@@ -1,0 +1,4 @@
+.frequency-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .5rem; }
+.inputs-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
+fieldset { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px; }
+legend { font-weight: bold; }

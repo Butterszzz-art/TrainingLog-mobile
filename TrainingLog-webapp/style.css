@@ -1,0 +1,93 @@
+#adjustMacrosToggle {
+  display: block;
+  margin: 16px auto;
+  padding: 8px 16px;
+  font-size: 1rem;
+}
+
+.card {
+  background: var(--card-bg);
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  border-radius: 6px;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.quick-add {
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:6px;
+}
+.quick-add input {
+  width:60px;
+  margin-right:4px;
+}
+
+.fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--text-color);
+  font-size: 1.5rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: var(--shadow);
+  border:none;
+}
+
+.icon-btn {
+  border:none;
+  background:none;
+  font-size:1rem;
+}
+
+.heatmap {
+  display:grid;
+  grid-template-columns: repeat(15, 12px);
+  gap:2px;
+  justify-content:center;
+  margin-top:8px;
+}
+.heatmap div {
+  width:12px;
+  height:12px;
+  background:#eee;
+}
+
+.coach-only {
+  display: none;
+}
+
+/* center the <h2> titles in every tab pane */
+.tab-content h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* sidebar background is dark, force link/text to white */
+.side-menu,
+.side-menu .menu-title,
+.side-menu ul li a {
+  color: #fff !important;
+}
+/* also for any dark-themed headers/footers */
+header, .dark-bg, .coach-only {
+  color: #fff;
+}
+
+/* ensure dark mode containers display white text */
+.dark-mode,
+.dark-mode * {
+  color: #fff;
+}
