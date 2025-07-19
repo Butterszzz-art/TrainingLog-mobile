@@ -492,6 +492,15 @@
   margin-bottom: .5rem;
   width: 100%;
 }
+.progress-nav button.active {
+  background-color: var(--primary);
+  color: var(--text-color);
+}
+@media (max-width: 600px) {
+  .progress-layout {
+    display: block;
+  }
+}
 .progress-chart,
 .progress-calendar {
   background: #fff;
@@ -803,10 +812,10 @@
     <div class="progress-layout">
       <div id="progressTogglePanel" class="panel active">
       <nav class="progress-nav">
-        <button onclick="showWorkoutProgress()">Workout</button>
-        <button onclick="showCardioProgress()">Cardio</button>
-        <button onclick="showBodyweightProgress()">Bodyweight</button>
-        <button onclick="showExerciseProgress()">Exercise</button>
+        <button id="workoutProgressBtn" onclick="showWorkoutProgress()">Workout</button>
+        <button id="cardioProgressBtn" onclick="showCardioProgress()">Cardio</button>
+        <button id="bodyweightProgressBtn" onclick="showBodyweightProgress()">Bodyweight</button>
+        <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
         <input type="date" id="startRange" onchange="refreshProgress()">
         <input type="date" id="endRange" onchange="refreshProgress()">
         <button onclick="promptGoal()">Set Goal</button>
@@ -3113,7 +3122,14 @@ async function fetchBodyweightHistory() {
   return weights.map(w => ({ date: w.date, weight: w.weight }));
 }
 
+function setActiveProgress(btnId) {
+  document.querySelectorAll('.progress-nav button').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById(btnId);
+  if (btn) btn.classList.add('active');
+}
+
 async function showWorkoutProgress(data) {
+  setActiveProgress('workoutProgressBtn');
   const workouts = Array.isArray(data?.workouts) ? data.workouts : [];
   if (data && workouts.length === 0) {
     // nothing to show
@@ -3133,6 +3149,7 @@ async function showWorkoutProgress(data) {
 }
 
 async function showCardioProgress() {
+  setActiveProgress('cardioProgressBtn');
   const history = await fetchCardioHistory();
   const filtered = applyDateRange(history);
   const dates = filtered.map(h => h.date);
@@ -3145,6 +3162,7 @@ async function showCardioProgress() {
 }
 
 async function showBodyweightProgress() {
+  setActiveProgress('bodyweightProgressBtn');
   const history = await fetchBodyweightHistory();
   const filtered = applyDateRange(history);
   const dates = filtered.map(h => h.date);
@@ -3157,6 +3175,7 @@ async function showBodyweightProgress() {
 }
 
 function showExerciseProgress() {
+  setActiveProgress('exerciseProgressBtn');
   document.getElementById('progressCanvas').style.display = 'none';
   document.getElementById('exerciseProgress').style.display = 'block';
   renderExerciseProgress();
