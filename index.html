@@ -365,105 +365,11 @@
   to { transform: rotate(360deg); }
 }
 
-/* Floating FAB container */
-#fabContainer {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1001;
-}
-  #fabContainer .fab {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: var(--primary);
-  color: #fff;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    transition: transform 0.3s ease;
+  /* Add to log button */
+  #addLogBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
-
-  /* Positioning for additional FAB-style buttons */
-  .fab-button {
-    bottom: 80px;
-  }
-
-  /* Styling for the main FAB toggle */
-  .fab-toggle {
-    position: absolute;
-    bottom: 60px;
-    right: 50%;
-    transform: translateX(50%);
-    width: 56px;
-    height: 56px;
-    font-size: 2rem;
-    border-radius: 50%;
-    background: #007bff;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    padding: 0;
-  }
-#fabContainer .fab-icon {
-  transition: transform 0.3s ease;
-}
-#fabContainer.open .fab-icon {
-  transform: rotate(45deg);
-}
-#fabContainer .fab-menu {
-  position: absolute;
-  top: 72px;
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 8px;
-  background: rgba(255,255,255,0.95);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transform: translateY(20px);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-#fabContainer.open .fab-menu {
-  transform: translateY(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-#fabContainer .fab-item {
-  width: 56px;
-  height: 56px;
-  background: var(--card-bg);
-  border: none;
-  border-radius: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: background 0.2s;
-}
-#fabContainer .fab-item:hover {
-  background: var(--primary);
-  color: #fff;
-}
-#fabContainer .fab-item .icon {
-  font-size: 20px;
-}
-#fabContainer .fab-item .label {
-  font-size: 10px;
-  margin-top: 2px;
-}
 
 /* Narrower inputs and calendar widget */
 #exercise,
@@ -652,9 +558,12 @@
 <div id="resistance-section">
   <div id="resistance-inputs">
   <div class="inputs-grid">
-  <input type="text" id="exercise" placeholder="Exercise" list="exerciseSuggestions" />
+  <input type="text" id="exercise" placeholder="Exercise" list="exerciseSuggestions" oninput="updateAddButtonState()" />
   <datalist id="exerciseSuggestions"></datalist>
-  <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value)" />
+  <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
+
+  <!-- Dynamically generated inputs will appear here -->
+  <div id="setInputsContainer" style="grid-column: 1 / -1;"></div>
 
   <!-- Optional goals -->
   <input type="number" id="goal" placeholder="Target Weight Goal (kg/lbs)" />
@@ -666,9 +575,6 @@
     <option value="lbs">lbs</option>
   </select>
   </div>
-
-  <!-- Dynamically generated inputs will appear here -->
-  <div id="setInputsContainer"></div>
 
   <!-- Date selector -->
   <input type="date" id="entryDate" class="calendar-widget slide-up" />
@@ -686,36 +592,7 @@
   </div>
 
   
-  <!-- Floating action menu -->
-  <div id="fabContainer">
-    <button id="fabToggle" class="fab fab-toggle"><span class="fab-icon">+</span></button>
-    <div id="fabMenu" class="fab-menu">
-      <button class="fab-item" onclick="addLogEntry()">
-        <span class="icon">➕</span>
-        <span class="label">Add</span>
-      </button>
-      <button class="fab-item" onclick="addWeightEntry()">
-        <span class="icon">⚖️</span>
-        <span class="label">Weight</span>
-      </button>
-      <button class="fab-item" onclick="addCardioEntry()">
-        <span class="icon">🏃</span>
-        <span class="label">Cardio</span>
-      </button>
-      <button class="fab-item" onclick="addMacroMeal()">
-        <span class="icon">🍽️</span>
-        <span class="label">Meal</span>
-      </button>
-      <button class="fab-item" onclick="saveWorkoutAsTemplate()">
-        <span class="icon">💾</span>
-        <span class="label">Save</span>
-      </button>
-      <button class="fab-item" onclick="loadSavedTemplate()">
-        <span class="icon">📂</span>
-        <span class="label">Load</span>
-      </button>
-    </div>
-  </div>
+  <button id="addLogBtn" onclick="addLogEntry()" disabled>Add to Log</button>
     <!-- Logs will render below this -->
     <div id="workoutsContainer" style="margin-top: 20px;"></div>
     </div>
@@ -1438,6 +1315,7 @@ function generateSetInputs(setCount) {
   for (let i = 0; i < setCount; i++) {
     container.innerHTML += getSetInputHTML(i);
   }
+  updateAddButtonState();
 }
 
 function addNewSet() {
@@ -1445,14 +1323,15 @@ function addNewSet() {
   container.innerHTML += getSetInputHTML(currentSetCount);
   currentSetCount++;
   document.getElementById("sets").value = currentSetCount;
+  updateAddButtonState();
 }
 
 function getSetInputHTML(i) {
   return `
     <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
       <label style="min-width: 60px;">Set ${i + 1}</label>
-      <input type="number" id="reps_${i}" placeholder="Reps" style="width: 80px;" />
-      <input type="number" id="weight_${i}" placeholder="Weight" style="width: 100px;" />
+      <input type="number" id="reps_${i}" placeholder="Reps" style="width: 80px;" oninput="updateAddButtonState()" />
+      <input type="number" id="weight_${i}" placeholder="Weight" style="width: 100px;" oninput="updateAddButtonState()" />
       <button onclick="removeSet(${i})" style="background-color: #dc3545; color: var(--text-color); border: none; padding: 4px 8px; border-radius: 4px;">❌</button>
     </div>
   `;
@@ -1476,6 +1355,27 @@ function removeSet(indexToRemove) {
     document.getElementById(`weight_${i}`).value = weights[i];
   }
   document.getElementById("sets").value = currentSetCount;
+  updateAddButtonState();
+}
+
+function updateAddButtonState() {
+  const exercise = document.getElementById('exercise').value.trim();
+  const sets = parseInt(document.getElementById('sets').value, 10);
+  const addBtn = document.getElementById('addLogBtn');
+  if (!addBtn) return;
+  if (!exercise || !sets || isNaN(sets) || sets < 1) {
+    addBtn.disabled = true;
+    return;
+  }
+  for (let i = 0; i < sets; i++) {
+    const reps = document.getElementById(`reps_${i}`);
+    const weight = document.getElementById(`weight_${i}`);
+    if (!reps || !weight || reps.value === '' || weight.value === '') {
+      addBtn.disabled = true;
+      return;
+    }
+  }
+  addBtn.disabled = false;
 }
 
   
@@ -1553,6 +1453,7 @@ function addLogEntry() {
 
   // ✅ Reset set counter
   currentSetCount = 0;
+  updateAddButtonState();
 
 
 
@@ -2893,18 +2794,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // Toggle FAB menu
-  const fabContainer = document.getElementById('fabContainer');
-  const fabToggle = document.getElementById('fabToggle');
-  fabToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    fabContainer.classList.toggle('open');
-  });
-  document.addEventListener('click', (e) => {
-    if (!fabContainer.contains(e.target)) {
-      fabContainer.classList.remove('open');
-    }
-  });
+  updateAddButtonState();
   
 // LOGOUT
 function logout() {
