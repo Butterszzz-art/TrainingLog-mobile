@@ -42,11 +42,12 @@ npm test
 
 ## Server Configuration
 
-`server.js` exposes a `/config` endpoint that provides the Airtable credentials. Create a `.env` file with the following variables before starting the server:
+`server.js` exposes a `/config` endpoint that provides the Airtable credentials. Create a `.env` file with the following variables before starting the server. `CORS_ORIGINS` may list allowed origins separated by commas:
 
 ```bash
 AIRTABLE_TOKEN=yourTokenHere
 AIRTABLE_BASE_ID=yourBaseIdHere
+CORS_ORIGINS=https://your-site.github.io,https://your-pwa-origin
 ```
 
 Run the server with:
