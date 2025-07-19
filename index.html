@@ -496,11 +496,14 @@
   background-color: var(--primary);
   color: var(--text-color);
 }
-@media (max-width: 600px) {
-  .progress-layout {
-    display: block;
+  @media (max-width: 600px) {
+    .progress-layout {
+      display: block;
+    }
+    #progressCanvas {
+      height: 300px;
+    }
   }
-}
 .progress-chart,
 .progress-calendar {
   background: #fff;
