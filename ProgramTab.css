@@ -1,4 +1,21 @@
 .frequency-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .5rem; }
-.inputs-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
+.inputs-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .inputs-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .inputs-grid input,
+  .inputs-grid select {
+    flex: 0 0 140px;
+  }
+}
 fieldset { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px; }
 legend { font-weight: bold; }
