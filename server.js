@@ -7,7 +7,14 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.use(cors());
+
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+  : [];
+const corsOptions = allowedOrigins.length
+  ? { origin: allowedOrigins, credentials: true }
+  : { origin: true, credentials: true };
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
