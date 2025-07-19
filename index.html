@@ -782,15 +782,7 @@
       <button onclick="applyCustomCalories()" style="width: 100%; margin-top: 10px; font-size: 1.1rem; padding: 12px;">Insert Calories</button>
     </div>
 
-    <!-- Theme selection -->
-    <div style="margin-bottom:20px;">
-      <label for="themeSelect">Color Theme:</label><br>
-      <select id="themeSelect" onchange="applyTheme(this.value)" style="width:100%;padding:8px;margin-top:6px;">
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-        <option value="neon">Neon Dark</option>
-      </select>
-    </div>
+    
 
     <!-- Adjust Macros -->
     <div id="adjustMacroSection" style="margin-bottom: 30px;">
@@ -901,6 +893,16 @@
     <input type="checkbox" id="trainerModeToggle" />
     Enable Trainer Mode
   </label>
+
+  <!-- Theme selection moved from macros settings -->
+  <div style="margin-top:20px;">
+    <label for="themeSelect">Color Theme:</label><br>
+    <select id="themeSelect" onchange="applyTheme(this.value)" style="width:100%;padding:8px;margin-top:6px;">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+      <option value="neon">Neon Dark</option>
+    </select>
+  </div>
 
   <div id="calorieCalcSection" style="margin-top:20px;">
     <h3>Calculate Calories</h3>
