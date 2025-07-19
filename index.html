@@ -159,6 +159,7 @@
     #appContainer {
       transition: margin-left 0.3s ease;
       margin-left: 0;
+      margin-top: 60px; /* offset for fixed hamburger button */
     }
     #appContainer.shifted {
       margin-left: 250px;
@@ -419,22 +420,22 @@
 }
 #fabContainer .fab-menu {
   position: absolute;
-  bottom: 0;
-  left: 72px;
+  top: 72px;
+  left: 0;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 12px;
   padding: 8px;
   background: rgba(255,255,255,0.95);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transform: translateX(20px);
+  transform: translateY(20px);
   opacity: 0;
   pointer-events: none;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 #fabContainer.open .fab-menu {
-  transform: translateX(0);
+  transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
 }
