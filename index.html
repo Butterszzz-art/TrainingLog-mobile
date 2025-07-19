@@ -533,6 +533,20 @@
   width:100%;
   max-width:100%;
 }
+
+@media (max-width: 600px){
+  #resistance-inputs{
+    flex-direction:row;
+    overflow-x:auto;
+    gap:8px;
+    padding-bottom:8px;
+    align-items:flex-start;
+  }
+  #resistance-inputs input,
+  #resistance-inputs select{
+    flex:0 0 140px;
+  }
+}
 #training-calendar{
   width:100%;
   max-width:500px;
