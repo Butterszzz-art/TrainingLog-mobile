@@ -1537,7 +1537,7 @@ function renderWorkouts() {
         <button onclick="toggleWorkoutDetails(${workoutIndex})" style="width: 100%; text-align: left; font-weight: bold;">
           ${workout.title}
         </button>
-        <div id="workoutDetails${workoutIndex}" style="display: none; margin-top: 10px;">
+        <div id="workoutDetails${workoutIndex}" style="display: none; margin-top: 10px; overflow-x: auto;">
           <table style="width: 100%;">
             <thead>
               <tr>
