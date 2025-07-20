@@ -278,19 +278,6 @@
       background-color: #c82333; /* Slightly darker red */
     }
 
-#macrosSettingsBtn {
-  background-color: var(--primary);
-  color: var(--text-color);
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s ease;
-}
-#macrosSettingsBtn:hover {
-  background-color: var(--primary-dark);
-}
 
 #goBackBtn {
   margin-bottom: 20px;
@@ -711,10 +698,6 @@
   </div>
 
 <div id="macroTab" class="tab-content" style="position: relative; padding: 20px;">
-  <!-- Settings Button, top right, only shown on Macros tab -->
-<button id="macrosSettingsBtn" onclick="openMacroSettings()" style="position: absolute; top: 8px; right: 8px; display: none; font-size: 0.8rem; padding: 4px 8px;">
-    ⚙️ Settings
-  </button>
 
   <!-- Main Macros Content -->
   <div id="macrosMainContent" style="max-width: 600px; margin: 0 auto;">
@@ -1166,10 +1149,6 @@ function showTab(tabName) {
   }
   activeTab = tab;
 
-  const settingsBtn = document.getElementById('macrosSettingsBtn');
-  if (settingsBtn) {
-    settingsBtn.style.display = tabName === 'macroTab' ? 'block' : 'none';
-  }
 
   switch (tabName) {
     case 'macroTab':
@@ -2755,18 +2734,12 @@ function openMacroSettings() {
   // Hide the main macros content and reveal the settings view
   document.getElementById('macrosMainContent').style.display = 'none';
   document.getElementById('macrosSettingsContent').style.display = 'block';
-  // Hide the settings button so only the "Go Back" button shows
-  const btn = document.getElementById('macrosSettingsBtn');
-  if (btn) btn.style.display = 'none';
 }
 
 function closeMacroSettings() {
   // Return to the main macros view
   document.getElementById('macrosSettingsContent').style.display = 'none';
   document.getElementById('macrosMainContent').style.display = 'block';
-  // Restore the settings button visibility
-  const btn = document.getElementById('macrosSettingsBtn');
-  if (btn) btn.style.display = 'block';
 }
 
 // expose helpers for inline handlers
@@ -3962,18 +3935,12 @@ function openMacroSettings() {
   // Hide the main macros content and reveal the settings view
   document.getElementById('macrosMainContent').style.display = 'none';
   document.getElementById('macrosSettingsContent').style.display = 'block';
-  // Hide the settings button so only the "Go Back" button shows
-  const btn = document.getElementById('macrosSettingsBtn');
-  if (btn) btn.style.display = 'none';
 }
 
 function closeMacroSettings() {
   // Return to the main macros view
   document.getElementById('macrosSettingsContent').style.display = 'none';
   document.getElementById('macrosMainContent').style.display = 'block';
-  // Restore the settings button visibility
-  const btn = document.getElementById('macrosSettingsBtn');
-  if (btn) btn.style.display = 'block';
 }
 
 // expose helpers for inline handlers
