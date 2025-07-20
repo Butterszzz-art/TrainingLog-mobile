@@ -924,9 +924,54 @@
   </div> <!-- #settingsTab -->
   </div> <!-- #appContainer -->
 </div> <!-- #pocketFitContainer -->
-<div id="pocketLifestyleContainer" class="section" style="display:none; text-align:center;">
+<div id="pocketLifestyleContainer" class="section" style="display:none;">
   <h2>PocketLifestyle</h2>
-  <p>Coming Soon</p>
+  <nav class="lifestyle-nav">
+    <button data-ltab="dailyTab">Daily Schedule</button>
+    <button data-ltab="studyTab">Study Sessions</button>
+    <button data-ltab="todoTab">To-Do List</button>
+    <button data-ltab="habitsTab">Habits</button>
+    <button data-ltab="goalsTab">Goals</button>
+  </nav>
+  <div id="dailyTab" class="lifestyle-tab">
+    <input type="date" id="scheduleDate" />
+    <ul id="scheduleList"></ul>
+    <button class="fab" onclick="openScheduleForm()">+</button>
+  </div>
+  <div id="studyTab" class="lifestyle-tab" style="display:none;">
+    <div class="quick-add">
+      <select id="subjectFilter"></select>
+      <button class="icon-btn" onclick="addSubject()">+</button>
+    </div>
+    <div id="studyTimerDisplay"></div>
+    <button onclick="startStudySession()" id="studyTimerBtn">Start Study Session</button>
+    <ul id="studyList"></ul>
+    <button class="fab" onclick="openStudyForm()">+</button>
+  </div>
+  <div id="todoTab" class="lifestyle-tab" style="display:none;">
+    <div class="quick-add">
+      <select id="todoCategoryFilter"></select>
+      <button class="icon-btn" onclick="addTodoCategory()">+</button>
+    </div>
+    <ul id="todoList"></ul>
+    <button class="fab" onclick="openTodoForm()">+</button>
+  </div>
+  <div id="habitsTab" class="lifestyle-tab" style="display:none;">
+    <div class="quick-add">
+      <select id="habitCategoryFilter"></select>
+      <button class="icon-btn" onclick="addHabit()">+</button>
+    </div>
+    <ul id="habitsList"></ul>
+    <button class="fab" onclick="openHabitForm()">+</button>
+  </div>
+  <div id="goalsTab" class="lifestyle-tab" style="display:none;">
+    <div class="quick-add">
+      <select id="goalCategoryFilter"></select>
+      <button class="icon-btn" onclick="addGoalCategory()">+</button>
+    </div>
+    <ul id="goalsList"></ul>
+    <button class="fab" onclick="openGoalForm()">+</button>
+  </div>
   <button onclick="openDashboard()">Back to Dashboard</button>
 </div>
 <div id="pocketFinanceContainer" class="section" style="display:none; text-align:center;">
@@ -950,6 +995,7 @@
 <script type="module" src="autoProgression.js"></script>
 <script type="module" src="periodization.js"></script>
 <script type="module" src="macrosFeatures.js"></script>
+<script type="module" src="lifestyle.js"></script>
 <script>
 
 let currentUser = null;
@@ -2831,7 +2877,14 @@ function openSection(section) {
   document.getElementById('dashboardContainer').style.display = 'none';
   const el = document.getElementById(section + 'Container');
   animateSwitch(el);
-  if (section === 'pocketFit') showTab('logTab');
+  if (section === 'pocketFit') {
+    showTab('logTab');
+  } else if (section === 'pocketLifestyle') {
+    if (!window.lifestyleInitialized && window.initLifestyle) {
+      window.initLifestyle();
+      window.lifestyleInitialized = true;
+    }
+  }
 }
 
 function openDashboard() {
