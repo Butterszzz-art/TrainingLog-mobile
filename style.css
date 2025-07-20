@@ -91,3 +91,20 @@ header, .dark-bg, .coach-only {
 .dark-mode * {
   color: #fff;
 }
+
+/* Lifestyle section */
+.lifestyle-nav {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+.lifestyle-nav button {
+  flex: 1;
+}
+.lifestyle-tab {
+  display: none;
+}
+.lifestyle-tab.active {
+  display: block;
+}
