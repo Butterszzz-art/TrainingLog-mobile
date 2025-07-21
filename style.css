@@ -75,6 +75,185 @@
   margin-bottom: 1rem;
 }
 
+/* Tab content styling */
+.tab-content {
+  display: none;
+  padding: 1rem;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Side menu styling */
+.side-menu {
+  position: fixed;
+  top: 0;
+  left: -300px;
+  width: 300px;
+  height: 100vh;
+  background: #333;
+  color: white;
+  transition: left 0.3s ease;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.side-menu.active {
+  left: 0;
+}
+
+.side-menu .menu-title {
+  padding: 1rem;
+  font-weight: bold;
+  border-bottom: 1px solid #555;
+}
+
+.side-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.side-menu ul li {
+  border-bottom: 1px solid #555;
+}
+
+.side-menu ul li a {
+  display: block;
+  padding: 1rem;
+  color: white;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.side-menu ul li a:hover {
+  background: #555;
+}
+
+/* Header styling */
+header {
+  background: var(--primary, #007bff);
+  color: white;
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Bottom navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card-bg, white);
+  border-top: 1px solid var(--border, #ddd);
+  display: flex;
+  justify-content: space-around;
+  padding: 0.5rem;
+  z-index: 100;
+}
+
+.bottom-nav button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+/* Toast notifications */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1000;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+/* Set input styling */
+.set-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.set-input label {
+  min-width: 60px;
+}
+
+.set-input input {
+  flex: 1;
+}
+
+/* Log entry styling */
+.log-entry {
+  border-bottom: 1px solid var(--border, #eee);
+  padding: 0.5rem 0;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+/* Theme variables */
+:root {
+  --primary: #007bff;
+  --card-bg: white;
+  --text-color: #333;
+  --border: #ddd;
+  --shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dark-mode {
+  --primary: #0d6efd;
+  --card-bg: #2d3748;
+  --text-color: white;
+  --border: #4a5568;
+  --shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.dark-mode body {
+  background: #1a202c;
+  color: white;
+}
+
+.dark-blue-mode {
+  --primary: #1e40af;
+  --card-bg: #1e3a8a;
+  --text-color: white;
+  --border: #3b82f6;
+  --shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.dark-blue-mode body {
+  background: #0f172a;
+  color: white;
+}
+
 /* sidebar background is dark, force link/text to white */
 .side-menu,
 .side-menu .menu-title,

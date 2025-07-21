@@ -1,4048 +1,805 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pocket Coach</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="ProgramTab.css">
-  <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#007bff">
-  <link rel="manifest" href="manifest.json">
-  <style>
-    /* Center all tab headers on the page */
-    .tab-content > h2,
-    .tab-content > h1 {
-      text-align: center;
-      margin-left: auto;
-      margin-right: auto;
-      width: 100%;
-    }
-    :root {
-      --bg-color: #F9F9FB;
-      --text-color: #000000;
-      --secondary-text: #B0B9C3;
-      --primary: #2F80ED;
-      --primary-dark: #1B64C2;
-      --danger: #dc3545;
-      --card-bg: #FFFFFF;
-      --border-color: #D9D9D9;
-      --sidebar-bg: #0D2A55;
-      --highlight: #F2994A;
-      --shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    body.theme-dark {
-      --bg-color: #121212;
-      --text-color: #FFFFFF;
-      --card-bg: #1E1E1E;
-      --border-color: #333;
-      --sidebar-bg: #000000;
-    }
-
-    body.theme-neon {
-      --bg-color: #000000;
-      --text-color: #39FF14;
-      --card-bg: #001100;
-      --border-color: #39FF14;
-      --sidebar-bg: #003300;
-    }
-    body {
-      font-family: 'Poppins', sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      padding: 20px;
-      margin: 0;
-      width: 100vw;
-      min-height: 100vh;
-      transition: margin-left 0.3s ease;
-      overflow-x: hidden;
-    }
-    body.sidebar-open {
-      overflow: hidden;
-    }
-    h2 {
-      font-size: 1.8rem;
-      line-height: 1.4;
-      margin-top: 0;
-    }
-    h3 {
-      font-size: 1.4rem;
-      line-height: 1.4;
-    }
-    input, select, textarea {
-      padding: 10px;
-      margin: 12px 0;
-      width: 100%;
-      box-sizing: border-box;
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
-      font-size: 16px;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-    }
-    input::placeholder,
-    textarea::placeholder {
-      color: var(--secondary-text);
-    }
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(0,123,255,0.3);
-    }
-
-    button {
-      padding: 10px 16px;
-      margin: 12px 0;
-      box-sizing: border-box;
-      border-radius: 6px;
-      background-color: var(--primary);
-      color: var(--text-color);
-      border: none;
-      cursor: pointer;
-      font-size: 15px;
-      box-shadow: var(--shadow);
-      transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-    button:hover {
-      background-color: var(--primary-dark);
-      transform: translateY(-2px);
-    }
-
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      font-size: 14px;
-      background: var(--card-bg);
-      box-shadow: var(--shadow);
-      color: var(--text-color);
-    }
-    th, td {
-      padding: 10px;
-      border: 1px solid var(--border-color);
-      text-align: center;
-    }
-    th {
-      background-color: #f0f0f0;
-    }
-    /* Sidebar Styles */
-    .side-menu {
-      position: fixed;
-      top: 0;
-      left: 0;
-      transform: translateX(-250px);
-      width: 250px;
-      height: 100%;
-      background-color: var(--sidebar-bg);
-      box-shadow: 2px 0 5px rgba(0,0,0,0.3);
-      overflow-y: auto;
-      box-sizing: border-box;
-      transition: transform 0.3s ease;
-      z-index: 1000;
-      padding-top: 60px;
-    }
-    .side-menu.open {
-      transform: translateX(0);
-    }
-
-    /* main content gets pushed when sidebar open */
-    .main-content {
-      transition: margin-left 0.3s ease;
-    }
-    body.sidebar-open .main-content {
-      margin-left: 250px;
-    }
-
-    /* Main content shift when sidebar is open */
-    #appContainer {
-      transition: margin-left 0.3s ease;
-      margin-left: 0;
-      margin-top: 60px; /* offset for fixed hamburger button */
-    }
-    #appContainer.shifted {
-      margin-left: 250px;
-    }
-
-
-    .menu-title {
-      font-size: 20px;
-      font-weight: bold;
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--border-color);
-      text-align: center;
-      color: var(--text-color);
-    }
-
-    .side-menu ul {
-  list-style: none; /* removes the bullets */
-  padding: 20px;
-  margin: 0;
-}
-
-.side-menu ul li {
-  margin-bottom: 15px;
-  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
-}
-
-.side-menu ul li a {
-  text-decoration: none;
-  color: var(--text-color);
-  font-weight: bold;
-  font-size: 16px;
-  display: block; /* make the entire item clickable */
-  padding: 8px 12px; /* add some padding for better hover area */
-  border-radius: 6px;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.side-menu ul li a:hover,
-.side-menu ul li a.active {
-  background-color: var(--primary); /* accent background on hover/active */
-  color: var(--text-color); /* ensure menu text is readable */
-}
-
-
-/* hamburger button always top-left, above content */
-.menu-toggle {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  width: 48px;
-  height: 48px;
-  z-index: 1100;
-  font-size: 24px;
-  background-color: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-.menu-toggle:hover {
-  background-color: #0056b3;
-}
-#menuToggle {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 1100;
-  width: 56px;
-  height: 56px;
-  padding: 0;
-  border-radius: 50%;
-  font-size: 24px;
-}
-
-
-    /* Tab content */
-    .tab-content {
-      display: none;
-      padding: 20px;
-      background: var(--card-bg);
-      box-shadow: var(--shadow);
-      border-radius: 10px;
-      margin-bottom: 20px;
-      color: var(--text-color);
-      opacity: 0;
-      transform: scale(0.9);
-      transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-    .tab-content.active {
-      display: block !important;
-      opacity: 1;
-      transform: scale(1);
-    }
-    .tab-content.fade-out {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-
-    #sidebarLogoutBtn {
-      width: 100%;
-      padding: 10px;
-      background-color: var(--danger);
-      color: var(--text-color);
-      border: none;
-      border-radius: 6px;
-      box-shadow: var(--shadow);
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    #sidebarLogoutBtn:hover {
-      background-color: #c82333; /* Slightly darker red */
-    }
-
-
-#goBackBtn {
-  margin-bottom: 20px;
-  padding: 6px 12px;
-  font-size: 14px;
-  cursor: pointer;
-  background-color: var(--primary);
-  color: var(--text-color);
-  border: none;
-  border-radius: 4px;
-  transition: background-color 0.3s ease;
-}
-#goBackBtn:hover {
-  background-color: var(--primary-dark);
-}
-
-/* Section transition styles */
-    .section {
-      opacity: 0;
-      transform: scale(0.9);
-      transition: opacity 0.4s ease, transform 0.4s ease;
-    }
-    #pocketFitContainer {
-      width: 100vw;
-      min-height: 100vh;
-      overflow-x: hidden;
-      transition: margin-left 0.3s ease;
-      margin-left: 0;
-    }
-.section.active {
-  opacity: 1;
-  transform: scale(1);
-}
-.section.fade-out {
-  opacity: 0;
-  transform: scale(0.9);
-}
-
-/* Loading button styles */
-.loading-btn {
-  position: relative;
-  overflow: hidden;
-  transition: background-color 0.3s ease;
-}
-.loading-btn.disabled,
-.loading-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.loading-btn .spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 16px;
-  height: 16px;
-  margin-top: -8px;
-  margin-left: -8px;
-  border: 2px solid rgba(255,255,255,0.5);
-  border-top-color: var(--text-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  display: none;
-}
-.loading-btn.loading .spinner {
-  display: block;
-}
-.loading-btn.loading span {
-  visibility: hidden;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-  /* Add to log button */
-  #addLogBtn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-/* Narrower inputs and calendar widget */
-#exercise,
-#sets,
-#goal,
-#repGoal,
-#weightUnit,
-#entryDate {
-  width: 60%;
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
-}
-
-#training-calendar {
-  width: 100%;
-  max-width: 500px;
-  margin: 20px auto;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  overflow: hidden;
-}
-
-#training-calendar table {
-  width: 100%;
-  border-collapse: collapse;
-}
-#training-calendar th,
-#training-calendar td {
-  padding: 6px;
-  text-align: center;
-  border: 1px solid var(--border-color);
-}
-#training-calendar td {
-  cursor: pointer;
-}
-
-.calendar-widget {
-  margin: 20px auto;
-  width: 60%;
-}
-
-.slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-@keyframes slide-up {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-    
-    
-#resistance-section{
-  display:grid;
-  grid-template-columns:1fr 1.2fr;
-  column-gap:24px;
-  align-items:start;
-  margin-bottom:80px;
-}
-#resistance-inputs{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
-#resistance-inputs input,
-#resistance-inputs select{
-  width:100%;
-  max-width:100%;
-}
-
-@media (max-width: 600px){
-  #resistance-section{display:block;}
-  #resistance-section .inputs-grid{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-  }
-  #resistance-inputs{
-    flex-direction:column;
-    align-items:stretch;
-    overflow:visible;
-    gap:8px;
-    padding-bottom:0;
-  }
-  #resistance-inputs input,
-  #resistance-inputs select{
-    flex:none;
-    width:100%;
-  }
-  #restTimerSection{
-    display:flex;
-    gap:8px;
-  }
-}
-#training-calendar{
-  width:100%;
-  max-width:500px;
-  height:auto;
-  margin-top:0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-#training-calendar .calendar-container{
-  transform: translateY(-20px);
-  transition: transform 0.3s ease;
-}
-#training-calendar:hover{
-  transform: translateY(-10px);
-}
-.highlight-past{background-color:#FFE0B2;}
-.highlight-today{background-color:#FF7043;}
-/* Progress Tab layout */
-.progress-layout {
-  display: grid;
-  grid-template-columns: 200px 1fr 300px;
-  gap: 1rem;
-}
-.progress-nav button {
-  display: block;
-  margin-bottom: .5rem;
-  width: 100%;
-}
-.progress-nav button.active {
-  background-color: var(--primary);
-  color: var(--text-color);
-}
-  @media (max-width: 600px) {
-    .progress-layout {
-      display: block;
-    }
-    #progressCanvas {
-      height: 300px;
-    }
-  }
-.progress-chart,
-.progress-calendar {
-  background: #fff;
-  padding: 1rem;
-  border-radius: .5rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,.1);
-}
-</style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PocketFit - Training Log</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#007bff">
 </head>
-
- 
 <body>
+    <div id="app">
+        <!-- Header -->
+        <header class="sticky">
+            <div class="header-content">
+                <h1>PocketFit</h1>
+                <div class="header-actions">
+                    <button id="menuToggle" class="icon-btn">☰</button>
+                    <button id="themeToggle" class="icon-btn">🌙</button>
+                </div>
+            </div>
+        </header>
 
-<div id="loginContainer" class="section active" style="max-width:400px;margin:40px auto;background:var(--card-bg);padding:20px;box-shadow:var(--shadow);border-radius:10px;color:var(--text-color);">
-  <h2>Login to Pocket Coach</h2>
-  <input type="text" id="username" placeholder="Enter Username" />
-  <input type="password" id="password" placeholder="Enter Password" />
-  <button id="loginButton" class="loading-btn" onclick="startLogin()"><span>Login</span><span class="spinner"></span></button>
-  <button id="signupButton" class="loading-btn" onclick="startSignup()"><span>Sign Up</span><span class="spinner"></span></button>
-</div>
-<div id="dashboardContainer" class="section" style="display:none; text-align:center;">
-  <h2>Welcome to Pocket Coach</h2>
-  <button onclick="openSection('pocketFit')">PocketFit</button>
-  <button onclick="openSection('pocketLifestyle')">PocketLifestyle</button>
-  <button onclick="openSection('pocketFinance')">PocketFinance</button>
-</div>
-
-<div id="pocketFitContainer" class="section" style="display:none;">
-  
-  <!-- Hamburger button -->
-  <button id="menuToggle" class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
-
-  <!-- Sidebar -->
-  <nav id="sideMenu" class="side-menu">
-    <div class="menu-title">PocketFit (<span id="userDisplay"></span>)</div>
-    <ul>
-      <li><a href="#" data-target="logTab">📋 Training Log</a></li>
-      <li><a href="#" onclick="openDashboard()">🏠 Dashboard</a></li>
-      <li><a href="#" data-target="weightTab">⚖️ Bodyweight</a></li>
-      <li><a href="#" data-target="cardioTab">🏃 Cardio</a></li>
-      <li><a href="#" data-target="macroTab">🍽️ Macros</a></li>
-      <li><a href="#" data-target="crossfitTab">💪 CrossFit</a></li>
-      <li><a href="#" data-target="programTab">🗓️ Programs</a></li>
-      <li><a href="#" data-target="communityTab">👥 Community</a></li>
-      <li><a href="#" data-target="progressTab">📈 Progress</a></li>
-      <li><a href="#" data-target="logHistoryTab">📜 Log History</a></li>
-      <li class="coach-only"><a href="#" data-target="coachingTab">🏆 Coaching</a></li>
-      <li><a href="#" data-target="settingsTab">⚙️ Settings</a></li>
-      <li><button id="sidebarLogoutBtn" onclick="logout()">Logout</button></li>
-    </ul>
-  </nav>
-
-  <div id="appContainer" class="main-content">
-
-<div id="progressReminder"></div>
-
-  <div id="logTab" class="tab-content">
-  <div id="logPanel" class="panel active">
-  <div id="training-calendar" class="slide-up"></div>
-  <h2>Resistance Exercise Log</h2>
-
-<div id="resistance-section">
-  <div id="resistance-inputs">
-  <div class="inputs-grid">
-  <input type="text" id="exercise" placeholder="Exercise" list="exerciseSuggestions" oninput="updateAddButtonState()" />
-  <datalist id="exerciseSuggestions"></datalist>
-  <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
-
-  <!-- Dynamically generated inputs will appear here -->
-  <div id="setInputsContainer" style="grid-column: 1 / -1;"></div>
-
-  <!-- Optional goals -->
-  <input type="number" id="goal" placeholder="Target Weight Goal (kg/lbs)" />
-  <input type="number" id="repGoal" placeholder="Target Rep Goal (optional)" />
-
-  <!-- Unit selector -->
-  <select id="weightUnit">
-    <option value="kg">kg</option>
-    <option value="lbs">lbs</option>
-  </select>
-  </div>
-
-  <!-- Date selector -->
-  <input type="date" id="entryDate" class="calendar-widget slide-up" />
-
-  <select id="templateSelect" onchange="loadSelectedTemplate()" style="margin-top: 10px;">
-  <option value="">Select Template...</option>
-</select>
-
-
-  <div id="restTimerSection" style="margin-top:10px;">
-    <input type="number" id="restMinutes" placeholder="Rest Minutes" style="width:80px;" />
-    <input type="number" id="restSeconds" placeholder="Rest Seconds" style="width:80px;" />
-    <button onclick="startRestTimer()">Start Rest Timer</button>
-    <span id="restTimerDisplay" style="margin-left:10px;"></span>
-  </div>
-
-  
-  <button id="addLogBtn" onclick="addLogEntry()" disabled>Add to Log</button>
-    <!-- Logs will render below this -->
-    <div id="workoutsContainer" style="margin-top: 20px;"></div>
-    </div>
-
-
-  </div>
-
-
-  </div>
-  </div>
-
-  <div id="weightTab" class="tab-content">
-    <div id="weightLogPanel" class="panel active">
-    <h2>Bodyweight Tracker</h2>
-    <input type="number" id="currentWeightInput" placeholder="Current Weight (kg)">
-    <input type="date" id="weightDateInput">
-    <button onclick="addWeightEntry()">Add Weight</button>
-    <input type="number" id="avgCalories" placeholder="Average Daily Calories" />
-    <button onclick="estimateCalories()">Estimate Calories</button>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Weight</th>
-          <th>Calories</th>
-          <th>Cardio (min)</th>
-          <th>Remove</th>
-        </tr>
-      </thead>
-      <tbody id="weightBody"></tbody>
-    </table>
-    <table>
-      <thead><tr><th>Scenario</th><th>Estimated Calories</th></tr></thead>
-      <tbody id="calorieEstimateTable"></tbody>
-    </table>
-    </div>
-    <div id="weightChartPanel" class="panel">
-      <div id="weightChartPanelContent"></div>
-    </div>
-  </div>
-  
-<div id="crossfitTab" class="tab-content">
-  <div id="cfEntryPanel" class="panel active">
-
-  <h2>CrossFit Workout Tracker</h2>
-
-  <input type="text" id="cfWorkoutName" placeholder="Workout Name (e.g., Murph)">
-  <input type="number" id="cfMinutes" placeholder="Time (Minutes)">
-  <input type="number" id="cfSeconds" placeholder="Time (Seconds)">
-  <input type="number" id="cfRounds" placeholder="Rounds Completed (optional)">
-  <textarea id="cfNotes" placeholder="Notes (optional)" style="width:100%;height:80px;margin-top:10px;"></textarea>
-
-  <h3 style="margin-top:20px;">Exercises</h3>
-  <div id="cfExercisesContainer"></div>
-  <button onclick="addCrossfitExercise()">➕ Add Exercise</button>
-
-  <button style="margin-top:20px;" onclick="saveCrossfitWorkout()">Save CrossFit Workout</button>
-  </div>
-  <div id="cfHistoryPanel" class="panel">
-  <h3 style="margin-top:30px;">Saved CrossFit Workouts</h3>
-  <div id="cfWorkoutsContainer"></div>
-  </div>
-</div>
-
-<div id="programTab" class="tab-content">
-  <div id="programBuilderPanel" class="panel active"><div id="programTabReactRoot"></div></div>
-  <div id="programListPanel" class="panel"></div>
-</div>
-
-<div id="communityTab" class="tab-content">
-  <div id="groupsPanel" class="panel active">
-  <h2>Community</h2>
-  <div>
-    <input id="groupSearchInput" placeholder="Search groups">
-    <input id="goalFilter" placeholder="Goal">
-    <input id="tagFilter" placeholder="Tag">
-    <button onclick="doGroupSearch()">Search</button>
-  </div>
-  <div id="groupList"></div>
-  <button onclick="showCreateGroup()">Create Group</button>
-  <button onclick="loadGroups()">Refresh Groups</button>
-  <div id="groupDetail" style="display:none;"></div>
-  </div>
-  <div id="postsPanel" class="panel"></div>
-</div>
-
-  <div id="cardioTab" class="tab-content">
-    <div id="cardioFormPanel" class="panel active">
-    <h2>Cardio Tracker</h2>
-    <input type="text" id="cardioType" placeholder="Type (e.g. Running)">
-    <input type="number" id="cardioDuration" placeholder="Duration (min)">
-    <input type="number" id="cardioDistance" placeholder="Distance (km)">
-    <input type="number" id="cardioCalories" placeholder="Calories burned (optional)">
-    <input type="text" id="cardioNotes" placeholder="Notes (optional)">
-    <button onclick="addCardioEntry()">Add Cardio</button>
-    <button onclick="completeCardioSession()">Complete Cardio Session</button>
-    </div>
-    <div id="cardioHistoryPanel" class="panel">
-      <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Distance</th><th>Calories</th><th>Notes</th><th>Remove</th></tr></thead>
-        <tbody id="cardioBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-<div id="macroTab" class="tab-content" style="position: relative; padding: 20px;">
-
-  <!-- Main Macros Content -->
-  <div id="macrosMainContent" style="max-width: 600px; margin: 0 auto;">
-    <div id="macroTargetsPanel" class="panel active">
-    <div id="targetsCard" class="card sticky">
-      <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;">🕒 Offline</span></h2>
-      <p style="font-size:1.1rem;">Energy: <span id="macroCalsProgress">0</span> / <span id="macroCalsTarget">0</span> kcal (<span id="macroCalsNet">0</span> net)</p>
-      <progress id="calsBar" value="0" max="100" style="width:100%;height:20px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="quickAdd('cals')">+</button></div>
-
-      <p style="font-size:1rem;">Protein: <span id="macroProteinProgress">0</span> / <span id="macroProteinTarget">0</span> g</p>
-      <progress id="proteinBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaProtein" type="number" value="10"><button onclick="quickAdd('protein')">+</button></div>
-
-      <p style="font-size:1rem;">Carbs: <span id="macroCarbsProgress">0</span> / <span id="macroCarbsTarget">0</span> g</p>
-      <progress id="carbBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaCarbs" type="number" value="10"><button onclick="quickAdd('carbs')">+</button></div>
-
-      <p style="font-size:1rem;">Fat: <span id="macroFatProgress">0</span> / <span id="macroFatTarget">0</span> g</p>
-      <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="quickAdd('fat')">+</button></div>
-
-      <div id="sparkContainer" style="display:flex;justify-content:space-around;margin-top:8px;">
-        <canvas id="calSpark" width="120" height="40"></canvas>
-        <canvas id="proteinSpark" width="120" height="40"></canvas>
-      </div>
-    </div>
-
-    <div id="heatmap" class="heatmap"></div>
-    </div>
-
-    <div id="macroMealsPanel" class="panel">
-    <details id="mealsCard" class="card" style="margin-top:10px;">
-      <summary>Meals <button onclick="scanBarcode()" class="icon-btn">📷</button></summary>
-      <div style="margin-top:10px;">
-        <div style="margin-bottom:10px;">
-          <select id="favSelect" onchange="logFavorite(this.value)">
-            <option value="">Favorites</option>
-          </select>
+        <!-- Sidebar Menu -->
+        <div id="sideMenu" class="side-menu">
+            <div class="menu-title">Navigation</div>
+            <ul>
+                <li><a href="#" data-target="workoutTab">💪 Workouts</a></li>
+                <li><a href="#" data-target="progressTab">📈 Progress</a></li>
+                <li><a href="#" data-target="macrosTab">🍎 Macros</a></li>
+                <li><a href="#" data-target="communityTab">👥 Community</a></li>
+                <li><a href="#" data-target="programTab">📋 Programs</a></li>
+                <li><a href="#" data-target="lifestyleTab">🏠 Pocketlifestyle</a></li>
+                <li><a href="#" data-target="historyTab">📚 Log History</a></li>
+                <li><a href="#" data-target="settingsTab">⚙️ Settings</a></li>
+            </ul>
         </div>
-        <div style="display:flex;margin-bottom:10px;">
-          <input id="recipeUrl" placeholder="Import recipe URL" style="flex:1;padding:6px;"/>
-          <button onclick="fetchRecipe()" style="margin-left:6px;">Fetch</button>
-        </div>
-        <div id="macroMealContainer"></div>
-      </div>
-    </details>
 
-    <button id="addMealFab" class="fab" onclick="addMacroMeal()">＋</button>
+        <!-- Main Content -->
+        <main>
+            <!-- Workout Tab -->
+            <div id="workoutTab" class="tab-content active">
+                <h2>Workout Log</h2>
+                <div class="card">
+                    <div class="inputs-grid">
+                        <input type="text" id="exercise" placeholder="Exercise name" list="exerciseList">
+                        <datalist id="exerciseList"></datalist>
+                        <input type="number" id="sets" placeholder="Sets" min="1" max="10" value="3">
+                        <input type="number" id="goal" placeholder="Target weight">
+                        <input type="number" id="repGoal" placeholder="Target reps">
+                        <select id="weightUnit">
+                            <option value="kg">kg</option>
+                            <option value="lbs">lbs</option>
+                        </select>
+                        <input type="date" id="entryDate">
+                    </div>
+                    <div id="setInputsContainer"></div>
+                    <button id="addButton" onclick="addLogEntry()">Add Entry</button>
+                </div>
+                <div id="workoutList"></div>
+            </div>
 
-    <button id="adjustMacrosToggle" class="btn" onclick="openMacroSettings()" style="margin-top:20px;">
-      ⚙️ Adjust Macros
-    </button>
+            <!-- Progress Tab -->
+            <div id="progressTab" class="tab-content">
+                <h2>Progress Tracking</h2>
+                <div class="card">
+                    <h3>Personal Records</h3>
+                    <div id="prsList"></div>
+                </div>
+                <div class="card">
+                    <h3>Milestones</h3>
+                    <div id="milestonesList"></div>
+                </div>
+                <div class="card">
+                    <h3>Goals</h3>
+                    <div id="goalsList"></div>
+                    <button onclick="addGoal()">Add Goal</button>
+                </div>
+            </div>
+
+            <!-- Macros Tab -->
+            <div id="macrosTab" class="tab-content">
+                <h2>Macro Tracking</h2>
+                <div id="macrosMainContent">
+                    <div class="card">
+                        <h3>Daily Progress</h3>
+                        <div id="dailyMacroProgress"></div>
+                    </div>
+                    <div class="card">
+                        <h3>Quick Add</h3>
+                        <div class="quick-add">
+                            <input type="number" id="qaProtein" placeholder="Protein (g)">
+                            <button onclick="quickAdd('protein')">+ Protein</button>
+                        </div>
+                        <div class="quick-add">
+                            <input type="number" id="qaCarbs" placeholder="Carbs (g)">
+                            <button onclick="quickAdd('carbs')">+ Carbs</button>
+                        </div>
+                        <div class="quick-add">
+                            <input type="number" id="qaFat" placeholder="Fat (g)">
+                            <button onclick="quickAdd('fat')">+ Fat</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="macrosSettingsContent" style="display: none;">
+                    <div class="card">
+                        <h3>Macro Targets</h3>
+                        <label>Protein (g): <input type="number" id="proteinTarget"></label>
+                        <label>Carbs (g): <input type="number" id="carbsTarget"></label>
+                        <label>Fat (g): <input type="number" id="fatTarget"></label>
+                        <button onclick="saveMacroTargets()">Save Targets</button>
+                    </div>
+                </div>
+                <button id="adjustMacrosToggle" onclick="toggleTargetForm()">⚙️ Adjust Macros</button>
+            </div>
+
+            <!-- Community Tab -->
+            <div id="communityTab" class="tab-content">
+                <h2>Community</h2>
+                <div class="card">
+                    <h3>Groups</h3>
+                    <button onclick="showCreateGroup()">Create Group</button>
+                    <div>
+                        <input id="groupSearchInput" placeholder="Search groups">
+                        <select id="goalFilter"><option value="">All Goals</option></select>
+                        <select id="tagFilter"><option value="">All Tags</option></select>
+                        <button onclick="doGroupSearch()">Search</button>
+                    </div>
+                    <div id="groupList"></div>
+                </div>
+                <div id="groupDetail" style="display: none;"></div>
+            </div>
+
+            <!-- Programs Tab -->
+            <div id="programTab" class="tab-content">
+                <h2>Training Programs</h2>
+                <div id="programTabReactRoot"></div>
+            </div>
+
+            <!-- Lifestyle Tab -->
+            <div id="lifestyleTab" class="tab-content">
+                <h2>Pocketlifestyle</h2>
+                <div class="lifestyle-nav">
+                    <button data-ltab="dailyTab">Daily</button>
+                    <button data-ltab="studyTab">Study</button>
+                    <button data-ltab="todoTab">Tasks</button>
+                    <button data-ltab="habitsTab">Habits</button>
+                    <button data-ltab="goalsTab">Goals</button>
+                </div>
+
+                <!-- Daily Schedule Tab -->
+                <div id="dailyTab" class="lifestyle-tab active">
+                    <h3>Daily Schedule</h3>
+                    <input type="date" id="scheduleDate">
+                    <button onclick="openScheduleForm()">Add Item</button>
+                    <ul id="scheduleList"></ul>
+                </div>
+
+                <!-- Study Sessions Tab -->
+                <div id="studyTab" class="lifestyle-tab">
+                    <h3>Study Sessions</h3>
+                    <select id="subjectFilter"></select>
+                    <button onclick="addSubject()">Add Subject</button>
+                    <button onclick="openStudyForm()">Manual Entry</button>
+                    <div>
+                        <button id="studyTimerBtn" onclick="startStudySession()">Start Study Session</button>
+                        <span id="studyTimerDisplay"></span>
+                    </div>
+                    <ul id="studyList"></ul>
+                </div>
+
+                <!-- Todo Tab -->
+                <div id="todoTab" class="lifestyle-tab">
+                    <h3>To-Do List</h3>
+                    <select id="todoCategoryFilter"></select>
+                    <button onclick="addTodoCategory()">Add Category</button>
+                    <button onclick="openTodoForm()">Add Task</button>
+                    <ul id="todoList"></ul>
+                </div>
+
+                <!-- Habits Tab -->
+                <div id="habitsTab" class="lifestyle-tab">
+                    <h3>Habits</h3>
+                    <button onclick="addHabit()">Add Habit</button>
+                    <ul id="habitsList"></ul>
+                </div>
+
+                <!-- Goals Tab -->
+                <div id="goalsTab" class="lifestyle-tab">
+                    <h3>Goals</h3>
+                    <button onclick="addGoalCategory()">Add Goal</button>
+                    <ul id="goalsList"></ul>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div id="historyTab" class="tab-content">
+                <h2>Log History</h2>
+                <div class="card">
+                    <h3>Workout History</h3>
+                    <div id="workoutHistory"></div>
+                </div>
+                <div class="card">
+                    <h3>Archived Workouts</h3>
+                    <div id="archivedWorkouts"></div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settingsTab" class="tab-content">
+                <h2>Settings</h2>
+                <div class="card">
+                    <h3>Account</h3>
+                    <div id="loginSection">
+                        <input type="text" id="username" placeholder="Username">
+                        <input type="password" id="password" placeholder="Password">
+                        <button onclick="startLogin()">Login</button>
+                    </div>
+                    <div id="userSection" style="display: none;">
+                        <p>Logged in as: <span id="currentUserDisplay"></span></p>
+                        <button onclick="logout()">Logout</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Theme</h3>
+                    <select id="themeSelector">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="dark-blue">Dark Blue</option>
+                    </select>
+                </div>
+                <div class="card">
+                    <h3>Data Management</h3>
+                    <button onclick="exportData()">Export Data</button>
+                    <button onclick="importData()">Import Data</button>
+                    <button onclick="clearAllData()">Clear All Data</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button data-target="workoutTab">💪</button>
+            <button data-target="progressTab">📈</button>
+            <button data-target="macrosTab">🍎</button>
+            <button data-target="communityTab">👥</button>
+            <button data-target="settingsTab">⚙️</button>
+        </nav>
     </div>
-  </div>
 
-  <!-- Settings Mini Tab -->
-  <div id="macrosSettingsContent" style="max-width: 600px; margin: 0 auto; display: none;">
-     <button id="goBackBtn" onclick="closeMacroSettings()" style="margin-bottom: 20px; font-size: 1rem; padding: 8px 16px;">⬅️ Go Back</button>
-
-    <!-- Custom Calories Input moved here -->
-    <div style="margin-bottom: 20px;">
-      <label for="customCalories">Custom Calorie Intake (optional):</label><br>
-      <input id="customCalories" type="number" placeholder="Enter custom calorie target" style="width: 100%; padding: 8px; margin-top: 6px;"/>
-      <button onclick="applyCustomCalories()" style="width: 100%; margin-top: 10px; font-size: 1.1rem; padding: 12px;">Insert Calories</button>
-    </div>
-
-    
-
-    <!-- Adjust Macros -->
-    <div id="adjustMacroSection" style="margin-bottom: 30px;">
-      <h3>Adjust Macros</h3>
-      <label>Protein: <span id="proteinVal">0</span> g</label>
-      <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <label>Fat: <span id="fatVal">0</span> g</label>
-      <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <label>Carbs: <span id="carbVal">0</span> g</label>
-      <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <p>Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
-      <button onclick="saveSliderMacros()" style="width: 100%; font-size: 1.1rem; padding: 12px;">Save Macros</button>
-    </div>
-
-  </div>
-</div>
-
-
-
-  <div id="progressTab" class="tab-content">
-    <h2>Progress Overview</h2>
-    <div class="progress-layout">
-      <div id="progressTogglePanel" class="panel active">
-      <nav class="progress-nav">
-        <button id="workoutProgressBtn" onclick="showWorkoutProgress()">Workout</button>
-        <button id="cardioProgressBtn" onclick="showCardioProgress()">Cardio</button>
-        <button id="bodyweightProgressBtn" onclick="showBodyweightProgress()">Bodyweight</button>
-        <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
-        <input type="date" id="startRange" onchange="refreshProgress()">
-        <input type="date" id="endRange" onchange="refreshProgress()">
-        <button onclick="promptGoal()">Set Goal</button>
-      </nav>
-      </div>
-      <div id="progressChartsPanel" class="panel">
-      <section class="progress-chart">
-        <canvas id="progressCanvas"></canvas>
-        <div id="exerciseProgress" style="display:none;"></div>
-        <div id="goalBar" style="margin-top:10px;"></div>
-        <div id="coachCorner" style="margin-top:10px;"></div>
-      </section>
-      <aside class="progress-calendar">
-        <div id="progressCalendar"></div>
-        <div id="prPanel"></div>
-        <div id="milestoneBadges"></div>
-      </aside>
-      <button onclick="exportCSV()">Export CSV</button>
-    </div>
-  </div>
-
-<div id="logHistoryTab" class="tab-content">
-  <h2>Log History</h2>
-  <div id="historyNav" style="margin-bottom:10px;">
-    <button onclick="showHistoryMiniTab('workout')">Workout History</button>
-    <button onclick="showHistoryMiniTab('macro')">Macro History</button>
-  </div>
-  <div id="historyWorkoutPanel" class="panel active">
-    <div id="workoutHistoryMiniTab">
-      <div id="logHistoryContainer"></div>
-    </div>
-  </div>
-  <div id="historyMacroPanel" class="panel">
-    <div id="macroHistoryMiniTab" style="display:none;">
-      <div id="macroHistoryContainer"></div>
-    </div>
-  </div>
-</div>
-
-<div id="coachingTab" class="tab-content coach-only">
-  <h2>Coach Dashboard</h2>
-  <section>
-    <h3>1. Client & Roster Management</h3>
-    <ul>
-      <li><strong>Clients Dashboard:</strong> Search, sort & filter clients.</li>
-      <li><strong>Profile Pages:</strong> Stats, goals, bio & history.</li>
-      <li><strong>Role-Based Access:</strong> Trainer vs. client views.</li>
-    </ul>
-  </section>
-  <section>
-    <h3>2. Program Assignment & Scheduling</h3>
-    <ul>
-      <li><strong>Assign Programs:</strong> Push templates to client calendars.</li>
-      <li><strong>Calendar Sync & Reminders:</strong> Email/SMS before sessions.</li>
-      <li><strong>Session Booking:</strong> Clients request/cancel sessions.</li>
-    </ul>
-  </section>
-  <section>
-    <h3>3. In-App Messaging & Check-Ins</h3>
-    <ul>
-      <li><strong>Secure Chat:</strong> 1-on-1 messaging with attachments.</li>
-      <li><strong>Progress Check-Ins:</strong> Photos, soreness logs.</li>
-      <li><strong>Group Broadcasts:</strong> Coach → all clients.</li>
-    </ul>
-  </section>
-  <section>
-    <h3>4. Advanced Analytics & Reporting</h3>
-    <ul>
-      <li><strong>High-Level Metrics:</strong> Roster adherence & trends.</li>
-      <li><strong>Client Reports:</strong> PDF/CSV summaries.</li>
-      <li><strong>Leaderboards:</strong> Volume & improvement rankings.</li>
-    </ul>
-  </section>
-  <!-- Continue similarly for items 5–10 -->
-</div>
-
-<div id="settingsTab" class="tab-content">
-  <h2>Settings</h2>
-  <label>
-    <input type="checkbox" id="trainerModeToggle" />
-    Enable Trainer Mode
-  </label>
-
-  <!-- Theme selection moved from macros settings -->
-  <div style="margin-top:20px;">
-    <label for="themeSelect">Color Theme:</label><br>
-    <select id="themeSelect" onchange="applyTheme(this.value)" style="width:100%;padding:8px;margin-top:6px;">
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-      <option value="neon">Neon Dark</option>
-    </select>
-  </div>
-
-  <div id="calorieCalcSection" style="margin-top:20px;">
-    <h3>Calculate Calories</h3>
-    <input type="number" id="calcWeight" placeholder="Weight (lbs)" style="width:100%;padding:8px;margin-bottom:10px;">
-    <input type="number" id="calcHeight" placeholder="Height (in)" style="width:100%;padding:8px;margin-bottom:10px;">
-    <select id="calcActivity" style="width:100%;padding:8px;margin-bottom:10px;">
-      <option value="1.2">Sedentary</option>
-      <option value="1.375">Lightly Active</option>
-      <option value="1.55">Moderately Active</option>
-      <option value="1.725">Very Active</option>
-      <option value="1.9">Extremely Active</option>
-    </select>
-    <button onclick="calculateCaloriesEquation()" style="width:100%;font-size:1.1rem;padding:12px;">Calculate Calories</button>
-    <p id="calorieCalcResult" style="margin-top:10px;"></p>
-  </div>
-  <button id="macroSettingsBtn" onclick="toggleMacroCalcForm()" style="margin-top:20px;">Macro Settings</button>
-
-  <div id="macroCalcForm" style="display:none; margin-top:20px;">
-    <h3>Set Your Macro Targets</h3>
-    <input type="number" id="macroWeight" placeholder="Bodyweight (lbs)" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-    <input type="number" id="macroHeight" placeholder="Height" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-    <select id="heightUnit" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-      <option value="in">in</option>
-      <option value="cm">cm</option>
-    </select>
-    <select id="macroActivity" style="width: 100%; padding: 8px; margin-bottom: 20px;">
-      <option value="1.2">Sedentary</option>
-      <option value="1.375">Lightly Active</option>
-      <option value="1.55">Moderately Active</option>
-      <option value="1.725">Very Active</option>
-      <option value="1.9">Extremely Active</option>
-    </select>
-    <button onclick="calculateMacroTargets()" style="width: 100%; font-size: 1.1rem; padding: 12px;">Calculate Targets</button>
-    <button onclick="console.log(planWeek([]))" style="width:100%;font-size:1rem;margin-top:10px;">Plan Week</button>
-  </div> <!-- #macroCalcForm -->
-  </div> <!-- #settingsTab -->
-  </div> <!-- #appContainer -->
-</div> <!-- #pocketFitContainer -->
-<div id="pocketLifestyleContainer" class="section" style="display:none;">
-  <h2>PocketLifestyle</h2>
-  <nav class="lifestyle-nav">
-    <button data-ltab="dailyTab">Daily Schedule</button>
-    <button data-ltab="studyTab">Study Sessions</button>
-    <button data-ltab="todoTab">To-Do List</button>
-    <button data-ltab="habitsTab">Habits</button>
-    <button data-ltab="goalsTab">Goals</button>
-  </nav>
-  <div id="dailyTab" class="lifestyle-tab">
-    <input type="date" id="scheduleDate" />
-    <ul id="scheduleList"></ul>
-    <button class="fab" onclick="openScheduleForm()">+</button>
-  </div>
-  <div id="studyTab" class="lifestyle-tab" style="display:none;">
-    <div class="quick-add">
-      <select id="subjectFilter"></select>
-      <button class="icon-btn" onclick="addSubject()">+</button>
-    </div>
-    <div id="studyTimerDisplay"></div>
-    <button onclick="startStudySession()" id="studyTimerBtn">Start Study Session</button>
-    <ul id="studyList"></ul>
-    <button class="fab" onclick="openStudyForm()">+</button>
-  </div>
-  <div id="todoTab" class="lifestyle-tab" style="display:none;">
-    <div class="quick-add">
-      <select id="todoCategoryFilter"></select>
-      <button class="icon-btn" onclick="addTodoCategory()">+</button>
-    </div>
-    <ul id="todoList"></ul>
-    <button class="fab" onclick="openTodoForm()">+</button>
-  </div>
-  <div id="habitsTab" class="lifestyle-tab" style="display:none;">
-    <div class="quick-add">
-      <select id="habitCategoryFilter"></select>
-      <button class="icon-btn" onclick="addHabit()">+</button>
-    </div>
-    <ul id="habitsList"></ul>
-    <button class="fab" onclick="openHabitForm()">+</button>
-  </div>
-  <div id="goalsTab" class="lifestyle-tab" style="display:none;">
-    <div class="quick-add">
-      <select id="goalCategoryFilter"></select>
-      <button class="icon-btn" onclick="addGoalCategory()">+</button>
-    </div>
-    <ul id="goalsList"></ul>
-    <button class="fab" onclick="openGoalForm()">+</button>
-  </div>
-  <button onclick="openDashboard()">Back to Dashboard</button>
-</div>
-<div id="pocketFinanceContainer" class="section" style="display:none; text-align:center;">
-  <h2>PocketFinance</h2>
-  <p>Coming Soon</p>
-  <button onclick="openDashboard()">Back to Dashboard</button>
-</div>
-
-<script src="archiveOldWorkouts.js"></script>
-<script src="progressiveOverload.js"></script>
-<script src="community.js"></script>
-<!-- Optional runtime configuration -->
-<script src="config.js"></script>
-<script type="module" src="progressUtils.js"></script>
-<script src="progressMilestones.js"></script>
-<script src="progressAnalytics.js"></script>
-<script src="progressGoals.js"></script>
-<script src="progressAI.js"></script>
-<script src="gamification.js"></script>
-<script type="module" src="offline.js"></script>
-<script type="module" src="autoProgression.js"></script>
-<script type="module" src="periodization.js"></script>
-<script type="module" src="macrosFeatures.js"></script>
-<script src="lifestyle.js"></script>
-<script>
-
-let currentUser = null;
-let savedUser = localStorage.getItem("fitnessAppUser");
-let activeSection = null;
-let activeTab = null;
-
-let airtableToken = '';
-let airtableBaseId = '';
-
-async function fetchAirtableConfig() {
-  try {
-    const res = await fetch(`${window.SERVER_URL}/config`, { credentials: "include" });
-    if (res.ok) {
-      const cfg = await res.json();
-      airtableToken = cfg.airtableToken;
-      airtableBaseId = cfg.airtableBaseId;
-      if (airtableToken && airtableBaseId) return;
-    }
-  } catch (err) {
-    console.warn('Server config fetch failed', err);
-  }
-
-  if (!airtableToken || !airtableBaseId) {
-    try {
-      const mod = await import('./config.js');
-      if (mod.SERVER_URL) window.SERVER_URL = mod.SERVER_URL;
-      if (mod.airtableConfig) {
-        airtableToken = mod.airtableConfig.airtableToken || airtableToken;
-        airtableBaseId = mod.airtableConfig.airtableBaseId || airtableBaseId;
-      }
-    } catch (err) {
-      // optional config.js not found
-    }
-  }
-
-  if (window.SERVER_URL) {
-    try {
-      const res = await fetch(`${window.SERVER_URL}/config`, { credentials: "include" });
-      if (res.ok) {
-        const cfg = await res.json();
-        airtableToken = cfg.airtableToken;
-        airtableBaseId = cfg.airtableBaseId;
-        if (airtableToken && airtableBaseId) return;
-      }
-    } catch (err) {
-      console.warn('Server config fetch failed', err);
-    }
-  }
-  if (window.airtableConfig) {
-    airtableToken = window.airtableConfig.airtableToken || airtableToken;
-    airtableBaseId = window.airtableConfig.airtableBaseId || airtableBaseId;
-  }
-  if (!airtableToken || !airtableBaseId) {
-    console.error('Failed to load Airtable configuration');
-  }
-}
-const usersTableName = 'Users';
-const templatesTableName = 'Templates';
-const MacroTargetsTableName = 'MacroTargets';  
-
-let macroMeals = [];
-
-let macroTargetCalories = 0;
-let macroTargetProtein = 0;
-let macroTargetFat = 0;
-let macroTargetCarbs = 0;
-
-let macroRanges = {
-  protein: { min: 0, max: 0 },
-  fat:     { min: 0, max: 0 },
-  carbs:   { min: 0, max: 0 },
-  tdee:    0
-};
-
-const defaultExercises = [
-  'Bench Press', 'Squat', 'Deadlift', 'Overhead Press', 'Barbell Row',
-  'Pull Up', 'Dip', 'Curl', 'Lunge', 'Leg Press', 'Leg Curl',
-  'Leg Extension', 'Calf Raise'
-];
-let userExercises = [];
-
-function updateExerciseSuggestions() {
-  const list = document.getElementById('exerciseSuggestions');
-  if (!list) return;
-  list.innerHTML = '';
-  const all = Array.from(new Set([...defaultExercises, ...userExercises]));
-  all.forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    list.appendChild(opt);
-  });
-}
-
-function loadUserExercises() {
-  if (!currentUser) return;
-  const data = JSON.parse(localStorage.getItem(`exercises_${currentUser}`)) || [];
-  userExercises = Array.isArray(data) ? data : [];
-  updateExerciseSuggestions();
-}
-
-function saveUserExercise(name) {
-  if (!currentUser || !name) return;
-  const key = `exercises_${currentUser}`;
-  const data = JSON.parse(localStorage.getItem(key)) || [];
-  if (!data.includes(name)) {
-    data.push(name);
-    localStorage.setItem(key, JSON.stringify(data));
-  }
-  userExercises = data;
-  updateExerciseSuggestions();
-}
-
-
-function setLoading(btn, state) {
-  if (!btn) return;
-  if (state) {
-    btn.classList.add('loading');
-    btn.disabled = true;
-  } else {
-    btn.classList.remove('loading');
-    btn.disabled = false;
-  }
-}
-
-  
-// LOGIN
-async function startLogin() {
-  const btn = document.getElementById('loginButton');
-  setLoading(btn, true);
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
-
-  if (!username || !password) {
-    alert("Please fill in both username and password.");
-    setLoading(btn, false);
-    return;
-  }
-
-  try {
-    const response = await fetch(`${window.SERVER_URL}/login`, {
-      method: 'POST',
-        credentials: "include",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      currentUser = username;
-      localStorage.setItem("fitnessAppUser", username);
-
-      document.getElementById("userDisplay").textContent = username;
-      document.getElementById("loginContainer").style.display = "none";
-      openSection('pocketFit');
-      window.renderWorkouts(); // ✅ Render workouts
-      renderMacroTargets();
-      renderWeights();
-      renderCardio();
-      renderCrossfitWorkouts();
-      loadTemplateDropdown(); // ✅ Load saved templates
-      loadProgramTemplates();
-      loadProgramDropdown();
-      checkActiveProgram();
-      loadUserExercises();
-      saveDailyMacroProgress(0, 0, 0); // reset progress on login
-      renderDailyMacroProgress();
-    } else {
-      alert(result.message || "Login failed.");
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    alert("Error connecting to server.");
-
-    await loadTemplateDropdown(); // ✅ Load templates after login
-  } finally {
-    setLoading(btn, false);
-  }
-
-if (savedUser) {
-  currentUser = savedUser;
-  renderMacroTargets();  // ✅ Restore progress bar + sliders
-}
-
-await fetchUserMacroTargets(currentUser); // define this function below
-  
-}
-  
-function showTab(tabName) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  const tab = document.getElementById(tabName);
-  if (!tab) return;
-  tab.classList.add('active');
-  if (typeof animateTabSwitch === 'function') {
-    animateTabSwitch(tab);
-  }
-  activeTab = tab;
-
-
-  switch (tabName) {
-    case 'macroTab':
-      if (window.renderSparklines) {
-        renderSparklines();
-        renderHeatmap();
-        updateOfflineBadge();
-      }
-      break;
-    case 'logTab':
-      if (window.renderWorkouts) renderWorkouts();
-      break;
-    case 'weightTab':
-      renderWeights();
-      break;
-    case 'cardioTab':
-      renderCardio();
-      break;
-    case 'crossfitTab':
-      renderCrossfitWorkouts();
-      break;
-    case 'programTab':
-      loadProgramTemplates();
-      loadProgramDropdown();
-      break;
-    case 'communityTab':
-      if (window.loadGroups) loadGroups();
-      break;
-    case 'progressTab':
-      showWorkoutProgress();
-      break;
-    case 'logHistoryTab':
-      showHistoryMiniTab('workout');
-      break;
-    case 'settingsTab':
-      const theme = localStorage.getItem('theme') || 'light';
-      if (typeof applyTheme === 'function') applyTheme(theme);
-      const themeSel = document.getElementById('themeSelect');
-      if (themeSel) themeSel.value = theme;
-      const trainerToggle = document.getElementById('trainerModeToggle');
-      if (trainerToggle) {
-        trainerToggle.checked = JSON.parse(localStorage.getItem('trainerMode') || 'false');
-      }
-      break;
-  }
-}
-
-
-  
-async function fetchUserMacroTargets(username) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/MacroTargets?filterByFormula={Username}='${username}'`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${airtableToken}` }
-  });
-  const data = await response.json();
-
-  if (data.records.length > 0) {
-    const fields = data.records[0].fields;
-
-    // ✅ Update local UI display bars
-    saveMacroTargetsToTop(fields);
-
-    // ✅ Store locally so they persist on refresh
-    localStorage.setItem(`macroTargets_${username}`, JSON.stringify(fields));
-  }
-}
-
-
-  
-
-// SIGNUP
-async function startSignup() {
-  const btn = document.getElementById('signupButton');
-  setLoading(btn, true);
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
-
-  if (!username || !password) {
-    alert("Please fill in both username and password.");
-    setLoading(btn, false);
-    return;
-  }
-
-  try {
-    const response = await fetch(`${window.SERVER_URL}/signup`, {
-      method: 'POST',
-        credentials: "include",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      alert("Account created successfully! You can now log in.");
-    } else {
-      alert(result.message || "Signup failed.");
-    }
-  } catch (error) {
-    console.error('Signup error:', error);
-    alert("Error connecting to server.");
-  } finally {
-    setLoading(btn, false);
-  }
-}
-  
-function toggleWorkoutDetails(index) {
-  const el = document.getElementById(`workoutDetails${index}`);
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-window.toggleWorkoutDetails = toggleWorkoutDetails;  
-  
-// Expose showTab globally for sidebar navigation
-window.showTab = showTab;
-
-
-  
-function editSetValue(workoutIndex, entryIndex, type, value, setIndex) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const entry = workouts[workoutIndex].log[entryIndex];
-
-  if (type === 'rep') {
-    entry.repsArray[setIndex] = +value;
-  } else if (type === 'weight') {
-    entry.weightsArray[setIndex] = +value;
-  }
-
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  renderWorkouts();
-}
-
-
-
-function editGoalValue(workoutIndex, entryIndex, type, value) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const entry = workouts[workoutIndex].log[entryIndex];
-
-  if (type === 'goal') {
-    entry.goal = +value;
-  } else if (type === 'repGoal') {
-    entry.repGoal = +value;
-  }
-
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  renderWorkouts();
-}
-
-
-
-  
-let currentSetCount = 0;
-
-function generateSetInputs(setCount) {
-  currentSetCount = setCount;
-  const container = document.getElementById("setInputsContainer");
-  container.innerHTML = '';
-  for (let i = 0; i < setCount; i++) {
-    container.innerHTML += getSetInputHTML(i);
-  }
-  updateAddButtonState();
-}
-
-function addNewSet() {
-  const container = document.getElementById("setInputsContainer");
-  container.innerHTML += getSetInputHTML(currentSetCount);
-  currentSetCount++;
-  document.getElementById("sets").value = currentSetCount;
-  updateAddButtonState();
-}
-
-function getSetInputHTML(i) {
-  return `
-    <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
-      <label style="min-width: 60px;">Set ${i + 1}</label>
-      <input type="number" id="reps_${i}" placeholder="Reps" style="width: 80px;" oninput="updateAddButtonState()" />
-      <input type="number" id="weight_${i}" placeholder="Weight" style="width: 100px;" oninput="updateAddButtonState()" />
-      <button onclick="removeSet(${i})" style="background-color: #dc3545; color: var(--text-color); border: none; padding: 4px 8px; border-radius: 4px;">❌</button>
-    </div>
-  `;
-}
-
-function removeSet(indexToRemove) {
-  currentSetCount--;
-  const reps = [];
-  const weights = [];
-
-  for (let i = 0; i < currentSetCount + 1; i++) {
-    if (i !== indexToRemove) {
-      reps.push(document.getElementById(`reps_${i}`).value);
-      weights.push(document.getElementById(`weight_${i}`).value);
-    }
-  }
-
-  generateSetInputs(currentSetCount);
-  for (let i = 0; i < currentSetCount; i++) {
-    document.getElementById(`reps_${i}`).value = reps[i];
-    document.getElementById(`weight_${i}`).value = weights[i];
-  }
-  document.getElementById("sets").value = currentSetCount;
-  updateAddButtonState();
-}
-
-function updateAddButtonState() {
-  const exercise = document.getElementById('exercise').value.trim();
-  const sets = parseInt(document.getElementById('sets').value, 10);
-  const addBtn = document.getElementById('addLogBtn');
-  if (!addBtn) return;
-  if (!exercise || !sets || isNaN(sets) || sets < 1) {
-    addBtn.disabled = true;
-    return;
-  }
-  for (let i = 0; i < sets; i++) {
-    const reps = document.getElementById(`reps_${i}`);
-    const weight = document.getElementById(`weight_${i}`);
-    if (!reps || !weight || reps.value === '' || weight.value === '') {
-      addBtn.disabled = true;
-      return;
-    }
-  }
-  addBtn.disabled = false;
-}
-
-  
-function addLogEntry() {
-  const exercise = document.getElementById("exercise").value.trim();
-  const sets = +document.getElementById("sets").value;
-  const goal = +document.getElementById("goal").value;
-  const repGoal = +document.getElementById("repGoal").value;
-  const unit = document.getElementById("weightUnit").value || 'kg';
-  const dateInput = document.getElementById("entryDate");
-  const date = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().split('T')[0];
-
-
-  if (!exercise || !sets || isNaN(sets) || sets < 1) {
-    alert("Please enter a valid exercise and number of sets.");
-    return;
-  }
-
-  const repsArray = [];
-  const weightsArray = [];
-
-  for (let i = 0; i < sets; i++) {
-    const reps = +document.getElementById(`reps_${i}`).value;
-    const weight = +document.getElementById(`weight_${i}`).value;
-    if (isNaN(reps) || isNaN(weight)) {
-      alert("Please enter valid reps and weight for all sets.");
-      return;
-    }
-    repsArray.push(reps);
-    weightsArray.push(weight);
-  }
-
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  if (
-    workouts.length === 0 ||
-    workouts[workouts.length - 1].date !== date
-  ) {
-    workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
-  }
-
-  workouts[workouts.length - 1].log.push({
-    exercise,
-    sets,
-    repsArray,
-    weightsArray,
-    unit,
-    date,
-    goal,
-    repGoal
-  });
-
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  updatePRs(currentUser, { log: [{ exercise, weightsArray, repsArray }] }, calculateWorkoutVolume);
-  updateGoalProgress(currentUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
-  renderPRs();
-  const prog = analyzeProgress ? analyzeProgress(currentUser) : [];
-  const deload = prog.find(p => p.type === 'deload');
-  if (deload) {
-    showToast(`Deload recommended for ${deload.exercise}`);
-  }
-  renderMilestones();
-  renderGoalBar();
-  showCoachInsights();
-  saveUserExercise(exercise);
-  trackWorkoutDate(date);
-  renderWorkouts();
-  updateTrainingCalendar();
-
-  // ✅ Clear form inputs
-  document.getElementById("exercise").value = '';
-  document.getElementById("sets").value = '';
-  document.getElementById("goal").value = '';
-  document.getElementById("repGoal").value = '';
-  document.getElementById("setInputsContainer").innerHTML = '';
-  if (dateInput) {
-    dateInput.value = new Date().toISOString().split('T')[0];
-  }
-
-  // ✅ Reset set counter
-  currentSetCount = 0;
-  updateAddButtonState();
-
-
-
-}
-
-  
-function renderWorkouts() {
-  archiveOldWorkouts(currentUser);
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const container = document.getElementById("workoutsContainer");
-
-  // Track open workout sections BEFORE rendering
-  const openWorkouts = new Set();
-  workouts.forEach((_, index) => {
-    const details = document.getElementById(`workoutDetails${index}`);
-    if (details && details.style.display === 'block') {
-      openWorkouts.add(index);
-    }
-  });
-
-  container.innerHTML = '';
-
-  workouts.forEach((workout, workoutIndex) => {
-    let rows = '';
-
-    workout.log.forEach((entry, entryIndex) => {
-      const sets = entry.sets || entry.repsArray?.length || 0;
-      const repsArray = entry.repsArray || [];
-      const weightsArray = entry.weightsArray || [];
-      const unit = entry.unit || 'kg';
-
-      rows += repsArray.map((rep, setIndex) => {
-        const weight = weightsArray[setIndex] ?? '-';
-        return `
-          <tr>
-            ${setIndex === 0 ? `<td rowspan="${sets}">${entry.exercise}</td>
-                                <td rowspan="${sets}">${sets}</td>` : ''}
-            <td>
-              <input type="number" value="${rep}" 
-                     onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'rep', this.value, ${setIndex})" />
-            </td>
-            <td>
-              <input type="number" value="${weight}" 
-                     onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'weight', this.value, ${setIndex})" />
-              <span style="font-size:12px;">(${unit})</span>
-            </td>
-            ${setIndex === 0 ? `
-              <td rowspan="${sets}">${entry.date}</td>
-              <td rowspan="${sets}">
-                ${entry.goal ? Math.min(100, Math.round((weightsArray[0] / entry.goal) * 100)) + '%' : '-'}<br>
-                <input type="number" value="${entry.goal !== undefined ? entry.goal : ''}"
-                       onchange="editGoalValue(${workoutIndex}, ${entryIndex}, 'goal', this.value)" style="width:60px;" />
-                <input type="number" value="${entry.repGoal !== undefined ? entry.repGoal : ''}"
-                       onchange="editGoalValue(${workoutIndex}, ${entryIndex}, 'repGoal', this.value)" style="width:60px;" />
-              </td>
-              <td rowspan="${sets}">
-                <button onclick="removeLogEntry(${workoutIndex}, ${entryIndex})" class="remove-btn">❌</button><br>
-                <button onclick="addSetToLog(${workoutIndex}, ${entryIndex})" class="add-set-btn">➕ Add Set</button>
-              </td>` : ''}
-          </tr>
-        `;
-      }).join('');
-    });
-
-    container.innerHTML += `
-      <div style="margin-bottom: 20px;">
-        <button onclick="toggleWorkoutDetails(${workoutIndex})" style="width: 100%; text-align: left; font-weight: bold;">
-          ${workout.title}
-        </button>
-        <div id="workoutDetails${workoutIndex}" style="display: none; margin-top: 10px; overflow-x: auto;">
-          <table style="width: 100%;">
-            <thead>
-              <tr>
-                <th>Exercise</th>
-                <th>Sets</th>
-                <th>Reps</th>
-                <th>Weight</th>
-                <th>Date</th>
-                <th>Goal Progress</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-            <p style="font-weight:bold; margin-top:10px;">Total Volume: ${calculateWorkoutVolume(workout)} ${workout.log[0]?.unit || 'kg'}</p>
-            ${workout.restBreaks && workout.restBreaks.length ? `<p>Restbreaks: ${workout.restBreaks.join(', ')} minutes</p>` : ''}
-            <button class="remove-btn" onclick="removeWorkout(${workoutIndex})">Delete Workout</button>
-        </div>
-      </div>
-    `;
-  });
-
-  // Restore open sections AFTER rendering
-  openWorkouts.forEach(index => {
-    const el = document.getElementById(`workoutDetails${index}`);
-    if (el) el.style.display = 'block';
-  });
-
-  renderWorkoutHistory();
-  if (document.getElementById('progressTab').classList.contains('active')) {
-    showWorkoutProgress();
-  }
-
-  window.renderWorkouts = renderWorkouts;
-  window.toggleWorkoutDetails = toggleWorkoutDetails;
-}
-
-  
-
-function addSetToLog(workoutIndex, entryIndex) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const entry = workouts[workoutIndex].log[entryIndex];
-
-  entry.repsArray.push(0);        // default value
-  entry.weightsArray.push(0);     // default value
-  entry.sets = entry.repsArray.length;
-
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  renderWorkouts();
-}
-window.addSetToLog = addSetToLog;
-
-let restInterval;
-function startRestTimer() {
-  const minutes = +document.getElementById('restMinutes').value || 0;
-  const seconds = +document.getElementById('restSeconds').value || 0;
-  const totalSeconds = minutes * 60 + seconds;
-  if (!totalSeconds) {
-    alert('Enter rest time');
-    return;
-  }
-  let remaining = totalSeconds;
-  const display = document.getElementById('restTimerDisplay');
-  display.textContent = formatRestTime(remaining);
-  clearInterval(restInterval);
-  restInterval = setInterval(() => {
-    remaining--;
-    if (remaining <= 0) {
-      clearInterval(restInterval);
-      display.textContent = 'Rest Over!';
-      logRestBreak(totalSeconds / 60);
-    } else {
-      display.textContent = formatRestTime(remaining);
-    }
-  }, 1000);
-}
-
-function formatRestTime(sec) {
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2,'0')}`;
-}
-
-function logRestBreak(mins) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const date = new Date().toISOString().split('T')[0];
-  if (
-    workouts.length === 0 ||
-    workouts[workouts.length - 1].date !== date
-  ) {
-    workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
-  }
-  const workout = workouts[workouts.length - 1];
-  if (!workout.restBreaks) workout.restBreaks = [];
-  workout.restBreaks.push(parseFloat(mins.toFixed(2)));
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  renderWorkouts();
-}
-
-
-// Save a workout template to Airtable
-async function saveTemplate(username, templateName, templateData) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${templatesTableName}`;
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        fields: {
-          Username: username,
-          TemplateName: templateName,
-          TemplateData: JSON.stringify(templateData)
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Airtable API error: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    console.log('Template saved:', result);
-  } catch (error) {
-    console.error('Error saving template:', error);
-    alert('Failed to save template. Please try again.');
-  }
-}
-  
-async function fetchTemplates(username) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${templatesTableName}?filterByFormula={Username}='${username}'`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${airtableToken}` }
-  });
-  const data = await response.json();
-  return data.records.map(record => ({
-    id: record.id,
-    name: record.fields.TemplateName,
-    data: JSON.parse(record.fields.TemplateData)
-  }));
-}
-
-function populateTemplateSelect(selectId) {
-  const select = document.getElementById(selectId);
-  if (!select) return Promise.resolve();
-  select.innerHTML = '<option value="">Select Template...</option>';
-  return fetchTemplates(currentUser).then(templates => {
-    templates.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = JSON.stringify(t.data);
-      opt.textContent = t.name;
-      select.appendChild(opt);
-    });
-  });
-}
-  
-
-// Populate the dropdown
-function loadTemplateDropdown() {
-  populateTemplateSelect("templateSelect").catch(err => {
-    console.error("Template loading failed:", err);
-    alert("Could not load templates.");
-  });
-}
-
-// Save last workout as template
-function saveWorkoutAsTemplate() {
-  const name = prompt("Enter a name for this template:");
-  if (!name) return;
-
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  if (!workouts.length) return alert("No workout to save.");
-  const template = workouts[workouts.length - 1];
-
-  saveTemplate(currentUser, name, template)
-    .then(() => {
-      alert("Template saved!");
-      loadTemplateDropdown(); // Refresh dropdown
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Failed to save template.");
-    });
-}
-
-
-// Load selected template into workouts
-function loadSelectedTemplate() {
-  const select = document.getElementById("templateSelect");
-  const value = select.value;
-  if (!value) return;
-
-  const template = JSON.parse(value);
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  workouts.push(template);
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  renderWorkouts();
-  alert("Template loaded!");
-}
-
-// SEND TEMPLATE TO ANOTHER USER
-async function sendTemplate() {
-  const otherUser = document.getElementById("shareWithUser").value.trim();
-  if (!otherUser) return alert("Enter username to share with.");
-
-  const select = document.getElementById("templateSelect");
-  const templateData = JSON.parse(select.value);
-
-  try {
-    const response = await fetch(`${window.SERVER_URL}/sendTemplate`, {
-      method: 'POST',
-        credentials: "include",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fromUser: currentUser,
-        toUser: otherUser,
-        templateName: templateData.title + " (Shared)",
-        templateData
-      })
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      alert("Template sent successfully!");
-    } else {
-      alert(result.message || "Failed to send template.");
-    }
-  } catch (error) {
-    console.error('Send template error:', error);
-    alert("Error sending template.");
-  }
-}
-
-// Show template actions if one is selected
-function showTemplateOptions() {
-  const selected = document.getElementById("templateSelect").value;
-  document.getElementById("templateActions").style.display = selected ? 'block' : 'none';
-}
-
-function toggleProgramBuilder() {
-  const builder = document.getElementById('programBuilder');
-  if (!builder) return;
-  builder.style.display = builder.style.display === 'none' ? 'block' : 'none';
-}
-
-function toggleTemplateBuilder() {
-  const builder = document.getElementById('templateBuilder');
-  const btn = document.getElementById('openTemplateBtn');
-  if (!builder) return;
-
-  const shouldShow = builder.style.display === 'none' || builder.style.display === '';
-  if (shouldShow) {
-    builder.style.display = 'block';
-    if (btn) btn.textContent = 'Hide Template';
-  } else {
-    builder.style.display = 'none';
-    if (btn) btn.textContent = 'Create Template';
-    document.getElementById('newTemplateExercise').value = '';
-    document.getElementById('newTemplateSets').value = '';
-    document.getElementById('newTemplateReps').value = '';
-    document.getElementById('newTemplateRPE').value = '';
-    newTemplateExercises = [];
-    document.getElementById('newTemplateList').innerHTML = '';
-  }
-}
-
-let newTemplateExercises = [];
-
-function addExerciseToTemplate() {
-  const nameInput = document.getElementById('newTemplateExercise');
-  const setsInput = document.getElementById('newTemplateSets');
-  const repsInput = document.getElementById('newTemplateReps');
-  const rpeInput = document.getElementById('newTemplateRPE');
-  if (!nameInput) return;
-  const name = nameInput.value.trim();
-  if (!name) return;
-  const sets = parseInt(setsInput.value) || 0;
-  const repRange = repsInput.value.trim();
-  const rpe = rpeInput.value.trim();
-  newTemplateExercises.push({ name, sets, repRange, rpe });
-  saveUserExercise(name);
-  const list = document.getElementById('newTemplateList');
-  if (list) {
-    const li = document.createElement('li');
-    let txt = `${name}`;
-    if (sets) txt += ` - ${sets} sets`;
-    if (repRange) txt += ` @ ${repRange}`;
-    if (rpe) txt += ` (RIR/RPE: ${rpe})`;
-    li.textContent = txt;
-    list.appendChild(li);
-  }
-  nameInput.value = '';
-  setsInput.value = '';
-  repsInput.value = '';
-  rpeInput.value = '';
-}
-
-function saveSimpleTemplate() {
-  const name = document.getElementById('newTemplateName').value.trim();
-  if (!name || newTemplateExercises.length === 0) return alert('Template info missing');
-  const templateData = {
-  title: name,
-  date: new Date().toISOString().split('T')[0],
-  log: newTemplateExercises.map(ex => ({
-    exercise: ex.name,
-    sets: ex.sets,
-    repRange: ex.repRange,
-    rpe: ex.rpe,
-    repsArray: Array(ex.sets || 0).fill(0),
-    weightsArray: Array(ex.sets || 0).fill(0),
-    unit: 'kg'
-  }))
-};
-
-  saveTemplate(currentUser, name, templateData)
-    .then(() => {
-      newTemplateExercises = [];
-      document.getElementById('newTemplateList').innerHTML = '';
-      document.getElementById('newTemplateName').value = '';
-      toggleTemplateBuilder();
-      loadProgramTemplates();
-      loadTemplateDropdown();
-      alert('Template saved');
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Failed to save template');
-    });
-}
-
-// ===== Program Builder =====
-let programDays = [];
-
-function loadProgramTemplates() {
-  populateTemplateSelect("programTemplateSelect");
-}
-
-function addDayToProgram() {
-  const sel = document.getElementById("programTemplateSelect");
-  const val = sel.value;
-  if (!val) return;
-  const data = JSON.parse(val);
-  programDays.push(data);
-  const list = document.getElementById("programDaysList");
-  const li = document.createElement('li');
-  li.textContent = sel.options[sel.selectedIndex].textContent;
-  list.appendChild(li);
-}
-
-function saveProgram() {
-  const name = document.getElementById("programName").value.trim();
-  if (!name || programDays.length === 0) return alert('Program info missing');
-  const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
-  const id = Date.now();
-  programs.push({ id, name, days: programDays });
-  localStorage.setItem(`programs_${currentUser}`, JSON.stringify(programs));
-  programDays = [];
-  document.getElementById("programDaysList").innerHTML = '';
-  loadProgramDropdown();
-  alert('Program saved');
-}
-
-function loadProgramDropdown() {
-  const select = document.getElementById('programSelect');
-  if (!select) return;
-  select.innerHTML = '';
-  const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
-  programs.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.name;
-    select.appendChild(opt);
-  });
-}
-
-function startProgram() {
-  const select = document.getElementById('programSelect');
-  const id = select.value;
-  const start = document.getElementById('programStart').value || new Date().toISOString().split('T')[0];
-  if (!id) return alert('Select a program');
-  localStorage.setItem(`activeProgram_${currentUser}`, JSON.stringify({ programId: Number(id), startDate: start }));
-  alert('Program started');
-  checkActiveProgram();
-}
-
-function checkActiveProgram() {
-  const active = JSON.parse(localStorage.getItem(`activeProgram_${currentUser}`));
-  if (!active) return;
-  const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
-  const program = programs.find(p => p.id === active.programId);
-  if (!program) return;
-  const start = new Date(active.startDate);
-  const today = new Date();
-  const diff = Math.floor((today.setHours(0,0,0,0) - start.setHours(0,0,0,0)) / 86400000);
-  if (diff < 0 || diff >= program.days.length) {
-    localStorage.removeItem(`activeProgram_${currentUser}`);
-    return;
-  }
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const dayTemplate = program.days[diff];
-  const todayStr = new Date().toISOString().split('T')[0];
-  if (!workouts.some(w => w.date === todayStr)) {
-    const tpl = JSON.parse(JSON.stringify(dayTemplate));
-    tpl.date = todayStr;
-    workouts.push(tpl);
-    localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  }
-  renderWorkouts();
-}
-
-function loadTodayProgram() {
-  checkActiveProgram();
-}
-
-
- 
-function completeWorkout() {
-  const date = new Date().toISOString().split('T')[0];
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  if (!workouts.some(w => w.date === date)) {
-    workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
-    localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-    trackWorkoutDate(date);
-  }
-  renderWorkouts();
-  renderWorkoutHistory();
-}
-
-async function saveWorkoutToBackend(workout) {
-  const action = {
-    url: `${window.SERVER_URL}/saveWorkout`,
-    options: {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: currentUser, workout })
-    }
-  };
-  try {
-    await fetch(action.url, { ...action.options, credentials: "include" });
-  } catch (err) {
-    console.warn('offline - queueing workout', err);
-    if (window.queueAction) queueAction(action);
-  }
-}
-
-async function loadWorkoutsFromBackend() {
-  try {
-    const res = await fetch(`${window.SERVER_URL}/getWorkouts?username=${currentUser}`, { credentials: "include" });
-    const data = await res.json();
-    if (data.workouts) {
-      localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(data.workouts));
-      renderWorkouts();
-    }
-  } catch (err) {
-    console.error('Failed to load workouts:', err);
-  }
-}
-  
-function getLastExerciseEntry(exerciseName) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-
-  // Flatten all sets for that exercise
-  let lastMatch = null;
-
-  for (let i = workouts.length - 1; i >= 0; i--) {
-    const log = workouts[i].log;
-    const match = log.find(entry => entry.exercise === exerciseName);
-    if (match) {
-      lastMatch = match;
-      break;
-    }
-  }
-
-  return lastMatch;
-}
-
-function handleExerciseBlur() {
-  const name = document.getElementById("exercise").value.trim();
-  if (!name) return;
-
-  const last = getLastExerciseEntry(name);
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const suggestion = getProgressiveOverloadSuggestion(name, workouts);
-  const msgDiv = document.getElementById("progressReminder");
-  msgDiv.innerHTML = '';
-
-  if (last) {
-    const reps = last.repsArray.join(', ');
-    const weights = last.weightsArray.join(', ');
-    msgDiv.innerHTML = `
-      <div style="margin:10px 0; color: var(--highlight); font-weight:bold;">
-        Last time: ${reps} reps at ${weights} ${last.unit} <br>
-        Try to beat that today!${suggestion ? `<br>Recommended: ${suggestion}` : ''}
-      </div>`;
-
-    // auto-fill today's sets with progression
-    document.getElementById('sets').value = last.sets || last.repsArray.length;
-    generateSetInputs(last.sets || last.repsArray.length);
-    last.repsArray.forEach((r, i) => {
-      const inc = suggestion && suggestion.includes('rep') ? r + 1 : r;
-      document.getElementById(`reps_${i}`).value = inc;
-    });
-    last.weightsArray.forEach((w, i) => {
-      let val = w;
-      if (suggestion && suggestion.includes('2.5')) val = w + 2.5;
-      document.getElementById(`weight_${i}`).value = val;
-    });
-    document.getElementById('weightUnit').value = last.unit || 'kg';
-  }
-}
-
-
-
-function addMacroMeal() {
-    const idx = macroMeals.length;
-    const container = document.getElementById("macroMealContainer");
-    container.insertAdjacentHTML("beforeend", `
-      <div id="meal${idx}" style="border:1px solid var(--border-color); padding:10px; margin:10px 0;">
-        <button data-idx="${idx}" class="toggle-meal">➕ Meal ${idx+1}</button>
-        <div id="mealContent${idx}" style="display:block; margin-top:10px;">
-          <label>Protein:</label>
-          <input type="number" id="protein${idx}" placeholder="g">
-          <label>Carbs:</label>
-          <input type="number" id="carbs${idx}" placeholder="g">
-          <label>Fats:</label>
-          <input type="number" id="fats${idx}" placeholder="g">
-          <br>
-          <button data-idx="${idx}" class="meal-submit">➕ Add to Tracker</button>
-          <button data-idx="${idx}" class="remove-meal">❌ Remove</button>
-        </div>
-      </div>
-    `);
-    macroMeals.push({ protein:0, carbs:0, fats:0 });
-
-    // Wire up this meal’s toggle, submit, and remove
-    const toggleBtn = document.querySelector(`#meal${idx} .toggle-meal`);
-    const content  = document.getElementById(`mealContent${idx}`);
-    toggleBtn.addEventListener("click", () => {
-      if (content.style.display === "none") {
-        content.style.display = "block";
-        toggleBtn.textContent = toggleBtn.textContent.replace("➕","🔽");
-      } else {
-        content.style.display = "none";
-        toggleBtn.textContent = toggleBtn.textContent.replace("🔽","➕");
-      }
-    });
-    document.querySelector(`#meal${idx} .meal-submit`)
-            .addEventListener("click", () => submitMeal(idx));
-    document.querySelector(`#meal${idx} .remove-meal`)
-            .addEventListener("click", () => removeMacroMeal(idx));
-
-  }
-
-function toggleMeal(contentId, btn) {
-  const div = document.getElementById(contentId);
-  if (div.style.display === "none") {
-    div.style.display = "block";
-    btn.innerText = btn.innerText.replace("➕", "🔽");
-  } else {
-    div.style.display = "none";
-    btn.innerText = btn.innerText.replace("🔽", "➕");
-  }
-}
-
-function submitMeal(idx) {
-  checkMacroReset();
-  if (!localStorage.getItem("macroResetTime")) {
-    localStorage.setItem("macroResetTime", Date.now().toString());
-  }
-  const p = Number(document.getElementById(`protein${idx}`).value) || 0;
-  const c = Number(document.getElementById(`carbs${idx}`).value) || 0;
-  const f = Number(document.getElementById(`fats${idx}`).value) || 0;
-
-  macroMeals[idx] = { protein: p, carbs: c, fats: f };
-
-  // Save meals to dailyMacroMeals array in localStorage
-  const currentMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
-  currentMeals[idx] = { protein: p, carbs: c, fats: f };
-  localStorage.setItem("dailyMacroMeals", JSON.stringify(currentMeals));
-
-  // Update totals and save
-  const newTotals = currentMeals.reduce((totals, meal) => {
-    totals.protein += meal.protein || 0;
-    totals.carbs += meal.carbs || 0;
-    totals.fats += meal.fats || 0;
-    return totals;
-  }, { protein:0, carbs:0, fats:0 });
-
-  updateDailyMacroProgress(newTotals.protein, newTotals.carbs, newTotals.fats);
-
-  // Now update the UI with the updated macro meals and new daily progress
-  updateMacroUI();
-
-  // collapse form
-  const content = document.getElementById(`mealContent${idx}`);
-  if (content) {
-    content.style.display = "none";
-    document.querySelector(`#meal${idx} .toggle-meal`).textContent =
-      document.querySelector(`#meal${idx} .toggle-meal`).textContent.replace("🔽", "➕");
-  }
-
-  const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
-  const meals = macroMeals; // your meals array
-  const totals = { calories: totalCals, protein: totalProtein, carbs: totalCarbs, fat: totalFats };
-
-  saveDailyMacroLog(currentUser, today, meals, totals);
-}
-
-
-  
-  
-function resetMeal(index) {
-  document.getElementById(`protein${index}`).value = '';
-  document.getElementById(`carbs${index}`).value = '';
-  document.getElementById(`fats${index}`).value = '';
-  updateMacroUI();
-}
-
-  
-function updateMacroTotals() {
-  totalProtein = 0;
-  totalCarbs = 0;
-  totalFats = 0;
-
-  macroMeals.forEach(index => {
-    const protein = +document.getElementById(`protein${index}`)?.value || 0;
-    const carbs = +document.getElementById(`carbs${index}`)?.value || 0;
-    const fats = +document.getElementById(`fats${index}`)?.value || 0;
-
-    totalProtein += protein;
-    totalCarbs += carbs;
-    totalFats += fats;
-  });
-
-  const totalCalories = (totalProtein * 4) + (totalCarbs * 4) + (totalFats * 9);
-
-  document.getElementById("macroEnergy").textContent = `${totalCalories.toFixed(0)}`;
-  document.getElementById("macroProtein").textContent = `${totalProtein.toFixed(1)}`;
-  document.getElementById("macroCarbs").textContent = `${totalCarbs.toFixed(1)}`;
-  document.getElementById("macroFat").textContent = `${totalFats.toFixed(1)}`;
-}
-  
-
-function removeMacroMeal(idx) {
-    macroMeals.splice(idx, 1);
-    const node = document.getElementById(`meal${idx}`);
-    if (node) node.remove();
-    // Rebuild the entire container so IDs line up again
-    const oldMeals = macroMeals.slice();
-    macroMeals = [];
-    document.getElementById("macroMealContainer").innerHTML = "";
-    oldMeals.forEach((_, i) => addMacroMeal());
-    updateMacroUI();
-  }
-
-function calculateMacroTargets() {
-  const w = +document.getElementById("macroWeight").value;
-  const hRaw = +document.getElementById("macroHeight").value;
-  if (!w || !hRaw) {
-    alert("Enter both weight and height.");
-    return;
-  }
-  const unit = document.getElementById("heightUnit").value;
-  const hInches = unit==="cm" ? hRaw/2.54 : hRaw;
-  const activity = +document.getElementById("macroActivity").value;
-  const age = 25; // or prompt separately
-  const tdee = Math.round((10*(w*0.453592) + 6.25*(hInches*2.54) - 5*age + 5)*activity);
-
-  const pMin = Math.round(0.78*w), pMax = Math.round(2.0*w);
-  const fMin = Math.round(0.3*w),  fMax = Math.round(0.6*w);
-  const cMin = Math.round(1.5*w),  cMax = Math.round(3.0*w);
-
-  macroRanges = {
-    protein: { min:pMin, max:pMax },
-    fat:     { min:fMin, max:fMax },
-    carbs:   { min:cMin, max:cMax },
-    tdee
-  };
-
-      // reveal the slider section when saved targets are loaded
-      document.getElementById("adjustMacroSection").style.display = "block";
-  document.getElementById("proteinSlider").min = pMin;
-  document.getElementById("proteinSlider").max = pMax;
-  document.getElementById("proteinSlider").value = pMin;
-
-  document.getElementById("fatSlider").min = fMin;
-  document.getElementById("fatSlider").max = fMax;
-  document.getElementById("fatSlider").value = fMin;
-
-  document.getElementById("carbSlider").min = cMin;
-  document.getElementById("carbSlider").max = cMax;
-  document.getElementById("carbSlider").value = cMin;
-
-  document.getElementById("calTarget").textContent = tdee;
-  document.getElementById("macroCalcForm").style.display = "none";
-  const msBtn = document.getElementById("macroSettingsBtn");
-  if (msBtn) msBtn.textContent = "Macro Settings";
-  adjustMacros();
-}
-
-function updateMacroUI() {
-  // Calculate totals from macroMeals array
-  let totalProtein = 0, totalCarbs = 0, totalFats = 0;
-  macroMeals.forEach(meal => {
-    totalProtein += meal.protein || 0;
-    totalCarbs += meal.carbs || 0;
-    totalFats += meal.fats || 0;
-  });
-
-  const totalCals = totalProtein * 4 + totalCarbs * 4 + totalFats * 9;
-
-  const cardioCals = getTodayCardioCalories();
-  const netCals = Math.max(0, totalCals - cardioCals);
-
-  // Update Top Bar Targets and progress
-  document.getElementById("macroCalsTarget").textContent = macroTargetCalories;
-  document.getElementById("macroProteinTarget").textContent = macroTargetProtein;
-  document.getElementById("macroFatTarget").textContent = macroTargetFat;
-  document.getElementById("macroCarbsTarget").textContent = macroTargetCarbs;
-
-  document.getElementById("calsBar").max = macroTargetCalories;
-  document.getElementById("proteinBar").max = macroTargetProtein;
-  document.getElementById("fatBar").max = macroTargetFat;
-  document.getElementById("carbBar").max = macroTargetCarbs;
-
-  document.getElementById("calsBar").value = netCals;
-  document.getElementById("proteinBar").value = totalProtein;
-  document.getElementById("fatBar").value = totalFats;
-  document.getElementById("carbBar").value = totalCarbs;
-
-  document.getElementById("macroCalsProgress").textContent = totalCals;
-  document.getElementById("macroCalsNet").textContent = netCals;
-  document.getElementById("macroProteinProgress").textContent = totalProtein;
-  document.getElementById("macroFatProgress").textContent = totalFats;
-  document.getElementById("macroCarbsProgress").textContent = totalCarbs;
-
-  // Update textual summary (optional)
-  document.getElementById("macroTotalCals").textContent = `${totalCals} / ${macroTargetCalories} kcal`;
-}
-
-
-function generateMacroTargets() {
-  const weight = +document.getElementById("bodyWeight").value;
-  const multiplier = +document.getElementById("activityLevel").value;
-
-  if (!weight || !multiplier) return alert("Please enter your weight and activity level.");
-
-  const tdee = weight * multiplier;
-
-  const proteinMin = (0.78 * weight).toFixed(1);
-  const proteinMax = (2.0 * weight).toFixed(1);
-
-  const fatMin = (0.3 * weight).toFixed(1);
-  const fatMax = (0.6 * weight).toFixed(1);
-
-  const carbMin = (1.5 * weight).toFixed(1);
-  const carbMax = (3.0 * weight).toFixed(1);
-
-  document.getElementById("macroTargetsResult").innerHTML = `
-    <h4>Estimated Daily Targets</h4>
-    <p><strong>Calories (TDEE):</strong> ~${tdee} kcal</p>
-    <p><strong>Protein:</strong> ${proteinMin}–${proteinMax}g</p>
-    <p><strong>Fat:</strong> ${fatMin}–${fatMax}g</p>
-    <p><strong>Carbs:</strong> ${carbMin}–${carbMax}g</p>
-  `;
-  
-  // Autofill the target input boxes and show them
-document.getElementById("editableMacroTargets").style.display = 'block';
-document.getElementById("targetCalories").value = Math.round(tdee);
-document.getElementById("targetProtein").value = proteinMax;
-document.getElementById("targetFat").value = fatMax;
-document.getElementById("targetCarbs").value = carbMax;
-}
-
-function saveMacroTargets() {
-  const targets = {
-    calories: +document.getElementById("targetCalories").value,
-    protein: +document.getElementById("targetProtein").value,
-    fat: +document.getElementById("targetFat").value,
-    carbs: +document.getElementById("targetCarbs").value,
-  };
-
-  localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(targets));
-  alert("Targets saved!");
-  renderMacroTargets(); // optional: live refresh UI
-}
-
-
-
-function adjustMacros(changedId) {
-    const p = Number(document.getElementById("proteinSlider").value);
-    const f = Number(document.getElementById("fatSlider").value);
-    const c = Number(document.getElementById("carbSlider").value);
-    const total = p*4 + f*9 + c*4;
-    const limit = macroRanges.tdee || 0;
-
-    if (total > limit) {
-      // automatically clamp carbs (simple approach)
-      const newC = Math.floor((limit - (p*4 + f*9)) / 4);
-      document.getElementById("carbSlider").value = Math.max(newC, 0);
-      return adjustMacros("carbSlider");
-    }
-
-    document.getElementById("proteinVal").textContent = p;
-    document.getElementById("fatVal").textContent = f;
-    document.getElementById("carbVal").textContent = c;
-    document.getElementById("macroTotalCals").textContent = `${total} / ${limit} kcal`;
-
-    // Optionally enforce max on non-changed sliders:
-    if (changedId) {
-      enforceSliderCaps(changedId, p, f, c, limit);
-    }
-  }
-
-
-
-  
-function renderMacroTargets() {
-  const saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`));
-  if (!saved) return;
-
-  document.getElementById("macroProteinTarget").textContent = saved.protein;
-  document.getElementById("macroFatTarget").textContent = saved.fat;
-  document.getElementById("macroCarbsTarget").textContent = saved.carbs;
-  document.getElementById("macroCalsTarget").textContent = saved.calories;
-  const calTargetEl = document.getElementById("calTarget");
-  if (calTargetEl) calTargetEl.textContent = saved.calories;
-
-  document.getElementById("macroProteinProgress").textContent = 0;
-  document.getElementById("macroFatProgress").textContent = 0;
-  document.getElementById("macroCarbsProgress").textContent = 0;
-  document.getElementById("macroCalsProgress").textContent = 0;
-
-  document.getElementById("proteinBar").value = 0;
-  document.getElementById("fatBar").value = 0;
-  document.getElementById("carbBar").value = 0;
-  document.getElementById("calsBar").value = 0;
-
-  // Restore sliders if ranges are known
-  if (macroRanges?.protein) {
-    document.getElementById("proteinSlider").value = saved.protein;
-    document.getElementById("fatSlider").value = saved.fat;
-    document.getElementById("carbSlider").value = saved.carbs;
-    updateSliderMacros();
-  }
-}
-
-
-
-function enforceSliderCaps(changedId, p, f, c, limit) {
-      const sliders = [
-        { id: "proteinSlider", val: p, kc: 4 },
-        { id: "fatSlider",     val: f, kc: 9 },
-        { id: "carbSlider",    val: c, kc: 4 }
-      ];
-      sliders.forEach(s => {
-        if (s.id === changedId) return;
-        const remaining = limit - (p*4 + f*9 + c*4) + s.val * s.kc;
-        const maxAllowed = Math.floor(remaining / s.kc);
-        let key = s.id.replace("Slider", "");
-        if (key === "carb") key = "carbs"; // match macroRanges naming
-        const range = macroRanges[key];
-        if (range) {
-          document.getElementById(s.id).max = Math.min(range.max, maxAllowed);
-        }
-      });
-  }
-  
-function saveSliderMacros() {
-    const p = Number(document.getElementById("proteinSlider").value);
-    const f = Number(document.getElementById("fatSlider").value);
-    const c = Number(document.getElementById("carbSlider").value);
-    const calTotal = p*4 + f*9 + c*4;
-      const target = { calories: calTotal, protein: p, fat: f, carbs: c };
-      // persist to Airtable and update local display
-      saveToAirtable(currentUser, target).then(() => {
-        showToast("Macro targets saved!");
-        saveMacroTargetsToTop(target);
-      });
-  }
-
-
-function updateSliderMacros() {
-  const protein = +document.getElementById("proteinSlider").value;
-  const fat = +document.getElementById("fatSlider").value;
-  const carbs = +document.getElementById("carbSlider").value;
-
-  const calLimit = macroRanges?.tdee || 0;
-  const totalCals = (protein * 4) + (fat * 9) + (carbs * 4);
-
-  document.getElementById("proteinVal").textContent = protein;
-  document.getElementById("fatVal").textContent = fat;
-  document.getElementById("carbVal").textContent = carbs;
-  document.getElementById("macroTotalCals").textContent = `${totalCals} / ${calLimit} kcal`;
-
-  // Do not auto-save here!
-}
-
-
-async function saveToAirtable(username, target) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/MacroTargets`;
-  try {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        fields: {
-          Username: username,
-          Calories: target.calories,
-          Protein:  target.protein,
-          Fat:      target.fat,
-          Carbs:    target.carbs
-        }
-      })
-    });
-    const d = await r.json();
-    if (!r.ok) {
-      console.error("Airtable save error:", d);
-      alert(`Could not save macros: ${d.error?.message || "unknown"}`);
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Network error saving macros.");
-  }
-}
-
-  
-function saveMacroTargetsToTop(target) {
-    localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(target));
-    document.getElementById("macroCalsTarget").textContent    = target.calories;
-    document.getElementById("macroProteinTarget").textContent = target.protein;
-    document.getElementById("macroFatTarget").textContent     = target.fat;
-    document.getElementById("macroCarbsTarget").textContent   = target.carbs;
-    // also reflect in the adjust section
-    const calTargetEl = document.getElementById("calTarget");
-    if (calTargetEl) calTargetEl.textContent = target.calories;
-    macroRanges = {
-      protein: { min: 0, max: target.protein },
-      fat:     { min: 0, max: target.fat },
-      carbs:   { min: 0, max: target.carbs },
-      tdee:    target.calories
-    };
-  }
-
-function renderMacroSlots() {
-    const saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`));
-    if (!saved) return;
-    document.getElementById("macroCalsTarget").textContent    = saved.calories;
-    document.getElementById("macroProteinTarget").textContent = saved.protein;
-    document.getElementById("macroFatTarget").textContent     = saved.fat;
-    document.getElementById("macroCarbsTarget").textContent   = saved.carbs;
-    document.getElementById("calsBar").max   = saved.calories;
-    document.getElementById("proteinBar").max= saved.protein;
-    document.getElementById("fatBar").max    = saved.fat;
-    document.getElementById("carbBar").max   = saved.carbs;
-    const calTargetEl = document.getElementById("calTarget");
-    if (calTargetEl) calTargetEl.textContent = saved.calories;
-    macroRanges = {
-      protein: { min: 0, max: saved.protein },
-      fat:     { min: 0, max: saved.fat },
-      carbs:   { min: 0, max: saved.carbs },
-      tdee:    saved.calories
-    };
-  }
-
-  
-function applyCustomCalories() {
-  const input = document.getElementById("customCalories");
-  const customCal = +input.value;
-
-  if (!customCal || customCal < 800) {
-    alert("Please enter a valid calorie value (e.g. 2800)");
-    return;
-  }
-
-  macroTargetCalories = customCal;
-
-  // Allocate 30% Protein, 25% Fat, 45% Carbs
-  const protein = Math.round((customCal * 0.3) / 4);
-  const fat     = Math.round((customCal * 0.25) / 9);
-  const carbs   = Math.round((customCal * 0.45) / 4);
-
-  macroTargetProtein = protein;
-  macroTargetFat     = fat;
-  macroTargetCarbs   = carbs;
-
-  macroRanges = {
-    protein: { min: 0, max: Math.round(protein * 1.2) },
-    fat:     { min: 0, max: Math.round(fat * 1.2) },
-    carbs:   { min: 0, max: Math.round(carbs * 1.2) },
-    tdee:    customCal
-  };
-
-  // Set slider values
-  document.getElementById("proteinSlider").value = 0;
-  document.getElementById("fatSlider").value = 0;
-  document.getElementById("carbSlider").value = 0;
-
-  // Set slider bounds (slightly above target for flexibility)
-  document.getElementById("proteinSlider").max = Math.round(protein * 1.2);
-  document.getElementById("fatSlider").max = Math.round(fat * 1.2);
-  document.getElementById("carbSlider").max = Math.round(carbs * 1.2);
-
-  const calTargetEl = document.getElementById("calTarget");
-  if (calTargetEl) calTargetEl.textContent = customCal;
-
-  updateMacroUI();
-  adjustMacros();
-}
-
- function toggleMacroAdjust() {
-  const section = document.getElementById("adjustMacroSection");
-  const btn = document.getElementById("adjustToggleBtn");
-
-  if (section.style.display === "none") {
-    section.style.display = "block";
-    btn.textContent = "▼ Adjust Macros";
-  } else {
-    section.style.display = "none";
-    btn.textContent = "▶ Adjust Macros";
-  }
-}
-
-function getTodayDateString() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10); // YYYY-MM-DD
-}
-
-function loadDailyMacroProgress() {
-  const today = getTodayDateString();
-  const savedDate = localStorage.getItem("dailyMacroDate");
-  if (savedDate !== today) {
-    // New day, reset saved macros
-    localStorage.setItem("dailyMacroDate", today);
-    localStorage.setItem("dailyMacroProgress", JSON.stringify({ protein: 0, carbs: 0, fats: 0 }));
-    return { protein: 0, carbs: 0, fats: 0 };
-  }
-
-  const progress = JSON.parse(localStorage.getItem("dailyMacroProgress"));
-  return progress || { protein: 0, carbs: 0, fats: 0 };
-}
-
-function getTodayCardioCalories() {
-  if (!currentUser) return 0;
-  const today = getTodayDateString();
-  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  return log.filter(e => e.date === today)
-            .reduce((sum, e) => sum + (parseFloat(e.calories) || 0), 0);
-}
-
-function getCardioMinutesForDate(date) {
-  if (!currentUser) return 0;
-  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  return log.filter(e => e.date === date)
-            .reduce((sum, e) => sum + (parseFloat(e.duration) || 0), 0);
-}
-
-function saveDailyMacroProgress(protein, carbs, fats) {
-  const today = getTodayDateString();
-  localStorage.setItem("dailyMacroDate", today);
-  localStorage.setItem("dailyMacroProgress", JSON.stringify({ protein, carbs, fats }));
-}
-
-function renderDailyMacroProgress() {
-  const progress = loadDailyMacroProgress();
-
-  const totalCals = progress.protein * 4 + progress.carbs * 4 + progress.fats * 9;
-
-  document.getElementById("proteinBar").value = progress.protein;
-  document.getElementById("macroProteinProgress").textContent = progress.protein;
-
-  document.getElementById("carbBar").value = progress.carbs;
-  document.getElementById("macroCarbsProgress").textContent = progress.carbs;
-
-  document.getElementById("fatBar").value = progress.fats;
-  document.getElementById("macroFatProgress").textContent = progress.fats;
-
-  document.getElementById("calsBar").value = totalCals;
-  document.getElementById("macroCalsProgress").textContent = totalCals;
-}
-
-// Call this when a meal is added or macros change:
-function updateDailyMacroProgress(protein, carbs, fats) {
-  const current = loadDailyMacroProgress();
-  const newProtein = current.protein + protein;
-  const newCarbs = current.carbs + carbs;
-  const newFats = current.fats + fats;
-
-  saveDailyMacroProgress(newProtein, newCarbs, newFats);
-  renderDailyMacroProgress();
-}
-
-function loadAndRenderDailyProgress() {
-  const progress = loadDailyMacroProgress();
-  // Update macroMeals to match progress so your app state is consistent
-  macroMeals = [{ protein: progress.protein, carbs: progress.carbs, fats: progress.fats }];
-
-  // Update UI accordingly
-  updateMacroUI();
-}
-
-// Call on page/app start
-loadAndRenderDailyProgress();
-
-
-async function saveDailyMacroLog(username, date, meals, totals) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/DailyLogs`;
-  const body = {
-    fields: {
-      Username: username,
-      Date: date,
-      Type: "Macros",
-      LogData: JSON.stringify(meals),
-      CaloriesTotal: totals.calories,
-      ProteinTotal: totals.protein,
-      CarbsTotal: totals.carbs,
-      FatTotal: totals.fat
-    }
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Failed to save daily log:", data);
-      alert("Failed to save daily log");
-    }
-    return data;
-  } catch (error) {
-    console.error("Network error saving daily log:", error);
-    alert("Network error saving daily log");
-  }
-}
-
-
-
-  
-async function saveDailyMacroLog(username, date, meals, totals) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/DailyLogs`;
-  const body = {
-    fields: {
-      Username: username,
-      Date: date,
-      Type: "Macros",
-      LogData: JSON.stringify(meals),
-      CaloriesTotal: totals.calories,
-      ProteinTotal: totals.protein,
-      CarbsTotal: totals.carbs,
-      FatTotal: totals.fat
-    }
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Failed to save daily log:", data);
-      alert("Failed to save daily log");
-    }
-    return data;
-  } catch (error) {
-    console.error("Network error saving daily log:", error);
-    alert("Network error saving daily log");
-  }
-}
-  
-function checkMacroReset() {
-  const lastReset = parseInt(localStorage.getItem("macroResetTime")) || Date.now();
-  const now = Date.now();
-
-  if (now - lastReset >= 86400000) { // 24h
-    const previousTotals = JSON.parse(localStorage.getItem("dailyMacroProgress")) || { protein:0, carbs:0, fats:0 };
-    const previousMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
-    const date = new Date(lastReset).toISOString().split('T')[0];
-    addMacroHistoryEntry(date, previousMeals, previousTotals);
-    saveDailyMacroLog(currentUser, date, previousMeals, previousTotals);
-
-    const calories = previousTotals.protein * 4 + previousTotals.carbs * 4 + previousTotals.fats * 9;
-    const cardioMinutes = getCardioMinutesForDate(date);
-    const wKey = `bodyweightLog_${currentUser}`;
-    const wLog = JSON.parse(localStorage.getItem(wKey)) || [];
-    const wEntry = wLog.find(e => e.date === date);
-    if (wEntry) {
-      wEntry.calories = calories;
-      wEntry.cardio = cardioMinutes;
-      localStorage.setItem(wKey, JSON.stringify(wLog));
-      renderWeights();
-    }
-
-    localStorage.setItem("dailyMacroProgress", JSON.stringify({ protein:0, carbs:0, fats:0 }));
-    localStorage.setItem("dailyMacroMeals", JSON.stringify([]));
-    localStorage.setItem("macroResetTime", now.toString());
-  } else if (!localStorage.getItem("macroResetTime")) {
-    localStorage.setItem("macroResetTime", now.toString());
-  }
-}
-
-
-function openMacroSettings() {
-  // Hide the main macros content and reveal the settings view
-  document.getElementById('macrosMainContent').style.display = 'none';
-  document.getElementById('macrosSettingsContent').style.display = 'block';
-}
-
-function closeMacroSettings() {
-  // Return to the main macros view
-  document.getElementById('macrosSettingsContent').style.display = 'none';
-  document.getElementById('macrosMainContent').style.display = 'block';
-}
-
-// expose helpers for inline handlers
-window.openMacroSettings = openMacroSettings;
-window.closeMacroSettings = closeMacroSettings;
-
-function toggleMacroCalcForm() {
-  const form = document.getElementById('macroCalcForm');
-  const btn = document.getElementById('macroSettingsBtn');
-  if (!form || !btn) return;
-  if (form.style.display === 'none') {
-    form.style.display = 'block';
-    btn.textContent = '⬅️ Back';
-  } else {
-    form.style.display = 'none';
-    btn.textContent = 'Macro Settings';
-  }
-}
-window.toggleMacroCalcForm = toggleMacroCalcForm;
-
-function updateNavForTrainer(isTrainer) {
-  document.querySelectorAll('.coach-only').forEach(el => {
-    el.style.display = isTrainer ? 'block' : 'none';
-  });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  const saved = JSON.parse(localStorage.getItem('trainerMode') || 'false');
-  const toggle = document.getElementById('trainerModeToggle');
-  if (toggle) toggle.checked = saved;
-  updateNavForTrainer(saved);
-    if (toggle) {
-      toggle.addEventListener('change', e => {
-        localStorage.setItem('trainerMode', JSON.stringify(e.target.checked));
-        updateNavForTrainer(e.target.checked);
-        if (e.target.checked) showTab('coachingTab');
-      });
-    }
-  });
-
-
-  updateAddButtonState();
-  
-// LOGOUT
-function logout() {
-  localStorage.removeItem("fitnessAppUser");
-  location.reload();
-}
-function animateSwitch(newEl) {
-  console.log('animateSwitch called for', newEl.id);
-  const previous = activeSection;
-  if (previous && previous !== newEl) {
-    previous.classList.add('fade-out');
-    setTimeout(() => {
-      previous.style.display = 'none';
-      previous.classList.remove('fade-out', 'active');
-    }, 400);
-  }
-  newEl.style.display = 'block';
-  requestAnimationFrame(() => {
-    newEl.classList.add('active');
-    console.log('active class added to', newEl.id);
-  });
-  setTimeout(() => {
-    if (!newEl.classList.contains('active')) {
-      console.warn('Forcing active class on', newEl.id);
-      newEl.style.display = 'block';
-      newEl.classList.add('active');
-    }
-  }, 500);
-  activeSection = newEl;
-}
-
-function animateTabSwitch(newTab) {
-  const previous = activeTab;
-  if (previous && previous !== newTab) {
-    previous.classList.add('fade-out');
-    setTimeout(() => {
-      previous.style.display = 'none';
-      previous.classList.remove('fade-out', 'active');
-    }, 300);
-  }
-  newTab.style.display = 'block';
-  requestAnimationFrame(() => newTab.classList.add('active'));
-  activeTab = newTab;
-}
-
-function openSection(section) {
-  document.getElementById('dashboardContainer').style.display = 'none';
-  const el = document.getElementById(section + 'Container');
-  animateSwitch(el);
-  if (section === 'pocketFit') {
-    showTab('logTab');
-  } else if (section === 'pocketLifestyle') {
-    if (!window.lifestyleInitialized && window.initLifestyle) {
-      window.initLifestyle();
-      window.lifestyleInitialized = true;
-    }
-  }
-}
-
-function openDashboard() {
-  const dash = document.getElementById('dashboardContainer');
-  animateSwitch(dash);
-}
-
-  
-// ===== TRAINING LOG & TEMPLATES =====
-
-function toggleWorkoutDetails(index) {
-  const el = document.getElementById(`workoutDetails${index}`);
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-function calculateWorkoutVolume(workout) {
-  let total = 0;
-
-  workout.log.forEach(entry => {
-    const reps = entry.repsArray || [];
-    const weights = entry.weightsArray || [];
-
-    for (let i = 0; i < reps.length; i++) {
-      const rep = reps[i];
-      const weight = weights[i] || 0;
-      total += rep * weight;
-    }
-  });
-
-  return total;
-}
-
-
-function removeLogEntry(workoutIndex, entryIndex) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  workouts[workoutIndex].log.splice(entryIndex, 1);
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  renderWorkouts();
-}
-
-function removeWorkout(index) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  if (confirm("Delete this entire workout?")) {
-    workouts.splice(index, 1);
-    localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-    renderWorkouts();
-  }
-}
-
-function renderWorkoutHistory() {
-  const container = document.getElementById("logHistoryContainer");
-  container.innerHTML = "";
-
-
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const history = JSON.parse(localStorage.getItem(`workoutHistory_${currentUser}`)) || [];
-  const all = history.concat(workouts.filter(w => w.log && w.log.length > 0));
-  all
-
-    .slice()
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .forEach(workout => {
-      const div = document.createElement("div");
-      div.style.border = "1px solid var(--border-color)";
-      div.style.padding = "10px";
-      div.style.marginTop = "10px";
-
-      const exercisesHtml = workout.log
-        .map(entry => {
-          const sets = entry.repsArray
-            .map((rep, i) => `${rep} x ${entry.weightsArray[i] ?? '-'} ${entry.unit || 'kg'}`)
-            .join(', ');
-          return `${entry.exercise}: ${sets}`;
-        })
-        .join('<br>');
-
-        const volume = calculateWorkoutVolume(workout);
-        const unit = workout.log[0]?.unit || 'kg';
-        const restInfo = workout.restBreaks && workout.restBreaks.length ? `<br>Restbreaks: ${workout.restBreaks.join(', ')} minutes` : '';
-
-        div.innerHTML = `<strong>${workout.title}</strong><br>${exercisesHtml}<br>Total Volume: ${volume} ${unit}${restInfo}`;
-      container.appendChild(div);
-    });
-}
-
-function addWeightEntry() {
-  const weight = +document.getElementById("currentWeightInput").value;
-  const dateField = document.getElementById("weightDateInput");
-  const date = dateField.value || new Date().toISOString().split('T')[0];
-  if (!weight) return alert("Enter weight");
-  const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  log.push({ weight, date, calories: null, cardio: null });
-  localStorage.setItem(`bodyweightLog_${currentUser}`, JSON.stringify(log));
-  if (dateField) dateField.value = '';
-  renderWeights();
-}
-
-function renderWeights() {
-  const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  const body = document.getElementById("weightBody");
-  body.innerHTML = '';
-  log.forEach((entry, index) => {
-    body.innerHTML += `<tr><td>${entry.date}</td><td>${entry.weight}</td><td>${entry.calories ?? '-'}</td><td>${entry.cardio ?? '-'}</td><td><button onclick="removeWeightEntry(${index})" class="remove-btn">❌</button></td></tr>`;
-  });
-  if (document.getElementById('progressTab').classList.contains('active')) {
-    showWorkoutProgress();
-  }
-}
-
-function removeWeightEntry(index) {
-  const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  log.splice(index, 1);
-  localStorage.setItem(`bodyweightLog_${currentUser}`, JSON.stringify(log));
-  renderWeights();
-}
-
-function estimateCalories() {
-  const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  const avgCals = +document.getElementById("avgCalories").value;
-  if (log.length < 7) return alert("Need at least 7 days of weight entries.");
-  const weightDiff = log[0].weight - log[log.length - 1].weight;
-  const caloriesBurned = weightDiff * 7700;
-  const maintenance = Math.round(avgCals + (caloriesBurned / log.length));
-  document.getElementById("calorieEstimateTable").innerHTML = `
-    <tr><td>Maintenance</td><td>${maintenance} kcal</td></tr>
-    <tr><td>Weight Loss (-500)</td><td>${maintenance - 500} kcal</td></tr>
-    <tr><td>Weight Gain (+500)</td><td>${maintenance + 500} kcal</td></tr>
-  `;
-}
-
-function calculateCaloriesEquation() {
-  const weight = +document.getElementById('calcWeight').value;
-  const height = +document.getElementById('calcHeight').value;
-  const activity = +document.getElementById('calcActivity').value;
-  if (!weight || !height) {
-    alert('Enter weight and height.');
-    return;
-  }
-  const age = 25;
-  const tdee = Math.round((10 * (weight * 0.453592) + 6.25 * (height * 2.54) - 5 * age + 5) * activity);
-  const resultEl = document.getElementById('calorieCalcResult');
-  if (resultEl) resultEl.textContent = `Estimated maintenance calories: ${tdee} kcal`;
-}
-
-// ===== CARDIO TRACKER =====
-function addCardioEntry() {
-  const type = document.getElementById("cardioType").value.trim();
-  const duration = +document.getElementById("cardioDuration").value;
-  const distance = document.getElementById("cardioDistance").value;
-  const calories = +document.getElementById("cardioCalories").value || 0;
-  const notes = document.getElementById("cardioNotes").value;
-  const date = new Date().toISOString().split('T')[0];
-  if (!type || !duration) return alert("Type and Duration are required");
-  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  log.push({ date, type, duration, distance, calories, notes });
-  localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
-  renderCardio();
-  updateMacroUI();
-}
-
-function completeCardioSession() {
-  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const date = new Date().toISOString().split('T')[0];
-  log.push({ date, type: 'Session Complete', duration: 0, distance: 0, calories: 0, notes: '' });
-  localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
-  renderCardio();
-  updateMacroUI();
-}
-
-function renderCardio() {
-  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const body = document.getElementById("cardioBody");
-  body.innerHTML = '';
-  log.forEach((entry, index) => {
-    body.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn">❌</button></td></tr>`;
-  });
-  if (document.getElementById('progressTab').classList.contains('active')) {
-    showWorkoutProgress();
-  }
-}
-
-function removeCardioEntry(index) {
-  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  log.splice(index, 1);
-  localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
-  renderCardio();
-  updateMacroUI();
-}
-
-let progressChart;
-
-function renderLineChart(labels, label, data, trend, forecast) {
-  const ctx = document.getElementById('progressCanvas').getContext('2d');
-  if (progressChart) progressChart.destroy();
-  progressChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label, data, tension: .4 },
-        trend ? { label: 'Trend', data: trend, borderDash: [5,5], borderColor: '#888', tension:.4, fill:false } : null,
-        forecast ? { label: 'Forecast', data: forecast, borderColor: '#f00', borderDash: [2,2], tension:.4, fill:false } : null
-      ].filter(Boolean)
-    },
-    options: { scales: { y: { beginAtZero: true } } }
-  });
-}
-
-function renderExerciseProgress() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const progressMap = {};
-
-  // gather last two entries for each exercise
-  workouts.sort((a, b) => a.date.localeCompare(b.date));
-  workouts.forEach(w => {
-    (w.log || []).forEach(e => {
-      if (!progressMap[e.exercise]) progressMap[e.exercise] = [];
-      progressMap[e.exercise].push(e);
-      if (progressMap[e.exercise].length > 2) {
-        progressMap[e.exercise].shift();
-      }
-    });
-  });
-
-  const container = document.getElementById('exerciseProgress');
-  container.innerHTML = '';
-
-  Object.entries(progressMap).forEach(([name, entries]) => {
-    if (entries.length < 2) return;
-    const prev = entries[0];
-    const latest = entries[1];
-
-    const prevText = `${prev.weightsArray[0]} ${prev.unit || ''} x ${prev.repsArray[0]}`;
-    const latestText = `${latest.weightsArray[0]} ${latest.unit || ''} x ${latest.repsArray[0]}`;
-
-    const p = document.createElement('p');
-    p.innerHTML = `<strong>${name}</strong> <del>${prevText}</del> → ${latestText}`;
-    container.appendChild(p);
-  });
-}
-
-async function fetchWorkoutHistory() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  return workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }));
-}
-
-function applyDateRange(history) {
-  const start = document.getElementById('startRange').value;
-  const end = document.getElementById('endRange').value;
-  if (!start && !end) return history;
-  return history.filter(h => {
-    const d = h.date;
-    if (start && d < start) return false;
-    if (end && d > end) return false;
-    return true;
-  });
-}
-
-async function fetchCardioHistory() {
-  const cardio = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  return cardio.map(c => ({ date: c.date, duration: c.duration }));
-}
-
-async function fetchBodyweightHistory() {
-  const weights = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  return weights.map(w => ({ date: w.date, weight: w.weight }));
-}
-
-function setActiveProgress(btnId) {
-  document.querySelectorAll('.progress-nav button').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById(btnId);
-  if (btn) btn.classList.add('active');
-}
-
-async function showWorkoutProgress(data) {
-  setActiveProgress('workoutProgressBtn');
-  const workouts = Array.isArray(data?.workouts) ? data.workouts : [];
-  if (data && workouts.length === 0) {
-    // nothing to show
-    return;
-  }
-  const history = workouts.length
-    ? workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }))
-    : await fetchWorkoutHistory();
-  const filtered = applyDateRange(history);
-  const dates = filtered.map(h => h.date);
-  const vols = filtered.map(h => h.volume);
-  document.getElementById('exerciseProgress').style.display = 'none';
-  document.getElementById('progressCanvas').style.display = 'block';
-  const trend = trendPoints(vols);
-  const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(vols, 4));
-  renderLineChart(dates.concat(new Array(4).fill('')), 'Total Volume', vols.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
-}
-
-async function showCardioProgress() {
-  setActiveProgress('cardioProgressBtn');
-  const history = await fetchCardioHistory();
-  const filtered = applyDateRange(history);
-  const dates = filtered.map(h => h.date);
-  const mins = filtered.map(h => h.duration);
-  document.getElementById('exerciseProgress').style.display = 'none';
-  document.getElementById('progressCanvas').style.display = 'block';
-  const trend = trendPoints(mins);
-  const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(mins, 4));
-  renderLineChart(dates.concat(new Array(4).fill('')), 'Cardio Minutes', mins.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
-}
-
-async function showBodyweightProgress() {
-  setActiveProgress('bodyweightProgressBtn');
-  const history = await fetchBodyweightHistory();
-  const filtered = applyDateRange(history);
-  const dates = filtered.map(h => h.date);
-  const weights = filtered.map(h => h.weight);
-  document.getElementById('exerciseProgress').style.display = 'none';
-  document.getElementById('progressCanvas').style.display = 'block';
-  const trend = trendPoints(weights);
-  const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(weights, 4));
-  renderLineChart(dates.concat(new Array(4).fill('')), 'Bodyweight', weights.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
-}
-
-function showExerciseProgress() {
-  setActiveProgress('exerciseProgressBtn');
-  document.getElementById('progressCanvas').style.display = 'none';
-  document.getElementById('exerciseProgress').style.display = 'block';
-  renderExerciseProgress();
-}
-
-function refreshProgress() {
-  if (document.getElementById('workoutTabBtn')?.classList.contains('active') || true) {
-    showWorkoutProgress();
-  }
-}
-
-function renderPRs() {
-  const prs = loadPRs(currentUser);
-  const panel = document.getElementById('prPanel');
-  if (!panel) return;
-  panel.innerHTML = '<h3>PRs</h3>';
-  Object.entries(prs).forEach(([ex, pr]) => {
-    const div = document.createElement('div');
-    div.textContent = `${ex}: 1RM ${pr.oneRM.toFixed(1)}, Vol ${pr.volume.toFixed(1)}`;
-    panel.appendChild(div);
-  });
-}
-
-function renderMilestones() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const milestones = checkMilestones(currentUser, workouts, calculateWorkoutVolume);
-  const cont = document.getElementById('milestoneBadges');
-  if (!cont) return;
-  cont.innerHTML = '';
-  milestones.forEach(m => {
-    const span = document.createElement('span');
-    span.textContent = m;
-    span.style.marginRight = '5px';
-    cont.appendChild(span);
-  });
-}
-
-function renderGoalBar() {
-  const goals = loadGoals(currentUser);
-  const bar = document.getElementById('goalBar');
-  if (!bar) return;
-  const g = goals['volume'];
-  if (!g) { bar.textContent = 'No goal set'; return; }
-  const pct = Math.min(100, (g.progress / g.target) * 100);
-  bar.innerHTML = `<div style="background:#eee;width:100%;height:10px;position:relative;"><div style="background:var(--primary);width:${pct}%;height:10px;"></div></div><small>${g.progress}/${g.target}</small>`;
-}
-
-function promptGoal() {
-  const target = parseFloat(prompt('Enter volume goal (kg):')); 
-  if (isNaN(target)) return; 
-  setGoal(currentUser, 'volume', target); 
-  renderGoalBar();
-}
-
-function showCoachInsights() {
-  const prs = loadPRs(currentUser);
-  const insights = simpleInsights(Object.fromEntries(Object.entries(prs).map(([k,v])=>[k,[v]])));
-  const corner = document.getElementById('coachCorner');
-  if (!corner) return;
-  corner.innerHTML = '';
-  insights.forEach(t => {
-    const div = document.createElement('div');
-    div.textContent = t;
-    div.style.border = '1px solid #ccc';
-    div.style.padding = '5px';
-    corner.appendChild(div);
-  });
-}
-
-function exportCSV() {
-  const history = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const rows = [['Date','Exercise','Sets','Reps','Weight']];
-  history.forEach(w => {
-    (w.log||[]).forEach(e => {
-      rows.push([w.date, e.exercise, e.sets, e.repsArray.join('|'), e.weightsArray.join('|')]);
-    });
-  });
-  const csv = rows.map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'workouts.csv';
-  a.click();
-}
-
-
-// ===== Training Progress Calendar =====
-let calendarMonth;
-let calendarYear;
-
-function getLocalStorage(key) {
-  return JSON.parse(localStorage.getItem(`${key}_${currentUser}`)) || [];
-}
-
-function getActiveProgram() {
-  return JSON.parse(localStorage.getItem(`activeProgram_${currentUser}`));
-}
-
-function getProgramDayDates(startDate) {
-  if (!startDate) return [];
-  const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
-  const active = getActiveProgram();
-  if (!active) return [];
-  const program = programs.find(p => p.id === active.programId);
-  if (!program) return [];
-  const dates = [];
-  for (let i = 0; i < program.days.length; i++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + i);
-    dates.push(d.toISOString().split('T')[0]);
-  }
-  return dates;
-}
-
-function trackWorkoutDate(date) {
-  const key = `workoutDates_${currentUser}`;
-  const dates = JSON.parse(localStorage.getItem(key)) || [];
-  if (!dates.includes(date)) {
-    dates.push(date);
-    localStorage.setItem(key, JSON.stringify(dates));
-  }
-}
-
-function goToDate(date) {
-  const input = document.getElementById('entryDate');
-  if (input) input.value = date;
-}
-
-function renderTrainingCalendar(month, year) {
-  const cal = document.getElementById('training-calendar');
-  if (!cal) return;
-  const trackedDates = getLocalStorage('workoutDates');
-  const active = getActiveProgram();
-  const programDates = active ? getProgramDayDates(active.startDate) : [];
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const volumeMap = {};
-  workouts.forEach(w => { volumeMap[w.date] = calculateWorkoutVolume(w); });
-
-  cal.innerHTML = '';
-
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
-  const header = document.createElement('div');
-  header.className = 'calendar-header';
-  header.style.display = 'flex';
-  header.style.justifyContent = 'space-between';
-  header.style.alignItems = 'center';
-  header.style.padding = '10px';
-
-  const prev = document.createElement('button');
-  prev.textContent = '<';
-  prev.onclick = () => {
-    const m = month === 0 ? 11 : month - 1;
-    const y = month === 0 ? year - 1 : year;
-    calendarMonth = m;
-    calendarYear = y;
-    renderTrainingCalendar(m, y);
-  };
-
-  const next = document.createElement('button');
-  next.textContent = '>';
-  next.onclick = () => {
-    const m = month === 11 ? 0 : month + 1;
-    const y = month === 11 ? year + 1 : year;
-    calendarMonth = m;
-    calendarYear = y;
-    renderTrainingCalendar(m, y);
-  };
-
-  const title = document.createElement('div');
-  title.textContent = firstDay.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  header.appendChild(prev);
-  header.appendChild(title);
-  header.appendChild(next);
-  cal.appendChild(header);
-
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-  const trHead = document.createElement('tr');
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
-    const th = document.createElement('th');
-    th.textContent = d;
-    trHead.appendChild(th);
-  });
-  thead.appendChild(trHead);
-  table.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
-  let row = document.createElement('tr');
-  for (let i = 0; i < firstDay.getDay(); i++) {
-    row.appendChild(document.createElement('td'));
-  }
-
-  for (let day = 1; day <= lastDay.getDate(); day++) {
-    const current = new Date(year, month, day);
-    const str = current.toISOString().split('T')[0];
-    const td = document.createElement('td');
-    td.textContent = day;
-    const vol = volumeMap[str] || 0;
-    if (vol) {
-      const shade = Math.min(1, vol / 500);
-      td.style.backgroundColor = `rgba(0,128,0,${shade})`;
-    }
-    if (programDates.includes(str)) td.classList.add("highlight-today");
-    if (str === new Date().toISOString().split('T')[0]) td.style.border = '2px solid var(--primary)';
-    td.onclick = () => goToDate(str);
-    row.appendChild(td);
-    if (current.getDay() === 6) {
-      tbody.appendChild(row);
-      row = document.createElement('tr');
-    }
-  }
-  if (row.children.length) {
-    while (row.children.length < 7) row.appendChild(document.createElement('td'));
-    tbody.appendChild(row);
-  }
-  table.appendChild(tbody);
-  cal.appendChild(table);
-}
-
-function initTrainingCalendar() {
-  const now = new Date();
-  calendarMonth = now.getMonth();
-  calendarYear = now.getFullYear();
-  renderTrainingCalendar(calendarMonth, calendarYear);
-}
-
-function updateTrainingCalendar() {
-  renderTrainingCalendar(calendarMonth, calendarYear);
-}
-
-
-// ========= CROSSFIT TRACKER =========
-
-let crossfitExercises = [];
-
-function addCrossfitExercise() {
-  const container = document.getElementById('cfExercisesContainer');
-  const index = crossfitExercises.length;
-
-  container.innerHTML += `
-    <div style="border:1px solid var(--border-color); padding:10px; margin-top:10px;">
-      <input type="text" placeholder="Exercise Name" id="cfExerciseName${index}">
-      <input type="number" placeholder="Sets" id="cfExerciseSets${index}">
-      <input type="number" placeholder="Reps per Set" id="cfExerciseReps${index}">
-      <input type="number" placeholder="Weight per Set (optional)" id="cfExerciseWeight${index}">
-      <button onclick="removeCrossfitExercise(${index})" class="remove-btn" style="margin-top:5px;">❌ Remove</button>
-    </div>
-  `;
-  
-  crossfitExercises.push(index);
-}
-
-function removeCrossfitExercise(index) {
-  const exerciseDiv = document.getElementById(`cfExerciseName${index}`).parentNode;
-  exerciseDiv.remove();
-  crossfitExercises = crossfitExercises.filter(i => i !== index);
-}
-
-function addMacroHistoryEntry(date, meals, totals) {
-  const key = `macroHistory_${currentUser}`;
-  const history = JSON.parse(localStorage.getItem(key)) || [];
-  history.push({ date, meals, totals });
-  localStorage.setItem(key, JSON.stringify(history));
-}
-
-function renderMacroHistory() {
-  const key = `macroHistory_${currentUser}`;
-  const history = JSON.parse(localStorage.getItem(key)) || [];
-  const container = document.getElementById("macroHistoryContainer");
-  container.innerHTML = "";
-  history.slice().reverse().forEach(entry => {
-    const div = document.createElement("div");
-    const mealsHtml = entry.meals.map((m, i) => `Meal ${i + 1}: P${m.protein}, C${m.carbs}, F${m.fats}`).join("<br>");
-    const totals = entry.totals || { protein:0, carbs:0, fats:0 };
-    const cals = totals.protein * 4 + totals.carbs * 4 + totals.fats * 9;
-    div.innerHTML = `<strong>${entry.date}</strong><br>${mealsHtml}<br>Total: ${cals} kcal`;
-    container.appendChild(div);
-  });
-}
-
-function showHistoryMiniTab(tab) {
-  const workoutTab = document.getElementById("workoutHistoryMiniTab");
-  const macroTab = document.getElementById("macroHistoryMiniTab");
-  if (tab === "macro") {
-    workoutTab.style.display = "none";
-    macroTab.style.display = "block";
-    renderMacroHistory();
-  } else {
-    macroTab.style.display = "none";
-    workoutTab.style.display = "block";
-    renderWorkoutHistory();
-  }
-}
-
-  
-
-
-
-
-
-  document.addEventListener("DOMContentLoaded", async () => {
-
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    applyTheme(savedTheme);
-    const sel = document.getElementById('themeSelect');
-    if (sel) sel.value = savedTheme;
-
-    await fetchAirtableConfig();
-
-    updateExerciseSuggestions();
-
-    const dateInput = document.getElementById('entryDate');
-    if (dateInput) {
-      dateInput.value = new Date().toISOString().split('T')[0];
-    }
-
-    // initial setup for macros
-    checkMacroReset();
-    updateMacroUI();
-    const addMealBtn = document.getElementById("macroMeal");
-    if (addMealBtn) {
-      addMealBtn.addEventListener("click", addMacroMeal);
-    }
-
-    const exerciseInput = document.getElementById("exercise");
-    if (exerciseInput) {
-      exerciseInput.addEventListener("blur", handleExerciseBlur);
-    }
-
-    // showTab is defined above
-
-// === Airtable Functions ===
-
-async function findUser(username) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${usersTableName}?filterByFormula={Username}='${username}'`;
-  const response = await fetch(url, {
-    credentials: "include",
-    headers: { Authorization: `Bearer ${airtableToken}` }
-  });
-  const data = await response.json();
-  return data.records[0];
-}
-
-async function createUser(username, password) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${usersTableName}`;
-  await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${airtableToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      fields: { Username: username, Password: password }
-    })
-  });
-}
-
-async function fetchDailyLogs(username) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/DailyLogs?filterByFormula=Username='${username}'&sort[0][field]=Date&sort[0][direction]=desc`;
-
-  try {
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${airtableToken}` }
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Failed to fetch daily logs:", data);
-      return [];
-    }
-    return data.records;
-  } catch (error) {
-    console.error("Network error fetching daily logs:", error);
-    return [];
-  }
-}
-
-function renderLogHistory(logs) {
-  const container = document.getElementById("logHistoryContainer");
-  container.innerHTML = "";
-
-  // Group by date then by type
-  const grouped = logs.reduce((acc, log) => {
-    const date = log.fields.Date;
-    if (!acc[date]) acc[date] = {};
-    const type = log.fields.Type;
-    if (!acc[date][type]) acc[date][type] = [];
-    acc[date][type].push(log);
-    return acc;
-  }, {});
-
-  for (const [date, types] of Object.entries(grouped)) {
-    const dateSection = document.createElement("div");
-    dateSection.innerHTML = `<h3>${date}</h3>`;
-
-    for (const [type, entries] of Object.entries(types)) {
-      const typeSection = document.createElement("div");
-      typeSection.innerHTML = `<h4>${type}</h4>`;
-      
-      entries.forEach(entry => {
-        const log = JSON.parse(entry.fields.LogData);
-        const logHtml = JSON.stringify(log, null, 2).replace(/\n/g, "<br>").replace(/ /g, "&nbsp;");
-        const entryDiv = document.createElement("pre");
-        entryDiv.innerHTML = logHtml;
-        typeSection.appendChild(entryDiv);
-      });
-
-      dateSection.appendChild(typeSection);
-    }
-
-    container.appendChild(dateSection);
-  }
-}
-
-
-    
-
-// ===== BODYWEIGHT TRACKER =====
-
-
-function saveCrossfitWorkout() {
-  const name = document.getElementById('cfWorkoutName').value.trim();
-  const minutes = +document.getElementById('cfMinutes').value || 0;
-  const seconds = +document.getElementById('cfSeconds').value || 0;
-  const rounds = document.getElementById('cfRounds').value;
-  const notes = document.getElementById('cfNotes').value;
-  
-  if (!name) return alert("Workout Name is required!");
-
-  const exercises = [];
-  crossfitExercises.forEach(i => {
-    const exerciseName = document.getElementById(`cfExerciseName${i}`).value;
-    const sets = +document.getElementById(`cfExerciseSets${i}`).value;
-    const reps = +document.getElementById(`cfExerciseReps${i}`).value;
-    const weight = +document.getElementById(`cfExerciseWeight${i}`).value || 0;
-    if (exerciseName && sets && reps) {
-      exercises.push({ exerciseName, sets, reps, weight });
-      saveUserExercise(exerciseName.trim());
-    }
-  });
-
-  const date = new Date().toISOString().split('T')[0];
-  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
-  cfLog.push({ date, name, minutes, seconds, rounds, notes, exercises });
-  localStorage.setItem(`crossfitLog_${currentUser}`, JSON.stringify(cfLog));
-  
-  // Reset form
-  document.getElementById('cfWorkoutName').value = '';
-  document.getElementById('cfMinutes').value = '';
-  document.getElementById('cfSeconds').value = '';
-  document.getElementById('cfRounds').value = '';
-  document.getElementById('cfNotes').value = '';
-  document.getElementById('cfExercisesContainer').innerHTML = '';
-  crossfitExercises = [];
-  
-  renderCrossfitWorkouts();
-}
-
-function renderCrossfitWorkouts() {
-  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
-  const container = document.getElementById('cfWorkoutsContainer');
-  container.innerHTML = '';
-
-  cfLog.forEach((wod, index) => {
-    let exercisesList = wod.exercises.map(e => `
-      <li>${e.exerciseName} - ${e.sets} sets x ${e.reps} reps ${e.weight ? `@ ${e.weight}kg` : ''}</li>
-    `).join('');
-
-    container.innerHTML += `
-      <div style="border:1px solid var(--border-color); padding:10px; margin-top:10px;">
-        <strong>${wod.date} - ${wod.name}</strong><br>
-        Time: ${wod.minutes}m ${wod.seconds}s<br>
-        Rounds: ${wod.rounds || '-'}<br>
-        Notes: ${wod.notes || '-'}<br>
-        <ul>${exercisesList}</ul>
-        <button onclick="removeCrossfitWorkout(${index})" class="remove-btn">❌ Delete</button>
-      </div>
-    `;
-  });
-}
-
-function removeCrossfitWorkout(index) {
-  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
-  cfLog.splice(index, 1);
-  localStorage.setItem(`crossfitLog_${currentUser}`, JSON.stringify(cfLog));
-  renderCrossfitWorkouts();
-}
-// Data holders
-let crossfitEntries = [];
-let crossfitTemplates = JSON.parse(localStorage.getItem('crossfitTemplates')) || [];
-
-function addCrossfitEntry() {
-  const exercise = document.getElementById('crossfitExercise').value.trim();
-  const sets = +document.getElementById('crossfitSets').value;
-  const reps = +document.getElementById('crossfitReps').value;
-  const weight = +document.getElementById('crossfitWeight').value;
-  const notes = document.getElementById('crossfitNotes').value.trim();
-
-  if (!exercise || !sets || !reps) {
-    alert('Fill in exercise, sets, and reps!');
-    return;
-  }
-
-  crossfitEntries.push({ exercise, sets, reps, weight, notes });
-  renderCrossfitEntries();
-  
-  // Clear input fields
-  document.getElementById('crossfitExercise').value = '';
-  document.getElementById('crossfitSets').value = '';
-  document.getElementById('crossfitReps').value = '';
-  document.getElementById('crossfitWeight').value = '';
-  document.getElementById('crossfitNotes').value = '';
-}
-
-function renderCrossfitEntries() {
-  const container = document.getElementById('crossfitWorkoutsContainer');
-  container.innerHTML = crossfitEntries.map((entry, index) => `
-    <div style="padding:10px; border:1px solid var(--border-color); margin-bottom:8px;">
-      <strong>${entry.exercise}</strong><br>
-      Sets: ${entry.sets} | Reps: ${entry.reps} | Weight: ${entry.weight || 'Bodyweight'} kg<br>
-      Notes: ${entry.notes || 'None'}
-      <br><button class="remove-btn" onclick="removeCrossfitEntry(${index})">Remove</button>
-    </div>
-  `).join('');
-}
-
-function removeCrossfitEntry(index) {
-  crossfitEntries.splice(index, 1);
-  renderCrossfitEntries();
-}
-
-function completeCrossfitWorkout() {
-  if (crossfitEntries.length === 0) {
-    alert('No exercises added!');
-    return;
-  }
-  const workouts = JSON.parse(localStorage.getItem(`crossfitWorkouts_${currentUser}`)) || [];
-  workouts.push({ date: new Date().toISOString().split('T')[0], log: crossfitEntries });
-  localStorage.setItem(`crossfitWorkouts_${currentUser}`, JSON.stringify(workouts));
-  
-  crossfitEntries = [];
-  renderCrossfitEntries();
-  alert('CrossFit workout saved!');
-}
-
-function saveCrossfitTemplate() {
-  if (crossfitEntries.length === 0) {
-    alert('No exercises to save as template!');
-    return;
-  }
-  const templateName = prompt('Enter a name for this template:');
-  if (!templateName) return;
-
-  crossfitTemplates.push({ name: templateName, workout: crossfitEntries });
-  localStorage.setItem('crossfitTemplates', JSON.stringify(crossfitTemplates));
-  alert('Template saved!');
-  renderTemplateOptions();
-}
-
-function renderTemplateOptions() {
-  const select = document.getElementById('templateSelect');
-  select.innerHTML = '<option value="">-- Load Saved Template --</option>';
-  crossfitTemplates.forEach((tpl, index) => {
-    select.innerHTML += `<option value="${index}">${tpl.name}</option>`;
-  });
-}
-
-function loadCrossfitTemplate() {
-  const index = document.getElementById('templateSelect').value;
-  if (index === '') return;
-  const template = crossfitTemplates[index];
-  crossfitEntries = JSON.parse(JSON.stringify(template.workout)); // Deep copy
-  renderCrossfitEntries();
-}
-    
-    
-  const loginEl = document.getElementById("loginContainer");
-  const dash = document.getElementById("dashboardContainer");
-  const fit = document.getElementById("pocketFitContainer");
-
-  if (savedUser) {
-    currentUser = savedUser;
-    document.getElementById("userDisplay").textContent = savedUser;
-    loginEl.style.display = "none";
-    openSection('pocketFit');
-    renderWorkouts();
-    renderWeights();
-    renderCardio();
-    renderCrossfitWorkouts();
-    loadTemplateDropdown();
-    loadProgramTemplates();
-    loadProgramDropdown();
-    checkActiveProgram();
-    loadUserExercises();
-  } else {
-    activeSection = loginEl;
-    loginEl.classList.add("active");
-  }
-
-
-  const savedTargets = JSON.parse(localStorage.getItem(`macroTargets_${savedUser}`));
-  if (savedTargets) {
-    saveMacroTargetsToTop(savedTargets);
-    macroRanges = {
-      protein: { min: 0, max: savedTargets.protein },
-      fat:     { min: 0, max: savedTargets.fat },
-      carbs:   { min: 0, max: savedTargets.carbs },
-      tdee:    savedTargets.calories
-    };
-    document.getElementById("adjustMacroSection").style.display = "block";
-    document.getElementById("proteinSlider").value = savedTargets.protein;
-    document.getElementById("fatSlider").value     = savedTargets.fat;
-    document.getElementById("carbSlider").value    = savedTargets.carbs;
-    adjustMacros();
-  } else {
-    const sliders = [
-      { id: "proteinSlider", label: "proteinVal" },
-      { id: "fatSlider", label: "fatVal" },
-      { id: "carbSlider", label: "carbVal" }
-    ];
-    sliders.forEach(({ id, label }) => {
-      const slider = document.getElementById(id);
-      const display = document.getElementById(label);
-      if (slider && display) {
-        slider.value = 0;
-        display.textContent = "0";
-      }
-    });
-    document.getElementById("macroTotalCals").textContent = "0";
-  }
-    
-
-    
-  
-
-  const menuToggle = document.getElementById("menuToggle");
-  const sideMenu = document.getElementById("sideMenu");
-
-  function toggleSidebar(force) {
-    const shouldOpen =
-      force !== undefined ? force : !sideMenu.classList.contains("open");
-    sideMenu.classList.toggle("open", shouldOpen);
-    document.getElementById("appContainer").classList.toggle("shifted", shouldOpen);
-    menuToggle.setAttribute("aria-expanded", String(shouldOpen));
-  }
-
-  menuToggle.addEventListener("click", () => {
-    // toggle sidebar panel
-    sideMenu.classList.toggle("open");
-    // push/pull main content
-    document.getElementById("appContainer").classList.toggle("shifted");
-    // update aria attribute
-    const expanded = menuToggle.getAttribute("aria-expanded") === "true";
-    menuToggle.setAttribute("aria-expanded", String(!expanded));
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!sideMenu.contains(e.target) && !menuToggle.contains(e.target)) {
-      toggleSidebar(false);
-    }
-  });
-
-  sideMenu.querySelectorAll("a[data-target]").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const tabName = link.getAttribute("data-target");
-      showTab(tabName);
-      toggleSidebar(false);
-    });
-  });
-
-  // Show the first tab initially
-  initTrainingCalendar();
-  showTab("logTab");
-  renderPRs();
-  renderMilestones();
-  renderGoalBar();
-
-}); // closing DOMContentLoaded
-
-window.openSection = openSection;
-window.openDashboard = openDashboard;
-window.startLogin = startLogin;
-window.startSignup = startSignup;
-window.logout = logout;
-window.addLogEntry = addLogEntry;
-window.completeWorkout = completeWorkout;
-window.addWeightEntry = addWeightEntry;
-window.estimateCalories = estimateCalories;
-window.addCardioEntry = addCardioEntry;
-window.completeCardioSession = completeCardioSession;
-window.loadSelectedTemplate = loadSelectedTemplate;
-window.sendTemplate = sendTemplate;
-window.renderWorkouts = renderWorkouts;
-window.toggleWorkoutDetails = toggleWorkoutDetails;
-window.removeWorkout = removeWorkout;               // ✅ Add this
-  window.removeLogEntry = removeLogEntry;             // ✅ Add this
-  window.calculateWorkoutVolume = calculateWorkoutVolume;
-  window.saveWorkoutAsTemplate = saveWorkoutAsTemplate;
-  window.loadTemplateDropdown = loadTemplateDropdown;
-  window.showHistoryMiniTab = showHistoryMiniTab;
-  window.renderWorkoutHistory = renderWorkoutHistory;
-  window.loadProgramTemplates = loadProgramTemplates;
-  window.addDayToProgram = addDayToProgram;
-  window.saveProgram = saveProgram;
-  window.loadProgramDropdown = loadProgramDropdown;
-  window.startRestTimer = startRestTimer;
-window.startProgram = startProgram;
-window.checkActiveProgram = checkActiveProgram;
-window.toggleProgramBuilder = toggleProgramBuilder;
-window.loadTodayProgram = loadTodayProgram;
-window.toggleTemplateBuilder = toggleTemplateBuilder;
-window.addExerciseToTemplate = addExerciseToTemplate;
-window.saveSimpleTemplate = saveSimpleTemplate;
-window.showWorkoutProgress = showWorkoutProgress;
-window.showCardioProgress = showCardioProgress;
-window.showBodyweightProgress = showBodyweightProgress;
-window.showExerciseProgress = showExerciseProgress;
-window.renderExerciseProgress = renderExerciseProgress;
-window.goToDate = goToDate;
-window.refreshProgress = refreshProgress;
-window.promptGoal = promptGoal;
-window.exportCSV = exportCSV;
-window.calculateCaloriesEquation = calculateCaloriesEquation;
-
-  function showToast(msg) {
-    const toast = document.createElement('div');
-    toast.textContent = msg;
-    toast.style.position = 'fixed';
-    toast.style.bottom = '20px';
-    toast.style.left = '50%';
-    toast.style.transform = 'translateX(-50%)';
-    toast.style.background = 'var(--highlight)';
-    toast.style.color = 'var(--text-color)';
-    toast.style.padding = '8px 16px';
-    toast.style.borderRadius = '4px';
-    toast.style.zIndex = '1000';
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }
-
-  window.showToast = showToast;
-
-
-
-  function initMobilePanels() {
-    document.querySelectorAll('.mobile-panel-toggle').forEach(bar => {
-      const tab = bar.closest('.tab-content');
-      if (tab && tab.id === 'logTab') return; // disable panel toggles on Training Log
-      bar.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const target = btn.dataset.target;
-          const tab = btn.closest('.tab-content');
-          if (!tab) return;
-          tab.querySelectorAll('.panel').forEach(p => {
-            p.classList.toggle('active', p.id === target);
-          });
-          bar.querySelectorAll('button').forEach(b => {
-            b.classList.toggle('active', b === btn);
-          });
-        });
-      });
-    });
-  }
-
-  window.initMobilePanels = initMobilePanels;
-
-  function applyTheme(theme) {
-    document.body.classList.remove('theme-dark', 'theme-neon', 'theme-light');
-    if (theme === 'dark') document.body.classList.add('theme-dark');
-    else if (theme === 'neon') document.body.classList.add('theme-neon');
-    localStorage.setItem('theme', theme);
-  }
-
-  window.applyTheme = applyTheme;
-function openMacroSettings() {
-  // Hide the main macros content and reveal the settings view
-  document.getElementById('macrosMainContent').style.display = 'none';
-  document.getElementById('macrosSettingsContent').style.display = 'block';
-}
-
-function closeMacroSettings() {
-  // Return to the main macros view
-  document.getElementById('macrosSettingsContent').style.display = 'none';
-  document.getElementById('macrosMainContent').style.display = 'block';
-}
-
-// expose helpers for inline handlers
-window.openMacroSettings = openMacroSettings;
-window.closeMacroSettings = closeMacroSettings;
-
-
-
-
-</script>
-
-    <!-- include Litepicker for progress calendar -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
-    <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', async function() {
-        const picker = new Litepicker({
-          element: document.getElementById('progressCalendar'),
-          inlineMode: true
-        });
-        if (picker.setHighlightedDays) {
-          const hist = await fetchWorkoutHistory();
-          const dates = hist.map(h => h.date);
-          picker.setHighlightedDays(dates);
-        }
-        showWorkoutProgress();
-      });
-    </script>
-
-    <script type="module" src="ProgramTab.js"></script>
+    <!-- Toast notifications -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="archiveOldWorkouts.js"></script>
+    <script src="calculateWorkoutVolume.js"></script>
+    <script src="progressUtils.js"></script>
+    <script src="progressMilestones.js"></script>
+    <script src="progressAnalytics.js"></script>
+    <script src="progressGoals.js"></script>
+    <script src="progressAI.js"></script>
+    <script src="gamification.js"></script>
+    <script src="exerciseAutocomplete.js"></script>
+    <script src="progressiveOverload.js"></script>
+    <script src="autoProgression.js"></script>
+    <script src="periodization.js" type="module"></script>
+    <script src="macrosFeatures.js" type="module"></script>
+    <script src="lifestyle.js"></script>
+    <script src="offline.js" type="module"></script>
+    <script src="community.js"></script>
+    <script src="ProgramTab.js" type="module"></script>
 
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () =>
-          navigator.serviceWorker.register('service-worker.js')
-            .catch(err => console.error('SW failed:', err))
-        );
-      }
+        // Global variables
+        let currentUser = localStorage.getItem('currentUser') || null;
+        let currentSetCount = 0;
+        let currentTheme = localStorage.getItem('theme') || 'light';
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            setupEventListeners();
+            applyTheme(currentTheme);
+            updateLoginUI();
+            renderWorkouts();
+            renderPRs();
+            renderMilestones();
+            loadGroups();
+            if (window.initLifestyle) {
+                initLifestyle();
+            }
+            renderHistory();
+            renderSettings();
+            
+            // Set today's date as default
+            document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+            updateSetInputs();
+        }
+
+        function setupEventListeners() {
+            // Menu toggle
+            document.getElementById('menuToggle').addEventListener('click', toggleMenu);
+            
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Tab navigation - sidebar
+            document.querySelectorAll('#sideMenu a[data-target]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showTab(this.getAttribute('data-target'));
+                    closeMenu();
+                });
+            });
+            
+            // Tab navigation - bottom nav
+            document.querySelectorAll('.bottom-nav button[data-target]').forEach(button => {
+                button.addEventListener('click', function() {
+                    showTab(this.getAttribute('data-target'));
+                });
+            });
+            
+            // Sets input change
+            document.getElementById('sets').addEventListener('change', updateSetInputs);
+            
+            // Theme selector
+            document.getElementById('themeSelector').addEventListener('change', function() {
+                applyTheme(this.value);
+            });
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.classList.add('active');
+                
+                // Initialize tab-specific content
+                switch(tabName) {
+                    case 'lifestyleTab':
+                        if (window.initLifestyle) {
+                            initLifestyle();
+                        }
+                        break;
+                    case 'historyTab':
+                        renderHistory();
+                        break;
+                    case 'settingsTab':
+                        renderSettings();
+                        break;
+                    case 'macrosTab':
+                        renderDailyMacroProgress();
+                        break;
+                    case 'progressTab':
+                        renderPRs();
+                        renderMilestones();
+                        break;
+                    case 'communityTab':
+                        loadGroups();
+                        break;
+                }
+            }
+        }
+
+        function toggleMenu() {
+            const menu = document.getElementById('sideMenu');
+            menu.classList.toggle('active');
+        }
+
+        function closeMenu() {
+            const menu = document.getElementById('sideMenu');
+            menu.classList.remove('active');
+        }
+
+        function toggleTheme() {
+            const themes = ['light', 'dark', 'dark-blue'];
+            const currentIndex = themes.indexOf(currentTheme);
+            const nextTheme = themes[(currentIndex + 1) % themes.length];
+            applyTheme(nextTheme);
+        }
+
+        function applyTheme(theme) {
+            currentTheme = theme;
+            document.body.className = theme + '-mode';
+            localStorage.setItem('theme', theme);
+            document.getElementById('themeSelector').value = theme;
+            
+            // Update theme toggle icon
+            const themeIcon = document.getElementById('themeToggle');
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+
+        // Workout functions
+        function updateSetInputs() {
+            const sets = parseInt(document.getElementById('sets').value) || 3;
+            const container = document.getElementById('setInputsContainer');
+            container.innerHTML = '';
+            
+            currentSetCount = sets;
+            
+            for (let i = 0; i < sets; i++) {
+                const setDiv = document.createElement('div');
+                setDiv.className = 'set-input';
+                setDiv.innerHTML = `
+                    <label>Set ${i + 1}:</label>
+                    <input type="number" id="reps_${i}" placeholder="Reps" min="1">
+                    <input type="number" id="weight_${i}" placeholder="Weight" step="0.5">
+                `;
+                container.appendChild(setDiv);
+            }
+            
+            updateAddButtonState();
+        }
+
+        function updateAddButtonState() {
+            const exercise = document.getElementById('exercise').value.trim();
+            const button = document.getElementById('addButton');
+            button.disabled = !exercise;
+        }
+
+        function addLogEntry() {
+            const exercise = document.getElementById('exercise').value.trim();
+            const sets = parseInt(document.getElementById('sets').value) || 3;
+            const goal = parseFloat(document.getElementById('goal').value) || null;
+            const repGoal = parseInt(document.getElementById('repGoal').value) || null;
+            const unit = document.getElementById('weightUnit').value;
+            const date = document.getElementById('entryDate').value;
+            
+            if (!exercise) {
+                showToast('Please enter an exercise name');
+                return;
+            }
+            
+            const repsArray = [];
+            const weightsArray = [];
+            
+            for (let i = 0; i < sets; i++) {
+                const reps = parseInt(document.getElementById(`reps_${i}`).value) || 0;
+                const weight = parseFloat(document.getElementById(`weight_${i}`).value) || 0;
+                repsArray.push(reps);
+                weightsArray.push(weight);
+            }
+            
+            const entry = {
+                exercise,
+                repsArray,
+                weightsArray,
+                goal,
+                repGoal,
+                unit,
+                timestamp: Date.now()
+            };
+            
+            // Save to workouts
+            const workoutsKey = `workouts_${currentUser}`;
+            let workouts = JSON.parse(localStorage.getItem(workoutsKey)) || [];
+            
+            // Check if we need a new workout for this date
+            const lastWorkout = workouts[workouts.length - 1];
+            if (!lastWorkout || lastWorkout.date !== date) {
+                workouts.push({
+                    date,
+                    title: `Workout ${new Date(date).toLocaleDateString()}`,
+                    log: [entry]
+                });
+            } else {
+                lastWorkout.log.push(entry);
+            }
+            
+            localStorage.setItem(workoutsKey, JSON.stringify(workouts));
+            
+            // Update PRs and other tracking
+            if (window.updatePRs) {
+                updatePRs(currentUser, { log: [entry] }, calculateWorkoutVolume);
+            }
+            
+            // Save exercise for autocomplete
+            if (window.saveUserExercise) {
+                saveUserExercise(exercise);
+            }
+            
+            // Clear form
+            document.getElementById('exercise').value = '';
+            for (let i = 0; i < sets; i++) {
+                document.getElementById(`reps_${i}`).value = '';
+                document.getElementById(`weight_${i}`).value = '';
+            }
+            
+            showToast('Entry added successfully!');
+            renderWorkouts();
+            renderPRs();
+        }
+
+        function renderWorkouts() {
+            if (!currentUser) return;
+            
+            const workoutsKey = `workouts_${currentUser}`;
+            const workouts = JSON.parse(localStorage.getItem(workoutsKey)) || [];
+            const container = document.getElementById('workoutList');
+            
+            container.innerHTML = '';
+            
+            workouts.slice(-5).reverse().forEach(workout => {
+                const workoutDiv = document.createElement('div');
+                workoutDiv.className = 'card';
+                
+                let logHtml = '';
+                workout.log.forEach(entry => {
+                    logHtml += `
+                        <div class="log-entry">
+                            <strong>${entry.exercise}</strong>
+                            <div>Sets: ${entry.repsArray.map((r, i) => `${r}x${entry.weightsArray[i]}${entry.unit}`).join(', ')}</div>
+                        </div>
+                    `;
+                });
+                
+                workoutDiv.innerHTML = `
+                    <h3>${workout.title}</h3>
+                    <p>Date: ${workout.date}</p>
+                    ${logHtml}
+                `;
+                
+                container.appendChild(workoutDiv);
+            });
+        }
+
+        function renderPRs() {
+            if (!currentUser || !window.loadPRs) return;
+            
+            const prs = loadPRs(currentUser);
+            const container = document.getElementById('prsList');
+            
+            container.innerHTML = '';
+            
+            Object.entries(prs).forEach(([exercise, data]) => {
+                const prDiv = document.createElement('div');
+                prDiv.innerHTML = `
+                    <strong>${exercise}</strong>: ${data.oneRM.toFixed(1)} (1RM)
+                `;
+                container.appendChild(prDiv);
+            });
+        }
+
+        function renderMilestones() {
+            if (!currentUser || !window.checkMilestones) return;
+            
+            const workoutsKey = `workouts_${currentUser}`;
+            const workouts = JSON.parse(localStorage.getItem(workoutsKey)) || [];
+            const milestones = checkMilestones(currentUser, workouts, calculateWorkoutVolume);
+            const container = document.getElementById('milestonesList');
+            
+            container.innerHTML = '';
+            
+            milestones.forEach(milestone => {
+                const milestoneDiv = document.createElement('div');
+                milestoneDiv.textContent = milestone;
+                container.appendChild(milestoneDiv);
+            });
+        }
+
+        function renderHistory() {
+            if (!currentUser) return;
+            
+            const historyKey = `workoutHistory_${currentUser}`;
+            const history = JSON.parse(localStorage.getItem(historyKey)) || [];
+            const container = document.getElementById('workoutHistory');
+            
+            container.innerHTML = '';
+            
+            if (history.length === 0) {
+                container.innerHTML = '<p>No workout history available.</p>';
+                return;
+            }
+            
+            history.slice(-10).reverse().forEach(workout => {
+                const workoutDiv = document.createElement('div');
+                workoutDiv.className = 'card';
+                
+                let logHtml = '';
+                if (workout.log && workout.log.length > 0) {
+                    workout.log.forEach(entry => {
+                        logHtml += `
+                            <div class="log-entry">
+                                <strong>${entry.exercise}</strong>
+                                <div>Sets: ${entry.repsArray.map((r, i) => `${r}x${entry.weightsArray[i]}${entry.unit}`).join(', ')}</div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                workoutDiv.innerHTML = `
+                    <h3>${workout.title}</h3>
+                    <p>Date: ${workout.date}</p>
+                    ${logHtml}
+                `;
+                
+                container.appendChild(workoutDiv);
+            });
+        }
+
+        function renderSettings() {
+            const themeSelector = document.getElementById('themeSelector');
+            themeSelector.value = currentTheme;
+        }
+
+        // Macro functions
+        function renderDailyMacroProgress() {
+            const progress = JSON.parse(localStorage.getItem('dailyMacroProgress')) || {
+                protein: 0,
+                carbs: 0,
+                fats: 0,
+                cals: 0
+            };
+            
+            const targets = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`)) || {
+                protein: 150,
+                carbs: 200,
+                fats: 70,
+                calories: 2000
+            };
+            
+            const container = document.getElementById('dailyMacroProgress');
+            if (!container) return;
+            
+            container.innerHTML = `
+                <div>Protein: ${progress.protein}g / ${targets.protein}g</div>
+                <div>Carbs: ${progress.carbs}g / ${targets.carbs}g</div>
+                <div>Fats: ${progress.fats}g / ${targets.fats}g</div>
+                <div>Calories: ${progress.cals} / ${targets.calories}</div>
+            `;
+        }
+
+        function saveMacroTargets() {
+            const protein = parseInt(document.getElementById('proteinTarget').value) || 150;
+            const carbs = parseInt(document.getElementById('carbsTarget').value) || 200;
+            const fats = parseInt(document.getElementById('fatTarget').value) || 70;
+            const calories = (protein * 4) + (carbs * 4) + (fats * 9);
+            
+            const targets = { protein, carbs, fats, calories };
+            localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(targets));
+            
+            showToast('Macro targets saved!');
+            renderDailyMacroProgress();
+        }
+
+        // Auth functions
+        async function startLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showToast('Please enter username and password');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${window.SERVER_URL}/login`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentUser = username;
+                    localStorage.setItem('currentUser', currentUser);
+                    updateLoginUI();
+                    showToast('Login successful!');
+                } else {
+                    showToast('Login failed: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                // Fallback to local login
+                currentUser = username;
+                localStorage.setItem('currentUser', currentUser);
+                updateLoginUI();
+                showToast('Logged in locally');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            updateLoginUI();
+            showToast('Logged out');
+        }
+
+        function updateLoginUI() {
+            const loginSection = document.getElementById('loginSection');
+            const userSection = document.getElementById('userSection');
+            const currentUserDisplay = document.getElementById('currentUserDisplay');
+            
+            if (currentUser) {
+                loginSection.style.display = 'none';
+                userSection.style.display = 'block';
+                currentUserDisplay.textContent = currentUser;
+            } else {
+                loginSection.style.display = 'block';
+                userSection.style.display = 'none';
+            }
+        }
+
+        // Utility functions
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function addGoal() {
+            const type = prompt('Goal type (e.g., "bench_press", "total_volume"):');
+            const target = parseFloat(prompt('Target value:'));
+            
+            if (type && target && window.setGoal) {
+                setGoal(currentUser, type, target);
+                showToast('Goal added!');
+            }
+        }
+
+        function exportData() {
+            if (!currentUser) {
+                showToast('Please login first');
+                return;
+            }
+            
+            const data = {};
+            for (let key in localStorage) {
+                if (key.includes(currentUser)) {
+                    data[key] = localStorage.getItem(key);
+                }
+            }
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pocketfit_data_${currentUser}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            Object.entries(data).forEach(([key, value]) => {
+                                localStorage.setItem(key, value);
+                            });
+                            showToast('Data imported successfully!');
+                            location.reload();
+                        } catch (error) {
+                            showToast('Error importing data');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // Make functions globally available
+        window.showTab = showTab;
+        window.addLogEntry = addLogEntry;
+        window.startLogin = startLogin;
+        window.logout = logout;
+        window.saveMacroTargets = saveMacroTargets;
+        window.addGoal = addGoal;
+        window.exportData = exportData;
+        window.importData = importData;
+        window.clearAllData = clearAllData;
+        window.currentUser = currentUser;
     </script>
-
-
 </body>
 </html>
-
-
