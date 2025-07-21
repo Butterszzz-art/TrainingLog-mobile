@@ -1448,7 +1448,10 @@ function addLogEntry() {
   }
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  if (workouts.length === 0 || !workouts[workouts.length - 1].log) {
+  if (
+    workouts.length === 0 ||
+    workouts[workouts.length - 1].date !== date
+  ) {
     workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
   }
 
@@ -1649,7 +1652,10 @@ function formatRestTime(sec) {
 function logRestBreak(mins) {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const date = new Date().toISOString().split('T')[0];
-  if (workouts.length === 0 || !workouts[workouts.length - 1].log) {
+  if (
+    workouts.length === 0 ||
+    workouts[workouts.length - 1].date !== date
+  ) {
     workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
   }
   const workout = workouts[workouts.length - 1];
@@ -1984,6 +1990,7 @@ function completeWorkout() {
   if (!workouts.some(w => w.date === date)) {
     workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
     localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+    trackWorkoutDate(date);
   }
   renderWorkouts();
   renderWorkoutHistory();
