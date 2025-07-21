@@ -31,5 +31,7 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js');
+  navigator.serviceWorker.register('service-worker.js').catch(error => {
+    console.warn('Service Worker registration failed:', error.message);
+  });
 }
