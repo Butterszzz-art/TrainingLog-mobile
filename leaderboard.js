@@ -34,6 +34,11 @@ function renderLeaderboard(sortKey = 'workoutsLogged') {
     `<div class="leader-entry" data-name="${d.name}"><span>#${i + 1}</span><span><strong>${d.name}</strong></span><span>${d[sortKey]}</span></div>`
   ).join('');
   container.innerHTML = `<div class="leaderboard">${rows}</div>`;
+  container.querySelectorAll('.leader-entry').forEach(el => {
+    el.addEventListener('click', () => {
+      if (window.showUserStats) window.showUserStats(el.dataset.name);
+    });
+  });
   renderCharts(data);
 }
 

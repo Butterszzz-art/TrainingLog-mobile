@@ -466,7 +466,13 @@ function renderCompetition(metric = 'workouts') {
     </div>`;
 
   container.querySelectorAll('.leader-entry').forEach(el => {
-    el.addEventListener('click', () => showLeaderDetail(el.dataset.id));
+    el.addEventListener('click', () => {
+      if (window.showGroupStats) {
+        window.showGroupStats(el.dataset.id);
+      } else {
+        showLeaderDetail(el.dataset.id);
+      }
+    });
   });
 
   renderCompetitionChart(data.slice(0,5), metric);

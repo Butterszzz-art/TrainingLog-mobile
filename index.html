@@ -746,6 +746,14 @@
   </div>
 </div>
 
+<div id="userStatsTab" class="tab-content">
+  <div id="userStatsContent"></div>
+</div>
+
+<div id="groupStatsTab" class="tab-content">
+  <div id="groupStatsContent"></div>
+</div>
+
   <div id="cardioTab" class="tab-content">
     <div id="cardioFormPanel" class="panel active">
     <h2>Cardio Tracker</h2>
@@ -1052,6 +1060,7 @@
 <script src="progressiveOverload.js"></script>
 <script src="community.js"></script>
 <script src="leaderboard.js"></script>
+<script src="stats.js"></script>
 <!-- Optional runtime configuration -->
 <script src="config.js"></script>
 <script type="module" src="progressUtils.js"></script>
@@ -1294,6 +1303,10 @@ function showTab(tabName) {
       break;
     case 'leaderboardTab':
       if (window.initLeaderboard) initLeaderboard();
+      break;
+    case 'userStatsTab':
+      break;
+    case 'groupStatsTab':
       break;
     case 'progressTab':
       showWorkoutProgress();
