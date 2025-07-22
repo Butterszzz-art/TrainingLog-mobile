@@ -141,7 +141,7 @@
       box-sizing: border-box;
       transition: transform 0.3s ease;
       z-index: 1000;
-      padding-top: 60px;
+      padding-top: 52px;
     }
     .side-menu.open {
       transform: translateX(0);
@@ -159,7 +159,7 @@
     #appContainer {
       transition: margin-left 0.3s ease;
       margin-left: 0;
-      margin-top: 60px; /* offset for fixed hamburger button */
+      margin-top: 52px; /* offset for fixed hamburger button */
     }
     #appContainer.shifted {
       margin-left: 250px;
@@ -207,7 +207,7 @@
 /* hamburger button always top-left, above content */
 .menu-toggle {
   position: fixed;
-  top: 16px;
+  top: 8px;
   left: 16px;
   width: 48px;
   height: 48px;
@@ -229,7 +229,7 @@
 }
 #menuToggle {
   position: fixed;
-  top: 16px;
+  top: 8px;
   left: 16px;
   z-index: 1100;
   width: 56px;
@@ -237,6 +237,17 @@
   padding: 0;
   border-radius: 50%;
   font-size: 24px;
+}
+
+.home-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 24px;
+  cursor: pointer;
 }
 
 
@@ -527,10 +538,10 @@
 
   <!-- Sidebar -->
   <nav id="sideMenu" class="side-menu">
+    <button id="homeButton" class="home-button" onclick="openDashboard()" aria-label="Home">🏠</button>
     <div class="menu-title">PocketFit (<span id="userDisplay"></span>)</div>
     <ul>
       <li><a href="#" data-target="logTab">📋 Training Log</a></li>
-      <li><a href="#" onclick="openDashboard()">🏠 Dashboard</a></li>
       <li><a href="#" data-target="weightTab">⚖️ Bodyweight</a></li>
       <li><a href="#" data-target="cardioTab">🏃 Cardio</a></li>
       <li><a href="#" data-target="macroTab">🍽️ Macros</a></li>
