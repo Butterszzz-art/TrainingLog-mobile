@@ -142,3 +142,33 @@ header, .dark-bg, .coach-only {
   border-radius: 8px;
   margin: 0;
 }
+
+/* group card layout */
+.group-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.group-card {
+  flex: 1 1 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.group-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.group-desc {
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+.group-members {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  margin-bottom: 8px;
+}
+.group-card button {
+  align-self: flex-end;
+  margin-top: auto;
+}
