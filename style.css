@@ -225,6 +225,26 @@ header, .dark-bg, .coach-only {
   flex: 1;
 }
 
+.stats-screen {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 10px;
+}
+
+.timeframe-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.timeframe-buttons button {
+  flex: 1;
+}
+.timeframe-buttons button.active {
+  background-color: var(--primary-dark);
+  color: #fff;
+}
+
 .spinner {
   width: 24px;
   height: 24px;

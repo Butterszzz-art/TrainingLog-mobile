@@ -35,6 +35,10 @@ const sampleGroupStats = {
     description: 'Strength training group',
     activities: ['Alice posted a new workout', 'Bob shared a tip'],
     topContributors: [{ user: 'Alice', posts: 12 }, { user: 'Bob', posts: 8 }],
+    workouts: [
+      { date: '2023-09-12', exercise: 'Squat', sets: 5, reps: 5, weight: 105 },
+      { date: '2023-09-10', exercise: 'Bench Press', sets: 5, reps: 5, weight: 75 }
+    ],
     exerciseVolume: { Squat: 12000, 'Bench Press': 9000, Deadlift: 15000 },
     weeklyVolume: [8000, 8500, 8700, 9200]
   },
@@ -43,6 +47,9 @@ const sampleGroupStats = {
     description: 'General fitness enthusiasts',
     activities: ['Cara joined the group'],
     topContributors: [{ user: 'Cara', posts: 4 }],
+    workouts: [
+      { date: '2023-09-11', exercise: 'Deadlift', sets: 4, reps: 6, weight: 115 }
+    ],
     exerciseVolume: { Squat: 9000, 'Bench Press': 7000, Deadlift: 11000 },
     weeklyVolume: [6000, 6400, 6300, 6500]
   }
@@ -96,11 +103,16 @@ function showGroupStats(id) {
   const activities = (stats.activities || []).map(a=>`<li>${a}</li>`).join('');
   const contributors = (stats.topContributors || [])
     .map(c=>`<li>${c.user} (${c.posts})</li>`).join('');
+  const workouts = (stats.workouts || [])
+    .map(w=>`<tr><td>${w.date}</td><td>${w.exercise}</td><td>${w.sets}</td><td>${w.reps}</td><td>${w.weight}</td></tr>`)
+    .join('');
   const volumes = Object.entries(stats.exerciseVolume || {})
     .map(([ex,v])=>`<tr><td>${ex}</td><td>${v}</td></tr>`).join('');
   container.innerHTML = `
     <h3>${stats.name}</h3>
     <p>${stats.description}</p>
+    <h4>Recent Workouts</h4>
+    <table><tr><th>Date</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Weight</th></tr>${workouts}</table>
     <h4>Recent Activity</h4>
     <ul>${activities}</ul>
     <h4>Top Contributors</h4>
