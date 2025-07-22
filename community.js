@@ -385,6 +385,91 @@ function showCreateGroup() {
   createGroup(name, goal, tags).then(() => renderGroups(groups));
 }
 
+// ----- Competition Features -----
+let currentCommunitySection = 'groups';
+let competitionChart;
+
+function showCommunitySection(section) {
+  currentCommunitySection = section;
+  const panels = {
+    groups: document.getElementById('groupsPanel'),
+    competition: document.getElementById('competitionPanel'),
+    posts: document.getElementById('postsPanel')
+  };
+  Object.values(panels).forEach(p => { if (p) p.style.display = 'none'; });
+  if (panels[section]) panels[section].style.display = 'block';
+  if (section === 'groups') {
+    loadGroups();
+  } else if (section === 'competition') {
+    renderCompetition();
+  }
+}
+
+function calcStatsForGroup(g) {
+  const members = Object.values(g.progress || {});
+  const workouts = members.reduce((s,m) => s + (m.workouts || 0), 0);
+  const studyHours = members.reduce((s,m) => s + (m.studyHours || 0), 0);
+  const engagement = (g.posts?.length || 0);
+  return { workouts, studyHours, engagement };
+}
+
+function renderCompetition(metric = 'workouts') {
+  const container = document.getElementById('competitionContent');
+  if (!container) return;
+  const data = groups.map(g => {
+    const stats = calcStatsForGroup(g);
+    return { id: g.id, name: g.name, ...stats };
+  });
+  data.sort((a,b) => (b[metric]||0) - (a[metric]||0));
+
+  const rows = data.map((d,i) =>
+    `<div class="leader-entry" data-id="${d.id}"><span>${i+1}</span><span>${d.name}</span><span>${d[metric]||0}</span></div>`
+  ).join('');
+
+  container.innerHTML = `
+    <div class="leaderboard-controls">
+      <label for="leaderSort">Sort by</label>
+      <select id="leaderSort" onchange="renderCompetition(this.value)">
+        <option value="workouts">Workouts</option>
+        <option value="studyHours">Study Hours</option>
+        <option value="engagement">Engagement</option>
+      </select>
+      <div class="leaderboard">${rows}</div>
+      <canvas id="competitionChart"></canvas>
+      <div id="leaderDetails" class="leader-details" style="display:none;"></div>
+    </div>`;
+
+  container.querySelectorAll('.leader-entry').forEach(el => {
+    el.addEventListener('click', () => showLeaderDetail(el.dataset.id));
+  });
+
+  renderCompetitionChart(data.slice(0,5), metric);
+}
+
+function renderCompetitionChart(items, metric) {
+  const ctx = document.getElementById('competitionChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+  if (competitionChart) competitionChart.destroy();
+  competitionChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: items.map(i => i.name),
+      datasets: [{ label: metric, data: items.map(i => i[metric]||0) }]
+    },
+    options: { plugins: { legend: { display: false } }, responsive: true }
+  });
+}
+
+function showLeaderDetail(groupId) {
+  const g = groups.find(gr => gr.id == groupId);
+  if (!g) return;
+  const detail = document.getElementById('leaderDetails');
+  if (!detail) return;
+  const stats = calcStatsForGroup(g);
+  detail.innerHTML = `<strong>${g.name}</strong><br>Workouts: ${stats.workouts}<br>Study Hours: ${stats.studyHours}<br>Posts: ${stats.engagement}`;
+  detail.style.display = 'block';
+}
+
 if (typeof window !== 'undefined') {
   window.loadGroups = loadGroups;
   window.showCreateGroup = showCreateGroup;
@@ -395,6 +480,8 @@ if (typeof window !== 'undefined') {
   window.doGroupSearch = doGroupSearch;
   window.clearGroupFilters = clearGroupFilters;
   window.joinGroup = joinGroup;
+  window.showCommunitySection = showCommunitySection;
+  window.renderCompetition = renderCompetition;
 }
 
 // allow tests to import functions

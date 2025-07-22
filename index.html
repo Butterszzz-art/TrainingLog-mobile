@@ -681,6 +681,10 @@
 </div>
 
 <div id="communityTab" class="tab-content">
+  <nav class="community-nav">
+    <button onclick="showCommunitySection('groups')">Groups</button>
+    <button onclick="showCommunitySection('competition')">Competition</button>
+  </nav>
   <div id="groupsPanel" class="panel active">
   <h2>Community</h2>
   <div class="community-search">
@@ -714,6 +718,10 @@
     <button class="action-btn" onclick="loadGroups()">Refresh Groups</button>
   </div>
   <div id="groupDetail" style="display:none;"></div>
+  </div>
+  <div id="competitionPanel" class="panel" style="display:none;">
+    <h2>Leaderboards</h2>
+    <div id="competitionContent"></div>
   </div>
   <div id="postsPanel" class="panel"></div>
 </div>
@@ -1261,7 +1269,7 @@ function showTab(tabName) {
       loadProgramDropdown();
       break;
     case 'communityTab':
-      if (window.loadGroups) loadGroups();
+      if (window.showCommunitySection) showCommunitySection('groups');
       break;
     case 'progressTab':
       showWorkoutProgress();
