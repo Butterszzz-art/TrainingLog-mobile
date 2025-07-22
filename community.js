@@ -183,6 +183,13 @@ function doGroupSearch() {
   searchGroups({ search, goal, tag }).then(renderGroups);
 }
 
+function clearGroupFilters() {
+  document.getElementById('groupSearchInput').value = '';
+  document.getElementById('goalFilter').value = '';
+  document.getElementById('tagFilter').value = '';
+  searchGroups({}).then(renderGroups);
+}
+
 // Add post locally and via backend
 async function addPost(groupId, user, text) {
   const g = groups.find(gr => gr.id === groupId);
@@ -312,6 +319,7 @@ if (typeof window !== 'undefined') {
   window.inviteUserToGroup = inviteUserToGroup;
   window.shareProgramToGroup = shareProgramToGroup;
   window.doGroupSearch = doGroupSearch;
+  window.clearGroupFilters = clearGroupFilters;
 }
 
 // allow tests to import functions
