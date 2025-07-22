@@ -683,15 +683,23 @@
 <div id="communityTab" class="tab-content">
   <div id="groupsPanel" class="panel active">
   <h2>Community</h2>
-  <div>
+  <div class="community-search">
+    <label for="groupSearchInput">Search Groups</label>
     <input id="groupSearchInput" placeholder="Search groups">
+    <label for="goalFilter">Goal</label>
     <input id="goalFilter" placeholder="Goal">
+    <label for="tagFilter">Tag</label>
     <input id="tagFilter" placeholder="Tag">
-    <button onclick="doGroupSearch()">Search</button>
+    <div class="search-buttons">
+      <button class="action-btn" onclick="doGroupSearch()">Search</button>
+      <button class="action-btn" onclick="clearGroupFilters()">Clear Filters</button>
+    </div>
   </div>
   <div id="groupList"></div>
-  <button onclick="showCreateGroup()">Create Group</button>
-  <button onclick="loadGroups()">Refresh Groups</button>
+  <div class="community-actions">
+    <button class="action-btn" onclick="showCreateGroup()">Create Group</button>
+    <button class="action-btn" onclick="loadGroups()">Refresh Groups</button>
+  </div>
   <div id="groupDetail" style="display:none;"></div>
   </div>
   <div id="postsPanel" class="panel"></div>
