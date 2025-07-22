@@ -62,13 +62,14 @@ function populateExerciseLbSelect() {
   sel.innerHTML = options;
 }
 
+let currentRange = 'weekly';
+
 function renderExerciseLeaderboard() {
   const exSel = document.getElementById('exerciseLbSelect');
-  const timeSel = document.getElementById('exerciseLbTime');
   const container = document.getElementById('exerciseLeaderboardContainer');
-  if (!exSel || !timeSel || !container) return;
+  if (!exSel || !container) return;
   const ex = exSel.value;
-  const tf = timeSel.value;
+  const tf = currentRange;
   const data = (sampleExerciseLeaderboard[ex] && sampleExerciseLeaderboard[ex][tf]) || [];
   if (!data.length) {
     container.innerHTML = '<p>No data available.</p>';
@@ -89,10 +90,19 @@ function renderExerciseLeaderboard() {
 function initExerciseLeaderboard() {
   populateExerciseLbSelect();
   const exSel = document.getElementById('exerciseLbSelect');
-  const timeSel = document.getElementById('exerciseLbTime');
-  if (!exSel || !timeSel) return;
+  const buttons = document.querySelectorAll('.timeframe-buttons button');
+  if (!exSel || !buttons.length) return;
   exSel.onchange = renderExerciseLeaderboard;
-  timeSel.onchange = renderExerciseLeaderboard;
+  buttons.forEach(btn => {
+    btn.onclick = () => {
+      currentRange = btn.dataset.range;
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderExerciseLeaderboard();
+    };
+  });
+  // set default active
+  buttons[0].classList.add('active');
   renderExerciseLeaderboard();
 }
 

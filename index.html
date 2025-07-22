@@ -750,11 +750,15 @@
 </div>
 
 <div id="userStatsTab" class="tab-content">
-  <div id="userStatsContent"></div>
+  <div class="stats-screen">
+    <div id="userStatsContent"></div>
+  </div>
 </div>
 
 <div id="groupStatsTab" class="tab-content">
-  <div id="groupStatsContent"></div>
+  <div class="stats-screen">
+    <div id="groupStatsContent"></div>
+  </div>
 </div>
 
 <div id="exerciseLeaderboardTab" class="tab-content">
@@ -763,12 +767,11 @@
     <div class="leaderboard-controls">
       <label for="exerciseLbSelect">Exercise</label>
       <select id="exerciseLbSelect"></select>
-      <label for="exerciseLbTime">Timeframe</label>
-      <select id="exerciseLbTime">
-        <option value="weekly">Weekly</option>
-        <option value="monthly">Monthly</option>
-        <option value="all">All-Time</option>
-      </select>
+    </div>
+    <div class="timeframe-buttons">
+      <button data-range="weekly">Weekly</button>
+      <button data-range="monthly">Monthly</button>
+      <button data-range="all">All-Time</button>
     </div>
     <div id="exerciseLeaderboardContainer"></div>
     <div style="margin-top:10px;">
