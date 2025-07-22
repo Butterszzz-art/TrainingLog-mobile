@@ -7,6 +7,25 @@ if (typeof localStorage !== 'undefined') {
 const serverUrl = (typeof window !== 'undefined' && window.SERVER_URL) ||
   'https://traininglog-backend.onrender.com';
 
+// Sample data used for prototype leaderboards
+const sampleExerciseData = {
+  Squat: [
+    { user: 'Alice', volume: 12000, sets: 50, reps: 200 },
+    { user: 'Bob', volume: 11000, sets: 45, reps: 180 },
+    { user: 'Cara', volume: 9000, sets: 40, reps: 160 }
+  ],
+  'Bench Press': [
+    { user: 'Alice', volume: 8000, sets: 40, reps: 160 },
+    { user: 'Bob', volume: 7500, sets: 38, reps: 150 },
+    { user: 'Cara', volume: 7000, sets: 35, reps: 140 }
+  ],
+  Deadlift: [
+    { user: 'Alice', volume: 14000, sets: 45, reps: 180 },
+    { user: 'Bob', volume: 13500, sets: 42, reps: 170 },
+    { user: 'Cara', volume: 12000, sets: 40, reps: 160 }
+  ]
+};
+
 function saveGroups() {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('communityGroups', JSON.stringify(groups));
@@ -416,6 +435,13 @@ function calcStatsForGroup(g) {
 function renderCompetition(metric = 'workouts') {
   const container = document.getElementById('competitionContent');
   if (!container) return;
+  if (!groups.length) {
+    groups = [
+      { id: 1, name: 'Alpha Team', progress: { a: { workouts: 20, studyHours: 5 } }, posts: [{}] },
+      { id: 2, name: 'Bravo Squad', progress: { b: { workouts: 15, studyHours: 8 } }, posts: [] },
+      { id: 3, name: 'Charlie Crew', progress: { c: { workouts: 25, studyHours: 3 } }, posts: [{},{}] }
+    ];
+  }
   const data = groups.map(g => {
     const stats = calcStatsForGroup(g);
     return { id: g.id, name: g.name, ...stats };
@@ -423,16 +449,16 @@ function renderCompetition(metric = 'workouts') {
   data.sort((a,b) => (b[metric]||0) - (a[metric]||0));
 
   const rows = data.map((d,i) =>
-    `<div class="leader-entry" data-id="${d.id}"><span>${i+1}</span><span>${d.name}</span><span>${d[metric]||0}</span></div>`
+    `<div class="leader-entry" data-id="${d.id}"><span>#${i+1}</span><span><strong>${d.name}</strong></span><span>${d[metric]||0}</span></div>`
   ).join('');
 
   container.innerHTML = `
     <div class="leaderboard-controls">
       <label for="leaderSort">Sort by</label>
       <select id="leaderSort" onchange="renderCompetition(this.value)">
-        <option value="workouts">Workouts</option>
+        <option value="workouts">Workouts Logged</option>
         <option value="studyHours">Study Hours</option>
-        <option value="engagement">Engagement</option>
+        <option value="engagement">Group Activity</option>
       </select>
       <div class="leaderboard">${rows}</div>
       <canvas id="competitionChart"></canvas>
@@ -466,8 +492,47 @@ function showLeaderDetail(groupId) {
   const detail = document.getElementById('leaderDetails');
   if (!detail) return;
   const stats = calcStatsForGroup(g);
-  detail.innerHTML = `<strong>${g.name}</strong><br>Workouts: ${stats.workouts}<br>Study Hours: ${stats.studyHours}<br>Posts: ${stats.engagement}`;
+  const exercises = Object.keys(sampleExerciseData);
+  const exOptions = exercises.map(e => `<option value="${e}">${e}</option>`).join('');
+  detail.innerHTML = `
+    <strong>${g.name}</strong><br>
+    Workouts: ${stats.workouts}<br>
+    Study Hours: ${stats.studyHours}<br>
+    Posts: ${stats.engagement}
+    <div class="exercise-compare">
+      <h4>Exercise Comparison</h4>
+      <label for="exerciseSelect">Exercise</label>
+      <select id="exerciseSelect">${exOptions}</select>
+      <label for="timeFilter">Timeframe</label>
+      <select id="timeFilter">
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="all">All-Time</option>
+      </select>
+      <div id="exerciseLb"></div>
+    </div>`;
   detail.style.display = 'block';
+
+  const selectEl = document.getElementById('exerciseSelect');
+  const timeEl = document.getElementById('timeFilter');
+  const render = () => renderExerciseLeaderboard(selectEl.value, timeEl.value);
+  selectEl.onchange = render;
+  timeEl.onchange = render;
+  render();
+}
+
+function renderExerciseLeaderboard(exercise, timeframe) {
+  const container = document.getElementById('exerciseLb');
+  if (!container) return;
+  const data = sampleExerciseData[exercise] || [];
+  if (!data.length) {
+    container.innerHTML = '<p>No data available for this exercise/timeframe.</p>';
+    return;
+  }
+  const rows = data.map((d,i) =>
+    `<div class="leader-entry"><span>#${i+1}</span><span><strong>${d.user}</strong></span><span>${d.volume.toLocaleString()} kg</span><span>${d.sets} sets, ${d.reps} reps</span></div>`
+  ).join('');
+  container.innerHTML = `<div class="leaderboard">${rows}</div>`;
 }
 
 if (typeof window !== 'undefined') {
