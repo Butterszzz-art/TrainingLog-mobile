@@ -743,6 +743,9 @@
     <p id="leaderboardEmpty" style="display:none;text-align:center;">No data available.</p>
     <canvas id="lbBarChart"></canvas>
     <canvas id="lbLineChart" style="margin-top:20px;"></canvas>
+    <div style="margin-top:10px;">
+      <button onclick="showTab('exerciseLeaderboardTab')">Exercise Leaderboard</button>
+    </div>
   </div>
 </div>
 
@@ -752,6 +755,26 @@
 
 <div id="groupStatsTab" class="tab-content">
   <div id="groupStatsContent"></div>
+</div>
+
+<div id="exerciseLeaderboardTab" class="tab-content">
+  <h2>Exercise Leaderboard</h2>
+  <div class="leaderboard-screen">
+    <div class="leaderboard-controls">
+      <label for="exerciseLbSelect">Exercise</label>
+      <select id="exerciseLbSelect"></select>
+      <label for="exerciseLbTime">Timeframe</label>
+      <select id="exerciseLbTime">
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="all">All-Time</option>
+      </select>
+    </div>
+    <div id="exerciseLeaderboardContainer"></div>
+    <div style="margin-top:10px;">
+      <button onclick="showTab('leaderboardTab')">Back to Leaderboard</button>
+    </div>
+  </div>
 </div>
 
   <div id="cardioTab" class="tab-content">
@@ -1060,6 +1083,7 @@
 <script src="progressiveOverload.js"></script>
 <script src="community.js"></script>
 <script src="leaderboard.js"></script>
+<script src="exerciseLeaderboard.js"></script>
 <script src="stats.js"></script>
 <!-- Optional runtime configuration -->
 <script src="config.js"></script>
@@ -1303,6 +1327,9 @@ function showTab(tabName) {
       break;
     case 'leaderboardTab':
       if (window.initLeaderboard) initLeaderboard();
+      break;
+    case 'exerciseLeaderboardTab':
+      if (window.initExerciseLeaderboard) initExerciseLeaderboard();
       break;
     case 'userStatsTab':
       break;
