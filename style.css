@@ -175,3 +175,28 @@ header, .dark-bg, .coach-only {
   align-self: flex-end;
   margin-top: auto;
 }
+
+/* community competition */
+.community-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.community-nav button {
+  flex: 1;
+}
+.leaderboard {
+  margin-top: 10px;
+}
+.leader-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.leader-details {
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+}
