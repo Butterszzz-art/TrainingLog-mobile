@@ -193,10 +193,20 @@ header, .dark-bg, .coach-only {
   justify-content: space-between;
   padding: 6px 0;
   border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+}
+.leader-entry:nth-child(even) {
+  background: rgba(0,0,0,0.03);
 }
 .leader-details {
   margin-top: 10px;
   padding: 10px;
   background: var(--card-bg);
   box-shadow: var(--shadow);
+}
+.exercise-compare {
+  margin-top: 10px;
+}
+.exercise-compare select {
+  margin-right: 6px;
 }
