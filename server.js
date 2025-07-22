@@ -34,6 +34,37 @@ const groups = [];
 const programs = [];
 const sharedPrograms = [];
 
+// sample leaderboard data
+const leaderboard = [
+  {
+    id: 1,
+    name: 'Alice',
+    workoutsLogged: 45,
+    studyHours: 30,
+    groupActivity: 120,
+    weeklyVolume: [500, 700, 650, 800],
+    progress: [10, 12, 14, 15, 16]
+  },
+  {
+    id: 2,
+    name: 'Bob',
+    workoutsLogged: 30,
+    studyHours: 40,
+    groupActivity: 100,
+    weeklyVolume: [400, 600, 550, 500],
+    progress: [8, 9, 11, 13, 14]
+  },
+  {
+    id: 3,
+    name: 'Cara',
+    workoutsLogged: 35,
+    studyHours: 55,
+    groupActivity: 90,
+    weeklyVolume: [450, 500, 470, 520],
+    progress: [15, 14, 16, 18, 20]
+  }
+];
+
 app.get('/config', (req, res) => {
   res.json({
     airtableToken: process.env.AIRTABLE_TOKEN || 'patHs7yemB2TYuOOc.6ed847f094d08b1d30710f9f5763d909d1841a2e7dc63fbdac208133a39ae577',
@@ -165,6 +196,11 @@ app.get('/community/groups/:groupId/progress', (req, res) => {
   }));
   const lb = calculateLeaderboard(members);
   res.json({ members, leaderboard: lb });
+});
+
+// basic leaderboard endpoint
+app.get('/leaderboard', (req, res) => {
+  res.json(leaderboard);
 });
 
 app.listen(PORT, () => {
