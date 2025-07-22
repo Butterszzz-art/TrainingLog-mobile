@@ -232,12 +232,48 @@ function renderGroups(list) {
   if (!container) return;
   container.innerHTML = '';
   list.forEach(g => {
-    const div = document.createElement('div');
-    div.textContent = g.name;
-    div.className = 'group-item';
-    div.onclick = () => openGroup(g.id);
-    container.appendChild(div);
+    const card = document.createElement('div');
+    card.className = 'group-card card group-item';
+
+    const title = document.createElement('div');
+    title.className = 'group-title';
+    title.textContent = g.name;
+    card.appendChild(title);
+
+    const descText = g.goal && g.goal.trim() ? g.goal : 'No description';
+    const desc = document.createElement('div');
+    desc.className = 'group-desc';
+    desc.textContent = descText;
+    card.appendChild(desc);
+
+    const count = Array.isArray(g.members) ? g.members.length : 0;
+    const members = document.createElement('div');
+    members.className = 'group-members';
+    members.textContent = `${count} member${count === 1 ? '' : 's'}`;
+    card.appendChild(members);
+
+    const isMember = window.currentUser && Array.isArray(g.members) && g.members.includes(window.currentUser);
+    const btn = document.createElement('button');
+    btn.className = 'action-btn';
+    btn.textContent = isMember ? 'View Group' : 'Join';
+    btn.onclick = () => {
+      if (isMember) openGroup(g.id); else joinGroup(g.id);
+    };
+    card.appendChild(btn);
+
+    container.appendChild(card);
   });
+}
+
+function joinGroup(id) {
+  const g = groups.find(gr => gr.id === id);
+  if (!g || !window.currentUser) return;
+  if (!Array.isArray(g.members)) g.members = [];
+  if (!g.members.includes(window.currentUser)) {
+    g.members.push(window.currentUser);
+    saveGroups();
+  }
+  openGroup(id);
 }
 
 async function openGroup(id) {
@@ -320,6 +356,7 @@ if (typeof window !== 'undefined') {
   window.shareProgramToGroup = shareProgramToGroup;
   window.doGroupSearch = doGroupSearch;
   window.clearGroupFilters = clearGroupFilters;
+  window.joinGroup = joinGroup;
 }
 
 // allow tests to import functions
