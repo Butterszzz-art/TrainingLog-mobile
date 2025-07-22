@@ -122,6 +122,9 @@ header, .dark-bg, .coach-only {
 .community-search input {
   margin: 0;
 }
+.community-search select {
+  margin: 0;
+}
 .search-buttons {
   display: flex;
   gap: 10px;

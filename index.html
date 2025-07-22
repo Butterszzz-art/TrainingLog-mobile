@@ -689,9 +689,22 @@
     <label for="goalFilter">Goal</label>
     <input id="goalFilter" placeholder="Goal">
     <label for="tagFilter">Tag</label>
-    <input id="tagFilter" placeholder="Tag">
+    <input id="tagFilter" list="tagOptions" placeholder="Tag">
+    <datalist id="tagOptions">
+      <option value="strength"></option>
+      <option value="hypertrophy"></option>
+      <option value="conditioning"></option>
+      <option value="crossfit"></option>
+    </datalist>
+    <label for="sortFilter">Sort By</label>
+    <select id="sortFilter" onchange="doGroupSearch()">
+      <option value="">--</option>
+      <option value="members">Most Members</option>
+      <option value="active">Recently Active</option>
+      <option value="alpha">Alphabetical (A-Z)</option>
+    </select>
     <div class="search-buttons">
-      <button class="action-btn" onclick="doGroupSearch()">Search</button>
+      <button id="groupSearchBtn" class="action-btn loading-btn" onclick="doGroupSearch()"><span>Search</span><span class="spinner"></span></button>
       <button class="action-btn" onclick="clearGroupFilters()">Clear Filters</button>
     </div>
   </div>

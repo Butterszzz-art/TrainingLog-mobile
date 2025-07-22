@@ -81,9 +81,35 @@ function filterGroups(list, opts = {}) {
   return list.filter(g => {
     if (opts.goal && !(g.goal || '').toLowerCase().includes(opts.goal.toLowerCase())) return false;
     if (opts.tag && !(g.tags || []).some(t => t.toLowerCase().includes(opts.tag.toLowerCase()))) return false;
-    if (opts.search && !g.name.toLowerCase().includes(opts.search.toLowerCase())) return false;
+    if (opts.search) {
+      const term = opts.search.toLowerCase();
+      const inName = (g.name || '').toLowerCase().includes(term);
+      const inGoal = (g.goal || '').toLowerCase().includes(term);
+      const inTags = (g.tags || []).some(t => t.toLowerCase().includes(term));
+      if (!inName && !inGoal && !inTags) return false;
+    }
     return true;
   });
+}
+
+function getLastActiveDate(g) {
+  if (Array.isArray(g.posts) && g.posts.length) {
+    const last = g.posts[g.posts.length - 1];
+    return new Date(last.date).getTime();
+  }
+  return 0;
+}
+
+function sortGroups(list, mode) {
+  const sorted = [...list];
+  if (mode === 'members') {
+    sorted.sort((a, b) => (b.members?.length || 0) - (a.members?.length || 0));
+  } else if (mode === 'active') {
+    sorted.sort((a, b) => getLastActiveDate(b) - getLastActiveDate(a));
+  } else if (mode === 'alpha') {
+    sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }
+  return sorted;
 }
 
 async function fetchPosts(groupId) {
@@ -173,21 +199,33 @@ async function fetchProgress(groupId) {
 
 
 function loadGroups() {
-  return fetchGroups(window.currentUser).then(renderGroups);
+  return fetchGroups(window.currentUser).then(list => {
+    const sort = document.getElementById('sortFilter')?.value || '';
+    renderGroups(sortGroups(list, sort));
+  });
 }
 
 function doGroupSearch() {
-  const search = document.getElementById('groupSearchInput').value;
-  const goal = document.getElementById('goalFilter').value;
-  const tag = document.getElementById('tagFilter').value;
-  searchGroups({ search, goal, tag }).then(renderGroups);
+  const search = document.getElementById('groupSearchInput').value.trim();
+  const goal = document.getElementById('goalFilter').value.trim();
+  const tag = document.getElementById('tagFilter').value.trim();
+  const sort = document.getElementById('sortFilter').value;
+  const btn = document.getElementById('groupSearchBtn');
+  if (btn) btn.classList.add('loading');
+  setTimeout(() => {
+    let list = filterGroups(groups, { search, goal, tag });
+    list = sortGroups(list, sort);
+    renderGroups(list);
+    if (btn) btn.classList.remove('loading');
+  }, 10);
 }
 
 function clearGroupFilters() {
   document.getElementById('groupSearchInput').value = '';
   document.getElementById('goalFilter').value = '';
   document.getElementById('tagFilter').value = '';
-  searchGroups({}).then(renderGroups);
+  document.getElementById('sortFilter').value = '';
+  renderGroups(sortGroups(groups));
 }
 
 // Add post locally and via backend
@@ -361,5 +399,5 @@ if (typeof window !== 'undefined') {
 
 // allow tests to import functions
 if (typeof module !== 'undefined') {
-  module.exports = { calculateLeaderboard, filterGroups };
+  module.exports = { calculateLeaderboard, filterGroups, sortGroups };
 }
