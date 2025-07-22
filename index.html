@@ -556,6 +556,7 @@
       <li><a href="#" data-target="crossfitTab">💪 CrossFit</a></li>
       <li><a href="#" data-target="programTab">🗓️ Programs</a></li>
       <li><a href="#" data-target="communityTab">👥 Community</a></li>
+      <li><a href="#" data-target="leaderboardTab">🏅 Leaderboard</a></li>
       <li><a href="#" data-target="progressTab">📈 Progress</a></li>
       <li><a href="#" data-target="logHistoryTab">📜 Log History</a></li>
       <li class="coach-only"><a href="#" data-target="coachingTab">🏆 Coaching</a></li>
@@ -724,6 +725,21 @@
     <div id="competitionContent"></div>
   </div>
   <div id="postsPanel" class="panel"></div>
+</div>
+
+<div id="leaderboardTab" class="tab-content">
+  <h2>Leaderboard</h2>
+  <div class="leaderboard-screen">
+    <div class="leaderboard-controls">
+      <label for="leaderSortStatic">Sort By</label>
+      <select id="leaderSortStatic">
+        <option value="workoutsLogged">Workouts Logged</option>
+        <option value="studyHours">Study Hours</option>
+        <option value="groupActivity">Group Activity</option>
+      </select>
+    </div>
+    <div id="leaderboardContainer"></div>
+  </div>
 </div>
 
   <div id="cardioTab" class="tab-content">
@@ -1031,6 +1047,7 @@
 <script src="archiveOldWorkouts.js"></script>
 <script src="progressiveOverload.js"></script>
 <script src="community.js"></script>
+<script src="leaderboard.js"></script>
 <!-- Optional runtime configuration -->
 <script src="config.js"></script>
 <script type="module" src="progressUtils.js"></script>
@@ -1270,6 +1287,9 @@ function showTab(tabName) {
       break;
     case 'communityTab':
       if (window.showCommunitySection) showCommunitySection('groups');
+      break;
+    case 'leaderboardTab':
+      if (window.initLeaderboard) initLeaderboard();
       break;
     case 'progressTab':
       showWorkoutProgress();

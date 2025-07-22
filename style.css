@@ -210,3 +210,17 @@ header, .dark-bg, .coach-only {
 .exercise-compare select {
   margin-right: 6px;
 }
+
+.leaderboard-screen {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 10px;
+}
+.leaderboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.leaderboard-controls select {
+  flex: 1;
+}
