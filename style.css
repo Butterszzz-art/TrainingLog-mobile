@@ -258,3 +258,12 @@ header, .dark-bg, .coach-only {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Progressive Overload Components */
+.progress-bar{background:#eee;height:10px;border-radius:6px;overflow:hidden;width:100%;}
+.progress-bar-fill{background:var(--primary);height:100%;width:0;transition:width 0.3s;}
+.progress-text{text-align:center;font-size:0.9rem;margin-top:4px;}
+.streak-counter{text-align:center;font-weight:bold;margin-top:6px;}
+#dashboardPRSummary{margin-top:10px;}
+@media(max-width:600px){#dashboardPRSummary{font-size:0.9rem;}}
+

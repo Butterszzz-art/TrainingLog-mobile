@@ -610,6 +610,12 @@
     <span id="restTimerDisplay" style="margin-left:10px;"></span>
   </div>
 
+  <div id="progressComponents" style="margin-top:10px;">
+    <div id="progressBar" class="progress-bar"><div id="progressFill" class="progress-bar-fill"></div></div>
+    <div id="progressText" class="progress-text"></div>
+    <div id="streakCounter" class="streak-counter"></div>
+  </div>
+
   
   <button id="addLogBtn" onclick="addLogEntry()" disabled>Add to Log</button>
     <!-- Logs will render below this -->
@@ -914,6 +920,7 @@
         <div id="milestoneBadges"></div>
       </aside>
       <button onclick="exportCSV()">Export CSV</button>
+      <div id="dashboardPRSummary" class="panel"></div>
     </div>
   </div>
 
@@ -1340,6 +1347,7 @@ function showTab(tabName) {
       break;
     case 'progressTab':
       showWorkoutProgress();
+      renderDashboardPRSummary();
       break;
     case 'logHistoryTab':
       showHistoryMiniTab('workout');
@@ -1540,10 +1548,12 @@ function updateAddButtonState() {
     const weight = document.getElementById(`weight_${i}`);
     if (!reps || !weight || reps.value === '' || weight.value === '') {
       addBtn.disabled = true;
+      updateProgressBar();
       return;
     }
   }
   addBtn.disabled = false;
+  updateProgressBar();
 }
 
   
@@ -1620,6 +1630,7 @@ function addLogEntry() {
   showCoachInsights();
   saveUserExercise(exercise);
   trackWorkoutDate(date);
+  if (typeof updateStreakCounter === 'function') updateStreakCounter();
   renderWorkouts();
   updateTrainingCalendar();
 
@@ -3455,6 +3466,73 @@ function exportCSV() {
   a.click();
 }
 
+function updateProgressBar() {
+  const bar = document.getElementById('progressFill');
+  const text = document.getElementById('progressText');
+  if (!bar || !text) return;
+  const exercise = document.getElementById('exercise').value.trim();
+  const sets = parseInt(document.getElementById('sets').value, 10);
+  if (!exercise || !sets || isNaN(sets) || sets < 1) {
+    bar.style.width = '0';
+    text.textContent = '';
+    return;
+  }
+  const reps = [];
+  const weights = [];
+  for (let i = 0; i < sets; i++) {
+    const r = parseFloat(document.getElementById(`reps_${i}`).value);
+    const w = parseFloat(document.getElementById(`weight_${i}`).value);
+    if (isNaN(r) || isNaN(w)) { bar.style.width = '0'; text.textContent = ''; return; }
+    reps.push(r); weights.push(w);
+  }
+  const current = computeOneRepMax(weights, reps);
+  const prs = loadPRs(currentUser);
+  const pr = prs[exercise]?.oneRM || 0;
+  if (!pr) {
+    bar.style.width = '0';
+    text.textContent = 'New exercise';
+    return;
+  }
+  const pct = Math.min(100, (current / pr) * 100);
+  bar.style.width = pct + '%';
+  text.textContent = pct.toFixed(0) + '% of PR';
+}
+
+function updateStreakCounter() {
+  const el = document.getElementById('streakCounter');
+  if (!el) return;
+  const dates = JSON.parse(localStorage.getItem(`workoutDates_${currentUser}`)) || [];
+  const streak = calculateStreak(dates);
+  el.textContent = `Current streak: ${streak} day${streak === 1 ? '' : 's'}`;
+}
+
+function renderDashboardPRSummary() {
+  const cont = document.getElementById('dashboardPRSummary');
+  if (!cont) return;
+  const prs = loadPRs(currentUser);
+  const goals = loadGoals(currentUser);
+  cont.innerHTML = '<h3>PR Summary</h3>';
+  Object.entries(prs).slice(-5).forEach(([ex, pr]) => {
+    const div = document.createElement('div');
+    div.textContent = `${ex}: 1RM ${pr.oneRM.toFixed(1)}`;
+    cont.appendChild(div);
+  });
+  if (goals.volume) {
+    const pct = Math.min(100, (goals.volume.progress / goals.volume.target) * 100);
+    const msg = document.createElement('div');
+    msg.textContent = `Next volume goal: ${goals.volume.target} (${pct.toFixed(0)}% complete)`;
+    cont.appendChild(msg);
+  }
+  const mot = document.createElement('div');
+  mot.textContent = 'Keep pushing for new personal bests!';
+  mot.style.marginTop = '8px';
+  cont.appendChild(mot);
+  const btn = document.createElement('button');
+  btn.textContent = 'Back to Training';
+  btn.onclick = () => showTab('logTab');
+  cont.appendChild(btn);
+}
+
 
 // ===== Training Progress Calendar =====
 let calendarMonth;
@@ -4049,6 +4127,7 @@ function loadCrossfitTemplate() {
   renderPRs();
   renderMilestones();
   renderGoalBar();
+  if (typeof updateStreakCounter === 'function') updateStreakCounter();
 
 }); // closing DOMContentLoaded
 
@@ -4096,6 +4175,9 @@ window.refreshProgress = refreshProgress;
 window.promptGoal = promptGoal;
 window.exportCSV = exportCSV;
 window.calculateCaloriesEquation = calculateCaloriesEquation;
+window.updateProgressBar = updateProgressBar;
+window.updateStreakCounter = updateStreakCounter;
+window.renderDashboardPRSummary = renderDashboardPRSummary;
 
   function showToast(msg) {
     const toast = document.createElement('div');
