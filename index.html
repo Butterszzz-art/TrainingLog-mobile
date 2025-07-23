@@ -1435,6 +1435,12 @@ function editSetValue(workoutIndex, entryIndex, type, value, setIndex) {
     entry.repsArray[setIndex] = +value;
   } else if (type === 'weight') {
     entry.weightsArray[setIndex] = +value;
+  } else if (type === 'dropset') {
+    if (!Array.isArray(entry.dropsetArray)) entry.dropsetArray = [];
+    entry.dropsetArray[setIndex] = !!value;
+  } else if (type === 'restPause') {
+    if (!Array.isArray(entry.restPauseArray)) entry.restPauseArray = [];
+    entry.restPauseArray[setIndex] = !!value;
   }
 
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
@@ -1486,6 +1492,8 @@ function getSetInputHTML(i) {
       <label style="min-width: 60px;">Set ${i + 1}</label>
       <input type="number" id="reps_${i}" placeholder="Reps" style="width: 80px;" oninput="updateAddButtonState()" />
       <input type="number" id="weight_${i}" placeholder="Weight" style="width: 100px;" oninput="updateAddButtonState()" />
+      <label style="font-size:12px;"><input type="checkbox" id="dropset_${i}" /> Dropset</label>
+      <label style="font-size:12px;"><input type="checkbox" id="restPause_${i}" /> Rest Pause</label>
       <button onclick="removeSet(${i})" style="background-color: #dc3545; color: var(--text-color); border: none; padding: 4px 8px; border-radius: 4px;">❌</button>
     </div>
   `;
@@ -1495,11 +1503,15 @@ function removeSet(indexToRemove) {
   currentSetCount--;
   const reps = [];
   const weights = [];
+  const drops = [];
+  const rests = [];
 
   for (let i = 0; i < currentSetCount + 1; i++) {
     if (i !== indexToRemove) {
       reps.push(document.getElementById(`reps_${i}`).value);
       weights.push(document.getElementById(`weight_${i}`).value);
+      drops.push(document.getElementById(`dropset_${i}`).checked);
+      rests.push(document.getElementById(`restPause_${i}`).checked);
     }
   }
 
@@ -1507,6 +1519,8 @@ function removeSet(indexToRemove) {
   for (let i = 0; i < currentSetCount; i++) {
     document.getElementById(`reps_${i}`).value = reps[i];
     document.getElementById(`weight_${i}`).value = weights[i];
+    document.getElementById(`dropset_${i}`).checked = drops[i];
+    document.getElementById(`restPause_${i}`).checked = rests[i];
   }
   document.getElementById("sets").value = currentSetCount;
   updateAddButtonState();
@@ -1550,16 +1564,22 @@ function addLogEntry() {
 
   const repsArray = [];
   const weightsArray = [];
+  const dropsetArray = [];
+  const restPauseArray = [];
 
   for (let i = 0; i < sets; i++) {
     const reps = +document.getElementById(`reps_${i}`).value;
     const weight = +document.getElementById(`weight_${i}`).value;
+    const ds = document.getElementById(`dropset_${i}`).checked;
+    const rp = document.getElementById(`restPause_${i}`).checked;
     if (isNaN(reps) || isNaN(weight)) {
       alert("Please enter valid reps and weight for all sets.");
       return;
     }
     repsArray.push(reps);
     weightsArray.push(weight);
+    dropsetArray.push(ds);
+    restPauseArray.push(rp);
   }
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
@@ -1575,6 +1595,8 @@ function addLogEntry() {
     sets,
     repsArray,
     weightsArray,
+    dropsetArray,
+    restPauseArray,
     unit,
     date,
     goal,
@@ -1582,6 +1604,9 @@ function addLogEntry() {
   });
 
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  if (typeof saveWorkoutToBackend === 'function') {
+    saveWorkoutToBackend(workouts[workouts.length - 1]);
+  }
   updatePRs(currentUser, { log: [{ exercise, weightsArray, repsArray }] }, calculateWorkoutVolume);
   updateGoalProgress(currentUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
   renderPRs();
@@ -1644,18 +1669,26 @@ function renderWorkouts() {
 
       rows += repsArray.map((rep, setIndex) => {
         const weight = weightsArray[setIndex] ?? '-';
+        const ds = entry.dropsetArray ? entry.dropsetArray[setIndex] : false;
+        const rp = entry.restPauseArray ? entry.restPauseArray[setIndex] : false;
         return `
           <tr>
             ${setIndex === 0 ? `<td rowspan="${sets}">${entry.exercise}</td>
                                 <td rowspan="${sets}">${sets}</td>` : ''}
             <td>
-              <input type="number" value="${rep}" 
+              <input type="number" value="${rep}"
                      onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'rep', this.value, ${setIndex})" />
             </td>
             <td>
-              <input type="number" value="${weight}" 
+              <input type="number" value="${weight}"
                      onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'weight', this.value, ${setIndex})" />
               <span style="font-size:12px;">(${unit})</span>
+            </td>
+            <td>
+              <label style="font-size:12px;"><input type="checkbox" ${ds ? 'checked' : ''}
+                     onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'dropset', this.checked, ${setIndex})" /> DS</label>
+              <label style="font-size:12px; margin-left:4px;"><input type="checkbox" ${rp ? 'checked' : ''}
+                     onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'restPause', this.checked, ${setIndex})" /> RP</label>
             </td>
             ${setIndex === 0 ? `
               <td rowspan="${sets}">${entry.date}</td>
@@ -1688,6 +1721,7 @@ function renderWorkouts() {
                 <th>Sets</th>
                 <th>Reps</th>
                 <th>Weight</th>
+                <th>Method</th>
                 <th>Date</th>
                 <th>Goal Progress</th>
                 <th>Actions</th>
@@ -1726,6 +1760,10 @@ function addSetToLog(workoutIndex, entryIndex) {
 
   entry.repsArray.push(0);        // default value
   entry.weightsArray.push(0);     // default value
+  if (!Array.isArray(entry.dropsetArray)) entry.dropsetArray = [];
+  if (!Array.isArray(entry.restPauseArray)) entry.restPauseArray = [];
+  entry.dropsetArray.push(false);
+  entry.restPauseArray.push(false);
   entry.sets = entry.repsArray.length;
 
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
@@ -3077,7 +3115,10 @@ function renderWorkoutHistory() {
       const exercisesHtml = workout.log
         .map(entry => {
           const sets = entry.repsArray
-            .map((rep, i) => `${rep} x ${entry.weightsArray[i] ?? '-'} ${entry.unit || 'kg'}`)
+            .map((rep, i) => {
+              const flags = `${entry.dropsetArray && entry.dropsetArray[i] ? ' DS' : ''}${entry.restPauseArray && entry.restPauseArray[i] ? ' RP' : ''}`;
+              return `${rep} x ${entry.weightsArray[i] ?? '-'} ${entry.unit || 'kg'}${flags}`;
+            })
             .join(', ');
           return `${entry.exercise}: ${sets}`;
         })

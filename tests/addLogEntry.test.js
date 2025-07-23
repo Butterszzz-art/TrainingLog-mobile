@@ -24,7 +24,9 @@ describe('addLogEntry', () => {
       <input id="entryDate">
       <div id="setInputsContainer"></div>
       <input id="reps_0">
-      <input id="weight_0">`);
+      <input id="weight_0">
+      <input id="dropset_0" type="checkbox">
+      <input id="restPause_0" type="checkbox">`);
 
     context = {
       document: dom.window.document,
