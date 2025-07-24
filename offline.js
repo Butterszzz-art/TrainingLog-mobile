@@ -30,8 +30,8 @@ if (typeof window !== 'undefined') {
   window.processQueue = processQueue;
 }
 
-if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js').catch(error => {
-    console.warn('Service Worker registration failed:', error.message);
-  });
-}
+// if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+//   navigator.serviceWorker.register('service-worker.js').catch(error => {
+//     console.warn('Service Worker registration failed:', error.message);
+//   });
+// }
