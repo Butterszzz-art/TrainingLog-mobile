@@ -75,16 +75,19 @@ cp config.example.js config.js
 The file exports two constants:
 
 ```javascript
-window.SERVER_URL = 'http://localhost:3000';
+window.SERVER_URL = 'https://traininglog-backend.onrender.com';
 window.airtableConfig = {
   airtableToken: 'yourToken',
   airtableBaseId: 'yourBase'
 };
 ```
 
-Optionally, set `SERVER_URL` to point at the Express backend that exposes the
-`/config` route. When no backend is reachable, the page falls back to the
-values provided in `config.js`.
-During development you can override `window.SERVER_URL` to use a local backend
-like `http://localhost:3000`.
+You can override the backend URL by setting the `REACT_APP_BACKEND_URL`
+environment variable. When no backend is reachable, the page falls back to the
+values provided in `config.js`. During development you may want to point it at a
+local server by creating an `.env.development` file containing
+
+```ini
+REACT_APP_BACKEND_URL=http://localhost:3000
+```
 
