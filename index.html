@@ -986,23 +986,27 @@
 </div>
 
 <div id="settingsTab" class="tab-content">
-  <h2>Settings</h2>
-  <label>
-    <input type="checkbox" id="trainerModeToggle" />
-    Enable Trainer Mode
-  </label>
+  <div id="settingsFormContainer" class="panel"></div>
 
-  <!-- Theme selection moved from macros settings -->
-  <div style="margin-top:20px;">
-    <label for="themeSelect">Color Theme:</label><br>
+  <section class="panel" aria-labelledby="trainerModeHeading">
+    <h3 id="trainerModeHeading">Trainer Mode</h3>
+    <label>
+      <input type="checkbox" id="trainerModeToggle" />
+      Enable Trainer Mode
+    </label>
+  </section>
+
+  <section id="legacyThemeSection" class="panel" aria-labelledby="themeSelectLabel" style="margin-top:20px;">
+    <h3 id="themeSelectLabel">Legacy Theme Picker</h3>
+    <p style="margin-top:0;">Use this selector if the primary settings form is unavailable.</p>
     <select id="themeSelect" onchange="applyTheme(this.value)" style="width:100%;padding:8px;margin-top:6px;">
       <option value="light">Light</option>
       <option value="dark">Dark</option>
       <option value="neon">Neon Dark</option>
     </select>
-  </div>
+  </section>
 
-  <div id="calorieCalcSection" style="margin-top:20px;">
+  <div id="calorieCalcSection" class="panel" style="margin-top:20px;">
     <h3>Calculate Calories</h3>
     <input type="number" id="calcWeight" placeholder="Weight (lbs)" style="width:100%;padding:8px;margin-bottom:10px;">
     <input type="number" id="calcHeight" placeholder="Height (in)" style="width:100%;padding:8px;margin-bottom:10px;">
@@ -1115,6 +1119,7 @@
 <script type="module" src="periodization.js"></script>
 <script type="module" src="macrosFeatures.js"></script>
 <script src="lifestyle.js"></script>
+<script src="src/js/settings.js"></script>
 <script>
 
 let currentUser = null;
@@ -1379,10 +1384,17 @@ function showTab(tabName) {
       showHistoryMiniTab('workout');
       break;
     case 'settingsTab':
+      if (typeof initSettingsPage === 'function') {
+        initSettingsPage();
+      }
       const theme = localStorage.getItem('theme') || 'light';
-      if (typeof applyTheme === 'function') applyTheme(theme);
       const themeSel = document.getElementById('themeSelect');
       if (themeSel) themeSel.value = theme;
+      const savedUnit = localStorage.getItem('defaultWeightUnit');
+      if (savedUnit) {
+        const weightUnitSelect = document.getElementById('weightUnit');
+        if (weightUnitSelect) weightUnitSelect.value = savedUnit;
+      }
       const trainerToggle = document.getElementById('trainerModeToggle');
       if (trainerToggle) {
         trainerToggle.checked = JSON.parse(localStorage.getItem('trainerMode') || 'false');
@@ -3783,6 +3795,16 @@ function showHistoryMiniTab(tab) {
     applyTheme(savedTheme);
     const sel = document.getElementById('themeSelect');
     if (sel) sel.value = savedTheme;
+    const primaryThemeSelect = document.getElementById('theme');
+    if (primaryThemeSelect) primaryThemeSelect.value = savedTheme;
+
+    const savedUnit = localStorage.getItem('defaultWeightUnit');
+    if (savedUnit) {
+      const defaultUnitSelect = document.getElementById('defaultUnit');
+      if (defaultUnitSelect) defaultUnitSelect.value = savedUnit;
+      const weightUnitSelect = document.getElementById('weightUnit');
+      if (weightUnitSelect) weightUnitSelect.value = savedUnit;
+    }
 
     await fetchAirtableConfig();
 
