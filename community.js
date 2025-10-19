@@ -2,6 +2,7 @@
 let groups = [];
 if (typeof localStorage !== 'undefined') {
   groups = JSON.parse(localStorage.getItem('communityGroups')) || [];
+  groups = normalizeGroups(groups);
 }
 
 const serverUrl = (typeof window !== 'undefined' && window.SERVER_URL) ||
@@ -26,6 +27,37 @@ const sampleExerciseData = {
   ]
 };
 
+function normalizeMember(member) {
+  if (!member) return null;
+  if (typeof member === 'string') {
+    return { userId: member };
+  }
+  if (typeof member === 'object') {
+    if (!member.userId) {
+      if (member.id) member.userId = member.id;
+      if (member.username) member.userId = member.username;
+    }
+    return member;
+  }
+  return null;
+}
+
+function normalizeGroup(group) {
+  if (!group) return group;
+  if (Array.isArray(group.members)) {
+    group.members = group.members
+      .map(normalizeMember)
+      .filter(Boolean);
+  } else {
+    group.members = [];
+  }
+  return group;
+}
+
+function normalizeGroups(list = []) {
+  return list.map(g => normalizeGroup({ ...g }));
+}
+
 function saveGroups() {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('communityGroups', JSON.stringify(groups));
@@ -43,7 +75,7 @@ async function createGroup(name, goal = '', tags = []) {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags })
 });
-      const g = await res.json();
+      const g = normalizeGroup(await res.json());
       groups.push(g);
       saveGroups();
       return g;
@@ -52,7 +84,7 @@ async function createGroup(name, goal = '', tags = []) {
     }
   }
   // fallback local group creation
-  const g = { id: Date.now(), name, goal, tags, members: [], posts: [] };
+  const g = normalizeGroup({ id: Date.now(), name, goal, tags, members: [], posts: [] });
   groups.push(g);
   saveGroups();
   return g;
@@ -70,7 +102,7 @@ async function fetchGroups(userId) {
       credentials: 'include'
     });
     if (res.ok) {
-      groups = await res.json();
+      groups = normalizeGroups(await res.json());
       saveGroups();
     }
   } catch (e) {
@@ -87,7 +119,7 @@ async function searchGroups(opts = {}) {
   try {
     const res = await fetch(`${window.SERVER_URL}/community/groups?${params.toString()}`, { method: 'GET', credentials: 'include' });
     if (res.ok) {
-      groups = await res.json();
+      groups = normalizeGroups(await res.json());
       saveGroups();
     }
   } catch (e) {
@@ -166,8 +198,10 @@ async function inviteUserToGroup(groupId, invitedUserId) {
       const g = groups.find(gr => gr.id === groupId);
       if (g) {
         if (!Array.isArray(g.members)) g.members = [];
-        g.members.push(invitedUserId);
-        saveGroups();
+        if (!isMemberOf(g, invitedUserId)) {
+          g.members.push({ userId: invitedUserId, invitedAt: new Date().toISOString() });
+          saveGroups();
+        }
       }
       alert('Invitation sent');
       openGroup(groupId);
@@ -309,7 +343,7 @@ function renderGroups(list) {
     members.textContent = `${count} member${count === 1 ? '' : 's'}`;
     card.appendChild(members);
 
-    const isMember = window.currentUser && Array.isArray(g.members) && g.members.includes(window.currentUser);
+    const isMember = isMemberOf(g, getCurrentUserId());
     const btn = document.createElement('button');
     btn.className = 'action-btn';
     btn.textContent = isMember ? 'View Group' : 'Join';
@@ -322,13 +356,42 @@ function renderGroups(list) {
   });
 }
 
+function getCurrentUserId() {
+  if (typeof window !== 'undefined' && window.currentUser) return window.currentUser;
+  if (typeof localStorage !== 'undefined') {
+    const stored = localStorage.getItem('currentUser');
+    if (stored) return stored;
+  }
+  return null;
+}
+
+function isMemberOf(group, userId) {
+  if (!Array.isArray(group?.members) || !userId) return false;
+  return group.members.some(member => {
+    if (member == null) return false;
+    if (typeof member === 'string') return member === userId;
+    if (typeof member === 'object') {
+      return member.userId === userId || member.id === userId || member.username === userId;
+    }
+    return false;
+  });
+}
+
 function joinGroup(id) {
   const g = groups.find(gr => gr.id === id);
-  if (!g || !window.currentUser) return;
+  if (!g) return;
+  const userId = getCurrentUserId();
+  if (!userId) {
+    if (typeof showToast === 'function') showToast('Please sign in to join groups');
+    return;
+  }
   if (!Array.isArray(g.members)) g.members = [];
-  if (!g.members.includes(window.currentUser)) {
-    g.members.push(window.currentUser);
+  if (!isMemberOf(g, userId)) {
+    g.members.push({ userId, joinedAt: new Date().toISOString() });
     saveGroups();
+    const sort = document.getElementById('sortFilter')?.value || '';
+    renderGroups(sortGroups(groups, sort));
+    if (typeof showToast === 'function') showToast(`You joined ${g.name}`);
   }
   openGroup(id);
 }
