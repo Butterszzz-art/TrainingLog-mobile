@@ -107,6 +107,13 @@
       transform: translateY(-2px);
     }
 
+    .form-error {
+      color: var(--danger);
+      margin: 4px 0 0;
+      min-height: 1.2em;
+      font-size: 0.9rem;
+    }
+
 
     table {
       width: 100%;
@@ -527,6 +534,7 @@
   <h2>Login to Pocket Coach</h2>
   <input type="text" id="username" placeholder="Enter Username" />
   <input type="password" id="password" placeholder="Enter Password" />
+  <p id="loginError" class="form-error" role="alert" aria-live="polite"></p>
   <button id="loginButton" class="loading-btn" onclick="startLogin()"><span>Login</span><span class="spinner"></span></button>
   <button id="signupButton" class="loading-btn" onclick="startSignup()"><span>Sign Up</span><span class="spinner"></span></button>
 </div>
@@ -1238,9 +1246,18 @@ async function startLogin() {
   setLoading(btn, true);
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
+  const errorEl = document.getElementById('loginError');
+
+  if (errorEl) {
+    errorEl.textContent = '';
+  }
 
   if (!username || !password) {
-    alert("Please fill in both username and password.");
+    if (errorEl) {
+      errorEl.textContent = "Please enter both username and password.";
+    } else {
+      console.warn("Please enter both username and password.");
+    }
     setLoading(btn, false);
     return;
   }
@@ -1275,11 +1292,21 @@ async function startLogin() {
       saveDailyMacroProgress(0, 0, 0); // reset progress on login
       renderDailyMacroProgress();
     } else {
-      alert(result.message || "Login failed.");
+      const message = result.message || "Invalid username or password.";
+      if (errorEl) {
+        errorEl.textContent = message;
+      } else {
+        console.warn(message);
+      }
+      return;
     }
   } catch (error) {
     console.error('Login error:', error);
-    alert("Error connecting to server.");
+    if (errorEl) {
+      errorEl.textContent = "Unable to connect to the server. Please try again later.";
+    } else {
+      console.error('Unable to connect to the server. Please try again later.');
+    }
 
     await loadTemplateDropdown(); // ✅ Load templates after login
   } finally {
