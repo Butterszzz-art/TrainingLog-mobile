@@ -1118,6 +1118,7 @@
 <script type="module" src="autoProgression.js"></script>
 <script type="module" src="periodization.js"></script>
 <script type="module" src="macrosFeatures.js"></script>
+<script type="module" src="history.js"></script>
 <script src="lifestyle.js"></script>
 <script src="src/js/settings.js"></script>
 <script>
@@ -1286,6 +1287,9 @@ async function startLogin() {
       document.getElementById("loginContainer").style.display = "none";
       openSection('pocketFit');
       window.renderWorkouts(); // ✅ Render workouts
+      if (typeof syncLocalHistoryFromWorkouts === 'function') {
+        syncLocalHistoryFromWorkouts();
+      }
       renderMacroTargets();
       renderWeights();
       renderCardio();
@@ -1669,6 +1673,9 @@ function addLogEntry() {
   saveUserExercise(exercise);
   trackWorkoutDate(date);
   if (typeof updateStreakCounter === 'function') updateStreakCounter();
+  if (typeof syncLocalHistoryFromWorkouts === 'function') {
+    syncLocalHistoryFromWorkouts();
+  }
   renderWorkouts();
   updateTrainingCalendar();
 
@@ -2193,6 +2200,9 @@ function completeWorkout() {
     workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
     localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
     trackWorkoutDate(date);
+  }
+  if (typeof syncLocalHistoryFromWorkouts === 'function') {
+    syncLocalHistoryFromWorkouts();
   }
   renderWorkouts();
   renderWorkoutHistory();
@@ -3131,6 +3141,9 @@ function removeLogEntry(workoutIndex, entryIndex) {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   workouts[workoutIndex].log.splice(entryIndex, 1);
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  if (typeof syncLocalHistoryFromWorkouts === 'function') {
+    syncLocalHistoryFromWorkouts();
+  }
   renderWorkouts();
 }
 
@@ -3139,47 +3152,88 @@ function removeWorkout(index) {
   if (confirm("Delete this entire workout?")) {
     workouts.splice(index, 1);
     localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+    if (typeof syncLocalHistoryFromWorkouts === 'function') {
+      syncLocalHistoryFromWorkouts();
+    }
     renderWorkouts();
   }
 }
 
-function renderWorkoutHistory() {
-  const container = document.getElementById("logHistoryContainer");
-  container.innerHTML = "";
+function buildWorkoutHistoryEntry(workout, index = 0) {
+  if (!workout || !Array.isArray(workout.log) || !workout.log.length) return null;
 
+  const sets = workout.log.map(entry => {
+    const reps = Array.isArray(entry.repsArray)
+      ? entry.repsArray
+          .filter(v => v !== null && v !== undefined && v !== '')
+          .map(String)
+          .join('/')
+      : '';
+    const weights = Array.isArray(entry.weightsArray)
+      ? entry.weightsArray
+          .filter(v => v !== null && v !== undefined && v !== '')
+          .map(String)
+          .join('/')
+      : '';
+    return {
+      exercise: entry.exercise || 'Exercise',
+      reps,
+      weight: weights
+    };
+  });
+
+  const notes = [];
+  if (workout.notes) notes.push(workout.notes);
+  if (Array.isArray(workout.restBreaks) && workout.restBreaks.length) {
+    notes.push(`Rest: ${workout.restBreaks.join(', ')} min`);
+  }
+
+  const performedDate = workout.date || workout.performedAt || new Date().toISOString();
+
+  return {
+    id: workout.id || workout.historyId || `local-${performedDate}-${index}`,
+    name: workout.title || workout.name || (performedDate ? `Workout on ${performedDate}` : 'Workout'),
+    units: workout.log[0]?.unit || workout.unit || '',
+    notes: notes.join('\n') || undefined,
+    sets,
+    performedAt: performedDate
+  };
+}
+
+function syncLocalHistoryFromWorkouts() {
+  const api = window.historyApi;
+  if (!api || typeof api.saveWorkoutToLocal !== 'function') return;
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const history = JSON.parse(localStorage.getItem(`workoutHistory_${currentUser}`)) || [];
-  const all = history.concat(workouts.filter(w => w.log && w.log.length > 0));
-  all
+  if (!workouts.length) return;
 
-    .slice()
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .forEach(workout => {
-      const div = document.createElement("div");
-      div.style.border = "1px solid var(--border-color)";
-      div.style.padding = "10px";
-      div.style.marginTop = "10px";
+  workouts.forEach((workout, index) => {
+    const entry = buildWorkoutHistoryEntry(workout, index);
+    if (!entry) return;
 
-      const exercisesHtml = workout.log
-        .map(entry => {
-          const sets = entry.repsArray
-            .map((rep, i) => {
-              const flags = `${entry.dropsetArray && entry.dropsetArray[i] ? ' DS' : ''}${entry.restPauseArray && entry.restPauseArray[i] ? ' RP' : ''}`;
-              return `${rep} x ${entry.weightsArray[i] ?? '-'} ${entry.unit || 'kg'}${flags}`;
-            })
-            .join(', ');
-          return `${entry.exercise}: ${sets}`;
-        })
-        .join('<br>');
+    const payload = { ...entry };
+    if (entry.performedAt) {
+      const performedDate = new Date(entry.performedAt);
+      if (!isNaN(performedDate)) {
+        payload.createdAt = performedDate.toISOString();
+      }
+    }
 
-        const volume = calculateWorkoutVolume(workout);
-        const unit = workout.log[0]?.unit || 'kg';
-        const restInfo = workout.restBreaks && workout.restBreaks.length ? `<br>Restbreaks: ${workout.restBreaks.join(', ')} minutes` : '';
+    api.saveWorkoutToLocal(payload);
+  });
 
-        div.innerHTML = `<strong>${workout.title}</strong><br>${exercisesHtml}<br>Total Volume: ${volume} ${unit}${restInfo}`;
-      container.appendChild(div);
-    });
+  if (typeof api.renderWorkoutHistory === 'function') {
+    api.renderWorkoutHistory();
+  }
+}
+
+async function renderWorkoutHistory() {
+  const api = window.historyApi;
+  if (!api || typeof api.renderWorkoutHistory !== 'function') {
+    return;
+  }
+
+  await api.renderWorkoutHistory();
 }
 
 function addWeightEntry() {
@@ -3779,6 +3833,9 @@ function showHistoryMiniTab(tab) {
   } else {
     macroTab.style.display = "none";
     workoutTab.style.display = "block";
+    if (typeof syncLocalHistoryFromWorkouts === 'function') {
+      syncLocalHistoryFromWorkouts();
+    }
     renderWorkoutHistory();
   }
 }
@@ -4084,6 +4141,9 @@ function loadCrossfitTemplate() {
     loginEl.style.display = "none";
     openSection('pocketFit');
     renderWorkouts();
+    if (typeof syncLocalHistoryFromWorkouts === 'function') {
+      syncLocalHistoryFromWorkouts();
+    }
     renderWeights();
     renderCardio();
     renderCrossfitWorkouts();
