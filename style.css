@@ -199,6 +199,262 @@ header, .dark-bg, .coach-only {
   background: rgba(0,0,0,0.03);
 }
 
+/* Workout log cards */
+.workout-entry {
+  margin-bottom: 1.5rem;
+}
+
+.workout-toggle {
+  width: 100%;
+  text-align: left;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.workout-details {
+  margin-top: 0.75rem;
+}
+
+.exercise-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.exercise-card {
+  position: relative;
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exercise-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.exercise-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.exercise-tag {
+  background: var(--highlight);
+  color: var(--card-bg);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+body.theme-dark .exercise-tag {
+  color: var(--text-color);
+}
+
+.menu-button,
+.set-menu-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+}
+
+.menu-button:hover,
+.set-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.theme-dark .menu-button:hover,
+body.theme-dark .set-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.set-type-bar {
+  background: var(--primary);
+  color: var(--card-bg);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.set-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.set-row--skipped {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.set-row[data-type="dropset"] {
+  border-color: var(--highlight);
+}
+
+.set-row[data-type="rest-pause"],
+.set-row[data-type="top-set"] {
+  border-color: var(--primary);
+}
+
+.set-row[data-type="warmup"],
+.set-row[data-type="backoff"] {
+  border-style: dashed;
+}
+
+body.theme-dark .set-row {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.set-index {
+  font-weight: 600;
+  min-width: 48px;
+}
+
+.set-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 90px;
+}
+
+.set-field-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary-text);
+}
+
+.set-field input {
+  width: 110px;
+  margin: 0;
+}
+
+.set-unit {
+  font-size: 0.75rem;
+  color: var(--secondary-text);
+}
+
+.set-type-pill {
+  background: var(--highlight);
+  color: var(--card-bg);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.set-complete {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.goal-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.goal-row input {
+  flex: 1 1 140px;
+  margin: 0;
+  width: auto;
+}
+
+.context-menu {
+  position: absolute;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  min-width: 170px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.context-menu.open {
+  display: flex;
+}
+
+.context-menu button {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu button:hover {
+  background: var(--primary);
+  color: var(--card-bg);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.25rem 0;
+}
+
+.workout-meta {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.workout-meta .remove-btn {
+  align-self: flex-start;
+}
+
+@media (max-width: 520px) {
+  .set-row {
+    align-items: flex-start;
+  }
+
+  .set-field input {
+    width: 100%;
+  }
+
+  .menu-button,
+  .set-menu-btn {
+    font-size: 1rem;
+  }
+}
+
 .history-list {
   list-style: none;
   padding: 0;
