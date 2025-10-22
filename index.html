@@ -1132,51 +1132,92 @@ let airtableToken = '';
 let airtableBaseId = '';
 
 async function fetchAirtableConfig() {
-  try {
-    const res = await fetch(`${window.SERVER_URL}/config`, { credentials: "include" });
-    if (res.ok) {
-      const cfg = await res.json();
-      airtableToken = cfg.airtableToken;
-      airtableBaseId = cfg.airtableBaseId;
-      if (airtableToken && airtableBaseId) return;
+  const normalizeAndApply = cfg => {
+    if (!cfg || typeof cfg !== 'object') {
+      return {
+        serverUrl: window.SERVER_URL,
+        airtable: {
+          baseId: airtableBaseId || null,
+          table: 'Workouts',
+          tokenProvided: Boolean(airtableToken)
+        }
+      };
     }
+
+    if (cfg.serverUrl) {
+      window.SERVER_URL = cfg.serverUrl;
+    }
+
+    const airtableCfg = cfg.airtable || {};
+
+    const tokenFromConfig =
+      (typeof airtableCfg.token === 'string' && airtableCfg.token) ||
+      (typeof cfg.airtableToken === 'string' && cfg.airtableToken);
+    const baseIdFromConfig =
+      (typeof airtableCfg.baseId === 'string' && airtableCfg.baseId) ||
+      (typeof cfg.airtableBaseId === 'string' && cfg.airtableBaseId);
+
+    if (tokenFromConfig) {
+      airtableToken = tokenFromConfig;
+    }
+    if (baseIdFromConfig) {
+      airtableBaseId = baseIdFromConfig;
+    }
+
+    const normalized = {
+      serverUrl: window.SERVER_URL,
+      airtable: {
+        baseId: baseIdFromConfig || airtableBaseId || null,
+        table: airtableCfg.table || 'Workouts',
+        tokenProvided:
+          typeof airtableCfg.tokenProvided === 'boolean'
+            ? airtableCfg.tokenProvided
+            : Boolean(tokenFromConfig || airtableToken)
+      }
+    };
+
+    return normalized;
+  };
+
+  try {
+    const res = await fetch(`${window.SERVER_URL}/config`, { credentials: 'include' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const cfg = await res.json();
+    return normalizeAndApply(cfg);
   } catch (err) {
     console.warn('Server config fetch failed', err);
   }
 
-  if (!airtableToken || !airtableBaseId) {
-    try {
-      const mod = await import('./config.js');
-      if (mod.SERVER_URL) window.SERVER_URL = mod.SERVER_URL;
-      if (mod.airtableConfig) {
-        airtableToken = mod.airtableConfig.airtableToken || airtableToken;
-        airtableBaseId = mod.airtableConfig.airtableBaseId || airtableBaseId;
+  try {
+    const mod = await import('./config.js');
+    const exportedAirtable =
+      (mod && (mod.airtableConfig || (mod.default && mod.default.airtableConfig))) ||
+      window.airtableConfig;
+    const cfg = normalizeAndApply({
+      serverUrl: mod && (mod.SERVER_URL || (mod.default && mod.default.SERVER_URL)) || window.SERVER_URL,
+      airtable: {
+        token: exportedAirtable && exportedAirtable.airtableToken,
+        baseId: exportedAirtable && exportedAirtable.airtableBaseId,
+        table: exportedAirtable && exportedAirtable.table,
+        tokenProvided: Boolean(exportedAirtable && exportedAirtable.airtableToken)
       }
-    } catch (err) {
-      // optional config.js not found
-    }
+    });
+    return cfg;
+  } catch (err) {
+    // optional config.js not found
   }
 
-  if (window.SERVER_URL) {
-    try {
-      const res = await fetch(`${window.SERVER_URL}/config`, { credentials: "include" });
-      if (res.ok) {
-        const cfg = await res.json();
-        airtableToken = cfg.airtableToken;
-        airtableBaseId = cfg.airtableBaseId;
-        if (airtableToken && airtableBaseId) return;
-      }
-    } catch (err) {
-      console.warn('Server config fetch failed', err);
+  const fallback = normalizeAndApply({
+    serverUrl: window.SERVER_URL,
+    airtable: {
+      baseId: window.airtableConfig && window.airtableConfig.airtableBaseId,
+      table: (window.airtableConfig && window.airtableConfig.table) || 'Workouts',
+      token: window.airtableConfig && window.airtableConfig.airtableToken,
+      tokenProvided: Boolean(window.airtableConfig && window.airtableConfig.airtableToken)
     }
-  }
-  if (window.airtableConfig) {
-    airtableToken = window.airtableConfig.airtableToken || airtableToken;
-    airtableBaseId = window.airtableConfig.airtableBaseId || airtableBaseId;
-  }
-  if (!airtableToken || !airtableBaseId) {
-    console.error('Failed to load Airtable configuration');
-  }
+  });
+
+  return fallback;
 }
 const usersTableName = 'Users';
 const templatesTableName = 'Templates';
