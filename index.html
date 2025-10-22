@@ -1544,10 +1544,12 @@ function editGoalValue(workoutIndex, entryIndex, type, value) {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const entry = workouts[workoutIndex].log[entryIndex];
 
+  const parsed = value === '' ? null : +value;
+
   if (type === 'goal') {
-    entry.goal = +value;
+    entry.goal = parsed;
   } else if (type === 'repGoal') {
-    entry.repGoal = +value;
+    entry.repGoal = parsed;
   }
 
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
@@ -1659,6 +1661,9 @@ function addLogEntry() {
   const weightsArray = [];
   const dropsetArray = [];
   const restPauseArray = [];
+  const skippedArray = [];
+  const completedArray = [];
+  const setTypeArray = [];
 
   for (let i = 0; i < sets; i++) {
     const reps = +document.getElementById(`reps_${i}`).value;
@@ -1673,6 +1678,15 @@ function addLogEntry() {
     weightsArray.push(weight);
     dropsetArray.push(ds);
     restPauseArray.push(rp);
+    skippedArray.push(false);
+    completedArray.push(false);
+    if (ds) {
+      setTypeArray.push('dropset');
+    } else if (rp) {
+      setTypeArray.push('rest-pause');
+    } else {
+      setTypeArray.push('standard');
+    }
   }
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
@@ -1690,6 +1704,9 @@ function addLogEntry() {
     weightsArray,
     dropsetArray,
     restPauseArray,
+    skippedArray,
+    completedArray,
+    setTypeArray,
     unit,
     date,
     goal,
@@ -1738,13 +1755,330 @@ function addLogEntry() {
 
 }
 
-  
+
+const DEFAULT_SET_TYPE = 'standard';
+const SET_TYPE_LABELS = {
+  [DEFAULT_SET_TYPE]: 'Standard',
+  dropset: 'Drop Set',
+  'rest-pause': 'Rest-Pause',
+  warmup: 'Warm-up',
+  backoff: 'Backoff',
+  'top-set': 'Top Set'
+};
+
+let activeContextMenu = null;
+
+function normalizeEntry(entry) {
+  let mutated = false;
+  if (!Array.isArray(entry.repsArray)) {
+    entry.repsArray = [];
+    mutated = true;
+  }
+  const length = entry.repsArray.length;
+
+  const ensure = (key, fillValue) => {
+    if (!Array.isArray(entry[key])) {
+      entry[key] = [];
+      mutated = true;
+    }
+    if (entry[key].length > length) {
+      entry[key].length = length;
+      mutated = true;
+    }
+    while (entry[key].length < length) {
+      entry[key].push(typeof fillValue === 'function' ? fillValue(entry[key].length) : fillValue);
+      mutated = true;
+    }
+  };
+
+  ensure('weightsArray', 0);
+  ensure('dropsetArray', false);
+  ensure('restPauseArray', false);
+  ensure('skippedArray', false);
+  ensure('completedArray', false);
+
+  if (!Array.isArray(entry.setTypeArray)) {
+    entry.setTypeArray = new Array(length).fill(DEFAULT_SET_TYPE);
+    mutated = true;
+  } else {
+    if (entry.setTypeArray.length > length) {
+      entry.setTypeArray.length = length;
+      mutated = true;
+    }
+    while (entry.setTypeArray.length < length) {
+      entry.setTypeArray.push(DEFAULT_SET_TYPE);
+      mutated = true;
+    }
+  }
+
+  for (let i = 0; i < length; i++) {
+    if (!entry.setTypeArray[i] || entry.setTypeArray[i] === true) {
+      if (entry.dropsetArray[i]) {
+        entry.setTypeArray[i] = 'dropset';
+      } else if (entry.restPauseArray[i]) {
+        entry.setTypeArray[i] = 'rest-pause';
+      } else {
+        entry.setTypeArray[i] = DEFAULT_SET_TYPE;
+      }
+      mutated = true;
+    }
+  }
+
+  if (entry.sets !== length) {
+    entry.sets = length;
+    mutated = true;
+  }
+
+  return mutated;
+}
+
+function createExerciseCard(workoutIndex, entryIndex, entry) {
+  const card = document.createElement('div');
+  card.className = 'exercise-card';
+
+  const header = document.createElement('div');
+  header.className = 'exercise-header';
+
+  const tag = document.createElement('span');
+  tag.className = 'exercise-tag';
+  tag.textContent = entry.muscleGroup || entry.primaryMuscle || 'Exercise';
+  header.appendChild(tag);
+
+  const title = document.createElement('h3');
+  title.textContent = entry.exercise || 'Exercise';
+  header.appendChild(title);
+
+  const headerMenuButton = document.createElement('button');
+  headerMenuButton.type = 'button';
+  headerMenuButton.className = 'menu-button';
+  headerMenuButton.setAttribute('aria-label', 'Exercise actions');
+  headerMenuButton.innerHTML = '&#8942;';
+  headerMenuButton.addEventListener('click', event => openContextMenu(event, workoutIndex, entryIndex));
+  header.appendChild(headerMenuButton);
+
+  card.appendChild(header);
+
+  const goalData = [];
+  const hasGoal = typeof entry.goal === 'number' && !Number.isNaN(entry.goal);
+  if (hasGoal && entry.goal !== 0) {
+    goalData.push(`Target Load: ${entry.goal} ${entry.unit || 'kg'}`);
+  }
+  const hasRepGoal = typeof entry.repGoal === 'number' && !Number.isNaN(entry.repGoal);
+  if (hasRepGoal && entry.repGoal !== 0) {
+    goalData.push(`Target Reps: ${entry.repGoal}`);
+  }
+
+  const specialTypes = Array.from(new Set((entry.setTypeArray || []).filter(type => type && type !== DEFAULT_SET_TYPE)));
+  if (specialTypes.length) {
+    goalData.push(`Set Focus: ${specialTypes.map(type => SET_TYPE_LABELS[type] || type).join(', ')}`);
+  }
+
+  if (goalData.length) {
+    const setTypeBar = document.createElement('div');
+    setTypeBar.className = 'set-type-bar';
+    setTypeBar.textContent = goalData.join(' • ');
+    card.appendChild(setTypeBar);
+  }
+
+  const setList = document.createElement('div');
+  setList.className = 'set-list';
+
+  const reps = entry.repsArray || [];
+  reps.forEach((rep, setIndex) => {
+    const row = createSetRow(workoutIndex, entryIndex, entry, setIndex);
+    setList.appendChild(row);
+  });
+
+  card.appendChild(setList);
+
+  const goalRow = document.createElement('div');
+  goalRow.className = 'goal-row';
+
+  const goalInput = document.createElement('input');
+  goalInput.type = 'number';
+  goalInput.placeholder = 'Weight Goal';
+  goalInput.value = hasGoal && entry.goal !== 0 ? entry.goal : '';
+  goalInput.addEventListener('change', event => editGoalValue(workoutIndex, entryIndex, 'goal', event.target.value));
+  goalRow.appendChild(goalInput);
+
+  const repGoalInput = document.createElement('input');
+  repGoalInput.type = 'number';
+  repGoalInput.placeholder = 'Rep Goal';
+  repGoalInput.value = hasRepGoal && entry.repGoal !== 0 ? entry.repGoal : '';
+  repGoalInput.addEventListener('change', event => editGoalValue(workoutIndex, entryIndex, 'repGoal', event.target.value));
+  goalRow.appendChild(repGoalInput);
+
+  card.appendChild(goalRow);
+
+  return card;
+}
+
+function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
+  const setRow = document.createElement('div');
+  setRow.className = 'set-row';
+
+  const setType = entry.setTypeArray?.[setIndex] || DEFAULT_SET_TYPE;
+  setRow.dataset.type = setType;
+
+  if (entry.skippedArray?.[setIndex]) {
+    setRow.classList.add('set-row--skipped');
+  }
+
+  const indexLabel = document.createElement('span');
+  indexLabel.className = 'set-index';
+  indexLabel.textContent = `Set ${setIndex + 1}`;
+  setRow.appendChild(indexLabel);
+
+  const weightWrapper = document.createElement('div');
+  weightWrapper.className = 'set-field';
+  const weightLabel = document.createElement('span');
+  weightLabel.className = 'set-field-label';
+  weightLabel.textContent = 'Weight';
+  const weightInput = document.createElement('input');
+  weightInput.type = 'number';
+  weightInput.value = entry.weightsArray?.[setIndex] ?? '';
+  weightInput.addEventListener('change', event => editSetValue(workoutIndex, entryIndex, 'weight', event.target.value, setIndex));
+  weightWrapper.appendChild(weightLabel);
+  weightWrapper.appendChild(weightInput);
+
+  const unit = document.createElement('span');
+  unit.className = 'set-unit';
+  unit.textContent = entry.unit || 'kg';
+  weightWrapper.appendChild(unit);
+  setRow.appendChild(weightWrapper);
+
+  const repsWrapper = document.createElement('div');
+  repsWrapper.className = 'set-field';
+  const repsLabel = document.createElement('span');
+  repsLabel.className = 'set-field-label';
+  repsLabel.textContent = 'Reps';
+  const repsInput = document.createElement('input');
+  repsInput.type = 'number';
+  repsInput.value = entry.repsArray?.[setIndex] ?? '';
+  repsInput.addEventListener('change', event => editSetValue(workoutIndex, entryIndex, 'rep', event.target.value, setIndex));
+  repsWrapper.appendChild(repsLabel);
+  repsWrapper.appendChild(repsInput);
+  setRow.appendChild(repsWrapper);
+
+  if (setType && setType !== DEFAULT_SET_TYPE) {
+    const typeBadge = document.createElement('span');
+    typeBadge.className = 'set-type-pill';
+    typeBadge.textContent = SET_TYPE_LABELS[setType] || setType;
+    setRow.appendChild(typeBadge);
+  }
+
+  const completeLabel = document.createElement('label');
+  completeLabel.className = 'set-complete';
+  const completeCheckbox = document.createElement('input');
+  completeCheckbox.type = 'checkbox';
+  completeCheckbox.checked = entry.completedArray?.[setIndex] || false;
+  completeCheckbox.addEventListener('change', event => toggleSetCompletion(workoutIndex, entryIndex, setIndex, event.target.checked));
+  completeLabel.appendChild(completeCheckbox);
+  completeLabel.appendChild(document.createTextNode(' Done'));
+  setRow.appendChild(completeLabel);
+
+  const setMenuButton = document.createElement('button');
+  setMenuButton.type = 'button';
+  setMenuButton.className = 'set-menu-btn';
+  setMenuButton.setAttribute('aria-label', 'Set actions');
+  setMenuButton.innerHTML = '&#8942;';
+  setMenuButton.addEventListener('click', event => openContextMenu(event, workoutIndex, entryIndex, setIndex));
+  setRow.appendChild(setMenuButton);
+
+  return setRow;
+}
+
+function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const card = event.currentTarget.closest('.exercise-card');
+  if (!card) return;
+
+  let menu = card.querySelector('.context-menu');
+  if (!menu) {
+    menu = document.createElement('div');
+    menu.className = 'context-menu';
+    menu.addEventListener('click', e => e.stopPropagation());
+    card.appendChild(menu);
+  }
+
+  menu.innerHTML = '';
+
+  const addButton = (label, handler) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      handler();
+      closeContextMenu();
+    });
+    menu.appendChild(button);
+  };
+
+  if (typeof setIndex === 'number') {
+    addButton('Add Set After', () => addSetToLog(workoutIndex, entryIndex, setIndex));
+    addButton('Delete Set', () => deleteSetFromLog(workoutIndex, entryIndex, setIndex));
+    addButton('Toggle Skip', () => toggleSkipSet(workoutIndex, entryIndex, setIndex));
+
+    const divider = document.createElement('div');
+    divider.className = 'context-menu-divider';
+    menu.appendChild(divider);
+
+    addButton('Standard Set', () => changeSetType(workoutIndex, entryIndex, setIndex, DEFAULT_SET_TYPE));
+    addButton('Drop Set', () => changeSetType(workoutIndex, entryIndex, setIndex, 'dropset'));
+    addButton('Rest-Pause', () => changeSetType(workoutIndex, entryIndex, setIndex, 'rest-pause'));
+    addButton('Warm-up', () => changeSetType(workoutIndex, entryIndex, setIndex, 'warmup'));
+    addButton('Backoff', () => changeSetType(workoutIndex, entryIndex, setIndex, 'backoff'));
+    addButton('Top Set', () => changeSetType(workoutIndex, entryIndex, setIndex, 'top-set'));
+  } else {
+    addButton('Add Set', () => addSetToLog(workoutIndex, entryIndex));
+    addButton('Delete Exercise', () => removeLogEntry(workoutIndex, entryIndex));
+  }
+
+  if (activeContextMenu && activeContextMenu !== menu) {
+    activeContextMenu.classList.remove('open');
+  }
+
+  menu.style.visibility = 'hidden';
+  menu.classList.add('open');
+  activeContextMenu = menu;
+
+  requestAnimationFrame(() => {
+    const buttonRect = event.currentTarget.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    let left = buttonRect.left - cardRect.left - menuRect.width + buttonRect.width;
+    if (left < 0) {
+      left = 0;
+    }
+    if (left + menuRect.width > cardRect.width) {
+      left = Math.max(0, cardRect.width - menuRect.width - 8);
+    }
+    const top = buttonRect.bottom - cardRect.top + 4;
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    menu.style.visibility = 'visible';
+  });
+}
+
+function closeContextMenu() {
+  if (activeContextMenu) {
+    activeContextMenu.classList.remove('open');
+    activeContextMenu = null;
+  }
+}
+
+document.addEventListener('click', closeContextMenu);
+window.addEventListener('resize', closeContextMenu);
+document.addEventListener('scroll', closeContextMenu, true);
+
 function renderWorkouts() {
   archiveOldWorkouts(currentUser);
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const container = document.getElementById("workoutsContainer");
+  if (!container) return;
 
-  // Track open workout sections BEFORE rendering
   const openWorkouts = new Set();
   workouts.forEach((_, index) => {
     const details = document.getElementById(`workoutDetails${index}`);
@@ -1754,91 +2088,72 @@ function renderWorkouts() {
   });
 
   container.innerHTML = '';
+  let workoutsUpdated = false;
 
   workouts.forEach((workout, workoutIndex) => {
-    let rows = '';
+    const workoutWrapper = document.createElement('div');
+    workoutWrapper.className = 'workout-entry';
 
-    workout.log.forEach((entry, entryIndex) => {
-      const sets = entry.sets || entry.repsArray?.length || 0;
-      const repsArray = entry.repsArray || [];
-      const weightsArray = entry.weightsArray || [];
-      const unit = entry.unit || 'kg';
+    const toggleButton = document.createElement('button');
+    toggleButton.type = 'button';
+    toggleButton.className = 'workout-toggle';
+    toggleButton.textContent = workout.title || `Workout ${workoutIndex + 1}`;
+    toggleButton.addEventListener('click', () => toggleWorkoutDetails(workoutIndex));
+    workoutWrapper.appendChild(toggleButton);
 
-      rows += repsArray.map((rep, setIndex) => {
-        const weight = weightsArray[setIndex] ?? '-';
-        const ds = entry.dropsetArray ? entry.dropsetArray[setIndex] : false;
-        const rp = entry.restPauseArray ? entry.restPauseArray[setIndex] : false;
-        return `
-          <tr>
-            ${setIndex === 0 ? `<td rowspan="${sets}">${entry.exercise}</td>
-                                <td rowspan="${sets}">${sets}</td>` : ''}
-            <td>
-              <input type="number" value="${rep}"
-                     onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'rep', this.value, ${setIndex})" />
-            </td>
-            <td>
-              <input type="number" value="${weight}"
-                     onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'weight', this.value, ${setIndex})" />
-              <span style="font-size:12px;">(${unit})</span>
-            </td>
-            <td>
-              <label style="font-size:12px;"><input type="checkbox" ${ds ? 'checked' : ''}
-                     onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'dropset', this.checked, ${setIndex})" /> DS</label>
-              <label style="font-size:12px; margin-left:4px;"><input type="checkbox" ${rp ? 'checked' : ''}
-                     onchange="editSetValue(${workoutIndex}, ${entryIndex}, 'restPause', this.checked, ${setIndex})" /> RP</label>
-            </td>
-            ${setIndex === 0 ? `
-              <td rowspan="${sets}">${entry.date}</td>
-              <td rowspan="${sets}">
-                ${entry.goal ? Math.min(100, Math.round((weightsArray[0] / entry.goal) * 100)) + '%' : '-'}<br>
-                <input type="number" value="${entry.goal !== undefined ? entry.goal : ''}"
-                       onchange="editGoalValue(${workoutIndex}, ${entryIndex}, 'goal', this.value)" style="width:60px;" />
-                <input type="number" value="${entry.repGoal !== undefined ? entry.repGoal : ''}"
-                       onchange="editGoalValue(${workoutIndex}, ${entryIndex}, 'repGoal', this.value)" style="width:60px;" />
-              </td>
-              <td rowspan="${sets}">
-                <button onclick="removeLogEntry(${workoutIndex}, ${entryIndex})" class="remove-btn">❌</button><br>
-                <button onclick="addSetToLog(${workoutIndex}, ${entryIndex})" class="add-set-btn">➕ Add Set</button>
-              </td>` : ''}
-          </tr>
-        `;
-      }).join('');
-    });
+    const details = document.createElement('div');
+    details.className = 'workout-details';
+    details.id = `workoutDetails${workoutIndex}`;
+    details.style.display = openWorkouts.has(workoutIndex) ? 'block' : 'none';
 
-    container.innerHTML += `
-      <div style="margin-bottom: 20px;">
-        <button onclick="toggleWorkoutDetails(${workoutIndex})" style="width: 100%; text-align: left; font-weight: bold;">
-          ${workout.title}
-        </button>
-        <div id="workoutDetails${workoutIndex}" style="display: none; margin-top: 10px; overflow-x: auto;">
-          <table style="width: 100%;">
-            <thead>
-              <tr>
-                <th>Exercise</th>
-                <th>Sets</th>
-                <th>Reps</th>
-                <th>Weight</th>
-                <th>Method</th>
-                <th>Date</th>
-                <th>Goal Progress</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-            <p style="font-weight:bold; margin-top:10px;">Total Volume: ${calculateWorkoutVolume(workout)} ${workout.log[0]?.unit || 'kg'}</p>
-            ${workout.restBreaks && workout.restBreaks.length ? `<p>Restbreaks: ${workout.restBreaks.join(', ')} minutes</p>` : ''}
-            <button class="remove-btn" onclick="removeWorkout(${workoutIndex})">Delete Workout</button>
-        </div>
-      </div>
-    `;
+    const cardsWrapper = document.createElement('div');
+    cardsWrapper.className = 'exercise-card-list';
+
+    if (Array.isArray(workout.log)) {
+      workout.log.forEach((entry, entryIndex) => {
+        if (normalizeEntry(entry)) {
+          workoutsUpdated = true;
+        }
+        const card = createExerciseCard(workoutIndex, entryIndex, entry);
+        cardsWrapper.appendChild(card);
+      });
+    }
+
+    details.appendChild(cardsWrapper);
+
+    const meta = document.createElement('div');
+    meta.className = 'workout-meta';
+
+    const volume = calculateWorkoutVolume(workout);
+    const unit = workout.log?.[0]?.unit || workout.unit || 'kg';
+
+    const volumeText = document.createElement('p');
+    volumeText.className = 'workout-volume';
+    volumeText.textContent = `Total Volume: ${volume} ${unit}`;
+    meta.appendChild(volumeText);
+
+    if (workout.restBreaks && workout.restBreaks.length) {
+      const rest = document.createElement('p');
+      rest.className = 'workout-rest';
+      rest.textContent = `Rest Breaks: ${workout.restBreaks.join(', ')} minutes`;
+      meta.appendChild(rest);
+    }
+
+    const deleteWorkoutButton = document.createElement('button');
+    deleteWorkoutButton.type = 'button';
+    deleteWorkoutButton.className = 'remove-btn';
+    deleteWorkoutButton.textContent = 'Delete Workout';
+    deleteWorkoutButton.addEventListener('click', () => removeWorkout(workoutIndex));
+    meta.appendChild(deleteWorkoutButton);
+
+    details.appendChild(meta);
+    workoutWrapper.appendChild(details);
+    container.appendChild(workoutWrapper);
   });
 
-  // Restore open sections AFTER rendering
-  openWorkouts.forEach(index => {
-    const el = document.getElementById(`workoutDetails${index}`);
-    if (el) el.style.display = 'block';
-  });
+  if (workoutsUpdated) {
+    localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  }
 
   renderWorkoutHistory();
   if (document.getElementById('progressTab').classList.contains('active')) {
@@ -1851,22 +2166,118 @@ function renderWorkouts() {
 
   
 
-function addSetToLog(workoutIndex, entryIndex) {
+function addSetToLog(workoutIndex, entryIndex, afterIndex = null) {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const entry = workouts[workoutIndex].log[entryIndex];
+  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  if (!entry) return;
 
-  entry.repsArray.push(0);        // default value
-  entry.weightsArray.push(0);     // default value
-  if (!Array.isArray(entry.dropsetArray)) entry.dropsetArray = [];
-  if (!Array.isArray(entry.restPauseArray)) entry.restPauseArray = [];
-  entry.dropsetArray.push(false);
-  entry.restPauseArray.push(false);
+  normalizeEntry(entry);
+
+  const insertPosition = typeof afterIndex === 'number'
+    ? Math.min(afterIndex + 1, entry.repsArray.length)
+    : entry.repsArray.length;
+
+  const insertAt = (array, value) => {
+    if (!Array.isArray(array)) return;
+    array.splice(insertPosition, 0, value);
+  };
+
+  entry.repsArray.splice(insertPosition, 0, 0);
+  entry.weightsArray.splice(insertPosition, 0, 0);
+  insertAt(entry.dropsetArray, false);
+  insertAt(entry.restPauseArray, false);
+  insertAt(entry.skippedArray, false);
+  insertAt(entry.completedArray, false);
+  if (!Array.isArray(entry.setTypeArray)) {
+    entry.setTypeArray = [];
+  }
+  entry.setTypeArray.splice(insertPosition, 0, DEFAULT_SET_TYPE);
+
   entry.sets = entry.repsArray.length;
 
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   renderWorkouts();
 }
 window.addSetToLog = addSetToLog;
+
+function deleteSetFromLog(workoutIndex, entryIndex, setIndex) {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  if (!entry || !Array.isArray(entry.repsArray)) return;
+
+  const removeAt = key => {
+    if (Array.isArray(entry[key])) {
+      entry[key].splice(setIndex, 1);
+    }
+  };
+
+  entry.repsArray.splice(setIndex, 1);
+  removeAt('weightsArray');
+  removeAt('dropsetArray');
+  removeAt('restPauseArray');
+  removeAt('skippedArray');
+  removeAt('completedArray');
+  removeAt('setTypeArray');
+
+  entry.sets = entry.repsArray.length;
+
+  if (entry.repsArray.length === 0) {
+    workouts[workoutIndex].log.splice(entryIndex, 1);
+    if (typeof syncLocalHistoryFromWorkouts === 'function') {
+      syncLocalHistoryFromWorkouts();
+    }
+  }
+
+  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  renderWorkouts();
+}
+
+function toggleSkipSet(workoutIndex, entryIndex, setIndex) {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  if (!entry) return;
+
+  normalizeEntry(entry);
+  entry.skippedArray[setIndex] = !entry.skippedArray[setIndex];
+  if (entry.skippedArray[setIndex]) {
+    entry.completedArray[setIndex] = false;
+  }
+
+  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  renderWorkouts();
+}
+
+function toggleSetCompletion(workoutIndex, entryIndex, setIndex, completed) {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  if (!entry) return;
+
+  normalizeEntry(entry);
+  entry.completedArray[setIndex] = completed;
+  if (completed) {
+    entry.skippedArray[setIndex] = false;
+  }
+
+  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  renderWorkouts();
+}
+
+function changeSetType(workoutIndex, entryIndex, setIndex, type) {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  if (!entry) return;
+
+  normalizeEntry(entry);
+  entry.setTypeArray[setIndex] = type;
+
+  if (!Array.isArray(entry.dropsetArray)) entry.dropsetArray = [];
+  if (!Array.isArray(entry.restPauseArray)) entry.restPauseArray = [];
+  entry.dropsetArray[setIndex] = type === 'dropset';
+  entry.restPauseArray[setIndex] = type === 'rest-pause';
+
+  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  renderWorkouts();
+}
 
 let restInterval;
 function startRestTimer() {
