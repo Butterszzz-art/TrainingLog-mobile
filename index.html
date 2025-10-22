@@ -2359,39 +2359,60 @@ async function saveTemplate(username, templateName, templateData) {
 }
   
 async function fetchTemplates(username) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${templatesTableName}?filterByFormula={Username}='${username}'`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${airtableToken}` }
-  });
-  const data = await response.json();
-  return data.records.map(record => ({
-    id: record.id,
-    name: record.fields.TemplateName,
-    data: JSON.parse(record.fields.TemplateData)
-  }));
+  const url = `${window.SERVER_URL}/templates?username=${encodeURIComponent(username)}`;
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error(`Templates HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  const items = Array.isArray(data.items) ? data.items : [];
+  return items;
 }
 
-function populateTemplateSelect(selectId) {
+function populateTemplateSelect(selectId, templates) {
   const select = document.getElementById(selectId);
-  if (!select) return Promise.resolve();
+  if (!select) return;
+
   select.innerHTML = '<option value="">Select Template...</option>';
-  return fetchTemplates(currentUser).then(templates => {
-    templates.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = JSON.stringify(t.data);
-      opt.textContent = t.name;
-      select.appendChild(opt);
-    });
+
+  templates.forEach(template => {
+    if (!template) return;
+    const name = template.name || template.TemplateName || 'Untitled Template';
+    let templateData = template.data ?? template.TemplateData ?? template.templateData;
+
+    if (typeof templateData === 'string') {
+      try {
+        templateData = JSON.parse(templateData);
+      } catch (err) {
+        console.warn('Skipping template with invalid data string', err, template);
+        return;
+      }
+    }
+
+    if (!templateData) return;
+
+    const option = document.createElement('option');
+    try {
+      option.value = JSON.stringify(templateData);
+    } catch (err) {
+      console.warn('Skipping template due to serialization error', err, template);
+      return;
+    }
+    option.textContent = name;
+    select.appendChild(option);
   });
 }
-  
+
 
 // Populate the dropdown
-function loadTemplateDropdown() {
-  populateTemplateSelect("templateSelect").catch(err => {
-    console.error("Template loading failed:", err);
-    alert("Could not load templates.");
-  });
+async function loadTemplateDropdown(username = currentUser) {
+  try {
+    const templates = await fetchTemplates(username);
+    populateTemplateSelect('templateSelect', templates);
+  } catch (err) {
+    console.warn('Template loading failed:', err);
+    populateTemplateSelect('templateSelect', []);
+  }
 }
 
 // Save last workout as template
@@ -2562,8 +2583,14 @@ function saveSimpleTemplate() {
 // ===== Program Builder =====
 let programDays = [];
 
-function loadProgramTemplates() {
-  populateTemplateSelect("programTemplateSelect");
+async function loadProgramTemplates(username = currentUser) {
+  try {
+    const templates = await fetchTemplates(username);
+    populateTemplateSelect('programTemplateSelect', templates);
+  } catch (err) {
+    console.warn('Program template loading failed:', err);
+    populateTemplateSelect('programTemplateSelect', []);
+  }
 }
 
 function addDayToProgram() {
