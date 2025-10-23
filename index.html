@@ -2071,6 +2071,8 @@ function closeContextMenu() {
 
 document.addEventListener('click', closeContextMenu);
 if (typeof window !== 'undefined') {
+=======
+if (typeof window !== 'undefined' && window.addEventListener) {
   window.addEventListener('resize', closeContextMenu);
 }
 document.addEventListener('scroll', closeContextMenu, true);
