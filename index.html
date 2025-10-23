@@ -639,6 +639,7 @@
     <div id="weightLogPanel" class="panel active">
     <h2>Bodyweight Tracker</h2>
     <input type="number" id="currentWeightInput" placeholder="Current Weight (kg)">
+    <button type="button" id="toggleBodyweightUnitBtn" onclick="toggleBodyweightUnit()">Change Unit</button>
     <input type="date" id="weightDateInput">
     <button onclick="addWeightEntry()">Add Weight</button>
     <input type="number" id="avgCalories" placeholder="Average Daily Calories" />
@@ -3719,14 +3720,153 @@ async function renderWorkoutHistory() {
   await api.renderWorkoutHistory();
 }
 
+const BODYWEIGHT_PREF_KEY = 'tl_bodyweight_pref';
+const BODYWEIGHT_CONVERSION_FACTOR = 2.20462;
+
+function convertWeightValue(value, fromUnit, toUnit, decimals = 1) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  const normalizedFrom = fromUnit === 'lb' ? 'lb' : 'kg';
+  const normalizedTo = toUnit === 'lb' ? 'lb' : 'kg';
+
+  let converted = value;
+  if (normalizedFrom !== normalizedTo) {
+    if (normalizedFrom === 'kg' && normalizedTo === 'lb') {
+      converted = value * BODYWEIGHT_CONVERSION_FACTOR;
+    } else if (normalizedFrom === 'lb' && normalizedTo === 'kg') {
+      converted = value / BODYWEIGHT_CONVERSION_FACTOR;
+    }
+  }
+
+  if (typeof decimals === 'number' && decimals >= 0) {
+    const multiplier = Math.pow(10, decimals);
+    converted = Math.round(converted * multiplier) / multiplier;
+  }
+
+  return converted;
+}
+
+function getEntryWeightKg(entry) {
+  if (!entry) return null;
+  if (typeof entry.weightKg === 'number' && !Number.isNaN(entry.weightKg)) {
+    return entry.weightKg;
+  }
+  let value = entry.weight;
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    value = Number.isNaN(parsed) ? null : parsed;
+  }
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  const unit = entry.unit === 'lb' ? 'lb' : 'kg';
+  const converted = convertWeightValue(value, unit, 'kg', null);
+  return typeof converted === 'number' && !Number.isNaN(converted) ? converted : null;
+}
+
+function getBodyweightPreference() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(BODYWEIGHT_PREF_KEY) || 'null');
+    const unit = stored?.unit === 'lb' ? 'lb' : 'kg';
+    const rawValue = stored?.value;
+    const value = typeof rawValue === 'number'
+      ? rawValue
+      : rawValue !== undefined && rawValue !== null && rawValue !== ''
+        ? parseFloat(rawValue)
+        : null;
+    return {
+      unit,
+      value: Number.isFinite(value) ? value : null
+    };
+  } catch (err) {
+    console.warn('Failed to read bodyweight preference, resetting to defaults.', err);
+    return { unit: 'kg', value: null };
+  }
+}
+
+function saveBodyweightPreference(value, unit) {
+  const normalizedUnit = unit === 'lb' ? 'lb' : 'kg';
+  const normalizedValue = typeof value === 'number' && !Number.isNaN(value)
+    ? Number(value)
+    : null;
+  localStorage.setItem(
+    BODYWEIGHT_PREF_KEY,
+    JSON.stringify({ value: normalizedValue, unit: normalizedUnit })
+  );
+}
+
+function applyBodyweightPreference(pref) {
+  const unit = pref.unit === 'lb' ? 'lb' : 'kg';
+  const input = document.getElementById('currentWeightInput');
+  if (input) {
+    input.placeholder = `Current Weight (${unit})`;
+    if (pref.value !== null && pref.value !== undefined && !Number.isNaN(pref.value)) {
+      input.value = pref.value;
+    } else if (!input.matches(':focus')) {
+      input.value = '';
+    }
+    if (!input.step) {
+      input.step = '0.1';
+    }
+  }
+
+  const toggleBtn = document.getElementById('toggleBodyweightUnitBtn');
+  if (toggleBtn) {
+    const nextUnit = unit === 'kg' ? 'lb' : 'kg';
+    toggleBtn.textContent = `Change Unit (to ${nextUnit})`;
+  }
+}
+
+function initBodyweightPreferenceUI() {
+  const pref = getBodyweightPreference();
+  applyBodyweightPreference(pref);
+}
+
+function toggleBodyweightUnit() {
+  const currentPref = getBodyweightPreference();
+  const input = document.getElementById('currentWeightInput');
+  const currentUnit = currentPref.unit === 'lb' ? 'lb' : 'kg';
+  const nextUnit = currentUnit === 'kg' ? 'lb' : 'kg';
+
+  let rawValue = null;
+  if (input && input.value.trim() !== '') {
+    const parsed = parseFloat(input.value);
+    rawValue = Number.isNaN(parsed) ? null : parsed;
+  } else if (typeof currentPref.value === 'number' && !Number.isNaN(currentPref.value)) {
+    rawValue = currentPref.value;
+  }
+
+  const convertedValue = typeof rawValue === 'number' && !Number.isNaN(rawValue)
+    ? convertWeightValue(rawValue, currentUnit, nextUnit, 1)
+    : null;
+
+  const updatedPref = { unit: nextUnit, value: convertedValue };
+  saveBodyweightPreference(updatedPref.value, updatedPref.unit);
+  applyBodyweightPreference(updatedPref);
+
+  if (typeof renderWeights === 'function') {
+    renderWeights();
+  }
+
+  if (typeof onBodyweightSaved === 'function') {
+    onBodyweightSaved(updatedPref.value, updatedPref.unit);
+  }
+}
+
 function addWeightEntry() {
-  const weight = +document.getElementById("currentWeightInput").value;
+  const input = document.getElementById("currentWeightInput");
+  const rawValue = input && input.value.trim() !== '' ? parseFloat(input.value) : NaN;
+  if (Number.isNaN(rawValue) || rawValue <= 0) return alert("Enter weight");
+
+  const weight = Number(rawValue.toFixed(1));
+  const { unit } = getBodyweightPreference();
+  const weightKg = convertWeightValue(rawValue, unit, 'kg', null);
   const dateField = document.getElementById("weightDateInput");
   const date = dateField.value || new Date().toISOString().split('T')[0];
-  if (!weight) return alert("Enter weight");
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  log.push({ weight, date, calories: null, cardio: null });
+  log.push({ weight, unit, weightKg, date, calories: null, cardio: null });
   localStorage.setItem(`bodyweightLog_${currentUser}`, JSON.stringify(log));
+  saveBodyweightPreference(weight, unit);
+  if (typeof onBodyweightSaved === 'function') {
+    onBodyweightSaved(weight, unit);
+  }
   if (dateField) dateField.value = '';
   renderWeights();
 }
@@ -3735,11 +3875,25 @@ function renderWeights() {
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   const body = document.getElementById("weightBody");
   body.innerHTML = '';
+  const pref = getBodyweightPreference();
+  const displayUnit = pref.unit === 'lb' ? 'lb' : 'kg';
   log.forEach((entry, index) => {
-    body.innerHTML += `<tr><td>${entry.date}</td><td>${entry.weight}</td><td>${entry.calories ?? '-'}</td><td>${entry.cardio ?? '-'}</td><td><button onclick="removeWeightEntry(${index})" class="remove-btn">❌</button></td></tr>`;
+    const baseKg = getEntryWeightKg(entry);
+    const converted = typeof baseKg === 'number' && !Number.isNaN(baseKg)
+      ? convertWeightValue(baseKg, 'kg', displayUnit, 1)
+      : null;
+    const weightDisplay = converted !== null && converted !== undefined
+      ? `${converted} ${displayUnit}`
+      : '-';
+    body.innerHTML += `<tr><td>${entry.date}</td><td>${weightDisplay}</td><td>${entry.calories ?? '-'}</td><td>${entry.cardio ?? '-'}</td><td><button onclick="removeWeightEntry(${index})" class="remove-btn">❌</button></td></tr>`;
   });
   if (document.getElementById('progressTab').classList.contains('active')) {
-    showWorkoutProgress();
+    const isBodyweightActive = document.getElementById('bodyweightProgressBtn')?.classList.contains('active');
+    if (isBodyweightActive) {
+      showBodyweightProgress();
+    } else {
+      showWorkoutProgress();
+    }
   }
 }
 
@@ -3754,7 +3908,12 @@ function estimateCalories() {
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   const avgCals = +document.getElementById("avgCalories").value;
   if (log.length < 7) return alert("Need at least 7 days of weight entries.");
-  const weightDiff = log[0].weight - log[log.length - 1].weight;
+  const startWeight = getEntryWeightKg(log[0]);
+  const endWeight = getEntryWeightKg(log[log.length - 1]);
+  if (startWeight === null || endWeight === null) {
+    return alert("Unable to calculate because some entries are missing weight values.");
+  }
+  const weightDiff = startWeight - endWeight;
   const caloriesBurned = weightDiff * 7700;
   const maintenance = Math.round(avgCals + (caloriesBurned / log.length));
   document.getElementById("calorieEstimateTable").innerHTML = `
@@ -3899,7 +4058,15 @@ async function fetchCardioHistory() {
 
 async function fetchBodyweightHistory() {
   const weights = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  return weights.map(w => ({ date: w.date, weight: w.weight }));
+  const pref = getBodyweightPreference();
+  const targetUnit = pref.unit === 'lb' ? 'lb' : 'kg';
+  return weights.map(w => {
+    const baseKg = getEntryWeightKg(w);
+    const value = typeof baseKg === 'number' && !Number.isNaN(baseKg)
+      ? convertWeightValue(baseKg, 'kg', targetUnit, 1)
+      : null;
+    return { date: w.date, weight: value };
+  });
 }
 
 function setActiveProgress(btnId) {
@@ -4346,6 +4513,8 @@ function showHistoryMiniTab(tab) {
       if (weightUnitSelect) weightUnitSelect.value = savedUnit;
     }
 
+    initBodyweightPreferenceUI();
+
     await fetchAirtableConfig();
 
     updateExerciseSuggestions();
@@ -4730,6 +4899,7 @@ window.logout = logout;
 window.addLogEntry = addLogEntry;
 window.completeWorkout = completeWorkout;
 window.addWeightEntry = addWeightEntry;
+window.toggleBodyweightUnit = toggleBodyweightUnit;
 window.estimateCalories = estimateCalories;
 window.addCardioEntry = addCardioEntry;
 window.completeCardioSession = completeCardioSession;
