@@ -2070,7 +2070,9 @@ function closeContextMenu() {
 }
 
 document.addEventListener('click', closeContextMenu);
-window.addEventListener('resize', closeContextMenu);
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('resize', closeContextMenu);
+}
 document.addEventListener('scroll', closeContextMenu, true);
 
 function renderWorkouts() {
