@@ -441,6 +441,18 @@
   align-items:start;
   margin-bottom:80px;
 }
+.workout-timer{
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  font-weight:600;
+  margin:12px 0 24px;
+  color:var(--text-color);
+}
+.workout-timer-value{
+  font-family:'Courier New', Courier, monospace;
+  font-size:1.25rem;
+}
 #resistance-inputs{
   display:flex;
   flex-direction:column;
@@ -458,6 +470,9 @@
     display:flex;
     flex-direction:column;
     gap:8px;
+  }
+  .workout-timer{
+    justify-content:center;
   }
   #resistance-inputs{
     flex-direction:column;
@@ -579,6 +594,11 @@
   <div id="logPanel" class="panel active">
   <div id="training-calendar" class="slide-up"></div>
   <h2>Resistance Exercise Log</h2>
+
+  <div id="workoutTimer" class="workout-timer" aria-live="polite">
+    <span class="workout-timer-label">Workout Time:</span>
+    <span id="workoutElapsed" class="workout-timer-value">00:00:00</span>
+  </div>
 
 <div id="resistance-section">
   <div id="resistance-inputs">
@@ -1119,6 +1139,7 @@
 <script type="module" src="autoProgression.js"></script>
 <script type="module" src="periodization.js"></script>
 <script type="module" src="macrosFeatures.js"></script>
+<script type="module" src="workoutTimer.js"></script>
 <script type="module" src="history.js"></script>
 <script src="lifestyle.js"></script>
 <script src="src/js/settings.js"></script>
@@ -1691,6 +1712,13 @@ function addLogEntry() {
   }
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  if (typeof startWorkoutTimer === 'function') {
+    try {
+      startWorkoutTimer();
+    } catch (err) {
+      console.warn('Unable to start workout timer', err);
+    }
+  }
   if (
     workouts.length === 0 ||
     workouts[workouts.length - 1].date !== date
@@ -2071,8 +2099,6 @@ function closeContextMenu() {
 }
 
 document.addEventListener('click', closeContextMenu);
-if (typeof window !== 'undefined') {
-=======
 if (typeof window !== 'undefined' && window.addEventListener) {
   window.addEventListener('resize', closeContextMenu);
 }
@@ -2677,10 +2703,34 @@ function loadTodayProgram() {
 
 
  
-function completeWorkout() {
+async function completeWorkout() {
   const date = new Date().toISOString().split('T')[0];
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  if (!workouts.some(w => w.date === date)) {
+  const todaysWorkout = workouts.find(w => w.date === date);
+  const latestWorkout = todaysWorkout || workouts[workouts.length - 1];
+
+  if (typeof stopWorkoutTimerAndSave === 'function') {
+    const meta = {};
+    if (latestWorkout) {
+      const name = latestWorkout.title || latestWorkout.name;
+      if (name) meta.name = name;
+      if (typeof latestWorkout.notes === 'string' && latestWorkout.notes) {
+        meta.notes = latestWorkout.notes;
+      }
+      const firstEntryWithUnit = Array.isArray(latestWorkout.log)
+        ? latestWorkout.log.find(entry => entry && entry.unit)
+        : null;
+      const units = firstEntryWithUnit?.unit || latestWorkout.unit;
+      if (units) meta.units = units;
+    }
+    try {
+      await stopWorkoutTimerAndSave(meta);
+    } catch (err) {
+      console.warn('Unable to stop workout timer', err);
+    }
+  }
+
+  if (!todaysWorkout) {
     workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
     localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
     trackWorkoutDate(date);
@@ -4518,6 +4568,10 @@ function showHistoryMiniTab(tab) {
     await fetchAirtableConfig();
 
     updateExerciseSuggestions();
+
+    if (typeof window.attachWorkoutTimerUI === 'function') {
+      window.attachWorkoutTimerUI();
+    }
 
     const dateInput = document.getElementById('entryDate');
     if (dateInput) {

@@ -1,3 +1,5 @@
+import { stopWorkoutTimerAndSave } from './workoutTimer.js';
+
 const STORAGE_KEYS = {
   workouts: 'tl_workout_history_v1'
 };
@@ -111,6 +113,16 @@ export async function finalizeResistanceWorkout(state) {
     createdAt: new Date().toISOString(),
     sets
   };
+
+  try {
+    await stopWorkoutTimerAndSave({
+      name: workout.name,
+      notes: workout.notes,
+      units: workout.units
+    });
+  } catch (err) {
+    console.warn('Failed to stop workout timer during finalize', err);
+  }
 
   const entry = saveWorkoutToLocal(workout);
 
