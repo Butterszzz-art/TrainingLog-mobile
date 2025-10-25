@@ -598,6 +598,7 @@
   <div id="workoutTimer" class="workout-timer" aria-live="polite">
     <span class="workout-timer-label">Workout Time:</span>
     <span id="workoutElapsed" class="workout-timer-value">00:00:00</span>
+    <button id="endWorkoutBtn" type="button" class="workout-timer-end">End Workout</button>
   </div>
 
 <div id="resistance-section">
@@ -4571,6 +4572,22 @@ function showHistoryMiniTab(tab) {
 
     if (typeof window.attachWorkoutTimerUI === 'function') {
       window.attachWorkoutTimerUI();
+    }
+
+    const endWorkoutBtn = document.getElementById('endWorkoutBtn');
+    if (endWorkoutBtn) {
+      endWorkoutBtn.addEventListener('click', () => {
+        if (typeof window.stopWorkoutTimerAndSave === 'function') {
+          try {
+            const maybePromise = window.stopWorkoutTimerAndSave();
+            if (maybePromise && typeof maybePromise.catch === 'function') {
+              maybePromise.catch((err) => console.warn('Unable to stop workout timer via button', err));
+            }
+          } catch (err) {
+            console.warn('Unable to stop workout timer via button', err);
+          }
+        }
+      });
     }
 
     const dateInput = document.getElementById('entryDate');

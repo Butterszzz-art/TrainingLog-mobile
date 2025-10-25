@@ -6,17 +6,27 @@ let _interval = null;
 export function startWorkoutTimer() {
   const active = _readTimer();
   if (active && typeof active.startTimeMs === 'number') {
+    if (!active.startDateKey) {
+      const patched = {
+        startTimeMs: active.startTimeMs,
+        startDateKey: getLocalDateKey(new Date(active.startTimeMs))
+      };
+      _writeTimer(patched);
+      return patched;
+    }
     return active;
   }
 
   const startTimeMs = Date.now();
-  _writeTimer({ startTimeMs });
+  const startDateKey = getLocalDateKey(new Date(startTimeMs));
+  const payload = { startTimeMs, startDateKey };
+  _writeTimer(payload);
 
   if (typeof document !== 'undefined') {
     attachWorkoutTimerUI();
   }
 
-  return { startTimeMs };
+  return payload;
 }
 
 export function getWorkoutElapsedMs() {
@@ -37,6 +47,7 @@ export async function stopWorkoutTimerAndSave(optionalMeta = {}) {
   const startTimeISO = new Date(active.startTimeMs).toISOString();
   const endTimeISO = new Date(endTimeMs).toISOString();
   const durationMin = Math.max(0, Math.round((endTimeMs - active.startTimeMs) / 60000));
+  const date = active.startDateKey || getLocalDateKey(new Date(active.startTimeMs));
 
   _clearTimer();
   _stopInterval();
@@ -56,7 +67,6 @@ export async function stopWorkoutTimerAndSave(optionalMeta = {}) {
     }
   }
 
-  const date = getLocalDateKey();
   const timing = { startTimeISO, endTimeISO, durationMin };
   const cleanedMeta = _cleanMeta(optionalMeta);
   const payload = {
@@ -71,7 +81,7 @@ export async function stopWorkoutTimerAndSave(optionalMeta = {}) {
     _persistLastTiming({ date, workout: payload.workout });
   }
 
-  return timing;
+  return { ...timing, date };
 }
 
 export function attachWorkoutTimerUI(elapsedElId = 'workoutElapsed') {
@@ -80,7 +90,30 @@ export function attachWorkoutTimerUI(elapsedElId = 'workoutElapsed') {
   if (!el) return;
 
   const render = () => {
-    el.textContent = _formatHHMMSS(getWorkoutElapsedMs());
+    const active = _readTimer();
+    if (!active || typeof active.startTimeMs !== 'number') {
+      el.textContent = _formatHHMMSS(0);
+      return;
+    }
+
+    let { startDateKey } = active;
+    if (!startDateKey) {
+      startDateKey = getLocalDateKey(new Date(active.startTimeMs));
+      _writeTimer({ startTimeMs: active.startTimeMs, startDateKey });
+    }
+
+    const todayKey = getLocalDateKey();
+    if (startDateKey && todayKey !== startDateKey) {
+      const maybePromise = stopWorkoutTimerAndSave({ autoReason: 'day-rollover' });
+      if (maybePromise && typeof maybePromise.catch === 'function') {
+        maybePromise.catch((err) => console.warn('Failed to auto stop workout timer', err));
+      }
+      el.textContent = _formatHHMMSS(0);
+      return;
+    }
+
+    const ms = Math.max(0, Date.now() - active.startTimeMs);
+    el.textContent = _formatHHMMSS(ms);
   };
 
   render();
