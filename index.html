@@ -625,7 +625,7 @@
   <!-- Date selector -->
   <input type="date" id="entryDate" class="calendar-widget slide-up" />
 
-  <select id="templateSelect" onchange="loadSelectedTemplate()" style="margin-top: 10px;">
+  <select id="resistanceTemplateSelect" onchange="loadSelectedResistanceTemplate()" style="margin-top: 10px;">
   <option value="">Select Template...</option>
 </select>
 
@@ -704,6 +704,13 @@
   <button onclick="addCrossfitExercise()">➕ Add Exercise</button>
 
   <button style="margin-top:20px;" onclick="saveCrossfitWorkout()">Save CrossFit Workout</button>
+
+  <div class="cf-template-controls" style="margin-top:20px;">
+    <label for="crossfitTemplateSelect">Load Saved Template</label>
+    <select id="crossfitTemplateSelect" onchange="loadCrossfitTemplate()" style="margin-top: 10px;">
+      <option value="">-- Load Saved Template --</option>
+    </select>
+  </div>
   </div>
   <div id="cfHistoryPanel" class="panel">
   <h3 style="margin-top:30px;">Saved CrossFit Workouts</h3>
@@ -2448,10 +2455,11 @@ function populateTemplateSelect(selectId, templates) {
 async function loadTemplateDropdown(username = currentUser) {
   try {
     const templates = await fetchTemplates(username);
-    populateTemplateSelect('templateSelect', templates);
+    // Populate the resistance template dropdown; CrossFit templates use a separate select
+    populateTemplateSelect('resistanceTemplateSelect', templates);
   } catch (err) {
     console.warn('Template loading failed:', err);
-    populateTemplateSelect('templateSelect', []);
+    populateTemplateSelect('resistanceTemplateSelect', []);
   }
 }
 
@@ -2476,18 +2484,36 @@ function saveWorkoutAsTemplate() {
 }
 
 
-// Load selected template into workouts
+// Load selected resistance template into workouts
 function loadSelectedTemplate() {
-  const select = document.getElementById("templateSelect");
-  const value = select.value;
+  // Retained for backward compatibility; delegates to the resistance loader.
+  loadSelectedResistanceTemplate();
+}
+
+function loadSelectedResistanceTemplate() {
+  const select = document.getElementById('resistanceTemplateSelect');
+  const value = select ? select.value : '';
   if (!value) return;
 
-  const template = JSON.parse(value);
+  let template;
+  try {
+    template = JSON.parse(value);
+  } catch (error) {
+    console.error('Invalid template JSON', error);
+    alert('Failed to load template.');
+    return;
+  }
+
+  if (!template || typeof template !== 'object') {
+    alert('Invalid template format.');
+    return;
+  }
+
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   workouts.push(template);
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   renderWorkouts();
-  alert("Template loaded!");
+  alert('Template loaded!');
 }
 
 // SEND TEMPLATE TO ANOTHER USER
@@ -2495,8 +2521,20 @@ async function sendTemplate() {
   const otherUser = document.getElementById("shareWithUser").value.trim();
   if (!otherUser) return alert("Enter username to share with.");
 
-  const select = document.getElementById("templateSelect");
-  const templateData = JSON.parse(select.value);
+  const select = document.getElementById('resistanceTemplateSelect');
+  if (!select || !select.value) {
+    alert('Select a template first.');
+    return;
+  }
+
+  let templateData;
+  try {
+    templateData = JSON.parse(select.value);
+  } catch (error) {
+    console.error('Invalid template JSON', error);
+    alert('Failed to share template.');
+    return;
+  }
 
   try {
     const response = await fetch(`${window.SERVER_URL}/sendTemplate`, {
@@ -2525,7 +2563,8 @@ async function sendTemplate() {
 
 // Show template actions if one is selected
 function showTemplateOptions() {
-  const selected = document.getElementById("templateSelect").value;
+  const select = document.getElementById('resistanceTemplateSelect');
+  const selected = select ? select.value : '';
   document.getElementById("templateActions").style.display = selected ? 'block' : 'none';
 }
 
@@ -4578,6 +4617,8 @@ function showHistoryMiniTab(tab) {
 
     updateExerciseSuggestions();
 
+    renderTemplateOptions();
+
     if (typeof window.attachWorkoutTimerUI === 'function') {
       window.attachWorkoutTimerUI();
     }
@@ -4846,7 +4887,8 @@ function saveCrossfitTemplate() {
 }
 
 function renderTemplateOptions() {
-  const select = document.getElementById('templateSelect');
+  const select = document.getElementById('crossfitTemplateSelect');
+  if (!select) return;
   select.innerHTML = '<option value="">-- Load Saved Template --</option>';
   crossfitTemplates.forEach((tpl, index) => {
     select.innerHTML += `<option value="${index}">${tpl.name}</option>`;
@@ -4854,7 +4896,9 @@ function renderTemplateOptions() {
 }
 
 function loadCrossfitTemplate() {
-  const index = document.getElementById('templateSelect').value;
+  const select = document.getElementById('crossfitTemplateSelect');
+  if (!select) return;
+  const index = select.value;
   if (index === '') return;
   const template = crossfitTemplates[index];
   crossfitEntries = JSON.parse(JSON.stringify(template.workout)); // Deep copy
@@ -4983,6 +5027,7 @@ window.estimateCalories = estimateCalories;
 window.addCardioEntry = addCardioEntry;
 window.completeCardioSession = completeCardioSession;
 window.loadSelectedTemplate = loadSelectedTemplate;
+window.loadSelectedResistanceTemplate = loadSelectedResistanceTemplate;
 window.sendTemplate = sendTemplate;
 window.renderWorkouts = renderWorkouts;
 window.toggleWorkoutDetails = toggleWorkoutDetails;
