@@ -4525,6 +4525,8 @@ function updateTrainingCalendar() {
 // ========= CROSSFIT TRACKER =========
 
 let crossfitExercises = [];
+let crossfitEntries = [];
+let crossfitTemplates = JSON.parse(localStorage.getItem('crossfitTemplates')) || [];
 
 function addCrossfitExercise() {
   const container = document.getElementById('cfExercisesContainer');
@@ -4814,10 +4816,6 @@ function removeCrossfitWorkout(index) {
   localStorage.setItem(`crossfitLog_${currentUser}`, JSON.stringify(cfLog));
   renderCrossfitWorkouts();
 }
-// Data holders
-let crossfitEntries = [];
-let crossfitTemplates = JSON.parse(localStorage.getItem('crossfitTemplates')) || [];
-
 function addCrossfitEntry() {
   const exercise = document.getElementById('crossfitExercise').value.trim();
   const sets = +document.getElementById('crossfitSets').value;
