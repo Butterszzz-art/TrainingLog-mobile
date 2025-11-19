@@ -1162,6 +1162,22 @@ let activeTab = null;
 let airtableToken = '';
 let airtableBaseId = '';
 
+const DEFAULT_SERVER_URL = 'https://traininglog-backend.onrender.com';
+
+function ensureServerUrl() {
+  if (typeof window === 'undefined') {
+    return DEFAULT_SERVER_URL;
+  }
+
+  if (!window.SERVER_URL || typeof window.SERVER_URL !== 'string') {
+    window.SERVER_URL = DEFAULT_SERVER_URL;
+  }
+
+  return window.SERVER_URL;
+}
+
+ensureServerUrl();
+
 async function fetchAirtableConfig() {
   const normalizeAndApply = cfg => {
     if (!cfg || typeof cfg !== 'object') {
@@ -1195,6 +1211,11 @@ async function fetchAirtableConfig() {
       airtableBaseId = baseIdFromConfig;
     }
 
+    if (typeof window !== 'undefined') {
+      window.airtableToken = airtableToken;
+      window.airtableBaseId = airtableBaseId;
+    }
+
     const normalized = {
       serverUrl: window.SERVER_URL,
       airtable: {
@@ -1211,6 +1232,7 @@ async function fetchAirtableConfig() {
   };
 
   try {
+    ensureServerUrl();
     const res = await fetch(`${window.SERVER_URL}/config`, { credentials: 'include' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const cfg = await res.json();
@@ -3471,68 +3493,37 @@ loadAndRenderDailyProgress();
 
 
 async function saveDailyMacroLog(username, date, meals, totals) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/DailyLogs`;
-  const body = {
-    fields: {
-      Username: username,
-      Date: date,
-      Type: "Macros",
-      LogData: JSON.stringify(meals),
-      CaloriesTotal: totals.calories,
-      ProteinTotal: totals.protein,
-      CarbsTotal: totals.carbs,
-      FatTotal: totals.fat
-    }
-  };
+  const token = (typeof window !== 'undefined' && window.airtableToken) || airtableToken;
+  const baseId = (typeof window !== 'undefined' && window.airtableBaseId) || airtableBaseId;
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Failed to save daily log:", data);
-      alert("Failed to save daily log");
-    }
-    return data;
-  } catch (error) {
-    console.error("Network error saving daily log:", error);
-    alert("Network error saving daily log");
+  if (!token || !baseId) {
+    console.warn('Missing Airtable credentials, skipping macro log save');
+    return;
   }
-}
 
+  const url = `https://api.airtable.com/v0/${baseId}/DailyLogs`;
+  const fields = {
+    Username: username,
+    Date: date,
+    Type: "Macros",
+    LogData: JSON.stringify(meals),
+    CaloriesTotal: totals.calories,
+    ProteinTotal: totals.protein,
+    CarbsTotal: totals.carbs,
+    FatTotal: totals.fat
+  };
 
-
-  
-async function saveDailyMacroLog(username, date, meals, totals) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/DailyLogs`;
-  const body = {
-    fields: {
-      Username: username,
-      Date: date,
-      Type: "Macros",
-      LogData: JSON.stringify(meals),
-      CaloriesTotal: totals.calories,
-      ProteinTotal: totals.protein,
-      CarbsTotal: totals.carbs,
-      FatTotal: totals.fat
-    }
+  const options = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ fields })
   };
 
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
+    const response = await fetch(url, options);
     const data = await response.json();
     if (!response.ok) {
       console.error("Failed to save daily log:", data);
