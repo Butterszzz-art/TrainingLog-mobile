@@ -1179,98 +1179,43 @@ function ensureServerUrl() {
 ensureServerUrl();
 
 async function fetchAirtableConfig() {
-  const normalizeAndApply = cfg => {
-    if (!cfg || typeof cfg !== 'object') {
-      return {
-        serverUrl: window.SERVER_URL,
-        airtable: {
-          baseId: airtableBaseId || null,
-          table: 'Workouts',
-          tokenProvided: Boolean(airtableToken)
-        }
-      };
-    }
+  ensureServerUrl();
 
-    if (cfg.serverUrl) {
+  const applyAirtableConfig = cfg => {
+    if (!cfg) return;
+
+    if (typeof cfg.serverUrl === 'string' && cfg.serverUrl.length) {
       window.SERVER_URL = cfg.serverUrl;
     }
 
-    const airtableCfg = cfg.airtable || {};
-
-    const tokenFromConfig =
-      (typeof airtableCfg.token === 'string' && airtableCfg.token) ||
-      (typeof cfg.airtableToken === 'string' && cfg.airtableToken);
-    const baseIdFromConfig =
-      (typeof airtableCfg.baseId === 'string' && airtableCfg.baseId) ||
-      (typeof cfg.airtableBaseId === 'string' && cfg.airtableBaseId);
-
-    if (tokenFromConfig) {
-      airtableToken = tokenFromConfig;
-    }
-    if (baseIdFromConfig) {
-      airtableBaseId = baseIdFromConfig;
-    }
-
-    if (typeof window !== 'undefined') {
-      window.airtableToken = airtableToken;
-      window.airtableBaseId = airtableBaseId;
-    }
-
-    const normalized = {
-      serverUrl: window.SERVER_URL,
-      airtable: {
-        baseId: baseIdFromConfig || airtableBaseId || null,
-        table: airtableCfg.table || 'Workouts',
-        tokenProvided:
-          typeof airtableCfg.tokenProvided === 'boolean'
-            ? airtableCfg.tokenProvided
-            : Boolean(tokenFromConfig || airtableToken)
+    if (cfg.airtableBaseId) {
+      airtableBaseId = cfg.airtableBaseId;
+      if (typeof window !== 'undefined') {
+        window.airtableBaseId = airtableBaseId;
       }
-    };
+    }
 
-    return normalized;
+    if (cfg.airtableToken) {
+      airtableToken = cfg.airtableToken;
+      if (typeof window !== 'undefined') {
+        window.airtableToken = airtableToken;
+      }
+    }
   };
 
   try {
-    ensureServerUrl();
     const res = await fetch(`${window.SERVER_URL}/config`, { credentials: 'include' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`Failed to load config: ${res.status}`);
+    }
     const cfg = await res.json();
-    return normalizeAndApply(cfg);
-  } catch (err) {
-    console.warn('Server config fetch failed', err);
-  }
-
-  try {
-    const mod = await import('./config.js');
-    const exportedAirtable =
-      (mod && (mod.airtableConfig || (mod.default && mod.default.airtableConfig))) ||
-      window.airtableConfig;
-    const cfg = normalizeAndApply({
-      serverUrl: mod && (mod.SERVER_URL || (mod.default && mod.default.SERVER_URL)) || window.SERVER_URL,
-      airtable: {
-        token: exportedAirtable && exportedAirtable.airtableToken,
-        baseId: exportedAirtable && exportedAirtable.airtableBaseId,
-        table: exportedAirtable && exportedAirtable.table,
-        tokenProvided: Boolean(exportedAirtable && exportedAirtable.airtableToken)
-      }
-    });
+    applyAirtableConfig(cfg);
     return cfg;
   } catch (err) {
-    // optional config.js not found
+    console.warn('Unable to fetch Airtable config from server, falling back to local config', err);
+    applyAirtableConfig(window.airtableConfig || {});
+    return window.airtableConfig || {};
   }
-
-  const fallback = normalizeAndApply({
-    serverUrl: window.SERVER_URL,
-    airtable: {
-      baseId: window.airtableConfig && window.airtableConfig.airtableBaseId,
-      table: (window.airtableConfig && window.airtableConfig.table) || 'Workouts',
-      token: window.airtableConfig && window.airtableConfig.airtableToken,
-      tokenProvided: Boolean(window.airtableConfig && window.airtableConfig.airtableToken)
-    }
-  });
-
-  return fallback;
 }
 const usersTableName = 'Users';
 const templatesTableName = 'Templates';
@@ -2059,7 +2004,10 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
   event.preventDefault();
   event.stopPropagation();
 
-  const card = event.currentTarget.closest('.exercise-card');
+  const target = event.currentTarget;
+  if (!target || !target.closest) return;
+
+  const card = target.closest('.exercise-card');
   if (!card) return;
 
   let menu = card.querySelector('.context-menu');
@@ -2112,7 +2060,11 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
   activeContextMenu = menu;
 
   requestAnimationFrame(() => {
-    const buttonRect = event.currentTarget.getBoundingClientRect();
+    if (!document.body.contains(target) || !document.body.contains(card)) {
+      return;
+    }
+
+    const buttonRect = target.getBoundingClientRect();
     const cardRect = card.getBoundingClientRect();
     const menuRect = menu.getBoundingClientRect();
     let left = buttonRect.left - cardRect.left - menuRect.width + buttonRect.width;
@@ -2813,6 +2765,8 @@ async function completeWorkout() {
 }
 
 async function saveWorkoutToBackend(workout) {
+  ensureServerUrl();
+
   const action = {
     url: `${window.SERVER_URL}/saveWorkout`,
     options: {
@@ -2821,10 +2775,14 @@ async function saveWorkoutToBackend(workout) {
       body: JSON.stringify({ username: currentUser, workout })
     }
   };
+
   try {
-    await fetch(action.url, { ...action.options, credentials: "include" });
+    const response = await fetch(action.url, { ...action.options, credentials: 'include' });
+    if (!response.ok) {
+      throw new Error(`Failed to save workout: ${response.status}`);
+    }
   } catch (err) {
-    console.warn('offline - queueing workout', err);
+    console.warn('Unable to reach server, queueing workout for retry', err);
     if (window.queueAction) queueAction(action);
   }
 }
