@@ -1326,6 +1326,10 @@ async function startLogin() {
     }
 
     if (result.success) {
+      if (result.token) {
+        window.authToken = result.token;
+        localStorage.setItem('authToken', result.token);
+      }
       currentUser = username;
       localStorage.setItem("fitnessAppUser", username);
 
@@ -2380,8 +2384,17 @@ async function saveTemplate(username, templateName, templateData) {
 }
   
 async function fetchTemplates(username) {
+  const token = window.authToken || localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('Missing auth token. Please log in again.');
+  }
   const url = `${window.SERVER_URL}/templates?username=${encodeURIComponent(username)}`;
-  const res = await fetch(url, { credentials: 'include' });
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
   if (!res.ok) {
     throw new Error(`Templates HTTP ${res.status}`);
   }
