@@ -91,3 +91,55 @@ local server by creating an `.env.development` file containing
 REACT_APP_BACKEND_URL=http://localhost:3000
 ```
 
+## Using the Rest-Pause/Drop-Set logger component
+
+The `RestPauseDropSetLogger` React component renders a small form for capturing
+base set data, optional rest–pause bursts, and drop-set follow-ons. Supply a
+`ui` object to override the default Tailwind classes and register an `onChange`
+handler to receive the normalized payload whenever the user edits the form.
+
+```jsx
+import RestPauseDropSetLogger from "./src/js/components/RestPauseDropSetLogger";
+
+function WorkoutCard() {
+  return (
+    <RestPauseDropSetLogger
+      className="max-w-full"
+      ui={{
+        root: "w-full",
+        card: "rounded-xl border bg-zinc-900 text-zinc-100 shadow-sm",
+        heading: "text-base font-semibold mb-2",
+        grid: "grid grid-cols-1 md:grid-cols-4 gap-2 items-end",
+        label: "text-xs text-zinc-400",
+        input: "mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm focus:outline-none",
+        toggleRow: "flex gap-2",
+        toggleIdle: "flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs",
+        toggleActive: "flex-1 rounded-lg border border-emerald-500 bg-emerald-600/20 text-emerald-300 px-3 py-2 text-xs",
+        section: "mt-3 rounded-lg border border-zinc-700 p-3",
+        sectionTitleRow: "flex items-center justify-between",
+        sectionTitle: "text-sm font-medium",
+        sectionAddBtn: "rounded-md border border-zinc-700 px-3 py-1 text-xs hover:bg-zinc-800",
+        subgrid: "grid grid-cols-3 md:grid-cols-6 gap-2 items-end",
+        sublabel: "text-[11px] text-zinc-400",
+        smallBtn: "rounded-md border border-zinc-700 px-3 py-2 text-xs hover:bg-zinc-800",
+        weightBadgeWrap: "col-span-1 md:col-span-1 text-xs text-zinc-400",
+        weightBadgeLabel: "opacity-70",
+        weightBadgeVal: "font-medium text-zinc-200",
+        summaryGrid: "mt-3 grid grid-cols-1 md:grid-cols-3 gap-2",
+        summaryCard: "rounded-lg border border-zinc-700 p-3",
+        summaryLabel: "text-[11px] uppercase tracking-wide text-zinc-400",
+        summaryValue: "text-xl font-semibold",
+        segmentTag: "inline-block mr-2 mb-1 rounded-md bg-zinc-800 border border-zinc-700 px-2 py-1 text-xs",
+        code: "rounded-lg border border-zinc-700 p-3 overflow-auto text-[11px] bg-zinc-900",
+      }}
+      onChange={evt => console.log(evt.value, evt.volume)}
+    />
+  );
+}
+```
+
+The `onChange` callback receives `{ value, flattened, volume }`, where
+`value` represents the current form selections, `flattened` provides arrays of
+segment weights and reps (base set + rest–pause bursts + drop-set sets), and
+`volume` is the computed total weight × reps for the combined effort.
+
