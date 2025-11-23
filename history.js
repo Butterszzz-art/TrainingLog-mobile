@@ -1,4 +1,5 @@
 import { stopWorkoutTimerAndSave } from './workoutTimer.js';
+import { loadLogsFromLocalStorage, saveLogToLocalStorage } from './resistanceLogs.js';
 
 const STORAGE_KEYS = {
   workouts: 'tl_workout_history_v1'
@@ -52,6 +53,23 @@ export function saveWorkoutToLocal(workout) {
   arr.unshift(entry);
   writeHistoryArray(arr);
   return entry;
+}
+
+function mapToResistanceLog(workout) {
+  const date = workout?.performedAt || workout?.date || workout?.createdAt || new Date().toISOString();
+  const exercises = Array.isArray(workout?.sets)
+    ? workout.sets.map(set => ({
+        name: set?.exercise || set?.name || 'Exercise',
+        repsArray: Array.isArray(set?.repsArray)
+          ? set.repsArray.map(n => Number(n) || 0)
+          : [Number(set?.reps ?? set?.repsArray?.[0] ?? 0) || 0],
+        weightsArray: Array.isArray(set?.weightsArray)
+          ? set.weightsArray.map(n => Number(n) || 0)
+          : [Number(set?.weight ?? set?.weightsArray?.[0] ?? 0) || 0],
+      }))
+    : [];
+
+  return { date, exercises };
 }
 
 export function loadLocalHistory() {
@@ -113,6 +131,9 @@ export async function finalizeResistanceWorkout(state) {
     createdAt: new Date().toISOString(),
     sets
   };
+
+  // Persist the completed workout locally for prototyping.
+  saveLogToLocalStorage(mapToResistanceLog(workout));
 
   try {
     await stopWorkoutTimerAndSave({
@@ -177,68 +198,60 @@ export async function loadWorkoutHistory() {
 export async function renderWorkoutHistory(containerEl = document.getElementById('logHistoryContainer')) {
   if (!containerEl) return;
 
-  const { items, source } = await loadHistory();
+  const logs = loadLogsFromLocalStorage().slice().sort((a, b) => new Date(b.date) - new Date(a.date));
   containerEl.innerHTML = '';
 
-  if (!items.length) {
+  if (!logs.length) {
     containerEl.innerHTML = `
       <div class="empty">
         No workouts yet.
-        <div class="hint">Log a workout and it will appear here (${source}).</div>
+        <div class="hint">Log a workout and it will appear here (local only).</div>
       </div>`;
     return;
   }
 
-  const ul = document.createElement('ul');
-  ul.className = 'history-list';
+  const list = document.createElement('ul');
+  list.className = 'history-list';
 
-  items.forEach(workout => {
+  logs.forEach(log => {
     const li = document.createElement('li');
     li.className = 'history-item';
+    const dateLabel = new Date(log.date).toLocaleString();
 
-    const performedAt = workout.performedAt || workout.date;
-    const timestamp = workout.createdAt || (performedAt ? new Date(performedAt).toISOString() : null);
-    const dateLabel = timestamp ? new Date(timestamp).toLocaleString() : 'Unknown date';
-
-    const sets = Array.isArray(workout.sets) && workout.sets.length
-      ? workout.sets
-      : Array.isArray(workout.log)
-        ? workout.log.map(entry => ({
-            exercise: entry.exercise,
-            weight: Array.isArray(entry.weightsArray) ? entry.weightsArray.filter(v => v !== null && v !== undefined && v !== '').map(String).join('/') : '',
-            reps: Array.isArray(entry.repsArray) ? entry.repsArray.filter(v => v !== null && v !== undefined && v !== '').map(String).join('/') : ''
-          }))
-        : [];
-
-    const meta = sets
-      .filter(set => set && set.exercise)
-      .map(set => {
-        const weight = set.weight ?? '';
-        const reps = set.reps ?? '';
-        const units = workout.units || '';
-        const weightLabel = weight ? `${weight}${units}` : '';
-        const repsLabel = reps ? ` × ${reps}` : '';
-        const detail = weightLabel || repsLabel
-          ? `${set.exercise}: ${weightLabel}${repsLabel}`.trim()
-          : set.exercise;
-        return detail;
-      })
-      .filter(Boolean)
-      .join(' · ');
+    const exerciseDetails = (Array.isArray(log.exercises) ? log.exercises : []).map(ex => {
+      const reps = Array.isArray(ex.repsArray) ? ex.repsArray : [];
+      const weights = Array.isArray(ex.weightsArray) ? ex.weightsArray : [];
+      const volume = reps.reduce((total, rep, idx) => total + (Number(rep) || 0) * (Number(weights[idx]) || 0), 0);
+      const desc = `${ex.name}: ${reps.join('/')}` + ` reps @ ${weights.join('/')}` + ` (${volume} volume)`;
+      return `<div class="meta">${desc}</div>`;
+    }).join('');
 
     li.innerHTML = `
       <div class="row">
-        <strong>${workout.name || workout.title || 'Workout'}</strong>
+        <strong>${new Date(log.date).toDateString()}</strong>
         <span>${dateLabel}</span>
       </div>
-      <div class="meta">${meta || 'No set data logged'}</div>
-      ${workout.notes ? `<div class="notes">${workout.notes}</div>` : ''}
+      ${exerciseDetails || '<div class="meta">No exercise data</div>'}
     `;
 
-    ul.appendChild(li);
+    li.addEventListener('click', () => {
+      if (typeof window.showWorkoutProgress === 'function') {
+        const workoutPayload = {
+          date: log.date.split('T')[0] || new Date(log.date).toISOString().split('T')[0],
+          log: (log.exercises || []).map(ex => ({
+            exercise: ex.name,
+            repsArray: Array.isArray(ex.repsArray) ? ex.repsArray : [],
+            weightsArray: Array.isArray(ex.weightsArray) ? ex.weightsArray : [],
+          })),
+        };
+        window.showWorkoutProgress({ workouts: [workoutPayload] });
+      }
+    });
+
+    list.appendChild(li);
   });
 
-  containerEl.appendChild(ul);
+  containerEl.appendChild(list);
 }
 
 const historyApi = {
