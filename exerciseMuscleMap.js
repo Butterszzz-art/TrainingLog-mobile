@@ -242,9 +242,18 @@ const exerciseMuscleMap = {
   'Yoke Carry': 'traps',
 };
 
-// Utility to look up a muscle group by exercise name
+// Build a normalized lookup to allow case-insensitive matching
+const normalizedExerciseMuscleMap = Object.fromEntries(
+  Object.entries(exerciseMuscleMap).map(([name, muscle]) => [name.toLowerCase(), muscle])
+);
+
+// Utility to look up a muscle group by exercise name (case-insensitive)
 function getMuscleGroup(exerciseName) {
-  return exerciseMuscleMap[exerciseName] || 'other';
+  if (typeof exerciseName !== 'string') {
+    return 'other';
+  }
+  const normalized = exerciseName.trim().toLowerCase();
+  return normalizedExerciseMuscleMap[normalized] || 'other';
 }
 
 if (typeof module !== 'undefined') {
