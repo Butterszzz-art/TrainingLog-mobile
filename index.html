@@ -3846,6 +3846,35 @@ function getBodyweightPreference() {
   }
 }
 
+function finishAndClearCurrentLog() {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const current = workouts[workouts.length - 1];
+  if (!current || !Array.isArray(current.log) || !current.log.length) return;
+
+  const resistanceLog = {
+    date: current.date ? new Date(current.date).toISOString() : new Date().toISOString(),
+    exercises: current.log.map(entry => ({
+      name: entry.exercise || 'Exercise',
+      repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
+      weightsArray: Array.isArray(entry.weightsArray) ? entry.weightsArray : [],
+    })),
+  };
+
+  if (typeof saveLogToLocalStorage === 'function') {
+    saveLogToLocalStorage(resistanceLog);
+  }
+
+  workouts.pop();
+  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  renderWorkouts();
+  if (typeof renderWorkoutHistory === 'function') {
+    renderWorkoutHistory();
+  }
+  if (typeof showWorkoutProgress === 'function') {
+    showWorkoutProgress({ workouts: workouts.map(w => ({ date: w.date, log: w.log })) });
+  }
+}
+
 function saveBodyweightPreference(value, unit) {
   const normalizedUnit = unit === 'lb' ? 'lb' : 'kg';
   const normalizedValue = typeof value === 'number' && !Number.isNaN(value)
@@ -4605,6 +4634,7 @@ function showHistoryMiniTab(tab) {
             console.warn('Unable to stop workout timer via button', err);
           }
         }
+        finishAndClearCurrentLog();
       });
     }
 
