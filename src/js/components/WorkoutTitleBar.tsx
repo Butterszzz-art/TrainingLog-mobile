@@ -55,6 +55,16 @@ export default function WorkoutTitleBar({
   const [customTitle, setCustomTitle] = useState<string>(initialTitle);
   const checkboxId = useId();
 
+  // Keep internal state aligned when the parent updates initial values
+  useEffect(() => {
+    const nextEnabled = initialEnabled ?? Boolean((initialTitle || "").trim());
+
+    setEnabled((current) => (current === nextEnabled ? current : nextEnabled));
+    setCustomTitle((current) =>
+      current === initialTitle ? current : initialTitle
+    );
+  }, [initialEnabled, initialTitle]);
+
   const defaultTitle = useMemo(() => {
     const d = dateForDefault ?? new Date();
     const dateStr = d.toLocaleDateString(dateLocale, {
