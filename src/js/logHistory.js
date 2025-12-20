@@ -1,9 +1,17 @@
+// Prototype local history: replace with API-backed fetch when available.
 function renderLogHistory() {
     const historyContainer = document.getElementById('historyContainer');
     if (!historyContainer) {
         return;
     }
-    const resistance = JSON.parse(localStorage.getItem('resistanceLogs') || '[]');
+    const resistance =
+        typeof loadLogsFromLocalStorage === 'function'
+            ? loadLogsFromLocalStorage()
+            : JSON.parse(
+                  localStorage.getItem('workoutHistory') ||
+                      localStorage.getItem('resistanceLogs') ||
+                      '[]'
+              );
     const cardio = JSON.parse(localStorage.getItem('cardioLogs') || '[]');
     const bodyweight = JSON.parse(localStorage.getItem('bodyweightLogs') || '[]');
     const crossfit = JSON.parse(localStorage.getItem('crossfitWorkouts') || '[]');
@@ -35,4 +43,3 @@ function renderLogHistory() {
 }
 
 document.addEventListener('DOMContentLoaded', renderLogHistory);
-
