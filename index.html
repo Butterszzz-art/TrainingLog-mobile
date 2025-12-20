@@ -3517,6 +3517,31 @@ function checkMacroReset() {
   const now = Date.now();
 
   if (now - lastReset >= 86400000) { // 24h
+    // Prototype: archive the current resistance log locally until real API sync is ready.
+    try {
+      if (typeof finishAndClearCurrentLog === 'function') {
+        finishAndClearCurrentLog();
+      } else if (typeof saveLogToLocalStorage === 'function' && typeof currentUser !== 'undefined') {
+        const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+        const current = workouts[workouts.length - 1];
+        if (current && Array.isArray(current.log) && current.log.length) {
+          const resistanceLog = {
+            date: current.date ? new Date(current.date).toISOString() : new Date(lastReset).toISOString(),
+            exercises: current.log.map(entry => ({
+              name: entry.exercise || 'Exercise',
+              repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
+              weightsArray: Array.isArray(entry.weightsArray) ? entry.weightsArray : [],
+            })),
+          };
+          saveLogToLocalStorage(resistanceLog);
+          workouts.pop();
+          localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+        }
+      }
+    } catch (err) {
+      console.warn('Unable to archive resistance log during daily reset', err);
+    }
+
     const previousTotals = JSON.parse(localStorage.getItem("dailyMacroProgress")) || { protein:0, carbs:0, fats:0 };
     const previousMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
     const date = new Date(lastReset).toISOString().split('T')[0];
