@@ -5060,7 +5060,9 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   window.saveProgram = saveProgram;
   window.loadProgramDropdown = loadProgramDropdown;
   window.startRestTimer = startRestTimer;
-  window.renderCrossfitWorkouts = renderCrossfitWorkouts;
+  if (typeof renderCrossfitWorkouts === 'function') {
+    window.renderCrossfitWorkouts = renderCrossfitWorkouts;
+  }
   window.startProgram = startProgram;
   window.checkActiveProgram = checkActiveProgram;
   window.toggleProgramBuilder = toggleProgramBuilder;
