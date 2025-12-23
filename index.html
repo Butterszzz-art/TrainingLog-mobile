@@ -4572,6 +4572,160 @@ function removeCrossfitExercise(index) {
   crossfitExercises = crossfitExercises.filter(i => i !== index);
 }
 
+function saveCrossfitWorkout() {
+  const name = document.getElementById('cfWorkoutName').value.trim();
+  const minutes = +document.getElementById('cfMinutes').value || 0;
+  const seconds = +document.getElementById('cfSeconds').value || 0;
+  const rounds = document.getElementById('cfRounds').value;
+  const notes = document.getElementById('cfNotes').value;
+  
+  if (!name) return alert("Workout Name is required!");
+
+  const exercises = [];
+  crossfitExercises.forEach(i => {
+    const exerciseName = document.getElementById(`cfExerciseName${i}`).value;
+    const sets = +document.getElementById(`cfExerciseSets${i}`).value;
+    const reps = +document.getElementById(`cfExerciseReps${i}`).value;
+    const weight = +document.getElementById(`cfExerciseWeight${i}`).value || 0;
+    if (exerciseName && sets && reps) {
+      exercises.push({ exerciseName, sets, reps, weight });
+      saveUserExercise(exerciseName.trim());
+    }
+  });
+
+  const date = new Date().toISOString().split('T')[0];
+  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
+  cfLog.push({ date, name, minutes, seconds, rounds, notes, exercises });
+  localStorage.setItem(`crossfitLog_${currentUser}`, JSON.stringify(cfLog));
+  
+  // Reset form
+  document.getElementById('cfWorkoutName').value = '';
+  document.getElementById('cfMinutes').value = '';
+  document.getElementById('cfSeconds').value = '';
+  document.getElementById('cfRounds').value = '';
+  document.getElementById('cfNotes').value = '';
+  document.getElementById('cfExercisesContainer').innerHTML = '';
+  crossfitExercises = [];
+  
+  renderCrossfitWorkouts();
+}
+
+function renderCrossfitWorkouts() {
+  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
+  const container = document.getElementById('cfWorkoutsContainer');
+  container.innerHTML = '';
+
+  cfLog.forEach((wod, index) => {
+    let exercisesList = wod.exercises.map(e => `
+      <li>${e.exerciseName} - ${e.sets} sets x ${e.reps} reps ${e.weight ? `@ ${e.weight}kg` : ''}</li>
+    `).join('');
+
+    container.innerHTML += `
+      <div style="border:1px solid var(--border-color); padding:10px; margin-top:10px;">
+        <strong>${wod.date} - ${wod.name}</strong><br>
+        Time: ${wod.minutes}m ${wod.seconds}s<br>
+        Rounds: ${wod.rounds || '-'}<br>
+        Notes: ${wod.notes || '-'}<br>
+        <ul>${exercisesList}</ul>
+        <button onclick="removeCrossfitWorkout(${index})" class="remove-btn">❌ Delete</button>
+      </div>
+    `;
+  });
+}
+
+function removeCrossfitWorkout(index) {
+  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
+  cfLog.splice(index, 1);
+  localStorage.setItem(`crossfitLog_${currentUser}`, JSON.stringify(cfLog));
+  renderCrossfitWorkouts();
+}
+function addCrossfitEntry() {
+  const exercise = document.getElementById('crossfitExercise').value.trim();
+  const sets = +document.getElementById('crossfitSets').value;
+  const reps = +document.getElementById('crossfitReps').value;
+  const weight = +document.getElementById('crossfitWeight').value;
+  const notes = document.getElementById('crossfitNotes').value.trim();
+
+  if (!exercise || !sets || !reps) {
+    alert('Fill in exercise, sets, and reps!');
+    return;
+  }
+
+  crossfitEntries.push({ exercise, sets, reps, weight, notes });
+  renderCrossfitEntries();
+  
+  // Clear input fields
+  document.getElementById('crossfitExercise').value = '';
+  document.getElementById('crossfitSets').value = '';
+  document.getElementById('crossfitReps').value = '';
+  document.getElementById('crossfitWeight').value = '';
+  document.getElementById('crossfitNotes').value = '';
+}
+
+function renderCrossfitEntries() {
+  const container = document.getElementById('crossfitWorkoutsContainer');
+  container.innerHTML = crossfitEntries.map((entry, index) => `
+    <div style="padding:10px; border:1px solid var(--border-color); margin-bottom:8px;">
+      <strong>${entry.exercise}</strong><br>
+      Sets: ${entry.sets} | Reps: ${entry.reps} | Weight: ${entry.weight || 'Bodyweight'} kg<br>
+      Notes: ${entry.notes || 'None'}
+      <br><button class="remove-btn" onclick="removeCrossfitEntry(${index})">Remove</button>
+    </div>
+  `).join('');
+}
+
+function removeCrossfitEntry(index) {
+  crossfitEntries.splice(index, 1);
+  renderCrossfitEntries();
+}
+
+function completeCrossfitWorkout() {
+  if (crossfitEntries.length === 0) {
+    alert('No exercises added!');
+    return;
+  }
+  const workouts = JSON.parse(localStorage.getItem(`crossfitWorkouts_${currentUser}`)) || [];
+  workouts.push({ date: new Date().toISOString().split('T')[0], log: crossfitEntries });
+  localStorage.setItem(`crossfitWorkouts_${currentUser}`, JSON.stringify(workouts));
+  
+  crossfitEntries = [];
+  renderCrossfitEntries();
+  alert('CrossFit workout saved!');
+}
+
+function saveCrossfitTemplate() {
+  if (crossfitEntries.length === 0) {
+    alert('No exercises to save as template!');
+    return;
+  }
+  const templateName = prompt('Enter a name for this template:');
+  if (!templateName) return;
+
+  crossfitTemplates.push({ name: templateName, workout: crossfitEntries });
+  localStorage.setItem('crossfitTemplates', JSON.stringify(crossfitTemplates));
+  alert('Template saved!');
+  renderTemplateOptions();
+}
+
+function renderTemplateOptions() {
+  const select = document.getElementById('crossfitTemplateSelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">-- Load Saved Template --</option>';
+  crossfitTemplates.forEach((tpl, index) => {
+    select.innerHTML += `<option value="${index}">${tpl.name}</option>`;
+  });
+}
+
+function loadCrossfitTemplate() {
+  const select = document.getElementById('crossfitTemplateSelect');
+  if (!select) return;
+  const index = select.value;
+  if (index === '') return;
+  const template = crossfitTemplates[index];
+  crossfitEntries = JSON.parse(JSON.stringify(template.workout)); // Deep copy
+  renderCrossfitEntries();
+}
+
 function addMacroHistoryEntry(date, meals, totals) {
   const key = `macroHistory_${currentUser}`;
   const history = JSON.parse(localStorage.getItem(key)) || [];
@@ -4768,164 +4922,7 @@ function renderLogHistory(logs) {
 
     
 
-// ===== BODYWEIGHT TRACKER =====
 
-
-function saveCrossfitWorkout() {
-  const name = document.getElementById('cfWorkoutName').value.trim();
-  const minutes = +document.getElementById('cfMinutes').value || 0;
-  const seconds = +document.getElementById('cfSeconds').value || 0;
-  const rounds = document.getElementById('cfRounds').value;
-  const notes = document.getElementById('cfNotes').value;
-  
-  if (!name) return alert("Workout Name is required!");
-
-  const exercises = [];
-  crossfitExercises.forEach(i => {
-    const exerciseName = document.getElementById(`cfExerciseName${i}`).value;
-    const sets = +document.getElementById(`cfExerciseSets${i}`).value;
-    const reps = +document.getElementById(`cfExerciseReps${i}`).value;
-    const weight = +document.getElementById(`cfExerciseWeight${i}`).value || 0;
-    if (exerciseName && sets && reps) {
-      exercises.push({ exerciseName, sets, reps, weight });
-      saveUserExercise(exerciseName.trim());
-    }
-  });
-
-  const date = new Date().toISOString().split('T')[0];
-  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
-  cfLog.push({ date, name, minutes, seconds, rounds, notes, exercises });
-  localStorage.setItem(`crossfitLog_${currentUser}`, JSON.stringify(cfLog));
-  
-  // Reset form
-  document.getElementById('cfWorkoutName').value = '';
-  document.getElementById('cfMinutes').value = '';
-  document.getElementById('cfSeconds').value = '';
-  document.getElementById('cfRounds').value = '';
-  document.getElementById('cfNotes').value = '';
-  document.getElementById('cfExercisesContainer').innerHTML = '';
-  crossfitExercises = [];
-  
-  renderCrossfitWorkouts();
-}
-
-function renderCrossfitWorkouts() {
-  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
-  const container = document.getElementById('cfWorkoutsContainer');
-  container.innerHTML = '';
-
-  cfLog.forEach((wod, index) => {
-    let exercisesList = wod.exercises.map(e => `
-      <li>${e.exerciseName} - ${e.sets} sets x ${e.reps} reps ${e.weight ? `@ ${e.weight}kg` : ''}</li>
-    `).join('');
-
-    container.innerHTML += `
-      <div style="border:1px solid var(--border-color); padding:10px; margin-top:10px;">
-        <strong>${wod.date} - ${wod.name}</strong><br>
-        Time: ${wod.minutes}m ${wod.seconds}s<br>
-        Rounds: ${wod.rounds || '-'}<br>
-        Notes: ${wod.notes || '-'}<br>
-        <ul>${exercisesList}</ul>
-        <button onclick="removeCrossfitWorkout(${index})" class="remove-btn">❌ Delete</button>
-      </div>
-    `;
-  });
-}
-
-function removeCrossfitWorkout(index) {
-  const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
-  cfLog.splice(index, 1);
-  localStorage.setItem(`crossfitLog_${currentUser}`, JSON.stringify(cfLog));
-  renderCrossfitWorkouts();
-}
-function addCrossfitEntry() {
-  const exercise = document.getElementById('crossfitExercise').value.trim();
-  const sets = +document.getElementById('crossfitSets').value;
-  const reps = +document.getElementById('crossfitReps').value;
-  const weight = +document.getElementById('crossfitWeight').value;
-  const notes = document.getElementById('crossfitNotes').value.trim();
-
-  if (!exercise || !sets || !reps) {
-    alert('Fill in exercise, sets, and reps!');
-    return;
-  }
-
-  crossfitEntries.push({ exercise, sets, reps, weight, notes });
-  renderCrossfitEntries();
-  
-  // Clear input fields
-  document.getElementById('crossfitExercise').value = '';
-  document.getElementById('crossfitSets').value = '';
-  document.getElementById('crossfitReps').value = '';
-  document.getElementById('crossfitWeight').value = '';
-  document.getElementById('crossfitNotes').value = '';
-}
-
-function renderCrossfitEntries() {
-  const container = document.getElementById('crossfitWorkoutsContainer');
-  container.innerHTML = crossfitEntries.map((entry, index) => `
-    <div style="padding:10px; border:1px solid var(--border-color); margin-bottom:8px;">
-      <strong>${entry.exercise}</strong><br>
-      Sets: ${entry.sets} | Reps: ${entry.reps} | Weight: ${entry.weight || 'Bodyweight'} kg<br>
-      Notes: ${entry.notes || 'None'}
-      <br><button class="remove-btn" onclick="removeCrossfitEntry(${index})">Remove</button>
-    </div>
-  `).join('');
-}
-
-function removeCrossfitEntry(index) {
-  crossfitEntries.splice(index, 1);
-  renderCrossfitEntries();
-}
-
-function completeCrossfitWorkout() {
-  if (crossfitEntries.length === 0) {
-    alert('No exercises added!');
-    return;
-  }
-  const workouts = JSON.parse(localStorage.getItem(`crossfitWorkouts_${currentUser}`)) || [];
-  workouts.push({ date: new Date().toISOString().split('T')[0], log: crossfitEntries });
-  localStorage.setItem(`crossfitWorkouts_${currentUser}`, JSON.stringify(workouts));
-  
-  crossfitEntries = [];
-  renderCrossfitEntries();
-  alert('CrossFit workout saved!');
-}
-
-function saveCrossfitTemplate() {
-  if (crossfitEntries.length === 0) {
-    alert('No exercises to save as template!');
-    return;
-  }
-  const templateName = prompt('Enter a name for this template:');
-  if (!templateName) return;
-
-  crossfitTemplates.push({ name: templateName, workout: crossfitEntries });
-  localStorage.setItem('crossfitTemplates', JSON.stringify(crossfitTemplates));
-  alert('Template saved!');
-  renderTemplateOptions();
-}
-
-function renderTemplateOptions() {
-  const select = document.getElementById('crossfitTemplateSelect');
-  if (!select) return;
-  select.innerHTML = '<option value="">-- Load Saved Template --</option>';
-  crossfitTemplates.forEach((tpl, index) => {
-    select.innerHTML += `<option value="${index}">${tpl.name}</option>`;
-  });
-}
-
-function loadCrossfitTemplate() {
-  const select = document.getElementById('crossfitTemplateSelect');
-  if (!select) return;
-  const index = select.value;
-  if (index === '') return;
-  const template = crossfitTemplates[index];
-  crossfitEntries = JSON.parse(JSON.stringify(template.workout)); // Deep copy
-  renderCrossfitEntries();
-}
-    
-    
   const loginEl = document.getElementById("loginContainer");
   const dash = document.getElementById("dashboardContainer");
   const fit = document.getElementById("pocketFitContainer");
