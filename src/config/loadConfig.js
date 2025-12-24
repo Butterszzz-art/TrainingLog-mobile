@@ -1,17 +1,30 @@
-const DEFAULT_SERVER_URL =
-  (typeof window !== 'undefined' &&
+function getDefaultServerUrl() {
+  if (
+    typeof window !== 'undefined' &&
     window.TrainingLogConfig &&
-    window.TrainingLogConfig.DEFAULT_SERVER_URL) ||
-  (typeof require === 'function' && require('./constants').DEFAULT_SERVER_URL);
+    window.TrainingLogConfig.DEFAULT_SERVER_URL
+  ) {
+    return window.TrainingLogConfig.DEFAULT_SERVER_URL;
+  }
+
+  if (typeof require === 'function') {
+    const constants = require('./constants');
+    if (constants && constants.DEFAULT_SERVER_URL) {
+      return constants.DEFAULT_SERVER_URL;
+    }
+  }
+
+  return 'https://traininglog-backend.onrender.com';
+}
 
 function resolveServerUrl() {
   if (typeof window === 'undefined') {
-    return DEFAULT_SERVER_URL;
+    return getDefaultServerUrl();
   }
   if (window.SERVER_URL && typeof window.SERVER_URL === 'string') {
     return window.SERVER_URL;
   }
-  window.SERVER_URL = DEFAULT_SERVER_URL;
+  window.SERVER_URL = getDefaultServerUrl();
   return window.SERVER_URL;
 }
 

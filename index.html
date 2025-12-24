@@ -1165,15 +1165,20 @@ let activeTab = null;
 let airtableToken = '';
 let airtableBaseId = '';
 
-const DEFAULT_SERVER_URL = 'https://traininglog-backend.onrender.com';
+function getDefaultServerUrl() {
+  if (window.TrainingLogConfig && window.TrainingLogConfig.DEFAULT_SERVER_URL) {
+    return window.TrainingLogConfig.DEFAULT_SERVER_URL;
+  }
+  return 'https://traininglog-backend.onrender.com';
+}
 
 function ensureServerUrl() {
   if (typeof window === 'undefined') {
-    return DEFAULT_SERVER_URL;
+    return getDefaultServerUrl();
   }
 
   if (!window.SERVER_URL || typeof window.SERVER_URL !== 'string') {
-    window.SERVER_URL = DEFAULT_SERVER_URL;
+    window.SERVER_URL = getDefaultServerUrl();
   }
 
   return window.SERVER_URL;
