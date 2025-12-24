@@ -1,4 +1,4 @@
-const DEFAULT_SERVER_URL = 'https://traininglog-backend.onrender.com';
+import { DEFAULT_SERVER_URL } from "./constants";
 
 declare global {
   interface Window {

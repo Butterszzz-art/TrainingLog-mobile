@@ -1,4 +1,8 @@
-const DEFAULT_SERVER_URL = 'https://traininglog-backend.onrender.com';
+const DEFAULT_SERVER_URL =
+  (typeof window !== 'undefined' &&
+    window.TrainingLogConfig &&
+    window.TrainingLogConfig.DEFAULT_SERVER_URL) ||
+  (typeof require === 'function' && require('./constants').DEFAULT_SERVER_URL);
 
 function resolveServerUrl() {
   if (typeof window === 'undefined') {
