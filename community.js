@@ -9,10 +9,11 @@ const serverUrl = (typeof window !== 'undefined' && window.SERVER_URL) ||
   'https://traininglog-backend.onrender.com';
 
 function getAuthHeaders() {
-  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
-    return window.getAuthHeaders();
+  if (typeof localStorage === 'undefined') {
+    return {};
   }
-  return {};
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // Sample data used for prototype leaderboards

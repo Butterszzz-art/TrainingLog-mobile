@@ -4,10 +4,11 @@ const LAST_TIMING_KEY = 'tl_last_workout_timing';
 let _interval = null;
 
 function getAuthHeaders() {
-  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
-    return window.getAuthHeaders();
+  if (typeof localStorage === 'undefined') {
+    return {};
   }
-  return {};
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export function startWorkoutTimer() {

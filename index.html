@@ -1187,8 +1187,8 @@ function ensureServerUrl() {
 ensureServerUrl();
 
 function getAuthHeaders() {
-  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
-    return window.getAuthHeaders();
+  if (typeof localStorage === 'undefined') {
+    return {};
   }
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};

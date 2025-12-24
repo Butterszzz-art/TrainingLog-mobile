@@ -4,10 +4,11 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const loadPrograms = () => JSON.parse(localStorage.getItem('programs') || '[]');
 const savePrograms = programs => localStorage.setItem('programs', JSON.stringify(programs));
 const getAuthHeaders = () => {
-  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
-    return window.getAuthHeaders();
+  if (typeof localStorage === 'undefined') {
+    return {};
   }
-  return {};
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 };
 function CalendarPreview({
   startDate,
