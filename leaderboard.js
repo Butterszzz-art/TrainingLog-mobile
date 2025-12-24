@@ -3,10 +3,11 @@ let barChart;
 let lineChart;
 
 function getAuthHeaders() {
-  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
-    return window.getAuthHeaders();
+  if (typeof localStorage === 'undefined') {
+    return {};
   }
-  return {};
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function sum(arr) {
