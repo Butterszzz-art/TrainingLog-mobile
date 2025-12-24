@@ -4,6 +4,9 @@ declare global {
   interface Window {
     SERVER_URL?: string;
     appConfig?: Record<string, unknown>;
+    TrainingLogConfig?: {
+      DEFAULT_SERVER_URL?: string;
+    };
     airtableConfig?: {
       airtableToken?: string;
       airtableBaseId?: string;
@@ -11,14 +14,22 @@ declare global {
   }
 }
 
+function getDefaultServerUrl(): string {
+  if (typeof window !== 'undefined' && window.TrainingLogConfig?.DEFAULT_SERVER_URL) {
+    return window.TrainingLogConfig.DEFAULT_SERVER_URL;
+  }
+
+  return DEFAULT_SERVER_URL;
+}
+
 function resolveServerUrl(): string {
   if (typeof window === 'undefined') {
-    return DEFAULT_SERVER_URL;
+    return getDefaultServerUrl();
   }
   if (window.SERVER_URL && typeof window.SERVER_URL === 'string') {
     return window.SERVER_URL;
   }
-  window.SERVER_URL = DEFAULT_SERVER_URL;
+  window.SERVER_URL = getDefaultServerUrl();
   return window.SERVER_URL;
 }
 
