@@ -1137,6 +1137,8 @@
 <script src="stats.js"></script>
 <!-- Optional runtime configuration -->
 <script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="src/config/loadConfig.js"></script>
 <script type="module" src="progressUtils.js"></script>
 <script src="progressMilestones.js"></script>
 <script src="progressAnalytics.js"></script>
@@ -1178,6 +1180,14 @@ function ensureServerUrl() {
 
 ensureServerUrl();
 
+function getAuthHeaders() {
+  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
+    return window.getAuthHeaders();
+  }
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function fetchAirtableConfig() {
   ensureServerUrl();
 
@@ -1203,19 +1213,25 @@ async function fetchAirtableConfig() {
     }
   };
 
-  try {
-    const res = await fetch(`${window.SERVER_URL}/config`, { credentials: 'include' });
-    if (!res.ok) {
-      throw new Error(`Failed to load config: ${res.status}`);
-    }
-    const cfg = await res.json();
-    applyAirtableConfig(cfg);
-    return cfg;
-  } catch (err) {
-    console.warn('Unable to fetch Airtable config from server, falling back to local config', err);
-    applyAirtableConfig(window.airtableConfig || {});
-    return window.airtableConfig || {};
+  if (window.appConfig) {
+    applyAirtableConfig(window.appConfig);
+    return window.appConfig;
   }
+
+  if (typeof window.loadConfig === 'function') {
+    try {
+      const cfg = await window.loadConfig();
+      applyAirtableConfig(cfg);
+      return cfg;
+    } catch (err) {
+      console.warn('Unable to fetch Airtable config from server, falling back to local config', err);
+    }
+  }
+
+  const fallback = window.airtableConfig || {};
+  window.appConfig = fallback;
+  applyAirtableConfig(fallback);
+  return fallback;
 }
 const usersTableName = 'Users';
 const templatesTableName = 'Templates';
@@ -1309,27 +1325,40 @@ async function startLogin() {
   }
 
   try {
-    const response = await fetch(`${window.SERVER_URL}/login`, {
-      method: 'POST',
-        credentials: "include",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-
-    // Attempt to parse as JSON; if HTML is returned, gracefully handle failure
     let result;
-    try {
-      result = await response.json();
-    } catch (e) {
-      console.error('Non-JSON response from server', e);
-      throw new Error('Server error: not available or invalid response.');
+    if (typeof window.login === 'function') {
+      result = await window.login(username, password);
+    } else {
+      const response = await fetch(`${window.SERVER_URL}/login`, {
+        method: 'POST',
+        credentials: "include",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      try {
+        result = await response.json();
+      } catch (e) {
+        console.error('Non-JSON response from server', e);
+        throw new Error('Server error: not available or invalid response.');
+      }
     }
 
-    if (result.success) {
-      if (result.token) {
-        window.authToken = result.token;
-        localStorage.setItem('token', result.token);
+    if (result && result.token) {
+      window.authToken = result.token;
+    }
+
+    if (result && result.success === false) {
+      const message = result.message || "Invalid username or password.";
+      if (errorEl) {
+        errorEl.textContent = message;
+      } else {
+        console.warn(message);
       }
+      return;
+    }
+
+    if (result) {
       currentUser = username;
       localStorage.setItem("fitnessAppUser", username);
 
@@ -1351,14 +1380,6 @@ async function startLogin() {
       loadUserExercises();
       saveDailyMacroProgress(0, 0, 0); // reset progress on login
       renderDailyMacroProgress();
-    } else {
-      const message = result.message || "Invalid username or password.";
-      if (errorEl) {
-        errorEl.textContent = message;
-      } else {
-        console.warn(message);
-      }
-      return;
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -2383,22 +2404,11 @@ async function saveTemplate(username, templateName, templateData) {
   }
 }
   
-function getStoredToken() {
-  const token = window.authToken || localStorage.getItem('token') || localStorage.getItem('authToken');
-  if (!token) {
-    throw new Error('Missing auth token. Please log in again.');
-  }
-  return token;
-}
-
 async function fetchTemplates(username) {
-  const token = getStoredToken();
   const url = `${window.SERVER_URL}/templates?username=${encodeURIComponent(username)}`;
   const res = await fetch(url, {
     credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+    headers: getAuthHeaders()
   });
   if (!res.ok) {
     throw new Error(`Templates HTTP ${res.status}`);
@@ -2531,8 +2541,8 @@ async function sendTemplate() {
   try {
     const response = await fetch(`${window.SERVER_URL}/sendTemplate`, {
       method: 'POST',
-        credentials: "include",
-      headers: { 'Content-Type': 'application/json' },
+      credentials: "include",
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
         fromUser: currentUser,
         toUser: otherUser,
@@ -2789,7 +2799,7 @@ async function saveWorkoutToBackend(workout) {
     url: `${window.SERVER_URL}/saveWorkout`,
     options: {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ username: currentUser, workout })
     }
   };
@@ -2807,7 +2817,10 @@ async function saveWorkoutToBackend(workout) {
 
 async function loadWorkoutsFromBackend() {
   try {
-    const res = await fetch(`${window.SERVER_URL}/getWorkouts?username=${currentUser}`, { credentials: "include" });
+    const res = await fetch(`${window.SERVER_URL}/getWorkouts?username=${currentUser}`, {
+      credentials: "include",
+      headers: getAuthHeaders()
+    });
     const data = await res.json();
     if (data.workouts) {
       localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(data.workouts));

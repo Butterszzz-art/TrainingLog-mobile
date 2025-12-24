@@ -27,6 +27,12 @@ async function parseJsonResponse(response) {
   }
 }
 
+function getAuthHeaders() {
+  const storage = resolveStorage();
+  const token = storage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function login(username, password, serverUrl) {
   const url = `${resolveServerUrl(serverUrl)}/login`;
   const response = await fetch(url, {
@@ -36,28 +42,18 @@ async function login(username, password, serverUrl) {
   });
 
   const data = await parseJsonResponse(response);
-  if (!data.success) {
-    throw new Error(data.message || 'Login failed');
-  }
-
-  const storage = resolveStorage();
-  if (data.token) {
+  if (data && data.token) {
+    const storage = resolveStorage();
     storage.setItem('token', data.token);
   }
 
-  return data.token;
+  return data;
 }
 
 async function fetchProtected(serverUrl) {
-  const storage = resolveStorage();
-  const token = storage.getItem('token');
-  if (!token) {
-    throw new Error('No token available');
-  }
-
   const url = `${resolveServerUrl(serverUrl)}/protected-route`;
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: getAuthHeaders()
   });
 
   if (!response.ok) {
@@ -68,15 +64,9 @@ async function fetchProtected(serverUrl) {
 }
 
 async function loadTemplates(username, serverUrl) {
-  const storage = resolveStorage();
-  const token = storage.getItem('token');
-  if (!token) {
-    throw new Error('No token available');
-  }
-
   const url = `${resolveServerUrl(serverUrl)}/templates?username=${encodeURIComponent(username)}`;
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: getAuthHeaders()
   });
 
   const data = await parseJsonResponse(response);
@@ -88,11 +78,12 @@ async function loadTemplates(username, serverUrl) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { login, fetchProtected, loadTemplates };
+  module.exports = { login, fetchProtected, loadTemplates, getAuthHeaders };
 }
 
 if (typeof window !== 'undefined') {
   window.login = login;
   window.fetchProtected = fetchProtected;
   window.loadTemplates = loadTemplates;
+  window.getAuthHeaders = getAuthHeaders;
 }

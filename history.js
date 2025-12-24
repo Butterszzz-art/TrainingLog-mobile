@@ -5,6 +5,13 @@ const STORAGE_KEYS = {
   workouts: 'tl_workout_history_v1'
 };
 
+function getAuthHeaders() {
+  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
+    return window.getAuthHeaders();
+  }
+  return {};
+}
+
 function generateLocalId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -153,7 +160,7 @@ export async function finalizeResistanceWorkout(state) {
   try {
     const res = await fetch(`${url}/workouts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       credentials: 'include',
       body: JSON.stringify(workout)
     });
@@ -177,7 +184,10 @@ export async function loadHistory() {
   }
 
   try {
-    const res = await fetch(`${window.SERVER_URL}/workouts`, { credentials: 'include' });
+    const res = await fetch(`${window.SERVER_URL}/workouts`, {
+      credentials: 'include',
+      headers: getAuthHeaders()
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const remoteItems = await res.json();
 

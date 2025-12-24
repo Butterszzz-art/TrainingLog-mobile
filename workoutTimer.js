@@ -3,6 +3,13 @@ const DAYS_STORAGE_KEY = 'tl_days_v1';
 const LAST_TIMING_KEY = 'tl_last_workout_timing';
 let _interval = null;
 
+function getAuthHeaders() {
+  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
+    return window.getAuthHeaders();
+  }
+  return {};
+}
+
 export function startWorkoutTimer() {
   const active = _readTimer();
   if (active && typeof active.startTimeMs === 'number') {
@@ -239,7 +246,7 @@ async function _syncDayRemote(day) {
     url: `${window.SERVER_URL}/days`,
     options: {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(day)
     }
   };

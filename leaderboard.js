@@ -2,6 +2,13 @@ let leaderboardData = [];
 let barChart;
 let lineChart;
 
+function getAuthHeaders() {
+  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
+    return window.getAuthHeaders();
+  }
+  return {};
+}
+
 function sum(arr) {
   return Array.isArray(arr) ? arr.reduce((t, n) => t + n, 0) : 0;
 }
@@ -12,7 +19,9 @@ async function fetchLeaderboard() {
   if (spinner) spinner.style.display = 'block';
   if (empty) empty.style.display = 'none';
   try {
-    const res = await fetch(`${window.SERVER_URL}/leaderboard`);
+    const res = await fetch(`${window.SERVER_URL}/leaderboard`, {
+      headers: getAuthHeaders()
+    });
     leaderboardData = await res.json();
   } catch (e) {
     console.warn('fetch leaderboard failed', e);
@@ -77,4 +86,3 @@ function initLeaderboard() {
 if (typeof window !== 'undefined') {
   window.initLeaderboard = initLeaderboard;
 }
-
