@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { fetchWorkoutHistory } from "../api/workoutHistory";
 import { loadLogsFromLocalStorage, WorkoutLog } from "../../resistanceLogs";
 
 // Prototype-only view: swap to API-backed history once the backend endpoint is ready.
@@ -24,11 +25,43 @@ export default function LogHistory({ className = "", onSelect }: LogHistoryProps
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = loadLogsFromLocalStorage();
-    const sorted = stored
-      .slice()
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setLogs(sorted);
+    let isActive = true;
+
+    const loadHistory = async () => {
+      const currentUser =
+        typeof window !== "undefined" &&
+        typeof (window as Window & { currentUser?: string }).currentUser === "string"
+          ? (window as Window & { currentUser?: string }).currentUser
+          : "";
+
+      if (currentUser) {
+        try {
+          const history = await fetchWorkoutHistory(currentUser);
+          if (isActive && Array.isArray(history)) {
+            const sorted = history
+              .slice()
+              .sort((a: WorkoutLog, b: WorkoutLog) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setLogs(sorted);
+            return;
+          }
+        } catch (error) {
+          console.warn("Failed to fetch workout history, falling back to local data.", error);
+        }
+      }
+
+      const stored = loadLogsFromLocalStorage();
+      const sorted = stored
+        .slice()
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      if (isActive) {
+        setLogs(sorted);
+      }
+    };
+
+    loadHistory();
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const totalVolume = useMemo(
