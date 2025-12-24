@@ -8,6 +8,13 @@ if (typeof localStorage !== 'undefined') {
 const serverUrl = (typeof window !== 'undefined' && window.SERVER_URL) ||
   'https://traininglog-backend.onrender.com';
 
+function getAuthHeaders() {
+  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
+    return window.getAuthHeaders();
+  }
+  return {};
+}
+
 // Sample data used for prototype leaderboards
 const sampleExerciseData = {
   Squat: [
@@ -72,7 +79,7 @@ async function createGroup(name, goal = '', tags = []) {
       const res = await fetch(`${window.SERVER_URL}/community/groups`, {
   method: 'POST',
   credentials: 'include',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
   body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags })
 });
       const g = normalizeGroup(await res.json());
@@ -99,7 +106,8 @@ async function fetchGroups(userId) {
   try {
     const res = await fetch(`${window.SERVER_URL}/community/groups?userId=${encodeURIComponent(userId)}`, {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'include',
+      headers: getAuthHeaders()
     });
     if (res.ok) {
       groups = normalizeGroups(await res.json());
@@ -117,7 +125,11 @@ async function searchGroups(opts = {}) {
   if (opts.tag) params.set('tag', opts.tag);
   if (opts.search) params.set('search', opts.search);
   try {
-    const res = await fetch(`${window.SERVER_URL}/community/groups?${params.toString()}`, { method: 'GET', credentials: 'include' });
+    const res = await fetch(`${window.SERVER_URL}/community/groups?${params.toString()}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: getAuthHeaders()
+    });
     if (res.ok) {
       groups = normalizeGroups(await res.json());
       saveGroups();
@@ -167,7 +179,8 @@ async function fetchPosts(groupId) {
   try {
     const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/posts`, {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'include',
+      headers: getAuthHeaders()
     });
     if (res.ok) {
       const posts = await res.json();
@@ -191,7 +204,7 @@ async function inviteUserToGroup(groupId, invitedUserId) {
     const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/invite`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ invitedUserId })
     });
     if (res.ok) {
@@ -221,7 +234,7 @@ async function shareProgramToGroup(groupId, programData) {
     const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/share`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ senderId: window.currentUser, programData })
     });
     if (res.ok) {
@@ -241,7 +254,8 @@ async function fetchProgress(groupId) {
   try {
     const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/progress`, {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'include',
+      headers: getAuthHeaders()
     });
     if (res.ok) return await res.json();
   } catch (e) {
@@ -290,7 +304,7 @@ async function addPost(groupId, user, text) {
       await fetch(`${window.SERVER_URL}/community/groups/${groupId}/posts`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ userId: user, text })
       });
     } catch (e) {

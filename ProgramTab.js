@@ -3,6 +3,12 @@ import { createRoot } from "https://esm.sh/react-dom@18/client";
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const loadPrograms = () => JSON.parse(localStorage.getItem('programs') || '[]');
 const savePrograms = programs => localStorage.setItem('programs', JSON.stringify(programs));
+const getAuthHeaders = () => {
+  if (typeof window !== 'undefined' && typeof window.getAuthHeaders === 'function') {
+    return window.getAuthHeaders();
+  }
+  return {};
+};
 function CalendarPreview({
   startDate,
   frequency,
@@ -125,7 +131,8 @@ export default function ProgramTab() {
       method: 'POST',
         credentials: "include",
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
       },
       body: JSON.stringify(payload)
     });
@@ -146,7 +153,8 @@ export default function ProgramTab() {
         credentials: "include",
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
       },
       body: JSON.stringify({
         programId: shareId,
