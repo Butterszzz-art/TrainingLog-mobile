@@ -2381,6 +2381,14 @@ function logRestBreak(mins) {
 
 // Save a workout template to Airtable
 async function saveTemplate(username, templateName, templateData) {
+  // Ensure Airtable credentials are loaded before posting.
+  if (!airtableBaseId || !airtableToken) {
+    // fetchAirtableConfig sets airtableBaseId and airtableToken from /config.
+    await fetchAirtableConfig();
+    if (!airtableBaseId || !airtableToken) {
+      throw new Error('Missing Airtable configuration; cannot save template.');
+    }
+  }
   const url = `https://api.airtable.com/v0/${airtableBaseId}/${templatesTableName}`;
   try {
     const response = await fetch(url, {
