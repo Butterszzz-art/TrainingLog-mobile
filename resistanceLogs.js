@@ -18,9 +18,37 @@ function normalizeLog(log) {
 
 function readExistingLogs() {
   try {
+    // Read current logs from 'workoutHistory' or the fallback 'resistanceLogs'
     const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('resistanceLogs');
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const logs = Array.isArray(parsed) ? parsed.slice() : [];
+    // Also read legacy logs stored by saveWorkoutToLocal under 'tl_workout_history_v1'
+    const legacyRaw = localStorage.getItem('tl_workout_history_v1');
+    if (legacyRaw) {
+      try {
+        const legacyParsed = JSON.parse(legacyRaw);
+        if (Array.isArray(legacyParsed)) {
+          legacyParsed.forEach(item => {
+            // Convert sets into the normalized { date, exercises } format
+            if (item && item.date && Array.isArray(item.sets)) {
+              const exercises = item.sets.map(set => ({
+                name: set?.exercise || set?.name || 'Exercise',
+                repsArray: Array.isArray(set?.repsArray)
+                  ? set.repsArray.map(n => Number(n) || 0)
+                  : [Number(set?.reps ?? set?.repsArray?.[0] ?? 0) || 0],
+                weightsArray: Array.isArray(set?.weightsArray)
+                  ? set.weightsArray.map(n => Number(n) || 0)
+                  : [Number(set?.weight ?? set?.weightsArray?.[0] ?? 0) || 0],
+              }));
+              logs.push({ date: item.date, exercises });
+            }
+          });
+        }
+      } catch {
+        // ignore parse errors in legacy data
+      }
+    }
+    return logs;
   } catch (err) {
     console.warn('Unable to read existing workout history locally', err);
     return [];
