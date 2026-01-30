@@ -628,6 +628,7 @@
   <select id="resistanceTemplateSelect" onchange="loadSelectedResistanceTemplate()" style="margin-top: 10px;">
   <option value="">Select Template...</option>
 </select>
+  <div id="templateLoadMessage" style="margin-top:6px; color:#b00020; display:none;"></div>
 
 
   <div id="restTimerSection" style="margin-top:10px;">
@@ -2418,27 +2419,45 @@ async function saveTemplate(username, templateName, templateData) {
   }
 }
   
+function setTemplateLoadMessage(message) {
+  const el = document.getElementById('templateLoadMessage');
+  if (el) {
+    el.textContent = message || '';
+    el.style.display = message ? 'block' : 'none';
+    return;
+  }
+  if (message) {
+    alert(message);
+  }
+}
+
 async function fetchTemplates(username) {
-  // Fall back to username; the back-end will accept either.
-  const url = `${window.SERVER_URL}/templates?username=${encodeURIComponent(username)}`;
+  const params = new URLSearchParams({ Username: username });
+  params.append('username', username);
+  const url = `${window.SERVER_URL}/templates?${params.toString()}`;
   const res = await fetch(url, {
     credentials: 'include',
     headers: getAuthHeaders()
   });
   if (res.status === 422) {
-    // Extract a detailed message if provided
-    let errMsg = 'Unprocessable Content';
+    let errMsg = 'Unable to load templates. Please confirm your username and try again.';
     try {
       const body = await res.json();
-      errMsg = body?.error?.detail || body?.error?.message || errMsg;
+      const detail = body?.error?.detail || body?.error?.message || body?.detail || body?.message;
+      if (typeof detail === 'string' && detail.trim()) {
+        errMsg = `Unable to load templates: ${detail}`;
+      }
     } catch {
       // ignore JSON parse errors
     }
-    throw new Error(`Templates HTTP 422: ${errMsg}`);
+    setTemplateLoadMessage(errMsg);
+    return [];
   }
   if (!res.ok) {
+    setTemplateLoadMessage('Unable to load templates right now. Please try again later.');
     throw new Error(`Templates HTTP ${res.status}`);
   }
+  setTemplateLoadMessage('');
   const data = await res.json();
   const items = Array.isArray(data.items) ? data.items : [];
   return items;
