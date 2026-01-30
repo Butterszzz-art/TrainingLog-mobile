@@ -538,7 +538,7 @@
   box-shadow: 0 2px 6px rgba(0,0,0,.1);
 }
 </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/js/chart.min.js"></script>
 
 </head>
 
@@ -2419,11 +2419,15 @@ async function saveTemplate(username, templateName, templateData) {
 }
   
 async function fetchTemplates(username) {
-  const url = `${window.SERVER_URL}/templates?username=${encodeURIComponent(username)}`;
+  const url = `${window.SERVER_URL}/templates?userId=${encodeURIComponent(username)}`;
   const res = await fetch(url, {
     credentials: 'include',
     headers: getAuthHeaders()
   });
+  if (res.status === 422) {
+    const text = await res.text();
+    throw new Error(`Templates HTTP 422: ${text}`);
+  }
   if (!res.ok) {
     throw new Error(`Templates HTTP ${res.status}`);
   }
@@ -5183,8 +5187,8 @@ window.closeMacroSettings = closeMacroSettings;
 </script>
 
     <!-- include Litepicker for progress calendar -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
-    <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+    <link rel="stylesheet" href="/css/litepicker.css" />
+    <script src="/js/litepicker.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async function() {
         const picker = new Litepicker({
