@@ -1061,12 +1061,32 @@
       <option value="in">in</option>
       <option value="cm">cm</option>
     </select>
+    <input type="number" id="macroAge" placeholder="Age" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+    <select id="macroSex" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select>
+    <input type="number" id="macroBodyFat" placeholder="Body Fat % (optional)" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+    <select id="macroBmrFormula" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+      <option value="mifflin">Mifflin-St Jeor</option>
+      <option value="katch">Katch-McArdle</option>
+    </select>
     <select id="macroActivity" style="width: 100%; padding: 8px; margin-bottom: 20px;">
       <option value="1.2">Sedentary</option>
       <option value="1.375">Lightly Active</option>
       <option value="1.55">Moderately Active</option>
       <option value="1.725">Very Active</option>
       <option value="1.9">Extremely Active</option>
+    </select>
+    <select id="macroGoal" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+      <option value="cut">Cut</option>
+      <option value="maintain">Maintain</option>
+      <option value="bulk">Bulk</option>
+    </select>
+    <select id="macroRate" style="width: 100%; padding: 8px; margin-bottom: 20px;">
+      <option value="slow">Slow</option>
+      <option value="moderate" selected>Moderate</option>
+      <option value="aggressive">Aggressive</option>
     </select>
     <button onclick="calculateMacroTargets()" style="width: 100%; font-size: 1.1rem; padding: 12px;">Calculate Targets</button>
     <button onclick="console.log(planWeek([]))" style="width:100%;font-size:1rem;margin-top:10px;">Plan Week</button>
@@ -1140,6 +1160,7 @@
 <script src="config.js"></script>
 <script src="auth.js"></script>
 <script src="src/config/constants.js"></script>
+<script src="src/utils/macroEngine.js"></script>
 <script src="src/config/loadConfig.js"></script>
 <script type="module" src="progressUtils.js"></script>
 <script src="progressMilestones.js"></script>
@@ -3093,42 +3114,69 @@ function removeMacroMeal(idx) {
 function calculateMacroTargets() {
   const w = +document.getElementById("macroWeight").value;
   const hRaw = +document.getElementById("macroHeight").value;
-  if (!w || !hRaw) {
-    alert("Enter both weight and height.");
+  const age = +document.getElementById("macroAge").value;
+  const sex = document.getElementById("macroSex").value || "male";
+  const bodyFatValue = +document.getElementById("macroBodyFat").value;
+  if (!w || !hRaw || !age) {
+    alert("Enter weight, height, and age.");
     return;
   }
   const unit = document.getElementById("heightUnit").value;
-  const hInches = unit==="cm" ? hRaw/2.54 : hRaw;
+  const hInches = unit === "cm" ? hRaw / 2.54 : hRaw;
   const activity = +document.getElementById("macroActivity").value;
-  const age = 25; // or prompt separately
-  const tdee = Math.round((10*(w*0.453592) + 6.25*(hInches*2.54) - 5*age + 5)*activity);
+  const goal = document.getElementById("macroGoal").value || "maintain";
+  const rate = document.getElementById("macroRate").value || "moderate";
+  const formula = document.getElementById("macroBmrFormula").value || "mifflin";
+  const bodyFat = Number.isFinite(bodyFatValue) && bodyFatValue > 0 ? bodyFatValue : null;
 
-  const pMin = Math.round(0.78*w), pMax = Math.round(2.0*w);
-  const fMin = Math.round(0.3*w),  fMax = Math.round(0.6*w);
-  const cMin = Math.round(1.5*w),  cMax = Math.round(3.0*w);
+  if (!window.macroEngine?.computeMacroPlan) {
+    alert("Macro engine unavailable. Please refresh.");
+    return;
+  }
+
+  const { energy, macros } = window.macroEngine.computeMacroPlan({
+    weightKg: w * 0.453592,
+    heightCm: hInches * 2.54,
+    ageYears: age,
+    bodyFatPercent: bodyFat,
+    sex,
+    activityFactor: activity,
+    goal,
+    rate,
+    formula,
+  });
+
+  const targetCalories = Math.round(energy.targetCalories);
+
+  const pMin = Math.round(macros.proteinGrams * 0.8);
+  const pMax = Math.round(macros.proteinGrams * 1.2);
+  const fMin = Math.round(macros.fatGrams * 0.8);
+  const fMax = Math.round(macros.fatGrams * 1.2);
+  const cMin = Math.round(macros.carbGrams * 0.8);
+  const cMax = Math.round(macros.carbGrams * 1.2);
 
   macroRanges = {
-    protein: { min:pMin, max:pMax },
-    fat:     { min:fMin, max:fMax },
-    carbs:   { min:cMin, max:cMax },
-    tdee
+    protein: { min: pMin, max: pMax },
+    fat: { min: fMin, max: fMax },
+    carbs: { min: cMin, max: cMax },
+    tdee: targetCalories,
   };
 
-      // reveal the slider section when saved targets are loaded
-      document.getElementById("adjustMacroSection").style.display = "block";
+  // reveal the slider section when saved targets are loaded
+  document.getElementById("adjustMacroSection").style.display = "block";
   document.getElementById("proteinSlider").min = pMin;
   document.getElementById("proteinSlider").max = pMax;
-  document.getElementById("proteinSlider").value = pMin;
+  document.getElementById("proteinSlider").value = macros.proteinGrams;
 
   document.getElementById("fatSlider").min = fMin;
   document.getElementById("fatSlider").max = fMax;
-  document.getElementById("fatSlider").value = fMin;
+  document.getElementById("fatSlider").value = macros.fatGrams;
 
   document.getElementById("carbSlider").min = cMin;
   document.getElementById("carbSlider").max = cMax;
-  document.getElementById("carbSlider").value = cMin;
+  document.getElementById("carbSlider").value = macros.carbGrams;
 
-  document.getElementById("calTarget").textContent = tdee;
+  document.getElementById("calTarget").textContent = targetCalories;
   document.getElementById("macroCalcForm").style.display = "none";
   const msBtn = document.getElementById("macroSettingsBtn");
   if (msBtn) msBtn.textContent = "Macro Settings";
@@ -3225,29 +3273,38 @@ function saveMacroTargets() {
 
 
 function adjustMacros(changedId) {
-    const p = Number(document.getElementById("proteinSlider").value);
-    const f = Number(document.getElementById("fatSlider").value);
-    const c = Number(document.getElementById("carbSlider").value);
-    const total = p*4 + f*9 + c*4;
-    const limit = macroRanges.tdee || 0;
+  const proteinSlider = document.getElementById("proteinSlider");
+  const fatSlider = document.getElementById("fatSlider");
+  const carbSlider = document.getElementById("carbSlider");
+  const limit = macroRanges.tdee || 0;
 
-    if (total > limit) {
-      // automatically clamp carbs (simple approach)
-      const newC = Math.floor((limit - (p*4 + f*9)) / 4);
-      document.getElementById("carbSlider").value = Math.max(newC, 0);
-      return adjustMacros("carbSlider");
-    }
+  const proteinVal = Number(proteinSlider.value);
+  const fatVal = Number(fatSlider.value);
+  const carbVal = Number(carbSlider.value);
 
-    document.getElementById("proteinVal").textContent = p;
-    document.getElementById("fatVal").textContent = f;
-    document.getElementById("carbVal").textContent = c;
-    document.getElementById("macroTotalCals").textContent = `${total} / ${limit} kcal`;
-
-    // Optionally enforce max on non-changed sliders:
-    if (changedId) {
-      enforceSliderCaps(changedId, p, f, c, limit);
-    }
+  const total = proteinVal * 4 + fatVal * 9 + carbVal * 4;
+  if (total > limit && limit > 0) {
+    const scale = limit / total;
+    proteinSlider.value = Math.round(proteinVal * scale);
+    fatSlider.value = Math.round(fatVal * scale);
+    carbSlider.value = Math.round(carbVal * scale);
   }
+
+  const p = Number(proteinSlider.value);
+  const f = Number(fatSlider.value);
+  const c = Number(carbSlider.value);
+  const finalTotal = p * 4 + f * 9 + c * 4;
+
+  document.getElementById("proteinVal").textContent = p;
+  document.getElementById("fatVal").textContent = f;
+  document.getElementById("carbVal").textContent = c;
+  document.getElementById("macroTotalCals").textContent = `${finalTotal} / ${limit} kcal`;
+
+  // Optionally enforce max on non-changed sliders:
+  if (changedId) {
+    enforceSliderCaps(changedId, p, f, c, limit);
+  }
+}
 
 
 
