@@ -851,19 +851,19 @@
       <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;">🕒 Offline</span></h2>
       <p style="font-size:1.1rem;">Energy: <span id="macroCalsProgress">0</span> / <span id="macroCalsTarget">0</span> kcal (<span id="macroCalsNet">0</span> net)</p>
       <progress id="calsBar" value="0" max="100" style="width:100%;height:20px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="quickAdd('cals')">+</button></div>
+      <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="addMacro('cal')">+</button></div>
 
       <p style="font-size:1rem;">Protein: <span id="macroProteinProgress">0</span> / <span id="macroProteinTarget">0</span> g</p>
       <progress id="proteinBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaProtein" type="number" value="10"><button onclick="quickAdd('protein')">+</button></div>
+      <div class="quick-add"><input id="qaProtein" type="number" value="10"><button onclick="addMacro('protein')">+</button></div>
 
       <p style="font-size:1rem;">Carbs: <span id="macroCarbsProgress">0</span> / <span id="macroCarbsTarget">0</span> g</p>
       <progress id="carbBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaCarbs" type="number" value="10"><button onclick="quickAdd('carbs')">+</button></div>
+      <div class="quick-add"><input id="qaCarbs" type="number" value="10"><button onclick="addMacro('carbs')">+</button></div>
 
       <p style="font-size:1rem;">Fat: <span id="macroFatProgress">0</span> / <span id="macroFatTarget">0</span> g</p>
       <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="quickAdd('fat')">+</button></div>
+      <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="addMacro('fat')">+</button></div>
 
       <div id="sparkContainer" style="display:flex;justify-content:space-around;margin-top:8px;">
         <canvas id="calSpark" width="120" height="40"></canvas>
@@ -915,12 +915,18 @@
     <!-- Adjust Macros -->
     <div id="adjustMacroSection" style="margin-bottom: 30px;">
       <h3>Adjust Macros</h3>
+      <p>FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
       <label>Protein: <span id="proteinVal">0</span> g</label>
       <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" style="width: 100%; margin-bottom: 10px;"><br>
       <label>Fat: <span id="fatVal">0</span> g</label>
       <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" style="width: 100%; margin-bottom: 10px;"><br>
       <label>Carbs: <span id="carbVal">0</span> g</label>
       <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" style="width: 100%; margin-bottom: 10px;"><br>
+      <div class="macro-adjustments">
+        <label><input type="checkbox" id="adjustVegetarian"> Extra protein (vegetarian/vegan)</label>
+        <label><input type="checkbox" id="adjustLowCarb"> Low-carb phase</label>
+        <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
+      </div>
       <p>Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
       <button onclick="saveSliderMacros()" style="width: 100%; font-size: 1.1rem; padding: 12px;">Save Macros</button>
     </div>
@@ -1066,7 +1072,8 @@
       <option value="male">Male</option>
       <option value="female">Female</option>
     </select>
-    <input type="number" id="macroBodyFat" placeholder="Body Fat % (optional)" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+    <label for="bodyFat">Body-Fat&nbsp;%</label>
+    <input type="number" id="bodyFat" name="bodyFat" step="0.1" min="0" max="60" style="width: 100%; padding: 8px; margin-bottom: 10px;">
     <select id="macroBmrFormula" style="width: 100%; padding: 8px; margin-bottom: 10px;">
       <option value="mifflin">Mifflin-St Jeor</option>
       <option value="katch">Katch-McArdle</option>
@@ -1282,6 +1289,8 @@ let macroRanges = {
   carbs:   { min: 0, max: 0 },
   tdee:    0
 };
+
+let consumed = { cal: 0, protein: 0, carbs: 0, fat: 0 };
 
 const defaultExercises = [
   'Bench Press', 'Squat', 'Deadlift', 'Overhead Press', 'Barbell Row',
@@ -3116,27 +3125,30 @@ function calculateMacroTargets() {
   const hRaw = +document.getElementById("macroHeight").value;
   const age = +document.getElementById("macroAge").value;
   const sex = document.getElementById("macroSex").value || "male";
-  const bodyFatValue = +document.getElementById("macroBodyFat").value;
+  const bodyFatValue = parseFloat(document.getElementById("bodyFat").value);
   if (!w || !hRaw || !age) {
     alert("Enter weight, height, and age.");
     return;
   }
   const unit = document.getElementById("heightUnit").value;
   const hInches = unit === "cm" ? hRaw / 2.54 : hRaw;
+  const heightCm = hInches * 2.54;
+  const heightM = heightCm / 100;
+  const weightKg = w * 0.453592;
   const activity = +document.getElementById("macroActivity").value;
   const goal = document.getElementById("macroGoal").value || "maintain";
   const rate = document.getElementById("macroRate").value || "moderate";
   const formula = document.getElementById("macroBmrFormula").value || "mifflin";
-  const bodyFat = Number.isFinite(bodyFatValue) && bodyFatValue > 0 ? bodyFatValue : null;
+  const bodyFat = Number.isFinite(bodyFatValue) ? bodyFatValue : null;
 
   if (!window.macroEngine?.computeMacroPlan) {
     alert("Macro engine unavailable. Please refresh.");
     return;
   }
 
-  const { energy, macros } = window.macroEngine.computeMacroPlan({
-    weightKg: w * 0.453592,
-    heightCm: hInches * 2.54,
+  let plan = window.macroEngine.computeMacroPlan({
+    weightKg,
+    heightCm,
     ageYears: age,
     bodyFatPercent: bodyFat,
     sex,
@@ -3146,7 +3158,47 @@ function calculateMacroTargets() {
     formula,
   });
 
-  const targetCalories = Math.round(energy.targetCalories);
+  const vegetarian = document.getElementById("adjustVegetarian")?.checked;
+  const lowCarb = document.getElementById("adjustLowCarb")?.checked;
+  const highFat = document.getElementById("adjustHighFat")?.checked;
+
+  if (vegetarian) {
+    const extraPercent = 0.15;
+    const increasedProtein = Math.round(plan.macros.proteinGrams * (1 + extraPercent));
+    const diffCals = (increasedProtein - plan.macros.proteinGrams) * 4;
+    plan.macros.proteinGrams = increasedProtein;
+    plan.macros.carbGrams = Math.max(0, plan.macros.carbGrams - Math.round(diffCals / 4));
+  }
+  if (lowCarb) {
+    const targetCarbs = 50;
+    if (plan.macros.carbGrams > targetCarbs) {
+      const carbDiffCals = (plan.macros.carbGrams - targetCarbs) * 4;
+      plan.macros.carbGrams = targetCarbs;
+      plan.macros.fatGrams += Math.round(carbDiffCals / 9);
+    }
+  }
+  if (highFat) {
+    const fatRatio = 0.35;
+    const totalCals = plan.energy.targetCalories;
+    const proteinCals = plan.macros.proteinGrams * 4;
+    const newFatCals = totalCals * fatRatio;
+    plan.macros.fatGrams = Math.round(newFatCals / 9);
+    const remainingCals = totalCals - proteinCals - newFatCals;
+    plan.macros.carbGrams = Math.max(0, Math.round(remainingCals / 4));
+  }
+
+  const targetCalories = Math.round(plan.energy.targetCalories);
+  const macros = plan.macros;
+
+  if (!Number.isNaN(bodyFatValue)) {
+    const leanMass = weightKg * (1 - bodyFatValue / 100);
+    const ffmi = leanMass / (heightM * heightM);
+    document.getElementById("ffmDisplay").textContent = `${leanMass.toFixed(1)} kg`;
+    document.getElementById("ffmiDisplay").textContent = ffmi.toFixed(1);
+  } else {
+    document.getElementById("ffmDisplay").textContent = "–";
+    document.getElementById("ffmiDisplay").textContent = "–";
+  }
 
   const pMin = Math.round(macros.proteinGrams * 0.8);
   const pMax = Math.round(macros.proteinGrams * 1.2);
@@ -3181,6 +3233,64 @@ function calculateMacroTargets() {
   const msBtn = document.getElementById("macroSettingsBtn");
   if (msBtn) msBtn.textContent = "Macro Settings";
   adjustMacros();
+}
+
+function getMacroTargetValues() {
+  const saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser || ""}`)) || {};
+  return {
+    calories: macroTargetCalories || saved.calories || 0,
+    protein: macroTargetProtein || saved.protein || 0,
+    carbs: macroTargetCarbs || saved.carbs || 0,
+    fat: macroTargetFat || saved.fat || 0,
+  };
+}
+
+function addMacro(type) {
+  const inputMap = {
+    cal: "qaCals",
+    protein: "qaProtein",
+    carbs: "qaCarbs",
+    fat: "qaFat",
+  };
+  const defaultSteps = { cal: 100, protein: 10, carbs: 10, fat: 5 };
+  const input = document.getElementById(inputMap[type]);
+  const parsed = input ? Number(input.value) : NaN;
+  const step = Number.isFinite(parsed) && parsed > 0 ? parsed : defaultSteps[type];
+  consumed[type] += step;
+
+  const targets = getMacroTargetValues();
+  const progressMap = {
+    cal: "macroCalsProgress",
+    protein: "macroProteinProgress",
+    carbs: "macroCarbsProgress",
+    fat: "macroFatProgress",
+  };
+  const barMap = {
+    cal: "calsBar",
+    protein: "proteinBar",
+    carbs: "carbBar",
+    fat: "fatBar",
+  };
+  const label = document.getElementById(progressMap[type]);
+  const bar = document.getElementById(barMap[type]);
+  if (label) label.textContent = consumed[type];
+  if (bar) bar.value = consumed[type];
+
+  if (type === "cal") {
+    const net = document.getElementById("macroCalsNet");
+    if (net) net.textContent = consumed[type];
+  }
+  const max =
+    type === "cal"
+      ? targets.calories
+      : type === "protein"
+        ? targets.protein
+        : type === "fat"
+          ? targets.fat
+          : targets.carbs;
+  if (bar && Number.isFinite(max) && max > 0) {
+    bar.max = max;
+  }
 }
 
 function updateMacroUI() {
