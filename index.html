@@ -1488,21 +1488,27 @@ function showTab(tabName) {
 
   
 async function fetchUserMacroTargets(username) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/MacroTargets?filterByFormula={Username}='${username}'`;
+  // Ensure Airtable credentials are loaded
+  if (!airtableBaseId || !airtableToken) {
+    await fetchAirtableConfig();
+  }
+  const url = `https://api.airtable.com/v0/${airtableBaseId}/${MacroTargetsTableName}?filterByFormula={Username}='${encodeURIComponent(username)}'`;
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${airtableToken}` }
   });
   const data = await response.json();
 
-  if (data.records.length > 0) {
-    const fields = data.records[0].fields;
-
-    // ✅ Update local UI display bars
-    saveMacroTargetsToTop(fields);
-
-    // ✅ Store locally so they persist on refresh
-    localStorage.setItem(`macroTargets_${username}`, JSON.stringify(fields));
+  if (!Array.isArray(data.records) || data.records.length === 0) {
+    throw new Error('No macro targets found for this user');
   }
+
+  const fields = data.records[0].fields;
+
+  // ✅ Update local UI display bars
+  saveMacroTargetsToTop(fields);
+
+  // ✅ Store locally so they persist on refresh
+  localStorage.setItem(`macroTargets_${username}`, JSON.stringify(fields));
 }
 
 
@@ -2451,7 +2457,7 @@ async function fetchTemplates(username) {
       // ignore JSON parse errors
     }
     setTemplateLoadMessage(errMsg);
-    return [];
+    throw new Error(`Templates HTTP 422: ${errMsg}`);
   }
   if (!res.ok) {
     setTemplateLoadMessage('Unable to load templates right now. Please try again later.');
