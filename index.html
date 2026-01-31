@@ -926,6 +926,37 @@
         <option value="bulk-moderate">Bulk – Moderate</option>
         <option value="bulk-aggressive">Bulk – Aggressive</option>
       </select>
+      <!-- Macro input modal (hidden by default) -->
+      <div id="macroInputModal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <h3>Enter Your Details</h3>
+          <label for="modalWeight">Weight (kg)</label>
+          <input id="modalWeight" type="number" step="0.1" />
+          <label for="modalHeight">Height (cm)</label>
+          <input id="modalHeight" type="number" step="0.1" />
+          <label for="modalAge">Age (years)</label>
+          <input id="modalAge" type="number" step="1" />
+          <label for="modalSex">Sex</label>
+          <select id="modalSex">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+          <label for="modalBodyFat">Body-Fat % (optional)</label>
+          <input id="modalBodyFat" type="number" step="0.1" />
+          <label for="modalActivity">Activity Level</label>
+          <select id="modalActivity">
+            <option value="1.2">Sedentary</option>
+            <option value="1.375">Lightly Active</option>
+            <option value="1.55">Moderately Active</option>
+            <option value="1.725">Very Active</option>
+            <option value="1.9">Athlete</option>
+          </select>
+          <div class="modal-actions">
+            <button id="macroModalOk">OK</button>
+            <button id="macroModalCancel" type="button">Cancel</button>
+          </div>
+        </div>
+      </div>
       <p>FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
       <label>Protein: <span id="proteinVal">0</span> g</label>
       <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" style="width: 100%; margin-bottom: 10px;"><br>
@@ -933,7 +964,8 @@
       <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" style="width: 100%; margin-bottom: 10px;"><br>
       <label>Carbs: <span id="carbVal">0</span> g</label>
       <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <div class="macro-adjustments">
+      <div class="macro-adjustments" style="display:none;">
+        <!-- Legacy adjustments hidden: kept for reference but not displayed -->
         <label><input type="checkbox" id="adjustVegetarian"> Extra protein (vegetarian/vegan)</label>
         <label><input type="checkbox" id="adjustLowCarb"> Low-carb phase</label>
         <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
@@ -5169,21 +5201,148 @@ function showHistoryMiniTab(tab) {
       addMealBtn.addEventListener("click", addMacroMeal);
     }
     const macroPresetSelect = document.getElementById("macroPreset");
+    const macroModal = document.getElementById("macroInputModal");
+    const macroModalOk = document.getElementById("macroModalOk");
+    const macroModalCancel = document.getElementById("macroModalCancel");
+    const macroInputsKey = "macroInputs";
+    let savedMacroInputs = {};
+    const storedInputs = localStorage.getItem(macroInputsKey);
+    if (storedInputs) {
+      try {
+        savedMacroInputs = JSON.parse(storedInputs);
+      } catch (error) {
+        console.warn("Unable to parse saved macro inputs", error);
+        savedMacroInputs = {};
+      }
+    }
+
+    const applyMacroInputsToForm = (inputs) => {
+      if (!inputs) return;
+      const weightInput = document.getElementById("macroWeight");
+      const heightInput = document.getElementById("macroHeight");
+      const heightUnit = document.getElementById("heightUnit");
+      const ageInput = document.getElementById("macroAge");
+      const sexInput = document.getElementById("macroSex");
+      const bodyFatInput = document.getElementById("bodyFat");
+      const activityInput = document.getElementById("macroActivity");
+      if (weightInput && Number.isFinite(inputs.weightKg)) {
+        weightInput.value = (inputs.weightKg / 0.453592).toFixed(1);
+      }
+      if (heightInput && Number.isFinite(inputs.heightCm)) {
+        heightInput.value = inputs.heightCm.toFixed(1);
+      }
+      if (heightUnit) {
+        heightUnit.value = "cm";
+      }
+      if (ageInput && Number.isFinite(inputs.ageYears)) {
+        ageInput.value = inputs.ageYears;
+      }
+      if (sexInput && inputs.sex) {
+        sexInput.value = inputs.sex;
+      }
+      if (bodyFatInput && Number.isFinite(inputs.bodyFatPercent)) {
+        bodyFatInput.value = inputs.bodyFatPercent;
+      }
+      if (activityInput && Number.isFinite(inputs.activityFactor)) {
+        activityInput.value = inputs.activityFactor;
+      }
+    };
+
+    const populateMacroModal = (inputs) => {
+      const weightModal = document.getElementById("modalWeight");
+      const heightModal = document.getElementById("modalHeight");
+      const ageModal = document.getElementById("modalAge");
+      const sexModal = document.getElementById("modalSex");
+      const bodyFatModal = document.getElementById("modalBodyFat");
+      const activityModal = document.getElementById("modalActivity");
+      if (weightModal) weightModal.value = inputs.weightKg ?? "";
+      if (heightModal) heightModal.value = inputs.heightCm ?? "";
+      if (ageModal) ageModal.value = inputs.ageYears ?? "";
+      if (sexModal) sexModal.value = inputs.sex ?? "male";
+      if (bodyFatModal) bodyFatModal.value = inputs.bodyFatPercent ?? "";
+      if (activityModal) activityModal.value = inputs.activityFactor ?? "1.55";
+    };
+
+    const hasRequiredMacroInputs = (inputs) =>
+      Number.isFinite(inputs.weightKg) &&
+      Number.isFinite(inputs.heightCm) &&
+      Number.isFinite(inputs.ageYears) &&
+      inputs.sex &&
+      Number.isFinite(inputs.activityFactor);
+
+    const applyPresetAndCalculate = (preset) => {
+      const goalSelect = document.getElementById("macroGoal");
+      const rateSelect = document.getElementById("macroRate");
+      if (goalSelect) {
+        goalSelect.value = preset.goal;
+      }
+      if (rateSelect) {
+        rateSelect.value = preset.rate;
+      }
+      calculateMacroTargets(preset.goal, preset.rate);
+    };
+
+    if (hasRequiredMacroInputs(savedMacroInputs)) {
+      applyMacroInputsToForm(savedMacroInputs);
+    }
+
     if (macroPresetSelect) {
       macroPresetSelect.addEventListener("change", () => {
-        const preset = presetMap[macroPresetSelect.value];
+        const presetKey = macroPresetSelect.value;
+        const preset = presetMap[presetKey];
         if (!preset) {
           return;
         }
-        const goalSelect = document.getElementById("macroGoal");
-        const rateSelect = document.getElementById("macroRate");
-        if (goalSelect) {
-          goalSelect.value = preset.goal;
+        if (!hasRequiredMacroInputs(savedMacroInputs)) {
+          if (macroModal) {
+            macroModal.dataset.preset = presetKey;
+            populateMacroModal(savedMacroInputs);
+            macroModal.style.display = "flex";
+          }
+          return;
         }
-        if (rateSelect) {
-          rateSelect.value = preset.rate;
+        applyPresetAndCalculate(preset);
+      });
+    }
+
+    if (macroModalOk) {
+      macroModalOk.addEventListener("click", () => {
+        const weightKg = parseFloat(document.getElementById("modalWeight")?.value);
+        const heightCm = parseFloat(document.getElementById("modalHeight")?.value);
+        const ageYears = parseInt(document.getElementById("modalAge")?.value, 10);
+        const sex = document.getElementById("modalSex")?.value || "male";
+        const bodyFatPercentRaw = parseFloat(document.getElementById("modalBodyFat")?.value);
+        const activityFactor = parseFloat(document.getElementById("modalActivity")?.value);
+        if (!Number.isFinite(weightKg) || !Number.isFinite(heightCm) || !Number.isFinite(ageYears)) {
+          alert("Please enter weight, height, and age to continue.");
+          return;
         }
-        calculateMacroTargets(preset.goal, preset.rate);
+        savedMacroInputs = {
+          weightKg,
+          heightCm,
+          ageYears,
+          sex,
+          bodyFatPercent: Number.isFinite(bodyFatPercentRaw) ? bodyFatPercentRaw : null,
+          activityFactor,
+        };
+        localStorage.setItem(macroInputsKey, JSON.stringify(savedMacroInputs));
+        applyMacroInputsToForm(savedMacroInputs);
+        if (macroModal) {
+          macroModal.style.display = "none";
+        }
+        const presetKey = macroModal?.dataset?.preset;
+        const preset = presetMap[presetKey];
+        if (preset) {
+          applyPresetAndCalculate(preset);
+        }
+      });
+    }
+
+    if (macroModalCancel) {
+      macroModalCancel.addEventListener("click", () => {
+        if (macroModal) {
+          macroModal.style.display = "none";
+        }
       });
     }
 
