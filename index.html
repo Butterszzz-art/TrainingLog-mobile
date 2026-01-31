@@ -851,19 +851,19 @@
       <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;">🕒 Offline</span></h2>
       <p style="font-size:1.1rem;">Energy: <span id="macroCalsProgress">0</span> / <span id="macroCalsTarget">0</span> kcal (<span id="macroCalsNet">0</span> net)</p>
       <progress id="calsBar" value="0" max="100" style="width:100%;height:20px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="addMacro('cal')">+</button></div>
+      <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="subtractMacro('cal')">–</button><button onclick="addMacro('cal')">+</button></div>
 
       <p style="font-size:1rem;">Protein: <span id="macroProteinProgress">0</span> / <span id="macroProteinTarget">0</span> g</p>
       <progress id="proteinBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaProtein" type="number" value="10"><button onclick="addMacro('protein')">+</button></div>
+      <div class="quick-add"><input id="qaProtein" type="number" value="10"><button onclick="subtractMacro('protein')">–</button><button onclick="addMacro('protein')">+</button></div>
 
       <p style="font-size:1rem;">Carbs: <span id="macroCarbsProgress">0</span> / <span id="macroCarbsTarget">0</span> g</p>
       <progress id="carbBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaCarbs" type="number" value="10"><button onclick="addMacro('carbs')">+</button></div>
+      <div class="quick-add"><input id="qaCarbs" type="number" value="10"><button onclick="subtractMacro('carbs')">–</button><button onclick="addMacro('carbs')">+</button></div>
 
       <p style="font-size:1rem;">Fat: <span id="macroFatProgress">0</span> / <span id="macroFatTarget">0</span> g</p>
       <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="addMacro('fat')">+</button></div>
+      <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="subtractMacro('fat')">–</button><button onclick="addMacro('fat')">+</button></div>
 
       <div id="sparkContainer" style="display:flex;justify-content:space-around;margin-top:8px;">
         <canvas id="calSpark" width="120" height="40"></canvas>
@@ -3257,6 +3257,54 @@ function addMacro(type) {
   const parsed = input ? Number(input.value) : NaN;
   const step = Number.isFinite(parsed) && parsed > 0 ? parsed : defaultSteps[type];
   consumed[type] += step;
+
+  const targets = getMacroTargetValues();
+  const progressMap = {
+    cal: "macroCalsProgress",
+    protein: "macroProteinProgress",
+    carbs: "macroCarbsProgress",
+    fat: "macroFatProgress",
+  };
+  const barMap = {
+    cal: "calsBar",
+    protein: "proteinBar",
+    carbs: "carbBar",
+    fat: "fatBar",
+  };
+  const label = document.getElementById(progressMap[type]);
+  const bar = document.getElementById(barMap[type]);
+  if (label) label.textContent = consumed[type];
+  if (bar) bar.value = consumed[type];
+
+  if (type === "cal") {
+    const net = document.getElementById("macroCalsNet");
+    if (net) net.textContent = consumed[type];
+  }
+  const max =
+    type === "cal"
+      ? targets.calories
+      : type === "protein"
+        ? targets.protein
+        : type === "fat"
+          ? targets.fat
+          : targets.carbs;
+  if (bar && Number.isFinite(max) && max > 0) {
+    bar.max = max;
+  }
+}
+
+function subtractMacro(type) {
+  const inputMap = {
+    cal: "qaCals",
+    protein: "qaProtein",
+    carbs: "qaCarbs",
+    fat: "qaFat",
+  };
+  const defaultSteps = { cal: 100, protein: 10, carbs: 10, fat: 5 };
+  const input = document.getElementById(inputMap[type]);
+  const parsed = input ? Number(input.value) : NaN;
+  const step = Number.isFinite(parsed) && parsed > 0 ? parsed : defaultSteps[type];
+  consumed[type] = Math.max(0, consumed[type] - step);
 
   const targets = getMacroTargetValues();
   const progressMap = {
