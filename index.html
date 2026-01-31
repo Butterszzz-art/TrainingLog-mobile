@@ -915,7 +915,7 @@
 
     <button id="addMealFab" class="fab" onclick="addMacroMeal()">＋</button>
 
-    <button id="adjustMacrosToggle" class="btn" onclick="openMacroSettings()" style="margin-top:20px;">
+    <button id="adjustMacrosToggle" class="btn" onclick="startAdjustMacros()" style="margin-top:20px;">
       ⚙️ Adjust Macros
     </button>
     </div>
@@ -4075,6 +4075,26 @@ function checkMacroReset() {
 }
 
 
+function startAdjustMacros() {
+  console.log('[Debug] Adjust Macros button clicked');
+  try {
+    const presetSelect = document.getElementById('macroPreset');
+    const proteinSlider = document.getElementById('proteinSlider');
+    const fatSlider = document.getElementById('fatSlider');
+    const carbSlider = document.getElementById('carbSlider');
+    if (!presetSelect) console.warn('[Debug] macroPreset element is missing');
+    if (!proteinSlider) console.warn('[Debug] proteinSlider element is missing');
+    if (!fatSlider) console.warn('[Debug] fatSlider element is missing');
+    if (!carbSlider) console.warn('[Debug] carbSlider element is missing');
+
+    openMacroSettings();
+    console.log('[Debug] Adjust Macros logic completed');
+  } catch (err) {
+    console.error('[Debug] Error in Adjust Macros handler:', err);
+    alert('An error occurred while opening Adjust Macros. Check console for details.');
+  }
+}
+
 function openMacroSettings() {
   const main = document.getElementById('macrosMainContent');
   const settings = document.getElementById('macrosSettingsContent');
@@ -4100,6 +4120,7 @@ function closeMacroSettings() {
 }
 
 // expose helpers for inline handlers
+window.startAdjustMacros = startAdjustMacros;
 window.openMacroSettings = openMacroSettings;
 window.closeMacroSettings = closeMacroSettings;
 
