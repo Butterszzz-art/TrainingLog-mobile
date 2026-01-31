@@ -939,7 +939,7 @@
       <div class="macro-card">
         <h3>Macro Preset</h3>
         <label for="macroPreset">Preset</label>
-        <select id="macroPreset">
+        <select id="macroPreset" title="Choose your goal and rate (e.g. Cut, Bulk).">
           <option value="">-- Choose a preset --</option>
           <option value="cut-slow">Cut – Slow</option>
           <option value="cut-moderate">Cut – Moderate</option>
@@ -995,11 +995,12 @@
       <div class="macro-card">
         <h3>Daily Tracking</h3>
         <label>Protein: <span id="proteinVal">0</span> g</label>
-        <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')"><br>
+        <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" title="Default: 2 g/kg when cutting, 1.8 g/kg when maintaining/bulking"><br>
         <label>Fat: <span id="fatVal">0</span> g</label>
-        <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')"><br>
+        <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" title="Default: 25 % of calories when cutting, 30 % when maintaining/bulking; min 0.6 g/kg"><br>
         <label>Carbs: <span id="carbVal">0</span> g</label>
-        <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')"><br>
+        <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" title="Carbs get the remaining calories after protein and fat"><br>
+        <textarea id="coachNotes" rows="3" placeholder="Trainer notes (optional)"></textarea>
         <details id="advancedOptions" class="macro-advanced">
           <summary>Advanced</summary>
           <div class="macro-advanced-body">
@@ -3240,8 +3241,12 @@ function calculateMacroTargets(goalOverride, rateOverride) {
   const age = +document.getElementById("macroAge").value;
   const sex = document.getElementById("macroSex").value || "male";
   const bodyFatValue = parseFloat(document.getElementById("bodyFat").value);
-  if (!w || !hRaw || !age) {
-    alert("Enter weight, height, and age.");
+  if (w <= 0 || hRaw <= 0 || age <= 0) {
+    alert("Please enter positive values for weight, height, and age.");
+    return;
+  }
+  if (Number.isFinite(bodyFatValue) && (bodyFatValue < 5 || bodyFatValue > 60)) {
+    alert("Body-fat percentage must be between 5 % and 60 %.");
     return;
   }
   const unit = document.getElementById("heightUnit").value;
