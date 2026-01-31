@@ -2445,12 +2445,16 @@ async function fetchTemplates(username) {
   if (!airtableBaseId || !airtableToken) {
     await fetchAirtableConfig();
   }
-  const params = new URLSearchParams({ Username: username });
+  const params = new URLSearchParams({ username });
   const url = `${window.SERVER_URL}/templates?${params.toString()}`;
   const res = await fetch(url, {
     credentials: 'include',
     headers: getAuthHeaders()
   });
+  if (res.status === 401 || res.status === 403) {
+    setTemplateLoadMessage('Authorization failed. Please log in again.');
+    throw new Error('Authorization failed. Please log in again.');
+  }
   if (res.status === 422) {
     let errMsg = 'Unable to load templates. Please confirm your username and try again.';
     try {
