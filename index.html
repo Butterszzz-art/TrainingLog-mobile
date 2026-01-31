@@ -4058,15 +4058,27 @@ function checkMacroReset() {
 
 
 function openMacroSettings() {
+  const main = document.getElementById('macrosMainContent');
+  const settings = document.getElementById('macrosSettingsContent');
+  if (!main || !settings) {
+    console.error('Macros view missing expected containers');
+    return;
+  }
   // Hide the main macros content and reveal the settings view
-  document.getElementById('macrosMainContent').style.display = 'none';
-  document.getElementById('macrosSettingsContent').style.display = 'block';
+  main.style.display = 'none';
+  settings.style.display = 'block';
 }
 
 function closeMacroSettings() {
+  const main = document.getElementById('macrosMainContent');
+  const settings = document.getElementById('macrosSettingsContent');
+  if (!main || !settings) {
+    console.error('Macros view missing expected containers');
+    return;
+  }
   // Return to the main macros view
-  document.getElementById('macrosSettingsContent').style.display = 'none';
-  document.getElementById('macrosMainContent').style.display = 'block';
+  settings.style.display = 'none';
+  main.style.display = 'block';
 }
 
 // expose helpers for inline handlers
@@ -5813,25 +5825,7 @@ window.renderDashboardPRSummary = renderDashboardPRSummary;
     localStorage.setItem('theme', theme);
   }
 
-  window.applyTheme = applyTheme;
-function openMacroSettings() {
-  // Hide the main macros content and reveal the settings view
-  document.getElementById('macrosMainContent').style.display = 'none';
-  document.getElementById('macrosSettingsContent').style.display = 'block';
-}
-
-function closeMacroSettings() {
-  // Return to the main macros view
-  document.getElementById('macrosSettingsContent').style.display = 'none';
-  document.getElementById('macrosMainContent').style.display = 'block';
-}
-
-// expose helpers for inline handlers
-window.openMacroSettings = openMacroSettings;
-window.closeMacroSettings = closeMacroSettings;
-
-
-
+window.applyTheme = applyTheme;
 
 </script>
 
