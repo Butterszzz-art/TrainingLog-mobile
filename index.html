@@ -872,6 +872,24 @@
       <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
       <div style="margin-top:8px;">
         <label><input type="checkbox" id="trainingDayToggle"> Training Day</label>
+      <div id="macroDailySummary" style="margin-top:12px;">
+        <h3 style="font-size:1.1rem;margin-bottom:6px;">Daily Summary</h3>
+        <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+          <span>Calories</span>
+          <span id="macroSummaryCals">0 / 0 kcal</span>
+        </div>
+        <div class="macro-summary-row" data-macro="protein" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+          <span>Protein</span>
+          <span id="macroSummaryProtein">0 / 0 g</span>
+        </div>
+        <div class="macro-summary-row" data-macro="carbs" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+          <span>Carbs</span>
+          <span id="macroSummaryCarbs">0 / 0 g</span>
+        </div>
+        <div class="macro-summary-row" data-macro="fat" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:#f5f5f5;">
+          <span>Fat</span>
+          <span id="macroSummaryFat">0 / 0 g</span>
+        </div>
       </div>
     </div>
 
@@ -904,7 +922,7 @@
   </div>
 
   <!-- Settings Mini Tab -->
-  <div id="macrosSettingsContent" style="max-width: 600px; margin: 0 auto; display: none;">
+  <div id="macrosSettingsContent" style="max-width: 1100px; margin: 0 auto; display: none;">
      <button id="goBackBtn" onclick="closeMacroSettings()" style="margin-bottom: 20px; font-size: 1rem; padding: 8px 16px;">⬅️ Go Back</button>
 
     <!-- Custom Calories Input moved here -->
@@ -917,65 +935,82 @@
     
 
     <!-- Adjust Macros -->
-    <div id="adjustMacroSection" style="margin-bottom: 30px;">
-      <h3>Adjust Macros</h3>
-      <label for="macroPreset">Macro Preset</label>
-      <select id="macroPreset" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-        <option value="">-- Choose a preset --</option>
-        <option value="cut-slow">Cut – Slow</option>
-        <option value="cut-moderate">Cut – Moderate</option>
-        <option value="cut-aggressive">Cut – Aggressive</option>
-        <option value="maintain">Maintain</option>
-        <option value="bulk-slow">Bulk – Slow</option>
-        <option value="bulk-moderate">Bulk – Moderate</option>
-        <option value="bulk-aggressive">Bulk – Aggressive</option>
-      </select>
-      <!-- Macro input modal (hidden by default) -->
-      <div id="macroInputModal" class="modal" style="display:none;">
-        <div class="modal-content">
-          <h3>Enter Your Details</h3>
-          <label for="modalWeight">Weight (kg)</label>
-          <input id="modalWeight" type="number" step="0.1" />
-          <label for="modalHeight">Height (cm)</label>
-          <input id="modalHeight" type="number" step="0.1" />
-          <label for="modalAge">Age (years)</label>
-          <input id="modalAge" type="number" step="1" />
-          <label for="modalSex">Sex</label>
-          <select id="modalSex">
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-          <label for="modalBodyFat">Body-Fat % (optional)</label>
-          <input id="modalBodyFat" type="number" step="0.1" />
-          <label for="modalActivity">Activity Level</label>
-          <select id="modalActivity">
-            <option value="1.2">Sedentary</option>
-            <option value="1.375">Lightly Active</option>
-            <option value="1.55">Moderately Active</option>
-            <option value="1.725">Very Active</option>
-            <option value="1.9">Athlete</option>
-          </select>
-          <div class="modal-actions">
-            <button id="macroModalOk">OK</button>
-            <button id="macroModalCancel" type="button">Cancel</button>
+    <div id="adjustMacroSection" class="adjust-macros grid" style="margin-bottom: 30px;">
+      <div class="macro-card">
+        <h3>Macro Preset</h3>
+        <label for="macroPreset">Preset</label>
+        <select id="macroPreset">
+          <option value="">-- Choose a preset --</option>
+          <option value="cut-slow">Cut – Slow</option>
+          <option value="cut-moderate">Cut – Moderate</option>
+          <option value="cut-aggressive">Cut – Aggressive</option>
+          <option value="maintain">Maintain</option>
+          <option value="bulk-slow">Bulk – Slow</option>
+          <option value="bulk-moderate">Bulk – Moderate</option>
+          <option value="bulk-aggressive">Bulk – Aggressive</option>
+        </select>
+        <p class="macro-helper">Choose a preset to auto-calculate targets. We'll prompt for your details if needed.</p>
+      </div>
+
+      <div class="macro-card">
+        <h3>Personal Details</h3>
+        <p class="macro-helper">Used for calorie and macro calculations.</p>
+        <button type="button" class="btn macro-edit-btn" onclick="document.getElementById('macroInputModal').style.display='flex'">
+          Edit personal details
+        </button>
+        <p class="macro-stats">FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
+        <!-- Macro input modal (hidden by default) -->
+        <div id="macroInputModal" class="modal" style="display:none;">
+          <div class="modal-content">
+            <h3>Enter Your Details</h3>
+            <label for="modalWeight">Weight (kg)</label>
+            <input id="modalWeight" type="number" step="0.1" />
+            <label for="modalHeight">Height (cm)</label>
+            <input id="modalHeight" type="number" step="0.1" />
+            <label for="modalAge">Age (years)</label>
+            <input id="modalAge" type="number" step="1" />
+            <label for="modalSex">Sex</label>
+            <select id="modalSex">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+            <label for="modalBodyFat">Body-Fat % (optional)</label>
+            <input id="modalBodyFat" type="number" step="0.1" />
+            <label for="modalActivity">Activity Level</label>
+            <select id="modalActivity">
+              <option value="1.2">Sedentary</option>
+              <option value="1.375">Lightly Active</option>
+              <option value="1.55">Moderately Active</option>
+              <option value="1.725">Very Active</option>
+              <option value="1.9">Athlete</option>
+            </select>
+            <div class="modal-actions">
+              <button id="macroModalOk">OK</button>
+              <button id="macroModalCancel" type="button">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
-      <p>FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
-      <label>Protein: <span id="proteinVal">0</span> g</label>
-      <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <label>Fat: <span id="fatVal">0</span> g</label>
-      <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <label>Carbs: <span id="carbVal">0</span> g</label>
-      <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <div class="macro-adjustments" style="display:none;">
-        <!-- Legacy adjustments hidden: kept for reference but not displayed -->
-        <label><input type="checkbox" id="adjustVegetarian"> Extra protein (vegetarian/vegan)</label>
-        <label><input type="checkbox" id="adjustLowCarb"> Low-carb phase</label>
-        <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
+
+      <div class="macro-card">
+        <h3>Daily Tracking</h3>
+        <label>Protein: <span id="proteinVal">0</span> g</label>
+        <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')"><br>
+        <label>Fat: <span id="fatVal">0</span> g</label>
+        <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')"><br>
+        <label>Carbs: <span id="carbVal">0</span> g</label>
+        <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')"><br>
+        <details id="advancedOptions" class="macro-advanced">
+          <summary>Advanced</summary>
+          <div class="macro-advanced-body">
+            <label><input type="checkbox" id="adjustVegetarian"> Extra protein (vegetarian/vegan)</label>
+            <label><input type="checkbox" id="adjustLowCarb"> Low-carb phase</label>
+            <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
+          </div>
+        </details>
+        <p class="macro-total">Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
+        <button onclick="saveSliderMacros()" class="macro-save-btn">Save Macros</button>
       </div>
-      <p>Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
-      <button onclick="saveSliderMacros()" style="width: 100%; font-size: 1.1rem; padding: 12px;">Save Macros</button>
     </div>
 
   </div>
@@ -3370,6 +3405,12 @@ function addMacro(type) {
   if (bar && Number.isFinite(max) && max > 0) {
     bar.max = max;
   }
+  updateMacroSummary({
+    cal: { value: consumed.cal, target: targets.calories, unit: "kcal" },
+    protein: { value: consumed.protein, target: targets.protein, unit: "g" },
+    carbs: { value: consumed.carbs, target: targets.carbs, unit: "g" },
+    fat: { value: consumed.fat, target: targets.fat, unit: "g" },
+  });
 }
 
 function subtractMacro(type) {
@@ -3418,6 +3459,59 @@ function subtractMacro(type) {
   if (bar && Number.isFinite(max) && max > 0) {
     bar.max = max;
   }
+  updateMacroSummary({
+    cal: { value: consumed.cal, target: targets.calories, unit: "kcal" },
+    protein: { value: consumed.protein, target: targets.protein, unit: "g" },
+    carbs: { value: consumed.carbs, target: targets.carbs, unit: "g" },
+    fat: { value: consumed.fat, target: targets.fat, unit: "g" },
+  });
+}
+
+function getMacroProgressColor(percent) {
+  if (percent < 75) return "#4caf50";
+  if (percent < 100) return "#ffc107";
+  return "#f44336";
+}
+
+function updateMacroSummary(data, options = {}) {
+  const netCals = options.netCals;
+  const summaryMap = {
+    cal: "macroSummaryCals",
+    protein: "macroSummaryProtein",
+    carbs: "macroSummaryCarbs",
+    fat: "macroSummaryFat",
+  };
+  const barMap = {
+    cal: "calsBar",
+    protein: "proteinBar",
+    carbs: "carbBar",
+    fat: "fatBar",
+  };
+  Object.entries(summaryMap).forEach(([type, summaryId]) => {
+    const entry = data[type];
+    if (!entry) return;
+    const target = Number(entry.target) || 0;
+    const value = Number(entry.value) || 0;
+    const percent = target > 0 ? (value / target) * 100 : 0;
+    const color = getMacroProgressColor(percent);
+    const summaryEl = document.getElementById(summaryId);
+    if (summaryEl) {
+      if (type === "cal" && Number.isFinite(netCals)) {
+        summaryEl.textContent = `${value} / ${Math.round(target)} ${entry.unit} (${Math.round(netCals)} net)`;
+      } else {
+        summaryEl.textContent = `${value} / ${Math.round(target)} ${entry.unit}`;
+      }
+    }
+    const row = document.querySelector(`.macro-summary-row[data-macro="${type}"]`);
+    if (row) {
+      row.style.borderLeft = `6px solid ${color}`;
+      row.style.backgroundColor = `${color}1A`;
+    }
+    const bar = document.getElementById(barMap[type]);
+    if (bar) {
+      bar.style.accentColor = color;
+    }
+  });
 }
 
 function updateMacroUI() {
@@ -3458,6 +3552,15 @@ function updateMacroUI() {
 
   // Update textual summary (optional)
   document.getElementById("macroTotalCals").textContent = `${totalCals} / ${macroTargetCalories} kcal`;
+  updateMacroSummary(
+    {
+      cal: { value: totalCals, target: macroTargetCalories, unit: "kcal" },
+      protein: { value: totalProtein, target: macroTargetProtein, unit: "g" },
+      carbs: { value: totalCarbs, target: macroTargetCarbs, unit: "g" },
+      fat: { value: totalFats, target: macroTargetFat, unit: "g" },
+    },
+    { netCals }
+  );
 }
 
 
@@ -5300,6 +5403,45 @@ function showHistoryMiniTab(tab) {
     if (hasRequiredMacroInputs(savedMacroInputs)) {
       applyMacroInputsToForm(savedMacroInputs);
     }
+    applyMacroInputsToForm(savedMacroInputs);
+
+    const persistMacroInputsFromForm = () => {
+      const weightInput = document.getElementById("macroWeight");
+      const heightInput = document.getElementById("macroHeight");
+      const heightUnit = document.getElementById("heightUnit");
+      const ageInput = document.getElementById("macroAge");
+      const sexInput = document.getElementById("macroSex");
+      const bodyFatInput = document.getElementById("bodyFat");
+      const activityInput = document.getElementById("macroActivity");
+      const weightLb = parseFloat(weightInput?.value);
+      const heightRaw = parseFloat(heightInput?.value);
+      const unit = heightUnit?.value || "in";
+      const heightCm = Number.isFinite(heightRaw)
+        ? unit === "cm"
+          ? heightRaw
+          : heightRaw * 2.54
+        : null;
+      const weightKg = Number.isFinite(weightLb) ? weightLb * 0.453592 : null;
+      const ageYears = parseInt(ageInput?.value, 10);
+      const bodyFatPercentRaw = parseFloat(bodyFatInput?.value);
+      const activityFactor = parseFloat(activityInput?.value);
+      savedMacroInputs = {
+        weightKg: Number.isFinite(weightKg) ? weightKg : null,
+        heightCm: Number.isFinite(heightCm) ? heightCm : null,
+        ageYears: Number.isFinite(ageYears) ? ageYears : null,
+        sex: sexInput?.value || "male",
+        bodyFatPercent: Number.isFinite(bodyFatPercentRaw) ? bodyFatPercentRaw : null,
+        activityFactor: Number.isFinite(activityFactor) ? activityFactor : null,
+      };
+      localStorage.setItem(macroInputsKey, JSON.stringify(savedMacroInputs));
+    };
+
+    ["macroWeight", "macroHeight", "heightUnit", "macroAge", "macroSex", "bodyFat", "macroActivity"].forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) {
+        input.addEventListener("change", persistMacroInputsFromForm);
+      }
+    });
 
     if (macroPresetSelect) {
       macroPresetSelect.addEventListener("change", () => {
