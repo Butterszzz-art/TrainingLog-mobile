@@ -915,6 +915,17 @@
     <!-- Adjust Macros -->
     <div id="adjustMacroSection" style="margin-bottom: 30px;">
       <h3>Adjust Macros</h3>
+      <label for="macroPreset">Macro Preset</label>
+      <select id="macroPreset" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+        <option value="">-- Choose a preset --</option>
+        <option value="cut-slow">Cut – Slow</option>
+        <option value="cut-moderate">Cut – Moderate</option>
+        <option value="cut-aggressive">Cut – Aggressive</option>
+        <option value="maintain">Maintain</option>
+        <option value="bulk-slow">Bulk – Slow</option>
+        <option value="bulk-moderate">Bulk – Moderate</option>
+        <option value="bulk-aggressive">Bulk – Aggressive</option>
+      </select>
       <p>FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
       <label>Protein: <span id="proteinVal">0</span> g</label>
       <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" style="width: 100%; margin-bottom: 10px;"><br>
@@ -3141,7 +3152,17 @@ function removeMacroMeal(idx) {
     updateMacroUI();
   }
 
-function calculateMacroTargets() {
+const presetMap = {
+  "cut-slow": { goal: "cut", rate: "slow" },
+  "cut-moderate": { goal: "cut", rate: "moderate" },
+  "cut-aggressive": { goal: "cut", rate: "aggressive" },
+  maintain: { goal: "maintain", rate: "moderate" },
+  "bulk-slow": { goal: "bulk", rate: "slow" },
+  "bulk-moderate": { goal: "bulk", rate: "moderate" },
+  "bulk-aggressive": { goal: "bulk", rate: "aggressive" },
+};
+
+function calculateMacroTargets(goalOverride, rateOverride) {
   const w = +document.getElementById("macroWeight").value;
   const hRaw = +document.getElementById("macroHeight").value;
   const age = +document.getElementById("macroAge").value;
@@ -3157,8 +3178,8 @@ function calculateMacroTargets() {
   const heightM = heightCm / 100;
   const weightKg = w * 0.453592;
   const activity = +document.getElementById("macroActivity").value;
-  const goal = document.getElementById("macroGoal").value || "maintain";
-  const rate = document.getElementById("macroRate").value || "moderate";
+  const goal = goalOverride || document.getElementById("macroGoal").value || "maintain";
+  const rate = rateOverride || document.getElementById("macroRate").value || "moderate";
   const formula = document.getElementById("macroBmrFormula").value || "mifflin";
   const bodyFat = Number.isFinite(bodyFatValue) ? bodyFatValue : null;
 
@@ -5146,6 +5167,24 @@ function showHistoryMiniTab(tab) {
     const addMealBtn = document.getElementById("macroMeal");
     if (addMealBtn) {
       addMealBtn.addEventListener("click", addMacroMeal);
+    }
+    const macroPresetSelect = document.getElementById("macroPreset");
+    if (macroPresetSelect) {
+      macroPresetSelect.addEventListener("change", () => {
+        const preset = presetMap[macroPresetSelect.value];
+        if (!preset) {
+          return;
+        }
+        const goalSelect = document.getElementById("macroGoal");
+        const rateSelect = document.getElementById("macroRate");
+        if (goalSelect) {
+          goalSelect.value = preset.goal;
+        }
+        if (rateSelect) {
+          rateSelect.value = preset.rate;
+        }
+        calculateMacroTargets(preset.goal, preset.rate);
+      });
     }
 
     const exerciseInput = document.getElementById("exercise");
