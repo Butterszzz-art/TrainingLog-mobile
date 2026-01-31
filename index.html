@@ -2446,7 +2446,6 @@ async function fetchTemplates(username) {
     await fetchAirtableConfig();
   }
   const params = new URLSearchParams({ Username: username });
-  params.append('username', username);
   const url = `${window.SERVER_URL}/templates?${params.toString()}`;
   const res = await fetch(url, {
     credentials: 'include',
