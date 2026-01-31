@@ -54,7 +54,9 @@ export function quickAdd(type, amountInputId) {
 }
 
 export async function fetchRecipe() {
-  const url = document.getElementById('recipeUrl').value;
+  const input = document.getElementById('recipeUrl');
+  if (!input) return;
+  const url = input.value;
   if (!url) return;
   const data = await importRecipe(url);
   if (data) {
