@@ -869,6 +869,10 @@
         <canvas id="calSpark" width="120" height="40"></canvas>
         <canvas id="proteinSpark" width="120" height="40"></canvas>
       </div>
+      <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
+      <div style="margin-top:8px;">
+        <label><input type="checkbox" id="trainingDayToggle"> Training Day</label>
+      </div>
     </div>
 
     <div id="heatmap" class="heatmap"></div>
@@ -3193,6 +3197,7 @@ const presetMap = {
   "bulk-moderate": { goal: "bulk", rate: "moderate" },
   "bulk-aggressive": { goal: "bulk", rate: "aggressive" },
 };
+window.presetMap = presetMap;
 
 function calculateMacroTargets(goalOverride, rateOverride) {
   const w = +document.getElementById("macroWeight").value;
@@ -3813,6 +3818,10 @@ function renderDailyMacroProgress() {
 
   document.getElementById("calsBar").value = totalCals;
   document.getElementById("macroCalsProgress").textContent = totalCals;
+
+  if (window.updateWeeklyTrend) {
+    window.updateWeeklyTrend(progress);
+  }
 }
 
 // Call this when a meal is added or macros change:
@@ -5282,6 +5291,12 @@ function showHistoryMiniTab(tab) {
       calculateMacroTargets(preset.goal, preset.rate);
     };
 
+    const setDayPreset = (presetKey) => {
+      const isTrainingDay = document.getElementById("trainingDayToggle")?.checked ?? true;
+      const storageKey = isTrainingDay ? "trainingPreset" : "restPreset";
+      localStorage.setItem(storageKey, presetKey);
+    };
+
     if (hasRequiredMacroInputs(savedMacroInputs)) {
       applyMacroInputsToForm(savedMacroInputs);
     }
@@ -5293,6 +5308,7 @@ function showHistoryMiniTab(tab) {
         if (!preset) {
           return;
         }
+        setDayPreset(presetKey);
         if (!hasRequiredMacroInputs(savedMacroInputs)) {
           if (macroModal) {
             macroModal.dataset.preset = presetKey;
@@ -5333,6 +5349,7 @@ function showHistoryMiniTab(tab) {
         const presetKey = macroModal?.dataset?.preset;
         const preset = presetMap[presetKey];
         if (preset) {
+          setDayPreset(presetKey);
           applyPresetAndCalculate(preset);
         }
       });
