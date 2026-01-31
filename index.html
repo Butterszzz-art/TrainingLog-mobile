@@ -3556,7 +3556,12 @@ function updateMacroUI() {
   document.getElementById("macroCarbsProgress").textContent = totalCarbs;
 
   // Update textual summary (optional)
-  document.getElementById("macroTotalCals").textContent = `${totalCals} / ${macroTargetCalories} kcal`;
+  const macroTotalCalsEl = document.getElementById("macroTotalCals");
+  if (!macroTotalCalsEl) {
+    console.warn("Macro settings UI not available: missing #macroTotalCals.");
+    return;
+  }
+  macroTotalCalsEl.textContent = `${totalCals} / ${macroTargetCalories} kcal`;
   updateMacroSummary(
     {
       cal: { value: totalCals, target: macroTargetCalories, unit: "kcal" },
@@ -3621,6 +3626,10 @@ function adjustMacros(changedId) {
   const proteinSlider = document.getElementById("proteinSlider");
   const fatSlider = document.getElementById("fatSlider");
   const carbSlider = document.getElementById("carbSlider");
+  if (!proteinSlider || !fatSlider || !carbSlider) {
+    console.warn("Macro settings UI not available: missing macro sliders.");
+    return;
+  }
   const limit = macroRanges.tdee || 0;
 
   const proteinVal = Number(proteinSlider.value);
@@ -3640,10 +3649,19 @@ function adjustMacros(changedId) {
   const c = Number(carbSlider.value);
   const finalTotal = p * 4 + f * 9 + c * 4;
 
-  document.getElementById("proteinVal").textContent = p;
-  document.getElementById("fatVal").textContent = f;
-  document.getElementById("carbVal").textContent = c;
-  document.getElementById("macroTotalCals").textContent = `${finalTotal} / ${limit} kcal`;
+  const proteinValEl = document.getElementById("proteinVal");
+  const fatValEl = document.getElementById("fatVal");
+  const carbValEl = document.getElementById("carbVal");
+  const macroTotalCalsEl = document.getElementById("macroTotalCals");
+  if (!proteinValEl || !fatValEl || !carbValEl || !macroTotalCalsEl) {
+    console.warn("Macro settings UI not available: missing macro value elements.");
+    return;
+  }
+
+  proteinValEl.textContent = p;
+  fatValEl.textContent = f;
+  carbValEl.textContent = c;
+  macroTotalCalsEl.textContent = `${finalTotal} / ${limit} kcal`;
 
   // Optionally enforce max on non-changed sliders:
   if (changedId) {
