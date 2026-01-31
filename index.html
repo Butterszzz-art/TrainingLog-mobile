@@ -869,6 +869,25 @@
         <canvas id="calSpark" width="120" height="40"></canvas>
         <canvas id="proteinSpark" width="120" height="40"></canvas>
       </div>
+      <div id="macroDailySummary" style="margin-top:12px;">
+        <h3 style="font-size:1.1rem;margin-bottom:6px;">Daily Summary</h3>
+        <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+          <span>Calories</span>
+          <span id="macroSummaryCals">0 / 0 kcal</span>
+        </div>
+        <div class="macro-summary-row" data-macro="protein" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+          <span>Protein</span>
+          <span id="macroSummaryProtein">0 / 0 g</span>
+        </div>
+        <div class="macro-summary-row" data-macro="carbs" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+          <span>Carbs</span>
+          <span id="macroSummaryCarbs">0 / 0 g</span>
+        </div>
+        <div class="macro-summary-row" data-macro="fat" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:#f5f5f5;">
+          <span>Fat</span>
+          <span id="macroSummaryFat">0 / 0 g</span>
+        </div>
+      </div>
     </div>
 
     <div id="heatmap" class="heatmap"></div>
@@ -3382,6 +3401,12 @@ function addMacro(type) {
   if (bar && Number.isFinite(max) && max > 0) {
     bar.max = max;
   }
+  updateMacroSummary({
+    cal: { value: consumed.cal, target: targets.calories, unit: "kcal" },
+    protein: { value: consumed.protein, target: targets.protein, unit: "g" },
+    carbs: { value: consumed.carbs, target: targets.carbs, unit: "g" },
+    fat: { value: consumed.fat, target: targets.fat, unit: "g" },
+  });
 }
 
 function subtractMacro(type) {
@@ -3430,6 +3455,59 @@ function subtractMacro(type) {
   if (bar && Number.isFinite(max) && max > 0) {
     bar.max = max;
   }
+  updateMacroSummary({
+    cal: { value: consumed.cal, target: targets.calories, unit: "kcal" },
+    protein: { value: consumed.protein, target: targets.protein, unit: "g" },
+    carbs: { value: consumed.carbs, target: targets.carbs, unit: "g" },
+    fat: { value: consumed.fat, target: targets.fat, unit: "g" },
+  });
+}
+
+function getMacroProgressColor(percent) {
+  if (percent < 75) return "#4caf50";
+  if (percent < 100) return "#ffc107";
+  return "#f44336";
+}
+
+function updateMacroSummary(data, options = {}) {
+  const netCals = options.netCals;
+  const summaryMap = {
+    cal: "macroSummaryCals",
+    protein: "macroSummaryProtein",
+    carbs: "macroSummaryCarbs",
+    fat: "macroSummaryFat",
+  };
+  const barMap = {
+    cal: "calsBar",
+    protein: "proteinBar",
+    carbs: "carbBar",
+    fat: "fatBar",
+  };
+  Object.entries(summaryMap).forEach(([type, summaryId]) => {
+    const entry = data[type];
+    if (!entry) return;
+    const target = Number(entry.target) || 0;
+    const value = Number(entry.value) || 0;
+    const percent = target > 0 ? (value / target) * 100 : 0;
+    const color = getMacroProgressColor(percent);
+    const summaryEl = document.getElementById(summaryId);
+    if (summaryEl) {
+      if (type === "cal" && Number.isFinite(netCals)) {
+        summaryEl.textContent = `${value} / ${Math.round(target)} ${entry.unit} (${Math.round(netCals)} net)`;
+      } else {
+        summaryEl.textContent = `${value} / ${Math.round(target)} ${entry.unit}`;
+      }
+    }
+    const row = document.querySelector(`.macro-summary-row[data-macro="${type}"]`);
+    if (row) {
+      row.style.borderLeft = `6px solid ${color}`;
+      row.style.backgroundColor = `${color}1A`;
+    }
+    const bar = document.getElementById(barMap[type]);
+    if (bar) {
+      bar.style.accentColor = color;
+    }
+  });
 }
 
 function updateMacroUI() {
@@ -3470,6 +3548,15 @@ function updateMacroUI() {
 
   // Update textual summary (optional)
   document.getElementById("macroTotalCals").textContent = `${totalCals} / ${macroTargetCalories} kcal`;
+  updateMacroSummary(
+    {
+      cal: { value: totalCals, target: macroTargetCalories, unit: "kcal" },
+      protein: { value: totalProtein, target: macroTargetProtein, unit: "g" },
+      carbs: { value: totalCarbs, target: macroTargetCarbs, unit: "g" },
+      fat: { value: totalFats, target: macroTargetFat, unit: "g" },
+    },
+    { netCals }
+  );
 }
 
 
@@ -5299,9 +5386,45 @@ function showHistoryMiniTab(tab) {
       calculateMacroTargets(preset.goal, preset.rate);
     };
 
-    if (hasRequiredMacroInputs(savedMacroInputs)) {
-      applyMacroInputsToForm(savedMacroInputs);
-    }
+    applyMacroInputsToForm(savedMacroInputs);
+
+    const persistMacroInputsFromForm = () => {
+      const weightInput = document.getElementById("macroWeight");
+      const heightInput = document.getElementById("macroHeight");
+      const heightUnit = document.getElementById("heightUnit");
+      const ageInput = document.getElementById("macroAge");
+      const sexInput = document.getElementById("macroSex");
+      const bodyFatInput = document.getElementById("bodyFat");
+      const activityInput = document.getElementById("macroActivity");
+      const weightLb = parseFloat(weightInput?.value);
+      const heightRaw = parseFloat(heightInput?.value);
+      const unit = heightUnit?.value || "in";
+      const heightCm = Number.isFinite(heightRaw)
+        ? unit === "cm"
+          ? heightRaw
+          : heightRaw * 2.54
+        : null;
+      const weightKg = Number.isFinite(weightLb) ? weightLb * 0.453592 : null;
+      const ageYears = parseInt(ageInput?.value, 10);
+      const bodyFatPercentRaw = parseFloat(bodyFatInput?.value);
+      const activityFactor = parseFloat(activityInput?.value);
+      savedMacroInputs = {
+        weightKg: Number.isFinite(weightKg) ? weightKg : null,
+        heightCm: Number.isFinite(heightCm) ? heightCm : null,
+        ageYears: Number.isFinite(ageYears) ? ageYears : null,
+        sex: sexInput?.value || "male",
+        bodyFatPercent: Number.isFinite(bodyFatPercentRaw) ? bodyFatPercentRaw : null,
+        activityFactor: Number.isFinite(activityFactor) ? activityFactor : null,
+      };
+      localStorage.setItem(macroInputsKey, JSON.stringify(savedMacroInputs));
+    };
+
+    ["macroWeight", "macroHeight", "heightUnit", "macroAge", "macroSex", "bodyFat", "macroActivity"].forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) {
+        input.addEventListener("change", persistMacroInputsFromForm);
+      }
+    });
 
     if (macroPresetSelect) {
       macroPresetSelect.addEventListener("change", () => {
