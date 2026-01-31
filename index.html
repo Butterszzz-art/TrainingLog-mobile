@@ -1166,6 +1166,10 @@ let activeTab = null;
 let airtableToken = '';
 let airtableBaseId = '';
 
+function setCurrentUser(user) {
+  currentUser = user && typeof user === 'object' ? user.username : user;
+}
+
 function getDefaultServerUrl() {
   if (window.TrainingLogConfig && window.TrainingLogConfig.DEFAULT_SERVER_URL) {
     return window.TrainingLogConfig.DEFAULT_SERVER_URL;
@@ -1366,7 +1370,7 @@ async function startLogin() {
     }
 
     if (result) {
-      currentUser = username;
+      setCurrentUser(username);
       localStorage.setItem("fitnessAppUser", username);
 
       document.getElementById("userDisplay").textContent = username;
@@ -1402,7 +1406,7 @@ async function startLogin() {
   }
 
 if (savedUser) {
-  currentUser = savedUser;
+  setCurrentUser(savedUser);
   renderMacroTargets();  // ✅ Restore progress bar + sliders
 }
 
@@ -2438,6 +2442,9 @@ function setTemplateLoadMessage(message) {
 }
 
 async function fetchTemplates(username) {
+  if (!airtableBaseId || !airtableToken) {
+    await fetchAirtableConfig();
+  }
   const params = new URLSearchParams({ Username: username });
   params.append('username', username);
   const url = `${window.SERVER_URL}/templates?${params.toString()}`;
@@ -2508,6 +2515,7 @@ function populateTemplateSelect(selectId, templates) {
 async function loadTemplateDropdown(username = currentUser) {
   try {
     const templates = await fetchTemplates(username);
+    console.log('Loaded templates:', templates);
     // Populate the resistance template dropdown; CrossFit templates use a separate select
     populateTemplateSelect('resistanceTemplateSelect', templates);
   } catch (err) {
@@ -4992,7 +5000,7 @@ function renderLogHistory(logs) {
   const fit = document.getElementById("pocketFitContainer");
 
   if (savedUser) {
-    currentUser = savedUser;
+    setCurrentUser(savedUser);
     document.getElementById("userDisplay").textContent = savedUser;
     loginEl.style.display = "none";
     openSection('pocketFit');
