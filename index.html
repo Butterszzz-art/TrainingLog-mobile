@@ -844,6 +844,8 @@
 
 <div id="macroTab" class="tab-content" style="position: relative; padding: 20px;">
 
+  <!-- Macros subviews: main + adjust -->
+  <div id="macrosMainView">
   <!-- Main Macros Content -->
   <div id="macrosMainContent" style="max-width: 600px; margin: 0 auto;">
     <div id="macroTargetsPanel" class="panel active">
@@ -915,15 +917,17 @@
 
     <button id="addMealFab" class="fab" onclick="addMacroMeal()">＋</button>
 
-    <button id="adjustMacrosToggle" class="btn" onclick="startAdjustMacros()" style="margin-top:20px;">
+    <button id="adjustMacrosToggle" class="btn" onclick="openAdjustMacros()" style="margin-top:20px;">
       ⚙️ Adjust Macros
     </button>
     </div>
   </div>
+  </div>
 
   <!-- Settings Mini Tab -->
-  <div id="macrosSettingsContent" style="max-width: 1100px; margin: 0 auto; display: none;">
-     <button id="goBackBtn" onclick="closeMacroSettings()" style="margin-bottom: 20px; font-size: 1rem; padding: 8px 16px;">⬅️ Go Back</button>
+  <div id="adjustMacrosView" style="display:none;">
+  <div id="macrosSettingsContent" style="max-width: 1100px; margin: 0 auto;">
+     <button id="backToMacrosBtn" onclick="openMacrosMain()" style="margin-bottom: 20px; font-size: 1rem; padding: 8px 16px; display:none;">⬅️ Go Back</button>
 
     <!-- Custom Calories Input moved here -->
     <div style="margin-bottom: 20px;">
@@ -1013,6 +1017,8 @@
         <button onclick="saveSliderMacros()" class="macro-save-btn">Save Macros</button>
       </div>
     </div>
+  </div>
+  </div>
 
   </div>
 </div>
@@ -4087,7 +4093,7 @@ function startAdjustMacros() {
     if (!fatSlider) console.warn('[Debug] fatSlider element is missing');
     if (!carbSlider) console.warn('[Debug] carbSlider element is missing');
 
-    openMacroSettings();
+    openAdjustMacros();
     console.log('[Debug] Adjust Macros logic completed');
   } catch (err) {
     console.error('[Debug] Error in Adjust Macros handler:', err);
@@ -4095,34 +4101,40 @@ function startAdjustMacros() {
   }
 }
 
-function openMacroSettings() {
-  const main = document.getElementById('macrosMainContent');
-  const settings = document.getElementById('macrosSettingsContent');
-  if (!main || !settings) {
-    console.error('Macros view missing expected containers');
+// --- Macros subview toggles (prevents blank page) ---
+function openAdjustMacros() {
+  console.log('[Debug] openAdjustMacros()');
+  const main = document.getElementById('macrosMainView');
+  const adjust = document.getElementById('adjustMacrosView');
+  const backBtn = document.getElementById('backToMacrosBtn');
+
+  if (!main || !adjust) {
+    console.warn('[Debug] Missing macros subview containers. Showing main view as fallback.');
+    if (main) main.style.display = 'block';
     return;
   }
-  // Hide the main macros content and reveal the settings view
+
   main.style.display = 'none';
-  settings.style.display = 'block';
+  adjust.style.display = 'block';
+  if (backBtn) backBtn.style.display = 'inline-block';
 }
 
-function closeMacroSettings() {
-  const main = document.getElementById('macrosMainContent');
-  const settings = document.getElementById('macrosSettingsContent');
-  if (!main || !settings) {
-    console.error('Macros view missing expected containers');
-    return;
-  }
-  // Return to the main macros view
-  settings.style.display = 'none';
+function openMacrosMain() {
+  console.log('[Debug] openMacrosMain()');
+  const main = document.getElementById('macrosMainView');
+  const adjust = document.getElementById('adjustMacrosView');
+  const backBtn = document.getElementById('backToMacrosBtn');
+
+  if (!main || !adjust) return;
+  adjust.style.display = 'none';
   main.style.display = 'block';
+  if (backBtn) backBtn.style.display = 'none';
 }
 
 // expose helpers for inline handlers
 window.startAdjustMacros = startAdjustMacros;
-window.openMacroSettings = openMacroSettings;
-window.closeMacroSettings = closeMacroSettings;
+window.openAdjustMacros = openAdjustMacros;
+window.openMacrosMain = openMacrosMain;
 
 function toggleMacroCalcForm() {
   const form = document.getElementById('macroCalcForm');
