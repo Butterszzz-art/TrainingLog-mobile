@@ -1410,7 +1410,8 @@ async function startLogin() {
       if (typeof syncLocalHistoryFromWorkouts === 'function') {
         syncLocalHistoryFromWorkouts();
       }
-      renderMacroTargets();
+      const fetchedTargets = await fetchUserMacroTargets(username);
+      renderMacroTargets({ useFallback: !fetchedTargets });
       renderWeights();
       renderCardio();
       renderCrossfitWorkouts();
@@ -1439,8 +1440,6 @@ if (savedUser) {
   setCurrentUser(savedUser);
   renderMacroTargets();  // ✅ Restore progress bar + sliders
 }
-
-await fetchUserMacroTargets(currentUser); // define this function below
   
 }
   
@@ -1521,28 +1520,50 @@ function showTab(tabName) {
 
 
   
+function loadMacroTargetsFromLocal() {
+  const raw = localStorage.getItem('macroTargets');
+  if (raw) {
+    return JSON.parse(raw);
+  }
+  return null;
+}
+
 async function fetchUserMacroTargets(username) {
-  // Ensure Airtable credentials are loaded
-  if (!airtableBaseId || !airtableToken) {
-    await fetchAirtableConfig();
+  if (!username) {
+    return false;
   }
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${MacroTargetsTableName}?filterByFormula={Username}='${encodeURIComponent(username)}'`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${airtableToken}` }
-  });
-  const data = await response.json();
+  try {
+    // Ensure Airtable credentials are loaded
+    if (!airtableBaseId || !airtableToken) {
+      await fetchAirtableConfig();
+    }
+    const url = `https://api.airtable.com/v0/${airtableBaseId}/${MacroTargetsTableName}` +
+      `?filterByFormula={Username}='${encodeURIComponent(username)}'` +
+      `&sort[0][field]=CreatedAt&sort[0][direction]=desc` +
+      `&maxRecords=1`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${airtableToken}` }
+    });
+    const data = await response.json();
 
-  if (!Array.isArray(data.records) || data.records.length === 0) {
-    throw new Error('No macro targets found for this user');
+    if (!Array.isArray(data.records) || data.records.length === 0) {
+      throw new Error('No macro targets found for this user');
+    }
+
+    const record = data.records[0];
+    const fields = record.fields;
+
+    // ✅ Update local UI display bars
+    saveMacroTargetsToTop(fields);
+
+    // ✅ Store locally so they persist on refresh
+    localStorage.setItem('macroTargets', JSON.stringify(fields));
+    localStorage.setItem(`macroTargets_${username}`, JSON.stringify(fields));
+    return true;
+  } catch (error) {
+    console.warn('Unable to fetch macro targets from Airtable', error);
+    return false;
   }
-
-  const fields = data.records[0].fields;
-
-  // ✅ Update local UI display bars
-  saveMacroTargetsToTop(fields);
-
-  // ✅ Store locally so they persist on refresh
-  localStorage.setItem(`macroTargets_${username}`, JSON.stringify(fields));
 }
 
 
@@ -3419,8 +3440,15 @@ function adjustMacros(changedId) {
 
 
   
-function renderMacroTargets() {
-  const saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`));
+function renderMacroTargets(options = {}) {
+  const { useFallback = false } = options;
+  let saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`));
+  if (!saved && useFallback) {
+    saved = loadMacroTargetsFromLocal();
+    if (saved && currentUser) {
+      localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(saved));
+    }
+  }
   if (!saved) return;
 
   document.getElementById("macroProteinTarget").textContent = saved.protein;
