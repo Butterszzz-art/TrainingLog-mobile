@@ -238,9 +238,18 @@ export function planWeek(meals) {
 export function toggleTargetForm() {
   const main = document.getElementById('macrosMainContent');
   const settings = document.getElementById('macrosSettingsContent');
+  const adjustToggle = document.getElementById('adjustMacrosToggle');
+  if (!main || !settings || !adjustToggle) {
+    const missing = [];
+    if (!main) missing.push('macrosMainContent');
+    if (!settings) missing.push('macrosSettingsContent');
+    if (!adjustToggle) missing.push('adjustMacrosToggle');
+    console.warn(`toggleTargetForm: missing element(s): ${missing.join(', ')}`);
+    return;
+  }
   main.style.display = main.style.display === 'none' ? 'block' : 'none';
   settings.style.display = settings.style.display === 'none' ? 'block' : 'none';
-  document.getElementById('adjustMacrosToggle').textContent =
+  adjustToggle.textContent =
     settings.style.display === 'block' ? '⬅️ Back to Targets' : '⚙️ Adjust Macros';
 }
 
