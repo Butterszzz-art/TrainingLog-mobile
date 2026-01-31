@@ -900,7 +900,7 @@
   </div>
 
   <!-- Settings Mini Tab -->
-  <div id="macrosSettingsContent" style="max-width: 600px; margin: 0 auto; display: none;">
+  <div id="macrosSettingsContent" style="max-width: 1100px; margin: 0 auto; display: none;">
      <button id="goBackBtn" onclick="closeMacroSettings()" style="margin-bottom: 20px; font-size: 1rem; padding: 8px 16px;">⬅️ Go Back</button>
 
     <!-- Custom Calories Input moved here -->
@@ -913,65 +913,82 @@
     
 
     <!-- Adjust Macros -->
-    <div id="adjustMacroSection" style="margin-bottom: 30px;">
-      <h3>Adjust Macros</h3>
-      <label for="macroPreset">Macro Preset</label>
-      <select id="macroPreset" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-        <option value="">-- Choose a preset --</option>
-        <option value="cut-slow">Cut – Slow</option>
-        <option value="cut-moderate">Cut – Moderate</option>
-        <option value="cut-aggressive">Cut – Aggressive</option>
-        <option value="maintain">Maintain</option>
-        <option value="bulk-slow">Bulk – Slow</option>
-        <option value="bulk-moderate">Bulk – Moderate</option>
-        <option value="bulk-aggressive">Bulk – Aggressive</option>
-      </select>
-      <!-- Macro input modal (hidden by default) -->
-      <div id="macroInputModal" class="modal" style="display:none;">
-        <div class="modal-content">
-          <h3>Enter Your Details</h3>
-          <label for="modalWeight">Weight (kg)</label>
-          <input id="modalWeight" type="number" step="0.1" />
-          <label for="modalHeight">Height (cm)</label>
-          <input id="modalHeight" type="number" step="0.1" />
-          <label for="modalAge">Age (years)</label>
-          <input id="modalAge" type="number" step="1" />
-          <label for="modalSex">Sex</label>
-          <select id="modalSex">
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-          <label for="modalBodyFat">Body-Fat % (optional)</label>
-          <input id="modalBodyFat" type="number" step="0.1" />
-          <label for="modalActivity">Activity Level</label>
-          <select id="modalActivity">
-            <option value="1.2">Sedentary</option>
-            <option value="1.375">Lightly Active</option>
-            <option value="1.55">Moderately Active</option>
-            <option value="1.725">Very Active</option>
-            <option value="1.9">Athlete</option>
-          </select>
-          <div class="modal-actions">
-            <button id="macroModalOk">OK</button>
-            <button id="macroModalCancel" type="button">Cancel</button>
+    <div id="adjustMacroSection" class="adjust-macros grid" style="margin-bottom: 30px;">
+      <div class="macro-card">
+        <h3>Macro Preset</h3>
+        <label for="macroPreset">Preset</label>
+        <select id="macroPreset">
+          <option value="">-- Choose a preset --</option>
+          <option value="cut-slow">Cut – Slow</option>
+          <option value="cut-moderate">Cut – Moderate</option>
+          <option value="cut-aggressive">Cut – Aggressive</option>
+          <option value="maintain">Maintain</option>
+          <option value="bulk-slow">Bulk – Slow</option>
+          <option value="bulk-moderate">Bulk – Moderate</option>
+          <option value="bulk-aggressive">Bulk – Aggressive</option>
+        </select>
+        <p class="macro-helper">Choose a preset to auto-calculate targets. We'll prompt for your details if needed.</p>
+      </div>
+
+      <div class="macro-card">
+        <h3>Personal Details</h3>
+        <p class="macro-helper">Used for calorie and macro calculations.</p>
+        <button type="button" class="btn macro-edit-btn" onclick="document.getElementById('macroInputModal').style.display='flex'">
+          Edit personal details
+        </button>
+        <p class="macro-stats">FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
+        <!-- Macro input modal (hidden by default) -->
+        <div id="macroInputModal" class="modal" style="display:none;">
+          <div class="modal-content">
+            <h3>Enter Your Details</h3>
+            <label for="modalWeight">Weight (kg)</label>
+            <input id="modalWeight" type="number" step="0.1" />
+            <label for="modalHeight">Height (cm)</label>
+            <input id="modalHeight" type="number" step="0.1" />
+            <label for="modalAge">Age (years)</label>
+            <input id="modalAge" type="number" step="1" />
+            <label for="modalSex">Sex</label>
+            <select id="modalSex">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+            <label for="modalBodyFat">Body-Fat % (optional)</label>
+            <input id="modalBodyFat" type="number" step="0.1" />
+            <label for="modalActivity">Activity Level</label>
+            <select id="modalActivity">
+              <option value="1.2">Sedentary</option>
+              <option value="1.375">Lightly Active</option>
+              <option value="1.55">Moderately Active</option>
+              <option value="1.725">Very Active</option>
+              <option value="1.9">Athlete</option>
+            </select>
+            <div class="modal-actions">
+              <button id="macroModalOk">OK</button>
+              <button id="macroModalCancel" type="button">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
-      <p>FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
-      <label>Protein: <span id="proteinVal">0</span> g</label>
-      <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <label>Fat: <span id="fatVal">0</span> g</label>
-      <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <label>Carbs: <span id="carbVal">0</span> g</label>
-      <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" style="width: 100%; margin-bottom: 10px;"><br>
-      <div class="macro-adjustments" style="display:none;">
-        <!-- Legacy adjustments hidden: kept for reference but not displayed -->
-        <label><input type="checkbox" id="adjustVegetarian"> Extra protein (vegetarian/vegan)</label>
-        <label><input type="checkbox" id="adjustLowCarb"> Low-carb phase</label>
-        <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
+
+      <div class="macro-card">
+        <h3>Daily Tracking</h3>
+        <label>Protein: <span id="proteinVal">0</span> g</label>
+        <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')"><br>
+        <label>Fat: <span id="fatVal">0</span> g</label>
+        <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')"><br>
+        <label>Carbs: <span id="carbVal">0</span> g</label>
+        <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')"><br>
+        <details id="advancedOptions" class="macro-advanced">
+          <summary>Advanced</summary>
+          <div class="macro-advanced-body">
+            <label><input type="checkbox" id="adjustVegetarian"> Extra protein (vegetarian/vegan)</label>
+            <label><input type="checkbox" id="adjustLowCarb"> Low-carb phase</label>
+            <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
+          </div>
+        </details>
+        <p class="macro-total">Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
+        <button onclick="saveSliderMacros()" class="macro-save-btn">Save Macros</button>
       </div>
-      <p>Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
-      <button onclick="saveSliderMacros()" style="width: 100%; font-size: 1.1rem; padding: 12px;">Save Macros</button>
     </div>
 
   </div>

@@ -604,3 +604,91 @@ body.theme-dark .set-row {
   padding: 10px;
   font-size: 1rem;
 }
+
+.adjust-macros.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.macro-card {
+  background: #f9f9f9;
+  border: 1px solid #d9d9d9;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.macro-card h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.macro-card label {
+  display: block;
+  font-weight: 600;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+.macro-card select,
+.macro-card input[type="number"],
+.macro-card input[type="range"] {
+  width: 100%;
+}
+
+.macro-card input[type="range"] {
+  margin-bottom: 10px;
+}
+
+.macro-helper {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #4b4b4b;
+}
+
+.macro-stats {
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.macro-edit-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.macro-advanced {
+  margin-top: 12px;
+  border-top: 1px dashed #c9c9c9;
+  padding-top: 10px;
+}
+
+.macro-advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.macro-advanced-body {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.macro-total {
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.macro-save-btn {
+  width: 100%;
+  font-size: 1.05rem;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  #macrosSettingsContent {
+    padding: 0 10px;
+  }
+}
