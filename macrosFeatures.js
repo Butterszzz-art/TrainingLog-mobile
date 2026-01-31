@@ -99,6 +99,96 @@ export function renderSparklines() {
   window.proChart = new Chart(ctx2,{type:'line',data:{labels,datasets:[{data:proteins,borderColor:'#F2994A',fill:false}]},options:{plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
 }
 
+const getWeeklyHistoryKey = () => `weeklyHistory_${window.currentUser || ''}`;
+
+const getTodayString = () => {
+  if (typeof window.getTodayDateString === 'function') {
+    return window.getTodayDateString();
+  }
+  return new Date().toISOString().split('T')[0];
+};
+
+const hasMacroInputs = () => {
+  const weight = parseFloat(document.getElementById("macroWeight")?.value);
+  const height = parseFloat(document.getElementById("macroHeight")?.value);
+  const age = parseFloat(document.getElementById("macroAge")?.value);
+  return Number.isFinite(weight) && Number.isFinite(height) && Number.isFinite(age);
+};
+
+export function updateWeeklyTrend(progressOverride) {
+  if (!window.Chart) return;
+  const canvas = document.getElementById('weeklyTrend');
+  if (!canvas) return;
+  const stored = progressOverride || JSON.parse(localStorage.getItem('dailyMacroProgress') || '{"protein":0,"carbs":0,"fats":0}');
+  const totalCals = (stored.protein || 0) * 4 + (stored.carbs || 0) * 4 + (stored.fats || 0) * 9;
+  const entry = {
+    date: getTodayString(),
+    cal: totalCals,
+    protein: stored.protein || 0,
+    carbs: stored.carbs || 0,
+    fat: stored.fats || 0,
+  };
+
+  const key = getWeeklyHistoryKey();
+  const history = JSON.parse(localStorage.getItem(key) || '[]');
+  const filtered = history.filter(item => item.date !== entry.date).filter(item => {
+    const diff = (new Date(entry.date) - new Date(item.date)) / (1000 * 60 * 60 * 24);
+    return diff <= 6;
+  });
+  filtered.push(entry);
+  filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+  localStorage.setItem(key, JSON.stringify(filtered));
+
+  const labels = filtered.map(item => item.date);
+  const dataCal = filtered.map(item => item.cal);
+  const ctx = canvas.getContext('2d');
+  if (window.weeklyChart) window.weeklyChart.destroy();
+  window.weeklyChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Calories', data: dataCal, borderColor: '#03a9f4', fill: false },
+      ],
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { x: { display: false }, y: { display: false } },
+    },
+  });
+}
+
+const applyDayPreset = (isTraining) => {
+  const presetKey = isTraining
+    ? (localStorage.getItem('trainingPreset') || 'bulk-moderate')
+    : (localStorage.getItem('restPreset') || 'maintain');
+  const preset = window.presetMap?.[presetKey];
+  if (!preset) return;
+  const presetSelect = document.getElementById('macroPreset');
+  if (presetSelect) presetSelect.value = presetKey;
+  if (hasMacroInputs() && typeof window.calculateMacroTargets === 'function') {
+    window.calculateMacroTargets(preset.goal, preset.rate);
+  }
+};
+
+const initTrainingToggle = () => {
+  const toggle = document.getElementById('trainingDayToggle');
+  if (!toggle) return;
+  const savedType = localStorage.getItem('macroDayType');
+  if (savedType) {
+    toggle.checked = savedType === 'training';
+  } else {
+    toggle.checked = true;
+    localStorage.setItem('macroDayType', 'training');
+  }
+  applyDayPreset(toggle.checked);
+  toggle.addEventListener('change', (e) => {
+    const isTraining = e.target.checked;
+    localStorage.setItem('macroDayType', isTraining ? 'training' : 'rest');
+    applyDayPreset(isTraining);
+  });
+};
+
 export function renderHeatmap() {
   const container = document.getElementById('heatmap');
   if (!container) return;
@@ -165,4 +255,17 @@ if (typeof window !== 'undefined') {
   window.updateOfflineBadge = updateOfflineBadge;
   window.renderSparklines = renderSparklines;
   window.renderHeatmap = renderHeatmap;
+  window.updateWeeklyTrend = updateWeeklyTrend;
+}
+
+if (typeof window !== 'undefined') {
+  const init = () => {
+    updateWeeklyTrend();
+    initTrainingToggle();
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 }
