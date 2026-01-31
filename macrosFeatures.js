@@ -91,8 +91,14 @@ export function renderSparklines() {
   const labels = history.map(h => h.date);
   const cals = history.map(h => (h.totals.protein*4)+(h.totals.carbs*4)+(h.totals.fats*9));
   const proteins = history.map(h => h.totals.protein);
-  const ctx1 = document.getElementById('calSpark').getContext('2d');
-  const ctx2 = document.getElementById('proteinSpark').getContext('2d');
+  const calCanvas = document.getElementById('calSpark');
+  const proteinCanvas = document.getElementById('proteinSpark');
+  if (!calCanvas || !proteinCanvas) {
+    console.warn('Sparklines skipped: missing calSpark or proteinSpark canvas.');
+    return;
+  }
+  const ctx1 = calCanvas.getContext('2d');
+  const ctx2 = proteinCanvas.getContext('2d');
   if (window.calChart) window.calChart.destroy();
   if (window.proChart) window.proChart.destroy();
   window.calChart = new Chart(ctx1,{type:'line',data:{labels,datasets:[{data:cals,borderColor:'#2F80ED',fill:false}]},options:{plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
