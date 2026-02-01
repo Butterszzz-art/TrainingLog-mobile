@@ -9,6 +9,50 @@
   display: none !important;
 }
 
+/* Macros sub-tabs (top buttons) */
+.macros-subtabs {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 18px 0 18px;
+}
+
+.macros-subtab {
+  background: #fff;
+  border: 3px solid #111;
+  border-radius: 18px;
+  padding: 18px 26px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 180px;
+  text-align: center;
+}
+
+.macros-subtab.active {
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.macros-subview {
+  padding: 14px 18px 18px 18px;
+}
+
+.macros-subview.is-hidden {
+  display: none !important;
+}
+
+@media (max-width: 680px) {
+  .macros-subtabs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .macros-subtab {
+    min-width: unset;
+    width: 100%;
+  }
+}
+
 .card {
   background: var(--card-bg);
   padding: 12px;
