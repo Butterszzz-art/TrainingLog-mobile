@@ -13,7 +13,10 @@ function normalizeExercise(exercise) {
 function normalizeLog(log) {
   const date = log?.date || log?.performedAt || log?.createdAt || new Date().toISOString();
   const exercises = Array.isArray(log?.exercises) ? log.exercises.map(normalizeExercise) : [];
-  return { date, exercises };
+  const title = log?.title || log?.name || log?.workoutTitle || null;
+  const userId = log?.userId || log?.username || log?.user || null;
+  const id = log?.id || null;
+  return { date, exercises, title, userId, id };
 }
 
 function readExistingLogs() {
@@ -40,7 +43,13 @@ function readExistingLogs() {
                   ? set.weightsArray.map(n => Number(n) || 0)
                   : [Number(set?.weight ?? set?.weightsArray?.[0] ?? 0) || 0],
               }));
-              logs.push({ date: item.date, exercises });
+              logs.push({
+                date: item.date,
+                exercises,
+                title: item?.name || item?.title || null,
+                userId: item?.userId || item?.username || null,
+                id: item?.id || null
+              });
             }
           });
         }
