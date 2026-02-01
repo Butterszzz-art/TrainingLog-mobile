@@ -2221,6 +2221,75 @@ function normalizeEntry(entry) {
   return mutated;
 }
 
+function getCurrentHistoryUserId() {
+  return currentUser || localStorage.getItem('Username') || localStorage.getItem('username') || null;
+}
+
+function loadResistanceHistoryForUser(userId) {
+  if (typeof loadLogsFromLocalStorage !== 'function') return [];
+  const logs = loadLogsFromLocalStorage();
+  return logs.filter(log => !log?.userId || !userId || log.userId === userId);
+}
+
+function getLastExerciseHistory(exerciseName, userId) {
+  if (!exerciseName) return null;
+  const history = loadResistanceHistoryForUser(userId)
+    .slice()
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  const normalizedName = exerciseName.toLowerCase();
+  for (const log of history) {
+    const exercise = (log.exercises || []).find(ex => (ex.name || '').toLowerCase() === normalizedName);
+    if (exercise) {
+      return { log, exercise };
+    }
+  }
+  return null;
+}
+
+function createLastTimeCard(exerciseName) {
+  const userId = getCurrentHistoryUserId();
+  const last = getLastExerciseHistory(exerciseName, userId);
+  if (!last) return null;
+
+  const card = document.createElement('div');
+  card.className = 'last-time-card';
+
+  const title = document.createElement('div');
+  title.className = 'last-time-title';
+  title.textContent = 'Last time';
+  card.appendChild(title);
+
+  const meta = document.createElement('div');
+  meta.className = 'last-time-meta';
+  const dateLabel = last.log?.date ? new Date(last.log.date).toLocaleDateString() : 'Unknown date';
+  const workoutTitle = last.log?.title || last.log?.name || 'Workout';
+  meta.textContent = `${dateLabel} • ${workoutTitle}`;
+  card.appendChild(meta);
+
+  const setsRow = document.createElement('div');
+  setsRow.className = 'last-time-sets';
+  const reps = Array.isArray(last.exercise?.repsArray) ? last.exercise.repsArray : [];
+  const weights = Array.isArray(last.exercise?.weightsArray) ? last.exercise.weightsArray : [];
+  const setCount = Math.max(reps.length, weights.length);
+  if (!setCount) {
+    const empty = document.createElement('span');
+    empty.textContent = 'No sets recorded.';
+    setsRow.appendChild(empty);
+  } else {
+    for (let i = 0; i < setCount; i += 1) {
+      const chip = document.createElement('span');
+      chip.className = 'last-time-chip';
+      const rep = reps[i] ?? '-';
+      const weight = weights[i] ?? '-';
+      chip.textContent = `${weight} × ${rep}`;
+      setsRow.appendChild(chip);
+    }
+  }
+
+  card.appendChild(setsRow);
+  return card;
+}
+
 function createExerciseCard(workoutIndex, entryIndex, entry) {
   const card = document.createElement('div');
   card.className = 'exercise-card';
@@ -2246,6 +2315,11 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   header.appendChild(headerMenuButton);
 
   card.appendChild(header);
+
+  const lastTimeCard = createLastTimeCard(entry.exercise || 'Exercise');
+  if (lastTimeCard) {
+    card.appendChild(lastTimeCard);
+  }
 
   const goalData = [];
   const hasGoal = typeof entry.goal === 'number' && !Number.isNaN(entry.goal);
@@ -4598,6 +4672,8 @@ function checkMacroReset() {
         if (current && Array.isArray(current.log) && current.log.length) {
           const resistanceLog = {
             date: current.date ? new Date(current.date).toISOString() : new Date(lastReset).toISOString(),
+            title: current.title || current.name || 'Workout',
+            userId: currentUser || localStorage.getItem('Username') || null,
             exercises: current.log.map(entry => ({
               name: entry.exercise || 'Exercise',
               repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
@@ -5031,6 +5107,8 @@ function finishAndClearCurrentLog() {
 
   const resistanceLog = {
     date: current.date ? new Date(current.date).toISOString() : new Date().toISOString(),
+    title: current.title || current.name || 'Workout',
+    userId: currentUser || localStorage.getItem('Username') || null,
     exercises: current.log.map(entry => ({
       name: entry.exercise || 'Exercise',
       repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
