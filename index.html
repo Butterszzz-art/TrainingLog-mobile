@@ -925,9 +925,9 @@
   </div>
 
   <!-- Settings Mini Tab -->
-  <div id="adjustMacrosView" style="display:none;">
+  <div id="adjustMacrosView" class="is-hidden">
   <div id="macrosSettingsContent" style="max-width: 1100px; margin: 0 auto;">
-     <button id="backToMacrosBtn" onclick="openMacrosMain()" style="margin-bottom: 20px; font-size: 1rem; padding: 8px 16px; display:none;">⬅️ Go Back</button>
+     <button id="backToMacrosBtn" class="is-hidden" onclick="openMacrosMain()" style="margin-bottom: 20px; font-size: 1rem; padding: 8px 16px;">⬅️ Go Back</button>
 
     <!-- Custom Calories Input moved here -->
     <div style="margin-bottom: 20px;">
@@ -1549,6 +1549,9 @@ function showTab(tabName) {
         renderSparklines();
         renderHeatmap();
         updateOfflineBadge();
+      }
+      if (typeof openMacrosMain === 'function') {
+        openMacrosMain();
       }
       break;
     case 'logTab':
@@ -4101,34 +4104,42 @@ function startAdjustMacros() {
   }
 }
 
-// --- Macros subview toggles (prevents blank page) ---
-function openAdjustMacros() {
-  console.log('[Debug] openAdjustMacros()');
-  const main = document.getElementById('macrosMainView');
-  const adjust = document.getElementById('adjustMacrosView');
-  const backBtn = document.getElementById('backToMacrosBtn');
+// --- Macros subview toggles (scoped to macros tab) ---
+function getMacrosSubviews() {
+  const root = document.getElementById('macroTab');
+  return {
+    root,
+    main: root ? root.querySelector('#macrosMainView') : document.getElementById('macrosMainView'),
+    adjust: root ? root.querySelector('#adjustMacrosView') : document.getElementById('adjustMacrosView'),
+    backBtn: root ? root.querySelector('#backToMacrosBtn') : document.getElementById('backToMacrosBtn')
+  };
+}
 
-  if (!main || !adjust) {
-    console.warn('[Debug] Missing macros subview containers. Showing main view as fallback.');
-    if (main) main.style.display = 'block';
+function setMacrosSubview(view) {
+  const { main, adjust, backBtn } = getMacrosSubviews();
+  if (!main) return;
+
+  if (view === 'adjust' && !adjust) {
+    console.warn('[macros] adjust view missing; reverting to main view');
+    main.classList.remove('is-hidden');
+    if (backBtn) backBtn.classList.add('is-hidden');
     return;
   }
 
-  main.style.display = 'none';
-  adjust.style.display = 'block';
-  if (backBtn) backBtn.style.display = 'inline-block';
+  const showAdjust = view === 'adjust';
+  main.classList.toggle('is-hidden', showAdjust);
+  if (adjust) adjust.classList.toggle('is-hidden', !showAdjust);
+  if (backBtn) backBtn.classList.toggle('is-hidden', !showAdjust);
+}
+
+function openAdjustMacros() {
+  console.log('[Debug] openAdjustMacros()');
+  setMacrosSubview('adjust');
 }
 
 function openMacrosMain() {
   console.log('[Debug] openMacrosMain()');
-  const main = document.getElementById('macrosMainView');
-  const adjust = document.getElementById('adjustMacrosView');
-  const backBtn = document.getElementById('backToMacrosBtn');
-
-  if (!main || !adjust) return;
-  adjust.style.display = 'none';
-  main.style.display = 'block';
-  if (backBtn) backBtn.style.display = 'none';
+  setMacrosSubview('main');
 }
 
 // expose helpers for inline handlers

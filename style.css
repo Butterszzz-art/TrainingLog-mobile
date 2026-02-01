@@ -5,6 +5,10 @@
   font-size: 1rem;
 }
 
+.is-hidden {
+  display: none !important;
+}
+
 .card {
   background: var(--card-bg);
   padding: 12px;
