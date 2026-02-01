@@ -844,203 +844,190 @@
 
 <div id="macroTab" class="tab-content" style="position: relative; padding: 20px;">
   <div id="macrosTab">
-    <!-- Macros subviews: main + adjust -->
-    <div id="macrosMainView">
-    <!-- Main Macros Content -->
-    <div id="macrosMainContent" style="max-width: 600px; margin: 0 auto;">
-      <div id="macroTargetsPanel" class="panel active">
-    <div id="targetsCard" class="card sticky">
-      <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;">🕒 Offline</span></h2>
-      <p style="font-size:1.1rem;">Energy: <span id="macroCalsProgress">0</span> / <span id="macroCalsTarget">0</span> kcal (<span id="macroCalsNet">0</span> net)</p>
-      <progress id="calsBar" value="0" max="100" style="width:100%;height:20px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="subtractMacro('cal')">–</button><button onclick="addMacro('cal')">+</button></div>
-
-      <p style="font-size:1rem;">Protein: <span id="macroProteinProgress">0</span> / <span id="macroProteinTarget">0</span> g</p>
-      <progress id="proteinBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaProtein" type="number" value="10"><button onclick="subtractMacro('protein')">–</button><button onclick="addMacro('protein')">+</button></div>
-
-      <p style="font-size:1rem;">Carbs: <span id="macroCarbsProgress">0</span> / <span id="macroCarbsTarget">0</span> g</p>
-      <progress id="carbBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaCarbs" type="number" value="10"><button onclick="subtractMacro('carbs')">–</button><button onclick="addMacro('carbs')">+</button></div>
-
-      <p style="font-size:1rem;">Fat: <span id="macroFatProgress">0</span> / <span id="macroFatTarget">0</span> g</p>
-      <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-      <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="subtractMacro('fat')">–</button><button onclick="addMacro('fat')">+</button></div>
-
-      <div id="sparkContainer" style="display:flex;justify-content:space-around;margin-top:8px;">
-        <canvas id="calSpark" width="120" height="40"></canvas>
-        <canvas id="proteinSpark" width="120" height="40"></canvas>
-      </div>
-      <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
-      <div style="margin-top:8px;">
-        <label><input type="checkbox" id="trainingDayToggle"> Training Day</label>
-      <div id="macroDailySummary" style="margin-top:12px;">
-        <h3 style="font-size:1.1rem;margin-bottom:6px;">Daily Summary</h3>
-        <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
-          <span>Calories</span>
-          <span id="macroSummaryCals">0 / 0 kcal</span>
-        </div>
-        <div class="macro-summary-row" data-macro="protein" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
-          <span>Protein</span>
-          <span id="macroSummaryProtein">0 / 0 g</span>
-        </div>
-        <div class="macro-summary-row" data-macro="carbs" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
-          <span>Carbs</span>
-          <span id="macroSummaryCarbs">0 / 0 g</span>
-        </div>
-        <div class="macro-summary-row" data-macro="fat" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:#f5f5f5;">
-          <span>Fat</span>
-          <span id="macroSummaryFat">0 / 0 g</span>
-        </div>
-      </div>
+    <div id="macrosSubTabs" class="macros-subtabs">
+      <button type="button" class="macros-subtab active" data-macro-subtab="targets">Targets</button>
+      <button type="button" class="macros-subtab" data-macro-subtab="adjust">Adjust Macros</button>
+      <button type="button" class="macros-subtab" data-macro-subtab="personal">Personal Details</button>
     </div>
 
-    <div id="heatmap" class="heatmap"></div>
-    </div>
+    <div id="macrosTargetsView" class="macros-subview" data-macro-view="targets">
+      <div id="macrosMainContent" style="max-width: 600px; margin: 0 auto;">
+        <div id="macroTargetsPanel" class="panel active">
+          <div id="targetsCard" class="card sticky">
+            <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;">🕒 Offline</span></h2>
+            <p style="font-size:1.1rem;">Energy: <span id="macroCalsProgress">0</span> / <span id="macroCalsTarget">0</span> kcal (<span id="macroCalsNet">0</span> net)</p>
+            <progress id="calsBar" value="0" max="100" style="width:100%;height:20px;margin-bottom:6px;"></progress>
+            <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="subtractMacro('cal')">–</button><button onclick="addMacro('cal')">+</button></div>
 
-    <div id="macroMealsPanel" class="panel">
-    <details id="mealsCard" class="card" style="margin-top:10px;">
-      <summary>Meals <button onclick="scanBarcode()" class="icon-btn">📷</button></summary>
-      <div style="margin-top:10px;">
-        <div style="margin-bottom:10px;">
-          <select id="favSelect" onchange="logFavorite(this.value)">
-            <option value="">Favorites</option>
-          </select>
-        </div>
-        <div style="display:flex;margin-bottom:10px;">
-          <input id="recipeUrl" placeholder="Import recipe URL" style="flex:1;padding:6px;"/>
-          <button onclick="fetchRecipe()" style="margin-left:6px;">Fetch</button>
-        </div>
-        <div id="macroMealContainer"></div>
-      </div>
-    </details>
+            <p style="font-size:1rem;">Protein: <span id="macroProteinProgress">0</span> / <span id="macroProteinTarget">0</span> g</p>
+            <progress id="proteinBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
+            <div class="quick-add"><input id="qaProtein" type="number" value="10"><button onclick="subtractMacro('protein')">–</button><button onclick="addMacro('protein')">+</button></div>
 
-    <button id="addMealFab" class="fab" onclick="addMacroMeal()">＋</button>
+            <p style="font-size:1rem;">Carbs: <span id="macroCarbsProgress">0</span> / <span id="macroCarbsTarget">0</span> g</p>
+            <progress id="carbBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
+            <div class="quick-add"><input id="qaCarbs" type="number" value="10"><button onclick="subtractMacro('carbs')">–</button><button onclick="addMacro('carbs')">+</button></div>
 
-      <button id="adjustMacrosToggle" class="btn" data-action="open-adjust-macros" style="margin-top:20px;">
-        ⚙️ Adjust Macros
-      </button>
-      </div>
-    </div>
-    </div>
+            <p style="font-size:1rem;">Fat: <span id="macroFatProgress">0</span> / <span id="macroFatTarget">0</span> g</p>
+            <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
+            <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="subtractMacro('fat')">–</button><button onclick="addMacro('fat')">+</button></div>
 
-    <!-- Settings Mini Tab -->
-    <div id="adjustMacrosView" class="is-hidden">
-    <div id="macrosSettingsContent" style="max-width: 1100px; margin: 0 auto;">
-      <div class="macros-adjust-header">
-        <button id="backToMacrosBtn" class="btn" data-action="back-to-macros-main" type="button">⬅️ Go Back</button>
-        <h2 class="macros-adjust-title">Adjust Macros</h2>
-      </div>
-
-      <div class="macros-mini-tabs" role="tablist" aria-label="Adjust Macros Sections">
-        <button type="button" class="macros-mini-tab is-active" role="tab" aria-selected="true" aria-controls="adjustPanel" id="adjustTabBtn" data-subtab="adjust">
-          Adjust
-        </button>
-        <button type="button" class="macros-mini-tab" role="tab" aria-selected="false" aria-controls="setupPanel" id="setupTabBtn" data-subtab="setup">
-          Setup
-        </button>
-      </div>
-
-      <div class="macros-mini-panels">
-        <div id="adjustPanel" class="macros-mini-panel" role="tabpanel" aria-labelledby="adjustTabBtn" data-subtab-panel="adjust">
-          <!-- Adjust Macros -->
-          <div id="adjustMacroSection" class="adjust-macros grid" style="margin-bottom: 30px;">
-            <div class="macro-card">
-              <h3>Daily Tracking</h3>
-              <label>Protein: <span id="proteinVal">0</span> g</label>
-              <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" title="Default: 2 g/kg when cutting, 1.8 g/kg when maintaining/bulking"><br>
-              <label>Fat: <span id="fatVal">0</span> g</label>
-              <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" title="Default: 25 % of calories when cutting, 30 % when maintaining/bulking; min 0.6 g/kg"><br>
-              <label>Carbs: <span id="carbVal">0</span> g</label>
-              <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" title="Carbs get the remaining calories after protein and fat"><br>
-              <textarea id="coachNotes" rows="3" placeholder="Trainer notes (optional)"></textarea>
-              <details id="advancedOptions" class="macro-advanced">
-                <summary>Advanced</summary>
-                <div class="macro-advanced-body">
-                  <label><input type="checkbox" id="adjustVegetarian"> Extra protein (vegetarian/vegan)</label>
-                  <label><input type="checkbox" id="adjustLowCarb"> Low-carb phase</label>
-                  <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
-                </div>
-              </details>
-              <p class="macro-total">Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
-              <button onclick="saveSliderMacros()" class="macro-save-btn">Save Macros</button>
+            <div id="sparkContainer" style="display:flex;justify-content:space-around;margin-top:8px;">
+              <canvas id="calSpark" width="120" height="40"></canvas>
+              <canvas id="proteinSpark" width="120" height="40"></canvas>
             </div>
+            <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
+            <div style="margin-top:8px;">
+              <label><input type="checkbox" id="trainingDayToggle"> Training Day</label>
+              <div id="macroDailySummary" style="margin-top:12px;">
+                <h3 style="font-size:1.1rem;margin-bottom:6px;">Daily Summary</h3>
+                <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+                  <span>Calories</span>
+                  <span id="macroSummaryCals">0 / 0 kcal</span>
+                </div>
+                <div class="macro-summary-row" data-macro="protein" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+                  <span>Protein</span>
+                  <span id="macroSummaryProtein">0 / 0 g</span>
+                </div>
+                <div class="macro-summary-row" data-macro="carbs" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+                  <span>Carbs</span>
+                  <span id="macroSummaryCarbs">0 / 0 g</span>
+                </div>
+                <div class="macro-summary-row" data-macro="fat" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:#f5f5f5;">
+                  <span>Fat</span>
+                  <span id="macroSummaryFat">0 / 0 g</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="heatmap" class="heatmap"></div>
+        </div>
+
+        <div id="macroMealsPanel" class="panel">
+          <details id="mealsCard" class="card" style="margin-top:10px;">
+            <summary>Meals <button onclick="scanBarcode()" class="icon-btn">📷</button></summary>
+            <div style="margin-top:10px;">
+              <div style="margin-bottom:10px;">
+                <select id="favSelect" onchange="logFavorite(this.value)">
+                  <option value="">Favorites</option>
+                </select>
+              </div>
+              <div style="display:flex;margin-bottom:10px;">
+                <input id="recipeUrl" placeholder="Import recipe URL" style="flex:1;padding:6px;"/>
+                <button onclick="fetchRecipe()" style="margin-left:6px;">Fetch</button>
+              </div>
+              <div id="macroMealContainer"></div>
+            </div>
+          </details>
+
+          <button id="addMealFab" class="fab" onclick="addMacroMeal()">＋</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="macrosAdjustView" class="macros-subview is-hidden" data-macro-view="adjust">
+      <div id="macrosSettingsContent" style="max-width: 1100px; margin: 0 auto;">
+        <div class="macros-adjust-header">
+          <h2 class="macros-adjust-title">Adjust Macros</h2>
+        </div>
+
+        <div id="adjustMacroSection" class="adjust-macros grid" style="margin-bottom: 30px;">
+          <div class="macro-card">
+            <h3>Daily Tracking</h3>
+            <label>Protein: <span id="proteinVal">0</span> g</label>
+            <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" title="Default: 2 g/kg when cutting, 1.8 g/kg when maintaining/bulking"><br>
+            <label>Fat: <span id="fatVal">0</span> g</label>
+            <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" title="Default: 25 % of calories when cutting, 30 % when maintaining/bulking; min 0.6 g/kg"><br>
+            <label>Carbs: <span id="carbVal">0</span> g</label>
+            <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" title="Carbs get the remaining calories after protein and fat"><br>
+            <textarea id="coachNotes" rows="3" placeholder="Trainer notes (optional)"></textarea>
+            <details id="advancedOptions" class="macro-advanced">
+              <summary>Advanced</summary>
+              <div class="macro-advanced-body">
+                <label><input type="checkbox" id="adjustVegetarian"> Extra protein (vegetarian/vegan)</label>
+                <label><input type="checkbox" id="adjustLowCarb"> Low-carb phase</label>
+                <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
+              </div>
+            </details>
+            <p class="macro-total">Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
+            <button onclick="saveSliderMacros()" class="macro-save-btn">Save Macros</button>
           </div>
         </div>
 
-        <div id="setupPanel" class="macros-mini-panel is-hidden" role="tabpanel" aria-labelledby="setupTabBtn" data-subtab-panel="setup">
-          <div class="adjust-macros grid" style="margin-bottom: 30px;">
-            <div class="macro-card">
-              <label for="customCalories">Custom Calorie Intake (optional):</label><br>
-              <input id="customCalories" type="number" placeholder="Enter custom calorie target" style="width: 100%; padding: 8px; margin-top: 6px;"/>
-              <button onclick="applyCustomCalories()" style="width: 100%; margin-top: 10px; font-size: 1.1rem; padding: 12px;">Insert Calories</button>
-            </div>
+        <div class="adjust-macros grid" style="margin-bottom: 30px;">
+          <div class="macro-card">
+            <label for="customCalories">Custom Calorie Intake (optional):</label><br>
+            <input id="customCalories" type="number" placeholder="Enter custom calorie target" style="width: 100%; padding: 8px; margin-top: 6px;"/>
+            <button onclick="applyCustomCalories()" style="width: 100%; margin-top: 10px; font-size: 1.1rem; padding: 12px;">Insert Calories</button>
+          </div>
 
-            <div class="macro-card">
-              <h3>Macro Preset</h3>
-              <label for="macroPreset">Preset</label>
-              <select id="macroPreset" title="Choose your goal and rate (e.g. Cut, Bulk).">
-                <option value="">-- Choose a preset --</option>
-                <option value="cut-slow">Cut – Slow</option>
-                <option value="cut-moderate">Cut – Moderate</option>
-                <option value="cut-aggressive">Cut – Aggressive</option>
-                <option value="maintain">Maintain</option>
-                <option value="bulk-slow">Bulk – Slow</option>
-                <option value="bulk-moderate">Bulk – Moderate</option>
-                <option value="bulk-aggressive">Bulk – Aggressive</option>
-              </select>
-              <p class="macro-helper">Choose a preset to auto-calculate targets. We'll prompt for your details if needed.</p>
-            </div>
+          <div class="macro-card">
+            <h3>Macro Preset</h3>
+            <label for="macroPreset">Preset</label>
+            <select id="macroPreset" title="Choose your goal and rate (e.g. Cut, Bulk).">
+              <option value="">-- Choose a preset --</option>
+              <option value="cut-slow">Cut – Slow</option>
+              <option value="cut-moderate">Cut – Moderate</option>
+              <option value="cut-aggressive">Cut – Aggressive</option>
+              <option value="maintain">Maintain</option>
+              <option value="bulk-slow">Bulk – Slow</option>
+              <option value="bulk-moderate">Bulk – Moderate</option>
+              <option value="bulk-aggressive">Bulk – Aggressive</option>
+            </select>
+            <p class="macro-helper">Choose a preset to auto-calculate targets. We'll prompt for your details if needed.</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
-            <div class="macro-card">
-              <h3>Personal Details</h3>
-              <p class="macro-helper">Used for calorie and macro calculations.</p>
-              <button type="button" class="btn macro-edit-btn" onclick="document.getElementById('macroInputModal').style.display='flex'">
-                Edit personal details
-              </button>
-              <p class="macro-stats">FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
-              <!-- Macro input modal (hidden by default) -->
-              <div id="macroInputModal" class="modal" style="display:none;">
-                <div class="modal-content">
-                  <h3>Enter Your Details</h3>
-                  <label for="modalWeight">Weight (kg)</label>
-                  <input id="modalWeight" type="number" step="0.1" />
-                  <label for="modalHeight">Height (cm)</label>
-                  <input id="modalHeight" type="number" step="0.1" />
-                  <label for="modalAge">Age (years)</label>
-                  <input id="modalAge" type="number" step="1" />
-                  <label for="modalSex">Sex</label>
-                  <select id="modalSex">
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                  <label for="modalBodyFat">Body-Fat % (optional)</label>
-                  <input id="modalBodyFat" type="number" step="0.1" />
-                  <label for="modalActivity">Activity Level</label>
-                  <select id="modalActivity">
-                    <option value="1.2">Sedentary</option>
-                    <option value="1.375">Lightly Active</option>
-                    <option value="1.55">Moderately Active</option>
-                    <option value="1.725">Very Active</option>
-                    <option value="1.9">Athlete</option>
-                  </select>
-                  <div class="modal-actions">
-                    <button id="macroModalOk">OK</button>
-                    <button id="macroModalCancel" type="button">Cancel</button>
-                  </div>
+    <div id="macrosPersonalView" class="macros-subview is-hidden" data-macro-view="personal">
+      <div id="macrosPersonalContent" style="max-width: 1100px; margin: 0 auto;">
+        <div class="macros-adjust-header">
+          <h2 class="macros-adjust-title">Personal Details</h2>
+        </div>
+
+        <div class="adjust-macros grid" style="margin-bottom: 30px;">
+          <div class="macro-card">
+            <h3>Personal Details</h3>
+            <p class="macro-helper">Used for calorie and macro calculations.</p>
+            <button type="button" class="btn macro-edit-btn" onclick="document.getElementById('macroInputModal').style.display='flex'">
+              Edit personal details
+            </button>
+            <p class="macro-stats">FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
+            <div id="macroInputModal" class="modal" style="display:none;">
+              <div class="modal-content">
+                <h3>Enter Your Details</h3>
+                <label for="modalWeight">Weight (kg)</label>
+                <input id="modalWeight" type="number" step="0.1" />
+                <label for="modalHeight">Height (cm)</label>
+                <input id="modalHeight" type="number" step="0.1" />
+                <label for="modalAge">Age (years)</label>
+                <input id="modalAge" type="number" step="1" />
+                <label for="modalSex">Sex</label>
+                <select id="modalSex">
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+                <label for="modalBodyFat">Body-Fat % (optional)</label>
+                <input id="modalBodyFat" type="number" step="0.1" />
+                <label for="modalActivity">Activity Level</label>
+                <select id="modalActivity">
+                  <option value="1.2">Sedentary</option>
+                  <option value="1.375">Lightly Active</option>
+                  <option value="1.55">Moderately Active</option>
+                  <option value="1.725">Very Active</option>
+                  <option value="1.9">Athlete</option>
+                </select>
+                <div class="modal-actions">
+                  <button id="macroModalOk">OK</button>
+                  <button id="macroModalCancel" type="button">Cancel</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <div class="macros-adjust-footer">
-        <button type="button" class="btn" data-action="back-to-macros-main">⬅️ Back to Macros</button>
-      </div>
     </div>
-    </div>
-
   </div>
 </div>
 
@@ -1571,7 +1558,9 @@ function showTab(tabName) {
         renderHeatmap();
         updateOfflineBadge();
       }
-      if (typeof openMacrosMain === 'function') {
+      if (typeof showMacroSubTab === 'function') {
+        showMacroSubTab(getSavedMacroSubTab() || 'targets');
+      } else if (typeof openMacrosMain === 'function') {
         openMacrosMain();
       }
       break;
@@ -4117,7 +4106,7 @@ function startAdjustMacros() {
     if (!fatSlider) console.warn('[Debug] fatSlider element is missing');
     if (!carbSlider) console.warn('[Debug] carbSlider element is missing');
 
-    openAdjustMacros();
+    openAdjustMacros('adjust');
     console.log('[Debug] Adjust Macros logic completed');
   } catch (err) {
     console.error('[Debug] Error in Adjust Macros handler:', err);
@@ -4125,109 +4114,76 @@ function startAdjustMacros() {
   }
 }
 
-// --- Macros subview toggles (scoped to macros tab) ---
-function getMacrosSubviews() {
+// --- Macros sub-tab switching (safe: only toggles inside Macros tab) ---
+function getMacrosSubtabState() {
   const root = document.getElementById('macrosTab') || document.getElementById('macroTab');
   return {
     root,
-    main: root ? root.querySelector('#macrosMainView') : document.getElementById('macrosMainView'),
-    adjust: root ? root.querySelector('#adjustMacrosView') : document.getElementById('adjustMacrosView'),
-    backBtns: root ? Array.from(root.querySelectorAll('[data-action="back-to-macros-main"]')) : []
+    tabs: root ? Array.from(root.querySelectorAll('.macros-subtab')) : [],
+    views: root ? Array.from(root.querySelectorAll('.macros-subview')) : []
   };
 }
 
-function setMacrosSubview(view) {
-  const { main, adjust, backBtns } = getMacrosSubviews();
-  if (!main) return;
-
-  if (view === 'adjust' && !adjust) {
-    console.warn('[macros] adjust view missing; reverting to main view');
-    main.classList.remove('is-hidden');
-    backBtns.forEach(btn => btn.classList.add('is-hidden'));
-    return;
+function getSavedMacroSubTab() {
+  try {
+    return localStorage.getItem('macros:lastSubTab');
+  } catch (e) {
+    return null;
   }
-
-  const showAdjust = view === 'adjust';
-  main.classList.toggle('is-hidden', showAdjust);
-  if (adjust) adjust.classList.toggle('is-hidden', !showAdjust);
-  backBtns.forEach(btn => btn.classList.toggle('is-hidden', !showAdjust));
 }
 
-function setMacrosSubtab(root, name) {
-  if (!root) return;
-  const panels = Array.from(root.querySelectorAll('[data-subtab-panel]'));
-  const buttons = Array.from(root.querySelectorAll('[data-subtab]'));
-  if (!panels.length || !buttons.length) return;
+function showMacroSubTab(key) {
+  const { root, tabs, views } = getMacrosSubtabState();
+  if (!root || !views.length) return;
 
-  const targetPanel = panels.find(panel => panel.dataset.subtabPanel === name);
-  const targetBtn = buttons.find(button => button.dataset.subtab === name);
+  const availableKeys = views.map(view => view.dataset.macroView);
+  const fallbackKey = availableKeys.includes('targets') ? 'targets' : availableKeys[0];
+  const targetKey = availableKeys.includes(key) ? key : fallbackKey;
 
-  if (!targetPanel || !targetBtn) {
-    console.warn(`[macros] subtab "${name}" missing; falling back to "adjust"`);
-    if (name !== 'adjust') {
-      setMacrosSubtab(root, 'adjust');
-    }
+  tabs.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.macroSubtab === targetKey);
+  });
+
+  views.forEach(view => {
+    view.classList.toggle('is-hidden', view.dataset.macroView !== targetKey);
+  });
+
+  try {
+    localStorage.setItem('macros:lastSubTab', targetKey);
+  } catch (e) {
+    // ignore storage issues
+  }
+}
+
+function initMacrosSubTabs() {
+  const { root } = getMacrosSubtabState();
+  if (!root) {
+    console.warn('[macros] root not found; skipping sub-tab wiring');
     return;
   }
 
-  buttons.forEach(button => {
-    const isActive = button.dataset.subtab === name;
-    button.classList.toggle('is-active', isActive);
-    button.setAttribute('aria-selected', String(isActive));
-    button.setAttribute('tabindex', isActive ? '0' : '-1');
-  });
+  const wrap = root.querySelector('#macrosSubTabs');
+  if (wrap) {
+    wrap.addEventListener('click', event => {
+      const btn = event.target.closest('.macros-subtab');
+      if (!btn) return;
+      event.preventDefault();
+      showMacroSubTab(btn.dataset.macroSubtab);
+    });
+  }
 
-  panels.forEach(panel => {
-    const isActive = panel.dataset.subtabPanel === name;
-    panel.classList.toggle('is-hidden', !isActive);
-  });
+  showMacroSubTab(getSavedMacroSubTab() || 'targets');
 }
 
 function openAdjustMacros(subtab) {
   console.log('[Debug] openAdjustMacros()');
-  setMacrosSubview('adjust');
-  const { root } = getMacrosSubviews();
-  setMacrosSubtab(root, subtab || 'adjust');
+  const target = subtab === 'personal' ? 'personal' : subtab === 'targets' ? 'targets' : 'adjust';
+  showMacroSubTab(target);
 }
 
 function openMacrosMain() {
   console.log('[Debug] openMacrosMain()');
-  setMacrosSubview('main');
-}
-
-function wireMacrosSubtabs() {
-  const { root } = getMacrosSubviews();
-  if (!root) {
-    console.warn('[macros] root not found; skipping subtab wiring');
-    return;
-  }
-
-  const openAdjustBtn = root.querySelector('[data-action="open-adjust-macros"]');
-  const backBtns = Array.from(root.querySelectorAll('[data-action="back-to-macros-main"]'));
-  const miniTabBtns = Array.from(root.querySelectorAll('[data-subtab]'));
-
-  if (openAdjustBtn) {
-    openAdjustBtn.addEventListener('click', event => {
-      event.preventDefault();
-      openAdjustMacros('adjust');
-    });
-  }
-
-  backBtns.forEach(btn => {
-    btn.addEventListener('click', event => {
-      event.preventDefault();
-      openMacrosMain();
-    });
-  });
-
-  miniTabBtns.forEach(btn => {
-    btn.addEventListener('click', event => {
-      event.preventDefault();
-      openAdjustMacros(btn.dataset.subtab);
-    });
-  });
-
-  setMacrosSubview('main');
+  showMacroSubTab('targets');
 }
 
 // expose helpers for inline handlers
@@ -4256,7 +4212,7 @@ function updateNavForTrainer(isTrainer) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  wireMacrosSubtabs();
+  initMacrosSubTabs();
   const saved = JSON.parse(localStorage.getItem('trainerMode') || 'false');
   const toggle = document.getElementById('trainerModeToggle');
   if (toggle) toggle.checked = saved;
