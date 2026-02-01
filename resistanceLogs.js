@@ -2,6 +2,13 @@
 
 const STORAGE_KEY = 'workoutHistory';
 
+function getCurrentUserId() {
+  if (typeof window !== 'undefined') {
+    return window.currentUser || localStorage.getItem('Username') || null;
+  }
+  return null;
+}
+
 function normalizeExercise(exercise) {
   return {
     name: exercise && exercise.name ? exercise.name : 'Exercise',
@@ -13,6 +20,9 @@ function normalizeExercise(exercise) {
 function normalizeLog(log) {
   const date = log?.date || log?.performedAt || log?.createdAt || new Date().toISOString();
   const exercises = Array.isArray(log?.exercises) ? log.exercises.map(normalizeExercise) : [];
+  const title = log?.title || log?.name || 'Resistance Workout';
+  const userId = log?.userId || log?.user || getCurrentUserId();
+  return { date, exercises, title, userId };
   const title = log?.title || log?.name || log?.workoutTitle || null;
   const userId = log?.userId || log?.username || log?.user || null;
   const id = log?.id || null;
@@ -46,6 +56,8 @@ function readExistingLogs() {
               logs.push({
                 date: item.date,
                 exercises,
+                title: item?.name || 'Resistance Workout',
+                userId: item?.userId || item?.user || getCurrentUserId()
                 title: item?.name || item?.title || null,
                 userId: item?.userId || item?.username || null,
                 id: item?.id || null

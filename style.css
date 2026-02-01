@@ -550,6 +550,11 @@ body.theme-dark .set-row {
   font-size: 0.95rem;
 }
 
+.history-open-btn {
+  margin-top: 8px;
+}
+
+.history-back-btn {
 .history-item-header {
   display: flex;
   align-items: center;
@@ -572,6 +577,26 @@ body.theme-dark .set-row {
 }
 
 .history-detail-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-detail-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+}
+
+.history-detail-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.history-detail-sets {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -598,6 +623,22 @@ body.theme-dark .set-row {
 }
 
 .last-time-card {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+}
+
+.last-time-title {
+  font-weight: 700;
+}
+
+.last-time-meta {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  margin-top: 2px;
   background: var(--card-bg);
   border: 1px dashed var(--border-color);
   border-radius: 10px;
@@ -616,6 +657,7 @@ body.theme-dark .set-row {
 
 .last-time-sets {
   margin-top: 6px;
+  font-size: 0.9rem;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;

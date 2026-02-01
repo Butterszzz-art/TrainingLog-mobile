@@ -221,8 +221,45 @@ export async function loadWorkoutHistory() {
   return items;
 }
 
-export async function renderWorkoutHistory(containerEl = document.getElementById('logHistoryContainer')) {
-  if (!containerEl) return;
+let cachedWorkoutHistory = [];
+
+function formatWorkoutDate(dateValue) {
+  if (!dateValue) return 'Unknown date';
+  const parsed = new Date(dateValue);
+  return Number.isNaN(parsed.getTime()) ? 'Unknown date' : parsed.toLocaleString();
+}
+
+function buildExerciseSummary(exercises) {
+  if (!Array.isArray(exercises) || !exercises.length) return 'No exercises recorded.';
+  const names = exercises.map(ex => ex?.name || 'Exercise').filter(Boolean);
+  if (!names.length) return 'No exercises recorded.';
+  const unique = Array.from(new Set(names));
+  return unique.length > 4 ? `${unique.slice(0, 4).join(', ')} +${unique.length - 4} more` : unique.join(', ');
+}
+
+function renderHistoryList(containerEl) {
+  containerEl.innerHTML = '';
+  const list = document.createElement('ul');
+  list.className = 'history-list';
+
+  cachedWorkoutHistory.forEach((log, index) => {
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    const title = log?.title || 'Resistance Workout';
+    const dateLabel = formatWorkoutDate(log?.date);
+    const summary = buildExerciseSummary(log?.exercises);
+
+    li.innerHTML = `
+      <div class="row">
+        <strong>${title}</strong>
+        <span>${dateLabel}</span>
+      </div>
+      <div class="meta">${summary}</div>
+      <button class="adv-btn primary history-open-btn" data-history-index="${index}">Open</button>
+    `;
+
+    list.appendChild(li);
+  });
 
   const currentUserId = getCurrentUserId();
   const logs = loadLogsFromLocalStorage()
@@ -352,6 +389,70 @@ export async function renderWorkoutHistory(containerEl = document.getElementById
   };
 
   renderList();
+}
+
+function renderHistoryDetail(containerEl, log) {
+  const title = log?.title || 'Resistance Workout';
+  const dateLabel = formatWorkoutDate(log?.date);
+  const exercises = Array.isArray(log?.exercises) ? log.exercises : [];
+
+  containerEl.innerHTML = `
+    <button class="adv-btn history-back-btn" id="historyBackBtn">← Back</button>
+    <h3 style="margin-top:12px;">${title}</h3>
+    <div class="meta">${dateLabel}</div>
+    <div class="history-detail-list">
+      ${exercises.map(ex => {
+        const reps = Array.isArray(ex?.repsArray) ? ex.repsArray : [];
+        const weights = Array.isArray(ex?.weightsArray) ? ex.weightsArray : [];
+        const length = Math.max(reps.length, weights.length);
+        const sets = Array.from({ length }, (_, idx) => {
+          const repValue = reps[idx] ?? 0;
+          const weightValue = weights[idx] ?? 0;
+          return `${weightValue} × ${repValue}`;
+        });
+        return `
+          <div class="history-detail-card">
+            <div class="history-detail-title">${ex?.name || 'Exercise'}</div>
+            <div class="history-detail-sets">${sets.length ? sets.join('<br>') : 'No sets recorded.'}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+export async function renderWorkoutHistory(containerEl = document.getElementById('logHistoryContainer')) {
+  if (!containerEl) return;
+
+  const logs = loadLogsFromLocalStorage().slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  cachedWorkoutHistory = logs;
+
+  if (!logs.length) {
+    containerEl.innerHTML = `
+      <div class="empty">
+        No workouts yet.
+        <div class="hint">Log a workout and it will appear here (local only).</div>
+      </div>`;
+    return;
+  }
+
+  renderHistoryList(containerEl);
+
+  containerEl.onclick = event => {
+    const openButton = event.target.closest('[data-history-index]');
+    if (openButton) {
+      const index = Number(openButton.dataset.historyIndex);
+      const log = cachedWorkoutHistory[index];
+      if (log) {
+        renderHistoryDetail(containerEl, log);
+      }
+      return;
+    }
+
+    if (event.target.id === 'historyBackBtn') {
+      renderHistoryList(containerEl);
+    }
+  };
 }
 
 const historyApi = {
