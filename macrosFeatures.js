@@ -117,6 +117,23 @@ const getTodayString = () => {
 };
 
 const hasMacroInputs = () => {
+  const stored = localStorage.getItem('personalDetails');
+  if (stored) {
+    try {
+      const details = JSON.parse(stored);
+      if (
+        Number.isFinite(details.weightKg) &&
+        Number.isFinite(details.heightCm) &&
+        Number.isFinite(details.ageYears) &&
+        (details.sex === 'male' || details.sex === 'female') &&
+        Number.isFinite(details.activityFactor)
+      ) {
+        return true;
+      }
+    } catch (e) {
+      console.warn('Unable to parse saved personal details', e);
+    }
+  }
   const weight = parseFloat(document.getElementById("macroWeight")?.value);
   const height = parseFloat(document.getElementById("macroHeight")?.value);
   const age = parseFloat(document.getElementById("macroAge")?.value);
