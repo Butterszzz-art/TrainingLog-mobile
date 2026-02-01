@@ -348,6 +348,12 @@ body.theme-dark .set-menu-btn:hover {
   gap: 0.75rem;
 }
 
+.set-row-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .set-row {
   display: flex;
   align-items: center;
@@ -781,4 +787,112 @@ body.theme-dark .set-row {
   #macrosSettingsContent {
     padding: 0 10px;
   }
+}
+
+/* Advanced set logging UI */
+.set-advanced {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fafafa;
+}
+.set-advanced-header {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.adv-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.adv-row.single {
+  grid-template-columns: 1fr;
+}
+.adv-row input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+.adv-btn {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fff;
+  font-size: 12px;
+}
+.adv-btn.primary {
+  border-color: #1e88e5;
+  background: #1e88e5;
+  color: #fff;
+}
+.method-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+.method-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #111;
+  font-size: 12px;
+  cursor: pointer;
+  background: #fff;
+}
+.method-pill.active {
+  background: #111;
+  color: #fff;
+}
+.tag-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.tag-chip {
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #fff;
+}
+.tag-chip.active {
+  border-color: #1e88e5;
+  color: #1e88e5;
+}
+.tag-input {
+  margin-top: 6px;
+}
+.tag-input input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+.set-state {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.state-btn {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  background: #fff;
+  font-size: 12px;
+}
+.state-btn.active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
 }

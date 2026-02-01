@@ -1860,6 +1860,7 @@ function addLogEntry() {
   const skippedArray = [];
   const completedArray = [];
   const setTypeArray = [];
+  const advancedArray = [];
 
   for (let i = 0; i < sets; i++) {
     const reps = +document.getElementById(`reps_${i}`).value;
@@ -1883,6 +1884,7 @@ function addLogEntry() {
     } else {
       setTypeArray.push('standard');
     }
+    advancedArray.push(createDefaultAdvancedSet());
   }
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
@@ -1910,6 +1912,7 @@ function addLogEntry() {
     skippedArray,
     completedArray,
     setTypeArray,
+    advancedArray,
     unit,
     date,
     goal,
@@ -1971,6 +1974,188 @@ const SET_TYPE_LABELS = {
 
 let activeContextMenu = null;
 
+const ADVANCED_METHODS = [
+  { key: 'dropset', label: 'Dropset' },
+  { key: 'restpause', label: 'Rest-Pause' },
+  { key: 'myoreps', label: 'Myo-reps' },
+  { key: 'backoff', label: 'Back-off' },
+  { key: 'tempo', label: 'Tempo' },
+  { key: 'partials', label: 'Partials' },
+  { key: 'assisted', label: 'Assisted' },
+  { key: 'amrap', label: 'AMRAP' }
+];
+
+const ADVANCED_STATES = [
+  { key: 'hit', label: '✅ Hit' },
+  { key: 'grind', label: '⚠️ Grind' },
+  { key: 'miss', label: '❌ Miss' },
+  { key: 'fatigued', label: '💤 Fatigued' }
+];
+
+const ADVANCED_TAGS = [
+  { key: 'pain', label: 'Pain' },
+  { key: 'pump', label: 'Pump' },
+  { key: 'grip', label: 'Grip' },
+  { key: 'cue', label: 'Cue' },
+  { key: 'note', label: 'Note' }
+];
+
+function createDefaultAdvancedSet() {
+  return {
+    method: null,
+    drops: [],
+    restPauseExtras: [],
+    myo: { activationReps: null, clusters: [] },
+    backoff: { weight: null, reps: null },
+    tempo: null,
+    partials: null,
+    assisted: null,
+    amrap: false,
+    tags: {},
+    state: null
+  };
+}
+
+function ensureAdvancedArray(entry) {
+  if (!Array.isArray(entry.advancedArray)) {
+    entry.advancedArray = [];
+  }
+  const length = entry.repsArray.length;
+  if (entry.advancedArray.length > length) {
+    entry.advancedArray.length = length;
+  }
+  while (entry.advancedArray.length < length) {
+    entry.advancedArray.push(createDefaultAdvancedSet());
+  }
+  return entry.advancedArray;
+}
+
+function renderMethodForm(adv, baseWeight) {
+  if (!adv.method) return '';
+
+  if (adv.method === 'dropset') {
+    const rows = adv.drops
+      .map(
+        (drop, i) => `
+          <div class="adv-row">
+            <input type="number" step="0.5" data-adv="dropWeight" data-index="${i}" value="${drop.weight ?? ''}" placeholder="Weight" />
+            <input type="number" step="1" data-adv="dropReps" data-index="${i}" value="${drop.reps ?? ''}" placeholder="Reps" />
+            <button class="adv-btn" type="button" data-adv="removeDrop" data-index="${i}">✕</button>
+          </div>
+        `
+      )
+      .join('');
+    return `
+      <div>
+        <strong>Dropset</strong>
+        ${rows || '<div style="opacity:.7;font-size:12px;margin:6px 0;">Add your drop(s) below</div>'}
+        <button class="adv-btn primary" type="button" data-adv="addDrop">+ Add drop</button>
+      </div>
+    `;
+  }
+
+  if (adv.method === 'restpause') {
+    const pills = adv.restPauseExtras
+      .map((r, i) => `<button class="adv-btn" type="button" data-adv="removeRP" data-index="${i}">+${r} ✕</button>`)
+      .join(' ');
+    return `
+      <div>
+        <strong>Rest-Pause</strong>
+        <div style="margin-top:6px;">
+          <button class="adv-btn primary" type="button" data-adv="addRP" data-val="2">+2</button>
+          <button class="adv-btn primary" type="button" data-adv="addRP" data-val="3">+3</button>
+          <button class="adv-btn primary" type="button" data-adv="addRP" data-val="1">+1</button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          ${pills || '<span style="opacity:.7;font-size:12px;">No extra reps yet</span>'}
+        </div>
+      </div>
+    `;
+  }
+
+  if (adv.method === 'myoreps') {
+    const clusters = (adv.myo?.clusters || [])
+      .map((r, i) => `<button class="adv-btn" type="button" data-adv="removeMyo" data-index="${i}">+${r} ✕</button>`)
+      .join(' ');
+    return `
+      <div>
+        <strong>Myo-reps</strong>
+        <div class="adv-row single">
+          <input type="number" step="1" data-adv="myoActivation" value="${adv.myo?.activationReps ?? ''}" placeholder="Activation reps (e.g. 12)" />
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="adv-btn primary" type="button" data-adv="addMyo" data-val="3">+3</button>
+          <button class="adv-btn primary" type="button" data-adv="addMyo" data-val="2">+2</button>
+          <button class="adv-btn primary" type="button" data-adv="addMyo" data-val="1">+1</button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          ${clusters || '<span style="opacity:.7;font-size:12px;">No clusters yet</span>'}
+        </div>
+      </div>
+    `;
+  }
+
+  if (adv.method === 'backoff') {
+    return `
+      <div>
+        <strong>Back-off</strong>
+        <div class="adv-row">
+          <input type="number" step="0.5" data-adv="backoffWeight" value="${adv.backoff?.weight ?? ''}" placeholder="Back-off weight" />
+          <input type="number" step="1" data-adv="backoffReps" value="${adv.backoff?.reps ?? ''}" placeholder="Back-off reps" />
+          <span></span>
+        </div>
+        <button class="adv-btn" type="button" data-adv="suggestBackoff" data-base-weight="${baseWeight ?? ''}">Suggest −10%</button>
+      </div>
+    `;
+  }
+
+  if (adv.method === 'tempo') {
+    return `
+      <div>
+        <strong>Tempo</strong>
+        <div class="adv-row single">
+          <input type="text" data-adv="tempo" value="${adv.tempo ?? ''}" placeholder="e.g. 3-1-1" />
+        </div>
+      </div>
+    `;
+  }
+
+  if (adv.method === 'partials') {
+    return `
+      <div>
+        <strong>Partials</strong>
+        <div class="adv-row single">
+          <input type="text" data-adv="partials" value="${adv.partials ?? ''}" placeholder="e.g. top half / bottom half" />
+        </div>
+      </div>
+    `;
+  }
+
+  if (adv.method === 'assisted') {
+    return `
+      <div>
+        <strong>Assisted</strong>
+        <div class="adv-row single">
+          <input type="text" data-adv="assisted" value="${adv.assisted ?? ''}" placeholder="e.g. band / machine / spotter" />
+        </div>
+      </div>
+    `;
+  }
+
+  if (adv.method === 'amrap') {
+    return `
+      <div>
+        <strong>AMRAP</strong>
+        <div style="opacity:.8;font-size:12px;margin-top:6px;">
+          This set is marked AMRAP (as many reps as possible).
+        </div>
+      </div>
+    `;
+  }
+
+  return '';
+}
+
 function normalizeEntry(entry) {
   let mutated = false;
   if (!Array.isArray(entry.repsArray)) {
@@ -1999,6 +2184,7 @@ function normalizeEntry(entry) {
   ensure('restPauseArray', false);
   ensure('skippedArray', false);
   ensure('completedArray', false);
+  ensureAdvancedArray(entry);
 
   if (!Array.isArray(entry.setTypeArray)) {
     entry.setTypeArray = new Array(length).fill(DEFAULT_SET_TYPE);
@@ -2117,6 +2303,9 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
 }
 
 function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'set-row-wrapper';
+
   const setRow = document.createElement('div');
   setRow.className = 'set-row';
 
@@ -2188,8 +2377,254 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   setMenuButton.addEventListener('click', event => openContextMenu(event, workoutIndex, entryIndex, setIndex));
   setRow.appendChild(setMenuButton);
 
-  return setRow;
+  wrapper.appendChild(setRow);
+
+  const advancedData = ensureAdvancedArray(entry)[setIndex];
+  const baseWeight = entry.weightsArray?.[setIndex] ?? null;
+  const methodPills = ADVANCED_METHODS.map(method => `
+    <button type="button" class="method-pill ${advancedData.method === method.key ? 'active' : ''}"
+      data-adv="setMethod" data-method="${method.key}">
+      ${method.label}
+    </button>
+  `).join('');
+
+  const stateRow = ADVANCED_STATES.map(state => `
+    <button type="button" class="state-btn ${advancedData.state === state.key ? 'active' : ''}"
+      data-adv="setState" data-state="${state.key}">
+      ${state.label}
+    </button>
+  `).join('');
+
+  const tagsRow = ADVANCED_TAGS.map(tag => `
+    <button type="button" class="tag-chip ${advancedData.tags?.[tag.key] ? 'active' : ''}"
+      data-adv="toggleTag" data-tag="${tag.key}">
+      ${tag.label}
+    </button>
+  `).join('');
+
+  const tagInputId = `tagInput_${workoutIndex}_${entryIndex}_${setIndex}`;
+
+  const advancedBlock = document.createElement('div');
+  advancedBlock.className = 'set-advanced';
+  advancedBlock.dataset.advRoot = '1';
+  advancedBlock.dataset.workout = workoutIndex;
+  advancedBlock.dataset.entry = entryIndex;
+  advancedBlock.dataset.set = setIndex;
+  advancedBlock.innerHTML = `
+    <div class="set-advanced-header">Advanced</div>
+    <div class="method-pills">${methodPills}</div>
+    ${renderMethodForm(advancedData, baseWeight)}
+    <div class="set-state">${stateRow}</div>
+    <div class="tag-row">${tagsRow}</div>
+    <div class="tag-input" id="${tagInputId}" style="display:none;">
+      <input type="text" data-adv="tagText" placeholder="Type and press Enter" />
+    </div>
+  `;
+
+  wrapper.appendChild(advancedBlock);
+  return wrapper;
 }
+
+function updateAdvancedSet(workoutIndex, entryIndex, setIndex, updater, shouldRender = false) {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  if (!entry) return;
+  normalizeEntry(entry);
+  const advancedArray = ensureAdvancedArray(entry);
+  const adv = advancedArray[setIndex];
+  if (!adv) return;
+  updater({ workouts, entry, adv });
+  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  if (shouldRender) {
+    renderWorkouts();
+  }
+}
+
+function parseAdvNumber(value) {
+  if (value === '' || value === null || typeof value === 'undefined') return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+document.addEventListener('click', event => {
+  const actionTarget = event.target.closest('[data-adv]');
+  if (!actionTarget) return;
+  const root = actionTarget.closest('[data-adv-root="1"]');
+  if (!root) return;
+
+  const workoutIndex = parseInt(root.dataset.workout, 10);
+  const entryIndex = parseInt(root.dataset.entry, 10);
+  const setIndex = parseInt(root.dataset.set, 10);
+  const action = actionTarget.dataset.adv;
+
+  if (action === 'setMethod') {
+    const method = actionTarget.dataset.method;
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+      adv.method = adv.method === method ? null : method;
+      adv.amrap = adv.method === 'amrap';
+      if (adv.method === 'dropset' && adv.drops.length === 0) {
+        adv.drops.push({ weight: null, reps: null });
+      }
+      if (adv.method === 'restpause' && !Array.isArray(adv.restPauseExtras)) {
+        adv.restPauseExtras = [];
+      }
+      if (adv.method === 'myoreps') {
+        adv.myo = adv.myo || { activationReps: null, clusters: [] };
+      }
+      if (adv.method === 'backoff') {
+        adv.backoff = adv.backoff || { weight: null, reps: null };
+      }
+    }, true);
+    return;
+  }
+
+  if (action === 'setState') {
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+      adv.state = actionTarget.dataset.state;
+    }, true);
+    return;
+  }
+
+  if (action === 'addDrop') {
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+      adv.drops.push({ weight: null, reps: null });
+    }, true);
+    return;
+  }
+
+  if (action === 'removeDrop') {
+    const index = parseInt(actionTarget.dataset.index, 10);
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+      adv.drops.splice(index, 1);
+    }, true);
+    return;
+  }
+
+  if (action === 'addRP') {
+    const value = parseInt(actionTarget.dataset.val, 10);
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+      adv.restPauseExtras.push(value);
+    }, true);
+    return;
+  }
+
+  if (action === 'removeRP') {
+    const index = parseInt(actionTarget.dataset.index, 10);
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+      adv.restPauseExtras.splice(index, 1);
+    }, true);
+    return;
+  }
+
+  if (action === 'addMyo') {
+    const value = parseInt(actionTarget.dataset.val, 10);
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+      adv.myo = adv.myo || { activationReps: null, clusters: [] };
+      adv.myo.clusters.push(value);
+    }, true);
+    return;
+  }
+
+  if (action === 'removeMyo') {
+    const index = parseInt(actionTarget.dataset.index, 10);
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+      adv.myo = adv.myo || { activationReps: null, clusters: [] };
+      adv.myo.clusters.splice(index, 1);
+    }, true);
+    return;
+  }
+
+  if (action === 'suggestBackoff') {
+    updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ entry, adv }) => {
+      const mainWeight = parseAdvNumber(entry.weightsArray?.[setIndex]);
+      if (mainWeight) {
+        adv.backoff.weight = Math.round(mainWeight * 0.9 * 2) / 2;
+      }
+    }, true);
+    return;
+  }
+
+  if (action === 'toggleTag') {
+    const tag = actionTarget.dataset.tag;
+    const inputWrap = document.getElementById(`tagInput_${workoutIndex}_${entryIndex}_${setIndex}`);
+    if (!inputWrap) return;
+    inputWrap.style.display = inputWrap.style.display === 'none' || !inputWrap.style.display ? 'block' : 'none';
+    const input = inputWrap.querySelector('input');
+    if (input) {
+      input.dataset.tag = tag;
+      input.focus();
+    }
+  }
+});
+
+document.addEventListener('input', event => {
+  const input = event.target;
+  if (!input || !input.getAttribute) return;
+  const root = input.closest('[data-adv-root="1"]');
+  if (!root) return;
+  const kind = input.getAttribute('data-adv');
+  if (!kind) return;
+
+  const workoutIndex = parseInt(root.dataset.workout, 10);
+  const entryIndex = parseInt(root.dataset.entry, 10);
+  const setIndex = parseInt(root.dataset.set, 10);
+
+  updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+    if (kind === 'dropWeight' || kind === 'dropReps') {
+      const dropIndex = parseInt(input.dataset.index, 10);
+      adv.drops[dropIndex] = adv.drops[dropIndex] || { weight: null, reps: null };
+      if (kind === 'dropWeight') adv.drops[dropIndex].weight = parseAdvNumber(input.value);
+      if (kind === 'dropReps') adv.drops[dropIndex].reps = parseAdvNumber(input.value);
+    }
+    if (kind === 'myoActivation') {
+      adv.myo = adv.myo || { activationReps: null, clusters: [] };
+      adv.myo.activationReps = parseAdvNumber(input.value);
+    }
+    if (kind === 'backoffWeight') {
+      adv.backoff.weight = parseAdvNumber(input.value);
+    }
+    if (kind === 'backoffReps') {
+      adv.backoff.reps = parseAdvNumber(input.value);
+    }
+    if (kind === 'tempo') {
+      adv.tempo = input.value;
+    }
+    if (kind === 'partials') {
+      adv.partials = input.value;
+    }
+    if (kind === 'assisted') {
+      adv.assisted = input.value;
+    }
+  });
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Enter') return;
+  const input = event.target;
+  if (!input || input.getAttribute('data-adv') !== 'tagText') return;
+  const root = input.closest('[data-adv-root="1"]');
+  if (!root) return;
+  const workoutIndex = parseInt(root.dataset.workout, 10);
+  const entryIndex = parseInt(root.dataset.entry, 10);
+  const setIndex = parseInt(root.dataset.set, 10);
+  const tag = input.dataset.tag;
+  if (!tag) return;
+
+  updateAdvancedSet(workoutIndex, entryIndex, setIndex, ({ adv }) => {
+    const value = input.value.trim();
+    if (value) {
+      adv.tags[tag] = value;
+    } else {
+      delete adv.tags[tag];
+    }
+  }, true);
+
+  input.value = '';
+  const inputWrap = input.closest('.tag-input');
+  if (inputWrap) {
+    inputWrap.style.display = 'none';
+  }
+});
 
 function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
   event.preventDefault();
@@ -2404,6 +2839,10 @@ function addSetToLog(workoutIndex, entryIndex, afterIndex = null) {
     entry.setTypeArray = [];
   }
   entry.setTypeArray.splice(insertPosition, 0, DEFAULT_SET_TYPE);
+  if (!Array.isArray(entry.advancedArray)) {
+    entry.advancedArray = [];
+  }
+  entry.advancedArray.splice(insertPosition, 0, createDefaultAdvancedSet());
 
   entry.sets = entry.repsArray.length;
 
@@ -2430,6 +2869,7 @@ function deleteSetFromLog(workoutIndex, entryIndex, setIndex) {
   removeAt('skippedArray');
   removeAt('completedArray');
   removeAt('setTypeArray');
+  removeAt('advancedArray');
 
   entry.sets = entry.repsArray.length;
 
