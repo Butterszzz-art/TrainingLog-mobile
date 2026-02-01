@@ -247,18 +247,24 @@ export function toggleTargetForm() {
   const main = document.getElementById('macrosMainContent');
   const settings = document.getElementById('macrosSettingsContent');
   const adjustToggle = document.getElementById('adjustMacrosToggle');
-  if (!main || !settings || !adjustToggle) {
-    const missing = [];
-    if (!main) missing.push('macrosMainContent');
-    if (!settings) missing.push('macrosSettingsContent');
-    if (!adjustToggle) missing.push('adjustMacrosToggle');
-    console.warn(`toggleTargetForm: missing element(s): ${missing.join(', ')}`);
+  if (!main) {
+    console.warn('toggleTargetForm: missing element: macrosMainContent');
     return;
+  }
+  if (!settings) {
+    console.warn('toggleTargetForm: missing element: macrosSettingsContent');
+    main.style.display = '';
+    return;
+  }
+  if (!adjustToggle) {
+    console.warn('toggleTargetForm: missing element: adjustMacrosToggle');
   }
   main.style.display = main.style.display === 'none' ? 'block' : 'none';
   settings.style.display = settings.style.display === 'none' ? 'block' : 'none';
-  adjustToggle.textContent =
-    settings.style.display === 'block' ? '⬅️ Back to Targets' : '⚙️ Adjust Macros';
+  if (adjustToggle) {
+    adjustToggle.textContent =
+      settings.style.display === 'block' ? '⬅️ Back to Targets' : '⚙️ Adjust Macros';
+  }
 }
 
 if (typeof window !== 'undefined') {
