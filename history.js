@@ -13,6 +13,16 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function getCurrentUserId() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return window.currentUser
+    || localStorage.getItem('Username')
+    || localStorage.getItem('username')
+    || null;
+}
+
 function generateLocalId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -77,7 +87,12 @@ function mapToResistanceLog(workout) {
       }))
     : [];
 
-  return { date, exercises };
+  return {
+    date,
+    exercises,
+    title: workout?.name || workout?.title || 'Resistance Workout',
+    userId: getCurrentUserId()
+  };
 }
 
 export function loadLocalHistory() {
@@ -246,7 +261,134 @@ function renderHistoryList(containerEl) {
     list.appendChild(li);
   });
 
-  containerEl.appendChild(list);
+  const currentUserId = getCurrentUserId();
+  const logs = loadLogsFromLocalStorage()
+    .filter(log => !log?.userId || !currentUserId || log.userId === currentUserId)
+    .slice()
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const renderEmpty = () => {
+    containerEl.innerHTML = `
+      <div class="empty">
+        No workouts yet.
+        <div class="hint">Log a workout and it will appear here (local only).</div>
+      </div>`;
+  };
+
+  const renderDetail = log => {
+    containerEl.innerHTML = '';
+    const backButton = document.createElement('button');
+    backButton.type = 'button';
+    backButton.className = 'adv-btn';
+    backButton.textContent = '← Back';
+    backButton.addEventListener('click', renderList);
+    containerEl.appendChild(backButton);
+
+    const title = document.createElement('h3');
+    title.textContent = log?.title || log?.name || 'Workout';
+    title.className = 'history-detail-title';
+    containerEl.appendChild(title);
+
+    const dateLine = document.createElement('div');
+    dateLine.className = 'history-detail-meta';
+    dateLine.textContent = new Date(log.date).toLocaleString();
+    containerEl.appendChild(dateLine);
+
+    const list = document.createElement('div');
+    list.className = 'history-detail-list';
+
+    (log.exercises || []).forEach(ex => {
+      const card = document.createElement('div');
+      card.className = 'history-detail-card';
+
+      const heading = document.createElement('div');
+      heading.className = 'history-detail-exercise';
+      heading.textContent = ex.name || 'Exercise';
+      card.appendChild(heading);
+
+      const setsRow = document.createElement('div');
+      setsRow.className = 'history-detail-sets';
+      const reps = Array.isArray(ex.repsArray) ? ex.repsArray : [];
+      const weights = Array.isArray(ex.weightsArray) ? ex.weightsArray : [];
+      const setCount = Math.max(reps.length, weights.length);
+      if (!setCount) {
+        setsRow.textContent = 'No sets recorded.';
+      } else {
+        const chips = [];
+        for (let i = 0; i < setCount; i += 1) {
+          const rep = reps[i] ?? '-';
+          const weight = weights[i] ?? '-';
+          chips.push(`${weight} × ${rep}`);
+        }
+        setsRow.textContent = chips.join(', ');
+      }
+      card.appendChild(setsRow);
+      list.appendChild(card);
+    });
+
+    if (!list.childElementCount) {
+      const empty = document.createElement('div');
+      empty.className = 'history-detail-empty';
+      empty.textContent = 'No exercise data.';
+      list.appendChild(empty);
+    }
+
+    containerEl.appendChild(list);
+  };
+
+  const renderList = () => {
+    containerEl.innerHTML = '';
+    if (!logs.length) {
+      renderEmpty();
+      return;
+    }
+
+    const list = document.createElement('ul');
+    list.className = 'history-list';
+
+    logs.forEach(log => {
+      const li = document.createElement('li');
+      li.className = 'history-item';
+      const dateLabel = new Date(log.date).toLocaleString();
+      const title = log?.title || log?.name || new Date(log.date).toDateString();
+
+      const header = document.createElement('div');
+      header.className = 'row';
+      const titleEl = document.createElement('strong');
+      titleEl.textContent = title;
+      const dateEl = document.createElement('span');
+      dateEl.textContent = dateLabel;
+      header.appendChild(titleEl);
+      header.appendChild(dateEl);
+
+      const openButton = document.createElement('button');
+      openButton.type = 'button';
+      openButton.className = 'adv-btn primary history-open-btn';
+      openButton.textContent = 'Open';
+      openButton.addEventListener('click', event => {
+        event.stopPropagation();
+        renderDetail(log);
+      });
+
+      const headerRow = document.createElement('div');
+      headerRow.className = 'history-item-header';
+      headerRow.appendChild(header);
+      headerRow.appendChild(openButton);
+
+      const exerciseCount = document.createElement('div');
+      exerciseCount.className = 'meta';
+      const count = Array.isArray(log.exercises) ? log.exercises.length : 0;
+      exerciseCount.textContent = `${count} exercise${count === 1 ? '' : 's'}`;
+
+      li.appendChild(headerRow);
+      li.appendChild(exerciseCount);
+      list.appendChild(li);
+    });
+
+    containerEl.appendChild(list);
+  };
+
+  renderList();
 }
 
 function renderHistoryDetail(containerEl, log) {

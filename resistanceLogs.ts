@@ -9,6 +9,9 @@ export interface WorkoutExercise {
 export interface WorkoutLog {
   date: string; // ISO string
   exercises: WorkoutExercise[];
+  title?: string | null;
+  userId?: string | null;
+  id?: string | null;
 }
 
 const STORAGE_KEY = 'workoutHistory';
@@ -24,7 +27,13 @@ function normalizeExercise(exercise: any): WorkoutExercise {
 function normalizeLog(log: WorkoutLog): WorkoutLog {
   const date = log?.date || new Date().toISOString();
   const exercises = Array.isArray(log?.exercises) ? log.exercises.map(normalizeExercise) : [];
-  return { date, exercises };
+  return {
+    date,
+    exercises,
+    title: log?.title || (log as any)?.name || (log as any)?.workoutTitle || null,
+    userId: log?.userId || (log as any)?.username || (log as any)?.user || null,
+    id: log?.id || null
+  };
 }
 
 export function saveLogToLocalStorage(log: WorkoutLog): void {
@@ -53,7 +62,13 @@ export function loadLogsFromLocalStorage(): WorkoutLog[] {
             ? entry.createdAt
             : new Date().toISOString();
 
-      return normalizeLog({ date, exercises: entry?.exercises || [] });
+      return normalizeLog({
+        date,
+        exercises: entry?.exercises || [],
+        title: entry?.title || entry?.name || entry?.workoutTitle || null,
+        userId: entry?.userId || entry?.username || entry?.user || null,
+        id: entry?.id || null
+      });
     });
   } catch (err) {
     console.warn('Unable to read workout logs locally (prototype storage only)', err);

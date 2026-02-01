@@ -23,6 +23,10 @@ function normalizeLog(log) {
   const title = log?.title || log?.name || 'Resistance Workout';
   const userId = log?.userId || log?.user || getCurrentUserId();
   return { date, exercises, title, userId };
+  const title = log?.title || log?.name || log?.workoutTitle || null;
+  const userId = log?.userId || log?.username || log?.user || null;
+  const id = log?.id || null;
+  return { date, exercises, title, userId, id };
 }
 
 function readExistingLogs() {
@@ -54,6 +58,9 @@ function readExistingLogs() {
                 exercises,
                 title: item?.name || 'Resistance Workout',
                 userId: item?.userId || item?.user || getCurrentUserId()
+                title: item?.name || item?.title || null,
+                userId: item?.userId || item?.username || null,
+                id: item?.id || null
               });
             }
           });
