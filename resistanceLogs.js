@@ -2,6 +2,13 @@
 
 const STORAGE_KEY = 'workoutHistory';
 
+function getCurrentUserId() {
+  if (typeof window !== 'undefined') {
+    return window.currentUser || localStorage.getItem('Username') || null;
+  }
+  return null;
+}
+
 function normalizeExercise(exercise) {
   return {
     name: exercise && exercise.name ? exercise.name : 'Exercise',
@@ -13,7 +20,9 @@ function normalizeExercise(exercise) {
 function normalizeLog(log) {
   const date = log?.date || log?.performedAt || log?.createdAt || new Date().toISOString();
   const exercises = Array.isArray(log?.exercises) ? log.exercises.map(normalizeExercise) : [];
-  return { date, exercises };
+  const title = log?.title || log?.name || 'Resistance Workout';
+  const userId = log?.userId || log?.user || getCurrentUserId();
+  return { date, exercises, title, userId };
 }
 
 function readExistingLogs() {
@@ -40,7 +49,12 @@ function readExistingLogs() {
                   ? set.weightsArray.map(n => Number(n) || 0)
                   : [Number(set?.weight ?? set?.weightsArray?.[0] ?? 0) || 0],
               }));
-              logs.push({ date: item.date, exercises });
+              logs.push({
+                date: item.date,
+                exercises,
+                title: item?.name || 'Resistance Workout',
+                userId: item?.userId || item?.user || getCurrentUserId()
+              });
             }
           });
         }

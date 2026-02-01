@@ -2221,6 +2221,41 @@ function normalizeEntry(entry) {
   return mutated;
 }
 
+function formatLastTimeSets(exercise) {
+  const reps = Array.isArray(exercise?.repsArray) ? exercise.repsArray : [];
+  const weights = Array.isArray(exercise?.weightsArray) ? exercise.weightsArray : [];
+  const length = Math.max(reps.length, weights.length);
+  const summary = [];
+  for (let i = 0; i < length && summary.length < 3; i++) {
+    const repValue = reps[i] ?? 0;
+    const weightValue = weights[i] ?? 0;
+    summary.push(`${weightValue}×${repValue}`);
+  }
+  return summary.length ? summary.join(', ') : 'No sets recorded last time';
+}
+
+function getLastExerciseLogEntry(exerciseName) {
+  if (typeof loadLogsFromLocalStorage !== 'function') return null;
+  const targetName = (exerciseName || '').trim().toLowerCase();
+  if (!targetName) return null;
+
+  const currentUserId = typeof currentUser !== 'undefined' ? currentUser : null;
+  const logs = loadLogsFromLocalStorage()
+    .slice()
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  for (const log of logs) {
+    if (currentUserId && log?.userId && log.userId !== currentUserId) continue;
+    const exercises = Array.isArray(log?.exercises) ? log.exercises : [];
+    const match = exercises.find(ex => (ex?.name || '').trim().toLowerCase() === targetName);
+    if (match) {
+      return { log, exercise: match };
+    }
+  }
+
+  return null;
+}
+
 function createExerciseCard(workoutIndex, entryIndex, entry) {
   const card = document.createElement('div');
   card.className = 'exercise-card';
@@ -2246,6 +2281,31 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   header.appendChild(headerMenuButton);
 
   card.appendChild(header);
+
+  const lastEntry = getLastExerciseLogEntry(entry.exercise || 'Exercise');
+  if (lastEntry) {
+    const lastPanel = document.createElement('div');
+    lastPanel.className = 'last-time-card';
+
+    const lastTitle = document.createElement('div');
+    lastTitle.className = 'last-time-title';
+    lastTitle.textContent = 'Last time';
+    lastPanel.appendChild(lastTitle);
+
+    const lastMeta = document.createElement('div');
+    lastMeta.className = 'last-time-meta';
+    const lastDate = lastEntry.log?.date ? new Date(lastEntry.log.date).toLocaleDateString() : 'Unknown date';
+    const lastWorkoutTitle = lastEntry.log?.title || 'Workout';
+    lastMeta.textContent = `${lastDate} • ${lastWorkoutTitle}`;
+    lastPanel.appendChild(lastMeta);
+
+    const lastSets = document.createElement('div');
+    lastSets.className = 'last-time-sets';
+    lastSets.textContent = formatLastTimeSets(lastEntry.exercise);
+    lastPanel.appendChild(lastSets);
+
+    card.appendChild(lastPanel);
+  }
 
   const goalData = [];
   const hasGoal = typeof entry.goal === 'number' && !Number.isNaN(entry.goal);
@@ -4598,6 +4658,8 @@ function checkMacroReset() {
         if (current && Array.isArray(current.log) && current.log.length) {
           const resistanceLog = {
             date: current.date ? new Date(current.date).toISOString() : new Date(lastReset).toISOString(),
+            title: current.title || 'Resistance Workout',
+            userId: typeof currentUser !== 'undefined' ? currentUser : null,
             exercises: current.log.map(entry => ({
               name: entry.exercise || 'Exercise',
               repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
@@ -5031,6 +5093,8 @@ function finishAndClearCurrentLog() {
 
   const resistanceLog = {
     date: current.date ? new Date(current.date).toISOString() : new Date().toISOString(),
+    title: current.title || 'Resistance Workout',
+    userId: typeof currentUser !== 'undefined' ? currentUser : null,
     exercises: current.log.map(entry => ({
       name: entry.exercise || 'Exercise',
       repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
