@@ -20,11 +20,8 @@ function normalizeExercise(exercise) {
 function normalizeLog(log) {
   const date = log?.date || log?.performedAt || log?.createdAt || new Date().toISOString();
   const exercises = Array.isArray(log?.exercises) ? log.exercises.map(normalizeExercise) : [];
-  const title = log?.title || log?.name || 'Resistance Workout';
-  const userId = log?.userId || log?.user || getCurrentUserId();
-  return { date, exercises, title, userId };
-  const title = log?.title || log?.name || log?.workoutTitle || null;
-  const userId = log?.userId || log?.username || log?.user || null;
+  const title = log?.title || log?.name || log?.workoutTitle || 'Resistance Workout';
+  const userId = log?.userId || log?.username || log?.user || getCurrentUserId();
   const id = log?.id || null;
   return { date, exercises, title, userId, id };
 }
@@ -56,10 +53,8 @@ function readExistingLogs() {
               logs.push({
                 date: item.date,
                 exercises,
-                title: item?.name || 'Resistance Workout',
-                userId: item?.userId || item?.user || getCurrentUserId()
-                title: item?.name || item?.title || null,
-                userId: item?.userId || item?.username || null,
+                title: item?.name || item?.title || 'Resistance Workout',
+                userId: item?.userId || item?.username || item?.user || getCurrentUserId(),
                 id: item?.id || null
               });
             }
