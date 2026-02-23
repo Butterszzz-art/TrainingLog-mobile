@@ -2375,12 +2375,6 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
     card.appendChild(lastPanel);
   }
 
-  const goalData = [];
-  const hasGoal = typeof entry.goal === 'number' && !Number.isNaN(entry.goal);
-  if (hasGoal && entry.goal !== 0) {
-    goalData.push(`Target Load: ${entry.goal} ${entry.unit || 'kg'}`);
-  }
-
   const lastTimeCard = createLastTimeCard(entry.exercise || 'Exercise');
   if (lastTimeCard) {
     card.appendChild(lastTimeCard);
