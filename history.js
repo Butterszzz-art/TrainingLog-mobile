@@ -179,20 +179,47 @@ export async function syncWorkoutToBackend(workout) {
   }
 }
 
+function mapLegacyWorkoutHistoryItems(username, data) {
+  const rawWorkouts = Array.isArray(data?.workouts) ? data.workouts : [];
+  return rawWorkouts.map((workout, index) => ({
+    id: workout?.id || `${username || 'unknown'}-${workout?.date || workout?.createdAt || index}`,
+    username,
+    date: workout?.date || workout?.createdAt,
+    title: workout?.title || workout?.name,
+    workout
+  }));
+}
+
 async function fetchWorkoutHistoryFromBackend(username) {
-  const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(username)}`, {
+  const headers = { ...getAuthHeaders() };
+  const encodedUsername = encodeURIComponent(username || '');
+
+  const primaryRes = await fetch(`${window.SERVER_URL}/workouts?username=${encodedUsername}`, {
     credentials: 'include',
-    headers: {
-      ...getAuthHeaders()
-    }
+    headers
   });
 
-  const data = await res.json();
-  if (!res.ok || !data?.success) {
-    throw new Error(data?.error?.message || 'Failed to load workouts');
+  const primaryData = await primaryRes.json().catch(() => null);
+  if (primaryRes.ok && primaryData?.success && Array.isArray(primaryData.items)) {
+    return primaryData.items;
   }
 
-  return data.items || [];
+  // Backward compatibility for deployments that still expose /getWorkouts.
+  const legacyRes = await fetch(`${window.SERVER_URL}/getWorkouts?username=${encodedUsername}`, {
+    credentials: 'include',
+    headers
+  });
+
+  const legacyData = await legacyRes.json().catch(() => null);
+  if (legacyRes.ok && Array.isArray(legacyData?.workouts)) {
+    return mapLegacyWorkoutHistoryItems(username, legacyData);
+  }
+
+  throw new Error(
+    primaryData?.error?.message
+      || legacyData?.error?.message
+      || 'Failed to load workouts'
+  );
 }
 
 export async function finalizeResistanceWorkout(state) {
