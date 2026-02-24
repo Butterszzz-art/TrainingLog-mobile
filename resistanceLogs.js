@@ -4,7 +4,10 @@ const STORAGE_KEY = 'workoutHistory';
 
 function getCurrentUserId() {
   if (typeof window !== 'undefined') {
-    return window.currentUser || localStorage.getItem('Username') || null;
+    if (typeof window.getActiveUsername === 'function') {
+      return window.getActiveUsername();
+    }
+    return window.currentUser || localStorage.getItem('username') || localStorage.getItem('Username') || null;
   }
   return null;
 }

@@ -33,6 +33,31 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function getActiveUsername() {
+  const storage = resolveStorage();
+  return (
+    globalThis.currentUser?.username ||
+    globalThis.currentUser?.userId ||
+    globalThis.currentUser ||
+    storage.getItem('username') ||
+    storage.getItem('Username') ||
+    null
+  );
+}
+
+function persistLoginIdentity(username, token) {
+  const storage = resolveStorage();
+  if (username) {
+    const normalizedUsername = String(username);
+    storage.setItem('username', normalizedUsername);
+    storage.setItem('Username', normalizedUsername);
+  }
+  if (token) {
+    storage.setItem('token', String(token));
+    storage.setItem('authToken', String(token));
+  }
+}
+
 async function login(username, password, serverUrl) {
   const url = `${resolveServerUrl(serverUrl)}/login`;
   const response = await fetch(url, {
@@ -43,8 +68,7 @@ async function login(username, password, serverUrl) {
 
   const data = await parseJsonResponse(response);
   if (data && data.token) {
-    const storage = resolveStorage();
-    storage.setItem('token', data.token);
+    persistLoginIdentity(username, data.token);
   }
 
   return data;
@@ -78,7 +102,7 @@ async function loadTemplates(username, serverUrl) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { login, fetchProtected, loadTemplates, getAuthHeaders };
+  module.exports = { login, fetchProtected, loadTemplates, getAuthHeaders, getActiveUsername, persistLoginIdentity };
 }
 
 if (typeof window !== 'undefined') {
@@ -86,4 +110,6 @@ if (typeof window !== 'undefined') {
   window.fetchProtected = fetchProtected;
   window.loadTemplates = loadTemplates;
   window.getAuthHeaders = getAuthHeaders;
+  window.getActiveUsername = getActiveUsername;
+  window.persistLoginIdentity = persistLoginIdentity;
 }

@@ -18,12 +18,16 @@ function getCurrentUserId() {
     return null;
   }
 
-  const userId =
-    window.currentUser?.username ||
-    window.currentUser?.userId ||
-    localStorage.getItem('username') ||
-    localStorage.getItem('Username') ||
-    null;
+  const userId = typeof window.getActiveUsername === 'function'
+    ? window.getActiveUsername()
+    : (
+      window.currentUser?.username ||
+      window.currentUser?.userId ||
+      window.currentUser ||
+      localStorage.getItem('username') ||
+      localStorage.getItem('Username') ||
+      null
+    );
 
   console.log('[History] Using username:', userId);
   return userId;
@@ -185,18 +189,8 @@ export async function syncWorkoutToBackend(workout) {
   }
 }
 
-function mapLegacyWorkoutHistoryItems(username, data) {
-  const rawWorkouts = Array.isArray(data?.workouts) ? data.workouts : [];
-  return rawWorkouts.map((workout, index) => ({
-    id: workout?.id || `${username || 'unknown'}-${workout?.date || workout?.createdAt || index}`,
-    username,
-    date: workout?.date || workout?.createdAt,
-    title: workout?.title || workout?.name,
-    workout
-  }));
-}
 
-async function fetchWorkoutHistoryFromBackend(username) {
+async function fetchWorkoutHistoryResponse(username) {
   const encodedUsername = encodeURIComponent(username || '');
   const url = `${window.SERVER_URL}/workouts?username=${encodedUsername}`;
 
@@ -214,8 +208,8 @@ async function fetchWorkoutHistoryFromBackend(username) {
   }
 
   if (!username) {
-    console.warn('[History] Username missing. Skipping backend fetch.');
-    throw new Error('Missing username');
+    console.warn('[History] Username missing. Not calling backend.');
+    throw new Error('Missing username (not logged in or username not stored)');
   }
 
   const response = await fetch(url, {
@@ -225,6 +219,23 @@ async function fetchWorkoutHistoryFromBackend(username) {
       ...authHeaders
     }
   });
+
+  return { response, url, hasAuth };
+}
+
+function mapLegacyWorkoutHistoryItems(username, data) {
+  const rawWorkouts = Array.isArray(data?.workouts) ? data.workouts : [];
+  return rawWorkouts.map((workout, index) => ({
+    id: workout?.id || `${username || 'no-user'}-${workout?.date || workout?.createdAt || index}`,
+    username,
+    date: workout?.date || workout?.createdAt,
+    title: workout?.title || workout?.name,
+    workout
+  }));
+}
+
+async function fetchWorkoutHistoryFromBackend(username) {
+  const { response, url, hasAuth } = await fetchWorkoutHistoryResponse(username);
 
   const raw = await response.text();
   let data = null;
@@ -303,12 +314,9 @@ export async function finalizeResistanceWorkout(state) {
   syncWorkoutToBackend(workout).then(async synced => {
     if (!synced || !window.SERVER_URL) return;
     try {
-      const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(workout.userId || '')}`, {
-        credentials: 'include',
-        headers: getAuthHeaders()
-      });
-      if (!res.ok) return;
-      const data = await res.json();
+      const { response } = await fetchWorkoutHistoryResponse(workout.userId || getCurrentUserId());
+      if (!response.ok) return;
+      const data = await response.json();
       const first = data?.items?.find(item => item?.workout?.id === workout.id || item?.id === workout.id);
       if (first) {
         await persistHistoryEntry(entry, first.workout || first);
@@ -329,7 +337,7 @@ export async function loadHistory() {
   }
 
   try {
-    const remoteItems = await fetchWorkoutHistoryFromBackend(getCurrentUserId() || 'unknown');
+    const remoteItems = await fetchWorkoutHistoryFromBackend(getCurrentUserId());
 
     const merged = mergeRemoteAndLocal(remoteItems, local);
 
@@ -435,7 +443,7 @@ export async function renderWorkoutHistory(containerEl = document.getElementById
 
   containerEl.innerHTML = '<p style="opacity:.7;">Loading workout history…</p>';
 
-  const currentUserId = getCurrentUserId() || 'unknown';
+  const currentUserId = getCurrentUserId();
   let items = [];
   try {
     if (!window.SERVER_URL) {

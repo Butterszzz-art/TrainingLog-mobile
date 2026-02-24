@@ -1291,6 +1291,28 @@ function setCurrentUser(user) {
   currentUser = user && typeof user === 'object' ? user.username : user;
 }
 
+function getActiveUsername() {
+  if (typeof window.getActiveUsername === 'function' && window.getActiveUsername !== getActiveUsername) {
+    return window.getActiveUsername();
+  }
+  return currentUser || localStorage.getItem('username') || localStorage.getItem('Username') || null;
+}
+
+function persistLoginIdentity(username, token) {
+  if (typeof window.persistLoginIdentity === 'function' && window.persistLoginIdentity !== persistLoginIdentity) {
+    window.persistLoginIdentity(username, token);
+    return;
+  }
+  if (username) {
+    localStorage.setItem('username', String(username));
+    localStorage.setItem('Username', String(username));
+  }
+  if (token) {
+    localStorage.setItem('token', String(token));
+    localStorage.setItem('authToken', String(token));
+  }
+}
+
 function getDefaultServerUrl() {
   if (window.TrainingLogConfig && window.TrainingLogConfig.DEFAULT_SERVER_URL) {
     return window.TrainingLogConfig.DEFAULT_SERVER_URL;
@@ -1480,6 +1502,7 @@ async function startLogin() {
 
     if (result && result.token) {
       window.authToken = result.token;
+      persistLoginIdentity(username, result.token);
     }
 
     if (result && result.success === false) {
@@ -1495,6 +1518,7 @@ async function startLogin() {
     if (result) {
       setCurrentUser(username);
       localStorage.setItem("fitnessAppUser", username);
+      persistLoginIdentity(username, result?.token);
 
       document.getElementById("userDisplay").textContent = username;
       document.getElementById("loginContainer").style.display = "none";
@@ -2257,7 +2281,7 @@ function getLastExerciseLogEntry(exerciseName) {
 }
 
 function getCurrentHistoryUserId() {
-  return currentUser || localStorage.getItem('Username') || localStorage.getItem('username') || null;
+  return getActiveUsername();
 }
 
 function loadResistanceHistoryForUser(userId) {
@@ -3603,13 +3627,23 @@ async function saveWorkoutToBackend(workout) {
 
 async function loadWorkoutsFromBackend() {
   try {
-    const res = await fetch(`${window.SERVER_URL}/getWorkouts?username=${currentUser}`, {
+    const activeUsername = getActiveUsername();
+    if (!activeUsername) {
+      console.warn('[Workouts] Username missing. Skipping backend fetch.');
+      return;
+    }
+
+    const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(activeUsername)}`, {
       credentials: "include",
       headers: getAuthHeaders()
     });
     const data = await res.json();
-    if (data.workouts) {
-      localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(data.workouts));
+    const workoutsFromApi = Array.isArray(data?.items)
+      ? data.items.map(item => item?.workout || item).filter(Boolean)
+      : (Array.isArray(data?.workouts) ? data.workouts : []);
+
+    if (workoutsFromApi.length) {
+      localStorage.setItem(`workouts_${activeUsername}`, JSON.stringify(workoutsFromApi));
       renderWorkouts();
     }
   } catch (err) {
@@ -4733,10 +4767,8 @@ function checkMacroReset() {
         if (current && Array.isArray(current.log) && current.log.length) {
           const resistanceLog = {
             date: current.date ? new Date(current.date).toISOString() : new Date(lastReset).toISOString(),
-            title: current.title || 'Resistance Workout',
-            userId: typeof currentUser !== 'undefined' ? currentUser : null,
             title: current.title || current.name || 'Workout',
-            userId: currentUser || localStorage.getItem('Username') || null,
+            userId: getActiveUsername(),
             exercises: current.log.map(entry => ({
               name: entry.exercise || 'Exercise',
               repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
@@ -5170,10 +5202,8 @@ function finishAndClearCurrentLog() {
 
   const resistanceLog = {
     date: current.date ? new Date(current.date).toISOString() : new Date().toISOString(),
-    title: current.title || 'Resistance Workout',
-    userId: typeof currentUser !== 'undefined' ? currentUser : null,
     title: current.title || current.name || 'Workout',
-    userId: currentUser || localStorage.getItem('Username') || null,
+    userId: getActiveUsername(),
     exercises: current.log.map(entry => ({
       name: entry.exercise || 'Exercise',
       repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
