@@ -17,10 +17,16 @@ function getCurrentUserId() {
   if (typeof window === 'undefined') {
     return null;
   }
-  return window.currentUser
-    || localStorage.getItem('Username')
-    || localStorage.getItem('username')
-    || null;
+
+  const userId =
+    window.currentUser?.username ||
+    window.currentUser?.userId ||
+    localStorage.getItem('username') ||
+    localStorage.getItem('Username') ||
+    null;
+
+  console.log('[History] Using username:', userId);
+  return userId;
 }
 
 function generateLocalId() {
@@ -204,8 +210,12 @@ async function fetchWorkoutHistoryFromBackend(username) {
 
   const hasAuth = !!authHeaders.Authorization;
   if (!hasAuth) {
-    console.warn('[History] No Authorization header found. Skipping backend /workouts fetch.');
-    throw new Error('Missing auth token');
+    console.warn('[History] No Authorization header found.');
+  }
+
+  if (!username) {
+    console.warn('[History] Username missing. Skipping backend fetch.');
+    throw new Error('Missing username');
   }
 
   const response = await fetch(url, {
