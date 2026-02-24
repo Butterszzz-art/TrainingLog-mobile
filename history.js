@@ -200,6 +200,8 @@ async function fetchWorkoutHistoryResponse(username) {
   const encodedUsername = encodeURIComponent(username || '');
   const url = `${window.SERVER_URL}/workouts?username=${encodedUsername}`;
 
+  const token = (typeof localStorage !== 'undefined' && localStorage.getItem('token')) || '';
+
   let authHeaders = {};
   try {
     authHeaders = typeof getAuthHeaders === 'function' ? (getAuthHeaders() || {}) : {};
@@ -222,7 +224,8 @@ async function fetchWorkoutHistoryResponse(username) {
     method: 'GET',
     credentials: 'include',
     headers: {
-      ...authHeaders
+      ...authHeaders,
+      Authorization: `Bearer ${token}`
     }
   });
 

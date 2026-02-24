@@ -6,7 +6,7 @@ export async function fetchWorkoutHistory(username: string) {
   const res = await fetch(
     `${DEFAULT_SERVER_URL}/workoutHistory?username=${encodeURIComponent(username)}`,
     {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { Authorization: `Bearer ${token}` },
     }
   );
 
