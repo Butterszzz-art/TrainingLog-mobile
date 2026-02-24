@@ -1287,6 +1287,19 @@ let activeTab = null;
 let airtableToken = '';
 let airtableBaseId = '';
 
+function forceFreshLogin() {
+  if (typeof window.clearAuthState === 'function') {
+    window.clearAuthState();
+  } else {
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('fitnessAppUser');
+  }
+
+  localStorage.removeItem('fitnessAppUser');
+  savedUser = null;
+}
+
 function setCurrentUser(user) {
   currentUser = user && typeof user === 'object' ? user.username : user;
 }
@@ -6492,6 +6505,9 @@ function renderLogHistory(logs) {
   const loginEl = document.getElementById("loginContainer");
   const dash = document.getElementById("dashboardContainer");
   const fit = document.getElementById("pocketFitContainer");
+
+  // Force a fresh auth handshake by clearing any persisted JWT on app load.
+  forceFreshLogin();
 
   if (savedUser) {
     setCurrentUser(savedUser);
