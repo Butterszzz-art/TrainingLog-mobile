@@ -1515,10 +1515,17 @@ async function startLogin() {
       return;
     }
 
+    if (!result?.token) {
+      if (errorEl) {
+        errorEl.textContent = 'Login failed: missing JWT token. Please try again.';
+      }
+      return;
+    }
+
     if (result) {
       setCurrentUser(username);
       localStorage.setItem("fitnessAppUser", username);
-      persistLoginIdentity(username, result?.token);
+      persistLoginIdentity(username, result.token);
 
       document.getElementById("userDisplay").textContent = username;
       document.getElementById("loginContainer").style.display = "none";
@@ -4947,9 +4954,15 @@ document.addEventListener('DOMContentLoaded', () => {
   updateAddButtonState();
   
 // LOGOUT
-function logout() {
+function logout(options = {}) {
   localStorage.removeItem("fitnessAppUser");
-  location.reload();
+  localStorage.removeItem('token');
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('username');
+  localStorage.removeItem('Username');
+  if (!options.suppressReload) {
+    location.reload();
+  }
 }
 function animateSwitch(newEl) {
   console.log('animateSwitch called for', newEl.id);
