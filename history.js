@@ -191,7 +191,7 @@ export async function syncWorkoutToBackend(workout) {
 
 
 async function fetchWorkoutHistoryResponse(username) {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  let token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
   if (!token) {
     console.warn('[History] No token yet, skipping backend call.');
     throw new Error('Missing auth token');
@@ -200,7 +200,7 @@ async function fetchWorkoutHistoryResponse(username) {
   const encodedUsername = encodeURIComponent(username || '');
   const url = `${window.SERVER_URL}/workouts?username=${encodedUsername}`;
 
-  const token = (typeof localStorage !== 'undefined' && localStorage.getItem('token')) || '';
+  token = (typeof localStorage !== 'undefined' && localStorage.getItem('token')) || '';
 
   let authHeaders = {};
   try {
