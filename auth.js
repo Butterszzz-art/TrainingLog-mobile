@@ -27,6 +27,31 @@ async function parseJsonResponse(response) {
   }
 }
 
+function clearAuthState() {
+  const storage = resolveStorage();
+  storage.removeItem('token');
+  storage.removeItem('authToken');
+  storage.removeItem('fitnessAppUser');
+}
+
+function isInvalidSignatureError(value) {
+  const message = typeof value === 'string'
+    ? value
+    : (value?.message || value?.error?.message || value?.error || '');
+
+  return /invalid\s+signature/i.test(String(message));
+}
+
+function forceLogoutDueToInvalidToken() {
+  clearAuthState();
+  if (typeof window !== 'undefined' && typeof window.logout === 'function') {
+    window.logout({ suppressReload: true });
+  }
+  if (typeof window !== 'undefined') {
+    window.alert('Your session token is invalid. Please log in again to get a new token.');
+  }
+}
+
 function getAuthHeaders() {
   const storage = resolveStorage();
   const token = storage.getItem('token');
@@ -52,6 +77,9 @@ function persistLoginIdentity(username, token) {
     storage.setItem('username', normalizedUsername);
     storage.setItem('Username', normalizedUsername);
   }
+
+  storage.removeItem('token');
+  storage.removeItem('authToken');
   if (token) {
     storage.setItem('token', String(token));
     storage.setItem('authToken', String(token));
@@ -67,6 +95,11 @@ async function login(username, password, serverUrl) {
   });
 
   const data = await parseJsonResponse(response);
+  if (isInvalidSignatureError(data)) {
+    forceLogoutDueToInvalidToken();
+    throw new Error('Invalid token signature. Logged out; please sign in again.');
+  }
+
   if (data && data.token) {
     persistLoginIdentity(username, data.token);
   }
@@ -80,11 +113,17 @@ async function fetchProtected(serverUrl) {
     headers: getAuthHeaders()
   });
 
+  const data = await parseJsonResponse(response);
+  if (isInvalidSignatureError(data)) {
+    forceLogoutDueToInvalidToken();
+    throw new Error('Invalid token signature. Logged out; please sign in again.');
+  }
+
   if (!response.ok) {
     throw new Error('Unauthorized or forbidden');
   }
 
-  return parseJsonResponse(response);
+  return data;
 }
 
 async function loadTemplates(username, serverUrl) {
@@ -94,6 +133,11 @@ async function loadTemplates(username, serverUrl) {
   });
 
   const data = await parseJsonResponse(response);
+  if (isInvalidSignatureError(data)) {
+    forceLogoutDueToInvalidToken();
+    throw new Error('Invalid token signature. Logged out; please sign in again.');
+  }
+
   if (!data.success) {
     throw new Error(data.message || 'Failed to load templates');
   }
@@ -102,7 +146,7 @@ async function loadTemplates(username, serverUrl) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { login, fetchProtected, loadTemplates, getAuthHeaders, getActiveUsername, persistLoginIdentity };
+  module.exports = { login, fetchProtected, loadTemplates, getAuthHeaders, getActiveUsername, persistLoginIdentity, clearAuthState, isInvalidSignatureError, forceLogoutDueToInvalidToken };
 }
 
 if (typeof window !== 'undefined') {
@@ -112,4 +156,7 @@ if (typeof window !== 'undefined') {
   window.getAuthHeaders = getAuthHeaders;
   window.getActiveUsername = getActiveUsername;
   window.persistLoginIdentity = persistLoginIdentity;
+  window.clearAuthState = clearAuthState;
+  window.isInvalidSignatureError = isInvalidSignatureError;
+  window.forceLogoutDueToInvalidToken = forceLogoutDueToInvalidToken;
 }

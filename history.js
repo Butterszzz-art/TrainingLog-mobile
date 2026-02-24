@@ -253,6 +253,13 @@ async function fetchWorkoutHistoryFromBackend(username) {
     bodyPreview: raw?.slice?.(0, 400)
   });
 
+  if (typeof window !== 'undefined' && typeof window.isInvalidSignatureError === 'function' && window.isInvalidSignatureError(data || raw)) {
+    if (typeof window.forceLogoutDueToInvalidToken === 'function') {
+      window.forceLogoutDueToInvalidToken();
+    }
+    throw new Error('Invalid token signature. Please log in again.');
+  }
+
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
       throw new Error('Unauthorized (token missing/expired). Please log in again.');
@@ -441,9 +448,12 @@ function renderHistoryDetail(containerEl, log) {
 export async function renderWorkoutHistory(containerEl = document.getElementById('logHistoryContainer')) {
   if (!containerEl) return;
 
+  const username = getCurrentUserId();
+  if (!username) return;
+
   containerEl.innerHTML = '<p style="opacity:.7;">Loading workout history…</p>';
 
-  const currentUserId = getCurrentUserId();
+  const currentUserId = username;
   let items = [];
   try {
     if (!window.SERVER_URL) {
