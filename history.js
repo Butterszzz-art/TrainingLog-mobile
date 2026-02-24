@@ -191,35 +191,62 @@ function mapLegacyWorkoutHistoryItems(username, data) {
 }
 
 async function fetchWorkoutHistoryFromBackend(username) {
-  const headers = { ...getAuthHeaders() };
   const encodedUsername = encodeURIComponent(username || '');
+  const url = `${window.SERVER_URL}/workouts?username=${encodedUsername}`;
 
-  const primaryRes = await fetch(`${window.SERVER_URL}/workouts?username=${encodedUsername}`, {
-    credentials: 'include',
-    headers
-  });
-
-  const primaryData = await primaryRes.json().catch(() => null);
-  if (primaryRes.ok && primaryData?.success && Array.isArray(primaryData.items)) {
-    return primaryData.items;
+  let authHeaders = {};
+  try {
+    authHeaders = typeof getAuthHeaders === 'function' ? (getAuthHeaders() || {}) : {};
+  } catch (e) {
+    console.warn('[History] getAuthHeaders() threw:', e);
+    authHeaders = {};
   }
 
-  // Backward compatibility for deployments that still expose /getWorkouts.
-  const legacyRes = await fetch(`${window.SERVER_URL}/getWorkouts?username=${encodedUsername}`, {
-    credentials: 'include',
-    headers
-  });
-
-  const legacyData = await legacyRes.json().catch(() => null);
-  if (legacyRes.ok && Array.isArray(legacyData?.workouts)) {
-    return mapLegacyWorkoutHistoryItems(username, legacyData);
+  const hasAuth = !!authHeaders.Authorization;
+  if (!hasAuth) {
+    console.warn('[History] No Authorization header found. Skipping backend /workouts fetch.');
+    throw new Error('Missing auth token');
   }
 
-  throw new Error(
-    primaryData?.error?.message
-      || legacyData?.error?.message
-      || 'Failed to load workouts'
-  );
+  const response = await fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      ...authHeaders
+    }
+  });
+
+  const raw = await response.text();
+  let data = null;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    data = null;
+  }
+
+  console.log('[History] /workouts response', {
+    url,
+    status: response.status,
+    ok: response.ok,
+    hasAuth,
+    bodyPreview: raw?.slice?.(0, 400)
+  });
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('Unauthorized (token missing/expired). Please log in again.');
+    }
+    if (response.status === 404) {
+      throw new Error('Endpoint /workouts not found on backend (not deployed or wrong SERVER_URL).');
+    }
+    throw new Error(data?.error?.message || raw || 'Failed to load workouts');
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.error?.message || 'Failed to load workouts');
+  }
+
+  return data.items || [];
 }
 
 export async function finalizeResistanceWorkout(state) {
