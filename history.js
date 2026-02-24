@@ -138,6 +138,63 @@ async function persistHistoryEntry(entry, saved) {
   return canonical;
 }
 
+export async function syncWorkoutToBackend(workout) {
+  try {
+    if (typeof window === 'undefined' || !window.SERVER_URL) {
+      return false;
+    }
+
+    const username = workout?.userId
+      || workout?.username
+      || getCurrentUserId();
+
+    const payload = {
+      username,
+      date: workout?.date || workout?.createdAt,
+      title: workout?.title || workout?.name,
+      workout
+    };
+
+    const res = await fetch(`${window.SERVER_URL}/workouts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) {
+      console.warn('[History] Backend sync failed', data);
+      return false;
+    }
+
+    console.log('[History] Synced workout to backend', data);
+    return true;
+  } catch (error) {
+    console.warn('[History] Backend sync error', error);
+    return false;
+  }
+}
+
+async function fetchWorkoutHistoryFromBackend(username) {
+  const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(username)}`, {
+    credentials: 'include',
+    headers: {
+      ...getAuthHeaders()
+    }
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.error?.message || 'Failed to load workouts');
+  }
+
+  return data.items || [];
+}
+
 export async function finalizeResistanceWorkout(state) {
   const sets = Array.isArray(state?.sets)
     ? state.sets.map(s => ({
@@ -148,11 +205,19 @@ export async function finalizeResistanceWorkout(state) {
     : [];
 
   const workout = {
+    id: generateLocalId(),
+    userId: getCurrentUserId(),
     name: state?.name || 'Resistance Workout',
+    title: state?.name || 'Resistance Workout',
     notes: state?.notes || '',
     units: state?.units || 'kg',
+    date: new Date().toISOString(),
     createdAt: new Date().toISOString(),
-    sets
+    sets,
+    exercises: sets.map(set => ({
+      name: set.exercise,
+      sets: [{ weight: set.weight, reps: set.reps }]
+    }))
   };
 
   // Persist the completed workout locally for prototyping.
@@ -170,24 +235,24 @@ export async function finalizeResistanceWorkout(state) {
 
   const entry = saveWorkoutToLocal(workout);
 
-  const url = typeof window !== 'undefined' ? window.SERVER_URL : undefined;
-  if (!url) return entry;
-
-  try {
-    const res = await fetch(`${url}/workouts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      credentials: 'include',
-      body: JSON.stringify(workout)
-    });
-
-    if (res.ok) {
-      const saved = await res.json();
-      return await persistHistoryEntry(entry, saved);
+  // Non-blocking backend sync so local completion UX is unaffected.
+  syncWorkoutToBackend(workout).then(async synced => {
+    if (!synced || !window.SERVER_URL) return;
+    try {
+      const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(workout.userId || '')}`, {
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const first = data?.items?.find(item => item?.workout?.id === workout.id || item?.id === workout.id);
+      if (first) {
+        await persistHistoryEntry(entry, first.workout || first);
+      }
+    } catch {
+      // Ignore follow-up canonicalization failures.
     }
-  } catch {
-    // Ignore network errors – the local copy is already stored.
-  }
+  });
 
   return entry;
 }
@@ -195,17 +260,12 @@ export async function finalizeResistanceWorkout(state) {
 export async function loadHistory() {
   const local = loadLocalHistory();
 
-  if (!window.SERVER_URL) {
+  if (typeof window === 'undefined' || !window.SERVER_URL) {
     return { items: local, source: 'local' };
   }
 
   try {
-    const res = await fetch(`${window.SERVER_URL}/workouts`, {
-      credentials: 'include',
-      headers: getAuthHeaders()
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const remoteItems = await res.json();
+    const remoteItems = await fetchWorkoutHistoryFromBackend(getCurrentUserId() || 'unknown');
 
     const merged = mergeRemoteAndLocal(remoteItems, local);
 
@@ -237,6 +297,23 @@ function buildExerciseSummary(exercises) {
   return unique.length > 4 ? `${unique.slice(0, 4).join(', ')} +${unique.length - 4} more` : unique.join(', ');
 }
 
+function normalizeHistoryItem(item) {
+  const workout = item?.workout || item;
+  const fromDetailedSets = (workout?.exercises || []).map(ex => ({
+    name: ex?.name || 'Exercise',
+    repsArray: Array.isArray(ex?.sets) ? ex.sets.map(set => Number(set?.reps ?? 0)) : [],
+    weightsArray: Array.isArray(ex?.sets) ? ex.sets.map(set => Number(set?.weight ?? 0)) : []
+  }));
+
+  return {
+    id: item?.id || workout?.id || generateLocalId(),
+    title: item?.title || workout?.title || workout?.name || 'Workout',
+    date: item?.date || workout?.date || workout?.createdAt,
+    exercises: fromDetailedSets.length ? fromDetailedSets : mapToResistanceLog(workout).exercises,
+    workout
+  };
+}
+
 function renderHistoryList(containerEl) {
   containerEl.innerHTML = '';
   const list = document.createElement('ul');
@@ -245,150 +322,18 @@ function renderHistoryList(containerEl) {
   cachedWorkoutHistory.forEach((log, index) => {
     const li = document.createElement('li');
     li.className = 'history-item';
-    const title = log?.title || 'Resistance Workout';
-    const dateLabel = formatWorkoutDate(log?.date);
-    const summary = buildExerciseSummary(log?.exercises);
-
     li.innerHTML = `
       <div class="row">
-        <strong>${title}</strong>
-        <span>${dateLabel}</span>
+        <strong>${log?.title || 'Workout'}</strong>
+        <span>${formatWorkoutDate(log?.date)}</span>
       </div>
-      <div class="meta">${summary}</div>
+      <div class="meta">${buildExerciseSummary(log?.exercises)}</div>
       <button class="adv-btn primary history-open-btn" data-history-index="${index}">Open</button>
     `;
-
     list.appendChild(li);
   });
 
-  const currentUserId = getCurrentUserId();
-  const logs = loadLogsFromLocalStorage()
-    .filter(log => !log?.userId || !currentUserId || log.userId === currentUserId)
-    .slice()
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  const renderEmpty = () => {
-    containerEl.innerHTML = `
-      <div class="empty">
-        No workouts yet.
-        <div class="hint">Log a workout and it will appear here (local only).</div>
-      </div>`;
-  };
-
-  const renderDetail = log => {
-    containerEl.innerHTML = '';
-    const backButton = document.createElement('button');
-    backButton.type = 'button';
-    backButton.className = 'adv-btn';
-    backButton.textContent = '← Back';
-    backButton.addEventListener('click', renderList);
-    containerEl.appendChild(backButton);
-
-    const title = document.createElement('h3');
-    title.textContent = log?.title || log?.name || 'Workout';
-    title.className = 'history-detail-title';
-    containerEl.appendChild(title);
-
-    const dateLine = document.createElement('div');
-    dateLine.className = 'history-detail-meta';
-    dateLine.textContent = new Date(log.date).toLocaleString();
-    containerEl.appendChild(dateLine);
-
-    const list = document.createElement('div');
-    list.className = 'history-detail-list';
-
-    (log.exercises || []).forEach(ex => {
-      const card = document.createElement('div');
-      card.className = 'history-detail-card';
-
-      const heading = document.createElement('div');
-      heading.className = 'history-detail-exercise';
-      heading.textContent = ex.name || 'Exercise';
-      card.appendChild(heading);
-
-      const setsRow = document.createElement('div');
-      setsRow.className = 'history-detail-sets';
-      const reps = Array.isArray(ex.repsArray) ? ex.repsArray : [];
-      const weights = Array.isArray(ex.weightsArray) ? ex.weightsArray : [];
-      const setCount = Math.max(reps.length, weights.length);
-      if (!setCount) {
-        setsRow.textContent = 'No sets recorded.';
-      } else {
-        const chips = [];
-        for (let i = 0; i < setCount; i += 1) {
-          const rep = reps[i] ?? '-';
-          const weight = weights[i] ?? '-';
-          chips.push(`${weight} × ${rep}`);
-        }
-        setsRow.textContent = chips.join(', ');
-      }
-      card.appendChild(setsRow);
-      list.appendChild(card);
-    });
-
-    if (!list.childElementCount) {
-      const empty = document.createElement('div');
-      empty.className = 'history-detail-empty';
-      empty.textContent = 'No exercise data.';
-      list.appendChild(empty);
-    }
-
-    containerEl.appendChild(list);
-  };
-
-  const renderList = () => {
-    containerEl.innerHTML = '';
-    if (!logs.length) {
-      renderEmpty();
-      return;
-    }
-
-    const list = document.createElement('ul');
-    list.className = 'history-list';
-
-    logs.forEach(log => {
-      const li = document.createElement('li');
-      li.className = 'history-item';
-      const dateLabel = new Date(log.date).toLocaleString();
-      const title = log?.title || log?.name || new Date(log.date).toDateString();
-
-      const header = document.createElement('div');
-      header.className = 'row';
-      const titleEl = document.createElement('strong');
-      titleEl.textContent = title;
-      const dateEl = document.createElement('span');
-      dateEl.textContent = dateLabel;
-      header.appendChild(titleEl);
-      header.appendChild(dateEl);
-
-      const openButton = document.createElement('button');
-      openButton.type = 'button';
-      openButton.className = 'adv-btn primary history-open-btn';
-      openButton.textContent = 'Open';
-      openButton.addEventListener('click', event => {
-        event.stopPropagation();
-        renderDetail(log);
-      });
-
-      const headerRow = document.createElement('div');
-      headerRow.className = 'history-item-header';
-      headerRow.appendChild(header);
-      headerRow.appendChild(openButton);
-
-      const exerciseCount = document.createElement('div');
-      exerciseCount.className = 'meta';
-      const count = Array.isArray(log.exercises) ? log.exercises.length : 0;
-      exerciseCount.textContent = `${count} exercise${count === 1 ? '' : 's'}`;
-
-      li.appendChild(headerRow);
-      li.appendChild(exerciseCount);
-      list.appendChild(li);
-    });
-
-    containerEl.appendChild(list);
-  };
-
-  renderList();
+  containerEl.appendChild(list);
 }
 
 function renderHistoryDetail(containerEl, log) {
@@ -424,15 +369,33 @@ function renderHistoryDetail(containerEl, log) {
 export async function renderWorkoutHistory(containerEl = document.getElementById('logHistoryContainer')) {
   if (!containerEl) return;
 
-  const logs = loadLogsFromLocalStorage().slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-  cachedWorkoutHistory = logs;
+  containerEl.innerHTML = '<p style="opacity:.7;">Loading workout history…</p>';
 
-  if (!logs.length) {
-    containerEl.innerHTML = `
-      <div class="empty">
-        No workouts yet.
-        <div class="hint">Log a workout and it will appear here (local only).</div>
-      </div>`;
+  const currentUserId = getCurrentUserId() || 'unknown';
+  let items = [];
+  try {
+    if (!window.SERVER_URL) {
+      throw new Error('SERVER_URL not configured');
+    }
+    items = await fetchWorkoutHistoryFromBackend(currentUserId);
+  } catch (error) {
+    console.warn('[History] Falling back to local history:', error);
+    items = loadLogsFromLocalStorage()
+      .filter(log => !log?.userId || log.userId === currentUserId)
+      .map(log => ({
+        id: log.id || generateLocalId(),
+        username: log.userId,
+        date: log.date,
+        title: log.title,
+        workout: log
+      }));
+  }
+
+  cachedWorkoutHistory = items.map(normalizeHistoryItem)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  if (!cachedWorkoutHistory.length) {
+    containerEl.innerHTML = '<p style="opacity:.7;">No workouts saved yet.</p>';
     return;
   }
 
@@ -461,6 +424,7 @@ const historyApi = {
   loadHistory,
   loadWorkoutHistory,
   finalizeResistanceWorkout,
+  syncWorkoutToBackend,
   renderWorkoutHistory
 };
 
