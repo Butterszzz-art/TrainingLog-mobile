@@ -83,6 +83,9 @@
     textarea::placeholder {
       color: var(--secondary-text);
     }
+    .suggested-input::placeholder {
+      font-style: italic;
+    }
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--primary);
@@ -655,6 +658,39 @@
   <option value="">Select Template...</option>
 </select>
   <div id="templateLoadMessage" style="margin-top:6px; color:#b00020; display:none;"></div>
+  <div id="templateBuilder" style="margin-top:12px; border:1px solid #ddd; border-radius:8px; padding:12px;">
+    <h3 style="margin:0 0 10px 0;">Template Builder</h3>
+    <input type="text" id="newTemplateName" placeholder="Template name" />
+    <input type="text" id="newTemplateDescription" placeholder="Description" style="margin-top:6px;" />
+    <input type="text" id="newTemplateTags" placeholder="Tags (comma separated)" style="margin-top:6px;" />
+    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+      <input type="text" id="newTemplateExercise" placeholder="Exercise name" style="flex:1 1 170px;" />
+      <input type="number" id="newTemplateSets" placeholder="Sets" min="1" style="width:90px;" />
+      <input type="text" id="newTemplateReps" placeholder="Target reps" style="width:100px;" />
+      <select id="newTemplateSetType" style="width:120px;">
+        <option value="straight">Straight</option>
+        <option value="superset">Superset</option>
+        <option value="circuit">Circuit</option>
+      </select>
+      <input type="text" id="newTemplateGroupId" placeholder="Group (e.g. A)" style="width:130px;" />
+      <button type="button" onclick="addExerciseToTemplate()">Add Exercise</button>
+    </div>
+    <small>Drag rows to reorder. Use matching group labels to link superset/circuit exercises.</small>
+    <ul id="newTemplateList" style="margin-top:8px; padding-left:18px;"></ul>
+    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+      <button type="button" onclick="saveSimpleTemplate()">Save Built Template</button>
+      <button type="button" onclick="resetTemplateBuilder()">Clear Builder</button>
+    </div>
+  </div>
+  <div id="templateManager" style="margin-top:12px; border:1px solid #ddd; border-radius:8px; padding:12px;">
+    <h3 style="margin:0 0 10px 0;">Template Manager</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+      <button type="button" onclick="editSelectedTemplate()">Edit</button>
+      <button type="button" onclick="duplicateSelectedTemplate()">Duplicate</button>
+      <button type="button" onclick="deleteSelectedTemplate()">Delete</button>
+    </div>
+    <div id="templateLibraryList" style="font-size:0.92rem;"></div>
+  </div>
 
 
   <div id="restTimerSection" style="margin-top:10px;">
@@ -1152,6 +1188,14 @@
     </label>
   </section>
 
+  <section class="panel" aria-labelledby="autoIncrementHeading" style="margin-top:20px;">
+    <h3 id="autoIncrementHeading">Progression Suggestions</h3>
+    <label>
+      <input type="checkbox" id="autoIncrementToggle" checked />
+      Auto-increment suggestions when the last set is at or below target RPE
+    </label>
+  </section>
+
   <section id="legacyThemeSection" class="panel" aria-labelledby="themeSelectLabel" style="margin-top:20px;">
     <h3 id="themeSelectLabel">Legacy Theme Picker</h3>
     <p style="margin-top:0;">Use this selector if the primary settings form is unavailable.</p>
@@ -1303,6 +1347,7 @@
 <script type="module" src="history.js"></script>
 <script src="lifestyle.js"></script>
 <script src="src/js/settings.js"></script>
+<script src="plateCalculator.js"></script>
 <script>
 
 let currentUser = null;
@@ -1681,6 +1726,10 @@ function showTab(tabName) {
       if (trainerToggle) {
         trainerToggle.checked = JSON.parse(localStorage.getItem('trainerMode') || 'false');
       }
+      const autoIncrementToggle = document.getElementById('autoIncrementToggle');
+      if (autoIncrementToggle) {
+        autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
+      }
       break;
   }
 }
@@ -1827,12 +1876,14 @@ function editGoalValue(workoutIndex, entryIndex, type, value) {
 let currentSetCount = 0;
 
 function generateSetInputs(setCount) {
-  currentSetCount = setCount;
+  currentSetCount = Number(setCount) || 0;
   const container = document.getElementById("setInputsContainer");
   container.innerHTML = '';
-  for (let i = 0; i < setCount; i++) {
+  for (let i = 0; i < currentSetCount; i++) {
     container.innerHTML += getSetInputHTML(i);
   }
+
+  applySuggestedSetValuesForExercise();
   updateAddButtonState();
 }
 
@@ -1850,6 +1901,7 @@ function getSetInputHTML(i) {
       <label style="min-width: 60px;">Set ${i + 1}</label>
       <input type="number" id="reps_${i}" placeholder="Reps" style="width: 80px;" oninput="updateAddButtonState()" />
       <input type="number" id="weight_${i}" placeholder="Weight" style="width: 100px;" oninput="updateAddButtonState()" />
+      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;">Plate Calc</button>
       <label style="font-size:12px;"><input type="checkbox" id="dropset_${i}" /> Dropset</label>
       <label style="font-size:12px;"><input type="checkbox" id="restPause_${i}" /> Rest Pause</label>
       <button onclick="removeSet(${i})" style="background-color: #dc3545; color: var(--text-color); border: none; padding: 4px 8px; border-radius: 4px;">❌</button>
@@ -1926,6 +1978,7 @@ function addLogEntry() {
   const weightsArray = [];
   const dropsetArray = [];
   const restPauseArray = [];
+  const rpeArray = [];
   const skippedArray = [];
   const completedArray = [];
   const setTypeArray = [];
@@ -1934,6 +1987,8 @@ function addLogEntry() {
   for (let i = 0; i < sets; i++) {
     const reps = +document.getElementById(`reps_${i}`).value;
     const weight = +document.getElementById(`weight_${i}`).value;
+    const rpeInput = document.getElementById(`rpe_${i}`);
+    const rpe = rpeInput ? +rpeInput.value : null;
     const ds = document.getElementById(`dropset_${i}`).checked;
     const rp = document.getElementById(`restPause_${i}`).checked;
     if (isNaN(reps) || isNaN(weight)) {
@@ -1942,6 +1997,7 @@ function addLogEntry() {
     }
     repsArray.push(reps);
     weightsArray.push(weight);
+    rpeArray.push(Number.isFinite(rpe) ? rpe : null);
     dropsetArray.push(ds);
     restPauseArray.push(rp);
     skippedArray.push(false);
@@ -1976,6 +2032,7 @@ function addLogEntry() {
     sets,
     repsArray,
     weightsArray,
+    rpeArray,
     dropsetArray,
     restPauseArray,
     skippedArray,
@@ -1988,9 +2045,26 @@ function addLogEntry() {
     repGoal
   });
 
+  const activeWorkout = workouts[workouts.length - 1];
+  const computedMetrics = typeof calculateWorkoutMetrics === 'function'
+    ? calculateWorkoutMetrics(activeWorkout)
+    : {
+        sessionVolume: calculateWorkoutVolume(activeWorkout),
+        averageIntensity: 0,
+        estimated1RM: Math.max(...weightsArray.map((w, i) => (w || 0) * (1 + ((repsArray[i] || 0) / 30))), 0)
+      };
+  activeWorkout.sessionVolume = computedMetrics.sessionVolume;
+  activeWorkout.averageIntensity = computedMetrics.averageIntensity;
+  activeWorkout.estimated1RM = computedMetrics.estimated1RM;
+  activeWorkout.metrics = {
+    volume: computedMetrics.sessionVolume,
+    intensity: computedMetrics.averageIntensity,
+    oneRM: computedMetrics.estimated1RM
+  };
+
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   if (typeof saveWorkoutToBackend === 'function') {
-    saveWorkoutToBackend(workouts[workouts.length - 1]);
+    saveWorkoutToBackend(activeWorkout);
   }
   updatePRs(currentUser, { log: [{ exercise, weightsArray, repsArray }] }, calculateWorkoutVolume);
   updateGoalProgress(currentUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
@@ -2024,6 +2098,7 @@ function addLogEntry() {
 
   // ✅ Reset set counter
   currentSetCount = 0;
+  lastAutoFilledExercise = '';
   updateAddButtonState();
 
 
@@ -3272,62 +3347,160 @@ async function fetchTemplates(username) {
   return items;
 }
 
+let resistanceTemplatesCache = [];
+let newTemplateExercises = [];
+let templateDraftEditId = null;
+
+function getLocalManagedTemplatesKey(username = currentUser) {
+  return `managedTemplates_${username}`;
+}
+
+function getLocalManagedTemplates(username = currentUser) {
+  return JSON.parse(localStorage.getItem(getLocalManagedTemplatesKey(username))) || [];
+}
+
+function saveLocalManagedTemplates(templates, username = currentUser) {
+  localStorage.setItem(getLocalManagedTemplatesKey(username), JSON.stringify(templates));
+}
+
+function normalizeTemplateRecord(template) {
+  if (!template) return null;
+  let templateData = template.data ?? template.TemplateData ?? template.templateData;
+
+  if (typeof templateData === 'string') {
+    try {
+      templateData = JSON.parse(templateData);
+    } catch (err) {
+      console.warn('Skipping template with invalid data string', err, template);
+      return null;
+    }
+  }
+
+  if (!templateData || typeof templateData !== 'object') return null;
+
+  const name = template.name || template.TemplateName || templateData.title || 'Untitled Template';
+  const id = template.id || template.recordId || template.localId || `${name}_${Date.now()}`;
+
+  return {
+    id,
+    name,
+    data: templateData,
+    source: template.source || (template.localId ? 'local' : 'remote')
+  };
+}
+
 function populateTemplateSelect(selectId, templates) {
   const select = document.getElementById(selectId);
   if (!select) return;
 
   select.innerHTML = '<option value="">Select Template...</option>';
-
   templates.forEach(template => {
     if (!template) return;
-    const name = template.name || template.TemplateName || 'Untitled Template';
-    let templateData = template.data ?? template.TemplateData ?? template.templateData;
-
-    if (typeof templateData === 'string') {
-      try {
-        templateData = JSON.parse(templateData);
-      } catch (err) {
-        console.warn('Skipping template with invalid data string', err, template);
-        return;
-      }
-    }
-
-    if (!templateData) return;
-
     const option = document.createElement('option');
-    try {
-      option.value = JSON.stringify(templateData);
-    } catch (err) {
-      console.warn('Skipping template due to serialization error', err, template);
-      return;
-    }
-    option.textContent = name;
+    option.value = template.id;
+    option.textContent = template.name;
     select.appendChild(option);
   });
+}
+
+function renderTemplateLibraryList() {
+  const container = document.getElementById('templateLibraryList');
+  if (!container) return;
+  if (!resistanceTemplatesCache.length) {
+    container.textContent = 'No templates loaded.';
+    return;
+  }
+  container.innerHTML = resistanceTemplatesCache
+    .map(tpl => {
+      const description = tpl.data?.metadata?.description || '';
+      const tags = Array.isArray(tpl.data?.metadata?.tags) ? tpl.data.metadata.tags.join(', ') : '';
+      return `<div style="padding:4px 0;"><strong>${tpl.name}</strong>${description ? ` — ${description}` : ''}${tags ? ` <em>[${tags}]</em>` : ''}</div>`;
+    })
+    .join('');
 }
 
 
 // Populate the dropdown
 async function loadTemplateDropdown(username = currentUser) {
   try {
-    const templates = await fetchTemplates(username);
-    console.log('Loaded templates:', templates);
+    const remoteTemplates = await fetchTemplates(username);
+    const localTemplates = getLocalManagedTemplates(username);
+    const merged = [...remoteTemplates, ...localTemplates]
+      .map(normalizeTemplateRecord)
+      .filter(Boolean);
+    resistanceTemplatesCache = merged;
+    console.log('Loaded templates:', merged);
     // Populate the resistance template dropdown; CrossFit templates use a separate select
-    populateTemplateSelect('resistanceTemplateSelect', templates);
+    populateTemplateSelect('resistanceTemplateSelect', merged);
+    renderTemplateLibraryList();
   } catch (err) {
     console.warn('Template loading failed:', err);
+    resistanceTemplatesCache = [];
     populateTemplateSelect('resistanceTemplateSelect', []);
+    renderTemplateLibraryList();
   }
+}
+
+function buildTemplateFromWorkout(workout, metadata = {}) {
+  const safeWorkout = workout && typeof workout === 'object' ? workout : {};
+  const log = Array.isArray(safeWorkout.log) ? safeWorkout.log : [];
+  const exercises = log.map((entry, exerciseIndex) => {
+    const setCount = Number(entry.sets) || (Array.isArray(entry.repsArray) ? entry.repsArray.length : 0);
+    const groupType = entry.groupType || 'straight';
+    const groupId = entry.groupId || null;
+    const sets = Array.from({ length: setCount }, (_, setIndex) => ({
+      order: setIndex + 1,
+      setType: entry.setTypeArray?.[setIndex] || groupType,
+      targetReps: entry.repRange || entry.repsArray?.[setIndex] || 0,
+      targetWeight: entry.weightsArray?.[setIndex] || 0,
+      groupId
+    }));
+    return {
+      id: entry.id || `ex_${exerciseIndex}_${Date.now()}`,
+      name: entry.exercise || entry.name || 'Exercise',
+      notes: entry.notes || '',
+      groupType,
+      groupId,
+      sets
+    };
+  });
+
+  const tags = Array.isArray(metadata.tags) ? metadata.tags : [];
+
+  return {
+    title: metadata.name || safeWorkout.title || `Template ${new Date().toISOString().split('T')[0]}`,
+    date: safeWorkout.date || new Date().toISOString().split('T')[0],
+    metadata: {
+      description: metadata.description || safeWorkout.description || '',
+      tags
+    },
+    exercises
+  };
 }
 
 // Save last workout as template
 function saveWorkoutAsTemplate() {
-  const name = prompt("Enter a name for this template:");
+  const name = prompt("Template name:");
   if (!name) return;
+  const description = prompt('Template description (optional):') || '';
+  const tagsInput = prompt('Template tags (comma separated, optional):') || '';
+  const tags = tagsInput.split(',').map(tag => tag.trim()).filter(Boolean);
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   if (!workouts.length) return alert("No workout to save.");
-  const template = workouts[workouts.length - 1];
+  const template = buildTemplateFromWorkout(workouts[workouts.length - 1], {
+    name,
+    description,
+    tags
+  });
+  const localTemplates = getLocalManagedTemplates();
+  localTemplates.push({
+    localId: `local_${Date.now()}`,
+    name,
+    data: template,
+    source: 'local'
+  });
+  saveLocalManagedTemplates(localTemplates);
 
   saveTemplate(currentUser, name, template)
     .then(() => {
@@ -3349,25 +3522,61 @@ function loadSelectedTemplate() {
 
 function loadSelectedResistanceTemplate() {
   const select = document.getElementById('resistanceTemplateSelect');
-  const value = select ? select.value : '';
+  const selectedTemplateId = select ? select.value : '';
+  const selectedTemplate = resistanceTemplatesCache.find(tpl => tpl.id === selectedTemplateId);
+  const value = selectedTemplate?.data;
   if (!value) return;
 
-  let template;
-  try {
-    template = JSON.parse(value);
-  } catch (error) {
-    console.error('Invalid template JSON', error);
-    alert('Failed to load template.');
-    return;
-  }
+  const template = value;
 
   if (!template || typeof template !== 'object') {
     alert('Invalid template format.');
     return;
   }
 
+  const templateLog = Array.isArray(template.log)
+    ? template.log
+    : (Array.isArray(template.exercises)
+      ? template.exercises.map((exercise, exerciseIndex, allExercises) => {
+        const sets = Array.isArray(exercise.sets) ? exercise.sets : [];
+        const linkedExerciseIds = allExercises
+          .filter(other => other.id !== exercise.id && other.groupType === exercise.groupType && other.groupId && other.groupId === exercise.groupId)
+          .map(other => other.id);
+        return {
+          exercise: exercise.name,
+          sets: sets.length,
+          repsArray: sets.map(setDef => Number(setDef.targetReps) || 0),
+          weightsArray: sets.map(setDef => Number(setDef.targetWeight) || 0),
+          dropsetArray: sets.map(() => false),
+          restPauseArray: sets.map(() => false),
+          skippedArray: sets.map(() => false),
+          completedArray: sets.map(() => false),
+          setTypeArray: sets.map(setDef => setDef.setType || 'standard'),
+          advancedArray: sets.map(() => createDefaultAdvancedSet()),
+          setDefinitions: sets,
+          groupType: exercise.groupType || 'straight',
+          groupId: exercise.groupId || null,
+          linkedExerciseIds,
+          templateExerciseId: exercise.id || `exercise_${exerciseIndex}`,
+          unit: 'kg',
+          date: new Date().toISOString().split('T')[0]
+        };
+      })
+      : []);
+
+  if (!templateLog.length) {
+    alert('Template has no exercises to load.');
+    return;
+  }
+
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  workouts.push(template);
+  workouts.push({
+    title: template.title || selectedTemplate?.name || `Template Workout ${new Date().toISOString().split('T')[0]}`,
+    date: new Date().toISOString().split('T')[0],
+    metadata: template.metadata || {},
+    log: templateLog,
+    restBreaks: []
+  });
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   renderWorkouts();
   alert('Template loaded!');
@@ -3384,14 +3593,9 @@ async function sendTemplate() {
     return;
   }
 
-  let templateData;
-  try {
-    templateData = JSON.parse(select.value);
-  } catch (error) {
-    console.error('Invalid template JSON', error);
-    alert('Failed to share template.');
-    return;
-  }
+  const selected = resistanceTemplatesCache.find(tpl => tpl.id === select.value);
+  const templateData = selected?.data;
+  if (!templateData) return alert('Failed to share template.');
 
   try {
     const response = await fetch(`${window.SERVER_URL}/sendTemplate`, {
@@ -3401,7 +3605,7 @@ async function sendTemplate() {
       body: JSON.stringify({
         fromUser: currentUser,
         toUser: otherUser,
-        templateName: templateData.title + " (Shared)",
+        templateName: (templateData.title || selected.name || 'Template') + " (Shared)",
         templateData
       })
     });
@@ -3422,7 +3626,8 @@ async function sendTemplate() {
 function showTemplateOptions() {
   const select = document.getElementById('resistanceTemplateSelect');
   const selected = select ? select.value : '';
-  document.getElementById("templateActions").style.display = selected ? 'block' : 'none';
+  const actions = document.getElementById("templateActions");
+  if (actions) actions.style.display = selected ? 'block' : 'none';
 }
 
 function toggleProgramBuilder() {
@@ -3433,79 +3638,146 @@ function toggleProgramBuilder() {
 
 function toggleTemplateBuilder() {
   const builder = document.getElementById('templateBuilder');
-  const btn = document.getElementById('openTemplateBtn');
   if (!builder) return;
-
-  const shouldShow = builder.style.display === 'none' || builder.style.display === '';
-  if (shouldShow) {
-    builder.style.display = 'block';
-    if (btn) btn.textContent = 'Hide Template';
-  } else {
-    builder.style.display = 'none';
-    if (btn) btn.textContent = 'Create Template';
-    document.getElementById('newTemplateExercise').value = '';
-    document.getElementById('newTemplateSets').value = '';
-    document.getElementById('newTemplateReps').value = '';
-    document.getElementById('newTemplateRPE').value = '';
-    newTemplateExercises = [];
-    document.getElementById('newTemplateList').innerHTML = '';
-  }
+  builder.style.display = builder.style.display === 'none' ? 'block' : 'none';
 }
 
-let newTemplateExercises = [];
+function renderTemplateBuilderList() {
+  const list = document.getElementById('newTemplateList');
+  if (!list) return;
+  list.innerHTML = '';
+  newTemplateExercises.forEach((exercise, index) => {
+    const li = document.createElement('li');
+    li.draggable = true;
+    li.dataset.index = String(index);
+    li.style.cursor = 'move';
+    li.textContent = `${exercise.name} — ${exercise.sets} sets @ ${exercise.repRange || 'n/a'} [${exercise.groupType}${exercise.groupId ? ` ${exercise.groupId}` : ''}]`;
+
+    li.addEventListener('dragstart', event => {
+      event.dataTransfer?.setData('text/plain', String(index));
+    });
+
+    li.addEventListener('dragover', event => {
+      event.preventDefault();
+    });
+
+    li.addEventListener('drop', event => {
+      event.preventDefault();
+      const fromIndex = Number(event.dataTransfer?.getData('text/plain'));
+      const toIndex = Number(li.dataset.index);
+      if (Number.isNaN(fromIndex) || Number.isNaN(toIndex) || fromIndex === toIndex) return;
+      const [moved] = newTemplateExercises.splice(fromIndex, 1);
+      newTemplateExercises.splice(toIndex, 0, moved);
+      renderTemplateBuilderList();
+    });
+
+    list.appendChild(li);
+  });
+}
+
+function resetTemplateBuilder() {
+  ['newTemplateExercise', 'newTemplateSets', 'newTemplateReps', 'newTemplateGroupId'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.value = '';
+  });
+  const tagsInput = document.getElementById('newTemplateTags');
+  if (tagsInput && !templateDraftEditId) tagsInput.value = '';
+  if (!templateDraftEditId) {
+    const nameInput = document.getElementById('newTemplateName');
+    const descInput = document.getElementById('newTemplateDescription');
+    if (nameInput) nameInput.value = '';
+    if (descInput) descInput.value = '';
+  }
+  newTemplateExercises = [];
+  renderTemplateBuilderList();
+}
 
 function addExerciseToTemplate() {
   const nameInput = document.getElementById('newTemplateExercise');
   const setsInput = document.getElementById('newTemplateSets');
   const repsInput = document.getElementById('newTemplateReps');
-  const rpeInput = document.getElementById('newTemplateRPE');
+  const setTypeInput = document.getElementById('newTemplateSetType');
+  const groupInput = document.getElementById('newTemplateGroupId');
   if (!nameInput) return;
   const name = nameInput.value.trim();
   if (!name) return;
-  const sets = parseInt(setsInput.value) || 0;
+  const sets = parseInt(setsInput.value, 10) || 1;
   const repRange = repsInput.value.trim();
-  const rpe = rpeInput.value.trim();
-  newTemplateExercises.push({ name, sets, repRange, rpe });
+  const groupType = setTypeInput?.value || 'straight';
+  const groupId = groupInput?.value.trim() || null;
+  newTemplateExercises.push({
+    id: `builder_${Date.now()}_${Math.random().toString(16).slice(2, 7)}`,
+    name,
+    sets,
+    repRange,
+    groupType,
+    groupId
+  });
   saveUserExercise(name);
-  const list = document.getElementById('newTemplateList');
-  if (list) {
-    const li = document.createElement('li');
-    let txt = `${name}`;
-    if (sets) txt += ` - ${sets} sets`;
-    if (repRange) txt += ` @ ${repRange}`;
-    if (rpe) txt += ` (RIR/RPE: ${rpe})`;
-    li.textContent = txt;
-    list.appendChild(li);
-  }
+  renderTemplateBuilderList();
   nameInput.value = '';
   setsInput.value = '';
   repsInput.value = '';
-  rpeInput.value = '';
+  if (groupInput) groupInput.value = '';
 }
 
 function saveSimpleTemplate() {
   const name = document.getElementById('newTemplateName').value.trim();
+  const description = document.getElementById('newTemplateDescription').value.trim();
+  const tags = document.getElementById('newTemplateTags').value
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean);
   if (!name || newTemplateExercises.length === 0) return alert('Template info missing');
   const templateData = {
-  title: name,
-  date: new Date().toISOString().split('T')[0],
-  log: newTemplateExercises.map(ex => ({
-    exercise: ex.name,
-    sets: ex.sets,
-    repRange: ex.repRange,
-    rpe: ex.rpe,
-    repsArray: Array(ex.sets || 0).fill(0),
-    weightsArray: Array(ex.sets || 0).fill(0),
-    unit: 'kg'
-  }))
-};
+    title: name,
+    date: new Date().toISOString().split('T')[0],
+    metadata: {
+      description,
+      tags
+    },
+    exercises: newTemplateExercises.map(ex => ({
+      id: ex.id,
+      name: ex.name,
+      groupType: ex.groupType,
+      groupId: ex.groupId,
+      sets: Array.from({ length: ex.sets || 1 }, (_, idx) => ({
+        order: idx + 1,
+        setType: ex.groupType === 'straight' ? 'straight' : ex.groupType,
+        targetReps: ex.repRange || 0,
+        targetWeight: 0,
+        groupId: ex.groupId
+      }))
+    }))
+  };
+
+  const localTemplates = getLocalManagedTemplates();
+  if (templateDraftEditId) {
+    const existingIndex = localTemplates.findIndex(tpl => tpl.localId === templateDraftEditId);
+    if (existingIndex >= 0) {
+      localTemplates[existingIndex] = {
+        ...localTemplates[existingIndex],
+        name,
+        data: templateData,
+        source: 'local'
+      };
+    } else {
+      localTemplates.push({ localId: templateDraftEditId, name, data: templateData, source: 'local' });
+    }
+  } else {
+    localTemplates.push({
+      localId: `local_${Date.now()}`,
+      name,
+      data: templateData,
+      source: 'local'
+    });
+  }
+  saveLocalManagedTemplates(localTemplates);
 
   saveTemplate(currentUser, name, templateData)
     .then(() => {
-      newTemplateExercises = [];
-      document.getElementById('newTemplateList').innerHTML = '';
-      document.getElementById('newTemplateName').value = '';
-      toggleTemplateBuilder();
+      templateDraftEditId = null;
+      resetTemplateBuilder();
       loadProgramTemplates();
       loadTemplateDropdown();
       alert('Template saved');
@@ -3516,13 +3788,75 @@ function saveSimpleTemplate() {
     });
 }
 
+function getSelectedTemplateRecord() {
+  const select = document.getElementById('resistanceTemplateSelect');
+  if (!select || !select.value) return null;
+  return resistanceTemplatesCache.find(tpl => tpl.id === select.value) || null;
+}
+
+function editSelectedTemplate() {
+  const selected = getSelectedTemplateRecord();
+  if (!selected) return alert('Select a template to edit.');
+  const exercises = selected.data?.exercises;
+  if (!Array.isArray(exercises) || !selected.id.startsWith('local_')) {
+    alert('Only locally managed advanced templates can be edited. Duplicate a remote template first.');
+    return;
+  }
+  templateDraftEditId = selected.id;
+  document.getElementById('newTemplateName').value = selected.name;
+  document.getElementById('newTemplateDescription').value = selected.data?.metadata?.description || '';
+  document.getElementById('newTemplateTags').value = (selected.data?.metadata?.tags || []).join(', ');
+  newTemplateExercises = exercises.map(exercise => ({
+    id: exercise.id || `builder_${Date.now()}`,
+    name: exercise.name,
+    sets: exercise.sets?.length || 1,
+    repRange: exercise.sets?.[0]?.targetReps || '',
+    groupType: exercise.groupType || 'straight',
+    groupId: exercise.groupId || null
+  }));
+  renderTemplateBuilderList();
+  document.getElementById('templateBuilder').style.display = 'block';
+}
+
+function duplicateSelectedTemplate() {
+  const selected = getSelectedTemplateRecord();
+  if (!selected) return alert('Select a template to duplicate.');
+  const cloned = JSON.parse(JSON.stringify(selected.data));
+  const localTemplates = getLocalManagedTemplates();
+  localTemplates.push({
+    localId: `local_${Date.now()}`,
+    name: `${selected.name} Copy`,
+    data: { ...cloned, title: `${selected.name} Copy` },
+    source: 'local'
+  });
+  saveLocalManagedTemplates(localTemplates);
+  loadTemplateDropdown();
+}
+
+function deleteSelectedTemplate() {
+  const selected = getSelectedTemplateRecord();
+  if (!selected) return alert('Select a template to delete.');
+  if (!selected.id.startsWith('local_')) {
+    alert('Only locally managed templates can be deleted in-app.');
+    return;
+  }
+  const localTemplates = getLocalManagedTemplates().filter(tpl => tpl.localId !== selected.id);
+  saveLocalManagedTemplates(localTemplates);
+  loadTemplateDropdown();
+}
+
 // ===== Program Builder =====
 let programDays = [];
 
 async function loadProgramTemplates(username = currentUser) {
   try {
-    const templates = await fetchTemplates(username);
-    populateTemplateSelect('programTemplateSelect', templates);
+    const remoteTemplates = await fetchTemplates(username);
+    const localTemplates = getLocalManagedTemplates(username);
+    const merged = [...remoteTemplates, ...localTemplates]
+      .map(normalizeTemplateRecord)
+      .filter(Boolean);
+    resistanceTemplatesCache = merged;
+    populateTemplateSelect('programTemplateSelect', merged);
   } catch (err) {
     console.warn('Program template loading failed:', err);
     populateTemplateSelect('programTemplateSelect', []);
@@ -3533,7 +3867,9 @@ function addDayToProgram() {
   const sel = document.getElementById("programTemplateSelect");
   const val = sel.value;
   if (!val) return;
-  const data = JSON.parse(val);
+  const selectedTemplate = resistanceTemplatesCache.find(tpl => tpl.id === val);
+  const data = selectedTemplate?.data;
+  if (!data) return;
   programDays.push(data);
   const list = document.getElementById("programDaysList");
   const li = document.createElement('li');
@@ -3696,57 +4032,178 @@ async function loadWorkoutsFromBackend() {
   }
 }
   
+const AUTO_INCREMENT_SETTING_KEY = 'autoIncrementEnabled';
+let lastAutoFilledExercise = '';
+
+function isAutoIncrementEnabled() {
+  const saved = localStorage.getItem(AUTO_INCREMENT_SETTING_KEY);
+  return saved === null ? true : saved === 'true';
+}
+
 function getLastExerciseEntry(exerciseName) {
+  const normalizedName = String(exerciseName || '').trim().toLowerCase();
+  if (!normalizedName) return null;
+
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
 
-  // Flatten all sets for that exercise
-  let lastMatch = null;
-
   for (let i = workouts.length - 1; i >= 0; i--) {
-    const log = workouts[i].log;
-    const match = log.find(entry => entry.exercise === exerciseName);
-    if (match) {
-      lastMatch = match;
-      break;
+    const log = Array.isArray(workouts[i]?.log) ? workouts[i].log : [];
+    const match = log.find(entry => String(entry?.exercise || '').trim().toLowerCase() === normalizedName);
+    if (match) return match;
+  }
+
+  return null;
+}
+
+function getLastWorkoutForExercise(exerciseName) {
+  const lastMatch = getLastExerciseEntry(exerciseName);
+  if (!lastMatch) return [];
+
+  const repsArray = Array.isArray(lastMatch.repsArray) ? lastMatch.repsArray : [];
+  const weightsArray = Array.isArray(lastMatch.weightsArray) ? lastMatch.weightsArray : [];
+
+  return repsArray.map((reps, index) => ({
+    reps: Number(reps) || 0,
+    weight: Number(weightsArray[index]) || 0
+  }));
+}
+
+function resolveLastSetRpe(entry) {
+  if (!entry || typeof entry !== 'object') return { target: null, actual: null };
+
+  const rawTarget = entry.targetRPE ?? entry.targetRpe ?? entry.rpeTarget ?? entry.goalRPE;
+  const target = Number(rawTarget);
+
+  let actualValue = entry.actualRPE ?? entry.actualRpe ?? entry.lastSetRPE ?? entry.lastSetRpe ?? entry.rpe;
+  if (Array.isArray(entry.rpeArray) && entry.rpeArray.length) {
+    actualValue = entry.rpeArray[entry.rpeArray.length - 1];
+  }
+  const actual = Number(actualValue);
+
+  return {
+    target: Number.isFinite(target) ? target : null,
+    actual: Number.isFinite(actual) ? actual : null
+  };
+}
+
+function shouldAutoIncrementSuggestion(entry) {
+  if (!isAutoIncrementEnabled() || !entry) return false;
+
+  const completed = Array.isArray(entry.completedArray) && entry.completedArray.length
+    ? Boolean(entry.completedArray[entry.completedArray.length - 1])
+    : true;
+
+  if (!completed) return false;
+
+  const { target, actual } = resolveLastSetRpe(entry);
+  if (target === null || actual === null) return false;
+
+  return actual <= target;
+}
+
+function getSuggestedSetsForExercise(exerciseName) {
+  const sets = getLastWorkoutForExercise(exerciseName);
+  const lastEntry = getLastExerciseEntry(exerciseName);
+
+  if (!sets.length) {
+    return { sets: [], unit: 'kg', autoIncrementApplied: false };
+  }
+
+  const suggestedSets = sets.map(set => ({ ...set }));
+  const shouldIncrement = shouldAutoIncrementSuggestion(lastEntry);
+
+  if (shouldIncrement) {
+    const shouldIncreaseWeight = Number.isFinite(Number(lastEntry?.repGoal))
+      ? suggestedSets.every(set => set.reps >= Number(lastEntry.repGoal))
+      : false;
+
+    if (shouldIncreaseWeight) {
+      suggestedSets.forEach(set => {
+        set.weight = Number((set.weight + 2.5).toFixed(2));
+      });
+    } else {
+      const finalIndex = suggestedSets.length - 1;
+      suggestedSets[finalIndex].reps += 1;
     }
   }
 
-  return lastMatch;
+  return {
+    sets: suggestedSets,
+    unit: lastEntry?.unit || 'kg',
+    autoIncrementApplied: shouldIncrement
+  };
+}
+
+function applySuggestedSetValuesForExercise(force = false) {
+  const exerciseInput = document.getElementById('exercise');
+  const name = exerciseInput ? exerciseInput.value.trim() : '';
+  if (!name || currentSetCount < 1) return false;
+
+  const shouldSkipForManualEdits = !force && lastAutoFilledExercise.toLowerCase() === name.toLowerCase();
+  if (shouldSkipForManualEdits) return false;
+
+  const suggestion = getSuggestedSetsForExercise(name);
+  if (!suggestion.sets.length) return false;
+
+  for (let i = 0; i < currentSetCount; i++) {
+    const repsInput = document.getElementById(`reps_${i}`);
+    const weightInput = document.getElementById(`weight_${i}`);
+    const setSuggestion = suggestion.sets[i];
+
+    if (!repsInput || !weightInput || !setSuggestion) continue;
+
+    if (force || repsInput.value === '') {
+      repsInput.value = setSuggestion.reps;
+    }
+    if (force || weightInput.value === '') {
+      weightInput.value = setSuggestion.weight;
+    }
+
+    repsInput.placeholder = 'Suggested from your last workout';
+    weightInput.placeholder = 'Suggested from your last workout';
+    repsInput.classList.add('suggested-input');
+    weightInput.classList.add('suggested-input');
+  }
+
+  const unitInput = document.getElementById('weightUnit');
+  if (unitInput && suggestion.unit) {
+    unitInput.value = suggestion.unit;
+  }
+
+  lastAutoFilledExercise = name;
+  updateAddButtonState();
+  return suggestion.autoIncrementApplied;
 }
 
 function handleExerciseBlur() {
-  const name = document.getElementById("exercise").value.trim();
+  const exerciseInput = document.getElementById('exercise');
+  const name = exerciseInput ? exerciseInput.value.trim() : '';
   if (!name) return;
 
-  const last = getLastExerciseEntry(name);
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const suggestion = getProgressiveOverloadSuggestion(name, workouts);
-  const msgDiv = document.getElementById("progressReminder");
-  msgDiv.innerHTML = '';
+  const suggestion = getSuggestedSetsForExercise(name);
+  const msgDiv = document.getElementById('progressReminder');
+  if (msgDiv) msgDiv.innerHTML = '';
 
-  if (last) {
-    const reps = last.repsArray.join(', ');
-    const weights = last.weightsArray.join(', ');
+  if (!suggestion.sets.length) return;
+
+  const reps = suggestion.sets.map(set => set.reps).join(', ');
+  const weights = suggestion.sets.map(set => set.weight).join(', ');
+
+  if (msgDiv) {
     msgDiv.innerHTML = `
       <div style="margin:10px 0; color: var(--highlight); font-weight:bold;">
-        Last time: ${reps} reps at ${weights} ${last.unit} <br>
-        Try to beat that today!${suggestion ? `<br>Recommended: ${suggestion}` : ''}
+        Suggested from last session: ${reps} reps at ${weights} ${suggestion.unit}
+        ${suggestion.autoIncrementApplied ? '<br><span style="font-style:italic; font-weight:normal;">Auto-increment applied because last set met target RPE.</span>' : ''}
       </div>`;
-
-    // auto-fill today's sets with progression
-    document.getElementById('sets').value = last.sets || last.repsArray.length;
-    generateSetInputs(last.sets || last.repsArray.length);
-    last.repsArray.forEach((r, i) => {
-      const inc = suggestion && suggestion.includes('rep') ? r + 1 : r;
-      document.getElementById(`reps_${i}`).value = inc;
-    });
-    last.weightsArray.forEach((w, i) => {
-      let val = w;
-      if (suggestion && suggestion.includes('2.5')) val = w + 2.5;
-      document.getElementById(`weight_${i}`).value = val;
-    });
-    document.getElementById('weightUnit').value = last.unit || 'kg';
   }
+
+  const setsInput = document.getElementById('sets');
+  if (setsInput && (!setsInput.value || Number(setsInput.value) !== suggestion.sets.length)) {
+    setsInput.value = suggestion.sets.length;
+  }
+
+  generateSetInputs(suggestion.sets.length);
+  applySuggestedSetValuesForExercise(true);
 }
 
 
@@ -4971,14 +5428,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggle = document.getElementById('trainerModeToggle');
   if (toggle) toggle.checked = saved;
   updateNavForTrainer(saved);
-    if (toggle) {
-      toggle.addEventListener('change', e => {
-        localStorage.setItem('trainerMode', JSON.stringify(e.target.checked));
-        updateNavForTrainer(e.target.checked);
-        if (e.target.checked) showTab('coachingTab');
-      });
-    }
-  });
+  if (toggle) {
+    toggle.addEventListener('change', e => {
+      localStorage.setItem('trainerMode', JSON.stringify(e.target.checked));
+      updateNavForTrainer(e.target.checked);
+      if (e.target.checked) showTab('coachingTab');
+    });
+  }
+
+  const autoIncrementToggle = document.getElementById('autoIncrementToggle');
+  if (autoIncrementToggle) {
+    autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
+    autoIncrementToggle.addEventListener('change', (event) => {
+      localStorage.setItem('autoIncrementEnabled', String(Boolean(event.target.checked)));
+      showToast(`Auto-increment suggestions ${event.target.checked ? 'enabled' : 'disabled'}`);
+    });
+  }
+});
 
 
   updateAddButtonState();
@@ -5489,6 +5955,53 @@ function renderLineChart(labels, label, data, trend, forecast) {
   });
 }
 
+function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) {
+  const ctx = document.getElementById('progressCanvas').getContext('2d');
+  if (progressChart) progressChart.destroy();
+  progressChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Session Volume',
+          data: volumes,
+          tension: .35,
+          yAxisID: 'yVolume'
+        },
+        {
+          label: 'Avg Intensity (%)',
+          data: intensities,
+          tension: .35,
+          yAxisID: 'yIntensity'
+        },
+        {
+          label: 'Estimated 1RM',
+          data: estimated1RMs,
+          tension: .35,
+          yAxisID: 'yVolume'
+        }
+      ]
+    },
+    options: {
+      scales: {
+        yVolume: {
+          beginAtZero: true,
+          position: 'left'
+        },
+        yIntensity: {
+          beginAtZero: true,
+          position: 'right',
+          suggestedMax: 100,
+          grid: {
+            drawOnChartArea: false
+          }
+        }
+      }
+    }
+  });
+}
+
 function renderExerciseProgress() {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const progressMap = {};
@@ -5524,7 +6037,15 @@ function renderExerciseProgress() {
 
 async function fetchWorkoutHistory() {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  return workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }));
+  return workouts.map(w => {
+    const metrics = typeof calculateWorkoutMetrics === 'function'
+      ? calculateWorkoutMetrics(w)
+      : null;
+    const volume = Number.isFinite(Number(w.sessionVolume)) ? Number(w.sessionVolume) : (metrics?.sessionVolume ?? calculateWorkoutVolume(w));
+    const averageIntensity = Number.isFinite(Number(w.averageIntensity)) ? Number(w.averageIntensity) : (metrics?.averageIntensity ?? 0);
+    const estimated1RM = Number.isFinite(Number(w.estimated1RM)) ? Number(w.estimated1RM) : (metrics?.estimated1RM ?? 0);
+    return { date: w.date, volume, averageIntensity, estimated1RM };
+  });
 }
 
 function applyDateRange(history) {
@@ -5571,16 +6092,24 @@ async function showWorkoutProgress(data) {
     return;
   }
   const history = workouts.length
-    ? workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }))
+    ? workouts.map(w => {
+        const metrics = typeof calculateWorkoutMetrics === 'function'
+          ? calculateWorkoutMetrics(w)
+          : null;
+        const volume = Number.isFinite(Number(w.sessionVolume)) ? Number(w.sessionVolume) : (metrics?.sessionVolume ?? calculateWorkoutVolume(w));
+        const averageIntensity = Number.isFinite(Number(w.averageIntensity)) ? Number(w.averageIntensity) : (metrics?.averageIntensity ?? 0);
+        const estimated1RM = Number.isFinite(Number(w.estimated1RM)) ? Number(w.estimated1RM) : (metrics?.estimated1RM ?? 0);
+        return { date: w.date, volume, averageIntensity, estimated1RM };
+      })
     : await fetchWorkoutHistory();
   const filtered = applyDateRange(history);
   const dates = filtered.map(h => h.date);
   const vols = filtered.map(h => h.volume);
+  const intensities = filtered.map(h => Number(h.averageIntensity || 0));
+  const estimated1RMs = filtered.map(h => Number(h.estimated1RM || 0));
   document.getElementById('exerciseProgress').style.display = 'none';
   document.getElementById('progressCanvas').style.display = 'block';
-  const trend = trendPoints(vols);
-  const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(vols, 4));
-  renderLineChart(dates.concat(new Array(4).fill('')), 'Total Volume', vols.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
+  renderWorkoutMetricsChart(dates, vols, intensities, estimated1RMs);
 }
 
 async function showCardioProgress() {
@@ -6562,6 +7091,7 @@ function showHistoryMiniTab(tab) {
     const exerciseInput = document.getElementById("exercise");
     if (exerciseInput) {
       exerciseInput.addEventListener("blur", handleExerciseBlur);
+      exerciseInput.addEventListener("change", handleExerciseBlur);
     }
 
     // showTab is defined above
@@ -6804,6 +7334,10 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
 window.toggleTemplateBuilder = toggleTemplateBuilder;
 window.addExerciseToTemplate = addExerciseToTemplate;
 window.saveSimpleTemplate = saveSimpleTemplate;
+window.resetTemplateBuilder = resetTemplateBuilder;
+window.editSelectedTemplate = editSelectedTemplate;
+window.duplicateSelectedTemplate = duplicateSelectedTemplate;
+window.deleteSelectedTemplate = deleteSelectedTemplate;
 window.showWorkoutProgress = showWorkoutProgress;
 window.showCardioProgress = showCardioProgress;
 window.showBodyweightProgress = showBodyweightProgress;
@@ -6898,5 +7432,4 @@ window.applyTheme = applyTheme;
 
 </body>
 </html>
-
 

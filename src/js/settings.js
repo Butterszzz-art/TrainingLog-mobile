@@ -34,6 +34,7 @@ function applySettingsToUI(settings) {
   const theme = settings.theme;
   const streakReminderEnabled = settings.streakReminderEnabled;
   const streakReminderTime = settings.streakReminderTime;
+  const autoIncrement = settings.autoIncrement;
 
   if (unit) {
     const unitSelect = document.getElementById('defaultUnit');
@@ -68,6 +69,10 @@ function applySettingsToUI(settings) {
       ? streakReminderTime
       : '19:00';
     reminderTimeInput.disabled = !Boolean(streakReminderEnabled);
+  if (typeof autoIncrement === 'boolean' && typeof localStorage !== 'undefined') {
+    const toggle = document.getElementById('autoIncrementSetting') || document.getElementById('autoIncrementToggle');
+    if (toggle) toggle.checked = autoIncrement;
+    localStorage.setItem('autoIncrementEnabled', String(autoIncrement));
   }
 }
 
@@ -80,6 +85,7 @@ function getDefaultSettings() {
     theme: localStorage.getItem('theme') || 'light',
     streakReminderEnabled: false,
     streakReminderTime: '19:00'
+    autoIncrement: localStorage.getItem('autoIncrementEnabled') !== 'false'
   };
 }
 
@@ -91,12 +97,14 @@ function saveSettings(event) {
   const themeField = container.querySelector('#theme');
   const reminderEnabledField = container.querySelector('#streakReminderEnabled');
   const reminderTimeField = container.querySelector('#streakReminderTime');
+  const autoIncrementField = container.querySelector('#autoIncrementSetting') || document.getElementById('autoIncrementToggle');
 
   const settings = {
     unit: unitField ? unitField.value : getDefaultSettings().unit,
     theme: themeField ? themeField.value : getDefaultSettings().theme,
     streakReminderEnabled: reminderEnabledField ? Boolean(reminderEnabledField.checked) : false,
     streakReminderTime: reminderTimeField && reminderTimeField.value ? reminderTimeField.value : '19:00'
+    autoIncrement: autoIncrementField ? Boolean(autoIncrementField.checked) : getDefaultSettings().autoIncrement
   };
 
   if (typeof localStorage !== 'undefined') {
