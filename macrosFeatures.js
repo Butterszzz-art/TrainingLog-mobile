@@ -89,10 +89,10 @@ export function updateOfflineBadge() {
 export function renderSparklines() {
   if (!window.Chart) return;
   const key = `macroHistory_${window.currentUser || ''}`;
-  const history = JSON.parse(localStorage.getItem(key) || '[]').slice(-7);
-  const labels = history.map(h => h.date);
-  const cals = history.map(h => (h.totals.protein*4)+(h.totals.carbs*4)+(h.totals.fats*9));
-  const proteins = history.map(h => h.totals.protein);
+  const macroHistory = JSON.parse(localStorage.getItem(key) || '[]').slice(-7);
+  const labels = macroHistory.map(h => h.date);
+  const cals = macroHistory.map(h => (h.totals.protein*4)+(h.totals.carbs*4)+(h.totals.fats*9));
+  const proteins = macroHistory.map(h => h.totals.protein);
   const calCanvas = document.getElementById('calSpark');
   const proteinCanvas = document.getElementById('proteinSpark');
   if (!calCanvas || !proteinCanvas) {
@@ -155,8 +155,8 @@ export function updateWeeklyTrend(progressOverride) {
   };
 
   const key = getWeeklyHistoryKey();
-  const history = JSON.parse(localStorage.getItem(key) || '[]');
-  const filtered = history.filter(item => item.date !== entry.date).filter(item => {
+  const weeklyHistory = JSON.parse(localStorage.getItem(key) || '[]');
+  const filtered = weeklyHistory.filter(item => item.date !== entry.date).filter(item => {
     const diff = (new Date(entry.date) - new Date(item.date)) / (1000 * 60 * 60 * 24);
     return diff <= 6;
   });
@@ -219,9 +219,9 @@ export function renderHeatmap() {
   if (!container) return;
   container.innerHTML = '';
   const key = `macroHistory_${window.currentUser || ''}`;
-  const history = JSON.parse(localStorage.getItem(key) || '[]');
+  const macroHistory = JSON.parse(localStorage.getItem(key) || '[]');
   const map = {};
-  history.forEach(h => {
+  macroHistory.forEach(h => {
     const total = (h.totals.protein*4)+(h.totals.carbs*4)+(h.totals.fats*9);
     const target = (JSON.parse(localStorage.getItem(`macroTargets_${window.currentUser}`))||{}).calories||1;
     map[h.date] = Math.min(1,total/target);

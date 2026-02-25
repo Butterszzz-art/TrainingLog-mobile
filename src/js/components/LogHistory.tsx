@@ -36,9 +36,9 @@ export default function LogHistory({ className = "", onSelect }: LogHistoryProps
 
       if (currentUser) {
         try {
-          const history = await fetchWorkoutHistory(currentUser);
-          if (isActive && Array.isArray(history)) {
-            const sorted = history
+          const workoutHistory = await fetchWorkoutHistory(currentUser);
+          if (isActive && Array.isArray(workoutHistory)) {
+            const sorted = workoutHistory
               .slice()
               .sort((a: WorkoutLog, b: WorkoutLog) => new Date(b.date).getTime() - new Date(a.date).getTime());
             setLogs(sorted);
