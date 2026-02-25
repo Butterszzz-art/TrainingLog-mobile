@@ -111,6 +111,142 @@ function computeMacroPlan({
   };
 }
 
+function roundMacroTargets(targets) {
+  const protein = Math.max(0, Math.round(Number(targets?.protein || 0)));
+  const carbs = Math.max(0, Math.round(Number(targets?.carbs || 0)));
+  const fat = Math.max(0, Math.round(Number(targets?.fat || 0)));
+  return {
+    protein,
+    carbs,
+    fat,
+    calories: protein * 4 + carbs * 4 + fat * 9,
+  };
+}
+
+function estimateWorkoutEnergyExpenditure(workout = {}) {
+  const sets = Array.isArray(workout?.sets)
+    ? workout.sets
+    : Array.isArray(workout?.workout?.sets)
+      ? workout.workout.sets
+      : [];
+
+  let totalVolume = 0;
+  let totalIntensity = 0;
+  let setCount = 0;
+
+  sets.forEach(set => {
+    const reps = Number(set?.reps) || 0;
+    const load = Number(set?.weight) || 0;
+    const rpe = Number(set?.rpe);
+    const intensity = Number.isFinite(rpe) ? rpe / 10 : 0.7;
+    totalVolume += reps * Math.max(load, 0);
+    totalIntensity += intensity;
+    setCount += 1;
+  });
+
+  const avgIntensity = setCount ? totalIntensity / setCount : 0;
+  const hrAvg = Number(workout?.hrAvg || workout?.workout?.hrAvg || 0);
+  const durationMin = Number(workout?.durationMin || workout?.workout?.durationMin || 0);
+  const hrLoad = hrAvg > 0 && durationMin > 0 ? (hrAvg / 100) * durationMin * 2 : 0;
+
+  const volumeKcal = totalVolume * 0.1;
+  const intensityKcal = avgIntensity * setCount * 8;
+  const estimatedCalories = Math.round(volumeKcal + intensityKcal + hrLoad);
+
+  return {
+    estimatedCalories,
+    totalVolume,
+    avgIntensity,
+    setCount,
+  };
+}
+
+function adjustTargetsByTrainingAndRecovery(baseTargets = {}, context = {}) {
+  const base = roundMacroTargets(baseTargets);
+  const energy = Number(context?.estimatedCalories || 0);
+  const volume = Number(context?.totalVolume || 0);
+  const isRestDay = Boolean(context?.isRestDay);
+  const isLowVolume = volume > 0 && volume < 1500;
+  const trainingFactor = Math.min(Math.max((energy + volume * 0.02) / 600, 0), 1.25);
+
+  let carbsDelta = 0;
+  let proteinDelta = 0;
+  let fatDelta = 0;
+  const reasons = [];
+
+  if (!isRestDay && trainingFactor > 0.1) {
+    carbsDelta += Math.round(20 + trainingFactor * 55);
+    proteinDelta += Math.round(8 + trainingFactor * 20);
+    reasons.push('Workout load increased carbs and protein.');
+  } else {
+    carbsDelta -= Math.round(Math.max(base.carbs * 0.15, 20));
+    reasons.push('Rest/low-volume day reduced carbs.');
+  }
+
+  const sleepHours = Number(context?.sleepHours);
+  const hrv = Number(context?.hrv);
+  const poorSleep = Number.isFinite(sleepHours) && sleepHours > 0 && sleepHours < 6.5;
+  const poorHrv = Number.isFinite(hrv) && hrv > 0 && hrv < 40;
+  if (poorSleep || poorHrv) {
+    fatDelta += Math.round(Math.max(base.fat * 0.12, 8));
+    reasons.push('Recovery was poor (sleep/HRV), fat increased for hormonal support.');
+  }
+
+  if (isLowVolume && !isRestDay) {
+    carbsDelta -= 15;
+    reasons.push('Low training volume slightly reduced carbs.');
+  }
+
+  return {
+    adjusted: roundMacroTargets({
+      protein: base.protein + proteinDelta,
+      carbs: base.carbs + carbsDelta,
+      fat: base.fat + fatDelta,
+    }),
+    deltas: { protein: proteinDelta, carbs: carbsDelta, fat: fatDelta },
+    reasons,
+  };
+}
+
+function applyDailyMacroAdjustment({
+  user,
+  baseTargets,
+  workout,
+  recovery = {},
+  date = new Date().toISOString().slice(0, 10),
+  isRestDay = false,
+} = {}) {
+  const safeUser = user || '';
+  if (!safeUser || !baseTargets) return null;
+  const workoutLoad = estimateWorkoutEnergyExpenditure(workout || {});
+  const computed = adjustTargetsByTrainingAndRecovery(baseTargets, {
+    ...workoutLoad,
+    ...recovery,
+    isRestDay,
+  });
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const key = `macroAdjustments_${safeUser}`;
+    const all = JSON.parse(localStorage.getItem(key) || '{}');
+    all[date] = {
+      date,
+      workoutLoad,
+      recovery,
+      baseTargets: roundMacroTargets(baseTargets),
+      adjustedTargets: computed.adjusted,
+      deltas: computed.deltas,
+      reasons: computed.reasons,
+    };
+    localStorage.setItem(key, JSON.stringify(all));
+  }
+
+  return {
+    ...computed,
+    workoutLoad,
+    message: `Macros adjusted for ${date}: P ${computed.deltas.protein >= 0 ? '+' : ''}${computed.deltas.protein}g, C ${computed.deltas.carbs >= 0 ? '+' : ''}${computed.deltas.carbs}g, F ${computed.deltas.fat >= 0 ? '+' : ''}${computed.deltas.fat}g.`,
+  };
+}
+
 if (typeof window !== 'undefined') {
   window.macroEngine = {
     calculateLeanMass,
@@ -120,5 +256,8 @@ if (typeof window !== 'undefined') {
     calculateTargetCalories,
     calculateMacros,
     computeMacroPlan,
+    estimateWorkoutEnergyExpenditure,
+    adjustTargetsByTrainingAndRecovery,
+    applyDailyMacroAdjustment,
   };
 }
