@@ -5258,7 +5258,68 @@ function saveDailyMacroProgress(protein, carbs, fats) {
   localStorage.setItem("dailyMacroProgress", JSON.stringify({ protein, carbs, fats }));
 }
 
+function getTodayWorkoutLoad(userId, today) {
+  const raw = JSON.parse(localStorage.getItem('tl_workout_history_v1') || '[]');
+  const todayEntries = Array.isArray(raw)
+    ? raw.filter(item => {
+        const itemDate = (item?.date || item?.createdAt || '').slice(0, 10);
+        const owner = item?.userId || item?.username || item?.user;
+        return itemDate === today && (!userId || !owner || owner === userId);
+      })
+    : [];
+
+  return todayEntries.reduce((acc, item) => {
+    const summary = window.macroEngine?.estimateWorkoutEnergyExpenditure
+      ? window.macroEngine.estimateWorkoutEnergyExpenditure(item)
+      : { estimatedCalories: 0, totalVolume: 0 };
+    acc.estimatedCalories += Number(summary.estimatedCalories || 0);
+    acc.totalVolume += Number(summary.totalVolume || 0);
+    return acc;
+  }, { estimatedCalories: 0, totalVolume: 0 });
+}
+
+function maybeApplyDailyMacroAdjustment() {
+  if (!window.macroEngine?.applyDailyMacroAdjustment || !currentUser) return;
+
+  const today = getTodayDateString();
+  const adjustedDate = localStorage.getItem(`macroTargetsAdjustedDate_${currentUser}`);
+  if (adjustedDate === today) return;
+
+  const baseTargets = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`) || 'null');
+  if (!baseTargets) return;
+
+  const workoutLoad = getTodayWorkoutLoad(currentUser, today);
+  const recoveryRaw = JSON.parse(localStorage.getItem(`recoveryMetrics_${currentUser}`) || '{}');
+  const recoveryToday = recoveryRaw?.[today] || recoveryRaw?.today || {};
+
+  const result = window.macroEngine.applyDailyMacroAdjustment({
+    user: currentUser,
+    baseTargets,
+    workout: workoutLoad,
+    recovery: {
+      sleepHours: Number(recoveryToday?.sleepHours || recoveryToday?.sleep || 0) || null,
+      hrv: Number(recoveryToday?.hrv || 0) || null,
+    },
+    date: today,
+    isRestDay: Number(workoutLoad.estimatedCalories || 0) < 20,
+  });
+
+  if (!result?.adjusted) return;
+  localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(result.adjusted));
+  localStorage.setItem(`macroTargetsAdjustedDate_${currentUser}`, today);
+
+  if (typeof window.renderMacroSlots === 'function') window.renderMacroSlots();
+  if (typeof window.renderMacroTargets === 'function') window.renderMacroTargets();
+
+  if (result.reasons?.length) {
+    const msg = `Macro targets updated: ${result.reasons.join(' ')}`;
+    if (typeof showToast === 'function') showToast(msg);
+    else console.log(msg);
+  }
+}
+
 function renderDailyMacroProgress() {
+  maybeApplyDailyMacroAdjustment();
   const progress = loadDailyMacroProgress();
 
   const totalCals = progress.protein * 4 + progress.carbs * 4 + progress.fats * 9;

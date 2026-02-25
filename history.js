@@ -83,6 +83,65 @@ export function saveWorkoutToLocal(workout) {
   return entry;
 }
 
+
+function readRecoveryMetrics(userId, date) {
+  const keys = [
+    `recoveryMetrics_${userId}`,
+    'recoveryMetrics',
+    `wellness_${userId}`,
+    'wellnessMetrics'
+  ];
+  for (const key of keys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const hit = parsed.find(item => item?.date === date) || parsed[parsed.length - 1];
+        if (hit) return { sleepHours: Number(hit.sleepHours || hit.sleep || 0), hrv: Number(hit.hrv || 0) };
+      }
+      if (parsed && typeof parsed === 'object') {
+        const byDate = parsed[date] || parsed.today || parsed;
+        return { sleepHours: Number(byDate?.sleepHours || byDate?.sleep || 0), hrv: Number(byDate?.hrv || 0) };
+      }
+    } catch {
+      // Ignore malformed recovery records.
+    }
+  }
+  return { sleepHours: null, hrv: null };
+}
+
+function applyMacroAdjustmentAfterWorkout(workout, userId) {
+  if (typeof window === 'undefined' || !window.macroEngine?.applyDailyMacroAdjustment || !userId) {
+    return;
+  }
+  const date = (workout?.date || new Date().toISOString()).slice(0, 10);
+  const baseTargets = JSON.parse(localStorage.getItem(`macroTargets_${userId}`) || 'null');
+  if (!baseTargets) return;
+
+  const recovery = readRecoveryMetrics(userId, date);
+  const result = window.macroEngine.applyDailyMacroAdjustment({
+    user: userId,
+    baseTargets,
+    workout,
+    recovery,
+    date,
+    isRestDay: false,
+  });
+  if (!result?.adjusted) return;
+
+  localStorage.setItem(`macroTargets_${userId}`, JSON.stringify(result.adjusted));
+  localStorage.setItem(`macroTargetsAdjustedDate_${userId}`, date);
+
+  if (typeof window.renderMacroSlots === 'function') window.renderMacroSlots();
+  if (typeof window.renderMacroTargets === 'function') window.renderMacroTargets();
+  if (typeof window.renderDailyMacroProgress === 'function') window.renderDailyMacroProgress();
+  if (typeof window.showToast === 'function') {
+    window.showToast(result.message);
+  } else {
+    alert(result.message);
+  }
+}
 function mapToResistanceLog(workout) {
   const date = workout?.performedAt || workout?.date || workout?.createdAt || new Date().toISOString();
   const exercises = Array.isArray(workout?.sets)
@@ -325,6 +384,7 @@ export async function finalizeResistanceWorkout(state) {
   }
 
   const entry = saveWorkoutToLocal(workout);
+  applyMacroAdjustmentAfterWorkout(workout, workout.userId || getCurrentUserId());
 
   // Non-blocking backend sync so local completion UX is unaffected.
   syncWorkoutToBackend(workout).then(async synced => {
