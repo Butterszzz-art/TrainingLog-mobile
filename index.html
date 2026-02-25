@@ -1277,6 +1277,7 @@
 <script type="module" src="history.js"></script>
 <script src="lifestyle.js"></script>
 <script src="src/js/settings.js"></script>
+<script src="plateCalculator.js"></script>
 <script>
 
 let currentUser = null;
@@ -1824,6 +1825,7 @@ function getSetInputHTML(i) {
       <label style="min-width: 60px;">Set ${i + 1}</label>
       <input type="number" id="reps_${i}" placeholder="Reps" style="width: 80px;" oninput="updateAddButtonState()" />
       <input type="number" id="weight_${i}" placeholder="Weight" style="width: 100px;" oninput="updateAddButtonState()" />
+      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;">Plate Calc</button>
       <label style="font-size:12px;"><input type="checkbox" id="dropset_${i}" /> Dropset</label>
       <label style="font-size:12px;"><input type="checkbox" id="restPause_${i}" /> Rest Pause</label>
       <button onclick="removeSet(${i})" style="background-color: #dc3545; color: var(--text-color); border: none; padding: 4px 8px; border-radius: 4px;">❌</button>
@@ -6738,5 +6740,4 @@ window.applyTheme = applyTheme;
 
 </body>
 </html>
-
 
