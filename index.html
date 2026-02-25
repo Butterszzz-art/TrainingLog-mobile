@@ -1126,6 +1126,11 @@
       </section>
       <aside class="progress-calendar">
         <div id="progressCalendar"></div>
+        <label for="prTimeframe" style="display:block;margin-top:10px;">PR Timeframe</label>
+        <select id="prTimeframe" onchange="renderPRs()" style="width:100%;margin-bottom:8px;">
+          <option value="all">All time</option>
+          <option value="year">Last year</option>
+        </select>
         <div id="prPanel"></div>
         <div id="milestoneBadges"></div>
       </aside>
@@ -2078,7 +2083,7 @@ function addLogEntry() {
   if (typeof saveWorkoutToBackend === 'function') {
     saveWorkoutToBackend(activeWorkout);
   }
-  updatePRs(currentUser, { log: [{ exercise, weightsArray, repsArray }] }, calculateWorkoutVolume);
+  updatePRs(currentUser, activeWorkout, calculateWorkoutVolume);
   updateGoalProgress(currentUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
   renderPRs();
   const prog = analyzeProgress ? analyzeProgress(currentUser) : [];
@@ -6325,12 +6330,54 @@ function renderPRs() {
   const prs = loadPRs(currentUser);
   const panel = document.getElementById('prPanel');
   if (!panel) return;
-  panel.innerHTML = '<h3>PRs</h3>';
-  Object.entries(prs).forEach(([ex, pr]) => {
+  const timeframe = document.getElementById('prTimeframe')?.value || 'all';
+  const cutoff = timeframe === 'year'
+    ? Date.now() - (365 * 24 * 60 * 60 * 1000)
+    : 0;
+  const formatDate = (stamp) => {
+    if (!stamp) return '—';
+    const d = new Date(stamp);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toISOString().split('T')[0];
+  };
+
+  panel.innerHTML = '<h3>Exercise PR Summary</h3>';
+  let visibleCount = 0;
+
+  Object.entries(prs).sort(([a], [b]) => a.localeCompare(b)).forEach(([ex, pr]) => {
+    const heaviestSet = pr?.heaviestSet && Number(pr.heaviestSet.date || 0) >= cutoff
+      ? pr.heaviestSet
+      : null;
+    const highestVolumeSession = pr?.highestVolumeSession && Number(pr.highestVolumeSession.date || 0) >= cutoff
+      ? pr.highestVolumeSession
+      : null;
+    const repEntries = Object.entries(pr?.repPRsByWeight || {})
+      .filter(([, value]) => Number(value?.date || 0) >= cutoff)
+      .sort((a, b) => Number(b[0]) - Number(a[0]));
+
+    if (!heaviestSet && !highestVolumeSession && repEntries.length === 0) return;
+
     const div = document.createElement('div');
-    div.textContent = `${ex}: 1RM ${pr.oneRM.toFixed(1)}, Vol ${pr.volume.toFixed(1)}`;
+    div.style.marginBottom = '10px';
+    const topRep = repEntries[0];
+    const topRepText = topRep
+      ? `${topRep[0]} × ${topRep[1].reps} (${formatDate(topRep[1].date)})`
+      : '—';
+    div.innerHTML = `
+      <strong>${ex}</strong><br>
+      Heaviest: ${heaviestSet ? `${heaviestSet.weight} × ${heaviestSet.reps} (${formatDate(heaviestSet.date)})` : '—'}<br>
+      Most reps @ weight: ${topRepText}<br>
+      Session volume: ${highestVolumeSession ? `${Number(highestVolumeSession.volume || 0).toFixed(1)} (${formatDate(highestVolumeSession.date)})` : '—'}
+    `;
     panel.appendChild(div);
+    visibleCount += 1;
   });
+
+  if (!visibleCount) {
+    const empty = document.createElement('div');
+    empty.textContent = 'No PRs found for the selected timeframe.';
+    panel.appendChild(empty);
+  }
 }
 
 function renderMilestones() {
