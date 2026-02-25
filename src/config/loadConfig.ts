@@ -7,10 +7,6 @@ declare global {
     TrainingLogConfig?: {
       DEFAULT_SERVER_URL?: string;
     };
-    airtableConfig?: {
-      airtableToken?: string;
-      airtableBaseId?: string;
-    };
   }
 }
 
@@ -45,15 +41,6 @@ export async function loadConfig(): Promise<Record<string, unknown>> {
       window.SERVER_URL = (config as { serverUrl?: string }).serverUrl;
     }
 
-    const airtableBaseId = (config as { airtableBaseId?: string }).airtableBaseId;
-    const airtableToken = (config as { airtableToken?: string }).airtableToken;
-    if (airtableBaseId || airtableToken) {
-      window.airtableConfig = {
-        ...(window.airtableConfig || {}),
-        ...(airtableBaseId ? { airtableBaseId } : {}),
-        ...(airtableToken ? { airtableToken } : {})
-      };
-    }
   }
 
   return config as Record<string, unknown>;

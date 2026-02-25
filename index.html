@@ -1679,7 +1679,7 @@ async function fetchUserMacroTargets(username) {
     if (!airtableBaseId || !airtableToken) {
       await fetchAirtableConfig();
     }
-    const url = `https://api.airtable.com/v0/${airtableBaseId}/${MacroTargetsTableName}` +
+    const url = `/airtable/${airtableBaseId}/${MacroTargetsTableName}` +
       `?filterByFormula={Username}='${encodeURIComponent(username)}'` +
       `&sort[0][field]=CreatedAt&sort[0][direction]=desc` +
       `&maxRecords=1`;
@@ -3168,7 +3168,7 @@ async function saveTemplate(username, templateName, templateData) {
       throw new Error('Missing Airtable configuration; cannot save template.');
     }
   }
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${templatesTableName}`;
+  const url = `/airtable/${airtableBaseId}/${templatesTableName}`;
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -4516,7 +4516,7 @@ function updateSliderMacros() {
 
 
 async function saveToAirtable(username, target) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/MacroTargets`;
+  const url = `/airtable/${airtableBaseId}/MacroTargets`;
   try {
     const r = await fetch(url, {
       method: "POST",
@@ -4729,37 +4729,29 @@ loadAndRenderDailyProgress();
 
 
 async function saveDailyMacroLog(username, date, meals, totals) {
-  const token = (typeof window !== 'undefined' && window.airtableToken) || airtableToken;
-  const baseId = (typeof window !== 'undefined' && window.airtableBaseId) || airtableBaseId;
-
-  if (!token || !baseId) {
-    console.warn('Missing Airtable credentials, skipping macro log save');
-    return;
-  }
-
-  const url = `https://api.airtable.com/v0/${baseId}/DailyLogs`;
-  const fields = {
-    Username: username,
-    Date: date,
-    Type: "Macros",
-    LogData: JSON.stringify(meals),
-    CaloriesTotal: totals.calories,
-    ProteinTotal: totals.protein,
-    CarbsTotal: totals.carbs,
-    FatTotal: totals.fat
-  };
-
-  const options = {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ fields })
+  const token = getAuthToken();
+  const payload = {
+    fields: {
+      Username: username,
+      Date: date,
+      Type: "Macros",
+      LogData: JSON.stringify(meals),
+      CaloriesTotal: totals.calories,
+      ProteinTotal: totals.protein,
+      CarbsTotal: totals.carbs,
+      FatTotal: totals.fat
+    }
   };
 
   try {
-    const response = await fetch(url, options);
+    const response = await fetch("/dailylogs", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
     const data = await response.json();
     if (!response.ok) {
       console.error("Failed to save daily log:", data);
@@ -6419,7 +6411,7 @@ function showHistoryMiniTab(tab) {
 // === Airtable Functions ===
 
 async function findUser(username) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${usersTableName}?filterByFormula={Username}='${username}'`;
+  const url = `/airtable/${airtableBaseId}/${usersTableName}?filterByFormula={Username}='${username}'`;
   const response = await fetch(url, {
     credentials: "include",
     headers: { Authorization: `Bearer ${airtableToken}` }
@@ -6429,7 +6421,7 @@ async function findUser(username) {
 }
 
 async function createUser(username, password) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/${usersTableName}`;
+  const url = `/airtable/${airtableBaseId}/${usersTableName}`;
   await fetch(url, {
     method: 'POST',
     headers: {
@@ -6443,18 +6435,19 @@ async function createUser(username, password) {
 }
 
 async function fetchDailyLogs(username) {
-  const url = `https://api.airtable.com/v0/${airtableBaseId}/DailyLogs?filterByFormula=Username='${username}'&sort[0][field]=Date&sort[0][direction]=desc`;
+  const token = getAuthToken();
+  const params = new URLSearchParams({ username });
 
   try {
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${airtableToken}` }
+    const response = await fetch(`/dailylogs?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     const data = await response.json();
     if (!response.ok) {
       console.error("Failed to fetch daily logs:", data);
       return [];
     }
-    return data.records;
+    return data.records || [];
   } catch (error) {
     console.error("Network error fetching daily logs:", error);
     return [];

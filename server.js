@@ -59,9 +59,73 @@ const leaderboard = [
 
 app.get('/config', (req, res) => {
   res.json({
-    airtableToken: process.env.AIRTABLE_TOKEN || 'patHs7yemB2TYuOOc.6ed847f094d08b1d30710f9f5763d909d1841a2e7dc63fbdac208133a39ae577',
-    airtableBaseId: process.env.AIRTABLE_BASE_ID || 'appmjr4IgnEH72K1b'
+    serverUrl: process.env.SERVER_URL || ''
   });
+});
+
+function getAirtableEnv() {
+  const token = process.env.AIRTABLE_TOKEN;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!token || !baseId) {
+    return { error: 'AIRTABLE_TOKEN and AIRTABLE_BASE_ID must be configured on the backend.' };
+  }
+
+  return { token, baseId };
+}
+
+app.post('/dailylogs', async (req, res) => {
+  const airtable = getAirtableEnv();
+  if (airtable.error) {
+    return res.status(500).json({ error: airtable.error });
+  }
+
+  try {
+    const response = await fetch(`https://api.airtable.com/v0/${airtable.baseId}/DailyLogs`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${airtable.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(req.body)
+    });
+
+    const data = await response.json();
+    return res.status(response.status).json(data);
+  } catch (error) {
+    return res.status(502).json({ error: 'Failed to reach Airtable', details: String(error) });
+  }
+});
+
+app.get('/dailylogs', async (req, res) => {
+  const airtable = getAirtableEnv();
+  if (airtable.error) {
+    return res.status(500).json({ error: airtable.error });
+  }
+
+  const username = req.query.username;
+  if (!username || typeof username !== 'string') {
+    return res.status(400).json({ error: 'username query param is required' });
+  }
+
+  const params = new URLSearchParams({
+    filterByFormula: `Username='${username}'`,
+    'sort[0][field]': 'Date',
+    'sort[0][direction]': 'desc'
+  });
+
+  try {
+    const response = await fetch(`https://api.airtable.com/v0/${airtable.baseId}/DailyLogs?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${airtable.token}`
+      }
+    });
+
+    const data = await response.json();
+    return res.status(response.status).json(data);
+  } catch (error) {
+    return res.status(502).json({ error: 'Failed to reach Airtable', details: String(error) });
+  }
 });
 
 app.post('/login', (req, res) => {
@@ -193,6 +257,38 @@ app.get('/community/groups/:groupId/progress', (req, res) => {
 // basic leaderboard endpoint
 app.get('/leaderboard', (req, res) => {
   res.json(leaderboard);
+});
+
+
+app.all('/airtable/:baseId/:table', async (req, res) => {
+  const airtable = getAirtableEnv();
+  if (airtable.error) {
+    return res.status(500).json({ error: airtable.error });
+  }
+
+  const { baseId, table } = req.params;
+  if (baseId !== airtable.baseId) {
+    return res.status(403).json({ error: 'Invalid Airtable base requested.' });
+  }
+
+  const query = new URLSearchParams(req.query).toString();
+  const url = `https://api.airtable.com/v0/${baseId}/${table}${query ? `?${query}` : ''}`;
+
+  try {
+    const response = await fetch(url, {
+      method: req.method,
+      headers: {
+        Authorization: `Bearer ${airtable.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : JSON.stringify(req.body)
+    });
+
+    const data = await response.json();
+    return res.status(response.status).json(data);
+  } catch (error) {
+    return res.status(502).json({ error: 'Failed to reach Airtable', details: String(error) });
+  }
 });
 
 app.listen(PORT, () => {
