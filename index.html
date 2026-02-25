@@ -6196,8 +6196,6 @@ async function fetchWorkouts() {
 
 async function fetchWorkoutHistory() {
   const workouts = await fetchWorkouts();
-  return workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }));
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   return workouts.map(w => {
     const metrics = typeof calculateWorkoutMetrics === 'function'
       ? calculateWorkoutMetrics(w)
@@ -7469,6 +7467,7 @@ function renderLogHistory(logs) {
 window.openSection = openSection;
 window.openDashboard = openDashboard;
 window.startLogin = startLogin;
+window.fetchWorkoutHistory = fetchWorkoutHistory;
 window.startSignup = startSignup;
 window.logout = logout;
 window.addLogEntry = addLogEntry;
