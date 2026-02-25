@@ -98,6 +98,56 @@ function updatePRs(user, workout, volumeCalc) {
   return updated ? prs : null;
 }
 
+function calculateMonotony(dailyLoads) {
+  if (!Array.isArray(dailyLoads) || dailyLoads.length === 0) return 0;
+  const loads = dailyLoads
+    .map(v => Number(v))
+    .filter(v => Number.isFinite(v) && v >= 0);
+  if (!loads.length) return 0;
+  const mean = loads.reduce((sum, value) => sum + value, 0) / loads.length;
+  const variance = loads.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / loads.length;
+  const standardDeviation = Math.sqrt(variance);
+  if (!standardDeviation) return 0;
+  return mean / standardDeviation;
+}
+
+function calculateStrain(weeklyMonotony, weeklyLoad) {
+  const monotony = Number(weeklyMonotony);
+  const load = Number(weeklyLoad);
+  if (!Number.isFinite(monotony) || !Number.isFinite(load)) return 0;
+  return monotony * load;
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = {
+    computeOneRepMax,
+    loadPRs,
+    savePRs,
+    updatePRs,
+    calculateMonotony,
+    calculateStrain
+  };
+}
+if (typeof window !== 'undefined') {
+  window.computeOneRepMax = computeOneRepMax;
+  window.loadPRs = loadPRs;
+  window.savePRs = savePRs;
+  window.updatePRs = updatePRs;
+  window.calculateMonotony = calculateMonotony;
+  window.calculateStrain = calculateStrain;
+}
+
+export {
+  computeOneRepMax,
+  loadPRs,
+  savePRs,
+  updatePRs,
+  calculateMonotony,
+  calculateStrain
+};
+  return updated ? prs : null;
+}
+
 if (typeof module !== 'undefined') {
   module.exports = { computeOneRepMax, calculate1RM, calculateWorkoutMetrics, loadPRs, savePRs, updatePRs };
 }

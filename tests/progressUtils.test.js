@@ -1,3 +1,9 @@
+const {
+  computeOneRepMax,
+  updatePRs,
+  calculateMonotony,
+  calculateStrain
+} = require('../progressUtils');
 const { computeOneRepMax, calculate1RM, calculateWorkoutMetrics, updatePRs } = require('../progressUtils');
 const { calculateWorkoutVolume } = require('../calculateWorkoutVolume');
 
@@ -14,6 +20,14 @@ test('updatePRs updates record when higher', () => {
   expect(prs.Bench.oneRM).toBeGreaterThan(0);
 });
 
+test('calculateMonotony returns mean divided by standard deviation', () => {
+  const dailyLoads = [100, 200, 100, 200, 100, 200, 100];
+  const monotony = calculateMonotony(dailyLoads);
+  expect(monotony).toBeCloseTo(2.8868, 3);
+});
+
+test('calculateStrain multiplies monotony and weekly load', () => {
+  expect(calculateStrain(2, 1500)).toBe(3000);
 
 test('calculate1RM supports brzycki method', () => {
   const orm = calculate1RM(5, 100, 'brzycki');
