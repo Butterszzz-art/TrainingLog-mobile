@@ -2039,7 +2039,7 @@ function addLogEntry() {
     workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
   }
 
-  workouts[workouts.length - 1].log.push({
+  const newEntry = {
     exercise,
     sets,
     repsArray,
@@ -2055,7 +2055,16 @@ function addLogEntry() {
     date,
     goal,
     repGoal
-  });
+  };
+  workouts[workouts.length - 1].log.push(newEntry);
+
+  if (typeof suggestNextSession === 'function') {
+    const recommendation = suggestNextSession(newEntry, workouts);
+    if (recommendation) {
+      newEntry.nextSessionRecommendation = recommendation;
+      showToast(`Next session suggestion for ${exercise}: ${recommendation.message}`);
+    }
+  }
 
   const activeWorkout = workouts[workouts.length - 1];
   const computedMetrics = typeof calculateWorkoutMetrics === 'function'
@@ -2558,6 +2567,17 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
     setTypeBar.className = 'set-type-bar';
     setTypeBar.textContent = goalData.join(' • ');
     card.appendChild(setTypeBar);
+  }
+
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const recommendation = entry.nextSessionRecommendation || (typeof suggestNextSession === 'function'
+    ? suggestNextSession(entry, workouts)
+    : null);
+  if (recommendation?.message) {
+    const recommendationBar = document.createElement('div');
+    recommendationBar.className = 'set-type-bar';
+    recommendationBar.textContent = `Next session recommendation: ${recommendation.message}`;
+    card.appendChild(recommendationBar);
   }
 
   const setList = document.createElement('div');
@@ -4116,9 +4136,32 @@ function shouldAutoIncrementSuggestion(entry) {
 function getSuggestedSetsForExercise(exerciseName) {
   const sets = getLastWorkoutForExercise(exerciseName);
   const lastEntry = getLastExerciseEntry(exerciseName);
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
 
   if (!sets.length) {
     return { sets: [], unit: 'kg', autoIncrementApplied: false };
+  }
+
+  const storedRecommendation = lastEntry?.nextSessionRecommendation;
+  if (storedRecommendation && Array.isArray(storedRecommendation.sets) && storedRecommendation.sets.length) {
+    return {
+      sets: storedRecommendation.sets,
+      unit: storedRecommendation.unit || lastEntry?.unit || 'kg',
+      autoIncrementApplied: storedRecommendation.strategy === 'increase',
+      recommendationMessage: storedRecommendation.message || ''
+    };
+  }
+
+  const computedRecommendation = typeof suggestNextSession === 'function'
+    ? suggestNextSession(lastEntry || exerciseName, workouts)
+    : null;
+  if (computedRecommendation && Array.isArray(computedRecommendation.sets) && computedRecommendation.sets.length) {
+    return {
+      sets: computedRecommendation.sets,
+      unit: computedRecommendation.unit || lastEntry?.unit || 'kg',
+      autoIncrementApplied: computedRecommendation.strategy === 'increase',
+      recommendationMessage: computedRecommendation.message || ''
+    };
   }
 
   const suggestedSets = sets.map(set => ({ ...set }));
@@ -4142,7 +4185,8 @@ function getSuggestedSetsForExercise(exerciseName) {
   return {
     sets: suggestedSets,
     unit: lastEntry?.unit || 'kg',
-    autoIncrementApplied: shouldIncrement
+    autoIncrementApplied: shouldIncrement,
+    recommendationMessage: ''
   };
 }
 
@@ -4205,6 +4249,7 @@ function handleExerciseBlur() {
     msgDiv.innerHTML = `
       <div style="margin:10px 0; color: var(--highlight); font-weight:bold;">
         Suggested from last session: ${reps} reps at ${weights} ${suggestion.unit}
+        ${suggestion.recommendationMessage ? `<br><span style="font-style:italic; font-weight:normal;">${suggestion.recommendationMessage}</span>` : ''}
         ${suggestion.autoIncrementApplied ? '<br><span style="font-style:italic; font-weight:normal;">Auto-increment applied because last set met target RPE.</span>' : ''}
       </div>`;
   }
