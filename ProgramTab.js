@@ -1,8 +1,39 @@
 import React, { useEffect, useState } from "https://esm.sh/react@18";
 import { createRoot } from "https://esm.sh/react-dom@18/client";
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const HISTORY_KEYS = ['workoutHistory', 'resistanceLogs', 'tl_workout_history_v1'];
 const loadPrograms = () => JSON.parse(localStorage.getItem('programs') || '[]');
 const savePrograms = programs => localStorage.setItem('programs', JSON.stringify(programs));
+
+const parseArrayFromStorage = key => {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+};
+const loadWorkoutHistory = () => HISTORY_KEYS.flatMap(parseArrayFromStorage);
+const buildVarietyRecommendations = frequency => {
+  if (typeof window === 'undefined' || !window.exerciseVarietyEngine || typeof window.exerciseVarietyEngine.buildProgramVarietyRecommendations !== 'function') {
+    return null;
+  }
+  const recommendations = window.exerciseVarietyEngine.buildProgramVarietyRecommendations(loadWorkoutHistory());
+  const suggestions = Object.entries(recommendations.suggestedVarietyExercises || {}).flatMap(([muscle, list]) => (Array.isArray(list) ? list : []).map(name => ({
+    muscle,
+    name
+  })));
+  return {
+    ...recommendations,
+    autoInsertedExercises: suggestions.map((item, idx) => ({
+      day: frequency[idx % Math.max(1, frequency.length)] || null,
+      muscle: item.muscle,
+      exercise: item.name
+    }))
+  };
+};
+
 const getAuthHeaders = () => {
   if (typeof localStorage === 'undefined') {
     return {};
@@ -65,7 +96,8 @@ export default function ProgramTab() {
         deloadPercent: 60
       }
     },
-    days: []
+    days: [],
+    autoInsertVariety: false
   });
   const handleFreqToggle = day => {
     setProgram(prev => {
@@ -126,8 +158,21 @@ export default function ProgramTab() {
       days: program.days.map((d, i) => ({
         name: d.name,
         order: i + 1
-      }))
+      })),
+      varietySettings: {
+        autoInsertSuggestions: program.autoInsertVariety
+      }
     };
+    const recommendations = buildVarietyRecommendations(program.frequency);
+    if (recommendations) {
+      payload.recommendations = recommendations;
+      if (program.autoInsertVariety) {
+        payload.autoInsertedExercises = recommendations.autoInsertedExercises;
+      }
+      payload.schedule = {
+        recommendedDeloadWeeks: recommendations?.deloadPlan?.recommendedDeloadWeeks || []
+      };
+    }
     const res = await fetch(`${window.SERVER_URL}/createProgram`, {
       method: 'POST',
         credentials: "include",
@@ -193,7 +238,10 @@ export default function ProgramTab() {
       ...program,
       startDate: e.target.value
     })
-  })), /*#__PURE__*/React.createElement("fieldset", null, /*#__PURE__*/React.createElement("legend", null, "Frequency"), /*#__PURE__*/React.createElement("div", { className: "frequency-grid" }, DAYS.map(d => /*#__PURE__*/React.createElement("label", { key: d }, /*#__PURE__*/React.createElement("input", { type: "checkbox", checked: program.frequency.includes(d), onChange: () => handleFreqToggle(d) }), " ", d)))), /*#__PURE__*/React.createElement("fieldset", null, /*#__PURE__*/React.createElement("legend", null, "Progression Type"), ['linear', 'undulating', 'block'].map(t => /*#__PURE__*/React.createElement("label", { key: t, style: { marginRight: '10px' } }, /*#__PURE__*/React.createElement("input", { type: "radio", name: "progType", value: t, checked: program.progressionType === t, onChange: () => setProgram({ ...program, progressionType: t }) }), " ", t))), /*#__PURE__*/React.createElement("fieldset", null, /*#__PURE__*/React.createElement("legend", null, "Split Mode"), /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", { type: "radio", name: "splitMode", value: "synchronous", checked: program.splitMode === 'synchronous', onChange: () => setProgram({ ...program, splitMode: 'synchronous' }) }), " Synchronous"), /*#__PURE__*/React.createElement("label", { style: { marginLeft: '10px' } }, /*#__PURE__*/React.createElement("input", { type: "radio", name: "splitMode", value: "asynchronous", checked: program.splitMode === 'asynchronous', onChange: () => setProgram({ ...program, splitMode: 'asynchronous' }) }), " Asynchronous"))), program.progressionType === 'linear' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  })), /*#__PURE__*/React.createElement("fieldset", null, /*#__PURE__*/React.createElement("legend", null, "Frequency"), /*#__PURE__*/React.createElement("div", { className: "frequency-grid" }, DAYS.map(d => /*#__PURE__*/React.createElement("label", { key: d }, /*#__PURE__*/React.createElement("input", { type: "checkbox", checked: program.frequency.includes(d), onChange: () => handleFreqToggle(d) }), " ", d)))), /*#__PURE__*/React.createElement("fieldset", null, /*#__PURE__*/React.createElement("legend", null, "Progression Type"), ['linear', 'undulating', 'block'].map(t => /*#__PURE__*/React.createElement("label", { key: t, style: { marginRight: '10px' } }, /*#__PURE__*/React.createElement("input", { type: "radio", name: "progType", value: t, checked: program.progressionType === t, onChange: () => setProgram({ ...program, progressionType: t }) }), " ", t))), /*#__PURE__*/React.createElement("fieldset", null, /*#__PURE__*/React.createElement("legend", null, "Split Mode"), /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", { type: "radio", name: "splitMode", value: "synchronous", checked: program.splitMode === 'synchronous', onChange: () => setProgram({ ...program, splitMode: 'synchronous' }) }), " Synchronous"), /*#__PURE__*/React.createElement("label", { style: { marginLeft: '10px' } }, /*#__PURE__*/React.createElement("input", { type: "radio", name: "splitMode", value: "asynchronous", checked: program.splitMode === 'asynchronous', onChange: () => setProgram({ ...program, splitMode: 'asynchronous' }) }), " Asynchronous"))), /*#__PURE__*/React.createElement("label", { style: { display: 'block', marginTop: '10px' } }, /*#__PURE__*/React.createElement("input", { type: "checkbox", checked: program.autoInsertVariety, onChange: e => setProgram({
+      ...program,
+      autoInsertVariety: e.target.checked
+    }) }), " Auto-insert variety suggestions and deload schedule"), program.progressionType === 'linear' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     title: "Amount to add each interval"
   }, "Increment ", /*#__PURE__*/React.createElement("input", {
     type: "number",

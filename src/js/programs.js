@@ -15,9 +15,16 @@
     : this,
   function (global) {
     const STORAGE_KEY = "programs";
+    const HISTORY_KEYS = ["workoutHistory", "resistanceLogs", "tl_workout_history_v1"];
     const FREQUENCY_DAYS = ["Mon", "Wed", "Fri"];
+    const DEFAULT_VARIETY_SETTINGS = {
+      autoInsertSuggestions: false,
+    };
     const existingToast =
       global && typeof global.showToast === "function" ? global.showToast : null;
+    const varietyEngine =
+      (global && global.exerciseVarietyEngine) ||
+      (typeof require === "function" ? require("../../exerciseVarietyEngine") : null);
 
     function isBrowser() {
       return Boolean(global && global.document);
@@ -101,6 +108,8 @@
           frequency: [],
           progression: "",
           splitMode: "",
+          varietySettings: { ...DEFAULT_VARIETY_SETTINGS },
+          recommendations: null,
         };
       }
       return {
@@ -111,7 +120,95 @@
           : [],
         progression: program.progression || "",
         splitMode: program.splitMode || "",
+        varietySettings: {
+          ...DEFAULT_VARIETY_SETTINGS,
+          ...(program.varietySettings || {}),
+        },
+        recommendations: program.recommendations || null,
       };
+    }
+
+    function parseJsonArray(value) {
+      if (!value) return [];
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function loadWorkoutHistory() {
+      if (!global || !global.localStorage) return [];
+      const combined = [];
+
+      HISTORY_KEYS.forEach((key) => {
+        parseJsonArray(global.localStorage.getItem(key)).forEach((entry) => {
+          combined.push(entry);
+        });
+      });
+
+      return combined;
+    }
+
+    function createAutoInsertedExercisePlan(suggestedVarietyExercises, frequency) {
+      const suggestions = Object.entries(suggestedVarietyExercises || {}).flatMap(
+        ([muscle, exercises]) =>
+          (Array.isArray(exercises) ? exercises : []).map((exercise) => ({
+            muscle,
+            name: exercise,
+          }))
+      );
+
+      if (!suggestions.length || !Array.isArray(frequency) || !frequency.length) {
+        return [];
+      }
+
+      return suggestions.map((suggestion, index) => ({
+        day: frequency[index % frequency.length],
+        muscle: suggestion.muscle,
+        exercise: suggestion.name,
+      }));
+    }
+
+    function buildVarietyRecommendations(program) {
+      if (!varietyEngine || typeof varietyEngine.buildProgramVarietyRecommendations !== "function") {
+        return null;
+      }
+
+      const recommendations = varietyEngine.buildProgramVarietyRecommendations(loadWorkoutHistory());
+      const autoInsertSuggestions = Boolean(program?.varietySettings?.autoInsertSuggestions);
+
+      return {
+        ...recommendations,
+        autoInsertedExercises: autoInsertSuggestions
+          ? createAutoInsertedExercisePlan(recommendations.suggestedVarietyExercises, program.frequency)
+          : [],
+      };
+    }
+
+    function renderVarietyPreview() {
+      const target = getElement("programVarietyPreview");
+      if (!target || !varietyEngine || typeof varietyEngine.buildProgramVarietyRecommendations !== "function") {
+        return;
+      }
+
+      const recommendations = varietyEngine.buildProgramVarietyRecommendations(loadWorkoutHistory());
+      const totalVariety = Object.values(recommendations.suggestedVarietyExercises || {}).reduce(
+        (count, list) => count + (Array.isArray(list) ? list.length : 0),
+        0
+      );
+      const lowProgressCount = Array.isArray(recommendations.lowProgressExercises)
+        ? recommendations.lowProgressExercises.length
+        : 0;
+      const deloadWeeks = recommendations?.deloadPlan?.recommendedDeloadWeeks || [];
+
+      target.innerHTML = `
+        <strong>History-informed recommendations ready:</strong>
+        ${totalVariety} variety suggestions,
+        ${lowProgressCount} low-progress exercises flagged,
+        deload weeks ${deloadWeeks.length ? deloadWeeks.join(", ") : "none"}.
+      `;
     }
 
     let programs = loadStoredPrograms().map(cloneProgram);
@@ -133,6 +230,7 @@
       const progression = getSelectValue("programProgression") || "";
       const splitMode = getSelectValue("programSplit") || "";
       const frequency = FREQUENCY_DAYS.filter((day) => getCheckboxState(`freq${day}`));
+      const autoInsertSuggestions = getCheckboxState("programAutoInsertVariety");
 
       if (!name || !startDate || frequency.length === 0) {
         return {
@@ -147,6 +245,9 @@
           frequency,
           progression,
           splitMode,
+          varietySettings: {
+            autoInsertSuggestions,
+          },
         },
       };
     }
@@ -157,6 +258,10 @@
       FREQUENCY_DAYS.forEach((day) => setCheckboxState(`freq${day}`, false));
       setInputValue("programProgression", "linear");
       setInputValue("programSplit", "full-body");
+      setCheckboxState(
+        "programAutoInsertVariety",
+        DEFAULT_VARIETY_SETTINGS.autoInsertSuggestions
+      );
     }
 
     function openProgramModal() {
@@ -203,6 +308,10 @@
           const frequency = program.frequency && program.frequency.length
             ? program.frequency.join(", ")
             : "-";
+          const deloadWeeks = program?.recommendations?.deloadPlan?.recommendedDeloadWeeks;
+          const autoInserted = Array.isArray(program?.recommendations?.autoInsertedExercises)
+            ? program.recommendations.autoInsertedExercises.length
+            : 0;
           return `
             <li class="program-item">
               <h3>${escapeHtml(program.name)}</h3>
@@ -211,6 +320,10 @@
                 <span><strong>Frequency:</strong> ${escapeHtml(frequency)}</span>
                 <span><strong>Progression:</strong> ${escapeHtml(program.progression)}</span>
                 <span><strong>Split:</strong> ${escapeHtml(program.splitMode)}</span>
+                <span><strong>Deload weeks:</strong> ${escapeHtml(
+                  Array.isArray(deloadWeeks) && deloadWeeks.length ? deloadWeeks.join(", ") : "None"
+                )}</span>
+                <span><strong>Auto-inserted variety:</strong> ${escapeHtml(String(autoInserted))}</span>
               </div>
             </li>
           `;
@@ -228,6 +341,7 @@
       }
 
       const program = cloneProgram(result.program);
+      program.recommendations = buildVarietyRecommendations(program);
       programs.push(program);
       persistPrograms(programs);
       renderProgramList();
@@ -246,6 +360,7 @@
       if (openButton) {
         openButton.addEventListener("click", () => {
           resetProgramForm();
+          renderVarietyPreview();
           openProgramModal();
         });
       }
