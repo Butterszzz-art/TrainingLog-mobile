@@ -83,6 +83,9 @@
     textarea::placeholder {
       color: var(--secondary-text);
     }
+    .suggested-input::placeholder {
+      font-style: italic;
+    }
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--primary);
@@ -1159,6 +1162,14 @@
     </label>
   </section>
 
+  <section class="panel" aria-labelledby="autoIncrementHeading" style="margin-top:20px;">
+    <h3 id="autoIncrementHeading">Progression Suggestions</h3>
+    <label>
+      <input type="checkbox" id="autoIncrementToggle" checked />
+      Auto-increment suggestions when the last set is at or below target RPE
+    </label>
+  </section>
+
   <section id="legacyThemeSection" class="panel" aria-labelledby="themeSelectLabel" style="margin-top:20px;">
     <h3 id="themeSelectLabel">Legacy Theme Picker</h3>
     <p style="margin-top:0;">Use this selector if the primary settings form is unavailable.</p>
@@ -1688,6 +1699,10 @@ function showTab(tabName) {
       if (trainerToggle) {
         trainerToggle.checked = JSON.parse(localStorage.getItem('trainerMode') || 'false');
       }
+      const autoIncrementToggle = document.getElementById('autoIncrementToggle');
+      if (autoIncrementToggle) {
+        autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
+      }
       break;
   }
 }
@@ -1834,12 +1849,14 @@ function editGoalValue(workoutIndex, entryIndex, type, value) {
 let currentSetCount = 0;
 
 function generateSetInputs(setCount) {
-  currentSetCount = setCount;
+  currentSetCount = Number(setCount) || 0;
   const container = document.getElementById("setInputsContainer");
   container.innerHTML = '';
-  for (let i = 0; i < setCount; i++) {
+  for (let i = 0; i < currentSetCount; i++) {
     container.innerHTML += getSetInputHTML(i);
   }
+
+  applySuggestedSetValuesForExercise();
   updateAddButtonState();
 }
 
@@ -2053,6 +2070,7 @@ function addLogEntry() {
 
   // ✅ Reset set counter
   currentSetCount = 0;
+  lastAutoFilledExercise = '';
   updateAddButtonState();
 
 
@@ -3986,57 +4004,178 @@ async function loadWorkoutsFromBackend() {
   }
 }
   
+const AUTO_INCREMENT_SETTING_KEY = 'autoIncrementEnabled';
+let lastAutoFilledExercise = '';
+
+function isAutoIncrementEnabled() {
+  const saved = localStorage.getItem(AUTO_INCREMENT_SETTING_KEY);
+  return saved === null ? true : saved === 'true';
+}
+
 function getLastExerciseEntry(exerciseName) {
+  const normalizedName = String(exerciseName || '').trim().toLowerCase();
+  if (!normalizedName) return null;
+
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
 
-  // Flatten all sets for that exercise
-  let lastMatch = null;
-
   for (let i = workouts.length - 1; i >= 0; i--) {
-    const log = workouts[i].log;
-    const match = log.find(entry => entry.exercise === exerciseName);
-    if (match) {
-      lastMatch = match;
-      break;
+    const log = Array.isArray(workouts[i]?.log) ? workouts[i].log : [];
+    const match = log.find(entry => String(entry?.exercise || '').trim().toLowerCase() === normalizedName);
+    if (match) return match;
+  }
+
+  return null;
+}
+
+function getLastWorkoutForExercise(exerciseName) {
+  const lastMatch = getLastExerciseEntry(exerciseName);
+  if (!lastMatch) return [];
+
+  const repsArray = Array.isArray(lastMatch.repsArray) ? lastMatch.repsArray : [];
+  const weightsArray = Array.isArray(lastMatch.weightsArray) ? lastMatch.weightsArray : [];
+
+  return repsArray.map((reps, index) => ({
+    reps: Number(reps) || 0,
+    weight: Number(weightsArray[index]) || 0
+  }));
+}
+
+function resolveLastSetRpe(entry) {
+  if (!entry || typeof entry !== 'object') return { target: null, actual: null };
+
+  const rawTarget = entry.targetRPE ?? entry.targetRpe ?? entry.rpeTarget ?? entry.goalRPE;
+  const target = Number(rawTarget);
+
+  let actualValue = entry.actualRPE ?? entry.actualRpe ?? entry.lastSetRPE ?? entry.lastSetRpe ?? entry.rpe;
+  if (Array.isArray(entry.rpeArray) && entry.rpeArray.length) {
+    actualValue = entry.rpeArray[entry.rpeArray.length - 1];
+  }
+  const actual = Number(actualValue);
+
+  return {
+    target: Number.isFinite(target) ? target : null,
+    actual: Number.isFinite(actual) ? actual : null
+  };
+}
+
+function shouldAutoIncrementSuggestion(entry) {
+  if (!isAutoIncrementEnabled() || !entry) return false;
+
+  const completed = Array.isArray(entry.completedArray) && entry.completedArray.length
+    ? Boolean(entry.completedArray[entry.completedArray.length - 1])
+    : true;
+
+  if (!completed) return false;
+
+  const { target, actual } = resolveLastSetRpe(entry);
+  if (target === null || actual === null) return false;
+
+  return actual <= target;
+}
+
+function getSuggestedSetsForExercise(exerciseName) {
+  const sets = getLastWorkoutForExercise(exerciseName);
+  const lastEntry = getLastExerciseEntry(exerciseName);
+
+  if (!sets.length) {
+    return { sets: [], unit: 'kg', autoIncrementApplied: false };
+  }
+
+  const suggestedSets = sets.map(set => ({ ...set }));
+  const shouldIncrement = shouldAutoIncrementSuggestion(lastEntry);
+
+  if (shouldIncrement) {
+    const shouldIncreaseWeight = Number.isFinite(Number(lastEntry?.repGoal))
+      ? suggestedSets.every(set => set.reps >= Number(lastEntry.repGoal))
+      : false;
+
+    if (shouldIncreaseWeight) {
+      suggestedSets.forEach(set => {
+        set.weight = Number((set.weight + 2.5).toFixed(2));
+      });
+    } else {
+      const finalIndex = suggestedSets.length - 1;
+      suggestedSets[finalIndex].reps += 1;
     }
   }
 
-  return lastMatch;
+  return {
+    sets: suggestedSets,
+    unit: lastEntry?.unit || 'kg',
+    autoIncrementApplied: shouldIncrement
+  };
+}
+
+function applySuggestedSetValuesForExercise(force = false) {
+  const exerciseInput = document.getElementById('exercise');
+  const name = exerciseInput ? exerciseInput.value.trim() : '';
+  if (!name || currentSetCount < 1) return false;
+
+  const shouldSkipForManualEdits = !force && lastAutoFilledExercise.toLowerCase() === name.toLowerCase();
+  if (shouldSkipForManualEdits) return false;
+
+  const suggestion = getSuggestedSetsForExercise(name);
+  if (!suggestion.sets.length) return false;
+
+  for (let i = 0; i < currentSetCount; i++) {
+    const repsInput = document.getElementById(`reps_${i}`);
+    const weightInput = document.getElementById(`weight_${i}`);
+    const setSuggestion = suggestion.sets[i];
+
+    if (!repsInput || !weightInput || !setSuggestion) continue;
+
+    if (force || repsInput.value === '') {
+      repsInput.value = setSuggestion.reps;
+    }
+    if (force || weightInput.value === '') {
+      weightInput.value = setSuggestion.weight;
+    }
+
+    repsInput.placeholder = 'Suggested from your last workout';
+    weightInput.placeholder = 'Suggested from your last workout';
+    repsInput.classList.add('suggested-input');
+    weightInput.classList.add('suggested-input');
+  }
+
+  const unitInput = document.getElementById('weightUnit');
+  if (unitInput && suggestion.unit) {
+    unitInput.value = suggestion.unit;
+  }
+
+  lastAutoFilledExercise = name;
+  updateAddButtonState();
+  return suggestion.autoIncrementApplied;
 }
 
 function handleExerciseBlur() {
-  const name = document.getElementById("exercise").value.trim();
+  const exerciseInput = document.getElementById('exercise');
+  const name = exerciseInput ? exerciseInput.value.trim() : '';
   if (!name) return;
 
-  const last = getLastExerciseEntry(name);
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const suggestion = getProgressiveOverloadSuggestion(name, workouts);
-  const msgDiv = document.getElementById("progressReminder");
-  msgDiv.innerHTML = '';
+  const suggestion = getSuggestedSetsForExercise(name);
+  const msgDiv = document.getElementById('progressReminder');
+  if (msgDiv) msgDiv.innerHTML = '';
 
-  if (last) {
-    const reps = last.repsArray.join(', ');
-    const weights = last.weightsArray.join(', ');
+  if (!suggestion.sets.length) return;
+
+  const reps = suggestion.sets.map(set => set.reps).join(', ');
+  const weights = suggestion.sets.map(set => set.weight).join(', ');
+
+  if (msgDiv) {
     msgDiv.innerHTML = `
       <div style="margin:10px 0; color: var(--highlight); font-weight:bold;">
-        Last time: ${reps} reps at ${weights} ${last.unit} <br>
-        Try to beat that today!${suggestion ? `<br>Recommended: ${suggestion}` : ''}
+        Suggested from last session: ${reps} reps at ${weights} ${suggestion.unit}
+        ${suggestion.autoIncrementApplied ? '<br><span style="font-style:italic; font-weight:normal;">Auto-increment applied because last set met target RPE.</span>' : ''}
       </div>`;
-
-    // auto-fill today's sets with progression
-    document.getElementById('sets').value = last.sets || last.repsArray.length;
-    generateSetInputs(last.sets || last.repsArray.length);
-    last.repsArray.forEach((r, i) => {
-      const inc = suggestion && suggestion.includes('rep') ? r + 1 : r;
-      document.getElementById(`reps_${i}`).value = inc;
-    });
-    last.weightsArray.forEach((w, i) => {
-      let val = w;
-      if (suggestion && suggestion.includes('2.5')) val = w + 2.5;
-      document.getElementById(`weight_${i}`).value = val;
-    });
-    document.getElementById('weightUnit').value = last.unit || 'kg';
   }
+
+  const setsInput = document.getElementById('sets');
+  if (setsInput && (!setsInput.value || Number(setsInput.value) !== suggestion.sets.length)) {
+    setsInput.value = suggestion.sets.length;
+  }
+
+  generateSetInputs(suggestion.sets.length);
+  applySuggestedSetValuesForExercise(true);
 }
 
 
@@ -5261,14 +5400,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggle = document.getElementById('trainerModeToggle');
   if (toggle) toggle.checked = saved;
   updateNavForTrainer(saved);
-    if (toggle) {
-      toggle.addEventListener('change', e => {
-        localStorage.setItem('trainerMode', JSON.stringify(e.target.checked));
-        updateNavForTrainer(e.target.checked);
-        if (e.target.checked) showTab('coachingTab');
-      });
-    }
-  });
+  if (toggle) {
+    toggle.addEventListener('change', e => {
+      localStorage.setItem('trainerMode', JSON.stringify(e.target.checked));
+      updateNavForTrainer(e.target.checked);
+      if (e.target.checked) showTab('coachingTab');
+    });
+  }
+
+  const autoIncrementToggle = document.getElementById('autoIncrementToggle');
+  if (autoIncrementToggle) {
+    autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
+    autoIncrementToggle.addEventListener('change', (event) => {
+      localStorage.setItem('autoIncrementEnabled', String(Boolean(event.target.checked)));
+      showToast(`Auto-increment suggestions ${event.target.checked ? 'enabled' : 'disabled'}`);
+    });
+  }
+});
 
 
   updateAddButtonState();
@@ -6782,6 +6930,7 @@ function showHistoryMiniTab(tab) {
     const exerciseInput = document.getElementById("exercise");
     if (exerciseInput) {
       exerciseInput.addEventListener("blur", handleExerciseBlur);
+      exerciseInput.addEventListener("change", handleExerciseBlur);
     }
 
     // showTab is defined above
