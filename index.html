@@ -1402,8 +1402,7 @@ async function fetchAirtableConfig() {
 }
 const usersTableName = 'Users';
 const templatesTableName = 'Templates';
-const MacroTargetsTableName = 'MacroTargets';  
-
+const MacroTargetsApiUrl = 'https://api.airtable.com/v0/appmjr4IgnEH72K1b/MacroTargets';
 let macroMeals = [];
 
 let macroTargetCalories = 0;
@@ -1679,7 +1678,7 @@ async function fetchUserMacroTargets(username) {
     if (!airtableBaseId || !airtableToken) {
       await fetchAirtableConfig();
     }
-    const url = `/airtable/${airtableBaseId}/${MacroTargetsTableName}` +
+    const url = `${MacroTargetsApiUrl}` +
       `?filterByFormula={Username}='${encodeURIComponent(username)}'` +
       `&sort[0][field]=CreatedAt&sort[0][direction]=desc` +
       `&maxRecords=1`;
@@ -4516,7 +4515,7 @@ function updateSliderMacros() {
 
 
 async function saveToAirtable(username, target) {
-  const url = `/airtable/${airtableBaseId}/MacroTargets`;
+  const url = MacroTargetsApiUrl;
   try {
     const r = await fetch(url, {
       method: "POST",
