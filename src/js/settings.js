@@ -32,6 +32,7 @@ function readStoredSettings() {
 function applySettingsToUI(settings) {
   const unit = settings.unit;
   const theme = settings.theme;
+  const autoIncrement = settings.autoIncrement;
 
   if (unit) {
     const unitSelect = document.getElementById('defaultUnit');
@@ -54,6 +55,12 @@ function applySettingsToUI(settings) {
       localStorage.setItem('theme', theme);
     }
   }
+
+  if (typeof autoIncrement === 'boolean' && typeof localStorage !== 'undefined') {
+    const toggle = document.getElementById('autoIncrementSetting') || document.getElementById('autoIncrementToggle');
+    if (toggle) toggle.checked = autoIncrement;
+    localStorage.setItem('autoIncrementEnabled', String(autoIncrement));
+  }
 }
 
 function getDefaultSettings() {
@@ -62,7 +69,8 @@ function getDefaultSettings() {
   }
   return {
     unit: localStorage.getItem('defaultWeightUnit') || 'kg',
-    theme: localStorage.getItem('theme') || 'light'
+    theme: localStorage.getItem('theme') || 'light',
+    autoIncrement: localStorage.getItem('autoIncrementEnabled') !== 'false'
   };
 }
 
@@ -72,10 +80,12 @@ function saveSettings(event) {
   const container = document.getElementById('settingsFormContainer') || document;
   const unitField = container.querySelector('#defaultUnit');
   const themeField = container.querySelector('#theme');
+  const autoIncrementField = container.querySelector('#autoIncrementSetting') || document.getElementById('autoIncrementToggle');
 
   const settings = {
     unit: unitField ? unitField.value : getDefaultSettings().unit,
-    theme: themeField ? themeField.value : getDefaultSettings().theme
+    theme: themeField ? themeField.value : getDefaultSettings().theme,
+    autoIncrement: autoIncrementField ? Boolean(autoIncrementField.checked) : getDefaultSettings().autoIncrement
   };
 
   if (typeof localStorage !== 'undefined') {
