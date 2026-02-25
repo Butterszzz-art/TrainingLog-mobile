@@ -121,6 +121,8 @@ function calculateStrain(weeklyMonotony, weeklyLoad) {
 if (typeof module !== 'undefined') {
   module.exports = {
     computeOneRepMax,
+    calculate1RM,
+    calculateWorkoutMetrics,
     loadPRs,
     savePRs,
     updatePRs,
@@ -130,6 +132,8 @@ if (typeof module !== 'undefined') {
 }
 if (typeof window !== 'undefined') {
   window.computeOneRepMax = computeOneRepMax;
+  window.calculate1RM = calculate1RM;
+  window.calculateWorkoutMetrics = calculateWorkoutMetrics;
   window.loadPRs = loadPRs;
   window.savePRs = savePRs;
   window.updatePRs = updatePRs;
@@ -139,25 +143,11 @@ if (typeof window !== 'undefined') {
 
 export {
   computeOneRepMax,
+  calculate1RM,
+  calculateWorkoutMetrics,
   loadPRs,
   savePRs,
   updatePRs,
   calculateMonotony,
   calculateStrain
 };
-  return updated ? prs : null;
-}
-
-if (typeof module !== 'undefined') {
-  module.exports = { computeOneRepMax, calculate1RM, calculateWorkoutMetrics, loadPRs, savePRs, updatePRs };
-}
-if (typeof window !== 'undefined') {
-  window.computeOneRepMax = computeOneRepMax;
-  window.calculate1RM = calculate1RM;
-  window.calculateWorkoutMetrics = calculateWorkoutMetrics;
-  window.loadPRs = loadPRs;
-  window.savePRs = savePRs;
-  window.updatePRs = updatePRs;
-}
-
-export { computeOneRepMax, calculate1RM, calculateWorkoutMetrics, loadPRs, savePRs, updatePRs };
