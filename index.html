@@ -1900,6 +1900,7 @@ function addLogEntry() {
   const weightsArray = [];
   const dropsetArray = [];
   const restPauseArray = [];
+  const rpeArray = [];
   const skippedArray = [];
   const completedArray = [];
   const setTypeArray = [];
@@ -1908,6 +1909,8 @@ function addLogEntry() {
   for (let i = 0; i < sets; i++) {
     const reps = +document.getElementById(`reps_${i}`).value;
     const weight = +document.getElementById(`weight_${i}`).value;
+    const rpeInput = document.getElementById(`rpe_${i}`);
+    const rpe = rpeInput ? +rpeInput.value : null;
     const ds = document.getElementById(`dropset_${i}`).checked;
     const rp = document.getElementById(`restPause_${i}`).checked;
     if (isNaN(reps) || isNaN(weight)) {
@@ -1916,6 +1919,7 @@ function addLogEntry() {
     }
     repsArray.push(reps);
     weightsArray.push(weight);
+    rpeArray.push(Number.isFinite(rpe) ? rpe : null);
     dropsetArray.push(ds);
     restPauseArray.push(rp);
     skippedArray.push(false);
@@ -1950,6 +1954,7 @@ function addLogEntry() {
     sets,
     repsArray,
     weightsArray,
+    rpeArray,
     dropsetArray,
     restPauseArray,
     skippedArray,
@@ -1962,9 +1967,26 @@ function addLogEntry() {
     repGoal
   });
 
+  const activeWorkout = workouts[workouts.length - 1];
+  const computedMetrics = typeof calculateWorkoutMetrics === 'function'
+    ? calculateWorkoutMetrics(activeWorkout)
+    : {
+        sessionVolume: calculateWorkoutVolume(activeWorkout),
+        averageIntensity: 0,
+        estimated1RM: Math.max(...weightsArray.map((w, i) => (w || 0) * (1 + ((repsArray[i] || 0) / 30))), 0)
+      };
+  activeWorkout.sessionVolume = computedMetrics.sessionVolume;
+  activeWorkout.averageIntensity = computedMetrics.averageIntensity;
+  activeWorkout.estimated1RM = computedMetrics.estimated1RM;
+  activeWorkout.metrics = {
+    volume: computedMetrics.sessionVolume,
+    intensity: computedMetrics.averageIntensity,
+    oneRM: computedMetrics.estimated1RM
+  };
+
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   if (typeof saveWorkoutToBackend === 'function') {
-    saveWorkoutToBackend(workouts[workouts.length - 1]);
+    saveWorkoutToBackend(activeWorkout);
   }
   updatePRs(currentUser, { log: [{ exercise, weightsArray, repsArray }] }, calculateWorkoutVolume);
   updateGoalProgress(currentUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
@@ -5463,6 +5485,53 @@ function renderLineChart(labels, label, data, trend, forecast) {
   });
 }
 
+function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) {
+  const ctx = document.getElementById('progressCanvas').getContext('2d');
+  if (progressChart) progressChart.destroy();
+  progressChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Session Volume',
+          data: volumes,
+          tension: .35,
+          yAxisID: 'yVolume'
+        },
+        {
+          label: 'Avg Intensity (%)',
+          data: intensities,
+          tension: .35,
+          yAxisID: 'yIntensity'
+        },
+        {
+          label: 'Estimated 1RM',
+          data: estimated1RMs,
+          tension: .35,
+          yAxisID: 'yVolume'
+        }
+      ]
+    },
+    options: {
+      scales: {
+        yVolume: {
+          beginAtZero: true,
+          position: 'left'
+        },
+        yIntensity: {
+          beginAtZero: true,
+          position: 'right',
+          suggestedMax: 100,
+          grid: {
+            drawOnChartArea: false
+          }
+        }
+      }
+    }
+  });
+}
+
 function renderExerciseProgress() {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const progressMap = {};
@@ -5498,7 +5567,15 @@ function renderExerciseProgress() {
 
 async function fetchWorkoutHistory() {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  return workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }));
+  return workouts.map(w => {
+    const metrics = typeof calculateWorkoutMetrics === 'function'
+      ? calculateWorkoutMetrics(w)
+      : null;
+    const volume = Number.isFinite(Number(w.sessionVolume)) ? Number(w.sessionVolume) : (metrics?.sessionVolume ?? calculateWorkoutVolume(w));
+    const averageIntensity = Number.isFinite(Number(w.averageIntensity)) ? Number(w.averageIntensity) : (metrics?.averageIntensity ?? 0);
+    const estimated1RM = Number.isFinite(Number(w.estimated1RM)) ? Number(w.estimated1RM) : (metrics?.estimated1RM ?? 0);
+    return { date: w.date, volume, averageIntensity, estimated1RM };
+  });
 }
 
 function applyDateRange(history) {
@@ -5545,16 +5622,24 @@ async function showWorkoutProgress(data) {
     return;
   }
   const history = workouts.length
-    ? workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }))
+    ? workouts.map(w => {
+        const metrics = typeof calculateWorkoutMetrics === 'function'
+          ? calculateWorkoutMetrics(w)
+          : null;
+        const volume = Number.isFinite(Number(w.sessionVolume)) ? Number(w.sessionVolume) : (metrics?.sessionVolume ?? calculateWorkoutVolume(w));
+        const averageIntensity = Number.isFinite(Number(w.averageIntensity)) ? Number(w.averageIntensity) : (metrics?.averageIntensity ?? 0);
+        const estimated1RM = Number.isFinite(Number(w.estimated1RM)) ? Number(w.estimated1RM) : (metrics?.estimated1RM ?? 0);
+        return { date: w.date, volume, averageIntensity, estimated1RM };
+      })
     : await fetchWorkoutHistory();
   const filtered = applyDateRange(history);
   const dates = filtered.map(h => h.date);
   const vols = filtered.map(h => h.volume);
+  const intensities = filtered.map(h => Number(h.averageIntensity || 0));
+  const estimated1RMs = filtered.map(h => Number(h.estimated1RM || 0));
   document.getElementById('exerciseProgress').style.display = 'none';
   document.getElementById('progressCanvas').style.display = 'block';
-  const trend = trendPoints(vols);
-  const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(vols, 4));
-  renderLineChart(dates.concat(new Array(4).fill('')), 'Total Volume', vols.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
+  renderWorkoutMetricsChart(dates, vols, intensities, estimated1RMs);
 }
 
 async function showCardioProgress() {
@@ -6738,5 +6823,3 @@ window.applyTheme = applyTheme;
 
 </body>
 </html>
-
-
