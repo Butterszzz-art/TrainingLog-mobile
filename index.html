@@ -6110,6 +6110,8 @@ function renderTrainingLoadCharts(workouts) {
   alerts.innerHTML = riskWeeks.length
     ? `<strong>⚠️ Deload suggestion:</strong> High stress detected in week(s) ${riskWeeks.map(w => w.weekStart).join(', ')}. Consider reducing volume/intensity by 20–40%.`
     : '<strong>✅ Load balance looks good.</strong> No high monotony/strain weeks detected in selected range.';
+}
+
 function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) {
   const ctx = document.getElementById('progressCanvas').getContext('2d');
   if (progressChart) progressChart.destroy();
