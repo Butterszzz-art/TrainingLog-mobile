@@ -1047,6 +1047,18 @@
       <section class="progress-chart">
         <canvas id="progressCanvas"></canvas>
         <div id="exerciseProgress" style="display:none;"></div>
+        <div id="trainingLoadPanel" style="margin-top:14px;">
+          <h3 style="margin-bottom:6px;">Training Stress
+            <span title="Monotony = mean daily load / standard deviation of daily load. Strain = monotony × weekly load." style="cursor:help;">ⓘ</span>
+          </h3>
+          <p style="margin:0 0 8px; font-size:.9rem;">
+            <strong title="Higher values indicate less day-to-day variation in training load.">Monotony</strong> and
+            <strong title="Strain combines weekly work and monotony to estimate total stress.">Strain</strong> are calculated from weekly volume and intensity load.
+          </p>
+          <canvas id="monotonyCanvas" style="max-height:180px; margin-bottom:10px;"></canvas>
+          <canvas id="strainCanvas" style="max-height:180px;"></canvas>
+          <div id="loadAlerts" style="margin-top:8px;"></div>
+        </div>
         <div id="goalBar" style="margin-top:10px;"></div>
         <div id="coachCorner" style="margin-top:10px;"></div>
       </section>
@@ -5445,6 +5457,10 @@ function removeCardioEntry(index) {
 }
 
 let progressChart;
+let monotonyChart;
+let strainChart;
+const SAFE_MONOTONY_THRESHOLD = 2;
+const SAFE_STRAIN_THRESHOLD = 6000;
 
 function renderLineChart(labels, label, data, trend, forecast) {
   const ctx = document.getElementById('progressCanvas').getContext('2d');
@@ -5461,6 +5477,147 @@ function renderLineChart(labels, label, data, trend, forecast) {
     },
     options: { scales: { y: { beginAtZero: true } } }
   });
+}
+
+function startOfWeek(dateText) {
+  const d = new Date(`${dateText}T00:00:00`);
+  const day = d.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + mondayOffset);
+  return d;
+}
+
+function deriveWorkoutIntensity(workout) {
+  if (Number.isFinite(workout?.intensity) && workout.intensity > 0) return workout.intensity;
+  const rows = Array.isArray(workout?.log) ? workout.log : [];
+  let weightedTotal = 0;
+  let repsTotal = 0;
+  rows.forEach(entry => {
+    const reps = Array.isArray(entry?.repsArray) ? entry.repsArray : [];
+    const weights = Array.isArray(entry?.weightsArray) ? entry.weightsArray : [];
+    reps.forEach((rep, idx) => {
+      const r = Number(rep);
+      const w = Number(weights[idx]);
+      if (!Number.isFinite(r) || !Number.isFinite(w)) return;
+      weightedTotal += r * w;
+      repsTotal += r;
+    });
+  });
+  if (!repsTotal) return 1;
+  return weightedTotal / repsTotal;
+}
+
+function buildWeeklyLoadMetrics(workouts) {
+  const dayLoadMap = {};
+  (workouts || []).forEach(w => {
+    if (!w?.date) return;
+    const storedVolume = Number(w.volume);
+    const volume = Number.isFinite(storedVolume) && storedVolume > 0
+      ? storedVolume
+      : calculateWorkoutVolume(w);
+    const intensity = deriveWorkoutIntensity(w);
+    const dayLoad = volume * intensity;
+    if (!Number.isFinite(dayLoad) || dayLoad < 0) return;
+    dayLoadMap[w.date] = (dayLoadMap[w.date] || 0) + dayLoad;
+  });
+
+  const weeks = {};
+  Object.entries(dayLoadMap).forEach(([dateText, dayLoad]) => {
+    const weekStart = startOfWeek(dateText).toISOString().slice(0, 10);
+    if (!weeks[weekStart]) {
+      weeks[weekStart] = { weekStart, dailyLoads: [0, 0, 0, 0, 0, 0, 0] };
+    }
+    const dayIndex = ((new Date(`${dateText}T00:00:00`).getDay() + 6) % 7);
+    weeks[weekStart].dailyLoads[dayIndex] += dayLoad;
+  });
+
+  return Object.values(weeks)
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart))
+    .map(w => {
+      const weeklyLoad = w.dailyLoads.reduce((sum, value) => sum + value, 0);
+      const weeklyMonotony = calculateMonotony(w.dailyLoads);
+      const weeklyStrain = calculateStrain(weeklyMonotony, weeklyLoad);
+      return {
+        weekStart: w.weekStart,
+        weeklyLoad,
+        weeklyMonotony,
+        weeklyStrain
+      };
+    });
+}
+
+function renderTrainingLoadCharts(workouts) {
+  const panel = document.getElementById('trainingLoadPanel');
+  const alerts = document.getElementById('loadAlerts');
+  if (!panel || !alerts) return;
+
+  const weekly = buildWeeklyLoadMetrics(workouts);
+  if (!weekly.length) {
+    panel.style.display = 'none';
+    alerts.innerHTML = '';
+    if (monotonyChart) monotonyChart.destroy();
+    if (strainChart) strainChart.destroy();
+    return;
+  }
+
+  panel.style.display = 'block';
+  const labels = weekly.map(w => w.weekStart);
+  const monotonyValues = weekly.map(w => Number(w.weeklyMonotony.toFixed(2)));
+  const strainValues = weekly.map(w => Math.round(w.weeklyStrain));
+
+  const monotonyCtx = document.getElementById('monotonyCanvas').getContext('2d');
+  const strainCtx = document.getElementById('strainCanvas').getContext('2d');
+
+  if (monotonyChart) monotonyChart.destroy();
+  monotonyChart = new Chart(monotonyCtx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Weekly Monotony',
+        data: monotonyValues,
+        backgroundColor: monotonyValues.map(v => v > SAFE_MONOTONY_THRESHOLD ? '#e74c3c' : '#4e79a7')
+      }]
+    },
+    options: {
+      plugins: {
+        tooltip: {
+          callbacks: {
+            afterLabel: () => 'Mean daily load / daily load standard deviation'
+          }
+        }
+      },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  if (strainChart) strainChart.destroy();
+  strainChart = new Chart(strainCtx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Weekly Strain',
+        data: strainValues,
+        backgroundColor: strainValues.map(v => v > SAFE_STRAIN_THRESHOLD ? '#e74c3c' : '#59a14f')
+      }]
+    },
+    options: {
+      plugins: {
+        tooltip: {
+          callbacks: {
+            afterLabel: () => 'Weekly monotony × weekly load'
+          }
+        }
+      },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  const riskWeeks = weekly.filter(w => w.weeklyMonotony > SAFE_MONOTONY_THRESHOLD || w.weeklyStrain > SAFE_STRAIN_THRESHOLD);
+  alerts.innerHTML = riskWeeks.length
+    ? `<strong>⚠️ Deload suggestion:</strong> High stress detected in week(s) ${riskWeeks.map(w => w.weekStart).join(', ')}. Consider reducing volume/intensity by 20–40%.`
+    : '<strong>✅ Load balance looks good.</strong> No high monotony/strain weeks detected in selected range.';
 }
 
 function renderExerciseProgress() {
@@ -5496,8 +5653,12 @@ function renderExerciseProgress() {
   });
 }
 
+async function fetchWorkouts() {
+  return JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+}
+
 async function fetchWorkoutHistory() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workouts = await fetchWorkouts();
   return workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }));
 }
 
@@ -5544,10 +5705,10 @@ async function showWorkoutProgress(data) {
     // nothing to show
     return;
   }
-  const history = workouts.length
-    ? workouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }))
-    : await fetchWorkoutHistory();
+  const rawWorkouts = workouts.length ? workouts : await fetchWorkouts();
+  const history = rawWorkouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }));
   const filtered = applyDateRange(history);
+  const filteredWorkouts = applyDateRange(rawWorkouts);
   const dates = filtered.map(h => h.date);
   const vols = filtered.map(h => h.volume);
   document.getElementById('exerciseProgress').style.display = 'none';
@@ -5555,6 +5716,7 @@ async function showWorkoutProgress(data) {
   const trend = trendPoints(vols);
   const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(vols, 4));
   renderLineChart(dates.concat(new Array(4).fill('')), 'Total Volume', vols.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
+  renderTrainingLoadCharts(filteredWorkouts);
 }
 
 async function showCardioProgress() {
@@ -5565,6 +5727,7 @@ async function showCardioProgress() {
   const mins = filtered.map(h => h.duration);
   document.getElementById('exerciseProgress').style.display = 'none';
   document.getElementById('progressCanvas').style.display = 'block';
+  document.getElementById('trainingLoadPanel').style.display = 'none';
   const trend = trendPoints(mins);
   const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(mins, 4));
   renderLineChart(dates.concat(new Array(4).fill('')), 'Cardio Minutes', mins.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
@@ -5578,6 +5741,7 @@ async function showBodyweightProgress() {
   const weights = filtered.map(h => h.weight);
   document.getElementById('exerciseProgress').style.display = 'none';
   document.getElementById('progressCanvas').style.display = 'block';
+  document.getElementById('trainingLoadPanel').style.display = 'none';
   const trend = trendPoints(weights);
   const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(weights, 4));
   renderLineChart(dates.concat(new Array(4).fill('')), 'Bodyweight', weights.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
@@ -5587,6 +5751,7 @@ function showExerciseProgress() {
   setActiveProgress('exerciseProgressBtn');
   document.getElementById('progressCanvas').style.display = 'none';
   document.getElementById('exerciseProgress').style.display = 'block';
+  document.getElementById('trainingLoadPanel').style.display = 'none';
   renderExerciseProgress();
 }
 
