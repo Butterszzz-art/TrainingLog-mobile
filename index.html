@@ -507,6 +507,32 @@
 }
 .highlight-past{background-color:#FFE0B2;}
 .highlight-today{background-color:#FF7043;}
+#training-calendar td.calendar-completed{
+  background-color: rgba(46, 160, 67, 0.75);
+  color: #fff;
+}
+#training-calendar td.calendar-missed{
+  background-color: rgba(119, 119, 119, 0.35);
+  color: var(--text-color);
+}
+#training-calendar td.calendar-planned{
+  box-shadow: inset 0 0 0 2px rgba(255, 167, 38, 0.75);
+}
+.calendar-legend{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  justify-content:center;
+  font-size:.85rem;
+  margin-top:8px;
+}
+.calendar-legend-item{display:inline-flex;align-items:center;gap:6px;}
+.calendar-legend-swatch{
+  width:12px;
+  height:12px;
+  border-radius:3px;
+  display:inline-block;
+}
 /* Progress Tab layout */
 .progress-layout {
   display: grid;
@@ -5780,20 +5806,68 @@ function goToDate(date) {
   if (input) input.value = date;
 }
 
+function normalizeIsoDate(date) {
+  const copy = new Date(date);
+  copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
+  return copy.toISOString().split('T')[0];
+}
+
+function getPlannedProgramDates(rangeStart, rangeEnd) {
+  const active = getActiveProgram();
+  if (!active || !active.startDate) return [];
+  const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
+  const program = programs.find(p => p.id === active.programId);
+  if (!program || !Array.isArray(program.days) || !program.days.length) return [];
+
+  const start = new Date(active.startDate);
+  const dates = [];
+  for (let i = 0; i < program.days.length; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    if (d >= rangeStart && d <= rangeEnd) {
+      dates.push(normalizeIsoDate(d));
+    }
+  }
+  return dates;
+}
+
+function getPlannedTemplateDates(rangeStart, rangeEnd, workouts) {
+  if (!Array.isArray(workouts)) return [];
+  return workouts
+    .filter(w => w && typeof w.date === 'string' && w.date >= normalizeIsoDate(rangeStart) && w.date <= normalizeIsoDate(rangeEnd))
+    .filter(w => Array.isArray(w.log) && w.log.some(entry => entry && (entry.repGoal || entry.goal)))
+    .map(w => w.date);
+}
+
+function isWorkoutCompleted(workout) {
+  if (!workout || !Array.isArray(workout.log)) return false;
+  return workout.log.some(entry => {
+    if (!entry) return false;
+    const repsDone = Array.isArray(entry.repsArray) && entry.repsArray.some(v => Number(v) > 0);
+    const weightDone = Array.isArray(entry.weightsArray) && entry.weightsArray.some(v => Number(v) > 0);
+    return repsDone || weightDone;
+  });
+}
+
 function renderTrainingCalendar(month, year) {
   const cal = document.getElementById('training-calendar');
   if (!cal) return;
-  const trackedDates = getLocalStorage('workoutDates');
-  const active = getActiveProgram();
-  const programDates = active ? getProgramDayDates(active.startDate) : [];
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const volumeMap = {};
-  workouts.forEach(w => { volumeMap[w.date] = calculateWorkoutVolume(w); });
 
   cal.innerHTML = '';
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
+  const todayIso = normalizeIsoDate(new Date());
+  const plannedDates = new Set([
+    ...getPlannedProgramDates(firstDay, lastDay),
+    ...getPlannedTemplateDates(firstDay, lastDay, workouts)
+  ]);
+
+  const completedDates = new Set();
+  workouts.forEach(w => {
+    if (w && typeof w.date === 'string' && isWorkoutCompleted(w)) completedDates.add(w.date);
+  });
 
   const header = document.createElement('div');
   header.className = 'calendar-header';
@@ -5852,13 +5926,15 @@ function renderTrainingCalendar(month, year) {
     const str = current.toISOString().split('T')[0];
     const td = document.createElement('td');
     td.textContent = day;
-    const vol = volumeMap[str] || 0;
-    if (vol) {
-      const shade = Math.min(1, vol / 500);
-      td.style.backgroundColor = `rgba(0,128,0,${shade})`;
-    }
-    if (programDates.includes(str)) td.classList.add("highlight-today");
-    if (str === new Date().toISOString().split('T')[0]) td.style.border = '2px solid var(--primary)';
+    const isCompleted = completedDates.has(str);
+    const isPlanned = plannedDates.has(str);
+    const isMissed = isPlanned && !isCompleted && str < todayIso;
+
+    if (isCompleted) td.classList.add('calendar-completed');
+    if (isMissed) td.classList.add('calendar-missed');
+    if (isPlanned && !isMissed && !isCompleted) td.classList.add('calendar-planned');
+
+    if (str === todayIso) td.style.border = '2px solid var(--primary)';
     td.onclick = () => goToDate(str);
     row.appendChild(td);
     if (current.getDay() === 6) {
@@ -5872,6 +5948,15 @@ function renderTrainingCalendar(month, year) {
   }
   table.appendChild(tbody);
   cal.appendChild(table);
+
+  const legend = document.createElement('div');
+  legend.className = 'calendar-legend';
+  legend.innerHTML = `
+    <span class="calendar-legend-item"><span class="calendar-legend-swatch" style="background: rgba(46, 160, 67, 0.75);"></span>Completed</span>
+    <span class="calendar-legend-item"><span class="calendar-legend-swatch" style="background: rgba(119, 119, 119, 0.35);"></span>Missed planned</span>
+    <span class="calendar-legend-item"><span class="calendar-legend-swatch" style="border:2px solid rgba(255, 167, 38, 0.75);"></span>Planned upcoming</span>
+  `;
+  cal.appendChild(legend);
 }
 
 function initTrainingCalendar() {
@@ -5884,6 +5969,80 @@ function initTrainingCalendar() {
 function updateTrainingCalendar() {
   renderTrainingCalendar(calendarMonth, calendarYear);
 }
+
+let streakReminderTimeoutId = null;
+
+function getReminderSettings() {
+  const fallback = { streakReminderEnabled: false, streakReminderTime: '19:00' };
+  if (typeof window.getStoredUserSettings !== 'function') return fallback;
+  const saved = window.getStoredUserSettings() || {};
+  return {
+    streakReminderEnabled: Boolean(saved.streakReminderEnabled),
+    streakReminderTime: saved.streakReminderTime || '19:00'
+  };
+}
+
+function hasWorkoutLoggedForDate(dateStr) {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  return workouts.some(w => w && w.date === dateStr && isWorkoutCompleted(w));
+}
+
+function isPlannedTrainingDate(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const planned = new Set(getPlannedProgramDates(d, d));
+  if (planned.has(dateStr)) return true;
+
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const templatePlanned = getPlannedTemplateDates(d, d, workouts);
+  return templatePlanned.includes(dateStr);
+}
+
+function sendStreakReminderNotification() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  const title = 'Workout reminder';
+  const body = 'You planned a training session today. Log your workout to keep your streak alive.';
+  new Notification(title, { body, tag: `streak-reminder-${currentUser}` });
+}
+
+function checkDailyStreakReminder() {
+  if (!currentUser) return;
+  const { streakReminderEnabled } = getReminderSettings();
+  if (!streakReminderEnabled) return;
+  const today = normalizeIsoDate(new Date());
+  if (!isPlannedTrainingDate(today)) return;
+  if (hasWorkoutLoggedForDate(today)) return;
+  sendStreakReminderNotification();
+}
+
+function scheduleStreakReminderJob() {
+  if (streakReminderTimeoutId) clearTimeout(streakReminderTimeoutId);
+  if (!currentUser) return;
+
+  const { streakReminderEnabled, streakReminderTime } = getReminderSettings();
+  if (!streakReminderEnabled) return;
+
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+
+  const [hourStr, minuteStr] = String(streakReminderTime || '19:00').split(':');
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
+
+  const now = new Date();
+  const nextRun = new Date(now);
+  nextRun.setSeconds(0, 0);
+  nextRun.setHours(Number.isFinite(hour) ? hour : 19, Number.isFinite(minute) ? minute : 0, 0, 0);
+  if (nextRun <= now) nextRun.setDate(nextRun.getDate() + 1);
+
+  streakReminderTimeoutId = setTimeout(() => {
+    checkDailyStreakReminder();
+    scheduleStreakReminderJob();
+  }, nextRun.getTime() - now.getTime());
+}
+
+window.addEventListener('traininglog:settings-saved', scheduleStreakReminderJob);
 
 
 // ========= CROSSFIT TRACKER =========
@@ -6602,6 +6761,7 @@ function renderLogHistory(logs) {
   renderMilestones();
   renderGoalBar();
   if (typeof updateStreakCounter === 'function') updateStreakCounter();
+  scheduleStreakReminderJob();
 
 }); // closing DOMContentLoaded
 

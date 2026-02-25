@@ -32,6 +32,8 @@ function readStoredSettings() {
 function applySettingsToUI(settings) {
   const unit = settings.unit;
   const theme = settings.theme;
+  const streakReminderEnabled = settings.streakReminderEnabled;
+  const streakReminderTime = settings.streakReminderTime;
 
   if (unit) {
     const unitSelect = document.getElementById('defaultUnit');
@@ -54,6 +56,19 @@ function applySettingsToUI(settings) {
       localStorage.setItem('theme', theme);
     }
   }
+
+  const reminderEnabledCheckbox = document.getElementById('streakReminderEnabled');
+  if (reminderEnabledCheckbox) {
+    reminderEnabledCheckbox.checked = Boolean(streakReminderEnabled);
+  }
+
+  const reminderTimeInput = document.getElementById('streakReminderTime');
+  if (reminderTimeInput) {
+    reminderTimeInput.value = typeof streakReminderTime === 'string' && streakReminderTime
+      ? streakReminderTime
+      : '19:00';
+    reminderTimeInput.disabled = !Boolean(streakReminderEnabled);
+  }
 }
 
 function getDefaultSettings() {
@@ -62,7 +77,9 @@ function getDefaultSettings() {
   }
   return {
     unit: localStorage.getItem('defaultWeightUnit') || 'kg',
-    theme: localStorage.getItem('theme') || 'light'
+    theme: localStorage.getItem('theme') || 'light',
+    streakReminderEnabled: false,
+    streakReminderTime: '19:00'
   };
 }
 
@@ -72,10 +89,14 @@ function saveSettings(event) {
   const container = document.getElementById('settingsFormContainer') || document;
   const unitField = container.querySelector('#defaultUnit');
   const themeField = container.querySelector('#theme');
+  const reminderEnabledField = container.querySelector('#streakReminderEnabled');
+  const reminderTimeField = container.querySelector('#streakReminderTime');
 
   const settings = {
     unit: unitField ? unitField.value : getDefaultSettings().unit,
-    theme: themeField ? themeField.value : getDefaultSettings().theme
+    theme: themeField ? themeField.value : getDefaultSettings().theme,
+    streakReminderEnabled: reminderEnabledField ? Boolean(reminderEnabledField.checked) : false,
+    streakReminderTime: reminderTimeField && reminderTimeField.value ? reminderTimeField.value : '19:00'
   };
 
   if (typeof localStorage !== 'undefined') {
@@ -88,6 +109,20 @@ function saveSettings(event) {
   } else if (typeof console !== 'undefined') {
     console.log('Settings saved');
   }
+
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('traininglog:settings-saved', { detail: settings }));
+  }
+}
+
+function bindReminderToggle(container = document) {
+  const reminderEnabledField = container.querySelector('#streakReminderEnabled');
+  const reminderTimeField = container.querySelector('#streakReminderTime');
+  if (!reminderEnabledField || !reminderTimeField) return;
+
+  reminderEnabledField.addEventListener('change', () => {
+    reminderTimeField.disabled = !reminderEnabledField.checked;
+  });
 }
 
 function injectSettingsMarkup() {
@@ -118,6 +153,7 @@ function injectSettingsMarkup() {
       if (form) {
         form.addEventListener('submit', saveSettings);
       }
+      bindReminderToggle(container);
       applySettingsToUI({ ...getDefaultSettings(), ...readStoredSettings() });
     })
     .catch(error => {
@@ -136,3 +172,5 @@ document.addEventListener('DOMContentLoaded', initializeSettingsFeature);
 
 window.initSettingsPage = injectSettingsMarkup;
 window.saveSettings = saveSettings;
+window.getStoredUserSettings = readStoredSettings;
+window.getDefaultUserSettings = getDefaultSettings;
