@@ -40,13 +40,6 @@ async function loadConfig() {
       window.SERVER_URL = config.serverUrl;
     }
 
-    if (config.airtableBaseId || config.airtableToken) {
-      window.airtableConfig = {
-        ...(window.airtableConfig || {}),
-        ...(config.airtableBaseId ? { airtableBaseId: config.airtableBaseId } : {}),
-        ...(config.airtableToken ? { airtableToken: config.airtableToken } : {})
-      };
-    }
   }
 
   return config;
