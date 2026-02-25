@@ -11,6 +11,59 @@ function computeOneRepMax(weightsArray, repsArray) {
   return best;
 }
 
+function calculate1RM(reps, weight, method = 'epley') {
+  const r = Number(reps);
+  const w = Number(weight);
+  if (!Number.isFinite(r) || !Number.isFinite(w) || r <= 0 || w <= 0) return 0;
+
+  if (method === 'brzycki') {
+    const denominator = 37 - r;
+    if (denominator <= 0) return 0;
+    return w * (36 / denominator);
+  }
+
+  return w * (1 + r / 30);
+}
+
+function calculateWorkoutMetrics(workout, method = 'epley') {
+  const log = Array.isArray(workout?.log) ? workout.log : [];
+  let sessionVolume = 0;
+  let weightedIntensityTotal = 0;
+  let totalValidSets = 0;
+  let estimated1RM = 0;
+
+  log.forEach(entry => {
+    const repsArray = Array.isArray(entry?.repsArray) ? entry.repsArray : [];
+    const weightsArray = Array.isArray(entry?.weightsArray) ? entry.weightsArray : [];
+    const rpeArray = Array.isArray(entry?.rpeArray) ? entry.rpeArray : [];
+
+    for (let i = 0; i < Math.max(repsArray.length, weightsArray.length); i++) {
+      const reps = Number(repsArray[i]);
+      const weight = Number(weightsArray[i]);
+      if (!Number.isFinite(reps) || !Number.isFinite(weight) || reps <= 0 || weight <= 0) continue;
+
+      const volume = reps * weight;
+      sessionVolume += volume;
+
+      const hasRpe = Number.isFinite(Number(rpeArray[i]));
+      const set1RM = calculate1RM(reps, weight, hasRpe ? 'epley' : method);
+      if (set1RM > estimated1RM) estimated1RM = set1RM;
+
+      if (set1RM > 0) {
+        weightedIntensityTotal += (weight / set1RM) * 100;
+        totalValidSets += 1;
+      }
+    }
+  });
+
+  const averageIntensity = totalValidSets > 0 ? weightedIntensityTotal / totalValidSets : 0;
+  return {
+    sessionVolume,
+    averageIntensity,
+    estimated1RM
+  };
+}
+
 function loadPRs(user) {
   if (typeof localStorage === 'undefined') return {};
   return JSON.parse(localStorage.getItem(`prs_${user}`)) || {};
@@ -92,3 +145,19 @@ export {
   calculateMonotony,
   calculateStrain
 };
+  return updated ? prs : null;
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { computeOneRepMax, calculate1RM, calculateWorkoutMetrics, loadPRs, savePRs, updatePRs };
+}
+if (typeof window !== 'undefined') {
+  window.computeOneRepMax = computeOneRepMax;
+  window.calculate1RM = calculate1RM;
+  window.calculateWorkoutMetrics = calculateWorkoutMetrics;
+  window.loadPRs = loadPRs;
+  window.savePRs = savePRs;
+  window.updatePRs = updatePRs;
+}
+
+export { computeOneRepMax, calculate1RM, calculateWorkoutMetrics, loadPRs, savePRs, updatePRs };

@@ -4,6 +4,7 @@ const {
   calculateMonotony,
   calculateStrain
 } = require('../progressUtils');
+const { computeOneRepMax, calculate1RM, calculateWorkoutMetrics, updatePRs } = require('../progressUtils');
 const { calculateWorkoutVolume } = require('../calculateWorkoutVolume');
 
 test('computeOneRepMax calculates epley estimate', () => {
@@ -27,4 +28,17 @@ test('calculateMonotony returns mean divided by standard deviation', () => {
 
 test('calculateStrain multiplies monotony and weekly load', () => {
   expect(calculateStrain(2, 1500)).toBe(3000);
+
+test('calculate1RM supports brzycki method', () => {
+  const orm = calculate1RM(5, 100, 'brzycki');
+  expect(orm).toBeCloseTo(100 * (36 / (37 - 5)));
+});
+
+test('calculateWorkoutMetrics returns volume, intensity, and estimated 1RM', () => {
+  const metrics = calculateWorkoutMetrics({
+    log: [{ repsArray: [5, 8], weightsArray: [100, 80] }]
+  });
+  expect(metrics.sessionVolume).toBe(1140);
+  expect(metrics.averageIntensity).toBeGreaterThan(0);
+  expect(metrics.estimated1RM).toBeGreaterThan(100);
 });
