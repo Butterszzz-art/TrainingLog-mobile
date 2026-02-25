@@ -1102,7 +1102,6 @@
         <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
         <input type="date" id="startRange" onchange="refreshProgress()">
         <input type="date" id="endRange" onchange="refreshProgress()">
-        <button onclick="promptGoal()">Set Goal</button>
       </nav>
       </div>
       <div id="progressChartsPanel" class="panel">
@@ -1122,6 +1121,7 @@
           <div id="loadAlerts" style="margin-top:8px;"></div>
         </div>
         <div id="goalBar" style="margin-top:10px;"></div>
+        <div id="goalProgressList" style="margin-top:10px;"></div>
         <div id="coachCorner" style="margin-top:10px;"></div>
       </section>
       <aside class="progress-calendar">
@@ -1196,6 +1196,35 @@
 
 <div id="settingsTab" class="tab-content">
   <div id="settingsFormContainer" class="panel"></div>
+
+  <section class="panel" aria-labelledby="smartGoalsHeading">
+    <h3 id="smartGoalsHeading">SMART Goals</h3>
+    <form id="smartGoalForm">
+      <input id="goalTitle" type="text" placeholder="Goal title (e.g. Squat 150 kg by 1 June 2026)" required>
+      <input id="goalExercise" type="text" placeholder="Exercise (e.g. Squat)" required>
+      <input id="goalTargetValue" type="number" min="0" step="0.1" placeholder="Target value" required>
+      <input id="goalStartValue" type="number" min="0" step="0.1" placeholder="Current/start value" required>
+      <input id="goalDueDate" type="date" required>
+
+      <label for="goalSpecific">Specific</label>
+      <textarea id="goalSpecific" rows="2" placeholder="What exactly will you achieve?"></textarea>
+      <label for="goalMeasurable">Measurable</label>
+      <textarea id="goalMeasurable" rows="2" placeholder="How will progress be measured?"></textarea>
+      <label for="goalAchievable">Achievable</label>
+      <textarea id="goalAchievable" rows="2" placeholder="Why is this realistic?"></textarea>
+      <label for="goalRelevant">Relevant</label>
+      <textarea id="goalRelevant" rows="2" placeholder="Why does this matter to you?"></textarea>
+      <label for="goalTimeBound">Time-bound</label>
+      <textarea id="goalTimeBound" rows="2" placeholder="When will this be completed?"></textarea>
+
+      <label>
+        <input id="goalSyncBackend" type="checkbox">
+        Sync this goal to backend (if available)
+      </label>
+      <button type="submit">Save SMART Goal</button>
+    </form>
+    <div id="smartGoalFeedback" style="font-size:0.95rem;"></div>
+  </section>
 
   <section class="panel" aria-labelledby="trainerModeHeading">
     <h3 id="trainerModeHeading">Trainer Mode</h3>
@@ -1354,7 +1383,7 @@
 <script src="src/config/loadConfig.js"></script>
 <script src="progressMilestones.js"></script>
 <script src="progressAnalytics.js"></script>
-<script src="progressGoals.js"></script>
+<script src="goals.js"></script>
 <script src="progressAI.js"></script>
 <script src="gamification.js"></script>
 <script src="src/js/crossfit.js"></script>
@@ -1723,6 +1752,7 @@ function showTab(tabName) {
     case 'progressTab':
       showWorkoutProgress();
       renderDashboardPRSummary();
+      renderGoalProgressList();
       break;
     case 'logHistoryTab':
       showHistoryMiniTab('workout');
@@ -1747,6 +1777,7 @@ function showTab(tabName) {
       if (autoIncrementToggle) {
         autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
       }
+      initSmartGoalForm();
       break;
   }
 }
@@ -2093,6 +2124,7 @@ function addLogEntry() {
   }
   renderMilestones();
   renderGoalBar();
+  renderGoalProgressList();
   showCoachInsights();
   saveUserExercise(exercise);
   trackWorkoutDate(date);
@@ -6394,21 +6426,120 @@ function renderMilestones() {
   });
 }
 
+function getGoalStatusMeta(status) {
+  const palette = {
+    ahead: { color: '#2e7d32', label: 'Ahead' },
+    on_track: { color: '#2e7d32', label: 'On track' },
+    behind: { color: '#f9a825', label: 'Behind schedule' },
+    at_risk: { color: '#c62828', label: 'At risk' }
+  };
+  return palette[status] || palette.on_track;
+}
+
 function renderGoalBar() {
   const goals = loadGoals(currentUser);
   const bar = document.getElementById('goalBar');
   if (!bar) return;
-  const g = goals['volume'];
-  if (!g) { bar.textContent = 'No goal set'; return; }
-  const pct = Math.min(100, (g.progress / g.target) * 100);
-  bar.innerHTML = `<div style="background:#eee;width:100%;height:10px;position:relative;"><div style="background:var(--primary);width:${pct}%;height:10px;"></div></div><small>${g.progress}/${g.target}</small>`;
+  if (!Array.isArray(goals) || goals.length === 0) {
+    bar.innerHTML = '<small>No SMART goals yet. Add one in Settings → SMART Goals.</small>';
+    return;
+  }
+  const topGoal = goals[0];
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const progress = calculateGoalProgress(topGoal, workouts);
+  const statusMeta = getGoalStatusMeta(progress.status);
+  bar.innerHTML = `<div style="background:#eee;width:100%;height:12px;position:relative;border-radius:6px;overflow:hidden;"><div style="background:${statusMeta.color};width:${progress.progressPercent}%;height:12px;"></div></div><small>${topGoal.title}: ${progress.currentValue.toFixed(1)}/${Number(topGoal.targetValue || 0).toFixed(1)} ${topGoal.unit || ''} • ${statusMeta.label}</small>`;
+}
+
+async function submitSmartGoalForm(event) {
+  event.preventDefault();
+  const feedback = document.getElementById('smartGoalFeedback');
+  const title = document.getElementById('goalTitle')?.value?.trim();
+  const exercise = document.getElementById('goalExercise')?.value?.trim();
+  const targetValue = Number(document.getElementById('goalTargetValue')?.value);
+  const startValue = Number(document.getElementById('goalStartValue')?.value);
+  const dueDate = document.getElementById('goalDueDate')?.value;
+
+  if (!title || !exercise || !Number.isFinite(targetValue) || !Number.isFinite(startValue) || !dueDate) {
+    if (feedback) feedback.textContent = 'Please complete all required SMART goal fields.';
+    return;
+  }
+
+  const syncToBackend = Boolean(document.getElementById('goalSyncBackend')?.checked);
+  const goal = createSmartGoal(currentUser, {
+    title,
+    type: 'strength',
+    exercise,
+    targetValue,
+    startValue,
+    currentValue: startValue,
+    dueDate,
+    specific: document.getElementById('goalSpecific')?.value || '',
+    measurable: document.getElementById('goalMeasurable')?.value || '',
+    achievable: document.getElementById('goalAchievable')?.value || '',
+    relevant: document.getElementById('goalRelevant')?.value || '',
+    timeBound: document.getElementById('goalTimeBound')?.value || dueDate,
+    syncToBackend
+  });
+
+  if (syncToBackend) {
+    const token = localStorage.getItem('token') || '';
+    await syncGoalsToBackend(currentUser, [goal], { enabled: true, token });
+  }
+
+  event.target.reset();
+  if (feedback) feedback.textContent = '✅ SMART goal saved.';
+  renderGoalBar();
+  renderGoalProgressList();
+}
+
+function initSmartGoalForm() {
+  const form = document.getElementById('smartGoalForm');
+  if (!form || form.dataset.bound === '1') return;
+  form.addEventListener('submit', submitSmartGoalForm);
+  form.dataset.bound = '1';
+}
+
+function removeGoal(goalId) {
+  deleteGoal(currentUser, goalId);
+  renderGoalBar();
+  renderGoalProgressList();
+}
+
+function renderGoalProgressList() {
+  const list = document.getElementById('goalProgressList');
+  if (!list) return;
+  const goals = loadGoals(currentUser);
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+
+  if (!Array.isArray(goals) || goals.length === 0) {
+    list.innerHTML = '<h3>Goal Progress</h3><p>No SMART goals yet. Add one in Settings.</p>';
+    return;
+  }
+
+  const cards = goals.map(goal => {
+    const progress = calculateGoalProgress(goal, workouts);
+    const statusMeta = getGoalStatusMeta(progress.status);
+    return `<article style="border:1px solid var(--border-color);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--card-bg);">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+        <strong>${goal.title}</strong>
+        <button onclick="removeGoal('${goal.id}')" style="margin:0;background:#666;">Remove</button>
+      </div>
+      <small>${goal.exercise || 'All exercises'} • Due ${goal.dueDate || 'No deadline'}</small>
+      <div style="margin-top:8px;background:#eee;border-radius:6px;overflow:hidden;height:14px;">
+        <div style="height:14px;width:${progress.progressPercent}%;background:${statusMeta.color};"></div>
+      </div>
+      <small>${progress.currentValue.toFixed(1)} / ${Number(goal.targetValue || 0).toFixed(1)} ${goal.unit || ''} • ${statusMeta.label}</small>
+    </article>`;
+  }).join('');
+
+  list.innerHTML = `<h3>Goal Progress</h3>${cards}`;
 }
 
 function promptGoal() {
-  const target = parseFloat(prompt('Enter volume goal (kg):')); 
-  if (isNaN(target)) return; 
-  setGoal(currentUser, 'volume', target); 
-  renderGoalBar();
+  showTab('settingsTab');
+  const firstInput = document.getElementById('goalTitle');
+  if (firstInput) firstInput.focus();
 }
 
 function showCoachInsights() {
@@ -7507,6 +7638,8 @@ function renderLogHistory(logs) {
   renderPRs();
   renderMilestones();
   renderGoalBar();
+  renderGoalProgressList();
+  initSmartGoalForm();
   if (typeof updateStreakCounter === 'function') updateStreakCounter();
   scheduleStreakReminderJob();
 
