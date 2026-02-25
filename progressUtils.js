@@ -74,26 +74,105 @@ function savePRs(user, prs) {
   localStorage.setItem(`prs_${user}`, JSON.stringify(prs));
 }
 
+function formatDateStamp(value) {
+  if (!value) return null;
+  const stamp = new Date(value).getTime();
+  return Number.isFinite(stamp) ? stamp : null;
+}
+
+function getSessionDateStamp(workout, fallback = Date.now()) {
+  const workoutDate = formatDateStamp(workout?.date);
+  if (workoutDate) return workoutDate;
+  const firstLogDate = Array.isArray(workout?.log)
+    ? workout.log.map(entry => formatDateStamp(entry?.date)).find(Boolean)
+    : null;
+  return firstLogDate || fallback;
+}
+
+function notifyPR(message) {
+  if (typeof window === 'undefined' || !message) return;
+  if (typeof window.showToast === 'function') {
+    window.showToast(message);
+    return;
+  }
+  if (typeof window.alert === 'function') {
+    window.alert(message);
+  }
+}
+
 function updatePRs(user, workout, volumeCalc) {
   if (!workout || !Array.isArray(workout.log)) return null;
   const prs = loadPRs(user);
   let updated = false;
-  workout.log.forEach(e => {
-    const vol = volumeCalc ? volumeCalc({ log: [e] }) : 0;
-    const orm = computeOneRepMax(e.weightsArray, e.repsArray);
-    const pr = prs[e.exercise] || { oneRM: 0, volume: 0, history: [] };
-    if (orm > pr.oneRM) {
-      pr.oneRM = orm;
-      updated = true;
-    }
-    if (vol > pr.volume) {
-      pr.volume = vol;
-      updated = true;
-    }
-    pr.history.push({ date: Date.now(), oneRM: orm });
-    if (pr.history.length > 10) pr.history.shift();
-    prs[e.exercise] = pr;
+  const sessionDate = getSessionDateStamp(workout);
+  const groupedByExercise = {};
+
+  workout.log.forEach(entry => {
+    const name = entry?.exercise;
+    if (!name) return;
+    if (!groupedByExercise[name]) groupedByExercise[name] = [];
+    groupedByExercise[name].push(entry);
   });
+
+  Object.entries(groupedByExercise).forEach(([exercise, entries]) => {
+    const existing = prs[exercise] || {
+      heaviestSet: null,
+      repPRsByWeight: {},
+      highestVolumeSession: null,
+      history: []
+    };
+    const repPRsByWeight = { ...(existing.repPRsByWeight || {}) };
+    let heaviestSet = existing.heaviestSet || null;
+    const exerciseVolume = volumeCalc ? volumeCalc({ log: entries }) : 0;
+    const prEvents = [];
+
+    entries.forEach(entry => {
+      const repsArray = Array.isArray(entry?.repsArray) ? entry.repsArray : [];
+      const weightsArray = Array.isArray(entry?.weightsArray) ? entry.weightsArray : [];
+      const size = Math.max(repsArray.length, weightsArray.length);
+
+      for (let i = 0; i < size; i++) {
+        const reps = Number(repsArray[i]);
+        const weight = Number(weightsArray[i]);
+        if (!Number.isFinite(reps) || !Number.isFinite(weight) || reps <= 0 || weight <= 0) continue;
+
+        if (!heaviestSet || weight > Number(heaviestSet.weight || 0)) {
+          heaviestSet = { weight, reps, date: sessionDate };
+          updated = true;
+          prEvents.push(`${exercise}: New heaviest set ${weight} × ${reps}`);
+        }
+
+        const weightKey = String(weight);
+        const existingAtWeight = repPRsByWeight[weightKey];
+        if (!existingAtWeight || reps > Number(existingAtWeight.reps || 0)) {
+          repPRsByWeight[weightKey] = { reps, date: sessionDate };
+          updated = true;
+          prEvents.push(`${exercise}: New rep PR ${weight} × ${reps}`);
+        }
+      }
+    });
+
+    let highestVolumeSession = existing.highestVolumeSession || null;
+    if (!highestVolumeSession || exerciseVolume > Number(highestVolumeSession.volume || 0)) {
+      highestVolumeSession = { volume: exerciseVolume, date: sessionDate };
+      updated = true;
+      prEvents.push(`${exercise}: New volume PR ${exerciseVolume.toFixed(1)}`);
+    }
+
+    const history = Array.isArray(existing.history) ? existing.history.slice(-29) : [];
+    if (prEvents.length) {
+      history.push({ date: sessionDate, events: prEvents });
+      prEvents.forEach(notifyPR);
+    }
+
+    prs[exercise] = {
+      heaviestSet,
+      repPRsByWeight,
+      highestVolumeSession,
+      history
+    };
+  });
+
   if (updated) savePRs(user, prs);
   return updated ? prs : null;
 }

@@ -1102,7 +1102,6 @@
         <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
         <input type="date" id="startRange" onchange="refreshProgress()">
         <input type="date" id="endRange" onchange="refreshProgress()">
-        <button onclick="promptGoal()">Set Goal</button>
       </nav>
       </div>
       <div id="progressChartsPanel" class="panel">
@@ -1122,10 +1121,16 @@
           <div id="loadAlerts" style="margin-top:8px;"></div>
         </div>
         <div id="goalBar" style="margin-top:10px;"></div>
+        <div id="goalProgressList" style="margin-top:10px;"></div>
         <div id="coachCorner" style="margin-top:10px;"></div>
       </section>
       <aside class="progress-calendar">
         <div id="progressCalendar"></div>
+        <label for="prTimeframe" style="display:block;margin-top:10px;">PR Timeframe</label>
+        <select id="prTimeframe" onchange="renderPRs()" style="width:100%;margin-bottom:8px;">
+          <option value="all">All time</option>
+          <option value="year">Last year</option>
+        </select>
         <div id="prPanel"></div>
         <div id="milestoneBadges"></div>
       </aside>
@@ -1191,6 +1196,35 @@
 
 <div id="settingsTab" class="tab-content">
   <div id="settingsFormContainer" class="panel"></div>
+
+  <section class="panel" aria-labelledby="smartGoalsHeading">
+    <h3 id="smartGoalsHeading">SMART Goals</h3>
+    <form id="smartGoalForm">
+      <input id="goalTitle" type="text" placeholder="Goal title (e.g. Squat 150 kg by 1 June 2026)" required>
+      <input id="goalExercise" type="text" placeholder="Exercise (e.g. Squat)" required>
+      <input id="goalTargetValue" type="number" min="0" step="0.1" placeholder="Target value" required>
+      <input id="goalStartValue" type="number" min="0" step="0.1" placeholder="Current/start value" required>
+      <input id="goalDueDate" type="date" required>
+
+      <label for="goalSpecific">Specific</label>
+      <textarea id="goalSpecific" rows="2" placeholder="What exactly will you achieve?"></textarea>
+      <label for="goalMeasurable">Measurable</label>
+      <textarea id="goalMeasurable" rows="2" placeholder="How will progress be measured?"></textarea>
+      <label for="goalAchievable">Achievable</label>
+      <textarea id="goalAchievable" rows="2" placeholder="Why is this realistic?"></textarea>
+      <label for="goalRelevant">Relevant</label>
+      <textarea id="goalRelevant" rows="2" placeholder="Why does this matter to you?"></textarea>
+      <label for="goalTimeBound">Time-bound</label>
+      <textarea id="goalTimeBound" rows="2" placeholder="When will this be completed?"></textarea>
+
+      <label>
+        <input id="goalSyncBackend" type="checkbox">
+        Sync this goal to backend (if available)
+      </label>
+      <button type="submit">Save SMART Goal</button>
+    </form>
+    <div id="smartGoalFeedback" style="font-size:0.95rem;"></div>
+  </section>
 
   <section class="panel" aria-labelledby="trainerModeHeading">
     <h3 id="trainerModeHeading">Trainer Mode</h3>
@@ -1349,7 +1383,7 @@
 <script src="src/config/loadConfig.js"></script>
 <script src="progressMilestones.js"></script>
 <script src="progressAnalytics.js"></script>
-<script src="progressGoals.js"></script>
+<script src="goals.js"></script>
 <script src="progressAI.js"></script>
 <script src="gamification.js"></script>
 <script src="src/js/crossfit.js"></script>
@@ -1358,6 +1392,8 @@
 <script type="module" src="periodization.js"></script>
 <script type="module" src="macrosFeatures.js"></script>
 <script type="module" src="workoutTimer.js"></script>
+<script src="cardioTab.js"></script>
+<script src="weightTab.js"></script>
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
 <script>
@@ -1718,6 +1754,7 @@ function showTab(tabName) {
     case 'progressTab':
       showWorkoutProgress();
       renderDashboardPRSummary();
+      renderGoalProgressList();
       break;
     case 'logHistoryTab':
       showHistoryMiniTab('workout');
@@ -1742,6 +1779,7 @@ function showTab(tabName) {
       if (autoIncrementToggle) {
         autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
       }
+      initSmartGoalForm();
       break;
   }
 }
@@ -2039,7 +2077,7 @@ function addLogEntry() {
     workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
   }
 
-  workouts[workouts.length - 1].log.push({
+  const newEntry = {
     exercise,
     sets,
     repsArray,
@@ -2055,7 +2093,16 @@ function addLogEntry() {
     date,
     goal,
     repGoal
-  });
+  };
+  workouts[workouts.length - 1].log.push(newEntry);
+
+  if (typeof suggestNextSession === 'function') {
+    const recommendation = suggestNextSession(newEntry, workouts);
+    if (recommendation) {
+      newEntry.nextSessionRecommendation = recommendation;
+      showToast(`Next session suggestion for ${exercise}: ${recommendation.message}`);
+    }
+  }
 
   const activeWorkout = workouts[workouts.length - 1];
   const computedMetrics = typeof calculateWorkoutMetrics === 'function'
@@ -2078,7 +2125,7 @@ function addLogEntry() {
   if (typeof saveWorkoutToBackend === 'function') {
     saveWorkoutToBackend(activeWorkout);
   }
-  updatePRs(currentUser, { log: [{ exercise, weightsArray, repsArray }] }, calculateWorkoutVolume);
+  updatePRs(currentUser, activeWorkout, calculateWorkoutVolume);
   updateGoalProgress(currentUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
   renderPRs();
   const prog = analyzeProgress ? analyzeProgress(currentUser) : [];
@@ -2088,6 +2135,7 @@ function addLogEntry() {
   }
   renderMilestones();
   renderGoalBar();
+  renderGoalProgressList();
   showCoachInsights();
   saveUserExercise(exercise);
   trackWorkoutDate(date);
@@ -2558,6 +2606,17 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
     setTypeBar.className = 'set-type-bar';
     setTypeBar.textContent = goalData.join(' • ');
     card.appendChild(setTypeBar);
+  }
+
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const recommendation = entry.nextSessionRecommendation || (typeof suggestNextSession === 'function'
+    ? suggestNextSession(entry, workouts)
+    : null);
+  if (recommendation?.message) {
+    const recommendationBar = document.createElement('div');
+    recommendationBar.className = 'set-type-bar';
+    recommendationBar.textContent = `Next session recommendation: ${recommendation.message}`;
+    card.appendChild(recommendationBar);
   }
 
   const setList = document.createElement('div');
@@ -4116,9 +4175,32 @@ function shouldAutoIncrementSuggestion(entry) {
 function getSuggestedSetsForExercise(exerciseName) {
   const sets = getLastWorkoutForExercise(exerciseName);
   const lastEntry = getLastExerciseEntry(exerciseName);
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
 
   if (!sets.length) {
     return { sets: [], unit: 'kg', autoIncrementApplied: false };
+  }
+
+  const storedRecommendation = lastEntry?.nextSessionRecommendation;
+  if (storedRecommendation && Array.isArray(storedRecommendation.sets) && storedRecommendation.sets.length) {
+    return {
+      sets: storedRecommendation.sets,
+      unit: storedRecommendation.unit || lastEntry?.unit || 'kg',
+      autoIncrementApplied: storedRecommendation.strategy === 'increase',
+      recommendationMessage: storedRecommendation.message || ''
+    };
+  }
+
+  const computedRecommendation = typeof suggestNextSession === 'function'
+    ? suggestNextSession(lastEntry || exerciseName, workouts)
+    : null;
+  if (computedRecommendation && Array.isArray(computedRecommendation.sets) && computedRecommendation.sets.length) {
+    return {
+      sets: computedRecommendation.sets,
+      unit: computedRecommendation.unit || lastEntry?.unit || 'kg',
+      autoIncrementApplied: computedRecommendation.strategy === 'increase',
+      recommendationMessage: computedRecommendation.message || ''
+    };
   }
 
   const suggestedSets = sets.map(set => ({ ...set }));
@@ -4142,7 +4224,8 @@ function getSuggestedSetsForExercise(exerciseName) {
   return {
     sets: suggestedSets,
     unit: lastEntry?.unit || 'kg',
-    autoIncrementApplied: shouldIncrement
+    autoIncrementApplied: shouldIncrement,
+    recommendationMessage: ''
   };
 }
 
@@ -4205,6 +4288,7 @@ function handleExerciseBlur() {
     msgDiv.innerHTML = `
       <div style="margin:10px 0; color: var(--highlight); font-weight:bold;">
         Suggested from last session: ${reps} reps at ${weights} ${suggestion.unit}
+        ${suggestion.recommendationMessage ? `<br><span style="font-style:italic; font-weight:normal;">${suggestion.recommendationMessage}</span>` : ''}
         ${suggestion.autoIncrementApplied ? '<br><span style="font-style:italic; font-weight:normal;">Auto-increment applied because last set met target RPE.</span>' : ''}
       </div>`;
   }
@@ -4612,6 +4696,42 @@ function getMacroTargetValues() {
   };
 }
 
+function getAdaptiveMacroTargets() {
+  const baseTargets = getMacroTargetValues();
+  const today = getTodayDateString();
+  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
+  const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
+  const fallbackWeightKg = Number(JSON.parse(localStorage.getItem('personalDetails') || 'null')?.weightKg) || 70;
+  const latestWeightKg = bodyweightLog.length ? (getEntryWeightKg(bodyweightLog[bodyweightLog.length - 1]) || fallbackWeightKg) : fallbackWeightKg;
+
+  const cardioCalories = window.cardioTab?.computeDailyCardioExpenditure
+    ? window.cardioTab.computeDailyCardioExpenditure(log, today, latestWeightKg)
+    : getTodayCardioCalories();
+
+  const goal = document.getElementById("macroGoal")?.value || 'maintain';
+  const rate = document.getElementById("macroRate")?.value || 'moderate';
+  const changeRate = window.weightTab?.computeWeightChangeRate ? window.weightTab.computeWeightChangeRate(bodyweightLog) : { kgPerWeek: 0 };
+  const trendSuggestion = window.weightTab?.suggestCalorieAdjustment
+    ? window.weightTab.suggestCalorieAdjustment({ kgPerWeek: changeRate.kgPerWeek, goal, rate })
+    : { caloriesDelta: 0, reason: '' };
+
+  const cardioAdjusted = window.cardioTab?.applyCardioMacroAdjustment
+    ? window.cardioTab.applyCardioMacroAdjustment(baseTargets, cardioCalories)
+    : { ...baseTargets, cardioCalories: 0 };
+
+  const weightAdjusted = window.weightTab?.applyWeightTrendAdjustment
+    ? window.weightTab.applyWeightTrendAdjustment(cardioAdjusted, trendSuggestion)
+    : { ...cardioAdjusted, caloriesDelta: 0 };
+
+  return {
+    ...weightAdjusted,
+    cardioCalories: cardioAdjusted.cardioCalories || 0,
+    weightCaloriesDelta: trendSuggestion.caloriesDelta || 0,
+    weightInsight: trendSuggestion.reason || '',
+    weightRateKgPerWeek: Number(changeRate.kgPerWeek || 0),
+  };
+}
+
 function addMacro(type) {
   const inputMap = {
     cal: "qaCals",
@@ -4778,19 +4898,20 @@ function updateMacroUI() {
 
   const totalCals = totalProtein * 4 + totalCarbs * 4 + totalFats * 9;
 
-  const cardioCals = getTodayCardioCalories();
+  const adaptiveTargets = getAdaptiveMacroTargets();
+  const cardioCals = adaptiveTargets.cardioCalories || 0;
   const netCals = Math.max(0, totalCals - cardioCals);
 
   // Update Top Bar Targets and progress
-  document.getElementById("macroCalsTarget").textContent = macroTargetCalories;
-  document.getElementById("macroProteinTarget").textContent = macroTargetProtein;
-  document.getElementById("macroFatTarget").textContent = macroTargetFat;
-  document.getElementById("macroCarbsTarget").textContent = macroTargetCarbs;
+  document.getElementById("macroCalsTarget").textContent = adaptiveTargets.calories;
+  document.getElementById("macroProteinTarget").textContent = adaptiveTargets.protein;
+  document.getElementById("macroFatTarget").textContent = adaptiveTargets.fat;
+  document.getElementById("macroCarbsTarget").textContent = adaptiveTargets.carbs;
 
-  document.getElementById("calsBar").max = macroTargetCalories;
-  document.getElementById("proteinBar").max = macroTargetProtein;
-  document.getElementById("fatBar").max = macroTargetFat;
-  document.getElementById("carbBar").max = macroTargetCarbs;
+  document.getElementById("calsBar").max = adaptiveTargets.calories;
+  document.getElementById("proteinBar").max = adaptiveTargets.protein;
+  document.getElementById("fatBar").max = adaptiveTargets.fat;
+  document.getElementById("carbBar").max = adaptiveTargets.carbs;
 
   document.getElementById("calsBar").value = netCals;
   document.getElementById("proteinBar").value = totalProtein;
@@ -4809,13 +4930,13 @@ function updateMacroUI() {
     console.warn("Macro settings UI not available: missing #macroTotalCals.");
     return;
   }
-  macroTotalCalsEl.textContent = `${totalCals} / ${macroTargetCalories} kcal`;
+  macroTotalCalsEl.textContent = `${totalCals} / ${adaptiveTargets.calories} kcal`;
   updateMacroSummary(
     {
-      cal: { value: totalCals, target: macroTargetCalories, unit: "kcal" },
-      protein: { value: totalProtein, target: macroTargetProtein, unit: "g" },
-      carbs: { value: totalCarbs, target: macroTargetCarbs, unit: "g" },
-      fat: { value: totalFats, target: macroTargetFat, unit: "g" },
+      cal: { value: totalCals, target: adaptiveTargets.calories, unit: "kcal" },
+      protein: { value: totalProtein, target: adaptiveTargets.protein, unit: "g" },
+      carbs: { value: totalCarbs, target: adaptiveTargets.carbs, unit: "g" },
+      fat: { value: totalFats, target: adaptiveTargets.fat, unit: "g" },
     },
     { netCals }
   );
@@ -5159,6 +5280,14 @@ function getTodayCardioCalories() {
   if (!currentUser) return 0;
   const today = getTodayDateString();
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
+  const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
+  const fallbackWeightKg = Number(JSON.parse(localStorage.getItem('personalDetails') || 'null')?.weightKg) || 70;
+  const latestWeightKg = bodyweightLog.length ? (getEntryWeightKg(bodyweightLog[bodyweightLog.length - 1]) || fallbackWeightKg) : fallbackWeightKg;
+
+  if (window.cardioTab?.computeDailyCardioExpenditure) {
+    return window.cardioTab.computeDailyCardioExpenditure(log, today, latestWeightKg);
+  }
+
   return log.filter(e => e.date === today)
             .reduce((sum, e) => sum + (parseFloat(e.calories) || 0), 0);
 }
@@ -5176,7 +5305,68 @@ function saveDailyMacroProgress(protein, carbs, fats) {
   localStorage.setItem("dailyMacroProgress", JSON.stringify({ protein, carbs, fats }));
 }
 
+function getTodayWorkoutLoad(userId, today) {
+  const raw = JSON.parse(localStorage.getItem('tl_workout_history_v1') || '[]');
+  const todayEntries = Array.isArray(raw)
+    ? raw.filter(item => {
+        const itemDate = (item?.date || item?.createdAt || '').slice(0, 10);
+        const owner = item?.userId || item?.username || item?.user;
+        return itemDate === today && (!userId || !owner || owner === userId);
+      })
+    : [];
+
+  return todayEntries.reduce((acc, item) => {
+    const summary = window.macroEngine?.estimateWorkoutEnergyExpenditure
+      ? window.macroEngine.estimateWorkoutEnergyExpenditure(item)
+      : { estimatedCalories: 0, totalVolume: 0 };
+    acc.estimatedCalories += Number(summary.estimatedCalories || 0);
+    acc.totalVolume += Number(summary.totalVolume || 0);
+    return acc;
+  }, { estimatedCalories: 0, totalVolume: 0 });
+}
+
+function maybeApplyDailyMacroAdjustment() {
+  if (!window.macroEngine?.applyDailyMacroAdjustment || !currentUser) return;
+
+  const today = getTodayDateString();
+  const adjustedDate = localStorage.getItem(`macroTargetsAdjustedDate_${currentUser}`);
+  if (adjustedDate === today) return;
+
+  const baseTargets = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`) || 'null');
+  if (!baseTargets) return;
+
+  const workoutLoad = getTodayWorkoutLoad(currentUser, today);
+  const recoveryRaw = JSON.parse(localStorage.getItem(`recoveryMetrics_${currentUser}`) || '{}');
+  const recoveryToday = recoveryRaw?.[today] || recoveryRaw?.today || {};
+
+  const result = window.macroEngine.applyDailyMacroAdjustment({
+    user: currentUser,
+    baseTargets,
+    workout: workoutLoad,
+    recovery: {
+      sleepHours: Number(recoveryToday?.sleepHours || recoveryToday?.sleep || 0) || null,
+      hrv: Number(recoveryToday?.hrv || 0) || null,
+    },
+    date: today,
+    isRestDay: Number(workoutLoad.estimatedCalories || 0) < 20,
+  });
+
+  if (!result?.adjusted) return;
+  localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(result.adjusted));
+  localStorage.setItem(`macroTargetsAdjustedDate_${currentUser}`, today);
+
+  if (typeof window.renderMacroSlots === 'function') window.renderMacroSlots();
+  if (typeof window.renderMacroTargets === 'function') window.renderMacroTargets();
+
+  if (result.reasons?.length) {
+    const msg = `Macro targets updated: ${result.reasons.join(' ')}`;
+    if (typeof showToast === 'function') showToast(msg);
+    else console.log(msg);
+  }
+}
+
 function renderDailyMacroProgress() {
+  maybeApplyDailyMacroAdjustment();
   const progress = loadDailyMacroProgress();
 
   const totalCals = progress.protein * 4 + progress.carbs * 4 + progress.fats * 9;
@@ -5833,8 +6023,21 @@ function addWeightEntry() {
   if (typeof onBodyweightSaved === 'function') {
     onBodyweightSaved(weight, unit);
   }
+  if (window.weightTab?.computeWeightChangeRate && window.weightTab?.suggestCalorieAdjustment) {
+    const goal = document.getElementById("macroGoal")?.value || 'maintain';
+    const rate = document.getElementById("macroRate")?.value || 'moderate';
+    const trend = window.weightTab.computeWeightChangeRate(log);
+    const suggestion = window.weightTab.suggestCalorieAdjustment({ kgPerWeek: trend.kgPerWeek, goal, rate });
+    localStorage.setItem(`weightTrend_${currentUser}`, JSON.stringify({
+      kgPerWeek: Number(trend.kgPerWeek || 0),
+      caloriesDelta: Number(suggestion.caloriesDelta || 0),
+      reason: suggestion.reason || '',
+      updatedAt: new Date().toISOString(),
+    }));
+  }
   if (dateField) dateField.value = '';
   renderWeights();
+  updateMacroUI();
 }
 
 function renderWeights() {
@@ -5908,12 +6111,22 @@ function addCardioEntry() {
   const type = document.getElementById("cardioType").value.trim();
   const duration = +document.getElementById("cardioDuration").value;
   const distance = document.getElementById("cardioDistance").value;
-  const calories = +document.getElementById("cardioCalories").value || 0;
+  const caloriesInput = +document.getElementById("cardioCalories").value || 0;
   const notes = document.getElementById("cardioNotes").value;
   const date = new Date().toISOString().split('T')[0];
   if (!type || !duration) return alert("Type and Duration are required");
+
+  const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
+  const fallbackWeightKg = Number(JSON.parse(localStorage.getItem('personalDetails') || 'null')?.weightKg) || 70;
+  const latestWeightKg = bodyweightLog.length ? (getEntryWeightKg(bodyweightLog[bodyweightLog.length - 1]) || fallbackWeightKg) : fallbackWeightKg;
+  const estimatedCalories = window.cardioTab?.estimateCardioCalories
+    ? window.cardioTab.estimateCardioCalories({ type, durationMinutes: duration, weightKg: latestWeightKg })
+    : 0;
+  const calories = caloriesInput > 0 ? caloriesInput : estimatedCalories;
+  const met = window.cardioTab?.resolveMET ? window.cardioTab.resolveMET(type) : null;
+
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  log.push({ date, type, duration, distance, calories, notes });
+  log.push({ date, type, duration, distance, calories, estimatedCalories, met, notes });
   localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
   renderCardio();
   updateMacroUI();
@@ -6302,9 +6515,62 @@ async function showBodyweightProgress() {
   document.getElementById('exerciseProgress').style.display = 'none';
   document.getElementById('progressCanvas').style.display = 'block';
   document.getElementById('trainingLoadPanel').style.display = 'none';
-  const trend = trendPoints(weights);
-  const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(weights, 4));
-  renderLineChart(dates.concat(new Array(4).fill('')), 'Bodyweight', weights.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
+
+  const workoutHistory = applyDateRange(await fetchWorkoutHistory());
+  const volumeByDate = {};
+  workoutHistory.forEach((w) => {
+    volumeByDate[w.date] = (volumeByDate[w.date] || 0) + Number(w.volume || 0);
+  });
+
+  const macroHistory = JSON.parse(localStorage.getItem(`macroHistory_${currentUser || ''}`) || '[]');
+  const intakeByDate = {};
+  macroHistory.forEach((entry) => {
+    const totals = entry?.totals || {};
+    intakeByDate[entry.date] = Number((totals.protein || 0) * 4 + (totals.carbs || 0) * 4 + (totals.fats || 0) * 9);
+  });
+
+  const alignedVolume = dates.map((d) => Number(volumeByDate[d] || 0));
+  const alignedIntake = dates.map((d) => Number(intakeByDate[d] || 0));
+  const weightTrend = trendPoints(weights);
+
+  const ctx = document.getElementById('progressCanvas').getContext('2d');
+  if (progressChart) progressChart.destroy();
+  progressChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [
+        { label: 'Bodyweight', data: weights, borderColor: '#2F80ED', yAxisID: 'yWeight', tension: 0.35 },
+        { label: 'Weight Trend', data: weightTrend, borderColor: '#2F80ED99', borderDash: [5, 5], yAxisID: 'yWeight', tension: 0.35, fill: false },
+        { label: 'Training Volume', data: alignedVolume, borderColor: '#27AE60', yAxisID: 'yVolume', tension: 0.35 },
+        { label: 'Caloric Intake', data: alignedIntake, borderColor: '#F2994A', yAxisID: 'yIntake', tension: 0.35 },
+      ]
+    },
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        yWeight: { type: 'linear', position: 'left', beginAtZero: false },
+        yVolume: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } },
+        yIntake: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, offset: true },
+      }
+    }
+  });
+
+  const coachCorner = document.getElementById('coachCorner');
+  if (coachCorner) {
+    const volumeTrend = alignedVolume.length > 1 ? ((alignedVolume[alignedVolume.length - 1] - alignedVolume[0]) / Math.max(1, alignedVolume[0] || 1)) : 0;
+    const intakeTrend = alignedIntake.length > 1 ? ((alignedIntake[alignedIntake.length - 1] - alignedIntake[0]) / Math.max(1, alignedIntake[0] || 1)) : 0;
+    const wtTrend = (weightTrend.length > 1 && Number.isFinite(weightTrend[0]))
+      ? (weightTrend[weightTrend.length - 1] - weightTrend[0])
+      : 0;
+    const insight = window.weightTab?.buildWeightVolumeIntakeInsight
+      ? window.weightTab.buildWeightVolumeIntakeInsight({ weightTrend: wtTrend, volumeTrend, intakeTrend })
+      : 'Review weight, training volume, and calories together to guide adjustments.';
+
+    const wtData = JSON.parse(localStorage.getItem(`weightTrend_${currentUser}`) || 'null');
+    const trendText = wtData ? `Weekly change: ${Number(wtData.kgPerWeek || 0).toFixed(2)} kg/week. ${wtData.reason || ''}` : '';
+    coachCorner.innerHTML = `<div style="padding:8px;border-left:4px solid var(--primary);background:rgba(47,128,237,.08);"><strong>Interpretation:</strong> ${insight}<br/><small>${trendText}</small></div>`;
+  }
 }
 
 function showExerciseProgress() {
@@ -6325,12 +6591,54 @@ function renderPRs() {
   const prs = loadPRs(currentUser);
   const panel = document.getElementById('prPanel');
   if (!panel) return;
-  panel.innerHTML = '<h3>PRs</h3>';
-  Object.entries(prs).forEach(([ex, pr]) => {
+  const timeframe = document.getElementById('prTimeframe')?.value || 'all';
+  const cutoff = timeframe === 'year'
+    ? Date.now() - (365 * 24 * 60 * 60 * 1000)
+    : 0;
+  const formatDate = (stamp) => {
+    if (!stamp) return '—';
+    const d = new Date(stamp);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toISOString().split('T')[0];
+  };
+
+  panel.innerHTML = '<h3>Exercise PR Summary</h3>';
+  let visibleCount = 0;
+
+  Object.entries(prs).sort(([a], [b]) => a.localeCompare(b)).forEach(([ex, pr]) => {
+    const heaviestSet = pr?.heaviestSet && Number(pr.heaviestSet.date || 0) >= cutoff
+      ? pr.heaviestSet
+      : null;
+    const highestVolumeSession = pr?.highestVolumeSession && Number(pr.highestVolumeSession.date || 0) >= cutoff
+      ? pr.highestVolumeSession
+      : null;
+    const repEntries = Object.entries(pr?.repPRsByWeight || {})
+      .filter(([, value]) => Number(value?.date || 0) >= cutoff)
+      .sort((a, b) => Number(b[0]) - Number(a[0]));
+
+    if (!heaviestSet && !highestVolumeSession && repEntries.length === 0) return;
+
     const div = document.createElement('div');
-    div.textContent = `${ex}: 1RM ${pr.oneRM.toFixed(1)}, Vol ${pr.volume.toFixed(1)}`;
+    div.style.marginBottom = '10px';
+    const topRep = repEntries[0];
+    const topRepText = topRep
+      ? `${topRep[0]} × ${topRep[1].reps} (${formatDate(topRep[1].date)})`
+      : '—';
+    div.innerHTML = `
+      <strong>${ex}</strong><br>
+      Heaviest: ${heaviestSet ? `${heaviestSet.weight} × ${heaviestSet.reps} (${formatDate(heaviestSet.date)})` : '—'}<br>
+      Most reps @ weight: ${topRepText}<br>
+      Session volume: ${highestVolumeSession ? `${Number(highestVolumeSession.volume || 0).toFixed(1)} (${formatDate(highestVolumeSession.date)})` : '—'}
+    `;
     panel.appendChild(div);
+    visibleCount += 1;
   });
+
+  if (!visibleCount) {
+    const empty = document.createElement('div');
+    empty.textContent = 'No PRs found for the selected timeframe.';
+    panel.appendChild(empty);
+  }
 }
 
 function renderMilestones() {
@@ -6347,21 +6655,120 @@ function renderMilestones() {
   });
 }
 
+function getGoalStatusMeta(status) {
+  const palette = {
+    ahead: { color: '#2e7d32', label: 'Ahead' },
+    on_track: { color: '#2e7d32', label: 'On track' },
+    behind: { color: '#f9a825', label: 'Behind schedule' },
+    at_risk: { color: '#c62828', label: 'At risk' }
+  };
+  return palette[status] || palette.on_track;
+}
+
 function renderGoalBar() {
   const goals = loadGoals(currentUser);
   const bar = document.getElementById('goalBar');
   if (!bar) return;
-  const g = goals['volume'];
-  if (!g) { bar.textContent = 'No goal set'; return; }
-  const pct = Math.min(100, (g.progress / g.target) * 100);
-  bar.innerHTML = `<div style="background:#eee;width:100%;height:10px;position:relative;"><div style="background:var(--primary);width:${pct}%;height:10px;"></div></div><small>${g.progress}/${g.target}</small>`;
+  if (!Array.isArray(goals) || goals.length === 0) {
+    bar.innerHTML = '<small>No SMART goals yet. Add one in Settings → SMART Goals.</small>';
+    return;
+  }
+  const topGoal = goals[0];
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const progress = calculateGoalProgress(topGoal, workouts);
+  const statusMeta = getGoalStatusMeta(progress.status);
+  bar.innerHTML = `<div style="background:#eee;width:100%;height:12px;position:relative;border-radius:6px;overflow:hidden;"><div style="background:${statusMeta.color};width:${progress.progressPercent}%;height:12px;"></div></div><small>${topGoal.title}: ${progress.currentValue.toFixed(1)}/${Number(topGoal.targetValue || 0).toFixed(1)} ${topGoal.unit || ''} • ${statusMeta.label}</small>`;
+}
+
+async function submitSmartGoalForm(event) {
+  event.preventDefault();
+  const feedback = document.getElementById('smartGoalFeedback');
+  const title = document.getElementById('goalTitle')?.value?.trim();
+  const exercise = document.getElementById('goalExercise')?.value?.trim();
+  const targetValue = Number(document.getElementById('goalTargetValue')?.value);
+  const startValue = Number(document.getElementById('goalStartValue')?.value);
+  const dueDate = document.getElementById('goalDueDate')?.value;
+
+  if (!title || !exercise || !Number.isFinite(targetValue) || !Number.isFinite(startValue) || !dueDate) {
+    if (feedback) feedback.textContent = 'Please complete all required SMART goal fields.';
+    return;
+  }
+
+  const syncToBackend = Boolean(document.getElementById('goalSyncBackend')?.checked);
+  const goal = createSmartGoal(currentUser, {
+    title,
+    type: 'strength',
+    exercise,
+    targetValue,
+    startValue,
+    currentValue: startValue,
+    dueDate,
+    specific: document.getElementById('goalSpecific')?.value || '',
+    measurable: document.getElementById('goalMeasurable')?.value || '',
+    achievable: document.getElementById('goalAchievable')?.value || '',
+    relevant: document.getElementById('goalRelevant')?.value || '',
+    timeBound: document.getElementById('goalTimeBound')?.value || dueDate,
+    syncToBackend
+  });
+
+  if (syncToBackend) {
+    const token = localStorage.getItem('token') || '';
+    await syncGoalsToBackend(currentUser, [goal], { enabled: true, token });
+  }
+
+  event.target.reset();
+  if (feedback) feedback.textContent = '✅ SMART goal saved.';
+  renderGoalBar();
+  renderGoalProgressList();
+}
+
+function initSmartGoalForm() {
+  const form = document.getElementById('smartGoalForm');
+  if (!form || form.dataset.bound === '1') return;
+  form.addEventListener('submit', submitSmartGoalForm);
+  form.dataset.bound = '1';
+}
+
+function removeGoal(goalId) {
+  deleteGoal(currentUser, goalId);
+  renderGoalBar();
+  renderGoalProgressList();
+}
+
+function renderGoalProgressList() {
+  const list = document.getElementById('goalProgressList');
+  if (!list) return;
+  const goals = loadGoals(currentUser);
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+
+  if (!Array.isArray(goals) || goals.length === 0) {
+    list.innerHTML = '<h3>Goal Progress</h3><p>No SMART goals yet. Add one in Settings.</p>';
+    return;
+  }
+
+  const cards = goals.map(goal => {
+    const progress = calculateGoalProgress(goal, workouts);
+    const statusMeta = getGoalStatusMeta(progress.status);
+    return `<article style="border:1px solid var(--border-color);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--card-bg);">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+        <strong>${goal.title}</strong>
+        <button onclick="removeGoal('${goal.id}')" style="margin:0;background:#666;">Remove</button>
+      </div>
+      <small>${goal.exercise || 'All exercises'} • Due ${goal.dueDate || 'No deadline'}</small>
+      <div style="margin-top:8px;background:#eee;border-radius:6px;overflow:hidden;height:14px;">
+        <div style="height:14px;width:${progress.progressPercent}%;background:${statusMeta.color};"></div>
+      </div>
+      <small>${progress.currentValue.toFixed(1)} / ${Number(goal.targetValue || 0).toFixed(1)} ${goal.unit || ''} • ${statusMeta.label}</small>
+    </article>`;
+  }).join('');
+
+  list.innerHTML = `<h3>Goal Progress</h3>${cards}`;
 }
 
 function promptGoal() {
-  const target = parseFloat(prompt('Enter volume goal (kg):')); 
-  if (isNaN(target)) return; 
-  setGoal(currentUser, 'volume', target); 
-  renderGoalBar();
+  showTab('settingsTab');
+  const firstInput = document.getElementById('goalTitle');
+  if (firstInput) firstInput.focus();
 }
 
 function showCoachInsights() {
@@ -7460,6 +7867,8 @@ function renderLogHistory(logs) {
   renderPRs();
   renderMilestones();
   renderGoalBar();
+  renderGoalProgressList();
+  initSmartGoalForm();
   if (typeof updateStreakCounter === 'function') updateStreakCounter();
   scheduleStreakReminderJob();
 
