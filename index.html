@@ -1332,19 +1332,21 @@
   <button onclick="openDashboard()">Back to Dashboard</button>
 </div>
 
+<script type="module" src="progressUtils.js"></script>
+<script src="src/js/settings.js"></script>
+<script type="module" src="history.js"></script>
+<!-- Optional runtime configuration -->
+<script src="config.js"></script>
+<script src="auth.js"></script>
 <script src="archiveOldWorkouts.js"></script>
 <script src="progressiveOverload.js"></script>
 <script src="community.js"></script>
 <script src="leaderboard.js"></script>
 <script src="exerciseLeaderboard.js"></script>
 <script src="stats.js"></script>
-<!-- Optional runtime configuration -->
-<script src="config.js"></script>
-<script src="auth.js"></script>
 <script src="src/config/constants.js"></script>
 <script src="src/utils/macroEngine.js"></script>
 <script src="src/config/loadConfig.js"></script>
-<script type="module" src="progressUtils.js"></script>
 <script src="progressMilestones.js"></script>
 <script src="progressAnalytics.js"></script>
 <script src="progressGoals.js"></script>
@@ -1356,9 +1358,7 @@
 <script type="module" src="periodization.js"></script>
 <script type="module" src="macrosFeatures.js"></script>
 <script type="module" src="workoutTimer.js"></script>
-<script type="module" src="history.js"></script>
 <script src="lifestyle.js"></script>
-<script src="src/js/settings.js"></script>
 <script src="plateCalculator.js"></script>
 <script>
 
@@ -2424,11 +2424,11 @@ function loadResistanceHistoryForUser(userId) {
 
 function getLastExerciseHistory(exerciseName, userId) {
   if (!exerciseName) return null;
-  const history = loadResistanceHistoryForUser(userId)
+  const userHistory = loadResistanceHistoryForUser(userId)
     .slice()
     .sort((a, b) => new Date(b.date) - new Date(a.date));
   const normalizedName = exerciseName.toLowerCase();
-  for (const log of history) {
+  for (const log of userHistory) {
     const exercise = (log.exercises || []).find(ex => (ex.name || '').toLowerCase() === normalizedName);
     if (exercise) {
       return { log, exercise };
@@ -6251,7 +6251,6 @@ async function showWorkoutProgress(data) {
     return;
   }
   const rawWorkouts = workouts.length ? workouts : await fetchWorkouts();
-  const history = rawWorkouts.map(w => ({ date: w.date, volume: calculateWorkoutVolume(w) }));
   const history = workouts.length
     ? workouts.map(w => {
         const metrics = typeof calculateWorkoutMetrics === 'function'
@@ -6280,8 +6279,8 @@ async function showWorkoutProgress(data) {
 
 async function showCardioProgress() {
   setActiveProgress('cardioProgressBtn');
-  const history = await fetchCardioHistory();
-  const filtered = applyDateRange(history);
+  const cardioHistory = await fetchCardioHistory();
+  const filtered = applyDateRange(cardioHistory);
   const dates = filtered.map(h => h.date);
   const mins = filtered.map(h => h.duration);
   document.getElementById('exerciseProgress').style.display = 'none';
@@ -6294,8 +6293,8 @@ async function showCardioProgress() {
 
 async function showBodyweightProgress() {
   setActiveProgress('bodyweightProgressBtn');
-  const history = await fetchBodyweightHistory();
-  const filtered = applyDateRange(history);
+  const bodyweightHistory = await fetchBodyweightHistory();
+  const filtered = applyDateRange(bodyweightHistory);
   const dates = filtered.map(h => h.date);
   const weights = filtered.map(h => h.weight);
   document.getElementById('exerciseProgress').style.display = 'none';
@@ -6379,9 +6378,9 @@ function showCoachInsights() {
 }
 
 function exportCSV() {
-  const history = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workoutHistory = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const rows = [['Date','Exercise','Sets','Reps','Weight']];
-  history.forEach(w => {
+  workoutHistory.forEach(w => {
     (w.log||[]).forEach(e => {
       rows.push([w.date, e.exercise, e.sets, e.repsArray.join('|'), e.weightsArray.join('|')]);
     });
@@ -6928,17 +6927,17 @@ function loadCrossfitTemplate() {
 
 function addMacroHistoryEntry(date, meals, totals) {
   const key = `macroHistory_${currentUser}`;
-  const history = JSON.parse(localStorage.getItem(key)) || [];
-  history.push({ date, meals, totals });
-  localStorage.setItem(key, JSON.stringify(history));
+  const macroHistory = JSON.parse(localStorage.getItem(key)) || [];
+  macroHistory.push({ date, meals, totals });
+  localStorage.setItem(key, JSON.stringify(macroHistory));
 }
 
 function renderMacroHistory() {
   const key = `macroHistory_${currentUser}`;
-  const history = JSON.parse(localStorage.getItem(key)) || [];
+  const macroHistory = JSON.parse(localStorage.getItem(key)) || [];
   const container = document.getElementById("macroHistoryContainer");
   container.innerHTML = "";
-  history.slice().reverse().forEach(entry => {
+  macroHistory.slice().reverse().forEach(entry => {
     const div = document.createElement("div");
     const mealsHtml = entry.meals.map((m, i) => `Meal ${i + 1}: P${m.protein}, C${m.carbs}, F${m.fats}`).join("<br>");
     const totals = entry.totals || { protein:0, carbs:0, fats:0 };
@@ -7602,4 +7601,3 @@ window.applyTheme = applyTheme;
 
 </body>
 </html>
-

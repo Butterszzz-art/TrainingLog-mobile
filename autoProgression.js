@@ -4,10 +4,10 @@ export function analyzeProgress(user) {
   const prs = loadPRs(user);
   const results = [];
   Object.entries(prs).forEach(([exercise, data]) => {
-    const history = data.history || [];
-    if (history.length >= 4) {
-      const last = history[history.length - 1];
-      const fourAgo = history[history.length - 4];
+    const progressionHistory = data.history || [];
+    if (progressionHistory.length >= 4) {
+      const last = progressionHistory[progressionHistory.length - 1];
+      const fourAgo = progressionHistory[progressionHistory.length - 4];
       if (last.oneRM <= fourAgo.oneRM) {
         results.push({ type: 'deload', exercise });
         return;

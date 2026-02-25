@@ -25,11 +25,11 @@ describe('archiveOldWorkouts', () => {
     archiveOldWorkouts(user, Date.now());
 
     const remaining = JSON.parse(localStorage.getItem(workoutsKey));
-    const history = JSON.parse(localStorage.getItem(historyKey));
+    const savedHistory = JSON.parse(localStorage.getItem(historyKey));
 
     expect(remaining).toHaveLength(1);
     expect(remaining[0].title).toBe('Recent');
-    expect(history).toHaveLength(1);
-    expect(history[0].title).toBe('Old');
+    expect(savedHistory).toHaveLength(1);
+    expect(savedHistory[0].title).toBe('Old');
   });
 });
