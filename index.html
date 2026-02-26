@@ -1671,9 +1671,6 @@ async function startLogin() {
       renderCardio();
       renderCrossfitWorkouts();
       loadTemplateDropdown(); // ✅ Load saved templates
-      loadProgramTemplates();
-      loadProgramDropdown();
-      checkActiveProgram();
       loadUserExercises();
       saveDailyMacroProgress(0, 0, 0); // reset progress on login
       renderDailyMacroProgress();
@@ -1735,8 +1732,6 @@ function showTab(tabName) {
       renderCrossfitWorkouts();
       break;
     case 'programTab':
-      loadProgramTemplates();
-      loadProgramDropdown();
       break;
     case 'communityTab':
       if (window.showCommunitySection) showCommunitySection('groups');
@@ -3701,12 +3696,6 @@ function showTemplateOptions() {
   if (actions) actions.style.display = selected ? 'block' : 'none';
 }
 
-function toggleProgramBuilder() {
-  const builder = document.getElementById('programBuilder');
-  if (!builder) return;
-  builder.style.display = builder.style.display === 'none' ? 'block' : 'none';
-}
-
 function toggleTemplateBuilder() {
   const builder = document.getElementById('templateBuilder');
   if (!builder) return;
@@ -3849,7 +3838,6 @@ function saveSimpleTemplate() {
     .then(() => {
       templateDraftEditId = null;
       resetTemplateBuilder();
-      loadProgramTemplates();
       loadTemplateDropdown();
       alert('Template saved');
     })
@@ -3916,105 +3904,6 @@ function deleteSelectedTemplate() {
   loadTemplateDropdown();
 }
 
-// ===== Program Builder =====
-let programDays = [];
-
-async function loadProgramTemplates(username = currentUser) {
-  try {
-    const remoteTemplates = await fetchTemplates(username);
-    const localTemplates = getLocalManagedTemplates(username);
-    const merged = [...remoteTemplates, ...localTemplates]
-      .map(normalizeTemplateRecord)
-      .filter(Boolean);
-    resistanceTemplatesCache = merged;
-    populateTemplateSelect('programTemplateSelect', merged);
-  } catch (err) {
-    console.warn('Program template loading failed:', err);
-    populateTemplateSelect('programTemplateSelect', []);
-  }
-}
-
-function addDayToProgram() {
-  const sel = document.getElementById("programTemplateSelect");
-  const val = sel.value;
-  if (!val) return;
-  const selectedTemplate = resistanceTemplatesCache.find(tpl => tpl.id === val);
-  const data = selectedTemplate?.data;
-  if (!data) return;
-  programDays.push(data);
-  const list = document.getElementById("programDaysList");
-  const li = document.createElement('li');
-  li.textContent = sel.options[sel.selectedIndex].textContent;
-  list.appendChild(li);
-}
-
-function saveProgram() {
-  const name = document.getElementById("programName").value.trim();
-  if (!name || programDays.length === 0) return alert('Program info missing');
-  const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
-  const id = Date.now();
-  programs.push({ id, name, days: programDays });
-  localStorage.setItem(`programs_${currentUser}`, JSON.stringify(programs));
-  programDays = [];
-  document.getElementById("programDaysList").innerHTML = '';
-  loadProgramDropdown();
-  alert('Program saved');
-}
-
-function loadProgramDropdown() {
-  const select = document.getElementById('programSelect');
-  if (!select) return;
-  select.innerHTML = '';
-  const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
-  programs.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.name;
-    select.appendChild(opt);
-  });
-}
-
-function startProgram() {
-  const select = document.getElementById('programSelect');
-  const id = select.value;
-  const start = document.getElementById('programStart').value || new Date().toISOString().split('T')[0];
-  if (!id) return alert('Select a program');
-  localStorage.setItem(`activeProgram_${currentUser}`, JSON.stringify({ programId: Number(id), startDate: start }));
-  alert('Program started');
-  checkActiveProgram();
-}
-
-function checkActiveProgram() {
-  const active = JSON.parse(localStorage.getItem(`activeProgram_${currentUser}`));
-  if (!active) return;
-  const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
-  const program = programs.find(p => p.id === active.programId);
-  if (!program) return;
-  const start = new Date(active.startDate);
-  const today = new Date();
-  const diff = Math.floor((today.setHours(0,0,0,0) - start.setHours(0,0,0,0)) / 86400000);
-  if (diff < 0 || diff >= program.days.length) {
-    localStorage.removeItem(`activeProgram_${currentUser}`);
-    return;
-  }
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const dayTemplate = program.days[diff];
-  const todayStr = new Date().toISOString().split('T')[0];
-  if (!workouts.some(w => w.date === todayStr)) {
-    const tpl = JSON.parse(JSON.stringify(dayTemplate));
-    tpl.date = todayStr;
-    workouts.push(tpl);
-    localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  }
-  renderWorkouts();
-}
-
-function loadTodayProgram() {
-  checkActiveProgram();
-}
-
-
- 
 async function completeWorkout() {
   const date = new Date().toISOString().split('T')[0];
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
@@ -7780,9 +7669,6 @@ function renderLogHistory(logs) {
     renderCardio();
     renderCrossfitWorkouts();
     loadTemplateDropdown();
-    loadProgramTemplates();
-    loadProgramDropdown();
-    checkActiveProgram();
     loadUserExercises();
   } else {
     activeSection = loginEl;
@@ -7899,18 +7785,10 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   window.loadTemplateDropdown = loadTemplateDropdown;
   window.showHistoryMiniTab = showHistoryMiniTab;
   window.renderWorkoutHistory = renderWorkoutHistory;
-  window.loadProgramTemplates = loadProgramTemplates;
-  window.addDayToProgram = addDayToProgram;
-  window.saveProgram = saveProgram;
-  window.loadProgramDropdown = loadProgramDropdown;
   window.startRestTimer = startRestTimer;
   if (typeof renderCrossfitWorkouts === 'function') {
     window.renderCrossfitWorkouts = renderCrossfitWorkouts;
   }
-  window.startProgram = startProgram;
-  window.checkActiveProgram = checkActiveProgram;
-  window.toggleProgramBuilder = toggleProgramBuilder;
-  window.loadTodayProgram = loadTodayProgram;
 window.toggleTemplateBuilder = toggleTemplateBuilder;
 window.addExerciseToTemplate = addExerciseToTemplate;
 window.saveSimpleTemplate = saveSimpleTemplate;
