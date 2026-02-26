@@ -1522,6 +1522,8 @@ async function fetchAirtableConfig() {
 const usersTableName = 'Users';
 const templatesTableName = 'Templates';
 const MacroTargetsApiUrl = 'https://api.airtable.com/v0/appmjr4IgnEH72K1b/MacroTargets';
+window.FEATURES = window.FEATURES || {};
+window.FEATURES.PROGRAM_BUILDER_V2 = true;
 let macroMeals = [];
 
 let macroTargetCalories = 0;
@@ -1672,8 +1674,10 @@ async function startLogin() {
       renderCrossfitWorkouts();
       loadTemplateDropdown(); // ✅ Load saved templates
       loadProgramTemplates();
-      loadProgramDropdown();
-      checkActiveProgram();
+      if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
+        loadProgramDropdown();
+        checkActiveProgram();
+      }
       loadUserExercises();
       saveDailyMacroProgress(0, 0, 0); // reset progress on login
       renderDailyMacroProgress();
@@ -1736,7 +1740,9 @@ function showTab(tabName) {
       break;
     case 'programTab':
       loadProgramTemplates();
-      loadProgramDropdown();
+      if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
+        loadProgramDropdown();
+      }
       break;
     case 'communityTab':
       if (window.showCommunitySection) showCommunitySection('groups');
@@ -7781,8 +7787,10 @@ function renderLogHistory(logs) {
     renderCrossfitWorkouts();
     loadTemplateDropdown();
     loadProgramTemplates();
-    loadProgramDropdown();
-    checkActiveProgram();
+    if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
+      loadProgramDropdown();
+      checkActiveProgram();
+    }
     loadUserExercises();
   } else {
     activeSection = loginEl;
@@ -7899,18 +7907,21 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   window.loadTemplateDropdown = loadTemplateDropdown;
   window.showHistoryMiniTab = showHistoryMiniTab;
   window.renderWorkoutHistory = renderWorkoutHistory;
-  window.loadProgramTemplates = loadProgramTemplates;
   window.addDayToProgram = addDayToProgram;
-  window.saveProgram = saveProgram;
-  window.loadProgramDropdown = loadProgramDropdown;
+  // Legacy exports kept only for backwards compatibility
+  if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
+    window.loadProgramTemplates = loadProgramTemplates;
+    window.saveProgram = saveProgram;
+    window.loadProgramDropdown = loadProgramDropdown;
+    window.startProgram = startProgram;
+    window.checkActiveProgram = checkActiveProgram;
+    window.loadTodayProgram = loadTodayProgram;
+  }
   window.startRestTimer = startRestTimer;
   if (typeof renderCrossfitWorkouts === 'function') {
     window.renderCrossfitWorkouts = renderCrossfitWorkouts;
   }
-  window.startProgram = startProgram;
-  window.checkActiveProgram = checkActiveProgram;
   window.toggleProgramBuilder = toggleProgramBuilder;
-  window.loadTodayProgram = loadTodayProgram;
 window.toggleTemplateBuilder = toggleTemplateBuilder;
 window.addExerciseToTemplate = addExerciseToTemplate;
 window.saveSimpleTemplate = saveSimpleTemplate;
@@ -8006,7 +8017,7 @@ window.applyTheme = applyTheme;
       });
     </script>
 
-    <script type="module" src="ProgramTab.js"></script>
+    <script type="module" src="ProgramTabV2.js"></script>
 
 
 
