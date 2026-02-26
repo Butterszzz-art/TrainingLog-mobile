@@ -12,256 +12,113 @@
       --border: #d5d8e3;
       --text: #1a1b2e;
       --accent: #2f80ed;
+      --ok: #0f9d58;
+      --warn: #b45309;
     }
-
-    body {
-      font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 40px 16px;
-    }
-
-    .page {
-      width: min(960px, 100%);
-      display: grid;
-      gap: 24px;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    h1 {
-      font-size: clamp(1.8rem, 3vw, 2.4rem);
-      margin: 0;
-    }
-
-    button {
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      background: var(--accent);
-      color: #fff;
-      font-weight: 600;
-      padding: 10px 18px;
-      font-size: 1rem;
-      box-shadow: 0 8px 18px rgba(47, 128, 237, 0.25);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 20px rgba(47, 128, 237, 0.35);
-    }
-
-    dialog.program-modal {
-      border: none;
-      border-radius: 16px;
-      padding: 0;
-      width: min(520px, 90vw);
-      box-shadow: 0 24px 40px rgba(15, 23, 42, 0.18);
-      background: transparent;
-    }
-
-    dialog::backdrop {
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(3px);
-    }
-
-    .modal-card {
-      background: var(--card);
-      border-radius: 16px;
-      padding: 24px;
-      display: grid;
-      gap: 16px;
-      border: 1px solid var(--border);
-    }
-
-    label span,
-    fieldset legend {
-      font-weight: 600;
-      font-size: 0.95rem;
-      display: inline-block;
-      margin-bottom: 4px;
-    }
-
-    input[type="text"],
-    input[type="date"],
-    select,
-    textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      font-size: 0.95rem;
-      background: #fff;
-      box-sizing: border-box;
-    }
-
-    fieldset {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      display: grid;
-      gap: 12px;
-      margin: 0;
-    }
-
-    .frequency-options {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .frequency-options label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-    }
-
-    .actions button.secondary {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-      box-shadow: none;
-    }
-
-    section.program-list {
-      background: var(--card);
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      padding: 24px;
-    }
-
-    section.program-list h2 {
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-
-    #programList {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 16px;
-    }
-
-    .program-item {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .program-item h3 {
-      margin: 0;
-      font-size: 1.1rem;
-    }
-
-    .program-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px 18px;
-      font-size: 0.9rem;
-      color: #4b5563;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 32px 16px;
-      color: #6b7280;
-      border: 1px dashed var(--border);
-      border-radius: 12px;
-      font-size: 0.95rem;
-    }
-
-    @media (max-width: 600px) {
-      header {
-        flex-direction: column;
-        gap: 16px;
-        text-align: center;
-      }
-
-      .actions {
-        flex-direction: column;
-      }
-
-      .actions button {
-        width: 100%;
-      }
-    }
+    body { font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; justify-content: center; padding: 40px 16px; }
+    .page { width: min(960px, 100%); display: grid; gap: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: clamp(1.8rem, 3vw, 2.4rem); margin: 0; }
+    button { cursor: pointer; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; padding: 10px 18px; font-size: 1rem; box-shadow: 0 8px 18px rgba(47, 128, 237, 0.25); }
+    button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+    dialog.program-modal { border: none; border-radius: 16px; padding: 0; width: min(720px, 95vw); box-shadow: 0 24px 40px rgba(15, 23, 42, 0.18); background: transparent; }
+    dialog::backdrop { background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(3px); }
+    .modal-card { background: var(--card); border-radius: 16px; padding: 24px; display: grid; gap: 16px; border: 1px solid var(--border); }
+    .wizard-step { display: none; gap: 12px; }
+    .wizard-step.active { display: grid; }
+    .step-title { margin: 0; font-size: 1.1rem; }
+    .helper { margin: 0; font-size: 0.9rem; color: #4b5563; }
+    .bar-row { display: grid; grid-template-columns: 100px 1fr 48px; align-items: center; gap: 8px; font-size: 0.9rem; }
+    .bar-track { height: 10px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, #2f80ed, #76b8ff); }
+    .warning-card { border: 1px solid #f9c27b; background: #fff8ee; border-radius: 10px; padding: 10px 12px; color: var(--warn); }
+    .ok-card { border: 1px solid #8fd5b3; background: #edf9f3; border-radius: 10px; padding: 10px 12px; color: var(--ok); }
+    .weekday-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .weekday-grid label { border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px; }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    .preview-table th, .preview-table td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+    label span { font-weight: 600; font-size: 0.95rem; display: inline-block; margin-bottom: 4px; }
+    input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem; box-sizing: border-box; }
+    .actions { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .actions-right { display: flex; gap: 10px; }
+    section.program-list { background: var(--card); border-radius: 16px; border: 1px solid var(--border); padding: 24px; }
+    #programList { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; }
+    .program-item { border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: grid; gap: 8px; }
+    .program-meta { display: flex; flex-wrap: wrap; gap: 12px 18px; font-size: 0.9rem; color: #4b5563; }
   </style>
 </head>
 <body>
   <div class="page">
     <header>
-      <h1>Create a New Program</h1>
+      <h1>Program Library</h1>
       <button type="button" id="openProgramButton">New Program</button>
     </header>
 
     <dialog id="programModal" class="program-modal">
       <form method="dialog" id="programForm" class="modal-card">
-        <h2>Program Details</h2>
-        <label for="programName"><span>Program Name</span>
-          <input type="text" id="programName" placeholder="e.g., Push/Pull/Legs">
-        </label>
-        <label for="programStartDate"><span>Start Date</span>
-          <input type="date" id="programStartDate">
-        </label>
-        <fieldset>
-          <legend>Training Frequency</legend>
-          <div id="frequency-selection" class="frequency-options">
-            <label><input type="checkbox" id="freqMon"> Mon</label>
-            <label><input type="checkbox" id="freqWed"> Wed</label>
-            <label><input type="checkbox" id="freqFri"> Fri</label>
+        <h2 id="wizardTitle">Step 3 · Review</h2>
+        <div id="stepReview" class="wizard-step active">
+          <p class="helper">Understand what’s going on at a glance before you schedule.</p>
+          <div><strong>Total sets/week:</strong> <span id="totalSetsValue">0</span></div>
+          <div>
+            <h3 class="step-title">Sets by muscle group</h3>
+            <div id="setsBars"></div>
           </div>
-        </fieldset>
-        <label for="programProgression"><span>Progression Style</span>
-          <select id="programProgression">
-            <option value="linear">Linear</option>
-            <option value="undulating">Undulating</option>
-            <option value="block">Block</option>
-          </select>
-        </label>
-        <label for="programSplit"><span>Split Mode</span>
-          <select id="programSplit">
-            <option value="full-body">Full Body</option>
-            <option value="upper-lower">Upper / Lower</option>
-            <option value="push-pull-legs">Push / Pull / Legs</option>
-          </select>
-        </label>
-        <fieldset>
-          <legend>Variety & Deload Recommendations</legend>
-          <label><input type="checkbox" id="programAutoInsertVariety"> Auto-insert suggested variety exercises</label>
-          <p id="programVarietyPreview" style="margin: 0; font-size: 0.9rem; color: #4b5563;">Recommendations will be generated from your past 8 weeks of exercise history.</p>
-        </fieldset>
+          <div>
+            <h3 class="step-title">Frequency by muscle group</h3>
+            <div id="frequencyBars"></div>
+          </div>
+          <div>
+            <h3 class="step-title">Warnings</h3>
+            <div id="warningCards"></div>
+          </div>
+        </div>
+
+        <div id="stepSchedule" class="wizard-step">
+          <p class="helper">Scheduling is a final planning step, separate from editing.</p>
+          <label for="programStartDate"><span>Start date</span><input type="date" id="programStartDate"></label>
+          <div>
+            <span>Training weekdays</span>
+            <div class="weekday-grid" id="weekdayGrid"></div>
+          </div>
+          <div>
+            <h3 class="step-title">Auto-map preview</h3>
+            <table class="preview-table">
+              <thead><tr><th>Weekday</th><th>Program day</th></tr></thead>
+              <tbody id="schedulePreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="stepSave" class="wizard-step">
+          <p class="helper">Finalize and activate your program.</p>
+          <label for="programName"><span>Program name (required)</span><input type="text" id="programName" required placeholder="e.g., Push/Pull/Legs"></label>
+          <label for="programNotes"><span>Notes (optional)</span><textarea id="programNotes" rows="3" placeholder="Goal, constraints, progression notes..."></textarea></label>
+          <div class="actions-right">
+            <button type="button" id="saveCopyButton" class="secondary">Save as copy</button>
+            <button type="button" id="saveProgramButton">Save</button>
+          </div>
+          <div id="postSaveActions" style="display:none;">
+            <button type="button" id="goToTodayButton" class="secondary">Go to Today's Workout</button>
+          </div>
+        </div>
+
         <div class="actions">
           <button type="button" id="cancelProgramButton" class="secondary">Cancel</button>
-          <button type="submit" id="saveProgramButton">Save Program</button>
+          <div class="actions-right">
+            <button type="button" id="backStepButton" class="secondary">Back</button>
+            <button type="button" id="nextStepButton">Next</button>
+          </div>
         </div>
       </form>
     </dialog>
 
     <section class="program-list">
-      <h2>Saved Programs</h2>
+      <h2 id="programLibraryTitle">Program Library</h2>
       <ul id="programList" class="program-items"></ul>
     </section>
   </div>
+  <script src="../js/programBuilderV2Core.js"></script>
   <script src="../js/programs.js"></script>
 </body>
 </html>

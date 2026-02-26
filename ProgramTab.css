@@ -19,3 +19,128 @@
 }
 fieldset { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px; }
 legend { font-weight: bold; }
+
+.program-tab-v2 {
+  display: grid;
+  gap: 1rem;
+}
+
+.program-v2-step {
+  border: 1px solid #d8dbe2;
+  border-radius: 10px;
+  padding: 1rem;
+  background: #fff;
+}
+
+.split-choice-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.split-choice {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+}
+
+.split-choice-primary {
+  background: #101828;
+  color: #fff;
+}
+
+.split-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.v2-pane-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 1rem;
+}
+
+.v2-pane {
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.day-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.day-row-main {
+  flex: 1;
+  text-align: left;
+}
+
+.day-row.is-active .day-row-main {
+  border: 1px solid #344054;
+}
+
+.exercise-controls {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.exercise-library {
+  border: 1px solid #f0f2f5;
+  border-radius: 8px;
+  max-height: 220px;
+  overflow: auto;
+  margin-bottom: 0.75rem;
+}
+
+.exercise-library-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid #f2f4f7;
+}
+
+.exercise-card {
+  margin-bottom: 0.75rem;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  padding: 0.45rem;
+}
+
+.sets-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.55rem;
+}
+
+.sets-table th,
+.sets-table td {
+  border: 1px solid #f2f4f7;
+  padding: 0.3rem;
+}
+
+.advanced-accordion {
+  margin-top: 0.5rem;
+}
+
+.advanced-field {
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.45rem;
+}
+
+@media (max-width: 900px) {
+  .v2-pane-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-controls {
+    grid-template-columns: 1fr;
+  }
+}

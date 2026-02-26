@@ -191,7 +191,7 @@ app.post('/api/groups', (req, res) => {
 });
 
 // Program creation
-app.post('/createProgram', (req, res) => {
+async function handleCreateProgram(req, res) {
   const program = req.body;
   if (!program || !program.name) {
     return res.status(400).json({ error: 'program name required' });
@@ -199,7 +199,10 @@ app.post('/createProgram', (req, res) => {
   program.id = programs.length + 1;
   programs.push(program);
   res.json({ id: program.id });
-});
+}
+
+app.post('/createProgram', handleCreateProgram);
+app.post('/saveProgram', handleCreateProgram);
 
 // Program sharing
 app.post('/shareProgram', (req, res) => {
