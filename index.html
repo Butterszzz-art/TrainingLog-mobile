@@ -1522,6 +1522,8 @@ async function fetchAirtableConfig() {
 const usersTableName = 'Users';
 const templatesTableName = 'Templates';
 const MacroTargetsApiUrl = 'https://api.airtable.com/v0/appmjr4IgnEH72K1b/MacroTargets';
+window.FEATURES = window.FEATURES || {};
+window.FEATURES.PROGRAM_BUILDER_V2 = true;
 let macroMeals = [];
 
 let macroTargetCalories = 0;
