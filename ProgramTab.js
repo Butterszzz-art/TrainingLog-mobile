@@ -1,6 +1,10 @@
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_TO_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 const HISTORY_KEYS = ["workoutHistory", "resistanceLogs", "tl_workout_history_v1"];
+const PROGRAM_SCHEMA_VERSION = 2;
+const IS_DEV_MODE =
+  typeof window !== "undefined" &&
+  (window.__DEV__ === true || ["localhost", "127.0.0.1"].includes(window.location.hostname));
 
 const GOAL_LIBRARY = {
   strength: { label: "Strength", sets: 4, reps: 5, intensity: 0.82 },
@@ -208,27 +212,60 @@ function createEl(tag, className, text) {
   return el;
 }
 
+function normalizeDraft(draft) {
+  const defaults = {
+    schemaVersion: PROGRAM_SCHEMA_VERSION,
+    name: "",
+    startDate: "",
+    frequency: [],
+    progressionType: "linear",
+    splitMode: "synchronous",
+    autoInsertVariety: false,
+    wizard: { goal: "strength", scheme: "linear", weeks: 8, baseLoad: 100 },
+    generatedWeeks: [],
+    generatedSessions: [],
+    days: []
+  };
+
+  const normalized = {
+    ...defaults,
+    ...(draft || {}),
+    schemaVersion: PROGRAM_SCHEMA_VERSION,
+    wizard: {
+      ...defaults.wizard,
+      ...((draft && draft.wizard) || {})
+    }
+  };
+
+  normalized.days = (Array.isArray(normalized.days) ? normalized.days : []).map((day, index) => ({
+    ...day,
+    dayId: day?.dayId || `day-${index + 1}`
+  }));
+
+  return normalized;
+}
+
+function runDevDraftAsserts(draft) {
+  if (!IS_DEV_MODE) return;
+  console.assert(draft.schemaVersion === PROGRAM_SCHEMA_VERSION, "Program draft schemaVersion must be 2");
+  console.assert(draft.days.every((day) => Boolean(day.dayId)), "Program draft days must include dayId");
+}
+
 function initProgramTab() {
   const root = document.getElementById("programTabReactRoot");
   if (!root) return;
+  if (root.__programTabMounted) return;
+  root.__programTabMounted = true;
+
+  const initialDraft = normalizeDraft();
+  runDevDraftAsserts(initialDraft);
 
   const state = {
     programs: loadPrograms(),
     showDrawer: false,
     showShare: false,
     shareId: null,
-    program: {
-      name: "",
-      startDate: "",
-      frequency: [],
-      progressionType: "linear",
-      splitMode: "synchronous",
-      autoInsertVariety: false,
-      wizard: { goal: "strength", scheme: "linear", weeks: 8, baseLoad: 100 },
-      generatedWeeks: [],
-      generatedSessions: [],
-      days: []
-    }
+    program: initialDraft
   };
 
   function toggleFrequency(day) {
@@ -260,9 +297,12 @@ function initProgramTab() {
     state.program.generatedSessions = generatedSessions;
     state.program.progressionType = state.program.wizard.scheme;
     state.program.days = generatedSessions.map((session, index) => ({
+      dayId: `day-${index + 1}`,
       name: `${session.dayName} · ${session.focus} (${session.sets}x${session.reps} @ ${session.intensityPct}%)`,
       order: index + 1
     }));
+    state.program = normalizeDraft(state.program);
+    runDevDraftAsserts(state.program);
     render();
   }
 
@@ -272,8 +312,12 @@ function initProgramTab() {
       return;
     }
 
+    state.program = normalizeDraft(state.program);
+    runDevDraftAsserts(state.program);
+
     const payload = {
       id: Date.now(),
+      schemaVersion: state.program.schemaVersion,
       name: state.program.name,
       startDate: state.program.startDate,
       frequency: state.program.frequency,
