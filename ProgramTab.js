@@ -1,3 +1,5 @@
+import { initProgramTabV2 } from "./ProgramTabV2.js";
+
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_TO_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 const HISTORY_KEYS = ["workoutHistory", "resistanceLogs", "tl_workout_history_v1"];
@@ -208,8 +210,7 @@ function createEl(tag, className, text) {
   return el;
 }
 
-function initProgramTab() {
-  const root = document.getElementById("programTabReactRoot");
+function initProgramTabV1(root) {
   if (!root) return;
 
   const state = {
@@ -507,6 +508,16 @@ function initProgramTab() {
   }
 
   render();
+}
+
+export function initProgramTab() {
+  const root = document.getElementById("programTabReactRoot");
+  if (!root) return;
+
+  if (window.FEATURES?.PROGRAM_BUILDER_V2) {
+    return initProgramTabV2(root);
+  }
+  return initProgramTabV1(root);
 }
 
 window.initProgramTab = initProgramTab;
