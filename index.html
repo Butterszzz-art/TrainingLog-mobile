@@ -17,6 +17,10 @@
       margin-right: auto;
       width: 100%;
     }
+    #programBuilderContainer,
+    #programTabReactRoot {
+      min-height: 60vh;
+    }
     :root {
       --bg-color: #F9F9FB;
       --text-color: #000000;
@@ -1764,9 +1768,6 @@ function showTab(tabName) {
       }
       if (typeof window.initProgramBuilder === 'function') {
         window.initProgramBuilder();
-      }
-      if (typeof window.toggleProgramBuilder === 'function') {
-        window.toggleProgramBuilder(true);
       }
       if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
         loadProgramDropdown();
