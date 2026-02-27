@@ -1744,12 +1744,14 @@ function showTab(tabName) {
       renderCrossfitWorkouts();
       break;
     case 'programTab':
-      loadProgramTemplates();
-      if (typeof initProgramBuilder === 'function') {
-        initProgramBuilder();
+      if (typeof window.loadProgramTemplates === 'function') {
+        window.loadProgramTemplates();
       }
-      if (typeof toggleProgramBuilder === 'function') {
-        toggleProgramBuilder(true);
+      if (typeof window.initProgramBuilder === 'function') {
+        window.initProgramBuilder();
+      }
+      if (typeof window.toggleProgramBuilder === 'function') {
+        window.toggleProgramBuilder(true);
       }
       if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
         loadProgramDropdown();

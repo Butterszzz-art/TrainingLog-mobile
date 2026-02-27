@@ -240,12 +240,15 @@
   }
 
   function toggleProgramBuilder(forceState) {
+    const doc = global.document;
     const panel =
-      global.document &&
-      (global.document.getElementById("programBuilderModal") ||
-        global.document.getElementById("programBuilder") ||
-        global.document.getElementById("programBuilderV2") ||
-        global.document.getElementById("programModal"));
+      doc &&
+      (doc.getElementById("programBuilderModal") ||
+        doc.getElementById("programBuilder") ||
+        doc.getElementById("programBuilderV2") ||
+        doc.getElementById("programModal") ||
+        doc.getElementById("programBuilderContainer") ||
+        doc.getElementById("programTabContent"));
 
     if (!panel) return false;
 
@@ -288,6 +291,24 @@
 
   function initProgramBuilder() {
     loadProgramTemplates();
+
+    if (!global.document) return true;
+
+    const container = global.document.getElementById("programBuilderContainer");
+    if (container) {
+      container.style.display = "";
+      if (!container.hasChildNodes()) {
+        if (typeof global.initProgramTabV2 === "function") {
+          global.initProgramTabV2(container);
+        } else if (typeof global.initProgramTab === "function") {
+          global.initProgramTab(container);
+        }
+      }
+    }
+
+    const tabContent = global.document.getElementById("programTabContent");
+    if (tabContent) tabContent.style.display = "";
+
     return true;
   }
 
