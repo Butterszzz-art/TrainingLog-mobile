@@ -308,7 +308,9 @@
 
     if (!global.document) return true;
 
-    const container = global.document.getElementById("programBuilderContainer");
+    const container =
+      global.document.getElementById("programTabReactRoot") ||
+      global.document.getElementById("programBuilderContainer");
     if (container) {
       container.style.display = "";
       if (!container.hasChildNodes()) {
