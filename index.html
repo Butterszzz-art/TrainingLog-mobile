@@ -1402,8 +1402,18 @@
 <script src="weightTab.js"></script>
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
-<script type="module" src="src/js/programBuilderV2Core.js"></script>
-<script type="module" src="src/js/ProgramTabV2.js"></script>
+<!-- Feature flags FIRST -->
+<script>
+  window.FEATURES = {
+    PROGRAM_BUILDER_V2: true
+  };
+</script>
+
+<!-- Then V2 core -->
+<script src="src/js/programBuilderV2Core.js"></script>
+
+<!-- Then V2 UI -->
+<script src="src/js/ProgramTabV2.js"></script>
 <script>
 
 let currentUser = null;
@@ -1530,8 +1540,6 @@ async function fetchAirtableConfig() {
 const usersTableName = 'Users';
 const templatesTableName = 'Templates';
 const MacroTargetsApiUrl = 'https://api.airtable.com/v0/appmjr4IgnEH72K1b/MacroTargets';
-window.FEATURES = window.FEATURES || {};
-window.FEATURES.PROGRAM_BUILDER_V2 = true;
 let macroMeals = [];
 
 let macroTargetCalories = 0;

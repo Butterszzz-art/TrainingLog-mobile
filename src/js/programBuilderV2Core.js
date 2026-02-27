@@ -292,6 +292,20 @@
   function initProgramBuilder() {
     loadProgramTemplates();
 
+    const activeUser =
+      typeof global.getActiveUsername === "function"
+        ? global.getActiveUsername()
+        : global.localStorage &&
+            (global.localStorage.getItem("currentUser") ||
+              global.localStorage.getItem("username") ||
+              global.localStorage.getItem("Username"));
+    global.__programDraft = loadDraft(activeUser || null);
+    global.__programState = {
+      userId: activeUser || null,
+      initialized: true,
+      initializedAt: new Date().toISOString(),
+    };
+
     if (!global.document) return true;
 
     const container = global.document.getElementById("programBuilderContainer");
