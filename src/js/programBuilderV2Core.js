@@ -308,16 +308,30 @@
 
     if (!global.document) return true;
 
-    const container =
-      global.document.getElementById("programTabReactRoot") ||
-      global.document.getElementById("programBuilderContainer");
+    const container = global.document.getElementById("programBuilderContainer");
     if (container) {
       container.style.display = "";
-      if (!container.hasChildNodes()) {
+
+      // ✅ Do NOT use hasChildNodes(); your HTML contains layout shells.
+      // Mount once using a guard flag.
+      if (!container.__programBuilderMounted) {
+        container.__programBuilderMounted = true;
+
+        // Use a dedicated mount root so background/layout shells can exist safely.
+        let mount = container.querySelector("#programBuilderV2Mount");
+        if (!mount) {
+          mount = global.document.createElement("div");
+          mount.id = "programBuilderV2Mount";
+          container.appendChild(mount);
+        }
+
         if (typeof global.initProgramTabV2 === "function") {
-          global.initProgramTabV2(container);
+          global.initProgramTabV2(mount);
         } else if (typeof global.initProgramTab === "function") {
-          global.initProgramTab(container);
+          global.initProgramTab(mount);
+        } else {
+          mount.innerHTML =
+            "<div style='padding:12px;opacity:.8'>Program UI missing: init function not found.</div>";
         }
       }
     }
