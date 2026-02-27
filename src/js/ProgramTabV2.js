@@ -10,7 +10,10 @@
       return;
     }
 
-    mount.innerHTML = `
+    const stepEl = document.getElementById("programStepContainer") || mount;
+    const summaryEl = document.getElementById("programSummaryContainer");
+
+    stepEl.innerHTML = `
       <div style="padding:12px">
         <h2 style="margin:0 0 8px 0">Program Builder V2</h2>
         <p style="opacity:.8;margin:0 0 12px 0">UI is mounted. Next: build the wizard screens.</p>
@@ -18,7 +21,15 @@
       </div>
     `;
 
-    mount.querySelector("#pbv2CreateDraft")?.addEventListener("click", () => {
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <div style="padding:12px;opacity:.8">
+          Summary container connected.
+        </div>
+      `;
+    }
+
+    stepEl.querySelector("#pbv2CreateDraft")?.addEventListener("click", () => {
       const userId = (window.getActiveUsername && window.getActiveUsername()) || "anonymous";
       const draft = core.createEmptyDraft(userId);
       core.saveDraft(userId, draft);
