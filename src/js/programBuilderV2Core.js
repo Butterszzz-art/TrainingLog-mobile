@@ -1,455 +1,326 @@
-(function (global, factory) {
-  if (typeof module === "object" && typeof module.exports === "object") {
-    module.exports = factory();
-  } else {
-    global.programBuilderV2Core = factory();
+(function (global) {
+  const PROGRAM_STORAGE_KEY = "programs";
+  const PROGRAM_DRAFT_STORAGE_KEY = "programBuilderV2Draft";
+  const DRAFT_STORAGE_PREFIX = "programBuilderV2Draft:";
+  const PROGRAM_SCHEMA_VERSION = 2;
+  const DEFAULT_GOAL = "hypertrophy";
+
+  function defaultProgramDraft() {
+    return {
+      name: "",
+      startDate: "",
+      frequency: [],
+      progressionType: "linear",
+      splitMode: "full-body",
+      varietySettings: { autoInsertSuggestions: false },
+    };
   }
-})(
-  typeof window !== "undefined"
-    ? window
-    : typeof globalThis !== "undefined"
-    ? globalThis
-    : this,
-  function () {
-    const PROGRAM_STORAGE_KEY = "programs";
-    const PROGRAM_DRAFT_STORAGE_KEY = "programBuilderV2Draft";
 
-    function defaultProgramDraft() {
-      return {
-        name: "",
-        startDate: "",
-        frequency: [],
-        progressionType: "linear",
-        splitMode: "full-body",
-        varietySettings: { autoInsertSuggestions: false },
-      };
-    }
+  function normalizeProgram(program) {
+    const draft = defaultProgramDraft();
+    if (!program || typeof program !== "object") return draft;
 
-    function normalizeProgram(program) {
-      const draft = defaultProgramDraft();
-      if (!program || typeof program !== "object") return draft;
+    const autoInsertSuggestions = Boolean(
+      program.varietySettings && program.varietySettings.autoInsertSuggestions
+    );
 
-      const autoInsertSuggestions = Boolean(
-        program?.varietySettings?.autoInsertSuggestions ?? program.autoInsertVariety
-      );
+    return {
+      ...draft,
+      ...program,
+      name: typeof program.name === "string" ? program.name : draft.name,
+      startDate: typeof program.startDate === "string" ? program.startDate : draft.startDate,
+      frequency: Array.isArray(program.frequency) ? program.frequency.slice() : [],
+      progressionType:
+        typeof program.progressionType === "string"
+          ? program.progressionType
+          : typeof program.progression === "string"
+          ? program.progression
+          : draft.progressionType,
+      splitMode: typeof program.splitMode === "string" ? program.splitMode : draft.splitMode,
+      varietySettings: {
+        autoInsertSuggestions: Boolean(autoInsertSuggestions || program.autoInsertVariety),
+      },
+    };
+  }
 
-      return {
-        ...draft,
-        ...program,
-        name: typeof program.name === "string" ? program.name : draft.name,
-        startDate: typeof program.startDate === "string" ? program.startDate : draft.startDate,
-        frequency: Array.isArray(program.frequency) ? [...program.frequency] : [],
-        progressionType:
-          typeof program.progressionType === "string"
-            ? program.progressionType
-            : typeof program.progression === "string"
-            ? program.progression
-            : draft.progressionType,
-        splitMode: typeof program.splitMode === "string" ? program.splitMode : draft.splitMode,
-        varietySettings: {
-          autoInsertSuggestions,
-        },
-      };
-    }
-
-    function summarizeProgram(program) {
-      const normalized = normalizeProgram(program);
-      const deloadWeeks = normalized?.recommendations?.deloadPlan?.recommendedDeloadWeeks;
-      const autoInserted = Array.isArray(normalized?.recommendations?.autoInsertedExercises)
+  function summarizeProgram(program) {
+    const normalized = normalizeProgram(program);
+    const deloadWeeks =
+      normalized && normalized.recommendations && normalized.recommendations.deloadPlan
+        ? normalized.recommendations.deloadPlan.recommendedDeloadWeeks
+        : null;
+    const autoInserted =
+      normalized && normalized.recommendations && Array.isArray(normalized.recommendations.autoInsertedExercises)
         ? normalized.recommendations.autoInsertedExercises.length
         : 0;
 
-      return {
-        name: normalized.name,
-        startDate: normalized.startDate,
-        frequency: normalized.frequency.length ? normalized.frequency.join(", ") : "-",
-        progressionType: normalized.progressionType,
-        splitMode: normalized.splitMode,
-        deloadWeeks:
-          Array.isArray(deloadWeeks) && deloadWeeks.length ? deloadWeeks.join(", ") : "None",
-        autoInserted,
-      };
-    }
+    return {
+      name: normalized.name,
+      startDate: normalized.startDate,
+      frequency: normalized.frequency.length ? normalized.frequency.join(", ") : "-",
+      progressionType: normalized.progressionType,
+      splitMode: normalized.splitMode,
+      deloadWeeks: Array.isArray(deloadWeeks) && deloadWeeks.length ? deloadWeeks.join(", ") : "None",
+      autoInserted,
+    };
+  }
 
-    function parsePrograms(value) {
-      if (!value) return [];
+  function parsePrograms(value) {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.map(normalizeProgram) : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function loadPrograms(globalObj) {
+    if (!globalObj || !globalObj.localStorage) return [];
+    return parsePrograms(globalObj.localStorage.getItem(PROGRAM_STORAGE_KEY));
+  }
+
+  function savePrograms(globalObj, programs) {
+    if (!globalObj || !globalObj.localStorage) return;
+    globalObj.localStorage.setItem(
+      PROGRAM_STORAGE_KEY,
+      JSON.stringify(Array.isArray(programs) ? programs.map(normalizeProgram) : [])
+    );
+  }
+
+  function upsertProgram(globalObj, program, index) {
+    const existing = loadPrograms(globalObj);
+    const normalized = normalizeProgram(program);
+    const hasIndex = Number.isInteger(index) && index >= 0 && index < existing.length;
+    const next = hasIndex
+      ? existing.map(function (entry, entryIndex) {
+          return entryIndex === index ? normalized : entry;
+        })
+      : existing.concat([normalized]);
+    savePrograms(globalObj, next);
+    return { programs: next, program: normalized };
+  }
+
+  function draftStorageKey(userId) {
+    return "" + DRAFT_STORAGE_PREFIX + (userId || "anonymous");
+  }
+
+  function createEmptyDraft(userId) {
+    const now = new Date().toISOString();
+    return {
+      schemaVersion: PROGRAM_SCHEMA_VERSION,
+      programId: null,
+      userId: userId || null,
+      name: "",
+      goal: DEFAULT_GOAL,
+      split: { type: "custom", daysPerWeek: 3 },
+      days: [],
+      schedule: { startDate: "", weekdays: [] },
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  function loadDraft(globalObjOrUserId, maybeUserId) {
+    if (typeof globalObjOrUserId === "object" && globalObjOrUserId && globalObjOrUserId.localStorage) {
+      const globalObj = globalObjOrUserId;
       try {
-        const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed.map(normalizeProgram) : [];
-      } catch (_error) {
-        return [];
-      }
-    }
-
-    function loadPrograms(globalObj) {
-      if (!globalObj?.localStorage) return [];
-      return parsePrograms(globalObj.localStorage.getItem(PROGRAM_STORAGE_KEY));
-    }
-
-    function savePrograms(globalObj, programs) {
-      if (!globalObj?.localStorage) return;
-      globalObj.localStorage.setItem(
-        PROGRAM_STORAGE_KEY,
-        JSON.stringify(Array.isArray(programs) ? programs.map(normalizeProgram) : [])
-      );
-    }
-
-    function upsertProgram(globalObj, program, index) {
-      const existing = loadPrograms(globalObj);
-      const normalized = normalizeProgram(program);
-      const hasIndex = Number.isInteger(index) && index >= 0 && index < existing.length;
-      const next = hasIndex
-        ? existing.map((entry, entryIndex) => (entryIndex === index ? normalized : entry))
-        : [...existing, normalized];
-      savePrograms(globalObj, next);
-      return { programs: next, program: normalized };
-    }
-
-    function loadDraft(globalObj) {
-      if (!globalObj?.localStorage) return defaultProgramDraft();
-      try {
-        return normalizeProgram(
-          JSON.parse(globalObj.localStorage.getItem(PROGRAM_DRAFT_STORAGE_KEY) || "null")
-        );
+        return normalizeProgram(JSON.parse(globalObj.localStorage.getItem(PROGRAM_DRAFT_STORAGE_KEY) || "null"));
       } catch (_error) {
         return defaultProgramDraft();
       }
     }
 
-    function saveDraft(globalObj, draft) {
-      if (!globalObj?.localStorage) return;
-      globalObj.localStorage.setItem(
+    const userId = typeof globalObjOrUserId === "string" ? globalObjOrUserId : maybeUserId;
+    if (!global.localStorage) return createEmptyDraft(userId);
+
+    try {
+      const raw = global.localStorage.getItem(draftStorageKey(userId));
+      if (!raw) return createEmptyDraft(userId);
+      const parsed = JSON.parse(raw);
+      return normalizeDraft(parsed);
+    } catch (_error) {
+      return createEmptyDraft(userId);
+    }
+  }
+
+  function saveDraft(globalObjOrUserId, maybeDraft) {
+    if (typeof globalObjOrUserId === "object" && globalObjOrUserId && globalObjOrUserId.localStorage) {
+      globalObjOrUserId.localStorage.setItem(
         PROGRAM_DRAFT_STORAGE_KEY,
-        JSON.stringify(normalizeProgram(draft))
+        JSON.stringify(normalizeProgram(maybeDraft))
       );
+      return normalizeProgram(maybeDraft);
     }
 
-    function clearDraft(globalObj) {
-      if (!globalObj?.localStorage) return;
-      globalObj.localStorage.removeItem(PROGRAM_DRAFT_STORAGE_KEY);
+    const userId = typeof globalObjOrUserId === "string" ? globalObjOrUserId : null;
+    const draft = userId ? maybeDraft : globalObjOrUserId;
+    const normalized = normalizeDraft(draft);
+    if (!global.localStorage) return normalized;
+    global.localStorage.setItem(draftStorageKey(userId), JSON.stringify(normalized));
+    return normalized;
+  }
+
+  function clearDraft(globalObjOrUserId) {
+    if (typeof globalObjOrUserId === "object" && globalObjOrUserId && globalObjOrUserId.localStorage) {
+      globalObjOrUserId.localStorage.removeItem(PROGRAM_DRAFT_STORAGE_KEY);
+      return;
     }
+
+    const userId = typeof globalObjOrUserId === "string" ? globalObjOrUserId : null;
+    if (!global.localStorage) return;
+    global.localStorage.removeItem(draftStorageKey(userId));
+  }
+
+  function normalizeDraft(draft) {
+    const base = createEmptyDraft(draft && draft.userId);
+    const source = draft && typeof draft === "object" ? draft : {};
 
     return {
-      PROGRAM_STORAGE_KEY,
-      PROGRAM_DRAFT_STORAGE_KEY,
-      defaultProgramDraft,
-      normalizeProgram,
-      summarizeProgram,
-      loadPrograms,
-      savePrograms,
-      upsertProgram,
-      loadDraft,
-      saveDraft,
-      clearDraft,
+      ...base,
+      ...source,
+      schemaVersion: PROGRAM_SCHEMA_VERSION,
+      goal: typeof source.goal === "string" && source.goal.trim() ? source.goal : DEFAULT_GOAL,
+      split: {
+        ...base.split,
+        ...(source.split && typeof source.split === "object" ? source.split : {}),
+        daysPerWeek: Number(source.split && source.split.daysPerWeek) > 0 ? Math.floor(Number(source.split.daysPerWeek)) : base.split.daysPerWeek,
+      },
+      days: Array.isArray(source.days) ? source.days : [],
+      schedule: {
+        ...base.schedule,
+        ...(source.schedule && typeof source.schedule === "object" ? source.schedule : {}),
+        weekdays: Array.isArray(source.schedule && source.schedule.weekdays)
+          ? source.schedule.weekdays.filter(function (weekday) {
+              return typeof weekday === "string" && weekday.trim();
+            })
+          : [],
+      },
+      createdAt: typeof source.createdAt === "string" && source.createdAt ? source.createdAt : base.createdAt,
+      updatedAt: new Date().toISOString(),
     };
   }
-);
 
-const STORAGE_KEY = "program_builder_v2_draft";
+  function computeProgramSummary(draft) {
+    const normalized = normalizeDraft(draft);
+    let exerciseCount = 0;
 
-export function createEmptyDraft() {
-  return {
-    split: "upper-lower",
-    days: [
-      { id: "day-1", name: "Day 1", focus: "Upper", exercises: [] },
-      { id: "day-2", name: "Day 2", focus: "Lower", exercises: [] }
-    ],
-    notes: "",
-    schedule: {
-      startDate: "",
-      trainingDays: []
-    },
-    metadata: {
-      name: "",
-      goal: ""
-    }
-  };
-}
-
-export function loadDraft() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createEmptyDraft();
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : createEmptyDraft();
-  } catch (_error) {
-    return createEmptyDraft();
-  }
-}
-
-export function saveDraft(draft) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
-}
-
-export function clearDraft() {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
-export function computeProgramSummary(draft) {
-  const dayCount = Array.isArray(draft?.days) ? draft.days.length : 0;
-  const exerciseCount = (draft?.days || []).reduce(
-    (count, day) => count + (Array.isArray(day.exercises) ? day.exercises.length : 0),
-    0
-  );
-  const scheduledDays = Array.isArray(draft?.schedule?.trainingDays) ? draft.schedule.trainingDays.length : 0;
-
-  return {
-    name: draft?.metadata?.name || "Untitled Program",
-    split: draft?.split || "-",
-    goal: draft?.metadata?.goal || "-",
-    dayCount,
-    exerciseCount,
-    scheduledDays
-  };
-}
-
-export function validateStep(stepId, draft) {
-  switch (stepId) {
-    case "split":
-      return Boolean(draft?.split);
-    case "days":
-      return Array.isArray(draft?.days) && draft.days.length > 0;
-    case "review":
-      return true;
-    case "schedule":
-      return Array.isArray(draft?.schedule?.trainingDays) && draft.schedule.trainingDays.length > 0;
-    case "save":
-      return Boolean(draft?.metadata?.name);
-    default:
-      return false;
-  }
-export const PROGRAM_SCHEMA_VERSION = 2;
-
-const DRAFT_STORAGE_PREFIX = "programBuilderV2Draft:";
-const DEFAULT_GOAL = "hypertrophy";
-
-function getStorage() {
-  if (typeof globalThis === "undefined" || !globalThis.localStorage) return null;
-  return globalThis.localStorage;
-}
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-function isObject(value) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function toPositiveInt(value, fallback = 0) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) return fallback;
-  return Math.floor(numeric);
-}
-
-function toArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function normalizeExercise(exercise) {
-  const source = isObject(exercise) ? exercise : {};
-  const directSets = toPositiveInt(source.sets, 0);
-  const setList = toArray(source.setList).concat(toArray(source.loggedSets));
-  const listSets = setList.reduce((count, setEntry) => {
-    if (!isObject(setEntry)) return count;
-    const reps = Number(setEntry.reps);
-    return count + (Number.isFinite(reps) && reps >= 0 ? 1 : 1);
-  }, 0);
-
-  return {
-    ...source,
-    name: typeof source.name === "string" ? source.name : "",
-    muscle:
-      typeof source.muscle === "string"
-        ? source.muscle.trim().toLowerCase()
-        : typeof source.primaryMuscle === "string"
-        ? source.primaryMuscle.trim().toLowerCase()
-        : typeof source.muscleGroup === "string"
-        ? source.muscleGroup.trim().toLowerCase()
-        : "unknown",
-    sets: directSets || listSets,
-  };
-}
-
-function normalizeDay(day, index) {
-  const source = isObject(day) ? day : {};
-  const exercises = toArray(source.exercises).map(normalizeExercise);
-
-  return {
-    ...source,
-    id: source.id || `day-${index + 1}`,
-    name: typeof source.name === "string" ? source.name : `Day ${index + 1}`,
-    exercises,
-  };
-}
-
-function draftStorageKey(userId) {
-  return `${DRAFT_STORAGE_PREFIX}${userId || "anonymous"}`;
-}
-
-export function createEmptyDraft(userId) {
-  const now = new Date().toISOString();
-  return {
-    schemaVersion: PROGRAM_SCHEMA_VERSION,
-    programId: null,
-    userId,
-    name: "",
-    goal: "hypertrophy",
-    split: { type: "custom", daysPerWeek: 3 },
-    days: [],
-    schedule: { startDate: "", weekdays: [] },
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-export function normalizeDraft(draft) {
-  const base = createEmptyDraft(draft && draft.userId);
-  const source = isObject(draft) ? draft : {};
-
-  const normalized = {
-    ...base,
-    ...source,
-    schemaVersion: PROGRAM_SCHEMA_VERSION,
-    goal: typeof source.goal === "string" && source.goal.trim() ? source.goal : DEFAULT_GOAL,
-    split: {
-      ...base.split,
-      ...(isObject(source.split) ? source.split : {}),
-      daysPerWeek: toPositiveInt(source?.split?.daysPerWeek, base.split.daysPerWeek),
-    },
-    days: toArray(source.days).map(normalizeDay),
-    schedule: {
-      ...base.schedule,
-      ...(isObject(source.schedule) ? source.schedule : {}),
-      weekdays: toArray(source?.schedule?.weekdays)
-        .filter((weekday) => typeof weekday === "string")
-        .map((weekday) => weekday.trim())
-        .filter(Boolean),
-    },
-    createdAt: typeof source.createdAt === "string" && source.createdAt ? source.createdAt : nowIso(),
-    updatedAt: nowIso(),
-  };
-
-  return normalized;
-}
-
-export function saveDraft(userId, draft) {
-  const storage = getStorage();
-  const normalized = normalizeDraft({ ...draft, userId: draft?.userId || userId });
-
-  if (!storage) return normalized;
-
-  storage.setItem(draftStorageKey(userId), JSON.stringify(normalized));
-  return normalized;
-}
-
-export function loadDraft(userId) {
-  const storage = getStorage();
-  if (!storage) return createEmptyDraft(userId);
-
-  try {
-    const raw = storage.getItem(draftStorageKey(userId));
-    if (!raw) return createEmptyDraft(userId);
-    return normalizeDraft({ ...JSON.parse(raw), userId });
-  } catch (_error) {
-    return createEmptyDraft(userId);
-  }
-}
-
-export function clearDraft(userId) {
-  const storage = getStorage();
-  if (!storage) return;
-  storage.removeItem(draftStorageKey(userId));
-}
-
-export function computeProgramSummary(draft) {
-  const normalized = normalizeDraft(draft);
-  const setsByMuscle = {};
-  const muscleDayMap = {};
-
-  let totalExercises = 0;
-  let totalSets = 0;
-
-  normalized.days.forEach((day) => {
-    const seenToday = new Set();
-
-    day.exercises.forEach((exercise) => {
-      totalExercises += 1;
-      totalSets += exercise.sets;
-      setsByMuscle[exercise.muscle] = (setsByMuscle[exercise.muscle] || 0) + exercise.sets;
-      seenToday.add(exercise.muscle);
-    });
-
-    seenToday.forEach((muscle) => {
-      if (!muscleDayMap[muscle]) muscleDayMap[muscle] = new Set();
-      muscleDayMap[muscle].add(day.id);
-    });
-  });
-
-  const frequencyByMuscle = Object.fromEntries(
-    Object.entries(muscleDayMap).map(([muscle, days]) => [muscle, days.size])
-  );
-
-  const warnings = [];
-  if (!normalized.name.trim()) {
-    warnings.push({ code: "MISSING_NAME", message: "Program name is empty." });
-  }
-  if (normalized.days.length === 0) {
-    warnings.push({ code: "NO_DAYS", message: "No training days have been added." });
-  }
-  if (totalExercises === 0) {
-    warnings.push({ code: "NO_EXERCISES", message: "No exercises were added to this program." });
-  }
-  if (totalSets === 0 && totalExercises > 0) {
-    warnings.push({ code: "NO_SETS", message: "Exercises exist but no sets were configured." });
-  }
-
-  return {
-    totalDays: normalized.days.length,
-    totalExercises,
-    totalSets,
-    setsByMuscle,
-    frequencyByMuscle,
-    warnings,
-  };
-}
-
-export function validateStep(draft, stepId) {
-  const normalized = normalizeDraft(draft);
-  const summary = computeProgramSummary(normalized);
-  const errors = [];
-
-  switch (stepId) {
-    case "details":
-    case "program-details":
-      if (!normalized.name.trim()) errors.push("Program name is required.");
-      if (!normalized.goal) errors.push("Program goal is required.");
-      break;
-    case "split":
-      if (!normalized.split.type) errors.push("Split type is required.");
-      if (normalized.split.daysPerWeek < 1) errors.push("Days per week must be at least 1.");
-      break;
-    case "days":
-      if (summary.totalDays < 1) errors.push("Add at least one training day.");
-      if (summary.totalExercises < 1) errors.push("Add at least one exercise.");
-      break;
-    case "schedule":
-      if (!normalized.schedule.startDate) errors.push("Start date is required.");
-      if (normalized.schedule.weekdays.length < 1) errors.push("Select at least one weekday.");
-      break;
-    case "review":
-      if (summary.totalDays < 1 || summary.totalExercises < 1 || summary.totalSets < 1) {
-        errors.push("Program must include days, exercises, and sets before review.");
+    normalized.days.forEach(function (day) {
+      if (Array.isArray(day.exercises)) {
+        exerciseCount += day.exercises.length;
       }
-      break;
-    default:
-      if (summary.totalDays < 1) errors.push("Draft is incomplete.");
+    });
+
+    return {
+      name: normalized.name || "Untitled Program",
+      split: normalized.split && normalized.split.type ? normalized.split.type : "-",
+      goal: normalized.goal || "-",
+      dayCount: normalized.days.length,
+      exerciseCount: exerciseCount,
+      scheduledDays: normalized.schedule.weekdays.length,
+    };
   }
 
-  return {
-    stepId,
-    isValid: errors.length === 0,
-    errors,
-    warnings: summary.warnings,
+  function validateStep(stepId, draft) {
+    const normalized = normalizeDraft(draft);
+    switch (stepId) {
+      case "split":
+        return Boolean(normalized.split && normalized.split.type);
+      case "days":
+        return Array.isArray(normalized.days) && normalized.days.length > 0;
+      case "review":
+        return true;
+      case "schedule":
+        return normalized.schedule.weekdays.length > 0;
+      case "save":
+        return Boolean((normalized.name || "").trim());
+      default:
+        return false;
+    }
+  }
+
+  function toggleProgramBuilder(forceState) {
+    const panel =
+      global.document &&
+      (global.document.getElementById("programBuilderModal") ||
+        global.document.getElementById("programBuilder") ||
+        global.document.getElementById("programBuilderV2") ||
+        global.document.getElementById("programModal"));
+
+    if (!panel) return false;
+
+    if (typeof panel.showModal === "function" && typeof panel.close === "function") {
+      const shouldOpen = typeof forceState === "boolean" ? forceState : !panel.open;
+      if (shouldOpen && !panel.open) panel.showModal();
+      if (!shouldOpen && panel.open) panel.close();
+      return shouldOpen;
+    }
+
+    const isVisible = panel.style.display !== "none";
+    const shouldShow = typeof forceState === "boolean" ? forceState : !isVisible;
+    panel.style.display = shouldShow ? "" : "none";
+    panel.classList.toggle("open", shouldShow);
+    return shouldShow;
+  }
+
+  function loadProgramTemplates() {
+    const programs = loadPrograms(global);
+    if (!global.document) return programs;
+
+    const select = global.document.getElementById("programTemplateSelect") || global.document.getElementById("programDropdown");
+    if (select) {
+      select.innerHTML = "";
+      const placeholder = global.document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Select program";
+      select.appendChild(placeholder);
+
+      programs.forEach(function (program, index) {
+        const option = global.document.createElement("option");
+        option.value = String(index);
+        option.textContent = program.name || "Unnamed program";
+        select.appendChild(option);
+      });
+    }
+
+    return programs;
+  }
+
+  function initProgramBuilder() {
+    loadProgramTemplates();
+    return true;
+  }
+
+  const api = {
+    PROGRAM_STORAGE_KEY,
+    PROGRAM_DRAFT_STORAGE_KEY,
+    PROGRAM_SCHEMA_VERSION,
+    defaultProgramDraft,
+    normalizeProgram,
+    summarizeProgram,
+    loadPrograms,
+    savePrograms,
+    upsertProgram,
+    createEmptyDraft,
+    normalizeDraft,
+    loadDraft,
+    saveDraft,
+    clearDraft,
+    computeProgramSummary,
+    validateStep,
+    toggleProgramBuilder,
+    loadProgramTemplates,
+    initProgramBuilder,
   };
-}
+
+  global.programBuilderV2Core = api;
+
+  // Required global assignments for legacy callers.
+  global.toggleProgramBuilder = toggleProgramBuilder;
+  global.loadProgramTemplates = loadProgramTemplates;
+  global.initProgramBuilder = initProgramBuilder;
+
+  if (typeof module === "object" && module.exports) {
+    module.exports = api;
+  }
+})(typeof window !== "undefined" ? window : typeof globalThis !== "undefined" ? globalThis : this);
