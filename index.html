@@ -7801,7 +7801,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   window.loadTemplateDropdown = loadTemplateDropdown;
   window.showHistoryMiniTab = showHistoryMiniTab;
   window.renderWorkoutHistory = renderWorkoutHistory;
-  window.addDayToProgram = addDayToProgram;
+  if (typeof window.addDayToProgram !== "function") window.addDayToProgram = () => {};
   // Legacy exports kept only for backwards compatibility
   if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
     window.loadProgramTemplates = loadProgramTemplates;
