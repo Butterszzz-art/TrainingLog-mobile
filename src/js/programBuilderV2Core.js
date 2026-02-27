@@ -320,6 +320,12 @@
   global.loadProgramTemplates = loadProgramTemplates;
   global.initProgramBuilder = initProgramBuilder;
 
+  if (typeof window !== "undefined") {
+    window.toggleProgramBuilder = toggleProgramBuilder;
+    window.loadProgramTemplates = loadProgramTemplates;
+    window.initProgramBuilder = initProgramBuilder;
+  }
+
   if (typeof module === "object" && module.exports) {
     module.exports = api;
   }

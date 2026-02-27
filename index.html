@@ -782,6 +782,10 @@
 </div>
 
 <div id="programTab" class="tab-content">
+  <div id="programTabContent">
+    <select id="programTemplateSelect" style="display:none;"></select>
+    <div id="programBuilderContainer" style="display:none;"></div>
+  </div>
   <div id="programBuilderPanel" class="panel active"><div id="programTabReactRoot"></div></div>
   <div id="programListPanel" class="panel"></div>
 </div>
@@ -1741,6 +1745,12 @@ function showTab(tabName) {
       break;
     case 'programTab':
       loadProgramTemplates();
+      if (typeof initProgramBuilder === 'function') {
+        initProgramBuilder();
+      }
+      if (typeof toggleProgramBuilder === 'function') {
+        toggleProgramBuilder(true);
+      }
       if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
         loadProgramDropdown();
       }
