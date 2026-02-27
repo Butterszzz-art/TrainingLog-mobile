@@ -1396,7 +1396,7 @@
 <script src="weightTab.js"></script>
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
-<script src="src/js/programBuilderV2Core.js"></script>
+<script type="module" src="src/js/programBuilderV2Core.js"></script>
 <script>
 
 let currentUser = null;
@@ -7816,7 +7816,8 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   if (typeof renderCrossfitWorkouts === 'function') {
     window.renderCrossfitWorkouts = renderCrossfitWorkouts;
   }
-  window.toggleProgramBuilder = toggleProgramBuilder;
+  window.toggleProgramBuilder =
+    typeof window.toggleProgramBuilder === 'function' ? window.toggleProgramBuilder : () => false;
 window.toggleTemplateBuilder = toggleTemplateBuilder;
 window.addExerciseToTemplate = addExerciseToTemplate;
 window.saveSimpleTemplate = saveSimpleTemplate;
@@ -7912,7 +7913,7 @@ window.applyTheme = applyTheme;
       });
     </script>
 
-    <script src="ProgramTabV2.js"></script>
+    <script type="module" src="ProgramTabV2.js"></script>
 
 
 
