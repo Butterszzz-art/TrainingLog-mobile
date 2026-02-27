@@ -784,7 +784,9 @@
 <div id="programTab" class="tab-content">
   <div id="programTabContent">
     <select id="programTemplateSelect" style="display:none;"></select>
-    <div id="programBuilderContainer" style="display:none;"></div>
+    <div id="programBuilderContainer">
+      <!-- ProgramTabV2 will render here -->
+    </div>
   </div>
   <div id="programBuilderPanel" class="panel active"><div id="programTabReactRoot"></div></div>
   <div id="programListPanel" class="panel"></div>
@@ -1401,6 +1403,7 @@
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
 <script type="module" src="src/js/programBuilderV2Core.js"></script>
+<script type="module" src="src/js/ProgramTabV2.js"></script>
 <script>
 
 let currentUser = null;
@@ -7924,10 +7927,6 @@ window.applyTheme = applyTheme;
         showWorkoutProgress();
       });
     </script>
-
-    <script type="module" src="ProgramTabV2.js"></script>
-
-
 
 </body>
 </html>
