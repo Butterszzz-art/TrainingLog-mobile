@@ -179,9 +179,83 @@
     max-height: none;
   }
 
-  #programBuilderV2 .summary-collapsible {
+#programBuilderV2 .summary-collapsible {
     display: block;
   }
+}
+
+.pbv2-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 320px;
+  gap: 12px;
+}
+
+.pbv2-stepper {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.pbv2-step {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, .1);
+  background: white;
+}
+
+.pbv2-step.active {
+  border-color: rgba(0, 0, 0, .3);
+  font-weight: 700;
+}
+
+.pbv2-paneTitle {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.pbv2-dayRow {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  margin-bottom: 8px;
+  cursor: pointer;
+  background: white;
+}
+
+.pbv2-dayRow.active {
+  border-color: rgba(0, 0, 0, .25);
+}
+
+.pbv2-dayActions button {
+  margin-left: 6px;
+}
+
+.pbv2-exCard {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  margin-top: 10px;
+  background: white;
+}
+
+.pbv2-exHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pbv2-setRow {
+  display: grid;
+  grid-template-columns: 70px 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.pbv2-addDay {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
 }
 
 /* sidebar background is dark, force link/text to white */
