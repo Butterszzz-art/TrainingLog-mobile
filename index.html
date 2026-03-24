@@ -1796,7 +1796,9 @@ function showTab(tabName) {
       renderGoalProgressList();
       break;
     case 'logHistoryTab':
-      showHistoryMiniTab('workout');
+      if (typeof showHistoryMiniTab === 'function') {
+        showHistoryMiniTab('workout');
+      }
       break;
     case 'settingsTab':
       if (typeof initSettingsPage === 'function') {
@@ -7275,33 +7277,72 @@ function addMacroHistoryEntry(date, meals, totals) {
 }
 
 function renderMacroHistory() {
-  const key = `macroHistory_${currentUser}`;
-  const macroHistory = JSON.parse(localStorage.getItem(key)) || [];
   const container = document.getElementById("macroHistoryContainer");
+  if (!container) return;
+
+  const userKey = typeof currentUser === 'string' && currentUser ? `macroHistory_${currentUser}` : null;
+  const fallbackKeys = [userKey, 'macroHistory_', 'macroHistory'].filter(Boolean);
+  let macroHistory = [];
+
+  for (const key of fallbackKeys) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+      if (Array.isArray(parsed) && parsed.length) {
+        macroHistory = parsed;
+        break;
+      }
+    } catch (error) {
+      console.warn('[MacroHistory] Failed to parse key:', key, error);
+    }
+  }
+
+  if (!macroHistory.length) {
+    container.innerHTML = '<p style="opacity:.7;">No macro history saved yet.</p>';
+    return;
+  }
+
   container.innerHTML = "";
   macroHistory.slice().reverse().forEach(entry => {
     const div = document.createElement("div");
-    const mealsHtml = entry.meals.map((m, i) => `Meal ${i + 1}: P${m.protein}, C${m.carbs}, F${m.fats}`).join("<br>");
+    const meals = Array.isArray(entry?.meals) ? entry.meals : [];
+    const mealsHtml = meals.length
+      ? meals.map((m, i) => `Meal ${i + 1}: P${m?.protein || 0}, C${m?.carbs || 0}, F${m?.fats || 0}`).join("<br>")
+      : 'No meal details saved.';
     const totals = entry.totals || { protein:0, carbs:0, fats:0 };
     const cals = totals.protein * 4 + totals.carbs * 4 + totals.fats * 9;
-    div.innerHTML = `<strong>${entry.date}</strong><br>${mealsHtml}<br>Total: ${cals} kcal`;
+    div.innerHTML = `<strong>${entry?.date || 'Unknown date'}</strong><br>${mealsHtml}<br>Total: ${cals} kcal`;
     container.appendChild(div);
   });
 }
 
-function showHistoryMiniTab(tab) {
-  const workoutTab = document.getElementById("workoutHistoryMiniTab");
-  const macroTab = document.getElementById("macroHistoryMiniTab");
-  if (tab === "macro") {
-    workoutTab.style.display = "none";
-    macroTab.style.display = "block";
-    renderMacroHistory();
-  } else {
-    macroTab.style.display = "none";
-    workoutTab.style.display = "block";
-    if (typeof syncLocalHistoryFromWorkouts === 'function') {
-      syncLocalHistoryFromWorkouts();
+function showHistoryMiniTab(type) {
+  const resolvedType = type === 'macro' ? 'macro' : 'workout';
+  const workoutMiniTab = document.getElementById("workoutHistoryMiniTab");
+  const macroMiniTab = document.getElementById("macroHistoryMiniTab");
+  const workoutPanel = document.getElementById("historyWorkoutPanel");
+  const macroPanel = document.getElementById("historyMacroPanel");
+
+  if (workoutPanel) workoutPanel.classList.toggle('active', resolvedType === 'workout');
+  if (macroPanel) macroPanel.classList.toggle('active', resolvedType === 'macro');
+
+  if (workoutMiniTab) {
+    workoutMiniTab.style.display = resolvedType === 'workout' ? 'block' : 'none';
+  }
+  if (macroMiniTab) {
+    macroMiniTab.style.display = resolvedType === 'macro' ? 'block' : 'none';
+  }
+
+  if (resolvedType === "macro") {
+    if (typeof renderMacroHistory === 'function') {
+      renderMacroHistory();
     }
+    return;
+  }
+
+  if (typeof syncLocalHistoryFromWorkouts === 'function') {
+    syncLocalHistoryFromWorkouts();
+  }
+  if (typeof renderWorkoutHistory === 'function') {
     renderWorkoutHistory();
   }
 }
@@ -7834,6 +7875,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   window.loadTemplateDropdown = loadTemplateDropdown;
   window.showHistoryMiniTab = showHistoryMiniTab;
   window.renderWorkoutHistory = renderWorkoutHistory;
+  window.renderMacroHistory = renderMacroHistory;
   if (typeof window.addDayToProgram !== "function") window.addDayToProgram = () => {};
   // Legacy exports kept only for backwards compatibility
   if (!window.FEATURES?.PROGRAM_BUILDER_V2) {

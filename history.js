@@ -518,21 +518,23 @@ export async function renderWorkoutHistory(containerEl = document.getElementById
   if (!containerEl) return;
 
   const username = getCurrentUserId();
-  if (!username) return;
 
   containerEl.innerHTML = '<p style="opacity:.7;">Loading workout history…</p>';
 
-  const currentUserId = username;
+  const currentUserId = username || null;
   let items = [];
   try {
-    if (!window.SERVER_URL) {
-      throw new Error('SERVER_URL not configured');
+    if (!window.SERVER_URL || !currentUserId) {
+      throw new Error('Backend unavailable for history fetch');
     }
     items = await fetchWorkoutHistoryFromBackend(currentUserId);
   } catch (error) {
     console.warn('[History] Falling back to local history:', error);
     items = loadLogsFromLocalStorage()
-      .filter(log => !log?.userId || log.userId === currentUserId)
+      .filter(log => {
+        if (!currentUserId) return true;
+        return !log?.userId || log.userId === currentUserId;
+      })
       .map(log => ({
         id: log.id || generateLocalId(),
         username: log.userId,
