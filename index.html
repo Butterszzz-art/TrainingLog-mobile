@@ -726,6 +726,7 @@
       <li><a href="#" data-target="homeTab">🏠 Home</a></li>
       <li><a href="#" data-target="logTab">📋 Training Log</a></li>
       <li><a href="#" data-target="weightTab">⚖️ Bodyweight</a></li>
+      <li><a href="#" data-target="checkInTab">🧾 Check-In</a></li>
       <li><a href="#" data-target="cardioTab">🏃 Cardio</a></li>
       <li><a href="#" data-target="macroTab">🍽️ Macros</a></li>
       <li><a href="#" data-target="crossfitTab">💪 CrossFit</a></li>
@@ -879,6 +880,34 @@
     </div>
     <div id="weightChartPanel" class="panel">
       <div id="weightChartPanelContent"></div>
+    </div>
+  </div>
+
+  <div id="checkInTab" class="tab-content">
+    <div class="panel active">
+      <h2>Weekly Bodybuilding Check-In</h2>
+      <p style="margin-top:-6px;">Track feedback by phase and week to make prep emotionally sticky.</p>
+      <div id="checkInNextDate" class="home-mission-progress"></div>
+
+      <input type="date" id="checkInDateInput">
+      <input type="text" id="checkInPhaseInput" placeholder="Phase (contest prep, improvement, mini cut)">
+      <input type="text" id="checkInWeekLabelInput" placeholder="Week label (auto if blank)">
+      <input type="number" step="0.1" id="checkInBodyweightInput" placeholder="Bodyweight">
+      <input type="number" step="0.1" id="checkInWaistInput" placeholder="Waist">
+      <input type="number" min="1" max="10" id="checkInEnergyInput" placeholder="Energy (1-10)">
+      <input type="number" min="1" max="10" id="checkInHungerInput" placeholder="Hunger (1-10)">
+      <input type="number" min="1" max="10" id="checkInSleepInput" placeholder="Sleep (1-10)">
+      <input type="number" min="1" max="10" id="checkInStressInput" placeholder="Stress (1-10)">
+      <input type="number" min="1" max="10" id="checkInDigestionInput" placeholder="Digestion (1-10)">
+      <input type="number" min="1" max="10" id="checkInTrainingPerformanceInput" placeholder="Training Performance (1-10)">
+      <textarea id="checkInNotesInput" placeholder="Notes"></textarea>
+      <input type="text" id="checkInFrontPhotoInput" placeholder="Front photo placeholder URL/path">
+      <input type="text" id="checkInSidePhotoInput" placeholder="Side photo placeholder URL/path">
+      <input type="text" id="checkInBackPhotoInput" placeholder="Back photo placeholder URL/path">
+      <button onclick="saveWeeklyCheckIn()">Save Weekly Check-In</button>
+
+      <h3>Check-In Timeline</h3>
+      <div id="checkInTimeline"></div>
     </div>
   </div>
   
@@ -1549,6 +1578,7 @@
 <script src="cardioTab.js"></script>
 <script src="weightTab.js"></script>
 <script src="prepMode.js"></script>
+<script src="checkinEngine.js"></script>
 <script src="dailyMissionEngine.js"></script>
 <script src="complianceEngine.js"></script>
 <script src="lifestyle.js"></script>
@@ -1907,6 +1937,9 @@ function showTab(tabName) {
       break;
     case 'weightTab':
       renderWeights();
+      break;
+    case 'checkInTab':
+      renderCheckInTab();
       break;
     case 'cardioTab':
       renderCardio();
@@ -6059,8 +6092,16 @@ function renderWeeklyComplianceCard(profile, username) {
   `;
 }
 
-function renderUpcomingPrepEvents(profile) {
-  const checkIn = getSafeDisplayValue(profile.nextCheckIn, 'Not scheduled');
+function getNextScheduledCheckIn(profile, username) {
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  if (window.checkinEngine?.getNextCheckInDate) {
+    return window.checkinEngine.getNextCheckInDate(phaseState);
+  }
+  return profile?.nextCheckIn || 'Not scheduled';
+}
+
+function renderUpcomingPrepEvents(profile, username) {
+  const checkIn = getSafeDisplayValue(getNextScheduledCheckIn(profile, username), 'Not scheduled');
   const refeed = getSafeDisplayValue(profile.nextRefeed, 'TBD');
   const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'TBD');
   const countdown = formatCountdownDays(profile.showDate);
@@ -6105,12 +6146,108 @@ function renderHomeDashboard() {
     renderStatusSummary(profile, username),
     renderTodaysMission(profile, username),
     renderWeeklyComplianceCard(profile, username),
-    renderUpcomingPrepEvents(profile),
+    renderUpcomingPrepEvents(profile, username),
     renderRewardSummary(profile)
   ].join('');
 }
 
   
+
+function getCheckInPhaseState() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  return window.prepModeApi?.getCurrentPhaseState?.(userId) || {};
+}
+
+function renderCheckInTab() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId || !window.checkinEngine) return;
+
+  const phaseState = getCheckInPhaseState();
+  const nextDate = window.checkinEngine.getNextCheckInDate(phaseState);
+  const nextDateEl = document.getElementById('checkInNextDate');
+  if (nextDateEl) {
+    nextDateEl.textContent = `Next scheduled check-in: ${nextDate}`;
+  }
+
+  const dateInput = document.getElementById('checkInDateInput');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().slice(0, 10);
+  }
+
+  const phaseInput = document.getElementById('checkInPhaseInput');
+  if (phaseInput && !phaseInput.value) {
+    phaseInput.value = phaseState.mode || 'improvement';
+  }
+
+  const checkIns = window.checkinEngine.loadCheckIns(userId);
+  const grouped = checkIns.reduce((acc, entry) => {
+    const key = entry.weekLabel || 'Unlabeled Week';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(entry);
+    return acc;
+  }, {});
+
+  const timeline = document.getElementById('checkInTimeline');
+  if (!timeline) return;
+  const labels = Object.keys(grouped);
+  if (!labels.length) {
+    timeline.innerHTML = '<p class="home-mission-progress">No check-ins yet. Save your first weekly check-in.</p>';
+    return;
+  }
+
+  timeline.innerHTML = labels.map((label) => {
+    const items = grouped[label].map((entry) => `
+      <li>
+        <strong>${entry.date}</strong> — BW: ${entry.bodyweight || '—'}, Waist: ${entry.waist || '—'}, Energy: ${entry.energy || '—'}, Training: ${entry.trainingPerformance || '—'}
+        <div style="font-size:0.9rem; opacity:0.85;">${entry.notes || 'No notes logged.'}</div>
+      </li>
+    `).join('');
+
+    return `
+      <section class="home-dashboard-card" style="margin-bottom:12px; text-align:left;">
+        <h4 style="margin:0 0 8px; text-transform:capitalize;">${label}</h4>
+        <ul style="margin:0; padding-left:16px;">${items}</ul>
+      </section>
+    `;
+  }).join('');
+}
+
+function saveWeeklyCheckIn() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId || !window.checkinEngine) return;
+
+  const phaseState = getCheckInPhaseState();
+  const dateValue = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const phaseValue = document.getElementById('checkInPhaseInput')?.value || phaseState.mode || 'improvement';
+  const manualWeekLabel = document.getElementById('checkInWeekLabelInput')?.value?.trim();
+
+  const draft = {
+    date: dateValue,
+    phase: phaseValue,
+    bodyweight: document.getElementById('checkInBodyweightInput')?.value || '',
+    waist: document.getElementById('checkInWaistInput')?.value || '',
+    energy: document.getElementById('checkInEnergyInput')?.value || '',
+    hunger: document.getElementById('checkInHungerInput')?.value || '',
+    sleep: document.getElementById('checkInSleepInput')?.value || '',
+    stress: document.getElementById('checkInStressInput')?.value || '',
+    digestion: document.getElementById('checkInDigestionInput')?.value || '',
+    trainingPerformance: document.getElementById('checkInTrainingPerformanceInput')?.value || '',
+    notes: document.getElementById('checkInNotesInput')?.value || '',
+    frontPhoto: document.getElementById('checkInFrontPhotoInput')?.value || '',
+    sidePhoto: document.getElementById('checkInSidePhotoInput')?.value || '',
+    backPhoto: document.getElementById('checkInBackPhotoInput')?.value || ''
+  };
+
+  draft.weekLabel = manualWeekLabel || window.checkinEngine.getWeekLabelForCheckIn(draft, phaseState);
+  window.checkinEngine.saveCheckIn(userId, draft, phaseState);
+
+  const weekLabelInput = document.getElementById('checkInWeekLabelInput');
+  if (weekLabelInput) weekLabelInput.value = draft.weekLabel;
+  renderCheckInTab();
+}
+
+window.saveWeeklyCheckIn = saveWeeklyCheckIn;
+
 // ===== TRAINING LOG & TEMPLATES =====
 
 function toggleWorkoutDetails(index) {
