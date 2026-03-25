@@ -710,6 +710,7 @@
     <div id="streakCounter" class="streak-counter"></div>
   </div>
 
+  <div id="gamificationCard" class="gamification-panel" style="margin-top:12px;"></div>
   
         <button id="addLogBtn" onclick="addLogEntry()" disabled>Add to Log</button>
         <button id="saveTemplateBtn" onclick="saveWorkoutAsTemplate()" style="margin-left: 10px;">Save as Template</button>
@@ -1151,6 +1152,14 @@
         </select>
         <div id="prPanel"></div>
         <div id="milestoneBadges"></div>
+        <div id="gamificationBadgeSection" class="gamification-panel" style="margin-top:12px;">
+          <h3 style="margin:0 0 8px;">Badge Gallery</h3>
+          <div id="gamificationBadgeGallery" class="gamification-badge-grid"></div>
+        </div>
+        <div id="gamificationEventsSection" class="gamification-panel" style="margin-top:12px;">
+          <h3 style="margin:0 0 8px;">Recent Events</h3>
+          <div id="gamificationEventsFeed" class="gamification-events-feed"></div>
+        </div>
       </aside>
       <button onclick="exportCSV()">Export CSV</button>
       <div id="dashboardPRSummary" class="panel"></div>
@@ -1451,6 +1460,9 @@ function forceFreshLogin() {
 
 function setCurrentUser(user) {
   currentUser = user && typeof user === 'object' ? user.username : user;
+  if (typeof window.renderGamificationUI === 'function' && currentUser) {
+    window.renderGamificationUI(currentUser);
+  }
 }
 
 function getActiveUsername() {
@@ -1756,6 +1768,9 @@ function showTab(tabName) {
       break;
     case 'logTab':
       if (window.renderWorkouts) renderWorkouts();
+      if (typeof window.renderGamificationUI === 'function' && currentUser) {
+        window.renderGamificationUI(currentUser);
+      }
       break;
     case 'weightTab':
       renderWeights();
@@ -1793,7 +1808,12 @@ function showTab(tabName) {
     case 'progressTab':
       showWorkoutProgress();
       renderDashboardPRSummary();
-      renderGoalProgressList();
+      if (typeof renderGoalProgressList === 'function') {
+        renderGoalProgressList();
+      }
+      if (typeof window.renderGamificationUI === 'function' && currentUser) {
+        window.renderGamificationUI(currentUser);
+      }
       break;
     case 'logHistoryTab':
       if (typeof showHistoryMiniTab === 'function') {
@@ -2176,7 +2196,9 @@ function addLogEntry() {
   }
   renderMilestones();
   renderGoalBar();
-  renderGoalProgressList();
+  if (typeof renderGoalProgressList === 'function') {
+    renderGoalProgressList();
+  }
   showCoachInsights();
   saveUserExercise(exercise);
   trackWorkoutDate(date);
@@ -6654,7 +6676,9 @@ async function submitSmartGoalForm(event) {
   event.target.reset();
   if (feedback) feedback.textContent = '✅ SMART goal saved.';
   renderGoalBar();
-  renderGoalProgressList();
+  if (typeof renderGoalProgressList === 'function') {
+    renderGoalProgressList();
+  }
 }
 
 function initSmartGoalForm() {
@@ -6667,7 +6691,9 @@ function initSmartGoalForm() {
 function removeGoal(goalId) {
   deleteGoal(currentUser, goalId);
   renderGoalBar();
-  renderGoalProgressList();
+  if (typeof renderGoalProgressList === 'function') {
+    renderGoalProgressList();
+  }
 }
 
 function renderGoalProgressList() {
@@ -7843,7 +7869,9 @@ function renderLogHistory(logs) {
   renderPRs();
   renderMilestones();
   renderGoalBar();
-  renderGoalProgressList();
+  if (typeof renderGoalProgressList === 'function') {
+    renderGoalProgressList();
+  }
   initSmartGoalForm();
   if (typeof updateStreakCounter === 'function') updateStreakCounter();
   scheduleStreakReminderJob();
