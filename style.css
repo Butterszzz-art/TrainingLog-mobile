@@ -1152,3 +1152,45 @@ body.theme-dark .set-row {
   background: #111;
   color: #fff;
 }
+
+.gamification-panel {
+  border: 1px solid #e3e8f5;
+  border-radius: 10px;
+  background: #f8faff;
+  padding: 10px;
+}
+
+.gamification-badge-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gamification-badge-pill {
+  background: #ffffff;
+  border: 1px solid #dbe2ff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.gamification-events-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gamification-event-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+
+.gamification-event-item small {
+  color: #65708a;
+}
