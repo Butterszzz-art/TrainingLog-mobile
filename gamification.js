@@ -4,26 +4,124 @@
   const MAX_TRACKED_IDS = 600;
 
   const XP_RULES = Object.freeze({
-    WORKOUT_COMPLETE: 25,
-    EXERCISE_COMPLETE: 8,
+    WORKOUT_COMPLETE: 40,
+    EXERCISE_COMPLETE: 10,
     SET_COMPLETE: 2,
-    PR_HIT: 30,
-    STREAK_DAY: 10,
-    ACHIEVEMENT_BONUS: 40
+    PR_HIT: 25,
+    STREAK_BONUS_3: 15,
+    STREAK_BONUS_7: 30,
+    STREAK_BONUS_30: 100
   });
 
-  const ACHIEVEMENTS = {
-    first_workout: { title: 'First Workout', description: 'Finish your first resistance workout.', icon: '🎯', xp: 40 },
-    seven_day_streak: { title: '7-Day Streak', description: 'Train 7 days in a row.', icon: '🔥', xp: 80 },
-    ten_workouts: { title: 'Ten Workouts', description: 'Complete 10 resistance sessions.', icon: '🔟', xp: 120 },
-    first_pr: { title: 'First PR', description: 'Set your first personal record.', icon: '🏆', xp: 70 },
-    squat_specialist: { title: 'Squat Specialist', description: 'Log 10 squat sessions.', icon: '🦵', xp: 90 },
-    bench_specialist: { title: 'Bench Specialist', description: 'Log 10 bench sessions.', icon: '💪', xp: 90 },
-    deadlift_specialist: { title: 'Deadlift Specialist', description: 'Log 10 deadlift sessions.', icon: '🏋️', xp: 90 },
-    consistency_30: { title: 'Consistency 30', description: 'Reach a 30-day training streak.', icon: '📅', xp: 200 },
-    volume_beast: { title: 'Volume Beast', description: 'Accumulate 100,000 total session volume.', icon: '🐉', xp: 200 },
-    template_builder: { title: 'Template Builder', description: 'Save your first workout template.', icon: '🧱', xp: 50 }
-  };
+  const LEVEL_FORMULA = Object.freeze({
+    BASE: 100,
+    EXPONENT: 1.25
+  });
+
+  const BADGE_REGISTRY = Object.freeze({
+    first_workout: {
+      title: 'First Workout',
+      description: 'Finish your first resistance workout.',
+      icon: '🎯',
+      xp: 50,
+      metric: 'total_workouts_completed',
+      target: 1,
+      unit: 'workouts'
+    },
+    ten_workouts: {
+      title: '10 Workouts',
+      description: 'Complete 10 resistance sessions.',
+      icon: '🔟',
+      xp: 75,
+      metric: 'total_workouts_completed',
+      target: 10,
+      unit: 'workouts'
+    },
+    fifty_workouts: {
+      title: '50 Workouts',
+      description: 'Complete 50 resistance sessions.',
+      icon: '💯',
+      xp: 150,
+      metric: 'total_workouts_completed',
+      target: 50,
+      unit: 'workouts'
+    },
+    first_pr_badge: {
+      title: 'First PR',
+      description: 'Hit your first personal record.',
+      icon: '🏆',
+      xp: 0,
+      metric: 'pr_count',
+      target: 1,
+      unit: 'PRs'
+    },
+    pr_machine: {
+      title: 'PR Machine',
+      description: 'Set 10 personal records.',
+      icon: '🚀',
+      xp: 0,
+      metric: 'pr_count',
+      target: 10,
+      unit: 'PRs'
+    },
+    set_grinder: {
+      title: 'Set Grinder',
+      description: 'Complete 250 total sets.',
+      icon: '🧱',
+      xp: 0,
+      metric: 'total_sets_completed',
+      target: 250,
+      unit: 'sets'
+    },
+    squat_specialist: {
+      title: 'Squat Specialist',
+      description: 'Log 10 squat sessions.',
+      icon: '🦵',
+      xp: 0,
+      metric: 'exercise_specific_milestone',
+      exerciseKey: 'squat',
+      target: 10,
+      unit: 'squat sessions'
+    },
+    bench_specialist: {
+      title: 'Bench Specialist',
+      description: 'Log 10 bench sessions.',
+      icon: '💪',
+      xp: 0,
+      metric: 'exercise_specific_milestone',
+      exerciseKey: 'bench',
+      target: 10,
+      unit: 'bench sessions'
+    },
+    deadlift_specialist: {
+      title: 'Deadlift Specialist',
+      description: 'Log 10 deadlift sessions.',
+      icon: '🏋️',
+      xp: 0,
+      metric: 'exercise_specific_milestone',
+      exerciseKey: 'deadlift',
+      target: 10,
+      unit: 'deadlift sessions'
+    },
+    streak_7: {
+      title: '7-Day Streak',
+      description: 'Reach a 7-day training streak.',
+      icon: '🔥',
+      xp: 0,
+      metric: 'streak_length',
+      target: 7,
+      unit: 'days'
+    },
+    streak_30: {
+      title: '30-Day Streak',
+      description: 'Reach a 30-day training streak.',
+      icon: '📅',
+      xp: 0,
+      metric: 'streak_length',
+      target: 30,
+      unit: 'days'
+    }
+  });
 
   function getTodayIsoDate(dateLike) {
     const d = dateLike ? new Date(dateLike) : new Date();
@@ -48,17 +146,22 @@
     return Array.isArray(value) ? value : [];
   }
 
+  function getXpNeededForNextLevel(level) {
+    const safeLevel = Math.max(1, Number(level) || 1);
+    return Math.round(LEVEL_FORMULA.BASE * Math.pow(safeLevel, LEVEL_FORMULA.EXPONENT));
+  }
+
   function getLevelForXp(totalXp) {
     const xp = Math.max(0, Number(totalXp) || 0);
     let level = 1;
-    let requiredToNext = 100;
+    let requiredToNext = getXpNeededForNextLevel(level);
     let consumed = 0;
 
     while (xp >= consumed + requiredToNext) {
       consumed += requiredToNext;
       level += 1;
-      requiredToNext = Math.floor(requiredToNext * 1.18 + 20);
-      if (level > 250) break;
+      requiredToNext = getXpNeededForNextLevel(level);
+      if (level > 500) break;
     }
 
     return {
@@ -82,16 +185,16 @@
       unlockedAchievements: [],
       recentEvents: [],
       weeklyXp: { weekKey: getWeekKey(), amount: 0 },
+      todayXp: { dayKey: getTodayIsoDate(), amount: 0 },
       lastWorkoutDate: null,
       completedWorkoutCount: 0,
       totalSetsCompleted: 0,
       totalExercisesCompleted: 0,
       totalPRs: 0,
-      totalVolume: 0,
       exerciseCounts: {},
       rewardedWorkoutIds: [],
       rewardedPREventIds: [],
-      streakGraceDays: 0
+      rewardedStreakMilestones: []
     };
   }
 
@@ -103,10 +206,14 @@
     merged.recentEvents = ensureArray(merged.recentEvents).slice(-MAX_RECENT_EVENTS);
     merged.rewardedWorkoutIds = ensureArray(merged.rewardedWorkoutIds).slice(-MAX_TRACKED_IDS);
     merged.rewardedPREventIds = ensureArray(merged.rewardedPREventIds).slice(-MAX_TRACKED_IDS);
+    merged.rewardedStreakMilestones = ensureArray(merged.rewardedStreakMilestones);
     merged.exerciseCounts = typeof merged.exerciseCounts === 'object' && merged.exerciseCounts ? merged.exerciseCounts : {};
 
     if (!merged.weeklyXp || typeof merged.weeklyXp !== 'object') {
       merged.weeklyXp = { weekKey: getWeekKey(), amount: 0 };
+    }
+    if (!merged.todayXp || typeof merged.todayXp !== 'object') {
+      merged.todayXp = { dayKey: getTodayIsoDate(), amount: 0 };
     }
 
     const levelState = getLevelForXp(merged.totalXp);
@@ -152,15 +259,91 @@
     state.recentEvents = [...ensureArray(state.recentEvents), newEvent].slice(-MAX_RECENT_EVENTS);
   }
 
-  function maybeToast(message) {
-    if (!message) return;
-    if (typeof globalScope.showToast === 'function') {
-      globalScope.showToast(message);
-      return;
+  function ensureCelebrationContainer() {
+    if (typeof document === 'undefined') return null;
+    let root = document.getElementById('gamificationCelebrationStack');
+    if (root) return root;
+
+    root = document.createElement('div');
+    root.id = 'gamificationCelebrationStack';
+    root.style.position = 'fixed';
+    root.style.right = '16px';
+    root.style.bottom = '16px';
+    root.style.display = 'flex';
+    root.style.flexDirection = 'column';
+    root.style.gap = '8px';
+    root.style.zIndex = '3000';
+    root.style.maxWidth = '280px';
+    document.body?.appendChild(root);
+    return root;
+  }
+
+  function showCelebration(type, message) {
+    if (!message || typeof document === 'undefined') return;
+    const root = ensureCelebrationContainer();
+    if (!root) return;
+
+    const card = document.createElement('div');
+    card.className = 'gamification-celebration-item';
+    const palette = {
+      xp: '#1d4ed8',
+      badge: '#7c3aed',
+      level_up: '#16a34a'
+    };
+
+    card.textContent = message;
+    card.style.background = palette[type] || '#334155';
+    card.style.color = '#fff';
+    card.style.padding = '10px 12px';
+    card.style.borderRadius = '10px';
+    card.style.fontSize = '0.88rem';
+    card.style.boxShadow = '0 6px 18px rgba(15,23,42,0.3)';
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(8px)';
+    card.style.transition = 'all 150ms ease';
+    root.appendChild(card);
+
+    requestAnimationFrame(() => {
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+    });
+
+    setTimeout(() => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(6px)';
+      setTimeout(() => card.remove(), 180);
+    }, 2200);
+  }
+
+  function normalizeXpBuckets(state, dateLike) {
+    const dayKey = getTodayIsoDate(dateLike);
+    const weekKey = getWeekKey(dateLike);
+
+    if (!state.todayXp || state.todayXp.dayKey !== dayKey) {
+      state.todayXp = { dayKey, amount: 0 };
     }
-    if (typeof globalScope.alert === 'function') {
-      globalScope.alert(message);
+    if (!state.weeklyXp || state.weeklyXp.weekKey !== weekKey) {
+      state.weeklyXp = { weekKey, amount: 0 };
     }
+  }
+
+  function addXp(state, amount, reason, metadata) {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    if (!safeAmount) return;
+
+    normalizeXpBuckets(state, metadata?.date);
+    state.totalXp += safeAmount;
+    state.todayXp.amount += safeAmount;
+    state.weeklyXp.amount += safeAmount;
+
+    pushRecentEvent(state, {
+      type: 'xp',
+      message: `+${safeAmount} XP ${reason || 'Progress'}`,
+      xp: safeAmount,
+      metadata: metadata || null
+    });
+
+    showCelebration('xp', `+${safeAmount} XP • ${reason || 'Progress'}`);
   }
 
   function evaluateLevelUp(state) {
@@ -178,33 +361,16 @@
           xp: 0,
           metadata: { level: next }
         });
+        showCelebration('level_up', `🎉 Level ${next} unlocked`);
       }
-      maybeToast(`🎉 Level Up! You reached Level ${state.level}`);
     }
 
     return state;
   }
 
   function awardXp(userId, amount, reason, metadata) {
-    const safeAmount = Math.max(0, Number(amount) || 0);
-    if (!safeAmount) return getGamificationState(userId);
-
     const state = getGamificationState(userId);
-    const nowWeek = getWeekKey(metadata?.date);
-    if (state.weeklyXp.weekKey !== nowWeek) {
-      state.weeklyXp = { weekKey: nowWeek, amount: 0 };
-    }
-
-    state.totalXp += safeAmount;
-    state.weeklyXp.amount += safeAmount;
-
-    pushRecentEvent(state, {
-      type: 'xp',
-      message: `+${safeAmount} XP ${reason || 'Progress'}`,
-      xp: safeAmount,
-      metadata: metadata || null
-    });
-
+    addXp(state, amount, reason, metadata);
     evaluateLevelUp(state);
     const saved = saveGamificationState(userId, state);
     renderGamificationUI(userId, saved);
@@ -212,28 +378,28 @@
   }
 
   function unlockAchievement(state, key) {
-    if (!ACHIEVEMENTS[key]) return false;
+    const badge = BADGE_REGISTRY[key];
+    if (!badge) return false;
     if (state.unlockedAchievements.includes(key)) return false;
 
-    const achievement = ACHIEVEMENTS[key];
     state.unlockedAchievements.push(key);
     state.badges.push({
       key,
-      title: achievement.title,
-      description: achievement.description,
-      icon: achievement.icon,
+      title: badge.title,
+      description: badge.description,
+      icon: badge.icon,
       unlockedAt: new Date().toISOString()
     });
 
     pushRecentEvent(state, {
       type: 'badge',
-      message: `Badge Unlocked: ${achievement.title}`,
-      xp: achievement.xp,
+      message: `Badge Unlocked: ${badge.title}`,
+      xp: badge.xp,
       metadata: { badge: key }
     });
 
-    maybeToast(`${achievement.icon} Badge unlocked: ${achievement.title}`);
-    state.totalXp += achievement.xp;
+    showCelebration('badge', `${badge.icon} ${badge.title} unlocked`);
+    if (badge.xp > 0) addXp(state, badge.xp, `${badge.title} badge`);
     return true;
   }
 
@@ -253,7 +419,6 @@
     const exercises = ensureArray(workout?.exercises);
     let exercisesCompleted = 0;
     let setsCompleted = 0;
-    let totalVolume = 0;
 
     exercises.forEach(ex => {
       const reps = ensureArray(ex?.repsArray);
@@ -266,88 +431,131 @@
         const weight = Number(weights[i]);
         if (!Number.isFinite(rep) || !Number.isFinite(weight) || rep <= 0 || weight <= 0) continue;
         setsCompleted += 1;
-        totalVolume += rep * weight;
         exerciseHasCompletedSet = true;
       }
 
       if (exerciseHasCompletedSet) exercisesCompleted += 1;
     });
 
-    return { exercisesCompleted, setsCompleted, totalVolume };
+    return { exercisesCompleted, setsCompleted };
   }
 
-  function maybeUnlockWorkoutMilestones(state) {
-    const count = state.completedWorkoutCount;
-    if (count >= 1) unlockAchievement(state, 'first_workout');
-    if (count >= 10) unlockAchievement(state, 'ten_workouts');
+  function evaluateTotalWorkoutsCompleted(state, badge) {
+    const current = Number(state.completedWorkoutCount) || 0;
+    const target = Number(badge?.target) || 0;
+    return { current, target, remaining: Math.max(0, target - current), unit: badge?.unit || 'workouts' };
+  }
 
-    if (count === 5 || count === 10 || count === 50) {
-      state.totalXp += XP_RULES.ACHIEVEMENT_BONUS;
-      pushRecentEvent(state, {
-        type: 'milestone',
-        message: `Milestone: ${count} workouts completed`,
-        xp: XP_RULES.ACHIEVEMENT_BONUS
-      });
+  function evaluateStreakLength(state, badge) {
+    const current = Number(state.streak) || 0;
+    const target = Number(badge?.target) || 0;
+    return { current, target, remaining: Math.max(0, target - current), unit: badge?.unit || 'days' };
+  }
+
+  function evaluatePRCount(state, badge) {
+    const current = Number(state.totalPRs) || 0;
+    const target = Number(badge?.target) || 0;
+    return { current, target, remaining: Math.max(0, target - current), unit: badge?.unit || 'PRs' };
+  }
+
+  function evaluateTotalSetsCompleted(state, badge) {
+    const current = Number(state.totalSetsCompleted) || 0;
+    const target = Number(badge?.target) || 0;
+    return { current, target, remaining: Math.max(0, target - current), unit: badge?.unit || 'sets' };
+  }
+
+  function evaluateExerciseSpecificMilestones(state, badge) {
+    const key = String(badge?.exerciseKey || '').toLowerCase();
+    const current = Number(state.exerciseCounts?.[key]) || 0;
+    const target = Number(badge?.target) || 0;
+    return { current, target, remaining: Math.max(0, target - current), unit: badge?.unit || 'sessions' };
+  }
+
+  const ACHIEVEMENT_EVALUATORS = Object.freeze({
+    total_workouts_completed: evaluateTotalWorkoutsCompleted,
+    streak_length: evaluateStreakLength,
+    pr_count: evaluatePRCount,
+    total_sets_completed: evaluateTotalSetsCompleted,
+    exercise_specific_milestone: evaluateExerciseSpecificMilestones
+  });
+
+  function evaluateAchievementProgress(state, badge) {
+    const evaluator = ACHIEVEMENT_EVALUATORS[badge?.metric];
+    if (typeof evaluator !== 'function') {
+      return { current: 0, target: Number(badge?.target) || 0, remaining: Number(badge?.target) || 0, unit: badge?.unit || 'items' };
     }
+    return evaluator(state, badge);
   }
 
-  function updateWorkoutStreak(userId, workoutDate) {
-    const state = getGamificationState(userId);
+  function evaluateBadgeUnlocks(state) {
+    Object.entries(BADGE_REGISTRY).forEach(([key, badge]) => {
+      if (state.unlockedAchievements.includes(key)) return;
+      const progress = evaluateAchievementProgress(state, badge);
+      if (progress.current >= progress.target && progress.target > 0) {
+        unlockAchievement(state, key);
+      }
+    });
+  }
+
+  function evaluateStreakBonuses(state, dayKey) {
+    const streakBonuses = [
+      { threshold: 3, xp: XP_RULES.STREAK_BONUS_3 },
+      { threshold: 7, xp: XP_RULES.STREAK_BONUS_7 },
+      { threshold: 30, xp: XP_RULES.STREAK_BONUS_30 }
+    ];
+
+    streakBonuses.forEach(({ threshold, xp }) => {
+      const rewardKey = `${dayKey}:${threshold}`;
+      if ((Number(state.streak) || 0) < threshold) return;
+      if (state.rewardedStreakMilestones.includes(rewardKey)) return;
+      state.rewardedStreakMilestones.push(rewardKey);
+      addXp(state, xp, `${threshold}-day streak bonus`, { streak: state.streak, date: dayKey });
+    });
+
+    state.rewardedStreakMilestones = ensureArray(state.rewardedStreakMilestones).slice(-MAX_TRACKED_IDS);
+  }
+
+  function updateWorkoutStreak(userId, workoutDate, stateOverride) {
+    const state = stateOverride || getGamificationState(userId);
     const currentDay = getTodayIsoDate(workoutDate);
     const previousDay = state.lastWorkoutDate ? getTodayIsoDate(state.lastWorkoutDate) : null;
-    let gaveStreakBonus = false;
 
     if (!previousDay) {
       state.streak = 1;
-      gaveStreakBonus = true;
     } else {
       const diffDays = Math.round((new Date(currentDay).getTime() - new Date(previousDay).getTime()) / 86400000);
       if (diffDays <= 0) {
-        // same day or older save: no streak changes
+        // Same day/older updates do not alter streak.
       } else if (diffDays === 1) {
-        state.streak += 1;
-        gaveStreakBonus = true;
-      } else if (state.streakGraceDays > 0 && diffDays <= state.streakGraceDays + 1) {
         state.streak += 1;
       } else {
         state.streak = 1;
-        gaveStreakBonus = true;
       }
     }
 
     state.lastWorkoutDate = currentDay;
     state.longestStreak = Math.max(Number(state.longestStreak) || 0, state.streak);
 
-    if (state.streak >= 7) unlockAchievement(state, 'seven_day_streak');
-    if (state.streak >= 30) unlockAchievement(state, 'consistency_30');
+    evaluateStreakBonuses(state, currentDay);
+    evaluateBadgeUnlocks(state);
+    evaluateLevelUp(state);
 
-    if (gaveStreakBonus) {
-      state.totalXp += XP_RULES.STREAK_DAY;
-      pushRecentEvent(state, {
-        type: 'streak',
-        message: `+${XP_RULES.STREAK_DAY} XP Streak day (${state.streak})`,
-        xp: XP_RULES.STREAK_DAY,
-        metadata: { streak: state.streak, date: currentDay }
-      });
+    if (!stateOverride) {
+      const saved = saveGamificationState(userId, state);
+      renderGamificationUI(userId, saved);
+      return saved;
     }
 
-    evaluateLevelUp(state);
-    const saved = saveGamificationState(userId, state);
-    renderGamificationUI(userId, saved);
-    return saved;
+    return state;
   }
 
   function evaluateWorkoutAchievements(userId, workout) {
     const state = getGamificationState(userId);
     const rewardId = getWorkoutRewardId(workout);
-    if (state.rewardedWorkoutIds.includes(rewardId)) {
-      return state;
-    }
+    if (state.rewardedWorkoutIds.includes(rewardId)) return state;
 
     const stats = countWorkoutStats(workout);
-    if (!stats.setsCompleted || !stats.exercisesCompleted) {
-      return state;
-    }
+    if (!stats.setsCompleted || !stats.exercisesCompleted) return state;
 
     state.rewardedWorkoutIds.push(rewardId);
     state.rewardedWorkoutIds = state.rewardedWorkoutIds.slice(-MAX_TRACKED_IDS);
@@ -355,31 +563,10 @@
     state.completedWorkoutCount += 1;
     state.totalSetsCompleted += stats.setsCompleted;
     state.totalExercisesCompleted += stats.exercisesCompleted;
-    state.totalVolume += stats.totalVolume;
 
-    state.totalXp += XP_RULES.WORKOUT_COMPLETE;
-    pushRecentEvent(state, {
-      type: 'xp',
-      message: `+${XP_RULES.WORKOUT_COMPLETE} XP Workout Complete`,
-      xp: XP_RULES.WORKOUT_COMPLETE,
-      metadata: { workoutId: workout?.id || null }
-    });
-
-    const exerciseXp = stats.exercisesCompleted * XP_RULES.EXERCISE_COMPLETE;
-    const setXp = stats.setsCompleted * XP_RULES.SET_COMPLETE;
-    state.totalXp += exerciseXp + setXp;
-
-    pushRecentEvent(state, {
-      type: 'xp',
-      message: `+${exerciseXp} XP Exercises Complete`,
-      xp: exerciseXp
-    });
-
-    pushRecentEvent(state, {
-      type: 'xp',
-      message: `+${setXp} XP Sets Complete`,
-      xp: setXp
-    });
+    addXp(state, XP_RULES.WORKOUT_COMPLETE, 'Workout Complete', { workoutId: workout?.id || null, date: workout?.date });
+    addXp(state, stats.exercisesCompleted * XP_RULES.EXERCISE_COMPLETE, 'Exercises Complete', { date: workout?.date });
+    addXp(state, stats.setsCompleted * XP_RULES.SET_COMPLETE, 'Sets Complete', { date: workout?.date });
 
     const names = ensureArray(workout?.exercises).map(ex => String(ex?.name || '').toLowerCase());
     names.forEach(name => {
@@ -389,31 +576,11 @@
       if (name.includes('deadlift')) state.exerciseCounts.deadlift = (state.exerciseCounts.deadlift || 0) + 1;
     });
 
-    if ((state.exerciseCounts.squat || 0) >= 10) unlockAchievement(state, 'squat_specialist');
-    if ((state.exerciseCounts.bench || 0) >= 10) unlockAchievement(state, 'bench_specialist');
-    if ((state.exerciseCounts.deadlift || 0) >= 10) unlockAchievement(state, 'deadlift_specialist');
-
-    if (state.totalVolume >= 100000) unlockAchievement(state, 'volume_beast');
-
-    const savedTemplates = (() => {
-      if (typeof localStorage === 'undefined') return [];
-      try {
-        const parsed = JSON.parse(localStorage.getItem('resistanceTemplates') || '[]');
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    })();
-    if (savedTemplates.length > 0) unlockAchievement(state, 'template_builder');
-
-    maybeUnlockWorkoutMilestones(state);
-    state.lastWorkoutDate = getTodayIsoDate(workout?.date);
-    state.longestStreak = Math.max(Number(state.longestStreak) || 0, Number(state.streak) || 0);
-
+    updateWorkoutStreak(userId, workout?.date, state);
+    evaluateBadgeUnlocks(state);
     evaluateLevelUp(state);
-    const saved = saveGamificationState(userId, state);
 
-    updateWorkoutStreak(userId, workout?.date);
+    const saved = saveGamificationState(userId, state);
     renderGamificationUI(userId, saved);
     return saved;
   }
@@ -441,20 +608,52 @@
     if (!newPrCount) return state;
 
     state.rewardedPREventIds = state.rewardedPREventIds.slice(-MAX_TRACKED_IDS);
-    const awarded = newPrCount * XP_RULES.PR_HIT;
-    state.totalXp += awarded;
     state.totalPRs += newPrCount;
+    addXp(state, newPrCount * XP_RULES.PR_HIT, `PR x${newPrCount}`, { date: workout?.date });
 
-    if (state.totalPRs >= 1) unlockAchievement(state, 'first_pr');
-
+    evaluateBadgeUnlocks(state);
     evaluateLevelUp(state);
     const saved = saveGamificationState(userId, state);
     renderGamificationUI(userId, saved);
     return saved;
   }
 
-  function getGamificationSummary(userId) {
-    const state = getGamificationState(userId);
+  function getNextRewardHint(state) {
+    const candidates = Object.entries(BADGE_REGISTRY)
+      .filter(([key]) => !state.unlockedAchievements.includes(key))
+      .map(([key, badge]) => {
+        const progress = evaluateAchievementProgress(state, badge);
+        return {
+          key,
+          badge,
+          ...progress,
+          ratio: progress.target > 0 ? progress.current / progress.target : 0
+        };
+      })
+      .filter(entry => entry.target > 0 && entry.remaining > 0)
+      .sort((a, b) => {
+        if (a.remaining !== b.remaining) return a.remaining - b.remaining;
+        return b.ratio - a.ratio;
+      });
+
+    const next = candidates[0] || null;
+    if (!next) {
+      return {
+        text: 'All defined badges unlocked. New content coming soon.',
+        badge: null,
+        remaining: 0
+      };
+    }
+
+    return {
+      badge: next.badge,
+      remaining: next.remaining,
+      text: `${next.badge.icon} ${next.badge.title} in ${next.remaining} ${next.unit}`
+    };
+  }
+
+  function getGamificationSummary(userId, providedState) {
+    const state = providedState || getGamificationState(userId);
     const latestBadge = ensureArray(state.badges).slice(-1)[0] || null;
     const progressPercent = state.nextLevelXp > 0
       ? Math.min(100, Math.round((state.currentLevelXp / state.nextLevelXp) * 100))
@@ -472,64 +671,74 @@
       badges: state.badges,
       recentEvents: state.recentEvents,
       weeklyXp: state.weeklyXp,
+      todayXp: state.todayXp,
       completedWorkoutCount: state.completedWorkoutCount,
-      unlockedAchievements: state.unlockedAchievements
+      totalPRs: state.totalPRs,
+      totalSetsCompleted: state.totalSetsCompleted,
+      unlockedAchievements: state.unlockedAchievements,
+      nextRewardHint: getNextRewardHint(state)
     };
   }
 
   function renderGamificationUI(userId, optionalState) {
     if (typeof document === 'undefined') return;
     const state = optionalState || getGamificationState(userId);
-    const summary = getGamificationSummary(userId);
+    const summary = getGamificationSummary(userId, state);
 
     const cardEl = document.getElementById('gamificationCard');
     if (cardEl) {
       const latestBadge = summary.latestBadge
         ? `${summary.latestBadge.icon} ${summary.latestBadge.title}`
         : 'No badge yet';
+
+      const safeHint = summary.nextRewardHint?.text || 'Keep training for your next badge.';
       cardEl.innerHTML = `
-        <h3 style="margin:0 0 8px;">🎮 Training XP</h3>
+        <h3 style="margin:0 0 8px;">🎮 Resistance XP</h3>
         <div style="font-size:0.95rem; margin-bottom:6px;">Level <strong>${summary.level}</strong> • ${summary.totalXp} XP total</div>
         <div style="height:10px; border-radius:99px; background:#ececec; overflow:hidden;">
           <div style="height:100%; width:${summary.progressPercent}%; background:linear-gradient(90deg,#6a5cff,#5fd0ff);"></div>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:0.85rem;">
+        <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:0.85rem; flex-wrap:wrap; gap:6px;">
           <span>${summary.currentLevelXp}/${summary.nextLevelXp} XP</span>
           <span>🔥 Streak ${summary.streak}</span>
+          <span>📅 This week ${summary.weeklyXp?.amount || 0} XP</span>
+          <span>⚡ Today ${summary.todayXp?.amount || 0} XP</span>
         </div>
         <div style="margin-top:8px; font-size:0.88rem;">Latest badge: <strong>${latestBadge}</strong></div>
+        <div style="margin-top:6px; font-size:0.88rem;">Next reward: <strong>${safeHint}</strong></div>
       `;
     }
 
     const galleryEl = document.getElementById('gamificationBadgeGallery');
     if (galleryEl) {
-      if (!state.badges.length) {
+      const badges = ensureArray(state.badges);
+      if (!badges.length) {
         galleryEl.innerHTML = '<p style="margin:0; color:#666;">No badges unlocked yet. Finish a workout to begin.</p>';
       } else {
-        galleryEl.innerHTML = state.badges
+        galleryEl.innerHTML = badges
           .slice()
           .reverse()
-          .map(badge => `<div class="gamification-badge-pill" title="${badge.description}">${badge.icon} ${badge.title}</div>`)
+          .map(badge => `<div class="gamification-badge-pill" title="${badge.description || ''}">${badge.icon || '🏅'} ${badge.title || 'Badge'}</div>`)
           .join('');
       }
     }
 
     const eventsEl = document.getElementById('gamificationEventsFeed');
     if (eventsEl) {
-      if (!summary.recentEvents.length) {
+      const events = ensureArray(summary.recentEvents);
+      if (!events.length) {
         eventsEl.innerHTML = '<p style="margin:0; color:#666;">No recent events yet.</p>';
       } else {
-        eventsEl.innerHTML = summary.recentEvents
+        eventsEl.innerHTML = events
           .slice()
           .reverse()
           .slice(0, 8)
-          .map(evt => `<div class="gamification-event-item"><span>${evt.message}</span><small>${new Date(evt.createdAt).toLocaleDateString()}</small></div>`)
+          .map(evt => `<div class="gamification-event-item"><span>${evt?.message || 'Progress updated'}</span><small>${evt?.createdAt ? new Date(evt.createdAt).toLocaleDateString() : ''}</small></div>`)
           .join('');
       }
     }
   }
 
-  // Legacy wrappers kept for compatibility with existing calls.
   function loadGamification(userId) {
     return getGamificationState(userId);
   }
@@ -548,8 +757,10 @@
   }
 
   const api = {
-    ACHIEVEMENTS,
+    BADGE_REGISTRY,
+    ACHIEVEMENTS: BADGE_REGISTRY,
     XP_RULES,
+    getXpNeededForNextLevel,
     getGamificationState,
     saveGamificationState,
     awardXp,
@@ -561,7 +772,12 @@
     renderGamificationUI,
     loadGamification,
     saveGamification,
-    updateGamification
+    updateGamification,
+    evaluateTotalWorkoutsCompleted,
+    evaluateStreakLength,
+    evaluatePRCount,
+    evaluateTotalSetsCompleted,
+    evaluateExerciseSpecificMilestones
   };
 
   if (typeof module !== 'undefined') {
