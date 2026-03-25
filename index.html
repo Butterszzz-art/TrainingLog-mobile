@@ -373,6 +373,46 @@
       border-bottom: 0;
       padding-bottom: 0;
     }
+    .home-mission-item {
+      align-items: center;
+    }
+    .home-mission-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      cursor: pointer;
+    }
+    .home-mission-checkbox input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #2f80ed;
+      flex-shrink: 0;
+    }
+    .home-mission-label {
+      color: var(--text-color);
+      transition: color 0.2s ease;
+    }
+    .home-mission-status {
+      margin-left: auto;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--secondary-text);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .home-mission-item.is-complete .home-mission-label {
+      color: var(--secondary-text);
+      text-decoration: line-through;
+    }
+    .home-mission-item.is-complete .home-mission-status {
+      color: #2ecc71;
+    }
+    .home-mission-progress {
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      color: var(--secondary-text);
+    }
 
     #sidebarLogoutBtn {
       width: 100%;
@@ -1509,6 +1549,7 @@
 <script src="cardioTab.js"></script>
 <script src="weightTab.js"></script>
 <script src="prepMode.js"></script>
+<script src="dailyMissionEngine.js"></script>
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
 <!-- Feature flags FIRST -->
@@ -5849,26 +5890,80 @@ function renderStatusSummary(profile) {
   `;
 }
 
-function renderTodaysMission(profile) {
-  const mission = {
-    training: getSafeDisplayValue(profile.todayTraining, 'Not set'),
-    cardio: getSafeDisplayValue(profile.todayCardio, 'Not set'),
-    macros: getSafeDisplayValue(profile.todayMacros, 'Not set'),
-    bodyweight: getSafeDisplayValue(profile.todayBodyweight, 'Not logged'),
-    posing: getSafeDisplayValue(profile.todayPosing, 'Not set'),
-    recovery: getSafeDisplayValue(profile.todayRecovery, 'Not set')
-  };
+const MISSION_ITEM_META = {
+  trainingComplete: 'Training',
+  cardioComplete: 'Cardio',
+  macrosComplete: 'Macros',
+  bodyweightLogged: 'Bodyweight',
+  posingComplete: 'Posing',
+  recoveryLogged: 'Recovery',
+  stepsComplete: 'Steps'
+};
+
+function getTodayMissionState(profile, username) {
+  const engine = window.dailyMissionEngine;
+  if (!engine) return null;
+  const date = new Date().toISOString().slice(0, 10);
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  return engine.getDailyMissionState(username, date)
+    || engine.generateDefaultMissionFromPhase(username, phaseState, date);
+}
+
+function renderMissionItem(itemKey, state) {
+  const label = MISSION_ITEM_META[itemKey] || itemKey;
+  const checked = Boolean(state?.[itemKey]);
+  return `
+    <li class="home-mission-item ${checked ? 'is-complete' : ''}">
+      <label class="home-mission-checkbox">
+        <input
+          type="checkbox"
+          ${checked ? 'checked' : ''}
+          onchange="toggleMissionItem('${itemKey}', this.checked)"
+        />
+        <span class="home-mission-label">${label}</span>
+        <span class="home-mission-status">${checked ? 'Done' : 'Pending'}</span>
+      </label>
+    </li>
+  `;
+}
+
+function toggleMissionItem(itemKey, checked) {
+  const engine = window.dailyMissionEngine;
+  if (!engine) return;
+  const userId = currentUser || localStorage.getItem('currentUser');
+  const date = new Date().toISOString().slice(0, 10);
+  if (checked) {
+    engine.markMissionItemComplete(userId, date, itemKey);
+  } else {
+    const existing = engine.getDailyMissionState(userId, date)
+      || engine.generateDefaultMissionFromPhase(userId, window.prepModeApi?.getCurrentPhaseState?.(userId) || {}, date);
+    existing[itemKey] = false;
+    engine.saveDailyMissionState(userId, date, existing);
+  }
+  renderHomeDashboard();
+}
+
+window.toggleMissionItem = toggleMissionItem;
+
+function renderTodaysMission(profile, username) {
+  const state = getTodayMissionState(profile, username);
+  if (!state || !window.dailyMissionEngine) {
+    return `
+      <section class="home-dashboard-card">
+        <h3 class="home-card-title">Today’s Mission</h3>
+        <p class="home-mission-progress">Mission engine unavailable.</p>
+      </section>
+    `;
+  }
+
+  const compliance = window.dailyMissionEngine.calculateDailyCompliance(state);
+  const items = compliance.requiredItems.map(itemKey => renderMissionItem(itemKey, state)).join('');
+
   return `
     <section class="home-dashboard-card">
       <h3 class="home-card-title">Today’s Mission</h3>
-      <ul class="home-mission-list">
-        <li class="home-mission-item"><span>Training</span><strong>${mission.training}</strong></li>
-        <li class="home-mission-item"><span>Cardio</span><strong>${mission.cardio}</strong></li>
-        <li class="home-mission-item"><span>Macros</span><strong>${mission.macros}</strong></li>
-        <li class="home-mission-item"><span>Bodyweight</span><strong>${mission.bodyweight}</strong></li>
-        <li class="home-mission-item"><span>Posing</span><strong>${mission.posing}</strong></li>
-        <li class="home-mission-item"><span>Recovery</span><strong>${mission.recovery}</strong></li>
-      </ul>
+      <p class="home-mission-progress">${compliance.completed}/${compliance.total} complete (${compliance.percent}%)</p>
+      <ul class="home-mission-list">${items}</ul>
     </section>
   `;
 }
@@ -5917,7 +6012,7 @@ function renderHomeDashboard() {
   container.innerHTML = [
     renderHeroPhaseHeader(profile, username),
     renderStatusSummary(profile),
-    renderTodaysMission(profile),
+    renderTodaysMission(profile, username),
     renderUpcomingPrepEvents(profile),
     renderRewardSummary(profile)
   ].join('');
