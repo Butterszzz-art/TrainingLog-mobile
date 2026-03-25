@@ -293,6 +293,86 @@
       opacity: 0;
       transform: scale(0.9);
     }
+    .home-dashboard {
+      display: grid;
+      gap: 16px;
+    }
+    .home-dashboard-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      text-align: left;
+    }
+    .home-hero-card {
+      background: linear-gradient(135deg, rgba(47, 128, 237, 0.18), rgba(15, 42, 85, 0.2));
+      border: 1px solid rgba(47, 128, 237, 0.45);
+    }
+    .home-hero-topline {
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--secondary-text);
+      margin-bottom: 8px;
+    }
+    .home-hero-athlete {
+      margin: 0;
+      font-size: 1.7rem;
+    }
+    .home-hero-meta {
+      margin: 10px 0 0;
+      font-size: 0.95rem;
+      color: var(--secondary-text);
+    }
+    .home-card-title {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+    }
+    .home-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+      gap: 10px;
+    }
+    .home-stat-chip {
+      background: rgba(47, 128, 237, 0.1);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .home-stat-label {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--secondary-text);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .home-stat-value {
+      margin: 4px 0 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .home-mission-list,
+    .home-upcoming-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+    .home-mission-item,
+    .home-upcoming-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 6px;
+      font-size: 0.95rem;
+    }
+    .home-mission-item:last-child,
+    .home-upcoming-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
 
     #sidebarLogoutBtn {
       width: 100%;
@@ -603,6 +683,7 @@
     <button id="homeButton" class="home-button" onclick="openDashboard()" aria-label="Home">🏠</button>
     <div class="menu-title">PocketFit (<span id="userDisplay"></span>)</div>
     <ul>
+      <li><a href="#" data-target="homeTab">🏠 Home</a></li>
       <li><a href="#" data-target="logTab">📋 Training Log</a></li>
       <li><a href="#" data-target="weightTab">⚖️ Bodyweight</a></li>
       <li><a href="#" data-target="cardioTab">🏃 Cardio</a></li>
@@ -622,6 +703,10 @@
   <div id="appContainer" class="main-content">
 
 <div id="progressReminder"></div>
+
+  <div id="homeTab" class="tab-content">
+    <div id="homeDashboardContent" class="home-dashboard"></div>
+  </div>
 
   <div id="logTab" class="tab-content">
   <div id="logPanel" class="panel active">
@@ -1757,6 +1842,9 @@ function showTab(tabName) {
 
 
   switch (tabName) {
+    case 'homeTab':
+      renderHomeDashboard();
+      break;
     case 'macroTab':
       if (window.renderSparklines) {
         renderSparklines();
@@ -5666,7 +5754,7 @@ function openSection(section) {
   const el = document.getElementById(section + 'Container');
   animateSwitch(el);
   if (section === 'pocketFit') {
-    showTab('logTab');
+    showTab('homeTab');
   } else if (section === 'pocketLifestyle') {
     if (!window.lifestyleInitialized && window.initLifestyle) {
       window.initLifestyle();
@@ -5678,6 +5766,161 @@ function openSection(section) {
 function openDashboard() {
   const dash = document.getElementById('dashboardContainer');
   animateSwitch(dash);
+}
+
+function getHomeDashboardSourceData() {
+  const username = currentUser || localStorage.getItem('currentUser');
+  const sources = [
+    `prepProfile_${username || ''}`,
+    `prepMode_${username || ''}`,
+    `dashboardProfile_${username || ''}`,
+    'personalDetails'
+  ];
+
+  const merged = {};
+  sources.forEach((key) => {
+    if (!key || key.endsWith('_')) return;
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        Object.assign(merged, parsed);
+      }
+    } catch (err) {
+      console.warn('Home dashboard source parse failed for', key, err);
+    }
+  });
+  return { username, profile: merged };
+}
+
+function getSafeDisplayValue(value, fallback = '—') {
+  if (value === 0) return '0';
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  return fallback;
+}
+
+function formatCountdownDays(dateLike) {
+  if (!dateLike) return 'TBD';
+  const showDate = new Date(dateLike);
+  if (Number.isNaN(showDate.getTime())) return 'TBD';
+  const now = new Date();
+  const ms = showDate.setHours(0, 0, 0, 0) - now.setHours(0, 0, 0, 0);
+  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+  if (days < 0) return 'Show complete';
+  if (days === 0) return 'Show day is today';
+  return `${days} days`;
+}
+
+function renderHeroPhaseHeader(profile, username) {
+  const athleteName = getSafeDisplayValue(profile.athleteName || username, 'Athlete');
+  const phase = getSafeDisplayValue(profile.currentPhase, 'Build Phase');
+  const weekLabel = getSafeDisplayValue(profile.weeksOutLabel || profile.seasonWeekLabel, 'Week label TBD');
+  const showCountdown = formatCountdownDays(profile.showDate);
+
+  return `
+    <section class="home-dashboard-card home-hero-card">
+      <p class="home-hero-topline">Command Center</p>
+      <h2 class="home-hero-athlete">${athleteName}</h2>
+      <p class="home-hero-meta">Phase: ${phase}</p>
+      <p class="home-hero-meta">${weekLabel}</p>
+      <p class="home-hero-meta">Show countdown: ${showCountdown}</p>
+    </section>
+  `;
+}
+
+function renderStatusSummary(profile) {
+  const daily = getSafeDisplayValue(profile.todaysCompliance, 'Pending');
+  const weekly = getSafeDisplayValue(profile.weeklyCompliance, 'Pending');
+  const streak = getSafeDisplayValue(profile.currentStreak, '0 days');
+  const onTrack = getSafeDisplayValue(profile.onTrackStatus, 'On-track logic coming soon');
+
+  return `
+    <section class="home-dashboard-card">
+      <h3 class="home-card-title">Status Summary</h3>
+      <div class="home-stat-grid">
+        <div class="home-stat-chip"><p class="home-stat-label">Today</p><p class="home-stat-value">${daily}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">This Week</p><p class="home-stat-value">${weekly}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${streak}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">On Track</p><p class="home-stat-value">${onTrack}</p></div>
+      </div>
+    </section>
+  `;
+}
+
+function renderTodaysMission(profile) {
+  const mission = {
+    training: getSafeDisplayValue(profile.todayTraining, 'Not set'),
+    cardio: getSafeDisplayValue(profile.todayCardio, 'Not set'),
+    macros: getSafeDisplayValue(profile.todayMacros, 'Not set'),
+    bodyweight: getSafeDisplayValue(profile.todayBodyweight, 'Not logged'),
+    posing: getSafeDisplayValue(profile.todayPosing, 'Not set'),
+    recovery: getSafeDisplayValue(profile.todayRecovery, 'Not set')
+  };
+  return `
+    <section class="home-dashboard-card">
+      <h3 class="home-card-title">Today’s Mission</h3>
+      <ul class="home-mission-list">
+        <li class="home-mission-item"><span>Training</span><strong>${mission.training}</strong></li>
+        <li class="home-mission-item"><span>Cardio</span><strong>${mission.cardio}</strong></li>
+        <li class="home-mission-item"><span>Macros</span><strong>${mission.macros}</strong></li>
+        <li class="home-mission-item"><span>Bodyweight</span><strong>${mission.bodyweight}</strong></li>
+        <li class="home-mission-item"><span>Posing</span><strong>${mission.posing}</strong></li>
+        <li class="home-mission-item"><span>Recovery</span><strong>${mission.recovery}</strong></li>
+      </ul>
+    </section>
+  `;
+}
+
+function renderUpcomingPrepEvents(profile) {
+  const checkIn = getSafeDisplayValue(profile.nextCheckIn, 'Not scheduled');
+  const refeed = getSafeDisplayValue(profile.nextRefeed, 'TBD');
+  const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'TBD');
+  const countdown = formatCountdownDays(profile.showDate);
+
+  return `
+    <section class="home-dashboard-card">
+      <h3 class="home-card-title">Upcoming</h3>
+      <ul class="home-upcoming-list">
+        <li class="home-upcoming-item"><span>Next Check-in</span><strong>${checkIn}</strong></li>
+        <li class="home-upcoming-item"><span>Refeed</span><strong>${refeed}</strong></li>
+        <li class="home-upcoming-item"><span>Peak Week Start</span><strong>${peakWeek}</strong></li>
+        <li class="home-upcoming-item"><span>Show Day Countdown</span><strong>${countdown}</strong></li>
+      </ul>
+    </section>
+  `;
+}
+
+function renderRewardSummary(profile) {
+  const level = getSafeDisplayValue(profile.level, 'Level 1');
+  const xp = getSafeDisplayValue(profile.xp, '0 XP');
+  const prepStreak = getSafeDisplayValue(profile.prepStreak, '0 days');
+  const latestBadge = getSafeDisplayValue(profile.latestBadge, 'No badges yet');
+  return `
+    <section class="home-dashboard-card">
+      <h3 class="home-card-title">Rewards & Progression</h3>
+      <div class="home-stat-grid">
+        <div class="home-stat-chip"><p class="home-stat-label">Level</p><p class="home-stat-value">${level}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">XP</p><p class="home-stat-value">${xp}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Prep Streak</p><p class="home-stat-value">${prepStreak}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Latest Badge</p><p class="home-stat-value">${latestBadge}</p></div>
+      </div>
+    </section>
+  `;
+}
+
+function renderHomeDashboard() {
+  const container = document.getElementById('homeDashboardContent');
+  if (!container) return;
+  const { username, profile } = getHomeDashboardSourceData();
+  container.innerHTML = [
+    renderHeroPhaseHeader(profile, username),
+    renderStatusSummary(profile),
+    renderTodaysMission(profile),
+    renderUpcomingPrepEvents(profile),
+    renderRewardSummary(profile)
+  ].join('');
 }
 
   
@@ -7868,7 +8111,7 @@ function renderLogHistory(logs) {
 
   // Show the first tab initially
   initTrainingCalendar();
-  showTab("logTab");
+  showTab("homeTab");
   renderPRs();
   renderMilestones();
   renderGoalBar();
@@ -7943,6 +8186,12 @@ window.calculateCaloriesEquation = calculateCaloriesEquation;
 window.updateProgressBar = updateProgressBar;
 window.updateStreakCounter = updateStreakCounter;
 window.renderDashboardPRSummary = renderDashboardPRSummary;
+window.renderHomeDashboard = renderHomeDashboard;
+window.renderHeroPhaseHeader = renderHeroPhaseHeader;
+window.renderStatusSummary = renderStatusSummary;
+window.renderTodaysMission = renderTodaysMission;
+window.renderUpcomingPrepEvents = renderUpcomingPrepEvents;
+window.renderRewardSummary = renderRewardSummary;
 
   function showToast(msg) {
     const toast = document.createElement('div');
