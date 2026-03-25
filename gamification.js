@@ -680,62 +680,88 @@
     };
   }
 
+  function renderGamificationCard(summary, options = {}) {
+    const title = options.title || 'Player Progress';
+    const compact = Boolean(options.compact);
+    const latestBadge = summary.latestBadge
+      ? `${summary.latestBadge.icon} ${summary.latestBadge.title}`
+      : 'No badge yet';
+
+    return `
+      <div class="gamification-card">
+        <h3 class="gamification-card-title">${title}</h3>
+        <p class="gamification-level-row">Level <strong>${summary.level}</strong> · ${summary.totalXp} XP total</p>
+        <div class="gamification-xp-track">
+          <div class="gamification-xp-fill" style="width:${summary.progressPercent}%;"></div>
+        </div>
+        <div class="gamification-xp-label">${summary.currentLevelXp}/${summary.nextLevelXp} XP to next level</div>
+        <div class="gamification-stat-grid">
+          <div class="gamification-stat-chip"><span>🔥</span><strong>${summary.streak}</strong><small>Current streak</small></div>
+          <div class="gamification-stat-chip"><span>🏅</span><strong>${ensureArray(summary.badges).length}</strong><small>Badges unlocked</small></div>
+          <div class="gamification-stat-chip"><span>⚡</span><strong>${summary.todayXp?.amount || 0}</strong><small>XP today</small></div>
+          <div class="gamification-stat-chip"><span>📅</span><strong>${summary.weeklyXp?.amount || 0}</strong><small>XP this week</small></div>
+        </div>
+        ${compact ? '' : `<p class="gamification-hint-row">Latest badge: <strong>${latestBadge}</strong></p>`}
+      </div>
+    `;
+  }
+
+  function renderBadgeGallery(state) {
+    const badges = ensureArray(state.badges);
+    if (!badges.length) {
+      return '<p class="gamification-empty">No badges unlocked yet. Finish a workout to begin.</p>';
+    }
+
+    return badges
+      .slice()
+      .reverse()
+      .map(badge => `<div class="gamification-badge-pill" title="${badge.description || ''}">${badge.icon || '🏅'} ${badge.title || 'Badge'}</div>`)
+      .join('');
+  }
+
+  function renderGamificationEvents(summary) {
+    const events = ensureArray(summary.recentEvents);
+    if (!events.length) {
+      return '<p class="gamification-empty">No recent events yet.</p>';
+    }
+
+    return events
+      .slice()
+      .reverse()
+      .slice(0, 8)
+      .map(evt => `<div class="gamification-event-item"><span>${evt?.message || 'Progress updated'}</span><small>${evt?.createdAt ? new Date(evt.createdAt).toLocaleDateString() : ''}</small></div>`)
+      .join('');
+  }
+
   function renderGamificationUI(userId, optionalState) {
     if (typeof document === 'undefined') return;
     const state = optionalState || getGamificationState(userId);
     const summary = getGamificationSummary(userId, state);
 
     const cardEl = document.getElementById('gamificationCard');
-    if (cardEl) {
-      const latestBadge = summary.latestBadge
-        ? `${summary.latestBadge.icon} ${summary.latestBadge.title}`
-        : 'No badge yet';
+    if (cardEl) cardEl.innerHTML = renderGamificationCard(summary, { title: '🎮 Player Progress' });
 
-      const safeHint = summary.nextRewardHint?.text || 'Keep training for your next badge.';
-      cardEl.innerHTML = `
-        <h3 style="margin:0 0 8px;">🎮 Resistance XP</h3>
-        <div style="font-size:0.95rem; margin-bottom:6px;">Level <strong>${summary.level}</strong> • ${summary.totalXp} XP total</div>
-        <div style="height:10px; border-radius:99px; background:#ececec; overflow:hidden;">
-          <div style="height:100%; width:${summary.progressPercent}%; background:linear-gradient(90deg,#6a5cff,#5fd0ff);"></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:0.85rem; flex-wrap:wrap; gap:6px;">
-          <span>${summary.currentLevelXp}/${summary.nextLevelXp} XP</span>
-          <span>🔥 Streak ${summary.streak}</span>
-          <span>📅 This week ${summary.weeklyXp?.amount || 0} XP</span>
-          <span>⚡ Today ${summary.todayXp?.amount || 0} XP</span>
-        </div>
-        <div style="margin-top:8px; font-size:0.88rem;">Latest badge: <strong>${latestBadge}</strong></div>
-        <div style="margin-top:6px; font-size:0.88rem;">Next reward: <strong>${safeHint}</strong></div>
-      `;
-    }
+    const progressCardEl = document.getElementById('progressGamificationCard');
+    if (progressCardEl) progressCardEl.innerHTML = renderGamificationCard(summary, { title: 'Gamification Summary', compact: true });
 
     const galleryEl = document.getElementById('gamificationBadgeGallery');
-    if (galleryEl) {
-      const badges = ensureArray(state.badges);
-      if (!badges.length) {
-        galleryEl.innerHTML = '<p style="margin:0; color:#666;">No badges unlocked yet. Finish a workout to begin.</p>';
-      } else {
-        galleryEl.innerHTML = badges
-          .slice()
-          .reverse()
-          .map(badge => `<div class="gamification-badge-pill" title="${badge.description || ''}">${badge.icon || '🏅'} ${badge.title || 'Badge'}</div>`)
-          .join('');
-      }
-    }
+    if (galleryEl) galleryEl.innerHTML = renderBadgeGallery(state);
 
     const eventsEl = document.getElementById('gamificationEventsFeed');
-    if (eventsEl) {
-      const events = ensureArray(summary.recentEvents);
-      if (!events.length) {
-        eventsEl.innerHTML = '<p style="margin:0; color:#666;">No recent events yet.</p>';
-      } else {
-        eventsEl.innerHTML = events
-          .slice()
-          .reverse()
-          .slice(0, 8)
-          .map(evt => `<div class="gamification-event-item"><span>${evt?.message || 'Progress updated'}</span><small>${evt?.createdAt ? new Date(evt.createdAt).toLocaleDateString() : ''}</small></div>`)
-          .join('');
-      }
+    if (eventsEl) eventsEl.innerHTML = renderGamificationEvents(summary);
+
+    const miniSummaryEl = document.getElementById('gamificationLogMiniSummary');
+    if (miniSummaryEl) {
+      const latestEvent = ensureArray(summary.recentEvents).slice(-1)[0];
+      miniSummaryEl.innerHTML = `
+        <div class="gamification-mini-summary-row">
+          <strong>Level ${summary.level}</strong>
+          <span>${summary.currentLevelXp}/${summary.nextLevelXp} XP</span>
+          <span>🔥 ${summary.streak} day streak</span>
+          <span>🏅 ${ensureArray(summary.badges).length} badges</span>
+        </div>
+        <p class="gamification-mini-summary-note">${latestEvent?.message || 'Log a completed workout to earn XP and badges.'}</p>
+      `;
     }
   }
 
@@ -769,6 +795,9 @@
     evaluatePRAchievements,
     updateWorkoutStreak,
     getGamificationSummary,
+    renderGamificationCard,
+    renderBadgeGallery,
+    renderGamificationEvents,
     renderGamificationUI,
     loadGamification,
     saveGamification,

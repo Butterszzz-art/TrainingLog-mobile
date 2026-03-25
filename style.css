@@ -1160,6 +1160,86 @@ body.theme-dark .set-row {
   padding: 10px;
 }
 
+.gamification-card-shell {
+  padding: 12px;
+}
+
+.gamification-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gamification-card-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.gamification-level-row,
+.gamification-xp-label,
+.gamification-hint-row {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #2f3a54;
+}
+
+.gamification-xp-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e8edf8;
+  overflow: hidden;
+}
+
+.gamification-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #0ea5e9);
+  transition: width 180ms ease;
+}
+
+.gamification-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gamification-stat-chip {
+  border: 1px solid #d9e2f5;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.78rem;
+  color: #4b5877;
+}
+
+.gamification-stat-chip strong {
+  color: #1f2a44;
+  font-size: 0.96rem;
+}
+
+.gamification-mini-summary {
+  border: 1px solid #e3e8f5;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.gamification-mini-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.gamification-mini-summary-note {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  color: #55627f;
+}
+
 .gamification-badge-grid {
   display: flex;
   flex-wrap: wrap;
@@ -1193,4 +1273,9 @@ body.theme-dark .set-row {
 
 .gamification-event-item small {
   color: #65708a;
+}
+
+.gamification-empty {
+  margin: 0;
+  color: #666;
 }
