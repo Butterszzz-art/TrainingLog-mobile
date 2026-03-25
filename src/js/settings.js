@@ -135,6 +135,139 @@ function bindReminderToggle(container = document) {
   });
 }
 
+function toNumberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const asNumber = Number(value);
+  return Number.isFinite(asNumber) ? asNumber : null;
+}
+
+function getPhaseSetupApi() {
+  if (typeof window === 'undefined' || !window.prepModeApi) return null;
+  const api = window.prepModeApi;
+  if (typeof api.getCurrentPhaseState !== 'function' || typeof api.saveCurrentPhaseState !== 'function') return null;
+  return api;
+}
+
+function setFieldValue(container, selector, value) {
+  const el = container.querySelector(selector);
+  if (!el) return;
+  el.value = value ?? '';
+}
+
+function updatePhaseSetupConditionalFields(container, mode) {
+  const contestFields = container.querySelector('#contestPrepFields');
+  const improvementFields = container.querySelector('#improvementFields');
+  const miniCutFields = container.querySelector('#miniCutFields');
+
+  if (contestFields) contestFields.style.display = mode === 'contest_prep' ? 'block' : 'none';
+  if (improvementFields) improvementFields.style.display = mode === 'improvement' ? 'block' : 'none';
+  if (miniCutFields) miniCutFields.style.display = mode === 'mini_cut' ? 'block' : 'none';
+}
+
+function renderPhaseSetupSummary(container, state) {
+  const summary = container.querySelector('#athleteSetupSummary');
+  const cta = container.querySelector('#phaseSetupCta');
+  if (!summary || !cta) return;
+
+  if (!state || !state.mode) {
+    summary.textContent = 'Set up prep mode details for phase-aware tracking.';
+    cta.textContent = 'Set Up Prep Mode';
+    return;
+  }
+
+  const athleteName = state.athleteName || 'Athlete';
+  const modeLabel = (window.prepModeApi && typeof window.prepModeApi.getCurrentPhaseLabel === 'function')
+    ? window.prepModeApi.getCurrentPhaseLabel(state)
+    : state.mode;
+  summary.textContent = `${athleteName}: ${modeLabel}`;
+  cta.textContent = 'Edit Phase Setup';
+}
+
+function hydratePhaseSetupForm(container, state) {
+  const form = container.querySelector('#athleteSetupForm');
+  if (!form) return;
+
+  const mode = state?.mode || 'improvement';
+  setFieldValue(form, '#athleteName', state?.athleteName || '');
+  setFieldValue(form, '#phaseMode', mode);
+
+  setFieldValue(form, '#prepShowDate', state?.showDate || '');
+  setFieldValue(form, '#prepDivision', state?.division || '');
+  setFieldValue(form, '#prepCurrentWeight', state?.currentWeight ?? '');
+  setFieldValue(form, '#prepStageWeight', state?.targetStageWeight ?? '');
+  setFieldValue(form, '#prepCheckInDay', state?.checkInDay || 'Sunday');
+  setFieldValue(form, '#prepCardioBaseline', state?.cardioBaseline || '');
+  setFieldValue(form, '#prepPosingFrequency', state?.posingFrequency || '');
+
+  setFieldValue(form, '#improvementStartDate', state?.startDate || '');
+  setFieldValue(form, '#weightGoalDirection', state?.weightGoalDirection || '');
+
+  setFieldValue(form, '#miniCutStartDate', state?.startDate || '');
+  setFieldValue(form, '#miniCutRateLoss', state?.targetRateOfLoss ?? '');
+
+  updatePhaseSetupConditionalFields(container, mode);
+}
+
+function bindPhaseSetup(container = document) {
+  const form = container.querySelector('#athleteSetupForm');
+  const cta = container.querySelector('#phaseSetupCta');
+  const phaseMode = container.querySelector('#phaseMode');
+  if (!form || !cta || !phaseMode) return;
+
+  const phaseApi = getPhaseSetupApi();
+  if (!phaseApi) {
+    cta.disabled = true;
+    cta.title = 'Prep mode API is unavailable in this environment.';
+    return;
+  }
+
+  let state = phaseApi.getCurrentPhaseState?.() || phaseApi.initializeDefaultPhaseState?.() || null;
+  renderPhaseSetupSummary(container, state);
+  hydratePhaseSetupForm(container, state);
+
+  cta.addEventListener('click', () => {
+    const isHidden = form.style.display === 'none';
+    form.style.display = isHidden ? 'block' : 'none';
+  });
+
+  phaseMode.addEventListener('change', () => {
+    updatePhaseSetupConditionalFields(container, phaseMode.value || 'improvement');
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const mode = phaseMode.value || 'improvement';
+    const startDate = mode === 'mini_cut'
+      ? form.querySelector('#miniCutStartDate')?.value
+      : form.querySelector('#improvementStartDate')?.value;
+
+    const payload = {
+      ...state,
+      athleteName: form.querySelector('#athleteName')?.value?.trim() || '',
+      mode,
+      startDate: startDate || null,
+      showDate: mode === 'contest_prep' ? form.querySelector('#prepShowDate')?.value || null : null,
+      division: mode === 'contest_prep' ? form.querySelector('#prepDivision')?.value?.trim() || '' : '',
+      currentWeight: mode === 'contest_prep' ? toNumberOrNull(form.querySelector('#prepCurrentWeight')?.value) : null,
+      targetStageWeight: mode === 'contest_prep' ? toNumberOrNull(form.querySelector('#prepStageWeight')?.value) : null,
+      checkInDay: mode === 'contest_prep' ? form.querySelector('#prepCheckInDay')?.value || 'Sunday' : 'Sunday',
+      cardioBaseline: mode === 'contest_prep' ? form.querySelector('#prepCardioBaseline')?.value?.trim() || '' : '',
+      posingFrequency: mode === 'contest_prep' ? form.querySelector('#prepPosingFrequency')?.value?.trim() || '' : '',
+      weightGoalDirection: mode === 'improvement' ? form.querySelector('#weightGoalDirection')?.value || '' : '',
+      targetRateOfLoss: mode === 'mini_cut' ? toNumberOrNull(form.querySelector('#miniCutRateLoss')?.value) : null
+    };
+
+    state = phaseApi.saveCurrentPhaseState?.(null, payload) || payload;
+    renderPhaseSetupSummary(container, state);
+    form.style.display = 'none';
+
+    if (typeof showToast === 'function') {
+      showToast('Athlete setup saved');
+    }
+  });
+}
+
 function injectSettingsMarkup() {
   const container = document.getElementById('settingsFormContainer');
   if (!container || container.dataset.loaded === 'true' || container.dataset.loaded === 'loading') {
@@ -164,6 +297,7 @@ function injectSettingsMarkup() {
         form.addEventListener('submit', saveSettings);
       }
       bindReminderToggle(container);
+      bindPhaseSetup(container);
       applySettingsToUI({ ...getDefaultSettings(), ...readStoredSettings() });
     })
     .catch(error => {
@@ -184,3 +318,4 @@ window.initSettingsPage = injectSettingsMarkup;
 window.saveSettings = saveSettings;
 window.getStoredUserSettings = readStoredSettings;
 window.getDefaultUserSettings = getDefaultSettings;
+window.bindPhaseSetup = bindPhaseSetup;
