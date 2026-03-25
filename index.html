@@ -227,35 +227,6 @@
   color: var(--text-color); /* ensure menu text is readable */
 }
 
-.primary-nav-strip {
-  position: sticky;
-  top: 0;
-  z-index: 900;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 8px;
-  margin: 8px 0 16px;
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-}
-
-.primary-nav-strip button {
-  margin: 0;
-  white-space: nowrap;
-  border-radius: 999px;
-  background: rgba(47, 128, 237, 0.15);
-  color: var(--text-color);
-  font-size: 13px;
-  padding: 8px 12px;
-}
-
-.primary-nav-strip button.active {
-  background: var(--primary);
-  color: #fff;
-}
-
 
 /* hamburger button always top-left, above content */
 .menu-toggle {
@@ -793,14 +764,6 @@
   </nav>
 
   <div id="appContainer" class="main-content">
-  <div class="primary-nav-strip" aria-label="Primary mobile navigation">
-    <button type="button" data-primary-target="homeTab">🏠 Home</button>
-    <button type="button" data-primary-target="logTab">📝 Log</button>
-    <button type="button" data-primary-target="progressTab">📈 Progress</button>
-    <button type="button" data-primary-target="checkInTab">🧾 Check-In</button>
-    <button type="button" data-primary-target="settingsTab">👤 Profile</button>
-  </div>
-
 <div id="progressReminder"></div>
 
   <div id="homeTab" class="tab-content">
@@ -1968,10 +1931,6 @@ function showTab(tabName) {
   document.querySelectorAll('#sideMenu a[data-target]').forEach((link) => {
     const isActive = link.getAttribute('data-target') === tabName;
     link.classList.toggle('active', isActive);
-  });
-  document.querySelectorAll('.primary-nav-strip button[data-primary-target]').forEach((button) => {
-    const isActive = button.getAttribute('data-primary-target') === tabName;
-    button.classList.toggle('active', isActive);
   });
   if (typeof animateTabSwitch === 'function') {
     animateTabSwitch(tab);
@@ -8551,13 +8510,6 @@ function renderLogHistory(logs) {
       const tabName = link.getAttribute("data-target");
       showTab(tabName);
       toggleSidebar(false);
-    });
-  });
-
-  document.querySelectorAll(".primary-nav-strip button[data-primary-target]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const tabName = button.getAttribute("data-primary-target");
-      showTab(tabName);
     });
   });
 
