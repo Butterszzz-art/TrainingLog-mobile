@@ -177,18 +177,12 @@ function updatePRs(user, workout, volumeCalc) {
 
   if (updated) {
     savePRs(user, prs);
-    if (typeof window !== 'undefined' && typeof window.evaluatePRAchievements === 'function') {
-      try {
-        window.evaluatePRAchievements(user, {
-          id: workout?.id || null,
-          date: workout?.date || Date.now(),
-          prEvents: allPREvents
-        });
-      } catch (err) {
-        console.warn('Gamification PR evaluation failed; continuing.', err);
-      }
-    }
   }
+
+  if (workout && typeof workout === 'object') {
+    workout.prEvents = allPREvents.slice();
+  }
+
   return updated ? prs : null;
 }
 

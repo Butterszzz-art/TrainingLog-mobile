@@ -26,7 +26,8 @@ function normalizeLog(log) {
   const title = log?.title || log?.name || log?.workoutTitle || 'Resistance Workout';
   const userId = log?.userId || log?.username || log?.user || getCurrentUserId();
   const id = log?.id || null;
-  return { date, exercises, title, userId, id };
+  const prEvents = Array.isArray(log?.prEvents) ? log.prEvents.map(item => String(item || '').trim()).filter(Boolean) : [];
+  return { date, exercises, title, userId, id, prEvents };
 }
 
 function readExistingLogs() {
@@ -87,11 +88,16 @@ export function saveLogToLocalStorage(log) {
 
     // Non-blocking gamification hook at final save point.
     // If gamification fails, workout logging must still succeed.
-    if (typeof window !== 'undefined' && typeof window.evaluateWorkoutAchievements === 'function') {
+    if (typeof window !== 'undefined') {
       const activeUser = normalizedLog.userId || getCurrentUserId();
       if (activeUser) {
         try {
-          window.evaluateWorkoutAchievements(activeUser, normalizedLog);
+          if (typeof window.evaluateWorkoutAchievements === 'function') {
+            window.evaluateWorkoutAchievements(activeUser, normalizedLog);
+          }
+          if (typeof window.evaluatePRAchievements === 'function' && Array.isArray(normalizedLog.prEvents) && normalizedLog.prEvents.length) {
+            window.evaluatePRAchievements(activeUser, normalizedLog);
+          }
         } catch (gamificationErr) {
           console.warn('Gamification workout evaluation failed; continuing normally.', gamificationErr);
         }
