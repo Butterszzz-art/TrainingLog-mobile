@@ -11,6 +11,17 @@
     post_show: 'Post-Show Recovery'
   };
 
+  const MODE_ALIASES = {
+    'improvement season': 'improvement',
+    improvement_season: 'improvement',
+    'mini cut': 'mini_cut',
+    minicut: 'mini_cut',
+    'contest prep': 'contest_prep',
+    contestprep: 'contest_prep',
+    'post-show': 'post_show',
+    postshow: 'post_show'
+  };
+
   const VALID_MODES = new Set(Object.keys(MODE_LABELS));
 
   function getTodayDateString() {
@@ -67,8 +78,9 @@
 
   function normalizeMode(mode, fallbackMode) {
     if (typeof mode !== 'string') return fallbackMode;
-    const normalized = mode.trim().toLowerCase();
-    return VALID_MODES.has(normalized) ? normalized : fallbackMode;
+    const normalized = mode.trim().toLowerCase().replace(/\s+/g, '_');
+    const aliasLookup = MODE_ALIASES[normalized] || MODE_ALIASES[normalized.replace(/_/g, ' ')] || normalized;
+    return VALID_MODES.has(aliasLookup) ? aliasLookup : fallbackMode;
   }
 
   function toNumberOrNull(value) {
@@ -77,9 +89,14 @@
     return Number.isFinite(n) ? n : null;
   }
 
+  function toStringOrEmpty(value) {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
   function sanitizeState(state) {
     const baseline = {
       mode: 'improvement',
+      athleteName: '',
       showDate: null,
       startDate: getTodayDateString(),
       targetStageWeight: null,
@@ -90,6 +107,8 @@
       posingFrequency: '',
       prepStartDate: null,
       reverseDietStartDate: null,
+      weightGoalDirection: '',
+      targetRateOfLoss: null,
       notes: '',
       updatedAt: new Date().toISOString()
     };
@@ -100,16 +119,19 @@
       ...baseline,
       ...source,
       mode: normalizeMode(source.mode, baseline.mode),
+      athleteName: toStringOrEmpty(source.athleteName),
       showDate: toISODateOrNull(source.showDate),
       startDate: toISODateOrNull(source.startDate) || baseline.startDate,
       targetStageWeight: toNumberOrNull(source.targetStageWeight),
       currentWeight: toNumberOrNull(source.currentWeight),
-      division: typeof source.division === 'string' ? source.division.trim() : baseline.division,
-      checkInDay: typeof source.checkInDay === 'string' && source.checkInDay.trim() ? source.checkInDay.trim() : baseline.checkInDay,
-      cardioBaseline: typeof source.cardioBaseline === 'string' ? source.cardioBaseline.trim() : baseline.cardioBaseline,
-      posingFrequency: typeof source.posingFrequency === 'string' ? source.posingFrequency.trim() : baseline.posingFrequency,
+      division: toStringOrEmpty(source.division),
+      checkInDay: toStringOrEmpty(source.checkInDay) || baseline.checkInDay,
+      cardioBaseline: toStringOrEmpty(source.cardioBaseline),
+      posingFrequency: toStringOrEmpty(source.posingFrequency),
       prepStartDate: toISODateOrNull(source.prepStartDate),
       reverseDietStartDate: toISODateOrNull(source.reverseDietStartDate),
+      weightGoalDirection: toStringOrEmpty(source.weightGoalDirection),
+      targetRateOfLoss: toNumberOrNull(source.targetRateOfLoss),
       notes: typeof source.notes === 'string' ? source.notes : baseline.notes,
       updatedAt: new Date().toISOString()
     };
@@ -192,6 +214,7 @@
     return {
       mode: normalized.mode,
       label,
+      athleteName: normalized.athleteName,
       daysUntilShow,
       weeksOut,
       isShowDay: daysUntilShow === 0,
@@ -201,7 +224,12 @@
       division: normalized.division,
       targetStageWeight: normalized.targetStageWeight,
       currentWeight: normalized.currentWeight,
+      cardioBaseline: normalized.cardioBaseline,
+      posingFrequency: normalized.posingFrequency,
       prepStartDate: normalized.prepStartDate,
+      startDate: normalized.startDate,
+      weightGoalDirection: normalized.weightGoalDirection,
+      targetRateOfLoss: normalized.targetRateOfLoss,
       reverseDietStartDate: normalized.reverseDietStartDate,
       notes: normalized.notes
     };

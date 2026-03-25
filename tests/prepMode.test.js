@@ -30,20 +30,25 @@ describe('prepMode', () => {
 
   test('saveCurrentPhaseState sanitizes and persists supported fields', () => {
     const saved = saveCurrentPhaseState('abc', {
-      mode: 'contest_prep',
+      mode: 'contest prep',
+      athleteName: 'Kai',
       showDate: '2026-08-12',
       targetStageWeight: '182.5',
       currentWeight: '191.3',
       division: 'Classic Physique',
       notes: 'Push posing volume',
-      checkInDay: 'Saturday'
+      checkInDay: 'Saturday',
+      cardioBaseline: '4x25 min LISS',
+      posingFrequency: '5 sessions'
     });
 
     expect(saved.mode).toBe('contest_prep');
+    expect(saved.athleteName).toBe('Kai');
     expect(saved.targetStageWeight).toBe(182.5);
     expect(saved.currentWeight).toBe(191.3);
     expect(getCurrentPhaseState('abc').division).toBe('Classic Physique');
     expect(getCurrentPhaseState('abc').checkInDay).toBe('Saturday');
+    expect(getCurrentPhaseState('abc').cardioBaseline).toBe('4x25 min LISS');
   });
 
   test('phase helpers calculate phase label and context', () => {
@@ -58,5 +63,27 @@ describe('prepMode', () => {
     const context = getPhaseContext({ mode: 'contest_prep', showDate: tomorrow, checkInDay: 'Friday' });
     expect(context.isPeakWeek).toBe(true);
     expect(context.checkInDay).toBe('Friday');
+  });
+
+  test('mini cut and improvement-specific setup fields persist safely', () => {
+    const miniCut = saveCurrentPhaseState('mini-athlete', {
+      mode: 'mini_cut',
+      startDate: '2026-03-01',
+      targetRateOfLoss: '0.7'
+    });
+
+    expect(miniCut.mode).toBe('mini_cut');
+    expect(miniCut.targetRateOfLoss).toBe(0.7);
+
+    const improvement = saveCurrentPhaseState('mini-athlete', {
+      ...miniCut,
+      mode: 'improvement',
+      weightGoalDirection: 'gain',
+      targetRateOfLoss: null
+    });
+
+    expect(improvement.mode).toBe('improvement');
+    expect(improvement.weightGoalDirection).toBe('gain');
+    expect(improvement.targetRateOfLoss).toBeNull();
   });
 });
