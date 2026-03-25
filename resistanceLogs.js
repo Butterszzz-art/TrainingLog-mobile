@@ -80,9 +80,23 @@ function readExistingLogs() {
  */
 export function saveLogToLocalStorage(log) {
   try {
+    const normalizedLog = normalizeLog(log);
     const existing = readExistingLogs();
-    existing.push(normalizeLog(log));
+    existing.push(normalizedLog);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+
+    // Non-blocking gamification hook at final save point.
+    // If gamification fails, workout logging must still succeed.
+    if (typeof window !== 'undefined' && typeof window.evaluateWorkoutAchievements === 'function') {
+      const activeUser = normalizedLog.userId || getCurrentUserId();
+      if (activeUser) {
+        try {
+          window.evaluateWorkoutAchievements(activeUser, normalizedLog);
+        } catch (gamificationErr) {
+          console.warn('Gamification workout evaluation failed; continuing normally.', gamificationErr);
+        }
+      }
+    }
   } catch (err) {
     console.warn('Unable to save resistance log locally (prototype)', err);
   }

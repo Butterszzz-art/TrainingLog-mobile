@@ -106,6 +106,7 @@ function updatePRs(user, workout, volumeCalc) {
   let updated = false;
   const sessionDate = getSessionDateStamp(workout);
   const groupedByExercise = {};
+  const allPREvents = [];
 
   workout.log.forEach(entry => {
     const name = entry?.exercise;
@@ -163,6 +164,7 @@ function updatePRs(user, workout, volumeCalc) {
     if (prEvents.length) {
       history.push({ date: sessionDate, events: prEvents });
       prEvents.forEach(notifyPR);
+      allPREvents.push(...prEvents);
     }
 
     prs[exercise] = {
@@ -173,7 +175,20 @@ function updatePRs(user, workout, volumeCalc) {
     };
   });
 
-  if (updated) savePRs(user, prs);
+  if (updated) {
+    savePRs(user, prs);
+    if (typeof window !== 'undefined' && typeof window.evaluatePRAchievements === 'function') {
+      try {
+        window.evaluatePRAchievements(user, {
+          id: workout?.id || null,
+          date: workout?.date || Date.now(),
+          prEvents: allPREvents
+        });
+      } catch (err) {
+        console.warn('Gamification PR evaluation failed; continuing.', err);
+      }
+    }
+  }
   return updated ? prs : null;
 }
 
