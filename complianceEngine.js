@@ -7,6 +7,29 @@
     { min: 50, label: 'at_risk' },
     { min: 0, label: 'off_track' }
   ];
+  const STORAGE_PREFIX = 'tl_compliance_summary_v1_';
+
+  function getStorage() {
+    try {
+      if (typeof localStorage !== 'undefined') return localStorage;
+    } catch (_error) {
+      // localStorage unavailable in some environments.
+    }
+
+    if (!globalScope.__complianceMemoryStore) {
+      globalScope.__complianceMemoryStore = {
+        _data: {},
+        getItem(key) {
+          return Object.prototype.hasOwnProperty.call(this._data, key) ? this._data[key] : null;
+        },
+        setItem(key, value) {
+          this._data[key] = String(value);
+        }
+      };
+    }
+
+    return globalScope.__complianceMemoryStore;
+  }
 
   function resolveDate(value) {
     if (!value) return new Date().toISOString().slice(0, 10);
@@ -24,6 +47,44 @@
       || globalScope.localStorage?.getItem('currentUser')
       || globalScope.localStorage?.getItem('username');
     return typeof fallback === 'string' && fallback.trim() ? fallback.trim() : 'guest';
+  }
+
+  function getStorageKey(userId) {
+    return `${STORAGE_PREFIX}${resolveUserId(userId)}`;
+  }
+
+  function loadComplianceSummaryState(userId) {
+    const raw = getStorage().getItem(getStorageKey(userId));
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function saveComplianceSummaryState(userId, state) {
+    const safe = state && typeof state === 'object' ? state : {};
+    getStorage().setItem(getStorageKey(userId), JSON.stringify(safe));
+    syncComplianceSummaryStateToBackend(resolveUserId(userId), safe);
+    return safe;
+  }
+
+  function syncComplianceSummaryStateToBackend(userId, state) {
+    const resolvedUser = resolveUserId(userId);
+    try {
+      // Future backend endpoint: PUT /api/bodybuilding/compliance-summary/:userId
+      // This intentionally does not gate local usage on network availability.
+      if (typeof globalScope.fetch !== 'function') return false;
+      return globalScope.fetch(`/api/bodybuilding/compliance-summary/${encodeURIComponent(resolvedUser)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state || {})
+      }).then(() => true).catch(() => false);
+    } catch (_error) {
+      return false;
+    }
   }
 
   function parseDate(dateKey) {
@@ -155,10 +216,14 @@
   }
 
   const api = {
+    loadComplianceSummaryState,
+    saveComplianceSummaryState,
+    syncComplianceSummaryStateToBackend,
     calculateDailyCompliancePercent,
     calculateWeeklyCompliance,
     getComplianceStatus,
-    getComplianceTrend
+    getComplianceTrend,
+    getStorageKey
   };
 
   if (typeof module !== 'undefined' && module.exports) {

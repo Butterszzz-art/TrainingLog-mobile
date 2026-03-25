@@ -199,7 +199,24 @@
         console.warn('Failed persisting gamification state.', err);
       }
     }
+    syncGamificationStateToBackend(userId, normalized);
     return normalized;
+  }
+
+  function syncGamificationStateToBackend(userId, state) {
+    const resolvedUser = userId || 'guest';
+    try {
+      // Future backend endpoint: PUT /api/bodybuilding/gamification/:userId
+      // Failures here should never block local progression updates.
+      if (typeof globalScope.fetch !== 'function') return false;
+      return globalScope.fetch(`/api/bodybuilding/gamification/${encodeURIComponent(resolvedUser)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state || defaultState(resolvedUser))
+      }).then(() => true).catch(() => false);
+    } catch (_error) {
+      return false;
+    }
   }
 
   function pushEvent(state, event) {
@@ -519,6 +536,7 @@
     // compatibility aliases
     renderGamificationCard: renderGamificationSummary,
     loadGamificationState: getGamificationState,
+    syncGamificationStateToBackend,
     persistGamificationState: saveGamificationState,
     loadGamification: getGamificationState,
     saveGamification: saveGamificationState,
