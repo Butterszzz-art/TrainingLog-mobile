@@ -1,5 +1,6 @@
 import { stopWorkoutTimerAndSave } from './workoutTimer.js';
 import { loadLogsFromLocalStorage, saveLogToLocalStorage } from './resistanceLogs.js';
+import { updatePRs } from './progressUtils.js';
 
 const STORAGE_KEYS = {
   workouts: 'tl_workout_history_v1'
@@ -157,10 +158,12 @@ function mapToResistanceLog(workout) {
     : [];
 
   return {
+    id: workout?.id || null,
     date,
     exercises,
     title: workout?.name || workout?.title || 'Resistance Workout',
-    userId: getCurrentUserId()
+    userId: getCurrentUserId(),
+    prEvents: Array.isArray(workout?.prEvents) ? workout.prEvents.slice() : []
   };
 }
 
@@ -369,6 +372,12 @@ export async function finalizeResistanceWorkout(state) {
       sets: [{ weight: set.weight, reps: set.reps }]
     }))
   };
+
+  try {
+    updatePRs(workout.userId || getCurrentUserId(), workout);
+  } catch (err) {
+    console.warn('Failed to update PRs during finalize flow', err);
+  }
 
   // Persist the completed workout locally for prototyping.
   saveLogToLocalStorage(mapToResistanceLog(workout));
