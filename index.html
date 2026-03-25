@@ -710,7 +710,8 @@
     <div id="streakCounter" class="streak-counter"></div>
   </div>
 
-  <div id="gamificationCard" class="gamification-panel" style="margin-top:12px;"></div>
+  <div id="gamificationCard" class="gamification-panel gamification-card-shell" style="margin-top:12px;"></div>
+  <div id="gamificationLogMiniSummary" class="gamification-mini-summary" style="margin-top:10px;"></div>
   
         <button id="addLogBtn" onclick="addLogEntry()" disabled>Add to Log</button>
         <button id="saveTemplateBtn" onclick="saveWorkoutAsTemplate()" style="margin-left: 10px;">Save as Template</button>
@@ -1125,6 +1126,7 @@
       </div>
       <div id="progressChartsPanel" class="panel">
       <section class="progress-chart">
+        <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
         <canvas id="progressCanvas"></canvas>
         <div id="exerciseProgress" style="display:none;"></div>
         <div id="trainingLoadPanel" style="margin-top:14px;">
