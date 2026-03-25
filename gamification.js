@@ -224,7 +224,23 @@
     return merged;
   }
 
-  function getGamificationState(userId) {
+  function prepareGamificationSyncPayload(state) {
+    const normalized = normalizeState(state?.userId, state);
+    return {
+      level: normalized.level,
+      totalXp: normalized.totalXp,
+      streak: normalized.streak,
+      badges: ensureArray(normalized.badges),
+      recentEvents: ensureArray(normalized.recentEvents),
+      workoutRewardHistory: {
+        rewardedWorkoutIds: ensureArray(normalized.rewardedWorkoutIds),
+        rewardedPREventIds: ensureArray(normalized.rewardedPREventIds),
+        rewardedStreakMilestones: ensureArray(normalized.rewardedStreakMilestones)
+      }
+    };
+  }
+
+  function loadGamificationState(userId) {
     if (typeof localStorage === 'undefined') return defaultState(userId);
     try {
       const raw = localStorage.getItem(getStorageKey(userId));
@@ -236,7 +252,7 @@
     }
   }
 
-  function saveGamificationState(userId, state) {
+  function persistGamificationState(userId, state) {
     if (typeof localStorage === 'undefined') return normalizeState(userId, state);
     const normalized = normalizeState(userId, state);
     try {
@@ -244,6 +260,34 @@
     } catch (err) {
       console.warn('Failed to persist gamification state.', err);
     }
+    return normalized;
+  }
+
+  async function syncGamificationStateToBackend(userId, state) {
+    const normalized = normalizeState(userId, state);
+    const payload = prepareGamificationSyncPayload(normalized);
+    try {
+      // Future backend integration point:
+      // invoke your API client here (for example, POST /api/gamification/sync).
+      // Keep this optional so local-first usage keeps working before backend rollout.
+      void userId;
+      void payload;
+      return { synced: false, reason: 'backend_not_configured' };
+    } catch (err) {
+      console.warn('Gamification sync failed; continuing with local state.', err);
+      return { synced: false, reason: 'sync_failed', error: err };
+    }
+  }
+
+  function getGamificationState(userId) {
+    return loadGamificationState(userId);
+  }
+
+  function saveGamificationState(userId, state) {
+    const normalized = persistGamificationState(userId, state);
+    syncGamificationStateToBackend(userId, normalized).catch(err => {
+      console.warn('Gamification sync failed unexpectedly; continuing locally.', err);
+    });
     return normalized;
   }
 
@@ -786,6 +830,10 @@
     BADGE_REGISTRY,
     ACHIEVEMENTS: BADGE_REGISTRY,
     XP_RULES,
+    loadGamificationState,
+    persistGamificationState,
+    syncGamificationStateToBackend,
+    prepareGamificationSyncPayload,
     getXpNeededForNextLevel,
     getGamificationState,
     saveGamificationState,
