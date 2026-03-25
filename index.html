@@ -199,6 +199,17 @@
   box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
 }
 
+.side-menu ul li.menu-section-label {
+  margin: 12px 0 6px;
+  box-shadow: none;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+  font-weight: 600;
+  padding-left: 10px;
+}
+
 .side-menu ul li a {
   text-decoration: none;
   color: var(--text-color);
@@ -214,6 +225,35 @@
 .side-menu ul li a.active {
   background-color: var(--primary); /* accent background on hover/active */
   color: var(--text-color); /* ensure menu text is readable */
+}
+
+.primary-nav-strip {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px;
+  margin: 8px 0 16px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.primary-nav-strip button {
+  margin: 0;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: rgba(47, 128, 237, 0.15);
+  color: var(--text-color);
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+.primary-nav-strip button.active {
+  background: var(--primary);
+  color: #fff;
 }
 
 
@@ -723,25 +763,43 @@
     <button id="homeButton" class="home-button" onclick="openDashboard()" aria-label="Home">🏠</button>
     <div class="menu-title">PocketFit (<span id="userDisplay"></span>)</div>
     <ul>
+      <li class="menu-section-label">Primary</li>
       <li><a href="#" data-target="homeTab">🏠 Home</a></li>
+      <li><a href="#" data-target="logTab">📝 Log</a></li>
+      <li><a href="#" data-target="progressTab">📈 Progress</a></li>
+      <li><a href="#" data-target="checkInTab">🧾 Check-In</a></li>
+      <li><a href="#" data-target="settingsTab">👤 Profile</a></li>
+
+      <li class="menu-section-label">Tracking</li>
       <li><a href="#" data-target="logTab">📋 Training Log</a></li>
       <li><a href="#" data-target="weightTab">⚖️ Bodyweight</a></li>
-      <li><a href="#" data-target="checkInTab">🧾 Check-In</a></li>
       <li><a href="#" data-target="cardioTab">🏃 Cardio</a></li>
       <li><a href="#" data-target="macroTab">🍽️ Macros</a></li>
+
+      <li class="menu-section-label">Planning & Community</li>
       <li><a href="#" data-target="crossfitTab">💪 CrossFit</a></li>
       <li><a href="#" data-target="programTab">🗓️ Programs</a></li>
       <li><a href="#" data-target="communityTab">👥 Community</a></li>
       <li><a href="#" data-target="leaderboardTab">🏅 Leaderboard</a></li>
-      <li><a href="#" data-target="progressTab">📈 Progress</a></li>
+
+      <li class="menu-section-label">History & Coaching</li>
       <li><a href="#" data-target="logHistoryTab">📜 Log History</a></li>
       <li class="coach-only"><a href="#" data-target="coachingTab">🏆 Coaching</a></li>
+
+      <li class="menu-section-label">App</li>
       <li><a href="#" data-target="settingsTab">⚙️ Settings</a></li>
       <li><button id="sidebarLogoutBtn" onclick="logout()">Logout</button></li>
     </ul>
   </nav>
 
   <div id="appContainer" class="main-content">
+  <div class="primary-nav-strip" aria-label="Primary mobile navigation">
+    <button type="button" data-primary-target="homeTab">🏠 Home</button>
+    <button type="button" data-primary-target="logTab">📝 Log</button>
+    <button type="button" data-primary-target="progressTab">📈 Progress</button>
+    <button type="button" data-primary-target="checkInTab">🧾 Check-In</button>
+    <button type="button" data-primary-target="settingsTab">👤 Profile</button>
+  </div>
 
 <div id="progressReminder"></div>
 
@@ -1907,6 +1965,14 @@ function showTab(tabName) {
   const tab = document.getElementById(tabName);
   if (!tab) return;
   tab.classList.add('active');
+  document.querySelectorAll('#sideMenu a[data-target]').forEach((link) => {
+    const isActive = link.getAttribute('data-target') === tabName;
+    link.classList.toggle('active', isActive);
+  });
+  document.querySelectorAll('.primary-nav-strip button[data-primary-target]').forEach((button) => {
+    const isActive = button.getAttribute('data-primary-target') === tabName;
+    button.classList.toggle('active', isActive);
+  });
   if (typeof animateTabSwitch === 'function') {
     animateTabSwitch(tab);
   }
@@ -8485,6 +8551,13 @@ function renderLogHistory(logs) {
       const tabName = link.getAttribute("data-target");
       showTab(tabName);
       toggleSidebar(false);
+    });
+  });
+
+  document.querySelectorAll(".primary-nav-strip button[data-primary-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const tabName = button.getAttribute("data-primary-target");
+      showTab(tabName);
     });
   });
 
