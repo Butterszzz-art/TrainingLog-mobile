@@ -183,6 +183,41 @@
     return days >= 0 ? Math.ceil(days / 7) : Math.floor(days / 7);
   }
 
+  function getSeasonWeekNumber(referenceDate, startDate) {
+    const ref = toISODateOrNull(referenceDate) || getTodayDateString();
+    const start = toISODateOrNull(startDate);
+    if (!start) return 1;
+    const refDate = new Date(ref);
+    const startDateObj = new Date(start);
+    const refUtc = Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth(), refDate.getUTCDate());
+    const startUtc = Date.UTC(startDateObj.getUTCFullYear(), startDateObj.getUTCMonth(), startDateObj.getUTCDate());
+    const dayDiff = Math.floor((refUtc - startUtc) / 86400000);
+    return Math.max(1, Math.floor(dayDiff / 7) + 1);
+  }
+
+  function getPrepWeekLabel(state = {}) {
+    const normalized = sanitizeState(state);
+    const daysUntilShow = getDaysUntilShow(normalized.showDate);
+    if (daysUntilShow === null) return `Prep Week ${getSeasonWeekNumber(normalized.referenceDate, normalized.prepStartDate || normalized.startDate)}`;
+    if (daysUntilShow < 0) return 'Show Complete';
+    if (daysUntilShow === 0) return 'Show Day';
+    if (daysUntilShow <= 7) return 'Peak Week';
+    return `${Math.ceil(daysUntilShow / 7)} Weeks Out`;
+  }
+
+  function getPostShowLabel(state = {}) {
+    const normalized = sanitizeState(state);
+    const startDate = normalized.reverseDietStartDate || normalized.showDate || normalized.startDate;
+    const week = getSeasonWeekNumber(normalized.referenceDate, startDate);
+    return `Post-Show Week ${week}`;
+  }
+
+  function getImprovementSeasonLabel(state = {}) {
+    const normalized = sanitizeState(state);
+    const week = getSeasonWeekNumber(normalized.referenceDate, normalized.startDate);
+    return `Improvement Season Week ${week}`;
+  }
+
   function inferModeFromShowDate(showDate, fallbackMode) {
     const days = getDaysUntilShow(showDate);
     if (days === null) return fallbackMode;
@@ -241,6 +276,9 @@
     initializeDefaultPhaseState,
     getDaysUntilShow,
     getWeeksOut,
+    getPrepWeekLabel,
+    getPostShowLabel,
+    getImprovementSeasonLabel,
     getCurrentPhaseLabel,
     getPhaseContext,
     getStorageKey

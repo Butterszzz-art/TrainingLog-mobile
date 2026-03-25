@@ -39,7 +39,7 @@ describe('checkinEngine', () => {
     expect(checkIns[0].frontPhoto).toBe('');
     expect(checkIns[0].sidePhoto).toBe('');
     expect(checkIns[0].backPhoto).toBe('');
-    expect(checkIns[0].weekLabel).toMatch(/weeks out/);
+    expect(checkIns[0].weekLabel).toMatch(/Weeks Out|Peak Week/);
     expect(global.localStorage.getItem(getStorageKey('athleteA'))).toBeTruthy();
   });
 
@@ -48,13 +48,13 @@ describe('checkinEngine', () => {
       { date: '2026-03-25', phase: 'contest_prep' },
       { showDate: '2026-06-17', mode: 'contest_prep' }
     );
-    expect(contestLabel).toBe('12 weeks out');
+    expect(contestLabel).toBe('12 Weeks Out');
 
     const improvementLabel = getWeekLabelForCheckIn(
       { date: '2026-03-25', phase: 'improvement' },
       { startDate: '2026-03-04', mode: 'improvement' }
     );
-    expect(improvementLabel).toBe('improvement season week 4');
+    expect(improvementLabel).toBe('Improvement Season Week 4');
   });
 
   test('getNextCheckInDate uses configured check-in day', () => {
