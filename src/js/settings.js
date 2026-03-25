@@ -76,6 +76,33 @@ function applySettingsToUI(settings) {
     if (toggle) toggle.checked = autoIncrement;
     localStorage.setItem('autoIncrementEnabled', String(autoIncrement));
   }
+
+  const profile = settings.profile || {};
+  const athleteInfo = profile.athleteInfo || {};
+  const phaseSettings = profile.phaseSettings || {};
+  const goals = profile.goals || {};
+
+  const setValue = (id, value) => {
+    const el = document.getElementById(id);
+    if (el && value !== undefined && value !== null) el.value = value;
+  };
+
+  setValue('athleteInfoName', athleteInfo.name || '');
+  setValue('athleteInfoCurrentWeight', athleteInfo.currentWeight ?? '');
+  setValue('athleteInfoHeight', athleteInfo.height || '');
+  setValue('athleteInfoDivision', athleteInfo.divisionClass || '');
+
+  setValue('profileCurrentPhase', phaseSettings.currentPhase || '');
+  setValue('profileShowDate', phaseSettings.showDate || '');
+  setValue('profileTargetStageWeight', phaseSettings.targetStageWeight ?? '');
+  setValue('profileCheckInDay', phaseSettings.checkInDay || 'Sunday');
+  setValue('profileCardioBaseline', phaseSettings.cardioBaseline || '');
+  setValue('profilePosingFrequency', phaseSettings.posingFrequency || '');
+
+  setValue('profileMacroTargets', goals.macroTargets || '');
+  setValue('profileStepsTarget', goals.stepsTarget ?? '');
+  setValue('profileCardioTarget', goals.cardioTarget || '');
+  setValue('profileSleepTarget', goals.sleepTarget ?? '');
 }
 
 function getDefaultSettings() {
@@ -87,7 +114,12 @@ function getDefaultSettings() {
     theme: localStorage.getItem('theme') || 'light',
     streakReminderEnabled: false,
     streakReminderTime: '19:00',
-    autoIncrement: localStorage.getItem('autoIncrementEnabled') !== 'false'
+    autoIncrement: localStorage.getItem('autoIncrementEnabled') !== 'false',
+    profile: {
+      athleteInfo: {},
+      phaseSettings: {},
+      goals: {}
+    }
   };
 }
 
@@ -106,13 +138,37 @@ function saveSettings(event) {
     theme: themeField ? themeField.value : getDefaultSettings().theme,
     streakReminderEnabled: reminderEnabledField ? Boolean(reminderEnabledField.checked) : false,
     streakReminderTime: reminderTimeField && reminderTimeField.value ? reminderTimeField.value : '19:00',
-    autoIncrement: autoIncrementField ? Boolean(autoIncrementField.checked) : getDefaultSettings().autoIncrement
+    autoIncrement: autoIncrementField ? Boolean(autoIncrementField.checked) : getDefaultSettings().autoIncrement,
+    profile: {
+      athleteInfo: {
+        name: container.querySelector('#athleteInfoName')?.value?.trim() || '',
+        currentWeight: toNumberOrNull(container.querySelector('#athleteInfoCurrentWeight')?.value),
+        height: container.querySelector('#athleteInfoHeight')?.value?.trim() || '',
+        divisionClass: container.querySelector('#athleteInfoDivision')?.value?.trim() || ''
+      },
+      phaseSettings: {
+        currentPhase: container.querySelector('#profileCurrentPhase')?.value || 'improvement',
+        showDate: container.querySelector('#profileShowDate')?.value || null,
+        targetStageWeight: toNumberOrNull(container.querySelector('#profileTargetStageWeight')?.value),
+        checkInDay: container.querySelector('#profileCheckInDay')?.value || 'Sunday',
+        cardioBaseline: container.querySelector('#profileCardioBaseline')?.value?.trim() || '',
+        posingFrequency: container.querySelector('#profilePosingFrequency')?.value?.trim() || ''
+      },
+      goals: {
+        macroTargets: container.querySelector('#profileMacroTargets')?.value?.trim() || '',
+        stepsTarget: toNumberOrNull(container.querySelector('#profileStepsTarget')?.value),
+        cardioTarget: container.querySelector('#profileCardioTarget')?.value?.trim() || '',
+        sleepTarget: toNumberOrNull(container.querySelector('#profileSleepTarget')?.value)
+      }
+    }
   };
 
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(getSettingsStorageKey(), JSON.stringify(settings));
   }
   applySettingsToUI(settings);
+  renderProfileGamificationSummary(container);
+  syncProfilePhaseSettings(settings.profile);
 
   if (typeof showToast === 'function') {
     showToast('Settings saved');
@@ -123,6 +179,91 @@ function saveSettings(event) {
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
     window.dispatchEvent(new CustomEvent('traininglog:settings-saved', { detail: settings }));
   }
+}
+
+function syncProfilePhaseSettings(profile) {
+  const phaseApi = getPhaseSetupApi();
+  if (!phaseApi) return;
+  const current = phaseApi.getCurrentPhaseState?.() || phaseApi.initializeDefaultPhaseState?.() || {};
+  const next = {
+    ...current,
+    athleteName: profile?.athleteInfo?.name || current.athleteName || '',
+    currentWeight: profile?.athleteInfo?.currentWeight ?? current.currentWeight,
+    division: profile?.athleteInfo?.divisionClass || current.division || '',
+    mode: profile?.phaseSettings?.currentPhase || current.mode || 'improvement',
+    showDate: profile?.phaseSettings?.showDate || current.showDate || null,
+    targetStageWeight: profile?.phaseSettings?.targetStageWeight ?? current.targetStageWeight,
+    checkInDay: profile?.phaseSettings?.checkInDay || current.checkInDay || 'Sunday',
+    cardioBaseline: profile?.phaseSettings?.cardioBaseline || current.cardioBaseline || '',
+    posingFrequency: profile?.phaseSettings?.posingFrequency || current.posingFrequency || ''
+  };
+  phaseApi.saveCurrentPhaseState?.(null, next);
+}
+
+function hydrateProfileFromPhaseState(settings) {
+  const phaseApi = getPhaseSetupApi();
+  if (!phaseApi) return settings;
+  const phaseState = phaseApi.getCurrentPhaseState?.() || phaseApi.initializeDefaultPhaseState?.();
+  if (!phaseState) return settings;
+  return {
+    ...settings,
+    profile: {
+      ...(settings.profile || {}),
+      athleteInfo: {
+        ...((settings.profile && settings.profile.athleteInfo) || {}),
+        name: settings.profile?.athleteInfo?.name || phaseState.athleteName || '',
+        currentWeight: settings.profile?.athleteInfo?.currentWeight ?? phaseState.currentWeight,
+        divisionClass: settings.profile?.athleteInfo?.divisionClass || phaseState.division || ''
+      },
+      phaseSettings: {
+        ...((settings.profile && settings.profile.phaseSettings) || {}),
+        currentPhase: settings.profile?.phaseSettings?.currentPhase || phaseState.mode || 'improvement',
+        showDate: settings.profile?.phaseSettings?.showDate || phaseState.showDate || null,
+        targetStageWeight: settings.profile?.phaseSettings?.targetStageWeight ?? phaseState.targetStageWeight,
+        checkInDay: settings.profile?.phaseSettings?.checkInDay || phaseState.checkInDay || 'Sunday',
+        cardioBaseline: settings.profile?.phaseSettings?.cardioBaseline || phaseState.cardioBaseline || '',
+        posingFrequency: settings.profile?.phaseSettings?.posingFrequency || phaseState.posingFrequency || ''
+      }
+    }
+  };
+}
+
+function renderProfileGamificationSummary(container = document) {
+  const userId = getActiveUsername() || 'guest';
+  const summary = typeof window.getGamificationSummary === 'function'
+    ? window.getGamificationSummary(userId)
+    : (typeof window.getGamificationState === 'function' ? window.getGamificationState(userId) : null);
+  if (!summary) return;
+  const level = summary.level ?? '—';
+  const totalXp = summary.totalXp ?? '—';
+  const streak = summary.streak ?? '—';
+  const badges = Array.isArray(summary.badges) ? summary.badges.length : (summary.badgeCount ?? '—');
+
+  const setText = (id, value) => {
+    const el = container.querySelector(`#${id}`) || document.getElementById(id);
+    if (el) el.textContent = String(value);
+  };
+  setText('profileGamificationLevel', level);
+  setText('profileGamificationXp', totalXp);
+  setText('profileGamificationStreak', streak);
+  setText('profileGamificationBadges', badges);
+}
+
+function bindLogoutAction(container = document) {
+  const logoutBtn = container.querySelector('#logoutBtn');
+  if (!logoutBtn) return;
+  logoutBtn.addEventListener('click', () => {
+    if (typeof window.logout === 'function') {
+      window.logout();
+      return;
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('fitnessAppUser');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('username');
+    }
+    if (typeof showToast === 'function') showToast('Logged out');
+  });
 }
 
 function bindReminderToggle(container = document) {
@@ -271,7 +412,7 @@ function bindPhaseSetup(container = document) {
 function injectSettingsMarkup() {
   const container = document.getElementById('settingsFormContainer');
   if (!container || container.dataset.loaded === 'true' || container.dataset.loaded === 'loading') {
-    applySettingsToUI({ ...getDefaultSettings(), ...readStoredSettings() });
+    applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
     return;
   }
 
@@ -297,8 +438,10 @@ function injectSettingsMarkup() {
         form.addEventListener('submit', saveSettings);
       }
       bindReminderToggle(container);
-      bindPhaseSetup(container);
-      applySettingsToUI({ ...getDefaultSettings(), ...readStoredSettings() });
+      bindLogoutAction(container);
+      const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
+      applySettingsToUI(hydrated);
+      renderProfileGamificationSummary(container);
     })
     .catch(error => {
       console.error('Failed to load settings page', error);
@@ -309,7 +452,7 @@ function injectSettingsMarkup() {
 
 function initializeSettingsFeature() {
   injectSettingsMarkup();
-  applySettingsToUI({ ...getDefaultSettings(), ...readStoredSettings() });
+  applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
 }
 
 document.addEventListener('DOMContentLoaded', initializeSettingsFeature);

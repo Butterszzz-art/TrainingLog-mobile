@@ -1279,3 +1279,64 @@ body.theme-dark .set-row {
   margin: 0;
   color: #666;
 }
+
+.profile-hub-form {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-section h3 {
+  margin-top: 0;
+}
+
+.profile-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-summary-grid div {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-summary-grid strong {
+  font-size: 1.1rem;
+}
+
+.checkin-form-section {
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid #dfe3ee;
+  border-radius: 10px;
+}
+
+.checkin-form-section h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.checkin-slider-field {
+  margin-bottom: 12px;
+}
+
+.checkin-slider-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.checkin-slider-field input[type="range"] {
+  width: 100%;
+}
+
+.checkin-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}

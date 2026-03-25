@@ -910,18 +910,61 @@
       <p style="margin-top:-6px;">Track feedback by phase and week to make prep emotionally sticky.</p>
       <div id="checkInNextDate" class="home-mission-progress"></div>
 
-      <input type="date" id="checkInDateInput">
-      <input type="text" id="checkInPhaseInput" placeholder="Phase (contest prep, improvement, mini cut)">
-      <input type="text" id="checkInWeekLabelInput" placeholder="Week label (auto if blank)">
-      <input type="number" step="0.1" id="checkInBodyweightInput" placeholder="Bodyweight">
-      <input type="number" step="0.1" id="checkInWaistInput" placeholder="Waist">
-      <input type="number" min="1" max="10" id="checkInEnergyInput" placeholder="Energy (1-10)">
-      <input type="number" min="1" max="10" id="checkInHungerInput" placeholder="Hunger (1-10)">
-      <input type="number" min="1" max="10" id="checkInSleepInput" placeholder="Sleep (1-10)">
-      <input type="number" min="1" max="10" id="checkInStressInput" placeholder="Stress (1-10)">
-      <input type="number" min="1" max="10" id="checkInDigestionInput" placeholder="Digestion (1-10)">
-      <input type="number" min="1" max="10" id="checkInTrainingPerformanceInput" placeholder="Training Performance (1-10)">
-      <textarea id="checkInNotesInput" placeholder="Notes"></textarea>
+      <section class="checkin-form-section">
+        <h3>Physical</h3>
+        <input type="date" id="checkInDateInput">
+        <input type="text" id="checkInPhaseInput" placeholder="Phase (contest prep, improvement, mini cut)">
+        <input type="text" id="checkInWeekLabelInput" placeholder="Week label (auto if blank)">
+        <input type="number" step="0.1" id="checkInBodyweightInput" placeholder="Bodyweight">
+        <input type="number" step="0.1" id="checkInWaistInput" placeholder="Waist">
+      </section>
+
+      <section class="checkin-form-section">
+        <h3>Recovery</h3>
+        <div class="checkin-slider-field">
+          <div class="checkin-slider-header"><span>Energy</span><strong id="checkInEnergyValue">5</strong></div>
+          <input type="range" min="1" max="10" step="1" value="5" id="checkInEnergyInput" data-value-target="checkInEnergyValue">
+          <div class="checkin-slider-labels"><span>Drained</span><span>High Energy</span></div>
+        </div>
+        <div class="checkin-slider-field">
+          <div class="checkin-slider-header"><span>Sleep Quality</span><strong id="checkInSleepValue">5</strong></div>
+          <input type="range" min="1" max="10" step="1" value="5" id="checkInSleepInput" data-value-target="checkInSleepValue">
+          <div class="checkin-slider-labels"><span>Poor Sleep</span><span>Excellent Sleep</span></div>
+        </div>
+        <div class="checkin-slider-field">
+          <div class="checkin-slider-header"><span>Stress</span><strong id="checkInStressValue">5</strong></div>
+          <input type="range" min="1" max="10" step="1" value="5" id="checkInStressInput" data-value-target="checkInStressValue">
+          <div class="checkin-slider-labels"><span>Low Stress</span><span>High Stress</span></div>
+        </div>
+      </section>
+
+      <section class="checkin-form-section">
+        <h3>Diet Response</h3>
+        <div class="checkin-slider-field">
+          <div class="checkin-slider-header"><span>Hunger</span><strong id="checkInHungerValue">5</strong></div>
+          <input type="range" min="1" max="10" step="1" value="5" id="checkInHungerInput" data-value-target="checkInHungerValue">
+          <div class="checkin-slider-labels"><span>Not Hungry</span><span>Very Hungry</span></div>
+        </div>
+        <div class="checkin-slider-field">
+          <div class="checkin-slider-header"><span>Digestion</span><strong id="checkInDigestionValue">5</strong></div>
+          <input type="range" min="1" max="10" step="1" value="5" id="checkInDigestionInput" data-value-target="checkInDigestionValue">
+          <div class="checkin-slider-labels"><span>Poor</span><span>Excellent</span></div>
+        </div>
+      </section>
+
+      <section class="checkin-form-section">
+        <h3>Performance</h3>
+        <div class="checkin-slider-field">
+          <div class="checkin-slider-header"><span>Training Performance</span><strong id="checkInTrainingPerformanceValue">5</strong></div>
+          <input type="range" min="1" max="10" step="1" value="5" id="checkInTrainingPerformanceInput" data-value-target="checkInTrainingPerformanceValue">
+          <div class="checkin-slider-labels"><span>Off</span><span>Peak</span></div>
+        </div>
+      </section>
+
+      <section class="checkin-form-section">
+        <h3>Notes</h3>
+        <textarea id="checkInNotesInput" placeholder="Notes"></textarea>
+      </section>
       <input type="text" id="checkInFrontPhotoInput" placeholder="Front photo placeholder URL/path">
       <input type="text" id="checkInSidePhotoInput" placeholder="Side photo placeholder URL/path">
       <input type="text" id="checkInBackPhotoInput" placeholder="Back photo placeholder URL/path">
@@ -6236,6 +6279,8 @@ function renderCheckInTab() {
     phaseInput.value = phaseState.mode || 'improvement';
   }
 
+  bindCheckInSliderDisplays();
+
   const checkIns = window.checkinEngine.loadCheckIns(userId);
   const grouped = checkIns.reduce((acc, entry) => {
     const key = entry.weekLabel || 'Unlabeled Week';
@@ -6267,6 +6312,20 @@ function renderCheckInTab() {
       </section>
     `;
   }).join('');
+}
+
+function bindCheckInSliderDisplays() {
+  const sliders = document.querySelectorAll('#checkInTab input[type="range"][data-value-target]');
+  sliders.forEach((slider) => {
+    const targetId = slider.getAttribute('data-value-target');
+    const valueEl = targetId ? document.getElementById(targetId) : null;
+    const updateValue = () => {
+      if (!valueEl) return;
+      valueEl.textContent = slider.value || '';
+    };
+    slider.oninput = updateValue;
+    updateValue();
+  });
 }
 
 function saveWeeklyCheckIn() {

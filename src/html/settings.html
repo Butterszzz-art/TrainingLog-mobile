@@ -1,106 +1,111 @@
-<div id="settingsPage" class="settings-page">
-  <h2>Settings</h2>
-  <form id="settingsForm">
-    <label for="defaultUnit">Default weight unit:</label>
-    <select id="defaultUnit" name="defaultUnit">
-      <option value="kg">Kilograms (kg)</option>
-      <option value="lbs">Pounds (lbs)</option>
-    </select>
+<div id="settingsPage" class="settings-page profile-hub-page">
+  <h2>Profile & Prep Hub</h2>
+  <form id="settingsForm" class="profile-hub-form">
+    <section class="panel profile-section" aria-labelledby="athleteInfoHeading">
+      <h3 id="athleteInfoHeading">Athlete Info</h3>
+      <label for="athleteInfoName">Name</label>
+      <input id="athleteInfoName" name="athleteInfoName" type="text" placeholder="Athlete name">
 
-    <label for="theme">Theme:</label>
-    <select id="theme" name="theme">
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-      <option value="neon">Neon</option>
-    </select>
+      <label for="athleteInfoCurrentWeight">Current Weight</label>
+      <input id="athleteInfoCurrentWeight" name="athleteInfoCurrentWeight" type="number" min="0" step="0.1" placeholder="0.0">
 
-    <label for="streakReminderEnabled">
-      <input type="checkbox" id="streakReminderEnabled" name="streakReminderEnabled">
-      Enable streak reminders
-    </label>
+      <label for="athleteInfoHeight">Height</label>
+      <input id="athleteInfoHeight" name="athleteInfoHeight" type="text" placeholder="e.g. 5'10\" or 178 cm">
 
-    <label for="streakReminderTime">Reminder time:</label>
-    <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00">
+      <label for="athleteInfoDivision">Division / Class</label>
+      <input id="athleteInfoDivision" name="athleteInfoDivision" type="text" placeholder="Classic Physique, Bikini, etc.">
+    </section>
 
-
-    <label for="autoIncrementSetting" style="display:block;margin-top:12px;">
-      <input type="checkbox" id="autoIncrementSetting" name="autoIncrementSetting" checked />
-      Auto-increment suggestions when the last set is at or below target RPE
-    </label>
-
-    <button type="submit" id="saveSettingsButton">Save Settings</button>
-  </form>
-
-  <section class="panel" id="athleteSetupSection" aria-labelledby="athleteSetupHeading" style="margin-top:16px;">
-    <h3 id="athleteSetupHeading">Athlete Setup</h3>
-    <p id="athleteSetupSummary" style="margin-top:0;">Set up prep mode details for phase-aware tracking.</p>
-    <button type="button" id="phaseSetupCta" style="margin-bottom:10px;">Set Up Prep Mode</button>
-
-    <form id="athleteSetupForm" style="display:none;">
-      <label for="athleteName">Athlete name</label>
-      <input id="athleteName" name="athleteName" type="text" placeholder="Athlete name">
-
-      <label for="phaseMode">Current phase</label>
-      <select id="phaseMode" name="phaseMode">
+    <section class="panel profile-section" aria-labelledby="phasePrepHeading">
+      <h3 id="phasePrepHeading">Phase / Prep Settings</h3>
+      <label for="profileCurrentPhase">Current phase</label>
+      <select id="profileCurrentPhase" name="profileCurrentPhase">
         <option value="improvement">Improvement Season</option>
         <option value="mini_cut">Mini Cut</option>
         <option value="contest_prep">Contest Prep</option>
         <option value="post_show">Post-Show</option>
       </select>
 
-      <div id="contestPrepFields" style="display:none;">
-        <label for="prepShowDate">Show date</label>
-        <input id="prepShowDate" name="showDate" type="date">
+      <label for="profileShowDate">Show date</label>
+      <input id="profileShowDate" name="profileShowDate" type="date">
 
-        <label for="prepDivision">Division/Class</label>
-        <input id="prepDivision" name="division" type="text" placeholder="Classic Physique, Bikini, etc.">
+      <label for="profileTargetStageWeight">Target stage weight</label>
+      <input id="profileTargetStageWeight" name="profileTargetStageWeight" type="number" min="0" step="0.1" placeholder="0.0">
 
-        <label for="prepCurrentWeight">Current bodyweight</label>
-        <input id="prepCurrentWeight" name="currentWeight" type="number" min="0" step="0.1" placeholder="0.0">
+      <label for="profileCheckInDay">Check-in day</label>
+      <select id="profileCheckInDay" name="profileCheckInDay">
+        <option>Monday</option>
+        <option>Tuesday</option>
+        <option>Wednesday</option>
+        <option>Thursday</option>
+        <option>Friday</option>
+        <option>Saturday</option>
+        <option selected>Sunday</option>
+      </select>
 
-        <label for="prepStageWeight">Estimated stage weight</label>
-        <input id="prepStageWeight" name="targetStageWeight" type="number" min="0" step="0.1" placeholder="0.0">
+      <label for="profileCardioBaseline">Cardio baseline</label>
+      <input id="profileCardioBaseline" name="profileCardioBaseline" type="text" placeholder="e.g. 4x25 min LISS">
 
-        <label for="prepCheckInDay">Check-in day</label>
-        <select id="prepCheckInDay" name="checkInDay">
-          <option>Monday</option>
-          <option>Tuesday</option>
-          <option>Wednesday</option>
-          <option>Thursday</option>
-          <option>Friday</option>
-          <option>Saturday</option>
-          <option selected>Sunday</option>
-        </select>
+      <label for="profilePosingFrequency">Posing frequency</label>
+      <input id="profilePosingFrequency" name="profilePosingFrequency" type="text" placeholder="e.g. 5 sessions/week">
+    </section>
 
-        <label for="prepCardioBaseline">Cardio baseline</label>
-        <input id="prepCardioBaseline" name="cardioBaseline" type="text" placeholder="e.g. 4x25 min LISS">
+    <section class="panel profile-section" aria-labelledby="goalsTargetsHeading">
+      <h3 id="goalsTargetsHeading">Goals / Targets</h3>
+      <label for="profileMacroTargets">Macro targets</label>
+      <input id="profileMacroTargets" name="profileMacroTargets" type="text" placeholder="e.g. 220P / 260C / 55F">
 
-        <label for="prepPosingFrequency">Posing target per week</label>
-        <input id="prepPosingFrequency" name="posingFrequency" type="text" placeholder="e.g. 5 sessions">
+      <label for="profileStepsTarget">Steps target</label>
+      <input id="profileStepsTarget" name="profileStepsTarget" type="number" min="0" step="100" placeholder="10000">
+
+      <label for="profileCardioTarget">Cardio target</label>
+      <input id="profileCardioTarget" name="profileCardioTarget" type="text" placeholder="e.g. 5x30 min/week">
+
+      <label for="profileSleepTarget">Sleep target</label>
+      <input id="profileSleepTarget" name="profileSleepTarget" type="number" min="0" step="0.5" placeholder="8.0">
+    </section>
+
+    <section class="panel profile-section" aria-labelledby="gamificationSummaryHeading">
+      <h3 id="gamificationSummaryHeading">Gamification Summary</h3>
+      <div class="profile-summary-grid">
+        <div><span>Level</span><strong id="profileGamificationLevel">—</strong></div>
+        <div><span>XP</span><strong id="profileGamificationXp">—</strong></div>
+        <div><span>Current Streak</span><strong id="profileGamificationStreak">—</strong></div>
+        <div><span>Badges Unlocked</span><strong id="profileGamificationBadges">—</strong></div>
       </div>
+    </section>
 
-      <div id="improvementFields" style="display:none;">
-        <label for="improvementStartDate">Start date</label>
-        <input id="improvementStartDate" name="startDate" type="date">
+    <section class="panel profile-section" aria-labelledby="appSettingsHeading">
+      <h3 id="appSettingsHeading">App Settings</h3>
+      <label for="defaultUnit">Units</label>
+      <select id="defaultUnit" name="defaultUnit">
+        <option value="kg">Kilograms (kg)</option>
+        <option value="lbs">Pounds (lbs)</option>
+      </select>
 
-        <label for="weightGoalDirection">Weight goal direction</label>
-        <select id="weightGoalDirection" name="weightGoalDirection">
-          <option value="">Select direction</option>
-          <option value="gain">Gain</option>
-          <option value="maintain">Maintain</option>
-          <option value="lose">Lose</option>
-        </select>
-      </div>
+      <label for="theme">Theme</label>
+      <select id="theme" name="theme">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="neon">Neon</option>
+      </select>
 
-      <div id="miniCutFields" style="display:none;">
-        <label for="miniCutStartDate">Start date</label>
-        <input id="miniCutStartDate" name="startDate" type="date">
+      <label for="streakReminderEnabled">
+        <input type="checkbox" id="streakReminderEnabled" name="streakReminderEnabled">
+        Notifications enabled
+      </label>
 
-        <label for="miniCutRateLoss">Target rate of loss</label>
-        <input id="miniCutRateLoss" name="targetRateOfLoss" type="number" min="0" step="0.1" placeholder="% BW/week">
-      </div>
+      <label for="streakReminderTime">Notification time</label>
+      <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00">
 
-      <button type="submit" id="athleteSetupSaveBtn">Save Athlete Setup</button>
-    </form>
-  </section>
+      <label for="autoIncrementSetting" style="display:block;margin-top:12px;">
+        <input type="checkbox" id="autoIncrementSetting" name="autoIncrementSetting" checked />
+        Auto-increment suggestions when the last set is at or below target RPE
+      </label>
+
+      <button type="button" id="logoutBtn" class="secondary">Logout</button>
+    </section>
+
+    <button type="submit" id="saveSettingsButton">Save Profile & Settings</button>
+  </form>
 </div>
