@@ -1550,6 +1550,7 @@
 <script src="weightTab.js"></script>
 <script src="prepMode.js"></script>
 <script src="dailyMissionEngine.js"></script>
+<script src="complianceEngine.js"></script>
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
 <!-- Feature flags FIRST -->
@@ -5900,11 +5901,33 @@ function renderHeroPhaseHeader(profile, username) {
   `;
 }
 
-function renderStatusSummary(profile) {
-  const daily = getSafeDisplayValue(profile.todaysCompliance, 'Pending');
-  const weekly = getSafeDisplayValue(profile.weeklyCompliance, 'Pending');
+function formatComplianceStatus(statusKey) {
+  const labels = {
+    on_track: 'On Track',
+    slightly_behind: 'Slightly Behind',
+    at_risk: 'At Risk',
+    off_track: 'Off Track'
+  };
+  return labels[statusKey] || 'Off Track';
+}
+
+function getComplianceSnapshot(profile, username) {
+  const missionState = getTodayMissionState(profile, username);
+  const dailyPercent = window.complianceEngine?.calculateDailyCompliancePercent?.(missionState) ?? 0;
+  const dailyStatus = window.complianceEngine?.getComplianceStatus?.(dailyPercent) || 'off_track';
+  const weekly = window.complianceEngine?.calculateWeeklyCompliance?.(username, new Date().toISOString().slice(0, 10))
+    || { averagePercent: 0, status: 'off_track', completedDays: 0, activeDays: 0, days: [] };
+  const trend = window.complianceEngine?.getComplianceTrend?.(username)
+    || { trend: 'steady', delta: 0, insight: 'Immediate course correction required' };
+  return { dailyPercent, dailyStatus, weekly, trend };
+}
+
+function renderStatusSummary(profile, username) {
+  const snapshot = getComplianceSnapshot(profile, username);
+  const daily = `${snapshot.dailyPercent}%`;
+  const weekly = `${snapshot.weekly.averagePercent}%`;
   const streak = getSafeDisplayValue(profile.currentStreak, '0 days');
-  const onTrack = getSafeDisplayValue(profile.onTrackStatus, 'On-track logic coming soon');
+  const onTrack = formatComplianceStatus(snapshot.dailyStatus);
 
   return `
     <section class="home-dashboard-card">
@@ -5915,6 +5938,7 @@ function renderStatusSummary(profile) {
         <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${streak}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">On Track</p><p class="home-stat-value">${onTrack}</p></div>
       </div>
+      <p class="home-mission-progress">Insight: ${snapshot.trend.insight}</p>
     </section>
   `;
 }
@@ -6011,6 +6035,30 @@ function renderTodaysMission(profile, username) {
   `;
 }
 
+function renderWeeklyComplianceCard(profile, username) {
+  const snapshot = getComplianceSnapshot(profile, username);
+  const trendDirection = snapshot.trend.trend === 'improving'
+    ? 'Improving'
+    : snapshot.trend.trend === 'declining'
+      ? 'Declining'
+      : 'Steady';
+
+  const deltaPrefix = snapshot.trend.delta > 0 ? '+' : '';
+
+  return `
+    <section class="home-dashboard-card">
+      <h3 class="home-card-title">Weekly Compliance</h3>
+      <div class="home-stat-grid">
+        <div class="home-stat-chip"><p class="home-stat-label">Average</p><p class="home-stat-value">${snapshot.weekly.averagePercent}%</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Status</p><p class="home-stat-value">${formatComplianceStatus(snapshot.weekly.status)}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">90%+ Days</p><p class="home-stat-value">${snapshot.weekly.completedDays}/7</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Trend</p><p class="home-stat-value">${trendDirection} (${deltaPrefix}${snapshot.trend.delta}%)</p></div>
+      </div>
+      <p class="home-mission-progress">${snapshot.trend.insight}</p>
+    </section>
+  `;
+}
+
 function renderUpcomingPrepEvents(profile) {
   const checkIn = getSafeDisplayValue(profile.nextCheckIn, 'Not scheduled');
   const refeed = getSafeDisplayValue(profile.nextRefeed, 'TBD');
@@ -6054,8 +6102,9 @@ function renderHomeDashboard() {
   const { username, profile } = getHomeDashboardSourceData();
   container.innerHTML = [
     renderHeroPhaseHeader(profile, username),
-    renderStatusSummary(profile),
+    renderStatusSummary(profile, username),
     renderTodaysMission(profile, username),
+    renderWeeklyComplianceCard(profile, username),
     renderUpcomingPrepEvents(profile),
     renderRewardSummary(profile)
   ].join('');
