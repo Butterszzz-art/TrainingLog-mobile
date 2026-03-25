@@ -37,4 +37,33 @@ describe('dailyMissionEngine', () => {
     expect(compliance.total).toBe(4);
     expect(compliance.percent).toBe(50);
   });
+
+  test('sync helpers mark training/cardio/bodyweight from app events', () => {
+    missionEngine.syncMissionFromWorkoutCompletion({ date: '2026-03-22' }, userId);
+    missionEngine.syncMissionFromCardioEntry({ date: '2026-03-22', type: 'Run', duration: 30 }, userId);
+    missionEngine.syncMissionFromBodyweightEntry({ date: '2026-03-22', weightKg: 88 }, userId);
+    const state = missionEngine.getDailyMissionState(userId, '2026-03-22');
+
+    expect(state.trainingComplete).toBe(true);
+    expect(state.cardioComplete).toBe(true);
+    expect(state.bodyweightLogged).toBe(true);
+  });
+
+  test('macro sync marks complete only when values are within thresholds', () => {
+    missionEngine.syncMissionFromMacroProgress({
+      date: '2026-03-21',
+      value: { calories: 2200, protein: 180, carbs: 230, fat: 65 },
+      targets: { calories: 2200, protein: 180, carbs: 230, fat: 65 }
+    }, userId);
+    let state = missionEngine.getDailyMissionState(userId, '2026-03-21');
+    expect(state.macrosComplete).toBe(true);
+
+    missionEngine.syncMissionFromMacroProgress({
+      date: '2026-03-21',
+      value: { calories: 1500, protein: 100, carbs: 100, fat: 40 },
+      targets: { calories: 2200, protein: 180, carbs: 230, fat: 65 }
+    }, userId);
+    state = missionEngine.getDailyMissionState(userId, '2026-03-21');
+    expect(state.macrosComplete).toBe(false);
+  });
 });

@@ -173,6 +173,105 @@
     return ['trainingComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'posingComplete', 'recoveryLogged'];
   }
 
+  function getDateKey(value) {
+    if (!value) return resolveDate();
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return resolveDate();
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  function updateMissionItem(userId, date, itemKey, isComplete) {
+    if (!ALL_MISSION_KEYS.includes(itemKey)) return null;
+    const day = resolveDate(date);
+    const existing = getDailyMissionState(userId, day)
+      || generateDefaultMissionFromPhase(userId, {}, day);
+    existing[itemKey] = Boolean(isComplete);
+    return saveDailyMissionState(userId, day, existing);
+  }
+
+  function syncMissionFromWorkoutCompletion(workout, userId) {
+    try {
+      const resolvedUser = resolveUserId(userId || workout?.userId || workout?.username || workout?.user);
+      const date = getDateKey(workout?.date || workout?.performedAt || workout?.createdAt);
+      return updateMissionItem(resolvedUser, date, 'trainingComplete', true);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function syncMissionFromCardioEntry(entry, userId) {
+    try {
+      const resolvedUser = resolveUserId(userId || entry?.userId || entry?.username || entry?.user);
+      const date = getDateKey(entry?.date || entry?.performedAt || entry?.createdAt);
+      const duration = Number(entry?.duration || entry?.durationMinutes);
+      const calories = Number(entry?.calories);
+      const hasSignal = Boolean(String(entry?.type || '').trim()) || duration > 0 || calories > 0;
+      return updateMissionItem(resolvedUser, date, 'cardioComplete', hasSignal);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function syncMissionFromBodyweightEntry(entry, userId) {
+    try {
+      const resolvedUser = resolveUserId(userId || entry?.userId || entry?.username || entry?.user);
+      const date = getDateKey(entry?.date || entry?.recordedAt || entry?.createdAt);
+      const weightValue = Number(entry?.weightKg ?? entry?.weight);
+      return updateMissionItem(resolvedUser, date, 'bodyweightLogged', Number.isFinite(weightValue) && weightValue > 0);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function syncMissionFromMacroProgress(progress, userId) {
+    try {
+      const resolvedUser = resolveUserId(userId || progress?.userId || progress?.username || progress?.user);
+      const date = getDateKey(progress?.date || progress?.recordedAt || progress?.createdAt);
+      const targets = progress?.targets || {};
+      const value = progress?.value || {};
+      const targetCalories = Number(targets.calories);
+      const targetProtein = Number(targets.protein);
+      const targetCarbs = Number(targets.carbs);
+      const targetFat = Number(targets.fat);
+      const actualCalories = Number(value.calories);
+      const actualProtein = Number(value.protein);
+      const actualCarbs = Number(value.carbs);
+      const actualFat = Number(value.fat);
+      const minRatio = Number(progress?.minRatio) > 0 ? Number(progress.minRatio) : 0.9;
+      const maxRatio = Number(progress?.maxRatio) > 0 ? Number(progress.maxRatio) : 1.1;
+
+      const isWithin = (actual, target) => {
+        if (!Number.isFinite(target) || target <= 0) return true;
+        if (!Number.isFinite(actual) || actual < 0) return false;
+        const ratio = actual / target;
+        return ratio >= minRatio && ratio <= maxRatio;
+      };
+
+      const complete = isWithin(actualCalories, targetCalories)
+        && isWithin(actualProtein, targetProtein)
+        && isWithin(actualCarbs, targetCarbs)
+        && isWithin(actualFat, targetFat);
+
+      return updateMissionItem(resolvedUser, date, 'macrosComplete', complete);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function syncMissionFromRecoveryEntry(entry, userId) {
+    try {
+      const resolvedUser = resolveUserId(userId || entry?.userId || entry?.username || entry?.user);
+      const date = getDateKey(entry?.date || entry?.recordedAt || entry?.createdAt);
+      const sleepHours = Number(entry?.sleepHours || entry?.sleep);
+      const hrv = Number(entry?.hrv);
+      const hasSignal = (Number.isFinite(sleepHours) && sleepHours > 0) || (Number.isFinite(hrv) && hrv > 0);
+      return updateMissionItem(resolvedUser, date, 'recoveryLogged', hasSignal);
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function calculateDailyCompliance(state) {
     const normalized = normalizeMissionState(state?.date, state);
     const requiredItems = inferRequiredItems(normalized);
@@ -194,6 +293,11 @@
     saveDailyMissionState,
     generateDefaultMissionFromPhase,
     markMissionItemComplete,
+    syncMissionFromWorkoutCompletion,
+    syncMissionFromCardioEntry,
+    syncMissionFromBodyweightEntry,
+    syncMissionFromMacroProgress,
+    syncMissionFromRecoveryEntry,
     calculateDailyCompliance,
     getStorageKey
   };
