@@ -111,6 +111,10 @@
     storage.setItem(getStorageKey(userId), JSON.stringify(payload));
   }
 
+  function loadDailyMissionState(userId) {
+    return readUserStore(userId);
+  }
+
   function getDailyMissionState(userId, date) {
     const day = resolveDate(date);
     const store = readUserStore(userId);
@@ -119,13 +123,41 @@
     return normalizeMissionState(day, existing);
   }
 
-  function saveDailyMissionState(userId, date, state) {
-    const day = resolveDate(date);
+  function saveDailyMissionState(userId, dateOrState, maybeState) {
+    if (typeof maybeState === 'undefined') {
+      const incoming = dateOrState && typeof dateOrState === 'object' ? dateOrState : {};
+      const normalizedStore = {};
+      Object.keys(incoming).forEach((key) => {
+        normalizedStore[resolveDate(key)] = normalizeMissionState(key, incoming[key]);
+      });
+      writeUserStore(userId, normalizedStore);
+      syncDailyMissionStateToBackend(resolveUserId(userId), normalizedStore);
+      return normalizedStore;
+    }
+
+    const day = resolveDate(dateOrState);
     const store = readUserStore(userId);
-    const next = normalizeMissionState(day, state);
+    const next = normalizeMissionState(day, maybeState);
     store[day] = next;
     writeUserStore(userId, store);
+    syncDailyMissionStateToBackend(resolveUserId(userId), store);
     return next;
+  }
+
+  function syncDailyMissionStateToBackend(userId, state) {
+    const resolvedUser = resolveUserId(userId);
+    try {
+      // Future backend endpoint: PUT /api/bodybuilding/daily-mission/:userId
+      // Sync errors are intentionally ignored to keep the app fully usable offline.
+      if (typeof globalScope.fetch !== 'function') return false;
+      return globalScope.fetch(`/api/bodybuilding/daily-mission/${encodeURIComponent(resolvedUser)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state || {})
+      }).then(() => true).catch(() => false);
+    } catch (_error) {
+      return false;
+    }
   }
 
   function normalizePhaseKey(phaseState) {
@@ -289,8 +321,10 @@
   }
 
   const api = {
+    loadDailyMissionState,
     getDailyMissionState,
     saveDailyMissionState,
+    syncDailyMissionStateToBackend,
     generateDefaultMissionFromPhase,
     markMissionItemComplete,
     syncMissionFromWorkoutCompletion,

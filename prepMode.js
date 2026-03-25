@@ -162,7 +162,33 @@
     const storage = getStorage();
     const next = sanitizeState(state);
     storage.setItem(getStorageKey(userId), JSON.stringify(next));
+    syncPhaseStateToBackend(resolveUserId(userId), next);
     return next;
+  }
+
+  function loadPhaseState(userId) {
+    return getCurrentPhaseState(userId);
+  }
+
+  function savePhaseState(userId, state) {
+    return saveCurrentPhaseState(userId, state);
+  }
+
+  function syncPhaseStateToBackend(userId, state) {
+    const payload = sanitizeState(state);
+    const resolvedUser = resolveUserId(userId);
+    try {
+      // Future backend endpoint: PUT /api/bodybuilding/phase-state/:userId
+      // Keep local storage as the source of truth even when this sync fails.
+      if (typeof globalScope.fetch !== 'function') return false;
+      return globalScope.fetch(`/api/bodybuilding/phase-state/${encodeURIComponent(resolvedUser)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(() => true).catch(() => false);
+    } catch (_error) {
+      return false;
+    }
   }
 
   function getDaysUntilShow(showDate) {
@@ -271,6 +297,9 @@
   }
 
   const api = {
+    loadPhaseState,
+    savePhaseState,
+    syncPhaseStateToBackend,
     getCurrentPhaseState,
     saveCurrentPhaseState,
     initializeDefaultPhaseState,

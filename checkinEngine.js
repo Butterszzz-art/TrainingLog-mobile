@@ -166,6 +166,10 @@
     }
   }
 
+  function loadCheckInState(userId) {
+    return loadCheckIns(userId);
+  }
+
   function saveCheckIn(userId, checkIn, phaseState = {}) {
     const storage = getStorage();
     const existing = loadCheckIns(userId);
@@ -173,12 +177,40 @@
     const deduped = existing.filter((entry) => entry.date !== normalized.date);
     const updated = [normalized, ...deduped].sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
     storage.setItem(getStorageKey(userId), JSON.stringify(updated));
+    syncCheckInStateToBackend(resolveUserId(userId), updated);
     return updated;
+  }
+
+  function saveCheckInState(userId, state) {
+    const normalized = Array.isArray(state) ? state.map((entry) => normalizeCheckIn(entry)) : [];
+    const sorted = normalized.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
+    getStorage().setItem(getStorageKey(userId), JSON.stringify(sorted));
+    syncCheckInStateToBackend(resolveUserId(userId), sorted);
+    return sorted;
+  }
+
+  function syncCheckInStateToBackend(userId, state) {
+    const resolvedUser = resolveUserId(userId);
+    try {
+      // Future backend endpoint: PUT /api/bodybuilding/checkins/:userId
+      // Keep check-ins working from local storage if network sync fails.
+      if (typeof globalScope.fetch !== 'function') return false;
+      return globalScope.fetch(`/api/bodybuilding/checkins/${encodeURIComponent(resolvedUser)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Array.isArray(state) ? state : [])
+      }).then(() => true).catch(() => false);
+    } catch (_error) {
+      return false;
+    }
   }
 
   const api = {
     saveCheckIn,
     loadCheckIns,
+    saveCheckInState,
+    loadCheckInState,
+    syncCheckInStateToBackend,
     getNextCheckInDate,
     getWeekLabelForCheckIn,
     getStorageKey
