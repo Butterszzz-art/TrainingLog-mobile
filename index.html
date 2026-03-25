@@ -5917,11 +5917,36 @@ function formatCountdownDays(dateLike) {
   return `${days} days`;
 }
 
+function formatExactDate(dateLike) {
+  if (!dateLike) return 'TBD';
+  const parsed = new Date(dateLike);
+  if (Number.isNaN(parsed.getTime())) return 'TBD';
+  return parsed.toISOString().slice(0, 10);
+}
+
+function getTimelineHeaderLabel(profile, username, referenceDate) {
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  const mode = String(phaseState.mode || profile?.currentPhase || 'improvement').toLowerCase().replace(/\s+/g, '_');
+  const payload = { ...phaseState, referenceDate };
+
+  if (mode === 'post_show') return window.prepModeApi?.getPostShowLabel?.(payload) || 'Post-Show Week 1';
+  if (mode === 'contest_prep' || mode === 'peak_week' || mode === 'show_day') {
+    return window.prepModeApi?.getPrepWeekLabel?.(payload) || 'Prep Week 1';
+  }
+  return window.prepModeApi?.getImprovementSeasonLabel?.(payload) || 'Improvement Season Week 1';
+}
+
 function renderHeroPhaseHeader(profile, username) {
   const athleteName = getSafeDisplayValue(profile.athleteName || username, 'Athlete');
   const phase = getSafeDisplayValue(profile.currentPhase, 'Build Phase');
-  const weekLabel = getSafeDisplayValue(profile.weeksOutLabel || profile.seasonWeekLabel, 'Week label TBD');
+  const weekLabel = getSafeDisplayValue(
+    getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10))
+      || profile.weeksOutLabel
+      || profile.seasonWeekLabel,
+    'Week label TBD'
+  );
   const showCountdown = formatCountdownDays(profile.showDate);
+  const showDate = formatExactDate(profile.showDate);
 
   return `
     <section class="home-dashboard-card home-hero-card">
@@ -5929,6 +5954,7 @@ function renderHeroPhaseHeader(profile, username) {
       <h2 class="home-hero-athlete">${athleteName}</h2>
       <p class="home-hero-meta">Phase: ${phase}</p>
       <p class="home-hero-meta">${weekLabel}</p>
+      <p class="home-hero-meta">Show Date: ${showDate}</p>
       <p class="home-hero-meta">Show countdown: ${showCountdown}</p>
     </section>
   `;
@@ -6070,6 +6096,7 @@ function renderTodaysMission(profile, username) {
 
 function renderWeeklyComplianceCard(profile, username) {
   const snapshot = getComplianceSnapshot(profile, username);
+  const headerLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
   const trendDirection = snapshot.trend.trend === 'improving'
     ? 'Improving'
     : snapshot.trend.trend === 'declining'
@@ -6080,7 +6107,7 @@ function renderWeeklyComplianceCard(profile, username) {
 
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Weekly Compliance</h3>
+      <h3 class="home-card-title">Weekly Compliance · ${headerLabel}</h3>
       <div class="home-stat-grid">
         <div class="home-stat-chip"><p class="home-stat-label">Average</p><p class="home-stat-value">${snapshot.weekly.averagePercent}%</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Status</p><p class="home-stat-value">${formatComplianceStatus(snapshot.weekly.status)}</p></div>
@@ -6105,6 +6132,7 @@ function renderUpcomingPrepEvents(profile, username) {
   const refeed = getSafeDisplayValue(profile.nextRefeed, 'TBD');
   const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'TBD');
   const countdown = formatCountdownDays(profile.showDate);
+  const timelineHeader = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
 
   return `
     <section class="home-dashboard-card">
@@ -6113,6 +6141,7 @@ function renderUpcomingPrepEvents(profile, username) {
         <li class="home-upcoming-item"><span>Next Check-in</span><strong>${checkIn}</strong></li>
         <li class="home-upcoming-item"><span>Refeed</span><strong>${refeed}</strong></li>
         <li class="home-upcoming-item"><span>Peak Week Start</span><strong>${peakWeek}</strong></li>
+        <li class="home-upcoming-item"><span>Timeline Header</span><strong>${timelineHeader}</strong></li>
         <li class="home-upcoming-item"><span>Show Day Countdown</span><strong>${countdown}</strong></li>
       </ul>
     </section>
@@ -6120,13 +6149,15 @@ function renderUpcomingPrepEvents(profile, username) {
 }
 
 function renderRewardSummary(profile) {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const progressHeader = getTimelineHeaderLabel(profile, userId, new Date().toISOString().slice(0, 10));
   const level = getSafeDisplayValue(profile.level, 'Level 1');
   const xp = getSafeDisplayValue(profile.xp, '0 XP');
   const prepStreak = getSafeDisplayValue(profile.prepStreak, '0 days');
   const latestBadge = getSafeDisplayValue(profile.latestBadge, 'No badges yet');
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Rewards & Progression</h3>
+      <h3 class="home-card-title">Rewards & Progression · ${progressHeader}</h3>
       <div class="home-stat-grid">
         <div class="home-stat-chip"><p class="home-stat-label">Level</p><p class="home-stat-value">${level}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">XP</p><p class="home-stat-value">${xp}</p></div>
@@ -6163,10 +6194,11 @@ function renderCheckInTab() {
   if (!userId || !window.checkinEngine) return;
 
   const phaseState = getCheckInPhaseState();
+  const checkInHeader = getTimelineHeaderLabel(phaseState, userId, new Date().toISOString().slice(0, 10));
   const nextDate = window.checkinEngine.getNextCheckInDate(phaseState);
   const nextDateEl = document.getElementById('checkInNextDate');
   if (nextDateEl) {
-    nextDateEl.textContent = `Next scheduled check-in: ${nextDate}`;
+    nextDateEl.textContent = `Next scheduled check-in: ${nextDate} · ${checkInHeader}`;
   }
 
   const dateInput = document.getElementById('checkInDateInput');
@@ -6205,7 +6237,7 @@ function renderCheckInTab() {
 
     return `
       <section class="home-dashboard-card" style="margin-bottom:12px; text-align:left;">
-        <h4 style="margin:0 0 8px; text-transform:capitalize;">${label}</h4>
+        <h4 style="margin:0 0 8px;">${label}</h4>
         <ul style="margin:0; padding-left:16px;">${items}</ul>
       </section>
     `;

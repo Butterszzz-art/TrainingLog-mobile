@@ -4,12 +4,12 @@
   const STORAGE_PREFIX = 'tl_checkins_v1_';
   const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const MODE_LABELS = {
-    improvement: 'improvement season',
-    mini_cut: 'mini cut',
-    contest_prep: 'contest prep',
-    peak_week: 'peak week',
-    show_day: 'show day',
-    post_show: 'post-show'
+    improvement: 'Improvement Season',
+    mini_cut: 'Mini Cut',
+    contest_prep: 'Contest Prep',
+    peak_week: 'Peak Week',
+    show_day: 'Show Day',
+    post_show: 'Post-Show'
   };
 
   function resolveUserId(userId) {
@@ -104,19 +104,20 @@
     const startOfCheckIn = Date.UTC(checkInDate.getUTCFullYear(), checkInDate.getUTCMonth(), checkInDate.getUTCDate());
     const startOfShow = Date.UTC(show.getUTCFullYear(), show.getUTCMonth(), show.getUTCDate());
     const daysOut = Math.round((startOfShow - startOfCheckIn) / 86400000);
-    if (daysOut <= 0) return daysOut === 0 ? 'show day' : 'post show';
-    return `${Math.ceil(daysOut / 7)} weeks out`;
+    if (daysOut <= 0) return daysOut === 0 ? 'Show Day' : 'Post-Show';
+    if (daysOut <= 7) return 'Peak Week';
+    return `${Math.ceil(daysOut / 7)} Weeks Out`;
   }
 
   function getSeasonWeekLabel(date, startDate, modeLabel) {
     const checkInDate = toDate(date);
     const start = toDate(startDate);
-    if (!checkInDate || !start) return `${modeLabel} week 1`;
+    if (!checkInDate || !start) return `${modeLabel} Week 1`;
     const startUtc = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
     const checkUtc = Date.UTC(checkInDate.getUTCFullYear(), checkInDate.getUTCMonth(), checkInDate.getUTCDate());
     const dayDiff = Math.floor((checkUtc - startUtc) / 86400000);
     const week = Math.max(1, Math.floor(dayDiff / 7) + 1);
-    return `${modeLabel} week ${week}`;
+    return `${modeLabel} Week ${week}`;
   }
 
   function getWeekLabelForCheckIn(checkIn, phaseState = {}) {
@@ -125,13 +126,25 @@
       ? checkIn.phase.trim().toLowerCase().replace(/\s+/g, '_')
       : String(phaseState.mode || 'improvement').toLowerCase();
 
-    if ((rawPhase === 'contest_prep' || rawPhase === 'peak_week' || rawPhase === 'show_day') && phaseState.showDate) {
+    const prepHelpers = globalScope.prepModeApi;
+
+    if (rawPhase === 'contest_prep' || rawPhase === 'peak_week' || rawPhase === 'show_day') {
+      if (prepHelpers?.getPrepWeekLabel) {
+        return prepHelpers.getPrepWeekLabel({ ...phaseState, referenceDate: entryDate });
+      }
       const weeksOut = getWeeksOutLabel(entryDate, phaseState.showDate);
       if (weeksOut) return weeksOut;
     }
 
     if (rawPhase === 'post_show') {
+      if (prepHelpers?.getPostShowLabel) {
+        return prepHelpers.getPostShowLabel({ ...phaseState, referenceDate: entryDate });
+      }
       return getSeasonWeekLabel(entryDate, phaseState.reverseDietStartDate || phaseState.showDate || phaseState.startDate, MODE_LABELS.post_show);
+    }
+
+    if (rawPhase === 'improvement' && prepHelpers?.getImprovementSeasonLabel) {
+      return prepHelpers.getImprovementSeasonLabel({ ...phaseState, referenceDate: entryDate });
     }
 
     const phaseKey = MODE_LABELS[rawPhase] ? rawPhase : 'improvement';

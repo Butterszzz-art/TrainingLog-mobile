@@ -4,6 +4,9 @@ const {
   initializeDefaultPhaseState,
   getDaysUntilShow,
   getWeeksOut,
+  getPrepWeekLabel,
+  getPostShowLabel,
+  getImprovementSeasonLabel,
   getCurrentPhaseLabel,
   getPhaseContext,
   getStorageKey
@@ -63,6 +66,14 @@ describe('prepMode', () => {
     const context = getPhaseContext({ mode: 'contest_prep', showDate: tomorrow, checkInDay: 'Friday' });
     expect(context.isPeakWeek).toBe(true);
     expect(context.checkInDay).toBe('Friday');
+  });
+
+  test('timeline labels support prep, post-show, and improvement season states', () => {
+    expect(getPrepWeekLabel({ showDate: '2026-06-17', referenceDate: '2026-03-25' })).toBe('12 Weeks Out');
+    expect(getPrepWeekLabel({ showDate: '2026-03-25', referenceDate: '2026-03-25' })).toBe('Show Day');
+    expect(getPostShowLabel({ showDate: '2026-03-01', referenceDate: '2026-03-10' })).toBe('Post-Show Week 2');
+    expect(getImprovementSeasonLabel({ startDate: '2026-02-18', referenceDate: '2026-03-25' })).toBe('Improvement Season Week 6');
+    expect(getPrepWeekLabel({ showDate: null, startDate: '2026-03-18', referenceDate: '2026-03-25' })).toBe('Prep Week 2');
   });
 
   test('mini cut and improvement-specific setup fields persist safely', () => {
