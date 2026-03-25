@@ -90,6 +90,13 @@ export function saveLogToLocalStorage(log) {
     // If gamification fails, workout logging must still succeed.
     if (typeof window !== 'undefined') {
       const activeUser = normalizedLog.userId || getCurrentUserId();
+      try {
+        if (window.dailyMissionEngine?.syncMissionFromWorkoutCompletion) {
+          window.dailyMissionEngine.syncMissionFromWorkoutCompletion(normalizedLog, activeUser);
+        }
+      } catch (missionErr) {
+        console.warn('Daily mission workout sync failed; continuing normally.', missionErr);
+      }
       if (activeUser) {
         try {
           if (typeof window.evaluateWorkoutAchievements === 'function') {
