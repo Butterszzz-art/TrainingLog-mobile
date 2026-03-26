@@ -441,6 +441,13 @@
       margin-bottom: 12px;
       font-size: 0.9rem;
       color: var(--secondary-text);
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(47, 128, 237, 0.08);
+    }
+    .home-mission-progress.is-complete {
+      color: #1f8f4a;
+      background: rgba(46, 204, 113, 0.12);
     }
 
     #sidebarLogoutBtn {
@@ -6214,7 +6221,7 @@ function renderStatusSummary(profile, username) {
 }
 
 const MISSION_ITEM_META = {
-  trainingComplete: 'Training',
+  workoutComplete: 'Workout',
   cardioComplete: 'Cardio',
   macrosComplete: 'Macros',
   bodyweightLogged: 'Bodyweight',
@@ -6284,14 +6291,27 @@ window.onRecoveryLogged = onRecoveryLogged;
 
 function renderTodaysMission(profile, username) {
   const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
+  const missionState = getTodayMissionState(profile, username);
+  const requiredItems = missionState?.requiredItems?.length
+    ? missionState.requiredItems
+    : ['workoutComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'recoveryLogged'];
+  const compliance = window.dailyMissionEngine?.calculateDailyCompliance?.(missionState) || {
+    completed: 0,
+    total: requiredItems.length,
+    percent: 0,
+    isComplete: false
+  };
+  const checklist = requiredItems.map(itemKey => renderMissionItem(itemKey, missionState)).join('');
+  const completionSummary = `${compliance.completed}/${compliance.total} complete · ${compliance.percent}%`;
+  const completionLabel = compliance.isComplete
+    ? 'Mission complete. Great work today.'
+    : `Mission in progress · ${completionSummary}`;
   return `
     <section class="home-dashboard-card">
       <h3 class="home-card-title">Today’s Mission · ${timelineLabel}</h3>
-      <p class="home-mission-progress">Mission brief coming online.</p>
-      <ul class="home-upcoming-list">
-        <li class="home-upcoming-item"><span>Primary Lift Focus</span><strong>Placeholder</strong></li>
-        <li class="home-upcoming-item"><span>Nutrition Objective</span><strong>Placeholder</strong></li>
-        <li class="home-upcoming-item"><span>Recovery Target</span><strong>Placeholder</strong></li>
+      <p class="home-mission-progress ${compliance.isComplete ? 'is-complete' : ''}">${completionLabel}</p>
+      <ul class="home-mission-list">
+        ${checklist}
       </ul>
     </section>
   `;

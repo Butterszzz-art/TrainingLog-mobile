@@ -3,7 +3,7 @@
 
   const STORAGE_PREFIX = 'tl_daily_mission_v1_';
   const ALL_MISSION_KEYS = [
-    'trainingComplete',
+    'workoutComplete',
     'cardioComplete',
     'macrosComplete',
     'bodyweightLogged',
@@ -13,10 +13,10 @@
   ];
 
   const PHASE_MISSION_MAP = {
-    contest_prep: ['trainingComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'posingComplete', 'recoveryLogged'],
-    improvement: ['trainingComplete', 'macrosComplete', 'bodyweightLogged', 'recoveryLogged'],
-    mini_cut: ['trainingComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged'],
-    post_show: ['trainingComplete', 'recoveryLogged', 'bodyweightLogged', 'macrosComplete']
+    contest_prep: ['workoutComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'posingComplete', 'recoveryLogged'],
+    improvement: ['workoutComplete', 'macrosComplete', 'bodyweightLogged', 'recoveryLogged'],
+    mini_cut: ['workoutComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'stepsComplete'],
+    post_show: ['workoutComplete', 'recoveryLogged', 'bodyweightLogged', 'macrosComplete', 'stepsComplete']
   };
 
   function getStorage() {
@@ -85,12 +85,16 @@
   function normalizeMissionState(date, state) {
     const source = state && typeof state === 'object' ? state : {};
     const requiredItems = Array.isArray(source.requiredItems)
-      ? source.requiredItems.filter(key => ALL_MISSION_KEYS.includes(key) && key !== 'stepsComplete')
+      ? source.requiredItems
+        .map((key) => (key === 'trainingComplete' ? 'workoutComplete' : key))
+        .filter(key => ALL_MISSION_KEYS.includes(key))
       : [];
+    const legacyWorkoutFlag = source.trainingComplete === true;
+    const workoutComplete = coerceBool(source.workoutComplete) || legacyWorkoutFlag;
 
     return {
       date: resolveDate(date || source.date),
-      trainingComplete: coerceBool(source.trainingComplete),
+      workoutComplete,
       cardioComplete: coerceBool(source.cardioComplete),
       macrosComplete: coerceBool(source.macrosComplete),
       bodyweightLogged: coerceBool(source.bodyweightLogged),
@@ -192,17 +196,18 @@
   }
 
   function markMissionItemComplete(userId, date, itemKey) {
-    if (!ALL_MISSION_KEYS.includes(itemKey)) return null;
+    const normalizedKey = itemKey === 'trainingComplete' ? 'workoutComplete' : itemKey;
+    if (!ALL_MISSION_KEYS.includes(normalizedKey)) return null;
     const day = resolveDate(date);
     const existing = getDailyMissionState(userId, day)
       || generateDefaultMissionFromPhase(userId, {}, day);
-    existing[itemKey] = true;
+    existing[normalizedKey] = true;
     return saveDailyMissionState(userId, day, existing);
   }
 
   function inferRequiredItems(state) {
     if (Array.isArray(state?.requiredItems) && state.requiredItems.length) return state.requiredItems;
-    return ['trainingComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'posingComplete', 'recoveryLogged'];
+    return ['workoutComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'posingComplete', 'recoveryLogged'];
   }
 
   function getDateKey(value) {
@@ -214,11 +219,12 @@
   }
 
   function updateMissionItem(userId, date, itemKey, isComplete) {
-    if (!ALL_MISSION_KEYS.includes(itemKey)) return null;
+    const normalizedKey = itemKey === 'trainingComplete' ? 'workoutComplete' : itemKey;
+    if (!ALL_MISSION_KEYS.includes(normalizedKey)) return null;
     const day = resolveDate(date);
     const existing = getDailyMissionState(userId, day)
       || generateDefaultMissionFromPhase(userId, {}, day);
-    existing[itemKey] = Boolean(isComplete);
+    existing[normalizedKey] = Boolean(isComplete);
     return saveDailyMissionState(userId, day, existing);
   }
 
@@ -226,7 +232,7 @@
     try {
       const resolvedUser = resolveUserId(userId || workout?.userId || workout?.username || workout?.user);
       const date = getDateKey(workout?.date || workout?.performedAt || workout?.createdAt);
-      return updateMissionItem(resolvedUser, date, 'trainingComplete', true);
+      return updateMissionItem(resolvedUser, date, 'workoutComplete', true);
     } catch (_error) {
       return null;
     }
