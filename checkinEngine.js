@@ -71,6 +71,8 @@
     const energy = safe.energy ?? safe.recoveryRatings?.energy ?? '';
     const sleep = safe.sleep ?? safe.recoveryRatings?.sleep ?? '';
     const stress = safe.stress ?? safe.recoveryRatings?.stress ?? '';
+    const priorAdjustments = safe.adjustments && typeof safe.adjustments === 'object' ? safe.adjustments : {};
+    const priorReview = safe.review && typeof safe.review === 'object' ? safe.review : {};
     return {
       date: normalizedDate,
       phase: normalizedPhase,
@@ -93,6 +95,23 @@
       digestion: safe.digestion ?? '',
       trainingPerformance: safe.trainingPerformance ?? '',
       notes: typeof safe.notes === 'string' ? safe.notes : '',
+      coachNotes: typeof safe.coachNotes === 'string' ? safe.coachNotes : '',
+      adjustments: {
+        macrosChanged: Boolean(priorAdjustments.macrosChanged),
+        macrosNotes: typeof priorAdjustments.macrosNotes === 'string' ? priorAdjustments.macrosNotes : '',
+        cardioChanged: Boolean(priorAdjustments.cardioChanged),
+        cardioNotes: typeof priorAdjustments.cardioNotes === 'string' ? priorAdjustments.cardioNotes : '',
+        stepsChanged: Boolean(priorAdjustments.stepsChanged),
+        stepsNotes: typeof priorAdjustments.stepsNotes === 'string' ? priorAdjustments.stepsNotes : '',
+        refeedAdded: Boolean(priorAdjustments.refeedAdded),
+        refeedNotes: typeof priorAdjustments.refeedNotes === 'string' ? priorAdjustments.refeedNotes : ''
+      },
+      review: {
+        status: typeof priorReview.status === 'string' && priorReview.status.trim() ? priorReview.status.trim() : 'pending',
+        coachActionItems: typeof priorReview.coachActionItems === 'string' ? priorReview.coachActionItems : '',
+        athleteSubmittedAt: typeof priorReview.athleteSubmittedAt === 'string' ? priorReview.athleteSubmittedAt : '',
+        coachReviewedAt: typeof priorReview.coachReviewedAt === 'string' ? priorReview.coachReviewedAt : ''
+      },
       frontPhoto: safe.frontPhoto ?? '',
       sidePhoto: safe.sidePhoto ?? '',
       backPhoto: safe.backPhoto ?? ''

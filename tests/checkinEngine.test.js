@@ -49,7 +49,50 @@ describe('checkinEngine', () => {
       sleep: 8,
       stress: 4
     });
+    expect(checkIns[0].coachNotes).toBe('');
+    expect(checkIns[0].adjustments).toEqual({
+      macrosChanged: false,
+      macrosNotes: '',
+      cardioChanged: false,
+      cardioNotes: '',
+      stepsChanged: false,
+      stepsNotes: '',
+      refeedAdded: false,
+      refeedNotes: ''
+    });
+    expect(checkIns[0].review.status).toBe('pending');
     expect(global.localStorage.getItem(getStorageKey('athleteA'))).toBeTruthy();
+  });
+
+  test('saveCheckIn preserves adjustment log and coach review metadata', () => {
+    saveCheckIn('athleteA', {
+      date: '2026-03-25',
+      phase: 'contest_prep',
+      coachNotes: 'Keep sodium and water stable for another week.',
+      adjustments: {
+        macrosChanged: true,
+        macrosNotes: 'Dropped carbs by 20g',
+        cardioChanged: true,
+        cardioNotes: '+1 LISS session',
+        stepsChanged: true,
+        stepsNotes: '12k to 14k',
+        refeedAdded: true,
+        refeedNotes: 'Saturday high-carb refeed'
+      },
+      review: {
+        status: 'reviewed',
+        coachActionItems: 'Hold training volume, monitor recovery.',
+        athleteSubmittedAt: '2026-03-25T10:00:00.000Z',
+        coachReviewedAt: '2026-03-25T19:00:00.000Z'
+      }
+    });
+
+    const checkIns = loadCheckIns('athleteA');
+    expect(checkIns[0].coachNotes).toMatch(/sodium/i);
+    expect(checkIns[0].adjustments.cardioChanged).toBe(true);
+    expect(checkIns[0].adjustments.refeedNotes).toMatch(/high-carb/i);
+    expect(checkIns[0].review.status).toBe('reviewed');
+    expect(checkIns[0].review.coachReviewedAt).toBe('2026-03-25T19:00:00.000Z');
   });
 
   test('getWeekLabelForCheckIn supports contest prep and improvement labels', () => {

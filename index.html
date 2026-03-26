@@ -991,10 +991,40 @@
         <h3>Notes</h3>
         <textarea id="checkInNotesInput" placeholder="Notes"></textarea>
       </section>
+      <section class="checkin-form-section">
+        <h3>Weekly Adjustments</h3>
+        <label><input type="checkbox" id="checkInAdjustmentMacrosChanged"> Macros changed</label>
+        <input type="text" id="checkInAdjustmentMacrosNotes" placeholder="Macro adjustment details">
+        <label><input type="checkbox" id="checkInAdjustmentCardioChanged"> Cardio changed</label>
+        <input type="text" id="checkInAdjustmentCardioNotes" placeholder="Cardio adjustment details">
+        <label><input type="checkbox" id="checkInAdjustmentStepsChanged"> Steps changed</label>
+        <input type="text" id="checkInAdjustmentStepsNotes" placeholder="Step target adjustment details">
+        <label><input type="checkbox" id="checkInAdjustmentRefeedAdded"> Refeed added</label>
+        <input type="text" id="checkInAdjustmentRefeedNotes" placeholder="Refeed details">
+      </section>
+      <section class="checkin-form-section">
+        <h3>Coach Review</h3>
+        <select id="checkInReviewStatusInput">
+          <option value="pending">Pending coach review</option>
+          <option value="reviewed">Reviewed</option>
+          <option value="approved">Approved</option>
+          <option value="needs_changes">Needs changes</option>
+        </select>
+        <textarea id="checkInCoachNotesInput" placeholder="Coach notes"></textarea>
+        <textarea id="checkInCoachActionItemsInput" placeholder="Coach action items for next week"></textarea>
+      </section>
+      <section class="checkin-form-section">
+        <h3>Summary & Export</h3>
+        <div id="checkInSummaryOutput" class="home-mission-progress">Save or select a check-in to generate a prep summary.</div>
+        <button type="button" onclick="generateCheckInSummary()">Generate Summary</button>
+        <button type="button" onclick="exportCheckInSummary('json')">Export Summary JSON</button>
+        <button type="button" onclick="exportCheckInSummary('txt')">Export Summary TXT</button>
+      </section>
       <input type="text" id="checkInFrontPhotoInput" placeholder="Front photo placeholder URL/path">
       <input type="text" id="checkInSidePhotoInput" placeholder="Side photo placeholder URL/path">
       <input type="text" id="checkInBackPhotoInput" placeholder="Back photo placeholder URL/path">
-      <button onclick="saveWeeklyCheckIn()">Save Weekly Check-In</button>
+      <button onclick="saveWeeklyCheckIn('athlete')">Save Athlete Check-In</button>
+      <button type="button" onclick="saveWeeklyCheckIn('coach')">Save Coach Review</button>
 
       <h3>Check-In Timeline</h3>
       <div id="checkInTimeline"></div>
@@ -6668,6 +6698,14 @@ function renderCheckInTab() {
           BW: ${entry.bodyweight || '—'} · Waist: ${entry.waist || '—'} · Recovery (E/S/St): ${entry.recoveryRatings?.energy || entry.energy || '—'}/${entry.recoveryRatings?.sleep || entry.sleep || '—'}/${entry.recoveryRatings?.stress || entry.stress || '—'}<br />
           Hunger: ${entry.hunger || '—'} · Digestion: ${entry.digestion || '—'} · Training: ${entry.trainingPerformance || '—'}
           <div style="font-size:0.9rem; opacity:0.85;">${entry.notes || 'No notes logged.'}</div>
+          <div style="font-size:0.88rem; margin-top:4px;">
+            <strong>Weekly adjustments:</strong> ${formatAdjustmentSummary(entry.adjustments)}
+          </div>
+          <div style="font-size:0.88rem; margin-top:4px;">
+            <strong>Coach review:</strong> ${(entry.review?.status || 'pending').replace('_', ' ')}
+            ${entry.review?.coachActionItems ? ` · Action items: ${entry.review.coachActionItems}` : ''}
+          </div>
+          <div style="font-size:0.88rem; opacity:0.9;">${entry.coachNotes ? `Coach notes: ${entry.coachNotes}` : 'Coach notes pending.'}</div>
           <div style="font-size:0.86rem; opacity:0.95; margin-top:6px; border-left:3px solid rgba(47,128,237,0.45); padding-left:8px;">
             <strong>Coach insight:</strong> ${(entry.insights?.summaryShort) || 'More check-ins needed for trend feedback.'}
             ${entry.insights?.summaryFull?.length ? `<div style="margin-top:4px;">${entry.insights.summaryFull.map(line => `<div>• ${line}</div>`).join('')}</div>` : ''}
@@ -6690,6 +6728,7 @@ function renderCheckInTab() {
       </section>
     `;
   }).join('');
+  generateCheckInSummary();
 }
 
 function getSafeSliderValue(value, fallback = 5) {
@@ -6719,6 +6758,9 @@ function hydrateCheckInFormFromLatestEntry(checkIns) {
   setValueIfEmpty('checkInPhaseInput', latest.phase);
   setValueIfEmpty('checkInWeekLabelInput', latest.weekLabel);
   setValueIfEmpty('checkInNotesInput', latest.notes);
+  setValueIfEmpty('checkInCoachNotesInput', latest.coachNotes);
+  setValueIfEmpty('checkInCoachActionItemsInput', latest.review?.coachActionItems);
+  setValueIfEmpty('checkInReviewStatusInput', latest.review?.status || 'pending');
 
   setValueIfEmpty('checkInEnergyInput', latest.energy, (value) => getSafeSliderValue(value));
   setValueIfEmpty('checkInHungerInput', latest.hunger, (value) => getSafeSliderValue(value));
@@ -6726,6 +6768,20 @@ function hydrateCheckInFormFromLatestEntry(checkIns) {
   setValueIfEmpty('checkInStressInput', latest.stress, (value) => getSafeSliderValue(value));
   setValueIfEmpty('checkInDigestionInput', latest.digestion, (value) => getSafeSliderValue(value));
   setValueIfEmpty('checkInTrainingPerformanceInput', latest.trainingPerformance, (value) => getSafeSliderValue(value));
+  const adjustmentToggles = [
+    ['checkInAdjustmentMacrosChanged', latest.adjustments?.macrosChanged],
+    ['checkInAdjustmentCardioChanged', latest.adjustments?.cardioChanged],
+    ['checkInAdjustmentStepsChanged', latest.adjustments?.stepsChanged],
+    ['checkInAdjustmentRefeedAdded', latest.adjustments?.refeedAdded]
+  ];
+  adjustmentToggles.forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el && !el.checked && value) el.checked = true;
+  });
+  setValueIfEmpty('checkInAdjustmentMacrosNotes', latest.adjustments?.macrosNotes);
+  setValueIfEmpty('checkInAdjustmentCardioNotes', latest.adjustments?.cardioNotes);
+  setValueIfEmpty('checkInAdjustmentStepsNotes', latest.adjustments?.stepsNotes);
+  setValueIfEmpty('checkInAdjustmentRefeedNotes', latest.adjustments?.refeedNotes);
 }
 
 function bindCheckInSliderDisplays() {
@@ -6742,7 +6798,111 @@ function bindCheckInSliderDisplays() {
   });
 }
 
-function saveWeeklyCheckIn() {
+function readCheckInAdjustmentPayload() {
+  return {
+    macrosChanged: !!document.getElementById('checkInAdjustmentMacrosChanged')?.checked,
+    macrosNotes: document.getElementById('checkInAdjustmentMacrosNotes')?.value || '',
+    cardioChanged: !!document.getElementById('checkInAdjustmentCardioChanged')?.checked,
+    cardioNotes: document.getElementById('checkInAdjustmentCardioNotes')?.value || '',
+    stepsChanged: !!document.getElementById('checkInAdjustmentStepsChanged')?.checked,
+    stepsNotes: document.getElementById('checkInAdjustmentStepsNotes')?.value || '',
+    refeedAdded: !!document.getElementById('checkInAdjustmentRefeedAdded')?.checked,
+    refeedNotes: document.getElementById('checkInAdjustmentRefeedNotes')?.value || ''
+  };
+}
+
+function formatAdjustmentSummary(adjustments) {
+  const source = adjustments || {};
+  const flags = [
+    ['Macros', source.macrosChanged, source.macrosNotes],
+    ['Cardio', source.cardioChanged, source.cardioNotes],
+    ['Steps', source.stepsChanged, source.stepsNotes],
+    ['Refeed', source.refeedAdded, source.refeedNotes]
+  ].filter((item) => item[1]);
+  if (!flags.length) return 'No weekly adjustments logged.';
+  return flags.map(([label, _changed, notes]) => `${label}${notes ? ` (${notes})` : ''}`).join(' · ');
+}
+
+function buildCheckInSummaryPayload(checkIn) {
+  if (!checkIn) return null;
+  const insights = checkIn.insights?.summaryShort || 'Trend intelligence will build after more entries.';
+  const adjustmentsSummary = formatAdjustmentSummary(checkIn.adjustments);
+  return {
+    date: checkIn.date,
+    phase: checkIn.phase,
+    weekLabel: checkIn.weekLabel || checkIn.phaseWeekLabel,
+    metrics: {
+      bodyweight: checkIn.bodyweight || '',
+      waist: checkIn.waist || '',
+      energy: checkIn.energy || '',
+      sleep: checkIn.sleep || '',
+      stress: checkIn.stress || '',
+      hunger: checkIn.hunger || '',
+      digestion: checkIn.digestion || '',
+      trainingPerformance: checkIn.trainingPerformance || ''
+    },
+    athleteNotes: checkIn.notes || '',
+    coachNotes: checkIn.coachNotes || '',
+    reviewStatus: checkIn.review?.status || 'pending',
+    coachActionItems: checkIn.review?.coachActionItems || '',
+    adjustmentsSummary,
+    trendSummary: insights
+  };
+}
+
+function generateCheckInSummary() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const output = document.getElementById('checkInSummaryOutput');
+  if (!output || !window.checkinEngine || !userId) return null;
+  const timeline = window.checkinEngine.getCheckInInsightTimeline?.(window.checkinEngine.loadCheckIns(userId)) || [];
+  const activeDate = document.getElementById('checkInDateInput')?.value;
+  const selected = timeline.find((entry) => entry.date === activeDate) || timeline[0];
+  if (!selected) {
+    output.textContent = 'No check-ins available for summary export yet.';
+    return null;
+  }
+  const payload = buildCheckInSummaryPayload(selected);
+  output.innerHTML = `
+    <strong>${payload.date}</strong> · ${payload.phase} · ${payload.weekLabel}<br />
+    BW ${payload.metrics.bodyweight || '—'} · Waist ${payload.metrics.waist || '—'} · Perf ${payload.metrics.trainingPerformance || '—'}<br />
+    <strong>Adjustments:</strong> ${payload.adjustmentsSummary}<br />
+    <strong>Review:</strong> ${payload.reviewStatus}${payload.coachActionItems ? ` · Action items: ${payload.coachActionItems}` : ''}<br />
+    <strong>Trend:</strong> ${payload.trendSummary}
+  `;
+  return payload;
+}
+
+function exportCheckInSummary(format = 'json') {
+  const payload = generateCheckInSummary();
+  if (!payload) return;
+  const exportBody = format === 'txt'
+    ? [
+      `Check-In Summary (${payload.date})`,
+      `Phase: ${payload.phase} | Week: ${payload.weekLabel}`,
+      `Bodyweight: ${payload.metrics.bodyweight || '—'}, Waist: ${payload.metrics.waist || '—'}`,
+      `Recovery: Energy ${payload.metrics.energy || '—'}, Sleep ${payload.metrics.sleep || '—'}, Stress ${payload.metrics.stress || '—'}`,
+      `Diet: Hunger ${payload.metrics.hunger || '—'}, Digestion ${payload.metrics.digestion || '—'}`,
+      `Performance: ${payload.metrics.trainingPerformance || '—'}`,
+      `Adjustments: ${payload.adjustmentsSummary}`,
+      `Athlete Notes: ${payload.athleteNotes || '—'}`,
+      `Coach Notes: ${payload.coachNotes || '—'}`,
+      `Review Status: ${payload.reviewStatus}`,
+      `Coach Action Items: ${payload.coachActionItems || '—'}`,
+      `Trend Summary: ${payload.trendSummary}`
+    ].join('\n')
+    : JSON.stringify(payload, null, 2);
+  const blob = new Blob([exportBody], { type: format === 'txt' ? 'text/plain;charset=utf-8' : 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `checkin-summary-${payload.date}.${format === 'txt' ? 'txt' : 'json'}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function saveWeeklyCheckIn(actor = 'athlete') {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
 
@@ -6763,10 +6923,25 @@ function saveWeeklyCheckIn() {
     digestion: document.getElementById('checkInDigestionInput')?.value || '',
     trainingPerformance: document.getElementById('checkInTrainingPerformanceInput')?.value || '',
     notes: document.getElementById('checkInNotesInput')?.value || '',
+    coachNotes: document.getElementById('checkInCoachNotesInput')?.value || '',
+    adjustments: readCheckInAdjustmentPayload(),
+    review: {
+      status: document.getElementById('checkInReviewStatusInput')?.value || 'pending',
+      coachActionItems: document.getElementById('checkInCoachActionItemsInput')?.value || '',
+      athleteSubmittedAt: actor === 'athlete' ? new Date().toISOString() : '',
+      coachReviewedAt: actor === 'coach' ? new Date().toISOString() : ''
+    },
     frontPhoto: document.getElementById('checkInFrontPhotoInput')?.value || '',
     sidePhoto: document.getElementById('checkInSidePhotoInput')?.value || '',
     backPhoto: document.getElementById('checkInBackPhotoInput')?.value || ''
   };
+
+  const currentEntries = window.checkinEngine.loadCheckIns(userId);
+  const existingForDate = currentEntries.find((entry) => entry.date === draft.date);
+  if (existingForDate) {
+    draft.review.athleteSubmittedAt = draft.review.athleteSubmittedAt || existingForDate.review?.athleteSubmittedAt || '';
+    draft.review.coachReviewedAt = draft.review.coachReviewedAt || existingForDate.review?.coachReviewedAt || '';
+  }
 
   draft.weekLabel = manualWeekLabel || window.checkinEngine.getWeekLabelForCheckIn(draft, phaseState);
   draft.phaseWeekLabel = draft.weekLabel;
@@ -6787,9 +6962,12 @@ function saveWeeklyCheckIn() {
   const weekLabelInput = document.getElementById('checkInWeekLabelInput');
   if (weekLabelInput) weekLabelInput.value = draft.weekLabel;
   renderCheckInTab();
+  generateCheckInSummary();
 }
 
 window.saveWeeklyCheckIn = saveWeeklyCheckIn;
+window.generateCheckInSummary = generateCheckInSummary;
+window.exportCheckInSummary = exportCheckInSummary;
 
 // ===== TRAINING LOG & TEMPLATES =====
 
