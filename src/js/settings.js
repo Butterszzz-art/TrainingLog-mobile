@@ -533,3 +533,4 @@ window.getStoredUserSettings = readStoredSettings;
 window.getDefaultUserSettings = getDefaultSettings;
 window.bindPhaseSetup = bindPhaseSetup;
 window.renderProfileTab = renderProfileTab;
+window.dispatchEvent(new CustomEvent('traininglog:settings-ready'));
