@@ -6289,6 +6289,22 @@ function onRecoveryLogged(entry) {
 
 window.onRecoveryLogged = onRecoveryLogged;
 
+function togglePosingComplete(isComplete) {
+  try {
+    if (window.dailyMissionEngine?.syncMissionFromPosingEntry) {
+      window.dailyMissionEngine.syncMissionFromPosingEntry({
+        date: new Date().toISOString().slice(0, 10),
+        complete: Boolean(isComplete)
+      }, currentUser);
+    }
+  } catch (missionErr) {
+    console.warn('Daily mission posing sync failed.', missionErr);
+  }
+  renderHomeDashboard();
+}
+
+window.togglePosingComplete = togglePosingComplete;
+
 function renderTodaysMission(profile, username) {
   const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
   const missionState = getTodayMissionState(profile, username);
@@ -6302,6 +6318,17 @@ function renderTodaysMission(profile, username) {
     isComplete: false
   };
   const checklist = requiredItems.map(itemKey => renderMissionItem(itemKey, missionState)).join('');
+  const posingIsRequired = requiredItems.includes('posingComplete');
+  const posingDone = Boolean(missionState?.posingComplete);
+  const posingQuickToggle = posingIsRequired
+    ? `
+      <div style="margin-top:10px;">
+        <button type="button" class="secondary" onclick="togglePosingComplete(${!posingDone})">
+          ${posingDone ? 'Mark Posing Incomplete' : 'Mark Posing Complete'}
+        </button>
+      </div>
+    `
+    : '';
   const completionSummary = `${compliance.completed}/${compliance.total} complete · ${compliance.percent}%`;
   const completionLabel = compliance.isComplete
     ? 'Mission complete. Great work today.'
@@ -6313,6 +6340,7 @@ function renderTodaysMission(profile, username) {
       <ul class="home-mission-list">
         ${checklist}
       </ul>
+      ${posingQuickToggle}
     </section>
   `;
 }
@@ -6541,6 +6569,13 @@ function saveWeeklyCheckIn() {
 
   draft.weekLabel = manualWeekLabel || window.checkinEngine.getWeekLabelForCheckIn(draft, phaseState);
   window.checkinEngine.saveCheckIn(userId, draft, phaseState);
+  if (typeof window.onRecoveryLogged === 'function') {
+    window.onRecoveryLogged({
+      date: draft.date,
+      sleepHours: Number(draft.sleep) || 0,
+      hrv: 0
+    });
+  }
 
   const weekLabelInput = document.getElementById('checkInWeekLabelInput');
   if (weekLabelInput) weekLabelInput.value = draft.weekLabel;
