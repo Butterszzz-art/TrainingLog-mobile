@@ -94,6 +94,7 @@
   }
 
   function sanitizeState(state) {
+    const contestPrepToolkit = sanitizeContestPrepToolkit(state?.contestPrepToolkit);
     const baseline = {
       mode: 'improvement',
       athleteName: '',
@@ -110,6 +111,7 @@
       weightGoalDirection: '',
       targetRateOfLoss: null,
       notes: '',
+      contestPrepToolkit,
       updatedAt: new Date().toISOString()
     };
 
@@ -132,8 +134,90 @@
       reverseDietStartDate: toISODateOrNull(source.reverseDietStartDate),
       weightGoalDirection: toStringOrEmpty(source.weightGoalDirection),
       targetRateOfLoss: toNumberOrNull(source.targetRateOfLoss),
+      contestPrepToolkit,
       notes: typeof source.notes === 'string' ? source.notes : baseline.notes,
       updatedAt: new Date().toISOString()
+    };
+  }
+
+  function buildDefaultPeakWeekChecklist() {
+    return [
+      { dayOffset: -7, label: '7 Days Out', tasks: ['Confirm peak week strategy with coach', 'Lock travel confirmations', 'Begin daily physique check-ins'], completedTasks: [] },
+      { dayOffset: -6, label: '6 Days Out', tasks: ['Stage-walk posing rounds', 'Review sodium and hydration baseline', 'Finalize pump-up kit list'], completedTasks: [] },
+      { dayOffset: -5, label: '5 Days Out', tasks: ['Practice mandatory poses under fatigue', 'Confirm tanning appointment windows', 'Pack non-perishable prep meals'], completedTasks: [] },
+      { dayOffset: -4, label: '4 Days Out', tasks: ['Register athlete check-in documents', 'Confirm athlete meeting time', 'Review travel-day meal timing'], completedTasks: [] },
+      { dayOffset: -3, label: '3 Days Out', tasks: ['Assess carb-loading response photos', 'Trim training volume per peak plan', 'Finalize show-day timeline'], completedTasks: [] },
+      { dayOffset: -2, label: '2 Days Out', tasks: ['Primary tan coat + skin prep', 'Set alarms for show-day meal intervals', 'Charge and stage all electronics'], completedTasks: [] },
+      { dayOffset: -1, label: '1 Day Out', tasks: ['Touch-up tan and glaze supplies', 'Lay out suit, jewelry, and number tag kit', 'Review wake-up checklist'], completedTasks: [] },
+      { dayOffset: 0, label: 'Show Day', tasks: ['Morning physique check and first meal', 'Pump-up protocol timing', 'Backstage execution checklist'], completedTasks: [] }
+    ];
+  }
+
+  function sanitizeChecklistDays(days) {
+    const sourceDays = Array.isArray(days) && days.length ? days : buildDefaultPeakWeekChecklist();
+    return sourceDays.map((day, index) => {
+      const dayOffset = Number.isFinite(Number(day?.dayOffset)) ? Number(day.dayOffset) : buildDefaultPeakWeekChecklist()[index]?.dayOffset ?? 0;
+      const tasks = Array.isArray(day?.tasks) ? day.tasks.filter(Boolean).map(item => String(item).trim()).filter(Boolean) : [];
+      const completedSet = new Set(Array.isArray(day?.completedTasks) ? day.completedTasks.map(item => String(item).trim()) : []);
+      const completedTasks = tasks.filter(task => completedSet.has(task));
+      return {
+        dayOffset,
+        label: toStringOrEmpty(day?.label) || (dayOffset === 0 ? 'Show Day' : `${Math.abs(dayOffset)} Days Out`),
+        tasks: tasks.length ? tasks : ['No tasks assigned'],
+        completedTasks
+      };
+    }).sort((a, b) => a.dayOffset - b.dayOffset);
+  }
+
+  function sanitizeChecklistSections(sections, fallback) {
+    return Object.keys(fallback).reduce((acc, key) => {
+      const base = fallback[key];
+      const incoming = sections && sections[key];
+      const merged = {
+        ...base,
+        done: Boolean(incoming?.done),
+        notes: toStringOrEmpty(incoming?.notes)
+      };
+      acc[key] = merged;
+      return acc;
+    }, {});
+  }
+
+  function sanitizeContestPrepToolkit(toolkit) {
+    const reminderFallback = [
+      { id: 'wake_assessment', time: '06:00', text: 'Wake, assess look, and log mirror check photo.' },
+      { id: 'meal_window', time: '09:00', text: 'Follow first structured meal and hydration target.' },
+      { id: 'check_in', time: '11:00', text: 'Attend athlete meeting / check-in with documents.' },
+      { id: 'tan_touchup', time: '13:00', text: 'Run tan touch-up + glaze prep before pump-up.' },
+      { id: 'stage_call', time: '15:00', text: 'Be backstage 45 min before class call.' }
+    ];
+    const checklistFallback = {
+      travel: { label: 'Travel arranged (flight/hotel/ride)', done: false, notes: '' },
+      tan: { label: 'Tan appointments + supplies secured', done: false, notes: '' },
+      registration: { label: 'Registration + NPC/IFBB docs packed', done: false, notes: '' }
+    };
+
+    const source = toolkit && typeof toolkit === 'object' ? toolkit : {};
+    const reminders = Array.isArray(source.showDayReminders)
+      ? source.showDayReminders.map((item, idx) => ({
+        id: toStringOrEmpty(item?.id) || `reminder_${idx + 1}`,
+        time: toStringOrEmpty(item?.time),
+        text: toStringOrEmpty(item?.text)
+      })).filter(item => item.text)
+      : [];
+    const sanitizedReminders = reminders.length ? reminders : reminderFallback;
+    const planningNotes = source.planningNotes && typeof source.planningNotes === 'object' ? source.planningNotes : {};
+
+    return {
+      peakWeekModeEnabled: source.peakWeekModeEnabled !== false,
+      peakWeekChecklistByDay: sanitizeChecklistDays(source.peakWeekChecklistByDay),
+      showDayReminders: sanitizedReminders,
+      travelTanRegistrationChecklist: sanitizeChecklistSections(source.travelTanRegistrationChecklist, checklistFallback),
+      planningNotes: {
+        water: toStringOrEmpty(planningNotes.water),
+        sodium: toStringOrEmpty(planningNotes.sodium),
+        carbs: toStringOrEmpty(planningNotes.carbs)
+      }
     };
   }
 
@@ -308,7 +392,55 @@
       weightGoalDirection: normalized.weightGoalDirection,
       targetRateOfLoss: normalized.targetRateOfLoss,
       reverseDietStartDate: normalized.reverseDietStartDate,
-      notes: normalized.notes
+      notes: normalized.notes,
+      contestPrepToolkit: normalized.contestPrepToolkit
+    };
+  }
+
+  function getPeakWeekChecklistByDay(state = {}) {
+    const normalized = sanitizeState(state);
+    return normalized.contestPrepToolkit.peakWeekChecklistByDay;
+  }
+
+  function getShowDayReminders(state = {}) {
+    const normalized = sanitizeState(state);
+    return normalized.contestPrepToolkit.showDayReminders;
+  }
+
+  function getTravelTanRegistrationChecklist(state = {}) {
+    const normalized = sanitizeState(state);
+    return normalized.contestPrepToolkit.travelTanRegistrationChecklist;
+  }
+
+  function getPlanningNotes(state = {}) {
+    const normalized = sanitizeState(state);
+    return normalized.contestPrepToolkit.planningNotes;
+  }
+
+  function getFinalWeekComplianceSummary(state = {}) {
+    const normalized = sanitizeState(state);
+    const checklistDays = normalized.contestPrepToolkit.peakWeekChecklistByDay;
+    const dayTotals = checklistDays.reduce((acc, day) => {
+      const total = Array.isArray(day.tasks) ? day.tasks.length : 0;
+      const completed = Array.isArray(day.completedTasks) ? day.completedTasks.length : 0;
+      return {
+        total: acc.total + total,
+        completed: acc.completed + Math.min(completed, total)
+      };
+    }, { total: 0, completed: 0 });
+
+    const coreChecklist = Object.values(normalized.contestPrepToolkit.travelTanRegistrationChecklist || {});
+    const coreCompleted = coreChecklist.filter(item => item?.done).length;
+    const coreTotal = coreChecklist.length;
+    const completionPercent = dayTotals.total ? Math.round((dayTotals.completed / dayTotals.total) * 100) : 0;
+
+    return {
+      peakWeekChecklistCompleted: dayTotals.completed,
+      peakWeekChecklistTotal: dayTotals.total,
+      peakWeekChecklistCompletionPercent: completionPercent,
+      travelTanRegistrationCompleted: coreCompleted,
+      travelTanRegistrationTotal: coreTotal,
+      isExecutionReady: completionPercent >= 85 && coreCompleted === coreTotal
     };
   }
 
@@ -326,7 +458,12 @@
     getImprovementSeasonLabel,
     getCurrentPhaseLabel,
     getPhaseContext,
-    getStorageKey
+    getStorageKey,
+    getPeakWeekChecklistByDay,
+    getShowDayReminders,
+    getTravelTanRegistrationChecklist,
+    getPlanningNotes,
+    getFinalWeekComplianceSummary
   };
 
   if (typeof module !== 'undefined' && module.exports) {
