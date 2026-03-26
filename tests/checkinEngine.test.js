@@ -4,6 +4,10 @@ const {
   getNextCheckInDate,
   getWeekLabelForCheckIn,
   groupCheckInsForTimeline,
+  buildSeasonMilestones,
+  getPhotoProgressHooks,
+  getComparisonPlaceholders,
+  buildSeasonArchive,
   getCheckInInsights,
   getCheckInInsightTimeline,
   getStorageKey
@@ -159,5 +163,49 @@ describe('checkinEngine', () => {
     expect(timeline).toHaveLength(2);
     expect(timeline[0].insights).toBeTruthy();
     expect(timeline[0].insights.summaryShort).toMatch(/Weight trend|Recovery|Performance|check-in/i);
+  });
+
+  test('buildSeasonMilestones returns prep to post-show waypoints', () => {
+    const milestones = buildSeasonMilestones({
+      startDate: '2026-01-01',
+      showDate: '2026-06-20'
+    });
+
+    expect(milestones.map(item => item.key)).toEqual([
+      'prep_start',
+      'weeks_out_16',
+      'weeks_out_12',
+      'weeks_out_8',
+      'peak_week',
+      'show_day',
+      'post_show_week_1'
+    ]);
+  });
+
+  test('getPhotoProgressHooks builds front/side/back storage hooks', () => {
+    const hooks = getPhotoProgressHooks({ sidePhoto: 'blob:side-1' }, 'peak_week');
+    expect(hooks).toHaveLength(3);
+    expect(hooks[0]).toEqual(expect.objectContaining({ view: 'front', hasPhoto: false }));
+    expect(hooks[1]).toEqual(expect.objectContaining({ view: 'side', hasPhoto: true }));
+    expect(hooks[2]).toEqual(expect.objectContaining({ view: 'back', hasPhoto: false }));
+  });
+
+  test('buildSeasonArchive links nearest check-ins and exposes comparison placeholders', () => {
+    const archive = buildSeasonArchive(
+      { startDate: '2026-02-01', showDate: '2026-06-20' },
+      [
+        { date: '2026-06-20', frontPhoto: 'blob:show-front' },
+        { date: '2026-06-14', sidePhoto: 'blob:peak-side' },
+        { date: '2026-04-26', backPhoto: 'blob:8week-back' }
+      ]
+    );
+
+    const showDay = archive.timeline.find(entry => entry.key === 'show_day');
+    const peakWeek = archive.timeline.find(entry => entry.key === 'peak_week');
+    expect(showDay.hasLinkedCheckIn).toBe(true);
+    expect(showDay.linkedCheckInDate).toBe('2026-06-20');
+    expect(peakWeek.hasLinkedCheckIn).toBe(true);
+    expect(Array.isArray(getComparisonPlaceholders())).toBe(true);
+    expect(archive.comparisons[0].status).toBe('placeholder');
   });
 });

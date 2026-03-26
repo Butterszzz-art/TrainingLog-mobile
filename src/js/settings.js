@@ -276,6 +276,68 @@ function escapeHtmlAttribute(value) {
     .replace(/>/g, '&gt;');
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderSeasonArchiveMarkup({ phaseSettings, userId }) {
+  const archive = window.checkinEngine?.buildSeasonArchive
+    ? window.checkinEngine.buildSeasonArchive(
+      {
+        mode: phaseSettings.currentPhase,
+        startDate: phaseSettings.startDate,
+        prepStartDate: phaseSettings.prepStartDate || phaseSettings.startDate,
+        showDate: phaseSettings.showDate
+      },
+      window.checkinEngine.loadCheckIns?.(userId) || []
+    )
+    : null;
+
+  if (!archive || !Array.isArray(archive.timeline) || !archive.timeline.length) {
+    return '<p class="season-archive-empty">Set a show date to unlock season archive milestones.</p>';
+  }
+
+  const timelineItems = archive.timeline.map((entry) => {
+    const photoHookSummary = entry.photoHooks
+      .map((hook) => `${hook.view}: ${hook.hasPhoto ? 'saved' : 'pending'}`)
+      .join(' · ');
+    return `
+      <li class="season-archive-item">
+        <div class="season-archive-row">
+          <strong>${escapeHtml(entry.label)}</strong>
+          <span>${escapeHtml(entry.date || 'TBD')}</span>
+        </div>
+        <div class="season-archive-meta">
+          ${entry.hasLinkedCheckIn
+      ? `Linked check-in: ${escapeHtml(entry.linkedCheckInDate)}${entry.linkedCheckInWeekLabel ? ` · ${escapeHtml(entry.linkedCheckInWeekLabel)}` : ''}`
+      : 'Linked check-in: pending'}
+        </div>
+        <div class="season-archive-meta">Photo hooks: ${escapeHtml(photoHookSummary)}</div>
+      </li>
+    `;
+  }).join('');
+
+  const compareItems = archive.comparisons.map((item) => (
+    `<li>${escapeHtml(item.label)} <em>(${escapeHtml(item.status)})</em></li>`
+  )).join('');
+
+  return `
+    <div class="season-archive">
+      <p class="season-archive-summary">
+        ${archive.hasAnyLinkedCheckIn
+      ? 'Season milestones are now tied to available check-ins and photo slots.'
+      : 'Milestones are generated. Add check-ins to link each waypoint automatically.'}
+      </p>
+      <ol class="season-archive-list">${timelineItems}</ol>
+      <h4>Comparison View Queue</h4>
+      <ul class="season-archive-compare">${compareItems}</ul>
+    </div>
+  `;
+}
+
 function renderProfileTab() {
   const container = document.getElementById('profileTabContent');
   if (!container) return;
@@ -350,6 +412,10 @@ function renderProfileTab() {
         <div><span>Current Streak</span><strong>${formatProfileValue(summary?.streak)}</strong></div>
         <div><span>Badges Unlocked</span><strong>${formatProfileValue(Array.isArray(summary?.badges) ? summary.badges.length : summary?.badgeCount)}</strong></div>
       </div>
+    </section>
+    <section class="panel profile-section" aria-labelledby="profileSeasonArchiveHeading">
+      <h3 id="profileSeasonArchiveHeading">Season Archive</h3>
+      ${renderSeasonArchiveMarkup({ phaseSettings, userId })}
     </section>
     <section class="panel profile-section" aria-labelledby="profileSettingsShortcutsHeading">
       <h3 id="profileSettingsShortcutsHeading">App Settings shortcuts</h3>
