@@ -210,6 +210,179 @@
     }));
   }
 
+  function toFiniteNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  function getRollingAverage(values) {
+    const valid = values.filter((value) => Number.isFinite(value));
+    if (!valid.length) return null;
+    const sum = valid.reduce((acc, value) => acc + value, 0);
+    return sum / valid.length;
+  }
+
+  function formatSigned(value, decimals = 1) {
+    if (!Number.isFinite(value)) return '0';
+    const rounded = Number(value.toFixed(decimals));
+    if (rounded > 0) return `+${rounded}`;
+    return String(rounded);
+  }
+
+  function classifyTrend(delta, stableThreshold = 0.25) {
+    if (!Number.isFinite(delta)) return 'unknown';
+    if (delta > stableThreshold) return 'up';
+    if (delta < -stableThreshold) return 'down';
+    return 'steady';
+  }
+
+  function buildInsightSnapshot(entriesDesc, indexInDesc = 0) {
+    const checkIns = Array.isArray(entriesDesc) ? entriesDesc : [];
+    if (!checkIns.length || indexInDesc < 0 || indexInDesc >= checkIns.length) {
+      return {
+        summaryShort: 'No check-in insight yet.',
+        summaryFull: [],
+        insightMap: {}
+      };
+    }
+
+    const current = checkIns[indexInDesc];
+    const previous = checkIns[indexInDesc + 1] || null;
+    const olderWindow = checkIns.slice(indexInDesc + 1, indexInDesc + 4);
+
+    const currentWeight = toFiniteNumber(current?.bodyweight);
+    const previousWeight = toFiniteNumber(previous?.bodyweight);
+    const olderWeights = olderWindow.map(entry => toFiniteNumber(entry?.bodyweight));
+    const rollingWeight = getRollingAverage(olderWeights);
+    const deltaWeight = Number.isFinite(currentWeight) && Number.isFinite(previousWeight)
+      ? currentWeight - previousWeight
+      : null;
+    const deltaVsRolling = Number.isFinite(currentWeight) && Number.isFinite(rollingWeight)
+      ? currentWeight - rollingWeight
+      : null;
+    const rollingDeltaRate = Number.isFinite(previousWeight) && Number.isFinite(rollingWeight)
+      ? previousWeight - rollingWeight
+      : null;
+
+    const weightTrendMessage = !Number.isFinite(deltaWeight)
+      ? 'Weight trend needs at least two check-ins.'
+      : deltaWeight <= -0.2
+        ? `Weight trend is moving down (${formatSigned(deltaWeight)} vs last check-in).`
+        : deltaWeight >= 0.2
+          ? `Weight trend is moving up (${formatSigned(deltaWeight)} vs last check-in).`
+          : 'Weight trend is on target and holding steady.';
+
+    const rateMessage = !Number.isFinite(deltaWeight)
+      ? 'Rate of loss/gain will appear after your next check-in.'
+      : Math.abs(deltaWeight) < 0.15
+        ? 'Weight loss has stalled this week.'
+        : deltaWeight <= -0.25 && deltaWeight >= -1.25
+          ? `Rate of loss is on target (${Math.abs(Number(deltaWeight.toFixed(2)))} per check-in).`
+          : deltaWeight < -1.25
+            ? `Rate of loss is aggressive (${Math.abs(Number(deltaWeight.toFixed(2)))} per check-in).`
+            : `Rate of gain is ${Number(deltaWeight.toFixed(2))} per check-in.`;
+
+    const recoveryNow = getRollingAverage([
+      toFiniteNumber(current?.energy),
+      toFiniteNumber(current?.sleep),
+      (function () {
+        const stress = toFiniteNumber(current?.stress);
+        return Number.isFinite(stress) ? (11 - stress) : null;
+      })()
+    ]);
+    const recoveryPrev = getRollingAverage(olderWindow.map((entry) => getRollingAverage([
+      toFiniteNumber(entry?.energy),
+      toFiniteNumber(entry?.sleep),
+      (function () {
+        const stress = toFiniteNumber(entry?.stress);
+        return Number.isFinite(stress) ? (11 - stress) : null;
+      })()
+    ])));
+    const recoveryDelta = Number.isFinite(recoveryNow) && Number.isFinite(recoveryPrev)
+      ? recoveryNow - recoveryPrev
+      : null;
+
+    const recoveryMessage = !Number.isFinite(recoveryDelta)
+      ? 'Recovery trend needs more check-ins.'
+      : recoveryDelta <= -0.6
+        ? `Recovery is slipping (${formatSigned(recoveryDelta, 2)} vs rolling trend).`
+        : recoveryDelta >= 0.6
+          ? `Recovery is improving (${formatSigned(recoveryDelta, 2)} vs rolling trend).`
+          : 'Recovery is stable week to week.';
+
+    const performanceCurrent = toFiniteNumber(current?.trainingPerformance);
+    const performancePrevious = toFiniteNumber(previous?.trainingPerformance);
+    const performanceRolling = getRollingAverage(olderWindow.map(entry => toFiniteNumber(entry?.trainingPerformance)));
+    const performanceDelta = Number.isFinite(performanceCurrent) && Number.isFinite(performancePrevious)
+      ? performanceCurrent - performancePrevious
+      : null;
+    const performanceVsRolling = Number.isFinite(performanceCurrent) && Number.isFinite(performanceRolling)
+      ? performanceCurrent - performanceRolling
+      : null;
+    const performanceTrend = classifyTrend(Number.isFinite(performanceVsRolling) ? performanceVsRolling : performanceDelta, 0.4);
+    const performanceMessage = performanceTrend === 'up'
+      ? 'Performance trend is improving.'
+      : performanceTrend === 'down'
+        ? 'Performance trend is softening.'
+        : performanceTrend === 'steady'
+          ? 'Performance is holding steady.'
+          : 'Performance trend needs more check-ins.';
+
+    const hungerCurrent = toFiniteNumber(current?.hunger);
+    const hungerWindow = checkIns.slice(indexInDesc, indexInDesc + 3).map(entry => toFiniteNumber(entry?.hunger));
+    const hungerOldest = hungerWindow.length >= 3 ? hungerWindow[2] : null;
+    const hungerTrend = Number.isFinite(hungerCurrent) && Number.isFinite(hungerOldest)
+      ? hungerCurrent - hungerOldest
+      : null;
+    const hungerMessage = !Number.isFinite(hungerTrend)
+      ? 'Hunger trend needs three check-ins.'
+      : hungerTrend >= 1
+        ? 'Hunger rising over the last 3 check-ins.'
+        : hungerTrend <= -1
+          ? 'Hunger easing over the last 3 check-ins.'
+          : 'Hunger is stable over the last 3 check-ins.';
+
+    const summary = [
+      weightTrendMessage,
+      rateMessage,
+      recoveryMessage,
+      performanceMessage,
+      hungerMessage
+    ];
+
+    if (Number.isFinite(deltaVsRolling) && Number.isFinite(rollingDeltaRate) && Math.abs(deltaVsRolling) < 0.2 && Math.abs(rollingDeltaRate) < 0.2) {
+      summary[0] = 'Weight trend is on target versus your rolling baseline.';
+    }
+
+    return {
+      summaryShort: [summary[0], summary[2], summary[3]].join(' '),
+      summaryFull: summary,
+      insightMap: {
+        weightTrend: summary[0],
+        rateOfChange: summary[1],
+        recoveryTrend: summary[2],
+        performanceTrend: summary[3],
+        hungerTrend: summary[4]
+      }
+    };
+  }
+
+  function getCheckInInsights(checkIns) {
+    const source = Array.isArray(checkIns) ? checkIns.slice() : [];
+    const sorted = source.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
+    return buildInsightSnapshot(sorted, 0);
+  }
+
+  function getCheckInInsightTimeline(checkIns) {
+    const source = Array.isArray(checkIns) ? checkIns.slice() : [];
+    const sorted = source.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
+    return sorted.map((entry, index) => ({
+      ...entry,
+      insights: buildInsightSnapshot(sorted, index)
+    }));
+  }
+
   function saveCheckIn(userId, checkIn, phaseState = {}) {
     const storage = getStorage();
     const existing = loadCheckIns(userId);
@@ -254,6 +427,8 @@
     getNextCheckInDate,
     getWeekLabelForCheckIn,
     groupCheckInsForTimeline,
+    getCheckInInsights,
+    getCheckInInsightTimeline,
     getStorageKey
   };
 
