@@ -4,6 +4,8 @@ const {
   getNextCheckInDate,
   getWeekLabelForCheckIn,
   groupCheckInsForTimeline,
+  getCheckInInsights,
+  getCheckInInsightTimeline,
   getStorageKey
 } = require('../checkinEngine');
 
@@ -89,5 +91,30 @@ describe('checkinEngine', () => {
     expect(grouped[0].weeksOutLabel).toBe('12 Weeks Out');
     expect(grouped[0].phaseWeeks[0].phaseWeekLabel).toBe('12 Weeks Out');
     expect(grouped[0].phaseWeeks[0].entries).toHaveLength(1);
+  });
+
+  test('getCheckInInsights returns prep-style trend feedback', () => {
+    const insights = getCheckInInsights([
+      { date: '2026-03-20', bodyweight: 190.2, energy: 8, sleep: 8, stress: 3, trainingPerformance: 8, hunger: 7 },
+      { date: '2026-03-13', bodyweight: 190.2, energy: 7, sleep: 7, stress: 4, trainingPerformance: 8, hunger: 6 },
+      { date: '2026-03-06', bodyweight: 191.4, energy: 8, sleep: 7, stress: 3, trainingPerformance: 8, hunger: 5 },
+      { date: '2026-02-27', bodyweight: 191.6, energy: 8, sleep: 8, stress: 3, trainingPerformance: 9, hunger: 4 }
+    ]);
+
+    expect(insights.summaryFull).toHaveLength(5);
+    expect(insights.insightMap.rateOfChange).toMatch(/stalled|on target|aggressive|gain/i);
+    expect(insights.insightMap.performanceTrend).toMatch(/holding steady|improving|softening/i);
+    expect(insights.insightMap.hungerTrend).toMatch(/last 3 check-ins/i);
+  });
+
+  test('getCheckInInsightTimeline includes insight payload per entry', () => {
+    const timeline = getCheckInInsightTimeline([
+      { date: '2026-03-20', bodyweight: 190.2, energy: 8, sleep: 8, stress: 3, trainingPerformance: 8, hunger: 7 },
+      { date: '2026-03-13', bodyweight: 190.0, energy: 8, sleep: 8, stress: 3, trainingPerformance: 8, hunger: 6 }
+    ]);
+
+    expect(timeline).toHaveLength(2);
+    expect(timeline[0].insights).toBeTruthy();
+    expect(timeline[0].insights.summaryShort).toMatch(/Weight trend|Recovery|Performance|check-in/i);
   });
 });

@@ -6227,6 +6227,25 @@ function renderStatusSummary(profile, username) {
   `;
 }
 
+function renderCheckInInsightSummary(profile, username) {
+  const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
+  const insightPayload = window.checkinEngine?.getCheckInInsights?.(checkIns) || null;
+  const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
+  const lines = insightPayload?.summaryFull?.length
+    ? insightPayload.summaryFull.slice(0, 3)
+    : ['Log two or more check-ins to unlock trend intelligence.'];
+  return `
+    <section class="home-dashboard-card">
+      <h3 class="home-card-title">Check-In Intelligence · ${timelineLabel}</h3>
+      <p class="home-mission-progress">${insightPayload?.summaryShort || lines[0]}</p>
+      <ul class="home-upcoming-list">
+        ${lines.map(line => `<li class="home-upcoming-item"><span>Insight</span><strong>${line}</strong></li>`).join('')}
+      </ul>
+    </section>
+  `;
+}
+
 const MISSION_ITEM_META = {
   workoutComplete: 'Workout',
   cardioComplete: 'Cardio',
@@ -6458,6 +6477,7 @@ function renderHomeDashboard() {
   container.innerHTML = `<div class="home-command-grid">${[
     renderHeroPhaseHeader(profile, username),
     renderStatusSummary(profile, username),
+    renderCheckInInsightSummary(profile, username),
     renderWeeklyComplianceCard(profile, username),
     renderTodaysMission(profile, username),
     renderUpcomingPrepEvents(profile, username),
@@ -6502,7 +6522,8 @@ function renderCheckInTab() {
   if (!timeline) return;
   timeline.innerHTML = '<p class="home-mission-progress">Loading weekly check-ins…</p>';
 
-  const groupedTimeline = window.checkinEngine.groupCheckInsForTimeline?.(checkIns) || [];
+  const entriesWithInsights = window.checkinEngine.getCheckInInsightTimeline?.(checkIns) || checkIns;
+  const groupedTimeline = window.checkinEngine.groupCheckInsForTimeline?.(entriesWithInsights) || [];
   if (!groupedTimeline.length) {
     timeline.innerHTML = '<p class="home-mission-progress">No weekly ritual logged yet. Save your first check-in to build your prep timeline.</p>';
     return;
@@ -6516,6 +6537,10 @@ function renderCheckInTab() {
           BW: ${entry.bodyweight || '—'} · Waist: ${entry.waist || '—'} · Recovery (E/S/St): ${entry.recoveryRatings?.energy || entry.energy || '—'}/${entry.recoveryRatings?.sleep || entry.sleep || '—'}/${entry.recoveryRatings?.stress || entry.stress || '—'}<br />
           Hunger: ${entry.hunger || '—'} · Digestion: ${entry.digestion || '—'} · Training: ${entry.trainingPerformance || '—'}
           <div style="font-size:0.9rem; opacity:0.85;">${entry.notes || 'No notes logged.'}</div>
+          <div style="font-size:0.86rem; opacity:0.95; margin-top:6px; border-left:3px solid rgba(47,128,237,0.45); padding-left:8px;">
+            <strong>Coach insight:</strong> ${(entry.insights?.summaryShort) || 'More check-ins needed for trend feedback.'}
+            ${entry.insights?.summaryFull?.length ? `<div style="margin-top:4px;">${entry.insights.summaryFull.map(line => `<div>• ${line}</div>`).join('')}</div>` : ''}
+          </div>
         </li>
       `).join('');
 
