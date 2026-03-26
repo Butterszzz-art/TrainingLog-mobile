@@ -9,6 +9,11 @@ const {
   getImprovementSeasonLabel,
   getCurrentPhaseLabel,
   getPhaseContext,
+  getPeakWeekChecklistByDay,
+  getShowDayReminders,
+  getTravelTanRegistrationChecklist,
+  getPlanningNotes,
+  getFinalWeekComplianceSummary,
   getStorageKey
 } = require('../prepMode');
 
@@ -102,5 +107,61 @@ describe('prepMode', () => {
     expect(improvement.mode).toBe('improvement');
     expect(improvement.weightGoalDirection).toBe('gain');
     expect(improvement.targetRateOfLoss).toBeNull();
+  });
+
+  test('contest prep toolkit exposes peak-week execution helpers', () => {
+    const saved = saveCurrentPhaseState('show-athlete', {
+      mode: 'peak_week',
+      showDate: '2026-06-20',
+      contestPrepToolkit: {
+        peakWeekChecklistByDay: [
+          {
+            dayOffset: -1,
+            label: '1 Day Out',
+            tasks: ['Lay out suit', 'Confirm athlete check-in packet'],
+            completedTasks: ['Lay out suit']
+          },
+          {
+            dayOffset: 0,
+            label: 'Show Day',
+            tasks: ['Pump-up protocol timing'],
+            completedTasks: ['Pump-up protocol timing']
+          }
+        ],
+        showDayReminders: [
+          { id: 'checkin', time: '10:00', text: 'Athlete check-in starts.' }
+        ],
+        travelTanRegistrationChecklist: {
+          travel: { done: true, notes: 'Arrive Thursday PM.' },
+          tan: { done: true, notes: '2 coats booked.' },
+          registration: { done: false, notes: 'Bring backup membership card.' }
+        },
+        planningNotes: {
+          water: 'Hold at 1.5 gal then taper after noon.',
+          sodium: 'Keep sodium stable through pump-up.',
+          carbs: 'Front-load 60% by 1 PM.'
+        }
+      }
+    });
+
+    const checklist = getPeakWeekChecklistByDay(saved);
+    expect(checklist.length).toBe(2);
+    expect(checklist[0].dayOffset).toBe(-1);
+
+    const reminders = getShowDayReminders(saved);
+    expect(reminders[0].text).toContain('check-in');
+
+    const logistics = getTravelTanRegistrationChecklist(saved);
+    expect(logistics.travel.done).toBe(true);
+    expect(logistics.registration.done).toBe(false);
+
+    const notes = getPlanningNotes(saved);
+    expect(notes.water).toContain('1.5 gal');
+
+    const compliance = getFinalWeekComplianceSummary(saved);
+    expect(compliance.peakWeekChecklistCompleted).toBe(2);
+    expect(compliance.peakWeekChecklistTotal).toBe(3);
+    expect(compliance.travelTanRegistrationCompleted).toBe(2);
+    expect(compliance.isExecutionReady).toBe(false);
   });
 });
