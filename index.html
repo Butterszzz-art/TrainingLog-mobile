@@ -308,6 +308,19 @@
       display: grid;
       gap: 16px;
     }
+    .home-command-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .home-command-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .home-command-grid .home-hero-card {
+        grid-column: 1 / -1;
+      }
+    }
     .home-dashboard-card {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -339,6 +352,11 @@
     .home-card-title {
       margin: 0 0 12px;
       font-size: 1.1rem;
+    }
+    .home-placeholder-note {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--secondary-text);
     }
     .home-stat-grid {
       display: grid;
@@ -6096,6 +6114,18 @@ function formatExactDate(dateLike) {
   return parsed.toISOString().slice(0, 10);
 }
 
+function getWeeksOutLabel(dateLike) {
+  if (!dateLike) return 'Weeks out TBD';
+  const showDate = new Date(dateLike);
+  if (Number.isNaN(showDate.getTime())) return 'Weeks out TBD';
+  const today = new Date();
+  const msDiff = showDate.setHours(0, 0, 0, 0) - today.setHours(0, 0, 0, 0);
+  const weeks = Math.ceil(msDiff / (1000 * 60 * 60 * 24 * 7));
+  if (weeks < 0) return 'Show complete';
+  if (weeks === 0) return 'Peak week';
+  return `${weeks} weeks out`;
+}
+
 function getTimelineHeaderLabel(profile, username, referenceDate) {
   const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
   const mode = String(phaseState.mode || profile?.currentPhase || 'improvement').toLowerCase().replace(/\s+/g, '_');
@@ -6121,17 +6151,19 @@ function renderHeroPhaseHeader(profile, username) {
       || profile.seasonWeekLabel,
     'Week label TBD'
   );
-  const showCountdown = formatCountdownDays(phaseState.showDate || profile.showDate);
-  const showDate = formatExactDate(phaseState.showDate || profile.showDate);
+  const showDateLike = phaseState.showDate || profile.showDate;
+  const showCountdown = formatCountdownDays(showDateLike);
+  const showDate = formatExactDate(showDateLike);
+  const weeksOut = getWeeksOutLabel(showDateLike);
 
   return `
     <section class="home-dashboard-card home-hero-card">
       <p class="home-hero-topline">Command Center</p>
       <h2 class="home-hero-athlete">${athleteName}</h2>
-      <p class="home-hero-meta">Phase: ${phase}</p>
-      <p class="home-hero-meta">${weekLabel}</p>
+      <p class="home-hero-meta">Current Phase: ${phase}</p>
+      <p class="home-hero-meta">Phase Label: ${weekLabel} · ${weeksOut}</p>
       <p class="home-hero-meta">Show Date: ${showDate}</p>
-      <p class="home-hero-meta">Show countdown: ${showCountdown}</p>
+      <p class="home-hero-meta">Days Until Show: ${showCountdown}</p>
     </section>
   `;
 }
@@ -6159,22 +6191,24 @@ function getComplianceSnapshot(profile, username) {
 
 function renderStatusSummary(profile, username) {
   const snapshot = getComplianceSnapshot(profile, username);
-  const daily = `${snapshot.dailyPercent}%`;
-  const weekly = `${snapshot.weekly.averagePercent}%`;
+  const hasDaily = Number.isFinite(snapshot.dailyPercent) && snapshot.dailyPercent > 0;
+  const hasWeekly = Number.isFinite(snapshot.weekly?.averagePercent) && snapshot.weekly.averagePercent > 0;
+  const daily = hasDaily ? `${snapshot.dailyPercent}%` : 'Pending check-in';
+  const weekly = hasWeekly ? `${snapshot.weekly.averagePercent}%` : 'Pending week data';
   const streak = getSafeDisplayValue(profile.currentStreak, '0 days');
-  const onTrack = formatComplianceStatus(snapshot.dailyStatus);
+  const onTrack = hasDaily ? formatComplianceStatus(snapshot.dailyStatus) : 'Placeholder';
   const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
 
   return `
     <section class="home-dashboard-card">
       <h3 class="home-card-title">Status Summary · ${timelineLabel}</h3>
       <div class="home-stat-grid">
-        <div class="home-stat-chip"><p class="home-stat-label">Today</p><p class="home-stat-value">${daily}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">This Week</p><p class="home-stat-value">${weekly}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Today’s Compliance</p><p class="home-stat-value">${daily}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Weekly Compliance</p><p class="home-stat-value">${weekly}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${streak}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">On Track</p><p class="home-stat-value">${onTrack}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">On-Track</p><p class="home-stat-value">${onTrack}</p></div>
       </div>
-      <p class="home-mission-progress">Insight: ${snapshot.trend.insight}</p>
+      <p class="home-placeholder-note">Placeholders auto-upgrade when compliance sync is available.</p>
     </section>
   `;
 }
@@ -6249,25 +6283,16 @@ function onRecoveryLogged(entry) {
 window.onRecoveryLogged = onRecoveryLogged;
 
 function renderTodaysMission(profile, username) {
-  const state = getTodayMissionState(profile, username);
   const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
-  if (!state || !window.dailyMissionEngine) {
-    return `
-      <section class="home-dashboard-card">
-        <h3 class="home-card-title">Today’s Mission · ${timelineLabel}</h3>
-        <p class="home-mission-progress">Mission engine unavailable.</p>
-      </section>
-    `;
-  }
-
-  const compliance = window.dailyMissionEngine.calculateDailyCompliance(state);
-  const items = compliance.requiredItems.map(itemKey => renderMissionItem(itemKey, state)).join('');
-
   return `
     <section class="home-dashboard-card">
       <h3 class="home-card-title">Today’s Mission · ${timelineLabel}</h3>
-      <p class="home-mission-progress">${compliance.completed}/${compliance.total} complete (${compliance.percent}%)</p>
-      <ul class="home-mission-list">${items}</ul>
+      <p class="home-mission-progress">Mission brief coming online.</p>
+      <ul class="home-upcoming-list">
+        <li class="home-upcoming-item"><span>Primary Lift Focus</span><strong>Placeholder</strong></li>
+        <li class="home-upcoming-item"><span>Nutrition Objective</span><strong>Placeholder</strong></li>
+        <li class="home-upcoming-item"><span>Recovery Target</span><strong>Placeholder</strong></li>
+      </ul>
     </section>
   `;
 }
@@ -6307,20 +6332,16 @@ function getNextScheduledCheckIn(profile, username) {
 
 function renderUpcomingPrepEvents(profile, username) {
   const checkIn = getSafeDisplayValue(getNextScheduledCheckIn(profile, username), 'Not scheduled');
-  const refeed = getSafeDisplayValue(profile.nextRefeed, 'TBD');
-  const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'TBD');
+  const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'Placeholder');
   const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
   const countdown = formatCountdownDays(phaseState.showDate || profile.showDate);
-  const timelineHeader = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
 
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Upcoming</h3>
+      <h3 class="home-card-title">Upcoming / Countdown</h3>
       <ul class="home-upcoming-list">
         <li class="home-upcoming-item"><span>Next Check-in</span><strong>${checkIn}</strong></li>
-        <li class="home-upcoming-item"><span>Refeed</span><strong>${refeed}</strong></li>
-        <li class="home-upcoming-item"><span>Peak Week Start</span><strong>${peakWeek}</strong></li>
-        <li class="home-upcoming-item"><span>Timeline Header</span><strong>${timelineHeader}</strong></li>
+        <li class="home-upcoming-item"><span>Peak Week</span><strong>${peakWeek}</strong></li>
         <li class="home-upcoming-item"><span>Show Day Countdown</span><strong>${countdown}</strong></li>
       </ul>
     </section>
@@ -6328,19 +6349,17 @@ function renderUpcomingPrepEvents(profile, username) {
 }
 
 function renderRewardSummary(profile) {
-  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  const progressHeader = getTimelineHeaderLabel(profile, userId, new Date().toISOString().slice(0, 10));
-  const level = getSafeDisplayValue(profile.level, 'Level 1');
-  const xp = getSafeDisplayValue(profile.xp, '0 XP');
-  const prepStreak = getSafeDisplayValue(profile.prepStreak, '0 days');
+  const level = getSafeDisplayValue(profile.level, 'Lvl 1');
+  const xp = getSafeDisplayValue(profile.xp, '0');
+  const prepStreak = getSafeDisplayValue(profile.prepStreak || profile.currentStreak, '0 days');
   const latestBadge = getSafeDisplayValue(profile.latestBadge, 'No badges yet');
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Rewards & Progression · ${progressHeader}</h3>
+      <h3 class="home-card-title">Reward Summary</h3>
       <div class="home-stat-grid">
         <div class="home-stat-chip"><p class="home-stat-label">Level</p><p class="home-stat-value">${level}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">XP</p><p class="home-stat-value">${xp}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Prep Streak</p><p class="home-stat-value">${prepStreak}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${prepStreak}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Latest Badge</p><p class="home-stat-value">${latestBadge}</p></div>
       </div>
     </section>
@@ -6351,14 +6370,13 @@ function renderHomeDashboard() {
   const container = document.getElementById('homeDashboardContent');
   if (!container) return;
   const { username, profile } = getHomeDashboardSourceData();
-  container.innerHTML = [
+  container.innerHTML = `<div class="home-command-grid">${[
     renderHeroPhaseHeader(profile, username),
     renderStatusSummary(profile, username),
     renderTodaysMission(profile, username),
-    renderWeeklyComplianceCard(profile, username),
     renderUpcomingPrepEvents(profile, username),
     renderRewardSummary(profile)
-  ].join('');
+  ].join('')}</div>`;
 }
 
   
