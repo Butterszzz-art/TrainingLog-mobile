@@ -1974,7 +1974,10 @@ if (savedUser) {
 function showTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   const tab = document.getElementById(tabName);
-  if (!tab) return;
+  if (!tab) {
+    console.warn(`[Tabs] Missing tab DOM node: ${tabName}`);
+    return;
+  }
   tab.classList.add('active');
   document.querySelectorAll('#sideMenu a[data-target]').forEach((link) => {
     const isActive = link.getAttribute('data-target') === tabName;
@@ -2086,32 +2089,64 @@ function showTab(tabName) {
 }
 
 function renderWorkoutHistoryTab() {
-  if (typeof showHistoryMiniTab !== 'function') {
-    console.warn('[Tabs] showHistoryMiniTab is unavailable.');
+  const historyTab = document.getElementById('logHistoryTab');
+  const workoutContainer = document.getElementById('logHistoryContainer');
+  if (!historyTab || !workoutContainer) {
+    console.warn('[Tabs] Missing Log History DOM nodes.');
+    if (historyTab) {
+      historyTab.insertAdjacentHTML(
+        'beforeend',
+        '<p style="opacity:.7;">Log History is unavailable because required UI elements are missing.</p>'
+      );
+    }
     return;
   }
-  showHistoryMiniTab('workout');
+
+  workoutContainer.innerHTML = '<p style="opacity:.7;">Loading workout history…</p>';
+
+  if (typeof showHistoryMiniTab === 'function') {
+    showHistoryMiniTab('workout');
+    return;
+  }
+
+  console.warn('[Tabs] showHistoryMiniTab is unavailable, using fallback renderer.');
+  if (typeof renderWorkoutHistoryFallback === 'function') {
+    renderWorkoutHistoryFallback(workoutContainer);
+  } else {
+    workoutContainer.innerHTML = '<p style="opacity:.7;">Workout history renderer is unavailable.</p>';
+  }
 }
 
 function ensureProfileTabRendered(retries = 8) {
-  if (typeof window.renderProfileTab === 'function') {
-    window.renderProfileTab();
+  const profileContainer = document.getElementById('profileTabContent');
+  if (!profileContainer) {
+    console.warn('[Tabs] Missing profileTabContent DOM node.');
     return;
   }
 
-  if (typeof window.initSettingsPage === 'function') {
-    window.initSettingsPage();
-  }
+  profileContainer.innerHTML = '<p style="opacity:.7;">Loading profile…</p>';
 
-  const profileContainer = document.getElementById('profileTabContent');
-  if (profileContainer) {
-    profileContainer.innerHTML = '<p style="opacity:.7;">Profile is still loading. Please try again in a moment.</p>';
+  if (typeof window.renderProfileTab === 'function') {
+    try {
+      window.renderProfileTab();
+      if (!profileContainer.innerHTML.trim()) {
+        profileContainer.innerHTML = '<p style="opacity:.7;">Profile has no data to display yet.</p>';
+      }
+    } catch (error) {
+      console.warn('[Tabs] renderProfileTab failed.', error);
+      profileContainer.innerHTML = '<p style="opacity:.7;">Unable to render Profile right now. Please try again.</p>';
+    }
+    return;
   }
 
   if (retries > 0) {
+    if (typeof window.initSettingsPage === 'function') {
+      window.initSettingsPage();
+    }
     setTimeout(() => ensureProfileTabRendered(retries - 1), 75);
   } else {
     console.warn('[Tabs] renderProfileTab is unavailable after retries.');
+    profileContainer.innerHTML = '<p style="opacity:.7;">Profile renderer is unavailable.</p>';
   }
 }
 
@@ -2128,15 +2163,6 @@ function bindSideMenuTabLinks() {
     const menuToggle = document.getElementById('menuToggle');
     if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
   };
-
-  sideMenu.querySelectorAll('a[data-target]').forEach((link) => {
-    if (link.dataset.tabBindingAttached === 'true') return;
-    link.addEventListener('click', (event) => {
-      event.preventDefault();
-      activateLinkTarget(link.getAttribute('data-target'));
-    });
-    link.dataset.tabBindingAttached = 'true';
-  });
 
   sideMenu.addEventListener('click', (event) => {
     const link = event.target.closest('a[data-target]');
@@ -8164,6 +8190,15 @@ function showHistoryMiniTab(type) {
   const macroPanel = document.getElementById("historyMacroPanel");
   const workoutContainer = document.getElementById('logHistoryContainer');
   const macroContainer = document.getElementById('macroHistoryContainer');
+  const historyTab = document.getElementById('logHistoryTab');
+
+  if (!historyTab) {
+    console.warn('[HistoryMiniTab] Missing logHistoryTab node.');
+    return;
+  }
+  if (!workoutMiniTab || !macroMiniTab || !workoutPanel || !macroPanel) {
+    console.warn('[HistoryMiniTab] Missing one or more history panel nodes.');
+  }
 
   if (workoutPanel) workoutPanel.classList.toggle('active', resolvedType === 'workout');
   if (macroPanel) macroPanel.classList.toggle('active', resolvedType === 'macro');
@@ -8176,18 +8211,35 @@ function showHistoryMiniTab(type) {
   }
 
   if (resolvedType === "macro") {
-    if (!macroContainer) return;
+    if (!macroContainer) {
+      console.warn('[HistoryMiniTab] Missing macroHistoryContainer node.');
+      return;
+    }
+    macroContainer.innerHTML = '<p style="opacity:.7;">Loading macro history…</p>';
     if (typeof renderMacroHistory === 'function') {
       renderMacroHistory();
+      if (!macroContainer.innerHTML.trim()) {
+        macroContainer.innerHTML = '<p style="opacity:.7;">No macro history saved yet.</p>';
+      }
+    } else {
+      macroContainer.innerHTML = '<p style="opacity:.7;">Macro history renderer is unavailable.</p>';
+      console.warn('[HistoryMiniTab] renderMacroHistory is unavailable.');
     }
     return;
   }
 
-  if (!workoutContainer) return;
+  if (!workoutContainer) {
+    console.warn('[HistoryMiniTab] Missing logHistoryContainer node.');
+    return;
+  }
+  workoutContainer.innerHTML = '<p style="opacity:.7;">Loading workout history…</p>';
   const historyRenderer = window.historyApi?.renderWorkoutHistory;
   if (typeof historyRenderer !== 'function') {
-    workoutContainer.innerHTML = '<p style="opacity:.7;">History module is still loading. Please try again.</p>';
+    workoutContainer.innerHTML = '<p style="opacity:.7;">Workout history renderer is unavailable.</p>';
     console.warn('[HistoryMiniTab] historyApi.renderWorkoutHistory is unavailable.');
+    if (typeof renderWorkoutHistoryFallback === 'function') {
+      renderWorkoutHistoryFallback(workoutContainer);
+    }
     return;
   }
   Promise.resolve(historyRenderer(workoutContainer)).catch((error) => {
