@@ -106,6 +106,12 @@
     return Number.isFinite(summary?.percent) ? summary.percent : 0;
   }
 
+  function inferRequiredItems(missionState) {
+    const defaults = ['workoutComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'posingComplete', 'recoveryLogged'];
+    if (!missionState || !Array.isArray(missionState.requiredItems) || !missionState.requiredItems.length) return defaults;
+    return missionState.requiredItems;
+  }
+
   function getComplianceStatus(percent) {
     const safePercent = Number.isFinite(percent) ? percent : 0;
     return STATUS_BUCKETS.find(bucket => safePercent >= bucket.min)?.label || 'off_track';
@@ -159,6 +165,15 @@
     };
   }
 
+  function calculateRolling7DayCompliance(userId, endDate) {
+    const weekly = calculateWeeklyCompliance(userId, endDate);
+    return {
+      percent: weekly.averagePercent,
+      status: getComplianceStatus(weekly.averagePercent),
+      windowDays: weekly.days
+    };
+  }
+
   function getMetricCompletionRate(userId, metricKey, endDate, durationDays) {
     const engine = globalScope.dailyMissionEngine;
     if (!engine) return 0;
@@ -182,12 +197,65 @@
     return Math.round((completed / total) * 100);
   }
 
+  function analyzeMissedTasks(userId, endDate, durationDays = 7) {
+    const engine = globalScope.dailyMissionEngine;
+    if (!engine) {
+      return {
+        rangeStart: resolveDate(endDate),
+        rangeEnd: resolveDate(endDate),
+        activeDays: 0,
+        totalMissed: 0,
+        byTask: {},
+        topMissedTask: null
+      };
+    }
+
+    const resolvedUser = resolveUserId(userId);
+    const endKey = resolveDate(endDate);
+    const end = parseDate(endKey);
+    const span = Math.max(1, durationDays);
+    const start = addDays(end, -(span - 1));
+    const byTask = {};
+    let activeDays = 0;
+    let totalMissed = 0;
+
+    for (let cursor = new Date(start); cursor <= end; cursor = addDays(cursor, 1)) {
+      const dateKey = toDateKey(cursor);
+      const state = engine.getDailyMissionState(resolvedUser, dateKey);
+      if (!state) continue;
+      activeDays += 1;
+      const requiredItems = inferRequiredItems(state);
+      requiredItems.forEach((itemKey) => {
+        if (!state[itemKey]) {
+          byTask[itemKey] = (byTask[itemKey] || 0) + 1;
+          totalMissed += 1;
+        }
+      });
+    }
+
+    const topMissedTask = Object.entries(byTask).sort((a, b) => b[1] - a[1])[0] || null;
+
+    return {
+      rangeStart: toDateKey(start),
+      rangeEnd: endKey,
+      activeDays,
+      totalMissed,
+      byTask,
+      topMissedTask: topMissedTask
+        ? { task: topMissedTask[0], missedDays: topMissedTask[1] }
+        : null
+    };
+  }
+
   function buildInsight(userId, weekly) {
     const lastDay = weekly.days.length ? weekly.days[weekly.days.length - 1].date : resolveDate();
     if (weekly.averagePercent >= 90) return 'On track';
 
     const cardioRate = getMetricCompletionRate(userId, 'cardioComplete', lastDay, 7);
     if (cardioRate > 0 && cardioRate < 60) return 'Cardio consistency slipping';
+
+    const posingRate = getMetricCompletionRate(userId, 'posingComplete', lastDay, 7);
+    if (posingRate > 0 && posingRate < 60) return 'Posing behind target';
 
     const bodyweightRate = getMetricCompletionRate(userId, 'bodyweightLogged', lastDay, 7);
     if (bodyweightRate >= 75) return 'Weight logging strong this week';
@@ -215,14 +283,41 @@
     };
   }
 
+  function getComplianceInsights(userId, endDate) {
+    const weekly = calculateWeeklyCompliance(userId, endDate);
+    const missed = analyzeMissedTasks(userId, endDate, 7);
+    const insights = [];
+    const headline = buildInsight(userId, weekly);
+    if (headline) insights.push(headline);
+
+    if (missed.topMissedTask && missed.topMissedTask.task === 'cardioComplete' && !insights.includes('Cardio consistency slipping')) {
+      insights.push('Cardio consistency slipping');
+    }
+    if (missed.topMissedTask && missed.topMissedTask.task === 'posingComplete' && !insights.includes('Posing behind target')) {
+      insights.push('Posing behind target');
+    }
+
+    if (!insights.includes('On track') && weekly.averagePercent >= 90) {
+      insights.unshift('On track');
+    }
+
+    return {
+      insights,
+      missed
+    };
+  }
+
   const api = {
     loadComplianceSummaryState,
     saveComplianceSummaryState,
     syncComplianceSummaryStateToBackend,
     calculateDailyCompliancePercent,
     calculateWeeklyCompliance,
+    calculateRolling7DayCompliance,
     getComplianceStatus,
     getComplianceTrend,
+    analyzeMissedTasks,
+    getComplianceInsights,
     getStorageKey
   };
 
