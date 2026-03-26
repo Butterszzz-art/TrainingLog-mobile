@@ -6109,16 +6109,17 @@ function getTimelineHeaderLabel(profile, username, referenceDate) {
 }
 
 function renderHeroPhaseHeader(profile, username) {
-  const athleteName = getSafeDisplayValue(profile.athleteName || username, 'Athlete');
-  const phase = getSafeDisplayValue(profile.currentPhase, 'Build Phase');
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  const athleteName = getSafeDisplayValue(phaseState.athleteName || profile.athleteName || username, 'Athlete');
+  const phase = getSafeDisplayValue(window.prepModeApi?.getCurrentPhaseLabel?.(phaseState) || phaseState.currentPhase || profile.currentPhase, 'Build Phase');
   const weekLabel = getSafeDisplayValue(
     getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10))
       || profile.weeksOutLabel
       || profile.seasonWeekLabel,
     'Week label TBD'
   );
-  const showCountdown = formatCountdownDays(profile.showDate);
-  const showDate = formatExactDate(profile.showDate);
+  const showCountdown = formatCountdownDays(phaseState.showDate || profile.showDate);
+  const showDate = formatExactDate(phaseState.showDate || profile.showDate);
 
   return `
     <section class="home-dashboard-card home-hero-card">

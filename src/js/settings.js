@@ -93,6 +93,7 @@ function applySettingsToUI(settings) {
   setValue('athleteInfoDivision', athleteInfo.divisionClass || '');
 
   setValue('profileCurrentPhase', phaseSettings.currentPhase || '');
+  setValue('profileStartDate', phaseSettings.startDate || '');
   setValue('profileShowDate', phaseSettings.showDate || '');
   setValue('profileTargetStageWeight', phaseSettings.targetStageWeight ?? '');
   setValue('profileCheckInDay', phaseSettings.checkInDay || 'Sunday');
@@ -148,6 +149,7 @@ function saveSettings(event) {
       },
       phaseSettings: {
         currentPhase: container.querySelector('#profileCurrentPhase')?.value || 'improvement',
+        startDate: container.querySelector('#profileStartDate')?.value || null,
         showDate: container.querySelector('#profileShowDate')?.value || null,
         targetStageWeight: toNumberOrNull(container.querySelector('#profileTargetStageWeight')?.value),
         checkInDay: container.querySelector('#profileCheckInDay')?.value || 'Sunday',
@@ -191,6 +193,7 @@ function syncProfilePhaseSettings(profile) {
     currentWeight: profile?.athleteInfo?.currentWeight ?? current.currentWeight,
     division: profile?.athleteInfo?.divisionClass || current.division || '',
     mode: profile?.phaseSettings?.currentPhase || current.mode || 'improvement',
+    startDate: profile?.phaseSettings?.startDate || current.startDate || null,
     showDate: profile?.phaseSettings?.showDate || current.showDate || null,
     targetStageWeight: profile?.phaseSettings?.targetStageWeight ?? current.targetStageWeight,
     checkInDay: profile?.phaseSettings?.checkInDay || current.checkInDay || 'Sunday',
@@ -218,6 +221,7 @@ function hydrateProfileFromPhaseState(settings) {
       phaseSettings: {
         ...((settings.profile && settings.profile.phaseSettings) || {}),
         currentPhase: settings.profile?.phaseSettings?.currentPhase || phaseState.mode || 'improvement',
+        startDate: settings.profile?.phaseSettings?.startDate || phaseState.startDate || null,
         showDate: settings.profile?.phaseSettings?.showDate || phaseState.showDate || null,
         targetStageWeight: settings.profile?.phaseSettings?.targetStageWeight ?? phaseState.targetStageWeight,
         checkInDay: settings.profile?.phaseSettings?.checkInDay || phaseState.checkInDay || 'Sunday',
@@ -305,9 +309,12 @@ function renderProfileTab() {
             <option value="improvement" ${selectedPhase === 'improvement' ? 'selected' : ''}>Improvement Season</option>
             <option value="mini_cut" ${selectedPhase === 'mini_cut' ? 'selected' : ''}>Mini Cut</option>
             <option value="contest_prep" ${selectedPhase === 'contest_prep' ? 'selected' : ''}>Contest Prep</option>
+            <option value="peak_week" ${selectedPhase === 'peak_week' ? 'selected' : ''}>Peak Week</option>
+            <option value="show_day" ${selectedPhase === 'show_day' ? 'selected' : ''}>Show Day</option>
             <option value="post_show" ${selectedPhase === 'post_show' ? 'selected' : ''}>Post-Show</option>
           </select>
         </label>
+        <label>Phase start date<input id="profileTabStartDate" type="date" value="${escapeHtmlAttribute(formatProfileValue(phaseSettings.startDate, ''))}" disabled></label>
         <label>Show date<input id="profileTabShowDate" type="date" value="${escapeHtmlAttribute(formatProfileValue(phaseSettings.showDate, ''))}" disabled></label>
         <label>Target stage weight<input id="profileTabTargetStageWeight" type="number" min="0" step="0.1" value="${escapeHtmlAttribute(formatProfileValue(phaseSettings.targetStageWeight, ''))}" disabled></label>
         <label>Check-in day
@@ -361,7 +368,7 @@ function bindProfileTabEditing(container) {
   if (!editButton || !saveButton || !cancelButton) return;
 
   const editableFields = Array.from(container.querySelectorAll(
-    '#profileTabAthleteName, #profileTabCurrentWeight, #profileTabHeight, #profileTabDivision, #profileTabCurrentPhase, #profileTabShowDate, #profileTabTargetStageWeight, #profileTabCheckInDay, #profileTabCardioBaseline, #profileTabPosingFrequency, #profileTabMacroTargets, #profileTabStepsTarget, #profileTabCardioTarget, #profileTabSleepTarget'
+    '#profileTabAthleteName, #profileTabCurrentWeight, #profileTabHeight, #profileTabDivision, #profileTabCurrentPhase, #profileTabStartDate, #profileTabShowDate, #profileTabTargetStageWeight, #profileTabCheckInDay, #profileTabCardioBaseline, #profileTabPosingFrequency, #profileTabMacroTargets, #profileTabStepsTarget, #profileTabCardioTarget, #profileTabSleepTarget'
   ));
 
   const setEditingState = (isEditing) => {
@@ -386,6 +393,7 @@ function bindProfileTabEditing(container) {
       },
       phaseSettings: {
         currentPhase: container.querySelector('#profileTabCurrentPhase')?.value || 'improvement',
+        startDate: container.querySelector('#profileTabStartDate')?.value || null,
         showDate: container.querySelector('#profileTabShowDate')?.value || null,
         targetStageWeight: toNumberOrNull(container.querySelector('#profileTabTargetStageWeight')?.value),
         checkInDay: container.querySelector('#profileTabCheckInDay')?.value || 'Sunday',
@@ -471,8 +479,9 @@ function updatePhaseSetupConditionalFields(container, mode) {
   const contestFields = container.querySelector('#contestPrepFields');
   const improvementFields = container.querySelector('#improvementFields');
   const miniCutFields = container.querySelector('#miniCutFields');
+  const contestLikeMode = mode === 'contest_prep' || mode === 'peak_week' || mode === 'show_day' || mode === 'post_show';
 
-  if (contestFields) contestFields.style.display = mode === 'contest_prep' ? 'block' : 'none';
+  if (contestFields) contestFields.style.display = contestLikeMode ? 'block' : 'none';
   if (improvementFields) improvementFields.style.display = mode === 'improvement' ? 'block' : 'none';
   if (miniCutFields) miniCutFields.style.display = mode === 'mini_cut' ? 'block' : 'none';
 }
@@ -551,6 +560,7 @@ function bindPhaseSetup(container = document) {
     event.preventDefault();
 
     const mode = phaseMode.value || 'improvement';
+    const usesShowTimeline = mode === 'contest_prep' || mode === 'peak_week' || mode === 'show_day' || mode === 'post_show';
     const startDate = mode === 'mini_cut'
       ? form.querySelector('#miniCutStartDate')?.value
       : form.querySelector('#improvementStartDate')?.value;
@@ -560,13 +570,13 @@ function bindPhaseSetup(container = document) {
       athleteName: form.querySelector('#athleteName')?.value?.trim() || '',
       mode,
       startDate: startDate || null,
-      showDate: mode === 'contest_prep' ? form.querySelector('#prepShowDate')?.value || null : null,
-      division: mode === 'contest_prep' ? form.querySelector('#prepDivision')?.value?.trim() || '' : '',
-      currentWeight: mode === 'contest_prep' ? toNumberOrNull(form.querySelector('#prepCurrentWeight')?.value) : null,
-      targetStageWeight: mode === 'contest_prep' ? toNumberOrNull(form.querySelector('#prepStageWeight')?.value) : null,
-      checkInDay: mode === 'contest_prep' ? form.querySelector('#prepCheckInDay')?.value || 'Sunday' : 'Sunday',
-      cardioBaseline: mode === 'contest_prep' ? form.querySelector('#prepCardioBaseline')?.value?.trim() || '' : '',
-      posingFrequency: mode === 'contest_prep' ? form.querySelector('#prepPosingFrequency')?.value?.trim() || '' : '',
+      showDate: usesShowTimeline ? form.querySelector('#prepShowDate')?.value || null : null,
+      division: usesShowTimeline ? form.querySelector('#prepDivision')?.value?.trim() || '' : '',
+      currentWeight: usesShowTimeline ? toNumberOrNull(form.querySelector('#prepCurrentWeight')?.value) : null,
+      targetStageWeight: usesShowTimeline ? toNumberOrNull(form.querySelector('#prepStageWeight')?.value) : null,
+      checkInDay: usesShowTimeline ? form.querySelector('#prepCheckInDay')?.value || 'Sunday' : 'Sunday',
+      cardioBaseline: usesShowTimeline ? form.querySelector('#prepCardioBaseline')?.value?.trim() || '' : '',
+      posingFrequency: usesShowTimeline ? form.querySelector('#prepPosingFrequency')?.value?.trim() || '' : '',
       weightGoalDirection: mode === 'improvement' ? form.querySelector('#weightGoalDirection')?.value || '' : '',
       targetRateOfLoss: mode === 'mini_cut' ? toNumberOrNull(form.querySelector('#miniCutRateLoss')?.value) : null
     };

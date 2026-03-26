@@ -253,18 +253,29 @@
     return 'contest_prep';
   }
 
-  function getCurrentPhaseLabel(state) {
+  function resolveEffectiveMode(state) {
     const normalized = sanitizeState(state);
-    const derivedMode = normalizeMode(normalized.mode, 'improvement');
-    const mode = derivedMode === 'improvement' && normalized.showDate
-      ? inferModeFromShowDate(normalized.showDate, derivedMode)
-      : derivedMode;
+    const mode = normalizeMode(normalized.mode, 'improvement');
+    const showDateMode = inferModeFromShowDate(normalized.showDate, mode);
 
+    if (mode === 'contest_prep') return showDateMode;
+    if (mode === 'peak_week') {
+      if (showDateMode === 'show_day' || showDateMode === 'post_show') return showDateMode;
+      return 'peak_week';
+    }
+    if (mode === 'show_day') return showDateMode === 'post_show' ? 'post_show' : 'show_day';
+    if (mode === 'post_show') return showDateMode === 'contest_prep' || showDateMode === 'peak_week' ? showDateMode : 'post_show';
+    return mode;
+  }
+
+  function getCurrentPhaseLabel(state) {
+    const mode = resolveEffectiveMode(state);
     return MODE_LABELS[mode] || MODE_LABELS.improvement;
   }
 
   function getPhaseContext(state) {
     const normalized = sanitizeState(state);
+    const effectiveMode = resolveEffectiveMode(normalized);
     const daysUntilShow = getDaysUntilShow(normalized.showDate);
     const weeksOut = getWeeksOut(normalized.showDate);
     const label = getCurrentPhaseLabel(normalized);
@@ -273,7 +284,8 @@
     // recommendations (check-in prompts, cardio adjustments, posing reminders,
     // and show-week alerts) without changing existing logging workflows.
     return {
-      mode: normalized.mode,
+      mode: effectiveMode,
+      configuredMode: normalized.mode,
       label,
       athleteName: normalized.athleteName,
       daysUntilShow,
@@ -319,5 +331,6 @@
 
   if (typeof globalScope !== 'undefined') {
     globalScope.prepModeApi = api;
+    globalScope.phaseEngineApi = api;
   }
 })(typeof window !== 'undefined' ? window : globalThis);
