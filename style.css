@@ -1289,6 +1289,26 @@ body.theme-dark .set-row {
   margin-top: 0;
 }
 
+.profile-field-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.profile-field-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.profile-edit-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
 .profile-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1306,6 +1326,12 @@ body.theme-dark .set-row {
 
 .profile-summary-grid strong {
   font-size: 1.1rem;
+}
+
+@media (min-width: 720px) {
+  .profile-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .checkin-form-section {
