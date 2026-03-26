@@ -770,6 +770,7 @@
       <li><a href="#" data-target="logTab">📋 Training Log</a></li>
       <li><a href="#" data-target="weightTab">⚖️ Bodyweight</a></li>
       <li><a href="#" data-target="cardioTab">🏃 Cardio</a></li>
+      <li><a href="#" data-target="posingTab">🎭 Posing</a></li>
       <li><a href="#" data-target="macroTab">🍽️ Macros</a></li>
 
       <li class="menu-section-label">Planning & Community</li>
@@ -1163,6 +1164,31 @@
       <table>
         <thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Distance</th><th>Calories</th><th>Notes</th><th>Remove</th></tr></thead>
         <tbody id="cardioBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="posingTab" class="tab-content">
+    <div class="panel active">
+      <h2>Posing Log</h2>
+      <p style="margin-top:-4px;">Track posing minutes, weekly target, streaks, and prep readiness.</p>
+      <div class="inputs-grid" style="margin-bottom:12px;">
+        <input type="date" id="posingDateInput">
+        <input type="number" id="posingMinutesInput" min="1" step="1" placeholder="Minutes">
+        <input type="number" id="posingTargetSessionsInput" min="1" step="1" placeholder="Target sessions / week">
+        <input type="number" id="posingTargetMinutesInput" min="10" step="5" placeholder="Target minutes / week">
+        <input type="text" id="posingNotesInput" placeholder="Notes (mandatories, transitions, stage flow)">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button onclick="savePosingTargets()">Save Weekly Target</button>
+        <button onclick="addPosingSession()">Log Posing Session</button>
+      </div>
+      <div id="posingSummaryCard" class="home-mission-progress" style="margin-bottom:10px;"></div>
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Minutes</th><th>Notes</th><th>Remove</th></tr>
+        </thead>
+        <tbody id="posingBody"></tbody>
       </table>
     </div>
   </div>
@@ -1676,6 +1702,7 @@
 <script src="prepMode.js"></script>
 <script src="checkinEngine.js"></script>
 <script src="dailyMissionEngine.js"></script>
+<script src="posingEngine.js"></script>
 <script src="complianceEngine.js"></script>
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
@@ -1967,6 +1994,7 @@ async function startLogin() {
       renderMacroTargets({ useFallback: !fetchedTargets });
       renderWeights();
       renderCardio();
+      renderPosingTab();
       renderCrossfitWorkouts();
       loadTemplateDropdown(); // ✅ Load saved templates
       loadProgramTemplates();
@@ -2046,6 +2074,9 @@ function showTab(tabName) {
       break;
     case 'cardioTab':
       renderCardio();
+      break;
+    case 'posingTab':
+      renderPosingTab();
       break;
     case 'crossfitTab':
       renderCrossfitWorkouts();
@@ -6399,6 +6430,103 @@ function renderWeeklyComplianceCard(profile, username) {
   `;
 }
 
+function renderPosingDashboardCard(userId) {
+  const posingApi = window.posingEngine;
+  if (!posingApi) return '';
+  const weekly = posingApi.getWeeklySummary(userId, new Date().toISOString().slice(0, 10));
+  const streak = posingApi.calculateStreak(userId, new Date().toISOString().slice(0, 10));
+  const overdue = posingApi.getOverdueStatus(userId, new Date().toISOString().slice(0, 10));
+  return `
+    <section class="home-dashboard-card">
+      <h3 class="home-card-title">Posing Readiness</h3>
+      <div class="home-stat-grid">
+        <div class="home-stat-chip"><p class="home-stat-label">Sessions (week)</p><p class="home-stat-value">${weekly.sessions}/${weekly.targetSessions}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Minutes (week)</p><p class="home-stat-value">${weekly.totalMinutes}/${weekly.targetMinutes}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Posing Streak</p><p class="home-stat-value">${streak} day${streak === 1 ? '' : 's'}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Overdue</p><p class="home-stat-value">${overdue.overdue ? 'Yes' : 'No'}</p></div>
+      </div>
+      <p class="home-mission-progress">${overdue.message}</p>
+    </section>
+  `;
+}
+
+function savePosingTargets() {
+  if (!window.posingEngine) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const sessions = Number(document.getElementById('posingTargetSessionsInput')?.value) || 0;
+  const minutes = Number(document.getElementById('posingTargetMinutesInput')?.value) || 0;
+  window.posingEngine.setWeeklyTarget(userId, { sessions, minutes });
+  renderPosingTab();
+  renderHomeDashboard();
+}
+
+function addPosingSession() {
+  if (!window.posingEngine) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const date = document.getElementById('posingDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const minutes = Number(document.getElementById('posingMinutesInput')?.value) || 0;
+  const notes = document.getElementById('posingNotesInput')?.value || '';
+  if (minutes <= 0) {
+    alert('Enter posing minutes.');
+    return;
+  }
+
+  const session = window.posingEngine.logPosingSession(userId, { date, minutes, notes });
+  if (!session) return;
+
+  try {
+    window.dailyMissionEngine?.syncMissionFromPosingEntry?.({ date, complete: true }, userId);
+  } catch (missionErr) {
+    console.warn('Daily mission posing sync failed.', missionErr);
+  }
+
+  document.getElementById('posingMinutesInput').value = '';
+  document.getElementById('posingNotesInput').value = '';
+  renderPosingTab();
+  renderHomeDashboard();
+}
+
+function removePosingSession(sessionId) {
+  if (!window.posingEngine) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  window.posingEngine.removePosingSession(userId, sessionId);
+  renderPosingTab();
+  renderHomeDashboard();
+}
+
+window.savePosingTargets = savePosingTargets;
+window.addPosingSession = addPosingSession;
+window.removePosingSession = removePosingSession;
+
+function renderPosingTab() {
+  if (!window.posingEngine) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const summaryEl = document.getElementById('posingSummaryCard');
+  const body = document.getElementById('posingBody');
+  if (!summaryEl || !body) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const dateInput = document.getElementById('posingDateInput');
+  if (dateInput && !dateInput.value) dateInput.value = today;
+
+  const weekly = window.posingEngine.getWeeklySummary(userId, today);
+  const streak = window.posingEngine.calculateStreak(userId, today);
+  const overdue = window.posingEngine.getOverdueStatus(userId, today);
+  const target = window.posingEngine.getWeeklyTarget(userId);
+
+  const targetSessionsInput = document.getElementById('posingTargetSessionsInput');
+  if (targetSessionsInput && !targetSessionsInput.value) targetSessionsInput.value = target.sessions;
+  const targetMinutesInput = document.getElementById('posingTargetMinutesInput');
+  if (targetMinutesInput && !targetMinutesInput.value) targetMinutesInput.value = target.minutes;
+
+  summaryEl.textContent = `Week ${weekly.rangeStart} → ${weekly.rangeEnd}: ${weekly.sessions}/${weekly.targetSessions} sessions · ${weekly.totalMinutes}/${weekly.targetMinutes} min · streak ${streak} day${streak === 1 ? '' : 's'} · ${overdue.message}`;
+
+  const rows = window.posingEngine.getPosingHistory(userId, { limit: 30 });
+  body.innerHTML = rows.length
+    ? rows.map(entry => `<tr><td>${entry.date}</td><td>${entry.minutes}</td><td>${entry.notes || '—'}</td><td><button class="remove-btn" onclick="removePosingSession('${entry.id}')">❌</button></td></tr>`).join('')
+    : '<tr><td colspan="4" style="opacity:.75;">No posing sessions yet.</td></tr>';
+}
+
 function renderProgressComplianceSummary() {
   const target = document.getElementById('coachCorner');
   if (!target) return;
@@ -6482,6 +6610,7 @@ function renderHomeDashboard() {
     renderCheckInInsightSummary(profile, username),
     renderWeeklyComplianceCard(profile, username),
     renderTodaysMission(profile, username),
+    renderPosingDashboardCard(username),
     renderUpcomingPrepEvents(profile, username),
     renderRewardSummary(profile)
   ].join('')}</div>`;

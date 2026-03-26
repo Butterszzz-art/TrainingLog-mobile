@@ -58,6 +58,11 @@
       description: 'Complete full weekly compliance.',
       predicate: state => state.metrics.perfectWeeks >= 1
     },
+    posing_streak_builder: {
+      title: 'Posing Technician',
+      description: 'Log 7 posing sessions.',
+      predicate: state => state.metrics.posingSessions >= 7
+    },
     locked_in: {
       title: 'Locked In',
       description: 'Hold a 21-day streak.',
@@ -137,6 +142,7 @@
         bodyweightLogs: 0,
         checkinsSubmitted: 0,
         posingSessions: 0,
+        posingMinutes: 0,
         prHits: 0,
         fullComplianceDays: 0,
         perfectWeeks: 0,
@@ -398,6 +404,7 @@
     if (sourceKey === 'bodyweight_logged') state.metrics.bodyweightLogs += 1;
     if (sourceKey === 'checkin_submitted') state.metrics.checkinsSubmitted += 1;
     if (sourceKey === 'posing_complete') state.metrics.posingSessions += 1;
+    if (sourceKey === 'posing_complete') state.metrics.posingMinutes += Math.max(0, Number(metadata.minutes) || 0);
     if (sourceKey === 'full_daily_compliance') {
       state.metrics.fullComplianceDays += 1;
       updateStreak(state, metadata.date);

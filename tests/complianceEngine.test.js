@@ -38,6 +38,9 @@ describe('complianceEngine', () => {
   });
 
   test('analyzes missed tasks and provides insight cues', () => {
+    global.posingEngine = {
+      getOverdueStatus: () => ({ overdue: true, daysSinceLastSession: 4 })
+    };
     const missed = complianceEngine.analyzeMissedTasks(userId, '2026-03-26', 7);
     expect(missed.totalMissed).toBeGreaterThan(0);
     expect(missed.byTask.cardioComplete).toBeGreaterThan(0);
@@ -46,5 +49,6 @@ describe('complianceEngine', () => {
     const insights = complianceEngine.getComplianceInsights(userId, '2026-03-26');
     expect(Array.isArray(insights.insights)).toBe(true);
     expect(insights.insights.join(' ').toLowerCase()).toContain('cardio consistency slipping');
+    expect(insights.insights.join(' ').toLowerCase()).toContain('posing overdue warning');
   });
 });

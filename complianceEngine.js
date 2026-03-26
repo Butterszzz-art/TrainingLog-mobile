@@ -256,6 +256,8 @@
 
     const posingRate = getMetricCompletionRate(userId, 'posingComplete', lastDay, 7);
     if (posingRate > 0 && posingRate < 60) return 'Posing behind target';
+    const posingOverdue = globalScope.posingEngine?.getOverdueStatus?.(userId, lastDay);
+    if (posingOverdue?.overdue) return 'Posing overdue warning';
 
     const bodyweightRate = getMetricCompletionRate(userId, 'bodyweightLogged', lastDay, 7);
     if (bodyweightRate >= 75) return 'Weight logging strong this week';
@@ -295,6 +297,10 @@
     }
     if (missed.topMissedTask && missed.topMissedTask.task === 'posingComplete' && !insights.includes('Posing behind target')) {
       insights.push('Posing behind target');
+    }
+    const posingOverdue = globalScope.posingEngine?.getOverdueStatus?.(userId, endDate);
+    if (posingOverdue?.overdue && !insights.includes('Posing overdue warning')) {
+      insights.push('Posing overdue warning');
     }
 
     if (!insights.includes('On track') && weekly.averagePercent >= 90) {
