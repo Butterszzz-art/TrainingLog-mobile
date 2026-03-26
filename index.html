@@ -6383,9 +6383,9 @@ function renderCheckInTab() {
     phaseInput.value = phaseState.mode || 'improvement';
   }
 
-  bindCheckInSliderDisplays();
-
   const checkIns = window.checkinEngine.loadCheckIns(userId);
+  hydrateCheckInFormFromLatestEntry(checkIns);
+  bindCheckInSliderDisplays();
   const grouped = checkIns.reduce((acc, entry) => {
     const key = entry.weekLabel || 'Unlabeled Week';
     if (!acc[key]) acc[key] = [];
@@ -6416,6 +6416,42 @@ function renderCheckInTab() {
       </section>
     `;
   }).join('');
+}
+
+function getSafeSliderValue(value, fallback = 5) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return String(fallback);
+  return String(Math.min(10, Math.max(1, Math.round(numeric))));
+}
+
+function hydrateCheckInFormFromLatestEntry(checkIns) {
+  if (!Array.isArray(checkIns) || !checkIns.length) return;
+  const latest = checkIns.reduce((currentLatest, item) => {
+    if (!currentLatest) return item;
+    const currentDate = new Date(currentLatest.date || 0).getTime();
+    const candidateDate = new Date(item.date || 0).getTime();
+    return candidateDate >= currentDate ? item : currentLatest;
+  }, null);
+  if (!latest) return;
+
+  const setValueIfEmpty = (id, value, formatter) => {
+    const el = document.getElementById(id);
+    if (!el || el.value) return;
+    el.value = formatter ? formatter(value) : (value ?? '');
+  };
+
+  setValueIfEmpty('checkInBodyweightInput', latest.bodyweight);
+  setValueIfEmpty('checkInWaistInput', latest.waist);
+  setValueIfEmpty('checkInPhaseInput', latest.phase);
+  setValueIfEmpty('checkInWeekLabelInput', latest.weekLabel);
+  setValueIfEmpty('checkInNotesInput', latest.notes);
+
+  setValueIfEmpty('checkInEnergyInput', latest.energy, (value) => getSafeSliderValue(value));
+  setValueIfEmpty('checkInHungerInput', latest.hunger, (value) => getSafeSliderValue(value));
+  setValueIfEmpty('checkInSleepInput', latest.sleep, (value) => getSafeSliderValue(value));
+  setValueIfEmpty('checkInStressInput', latest.stress, (value) => getSafeSliderValue(value));
+  setValueIfEmpty('checkInDigestionInput', latest.digestion, (value) => getSafeSliderValue(value));
+  setValueIfEmpty('checkInTrainingPerformanceInput', latest.trainingPerformance, (value) => getSafeSliderValue(value));
 }
 
 function bindCheckInSliderDisplays() {
