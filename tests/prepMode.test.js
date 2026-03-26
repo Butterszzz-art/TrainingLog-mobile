@@ -79,7 +79,7 @@ describe('prepMode', () => {
     expect(getPrepWeekLabel({ showDate: today, referenceDate: today })).toBe('Show Day');
     expect(getPostShowLabel({ showDate: '2026-03-01', referenceDate: '2026-03-10' })).toBe('Post-Show Week 2');
     expect(getImprovementSeasonLabel({ startDate: '2026-02-18', referenceDate: '2026-03-25' })).toBe('Improvement Season Week 6');
-    expect(getPrepWeekLabel({ showDate: null, startDate: '2026-03-18', referenceDate: '2026-03-25' })).toBe('Prep Week 2');
+    expect(getPrepWeekLabel({ showDate: null, startDate: '2026-03-18', referenceDate: '2026-03-25' })).toBe('Contest Prep Week 2');
   });
 
   test('mini cut and improvement-specific setup fields persist safely', () => {

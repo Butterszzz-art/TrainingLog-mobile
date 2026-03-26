@@ -286,6 +286,12 @@ function renderProfileTab() {
   const goals = profile.goals || {};
   const selectedPhase = phaseSettings.currentPhase || 'improvement';
   const selectedCheckInDay = phaseSettings.checkInDay || 'Sunday';
+  const timelineLabel = getProfileTimelineLabel({
+    ...phaseSettings,
+    mode: phaseSettings.currentPhase,
+    startDate: phaseSettings.startDate,
+    showDate: phaseSettings.showDate
+  });
   const userId = getActiveUsername() || 'guest';
   const summary = typeof window.getGamificationSummary === 'function'
     ? window.getGamificationSummary(userId)
@@ -304,6 +310,7 @@ function renderProfileTab() {
     <section class="panel profile-section" aria-labelledby="profilePhaseHeading">
       <h3 id="profilePhaseHeading">Phase / Prep Settings</h3>
       <div class="profile-field-grid">
+        <label>Timeline label<input id="profileTabTimelineLabel" type="text" value="${escapeHtmlAttribute(formatProfileValue(timelineLabel, 'Improvement Season Week 1'))}" disabled></label>
         <label>Current phase
           <select id="profileTabCurrentPhase" disabled>
             <option value="improvement" ${selectedPhase === 'improvement' ? 'selected' : ''}>Improvement Season</option>
@@ -469,6 +476,18 @@ function getPhaseSetupApi() {
   return api;
 }
 
+function getProfileTimelineLabel(state, referenceDate = new Date().toISOString().slice(0, 10)) {
+  if (!window.prepModeApi) return 'Improvement Season Week 1';
+  const mode = String(state?.mode || state?.currentPhase || 'improvement').toLowerCase().replace(/\s+/g, '_');
+  const payload = { ...(state || {}), referenceDate };
+  if (mode === 'post_show') return window.prepModeApi.getPostShowLabel?.(payload) || 'Post-Show Week 1';
+  if (mode === 'contest_prep' || mode === 'peak_week' || mode === 'show_day') {
+    return window.prepModeApi.getPrepWeekLabel?.(payload) || 'Contest Prep Week 1';
+  }
+  if (mode === 'mini_cut') return window.prepModeApi.getImprovementSeasonLabel?.(payload) || 'Mini Cut Week 1';
+  return window.prepModeApi.getImprovementSeasonLabel?.(payload) || 'Improvement Season Week 1';
+}
+
 function setFieldValue(container, selector, value) {
   const el = container.querySelector(selector);
   if (!el) return;
@@ -501,7 +520,8 @@ function renderPhaseSetupSummary(container, state) {
   const modeLabel = (window.prepModeApi && typeof window.prepModeApi.getCurrentPhaseLabel === 'function')
     ? window.prepModeApi.getCurrentPhaseLabel(state)
     : state.mode;
-  summary.textContent = `${athleteName}: ${modeLabel}`;
+  const timelineLabel = getProfileTimelineLabel(state);
+  summary.textContent = `${athleteName}: ${modeLabel} · ${timelineLabel}`;
   cta.textContent = 'Edit Phase Setup';
 }
 

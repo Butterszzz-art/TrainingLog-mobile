@@ -224,8 +224,10 @@
   function getPrepWeekLabel(state = {}) {
     const normalized = sanitizeState(state);
     const daysUntilShow = getDaysUntilShow(normalized.showDate);
-    if (daysUntilShow === null) return `Prep Week ${getSeasonWeekNumber(normalized.referenceDate, normalized.prepStartDate || normalized.startDate)}`;
-    if (daysUntilShow < 0) return 'Show Complete';
+    if (daysUntilShow === null) {
+      return `Contest Prep Week ${getSeasonWeekNumber(normalized.referenceDate, normalized.prepStartDate || normalized.startDate)}`;
+    }
+    if (daysUntilShow < 0) return `Post-Show Week ${getSeasonWeekNumber(normalized.referenceDate, normalized.showDate)}`;
     if (daysUntilShow === 0) return 'Show Day';
     if (daysUntilShow <= 7) return 'Peak Week';
     return `${Math.ceil(daysUntilShow / 7)} Weeks Out`;
@@ -241,6 +243,8 @@
   function getImprovementSeasonLabel(state = {}) {
     const normalized = sanitizeState(state);
     const week = getSeasonWeekNumber(normalized.referenceDate, normalized.startDate);
+    const mode = normalizeMode(normalized.mode, 'improvement');
+    if (mode === 'mini_cut') return `Mini Cut Week ${week}`;
     return `Improvement Season Week ${week}`;
   }
 
