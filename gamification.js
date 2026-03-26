@@ -53,20 +53,10 @@
       description: 'Log prep status in single-digit weeks out.',
       predicate: state => state.metrics.singleDigitWeeksOutUnlocked === true
     },
-    peak_week_unlocked: {
-      title: 'Peak Week Unlocked',
-      description: 'Enter peak week and record compliance.',
-      predicate: state => state.metrics.peakWeekUnlocked === true
-    },
     perfect_week: {
       title: 'Perfect Week',
       description: 'Complete full weekly compliance.',
       predicate: state => state.metrics.perfectWeeks >= 1
-    },
-    cardio_warrior: {
-      title: 'Cardio Warrior',
-      description: 'Complete 20 cardio sessions.',
-      predicate: state => state.metrics.cardioCompleted >= 20
     },
     locked_in: {
       title: 'Locked In',
@@ -136,6 +126,7 @@
       recentEvents: [],
       rewardedWorkoutIds: [],
       rewardedPrIds: [],
+      rewardedActionIds: [],
       weeklyXp: { weekKey: getWeekKey(), amount: 0 },
       todaysXp: { dayKey: getTodayIsoDate(), amount: 0 },
       lastActiveDate: null,
@@ -162,6 +153,7 @@
     merged.recentEvents = ensureArray(merged.recentEvents).slice(-MAX_RECENT_EVENTS);
     merged.rewardedWorkoutIds = ensureArray(merged.rewardedWorkoutIds).slice(-MAX_TRACKED_IDS);
     merged.rewardedPrIds = ensureArray(merged.rewardedPrIds).slice(-MAX_TRACKED_IDS);
+    merged.rewardedActionIds = ensureArray(merged.rewardedActionIds).slice(-MAX_TRACKED_IDS);
     merged.metrics = { ...seed.metrics, ...((rawState && rawState.metrics) || {}) };
 
     if (!merged.weeklyXp || typeof merged.weeklyXp !== 'object') {
@@ -391,6 +383,16 @@
       showCelebration('pr_bonus', 'PR bonus awarded');
     }
 
+    if (sourceKey !== 'completed_workout' && sourceKey !== 'pr_hit') {
+      const rewardId = metadata.rewardId
+        || (sourceKey === 'full_weekly_compliance'
+          ? `${sourceKey}:${getWeekKey(metadata.date)}`
+          : `${sourceKey}:${getTodayIsoDate(metadata.date)}`);
+      if (state.rewardedActionIds.includes(rewardId)) return state;
+      state.rewardedActionIds.push(rewardId);
+      state.rewardedActionIds = state.rewardedActionIds.slice(-MAX_TRACKED_IDS);
+    }
+
     if (sourceKey === 'completed_cardio') state.metrics.cardioCompleted += 1;
     if (sourceKey === 'macros_complete') state.metrics.macrosCompleteDays += 1;
     if (sourceKey === 'bodyweight_logged') state.metrics.bodyweightLogs += 1;
@@ -430,6 +432,7 @@
       recentEvents: state.recentEvents,
       rewardedWorkoutIds: state.rewardedWorkoutIds,
       rewardedPrIds: state.rewardedPrIds,
+      rewardedActionIds: state.rewardedActionIds,
       weeklyXp: state.weeklyXp,
       todaysXp: state.todaysXp,
       currentLevelXp: state.currentLevelXp,
@@ -453,6 +456,10 @@
         <div class="gamification-muted-row">${summary.currentLevelXp} / ${summary.nextLevelXp} XP</div>
         <div class="gamification-meta-row">
           <span>Streak: <strong>${summary.streak}</strong></span>
+          <span>Today: <strong>${summary.todaysXp?.amount || 0} XP</strong></span>
+        </div>
+        <div class="gamification-meta-row">
+          <span>Week: <strong>${summary.weeklyXp?.amount || 0} XP</strong></span>
           <span>Latest badge: <strong>${latestBadge}</strong></span>
         </div>
       </div>
@@ -465,7 +472,7 @@
     return events.map(evt => `
       <div class="gamification-event-item">
         <span>${evt.message}</span>
-        <small>${evt.createdAt ? new Date(evt.createdAt).toLocaleDateString() : ''}</small>
+        <small>${evt.createdAt ? new Date(evt.createdAt).toLocaleString() : ''}</small>
       </div>
     `).join('');
   }
@@ -526,6 +533,8 @@
     awardXp,
     evaluateLevelUp,
     evaluateBadges,
+    resolveLevelState,
+    xpNeededForLevel,
     evaluateWorkoutAchievements,
     evaluatePRAchievements,
     getGamificationSummary,

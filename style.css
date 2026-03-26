@@ -1170,6 +1170,38 @@ body.theme-dark .set-row {
   gap: 8px;
 }
 
+.gamification-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.gamification-label {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.gamification-level {
+  font-size: 1.15rem;
+  color: #0f172a;
+}
+
+.gamification-muted-row {
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.gamification-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
 .gamification-card-title {
   margin: 0;
   font-size: 1rem;
