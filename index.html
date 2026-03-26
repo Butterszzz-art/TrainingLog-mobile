@@ -1259,6 +1259,36 @@
             <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
             <div style="margin-top:8px;">
               <label><input type="checkbox" id="trainingDayToggle"> Training Day</label>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:10px;">
+                <label style="display:flex;flex-direction:column;gap:4px;">
+                  Carb Day
+                  <select id="carbCycleSelect">
+                    <option value="normal">Normal</option>
+                    <option value="high">High Day</option>
+                    <option value="low">Low Day</option>
+                  </select>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;padding-top:20px;">
+                  <input type="checkbox" id="refeedDayToggle">
+                  Refeed Day
+                </label>
+              </div>
+              <p id="macroDayProfileSummary" style="font-size:0.9rem;margin-top:8px;color:var(--text-muted,#777);"></p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px;">
+                <label style="display:flex;flex-direction:column;gap:4px;">
+                  Hydration (ml)
+                  <input type="number" id="hydrationMlInput" min="0" step="50" placeholder="Optional target">
+                </label>
+                <label style="display:flex;flex-direction:column;gap:4px;">
+                  Sodium (mg)
+                  <input type="number" id="sodiumMgInput" min="0" step="50" placeholder="Optional target">
+                </label>
+              </div>
+              <p id="hydrationSodiumSummary" style="font-size:0.85rem;margin-top:6px;color:var(--text-muted,#777);"></p>
+              <label style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
+                Digestion Notes
+                <textarea id="digestionNotesInput" rows="2" placeholder="Bloating, appetite, bowel regularity, food tolerances..."></textarea>
+              </label>
               <div id="macroDailySummary" style="margin-top:12px;">
                 <h3 style="font-size:1.1rem;margin-bottom:6px;">Daily Summary</h3>
                 <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
@@ -4701,6 +4731,14 @@ function addMacroMeal() {
       <div id="meal${idx}" style="border:1px solid var(--border-color); padding:10px; margin:10px 0;">
         <button data-idx="${idx}" class="toggle-meal">➕ Meal ${idx+1}</button>
         <div id="mealContent${idx}" style="display:block; margin-top:10px;">
+          <label>Timing Slot:</label>
+          <select id="mealSlot${idx}">
+            <option value="breakfast">Breakfast</option>
+            <option value="pre_workout">Pre-workout</option>
+            <option value="post_workout">Post-workout</option>
+            <option value="intra_day">Intra-day</option>
+            <option value="pre_bed">Pre-bed</option>
+          </select>
           <label>Protein:</label>
           <input type="number" id="protein${idx}" placeholder="g">
           <label>Carbs:</label>
@@ -4753,12 +4791,13 @@ function submitMeal(idx) {
   const p = Number(document.getElementById(`protein${idx}`).value) || 0;
   const c = Number(document.getElementById(`carbs${idx}`).value) || 0;
   const f = Number(document.getElementById(`fats${idx}`).value) || 0;
+  const slot = document.getElementById(`mealSlot${idx}`)?.value || "intra_day";
 
-  macroMeals[idx] = { protein: p, carbs: c, fats: f };
+  macroMeals[idx] = { protein: p, carbs: c, fats: f, slot };
 
   // Save meals to dailyMacroMeals array in localStorage
   const currentMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
-  currentMeals[idx] = { protein: p, carbs: c, fats: f };
+  currentMeals[idx] = { protein: p, carbs: c, fats: f, slot };
   localStorage.setItem("dailyMacroMeals", JSON.stringify(currentMeals));
 
   // Update totals and save
@@ -5086,8 +5125,68 @@ function getMacroTargetValues() {
   };
 }
 
+function getMacroCyclingSettings() {
+  const trainingToggle = document.getElementById("trainingDayToggle");
+  const carbCycleSelect = document.getElementById("carbCycleSelect");
+  const refeedToggle = document.getElementById("refeedDayToggle");
+  return {
+    dayType: trainingToggle?.checked ? "training" : "rest",
+    carbCycle: carbCycleSelect?.value || "normal",
+    isRefeedDay: Boolean(refeedToggle?.checked),
+  };
+}
+
+function getMacroDayContextKey() {
+  return `macroDayContext_${currentUser || 'guest'}`;
+}
+
+function persistMacroDayContext() {
+  const hydrationMl = Number(document.getElementById("hydrationMlInput")?.value || 0);
+  const sodiumMg = Number(document.getElementById("sodiumMgInput")?.value || 0);
+  const digestionNotes = document.getElementById("digestionNotesInput")?.value || "";
+  const payload = {
+    date: getTodayDateString(),
+    ...getMacroCyclingSettings(),
+    hydrationMl: hydrationMl > 0 ? hydrationMl : null,
+    sodiumMg: sodiumMg > 0 ? sodiumMg : null,
+    digestionNotes: digestionNotes.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(getMacroDayContextKey(), JSON.stringify(payload));
+}
+
+function loadMacroDayContext() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(getMacroDayContextKey()) || 'null');
+    if (!saved || saved.date !== getTodayDateString()) return;
+    const carbCycleSelect = document.getElementById("carbCycleSelect");
+    if (carbCycleSelect && ['normal', 'high', 'low'].includes(saved.carbCycle)) {
+      carbCycleSelect.value = saved.carbCycle;
+    }
+    const refeedToggle = document.getElementById("refeedDayToggle");
+    if (refeedToggle) refeedToggle.checked = Boolean(saved.isRefeedDay);
+    const hydrationInput = document.getElementById("hydrationMlInput");
+    if (hydrationInput && saved.hydrationMl) hydrationInput.value = saved.hydrationMl;
+    const sodiumInput = document.getElementById("sodiumMgInput");
+    if (sodiumInput && saved.sodiumMg) sodiumInput.value = saved.sodiumMg;
+    const digestionInput = document.getElementById("digestionNotesInput");
+    if (digestionInput && saved.digestionNotes) digestionInput.value = saved.digestionNotes;
+  } catch (_err) {
+    // Ignore malformed local context payload.
+  }
+}
+
+function getBodybuildingMacroTargets(baseTargets) {
+  if (!window.macroEngine?.buildBodybuildingDayTargets) {
+    return { adjusted: baseTargets, profile: { label: "Base" }, notes: [] };
+  }
+  return window.macroEngine.buildBodybuildingDayTargets(baseTargets, getMacroCyclingSettings());
+}
+
 function getAdaptiveMacroTargets() {
   const baseTargets = getMacroTargetValues();
+  const daySplit = getBodybuildingMacroTargets(baseTargets);
+  const splitTargets = daySplit.adjusted || baseTargets;
   const today = getTodayDateString();
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
   const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
@@ -5106,8 +5205,8 @@ function getAdaptiveMacroTargets() {
     : { caloriesDelta: 0, reason: '' };
 
   const cardioAdjusted = window.cardioTab?.applyCardioMacroAdjustment
-    ? window.cardioTab.applyCardioMacroAdjustment(baseTargets, cardioCalories)
-    : { ...baseTargets, cardioCalories: 0 };
+    ? window.cardioTab.applyCardioMacroAdjustment(splitTargets, cardioCalories)
+    : { ...splitTargets, cardioCalories: 0 };
 
   const weightAdjusted = window.weightTab?.applyWeightTrendAdjustment
     ? window.weightTab.applyWeightTrendAdjustment(cardioAdjusted, trendSuggestion)
@@ -5119,6 +5218,8 @@ function getAdaptiveMacroTargets() {
     weightCaloriesDelta: trendSuggestion.caloriesDelta || 0,
     weightInsight: trendSuggestion.reason || '',
     weightRateKgPerWeek: Number(changeRate.kgPerWeek || 0),
+    bodybuildingProfile: daySplit.profile,
+    bodybuildingNotes: daySplit.notes || [],
   };
 }
 
@@ -5291,6 +5392,13 @@ function updateMacroUI() {
   const adaptiveTargets = getAdaptiveMacroTargets();
   const cardioCals = adaptiveTargets.cardioCalories || 0;
   const netCals = Math.max(0, totalCals - cardioCals);
+  const dayProfileEl = document.getElementById("macroDayProfileSummary");
+  if (dayProfileEl) {
+    const notes = Array.isArray(adaptiveTargets.bodybuildingNotes) ? adaptiveTargets.bodybuildingNotes.join(' ') : '';
+    dayProfileEl.textContent = adaptiveTargets.bodybuildingProfile?.label
+      ? `${adaptiveTargets.bodybuildingProfile.label}. ${notes}`.trim()
+      : notes;
+  }
 
   // Update Top Bar Targets and progress
   document.getElementById("macroCalsTarget").textContent = adaptiveTargets.calories;
@@ -5330,6 +5438,25 @@ function updateMacroUI() {
     },
     { netCals }
   );
+
+  const hydrationInput = document.getElementById("hydrationMlInput");
+  const sodiumInput = document.getElementById("sodiumMgInput");
+  const hydrationSummary = document.getElementById("hydrationSodiumSummary");
+  if (window.macroEngine?.estimateHydrationAndSodiumTargets && hydrationSummary) {
+    let personalDetails = null;
+    try {
+      personalDetails = JSON.parse(localStorage.getItem('personalDetails') || 'null');
+    } catch (_err) {
+      personalDetails = null;
+    }
+    const hydrationSuggestion = window.macroEngine.estimateHydrationAndSodiumTargets({
+      weightKg: Number(personalDetails?.weightKg || 0),
+      ...getMacroCyclingSettings(),
+    });
+    if (hydrationInput && !hydrationInput.value) hydrationInput.value = hydrationSuggestion.hydrationMl;
+    if (sodiumInput && !sodiumInput.value) sodiumInput.value = hydrationSuggestion.sodiumMg;
+    hydrationSummary.textContent = `Suggested baseline: ${hydrationSuggestion.hydrationMl} ml water · ${hydrationSuggestion.sodiumMg} mg sodium.`;
+  }
 
   try {
     if (window.dailyMissionEngine?.syncMissionFromMacroProgress) {
@@ -5822,16 +5949,33 @@ function loadAndRenderDailyProgress() {
 
 // Call on page/app start
 loadAndRenderDailyProgress();
+loadMacroDayContext();
+
+["carbCycleSelect", "refeedDayToggle", "hydrationMlInput", "sodiumMgInput", "digestionNotesInput", "trainingDayToggle"].forEach((id) => {
+  const node = document.getElementById(id);
+  if (!node) return;
+  const eventName = node.tagName === 'SELECT' ? 'change' : (node.type === 'checkbox' ? 'change' : 'input');
+  node.addEventListener(eventName, () => {
+    persistMacroDayContext();
+    updateMacroUI();
+  });
+});
 
 
 async function saveDailyMacroLog(username, date, meals, totals) {
   const token = getAuthToken();
+  let dayContext = null;
+  try {
+    dayContext = JSON.parse(localStorage.getItem(getMacroDayContextKey()) || 'null');
+  } catch (_err) {
+    dayContext = null;
+  }
   const payload = {
     fields: {
       Username: username,
       Date: date,
       Type: "Macros",
-      LogData: JSON.stringify(meals),
+      LogData: JSON.stringify({ meals, dayContext }),
       CaloriesTotal: totals.calories,
       ProteinTotal: totals.protein,
       CarbsTotal: totals.carbs,
