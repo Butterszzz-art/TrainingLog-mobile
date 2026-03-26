@@ -247,6 +247,87 @@ function applyDailyMacroAdjustment({
   };
 }
 
+function buildBodybuildingDayTargets(baseTargets = {}, strategy = {}) {
+  const base = roundMacroTargets(baseTargets);
+  const dayType = strategy?.dayType === 'rest' ? 'rest' : 'training';
+  const carbCycle = ['high', 'low'].includes(strategy?.carbCycle) ? strategy.carbCycle : 'normal';
+  const isRefeedDay = Boolean(strategy?.isRefeedDay);
+
+  let protein = base.protein;
+  let carbs = base.carbs;
+  let fat = base.fat;
+  const notes = [];
+
+  if (dayType === 'training') {
+    carbs = Math.round(carbs * 1.12);
+    protein = Math.round(protein * 1.05);
+    fat = Math.round(fat * 0.92);
+    notes.push('Training day split: carbs up, fat slightly lower to bias peri-workout fuel.');
+  } else {
+    carbs = Math.round(carbs * 0.82);
+    fat = Math.round(fat * 1.10);
+    notes.push('Rest day split: carbs reduced and fats raised for lower output demand.');
+  }
+
+  if (carbCycle === 'high') {
+    carbs = Math.round(carbs * 1.2);
+    fat = Math.round(fat * 0.9);
+    notes.push('High day applied for glycogen refill and performance support.');
+  } else if (carbCycle === 'low') {
+    carbs = Math.round(carbs * 0.75);
+    protein = Math.round(protein * 1.05);
+    fat = Math.round(fat * 1.06);
+    notes.push('Low day applied to increase deficit while preserving satiety.');
+  }
+
+  if (isRefeedDay) {
+    carbs = Math.round(carbs * 1.35);
+    fat = Math.max(30, Math.round(fat * 0.82));
+    notes.push('Refeed day enabled: high carbs with controlled fats.');
+  }
+
+  return {
+    adjusted: roundMacroTargets({ protein, carbs, fat }),
+    profile: {
+      dayType,
+      carbCycle,
+      isRefeedDay,
+      label: `${dayType === 'training' ? 'Training' : 'Rest'} · ${carbCycle === 'normal' ? 'Normal' : carbCycle === 'high' ? 'High' : 'Low'}${isRefeedDay ? ' · Refeed' : ''}`,
+    },
+    notes,
+  };
+}
+
+function suggestMealTimingSlots(targets = {}, config = {}) {
+  const safe = roundMacroTargets(targets);
+  const trainingTime = config?.trainingTime || 'pm';
+  const slots = trainingTime === 'am'
+    ? ['pre_workout', 'post_workout', 'midday', 'evening', 'pre_bed']
+    : ['breakfast', 'midday', 'pre_workout', 'post_workout', 'pre_bed'];
+  const template = trainingTime === 'am'
+    ? [0.22, 0.30, 0.20, 0.16, 0.12]
+    : [0.18, 0.20, 0.20, 0.28, 0.14];
+
+  return slots.map((slot, idx) => ({
+    slot,
+    calories: Math.round(safe.calories * template[idx]),
+    protein: Math.round(safe.protein * 0.2),
+    carbs: Math.round(safe.carbs * template[idx]),
+    fat: Math.round(safe.fat * (idx === slots.length - 1 ? 0.3 : 0.175)),
+  }));
+}
+
+function estimateHydrationAndSodiumTargets({ weightKg, dayType = 'training', isRefeedDay = false } = {}) {
+  const safeWeight = Number(weightKg);
+  const baseWeight = Number.isFinite(safeWeight) && safeWeight > 0 ? safeWeight : 75;
+  const hydrationMl = Math.round(baseWeight * 35 + (dayType === 'training' ? 850 : 450) + (isRefeedDay ? 250 : 0));
+  const sodiumMg = Math.round(baseWeight * 28 + (dayType === 'training' ? 350 : 0));
+  return {
+    hydrationMl,
+    sodiumMg,
+  };
+}
+
 if (typeof window !== 'undefined') {
   window.macroEngine = {
     calculateLeanMass,
@@ -259,5 +340,8 @@ if (typeof window !== 'undefined') {
     estimateWorkoutEnergyExpenditure,
     adjustTargetsByTrainingAndRecovery,
     applyDailyMacroAdjustment,
+    buildBodybuildingDayTargets,
+    suggestMealTimingSlots,
+    estimateHydrationAndSodiumTargets,
   };
 }
