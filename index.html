@@ -1384,6 +1384,7 @@
           <canvas id="strainCanvas" style="max-height:180px;"></canvas>
           <div id="loadAlerts" style="margin-top:8px;"></div>
         </div>
+        <div id="bodybuildingProgressPanel" style="margin-top:14px;"></div>
         <div id="goalBar" style="margin-top:10px;"></div>
         <div id="goalProgressList" style="margin-top:10px;"></div>
         <div id="coachCorner" style="margin-top:10px;"></div>
@@ -1660,6 +1661,7 @@
 <script src="src/config/loadConfig.js"></script>
 <script src="progressMilestones.js"></script>
 <script src="progressAnalytics.js"></script>
+<script src="bodybuildingProgress.js"></script>
 <script src="goals.js"></script>
 <script src="progressAI.js"></script>
 <script src="gamification.js"></script>
@@ -7367,6 +7369,74 @@ function renderExerciseProgress() {
   });
 }
 
+function renderBodybuildingProgressPanel(workouts) {
+  const panel = document.getElementById('bodybuildingProgressPanel');
+  if (!panel) return;
+  if (typeof computeBodybuildingProgressSummary !== 'function') {
+    panel.innerHTML = '';
+    return;
+  }
+
+  const summary = computeBodybuildingProgressSummary(workouts || []);
+  const volumeRows = (summary.muscleGroupVolume || [])
+    .map(group => {
+      const plannedLabel = group.planned > 0 ? group.planned.toFixed(0) : '—';
+      const status = group.planned > 0
+        ? `${(group.ratio * 100).toFixed(0)}%`
+        : 'Unplanned';
+      return `<tr><td>${group.muscleGroup}</td><td>${group.actual.toFixed(0)}</td><td>${plannedLabel}</td><td>${status}</td></tr>`;
+    })
+    .join('');
+
+  const consistencyRows = (summary.exerciseConsistency || [])
+    .slice(0, 8)
+    .map(item => `<tr><td>${item.exercise}</td><td>${item.sessions}</td><td>${item.avgDaysBetween ? item.avgDaysBetween.toFixed(1) : '—'}</td></tr>`)
+    .join('');
+
+  const topSetItems = (summary.prSummaries?.topSetPRs || [])
+    .map(item => `<li>${item.exercise}: ${item.value.toFixed(1)}</li>`)
+    .join('');
+  const repItems = (summary.prSummaries?.repPRs || [])
+    .map(item => `<li>${item.exercise}: ${item.value.toFixed(0)} reps</li>`)
+    .join('');
+  const volumeItems = (summary.prSummaries?.volumePRs || [])
+    .map(item => `<li>${item.exercise}: ${item.value.toFixed(0)} vol</li>`)
+    .join('');
+
+  const weakPointItems = (summary.weakPointFocus || [])
+    .map(item => `<li><strong>${item.muscleGroup}</strong>: ${item.recommendation}</li>`)
+    .join('');
+  const assumptionItems = (summary.assumptions || [])
+    .map(text => `<li>${text}</li>`)
+    .join('');
+
+  panel.innerHTML = `
+    <h3>Bodybuilding Progress</h3>
+    <h4 style="margin:6px 0;">Muscle Group Weekly Volume (actual vs planned)</h4>
+    <table style="width:100%;font-size:.9rem;">
+      <tr><th align="left">Muscle Group</th><th align="left">Actual</th><th align="left">Planned</th><th align="left">Status</th></tr>
+      ${volumeRows || '<tr><td colspan="4">No resistance log data in selected range.</td></tr>'}
+    </table>
+    <h4 style="margin:8px 0 4px;">Exercise Consistency</h4>
+    <table style="width:100%;font-size:.9rem;">
+      <tr><th align="left">Exercise</th><th align="left">Sessions</th><th align="left">Avg days between</th></tr>
+      ${consistencyRows || '<tr><td colspan="3">No consistency data yet.</td></tr>'}
+    </table>
+    <h4 style="margin:8px 0 4px;">PR Snapshot</h4>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
+      <div><strong>Top Set</strong><ul>${topSetItems || '<li>No data</li>'}</ul></div>
+      <div><strong>Rep PR</strong><ul>${repItems || '<li>No data</li>'}</ul></div>
+      <div><strong>Volume PR</strong><ul>${volumeItems || '<li>No data</li>'}</ul></div>
+    </div>
+    <h4 style="margin:8px 0 4px;">Weak-Point Focus</h4>
+    <ul>${weakPointItems || '<li>No weak points flagged this week.</li>'}</ul>
+    <details style="margin-top:6px;">
+      <summary>Mapping assumptions</summary>
+      <ul>${assumptionItems}</ul>
+    </details>
+  `;
+}
+
 async function fetchWorkouts() {
   return JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
 }
@@ -7452,6 +7522,7 @@ async function showWorkoutProgress(data) {
   renderLineChart(dates.concat(new Array(4).fill('')), 'Total Volume', vols.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
   renderTrainingLoadCharts(filteredWorkouts);
   renderWorkoutMetricsChart(dates, vols, intensities, estimated1RMs);
+  renderBodybuildingProgressPanel(filteredWorkouts);
   renderProgressComplianceSummary();
 }
 
@@ -7467,6 +7538,7 @@ async function showCardioProgress() {
   const trend = trendPoints(mins);
   const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(mins, 4));
   renderLineChart(dates.concat(new Array(4).fill('')), 'Cardio Minutes', mins.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
+  renderBodybuildingProgressPanel([]);
   renderProgressComplianceSummary();
 }
 
@@ -7535,6 +7607,7 @@ async function showBodyweightProgress() {
     const trendText = wtData ? `Weekly change: ${Number(wtData.kgPerWeek || 0).toFixed(2)} kg/week. ${wtData.reason || ''}` : '';
     coachCorner.innerHTML = `<div style="padding:8px;border-left:4px solid var(--primary);background:rgba(47,128,237,.08);"><strong>Interpretation:</strong> ${insight}<br/><small>${trendText}</small></div>`;
   }
+  renderBodybuildingProgressPanel([]);
   renderProgressComplianceSummary();
 }
 
@@ -7544,6 +7617,7 @@ function showExerciseProgress() {
   document.getElementById('exerciseProgress').style.display = 'block';
   document.getElementById('trainingLoadPanel').style.display = 'none';
   renderExerciseProgress();
+  fetchWorkouts().then(renderBodybuildingProgressPanel);
   renderProgressComplianceSummary();
 }
 
