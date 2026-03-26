@@ -6191,17 +6191,23 @@ function getComplianceSnapshot(profile, username) {
   const dailyStatus = window.complianceEngine?.getComplianceStatus?.(dailyPercent) || 'off_track';
   const weekly = window.complianceEngine?.calculateWeeklyCompliance?.(username, new Date().toISOString().slice(0, 10))
     || { averagePercent: 0, status: 'off_track', completedDays: 0, activeDays: 0, days: [] };
+  const rolling7 = window.complianceEngine?.calculateRolling7DayCompliance?.(username, new Date().toISOString().slice(0, 10))
+    || { percent: weekly.averagePercent || 0, status: weekly.status || 'off_track' };
   const trend = window.complianceEngine?.getComplianceTrend?.(username)
     || { trend: 'steady', delta: 0, insight: 'Immediate course correction required' };
-  return { dailyPercent, dailyStatus, weekly, trend };
+  const insightsPayload = window.complianceEngine?.getComplianceInsights?.(username, new Date().toISOString().slice(0, 10))
+    || { insights: [trend.insight], missed: { byTask: {}, topMissedTask: null } };
+  return { dailyPercent, dailyStatus, weekly, rolling7, trend, insightsPayload };
 }
 
 function renderStatusSummary(profile, username) {
   const snapshot = getComplianceSnapshot(profile, username);
   const hasDaily = Number.isFinite(snapshot.dailyPercent) && snapshot.dailyPercent > 0;
   const hasWeekly = Number.isFinite(snapshot.weekly?.averagePercent) && snapshot.weekly.averagePercent > 0;
+  const hasRolling = Number.isFinite(snapshot.rolling7?.percent) && snapshot.rolling7.percent > 0;
   const daily = hasDaily ? `${snapshot.dailyPercent}%` : 'Pending check-in';
   const weekly = hasWeekly ? `${snapshot.weekly.averagePercent}%` : 'Pending week data';
+  const rolling = hasRolling ? `${snapshot.rolling7.percent}%` : 'Pending week data';
   const streak = getSafeDisplayValue(profile.currentStreak, '0 days');
   const onTrack = hasDaily ? formatComplianceStatus(snapshot.dailyStatus) : 'Placeholder';
   const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
@@ -6212,6 +6218,7 @@ function renderStatusSummary(profile, username) {
       <div class="home-stat-grid">
         <div class="home-stat-chip"><p class="home-stat-label">Today’s Compliance</p><p class="home-stat-value">${daily}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Weekly Compliance</p><p class="home-stat-value">${weekly}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Rolling 7-Day</p><p class="home-stat-value">${rolling}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${streak}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">On-Track</p><p class="home-stat-value">${onTrack}</p></div>
       </div>
@@ -6361,12 +6368,38 @@ function renderWeeklyComplianceCard(profile, username) {
       <h3 class="home-card-title">Weekly Compliance · ${headerLabel}</h3>
       <div class="home-stat-grid">
         <div class="home-stat-chip"><p class="home-stat-label">Average</p><p class="home-stat-value">${snapshot.weekly.averagePercent}%</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Rolling 7-Day</p><p class="home-stat-value">${snapshot.rolling7.percent}%</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Status</p><p class="home-stat-value">${formatComplianceStatus(snapshot.weekly.status)}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">90%+ Days</p><p class="home-stat-value">${snapshot.weekly.completedDays}/7</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Trend</p><p class="home-stat-value">${trendDirection} (${deltaPrefix}${snapshot.trend.delta}%)</p></div>
       </div>
-      <p class="home-mission-progress">${snapshot.trend.insight}</p>
+      <p class="home-mission-progress">${snapshot.insightsPayload.insights.join(' · ') || snapshot.trend.insight}</p>
     </section>
+  `;
+}
+
+function renderProgressComplianceSummary() {
+  const target = document.getElementById('coachCorner');
+  if (!target) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const snapshot = getComplianceSnapshot({}, userId);
+  const missedList = Object.entries(snapshot.insightsPayload?.missed?.byTask || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([task, missed]) => `${MISSION_ITEM_META[task] || task}: ${missed} missed`)
+    .join(' · ');
+
+  target.innerHTML = `
+    <div style="padding:10px;border-left:4px solid var(--primary);background:rgba(47,128,237,.08);margin-bottom:10px;">
+      <strong>Compliance Summary:</strong>
+      Daily ${snapshot.dailyPercent}% (${formatComplianceStatus(snapshot.dailyStatus)}) ·
+      Weekly ${snapshot.weekly.averagePercent}% (${formatComplianceStatus(snapshot.weekly.status)}) ·
+      Rolling 7-day ${snapshot.rolling7.percent}% (${formatComplianceStatus(snapshot.rolling7.status)})
+      <br />
+      <small><strong>Insights:</strong> ${snapshot.insightsPayload.insights.join(' · ') || 'No insight yet'}</small>
+      <br />
+      <small><strong>Missed task analysis:</strong> ${missedList || 'No missed tasks in the current 7-day window.'}</small>
+    </div>
   `;
 }
 
@@ -6421,6 +6454,7 @@ function renderHomeDashboard() {
   container.innerHTML = `<div class="home-command-grid">${[
     renderHeroPhaseHeader(profile, username),
     renderStatusSummary(profile, username),
+    renderWeeklyComplianceCard(profile, username),
     renderTodaysMission(profile, username),
     renderUpcomingPrepEvents(profile, username),
     renderRewardSummary(profile)
@@ -7376,6 +7410,7 @@ async function showWorkoutProgress(data) {
   renderLineChart(dates.concat(new Array(4).fill('')), 'Total Volume', vols.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
   renderTrainingLoadCharts(filteredWorkouts);
   renderWorkoutMetricsChart(dates, vols, intensities, estimated1RMs);
+  renderProgressComplianceSummary();
 }
 
 async function showCardioProgress() {
@@ -7390,6 +7425,7 @@ async function showCardioProgress() {
   const trend = trendPoints(mins);
   const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(mins, 4));
   renderLineChart(dates.concat(new Array(4).fill('')), 'Cardio Minutes', mins.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
+  renderProgressComplianceSummary();
 }
 
 async function showBodyweightProgress() {
@@ -7457,6 +7493,7 @@ async function showBodyweightProgress() {
     const trendText = wtData ? `Weekly change: ${Number(wtData.kgPerWeek || 0).toFixed(2)} kg/week. ${wtData.reason || ''}` : '';
     coachCorner.innerHTML = `<div style="padding:8px;border-left:4px solid var(--primary);background:rgba(47,128,237,.08);"><strong>Interpretation:</strong> ${insight}<br/><small>${trendText}</small></div>`;
   }
+  renderProgressComplianceSummary();
 }
 
 function showExerciseProgress() {
@@ -7465,6 +7502,7 @@ function showExerciseProgress() {
   document.getElementById('exerciseProgress').style.display = 'block';
   document.getElementById('trainingLoadPanel').style.display = 'none';
   renderExerciseProgress();
+  renderProgressComplianceSummary();
 }
 
 function refreshProgress() {
