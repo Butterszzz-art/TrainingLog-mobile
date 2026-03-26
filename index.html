@@ -6412,9 +6412,12 @@ function getNextScheduledCheckIn(profile, username) {
 }
 
 function renderUpcomingPrepEvents(profile, username) {
-  const checkIn = getSafeDisplayValue(getNextScheduledCheckIn(profile, username), 'Not scheduled');
-  const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'Placeholder');
   const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  const checkIn = getSafeDisplayValue(getNextScheduledCheckIn(profile, username), 'Not scheduled');
+  const nextCheckInPhaseWeek = window.checkinEngine?.getWeekLabelForCheckIn
+    ? window.checkinEngine.getWeekLabelForCheckIn({ date: checkIn, phase: phaseState.mode || 'improvement' }, phaseState)
+    : 'Phase week TBD';
+  const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'Placeholder');
   const countdown = formatCountdownDays(phaseState.showDate || profile.showDate);
 
   return `
@@ -6422,6 +6425,7 @@ function renderUpcomingPrepEvents(profile, username) {
       <h3 class="home-card-title">Upcoming / Countdown</h3>
       <ul class="home-upcoming-list">
         <li class="home-upcoming-item"><span>Next Check-in</span><strong>${checkIn}</strong></li>
+        <li class="home-upcoming-item"><span>Scheduled Label</span><strong>${nextCheckInPhaseWeek}</strong></li>
         <li class="home-upcoming-item"><span>Peak Week</span><strong>${peakWeek}</strong></li>
         <li class="home-upcoming-item"><span>Show Day Countdown</span><strong>${countdown}</strong></li>
       </ul>
@@ -6493,33 +6497,40 @@ function renderCheckInTab() {
   const checkIns = window.checkinEngine.loadCheckIns(userId);
   hydrateCheckInFormFromLatestEntry(checkIns);
   bindCheckInSliderDisplays();
-  const grouped = checkIns.reduce((acc, entry) => {
-    const key = entry.weekLabel || 'Unlabeled Week';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(entry);
-    return acc;
-  }, {});
 
   const timeline = document.getElementById('checkInTimeline');
   if (!timeline) return;
-  const labels = Object.keys(grouped);
-  if (!labels.length) {
-    timeline.innerHTML = '<p class="home-mission-progress">No check-ins yet. Save your first weekly check-in.</p>';
+  timeline.innerHTML = '<p class="home-mission-progress">Loading weekly check-ins…</p>';
+
+  const groupedTimeline = window.checkinEngine.groupCheckInsForTimeline?.(checkIns) || [];
+  if (!groupedTimeline.length) {
+    timeline.innerHTML = '<p class="home-mission-progress">No weekly ritual logged yet. Save your first check-in to build your prep timeline.</p>';
     return;
   }
 
-  timeline.innerHTML = labels.map((label) => {
-    const items = grouped[label].map((entry) => `
-      <li>
-        <strong>${entry.date}</strong> — BW: ${entry.bodyweight || '—'}, Waist: ${entry.waist || '—'}, Energy: ${entry.energy || '—'}, Training: ${entry.trainingPerformance || '—'}
-        <div style="font-size:0.9rem; opacity:0.85;">${entry.notes || 'No notes logged.'}</div>
-      </li>
-    `).join('');
+  timeline.innerHTML = groupedTimeline.map((weeksOutGroup) => {
+    const phaseWeekBlocks = weeksOutGroup.phaseWeeks.map((phaseWeekGroup) => {
+      const entries = phaseWeekGroup.entries.map((entry) => `
+        <li style="margin-bottom:10px;">
+          <strong>${entry.date}</strong> · Phase: ${entry.phase || '—'}<br />
+          BW: ${entry.bodyweight || '—'} · Waist: ${entry.waist || '—'} · Recovery (E/S/St): ${entry.recoveryRatings?.energy || entry.energy || '—'}/${entry.recoveryRatings?.sleep || entry.sleep || '—'}/${entry.recoveryRatings?.stress || entry.stress || '—'}<br />
+          Hunger: ${entry.hunger || '—'} · Digestion: ${entry.digestion || '—'} · Training: ${entry.trainingPerformance || '—'}
+          <div style="font-size:0.9rem; opacity:0.85;">${entry.notes || 'No notes logged.'}</div>
+        </li>
+      `).join('');
+
+      return `
+        <article class="checkin-timeline-subgroup">
+          <h5>${phaseWeekGroup.phaseWeekLabel}</h5>
+          <ul>${entries}</ul>
+        </article>
+      `;
+    }).join('');
 
     return `
-      <section class="home-dashboard-card" style="margin-bottom:12px; text-align:left;">
-        <h4 style="margin:0 0 8px;">${label}</h4>
-        <ul style="margin:0; padding-left:16px;">${items}</ul>
+      <section class="home-dashboard-card checkin-timeline-group">
+        <h4>${weeksOutGroup.weeksOutLabel}</h4>
+        ${phaseWeekBlocks}
       </section>
     `;
   }).join('');
@@ -6602,6 +6613,12 @@ function saveWeeklyCheckIn() {
   };
 
   draft.weekLabel = manualWeekLabel || window.checkinEngine.getWeekLabelForCheckIn(draft, phaseState);
+  draft.phaseWeekLabel = draft.weekLabel;
+  draft.recoveryRatings = {
+    energy: draft.energy,
+    sleep: draft.sleep,
+    stress: draft.stress
+  };
   window.checkinEngine.saveCheckIn(userId, draft, phaseState);
   if (typeof window.onRecoveryLogged === 'function') {
     window.onRecoveryLogged({
