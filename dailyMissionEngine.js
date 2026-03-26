@@ -310,6 +310,17 @@
     }
   }
 
+  function syncMissionFromPosingEntry(entry, userId) {
+    try {
+      const resolvedUser = resolveUserId(userId || entry?.userId || entry?.username || entry?.user);
+      const date = getDateKey(entry?.date || entry?.recordedAt || entry?.createdAt);
+      const complete = entry?.complete === false ? false : true;
+      return updateMissionItem(resolvedUser, date, 'posingComplete', complete);
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function calculateDailyCompliance(state) {
     const normalized = normalizeMissionState(state?.date, state);
     const requiredItems = inferRequiredItems(normalized);
@@ -338,6 +349,7 @@
     syncMissionFromBodyweightEntry,
     syncMissionFromMacroProgress,
     syncMissionFromRecoveryEntry,
+    syncMissionFromPosingEntry,
     calculateDailyCompliance,
     getStorageKey
   };
