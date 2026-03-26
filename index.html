@@ -739,7 +739,7 @@
       <li><a href="#" data-target="logTab">📝 Log</a></li>
       <li><a href="#" data-target="progressTab">📈 Progress</a></li>
       <li><a href="#" data-target="checkInTab">🧾 Check-In</a></li>
-      <li><a href="#" data-target="settingsTab">👤 Profile</a></li>
+      <li><a href="#" data-target="profileTab">👤 Profile</a></li>
 
       <li class="menu-section-label">Tracking</li>
       <li><a href="#" data-target="logTab">📋 Training Log</a></li>
@@ -1441,6 +1441,11 @@
   <!-- Continue similarly for items 5–10 -->
 </div>
 
+<div id="profileTab" class="tab-content">
+  <h2>Profile</h2>
+  <div id="profileTabContent" class="panel"></div>
+</div>
+
 <div id="settingsTab" class="tab-content">
   <div id="settingsFormContainer" class="panel"></div>
 
@@ -2052,6 +2057,11 @@ function showTab(tabName) {
     case 'logHistoryTab':
       if (typeof showHistoryMiniTab === 'function') {
         showHistoryMiniTab('workout');
+      }
+      break;
+    case 'profileTab':
+      if (typeof window.renderProfileTab === 'function') {
+        window.renderProfileTab();
       }
       break;
     case 'settingsTab':
@@ -8050,12 +8060,42 @@ function renderMacroHistory() {
   });
 }
 
+function renderWorkoutHistoryFallback(container) {
+  if (!container) return;
+
+  const userKey = typeof currentUser === 'string' && currentUser ? currentUser : null;
+  const logs = (typeof loadLogsFromLocalStorage === 'function'
+    ? loadLogsFromLocalStorage()
+    : JSON.parse(localStorage.getItem('workoutHistory') || localStorage.getItem('resistanceLogs') || '[]')
+  ).filter(entry => !userKey || !entry?.userId || entry.userId === userKey);
+
+  if (!logs.length) {
+    container.innerHTML = '<p style="opacity:.7;">No workouts saved yet. Start logging in the Log tab to build your history.</p>';
+    return;
+  }
+
+  const rows = logs
+    .slice()
+    .sort((a, b) => new Date(b?.date || 0) - new Date(a?.date || 0))
+    .map(entry => {
+      const title = entry?.title || 'Workout';
+      const date = entry?.date || 'Unknown date';
+      const exercises = Array.isArray(entry?.exercises) ? entry.exercises.length : 0;
+      return `<li><strong>${title}</strong> <span style="opacity:.7;">(${date})</span><br><small>${exercises} exercise${exercises === 1 ? '' : 's'}</small></li>`;
+    })
+    .join('');
+
+  container.innerHTML = `<ul style="display:grid; gap:10px; padding-left:20px;">${rows}</ul>`;
+}
+
 function showHistoryMiniTab(type) {
   const resolvedType = type === 'macro' ? 'macro' : 'workout';
   const workoutMiniTab = document.getElementById("workoutHistoryMiniTab");
   const macroMiniTab = document.getElementById("macroHistoryMiniTab");
   const workoutPanel = document.getElementById("historyWorkoutPanel");
   const macroPanel = document.getElementById("historyMacroPanel");
+  const workoutContainer = document.getElementById('logHistoryContainer');
+  const macroContainer = document.getElementById('macroHistoryContainer');
 
   if (workoutPanel) workoutPanel.classList.toggle('active', resolvedType === 'workout');
   if (macroPanel) macroPanel.classList.toggle('active', resolvedType === 'macro');
@@ -8068,18 +8108,26 @@ function showHistoryMiniTab(type) {
   }
 
   if (resolvedType === "macro") {
+    if (!macroContainer) return;
     if (typeof renderMacroHistory === 'function') {
       renderMacroHistory();
     }
     return;
   }
 
+  if (!workoutContainer) return;
   if (typeof syncLocalHistoryFromWorkouts === 'function') {
     syncLocalHistoryFromWorkouts();
   }
-  if (typeof renderWorkoutHistory === 'function') {
-    renderWorkoutHistory();
+  const historyRenderer = window.historyApi?.renderWorkoutHistory || window.renderWorkoutHistory;
+  if (typeof historyRenderer === 'function') {
+    Promise.resolve(historyRenderer(workoutContainer)).catch((error) => {
+      console.warn('[HistoryMiniTab] Failed to render via historyApi, using local fallback.', error);
+      renderWorkoutHistoryFallback(workoutContainer);
+    });
+    return;
   }
+  renderWorkoutHistoryFallback(workoutContainer);
 }
 
   
@@ -8427,47 +8475,6 @@ async function fetchDailyLogs(username) {
     return [];
   }
 }
-
-function renderLogHistory(logs) {
-  const container = document.getElementById("logHistoryContainer");
-  container.innerHTML = "";
-
-  // Group by date then by type
-  const grouped = logs.reduce((acc, log) => {
-    const date = log.fields.Date;
-    if (!acc[date]) acc[date] = {};
-    const type = log.fields.Type;
-    if (!acc[date][type]) acc[date][type] = [];
-    acc[date][type].push(log);
-    return acc;
-  }, {});
-
-  for (const [date, types] of Object.entries(grouped)) {
-    const dateSection = document.createElement("div");
-    dateSection.innerHTML = `<h3>${date}</h3>`;
-
-    for (const [type, entries] of Object.entries(types)) {
-      const typeSection = document.createElement("div");
-      typeSection.innerHTML = `<h4>${type}</h4>`;
-      
-      entries.forEach(entry => {
-        const log = JSON.parse(entry.fields.LogData);
-        const logHtml = JSON.stringify(log, null, 2).replace(/\n/g, "<br>").replace(/ /g, "&nbsp;");
-        const entryDiv = document.createElement("pre");
-        entryDiv.innerHTML = logHtml;
-        typeSection.appendChild(entryDiv);
-      });
-
-      dateSection.appendChild(typeSection);
-    }
-
-    container.appendChild(dateSection);
-  }
-}
-
-
-    
-
 
   const loginEl = document.getElementById("loginContainer");
   const dash = document.getElementById("dashboardContainer");

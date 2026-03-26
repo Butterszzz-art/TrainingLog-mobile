@@ -249,6 +249,74 @@ function renderProfileGamificationSummary(container = document) {
   setText('profileGamificationBadges', badges);
 }
 
+function getProfileSnapshot() {
+  const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
+  return hydrated.profile || {};
+}
+
+function formatProfileValue(value, fallback = '—') {
+  if (value === null || value === undefined) return fallback;
+  const text = String(value).trim();
+  return text ? text : fallback;
+}
+
+function renderProfileTab() {
+  const container = document.getElementById('profileTabContent');
+  if (!container) return;
+
+  const profile = getProfileSnapshot();
+  const athleteInfo = profile.athleteInfo || {};
+  const phaseSettings = profile.phaseSettings || {};
+  const goals = profile.goals || {};
+  const userId = getActiveUsername() || 'guest';
+  const summary = typeof window.getGamificationSummary === 'function'
+    ? window.getGamificationSummary(userId)
+    : (typeof window.getGamificationState === 'function' ? window.getGamificationState(userId) : null);
+
+  container.innerHTML = `
+    <section class="panel profile-section" aria-labelledby="profileAthleteInfoHeading">
+      <h3 id="profileAthleteInfoHeading">Athlete Info</h3>
+      <p><strong>Name:</strong> ${formatProfileValue(athleteInfo.name)}</p>
+      <p><strong>Current Weight:</strong> ${formatProfileValue(athleteInfo.currentWeight)}</p>
+      <p><strong>Height:</strong> ${formatProfileValue(athleteInfo.height)}</p>
+      <p><strong>Division / Class:</strong> ${formatProfileValue(athleteInfo.divisionClass)}</p>
+    </section>
+    <section class="panel profile-section" aria-labelledby="profilePhaseHeading">
+      <h3 id="profilePhaseHeading">Phase / Prep Settings</h3>
+      <p><strong>Current phase:</strong> ${formatProfileValue(phaseSettings.currentPhase, 'improvement')}</p>
+      <p><strong>Show date:</strong> ${formatProfileValue(phaseSettings.showDate)}</p>
+      <p><strong>Target stage weight:</strong> ${formatProfileValue(phaseSettings.targetStageWeight)}</p>
+      <p><strong>Check-in day:</strong> ${formatProfileValue(phaseSettings.checkInDay, 'Sunday')}</p>
+      <p><strong>Cardio baseline:</strong> ${formatProfileValue(phaseSettings.cardioBaseline)}</p>
+      <p><strong>Posing frequency:</strong> ${formatProfileValue(phaseSettings.posingFrequency)}</p>
+    </section>
+    <section class="panel profile-section" aria-labelledby="profileGoalsHeading">
+      <h3 id="profileGoalsHeading">Goals / Targets</h3>
+      <p><strong>Macro targets:</strong> ${formatProfileValue(goals.macroTargets)}</p>
+      <p><strong>Steps target:</strong> ${formatProfileValue(goals.stepsTarget)}</p>
+      <p><strong>Cardio target:</strong> ${formatProfileValue(goals.cardioTarget)}</p>
+      <p><strong>Sleep target:</strong> ${formatProfileValue(goals.sleepTarget)}</p>
+    </section>
+    <section class="panel profile-section" aria-labelledby="profileGamificationHeading">
+      <h3 id="profileGamificationHeading">Gamification Summary</h3>
+      <div class="profile-summary-grid">
+        <div><span>Level</span><strong>${formatProfileValue(summary?.level)}</strong></div>
+        <div><span>XP</span><strong>${formatProfileValue(summary?.totalXp)}</strong></div>
+        <div><span>Current Streak</span><strong>${formatProfileValue(summary?.streak)}</strong></div>
+        <div><span>Badges Unlocked</span><strong>${formatProfileValue(Array.isArray(summary?.badges) ? summary.badges.length : summary?.badgeCount)}</strong></div>
+      </div>
+    </section>
+    <section class="panel profile-section" aria-labelledby="profileSettingsShortcutsHeading">
+      <h3 id="profileSettingsShortcutsHeading">App Settings shortcuts</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="secondary" onclick="showTab('settingsTab')">Open Settings</button>
+        <button type="button" class="secondary" onclick="showTab('macroTab')">Open Macro Targets</button>
+        <button type="button" class="secondary" onclick="showTab('checkInTab')">Open Check-In</button>
+      </div>
+    </section>
+  `;
+}
+
 function bindLogoutAction(container = document) {
   const logoutBtn = container.querySelector('#logoutBtn');
   if (!logoutBtn) return;
@@ -453,12 +521,15 @@ function injectSettingsMarkup() {
 function initializeSettingsFeature() {
   injectSettingsMarkup();
   applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
+  renderProfileTab();
 }
 
 document.addEventListener('DOMContentLoaded', initializeSettingsFeature);
+window.addEventListener('traininglog:settings-saved', renderProfileTab);
 
 window.initSettingsPage = injectSettingsMarkup;
 window.saveSettings = saveSettings;
 window.getStoredUserSettings = readStoredSettings;
 window.getDefaultUserSettings = getDefaultSettings;
 window.bindPhaseSetup = bindPhaseSetup;
+window.renderProfileTab = renderProfileTab;
