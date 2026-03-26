@@ -254,10 +254,22 @@ function getProfileSnapshot() {
   return hydrated.profile || {};
 }
 
+function getHydratedSettingsSnapshot() {
+  return hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
+}
+
 function formatProfileValue(value, fallback = '—') {
   if (value === null || value === undefined) return fallback;
   const text = String(value).trim();
   return text ? text : fallback;
+}
+
+function escapeHtmlAttribute(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function renderProfileTab() {
@@ -268,6 +280,8 @@ function renderProfileTab() {
   const athleteInfo = profile.athleteInfo || {};
   const phaseSettings = profile.phaseSettings || {};
   const goals = profile.goals || {};
+  const selectedPhase = phaseSettings.currentPhase || 'improvement';
+  const selectedCheckInDay = phaseSettings.checkInDay || 'Sunday';
   const userId = getActiveUsername() || 'guest';
   const summary = typeof window.getGamificationSummary === 'function'
     ? window.getGamificationSummary(userId)
@@ -276,26 +290,43 @@ function renderProfileTab() {
   container.innerHTML = `
     <section class="panel profile-section" aria-labelledby="profileAthleteInfoHeading">
       <h3 id="profileAthleteInfoHeading">Athlete Info</h3>
-      <p><strong>Name:</strong> ${formatProfileValue(athleteInfo.name)}</p>
-      <p><strong>Current Weight:</strong> ${formatProfileValue(athleteInfo.currentWeight)}</p>
-      <p><strong>Height:</strong> ${formatProfileValue(athleteInfo.height)}</p>
-      <p><strong>Division / Class:</strong> ${formatProfileValue(athleteInfo.divisionClass)}</p>
+      <div class="profile-field-grid">
+        <label>Name<input id="profileTabAthleteName" type="text" value="${escapeHtmlAttribute(formatProfileValue(athleteInfo.name, ''))}" disabled></label>
+        <label>Current Weight<input id="profileTabCurrentWeight" type="number" min="0" step="0.1" value="${escapeHtmlAttribute(formatProfileValue(athleteInfo.currentWeight, ''))}" disabled></label>
+        <label>Height<input id="profileTabHeight" type="text" value="${escapeHtmlAttribute(formatProfileValue(athleteInfo.height, ''))}" disabled></label>
+        <label>Division / Class<input id="profileTabDivision" type="text" value="${escapeHtmlAttribute(formatProfileValue(athleteInfo.divisionClass, ''))}" disabled></label>
+      </div>
     </section>
     <section class="panel profile-section" aria-labelledby="profilePhaseHeading">
       <h3 id="profilePhaseHeading">Phase / Prep Settings</h3>
-      <p><strong>Current phase:</strong> ${formatProfileValue(phaseSettings.currentPhase, 'improvement')}</p>
-      <p><strong>Show date:</strong> ${formatProfileValue(phaseSettings.showDate)}</p>
-      <p><strong>Target stage weight:</strong> ${formatProfileValue(phaseSettings.targetStageWeight)}</p>
-      <p><strong>Check-in day:</strong> ${formatProfileValue(phaseSettings.checkInDay, 'Sunday')}</p>
-      <p><strong>Cardio baseline:</strong> ${formatProfileValue(phaseSettings.cardioBaseline)}</p>
-      <p><strong>Posing frequency:</strong> ${formatProfileValue(phaseSettings.posingFrequency)}</p>
+      <div class="profile-field-grid">
+        <label>Current phase
+          <select id="profileTabCurrentPhase" disabled>
+            <option value="improvement" ${selectedPhase === 'improvement' ? 'selected' : ''}>Improvement Season</option>
+            <option value="mini_cut" ${selectedPhase === 'mini_cut' ? 'selected' : ''}>Mini Cut</option>
+            <option value="contest_prep" ${selectedPhase === 'contest_prep' ? 'selected' : ''}>Contest Prep</option>
+            <option value="post_show" ${selectedPhase === 'post_show' ? 'selected' : ''}>Post-Show</option>
+          </select>
+        </label>
+        <label>Show date<input id="profileTabShowDate" type="date" value="${escapeHtmlAttribute(formatProfileValue(phaseSettings.showDate, ''))}" disabled></label>
+        <label>Target stage weight<input id="profileTabTargetStageWeight" type="number" min="0" step="0.1" value="${escapeHtmlAttribute(formatProfileValue(phaseSettings.targetStageWeight, ''))}" disabled></label>
+        <label>Check-in day
+          <select id="profileTabCheckInDay" disabled>
+            ${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => `<option value="${day}" ${selectedCheckInDay === day ? 'selected' : ''}>${day}</option>`).join('')}
+          </select>
+        </label>
+        <label>Cardio baseline<input id="profileTabCardioBaseline" type="text" value="${escapeHtmlAttribute(formatProfileValue(phaseSettings.cardioBaseline, ''))}" disabled></label>
+        <label>Posing frequency<input id="profileTabPosingFrequency" type="text" value="${escapeHtmlAttribute(formatProfileValue(phaseSettings.posingFrequency, ''))}" disabled></label>
+      </div>
     </section>
     <section class="panel profile-section" aria-labelledby="profileGoalsHeading">
       <h3 id="profileGoalsHeading">Goals / Targets</h3>
-      <p><strong>Macro targets:</strong> ${formatProfileValue(goals.macroTargets)}</p>
-      <p><strong>Steps target:</strong> ${formatProfileValue(goals.stepsTarget)}</p>
-      <p><strong>Cardio target:</strong> ${formatProfileValue(goals.cardioTarget)}</p>
-      <p><strong>Sleep target:</strong> ${formatProfileValue(goals.sleepTarget)}</p>
+      <div class="profile-field-grid">
+        <label>Macro targets<input id="profileTabMacroTargets" type="text" value="${escapeHtmlAttribute(formatProfileValue(goals.macroTargets, ''))}" disabled></label>
+        <label>Steps target<input id="profileTabStepsTarget" type="number" min="0" step="100" value="${escapeHtmlAttribute(formatProfileValue(goals.stepsTarget, ''))}" disabled></label>
+        <label>Cardio target<input id="profileTabCardioTarget" type="text" value="${escapeHtmlAttribute(formatProfileValue(goals.cardioTarget, ''))}" disabled></label>
+        <label>Sleep target<input id="profileTabSleepTarget" type="number" min="0" step="0.5" value="${escapeHtmlAttribute(formatProfileValue(goals.sleepTarget, ''))}" disabled></label>
+      </div>
     </section>
     <section class="panel profile-section" aria-labelledby="profileGamificationHeading">
       <h3 id="profileGamificationHeading">Gamification Summary</h3>
@@ -308,6 +339,11 @@ function renderProfileTab() {
     </section>
     <section class="panel profile-section" aria-labelledby="profileSettingsShortcutsHeading">
       <h3 id="profileSettingsShortcutsHeading">App Settings shortcuts</h3>
+      <div class="profile-edit-actions">
+        <button type="button" id="profileEditButton">Edit Profile Hub</button>
+        <button type="button" id="profileSaveButton" style="display:none;">Save</button>
+        <button type="button" id="profileCancelButton" class="secondary" style="display:none;">Cancel</button>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button type="button" class="secondary" onclick="showTab('settingsTab')">Open Settings</button>
         <button type="button" class="secondary" onclick="showTab('macroTab')">Open Macro Targets</button>
@@ -315,6 +351,74 @@ function renderProfileTab() {
       </div>
     </section>
   `;
+  bindProfileTabEditing(container);
+}
+
+function bindProfileTabEditing(container) {
+  const editButton = container.querySelector('#profileEditButton');
+  const saveButton = container.querySelector('#profileSaveButton');
+  const cancelButton = container.querySelector('#profileCancelButton');
+  if (!editButton || !saveButton || !cancelButton) return;
+
+  const editableFields = Array.from(container.querySelectorAll(
+    '#profileTabAthleteName, #profileTabCurrentWeight, #profileTabHeight, #profileTabDivision, #profileTabCurrentPhase, #profileTabShowDate, #profileTabTargetStageWeight, #profileTabCheckInDay, #profileTabCardioBaseline, #profileTabPosingFrequency, #profileTabMacroTargets, #profileTabStepsTarget, #profileTabCardioTarget, #profileTabSleepTarget'
+  ));
+
+  const setEditingState = (isEditing) => {
+    editableFields.forEach((field) => {
+      field.disabled = !isEditing;
+    });
+    editButton.style.display = isEditing ? 'none' : 'inline-flex';
+    saveButton.style.display = isEditing ? 'inline-flex' : 'none';
+    cancelButton.style.display = isEditing ? 'inline-flex' : 'none';
+  };
+
+  editButton.addEventListener('click', () => setEditingState(true));
+  cancelButton.addEventListener('click', () => renderProfileTab());
+  saveButton.addEventListener('click', () => {
+    const currentSettings = getHydratedSettingsSnapshot();
+    const nextProfile = {
+      athleteInfo: {
+        name: container.querySelector('#profileTabAthleteName')?.value?.trim() || '',
+        currentWeight: toNumberOrNull(container.querySelector('#profileTabCurrentWeight')?.value),
+        height: container.querySelector('#profileTabHeight')?.value?.trim() || '',
+        divisionClass: container.querySelector('#profileTabDivision')?.value?.trim() || ''
+      },
+      phaseSettings: {
+        currentPhase: container.querySelector('#profileTabCurrentPhase')?.value || 'improvement',
+        showDate: container.querySelector('#profileTabShowDate')?.value || null,
+        targetStageWeight: toNumberOrNull(container.querySelector('#profileTabTargetStageWeight')?.value),
+        checkInDay: container.querySelector('#profileTabCheckInDay')?.value || 'Sunday',
+        cardioBaseline: container.querySelector('#profileTabCardioBaseline')?.value?.trim() || '',
+        posingFrequency: container.querySelector('#profileTabPosingFrequency')?.value?.trim() || ''
+      },
+      goals: {
+        macroTargets: container.querySelector('#profileTabMacroTargets')?.value?.trim() || '',
+        stepsTarget: toNumberOrNull(container.querySelector('#profileTabStepsTarget')?.value),
+        cardioTarget: container.querySelector('#profileTabCardioTarget')?.value?.trim() || '',
+        sleepTarget: toNumberOrNull(container.querySelector('#profileTabSleepTarget')?.value)
+      }
+    };
+
+    const mergedSettings = {
+      ...currentSettings,
+      profile: {
+        ...(currentSettings.profile || {}),
+        ...nextProfile
+      }
+    };
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(getSettingsStorageKey(), JSON.stringify(mergedSettings));
+    }
+    syncProfilePhaseSettings(mergedSettings.profile);
+    applySettingsToUI(mergedSettings);
+    renderProfileTab();
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('traininglog:settings-saved', { detail: mergedSettings }));
+    }
+    if (typeof showToast === 'function') showToast('Profile hub saved');
+  });
 }
 
 function bindLogoutAction(container = document) {
