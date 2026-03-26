@@ -2055,22 +2055,10 @@ function showTab(tabName) {
       }
       break;
     case 'logHistoryTab':
-      if (typeof showHistoryMiniTab === 'function') {
-        showHistoryMiniTab('workout');
-      } else {
-        console.warn('[Tabs] showHistoryMiniTab is unavailable.');
-      }
+      renderWorkoutHistoryTab();
       break;
     case 'profileTab':
-      if (typeof window.renderProfileTab === 'function') {
-        window.renderProfileTab();
-      } else {
-        const profileContainer = document.getElementById('profileTabContent');
-        if (profileContainer) {
-          profileContainer.innerHTML = '<p style="opacity:.7;">Profile is still loading. Please try again in a moment.</p>';
-        }
-        console.warn('[Tabs] renderProfileTab is unavailable. Waiting for settings module initialization.');
-      }
+      ensureProfileTabRendered();
       break;
     case 'settingsTab':
       if (typeof initSettingsPage === 'function') {
@@ -2097,9 +2085,58 @@ function showTab(tabName) {
   }
 }
 
+function renderWorkoutHistoryTab() {
+  if (typeof showHistoryMiniTab !== 'function') {
+    console.warn('[Tabs] showHistoryMiniTab is unavailable.');
+    return;
+  }
+  showHistoryMiniTab('workout');
+}
+
+function ensureProfileTabRendered(retries = 8) {
+  if (typeof window.renderProfileTab === 'function') {
+    window.renderProfileTab();
+    return;
+  }
+
+  if (typeof window.initSettingsPage === 'function') {
+    window.initSettingsPage();
+  }
+
+  const profileContainer = document.getElementById('profileTabContent');
+  if (profileContainer) {
+    profileContainer.innerHTML = '<p style="opacity:.7;">Profile is still loading. Please try again in a moment.</p>';
+  }
+
+  if (retries > 0) {
+    setTimeout(() => ensureProfileTabRendered(retries - 1), 75);
+  } else {
+    console.warn('[Tabs] renderProfileTab is unavailable after retries.');
+  }
+}
+
 function bindSideMenuTabLinks() {
   const sideMenu = document.getElementById('sideMenu');
   if (!sideMenu || sideMenu.dataset.tabBindingAttached === 'true') return;
+
+  const activateLinkTarget = (tabName) => {
+    if (!tabName) return;
+    showTab(tabName);
+    sideMenu.classList.remove('open');
+    const appContainer = document.getElementById('appContainer');
+    if (appContainer) appContainer.classList.remove('shifted');
+    const menuToggle = document.getElementById('menuToggle');
+    if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  sideMenu.querySelectorAll('a[data-target]').forEach((link) => {
+    if (link.dataset.tabBindingAttached === 'true') return;
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      activateLinkTarget(link.getAttribute('data-target'));
+    });
+    link.dataset.tabBindingAttached = 'true';
+  });
 
   sideMenu.addEventListener('click', (event) => {
     const link = event.target.closest('a[data-target]');
@@ -2107,14 +2144,7 @@ function bindSideMenuTabLinks() {
     event.preventDefault();
 
     const tabName = link.getAttribute('data-target');
-    if (!tabName) return;
-
-    showTab(tabName);
-    sideMenu.classList.remove('open');
-    const appContainer = document.getElementById('appContainer');
-    if (appContainer) appContainer.classList.remove('shifted');
-    const menuToggle = document.getElementById('menuToggle');
-    if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
+    activateLinkTarget(tabName);
   });
 
   sideMenu.dataset.tabBindingAttached = 'true';
@@ -8162,7 +8192,7 @@ function showHistoryMiniTab(type) {
   }
   Promise.resolve(historyRenderer(workoutContainer)).catch((error) => {
     console.warn('[HistoryMiniTab] Failed to render workout history.', error);
-    renderWorkoutHistoryFallback(workoutContainer);
+    workoutContainer.innerHTML = '<p style="opacity:.7;">Unable to load workout history right now. Please try again.</p>';
   });
 }
 
