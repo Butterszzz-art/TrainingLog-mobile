@@ -3,6 +3,7 @@ const {
   loadCheckIns,
   getNextCheckInDate,
   getWeekLabelForCheckIn,
+  groupCheckInsForTimeline,
   getStorageKey
 } = require('../checkinEngine');
 
@@ -40,6 +41,12 @@ describe('checkinEngine', () => {
     expect(checkIns[0].sidePhoto).toBe('');
     expect(checkIns[0].backPhoto).toBe('');
     expect(checkIns[0].weekLabel).toMatch(/Weeks Out|Peak Week/);
+    expect(checkIns[0].phaseWeekLabel).toBe(checkIns[0].weekLabel);
+    expect(checkIns[0].recoveryRatings).toEqual({
+      energy: 7,
+      sleep: 8,
+      stress: 4
+    });
     expect(global.localStorage.getItem(getStorageKey('athleteA'))).toBeTruthy();
   });
 
@@ -62,5 +69,25 @@ describe('checkinEngine', () => {
     expect(next).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     const parsed = new Date(`${next}T00:00:00Z`);
     expect(parsed.getUTCDay()).toBe(0);
+  });
+
+  test('groupCheckInsForTimeline nests entries by weeks out then phase week', () => {
+    const grouped = groupCheckInsForTimeline([
+      {
+        date: '2026-03-25',
+        weeksOutLabel: '12 Weeks Out',
+        phaseWeekLabel: '12 Weeks Out'
+      },
+      {
+        date: '2026-03-18',
+        weeksOutLabel: '13 Weeks Out',
+        phaseWeekLabel: '13 Weeks Out'
+      }
+    ]);
+
+    expect(grouped).toHaveLength(2);
+    expect(grouped[0].weeksOutLabel).toBe('12 Weeks Out');
+    expect(grouped[0].phaseWeeks[0].phaseWeekLabel).toBe('12 Weeks Out');
+    expect(grouped[0].phaseWeeks[0].entries).toHaveLength(1);
   });
 });

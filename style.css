@@ -1369,6 +1369,31 @@ body.theme-dark .set-row {
   opacity: 0.75;
 }
 
+.checkin-timeline-group {
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.checkin-timeline-group h4 {
+  margin: 0 0 8px;
+}
+
+.checkin-timeline-subgroup {
+  border-left: 3px solid rgba(47, 128, 237, 0.35);
+  padding-left: 10px;
+  margin: 8px 0 12px;
+}
+
+.checkin-timeline-subgroup h5 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.checkin-timeline-subgroup ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
 @media (max-width: 640px) {
   .checkin-form-section {
     padding: 12px;

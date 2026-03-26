@@ -57,20 +57,39 @@
 
   function normalizeCheckIn(checkIn, phaseState = {}) {
     const safe = checkIn && typeof checkIn === 'object' ? checkIn : {};
+    const normalizedDate = toIsoDate(safe.date);
+    const normalizedPhase = typeof safe.phase === 'string' && safe.phase.trim()
+      ? safe.phase.trim()
+      : (phaseState.mode || 'improvement');
+    const phaseWeekLabel = typeof safe.phaseWeekLabel === 'string' && safe.phaseWeekLabel.trim()
+      ? safe.phaseWeekLabel.trim()
+      : getWeekLabelForCheckIn({ ...safe, date: normalizedDate, phase: normalizedPhase }, phaseState);
+    const weeksOutLabel = typeof safe.weeksOutLabel === 'string' && safe.weeksOutLabel.trim()
+      ? safe.weeksOutLabel.trim()
+      : (getWeeksOutLabel(normalizedDate, phaseState.showDate) || phaseWeekLabel);
+
+    const energy = safe.energy ?? safe.recoveryRatings?.energy ?? '';
+    const sleep = safe.sleep ?? safe.recoveryRatings?.sleep ?? '';
+    const stress = safe.stress ?? safe.recoveryRatings?.stress ?? '';
     return {
-      date: toIsoDate(safe.date),
-      phase: typeof safe.phase === 'string' && safe.phase.trim()
-        ? safe.phase.trim()
-        : (phaseState.mode || 'improvement'),
+      date: normalizedDate,
+      phase: normalizedPhase,
       weekLabel: typeof safe.weekLabel === 'string' && safe.weekLabel.trim()
         ? safe.weekLabel.trim()
-        : getWeekLabelForCheckIn({ ...safe, date: toIsoDate(safe.date) }, phaseState),
+        : phaseWeekLabel,
+      phaseWeekLabel,
+      weeksOutLabel,
       bodyweight: safe.bodyweight ?? '',
       waist: safe.waist ?? '',
-      energy: safe.energy ?? '',
+      energy,
       hunger: safe.hunger ?? '',
-      sleep: safe.sleep ?? '',
-      stress: safe.stress ?? '',
+      sleep,
+      stress,
+      recoveryRatings: {
+        energy,
+        sleep,
+        stress
+      },
       digestion: safe.digestion ?? '',
       trainingPerformance: safe.trainingPerformance ?? '',
       notes: typeof safe.notes === 'string' ? safe.notes : '',
@@ -170,6 +189,27 @@
     return loadCheckIns(userId);
   }
 
+  function groupCheckInsForTimeline(checkIns) {
+    const source = Array.isArray(checkIns) ? checkIns : [];
+    const groups = new Map();
+    source.forEach((entry) => {
+      const weeksOut = entry.weeksOutLabel || 'General Timeline';
+      const phaseWeek = entry.phaseWeekLabel || entry.weekLabel || 'Unlabeled Phase Week';
+      if (!groups.has(weeksOut)) groups.set(weeksOut, new Map());
+      const phaseMap = groups.get(weeksOut);
+      if (!phaseMap.has(phaseWeek)) phaseMap.set(phaseWeek, []);
+      phaseMap.get(phaseWeek).push(entry);
+    });
+
+    return Array.from(groups.entries()).map(([weeksOutLabel, phaseWeeks]) => ({
+      weeksOutLabel,
+      phaseWeeks: Array.from(phaseWeeks.entries()).map(([phaseWeekLabel, entries]) => ({
+        phaseWeekLabel,
+        entries
+      }))
+    }));
+  }
+
   function saveCheckIn(userId, checkIn, phaseState = {}) {
     const storage = getStorage();
     const existing = loadCheckIns(userId);
@@ -213,6 +253,7 @@
     syncCheckInStateToBackend,
     getNextCheckInDate,
     getWeekLabelForCheckIn,
+    groupCheckInsForTimeline,
     getStorageKey
   };
 
