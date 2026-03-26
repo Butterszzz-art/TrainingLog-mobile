@@ -1360,6 +1360,46 @@ body.theme-dark .set-row {
   font-size: 1.1rem;
 }
 
+.season-archive-empty {
+  margin: 0;
+  color: #666;
+}
+
+.season-archive-summary {
+  margin: 0 0 10px;
+  color: #4d5875;
+}
+
+.season-archive-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.season-archive-item {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.season-archive-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.season-archive-meta {
+  font-size: 0.85rem;
+  color: #5e6a89;
+}
+
+.season-archive-compare {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
 @media (min-width: 720px) {
   .profile-field-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -229,6 +229,104 @@
     }));
   }
 
+  function toUtcStart(dateValue) {
+    const parsed = toDate(dateValue);
+    if (!parsed) return null;
+    return Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+  }
+
+  function isoFromUtcMs(utcMs) {
+    if (!Number.isFinite(utcMs)) return null;
+    return new Date(utcMs).toISOString().slice(0, 10);
+  }
+
+  function addDaysToIsoDate(isoDate, days) {
+    const utc = toUtcStart(isoDate);
+    if (!Number.isFinite(utc)) return null;
+    return isoFromUtcMs(utc + (days * 86400000));
+  }
+
+  function buildSeasonMilestones(phaseState = {}) {
+    const showDate = phaseState.showDate ? toIsoDate(phaseState.showDate) : null;
+    const prepStartDate = phaseState.prepStartDate || phaseState.startDate || null;
+    const prepStart = prepStartDate ? toIsoDate(prepStartDate) : null;
+    const entries = [
+      { key: 'prep_start', label: 'Prep Start', date: prepStart, phase: 'contest_prep' },
+      { key: 'weeks_out_16', label: '16 Weeks Out', date: addDaysToIsoDate(showDate, -112), phase: 'contest_prep' },
+      { key: 'weeks_out_12', label: '12 Weeks Out', date: addDaysToIsoDate(showDate, -84), phase: 'contest_prep' },
+      { key: 'weeks_out_8', label: '8 Weeks Out', date: addDaysToIsoDate(showDate, -56), phase: 'contest_prep' },
+      { key: 'peak_week', label: 'Peak Week', date: addDaysToIsoDate(showDate, -7), phase: 'peak_week' },
+      { key: 'show_day', label: 'Show Day', date: showDate, phase: 'show_day' },
+      { key: 'post_show_week_1', label: 'Post-Show Week 1', date: addDaysToIsoDate(showDate, 7), phase: 'post_show' }
+    ];
+
+    return entries
+      .filter((entry) => Boolean(entry.date))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function findClosestCheckInForMilestone(milestone, checkIns, maxDaysDelta = 7) {
+    if (!milestone?.date || !Array.isArray(checkIns) || !checkIns.length) return null;
+    const milestoneUtc = toUtcStart(milestone.date);
+    if (!Number.isFinite(milestoneUtc)) return null;
+    let winner = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    checkIns.forEach((entry) => {
+      const entryUtc = toUtcStart(entry?.date);
+      if (!Number.isFinite(entryUtc)) return;
+      const dayDistance = Math.abs(Math.round((entryUtc - milestoneUtc) / 86400000));
+      if (dayDistance < bestDistance) {
+        bestDistance = dayDistance;
+        winner = entry;
+      }
+    });
+
+    if (bestDistance > maxDaysDelta) return null;
+    return winner;
+  }
+
+  function getPhotoProgressHooks(checkIn = {}, milestoneKey = 'general') {
+    return [
+      { id: `${milestoneKey}_front`, view: 'front', value: checkIn.frontPhoto || '', hasPhoto: Boolean(checkIn.frontPhoto) },
+      { id: `${milestoneKey}_side`, view: 'side', value: checkIn.sidePhoto || '', hasPhoto: Boolean(checkIn.sidePhoto) },
+      { id: `${milestoneKey}_back`, view: 'back', value: checkIn.backPhoto || '', hasPhoto: Boolean(checkIn.backPhoto) }
+    ];
+  }
+
+  function getComparisonPlaceholders() {
+    return [
+      { id: 'prep_start_vs_show_day', label: 'Prep Start vs Show Day', status: 'placeholder' },
+      { id: 'weeks_out_16_vs_weeks_out_8', label: '16 Weeks Out vs 8 Weeks Out', status: 'placeholder' },
+      { id: 'peak_week_vs_post_show_week_1', label: 'Peak Week vs Post-Show Week 1', status: 'placeholder' }
+    ];
+  }
+
+  function buildSeasonArchive(phaseState = {}, checkIns = []) {
+    const normalizedCheckIns = Array.isArray(checkIns)
+      ? checkIns.map((entry) => normalizeCheckIn(entry, phaseState)).sort((a, b) => a.date.localeCompare(b.date))
+      : [];
+    const milestones = buildSeasonMilestones(phaseState);
+
+    const timeline = milestones.map((milestone) => {
+      const linkedCheckIn = findClosestCheckInForMilestone(milestone, normalizedCheckIns);
+      return {
+        ...milestone,
+        linkedCheckInDate: linkedCheckIn?.date || null,
+        linkedCheckInWeekLabel: linkedCheckIn?.weekLabel || linkedCheckIn?.phaseWeekLabel || null,
+        hasLinkedCheckIn: Boolean(linkedCheckIn),
+        photoHooks: getPhotoProgressHooks(linkedCheckIn || {}, milestone.key)
+      };
+    });
+
+    return {
+      timeline,
+      comparisons: getComparisonPlaceholders(),
+      hasAnyLinkedCheckIn: timeline.some((entry) => entry.hasLinkedCheckIn),
+      totalMilestones: timeline.length
+    };
+  }
+
   function toFiniteNumber(value) {
     if (value === null || value === undefined || value === '') return null;
     const numeric = Number(value);
@@ -446,6 +544,10 @@
     getNextCheckInDate,
     getWeekLabelForCheckIn,
     groupCheckInsForTimeline,
+    buildSeasonMilestones,
+    getPhotoProgressHooks,
+    getComparisonPlaceholders,
+    buildSeasonArchive,
     getCheckInInsights,
     getCheckInInsightTimeline,
     getStorageKey
