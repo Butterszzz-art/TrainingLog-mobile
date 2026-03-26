@@ -6103,7 +6103,10 @@ function getTimelineHeaderLabel(profile, username, referenceDate) {
 
   if (mode === 'post_show') return window.prepModeApi?.getPostShowLabel?.(payload) || 'Post-Show Week 1';
   if (mode === 'contest_prep' || mode === 'peak_week' || mode === 'show_day') {
-    return window.prepModeApi?.getPrepWeekLabel?.(payload) || 'Prep Week 1';
+    return window.prepModeApi?.getPrepWeekLabel?.(payload) || 'Contest Prep Week 1';
+  }
+  if (mode === 'mini_cut') {
+    return window.prepModeApi?.getImprovementSeasonLabel?.(payload) || 'Mini Cut Week 1';
   }
   return window.prepModeApi?.getImprovementSeasonLabel?.(payload) || 'Improvement Season Week 1';
 }
@@ -6160,10 +6163,11 @@ function renderStatusSummary(profile, username) {
   const weekly = `${snapshot.weekly.averagePercent}%`;
   const streak = getSafeDisplayValue(profile.currentStreak, '0 days');
   const onTrack = formatComplianceStatus(snapshot.dailyStatus);
+  const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
 
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Status Summary</h3>
+      <h3 class="home-card-title">Status Summary · ${timelineLabel}</h3>
       <div class="home-stat-grid">
         <div class="home-stat-chip"><p class="home-stat-label">Today</p><p class="home-stat-value">${daily}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">This Week</p><p class="home-stat-value">${weekly}</p></div>
@@ -6246,10 +6250,11 @@ window.onRecoveryLogged = onRecoveryLogged;
 
 function renderTodaysMission(profile, username) {
   const state = getTodayMissionState(profile, username);
+  const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
   if (!state || !window.dailyMissionEngine) {
     return `
       <section class="home-dashboard-card">
-        <h3 class="home-card-title">Today’s Mission</h3>
+        <h3 class="home-card-title">Today’s Mission · ${timelineLabel}</h3>
         <p class="home-mission-progress">Mission engine unavailable.</p>
       </section>
     `;
@@ -6260,7 +6265,7 @@ function renderTodaysMission(profile, username) {
 
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Today’s Mission</h3>
+      <h3 class="home-card-title">Today’s Mission · ${timelineLabel}</h3>
       <p class="home-mission-progress">${compliance.completed}/${compliance.total} complete (${compliance.percent}%)</p>
       <ul class="home-mission-list">${items}</ul>
     </section>
@@ -6304,7 +6309,8 @@ function renderUpcomingPrepEvents(profile, username) {
   const checkIn = getSafeDisplayValue(getNextScheduledCheckIn(profile, username), 'Not scheduled');
   const refeed = getSafeDisplayValue(profile.nextRefeed, 'TBD');
   const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'TBD');
-  const countdown = formatCountdownDays(profile.showDate);
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  const countdown = formatCountdownDays(phaseState.showDate || profile.showDate);
   const timelineHeader = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
 
   return `
