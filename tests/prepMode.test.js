@@ -60,17 +60,23 @@ describe('prepMode', () => {
     expect(getDaysUntilShow(tomorrow)).toBe(1);
     expect(getWeeksOut(tomorrow)).toBe(1);
 
-    const label = getCurrentPhaseLabel({ mode: 'improvement', showDate: tomorrow });
+    const label = getCurrentPhaseLabel({ mode: 'contest_prep', showDate: tomorrow });
     expect(label).toBe('Peak Week');
+
+    const improvementLabel = getCurrentPhaseLabel({ mode: 'improvement', showDate: tomorrow });
+    expect(improvementLabel).toBe('Improvement Season');
 
     const context = getPhaseContext({ mode: 'contest_prep', showDate: tomorrow, checkInDay: 'Friday' });
     expect(context.isPeakWeek).toBe(true);
+    expect(context.mode).toBe('peak_week');
+    expect(context.configuredMode).toBe('contest_prep');
     expect(context.checkInDay).toBe('Friday');
   });
 
   test('timeline labels support prep, post-show, and improvement season states', () => {
+    const today = new Date().toISOString().slice(0, 10);
     expect(getPrepWeekLabel({ showDate: '2026-06-17', referenceDate: '2026-03-25' })).toBe('12 Weeks Out');
-    expect(getPrepWeekLabel({ showDate: '2026-03-25', referenceDate: '2026-03-25' })).toBe('Show Day');
+    expect(getPrepWeekLabel({ showDate: today, referenceDate: today })).toBe('Show Day');
     expect(getPostShowLabel({ showDate: '2026-03-01', referenceDate: '2026-03-10' })).toBe('Post-Show Week 2');
     expect(getImprovementSeasonLabel({ startDate: '2026-02-18', referenceDate: '2026-03-25' })).toBe('Improvement Season Week 6');
     expect(getPrepWeekLabel({ showDate: null, startDate: '2026-03-18', referenceDate: '2026-03-25' })).toBe('Prep Week 2');
