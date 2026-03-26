@@ -2057,11 +2057,19 @@ function showTab(tabName) {
     case 'logHistoryTab':
       if (typeof showHistoryMiniTab === 'function') {
         showHistoryMiniTab('workout');
+      } else {
+        console.warn('[Tabs] showHistoryMiniTab is unavailable.');
       }
       break;
     case 'profileTab':
       if (typeof window.renderProfileTab === 'function') {
         window.renderProfileTab();
+      } else {
+        const profileContainer = document.getElementById('profileTabContent');
+        if (profileContainer) {
+          profileContainer.innerHTML = '<p style="opacity:.7;">Profile is still loading. Please try again in a moment.</p>';
+        }
+        console.warn('[Tabs] renderProfileTab is unavailable. Waiting for settings module initialization.');
       }
       break;
     case 'settingsTab':
@@ -2088,6 +2096,31 @@ function showTab(tabName) {
       break;
   }
 }
+
+function bindSideMenuTabLinks() {
+  const sideMenu = document.getElementById('sideMenu');
+  if (!sideMenu || sideMenu.dataset.tabBindingAttached === 'true') return;
+
+  sideMenu.addEventListener('click', (event) => {
+    const link = event.target.closest('a[data-target]');
+    if (!link || !sideMenu.contains(link)) return;
+    event.preventDefault();
+
+    const tabName = link.getAttribute('data-target');
+    if (!tabName) return;
+
+    showTab(tabName);
+    sideMenu.classList.remove('open');
+    const appContainer = document.getElementById('appContainer');
+    if (appContainer) appContainer.classList.remove('shifted');
+    const menuToggle = document.getElementById('menuToggle');
+    if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
+  });
+
+  sideMenu.dataset.tabBindingAttached = 'true';
+}
+
+bindSideMenuTabLinks();
 
 
   
@@ -2184,6 +2217,11 @@ window.toggleWorkoutDetails = toggleWorkoutDetails;
   
 // Expose showTab globally for sidebar navigation
 window.showTab = showTab;
+window.addEventListener('traininglog:settings-ready', () => {
+  const activeProfileTab = document.querySelector('#profileTab.tab-content.active');
+  if (!activeProfileTab || typeof window.renderProfileTab !== 'function') return;
+  window.renderProfileTab();
+});
 
 
   
@@ -8116,18 +8154,16 @@ function showHistoryMiniTab(type) {
   }
 
   if (!workoutContainer) return;
-  if (typeof syncLocalHistoryFromWorkouts === 'function') {
-    syncLocalHistoryFromWorkouts();
-  }
-  const historyRenderer = window.historyApi?.renderWorkoutHistory || window.renderWorkoutHistory;
-  if (typeof historyRenderer === 'function') {
-    Promise.resolve(historyRenderer(workoutContainer)).catch((error) => {
-      console.warn('[HistoryMiniTab] Failed to render via historyApi, using local fallback.', error);
-      renderWorkoutHistoryFallback(workoutContainer);
-    });
+  const historyRenderer = window.historyApi?.renderWorkoutHistory;
+  if (typeof historyRenderer !== 'function') {
+    workoutContainer.innerHTML = '<p style="opacity:.7;">History module is still loading. Please try again.</p>';
+    console.warn('[HistoryMiniTab] historyApi.renderWorkoutHistory is unavailable.');
     return;
   }
-  renderWorkoutHistoryFallback(workoutContainer);
+  Promise.resolve(historyRenderer(workoutContainer)).catch((error) => {
+    console.warn('[HistoryMiniTab] Failed to render workout history.', error);
+    renderWorkoutHistoryFallback(workoutContainer);
+  });
 }
 
   
@@ -8570,14 +8606,7 @@ async function fetchDailyLogs(username) {
     }
   });
 
-  sideMenu.querySelectorAll("a[data-target]").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const tabName = link.getAttribute("data-target");
-      showTab(tabName);
-      toggleSidebar(false);
-    });
-  });
+  bindSideMenuTabLinks();
 
   // Show the first tab initially
   initTrainingCalendar();
