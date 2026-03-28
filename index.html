@@ -473,6 +473,53 @@
       padding: 12px;
       background: rgba(47, 128, 237, 0.04);
     }
+    .coach-client-actions {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .coach-client-detail {
+      display: grid;
+      gap: 12px;
+    }
+    .coach-client-detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .coach-client-detail-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .coach-client-detail-card {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px;
+      background: rgba(47, 128, 237, 0.05);
+    }
+    .coach-client-detail-card h4 {
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--secondary-text);
+    }
+    .coach-client-detail-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      font-size: 0.92rem;
+    }
+    .coach-client-detail-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
     @media (min-width: 800px) {
       .coach-roster-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7153,6 +7200,13 @@ function formatCoachDate(dateLike) {
   return parsed.toISOString().slice(0, 10);
 }
 
+const coachDashboardState = {
+  clients: [],
+  source: 'demo',
+  selectedClientId: null,
+  isBound: false
+};
+
 function getCoachDemoClients() {
   return [
     {
@@ -7163,7 +7217,13 @@ function getCoachDemoClients() {
       lastCheckInDate: '2026-03-25',
       compliancePercent: 91,
       primaryStatusMetric: 'Bodyweight trend stable',
-      alertStatus: 'ok'
+      alertStatus: 'ok',
+      athleteInfo: { height: `5'5"`, divisionClass: 'Bikini' },
+      currentBodyweight: 131.8,
+      latestCheckInSummary: 'Great energy and stable waist. Coach held macros steady.',
+      recentProgressSummary: 'Down 0.6 lb over 7 days with improved conditioning photos.',
+      currentProgramSummary: '5-day body-part split with daily posing and 4 cardio sessions.',
+      currentNutritionSummary: '1,980 kcal · 155P / 210C / 58F'
     },
     {
       id: 'demo-a2',
@@ -7173,7 +7233,13 @@ function getCoachDemoClients() {
       lastCheckInDate: '2026-03-23',
       compliancePercent: 76,
       primaryStatusMetric: 'Bench fatigue elevated',
-      alertStatus: 'watch'
+      alertStatus: 'watch',
+      athleteInfo: { height: `5'10"`, divisionClass: '83kg Class' },
+      currentBodyweight: 82.3,
+      latestCheckInSummary: 'Sleep dipped to 5/10; plan adjusted with lower accessory volume.',
+      recentProgressSummary: 'Squat e1RM trending up; bench flat over 2 weeks.',
+      currentProgramSummary: '4-day SBD peak with top singles + backoff triples.',
+      currentNutritionSummary: '3,120 kcal · 210P / 365C / 88F'
     },
     {
       id: 'demo-a3',
@@ -7183,7 +7249,13 @@ function getCoachDemoClients() {
       lastCheckInDate: '2026-03-20',
       compliancePercent: 58,
       primaryStatusMetric: 'Missed 2 cardio targets',
-      alertStatus: 'alert'
+      alertStatus: 'alert',
+      athleteInfo: { height: `6'0"`, divisionClass: 'General Fitness' },
+      currentBodyweight: 188.4,
+      latestCheckInSummary: 'Reported work stress spike and reduced training consistency.',
+      recentProgressSummary: 'Bodyweight stable, but conditioning pace has regressed.',
+      currentProgramSummary: '3 lifting + 3 conditioning sessions weekly.',
+      currentNutritionSummary: '2,640 kcal target with flexible carb cycling'
     }
   ];
 }
@@ -7198,7 +7270,14 @@ function normalizeCoachClientRecord(client = {}) {
     lastCheckInDate: client.lastCheckInDate || client.lastCheckIn || client.lastCheckinDate || '',
     compliancePercent: Number.isFinite(pct) ? Math.max(0, Math.min(100, Math.round(pct))) : 0,
     primaryStatusMetric: client.primaryStatusMetric || client.statusMetric || client.primaryMetric || 'Awaiting status metric',
-    alertStatus: String(client.alertStatus || client.alert || 'watch').toLowerCase()
+    alertStatus: String(client.alertStatus || client.alert || 'watch').toLowerCase(),
+    athleteInfo: client.athleteInfo || {},
+    currentBodyweight: client.currentBodyweight ?? client.bodyweight ?? client.athleteInfo?.currentWeight ?? null,
+    latestCheckInSummary: client.latestCheckInSummary || client.latestCheckInInsight || '',
+    recentProgressSummary: client.recentProgressSummary || client.progressSummary || '',
+    currentProgramSummary: client.currentProgramSummary || client.programSummary || '',
+    currentNutritionSummary: client.currentNutritionSummary || client.nutritionSummary || '',
+    latestCheckIn: client.latestCheckInEntry || client.latestCheckInData || null
   };
 }
 
@@ -7268,7 +7347,119 @@ function renderCoachClientCard(client) {
           <p class="coach-client-kpi-value">${escapeCoachText(safeClient.primaryStatusMetric)}</p>
         </li>
       </ul>
+      <div class="coach-client-actions">
+        <button type="button" data-coach-open-detail="${escapeCoachText(safeClient.id)}">Open Client</button>
+      </div>
     </article>
+  `;
+}
+
+function getLocalCoachClientData(client) {
+  const activeUserId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!activeUserId || activeUserId !== client.id) return {};
+  const profile = getUserProfile(activeUserId) || {};
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(activeUserId) || {};
+  const checkIns = window.checkinEngine?.loadCheckIns?.(activeUserId) || [];
+  const latestCheckIn = Array.isArray(checkIns) && checkIns.length ? checkIns[0] : null;
+  const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${activeUserId}`) || '[]');
+  const latestBodyweight = Array.isArray(bodyweightLog) && bodyweightLog.length
+    ? (bodyweightLog[bodyweightLog.length - 1]?.weight ?? bodyweightLog[bodyweightLog.length - 1]?.weightKg ?? null)
+    : null;
+  const macroTargets = JSON.parse(localStorage.getItem(`macroTargets_${activeUserId}`) || 'null');
+  const programs = JSON.parse(localStorage.getItem(`programs_${activeUserId}`) || localStorage.getItem('programs') || '[]');
+  const activeProgram = JSON.parse(localStorage.getItem(`activeProgram_${activeUserId}`) || 'null');
+  const activeProgramName = activeProgram?.programName
+    || programs.find((p) => p?.id && p.id === activeProgram?.programId)?.name;
+
+  return {
+    profile,
+    phaseState,
+    latestCheckIn,
+    latestBodyweight,
+    macroTargets,
+    activeProgramName
+  };
+}
+
+function renderCoachClientDetailRow(label, value, fallback = 'Not available yet') {
+  return `<li><span>${escapeCoachText(label)}</span><strong>${escapeCoachText(value, fallback)}</strong></li>`;
+}
+
+function renderCoachClientDetail(client) {
+  const safeClient = normalizeCoachClientRecord(client);
+  const localData = getLocalCoachClientData(safeClient);
+  const phaseState = localData.phaseState || {};
+  const profile = localData.profile || {};
+  const latestCheckIn = safeClient.latestCheckIn || localData.latestCheckIn || null;
+  const snapshot = getComplianceSnapshot(profile, safeClient.id, normalizeArchetype(safeClient.archetype));
+  const complianceSummary = [
+    `Daily ${snapshot.dailyPercent ?? safeClient.compliancePercent}% (${formatComplianceStatus(snapshot.dailyStatus)})`,
+    `Weekly ${snapshot.weekly?.averagePercent ?? safeClient.compliancePercent}% (${formatComplianceStatus(snapshot.weekly?.status)})`,
+    `Rolling ${snapshot.rolling7?.percent ?? safeClient.compliancePercent}% (${formatComplianceStatus(snapshot.rolling7?.status)})`
+  ].join(' · ');
+  const nutritionTargets = localData.macroTargets
+    ? `${localData.macroTargets.calories || 0} kcal · ${localData.macroTargets.protein || 0}P / ${localData.macroTargets.carbs || 0}C / ${localData.macroTargets.fat || 0}F`
+    : '';
+  const bodyweightValue = safeClient.currentBodyweight
+    ?? latestCheckIn?.bodyweight
+    ?? localData.latestBodyweight
+    ?? phaseState?.athleteInfo?.currentWeight
+    ?? profile?.athleteInfo?.currentWeight;
+
+  return `
+    <section class="coach-client-detail">
+      <section class="coach-dashboard-header">
+        <div class="coach-client-detail-header">
+          <div>
+            <h3 class="coach-dashboard-title">${escapeCoachText(safeClient.name)}</h3>
+            <p class="coach-dashboard-subtitle">Client detail overview · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
+          </div>
+          <button type="button" data-coach-back>← Back to roster</button>
+        </div>
+      </section>
+      <section class="coach-client-detail-grid">
+        <article class="coach-client-detail-card">
+          <h4>Athlete Info</h4>
+          <ul class="coach-client-detail-list">
+            ${renderCoachClientDetailRow('Athlete', safeClient.name)}
+            ${renderCoachClientDetailRow('Archetype', safeClient.archetype)}
+            ${renderCoachClientDetailRow('Phase', safeClient.currentPhase)}
+            ${renderCoachClientDetailRow('Current Bodyweight', bodyweightValue ? `${bodyweightValue}` : '')}
+            ${renderCoachClientDetailRow('Division / Class', safeClient.athleteInfo?.divisionClass || profile?.athleteInfo?.divisionClass)}
+            ${renderCoachClientDetailRow('Height', safeClient.athleteInfo?.height || profile?.athleteInfo?.height)}
+          </ul>
+        </article>
+        <article class="coach-client-detail-card">
+          <h4>Compliance Summary</h4>
+          <p class="coach-dashboard-subtitle">${escapeCoachText(complianceSummary, 'Compliance data not available yet')}</p>
+          <ul class="coach-client-detail-list">
+            ${renderCoachClientDetailRow('Primary Status', safeClient.primaryStatusMetric)}
+            ${renderCoachClientDetailRow('Last Check-In', formatCoachDate(safeClient.lastCheckInDate))}
+          </ul>
+        </article>
+        <article class="coach-client-detail-card">
+          <h4>Latest Check-In Summary</h4>
+          <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.latestCheckInSummary || latestCheckIn?.insights?.summaryShort, 'No check-in summary yet')}</p>
+          <ul class="coach-client-detail-list">
+            ${renderCoachClientDetailRow('Date', latestCheckIn?.date || safeClient.lastCheckInDate, 'No check-in logged')}
+            ${renderCoachClientDetailRow('Recovery (E/S/St)', latestCheckIn ? `${latestCheckIn.energy || '—'}/${latestCheckIn.sleep || '—'}/${latestCheckIn.stress || '—'}` : '')}
+            ${renderCoachClientDetailRow('Coach Review', latestCheckIn?.review?.status || '', 'Pending coach review')}
+          </ul>
+        </article>
+        <article class="coach-client-detail-card">
+          <h4>Recent Progress Summary</h4>
+          <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.recentProgressSummary, 'No recent progress data yet')}</p>
+        </article>
+        <article class="coach-client-detail-card">
+          <h4>Current Program Summary</h4>
+          <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentProgramSummary || localData.activeProgramName, 'No active program assigned yet')}</p>
+        </article>
+        <article class="coach-client-detail-card">
+          <h4>Current Nutrition Summary</h4>
+          <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentNutritionSummary || nutritionTargets, 'No nutrition targets set yet')}</p>
+        </article>
+      </section>
+    </section>
   `;
 }
 
@@ -7280,30 +7471,67 @@ function renderCoachClientRoster(clients = []) {
   return `<section class="coach-roster-grid" aria-label="Coach client roster">${cards}</section>`;
 }
 
-async function renderCoachDashboard() {
+function ensureCoachDashboardInteractions() {
+  if (coachDashboardState.isBound) return;
   const container = document.getElementById('coachDashboardContent');
   if (!container) return;
-  container.innerHTML = '<p class="coach-no-clients">Loading coach roster…</p>';
+  container.addEventListener('click', (event) => {
+    const openBtn = event.target.closest('[data-coach-open-detail]');
+    if (openBtn) {
+      coachDashboardState.selectedClientId = openBtn.getAttribute('data-coach-open-detail');
+      renderCoachDashboardView();
+      return;
+    }
+    const backBtn = event.target.closest('[data-coach-back]');
+    if (backBtn) {
+      coachDashboardState.selectedClientId = null;
+      renderCoachDashboardView();
+    }
+  });
+  coachDashboardState.isBound = true;
+}
 
-  const { clients, source } = await loadCoachClients();
+function renderCoachDashboardView() {
+  const container = document.getElementById('coachDashboardContent');
+  if (!container) return;
+  const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
+  const selectedClient = clients.find((client) => normalizeCoachClientRecord(client).id === coachDashboardState.selectedClientId);
   const avgCompliance = clients.length
     ? Math.round(clients.reduce((sum, client) => sum + (Number(client.compliancePercent) || 0), 0) / clients.length)
     : 0;
   const flaggedCount = clients.filter((client) => getCoachAlertMeta(client.alertStatus).className === 'is-alert').length;
-  const dataSourceLabel = source === 'backend' ? 'Backend relationship data' : 'Local demo fallback';
+  const dataSourceLabel = coachDashboardState.source === 'backend' ? 'Backend relationship data' : 'Local demo fallback';
 
-  container.innerHTML = `
-    <section class="coach-dashboard-header">
-      <h3 class="coach-dashboard-title">Client Roster Overview</h3>
-      <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action</p>
-    </section>
-    ${renderCoachClientRoster(clients)}
-  `;
+  container.innerHTML = selectedClient
+    ? renderCoachClientDetail(selectedClient)
+    : `
+      <section class="coach-dashboard-header">
+        <h3 class="coach-dashboard-title">Client Roster Overview</h3>
+        <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action</p>
+      </section>
+      ${renderCoachClientRoster(clients)}
+    `;
+}
+
+async function renderCoachDashboard() {
+  const container = document.getElementById('coachDashboardContent');
+  if (!container) return;
+  container.innerHTML = '<p class="coach-no-clients">Loading coach roster…</p>';
+  ensureCoachDashboardInteractions();
+
+  const { clients, source } = await loadCoachClients();
+  coachDashboardState.clients = clients.map(normalizeCoachClientRecord);
+  coachDashboardState.source = source;
+  if (!coachDashboardState.clients.some((client) => client.id === coachDashboardState.selectedClientId)) {
+    coachDashboardState.selectedClientId = null;
+  }
+  renderCoachDashboardView();
 }
 
 window.renderCoachDashboard = renderCoachDashboard;
 window.renderCoachClientRoster = renderCoachClientRoster;
 window.renderCoachClientCard = renderCoachClientCard;
+window.renderCoachClientDetail = renderCoachClientDetail;
 
 const CHECKIN_ARCHETYPE_SCHEMAS = Object.freeze({
   bodybuilder: {
