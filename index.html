@@ -781,7 +781,7 @@
 
       <li class="menu-section-label">History & Coaching</li>
       <li><a href="#" data-target="logHistoryTab">📜 Log History</a></li>
-      <li class="coach-only"><a href="#" data-target="coachingTab">🏆 Coaching</a></li>
+      <li class="coach-only"><a href="#" data-target="coachingTab">🧭 Coach Dashboard</a></li>
 
       <li class="menu-section-label">App</li>
       <li><a href="#" data-target="settingsTab">⚙️ Settings</a></li>
@@ -1502,6 +1502,18 @@
 
 <div id="coachingTab" class="tab-content coach-only">
   <h2>Coach Dashboard</h2>
+  <p style="opacity:0.85;">
+    Coach Mode foundation is active. This is the shell for future coach workflows while athlete tools remain unchanged.
+  </p>
+  <section>
+    <h3>Coach Routes (Scaffold)</h3>
+    <ul>
+      <li><strong>/coach/dashboard</strong> → Overview shell (current tab)</li>
+      <li><strong>/coach/clients</strong> → Planned roster + client details</li>
+      <li><strong>/coach/programs</strong> → Planned assignment workflows</li>
+      <li><strong>/coach/check-ins</strong> → Planned review queue</li>
+    </ul>
+  </section>
   <section>
     <h3>1. Client & Roster Management</h3>
     <ul>
@@ -1574,12 +1586,21 @@
     <div id="smartGoalFeedback" style="font-size:0.95rem;"></div>
   </section>
 
-  <section class="panel" aria-labelledby="trainerModeHeading">
-    <h3 id="trainerModeHeading">Trainer Mode</h3>
+  <section class="panel" aria-labelledby="appModeHeading">
+    <h3 id="appModeHeading">App Mode</h3>
+    <label for="appModeSelect">Account mode</label>
+    <select id="appModeSelect">
+      <option value="athlete">Athlete only</option>
+      <option value="coach">Coach only</option>
+      <option value="both">Athlete + Coach</option>
+    </select>
     <label>
-      <input type="checkbox" id="trainerModeToggle" />
-      Enable Trainer Mode
+      <input type="checkbox" id="coachModeToggle" />
+      Enable Coach Mode
     </label>
+    <p style="margin:8px 0 0;opacity:0.8;font-size:0.9rem;">
+      Athlete experience remains the default unless Coach Mode is enabled.
+    </p>
   </section>
 
   <section class="panel" aria-labelledby="autoIncrementHeading" style="margin-top:20px;">
@@ -2071,6 +2092,9 @@ if (savedUser) {
 }
   
 function showTab(tabName) {
+  if (tabName === 'coachingTab' && !isCoachModeEnabled()) {
+    tabName = 'homeTab';
+  }
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   const tab = document.getElementById(tabName);
   if (!tab) {
@@ -2177,9 +2201,14 @@ function showTab(tabName) {
         const weightUnitSelect = document.getElementById('weightUnit');
         if (weightUnitSelect) weightUnitSelect.value = savedUnit;
       }
-      const trainerToggle = document.getElementById('trainerModeToggle');
-      if (trainerToggle) {
-        trainerToggle.checked = JSON.parse(localStorage.getItem('trainerMode') || 'false');
+      const appModeSelect = document.getElementById('appModeSelect');
+      if (appModeSelect) {
+        appModeSelect.value = getCurrentAppMode();
+      }
+      const coachModeToggle = document.getElementById('coachModeToggle');
+      if (coachModeToggle) {
+        coachModeToggle.checked = isCoachModeEnabled();
+        coachModeToggle.disabled = getCurrentAppMode() !== 'both';
       }
       const autoIncrementToggle = document.getElementById('autoIncrementToggle');
       if (autoIncrementToggle) {
@@ -2375,6 +2404,9 @@ window.toggleWorkoutDetails = toggleWorkoutDetails;
   
 // Expose showTab globally for sidebar navigation
 window.showTab = showTab;
+window.isCoachModeEnabled = isCoachModeEnabled;
+window.setCoachModeEnabled = setCoachModeEnabled;
+window.getCurrentAppMode = getCurrentAppMode;
 window.addEventListener('traininglog:settings-ready', () => {
   const activeProfileTab = document.querySelector('#profileTab.tab-content.active');
   if (!activeProfileTab || typeof window.renderProfileTab !== 'function') return;
@@ -6158,23 +6190,103 @@ function toggleMacroCalcForm() {
 }
 window.toggleMacroCalcForm = toggleMacroCalcForm;
 
-function updateNavForTrainer(isTrainer) {
-  document.querySelectorAll('.coach-only').forEach(el => {
-    el.style.display = isTrainer ? 'block' : 'none';
+const APP_MODE_STORAGE_KEY = 'appMode';
+const COACH_MODE_ENABLED_STORAGE_KEY = 'coachModeEnabled';
+const LEGACY_TRAINER_MODE_KEY = 'trainerMode';
+
+function normalizeAppMode(value) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (normalized === 'athlete' || normalized === 'coach' || normalized === 'both') {
+    return normalized;
+  }
+  return 'athlete';
+}
+
+function getCurrentAppMode() {
+  const stored = localStorage.getItem(APP_MODE_STORAGE_KEY);
+  if (stored) return normalizeAppMode(stored);
+  const legacyTrainerModeEnabled = JSON.parse(localStorage.getItem(LEGACY_TRAINER_MODE_KEY) || 'false');
+  return legacyTrainerModeEnabled ? 'both' : 'athlete';
+}
+
+function setCurrentAppMode(mode) {
+  const nextMode = normalizeAppMode(mode);
+  localStorage.setItem(APP_MODE_STORAGE_KEY, nextMode);
+  return nextMode;
+}
+
+function isCoachModeEnabled() {
+  const mode = getCurrentAppMode();
+  if (mode === 'coach') return true;
+  if (mode === 'athlete') return false;
+  return localStorage.getItem(COACH_MODE_ENABLED_STORAGE_KEY) === 'true';
+}
+
+function setCoachModeEnabled(value) {
+  const mode = getCurrentAppMode();
+  if (mode === 'coach') {
+    localStorage.setItem(COACH_MODE_ENABLED_STORAGE_KEY, 'true');
+    return true;
+  }
+  if (mode === 'athlete') {
+    localStorage.setItem(COACH_MODE_ENABLED_STORAGE_KEY, 'false');
+    return false;
+  }
+  const next = Boolean(value);
+  localStorage.setItem(COACH_MODE_ENABLED_STORAGE_KEY, String(next));
+  return next;
+}
+
+function applyAppModeToNavigation() {
+  const coachModeEnabled = isCoachModeEnabled();
+  document.querySelectorAll('.coach-only').forEach((el) => {
+    el.style.display = coachModeEnabled ? 'block' : 'none';
   });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   initMacrosSubTabs();
-  const saved = JSON.parse(localStorage.getItem('trainerMode') || 'false');
-  const toggle = document.getElementById('trainerModeToggle');
-  if (toggle) toggle.checked = saved;
-  updateNavForTrainer(saved);
-  if (toggle) {
-    toggle.addEventListener('change', e => {
-      localStorage.setItem('trainerMode', JSON.stringify(e.target.checked));
-      updateNavForTrainer(e.target.checked);
-      if (e.target.checked) showTab('coachingTab');
+  const appModeSelect = document.getElementById('appModeSelect');
+  const coachModeToggle = document.getElementById('coachModeToggle');
+
+  const syncModeControls = () => {
+    const appMode = getCurrentAppMode();
+    if (appModeSelect) appModeSelect.value = appMode;
+    if (coachModeToggle) {
+      const coachOnlyAccount = appMode === 'coach';
+      coachModeToggle.checked = isCoachModeEnabled();
+      coachModeToggle.disabled = coachOnlyAccount || appMode === 'athlete';
+    }
+  };
+
+  syncModeControls();
+  applyAppModeToNavigation();
+
+  if (appModeSelect) {
+    appModeSelect.addEventListener('change', (event) => {
+      const nextMode = setCurrentAppMode(event.target.value);
+      const shouldEnableCoachMode = nextMode === 'coach' ? true : isCoachModeEnabled();
+      setCoachModeEnabled(shouldEnableCoachMode);
+      syncModeControls();
+      applyAppModeToNavigation();
+      if (isCoachModeEnabled()) {
+        showTab('coachingTab');
+      } else if (activeTab && activeTab.id === 'coachingTab') {
+        showTab('homeTab');
+      }
+    });
+  }
+
+  if (coachModeToggle) {
+    coachModeToggle.addEventListener('change', (event) => {
+      setCoachModeEnabled(event.target.checked);
+      syncModeControls();
+      applyAppModeToNavigation();
+      if (isCoachModeEnabled()) {
+        showTab('coachingTab');
+      } else if (activeTab && activeTab.id === 'coachingTab') {
+        showTab('homeTab');
+      }
     });
   }
 
