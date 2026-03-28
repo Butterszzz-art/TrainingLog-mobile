@@ -4,6 +4,8 @@
   const DRAFT_STORAGE_PREFIX = "programBuilderV2Draft:";
   const PROGRAM_SCHEMA_VERSION = 2;
   const DEFAULT_GOAL = "hypertrophy";
+  const PROGRAM_TEMPLATE_STORAGE_KEY = "programTemplates";
+  const PROGRAM_ASSIGNMENT_STORAGE_KEY = "programAssignments";
 
   function defaultProgramDraft() {
     return {
@@ -111,10 +113,15 @@
       schemaVersion: PROGRAM_SCHEMA_VERSION,
       programId: null,
       userId: userId || null,
+      coachId: userId || null,
+      clientId: null,
       name: "",
+      title: "",
       goal: DEFAULT_GOAL,
-      split: { type: "custom", daysPerWeek: 3 },
+      split: { type: "custom", name: "", daysPerWeek: 3 },
+      archetype: "general",
       days: [],
+      progressionNotes: "",
       schedule: { startDate: "", weekdays: [] },
       createdAt: now,
       updatedAt: now,
@@ -176,23 +183,96 @@
     const base = createEmptyDraft(draft && draft.userId);
     const source = draft && typeof draft === "object" ? draft : {};
 
+    const normalizedDays = Array.isArray(source.days)
+      ? source.days.map(function (day, dayIndex) {
+          const fallbackName = "Day " + (dayIndex + 1);
+          const safeDay = day && typeof day === "object" ? day : {};
+          const safeExercises = Array.isArray(safeDay.exercises) ? safeDay.exercises : [];
+          return {
+            dayId:
+              typeof safeDay.dayId === "string" && safeDay.dayId.trim()
+                ? safeDay.dayId
+                : "day-" + dayIndex + "-" + Date.now(),
+            name: typeof safeDay.name === "string" && safeDay.name.trim() ? safeDay.name.trim() : fallbackName,
+            notes: typeof safeDay.notes === "string" ? safeDay.notes : "",
+            exercises: safeExercises.map(function (exercise, exerciseIndex) {
+              const safeExercise = exercise && typeof exercise === "object" ? exercise : {};
+              const safeSets = Array.isArray(safeExercise.sets) ? safeExercise.sets : [];
+              return {
+                exerciseId:
+                  typeof safeExercise.exerciseId === "string" && safeExercise.exerciseId.trim()
+                    ? safeExercise.exerciseId
+                    : "ex-" + dayIndex + "-" + exerciseIndex + "-" + Date.now(),
+                name:
+                  typeof safeExercise.name === "string" && safeExercise.name.trim()
+                    ? safeExercise.name.trim()
+                    : "Exercise " + (exerciseIndex + 1),
+                notes: typeof safeExercise.notes === "string" ? safeExercise.notes : "",
+                rirNote: typeof safeExercise.rirNote === "string" ? safeExercise.rirNote : "",
+                rpeNote: typeof safeExercise.rpeNote === "string" ? safeExercise.rpeNote : "",
+                progressionNotes:
+                  typeof safeExercise.progressionNotes === "string" ? safeExercise.progressionNotes : "",
+                archetypeTags: Array.isArray(safeExercise.archetypeTags)
+                  ? safeExercise.archetypeTags.filter(function (tag) {
+                      return typeof tag === "string" && tag.trim();
+                    })
+                  : [],
+                sets: safeSets.map(function (set) {
+                  const safeSet = set && typeof set === "object" ? set : {};
+                  return {
+                    setType: typeof safeSet.setType === "string" && safeSet.setType ? safeSet.setType : "straight",
+                    reps: Number.isFinite(Number(safeSet.reps)) ? Number(safeSet.reps) : null,
+                    weight: Number.isFinite(Number(safeSet.weight)) ? Number(safeSet.weight) : null,
+                    rpe: Number.isFinite(Number(safeSet.rpe)) ? Number(safeSet.rpe) : null,
+                    rir: Number.isFinite(Number(safeSet.rir)) ? Number(safeSet.rir) : null,
+                    restSec: Number.isFinite(Number(safeSet.restSec)) ? Number(safeSet.restSec) : 120,
+                  };
+                }),
+              };
+            }),
+          };
+        })
+      : [];
+
     return {
       ...base,
       ...source,
       schemaVersion: PROGRAM_SCHEMA_VERSION,
+      coachId:
+        typeof source.coachId === "string" && source.coachId.trim()
+          ? source.coachId
+          : typeof source.userId === "string" && source.userId.trim()
+          ? source.userId
+          : base.coachId,
+      clientId: typeof source.clientId === "string" && source.clientId.trim() ? source.clientId : null,
+      name: typeof source.name === "string" ? source.name : base.name,
+      title:
+        typeof source.title === "string" && source.title.trim()
+          ? source.title
+          : typeof source.name === "string"
+          ? source.name
+          : base.title,
       goal: typeof source.goal === "string" && source.goal.trim() ? source.goal : DEFAULT_GOAL,
+      archetype:
+        typeof source.archetype === "string" && source.archetype.trim() ? source.archetype : base.archetype,
       split: {
         ...base.split,
         ...(source.split && typeof source.split === "object" ? source.split : {}),
-        daysPerWeek: Number(source.split && source.split.daysPerWeek) > 0 ? Math.floor(Number(source.split.daysPerWeek)) : base.split.daysPerWeek,
+        name:
+          source.split && typeof source.split.name === "string" ? source.split.name : base.split.name,
+        daysPerWeek:
+          Number(source.split && source.split.daysPerWeek) > 0
+            ? Math.floor(Number(source.split.daysPerWeek))
+            : base.split.daysPerWeek,
       },
-      days: Array.isArray(source.days) ? source.days : [],
+      days: normalizedDays,
+      progressionNotes: typeof source.progressionNotes === "string" ? source.progressionNotes : "",
       schedule: {
         ...base.schedule,
         ...(source.schedule && typeof source.schedule === "object" ? source.schedule : {}),
         weekdays: Array.isArray(source.schedule && source.schedule.weekdays)
           ? source.schedule.weekdays.filter(function (weekday) {
-              return typeof weekday === "string" && weekday.trim();
+              return Number.isInteger(weekday) && weekday >= 1 && weekday <= 7;
             })
           : [],
       },
@@ -212,12 +292,15 @@
     });
 
     return {
-      name: normalized.name || "Untitled Program",
+      name: normalized.name || normalized.title || "Untitled Program",
       split: normalized.split && normalized.split.type ? normalized.split.type : "-",
+      splitName: normalized.split && normalized.split.name ? normalized.split.name : "-",
       goal: normalized.goal || "-",
+      archetype: normalized.archetype || "general",
       dayCount: normalized.days.length,
       exerciseCount: exerciseCount,
       scheduledDays: normalized.schedule.weekdays.length,
+      progressionNotes: normalized.progressionNotes || "",
     };
   }
 
@@ -266,7 +349,7 @@
     return shouldShow;
   }
 
-  function loadProgramTemplates() {
+  function populateProgramTemplateSelect() {
     const programs = loadPrograms(global);
     if (!global.document) return programs;
 
@@ -290,7 +373,7 @@
   }
 
   function initProgramBuilder() {
-    loadProgramTemplates();
+    populateProgramTemplateSelect();
 
     const activeUser =
       typeof global.getActiveUsername === "function"
@@ -342,10 +425,84 @@
     return true;
   }
 
+
+
+  function parseCollection(value) {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function loadCoachTemplates(globalObj) {
+    if (!globalObj || !globalObj.localStorage) return [];
+    return parseCollection(globalObj.localStorage.getItem(PROGRAM_TEMPLATE_STORAGE_KEY));
+  }
+
+  function saveProgramTemplate(globalObj, template) {
+    if (!globalObj || !globalObj.localStorage) return null;
+    const templates = loadCoachTemplates(globalObj);
+    const normalized = normalizeDraft(template);
+    const entry = {
+      ...normalized,
+      templateId: normalized.templateId || "tpl-" + Date.now(),
+      sourceProgramId: normalized.programId || null,
+      savedAt: new Date().toISOString(),
+      kind: "coach_template",
+    };
+    templates.push(entry);
+    globalObj.localStorage.setItem(PROGRAM_TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+    return entry;
+  }
+
+  function duplicateProgramTemplate(globalObj, templateId) {
+    const templates = loadCoachTemplates(globalObj);
+    const source = templates.find(function (tpl) {
+      return tpl.templateId === templateId;
+    });
+    if (!source) return null;
+    return saveProgramTemplate(globalObj, {
+      ...source,
+      templateId: null,
+      title: (source.title || source.name || "Template") + " (Copy)",
+      name: source.name || source.title || "",
+    });
+  }
+
+  function loadProgramAssignments(globalObj) {
+    if (!globalObj || !globalObj.localStorage) return [];
+    return parseCollection(globalObj.localStorage.getItem(PROGRAM_ASSIGNMENT_STORAGE_KEY));
+  }
+
+  function assignProgramToClient(globalObj, assignment) {
+    if (!globalObj || !globalObj.localStorage) return null;
+    const all = loadProgramAssignments(globalObj);
+    const normalizedProgram = normalizeDraft(assignment && assignment.program);
+    const record = {
+      assignmentId: "asn-" + Date.now(),
+      coachId: assignment && assignment.coachId ? assignment.coachId : normalizedProgram.coachId || null,
+      clientId: assignment && assignment.clientId ? assignment.clientId : null,
+      clientName: assignment && assignment.clientName ? assignment.clientName : "",
+      archetype: assignment && assignment.archetype ? assignment.archetype : normalizedProgram.archetype || "general",
+      assignedAt: new Date().toISOString(),
+      status: "active",
+      notes: assignment && assignment.notes ? assignment.notes : "",
+      program: normalizedProgram,
+    };
+    all.push(record);
+    globalObj.localStorage.setItem(PROGRAM_ASSIGNMENT_STORAGE_KEY, JSON.stringify(all));
+    return record;
+  }
+
   const api = {
     PROGRAM_STORAGE_KEY,
     PROGRAM_DRAFT_STORAGE_KEY,
     PROGRAM_SCHEMA_VERSION,
+    PROGRAM_TEMPLATE_STORAGE_KEY,
+    PROGRAM_ASSIGNMENT_STORAGE_KEY,
     defaultProgramDraft,
     normalizeProgram,
     summarizeProgram,
@@ -360,20 +517,25 @@
     computeProgramSummary,
     validateStep,
     toggleProgramBuilder,
-    loadProgramTemplates,
+    populateProgramTemplateSelect,
     initProgramBuilder,
+    loadCoachTemplates,
+    saveProgramTemplate,
+    duplicateProgramTemplate,
+    loadProgramAssignments,
+    assignProgramToClient,
   };
 
   global.programBuilderV2Core = api;
 
   // Required global assignments for legacy callers.
   global.toggleProgramBuilder = toggleProgramBuilder;
-  global.loadProgramTemplates = loadProgramTemplates;
+  global.loadProgramTemplates = populateProgramTemplateSelect;
   global.initProgramBuilder = initProgramBuilder;
 
   if (typeof window !== "undefined") {
     window.toggleProgramBuilder = toggleProgramBuilder;
-    window.loadProgramTemplates = loadProgramTemplates;
+    window.loadProgramTemplates = populateProgramTemplateSelect;
     window.initProgramBuilder = initProgramBuilder;
   }
 
