@@ -1439,6 +1439,7 @@
       <div id="progressChartsPanel" class="panel">
       <section class="progress-chart">
         <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
+        <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
         <canvas id="progressCanvas"></canvas>
         <div id="exerciseProgress" style="display:none;"></div>
         <div id="trainingLoadPanel" style="margin-top:14px;">
@@ -8220,6 +8221,146 @@ async function fetchBodyweightHistory() {
   });
 }
 
+function getProgressArchetype() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  return getHomeAthleteArchetype({}, userId);
+}
+
+function average(values) {
+  const nums = (Array.isArray(values) ? values : []).map(Number).filter((v) => Number.isFinite(v));
+  if (!nums.length) return null;
+  return nums.reduce((sum, v) => sum + v, 0) / nums.length;
+}
+
+function getArrayTrendSummary(values, options = {}) {
+  const nums = (Array.isArray(values) ? values : []).map(Number).filter((v) => Number.isFinite(v));
+  const precision = Number.isFinite(options.precision) ? options.precision : 1;
+  const fallback = options.fallback || 'No data yet.';
+  if (nums.length < 2) return fallback;
+  const delta = nums[nums.length - 1] - nums[0];
+  const direction = delta > 0 ? 'up' : (delta < 0 ? 'down' : 'flat');
+  return `${direction} ${Math.abs(delta).toFixed(precision)}`;
+}
+
+function getCurrentWeekDateRange() {
+  const now = new Date();
+  const day = now.getUTCDay();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day));
+  const end = new Date(start.getTime() + (6 * 86400000));
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10)
+  };
+}
+
+function getWorkoutTopSetEntries(workouts, matcher) {
+  const entries = [];
+  (Array.isArray(workouts) ? workouts : []).forEach((workout) => {
+    if (!Array.isArray(workout?.log)) return;
+    workout.log.forEach((entry) => {
+      const name = String(entry?.exercise || entry?.name || '').toLowerCase();
+      if (!name || !matcher.test(name)) return;
+      const weights = Array.isArray(entry?.weightsArray) ? entry.weightsArray : [];
+      const reps = Array.isArray(entry?.repsArray) ? entry.repsArray : [];
+      const bestWeight = Math.max(...weights.map((w) => Number(w) || 0), 0);
+      const bestReps = Math.max(...reps.map((r) => Number(r) || 0), 0);
+      if (bestWeight <= 0) return;
+      entries.push({
+        date: workout?.date || '',
+        exercise: entry?.exercise || entry?.name || 'Exercise',
+        weight: bestWeight,
+        reps: bestReps
+      });
+    });
+  });
+  return entries.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+}
+
+function renderProgressArchetypeSpotlight(context = {}) {
+  const panel = document.getElementById('progressArchetypeSpotlight');
+  if (!panel) return;
+
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const archetype = getProgressArchetype();
+  const workouts = Array.isArray(context.workouts) ? context.workouts : (JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || []);
+  const workoutHistory = Array.isArray(context.workoutHistory) ? context.workoutHistory : [];
+  const cardioHistory = Array.isArray(context.cardioHistory) ? context.cardioHistory : (JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || []);
+  const bodyweightHistory = Array.isArray(context.bodyweightHistory) ? context.bodyweightHistory : [];
+  const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
+  const complianceSnapshot = getComplianceSnapshot({}, userId, archetype);
+  const bbSummary = typeof computeBodybuildingProgressSummary === 'function' ? computeBodybuildingProgressSummary(workouts || []) : null;
+  const posingWeekly = window.posingEngine?.getWeeklySummary?.(userId, new Date().toISOString().slice(0, 10)) || null;
+
+  const strengthTrend = getArrayTrendSummary(workoutHistory.map((h) => Number(h.estimated1RM || 0)), { precision: 1 });
+  const cardioTrend = getArrayTrendSummary(cardioHistory.map((h) => Number(h.duration || 0)), { precision: 0 });
+  const bodyweightTrend = getArrayTrendSummary(bodyweightHistory.map((h) => Number(h.weight)), { precision: 1 });
+
+  const checkInAverage = (key) => average(checkIns.map((entry) => Number(getCheckInArchetypeMetricValue(entry, key))));
+  const checkInTrend = (key) => getArrayTrendSummary(checkIns.map((entry) => Number(getCheckInArchetypeMetricValue(entry, key))), { precision: 1 });
+
+  const week = getCurrentWeekDateRange();
+  const workoutsThisWeek = workouts.filter((w) => w?.date >= week.start && w?.date <= week.end).length;
+  const cardioThisWeek = cardioHistory.filter((c) => c?.date >= week.start && c?.date <= week.end).length;
+  const cardioMinutesThisWeek = cardioHistory
+    .filter((c) => c?.date >= week.start && c?.date <= week.end)
+    .reduce((sum, c) => sum + (Number(c?.duration) || 0), 0);
+
+  const squatSeries = getWorkoutTopSetEntries(workouts, /\bsquat\b/);
+  const benchSeries = getWorkoutTopSetEntries(workouts, /\bbench\b/);
+  const deadliftSeries = getWorkoutTopSetEntries(workouts, /\bdeadlift|sumo|conventional\b/);
+  const latestBw = bodyweightHistory[bodyweightHistory.length - 1]?.weight;
+  const profile = getCurrentProfile(userId);
+  const divisionClass = profile?.athleteInfo?.divisionClass || profile?.division || 'Not set';
+
+  const muscleVolumeRows = (bbSummary?.muscleGroupVolume || []).slice(0, 5).map((group) => {
+    const ratio = Number.isFinite(group?.ratio) ? `${Math.round(group.ratio * 100)}%` : 'Unplanned';
+    return `<li>${group.muscleGroup}: ${Number(group.actual || 0).toFixed(0)} (${ratio})</li>`;
+  }).join('');
+  const topSetRows = (bbSummary?.prSummaries?.topSetPRs || []).slice(0, 4).map((item) => `<li>${item.exercise}: ${Number(item.value || 0).toFixed(1)}</li>`).join('');
+
+  const progressCardsByArchetype = {
+    bodybuilder: [
+      { title: 'Bodyweight Trend', detail: bodyweightTrend },
+      { title: 'Check-In Trends', detail: `Physique/posing ${checkInTrend('physiquePosing')} · Cardio adherence ${checkInTrend('cardioAdherence')}` },
+      { title: 'Cardio Adherence', detail: `Week cardio: ${cardioThisWeek} sessions / ${cardioMinutesThisWeek} min${checkInAverage('cardioAdherence') ? ` · check-in avg ${checkInAverage('cardioAdherence').toFixed(1)}/10` : ''}` },
+      { title: 'Posing Frequency', detail: posingWeekly ? `${posingWeekly.sessions}/${posingWeekly.targetSessions} sessions this week (${posingWeekly.sessionsPercent}%)` : 'No posing logs yet.' },
+      { title: 'Muscle-Group Volume', detail: muscleVolumeRows ? `<ul style="margin:6px 0 0 18px;">${muscleVolumeRows}</ul>` : 'No muscle-group volume yet.' }
+    ],
+    powerlifter: [
+      { title: 'Squat / Bench / Deadlift Trend', detail: `Squat ${getArrayTrendSummary(squatSeries.map((x) => x.weight), { precision: 1 })} · Bench ${getArrayTrendSummary(benchSeries.map((x) => x.weight), { precision: 1 })} · Deadlift ${getArrayTrendSummary(deadliftSeries.map((x) => x.weight), { precision: 1 })}` },
+      { title: 'Estimated 1RM Trend', detail: strengthTrend },
+      { title: 'Top Sets', detail: topSetRows ? `<ul style="margin:6px 0 0 18px;">${topSetRows}</ul>` : 'No top sets yet.' },
+      { title: 'Recovery / Fatigue Trend', detail: `Fatigue ${checkInTrend('fatigue')} · Soreness ${checkInTrend('soreness')}` },
+      { title: 'Bodyweight Class Tracking', detail: `Latest BW ${Number.isFinite(Number(latestBw)) ? Number(latestBw).toFixed(1) : '—'} · Class ${divisionClass}` }
+    ],
+    hybrid: [
+      { title: 'Strength Trend', detail: strengthTrend },
+      { title: 'Cardio Trend', detail: `${cardioTrend} · ${cardioThisWeek} sessions this week` },
+      { title: 'Bodyweight Trend', detail: bodyweightTrend },
+      { title: 'Workout Consistency', detail: `${workoutsThisWeek} workouts this week · Weekly compliance ${Number(complianceSnapshot?.weekly?.averagePercent || 0).toFixed(0)}%` }
+    ],
+    recreational: [
+      { title: 'Workouts This Week', detail: `${workoutsThisWeek} sessions (${week.start} → ${week.end})` },
+      { title: 'Steps / Consistency', detail: `Weekly consistency ${Number(complianceSnapshot?.weekly?.averagePercent || 0).toFixed(0)}% · Steps misses ${(complianceSnapshot?.insightsPayload?.missed?.byTask?.stepsComplete) || 0}` },
+      { title: 'Bodyweight Trend', detail: bodyweightTrend },
+      { title: 'Simple Strength Progress', detail: strengthTrend }
+    ]
+  };
+
+  const cards = progressCardsByArchetype[archetype] || progressCardsByArchetype.hybrid;
+  panel.innerHTML = `
+    <h3 style="margin:0 0 8px;">Archetype Progress Focus · ${archetype.charAt(0).toUpperCase() + archetype.slice(1)}</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
+      ${cards.map((item) => `
+        <article style="border:1px solid var(--border);border-radius:10px;padding:8px;background:rgba(255,255,255,.03);min-height:72px;">
+          <strong>${item.title}</strong>
+          <div style="margin-top:4px;font-size:.9rem;opacity:.95;">${item.detail || 'No data yet.'}</div>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
 function setActiveProgress(btnId) {
   document.querySelectorAll('.progress-nav button').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById(btnId);
@@ -8253,6 +8394,7 @@ async function showWorkoutProgress(data) {
   const estimated1RMs = filtered.map(h => Number(h.estimated1RM || 0));
   document.getElementById('exerciseProgress').style.display = 'none';
   document.getElementById('progressCanvas').style.display = 'block';
+  document.getElementById('trainingLoadPanel').style.display = 'block';
   const trend = trendPoints(vols);
   const forecast = Array(Math.max(0, dates.length - 1)).fill(null).concat(forecastNext(vols, 4));
   renderLineChart(dates.concat(new Array(4).fill('')), 'Total Volume', vols.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
@@ -8260,6 +8402,12 @@ async function showWorkoutProgress(data) {
   renderWorkoutMetricsChart(dates, vols, intensities, estimated1RMs);
   renderBodybuildingProgressPanel(filteredWorkouts);
   renderProgressComplianceSummary();
+  renderProgressArchetypeSpotlight({
+    workouts: filteredWorkouts,
+    workoutHistory: filtered,
+    cardioHistory: applyDateRange(await fetchCardioHistory()),
+    bodyweightHistory: applyDateRange(await fetchBodyweightHistory())
+  });
 }
 
 async function showCardioProgress() {
@@ -8276,6 +8424,12 @@ async function showCardioProgress() {
   renderLineChart(dates.concat(new Array(4).fill('')), 'Cardio Minutes', mins.concat(new Array(4).fill(null)), trend.concat(new Array(4).fill(null)), forecast);
   renderBodybuildingProgressPanel([]);
   renderProgressComplianceSummary();
+  renderProgressArchetypeSpotlight({
+    workouts: applyDateRange(await fetchWorkouts()),
+    workoutHistory: applyDateRange(await fetchWorkoutHistory()),
+    cardioHistory: filtered,
+    bodyweightHistory: applyDateRange(await fetchBodyweightHistory())
+  });
 }
 
 async function showBodyweightProgress() {
@@ -8345,6 +8499,12 @@ async function showBodyweightProgress() {
   }
   renderBodybuildingProgressPanel([]);
   renderProgressComplianceSummary();
+  renderProgressArchetypeSpotlight({
+    workouts: applyDateRange(await fetchWorkouts()),
+    workoutHistory: workoutHistory,
+    cardioHistory: applyDateRange(await fetchCardioHistory()),
+    bodyweightHistory: filtered
+  });
 }
 
 function showExerciseProgress() {
@@ -8355,6 +8515,14 @@ function showExerciseProgress() {
   renderExerciseProgress();
   fetchWorkouts().then(renderBodybuildingProgressPanel);
   renderProgressComplianceSummary();
+  Promise.all([fetchWorkouts(), fetchWorkoutHistory(), fetchCardioHistory(), fetchBodyweightHistory()]).then(([workouts, workoutHistory, cardioHistory, bodyweightHistory]) => {
+    renderProgressArchetypeSpotlight({
+      workouts: applyDateRange(workouts),
+      workoutHistory: applyDateRange(workoutHistory),
+      cardioHistory: applyDateRange(cardioHistory),
+      bodyweightHistory: applyDateRange(bodyweightHistory)
+    });
+  });
 }
 
 function refreshProgress() {
