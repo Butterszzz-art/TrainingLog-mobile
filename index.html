@@ -932,8 +932,8 @@
 
   <div id="checkInTab" class="tab-content">
     <div class="panel active">
-      <h2>Weekly Bodybuilding Check-In</h2>
-      <p style="margin-top:-6px;">Track feedback by phase and week to make prep emotionally sticky.</p>
+      <h2>Weekly Athlete Check-In</h2>
+      <p style="margin-top:-6px;">Track weekly readiness with prompts tailored to your athlete archetype.</p>
       <div id="checkInNextDate" class="home-mission-progress"></div>
 
       <section class="checkin-form-section">
@@ -965,26 +965,9 @@
       </section>
 
       <section class="checkin-form-section">
-        <h3>Diet Response</h3>
-        <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span>Hunger</span><strong id="checkInHungerValue">5</strong></div>
-          <input type="range" min="1" max="10" step="1" value="5" id="checkInHungerInput" data-value-target="checkInHungerValue">
-          <div class="checkin-slider-labels"><span>Not Hungry</span><span>Very Hungry</span></div>
-        </div>
-        <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span>Digestion</span><strong id="checkInDigestionValue">5</strong></div>
-          <input type="range" min="1" max="10" step="1" value="5" id="checkInDigestionInput" data-value-target="checkInDigestionValue">
-          <div class="checkin-slider-labels"><span>Poor</span><span>Excellent</span></div>
-        </div>
-      </section>
-
-      <section class="checkin-form-section">
-        <h3>Performance</h3>
-        <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span>Training Performance</span><strong id="checkInTrainingPerformanceValue">5</strong></div>
-          <input type="range" min="1" max="10" step="1" value="5" id="checkInTrainingPerformanceInput" data-value-target="checkInTrainingPerformanceValue">
-          <div class="checkin-slider-labels"><span>Off</span><span>Peak</span></div>
-        </div>
+        <h3 id="checkInArchetypeSectionTitle">Archetype Focus</h3>
+        <p id="checkInArchetypeSectionDescription" class="home-mission-progress">Loading archetype-specific prompts…</p>
+        <div id="checkInArchetypeFields"></div>
       </section>
 
       <section class="checkin-form-section">
@@ -6952,7 +6935,126 @@ function getHomeDashboardCardRenderers(profile, username, archetype) {
   };
 }
 
-  
+const CHECKIN_ARCHETYPE_SCHEMAS = Object.freeze({
+  bodybuilder: {
+    label: 'Bodybuilder Check-In',
+    description: 'Emphasis: hunger/digestion, physique/posing, cardio adherence, and prep readiness.',
+    fields: [
+      { key: 'hunger', label: 'Hunger', kind: 'slider', minLabel: 'Low', maxLabel: 'High' },
+      { key: 'digestion', label: 'Digestion', kind: 'slider', minLabel: 'Poor', maxLabel: 'Excellent' },
+      { key: 'physiquePosing', label: 'Physique / Posing', kind: 'slider', minLabel: 'Flat/Off', maxLabel: 'Sharp/Confident' },
+      { key: 'cardioAdherence', label: 'Cardio Adherence', kind: 'slider', minLabel: 'Missed', maxLabel: 'Nailed' },
+      { key: 'prepReadiness', label: 'Prep Readiness', kind: 'slider', minLabel: 'Behind', maxLabel: 'Ready' }
+    ]
+  },
+  powerlifter: {
+    label: 'Powerlifter Check-In',
+    description: 'Emphasis: SBD readiness, fatigue/soreness, and weight class relevance.',
+    fields: [
+      { key: 'squatReadiness', label: 'Squat Readiness', kind: 'slider', minLabel: 'Not Ready', maxLabel: 'Locked In' },
+      { key: 'benchReadiness', label: 'Bench Readiness', kind: 'slider', minLabel: 'Not Ready', maxLabel: 'Locked In' },
+      { key: 'deadliftReadiness', label: 'Deadlift Readiness', kind: 'slider', minLabel: 'Not Ready', maxLabel: 'Locked In' },
+      { key: 'fatigue', label: 'Fatigue', kind: 'slider', minLabel: 'Fresh', maxLabel: 'Crushed' },
+      { key: 'soreness', label: 'Soreness', kind: 'slider', minLabel: 'None', maxLabel: 'Very Sore' },
+      { key: 'weightClassRelevance', label: 'Weight Class Readiness', kind: 'slider', minLabel: 'Off Target', maxLabel: 'On Weight' }
+    ]
+  },
+  hybrid: {
+    label: 'Hybrid Check-In',
+    description: 'Emphasis: balancing strength and cardio while monitoring conditioning feel.',
+    fields: [
+      { key: 'strengthCardioBalance', label: 'Strength + Cardio Balance', kind: 'slider', minLabel: 'Unbalanced', maxLabel: 'Balanced' },
+      { key: 'conditioningFeel', label: 'Conditioning Feel', kind: 'slider', minLabel: 'Heavy', maxLabel: 'Fast' }
+    ]
+  },
+  recreational: {
+    label: 'Recreational Check-In',
+    description: 'Emphasis: consistency, energy/sleep/stress, and weight trend momentum.',
+    fields: [
+      { key: 'consistency', label: 'Consistency This Week', kind: 'slider', minLabel: 'Off Track', maxLabel: 'Dialed' },
+      { key: 'weightTrend', label: 'Weight Trend Confidence', kind: 'slider', minLabel: 'Unclear', maxLabel: 'On Track' }
+    ]
+  }
+});
+const CHECKIN_FIELD_FALLBACKS = Object.freeze({
+  hunger: 'hunger',
+  digestion: 'digestion',
+  prepReadiness: 'trainingPerformance',
+  strengthCardioBalance: 'trainingPerformance',
+  consistency: 'trainingPerformance',
+  weightTrend: 'bodyweight'
+});
+const CHECKIN_TRAINING_PERFORMANCE_BY_ARCHETYPE = Object.freeze({
+  bodybuilder: 'prepReadiness',
+  powerlifter: 'squatReadiness',
+  hybrid: 'strengthCardioBalance',
+  recreational: 'consistency'
+});
+
+function getCheckInArchetype(userId) {
+  const direct = typeof window.getAthleteArchetype === 'function'
+    ? window.getAthleteArchetype(userId)
+    : null;
+  return normalizeArchetype(direct || getHomeAthleteArchetype(null, userId));
+}
+
+function renderCheckInArchetypeFields(archetype, sourceEntry = null) {
+  const schema = CHECKIN_ARCHETYPE_SCHEMAS[archetype] || CHECKIN_ARCHETYPE_SCHEMAS.hybrid;
+  const title = document.getElementById('checkInArchetypeSectionTitle');
+  if (title) title.textContent = schema.label;
+  const description = document.getElementById('checkInArchetypeSectionDescription');
+  if (description) description.textContent = schema.description;
+  const container = document.getElementById('checkInArchetypeFields');
+  if (!container) return;
+
+  container.innerHTML = schema.fields.map((field) => `
+    <div class="checkin-slider-field">
+      <div class="checkin-slider-header"><span>${field.label}</span><strong id="checkInFieldValue_${field.key}">5</strong></div>
+      <input
+        type="range"
+        min="1"
+        max="10"
+        step="1"
+        value="5"
+        id="checkInField_${field.key}"
+        data-checkin-field="${field.key}"
+        data-value-target="checkInFieldValue_${field.key}">
+      <div class="checkin-slider-labels"><span>${field.minLabel}</span><span>${field.maxLabel}</span></div>
+    </div>
+  `).join('');
+
+  if (sourceEntry) hydrateCheckInArchetypeFields(sourceEntry);
+}
+
+function getCheckInArchetypeMetricValue(checkIn, metricKey) {
+  if (!checkIn) return '';
+  const direct = checkIn?.archetypeMetrics?.[metricKey];
+  if (direct !== undefined && direct !== null && direct !== '') return direct;
+  const legacyField = CHECKIN_FIELD_FALLBACKS[metricKey];
+  if (legacyField && checkIn[legacyField] !== undefined && checkIn[legacyField] !== null && checkIn[legacyField] !== '') {
+    return checkIn[legacyField];
+  }
+  return '';
+}
+
+function hydrateCheckInArchetypeFields(checkIn) {
+  const fields = document.querySelectorAll('#checkInArchetypeFields [data-checkin-field]');
+  fields.forEach((el) => {
+    const metricKey = el.getAttribute('data-checkin-field');
+    if (!metricKey || el.value) return;
+    el.value = getSafeSliderValue(getCheckInArchetypeMetricValue(checkIn, metricKey));
+  });
+}
+
+function readCheckInArchetypeMetrics() {
+  const metrics = {};
+  document.querySelectorAll('#checkInArchetypeFields [data-checkin-field]').forEach((el) => {
+    const key = el.getAttribute('data-checkin-field');
+    if (!key) return;
+    metrics[key] = el.value || '';
+  });
+  return metrics;
+}
 
 function getCheckInPhaseState() {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
@@ -6962,6 +7064,7 @@ function getCheckInPhaseState() {
 function renderCheckInTab() {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
+  const archetype = getCheckInArchetype(userId);
 
   const phaseState = getCheckInPhaseState();
   const checkInHeader = getTimelineHeaderLabel(phaseState, userId, new Date().toISOString().slice(0, 10));
@@ -6982,6 +7085,8 @@ function renderCheckInTab() {
   }
 
   const checkIns = window.checkinEngine.loadCheckIns(userId);
+  const latestCheckIn = Array.isArray(checkIns) && checkIns.length ? checkIns[0] : null;
+  renderCheckInArchetypeFields(archetype, latestCheckIn);
   hydrateCheckInFormFromLatestEntry(checkIns);
   bindCheckInSliderDisplays();
 
@@ -7001,8 +7106,9 @@ function renderCheckInTab() {
       const entries = phaseWeekGroup.entries.map((entry) => `
         <li style="margin-bottom:10px;">
           <strong>${entry.date}</strong> · Phase: ${entry.phase || '—'}<br />
+          Archetype: ${entry.archetype || 'legacy'}<br />
           BW: ${entry.bodyweight || '—'} · Waist: ${entry.waist || '—'} · Recovery (E/S/St): ${entry.recoveryRatings?.energy || entry.energy || '—'}/${entry.recoveryRatings?.sleep || entry.sleep || '—'}/${entry.recoveryRatings?.stress || entry.stress || '—'}<br />
-          Hunger: ${entry.hunger || '—'} · Digestion: ${entry.digestion || '—'} · Training: ${entry.trainingPerformance || '—'}
+          ${formatCheckInArchetypeMetricSummary(entry)}
           <div style="font-size:0.9rem; opacity:0.85;">${entry.notes || 'No notes logged.'}</div>
           <div style="font-size:0.88rem; margin-top:4px;">
             <strong>Weekly adjustments:</strong> ${formatAdjustmentSummary(entry.adjustments)}
@@ -7069,11 +7175,9 @@ function hydrateCheckInFormFromLatestEntry(checkIns) {
   setValueIfEmpty('checkInReviewStatusInput', latest.review?.status || 'pending');
 
   setValueIfEmpty('checkInEnergyInput', latest.energy, (value) => getSafeSliderValue(value));
-  setValueIfEmpty('checkInHungerInput', latest.hunger, (value) => getSafeSliderValue(value));
   setValueIfEmpty('checkInSleepInput', latest.sleep, (value) => getSafeSliderValue(value));
   setValueIfEmpty('checkInStressInput', latest.stress, (value) => getSafeSliderValue(value));
-  setValueIfEmpty('checkInDigestionInput', latest.digestion, (value) => getSafeSliderValue(value));
-  setValueIfEmpty('checkInTrainingPerformanceInput', latest.trainingPerformance, (value) => getSafeSliderValue(value));
+  hydrateCheckInArchetypeFields(latest);
   const adjustmentToggles = [
     ['checkInAdjustmentMacrosChanged', latest.adjustments?.macrosChanged],
     ['checkInAdjustmentCardioChanged', latest.adjustments?.cardioChanged],
@@ -7129,6 +7233,17 @@ function formatAdjustmentSummary(adjustments) {
   return flags.map(([label, _changed, notes]) => `${label}${notes ? ` (${notes})` : ''}`).join(' · ');
 }
 
+function formatCheckInArchetypeMetricSummary(checkIn) {
+  const archetype = normalizeArchetype(checkIn?.archetype);
+  const schema = CHECKIN_ARCHETYPE_SCHEMAS[archetype] || CHECKIN_ARCHETYPE_SCHEMAS.hybrid;
+  const values = (schema.fields || []).map((field) => {
+    const value = getCheckInArchetypeMetricValue(checkIn, field.key);
+    return `${field.label}: ${value || '—'}`;
+  });
+  if (values.length) return values.join(' · ');
+  return `Hunger: ${checkIn?.hunger || '—'} · Digestion: ${checkIn?.digestion || '—'} · Training: ${checkIn?.trainingPerformance || '—'}`;
+}
+
 function buildCheckInSummaryPayload(checkIn) {
   if (!checkIn) return null;
   const insights = checkIn.insights?.summaryShort || 'Trend intelligence will build after more entries.';
@@ -7143,10 +7258,11 @@ function buildCheckInSummaryPayload(checkIn) {
       energy: checkIn.energy || '',
       sleep: checkIn.sleep || '',
       stress: checkIn.stress || '',
-      hunger: checkIn.hunger || '',
-      digestion: checkIn.digestion || '',
+      archetypeSummary: formatCheckInArchetypeMetricSummary(checkIn),
       trainingPerformance: checkIn.trainingPerformance || ''
     },
+    archetype: normalizeArchetype(checkIn.archetype),
+    archetypeMetrics: checkIn.archetypeMetrics || {},
     athleteNotes: checkIn.notes || '',
     coachNotes: checkIn.coachNotes || '',
     reviewStatus: checkIn.review?.status || 'pending',
@@ -7169,8 +7285,9 @@ function generateCheckInSummary() {
   }
   const payload = buildCheckInSummaryPayload(selected);
   output.innerHTML = `
-    <strong>${payload.date}</strong> · ${payload.phase} · ${payload.weekLabel}<br />
+    <strong>${payload.date}</strong> · ${payload.phase} · ${payload.weekLabel} · ${payload.archetype}<br />
     BW ${payload.metrics.bodyweight || '—'} · Waist ${payload.metrics.waist || '—'} · Perf ${payload.metrics.trainingPerformance || '—'}<br />
+    <strong>Archetype focus:</strong> ${payload.metrics.archetypeSummary}<br />
     <strong>Adjustments:</strong> ${payload.adjustmentsSummary}<br />
     <strong>Review:</strong> ${payload.reviewStatus}${payload.coachActionItems ? ` · Action items: ${payload.coachActionItems}` : ''}<br />
     <strong>Trend:</strong> ${payload.trendSummary}
@@ -7185,9 +7302,10 @@ function exportCheckInSummary(format = 'json') {
     ? [
       `Check-In Summary (${payload.date})`,
       `Phase: ${payload.phase} | Week: ${payload.weekLabel}`,
+      `Archetype: ${payload.archetype}`,
       `Bodyweight: ${payload.metrics.bodyweight || '—'}, Waist: ${payload.metrics.waist || '—'}`,
       `Recovery: Energy ${payload.metrics.energy || '—'}, Sleep ${payload.metrics.sleep || '—'}, Stress ${payload.metrics.stress || '—'}`,
-      `Diet: Hunger ${payload.metrics.hunger || '—'}, Digestion ${payload.metrics.digestion || '—'}`,
+      `Archetype Focus: ${payload.metrics.archetypeSummary}`,
       `Performance: ${payload.metrics.trainingPerformance || '—'}`,
       `Adjustments: ${payload.adjustmentsSummary}`,
       `Athlete Notes: ${payload.athleteNotes || '—'}`,
@@ -7211,6 +7329,9 @@ function exportCheckInSummary(format = 'json') {
 function saveWeeklyCheckIn(actor = 'athlete') {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
+  const archetype = getCheckInArchetype(userId);
+  const archetypeMetrics = readCheckInArchetypeMetrics();
+  const trainingMetricKey = CHECKIN_TRAINING_PERFORMANCE_BY_ARCHETYPE[archetype];
 
   const phaseState = getCheckInPhaseState();
   const dateValue = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
@@ -7223,11 +7344,13 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     bodyweight: document.getElementById('checkInBodyweightInput')?.value || '',
     waist: document.getElementById('checkInWaistInput')?.value || '',
     energy: document.getElementById('checkInEnergyInput')?.value || '',
-    hunger: document.getElementById('checkInHungerInput')?.value || '',
     sleep: document.getElementById('checkInSleepInput')?.value || '',
     stress: document.getElementById('checkInStressInput')?.value || '',
-    digestion: document.getElementById('checkInDigestionInput')?.value || '',
-    trainingPerformance: document.getElementById('checkInTrainingPerformanceInput')?.value || '',
+    archetype,
+    archetypeMetrics,
+    hunger: archetypeMetrics.hunger || '',
+    digestion: archetypeMetrics.digestion || '',
+    trainingPerformance: (trainingMetricKey && archetypeMetrics[trainingMetricKey]) || '',
     notes: document.getElementById('checkInNotesInput')?.value || '',
     coachNotes: document.getElementById('checkInCoachNotesInput')?.value || '',
     adjustments: readCheckInAdjustmentPayload(),

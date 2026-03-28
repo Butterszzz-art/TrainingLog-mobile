@@ -65,7 +65,29 @@ describe('checkinEngine', () => {
       refeedNotes: ''
     });
     expect(checkIns[0].review.status).toBe('pending');
+    expect(checkIns[0].archetype).toBe('recreational');
+    expect(checkIns[0].archetypeMetrics).toEqual({
+      energy: 7,
+      sleep: 8,
+      stress: 4
+    });
     expect(global.localStorage.getItem(getStorageKey('athleteA'))).toBeTruthy();
+  });
+
+  test('normalizeCheckIn keeps archetype metrics and legacy fallbacks', () => {
+    saveCheckIn('athleteA', {
+      date: '2026-03-26',
+      archetype: 'bodybuilder',
+      hunger: 8,
+      archetypeMetrics: {
+        cardioAdherence: 9
+      }
+    });
+
+    const checkIns = loadCheckIns('athleteA');
+    expect(checkIns[0].archetype).toBe('bodybuilder');
+    expect(checkIns[0].archetypeMetrics.cardioAdherence).toBe(9);
+    expect(checkIns[0].archetypeMetrics.hunger).toBe(8);
   });
 
   test('saveCheckIn preserves adjustment log and coach review metadata', () => {
