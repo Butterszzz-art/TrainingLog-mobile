@@ -6382,17 +6382,17 @@ function formatComplianceStatus(statusKey) {
   return labels[statusKey] || 'Off Track';
 }
 
-function getComplianceSnapshot(profile, username) {
+function getComplianceSnapshot(profile, username, archetype) {
   const missionState = getTodayMissionState(profile, username);
-  const dailyPercent = window.complianceEngine?.calculateDailyCompliancePercent?.(missionState) ?? 0;
+  const dailyPercent = window.complianceEngine?.calculateDailyCompliancePercent?.(missionState, archetype) ?? 0;
   const dailyStatus = window.complianceEngine?.getComplianceStatus?.(dailyPercent) || 'off_track';
-  const weekly = window.complianceEngine?.calculateWeeklyCompliance?.(username, new Date().toISOString().slice(0, 10))
+  const weekly = window.complianceEngine?.calculateWeeklyCompliance?.(username, new Date().toISOString().slice(0, 10), archetype)
     || { averagePercent: 0, status: 'off_track', completedDays: 0, activeDays: 0, days: [] };
-  const rolling7 = window.complianceEngine?.calculateRolling7DayCompliance?.(username, new Date().toISOString().slice(0, 10))
+  const rolling7 = window.complianceEngine?.calculateRolling7DayCompliance?.(username, new Date().toISOString().slice(0, 10), archetype)
     || { percent: weekly.averagePercent || 0, status: weekly.status || 'off_track' };
-  const trend = window.complianceEngine?.getComplianceTrend?.(username)
+  const trend = window.complianceEngine?.getComplianceTrend?.(username, archetype)
     || { trend: 'steady', delta: 0, insight: 'Immediate course correction required' };
-  const insightsPayload = window.complianceEngine?.getComplianceInsights?.(username, new Date().toISOString().slice(0, 10))
+  const insightsPayload = window.complianceEngine?.getComplianceInsights?.(username, new Date().toISOString().slice(0, 10), archetype)
     || { insights: [trend.insight], missed: { byTask: {}, topMissedTask: null } };
   return { dailyPercent, dailyStatus, weekly, rolling7, trend, insightsPayload };
 }
@@ -6424,7 +6424,7 @@ function getArchetypeStatusLabelMap(archetype) {
 }
 
 function renderStatusSummary(profile, username, archetype) {
-  const snapshot = getComplianceSnapshot(profile, username);
+  const snapshot = getComplianceSnapshot(profile, username, archetype);
   const labels = getArchetypeStatusLabelMap(archetype);
   const hasDaily = Number.isFinite(snapshot.dailyPercent) && snapshot.dailyPercent > 0;
   const hasWeekly = Number.isFinite(snapshot.weekly?.averagePercent) && snapshot.weekly.averagePercent > 0;
