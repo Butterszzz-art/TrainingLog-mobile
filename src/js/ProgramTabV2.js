@@ -1,5 +1,12 @@
 (function () {
   const STEPS = ["split", "days", "review", "schedule", "save"];
+  const ARCHETYPES = [
+    { value: "general", label: "General" },
+    { value: "beginner", label: "Beginner" },
+    { value: "strength", label: "Strength" },
+    { value: "hypertrophy", label: "Hypertrophy" },
+    { value: "fat-loss", label: "Fat Loss" },
+  ];
 
   function getUserId() {
     return (
@@ -22,10 +29,17 @@
     });
   }
 
+  function esc(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function initProgramTabV2(mountEl) {
-    // mountEl might be programBuilderV2Mount; UI uses fixed containers by ID
-    if (!mountEl) return;
-    if (mountEl.__pbv2Mounted) return;
+    if (!mountEl || mountEl.__pbv2Mounted) return;
     mountEl.__pbv2Mounted = true;
 
     const core = window.programBuilderV2Core;
@@ -35,13 +49,14 @@
     }
 
     const userId = getUserId();
-    let draft = core.loadDraft(userId);
+    let draft = core.normalizeDraft(core.loadDraft(userId));
     let step = "split";
     let selectedDayId = draft.days?.[0]?.dayId || null;
 
-    // ---------- state helpers ----------
     function persistDraft() {
       draft.updatedAt = new Date().toISOString();
+      draft.name = draft.title || draft.name || "";
+      draft.coachId = draft.coachId || userId;
       draft = core.saveDraft(userId, draft);
     }
 
@@ -56,9 +71,7 @@
       const missing = required.filter((id) => !$(id));
       if (missing.length) {
         mountEl.innerHTML =
-          "<div style='padding:12px;color:#b00'>Missing containers: " +
-          missing.join(", ") +
-          "</div>";
+          "<div style='padding:12px;color:#b00'>Missing containers: " + missing.join(", ") + "</div>";
         return false;
       }
       return true;
@@ -76,12 +89,9 @@
     }
 
     function canProceedFrom(currentStep) {
-      // core.validateStep signature in your file is validateStep(stepId, draft)
-      // (it’s currently: validateStep(stepId, draft) in the deployed core)
       try {
         return Boolean(core.validateStep(currentStep, draft));
-      } catch (e) {
-        console.warn("[ProgramV2] validateStep error", e);
+      } catch (_e) {
         return true;
       }
     }
@@ -100,11 +110,13 @@
       goToStep(STEPS[Math.max(idx - 1, 0)]);
     }
 
-    // ---------- actions ----------
     function setSplit(type, daysPerWeek) {
-      draft.split = { type, daysPerWeek };
-
-      // Generate days only if none exist
+      draft.split = {
+        ...(draft.split || {}),
+        type,
+        daysPerWeek,
+        name: draft.split?.name || "",
+      };
       if (!Array.isArray(draft.days) || draft.days.length === 0) {
         draft.days = Array.from({ length: daysPerWeek }, (_, i) => ({
           dayId: uuid(),
@@ -113,11 +125,7 @@
           exercises: [],
         }));
         selectedDayId = draft.days[0]?.dayId || null;
-      } else {
-        // Keep existing days but update count
-        draft.split.daysPerWeek = draft.days.length;
       }
-
       persistDraft();
       goToStep("days");
     }
@@ -131,9 +139,9 @@
         exercises: [],
       };
       draft.days.push(newDay);
-      selectedDayId = newDay.dayId;
-      draft.split = draft.split || { type: "custom", daysPerWeek: draft.days.length };
+      draft.split = draft.split || { type: "custom", daysPerWeek: draft.days.length, name: "" };
       draft.split.daysPerWeek = draft.days.length;
+      selectedDayId = newDay.dayId;
       persistDraft();
       render();
     }
@@ -169,13 +177,24 @@
       day.exercises.push({
         exerciseId: uuid(),
         name: name.trim(),
-        muscleGroup: "", // can add later (dropdown)
-        sets: [{ setType: "straight", reps: 8, weight: null, rpe: null, restSec: 120 }],
         notes: "",
+        rirNote: "",
+        rpeNote: "",
+        progressionNotes: "",
+        archetypeTags: [draft.archetype || "general"],
+        sets: [{ setType: "straight", reps: 8, weight: null, rpe: null, rir: null, restSec: 120 }],
       });
 
       persistDraft();
       render();
+    }
+
+    function updateExerciseField(dayId, exerciseId, field, value) {
+      const day = (draft.days || []).find((d) => d.dayId === dayId);
+      const ex = (day?.exercises || []).find((e) => e.exerciseId === exerciseId);
+      if (!ex) return;
+      ex[field] = value;
+      persistDraft();
     }
 
     function updateSetField(dayId, exerciseId, setIndex, field, value) {
@@ -191,7 +210,7 @@
       const ex = (day?.exercises || []).find((e) => e.exerciseId === exerciseId);
       if (!ex) return;
       ex.sets = Array.isArray(ex.sets) ? ex.sets : [];
-      ex.sets.push({ setType: "straight", reps: 8, weight: null, rpe: null, restSec: 120 });
+      ex.sets.push({ setType: "straight", reps: 8, weight: null, rpe: null, rir: null, restSec: 120 });
       persistDraft();
       render();
     }
@@ -205,17 +224,71 @@
     }
 
     function saveProgramFinal() {
-      const name = (draft.name || "").trim();
-      if (!name) {
-        alert("Program name is required.");
+      const title = (draft.title || "").trim();
+      if (!title) {
+        alert("Program title is required.");
         return;
       }
-      // Local save via core upsertProgram (uses PROGRAM_STORAGE_KEY="programs")
-      core.upsertProgram(window, draft);
+      draft.name = title;
+      draft.programId = draft.programId || `prog-${Date.now()}`;
+      draft.coachId = draft.coachId || userId;
+      const persisted = core.upsertProgram(window, core.normalizeDraft(draft));
+      draft = core.normalizeDraft(persisted.program || draft);
+      persistDraft();
       alert("Program saved ✅");
     }
 
-    // ---------- render ----------
+    function saveTemplate() {
+      if (!draft.title?.trim()) {
+        alert("Add a program title before saving template.");
+        return;
+      }
+      const template = core.saveProgramTemplate(window, draft);
+      if (!template) {
+        alert("Template save failed.");
+        return;
+      }
+      alert(`Template saved: ${template.title || template.name}`);
+    }
+
+    function duplicateLastTemplate() {
+      const templates = core.loadCoachTemplates(window);
+      const latest = templates[templates.length - 1];
+      if (!latest) {
+        alert("No templates available to duplicate yet.");
+        return;
+      }
+      const duplicated = core.duplicateProgramTemplate(window, latest.templateId);
+      if (!duplicated) {
+        alert("Template duplication failed.");
+        return;
+      }
+      alert(`Template duplicated: ${duplicated.title || duplicated.name}`);
+    }
+
+    function assignToClient() {
+      if (!draft.title?.trim()) {
+        alert("Save or title the program before assigning.");
+        return;
+      }
+      const clientName = prompt("Client name to assign this program to:");
+      if (!clientName || !clientName.trim()) return;
+      const clientId = prompt("Client ID (optional):", clientName.toLowerCase().replace(/\s+/g, "-")) || "";
+      const assignment = core.assignProgramToClient(window, {
+        coachId: userId,
+        clientId: clientId.trim() || null,
+        clientName: clientName.trim(),
+        archetype: draft.archetype || "general",
+        notes: draft.progressionNotes || "",
+        program: draft,
+      });
+      if (!assignment) {
+        alert("Assignment failed.");
+        return;
+      }
+      alert(`Assigned to ${assignment.clientName} ✅`);
+    }
+
     function renderStepper() {
       const host = $("programStepperContainer");
       host.innerHTML = "";
@@ -242,7 +315,7 @@
         const row = document.createElement("div");
         row.className = "pbv2-dayRow" + (day.dayId === selectedDayId ? " active" : "");
         row.innerHTML = `
-          <div class="pbv2-dayTitle">${day.name}</div>
+          <div class="pbv2-dayTitle">${esc(day.name)}</div>
           <div class="pbv2-dayMeta">${(day.exercises || []).length} exercises</div>
           <div class="pbv2-dayActions">
             <button data-act="rename" data-id="${day.dayId}" title="Rename">✏️</button>
@@ -283,6 +356,7 @@
       const host = $("programStepContainer");
       host.innerHTML = `
         <h2>Choose a split</h2>
+        <label>Split name <input id="pbv2SplitName" value="${esc(draft.split?.name || "")}" placeholder="e.g., 4-Day Upper/Lower" /></label>
         <div class="pbv2-grid">
           <button data-split="fullbody" data-days="3">Full Body (3)</button>
           <button data-split="upperlower" data-days="4">Upper/Lower (4)</button>
@@ -290,6 +364,11 @@
           <button data-split="custom" data-days="4">Custom (4)</button>
         </div>
       `;
+      host.querySelector("#pbv2SplitName").addEventListener("input", (e) => {
+        draft.split = draft.split || { type: "custom", daysPerWeek: 3, name: "" };
+        draft.split.name = e.target.value;
+        persistDraft();
+      });
       host.querySelectorAll("button[data-split]").forEach((btn) => {
         btn.addEventListener("click", () => {
           setSplit(btn.dataset.split, parseInt(btn.dataset.days, 10));
@@ -308,7 +387,7 @@
       }
 
       host.innerHTML = `
-        <h2>${day.name}</h2>
+        <h2>${esc(day.name)}</h2>
         <button id="pbv2AddExercise">+ Add Exercise</button>
         <div id="pbv2Exercises"></div>
       `;
@@ -321,7 +400,7 @@
         card.className = "pbv2-exCard";
         card.innerHTML = `
           <div class="pbv2-exHeader">
-            <strong>${ex.name}</strong>
+            <strong>${esc(ex.name)}</strong>
             <button data-remove="${ex.exerciseId}" title="Remove">✖</button>
           </div>
           <div class="pbv2-sets">
@@ -331,38 +410,41 @@
               <div class="pbv2-setRow">
                 <span>Set ${idx + 1}</span>
                 <label>Reps <input data-field="reps" data-idx="${idx}" value="${s.reps ?? ""}" /></label>
-                <label>Weight <input data-field="weight" data-idx="${idx}" value="${s.weight ?? ""}" /></label>
+                <label>RPE <input data-field="rpe" data-idx="${idx}" value="${s.rpe ?? ""}" /></label>
+                <label>RIR <input data-field="rir" data-idx="${idx}" value="${s.rir ?? ""}" /></label>
               </div>
             `
               )
               .join("")}
           </div>
+          <div class="pbv2-exNotes">
+            <label>RIR/RPE Notes <input data-exfield="rpeNote" value="${esc(ex.rpeNote || ex.rirNote || "")}" /></label>
+            <label>Progression Notes <input data-exfield="progressionNotes" value="${esc(ex.progressionNotes || "")}" /></label>
+          </div>
           <button data-addset="${ex.exerciseId}">+ Add Set</button>
         `;
 
-        // remove exercise
         card.querySelector("button[data-remove]")?.addEventListener("click", () => {
           removeExercise(day.dayId, ex.exerciseId);
         });
 
-        // add set
         card.querySelector("button[data-addset]")?.addEventListener("click", () => {
           addSet(day.dayId, ex.exerciseId);
         });
 
-        // set input changes
         card.querySelectorAll("input[data-field]").forEach((inp) => {
           inp.addEventListener("change", () => {
             const field = inp.dataset.field;
             const idx = parseInt(inp.dataset.idx, 10);
             const raw = inp.value.trim();
-            const val =
-              raw === ""
-                ? null
-                : field === "reps"
-                ? parseInt(raw, 10)
-                : parseFloat(raw);
+            const val = raw === "" ? null : parseFloat(raw);
             updateSetField(day.dayId, ex.exerciseId, idx, field, val);
+          });
+        });
+
+        card.querySelectorAll("input[data-exfield]").forEach((inp) => {
+          inp.addEventListener("change", () => {
+            updateExerciseField(day.dayId, ex.exerciseId, inp.dataset.exfield, inp.value.trim());
           });
         });
 
@@ -375,12 +457,12 @@
       const summary = core.computeProgramSummary(draft);
       host.innerHTML = `
         <h2>Review</h2>
-        <p><strong>${summary.name}</strong></p>
-        <p>Split: ${summary.split}</p>
-        <p>Goal: ${summary.goal}</p>
+        <p><strong>${esc(summary.name)}</strong></p>
+        <p>Split: ${esc(summary.split)} (${esc(summary.splitName || "-")})</p>
+        <p>Archetype: ${esc(summary.archetype)}</p>
         <p>Days: ${summary.dayCount}</p>
         <p>Exercises: ${summary.exerciseCount}</p>
-        <p>Scheduled weekdays: ${summary.scheduledDays}</p>
+        <p>Progression notes: ${esc(summary.progressionNotes || "-")}</p>
       `;
     }
 
@@ -391,7 +473,7 @@
         <label>Start date <input id="pbv2StartDate" type="date" value="${draft.schedule?.startDate || ""}"></label>
         <div style="margin-top:10px">
           <strong>Weekdays</strong><br/>
-          ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+          ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             .map((d, i) => {
               const wd = i + 1;
               const checked = (draft.schedule?.weekdays || []).includes(wd) ? "checked" : "";
@@ -422,17 +504,38 @@
     function renderSaveStep() {
       const host = $("programStepContainer");
       host.innerHTML = `
-        <h2>Save</h2>
-        <label>Program name <input id="pbv2Name" value="${draft.name || ""}"></label>
-        <div style="margin-top:12px">
+        <h2>Save & Assign</h2>
+        <label>Program title <input id="pbv2Title" value="${esc(draft.title || draft.name || "")}"></label>
+        <label>Archetype
+          <select id="pbv2Archetype">
+            ${ARCHETYPES.map((a) => `<option value="${a.value}" ${draft.archetype === a.value ? "selected" : ""}>${a.label}</option>`).join("")}
+          </select>
+        </label>
+        <label>Program progression notes <textarea id="pbv2ProgressionNotes" rows="3">${esc(draft.progressionNotes || "")}</textarea></label>
+        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
           <button id="pbv2SaveProgram">Save program</button>
+          <button id="pbv2SaveTemplate" type="button">Save template</button>
+          <button id="pbv2DuplicateTemplate" type="button">Duplicate template</button>
+          <button id="pbv2AssignClient" type="button">Assign to client</button>
         </div>
       `;
-      host.querySelector("#pbv2Name").addEventListener("input", (e) => {
+      host.querySelector("#pbv2Title").addEventListener("input", (e) => {
+        draft.title = e.target.value;
         draft.name = e.target.value;
         persistDraft();
       });
+      host.querySelector("#pbv2Archetype").addEventListener("change", (e) => {
+        draft.archetype = e.target.value;
+        persistDraft();
+      });
+      host.querySelector("#pbv2ProgressionNotes").addEventListener("input", (e) => {
+        draft.progressionNotes = e.target.value;
+        persistDraft();
+      });
       host.querySelector("#pbv2SaveProgram").onclick = saveProgramFinal;
+      host.querySelector("#pbv2SaveTemplate").onclick = saveTemplate;
+      host.querySelector("#pbv2DuplicateTemplate").onclick = duplicateLastTemplate;
+      host.querySelector("#pbv2AssignClient").onclick = assignToClient;
     }
 
     function renderSummaryPane() {
@@ -440,9 +543,9 @@
       const summary = core.computeProgramSummary(draft);
       host.innerHTML = `
         <div class="pbv2-paneTitle">Summary</div>
-        <p><strong>${summary.name}</strong></p>
-        <p>Split: ${summary.split}</p>
-        <p>Goal: ${summary.goal}</p>
+        <p><strong>${esc(summary.name)}</strong></p>
+        <p>Split: ${esc(summary.split)} (${esc(summary.splitName || "-")})</p>
+        <p>Archetype: ${esc(summary.archetype)}</p>
         <p>Days: ${summary.dayCount}</p>
         <p>Exercises: ${summary.exerciseCount}</p>
         <p>Scheduled: ${summary.scheduledDays}</p>
@@ -482,6 +585,5 @@
     render();
   }
 
-  // expose global for core to call
   window.initProgramTabV2 = initProgramTabV2;
 })();
