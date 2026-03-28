@@ -6357,6 +6357,13 @@ function getTimelineHeaderLabel(profile, username, referenceDate) {
 
 function renderHeroPhaseHeader(profile, username) {
   const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  const archetype = getHomeAthleteArchetype(profile, username);
+  const heroToplineByArchetype = {
+    bodybuilder: 'Physique Command Center',
+    powerlifter: 'Strength Command Center',
+    hybrid: 'Hybrid Performance Hub',
+    recreational: 'Habit Command Center'
+  };
   const athleteName = getSafeDisplayValue(phaseState.athleteName || profile.athleteName || username, 'Athlete');
   const phase = getSafeDisplayValue(window.prepModeApi?.getCurrentPhaseLabel?.(phaseState) || phaseState.currentPhase || profile.currentPhase, 'Build Phase');
   const weekLabel = getSafeDisplayValue(
@@ -6372,7 +6379,7 @@ function renderHeroPhaseHeader(profile, username) {
 
   return `
     <section class="home-dashboard-card home-hero-card">
-      <p class="home-hero-topline">Command Center</p>
+      <p class="home-hero-topline">${heroToplineByArchetype[archetype] || 'Command Center'}</p>
       <h2 class="home-hero-athlete">${athleteName}</h2>
       <p class="home-hero-meta">Current Phase: ${phase}</p>
       <p class="home-hero-meta">Phase Label: ${weekLabel} · ${weeksOut}</p>
@@ -6407,8 +6414,35 @@ function getComplianceSnapshot(profile, username) {
   return { dailyPercent, dailyStatus, weekly, rolling7, trend, insightsPayload };
 }
 
-function renderStatusSummary(profile, username) {
+function normalizeArchetype(archetype) {
+  const value = typeof archetype === 'string' ? archetype.trim().toLowerCase() : '';
+  if (['bodybuilder', 'powerlifter', 'hybrid', 'recreational'].includes(value)) return value;
+  return 'hybrid';
+}
+
+function getHomeAthleteArchetype(profile, username) {
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || {};
+  const profileArchetype = profile?.athleteArchetype || phaseState?.athleteArchetype;
+  return normalizeArchetype(profileArchetype || localStorage.getItem('athleteArchetype'));
+}
+
+function getArchetypeStatusLabelMap(archetype) {
+  const base = {
+    daily: 'Today’s Compliance',
+    weekly: 'Weekly Compliance',
+    rolling: 'Rolling 7-Day',
+    streak: 'Streak',
+    onTrack: 'On-Track'
+  };
+  if (archetype === 'bodybuilder') return { ...base, daily: 'Daily Check-In Score', weekly: 'Prep Compliance', rolling: '7-Day Prep Trend', streak: 'Posing/Prep Streak', onTrack: 'Stage-Ready Status' };
+  if (archetype === 'powerlifter') return { ...base, daily: 'Training Readiness', weekly: 'Execution Consistency', rolling: '7-Day Strength Trend', streak: 'Consistency Streak', onTrack: 'Meet-Prep Status' };
+  if (archetype === 'recreational') return { ...base, daily: 'Daily Habits', weekly: 'Week Consistency', rolling: '7-Day Routine Trend', streak: 'Habit Streak', onTrack: 'Momentum' };
+  return { ...base, daily: 'Daily Execution', weekly: 'Weekly Compliance', rolling: '7-Day Balance', streak: 'Streak', onTrack: 'On-Track' };
+}
+
+function renderStatusSummary(profile, username, archetype) {
   const snapshot = getComplianceSnapshot(profile, username);
+  const labels = getArchetypeStatusLabelMap(archetype);
   const hasDaily = Number.isFinite(snapshot.dailyPercent) && snapshot.dailyPercent > 0;
   const hasWeekly = Number.isFinite(snapshot.weekly?.averagePercent) && snapshot.weekly.averagePercent > 0;
   const hasRolling = Number.isFinite(snapshot.rolling7?.percent) && snapshot.rolling7.percent > 0;
@@ -6423,11 +6457,11 @@ function renderStatusSummary(profile, username) {
     <section class="home-dashboard-card">
       <h3 class="home-card-title">Status Summary · ${timelineLabel}</h3>
       <div class="home-stat-grid">
-        <div class="home-stat-chip"><p class="home-stat-label">Today’s Compliance</p><p class="home-stat-value">${daily}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Weekly Compliance</p><p class="home-stat-value">${weekly}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Rolling 7-Day</p><p class="home-stat-value">${rolling}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${streak}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">On-Track</p><p class="home-stat-value">${onTrack}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">${labels.daily}</p><p class="home-stat-value">${daily}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">${labels.weekly}</p><p class="home-stat-value">${weekly}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">${labels.rolling}</p><p class="home-stat-value">${rolling}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">${labels.streak}</p><p class="home-stat-value">${streak}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">${labels.onTrack}</p><p class="home-stat-value">${onTrack}</p></div>
       </div>
       <p class="home-placeholder-note">Placeholders auto-upgrade when compliance sync is available.</p>
     </section>
@@ -6472,8 +6506,8 @@ function getTodayMissionState(profile, username) {
     || engine.generateDefaultMissionFromPhase(username, phaseState, date);
 }
 
-function renderMissionItem(itemKey, state) {
-  const label = MISSION_ITEM_META[itemKey] || itemKey;
+function renderMissionItem(itemKey, state, labelOverride = '') {
+  const label = labelOverride || MISSION_ITEM_META[itemKey] || itemKey;
   const checked = Boolean(state?.[itemKey]);
   return `
     <li class="home-mission-item ${checked ? 'is-complete' : ''}">
@@ -6488,6 +6522,41 @@ function renderMissionItem(itemKey, state) {
       </label>
     </li>
   `;
+}
+
+function getMissionLabelForArchetype(itemKey, archetype) {
+  const overrides = {
+    bodybuilder: {
+      bodyweightLogged: 'Bodyweight Trend',
+      macrosComplete: 'Macros Hit',
+      cardioComplete: 'Cardio Complete',
+      posingComplete: 'Posing Session',
+      recoveryLogged: 'Recovery Check-In'
+    },
+    powerlifter: {
+      workoutComplete: 'Top Lift Session',
+      bodyweightLogged: 'Weight Class Check',
+      recoveryLogged: 'Recovery Logged',
+      cardioComplete: 'GPP/Cardio',
+      macrosComplete: 'Fueling'
+    },
+    hybrid: {
+      workoutComplete: 'Workout',
+      cardioComplete: 'Cardio',
+      bodyweightLogged: 'Bodyweight',
+      macrosComplete: 'Macros',
+      recoveryLogged: 'Recovery'
+    },
+    recreational: {
+      workoutComplete: 'Workout Complete',
+      cardioComplete: 'Move/Cardio',
+      bodyweightLogged: 'Weight Check',
+      macrosComplete: 'Nutrition Win',
+      stepsComplete: 'Steps Goal',
+      recoveryLogged: 'Recovery Habit'
+    }
+  };
+  return overrides[archetype]?.[itemKey] || MISSION_ITEM_META[itemKey] || itemKey;
 }
 
 function toggleMissionItem(itemKey, checked) {
@@ -6538,7 +6607,7 @@ function togglePosingComplete(isComplete) {
 
 window.togglePosingComplete = togglePosingComplete;
 
-function renderTodaysMission(profile, username) {
+function renderTodaysMission(profile, username, archetype) {
   const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
   const missionState = getTodayMissionState(profile, username);
   const requiredItems = missionState?.requiredItems?.length
@@ -6550,7 +6619,9 @@ function renderTodaysMission(profile, username) {
     percent: 0,
     isComplete: false
   };
-  const checklist = requiredItems.map(itemKey => renderMissionItem(itemKey, missionState)).join('');
+  const checklist = requiredItems
+    .map(itemKey => renderMissionItem(itemKey, missionState, getMissionLabelForArchetype(itemKey, archetype)))
+    .join('');
   const posingIsRequired = requiredItems.includes('posingComplete');
   const posingDone = Boolean(missionState?.posingComplete);
   const posingQuickToggle = posingIsRequired
@@ -6568,12 +6639,82 @@ function renderTodaysMission(profile, username) {
     : `Mission in progress · ${completionSummary}`;
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Today’s Mission · ${timelineLabel}</h3>
+      <h3 class="home-card-title">${archetype === 'recreational' ? 'Today’s Habits' : 'Today’s Mission'} · ${timelineLabel}</h3>
       <p class="home-mission-progress ${compliance.isComplete ? 'is-complete' : ''}">${completionLabel}</p>
       <ul class="home-mission-list">
         ${checklist}
       </ul>
       ${posingQuickToggle}
+    </section>
+  `;
+}
+
+function getLatestCheckIn(userId) {
+  const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
+  return checkIns[0] || null;
+}
+
+function renderArchetypeFocusCard(profile, username, archetype) {
+  const snapshot = getComplianceSnapshot(profile, username);
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const latestCheckIn = getLatestCheckIn(userId);
+  const currentWeight = getSafeDisplayValue(
+    latestCheckIn?.bodyweight || phaseState?.athleteInfo?.currentWeight || profile?.athleteInfo?.currentWeight || profile?.currentWeight,
+    'Not logged'
+  );
+  const readiness = latestCheckIn?.trainingPerformance || latestCheckIn?.energy || 'Pending';
+  const divisionClass = getSafeDisplayValue(phaseState?.athleteInfo?.divisionClass || profile?.athleteInfo?.divisionClass, 'Open');
+  const workoutsThisWeek = Number.isFinite(snapshot.weekly?.activeDays) ? snapshot.weekly.activeDays : 0;
+  const statusLine = snapshot.insightsPayload?.insights?.[0] || snapshot.trend?.insight || 'Add logs to unlock smarter focus insights.';
+
+  const focusByArchetype = {
+    bodybuilder: {
+      title: 'Physique Focus',
+      items: [
+        ['Bodyweight Trend', `${currentWeight}`],
+        ['Macros Compliance', `${snapshot.weekly?.averagePercent ?? 0}%`],
+        ['Cardio/Posing Readiness', `${formatComplianceStatus(snapshot.dailyStatus)}`],
+        ['Phase / Weeks Out', `${getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10))}`]
+      ]
+    },
+    powerlifter: {
+      title: 'Strength Focus',
+      items: [
+        ['Top Lift Session Trend', `${snapshot.rolling7?.percent ?? 0}%`],
+        ['Recovery / Readiness', `${readiness}`],
+        ['Weight Class', `${divisionClass}`],
+        ['Execution Status', `${formatComplianceStatus(snapshot.weekly?.status)}`]
+      ]
+    },
+    recreational: {
+      title: 'Habit Focus',
+      items: [
+        ['Workouts This Week', `${workoutsThisWeek}/7`],
+        ['Weight Trend', `${currentWeight}`],
+        ['Steps & Movement', `${snapshot.weekly?.completedDays ?? 0} compliant day(s)`],
+        ['Simple Compliance', `${snapshot.dailyPercent}% today`]
+      ]
+    },
+    hybrid: {
+      title: 'Hybrid Focus',
+      items: [
+        ['Workout Consistency', `${workoutsThisWeek}/7 active days`],
+        ['Cardio & Conditioning', `${snapshot.rolling7?.percent ?? 0}%`],
+        ['Bodyweight', `${currentWeight}`],
+        ['Macros / Recovery', `${snapshot.weekly?.averagePercent ?? 0}%`]
+      ]
+    }
+  };
+
+  const selected = focusByArchetype[archetype] || focusByArchetype.hybrid;
+  return `
+    <section class="home-dashboard-card">
+      <h3 class="home-card-title">${selected.title}</h3>
+      <ul class="home-upcoming-list">
+        ${selected.items.map(([label, value]) => `<li class="home-upcoming-item"><span>${label}</span><strong>${getSafeDisplayValue(value)}</strong></li>`).join('')}
+      </ul>
+      <p class="home-mission-progress">${statusLine}</p>
     </section>
   `;
 }
@@ -6778,16 +6919,37 @@ function renderHomeDashboard() {
   const container = document.getElementById('homeDashboardContent');
   if (!container) return;
   const { username, profile } = getHomeDashboardSourceData();
-  container.innerHTML = `<div class="home-command-grid">${[
-    renderHeroPhaseHeader(profile, username),
-    renderStatusSummary(profile, username),
-    renderCheckInInsightSummary(profile, username),
-    renderWeeklyComplianceCard(profile, username),
-    renderTodaysMission(profile, username),
-    renderPosingDashboardCard(username),
-    renderUpcomingPrepEvents(profile, username),
-    renderRewardSummary(profile)
-  ].join('')}</div>`;
+  const archetype = getHomeAthleteArchetype(profile, username);
+  const cardRenderers = getHomeDashboardCardRenderers(profile, username, archetype);
+  const orderedCards = getHomeDashboardCardOrder(archetype)
+    .map(cardId => cardRenderers[cardId]?.())
+    .filter(Boolean);
+  container.innerHTML = `<div class="home-command-grid">${orderedCards.join('')}</div>`;
+}
+
+function getHomeDashboardCardOrder(archetype) {
+  const baseOrder = ['hero', 'focus', 'status', 'mission', 'weekly', 'checkins', 'posing', 'upcoming', 'rewards'];
+  const orders = {
+    bodybuilder: ['hero', 'focus', 'mission', 'checkins', 'status', 'weekly', 'posing', 'upcoming', 'rewards'],
+    powerlifter: ['hero', 'focus', 'status', 'weekly', 'mission', 'checkins', 'upcoming', 'posing', 'rewards'],
+    hybrid: ['hero', 'focus', 'status', 'mission', 'weekly', 'checkins', 'upcoming', 'posing', 'rewards'],
+    recreational: ['hero', 'focus', 'mission', 'status', 'weekly', 'checkins', 'upcoming', 'posing', 'rewards']
+  };
+  return orders[archetype] || baseOrder;
+}
+
+function getHomeDashboardCardRenderers(profile, username, archetype) {
+  return {
+    hero: () => renderHeroPhaseHeader(profile, username),
+    focus: () => renderArchetypeFocusCard(profile, username, archetype),
+    status: () => renderStatusSummary(profile, username, archetype),
+    mission: () => renderTodaysMission(profile, username, archetype),
+    weekly: () => renderWeeklyComplianceCard(profile, username),
+    checkins: () => renderCheckInInsightSummary(profile, username),
+    posing: () => renderPosingDashboardCard(username),
+    upcoming: () => renderUpcomingPrepEvents(profile, username),
+    rewards: () => renderRewardSummary(profile)
+  };
 }
 
   
