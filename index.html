@@ -358,6 +358,131 @@
       font-size: 0.9rem;
       color: var(--secondary-text);
     }
+    .coach-dashboard {
+      display: grid;
+      gap: 14px;
+    }
+    .coach-dashboard-header {
+      display: grid;
+      gap: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      text-align: left;
+    }
+    .coach-dashboard-title {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+    .coach-dashboard-subtitle {
+      margin: 0;
+      color: var(--secondary-text);
+      font-size: 0.9rem;
+    }
+    .coach-roster-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .coach-client-card {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      background: var(--card-bg);
+      padding: 14px;
+      text-align: left;
+    }
+    .coach-client-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .coach-client-name {
+      margin: 0;
+      font-size: 1rem;
+    }
+    .coach-client-meta {
+      margin: 4px 0 0;
+      color: var(--secondary-text);
+      font-size: 0.86rem;
+    }
+    .coach-alert-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .coach-alert-pill.is-ok {
+      background: rgba(43, 110, 82, 0.14);
+      color: #2b6e52;
+      border-color: rgba(43, 110, 82, 0.3);
+    }
+    .coach-alert-pill.is-watch {
+      background: rgba(191, 118, 20, 0.14);
+      color: #8a5a13;
+      border-color: rgba(191, 118, 20, 0.3);
+    }
+    .coach-alert-pill.is-alert {
+      background: rgba(185, 55, 67, 0.16);
+      color: #9d2235;
+      border-color: rgba(185, 55, 67, 0.35);
+    }
+    .coach-client-kpis {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .coach-client-kpi {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px;
+      background: rgba(47, 128, 237, 0.06);
+    }
+    .coach-client-kpi-label {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--secondary-text);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .coach-client-kpi-value {
+      margin: 4px 0 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .coach-no-clients {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--secondary-text);
+      border: 1px dashed var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      background: rgba(47, 128, 237, 0.04);
+    }
+    @media (min-width: 800px) {
+      .coach-roster-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 1180px) {
+      .coach-roster-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
     .home-stat-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
@@ -1502,51 +1627,10 @@
 
 <div id="coachingTab" class="tab-content coach-only">
   <h2>Coach Dashboard</h2>
-  <p style="opacity:0.85;">
-    Coach Mode foundation is active. This is the shell for future coach workflows while athlete tools remain unchanged.
+  <p style="opacity:0.85; margin-bottom: 14px;">
+    Operational roster view for coach mode. Client summary cards update from backend data when available and use local demo data when relationships are not yet connected.
   </p>
-  <section>
-    <h3>Coach Routes (Scaffold)</h3>
-    <ul>
-      <li><strong>/coach/dashboard</strong> → Overview shell (current tab)</li>
-      <li><strong>/coach/clients</strong> → Planned roster + client details</li>
-      <li><strong>/coach/programs</strong> → Planned assignment workflows</li>
-      <li><strong>/coach/check-ins</strong> → Planned review queue</li>
-    </ul>
-  </section>
-  <section>
-    <h3>1. Client & Roster Management</h3>
-    <ul>
-      <li><strong>Clients Dashboard:</strong> Search, sort & filter clients.</li>
-      <li><strong>Profile Pages:</strong> Stats, goals, bio & history.</li>
-      <li><strong>Role-Based Access:</strong> Trainer vs. client views.</li>
-    </ul>
-  </section>
-  <section>
-    <h3>2. Program Assignment & Scheduling</h3>
-    <ul>
-      <li><strong>Assign Programs:</strong> Push templates to client calendars.</li>
-      <li><strong>Calendar Sync & Reminders:</strong> Email/SMS before sessions.</li>
-      <li><strong>Session Booking:</strong> Clients request/cancel sessions.</li>
-    </ul>
-  </section>
-  <section>
-    <h3>3. In-App Messaging & Check-Ins</h3>
-    <ul>
-      <li><strong>Secure Chat:</strong> 1-on-1 messaging with attachments.</li>
-      <li><strong>Progress Check-Ins:</strong> Photos, soreness logs.</li>
-      <li><strong>Group Broadcasts:</strong> Coach → all clients.</li>
-    </ul>
-  </section>
-  <section>
-    <h3>4. Advanced Analytics & Reporting</h3>
-    <ul>
-      <li><strong>High-Level Metrics:</strong> Roster adherence & trends.</li>
-      <li><strong>Client Reports:</strong> PDF/CSV summaries.</li>
-      <li><strong>Leaderboards:</strong> Volume & improvement rankings.</li>
-    </ul>
-  </section>
-  <!-- Continue similarly for items 5–10 -->
+  <div id="coachDashboardContent" class="coach-dashboard"></div>
 </div>
 
 <div id="profileTab" class="tab-content">
@@ -2115,6 +2199,9 @@ function showTab(tabName) {
   switch (tabName) {
     case 'homeTab':
       renderHomeDashboard();
+      break;
+    case 'coachingTab':
+      renderCoachDashboard();
       break;
     case 'macroTab':
       if (window.renderSparklines) {
@@ -7047,6 +7134,176 @@ function getHomeDashboardCardRenderers(profile, username, archetype) {
     rewards: () => renderRewardSummary(profile)
   };
 }
+
+
+function escapeCoachText(value, fallback = '—') {
+  const safe = getSafeDisplayValue(value, fallback);
+  return String(safe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatCoachDate(dateLike) {
+  if (!dateLike) return 'No check-in logged';
+  const parsed = new Date(dateLike);
+  if (Number.isNaN(parsed.getTime())) return 'No check-in logged';
+  return parsed.toISOString().slice(0, 10);
+}
+
+function getCoachDemoClients() {
+  return [
+    {
+      id: 'demo-a1',
+      name: 'Maya Thompson',
+      archetype: 'Bodybuilder',
+      currentPhase: 'Contest Prep · Week 9',
+      lastCheckInDate: '2026-03-25',
+      compliancePercent: 91,
+      primaryStatusMetric: 'Bodyweight trend stable',
+      alertStatus: 'ok'
+    },
+    {
+      id: 'demo-a2',
+      name: 'Eric Ramirez',
+      archetype: 'Powerlifter',
+      currentPhase: 'Strength Peak · Week 3',
+      lastCheckInDate: '2026-03-23',
+      compliancePercent: 76,
+      primaryStatusMetric: 'Bench fatigue elevated',
+      alertStatus: 'watch'
+    },
+    {
+      id: 'demo-a3',
+      name: 'Jules Parker',
+      archetype: 'Hybrid',
+      currentPhase: 'Base Build · Week 5',
+      lastCheckInDate: '2026-03-20',
+      compliancePercent: 58,
+      primaryStatusMetric: 'Missed 2 cardio targets',
+      alertStatus: 'alert'
+    }
+  ];
+}
+
+function normalizeCoachClientRecord(client = {}) {
+  const pct = Number(client.compliancePercent);
+  return {
+    id: client.id || client.clientId || `client-${Math.random().toString(36).slice(2, 8)}`,
+    name: client.name || client.clientName || 'Unnamed client',
+    archetype: client.archetype || client.athleteArchetype || 'Unassigned',
+    currentPhase: client.currentPhase || client.phase || 'Phase not set',
+    lastCheckInDate: client.lastCheckInDate || client.lastCheckIn || client.lastCheckinDate || '',
+    compliancePercent: Number.isFinite(pct) ? Math.max(0, Math.min(100, Math.round(pct))) : 0,
+    primaryStatusMetric: client.primaryStatusMetric || client.statusMetric || client.primaryMetric || 'Awaiting status metric',
+    alertStatus: String(client.alertStatus || client.alert || 'watch').toLowerCase()
+  };
+}
+
+async function loadCoachClients() {
+  const coachId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'coach';
+  const fallback = getCoachDemoClients().map(normalizeCoachClientRecord);
+  const endpoint = `/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
+
+  try {
+    const response = await fetch(endpoint);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.clients)
+        ? payload.clients
+        : [];
+
+    if (!list.length) {
+      return { clients: fallback, source: 'demo' };
+    }
+
+    return {
+      clients: list.map(normalizeCoachClientRecord),
+      source: 'backend'
+    };
+  } catch (error) {
+    console.info('[CoachDashboard] falling back to demo roster data.', error);
+    return { clients: fallback, source: 'demo' };
+  }
+}
+
+function getCoachAlertMeta(status = 'watch') {
+  const normalized = String(status || 'watch').toLowerCase();
+  if (normalized === 'ok' || normalized === 'stable') {
+    return { label: 'Stable', className: 'is-ok' };
+  }
+  if (normalized === 'alert' || normalized === 'at_risk' || normalized === 'risk') {
+    return { label: 'Needs Action', className: 'is-alert' };
+  }
+  return { label: 'Watch', className: 'is-watch' };
+}
+
+function renderCoachClientCard(client) {
+  const safeClient = normalizeCoachClientRecord(client);
+  const alertMeta = getCoachAlertMeta(safeClient.alertStatus);
+  return `
+    <article class="coach-client-card" data-client-id="${escapeCoachText(safeClient.id)}">
+      <header class="coach-client-card-header">
+        <div>
+          <h3 class="coach-client-name">${escapeCoachText(safeClient.name)}</h3>
+          <p class="coach-client-meta">${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
+        </div>
+        <span class="coach-alert-pill ${alertMeta.className}">${alertMeta.label}</span>
+      </header>
+      <ul class="coach-client-kpis">
+        <li class="coach-client-kpi">
+          <p class="coach-client-kpi-label">Last Check-In</p>
+          <p class="coach-client-kpi-value">${escapeCoachText(formatCoachDate(safeClient.lastCheckInDate))}</p>
+        </li>
+        <li class="coach-client-kpi">
+          <p class="coach-client-kpi-label">Compliance</p>
+          <p class="coach-client-kpi-value">${escapeCoachText(`${safeClient.compliancePercent}%`)}</p>
+        </li>
+        <li class="coach-client-kpi" style="grid-column: 1 / -1;">
+          <p class="coach-client-kpi-label">Primary Status Metric</p>
+          <p class="coach-client-kpi-value">${escapeCoachText(safeClient.primaryStatusMetric)}</p>
+        </li>
+      </ul>
+    </article>
+  `;
+}
+
+function renderCoachClientRoster(clients = []) {
+  if (!Array.isArray(clients) || !clients.length) {
+    return '<p class="coach-no-clients">No clients assigned yet. Demo roster will appear once coach relationships are configured.</p>';
+  }
+  const cards = clients.map((client) => renderCoachClientCard(client)).join('');
+  return `<section class="coach-roster-grid" aria-label="Coach client roster">${cards}</section>`;
+}
+
+async function renderCoachDashboard() {
+  const container = document.getElementById('coachDashboardContent');
+  if (!container) return;
+  container.innerHTML = '<p class="coach-no-clients">Loading coach roster…</p>';
+
+  const { clients, source } = await loadCoachClients();
+  const avgCompliance = clients.length
+    ? Math.round(clients.reduce((sum, client) => sum + (Number(client.compliancePercent) || 0), 0) / clients.length)
+    : 0;
+  const flaggedCount = clients.filter((client) => getCoachAlertMeta(client.alertStatus).className === 'is-alert').length;
+  const dataSourceLabel = source === 'backend' ? 'Backend relationship data' : 'Local demo fallback';
+
+  container.innerHTML = `
+    <section class="coach-dashboard-header">
+      <h3 class="coach-dashboard-title">Client Roster Overview</h3>
+      <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action</p>
+    </section>
+    ${renderCoachClientRoster(clients)}
+  `;
+}
+
+window.renderCoachDashboard = renderCoachDashboard;
+window.renderCoachClientRoster = renderCoachClientRoster;
+window.renderCoachClientCard = renderCoachClientCard;
 
 const CHECKIN_ARCHETYPE_SCHEMAS = Object.freeze({
   bodybuilder: {
