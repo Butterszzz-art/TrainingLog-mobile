@@ -11,6 +11,14 @@
     show_day: 'Show Day',
     post_show: 'Post-Show'
   };
+  const KNOWN_ARCHETYPES = ['bodybuilder', 'powerlifter', 'hybrid', 'recreational'];
+  const DEFAULT_ARCHETYPE = 'recreational';
+  const LEGACY_ARCHETYPE_METRIC_MAP = {
+    bodybuilder: ['hunger', 'digestion', 'trainingPerformance'],
+    powerlifter: ['trainingPerformance'],
+    hybrid: ['trainingPerformance'],
+    recreational: ['energy', 'sleep', 'stress']
+  };
 
   function resolveUserId(userId) {
     const fromArg = typeof userId === 'string' ? userId.trim() : '';
@@ -57,6 +65,8 @@
 
   function normalizeCheckIn(checkIn, phaseState = {}) {
     const safe = checkIn && typeof checkIn === 'object' ? checkIn : {};
+    const archetypeRaw = typeof safe.archetype === 'string' ? safe.archetype.trim().toLowerCase() : '';
+    const archetype = KNOWN_ARCHETYPES.includes(archetypeRaw) ? archetypeRaw : DEFAULT_ARCHETYPE;
     const normalizedDate = toIsoDate(safe.date);
     const normalizedPhase = typeof safe.phase === 'string' && safe.phase.trim()
       ? safe.phase.trim()
@@ -73,8 +83,17 @@
     const stress = safe.stress ?? safe.recoveryRatings?.stress ?? '';
     const priorAdjustments = safe.adjustments && typeof safe.adjustments === 'object' ? safe.adjustments : {};
     const priorReview = safe.review && typeof safe.review === 'object' ? safe.review : {};
+    const priorArchetypeMetrics = safe.archetypeMetrics && typeof safe.archetypeMetrics === 'object' ? safe.archetypeMetrics : {};
+    const archetypeMetrics = { ...priorArchetypeMetrics };
+    (LEGACY_ARCHETYPE_METRIC_MAP[archetype] || []).forEach((fieldKey) => {
+      if (archetypeMetrics[fieldKey] !== undefined && archetypeMetrics[fieldKey] !== null && archetypeMetrics[fieldKey] !== '') return;
+      if (safe[fieldKey] !== undefined && safe[fieldKey] !== null && safe[fieldKey] !== '') {
+        archetypeMetrics[fieldKey] = safe[fieldKey];
+      }
+    });
     return {
       date: normalizedDate,
+      archetype,
       phase: normalizedPhase,
       weekLabel: typeof safe.weekLabel === 'string' && safe.weekLabel.trim()
         ? safe.weekLabel.trim()
@@ -114,7 +133,8 @@
       },
       frontPhoto: safe.frontPhoto ?? '',
       sidePhoto: safe.sidePhoto ?? '',
-      backPhoto: safe.backPhoto ?? ''
+      backPhoto: safe.backPhoto ?? '',
+      archetypeMetrics
     };
   }
 
