@@ -3,6 +3,20 @@
   <form id="settingsForm" class="profile-hub-form">
     <section class="panel profile-section" aria-labelledby="athleteInfoHeading">
       <h3 id="athleteInfoHeading">Athlete Info</h3>
+      <label for="profileAthleteArchetype">Athlete archetype</label>
+      <select id="profileAthleteArchetype" name="profileAthleteArchetype">
+        <option value="bodybuilder">Bodybuilder</option>
+        <option value="powerlifter">Powerlifter</option>
+        <option value="hybrid">Hybrid</option>
+        <option value="recreational">Recreational</option>
+      </select>
+      <ul class="profile-archetype-descriptions">
+        <li><strong>Bodybuilder:</strong> Physique-focused training centered on hypertrophy, symmetry, and conditioning.</li>
+        <li><strong>Powerlifter:</strong> Strength-first training aimed at improving squat, bench, and deadlift performance.</li>
+        <li><strong>Hybrid:</strong> Balanced focus on strength, muscle growth, and overall athletic conditioning.</li>
+        <li><strong>Recreational:</strong> General fitness approach built around consistency, health, and sustainable progress.</li>
+      </ul>
+
       <label for="athleteInfoName">Name</label>
       <input id="athleteInfoName" name="athleteInfoName" type="text" placeholder="Athlete name">
 

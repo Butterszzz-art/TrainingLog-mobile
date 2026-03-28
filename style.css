@@ -1334,6 +1334,23 @@ body.theme-dark .set-row {
   font-size: 0.9rem;
 }
 
+.profile-archetype-current {
+  margin: 10px 0 6px;
+  font-size: 0.92rem;
+  color: #3f4a64;
+}
+
+.profile-archetype-descriptions {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.03);
+  display: grid;
+  gap: 6px;
+  font-size: 0.86rem;
+  color: #4b5673;
+}
+
 .profile-edit-actions {
   display: flex;
   gap: 8px;

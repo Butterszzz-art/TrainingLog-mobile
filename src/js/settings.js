@@ -3,6 +3,7 @@ const DEFAULT_ATHLETE_ARCHETYPE = 'recreational';
 const ATHLETE_ARCHETYPE_CONFIGS = Object.freeze({
   bodybuilder: Object.freeze({
     label: 'Bodybuilder',
+    shortDescription: 'Physique-focused training centered on hypertrophy, symmetry, and conditioning.',
     defaultDashboardEmphasis: 'physique and hypertrophy',
     defaultCheckInStyle: 'weekly physique-focused',
     defaultProgressEmphasis: 'muscle gain and symmetry',
@@ -10,6 +11,7 @@ const ATHLETE_ARCHETYPE_CONFIGS = Object.freeze({
   }),
   powerlifter: Object.freeze({
     label: 'Powerlifter',
+    shortDescription: 'Strength-first training aimed at improving squat, bench, and deadlift performance.',
     defaultDashboardEmphasis: 'strength performance',
     defaultCheckInStyle: 'performance and recovery',
     defaultProgressEmphasis: '1RM and volume landmarks',
@@ -17,6 +19,7 @@ const ATHLETE_ARCHETYPE_CONFIGS = Object.freeze({
   }),
   hybrid: Object.freeze({
     label: 'Hybrid',
+    shortDescription: 'Balanced focus on strength, muscle growth, and overall athletic conditioning.',
     defaultDashboardEmphasis: 'balanced strength and conditioning',
     defaultCheckInStyle: 'balanced performance and body composition',
     defaultProgressEmphasis: 'mixed performance and physique trends',
@@ -24,6 +27,7 @@ const ATHLETE_ARCHETYPE_CONFIGS = Object.freeze({
   }),
   recreational: Object.freeze({
     label: 'Recreational',
+    shortDescription: 'General fitness approach built around consistency, health, and sustainable progress.',
     defaultDashboardEmphasis: 'consistency and wellness',
     defaultCheckInStyle: 'habit-first quick check-in',
     defaultProgressEmphasis: 'overall fitness trend',
@@ -62,6 +66,19 @@ function normalizeAthleteArchetype(archetype) {
 
 function getArchetypeConfig(archetype) {
   return ATHLETE_ARCHETYPE_CONFIGS[normalizeAthleteArchetype(archetype)];
+}
+
+function renderAthleteArchetypeOptions(selectedArchetype) {
+  const selected = normalizeAthleteArchetype(selectedArchetype);
+  return Object.entries(ATHLETE_ARCHETYPE_CONFIGS)
+    .map(([value, config]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${config.label}</option>`)
+    .join('');
+}
+
+function renderAthleteArchetypeDescriptionList() {
+  return Object.values(ATHLETE_ARCHETYPE_CONFIGS)
+    .map((config) => `<li><strong>${escapeHtml(config.label)}:</strong> ${escapeHtml(config.shortDescription)}</li>`)
+    .join('');
 }
 
 function readStoredSettingsForUser(userId) {
@@ -165,6 +182,7 @@ function applySettingsToUI(settings) {
   };
 
   setValue('athleteInfoName', athleteInfo.name || '');
+  setValue('profileAthleteArchetype', profile.athleteArchetype || DEFAULT_ATHLETE_ARCHETYPE);
   setValue('athleteInfoCurrentWeight', athleteInfo.currentWeight ?? '');
   setValue('athleteInfoHeight', athleteInfo.height || '');
   setValue('athleteInfoDivision', athleteInfo.divisionClass || '');
@@ -450,6 +468,8 @@ function renderProfileTab() {
   const goals = profile.goals || {};
   const selectedPhase = phaseSettings.currentPhase || 'improvement';
   const selectedCheckInDay = phaseSettings.checkInDay || 'Sunday';
+  const selectedArchetype = normalizeAthleteArchetype(profile.athleteArchetype);
+  const selectedArchetypeConfig = getArchetypeConfig(selectedArchetype);
   const timelineLabel = getProfileTimelineLabel({
     ...phaseSettings,
     mode: phaseSettings.currentPhase,
@@ -465,11 +485,18 @@ function renderProfileTab() {
     <section class="panel profile-section" aria-labelledby="profileAthleteInfoHeading">
       <h3 id="profileAthleteInfoHeading">Athlete Info</h3>
       <div class="profile-field-grid">
+        <label>Athlete archetype
+          <select id="profileTabAthleteArchetype" disabled>
+            ${renderAthleteArchetypeOptions(selectedArchetype)}
+          </select>
+        </label>
         <label>Name<input id="profileTabAthleteName" type="text" value="${escapeHtmlAttribute(formatProfileValue(athleteInfo.name, ''))}" disabled></label>
         <label>Current Weight<input id="profileTabCurrentWeight" type="number" min="0" step="0.1" value="${escapeHtmlAttribute(formatProfileValue(athleteInfo.currentWeight, ''))}" disabled></label>
         <label>Height<input id="profileTabHeight" type="text" value="${escapeHtmlAttribute(formatProfileValue(athleteInfo.height, ''))}" disabled></label>
         <label>Division / Class<input id="profileTabDivision" type="text" value="${escapeHtmlAttribute(formatProfileValue(athleteInfo.divisionClass, ''))}" disabled></label>
       </div>
+      <p class="profile-archetype-current">Current archetype: <strong>${escapeHtml(selectedArchetypeConfig.label)}</strong> — ${escapeHtml(selectedArchetypeConfig.shortDescription)}</p>
+      <ul class="profile-archetype-descriptions">${renderAthleteArchetypeDescriptionList()}</ul>
     </section>
     <section class="panel profile-section" aria-labelledby="profilePhaseHeading">
       <h3 id="profilePhaseHeading">Phase / Prep Settings</h3>
@@ -543,7 +570,7 @@ function bindProfileTabEditing(container) {
   if (!editButton || !saveButton || !cancelButton) return;
 
   const editableFields = Array.from(container.querySelectorAll(
-    '#profileTabAthleteName, #profileTabCurrentWeight, #profileTabHeight, #profileTabDivision, #profileTabCurrentPhase, #profileTabStartDate, #profileTabShowDate, #profileTabTargetStageWeight, #profileTabCheckInDay, #profileTabCardioBaseline, #profileTabPosingFrequency, #profileTabMacroTargets, #profileTabStepsTarget, #profileTabCardioTarget, #profileTabSleepTarget'
+    '#profileTabAthleteArchetype, #profileTabAthleteName, #profileTabCurrentWeight, #profileTabHeight, #profileTabDivision, #profileTabCurrentPhase, #profileTabStartDate, #profileTabShowDate, #profileTabTargetStageWeight, #profileTabCheckInDay, #profileTabCardioBaseline, #profileTabPosingFrequency, #profileTabMacroTargets, #profileTabStepsTarget, #profileTabCardioTarget, #profileTabSleepTarget'
   ));
 
   const setEditingState = (isEditing) => {
@@ -560,6 +587,7 @@ function bindProfileTabEditing(container) {
   saveButton.addEventListener('click', () => {
     const currentSettings = getHydratedSettingsSnapshot();
     const nextProfile = {
+      athleteArchetype: normalizeAthleteArchetype(container.querySelector('#profileTabAthleteArchetype')?.value),
       athleteInfo: {
         name: container.querySelector('#profileTabAthleteName')?.value?.trim() || '',
         currentWeight: toNumberOrNull(container.querySelector('#profileTabCurrentWeight')?.value),
