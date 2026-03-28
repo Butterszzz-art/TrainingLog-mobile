@@ -1,4 +1,35 @@
 const SETTINGS_PREFIX = 'settings_';
+const DEFAULT_ATHLETE_ARCHETYPE = 'recreational';
+const ATHLETE_ARCHETYPE_CONFIGS = Object.freeze({
+  bodybuilder: Object.freeze({
+    label: 'Bodybuilder',
+    defaultDashboardEmphasis: 'physique and hypertrophy',
+    defaultCheckInStyle: 'weekly physique-focused',
+    defaultProgressEmphasis: 'muscle gain and symmetry',
+    defaultComplianceEmphasis: 'nutrition and posing consistency'
+  }),
+  powerlifter: Object.freeze({
+    label: 'Powerlifter',
+    defaultDashboardEmphasis: 'strength performance',
+    defaultCheckInStyle: 'performance and recovery',
+    defaultProgressEmphasis: '1RM and volume landmarks',
+    defaultComplianceEmphasis: 'program execution'
+  }),
+  hybrid: Object.freeze({
+    label: 'Hybrid',
+    defaultDashboardEmphasis: 'balanced strength and conditioning',
+    defaultCheckInStyle: 'balanced performance and body composition',
+    defaultProgressEmphasis: 'mixed performance and physique trends',
+    defaultComplianceEmphasis: 'training and recovery balance'
+  }),
+  recreational: Object.freeze({
+    label: 'Recreational',
+    defaultDashboardEmphasis: 'consistency and wellness',
+    defaultCheckInStyle: 'habit-first quick check-in',
+    defaultProgressEmphasis: 'overall fitness trend',
+    defaultComplianceEmphasis: 'habit adherence'
+  })
+});
 
 function getActiveUsername() {
   if (typeof window !== 'undefined') {
@@ -16,10 +47,27 @@ function getSettingsStorageKey() {
   return user ? `${SETTINGS_PREFIX}${user}` : `${SETTINGS_PREFIX}guest`;
 }
 
-function readStoredSettings() {
+function getSettingsStorageKeyForUser(userId) {
+  const resolved = typeof userId === 'string' ? userId.trim() : '';
+  return `${SETTINGS_PREFIX}${resolved || 'guest'}`;
+}
+
+function normalizeAthleteArchetype(archetype) {
+  const normalized = typeof archetype === 'string' ? archetype.trim().toLowerCase() : '';
+  if (Object.prototype.hasOwnProperty.call(ATHLETE_ARCHETYPE_CONFIGS, normalized)) {
+    return normalized;
+  }
+  return DEFAULT_ATHLETE_ARCHETYPE;
+}
+
+function getArchetypeConfig(archetype) {
+  return ATHLETE_ARCHETYPE_CONFIGS[normalizeAthleteArchetype(archetype)];
+}
+
+function readStoredSettingsForUser(userId) {
   if (typeof localStorage === 'undefined') return {};
   try {
-    const raw = localStorage.getItem(getSettingsStorageKey());
+    const raw = localStorage.getItem(getSettingsStorageKeyForUser(userId));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return typeof parsed === 'object' && parsed !== null ? parsed : {};
@@ -27,6 +75,34 @@ function readStoredSettings() {
     console.warn('Unable to parse stored settings', error);
     return {};
   }
+}
+
+function writeStoredSettingsForUser(userId, settings) {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(getSettingsStorageKeyForUser(userId), JSON.stringify(settings));
+}
+
+function getAthleteArchetype(userId) {
+  const profile = readStoredSettingsForUser(userId)?.profile;
+  return normalizeAthleteArchetype(profile?.athleteArchetype);
+}
+
+function setAthleteArchetype(userId, archetype) {
+  const nextArchetype = normalizeAthleteArchetype(archetype);
+  const existing = { ...getDefaultSettings(), ...readStoredSettingsForUser(userId) };
+  const next = {
+    ...existing,
+    profile: {
+      ...(existing.profile || {}),
+      athleteArchetype: nextArchetype
+    }
+  };
+  writeStoredSettingsForUser(userId, next);
+  return nextArchetype;
+}
+
+function readStoredSettings() {
+  return readStoredSettingsForUser(getActiveUsername());
 }
 
 function applySettingsToUI(settings) {
@@ -78,6 +154,7 @@ function applySettingsToUI(settings) {
   }
 
   const profile = settings.profile || {};
+  profile.athleteArchetype = normalizeAthleteArchetype(profile.athleteArchetype);
   const athleteInfo = profile.athleteInfo || {};
   const phaseSettings = profile.phaseSettings || {};
   const goals = profile.goals || {};
@@ -117,6 +194,7 @@ function getDefaultSettings() {
     streakReminderTime: '19:00',
     autoIncrement: localStorage.getItem('autoIncrementEnabled') !== 'false',
     profile: {
+      athleteArchetype: DEFAULT_ATHLETE_ARCHETYPE,
       athleteInfo: {},
       phaseSettings: {},
       goals: {}
@@ -128,6 +206,8 @@ function saveSettings(event) {
   if (event) event.preventDefault();
 
   const container = document.getElementById('settingsFormContainer') || document;
+  const existingSettings = getHydratedSettingsSnapshot();
+  const existingProfile = existingSettings.profile || {};
   const unitField = container.querySelector('#defaultUnit');
   const themeField = container.querySelector('#theme');
   const reminderEnabledField = container.querySelector('#streakReminderEnabled');
@@ -141,6 +221,10 @@ function saveSettings(event) {
     streakReminderTime: reminderTimeField && reminderTimeField.value ? reminderTimeField.value : '19:00',
     autoIncrement: autoIncrementField ? Boolean(autoIncrementField.checked) : getDefaultSettings().autoIncrement,
     profile: {
+      ...existingProfile,
+      athleteArchetype: normalizeAthleteArchetype(
+        container.querySelector('#profileAthleteArchetype')?.value || existingProfile.athleteArchetype
+      ),
       athleteInfo: {
         name: container.querySelector('#athleteInfoName')?.value?.trim() || '',
         currentWeight: toNumberOrNull(container.querySelector('#athleteInfoCurrentWeight')?.value),
@@ -205,21 +289,39 @@ function syncProfilePhaseSettings(profile) {
 
 function hydrateProfileFromPhaseState(settings) {
   const phaseApi = getPhaseSetupApi();
-  if (!phaseApi) return settings;
+  const existingProfile = settings.profile || {};
+  const baseProfile = {
+    athleteArchetype: normalizeAthleteArchetype(existingProfile.athleteArchetype),
+    athleteInfo: {},
+    phaseSettings: {},
+    goals: {},
+    ...existingProfile
+  };
+  if (!phaseApi) {
+    return {
+      ...settings,
+      profile: baseProfile
+    };
+  }
   const phaseState = phaseApi.getCurrentPhaseState?.() || phaseApi.initializeDefaultPhaseState?.();
-  if (!phaseState) return settings;
+  if (!phaseState) {
+    return {
+      ...settings,
+      profile: baseProfile
+    };
+  }
   return {
     ...settings,
     profile: {
-      ...(settings.profile || {}),
+      ...baseProfile,
       athleteInfo: {
-        ...((settings.profile && settings.profile.athleteInfo) || {}),
+        ...(baseProfile.athleteInfo || {}),
         name: settings.profile?.athleteInfo?.name || phaseState.athleteName || '',
         currentWeight: settings.profile?.athleteInfo?.currentWeight ?? phaseState.currentWeight,
         divisionClass: settings.profile?.athleteInfo?.divisionClass || phaseState.division || ''
       },
       phaseSettings: {
-        ...((settings.profile && settings.profile.phaseSettings) || {}),
+        ...(baseProfile.phaseSettings || {}),
         currentPhase: settings.profile?.phaseSettings?.currentPhase || phaseState.mode || 'improvement',
         startDate: settings.profile?.phaseSettings?.startDate || phaseState.startDate || null,
         showDate: settings.profile?.phaseSettings?.showDate || phaseState.showDate || null,
@@ -731,6 +833,10 @@ window.initSettingsPage = injectSettingsMarkup;
 window.saveSettings = saveSettings;
 window.getStoredUserSettings = readStoredSettings;
 window.getDefaultUserSettings = getDefaultSettings;
+window.getAthleteArchetype = getAthleteArchetype;
+window.setAthleteArchetype = setAthleteArchetype;
+window.getArchetypeConfig = getArchetypeConfig;
+window.getAthleteArchetypeConfigs = () => ATHLETE_ARCHETYPE_CONFIGS;
 window.bindPhaseSetup = bindPhaseSetup;
 window.renderProfileTab = renderProfileTab;
 window.dispatchEvent(new CustomEvent('traininglog:settings-ready'));
