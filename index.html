@@ -7313,6 +7313,9 @@ function getCoachDemoClients() {
       alertStatus: 'ok',
       athleteInfo: { height: `5'5"`, divisionClass: 'Bikini' },
       currentBodyweight: 131.8,
+      workoutsLoggedThisWeek: 5,
+      cardioMissedSessions: 0,
+      weeklyWeightChangePercent: -0.45,
       latestCheckInSummary: 'Great energy and stable waist. Coach held macros steady.',
       recentProgressSummary: 'Down 0.6 lb over 7 days with improved conditioning photos.',
       currentProgramSummary: '5-day body-part split with daily posing and 4 cardio sessions.',
@@ -7329,6 +7332,9 @@ function getCoachDemoClients() {
       alertStatus: 'watch',
       athleteInfo: { height: `5'10"`, divisionClass: '83kg Class' },
       currentBodyweight: 82.3,
+      workoutsLoggedThisWeek: 3,
+      cardioMissedSessions: 1,
+      weeklyWeightChangePercent: 0.85,
       latestCheckInSummary: 'Sleep dipped to 5/10; plan adjusted with lower accessory volume.',
       recentProgressSummary: 'Squat e1RM trending up; bench flat over 2 weeks.',
       currentProgramSummary: '4-day SBD peak with top singles + backoff triples.',
@@ -7345,6 +7351,9 @@ function getCoachDemoClients() {
       alertStatus: 'alert',
       athleteInfo: { height: `6'0"`, divisionClass: 'General Fitness' },
       currentBodyweight: 188.4,
+      workoutsLoggedThisWeek: 0,
+      cardioMissedSessions: 3,
+      weeklyWeightChangePercent: -1.42,
       latestCheckInSummary: 'Reported work stress spike and reduced training consistency.',
       recentProgressSummary: 'Bodyweight stable, but conditioning pace has regressed.',
       currentProgramSummary: '3 lifting + 3 conditioning sessions weekly.',
@@ -7414,9 +7423,145 @@ function getCoachAlertMeta(status = 'watch') {
   return { label: 'Watch', className: 'is-watch' };
 }
 
+function toCoachDateValue(dateLike) {
+  if (!dateLike) return null;
+  const parsed = new Date(dateLike);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getDaysSinceCoachDate(dateLike) {
+  const parsed = toCoachDateValue(dateLike);
+  if (!parsed) return null;
+  const now = new Date();
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((now.getTime() - parsed.getTime()) / msPerDay);
+}
+
+function inferCoachTrendSignal(client = {}) {
+  const summary = `${client.recentProgressSummary || ''} ${client.primaryStatusMetric || ''}`.toLowerCase();
+  if (!summary.trim()) return null;
+  if (/(stalled|plateau|regressed|no progress|flat over|not moving)/.test(summary)) return 'stalled';
+  if (/(rapid|too fast|spike|sharp drop|dropped fast)/.test(summary)) return 'rapid';
+  return null;
+}
+
+function deriveCoachClientAlerts(client = {}) {
+  const alerts = [];
+  const daysSinceCheckIn = getDaysSinceCoachDate(client.lastCheckInDate);
+  if (Number.isFinite(daysSinceCheckIn)) {
+    if (daysSinceCheckIn >= 10) {
+      alerts.push({
+        id: 'missed_checkin',
+        severity: 'alert',
+        label: 'Missed check-in',
+        reason: `${daysSinceCheckIn} days since last check-in`
+      });
+    } else if (daysSinceCheckIn >= 7) {
+      alerts.push({
+        id: 'missed_checkin',
+        severity: 'watch',
+        label: 'Missed check-in',
+        reason: `${daysSinceCheckIn} days since last check-in`
+      });
+    }
+  }
+
+  const compliance = Number(client.compliancePercent);
+  if (Number.isFinite(compliance)) {
+    if (compliance < 65) {
+      alerts.push({ id: 'low_compliance', severity: 'alert', label: 'Low compliance', reason: `${Math.round(compliance)}% adherence` });
+    } else if (compliance < 80) {
+      alerts.push({ id: 'low_compliance', severity: 'watch', label: 'Low compliance', reason: `${Math.round(compliance)}% adherence` });
+    }
+  }
+
+  const trendSignal = inferCoachTrendSignal(client);
+  if (trendSignal === 'stalled') {
+    alerts.push({ id: 'stalled_trend', severity: 'watch', label: 'Stalled trend', reason: 'Progress notes suggest stalled momentum' });
+  }
+
+  const weeklyWeightChangePct = Number(
+    client.weeklyWeightChangePercent
+    ?? client.weeklyWeightChangePct
+    ?? client.latestCheckIn?.weeklyWeightChangePercent
+    ?? client.latestCheckIn?.weeklyWeightChangePct
+  );
+  if (Number.isFinite(weeklyWeightChangePct)) {
+    const absChange = Math.abs(weeklyWeightChangePct);
+    if (absChange >= 1.25) {
+      alerts.push({ id: 'rapid_weight_change', severity: 'alert', label: 'Rapid weight change', reason: `${weeklyWeightChangePct.toFixed(2)}% this week` });
+    } else if (absChange >= 0.8) {
+      alerts.push({ id: 'rapid_weight_change', severity: 'watch', label: 'Rapid weight change', reason: `${weeklyWeightChangePct.toFixed(2)}% this week` });
+    }
+  } else if (trendSignal === 'rapid') {
+    alerts.push({ id: 'rapid_weight_change', severity: 'watch', label: 'Rapid weight change', reason: 'Progress notes suggest unusually fast change' });
+  }
+
+  const workoutsLoggedThisWeek = Number(
+    client.workoutsLoggedThisWeek
+    ?? client.latestCheckIn?.workoutsLoggedThisWeek
+    ?? client.latestCheckIn?.trainingSessionsCompleted
+  );
+  if (Number.isFinite(workoutsLoggedThisWeek) && workoutsLoggedThisWeek <= 0) {
+    alerts.push({ id: 'no_workout_logs', severity: 'alert', label: 'No workout logs this week', reason: '0 sessions logged this week' });
+  }
+
+  const cardioMissed = Number(
+    client.cardioMissedSessions
+    ?? client.latestCheckIn?.cardioMissedSessions
+    ?? client.latestCheckIn?.missedCardioSessions
+  );
+  const cardioAdherence = Number(client.latestCheckIn?.cardioAdherence);
+  if (Number.isFinite(cardioMissed)) {
+    if (cardioMissed >= 2) {
+      alerts.push({ id: 'cardio_missed_repeatedly', severity: 'alert', label: 'Cardio missed repeatedly', reason: `${cardioMissed} cardio sessions missed` });
+    } else if (cardioMissed === 1) {
+      alerts.push({ id: 'cardio_missed_repeatedly', severity: 'watch', label: 'Cardio missed repeatedly', reason: '1 cardio session missed' });
+    }
+  } else if (Number.isFinite(cardioAdherence) && cardioAdherence <= 4) {
+    alerts.push({
+      id: 'cardio_missed_repeatedly',
+      severity: cardioAdherence <= 2 ? 'alert' : 'watch',
+      label: 'Cardio missed repeatedly',
+      reason: `Cardio adherence score ${cardioAdherence}/10`
+    });
+  }
+
+  const deduped = new Map();
+  alerts.forEach((entry) => {
+    const prior = deduped.get(entry.id);
+    if (!prior || (prior.severity === 'watch' && entry.severity === 'alert')) {
+      deduped.set(entry.id, entry);
+    }
+  });
+  return Array.from(deduped.values())
+    .sort((a, b) => (a.severity === b.severity ? a.label.localeCompare(b.label) : a.severity === 'alert' ? -1 : 1))
+    .slice(0, 3);
+}
+
+function deriveCoachAlertStatus(client = {}) {
+  const alerts = deriveCoachClientAlerts(client);
+  if (alerts.some((alert) => alert.severity === 'alert')) return 'alert';
+  if (alerts.length) return 'watch';
+  return String(client.alertStatus || 'ok').toLowerCase() === 'alert' ? 'watch' : 'ok';
+}
+
+function renderCoachAlertList(alerts = []) {
+  if (!alerts.length) {
+    return '<li><span>Stable</span><strong>No active alerts</strong></li>';
+  }
+  return alerts
+    .map((alert) => `<li><span>${escapeCoachText(alert.label)}</span><strong>${escapeCoachText(alert.reason)}</strong></li>`)
+    .join('');
+}
+
 function renderCoachClientCard(client) {
   const safeClient = normalizeCoachClientRecord(client);
-  const alertMeta = getCoachAlertMeta(safeClient.alertStatus);
+  const derivedAlerts = deriveCoachClientAlerts(safeClient);
+  const alertMeta = getCoachAlertMeta(deriveCoachAlertStatus(safeClient));
+  const alertLine = derivedAlerts.length
+    ? derivedAlerts.map((entry) => entry.label).join(' · ')
+    : 'No urgent flags this week';
   return `
     <article class="coach-client-card" data-client-id="${escapeCoachText(safeClient.id)}">
       <header class="coach-client-card-header">
@@ -7438,6 +7583,10 @@ function renderCoachClientCard(client) {
         <li class="coach-client-kpi" style="grid-column: 1 / -1;">
           <p class="coach-client-kpi-label">Primary Status Metric</p>
           <p class="coach-client-kpi-value">${escapeCoachText(safeClient.primaryStatusMetric)}</p>
+        </li>
+        <li class="coach-client-kpi" style="grid-column: 1 / -1;">
+          <p class="coach-client-kpi-label">Coach Alerts</p>
+          <p class="coach-client-kpi-value">${escapeCoachText(alertLine)}</p>
         </li>
       </ul>
       <div class="coach-client-actions">
@@ -7587,6 +7736,7 @@ function assignCoachNutritionPlan(clientId, clientName) {
 
 function renderCoachClientDetail(client) {
   const safeClient = normalizeCoachClientRecord(client);
+  const derivedAlerts = deriveCoachClientAlerts(safeClient);
   const localData = getLocalCoachClientData(safeClient);
   const assignedNutrition = getAssignedNutritionPlan(safeClient.id);
   const phaseState = localData.phaseState || {};
@@ -7642,6 +7792,13 @@ function renderCoachClientDetail(client) {
           <ul class="coach-client-detail-list">
             ${renderCoachClientDetailRow('Primary Status', safeClient.primaryStatusMetric)}
             ${renderCoachClientDetailRow('Last Check-In', formatCoachDate(safeClient.lastCheckInDate))}
+          </ul>
+        </article>
+        <article class="coach-client-detail-card">
+          <h4>Coach Alerts (V1 Rules)</h4>
+          <p class="coach-dashboard-subtitle">Simple explainable checks: check-in cadence, compliance, trend stalls, rapid weight change, logging gaps, and repeated missed cardio.</p>
+          <ul class="coach-client-detail-list">
+            ${renderCoachAlertList(derivedAlerts)}
           </ul>
         </article>
         <article class="coach-client-detail-card">
@@ -7740,7 +7897,8 @@ function renderCoachDashboardView() {
   const avgCompliance = clients.length
     ? Math.round(clients.reduce((sum, client) => sum + (Number(client.compliancePercent) || 0), 0) / clients.length)
     : 0;
-  const flaggedCount = clients.filter((client) => getCoachAlertMeta(client.alertStatus).className === 'is-alert').length;
+  const flaggedCount = clients.filter((client) => getCoachAlertMeta(deriveCoachAlertStatus(client)).className === 'is-alert').length;
+  const watchCount = clients.filter((client) => getCoachAlertMeta(deriveCoachAlertStatus(client)).className === 'is-watch').length;
   const dataSourceLabel = coachDashboardState.source === 'backend' ? 'Backend relationship data' : 'Local demo fallback';
 
   container.innerHTML = selectedClient
@@ -7748,7 +7906,7 @@ function renderCoachDashboardView() {
     : `
       <section class="coach-dashboard-header">
         <h3 class="coach-dashboard-title">Client Roster Overview</h3>
-        <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action</p>
+        <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action · ${watchCount} on watch</p>
       </section>
       ${renderCoachClientRoster(clients)}
     `;
