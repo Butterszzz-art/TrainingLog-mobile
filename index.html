@@ -2548,6 +2548,10 @@ function showTab(tabName) {
       ensureProfileTabRendered();
       break;
     case 'settingsTab':
+      if (!document.getElementById('settingsFormContainer')) {
+        console.warn('[Tabs:showTab] Missing #settingsFormContainer container.');
+        break;
+      }
       if (typeof initSettingsPage === 'function') {
         initSettingsPage();
       }
@@ -2581,7 +2585,12 @@ function renderWorkoutHistoryTab() {
   const historyTab = document.getElementById('logHistoryTab');
   const workoutContainer = document.getElementById('logHistoryContainer');
   if (!historyTab || !workoutContainer) {
-    console.warn('[Tabs] Missing Log History DOM nodes.');
+    if (!historyTab) {
+      console.warn('[Tabs:renderWorkoutHistoryTab] Missing #logHistoryTab container.');
+    }
+    if (!workoutContainer) {
+      console.warn('[Tabs:renderWorkoutHistoryTab] Missing #logHistoryContainer container.');
+    }
     if (historyTab) {
       historyTab.insertAdjacentHTML(
         'beforeend',
@@ -10618,7 +10627,10 @@ function addMacroHistoryEntry(date, meals, totals) {
 
 function renderMacroHistory() {
   const container = document.getElementById("macroHistoryContainer");
-  if (!container) return;
+  if (!container) {
+    console.warn('[HistoryMiniTab:renderMacroHistory] Missing #macroHistoryContainer container.');
+    return;
+  }
 
   const userKey = typeof currentUser === 'string' && currentUser ? `macroHistory_${currentUser}` : null;
   const fallbackKeys = [userKey, 'macroHistory_', 'macroHistory'].filter(Boolean);

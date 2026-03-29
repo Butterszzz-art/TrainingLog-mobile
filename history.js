@@ -524,7 +524,10 @@ function renderHistoryDetail(containerEl, log) {
 }
 
 export async function renderWorkoutHistory(containerEl = document.getElementById('logHistoryContainer')) {
-  if (!containerEl) return;
+  if (!containerEl) {
+    console.warn('[History:renderWorkoutHistory] Missing #logHistoryContainer container.');
+    return;
+  }
 
   const username = getCurrentUserId();
 
