@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="ProgramTab.css">
   <link rel="stylesheet" href="style.css">
-  <meta name="theme-color" content="#007bff">
+  <meta name="theme-color" content="#0b0f0d">
   <style>
     /* Center all tab headers on the page */
     .tab-content > h2,
@@ -22,17 +22,21 @@
       min-height: 60vh;
     }
     :root {
-      --bg-color: #F9F9FB;
-      --text-color: #000000;
-      --secondary-text: #B0B9C3;
-      --primary: #2F80ED;
-      --primary-dark: #1B64C2;
+      --bg-color: #080b0a;
+      --surface-bg: #0e1411;
+      --card-bg: #121b17;
+      --elevated-bg: #18231e;
+      --primary: #2d7d5b;
+      --primary-dark: #225f45;
+      --text-color: #f4f7f5;
+      --secondary-text: #b8c2bc;
+      --text-muted: #8c9891;
       --danger: #dc3545;
-      --card-bg: #FFFFFF;
-      --border-color: #D9D9D9;
-      --sidebar-bg: #0D2A55;
-      --highlight: #F2994A;
-      --shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      --border-color: rgba(132, 157, 144, 0.28);
+      --sidebar-bg: #0b100e;
+      --highlight: #c6944f;
+      --shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+      --shell-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
     }
 
     body.theme-dark {
@@ -50,11 +54,14 @@
       --border-color: #39FF14;
       --sidebar-bg: #003300;
     }
+    html,
+    body {
+      background-color: var(--bg-color);
+    }
     body {
       font-family: 'Poppins', sans-serif;
-      background-color: var(--bg-color);
       color: var(--text-color);
-      padding: 20px;
+      padding: 8px 12px 16px;
       margin: 0;
       width: 100vw;
       min-height: 100vh;
@@ -171,7 +178,8 @@
     #appContainer {
       transition: margin-left 0.3s ease;
       margin-left: 0;
-      margin-top: 52px; /* offset for fixed hamburger button */
+      margin-top: 0;
+      padding-top: 62px; /* space for floating controls with no body strip */
     }
     #appContainer.shifted {
       margin-left: 250px;
@@ -237,19 +245,19 @@
   height: 48px;
   z-index: 1100;
   font-size: 24px;
-  background-color: var(--primary);
+  background: linear-gradient(180deg, #163427, #0f231b);
+  border: 1px solid rgba(95, 130, 113, 0.5);
   color: #fff;
-  border: none;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 .menu-toggle:hover {
-  background-color: #0056b3;
+  background: linear-gradient(180deg, #1d4332, #133126);
 }
 #menuToggle {
   position: fixed;
@@ -286,8 +294,9 @@
     .tab-content {
       display: none;
       padding: 20px;
-      background: var(--card-bg);
-      box-shadow: var(--shadow);
+      background: linear-gradient(180deg, rgba(15, 21, 18, 0.96), rgba(11, 16, 14, 0.98));
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shell-shadow);
       border-radius: 10px;
       margin-bottom: 20px;
       color: var(--text-color);
@@ -305,9 +314,9 @@
       transform: scale(0.9);
     }
     #homeTab {
-      background: radial-gradient(circle at top, #111d18 0%, #090d0b 55%, #070909 100%);
-      border: 1px solid rgba(78, 103, 92, 0.35);
-      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+      background: radial-gradient(circle at top, rgba(34, 61, 49, 0.28) 0%, #0a0f0d 58%, #070909 100%);
+      border: 1px solid rgba(94, 121, 109, 0.38);
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
     }
     .home-dashboard {
       display: grid;
@@ -329,17 +338,17 @@
     .home-command-grid > .home-dashboard-card:nth-child(7) { animation-delay: 0.24s; }
     .home-dashboard-card {
       --home-accent: #1f7f59;
-      background: linear-gradient(180deg, rgba(8, 15, 12, 0.92), rgba(7, 13, 10, 0.97));
-      border: 1px solid rgba(98, 128, 115, 0.26);
+      background: linear-gradient(180deg, rgba(15, 24, 20, 0.96), rgba(10, 16, 13, 0.98));
+      border: 1px solid rgba(96, 126, 113, 0.36);
       border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
       padding: 14px;
       text-align: left;
       color: #f4f7f5;
       transition: border-color 0.25s ease, transform 0.25s ease;
     }
     .home-dashboard-card:hover {
-      border-color: rgba(70, 156, 118, 0.38);
+      border-color: rgba(89, 156, 126, 0.5);
       transform: translateY(-1px);
     }
     .home-hero-card {
@@ -350,7 +359,7 @@
       font-size: 0.8rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--secondary-text);
+      color: #c2ccc6;
       margin-bottom: 8px;
     }
     .home-hero-athlete {
@@ -360,7 +369,7 @@
     .home-hero-meta {
       margin: 10px 0 0;
       font-size: 0.95rem;
-      color: var(--secondary-text);
+      color: #b5c0ba;
     }
     .home-card-title,
     .home-section-header {
@@ -373,7 +382,7 @@
     .home-placeholder-note {
       margin: 0;
       font-size: 0.9rem;
-      color: var(--secondary-text);
+      color: #b0bbb5;
     }
     .coach-dashboard {
       display: grid;
@@ -554,15 +563,15 @@
     }
     .home-stat-chip,
     .home-metric-chip {
-      background: rgba(40, 90, 69, 0.18);
-      border: 1px solid rgba(81, 128, 107, 0.35);
+      background: rgba(41, 74, 61, 0.34);
+      border: 1px solid rgba(90, 129, 112, 0.44);
       border-radius: 10px;
       padding: 9px;
     }
     .home-stat-label {
       margin: 0;
       font-size: 0.75rem;
-      color: #8ba196;
+      color: #a9b8b0;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
@@ -585,7 +594,7 @@
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      border-bottom: 1px solid rgba(122, 145, 134, 0.25);
+      border-bottom: 1px solid rgba(122, 145, 134, 0.34);
       padding-bottom: 6px;
       font-size: 0.95rem;
     }
@@ -618,7 +627,7 @@
       margin-left: auto;
       font-weight: 600;
       font-size: 0.85rem;
-      color: #8fa69a;
+      color: #afbeb6;
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
@@ -633,11 +642,11 @@
     .home-muted-panel {
       margin-bottom: 10px;
       font-size: 0.9rem;
-      color: #9ab0a5;
+      color: #bcc9c2;
       padding: 8px 10px;
       border-radius: 10px;
-      background: rgba(33, 68, 55, 0.25);
-      border: 1px solid rgba(89, 127, 111, 0.22);
+      background: rgba(30, 56, 46, 0.42);
+      border: 1px solid rgba(101, 136, 121, 0.34);
       transition: background-color 0.25s ease, color 0.25s ease;
     }
     .home-mission-progress.is-complete {
@@ -677,7 +686,7 @@
       width: 100%;
       height: 10px;
       border-radius: 999px;
-      background: rgba(158, 176, 167, 0.22);
+      background: rgba(158, 176, 167, 0.3);
       overflow: hidden;
       position: relative;
     }
@@ -701,7 +710,7 @@
       justify-content: space-between;
       gap: 12px;
       font-size: 0.86rem;
-      color: #d7dfdb;
+      color: #e3e9e6;
     }
     .home-card-header {
       display: flex;
@@ -719,7 +728,7 @@
       border: 1px solid rgba(189, 97, 97, 0.5);
       border-radius: 10px;
       background: rgba(118, 39, 39, 0.25);
-      color: #f5b7b7;
+      color: #ffd2d2;
       padding: 8px 10px;
       font-size: 0.85rem;
       margin-top: 10px;
