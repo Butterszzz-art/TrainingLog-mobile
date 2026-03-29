@@ -7434,20 +7434,59 @@ function renderUpcomingPrepEvents(profile, username) {
   `;
 }
 
-function renderRewardSummary(profile) {
-  const level = getSafeDisplayValue(profile.level, 'Lvl 1');
-  const xp = getSafeDisplayValue(profile.xp, '0');
-  const prepStreak = getSafeDisplayValue(profile.prepStreak || profile.currentStreak, '0 days');
-  const latestBadge = getSafeDisplayValue(profile.latestBadge, 'No badges yet');
+function getHomeGamificationSummary(profile, username) {
+  const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const summary = window.getGamificationSummary?.(userId) || null;
+  if (summary) return summary;
+
+  const levelFromProfile = Number(profile?.level);
+  const totalXpFromProfile = Number(profile?.xp);
+  const streakFromProfile = Number(profile?.prepStreak ?? profile?.currentStreak ?? 0) || 0;
+  const level = Number.isFinite(levelFromProfile) && levelFromProfile > 0 ? levelFromProfile : 1;
+  const totalXp = Number.isFinite(totalXpFromProfile) && totalXpFromProfile >= 0 ? totalXpFromProfile : 0;
+  const nextLevelXp = window.xpNeededForLevel?.(level) || 100;
+  const currentLevelXp = nextLevelXp > 0 ? totalXp % nextLevelXp : 0;
+  const progressPercent = nextLevelXp > 0 ? Math.round((currentLevelXp / nextLevelXp) * 100) : 0;
+
+  return {
+    level,
+    totalXp,
+    streak: streakFromProfile,
+    todaysXp: { amount: 0 },
+    weeklyXp: { amount: 0 },
+    nextLevelXp,
+    currentLevelXp,
+    progressPercent,
+    latestBadge: profile?.latestBadge ? { title: profile.latestBadge } : null,
+    recentEvents: []
+  };
+}
+
+function renderCompactProgressionSummary(profile, username) {
+  const summary = getHomeGamificationSummary(profile, username);
+  const safeProgress = Math.min(100, Math.max(0, Number(summary.progressPercent) || 0));
+  const latestBadge = summary.latestBadge?.title || summary.badges?.slice?.(-1)?.[0]?.title || 'No badges yet';
+  const recentProgressText = summary.recentEvents?.length
+    ? summary.recentEvents.slice().reverse()[0]?.message
+    : getSafeDisplayValue(profile.recentProgressSummary, 'Keep logging to unlock progression insights.');
+
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Reward Summary</h3>
+      <div class="home-card-header">
+        <h3 class="home-card-title">XP / Progression</h3>
+        <span class="home-status-pill is-good">Level ${summary.level}</span>
+      </div>
+      <div class="home-progress-track" style="margin-bottom:10px;">
+        <div class="home-progress-fill" style="--fill-target:${safeProgress}%;width:${safeProgress}%"></div>
+      </div>
+      <p class="home-mission-progress">${summary.currentLevelXp} / ${summary.nextLevelXp} XP</p>
       <div class="home-stat-grid">
-        <div class="home-stat-chip"><p class="home-stat-label">Level</p><p class="home-stat-value">${level}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">XP</p><p class="home-stat-value">${xp}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${prepStreak}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Total XP</p><p class="home-stat-value">${summary.totalXp}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${summary.streak} day${summary.streak === 1 ? '' : 's'}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Today</p><p class="home-stat-value">${summary.todaysXp?.amount || 0} XP</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Latest Badge</p><p class="home-stat-value">${latestBadge}</p></div>
       </div>
+      <p class="home-mission-progress"><strong>Recent:</strong> ${recentProgressText}</p>
     </section>
   `;
 }
@@ -7465,12 +7504,12 @@ function renderHomeDashboard() {
 }
 
 function getHomeDashboardCardOrder(archetype) {
-  const baseOrder = ['hero', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming'];
+  const baseOrder = ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'];
   const orders = {
-    bodybuilder: ['hero', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming'],
-    powerlifter: ['hero', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming'],
-    hybrid: ['hero', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming'],
-    recreational: ['hero', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming']
+    bodybuilder: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
+    powerlifter: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
+    hybrid: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
+    recreational: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights']
   };
   return orders[archetype] || baseOrder;
 }
@@ -7478,12 +7517,14 @@ function getHomeDashboardCardOrder(archetype) {
 function getHomeDashboardCardRenderers(profile, username, archetype) {
   return {
     hero: () => renderHeroPhaseHeader(profile, username),
+    progression: () => renderCompactProgressionSummary(profile, username),
     focus: () => renderArchetypeFocusCard(profile, username),
     macro: () => renderMacroProgressCard(profile, username),
     status: () => renderStatusSummary(profile, username, archetype),
     mission: () => renderTodaysMission(profile, username, archetype),
     weekly: () => renderWeeklyComplianceCard(profile, username),
-    upcoming: () => renderUpcomingPrepEvents(profile, username)
+    upcoming: () => renderUpcomingPrepEvents(profile, username),
+    insights: () => renderCheckInInsightSummary(profile, username)
   };
 }
 
