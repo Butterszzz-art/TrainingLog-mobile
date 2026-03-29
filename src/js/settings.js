@@ -1,4 +1,5 @@
 const SETTINGS_PREFIX = 'settings_';
+const SETTINGS_LOAD_ERROR_MESSAGE = 'Settings could not be loaded. Please try again later.';
 const DEFAULT_ATHLETE_ARCHETYPE = 'recreational';
 const ATHLETE_ARCHETYPE_CONFIGS = Object.freeze({
   bodybuilder: Object.freeze({
@@ -816,7 +817,7 @@ function injectSettingsMarkup() {
 
   if (typeof fetch !== 'function') {
     console.warn('Fetch API is unavailable; rendering static settings form.');
-    container.innerHTML = '<p class="form-error">Settings form unavailable in this environment.</p>';
+    container.innerHTML = `<p class="form-error">${SETTINGS_LOAD_ERROR_MESSAGE}</p>`;
     applySettingsToUI({ ...getDefaultSettings(), ...readStoredSettings() });
     return;
   }
@@ -843,7 +844,7 @@ function injectSettingsMarkup() {
     })
     .catch(error => {
       console.error('Failed to load settings page', error);
-      container.innerHTML = '<p class="form-error">Unable to load settings at this time.</p>';
+      container.innerHTML = `<p class="form-error">${SETTINGS_LOAD_ERROR_MESSAGE}</p>`;
       delete container.dataset.loaded;
     });
 }
