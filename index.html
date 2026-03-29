@@ -1391,6 +1391,13 @@
         <div id="macroTargetsPanel" class="panel active">
           <div id="targetsCard" class="card sticky">
             <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;">🕒 Offline</span></h2>
+            <div id="assignedNutritionPlanCard" style="display:none;margin:10px 0;padding:10px;border:1px solid #dbe7ff;border-radius:10px;background:#f5f9ff;">
+              <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+                <strong>Coach Nutrition Plan</strong>
+                <small id="assignedNutritionPlanMeta" style="color:#54657a;"></small>
+              </div>
+              <p id="assignedNutritionPlanSummary" style="margin:6px 0 0 0;font-size:0.9rem;color:#30445d;"></p>
+            </div>
             <p style="font-size:1.1rem;">Energy: <span id="macroCalsProgress">0</span> / <span id="macroCalsTarget">0</span> kcal (<span id="macroCalsNet">0</span> net)</p>
             <progress id="calsBar" value="0" max="100" style="width:100%;height:20px;margin-bottom:6px;"></progress>
             <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="subtractMacro('cal')">–</button><button onclick="addMacro('cal')">+</button></div>
@@ -5267,6 +5274,10 @@ function calculateMacroTargets(goalOverride, rateOverride) {
 
 function getMacroTargetValues() {
   const saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser || ""}`)) || {};
+  const assignedPlanTargets = getAssignedNutritionTargetsForCurrentDay(currentUser);
+  if (assignedPlanTargets) {
+    return assignedPlanTargets;
+  }
   return {
     calories: macroTargetCalories || saved.calories || 0,
     protein: macroTargetProtein || saved.protein || 0,
@@ -5284,6 +5295,86 @@ function getMacroCyclingSettings() {
     carbCycle: carbCycleSelect?.value || "normal",
     isRefeedDay: Boolean(refeedToggle?.checked),
   };
+}
+
+function getCoachNutritionPlanStore() {
+  try {
+    return JSON.parse(localStorage.getItem('coachNutritionAssignments_v1') || '{}');
+  } catch (_err) {
+    return {};
+  }
+}
+
+function saveCoachNutritionPlanStore(store) {
+  localStorage.setItem('coachNutritionAssignments_v1', JSON.stringify(store || {}));
+}
+
+function roundMacroNumber(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.round(parsed));
+}
+
+function normalizeMacroTargets(targets = {}) {
+  const protein = roundMacroNumber(targets.protein);
+  const carbs = roundMacroNumber(targets.carbs);
+  const fat = roundMacroNumber(targets.fat);
+  return {
+    protein,
+    carbs,
+    fat,
+    calories: protein * 4 + carbs * 4 + fat * 9,
+  };
+}
+
+function getAssignedNutritionPlan(userId) {
+  if (!userId) return null;
+  const store = getCoachNutritionPlanStore();
+  return store[userId] || null;
+}
+
+function getAssignedNutritionTargetsForCurrentDay(userId) {
+  const assigned = getAssignedNutritionPlan(userId);
+  if (!assigned) return null;
+  const settings = getMacroCyclingSettings();
+  const isTrainingDay = settings.dayType !== 'rest';
+  const useHigh = settings.carbCycle === 'high';
+  const useLow = settings.carbCycle === 'low';
+  const useRefeed = settings.isRefeedDay && assigned.days?.refeed;
+  const fallback = isTrainingDay ? assigned.days?.training : assigned.days?.rest;
+  const selected = useRefeed
+    ? assigned.days?.refeed
+    : useHigh
+      ? assigned.days?.high
+      : useLow
+        ? assigned.days?.low
+        : fallback;
+  if (!selected) return null;
+  return normalizeMacroTargets(selected);
+}
+
+function renderAssignedNutritionPlanForAthlete() {
+  const card = document.getElementById('assignedNutritionPlanCard');
+  if (!card) return;
+  const summary = document.getElementById('assignedNutritionPlanSummary');
+  const meta = document.getElementById('assignedNutritionPlanMeta');
+  const assigned = getAssignedNutritionPlan(currentUser);
+  if (!assigned) {
+    card.style.display = 'none';
+    return;
+  }
+  const selected = getAssignedNutritionTargetsForCurrentDay(currentUser);
+  const dayLabel = selected
+    ? `${selected.calories} kcal · ${selected.protein}P / ${selected.carbs}C / ${selected.fat}F`
+    : 'No day target selected';
+  if (summary) {
+    summary.textContent = `${assigned.planName || 'Macro plan'} (${assigned.structure?.type || 'macro-based'}) — active target: ${dayLabel}`;
+  }
+  if (meta) {
+    const assignedDate = assigned.assignedAt ? new Date(assigned.assignedAt).toLocaleDateString() : '';
+    meta.textContent = assignedDate ? `Assigned ${assignedDate}` : '';
+  }
+  card.style.display = 'block';
 }
 
 function getMacroDayContextKey() {
@@ -5529,6 +5620,7 @@ function updateMacroSummary(data, options = {}) {
 }
 
 function updateMacroUI() {
+  renderAssignedNutritionPlanForAthlete();
   // Calculate totals from macroMeals array
   let totalProtein = 0, totalCarbs = 0, totalFats = 0;
   macroMeals.forEach(meal => {
@@ -5740,6 +5832,7 @@ function renderMacroTargets(options = {}) {
     }
   }
   if (!saved) return;
+  renderAssignedNutritionPlanForAthlete();
 
   document.getElementById("macroProteinTarget").textContent = saved.protein;
   document.getElementById("macroFatTarget").textContent = saved.fat;
@@ -5868,8 +5961,8 @@ function saveMacroTargetsToTop(target) {
   }
 
 function renderMacroSlots() {
-    const saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`));
-    if (!saved) return;
+    const saved = getMacroTargetValues();
+    if (!saved?.calories) return;
     document.getElementById("macroCalsTarget").textContent    = saved.calories;
     document.getElementById("macroProteinTarget").textContent = saved.protein;
     document.getElementById("macroFatTarget").textContent     = saved.fat;
@@ -7385,9 +7478,117 @@ function renderCoachClientDetailRow(label, value, fallback = 'Not available yet'
   return `<li><span>${escapeCoachText(label)}</span><strong>${escapeCoachText(value, fallback)}</strong></li>`;
 }
 
+function formatMacroLine(targets = {}) {
+  const safe = normalizeMacroTargets(targets);
+  return `${safe.calories} kcal · ${safe.protein}P / ${safe.carbs}C / ${safe.fat}F`;
+}
+
+function deriveNutritionDayVariants(baseTraining = {}, baseRest = {}, includeRefeed = false, refeed = null) {
+  const training = normalizeMacroTargets(baseTraining);
+  const rest = normalizeMacroTargets(baseRest);
+  const fallbackHigh = {
+    protein: Math.round(training.protein * 1.03),
+    carbs: Math.round(training.carbs * 1.18),
+    fat: Math.round(training.fat * 0.9),
+  };
+  const fallbackLow = {
+    protein: Math.round(rest.protein * 1.03),
+    carbs: Math.round(rest.carbs * 0.78),
+    fat: Math.round(rest.fat * 1.08),
+  };
+  const high = window.macroEngine?.buildBodybuildingDayTargets
+    ? window.macroEngine.buildBodybuildingDayTargets(training, { dayType: 'training', carbCycle: 'high' }).adjusted
+    : normalizeMacroTargets(fallbackHigh);
+  const low = window.macroEngine?.buildBodybuildingDayTargets
+    ? window.macroEngine.buildBodybuildingDayTargets(rest, { dayType: 'rest', carbCycle: 'low' }).adjusted
+    : normalizeMacroTargets(fallbackLow);
+  const days = {
+    training,
+    rest,
+    high: normalizeMacroTargets(high),
+    low: normalizeMacroTargets(low),
+  };
+  if (includeRefeed) {
+    const derived = window.macroEngine?.buildBodybuildingDayTargets
+      ? window.macroEngine.buildBodybuildingDayTargets(training, { dayType: 'training', carbCycle: 'high', isRefeedDay: true }).adjusted
+      : normalizeMacroTargets({
+        protein: training.protein,
+        carbs: Math.round(training.carbs * 1.32),
+        fat: Math.round(training.fat * 0.83),
+      });
+    days.refeed = normalizeMacroTargets(refeed || derived);
+  }
+  return days;
+}
+
+function buildCoachNutritionAssignmentFromForm(clientId, clientName) {
+  const read = (id) => roundMacroNumber(document.getElementById(id)?.value);
+  const training = {
+    protein: read('coachNutritionTrainingProtein'),
+    carbs: read('coachNutritionTrainingCarbs'),
+    fat: read('coachNutritionTrainingFat'),
+  };
+  const rest = {
+    protein: read('coachNutritionRestProtein'),
+    carbs: read('coachNutritionRestCarbs'),
+    fat: read('coachNutritionRestFat'),
+  };
+  if (!training.protein || !training.carbs || !training.fat || !rest.protein || !rest.carbs || !rest.fat) {
+    throw new Error('Training/rest day macros are required.');
+  }
+  const includeRefeed = Boolean(document.getElementById('coachNutritionEnableRefeed')?.checked);
+  const customRefeed = {
+    protein: read('coachNutritionRefeedProtein'),
+    carbs: read('coachNutritionRefeedCarbs'),
+    fat: read('coachNutritionRefeedFat'),
+  };
+  const refeedProvided = customRefeed.protein || customRefeed.carbs || customRefeed.fat;
+  const days = deriveNutritionDayVariants(training, rest, includeRefeed, includeRefeed && refeedProvided ? customRefeed : null);
+  return {
+    version: 1,
+    planType: 'macro',
+    planName: 'Coach Assigned Macro Plan',
+    assignedClientId: clientId,
+    assignedClientName: clientName || clientId,
+    assignedByCoachId: currentUser || 'coach',
+    assignedAt: new Date().toISOString(),
+    structure: {
+      type: 'macro-day-split',
+      supportsHighLowDays: true,
+      supportsRefeed: includeRefeed,
+      notes: document.getElementById('coachNutritionNotes')?.value?.trim() || '',
+    },
+    days,
+  };
+}
+
+function assignCoachNutritionPlan(clientId, clientName) {
+  if (!clientId) return;
+  let assignment;
+  try {
+    assignment = buildCoachNutritionAssignmentFromForm(clientId, clientName);
+  } catch (error) {
+    alert(error.message || 'Unable to build nutrition assignment.');
+    return;
+  }
+
+  const store = getCoachNutritionPlanStore();
+  store[clientId] = assignment;
+  saveCoachNutritionPlanStore(store);
+
+  const athleteDefault = normalizeMacroTargets(assignment.days.training);
+  localStorage.setItem(`macroTargets_${clientId}`, JSON.stringify(athleteDefault));
+  if (clientName) {
+    localStorage.setItem(`clientName_${clientId}`, clientName);
+  }
+  alert(`Nutrition plan assigned to ${clientName || clientId} ✅`);
+  renderCoachDashboardView();
+}
+
 function renderCoachClientDetail(client) {
   const safeClient = normalizeCoachClientRecord(client);
   const localData = getLocalCoachClientData(safeClient);
+  const assignedNutrition = getAssignedNutritionPlan(safeClient.id);
   const phaseState = localData.phaseState || {};
   const profile = localData.profile || {};
   const latestCheckIn = safeClient.latestCheckIn || localData.latestCheckIn || null;
@@ -7399,6 +7600,12 @@ function renderCoachClientDetail(client) {
   ].join(' · ');
   const nutritionTargets = localData.macroTargets
     ? `${localData.macroTargets.calories || 0} kcal · ${localData.macroTargets.protein || 0}P / ${localData.macroTargets.carbs || 0}C / ${localData.macroTargets.fat || 0}F`
+    : '';
+  const trainingDefaults = assignedNutrition?.days?.training || localData.macroTargets || { protein: 160, carbs: 220, fat: 60 };
+  const restDefaults = assignedNutrition?.days?.rest || localData.macroTargets || { protein: 160, carbs: 170, fat: 70 };
+  const refeedDefaults = assignedNutrition?.days?.refeed || {};
+  const assignedSummary = assignedNutrition
+    ? `Training ${formatMacroLine(assignedNutrition.days?.training)} · Rest ${formatMacroLine(assignedNutrition.days?.rest)} · High ${formatMacroLine(assignedNutrition.days?.high)} · Low ${formatMacroLine(assignedNutrition.days?.low)}${assignedNutrition.days?.refeed ? ` · Refeed ${formatMacroLine(assignedNutrition.days.refeed)}` : ''}`
     : '';
   const bodyweightValue = safeClient.currentBodyweight
     ?? latestCheckIn?.bodyweight
@@ -7457,6 +7664,33 @@ function renderCoachClientDetail(client) {
         <article class="coach-client-detail-card">
           <h4>Current Nutrition Summary</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentNutritionSummary || nutritionTargets, 'No nutrition targets set yet')}</p>
+          <div style="margin-top:10px;padding:10px;border:1px solid #ebeff7;border-radius:10px;">
+            <h5 style="margin:0 0 8px 0;">Assign Nutrition Setup (V1 macro-based)</h5>
+            <p style="font-size:0.85rem;margin:0 0 8px 0;color:#4d5f73;">Uses training/rest macro anchors, auto-generates high/low days, and supports optional refeed targets.</p>
+            ${assignedSummary ? `<p style=\"font-size:0.82rem;margin:0 0 10px 0;color:#2f3f56;\"><strong>Assigned plan:</strong> ${escapeCoachText(assignedSummary)}</p>` : ''}
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+              <label>Training P<input id="coachNutritionTrainingProtein" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.protein)}"></label>
+              <label>Training C<input id="coachNutritionTrainingCarbs" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.carbs)}"></label>
+              <label>Training F<input id="coachNutritionTrainingFat" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.fat)}"></label>
+              <label>Rest P<input id="coachNutritionRestProtein" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.protein)}"></label>
+              <label>Rest C<input id="coachNutritionRestCarbs" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.carbs)}"></label>
+              <label>Rest F<input id="coachNutritionRestFat" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.fat)}"></label>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+              <input id="coachNutritionEnableRefeed" type="checkbox" ${assignedNutrition?.days?.refeed ? 'checked' : ''}>
+              Include optional refeed target
+            </label>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px;">
+              <label>Refeed P<input id="coachNutritionRefeedProtein" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.protein)}" placeholder="optional"></label>
+              <label>Refeed C<input id="coachNutritionRefeedCarbs" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.carbs)}" placeholder="optional"></label>
+              <label>Refeed F<input id="coachNutritionRefeedFat" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.fat)}" placeholder="optional"></label>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
+              Coach nutrition notes
+              <textarea id="coachNutritionNotes" rows="2" placeholder="Execution notes, substitutions, check-in expectations...">${escapeCoachText(assignedNutrition?.structure?.notes || '')}</textarea>
+            </label>
+            <button type="button" style="margin-top:10px;" data-coach-assign-nutrition="${escapeCoachText(safeClient.id)}" data-client-name="${escapeCoachText(safeClient.name)}">Assign Nutrition Plan</button>
+          </div>
         </article>
       </section>
     </section>
@@ -7476,6 +7710,13 @@ function ensureCoachDashboardInteractions() {
   const container = document.getElementById('coachDashboardContent');
   if (!container) return;
   container.addEventListener('click', (event) => {
+    const assignNutritionBtn = event.target.closest('[data-coach-assign-nutrition]');
+    if (assignNutritionBtn) {
+      const clientId = assignNutritionBtn.getAttribute('data-coach-assign-nutrition');
+      const clientName = assignNutritionBtn.getAttribute('data-client-name') || '';
+      assignCoachNutritionPlan(clientId, clientName);
+      return;
+    }
     const openBtn = event.target.closest('[data-coach-open-detail]');
     if (openBtn) {
       coachDashboardState.selectedClientId = openBtn.getAttribute('data-coach-open-detail');
