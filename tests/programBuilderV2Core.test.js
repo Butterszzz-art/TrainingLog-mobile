@@ -12,6 +12,16 @@ function createMemoryGlobal() {
 }
 
 describe('programBuilderV2Core coach foundations', () => {
+  test('default coach exercise includes sets/reps and RIR/RPE note fields', () => {
+    const exercise = core.createDefaultExercise({ name: 'Back Squat' });
+    expect(exercise.name).toBe('Back Squat');
+    expect(exercise).toHaveProperty('rpeNote');
+    expect(exercise).toHaveProperty('rirNote');
+    expect(exercise).toHaveProperty('progressionNotes');
+    expect(Array.isArray(exercise.sets)).toBe(true);
+    expect(exercise.sets[0].reps).toBe(8);
+  });
+
   test('normalizeDraft preserves coach builder fields', () => {
     const normalized = core.normalizeDraft({
       title: 'Offseason Strength Block',
@@ -56,6 +66,8 @@ describe('programBuilderV2Core coach foundations', () => {
 
     const duplicated = core.duplicateProgramTemplate(fakeGlobal, saved.templateId);
     expect(duplicated.title).toContain('(Copy)');
+    const duplicatedLatest = core.duplicateProgramTemplate(fakeGlobal, null);
+    expect(duplicatedLatest.title).toContain('(Copy)');
 
     const assignment = core.assignProgramToClient(fakeGlobal, {
       coachId: 'coach-1',

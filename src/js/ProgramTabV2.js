@@ -52,6 +52,12 @@
     let draft = core.normalizeDraft(core.loadDraft(userId));
     let step = "split";
     let selectedDayId = draft.days?.[0]?.dayId || null;
+    let selectedTemplateId = "";
+    const assignmentForm = {
+      clientName: "",
+      clientId: "",
+      assignmentNotes: "",
+    };
 
     function persistDraft() {
       draft.updatedAt = new Date().toISOString();
@@ -174,15 +180,15 @@
       if (!name) return;
 
       day.exercises = Array.isArray(day.exercises) ? day.exercises : [];
+      const baseExercise =
+        typeof core.createDefaultExercise === "function"
+          ? core.createDefaultExercise({ name: name.trim() })
+          : { name: name.trim(), sets: [{ setType: "straight", reps: 8, weight: null, rpe: null, rir: null, restSec: 120 }] };
       day.exercises.push({
+        ...baseExercise,
         exerciseId: uuid(),
         name: name.trim(),
-        notes: "",
-        rirNote: "",
-        rpeNote: "",
-        progressionNotes: "",
         archetypeTags: [draft.archetype || "general"],
-        sets: [{ setType: "straight", reps: 8, weight: null, rpe: null, rir: null, restSec: 120 }],
       });
 
       persistDraft();
@@ -251,19 +257,21 @@
       alert(`Template saved: ${template.title || template.name}`);
     }
 
-    function duplicateLastTemplate() {
+    function duplicateTemplate() {
       const templates = core.loadCoachTemplates(window);
-      const latest = templates[templates.length - 1];
-      if (!latest) {
+      if (!templates.length) {
         alert("No templates available to duplicate yet.");
         return;
       }
-      const duplicated = core.duplicateProgramTemplate(window, latest.templateId);
+      const targetTemplateId = selectedTemplateId || templates[templates.length - 1].templateId;
+      const duplicated = core.duplicateProgramTemplate(window, targetTemplateId);
       if (!duplicated) {
         alert("Template duplication failed.");
         return;
       }
+      selectedTemplateId = duplicated.templateId || selectedTemplateId;
       alert(`Template duplicated: ${duplicated.title || duplicated.name}`);
+      render();
     }
 
     function assignToClient() {
@@ -271,15 +279,18 @@
         alert("Save or title the program before assigning.");
         return;
       }
-      const clientName = prompt("Client name to assign this program to:");
-      if (!clientName || !clientName.trim()) return;
-      const clientId = prompt("Client ID (optional):", clientName.toLowerCase().replace(/\s+/g, "-")) || "";
+      const clientName = (assignmentForm.clientName || "").trim();
+      if (!clientName) {
+        alert("Client name is required.");
+        return;
+      }
+      const clientId = (assignmentForm.clientId || "").trim();
       const assignment = core.assignProgramToClient(window, {
         coachId: userId,
-        clientId: clientId.trim() || null,
-        clientName: clientName.trim(),
+        clientId: clientId || null,
+        clientName,
         archetype: draft.archetype || "general",
-        notes: draft.progressionNotes || "",
+        notes: (assignmentForm.assignmentNotes || "").trim() || draft.progressionNotes || "",
         program: draft,
       });
       if (!assignment) {
@@ -503,6 +514,10 @@
 
     function renderSaveStep() {
       const host = $("programStepContainer");
+      const templates = core.loadCoachTemplates(window);
+      if (!selectedTemplateId && templates.length) {
+        selectedTemplateId = templates[templates.length - 1].templateId;
+      }
       host.innerHTML = `
         <h2>Save & Assign</h2>
         <label>Program title <input id="pbv2Title" value="${esc(draft.title || draft.name || "")}"></label>
@@ -512,6 +527,25 @@
           </select>
         </label>
         <label>Program progression notes <textarea id="pbv2ProgressionNotes" rows="3">${esc(draft.progressionNotes || "")}</textarea></label>
+        <label>Saved templates
+          <select id="pbv2TemplateSelect">
+            <option value="">Latest template</option>
+            ${templates
+              .map(
+                (template) =>
+                  `<option value="${esc(template.templateId || "")}" ${
+                    selectedTemplateId === template.templateId ? "selected" : ""
+                  }>${esc(template.title || template.name || "Untitled Template")}</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+        <fieldset style="border:1px solid #ddd;padding:10px;border-radius:8px;">
+          <legend>Assign to client</legend>
+          <label>Client name <input id="pbv2ClientName" value="${esc(assignmentForm.clientName)}" placeholder="e.g., Avery Smith"></label>
+          <label>Client ID <input id="pbv2ClientId" value="${esc(assignmentForm.clientId)}" placeholder="optional"></label>
+          <label>Assignment notes <textarea id="pbv2AssignmentNotes" rows="2" placeholder="optional">${esc(assignmentForm.assignmentNotes)}</textarea></label>
+        </fieldset>
         <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
           <button id="pbv2SaveProgram">Save program</button>
           <button id="pbv2SaveTemplate" type="button">Save template</button>
@@ -532,9 +566,21 @@
         draft.progressionNotes = e.target.value;
         persistDraft();
       });
+      host.querySelector("#pbv2TemplateSelect").addEventListener("change", (e) => {
+        selectedTemplateId = e.target.value;
+      });
+      host.querySelector("#pbv2ClientName").addEventListener("input", (e) => {
+        assignmentForm.clientName = e.target.value;
+      });
+      host.querySelector("#pbv2ClientId").addEventListener("input", (e) => {
+        assignmentForm.clientId = e.target.value;
+      });
+      host.querySelector("#pbv2AssignmentNotes").addEventListener("input", (e) => {
+        assignmentForm.assignmentNotes = e.target.value;
+      });
       host.querySelector("#pbv2SaveProgram").onclick = saveProgramFinal;
       host.querySelector("#pbv2SaveTemplate").onclick = saveTemplate;
-      host.querySelector("#pbv2DuplicateTemplate").onclick = duplicateLastTemplate;
+      host.querySelector("#pbv2DuplicateTemplate").onclick = duplicateTemplate;
       host.querySelector("#pbv2AssignClient").onclick = assignToClient;
     }
 

@@ -7,6 +7,31 @@
   const PROGRAM_TEMPLATE_STORAGE_KEY = "programTemplates";
   const PROGRAM_ASSIGNMENT_STORAGE_KEY = "programAssignments";
 
+  function createDefaultSet() {
+    return {
+      setType: "straight",
+      reps: 8,
+      weight: null,
+      rpe: null,
+      rir: null,
+      restSec: 120,
+    };
+  }
+
+  function createDefaultExercise(overrides) {
+    const source = overrides && typeof overrides === "object" ? overrides : {};
+    return {
+      exerciseId: typeof source.exerciseId === "string" && source.exerciseId ? source.exerciseId : null,
+      name: typeof source.name === "string" ? source.name : "",
+      notes: typeof source.notes === "string" ? source.notes : "",
+      rirNote: typeof source.rirNote === "string" ? source.rirNote : "",
+      rpeNote: typeof source.rpeNote === "string" ? source.rpeNote : "",
+      progressionNotes: typeof source.progressionNotes === "string" ? source.progressionNotes : "",
+      archetypeTags: Array.isArray(source.archetypeTags) ? source.archetypeTags.slice() : [],
+      sets: [createDefaultSet()],
+    };
+  }
+
   function defaultProgramDraft() {
     return {
       name: "",
@@ -460,9 +485,11 @@
 
   function duplicateProgramTemplate(globalObj, templateId) {
     const templates = loadCoachTemplates(globalObj);
-    const source = templates.find(function (tpl) {
-      return tpl.templateId === templateId;
-    });
+    const source =
+      templates.find(function (tpl) {
+        return tpl.templateId === templateId;
+      }) ||
+      (templates.length ? templates[templates.length - 1] : null);
     if (!source) return null;
     return saveProgramTemplate(globalObj, {
       ...source,
@@ -503,6 +530,8 @@
     PROGRAM_SCHEMA_VERSION,
     PROGRAM_TEMPLATE_STORAGE_KEY,
     PROGRAM_ASSIGNMENT_STORAGE_KEY,
+    createDefaultSet,
+    createDefaultExercise,
     defaultProgramDraft,
     normalizeProgram,
     summarizeProgram,
