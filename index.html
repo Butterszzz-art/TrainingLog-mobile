@@ -8846,17 +8846,18 @@ function syncLocalHistoryFromWorkouts() {
   });
 
   if (typeof api.renderWorkoutHistory === 'function') {
-    api.renderWorkoutHistory();
+    const workoutContainer = document.getElementById('logHistoryContainer');
+    api.renderWorkoutHistory(workoutContainer);
   }
 }
 
-async function renderWorkoutHistory() {
+async function renderWorkoutHistory(container = document.getElementById('logHistoryContainer')) {
   const api = window.historyApi;
   if (!api || typeof api.renderWorkoutHistory !== 'function') {
     return;
   }
 
-  await api.renderWorkoutHistory();
+  await api.renderWorkoutHistory(container);
 }
 
 const BODYWEIGHT_PREF_KEY = 'tl_bodyweight_pref';
