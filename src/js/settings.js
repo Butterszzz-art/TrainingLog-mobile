@@ -223,7 +223,11 @@ function getDefaultSettings() {
 function saveSettings(event) {
   if (event) event.preventDefault();
 
-  const container = document.getElementById('settingsFormContainer') || document;
+  const container = document.getElementById('settingsFormContainer');
+  if (!container) {
+    console.warn('[Settings:saveSettings] Missing #settingsFormContainer container.');
+    return;
+  }
   const existingSettings = getHydratedSettingsSnapshot();
   const existingProfile = existingSettings.profile || {};
   const unitField = container.querySelector('#defaultUnit');
@@ -460,7 +464,10 @@ function renderSeasonArchiveMarkup({ phaseSettings, userId }) {
 
 function renderProfileTab() {
   const container = document.getElementById('profileTabContent');
-  if (!container) return;
+  if (!container) {
+    console.warn('[Settings:renderProfileTab] Missing #profileTabContent container.');
+    return;
+  }
 
   const profile = getProfileSnapshot();
   const athleteInfo = profile.athleteInfo || {};
@@ -809,7 +816,13 @@ function bindPhaseSetup(container = document) {
 
 function injectSettingsMarkup() {
   const container = document.getElementById('settingsFormContainer');
-  if (!container || container.dataset.loaded === 'true' || container.dataset.loaded === 'loading') {
+  if (!container) {
+    console.warn('[Settings:injectSettingsMarkup] Missing #settingsFormContainer container.');
+    applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
+    return;
+  }
+
+  if (container.dataset.loaded === 'true' || container.dataset.loaded === 'loading') {
     applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
     return;
   }
