@@ -2619,6 +2619,17 @@ function ensureProfileTabRendered(retries = 8) {
   const profileContainer = document.getElementById('profileTabContent');
   if (!profileContainer) {
     console.warn('[Tabs] Missing profileTabContent DOM node.');
+    const profileTab = document.getElementById('profileTab');
+    if (profileTab) {
+      const existingMessage = profileTab.querySelector('[data-profile-fallback="missing-node"]');
+      if (!existingMessage) {
+        const fallback = document.createElement('p');
+        fallback.dataset.profileFallback = 'missing-node';
+        fallback.style.opacity = '.7';
+        fallback.textContent = 'Profile content is unavailable because required UI elements are missing.';
+        profileTab.appendChild(fallback);
+      }
+    }
     return;
   }
 
@@ -2674,10 +2685,6 @@ function bindSideMenuTabLinks() {
   sideMenu.dataset.tabBindingAttached = 'true';
 }
 
-bindSideMenuTabLinks();
-
-
-  
 function loadMacroTargetsFromLocal() {
   const raw = localStorage.getItem('macroTargets');
   if (raw) {
