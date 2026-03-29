@@ -1425,37 +1425,151 @@ body.theme-dark .set-row {
 
 .checkin-form-section {
   margin: 12px 0;
-  padding: 10px;
-  border: 1px solid #dfe3ee;
-  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid rgba(88, 127, 108, 0.4);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(18, 27, 23, 0.96), rgba(11, 17, 14, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 12px 24px rgba(0, 0, 0, 0.25);
 }
 
 .checkin-form-section h3 {
   margin: 0 0 10px;
   font-size: 1rem;
+  color: var(--text-color);
+}
+
+#checkInTab .checkin-form-section input:not([type="checkbox"]):not([type="range"]),
+#checkInTab .checkin-form-section select,
+#checkInTab .checkin-form-section textarea,
+#checkInTab > .panel > input:not([type="checkbox"]):not([type="range"]) {
+  background: #0c1511;
+  border: 1px solid rgba(92, 140, 117, 0.45);
+  border-radius: 12px;
+  color: var(--text-color);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.02), inset 0 -8px 18px rgba(0, 0, 0, 0.2);
+}
+
+#checkInTab .checkin-form-section input:not([type="checkbox"]):not([type="range"])::placeholder,
+#checkInTab .checkin-form-section textarea::placeholder,
+#checkInTab > .panel > input:not([type="checkbox"]):not([type="range"])::placeholder {
+  color: var(--text-muted);
+}
+
+#checkInTab .checkin-form-section input:not([type="checkbox"]):not([type="range"]):focus,
+#checkInTab .checkin-form-section select:focus,
+#checkInTab .checkin-form-section textarea:focus,
+#checkInTab > .panel > input:not([type="checkbox"]):not([type="range"]):focus {
+  border-color: rgba(94, 173, 131, 0.75);
+  box-shadow: 0 0 0 2px rgba(46, 125, 91, 0.33), 0 0 18px rgba(37, 113, 80, 0.26);
+}
+
+#checkInTab .checkin-form-section label {
+  color: var(--secondary-text);
+  display: block;
+  margin: 4px 0;
 }
 
 .checkin-slider-field {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(92, 140, 117, 0.32);
+  border-radius: 12px;
+  background: rgba(7, 12, 10, 0.55);
 }
 
 .checkin-slider-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 4px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.checkin-slider-title {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.checkin-slider-value {
+  min-width: 34px;
+  text-align: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(86, 146, 115, 0.48);
+  background: rgba(23, 55, 41, 0.9);
+  color: #ecfff4;
+  line-height: 1.1;
+  font-size: 0.92rem;
 }
 
 .checkin-slider-field input[type="range"] {
   width: 100%;
-  height: 32px;
+  height: 22px;
   touch-action: pan-y;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  --checkin-slider-progress: 50%;
+}
+
+.checkin-slider-field input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #2f8c63 0%,
+    #2f8c63 var(--checkin-slider-progress),
+    #2a312d var(--checkin-slider-progress),
+    #2a312d 100%
+  );
+}
+
+.checkin-slider-field input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 202, 164, 0.72);
+  background: radial-gradient(circle at 30% 30%, #4ec086, #1f6a49 70%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(39, 134, 93, 0.2);
+  cursor: pointer;
+}
+
+.checkin-slider-field input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #2a312d;
+}
+
+.checkin-slider-field input[type="range"]::-moz-range-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #2f8c63;
+}
+
+.checkin-slider-field input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 202, 164, 0.72);
+  background: #2a8c5f;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(39, 134, 93, 0.2);
+  cursor: pointer;
 }
 
 .checkin-slider-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
-  opacity: 0.75;
+  gap: 12px;
+  font-size: 0.76rem;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+}
+
+.checkin-slider-labels span:last-child {
+  text-align: right;
 }
 
 .checkin-timeline-group {
@@ -1489,13 +1603,13 @@ body.theme-dark .set-row {
     margin: 10px 0;
   }
 
-  .checkin-slider-header strong {
-    font-size: 1rem;
-    min-width: 28px;
-    text-align: right;
+  .checkin-slider-value {
+    font-size: 0.9rem;
+    min-width: 32px;
+    padding: 4px 8px;
   }
 
   .checkin-slider-labels {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
   }
 }

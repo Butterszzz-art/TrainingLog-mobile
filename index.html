@@ -1271,17 +1271,17 @@
       <section class="checkin-form-section">
         <h3>Recovery</h3>
         <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span>Energy</span><strong id="checkInEnergyValue">5</strong></div>
+          <div class="checkin-slider-header"><span class="checkin-slider-title">Energy</span><strong class="checkin-slider-value" id="checkInEnergyValue">5</strong></div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInEnergyInput" data-value-target="checkInEnergyValue">
           <div class="checkin-slider-labels"><span>Drained</span><span>High Energy</span></div>
         </div>
         <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span>Sleep Quality</span><strong id="checkInSleepValue">5</strong></div>
+          <div class="checkin-slider-header"><span class="checkin-slider-title">Sleep Quality</span><strong class="checkin-slider-value" id="checkInSleepValue">5</strong></div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInSleepInput" data-value-target="checkInSleepValue">
           <div class="checkin-slider-labels"><span>Poor Sleep</span><span>Excellent Sleep</span></div>
         </div>
         <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span>Stress</span><strong id="checkInStressValue">5</strong></div>
+          <div class="checkin-slider-header"><span class="checkin-slider-title">Stress</span><strong class="checkin-slider-value" id="checkInStressValue">5</strong></div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInStressInput" data-value-target="checkInStressValue">
           <div class="checkin-slider-labels"><span>Low Stress</span><span>High Stress</span></div>
         </div>
@@ -8259,7 +8259,7 @@ function renderCheckInArchetypeFields(archetype, sourceEntry = null) {
 
   container.innerHTML = schema.fields.map((field) => `
     <div class="checkin-slider-field">
-      <div class="checkin-slider-header"><span>${field.label}</span><strong id="checkInFieldValue_${field.key}">5</strong></div>
+      <div class="checkin-slider-header"><span class="checkin-slider-title">${field.label}</span><strong class="checkin-slider-value" id="checkInFieldValue_${field.key}">5</strong></div>
       <input
         type="range"
         min="1"
@@ -8452,6 +8452,11 @@ function bindCheckInSliderDisplays() {
     const updateValue = () => {
       if (!valueEl) return;
       valueEl.textContent = slider.value || '';
+      const min = Number(slider.min || 0);
+      const max = Number(slider.max || 10);
+      const current = Number(slider.value || min);
+      const percent = max > min ? ((current - min) / (max - min)) * 100 : 0;
+      slider.style.setProperty('--checkin-slider-progress', `${Math.max(0, Math.min(100, percent))}%`);
     };
     slider.oninput = updateValue;
     updateValue();
