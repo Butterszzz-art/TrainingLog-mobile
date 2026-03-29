@@ -1044,10 +1044,76 @@
   }
 .progress-chart,
 .progress-calendar {
-  background: #fff;
+  background: linear-gradient(180deg, rgba(18, 27, 23, 0.94), rgba(12, 18, 15, 0.97));
   padding: 1rem;
   border-radius: .5rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,.1);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+  color: var(--text-color);
+}
+
+#bodybuildingProgressPanel {
+  margin-top: 14px;
+  color: var(--text-color);
+}
+#bodybuildingProgressPanel h3 {
+  margin: 0 0 10px;
+  color: #f6faf8;
+  letter-spacing: 0.01em;
+}
+#bodybuildingProgressPanel h4 {
+  margin: 10px 0 6px;
+  color: #dce7e1;
+  font-size: 1rem;
+}
+#bodybuildingProgressPanel table {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(14, 21, 18, 0.92);
+  box-shadow: none;
+}
+#bodybuildingProgressPanel th {
+  background: rgba(35, 57, 47, 0.9);
+  color: #f3f8f5;
+  font-weight: 600;
+  border-color: rgba(121, 150, 137, 0.4);
+}
+#bodybuildingProgressPanel td {
+  color: #e5ece8;
+  border-color: rgba(115, 143, 131, 0.28);
+}
+#bodybuildingProgressPanel .progress-empty {
+  color: #b8c2bc;
+}
+#bodybuildingProgressPanel .bb-pr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+#bodybuildingProgressPanel .bb-pr-card {
+  background: rgba(15, 24, 20, 0.86);
+  border: 1px solid rgba(113, 141, 129, 0.35);
+  border-radius: 8px;
+  padding: 8px;
+}
+#bodybuildingProgressPanel ul {
+  margin: 6px 0 0 18px;
+  padding: 0;
+  color: #d7e2dc;
+}
+#bodybuildingProgressPanel li {
+  margin: 4px 0;
+}
+#bodybuildingProgressPanel details {
+  margin-top: 8px;
+  color: #c2cdc7;
+}
+#bodybuildingProgressPanel summary {
+  color: #dce7e1;
 }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1784,7 +1850,7 @@
           <canvas id="strainCanvas" style="max-height:180px;"></canvas>
           <div id="loadAlerts" style="margin-top:8px;"></div>
         </div>
-        <div id="bodybuildingProgressPanel" style="margin-top:14px;"></div>
+        <div id="bodybuildingProgressPanel"></div>
         <div id="goalBar" style="margin-top:10px;"></div>
         <div id="goalProgressList" style="margin-top:10px;"></div>
         <div id="coachCorner" style="margin-top:10px;"></div>
@@ -9403,25 +9469,25 @@ function renderBodybuildingProgressPanel(workouts) {
 
   panel.innerHTML = `
     <h3>Bodybuilding Progress</h3>
-    <h4 style="margin:6px 0;">Muscle Group Weekly Volume (actual vs planned)</h4>
-    <table style="width:100%;font-size:.9rem;">
+    <h4>Muscle Group Weekly Volume (actual vs planned)</h4>
+    <table>
       <tr><th align="left">Muscle Group</th><th align="left">Actual</th><th align="left">Planned</th><th align="left">Status</th></tr>
-      ${volumeRows || '<tr><td colspan="4">No resistance log data in selected range.</td></tr>'}
+      ${volumeRows || '<tr><td colspan="4" class="progress-empty">No resistance log data in selected range.</td></tr>'}
     </table>
-    <h4 style="margin:8px 0 4px;">Exercise Consistency</h4>
-    <table style="width:100%;font-size:.9rem;">
+    <h4>Exercise Consistency</h4>
+    <table>
       <tr><th align="left">Exercise</th><th align="left">Sessions</th><th align="left">Avg days between</th></tr>
-      ${consistencyRows || '<tr><td colspan="3">No consistency data yet.</td></tr>'}
+      ${consistencyRows || '<tr><td colspan="3" class="progress-empty">No consistency data yet.</td></tr>'}
     </table>
-    <h4 style="margin:8px 0 4px;">PR Snapshot</h4>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
-      <div><strong>Top Set</strong><ul>${topSetItems || '<li>No data</li>'}</ul></div>
-      <div><strong>Rep PR</strong><ul>${repItems || '<li>No data</li>'}</ul></div>
-      <div><strong>Volume PR</strong><ul>${volumeItems || '<li>No data</li>'}</ul></div>
+    <h4>PR Snapshot</h4>
+    <div class="bb-pr-grid">
+      <div class="bb-pr-card"><strong>Top Set</strong><ul>${topSetItems || '<li class="progress-empty">No data</li>'}</ul></div>
+      <div class="bb-pr-card"><strong>Rep PR</strong><ul>${repItems || '<li class="progress-empty">No data</li>'}</ul></div>
+      <div class="bb-pr-card"><strong>Volume PR</strong><ul>${volumeItems || '<li class="progress-empty">No data</li>'}</ul></div>
     </div>
-    <h4 style="margin:8px 0 4px;">Weak-Point Focus</h4>
-    <ul>${weakPointItems || '<li>No weak points flagged this week.</li>'}</ul>
-    <details style="margin-top:6px;">
+    <h4>Weak-Point Focus</h4>
+    <ul>${weakPointItems || '<li class="progress-empty">No weak points flagged this week.</li>'}</ul>
+    <details>
       <summary>Mapping assumptions</summary>
       <ul>${assumptionItems}</ul>
     </details>
