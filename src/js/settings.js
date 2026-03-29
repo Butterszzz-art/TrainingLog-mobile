@@ -460,7 +460,10 @@ function renderSeasonArchiveMarkup({ phaseSettings, userId }) {
 
 function renderProfileTab() {
   const container = document.getElementById('profileTabContent');
-  if (!container) return;
+  if (!container) {
+    console.warn('[Settings] renderProfileTab aborted because #profileTabContent is missing.');
+    return;
+  }
 
   const profile = getProfileSnapshot();
   const athleteInfo = profile.athleteInfo || {};
