@@ -2430,8 +2430,11 @@ async function startLogin() {
       localStorage.setItem("fitnessAppUser", username);
       persistLoginIdentity(username, result.token);
 
-      document.getElementById("userDisplay").textContent = username;
-      document.getElementById("loginContainer").style.display = "none";
+      // BUGFIX: null-safe — #userDisplay may not exist in the current DOM
+      const userDisplayEl = document.getElementById("userDisplay");
+      if (userDisplayEl) userDisplayEl.textContent = username;
+      const loginContainerEl = document.getElementById("loginContainer");
+      if (loginContainerEl) loginContainerEl.style.display = "none";
       openSection('pocketFit');
       window.renderWorkouts(); // ✅ Render workouts
       if (typeof syncLocalHistoryFromWorkouts === 'function') {
@@ -11122,8 +11125,10 @@ async function fetchDailyLogs(username) {
 
   if (savedUser) {
     setCurrentUser(savedUser);
-    document.getElementById("userDisplay").textContent = savedUser;
-    loginEl.style.display = "none";
+    // BUGFIX: null-safe — #userDisplay may not exist in the current DOM
+    const userDisplayEl = document.getElementById("userDisplay");
+    if (userDisplayEl) userDisplayEl.textContent = savedUser;
+    if (loginEl) loginEl.style.display = "none";
     openSection('pocketFit');
     renderWorkouts();
     if (typeof syncLocalHistoryFromWorkouts === 'function') {
