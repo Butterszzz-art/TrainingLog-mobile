@@ -150,6 +150,7 @@
       padding-bottom: 80px;
     }
 
+    /* Unified bottom nav — one horizontally-scrollable bar with ALL tabs. */
     #bottomNav {
       position: fixed;
       bottom: 0;
@@ -164,10 +165,19 @@
       align-items: stretch;
       z-index: 1000;
       box-shadow: 0 -4px 24px rgba(0,0,0,0.45);
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      scroll-snap-type: x proximity;
+    }
+    #bottomNav::-webkit-scrollbar {
+      display: none;
     }
 
     .bn-item {
-      flex: 1;
+      flex: 0 0 auto;
+      min-width: 72px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -179,11 +189,12 @@
       font-size: 11px;
       font-family: 'Poppins', sans-serif;
       cursor: pointer;
-      padding: 0;
+      padding: 0 10px;
       margin: 0;
       box-shadow: none;
       transition: color 0.2s ease;
       -webkit-tap-highlight-color: transparent;
+      scroll-snap-align: start;
     }
     .bn-item:hover {
       background: none;
@@ -204,100 +215,13 @@
     .bn-item .bn-label {
       font-size: 10px;
       letter-spacing: 0.02em;
+      white-space: nowrap;
     }
-
-    /* More drawer */
-    #moreDrawer {
-      position: fixed;
-      bottom: 64px;
-      left: 0;
-      right: 0;
-      background: rgba(11, 16, 14, 0.97);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(132, 157, 144, 0.22);
-      border-radius: 20px 20px 0 0;
-      z-index: 999;
-      padding: 16px 12px 8px;
-      transform: translateY(100%);
-      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
-      box-shadow: 0 -8px 40px rgba(0,0,0,0.55);
-    }
-    #moreDrawer.open {
-      transform: translateY(0);
-    }
-    .more-drawer-handle {
-      width: 36px;
-      height: 4px;
-      background: rgba(132,157,144,0.35);
-      border-radius: 2px;
-      margin: 0 auto 16px;
-    }
-    .more-drawer-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      max-width: 480px;
-      margin: 0 auto;
-    }
-    .more-drawer-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      background: rgba(24, 35, 30, 0.8);
-      border: 1px solid rgba(132, 157, 144, 0.18);
-      border-radius: 14px;
-      padding: 12px 6px;
-      cursor: pointer;
-      font-family: 'Poppins', sans-serif;
-      font-size: 10px;
-      color: var(--secondary-text);
-      transition: background 0.2s, color 0.2s, transform 0.2s;
-      box-shadow: none;
-      margin: 0;
-    }
-    .more-drawer-item:hover {
-      background: rgba(45, 125, 91, 0.22);
-      color: var(--text-color);
-      transform: translateY(-2px);
-    }
-    .more-drawer-item .md-icon {
-      font-size: 22px;
-    }
-    .more-drawer-section {
-      font-size: 10px;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      font-weight: 600;
-      padding: 10px 4px 4px;
-      grid-column: 1 / -1;
-    }
-    .more-drawer-logout {
-      grid-column: 1 / -1;
-      flex-direction: row;
-      gap: 8px;
-      justify-content: center;
-      margin-top: 2px;
-      padding: 10px;
-      background: rgba(185, 55, 67, 0.1);
-      border-color: rgba(185, 55, 67, 0.25);
+    .bn-item.bn-logout {
       color: #c05060;
     }
-    .more-drawer-logout:hover {
-      background: rgba(185, 55, 67, 0.2);
+    .bn-item.bn-logout:hover {
       color: #e06070;
-    }
-    #moreBackdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 998;
-      background: rgba(0,0,0,0.45);
-    }
-    #moreBackdrop.open {
-      display: block;
     }
 
 
@@ -1151,7 +1075,7 @@
 
 <div id="pocketFitContainer" class="section" style="display:none;">
   
-  <!-- Bottom Navigation Bar -->
+  <!-- Unified Navigation Bar (single scrollable bar with all tabs) -->
   <nav id="bottomNav" aria-label="Main navigation">
     <button class="bn-item active" data-tab="homeTab" aria-label="Home">
       <span class="bn-icon">🏠</span>
@@ -1169,40 +1093,59 @@
       <span class="bn-icon">🍽️</span>
       <span class="bn-label">Macros</span>
     </button>
-    <button class="bn-item" id="moreNavBtn" aria-label="More">
-      <span class="bn-icon">☰</span>
-      <span class="bn-label">More</span>
+    <button class="bn-item" data-tab="checkInTab" aria-label="Check-In">
+      <span class="bn-icon">🧾</span>
+      <span class="bn-label">Check-In</span>
+    </button>
+    <button class="bn-item" data-tab="weightTab" aria-label="Weight">
+      <span class="bn-icon">⚖️</span>
+      <span class="bn-label">Weight</span>
+    </button>
+    <button class="bn-item" data-tab="cardioTab" aria-label="Cardio">
+      <span class="bn-icon">🏃</span>
+      <span class="bn-label">Cardio</span>
+    </button>
+    <button class="bn-item" data-tab="posingTab" aria-label="Posing">
+      <span class="bn-icon">🎭</span>
+      <span class="bn-label">Posing</span>
+    </button>
+    <button class="bn-item" data-tab="programTab" aria-label="Programs">
+      <span class="bn-icon">🗓️</span>
+      <span class="bn-label">Programs</span>
+    </button>
+    <button class="bn-item" data-tab="crossfitTab" aria-label="CrossFit">
+      <span class="bn-icon">💪</span>
+      <span class="bn-label">CrossFit</span>
+    </button>
+    <button class="bn-item" data-tab="communityTab" aria-label="Community">
+      <span class="bn-icon">👥</span>
+      <span class="bn-label">Community</span>
+    </button>
+    <button class="bn-item" data-tab="leaderboardTab" aria-label="Leaderboard">
+      <span class="bn-icon">🏅</span>
+      <span class="bn-label">Leaderboard</span>
+    </button>
+    <button class="bn-item" data-tab="logHistoryTab" aria-label="History">
+      <span class="bn-icon">📜</span>
+      <span class="bn-label">History</span>
+    </button>
+    <button class="bn-item coach-only" data-tab="coachingTab" aria-label="Coach">
+      <span class="bn-icon">🧭</span>
+      <span class="bn-label">Coach</span>
+    </button>
+    <button class="bn-item" data-tab="profileTab" aria-label="Profile">
+      <span class="bn-icon">👤</span>
+      <span class="bn-label">Profile</span>
+    </button>
+    <button class="bn-item" data-tab="settingsTab" aria-label="Settings">
+      <span class="bn-icon">⚙️</span>
+      <span class="bn-label">Settings</span>
+    </button>
+    <button class="bn-item bn-logout" onclick="logout()" aria-label="Logout">
+      <span class="bn-icon">🚪</span>
+      <span class="bn-label">Logout</span>
     </button>
   </nav>
-
-  <!-- More drawer backdrop -->
-  <div id="moreBackdrop"></div>
-
-  <!-- More drawer -->
-  <div id="moreDrawer" role="dialog" aria-label="More navigation">
-    <div class="more-drawer-handle"></div>
-    <div class="more-drawer-grid">
-      <span class="more-drawer-section">Tracking</span>
-      <button class="more-drawer-item" data-tab="checkInTab"><span class="md-icon">🧾</span>Check-In</button>
-      <button class="more-drawer-item" data-tab="weightTab"><span class="md-icon">⚖️</span>Weight</button>
-      <button class="more-drawer-item" data-tab="cardioTab"><span class="md-icon">🏃</span>Cardio</button>
-      <button class="more-drawer-item" data-tab="posingTab"><span class="md-icon">🎭</span>Posing</button>
-
-      <span class="more-drawer-section">Planning</span>
-      <button class="more-drawer-item" data-tab="programTab"><span class="md-icon">🗓️</span>Programs</button>
-      <button class="more-drawer-item" data-tab="crossfitTab"><span class="md-icon">💪</span>CrossFit</button>
-      <button class="more-drawer-item" data-tab="communityTab"><span class="md-icon">👥</span>Community</button>
-      <button class="more-drawer-item" data-tab="leaderboardTab"><span class="md-icon">🏅</span>Leaderboard</button>
-
-      <span class="more-drawer-section">History &amp; More</span>
-      <button class="more-drawer-item" data-tab="logHistoryTab"><span class="md-icon">📜</span>History</button>
-      <button class="more-drawer-item coach-only" data-tab="coachingTab"><span class="md-icon">🧭</span>Coach</button>
-      <button class="more-drawer-item" data-tab="profileTab"><span class="md-icon">👤</span>Profile</button>
-      <button class="more-drawer-item" data-tab="settingsTab"><span class="md-icon">⚙️</span>Settings</button>
-
-      <button class="more-drawer-item more-drawer-logout" onclick="logout()"><span class="md-icon">🚪</span>Logout</button>
-    </div>
-  </div>
 
   <div id="appContainer" class="main-content">
 <div id="progressReminder"></div>
@@ -6708,7 +6651,9 @@ function setCoachModeEnabled(value) {
 function applyAppModeToNavigation() {
   const coachModeEnabled = isCoachModeEnabled();
   document.querySelectorAll('.coach-only').forEach((el) => {
-    el.style.display = coachModeEnabled ? 'block' : 'none';
+    // Use empty string to revert to the stylesheet default (e.g. flex for
+    // .bn-item) instead of forcing 'block', which would break the nav layout.
+    el.style.display = coachModeEnabled ? '' : 'none';
   });
 }
 
@@ -11196,33 +11141,10 @@ async function fetchDailyLogs(username) {
     btn.addEventListener('click', () => {
       showTab(btn.dataset.tab);
       setActiveNavTab(btn.dataset.tab);
-    });
-  });
-
-  // More drawer
-  const moreDrawer = document.getElementById('moreDrawer');
-  const moreBackdrop = document.getElementById('moreBackdrop');
-  const moreNavBtn = document.getElementById('moreNavBtn');
-
-  function openMoreDrawer() {
-    moreDrawer.classList.add('open');
-    moreBackdrop.classList.add('open');
-  }
-  function closeMoreDrawer() {
-    moreDrawer.classList.remove('open');
-    moreBackdrop.classList.remove('open');
-  }
-
-  moreNavBtn.addEventListener('click', () => {
-    moreDrawer.classList.contains('open') ? closeMoreDrawer() : openMoreDrawer();
-  });
-  moreBackdrop.addEventListener('click', closeMoreDrawer);
-
-  document.querySelectorAll('.more-drawer-item[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      showTab(btn.dataset.tab);
-      setActiveNavTab(null);
-      closeMoreDrawer();
+      // Keep the active tab visible when the nav scrolls horizontally.
+      if (typeof btn.scrollIntoView === 'function') {
+        btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
     });
   });
 
