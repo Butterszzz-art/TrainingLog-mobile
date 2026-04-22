@@ -65,11 +65,7 @@
       margin: 0;
       width: 100vw;
       min-height: 100vh;
-      transition: margin-left 0.3s ease;
       overflow-x: hidden;
-    }
-    body.sidebar-open {
-      overflow: hidden;
     }
     h2 {
       font-size: 1.8rem;
@@ -104,21 +100,22 @@
     }
 
     button {
-      padding: 10px 16px;
+      padding: 10px 22px;
       margin: 12px 0;
       box-sizing: border-box;
-      border-radius: 6px;
+      border-radius: 999px;
       background-color: var(--primary);
       color: var(--text-color);
       border: none;
       cursor: pointer;
       font-size: 15px;
       box-shadow: var(--shadow);
-      transition: background-color 0.3s ease, transform 0.2s ease;
+      transition: background-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
     }
     button:hover {
       background-color: var(--primary-dark);
       transform: translateY(-2px);
+      box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.28), 0 6px 20px rgba(45, 125, 91, 0.35);
     }
 
     .form-error {
@@ -146,148 +143,162 @@
     th {
       background-color: #f0f0f0;
     }
-    /* Sidebar Styles */
-    .side-menu {
-      position: fixed;
-      top: 0;
-      left: 0;
-      transform: translateX(-250px);
-      width: 250px;
-      height: 100%;
-      background-color: var(--sidebar-bg);
-      box-shadow: 2px 0 5px rgba(0,0,0,0.3);
-      overflow-y: auto;
-      box-sizing: border-box;
-      transition: transform 0.3s ease;
-      z-index: 1000;
-      padding-top: 70px; /* provide space for home/hamburger buttons */
-    }
-    .side-menu.open {
-      transform: translateX(0);
-    }
-
-    /* main content gets pushed when sidebar open */
-    .main-content {
-      transition: margin-left 0.3s ease;
-    }
-    body.sidebar-open .main-content {
-      margin-left: 250px;
-    }
-
-    /* Main content shift when sidebar is open */
+    /* Bottom Nav */
     #appContainer {
-      transition: margin-left 0.3s ease;
-      margin-left: 0;
-      margin-top: 0;
-      padding-top: 62px; /* space for floating controls with no body strip */
-    }
-    #appContainer.shifted {
-      margin-left: 250px;
+      margin: 0;
+      padding-top: 8px;
+      padding-bottom: 80px;
     }
 
+    #bottomNav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(10, 15, 12, 0.92);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-top: 1px solid rgba(132, 157, 144, 0.22);
+      display: flex;
+      align-items: stretch;
+      z-index: 1000;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.45);
+    }
 
-    .menu-title {
-      font-size: 20px;
-      font-weight: bold;
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--border-color);
-      text-align: center;
+    .bn-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: none;
+      border: none;
+      color: var(--secondary-text);
+      font-size: 11px;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+      transition: color 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bn-item:hover {
+      background: none;
+      transform: none;
       color: var(--text-color);
-      margin-top: 10px; /* slight offset below home button */
+    }
+    .bn-item.active {
+      color: var(--primary);
+    }
+    .bn-item .bn-icon {
+      font-size: 20px;
+      line-height: 1;
+      transition: transform 0.2s ease;
+    }
+    .bn-item.active .bn-icon {
+      transform: translateY(-2px);
+    }
+    .bn-item .bn-label {
+      font-size: 10px;
+      letter-spacing: 0.02em;
     }
 
-    .side-menu ul {
-  list-style: none; /* removes the bullets */
-  padding: 20px;
-  margin: 0;
-}
-
-.side-menu ul li {
-  margin-bottom: 15px;
-  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
-}
-
-.side-menu ul li.menu-section-label {
-  margin: 12px 0 6px;
-  box-shadow: none;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--secondary-text);
-  font-weight: 600;
-  padding-left: 10px;
-}
-
-.side-menu ul li a {
-  text-decoration: none;
-  color: var(--text-color);
-  font-weight: bold;
-  font-size: 16px;
-  display: block; /* make the entire item clickable */
-  padding: 8px 12px; /* add some padding for better hover area */
-  border-radius: 6px;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.side-menu ul li a:hover,
-.side-menu ul li a.active {
-  background-color: var(--primary); /* accent background on hover/active */
-  color: var(--text-color); /* ensure menu text is readable */
-}
-
-
-/* hamburger button always top-left, above content */
-.menu-toggle {
-  position: fixed;
-  top: 8px;
-  left: 16px;
-  width: 48px;
-  height: 48px;
-  z-index: 1100;
-  font-size: 24px;
-  background: linear-gradient(180deg, #163427, #0f231b);
-  border: 1px solid rgba(95, 130, 113, 0.5);
-  color: #fff;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-.menu-toggle:hover {
-  background: linear-gradient(180deg, #1d4332, #133126);
-}
-#menuToggle {
-  position: fixed;
-  top: 8px;
-  left: 16px;
-  z-index: 1100;
-  width: 56px;
-  height: 56px;
-  padding: 0;
-  border-radius: 50%;
-  font-size: 24px;
-}
-
-.home-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--primary);
-  border: none;
-  border-radius: 50%;
-  color: #fff;
-  font-size: 20px;
-  box-shadow: var(--shadow);
-  cursor: pointer;
-}
+    /* More drawer */
+    #moreDrawer {
+      position: fixed;
+      bottom: 64px;
+      left: 0;
+      right: 0;
+      background: rgba(11, 16, 14, 0.97);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(132, 157, 144, 0.22);
+      border-radius: 20px 20px 0 0;
+      z-index: 999;
+      padding: 16px 12px 8px;
+      transform: translateY(100%);
+      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.55);
+    }
+    #moreDrawer.open {
+      transform: translateY(0);
+    }
+    .more-drawer-handle {
+      width: 36px;
+      height: 4px;
+      background: rgba(132,157,144,0.35);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .more-drawer-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .more-drawer-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      background: rgba(24, 35, 30, 0.8);
+      border: 1px solid rgba(132, 157, 144, 0.18);
+      border-radius: 14px;
+      padding: 12px 6px;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      font-size: 10px;
+      color: var(--secondary-text);
+      transition: background 0.2s, color 0.2s, transform 0.2s;
+      box-shadow: none;
+      margin: 0;
+    }
+    .more-drawer-item:hover {
+      background: rgba(45, 125, 91, 0.22);
+      color: var(--text-color);
+      transform: translateY(-2px);
+    }
+    .more-drawer-item .md-icon {
+      font-size: 22px;
+    }
+    .more-drawer-section {
+      font-size: 10px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 10px 4px 4px;
+      grid-column: 1 / -1;
+    }
+    .more-drawer-logout {
+      grid-column: 1 / -1;
+      flex-direction: row;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 2px;
+      padding: 10px;
+      background: rgba(185, 55, 67, 0.1);
+      border-color: rgba(185, 55, 67, 0.25);
+      color: #c05060;
+    }
+    .more-drawer-logout:hover {
+      background: rgba(185, 55, 67, 0.2);
+      color: #e06070;
+    }
+    #moreBackdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 998;
+      background: rgba(0,0,0,0.45);
+    }
+    #moreBackdrop.open {
+      display: block;
+    }
 
 
     /* Tab content */
@@ -1140,43 +1151,58 @@
 
 <div id="pocketFitContainer" class="section" style="display:none;">
   
-  <!-- Hamburger button -->
-  <button id="menuToggle" class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
-
-  <!-- Sidebar -->
-  <nav id="sideMenu" class="side-menu">
-    <button id="homeButton" class="home-button" onclick="openDashboard()" aria-label="Home">🏠</button>
-    <div class="menu-title">PocketFit (<span id="userDisplay"></span>)</div>
-    <ul>
-      <li class="menu-section-label">Primary</li>
-      <li><a href="#" data-target="homeTab">🏠 Home</a></li>
-      <li><a href="#" data-target="logTab">📝 Log</a></li>
-      <li><a href="#" data-target="progressTab">📈 Progress</a></li>
-      <li><a href="#" data-target="checkInTab">🧾 Check-In</a></li>
-      <li><a href="#" data-target="profileTab">👤 Profile</a></li>
-
-      <li class="menu-section-label">Tracking</li>
-      <li><a href="#" data-target="logTab">📋 Training Log</a></li>
-      <li><a href="#" data-target="weightTab">⚖️ Bodyweight</a></li>
-      <li><a href="#" data-target="cardioTab">🏃 Cardio</a></li>
-      <li><a href="#" data-target="posingTab">🎭 Posing</a></li>
-      <li><a href="#" data-target="macroTab">🍽️ Macros</a></li>
-
-      <li class="menu-section-label">Planning & Community</li>
-      <li><a href="#" data-target="crossfitTab">💪 CrossFit</a></li>
-      <li><a href="#" data-target="programTab">🗓️ Programs</a></li>
-      <li><a href="#" data-target="communityTab">👥 Community</a></li>
-      <li><a href="#" data-target="leaderboardTab">🏅 Leaderboard</a></li>
-
-      <li class="menu-section-label">History & Coaching</li>
-      <li><a href="#" data-target="logHistoryTab">📜 Log History</a></li>
-      <li class="coach-only"><a href="#" data-target="coachingTab">🧭 Coach Dashboard</a></li>
-
-      <li class="menu-section-label">App</li>
-      <li><a href="#" data-target="settingsTab">⚙️ Settings</a></li>
-      <li><button id="sidebarLogoutBtn" onclick="logout()">Logout</button></li>
-    </ul>
+  <!-- Bottom Navigation Bar -->
+  <nav id="bottomNav" aria-label="Main navigation">
+    <button class="bn-item active" data-tab="homeTab" aria-label="Home">
+      <span class="bn-icon">🏠</span>
+      <span class="bn-label">Home</span>
+    </button>
+    <button class="bn-item" data-tab="logTab" aria-label="Log">
+      <span class="bn-icon">📝</span>
+      <span class="bn-label">Log</span>
+    </button>
+    <button class="bn-item" data-tab="progressTab" aria-label="Progress">
+      <span class="bn-icon">📈</span>
+      <span class="bn-label">Progress</span>
+    </button>
+    <button class="bn-item" data-tab="macroTab" aria-label="Macros">
+      <span class="bn-icon">🍽️</span>
+      <span class="bn-label">Macros</span>
+    </button>
+    <button class="bn-item" id="moreNavBtn" aria-label="More">
+      <span class="bn-icon">☰</span>
+      <span class="bn-label">More</span>
+    </button>
   </nav>
+
+  <!-- More drawer backdrop -->
+  <div id="moreBackdrop"></div>
+
+  <!-- More drawer -->
+  <div id="moreDrawer" role="dialog" aria-label="More navigation">
+    <div class="more-drawer-handle"></div>
+    <div class="more-drawer-grid">
+      <span class="more-drawer-section">Tracking</span>
+      <button class="more-drawer-item" data-tab="checkInTab"><span class="md-icon">🧾</span>Check-In</button>
+      <button class="more-drawer-item" data-tab="weightTab"><span class="md-icon">⚖️</span>Weight</button>
+      <button class="more-drawer-item" data-tab="cardioTab"><span class="md-icon">🏃</span>Cardio</button>
+      <button class="more-drawer-item" data-tab="posingTab"><span class="md-icon">🎭</span>Posing</button>
+
+      <span class="more-drawer-section">Planning</span>
+      <button class="more-drawer-item" data-tab="programTab"><span class="md-icon">🗓️</span>Programs</button>
+      <button class="more-drawer-item" data-tab="crossfitTab"><span class="md-icon">💪</span>CrossFit</button>
+      <button class="more-drawer-item" data-tab="communityTab"><span class="md-icon">👥</span>Community</button>
+      <button class="more-drawer-item" data-tab="leaderboardTab"><span class="md-icon">🏅</span>Leaderboard</button>
+
+      <span class="more-drawer-section">History &amp; More</span>
+      <button class="more-drawer-item" data-tab="logHistoryTab"><span class="md-icon">📜</span>History</button>
+      <button class="more-drawer-item coach-only" data-tab="coachingTab"><span class="md-icon">🧭</span>Coach</button>
+      <button class="more-drawer-item" data-tab="profileTab"><span class="md-icon">👤</span>Profile</button>
+      <button class="more-drawer-item" data-tab="settingsTab"><span class="md-icon">⚙️</span>Settings</button>
+
+      <button class="more-drawer-item more-drawer-logout" onclick="logout()"><span class="md-icon">🚪</span>Logout</button>
+    </div>
+  </div>
 
   <div id="appContainer" class="main-content">
 <div id="progressReminder"></div>
@@ -1877,6 +1903,7 @@
       <div id="dashboardPRSummary" class="panel"></div>
     </div>
   </div>
+</div><!-- /#progressTab -->
 
 <div id="logHistoryTab" class="tab-content">
   <h2>Log History</h2>
@@ -2457,9 +2484,9 @@ function showTab(tabName) {
     return;
   }
   tab.classList.add('active');
-  document.querySelectorAll('#sideMenu a[data-target]').forEach((link) => {
-    const isActive = link.getAttribute('data-target') === tabName;
-    link.classList.toggle('active', isActive);
+  // Sync bottom nav active state
+  document.querySelectorAll('#bottomNav .bn-item[data-tab]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
   if (typeof animateTabSwitch === 'function') {
     animateTabSwitch(tab);
@@ -2660,29 +2687,7 @@ function ensureProfileTabRendered(retries = 8) {
 }
 
 function bindSideMenuTabLinks() {
-  const sideMenu = document.getElementById('sideMenu');
-  if (!sideMenu || sideMenu.dataset.tabBindingAttached === 'true') return;
-
-  const activateLinkTarget = (tabName) => {
-    if (!tabName) return;
-    showTab(tabName);
-    sideMenu.classList.remove('open');
-    const appContainer = document.getElementById('appContainer');
-    if (appContainer) appContainer.classList.remove('shifted');
-    const menuToggle = document.getElementById('menuToggle');
-    if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
-  };
-
-  sideMenu.addEventListener('click', (event) => {
-    const link = event.target.closest('a[data-target]');
-    if (!link || !sideMenu.contains(link)) return;
-    event.preventDefault();
-
-    const tabName = link.getAttribute('data-target');
-    activateLinkTarget(tabName);
-  });
-
-  sideMenu.dataset.tabBindingAttached = 'true';
+  // Sidebar replaced by bottom nav — nothing to bind here.
 }
 
 function loadMacroTargetsFromLocal() {
@@ -11175,34 +11180,46 @@ async function fetchDailyLogs(username) {
     
   
 
-  const menuToggle = document.getElementById("menuToggle");
-  const sideMenu = document.getElementById("sideMenu");
-
-  function toggleSidebar(force) {
-    const shouldOpen =
-      force !== undefined ? force : !sideMenu.classList.contains("open");
-    sideMenu.classList.toggle("open", shouldOpen);
-    document.getElementById("appContainer").classList.toggle("shifted", shouldOpen);
-    menuToggle.setAttribute("aria-expanded", String(shouldOpen));
+  // Bottom nav tab switching
+  function setActiveNavTab(tabName) {
+    document.querySelectorAll('#bottomNav .bn-item[data-tab]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
   }
 
-  menuToggle.addEventListener("click", () => {
-    // toggle sidebar panel
-    sideMenu.classList.toggle("open");
-    // push/pull main content
-    document.getElementById("appContainer").classList.toggle("shifted");
-    // update aria attribute
-    const expanded = menuToggle.getAttribute("aria-expanded") === "true";
-    menuToggle.setAttribute("aria-expanded", String(!expanded));
+  document.querySelectorAll('#bottomNav .bn-item[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      showTab(btn.dataset.tab);
+      setActiveNavTab(btn.dataset.tab);
+    });
   });
 
-  document.addEventListener("click", (e) => {
-    if (!sideMenu.contains(e.target) && !menuToggle.contains(e.target)) {
-      toggleSidebar(false);
-    }
-  });
+  // More drawer
+  const moreDrawer = document.getElementById('moreDrawer');
+  const moreBackdrop = document.getElementById('moreBackdrop');
+  const moreNavBtn = document.getElementById('moreNavBtn');
 
-  bindSideMenuTabLinks();
+  function openMoreDrawer() {
+    moreDrawer.classList.add('open');
+    moreBackdrop.classList.add('open');
+  }
+  function closeMoreDrawer() {
+    moreDrawer.classList.remove('open');
+    moreBackdrop.classList.remove('open');
+  }
+
+  moreNavBtn.addEventListener('click', () => {
+    moreDrawer.classList.contains('open') ? closeMoreDrawer() : openMoreDrawer();
+  });
+  moreBackdrop.addEventListener('click', closeMoreDrawer);
+
+  document.querySelectorAll('.more-drawer-item[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      showTab(btn.dataset.tab);
+      setActiveNavTab(null);
+      closeMoreDrawer();
+    });
+  });
 
   // Show the first tab initially
   initTrainingCalendar();
