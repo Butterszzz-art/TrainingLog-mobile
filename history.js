@@ -534,27 +534,56 @@ export async function renderWorkoutHistory(containerEl = document.getElementById
   containerEl.innerHTML = '<p style="opacity:.7;">Loading workout history…</p>';
 
   const currentUserId = username || null;
-  let items = [];
+
+  // Always read local history so archived workouts still surface
+  // even when the backend returns an empty list. Pull from BOTH stores:
+  //   - readHistoryArray() reads `tl_workout_history_v1` (entries shaped as
+  //     {id, date, title, workout: {...}} — what archive + finalize write).
+  //   - loadLogsFromLocalStorage() reads `workoutHistory` (resistance log
+  //     shape with top-level exercises), so completion-saved logs appear too.
+  const rawLegacy = readHistoryArray()
+    .filter(item => {
+      const uid = item?.userId || item?.username || item?.workout?.userId;
+      if (!currentUserId) return true;
+      return !uid || uid === currentUserId;
+    });
+
+  const rawResistance = loadLogsFromLocalStorage()
+    .filter(log => {
+      if (!currentUserId) return true;
+      return !log?.userId || log.userId === currentUserId;
+    })
+    .map(log => ({
+      id: log.id || generateLocalId(),
+      username: log.userId,
+      date: log.date,
+      title: log.title,
+      workout: log
+    }));
+
+  // Dedupe by id so the same workout isn't shown twice when both stores have it.
+  const seenLocalIds = new Set();
+  const localItems = [...rawLegacy, ...rawResistance].filter(item => {
+    const key = item?.id || item?.workout?.id || `${item?.date}|${item?.title}`;
+    if (!key) return true;
+    if (seenLocalIds.has(key)) return false;
+    seenLocalIds.add(key);
+    return true;
+  });
+
+  let remoteItems = [];
   try {
     if (!window.SERVER_URL || !currentUserId) {
       throw new Error('Backend unavailable for history fetch');
     }
-    items = await fetchWorkoutHistoryFromBackend(currentUserId);
+    remoteItems = await fetchWorkoutHistoryFromBackend(currentUserId);
   } catch (error) {
-    console.warn('[History] Falling back to local history:', error);
-    items = loadLogsFromLocalStorage()
-      .filter(log => {
-        if (!currentUserId) return true;
-        return !log?.userId || log.userId === currentUserId;
-      })
-      .map(log => ({
-        id: log.id || generateLocalId(),
-        username: log.userId,
-        date: log.date,
-        title: log.title,
-        workout: log
-      }));
+    console.warn('[History] Backend history unavailable, using local only:', error);
   }
+
+  // BUGFIX: merge instead of overriding. Previously a successful-but-empty
+  // backend response would wipe out the locally archived workouts.
+  const items = mergeRemoteAndLocal(remoteItems, localItems);
 
   cachedWorkoutHistory = items.map(normalizeHistoryItem)
     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
