@@ -900,7 +900,7 @@ body.theme-dark .set-row {
 .modal-content input,
 .modal-content select {
   width: 100%;
-  padding: 8px;
+  margin: 6px 0;
 }
 
 .modal-actions {
@@ -1069,9 +1069,7 @@ body.theme-dark .set-row {
 }
 .adv-row input {
   width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  margin: 0;
 }
 .adv-btn {
   padding: 6px 10px;
@@ -1128,9 +1126,7 @@ body.theme-dark .set-row {
 }
 .tag-input input {
   width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  margin: 0;
 }
 .set-state {
   display: flex;
