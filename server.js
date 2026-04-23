@@ -25,6 +25,7 @@ const { calculateLeaderboard } = require('./community');
 const groups = [];
 const programs = [];
 const sharedPrograms = [];
+const userSettings = new Map(); // username → { ...settings, updatedAt }
 
 // sample leaderboard data
 const leaderboard = [
@@ -293,6 +294,44 @@ app.all('/airtable/:baseId/:table', async (req, res) => {
     return res.status(502).json({ error: 'Failed to reach Airtable', details: String(error) });
   }
 });
+
+// ── User Settings ──────────────────────────────────────────────────────────
+
+/**
+ * GET /api/user/settings?username=<username>
+ * Returns persisted settings for the user, or 404 if none saved yet.
+ */
+app.get('/api/user/settings', (req, res) => {
+  const username = req.query.username;
+  if (!username || typeof username !== 'string' || !username.trim()) {
+    return res.status(400).json({ error: 'username query param is required' });
+  }
+  const saved = userSettings.get(username.trim());
+  if (!saved) {
+    return res.status(404).json({ error: 'No settings found for this user' });
+  }
+  res.json(saved);
+});
+
+/**
+ * PUT /api/user/settings
+ * Body: { username: string, settings: object }
+ * Upserts the settings object for the user.
+ */
+app.put('/api/user/settings', (req, res) => {
+  const { username, settings } = req.body || {};
+  if (!username || typeof username !== 'string' || !username.trim()) {
+    return res.status(400).json({ error: 'username is required in request body' });
+  }
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    return res.status(400).json({ error: 'settings must be a non-null object' });
+  }
+  const updatedAt = new Date().toISOString();
+  userSettings.set(username.trim(), { ...settings, updatedAt });
+  res.json({ ok: true, updatedAt });
+});
+
+// ── End User Settings ───────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

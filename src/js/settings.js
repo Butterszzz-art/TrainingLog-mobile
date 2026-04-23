@@ -1,5 +1,183 @@
 const SETTINGS_PREFIX = 'settings_';
 const SETTINGS_LOAD_ERROR_MESSAGE = 'Settings could not be loaded. Please try again later.';
+
+// ── Dirty-tracking state (module-level) ────────────────────────────────────
+let settingsDirtyFlag = false;
+
+function markSettingsDirty() {
+  if (settingsDirtyFlag) return; // already dirty — skip re-render
+  settingsDirtyFlag = true;
+  _updateDirtyUI(true);
+}
+
+function clearSettingsDirty() {
+  settingsDirtyFlag = false;
+  _updateDirtyUI(false);
+}
+
+function _updateDirtyUI(dirty) {
+  document.querySelectorAll('.unsaved-badge').forEach(el => {
+    el.classList.toggle('visible', dirty);
+  });
+}
+
+// Expose as global so showTab can read it
+Object.defineProperty(window, 'settingsDirtyFlag', {
+  get: () => settingsDirtyFlag,
+  set: v => { settingsDirtyFlag = Boolean(v); _updateDirtyUI(settingsDirtyFlag); },
+  configurable: true
+});
+
+// Warn on browser close/reload when dirty
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', e => {
+    if (settingsDirtyFlag) {
+      e.preventDefault();
+      return (e.returnValue = 'You have unsaved settings. Leave without saving?');
+    }
+  });
+}
+
+// ── Backend persistence helpers ─────────────────────────────────────────────
+function _getServerUrl() {
+  if (typeof window !== 'undefined' && window.SERVER_URL) return window.SERVER_URL;
+  if (typeof globalThis !== 'undefined' && globalThis.SERVER_URL) return globalThis.SERVER_URL;
+  return '';
+}
+
+function _getHeaders() {
+  const base = { 'Content-Type': 'application/json' };
+  if (typeof getAuthHeaders === 'function') return { ...base, ...getAuthHeaders() };
+  try {
+    const token = localStorage.getItem('token');
+    if (token) base['Authorization'] = `Bearer ${token}`;
+  } catch (_) {}
+  return base;
+}
+
+/**
+ * Push settings to backend (best-effort — never throws).
+ * Returns { ok: true, updatedAt } or { ok: false, error: string }.
+ */
+async function pushSettingsToBackend(settings) {
+  const username = getActiveUsername();
+  const serverUrl = _getServerUrl();
+  if (!serverUrl || !username) return { ok: false, error: 'no server url or user' };
+
+  try {
+    const res = await fetch(`${serverUrl}/api/user/settings`, {
+      method: 'PUT',
+      headers: _getHeaders(),
+      body: JSON.stringify({ username, settings })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { ok: false, error: data.error || `HTTP ${res.status}` };
+    }
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, updatedAt: data.updatedAt };
+  } catch (err) {
+    return { ok: false, error: 'Network error — saved locally only' };
+  }
+}
+
+/**
+ * Load settings from backend (best-effort — returns null on any failure).
+ */
+async function loadSettingsFromBackend() {
+  const username = getActiveUsername();
+  const serverUrl = _getServerUrl();
+  if (!serverUrl || !username) return null;
+
+  try {
+    const res = await fetch(
+      `${serverUrl}/api/user/settings?username=${encodeURIComponent(username)}`,
+      { headers: _getHeaders() }
+    );
+    if (!res.ok) return null; // 404 on first-time user is expected
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// ── Validation ──────────────────────────────────────────────────────────────
+/**
+ * Validate profile fields inside container.
+ * Returns array of { fieldId, message } for each violation.
+ */
+function validateProfileSettings(container) {
+  const errors = [];
+  const q = id => container ? container.querySelector(`#${id}`) : document.getElementById(id);
+
+  const weightEl = q('athleteInfoCurrentWeight');
+  if (weightEl && weightEl.value !== '') {
+    const w = parseFloat(weightEl.value);
+    if (isNaN(w) || w <= 0) errors.push({ fieldId: 'athleteInfoCurrentWeight', message: 'Weight must be a positive number.' });
+    else if (w > 700) errors.push({ fieldId: 'athleteInfoCurrentWeight', message: 'Weight seems too high — please double-check.' });
+  }
+
+  const stageWeightEl = q('profileTargetStageWeight');
+  if (stageWeightEl && stageWeightEl.value !== '') {
+    const w = parseFloat(stageWeightEl.value);
+    if (isNaN(w) || w <= 0) errors.push({ fieldId: 'profileTargetStageWeight', message: 'Target weight must be a positive number.' });
+    else if (w > 700) errors.push({ fieldId: 'profileTargetStageWeight', message: 'Target weight seems too high — please double-check.' });
+  }
+
+  const sleepEl = q('profileSleepTarget');
+  if (sleepEl && sleepEl.value !== '') {
+    const s = parseFloat(sleepEl.value);
+    if (isNaN(s) || s < 0 || s > 24) errors.push({ fieldId: 'profileSleepTarget', message: 'Sleep target must be between 0 and 24 hours.' });
+  }
+
+  const stepsEl = q('profileStepsTarget');
+  if (stepsEl && stepsEl.value !== '') {
+    const st = parseFloat(stepsEl.value);
+    if (isNaN(st) || st < 0) errors.push({ fieldId: 'profileStepsTarget', message: 'Steps target must be a non-negative number.' });
+  }
+
+  const startEl = q('profileStartDate');
+  const showEl = q('profileShowDate');
+  if (startEl && showEl && startEl.value && showEl.value) {
+    if (new Date(startEl.value) > new Date(showEl.value)) {
+      errors.push({ fieldId: 'profileShowDate', message: 'Show/meet date must be after the phase start date.' });
+    }
+  }
+
+  return errors;
+}
+
+function showValidationErrors(errors, container) {
+  if (!container) container = document.getElementById('settingsFormContainer') || document;
+  errors.forEach(({ fieldId, message }) => {
+    const field = container.querySelector ? container.querySelector(`#${fieldId}`) : document.getElementById(fieldId);
+    if (field) field.classList.add('field-invalid');
+    const errEl = container.querySelector ? container.querySelector(`#err-${fieldId}`) : document.getElementById(`err-${fieldId}`);
+    if (errEl) { errEl.textContent = message; errEl.classList.add('visible'); }
+  });
+}
+
+function clearValidationErrors(container) {
+  if (!container) container = document.getElementById('settingsFormContainer') || document;
+  const root = container.querySelector ? container : document;
+  root.querySelectorAll('.field-invalid').forEach(el => el.classList.remove('field-invalid'));
+  root.querySelectorAll('.field-error').forEach(el => { el.textContent = ''; el.classList.remove('visible'); });
+}
+
+// ── Save button loading state ───────────────────────────────────────────────
+function setSettingsSaveLoading(loading) {
+  const btns = document.querySelectorAll('#saveSettingsButton, #saveAppSettingsButton');
+  btns.forEach(btn => {
+    btn.disabled = loading;
+    btn.dataset.loading = loading ? 'true' : 'false';
+    if (loading) {
+      if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+      btn.textContent = 'Saving…';
+    } else {
+      btn.textContent = btn.dataset.originalText || 'Save';
+    }
+  });
+}
 const DEFAULT_ATHLETE_ARCHETYPE = 'recreational';
 const ATHLETE_ARCHETYPE_CONFIGS = Object.freeze({
   bodybuilder: Object.freeze({
@@ -221,7 +399,7 @@ function getDefaultSettings() {
   };
 }
 
-function saveSettings(event) {
+async function saveSettings(event) {
   if (event) event.preventDefault();
 
   const container = document.getElementById('settingsFormContainer');
@@ -229,6 +407,16 @@ function saveSettings(event) {
     console.warn('[Settings:saveSettings] Missing #settingsFormContainer container.');
     return;
   }
+
+  // 1. Validate — abort if there are errors
+  const errors = validateProfileSettings(container);
+  if (errors.length) {
+    showValidationErrors(errors, container);
+    if (typeof showToast === 'function') showToast('Please fix the highlighted errors before saving.');
+    return;
+  }
+  clearValidationErrors(container);
+
   const existingSettings = getHydratedSettingsSnapshot();
   const existingProfile = existingSettings.profile || {};
   const unitField = container.querySelector('#defaultUnit');
@@ -272,6 +460,7 @@ function saveSettings(event) {
     }
   };
 
+  // 2. Persist to localStorage immediately
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(getSettingsStorageKey(), JSON.stringify(settings));
   }
@@ -279,12 +468,26 @@ function saveSettings(event) {
   renderProfileGamificationSummary(container);
   syncProfilePhaseSettings(settings.profile);
 
+  // 3. Push to backend (shows loading state while in-flight)
+  setSettingsSaveLoading(true);
+  const result = await pushSettingsToBackend(settings);
+  setSettingsSaveLoading(false);
+
+  // 4. User feedback
   if (typeof showToast === 'function') {
-    showToast('Settings saved');
-  } else if (typeof console !== 'undefined') {
-    console.log('Settings saved');
+    if (result.ok) {
+      showToast('Settings saved ✓');
+    } else {
+      // Saved locally — let the user know backend sync failed without blocking
+      showToast(`Saved locally · backend sync failed (${result.error})`);
+      console.warn('[Settings] Backend sync failed:', result.error);
+    }
   }
 
+  // 5. Clear dirty flag
+  clearSettingsDirty();
+
+  // 6. Broadcast so other modules can react
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
     window.dispatchEvent(new CustomEvent('traininglog:settings-saved', { detail: settings }));
   }
@@ -864,6 +1067,33 @@ function injectSettingsMarkup() {
         coachToggle.checked = isCoachModeEnabled();
         coachToggle.disabled = getCurrentAppMode() !== 'both';
       }
+
+      // Wire dirty tracking on all form fields
+      container.querySelectorAll('input, select, textarea').forEach(el => {
+        el.addEventListener('change', markSettingsDirty);
+        el.addEventListener('input', markSettingsDirty);
+      });
+
+      // Try to hydrate from backend (non-blocking); backend wins for profile data
+      loadSettingsFromBackend().then(backendSettings => {
+        if (!backendSettings || typeof backendSettings !== 'object') return;
+        // Strip server-side metadata before merging
+        const { updatedAt, ...remoteData } = backendSettings;
+        const merged = {
+          ...getDefaultSettings(),
+          ...readStoredSettings(),
+          ...remoteData,
+          // Always take the most-specific nested objects from remote
+          profile: {
+            ...(readStoredSettings().profile || {}),
+            ...(remoteData.profile || {})
+          }
+        };
+        localStorage.setItem(getSettingsStorageKey(), JSON.stringify(merged));
+        applySettingsToUI(hydrateProfileFromPhaseState(merged));
+        // After applying remote data, the form is "clean" from the server's perspective
+        clearSettingsDirty();
+      }).catch(() => {/* silent — backend may be down */});
     })
     .catch(error => {
       console.error('Failed to load settings page', error);
@@ -891,4 +1121,6 @@ window.getArchetypeConfig = getArchetypeConfig;
 window.getAthleteArchetypeConfigs = () => ATHLETE_ARCHETYPE_CONFIGS;
 window.bindPhaseSetup = bindPhaseSetup;
 window.renderProfileTab = renderProfileTab;
+window.loadSettingsFromBackend = loadSettingsFromBackend;
+window.pushSettingsToBackend = pushSettingsToBackend;
 window.dispatchEvent(new CustomEvent('traininglog:settings-ready'));

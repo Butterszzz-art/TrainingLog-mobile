@@ -9,7 +9,7 @@
     <button type="button" class="settings-subtab" data-settings-subtab="app">⚙️ App</button>
   </div>
 
-  <!-- ── PROFILE + APP share one form so saveSettings() can read all fields ── -->
+  <!-- Profile + App share one form so saveSettings() can read all fields -->
   <form id="settingsForm" class="profile-hub-form">
 
     <!-- ── PROFILE ── -->
@@ -31,6 +31,7 @@
 
         <label for="athleteInfoCurrentWeight">Weight</label>
         <input id="athleteInfoCurrentWeight" name="athleteInfoCurrentWeight" type="number" min="0" step="0.1" placeholder="0.0">
+        <span class="field-error" id="err-athleteInfoCurrentWeight" role="alert"></span>
 
         <label for="athleteInfoHeight">Height</label>
         <input id="athleteInfoHeight" name="athleteInfoHeight" type="text" placeholder="e.g. 5'10&quot; or 178 cm">
@@ -59,9 +60,11 @@
 
         <label for="profileShowDate">Show / Meet date</label>
         <input id="profileShowDate" name="profileShowDate" type="date">
+        <span class="field-error" id="err-profileShowDate" role="alert"></span>
 
         <label for="profileTargetStageWeight">Target competition weight</label>
         <input id="profileTargetStageWeight" name="profileTargetStageWeight" type="number" min="0" step="0.1" placeholder="0.0">
+        <span class="field-error" id="err-profileTargetStageWeight" role="alert"></span>
 
         <label for="profileCheckInDay">Check-in day</label>
         <select id="profileCheckInDay" name="profileCheckInDay">
@@ -85,12 +88,14 @@
 
         <label for="profileStepsTarget">Steps target</label>
         <input id="profileStepsTarget" name="profileStepsTarget" type="number" min="0" step="100" placeholder="10000">
+        <span class="field-error" id="err-profileStepsTarget" role="alert"></span>
 
         <label for="profileCardioTarget">Cardio target</label>
         <input id="profileCardioTarget" name="profileCardioTarget" type="text" placeholder="e.g. 5×30 min/week">
 
         <label for="profileSleepTarget">Sleep target (hrs)</label>
-        <input id="profileSleepTarget" name="profileSleepTarget" type="number" min="0" step="0.5" placeholder="8.0">
+        <input id="profileSleepTarget" name="profileSleepTarget" type="number" min="0" max="24" step="0.5" placeholder="8.0">
+        <span class="field-error" id="err-profileSleepTarget" role="alert"></span>
       </section>
 
       <section class="panel profile-section" aria-labelledby="sGamificationHeading">
@@ -103,7 +108,8 @@
         </div>
       </section>
 
-      <button type="submit" id="saveSettingsButton">Save Profile</button>
+      <div class="unsaved-badge" id="settingsDirtyBadge" aria-live="polite">● Unsaved changes</div>
+      <button type="submit" id="saveSettingsButton" data-save-text="Save Profile">Save Profile</button>
     </div>
 
     <!-- ── APP ── -->
@@ -169,12 +175,13 @@
         <button type="button" id="logoutBtn" class="secondary" style="margin-top:16px;">Logout</button>
       </section>
 
-      <button type="submit" id="saveAppSettingsButton">Save App Settings</button>
+      <div class="unsaved-badge" aria-live="polite">● Unsaved changes</div>
+      <button type="submit" id="saveAppSettingsButton" data-save-text="Save App Settings">Save App Settings</button>
     </div>
 
   </form><!-- end #settingsForm -->
 
-  <!-- ── GOALS (own form — cannot nest inside #settingsForm) ── -->
+  <!-- Goals: own form — cannot nest inside #settingsForm -->
   <div id="settingsSubGoals" class="settings-subview hidden">
 
     <section class="panel profile-section" aria-labelledby="sSmartGoalsHeading">
@@ -228,7 +235,7 @@
 
   </div><!-- end #settingsSubGoals -->
 
-  <!-- ── NUTRITION (no nested form — uses onclick buttons) ── -->
+  <!-- Nutrition: no nested form — uses onclick buttons -->
   <div id="settingsSubNutrition" class="settings-subview hidden">
 
     <section class="panel profile-section" aria-labelledby="sCalorieCalcHeading">

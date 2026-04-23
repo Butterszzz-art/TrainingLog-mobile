@@ -1267,6 +1267,39 @@
   font-size: 1rem;
   margin-bottom: 10px;
 }
+
+/* === SETTINGS VALIDATION & DIRTY STATE === */
+.field-error {
+  color: var(--danger, #dc3545);
+  font-size: 0.76rem;
+  margin-top: 2px;
+  margin-bottom: 6px;
+  display: none;
+}
+.field-error.visible {
+  display: block;
+}
+input.field-invalid,
+select.field-invalid,
+textarea.field-invalid {
+  border-color: var(--danger, #dc3545) !important;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.18) !important;
+}
+.unsaved-badge {
+  font-size: 0.76rem;
+  color: var(--highlight, #2d7d5b);
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: none;
+}
+.unsaved-badge.visible {
+  display: block;
+}
+button[data-loading="true"] {
+  opacity: 0.65;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -2638,6 +2671,14 @@ if (savedUser) {
 }
   
 function showTab(tabName) {
+  // Guard: warn if navigating away from settings with unsaved changes
+  if (tabName !== 'settingsTab' && window.settingsDirtyFlag) {
+    if (!confirm('You have unsaved settings changes. Leave without saving?')) {
+      return;
+    }
+    window.settingsDirtyFlag = false;
+  }
+
   if (tabName === 'coachingTab' && !isCoachModeEnabled()) {
     tabName = 'homeTab';
   }
