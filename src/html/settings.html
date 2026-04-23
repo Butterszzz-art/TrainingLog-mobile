@@ -1,130 +1,336 @@
 <div id="settingsPage" class="settings-page profile-hub-page">
-  <h2>Profile & Prep Hub</h2>
+  <h2>Settings</h2>
+
+  <!-- 4 compact scrollable mini-tabs -->
+  <div class="settings-subtabs">
+    <button type="button" class="settings-subtab active" data-settings-subtab="profile">👤 Profile</button>
+    <button type="button" class="settings-subtab" data-settings-subtab="goals">🎯 Goals</button>
+    <button type="button" class="settings-subtab" data-settings-subtab="nutrition">🥗 Nutrition</button>
+    <button type="button" class="settings-subtab" data-settings-subtab="app">⚙️ App</button>
+  </div>
+
+  <!-- ── PROFILE + APP share one form so saveSettings() can read all fields ── -->
   <form id="settingsForm" class="profile-hub-form">
-    <section class="panel profile-section" aria-labelledby="athleteInfoHeading">
-      <h3 id="athleteInfoHeading">Athlete Info</h3>
-      <label for="profileAthleteArchetype">Athlete archetype</label>
-      <select id="profileAthleteArchetype" name="profileAthleteArchetype">
-        <option value="bodybuilder">Bodybuilder</option>
-        <option value="powerlifter">Powerlifter</option>
-        <option value="hybrid">Hybrid</option>
-        <option value="recreational">Recreational</option>
-      </select>
-      <ul class="profile-archetype-descriptions">
-        <li><strong>Bodybuilder:</strong> Physique-focused training centered on hypertrophy, symmetry, and conditioning.</li>
-        <li><strong>Powerlifter:</strong> Strength-first training aimed at improving squat, bench, and deadlift performance.</li>
-        <li><strong>Hybrid:</strong> Balanced focus on strength, muscle growth, and overall athletic conditioning.</li>
-        <li><strong>Recreational:</strong> General fitness approach built around consistency, health, and sustainable progress.</li>
-      </ul>
 
-      <label for="athleteInfoName">Name</label>
-      <input id="athleteInfoName" name="athleteInfoName" type="text" placeholder="Athlete name">
+    <!-- ── PROFILE ── -->
+    <div id="settingsSubProfile" class="settings-subview">
 
-      <label for="athleteInfoCurrentWeight">Current Weight</label>
-      <input id="athleteInfoCurrentWeight" name="athleteInfoCurrentWeight" type="number" min="0" step="0.1" placeholder="0.0">
+      <section class="panel profile-section" aria-labelledby="sAthleteInfoHeading">
+        <h3 id="sAthleteInfoHeading">Athlete Info</h3>
 
-      <label for="athleteInfoHeight">Height</label>
-      <input id="athleteInfoHeight" name="athleteInfoHeight" type="text" placeholder="e.g. 5'10\" or 178 cm">
+        <label for="profileAthleteArchetype">Archetype</label>
+        <select id="profileAthleteArchetype" name="profileAthleteArchetype">
+          <option value="bodybuilder">Bodybuilder</option>
+          <option value="powerlifter">Powerlifter</option>
+          <option value="hybrid">Hybrid</option>
+          <option value="recreational">Recreational</option>
+        </select>
 
-      <label for="athleteInfoDivision">Division / Class</label>
-      <input id="athleteInfoDivision" name="athleteInfoDivision" type="text" placeholder="Classic Physique, Bikini, etc.">
+        <label for="athleteInfoName">Name</label>
+        <input id="athleteInfoName" name="athleteInfoName" type="text" placeholder="Athlete name">
+
+        <label for="athleteInfoCurrentWeight">Weight</label>
+        <input id="athleteInfoCurrentWeight" name="athleteInfoCurrentWeight" type="number" min="0" step="0.1" placeholder="0.0">
+
+        <label for="athleteInfoHeight">Height</label>
+        <input id="athleteInfoHeight" name="athleteInfoHeight" type="text" placeholder="e.g. 5'10&quot; or 178 cm">
+
+        <label for="athleteInfoDivision">Division / Class</label>
+        <input id="athleteInfoDivision" name="athleteInfoDivision" type="text" placeholder="Classic Physique, 83kg, etc.">
+      </section>
+
+      <section class="panel profile-section" aria-labelledby="sPhasePrepHeading">
+        <h3 id="sPhasePrepHeading">Phase / Prep</h3>
+
+        <label for="profileCurrentPhase">Current phase</label>
+        <select id="profileCurrentPhase" name="profileCurrentPhase">
+          <option value="improvement">Improvement Season</option>
+          <option value="mini_cut">Mini Cut</option>
+          <option value="contest_prep">Contest Prep</option>
+          <option value="peak_week">Peak Week</option>
+          <option value="show_day">Show Day</option>
+          <option value="post_show">Post-Show</option>
+          <option value="meet_prep">Meet Prep</option>
+          <option value="off_season">Off Season</option>
+        </select>
+
+        <label for="profileStartDate">Phase start</label>
+        <input id="profileStartDate" name="profileStartDate" type="date">
+
+        <label for="profileShowDate">Show / Meet date</label>
+        <input id="profileShowDate" name="profileShowDate" type="date">
+
+        <label for="profileTargetStageWeight">Target competition weight</label>
+        <input id="profileTargetStageWeight" name="profileTargetStageWeight" type="number" min="0" step="0.1" placeholder="0.0">
+
+        <label for="profileCheckInDay">Check-in day</label>
+        <select id="profileCheckInDay" name="profileCheckInDay">
+          <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+          <option>Thursday</option><option>Friday</option><option>Saturday</option>
+          <option selected>Sunday</option>
+        </select>
+
+        <label for="profileCardioBaseline">Cardio baseline</label>
+        <input id="profileCardioBaseline" name="profileCardioBaseline" type="text" placeholder="e.g. 4×25 min LISS">
+
+        <label for="profilePosingFrequency">Posing frequency</label>
+        <input id="profilePosingFrequency" name="profilePosingFrequency" type="text" placeholder="e.g. 5 sessions/week">
+      </section>
+
+      <section class="panel profile-section" aria-labelledby="sGoalsTargetsHeading">
+        <h3 id="sGoalsTargetsHeading">Targets</h3>
+
+        <label for="profileMacroTargets">Macro targets</label>
+        <input id="profileMacroTargets" name="profileMacroTargets" type="text" placeholder="e.g. 220P / 260C / 55F">
+
+        <label for="profileStepsTarget">Steps target</label>
+        <input id="profileStepsTarget" name="profileStepsTarget" type="number" min="0" step="100" placeholder="10000">
+
+        <label for="profileCardioTarget">Cardio target</label>
+        <input id="profileCardioTarget" name="profileCardioTarget" type="text" placeholder="e.g. 5×30 min/week">
+
+        <label for="profileSleepTarget">Sleep target (hrs)</label>
+        <input id="profileSleepTarget" name="profileSleepTarget" type="number" min="0" step="0.5" placeholder="8.0">
+      </section>
+
+      <section class="panel profile-section" aria-labelledby="sGamificationHeading">
+        <h3 id="sGamificationHeading">Gamification</h3>
+        <div class="profile-summary-grid">
+          <div><span>Level</span><strong id="profileGamificationLevel">—</strong></div>
+          <div><span>XP</span><strong id="profileGamificationXp">—</strong></div>
+          <div><span>Streak</span><strong id="profileGamificationStreak">—</strong></div>
+          <div><span>Badges</span><strong id="profileGamificationBadges">—</strong></div>
+        </div>
+      </section>
+
+      <button type="submit" id="saveSettingsButton">Save Profile</button>
+    </div>
+
+    <!-- ── APP ── -->
+    <div id="settingsSubApp" class="settings-subview hidden">
+
+      <section class="panel profile-section" aria-labelledby="sTrainingModeHeading">
+        <h3 id="sTrainingModeHeading">Training Mode</h3>
+        <p style="font-size:0.83rem;color:var(--secondary-text);margin:0 0 10px;">Switching modes never deletes data — it only changes which features are visible.</p>
+        <div class="mode-switcher">
+          <button type="button" class="mode-btn" data-mode="bodybuilding" onclick="setTrainingMode('bodybuilding')">🏆 Bodybuilding</button>
+          <button type="button" class="mode-btn" data-mode="powerlifting" onclick="setTrainingMode('powerlifting')">🏋️ Powerlifting</button>
+          <button type="button" class="mode-btn" data-mode="athlete" onclick="setTrainingMode('athlete')">⚡ Athlete</button>
+        </div>
+        <p id="modeDescription" style="font-size:0.82rem;color:var(--text-muted);margin:8px 0 0;min-height:32px;"></p>
+      </section>
+
+      <section class="panel profile-section" aria-labelledby="sAppSettingsHeading">
+        <h3 id="sAppSettingsHeading">App Settings</h3>
+
+        <label for="defaultUnit">Units</label>
+        <select id="defaultUnit" name="defaultUnit">
+          <option value="kg">Kilograms (kg)</option>
+          <option value="lbs">Pounds (lbs)</option>
+        </select>
+
+        <label for="theme">Theme</label>
+        <select id="theme" name="theme" onchange="applyTheme(this.value)">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="neon">Neon</option>
+        </select>
+
+        <label for="streakReminderEnabled" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="streakReminderEnabled" name="streakReminderEnabled">
+          Notifications enabled
+        </label>
+
+        <label for="streakReminderTime">Notification time</label>
+        <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00">
+
+        <label for="autoIncrementSetting" style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+          <input type="checkbox" id="autoIncrementSetting" name="autoIncrementSetting" checked>
+          Auto-increment weight suggestions
+        </label>
+      </section>
+
+      <section class="panel profile-section" aria-labelledby="sAppModeHeading">
+        <h3 id="sAppModeHeading">Account Mode</h3>
+
+        <label for="appModeSelect">Mode</label>
+        <select id="appModeSelect">
+          <option value="athlete">Athlete only</option>
+          <option value="coach">Coach only</option>
+          <option value="both">Athlete + Coach</option>
+        </select>
+
+        <label for="coachModeToggle" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+          <input type="checkbox" id="coachModeToggle">
+          Enable Coach Mode
+        </label>
+        <p style="margin:6px 0 0;font-size:0.83rem;color:var(--secondary-text);">Athlete experience is the default unless Coach Mode is enabled.</p>
+
+        <button type="button" id="logoutBtn" class="secondary" style="margin-top:16px;">Logout</button>
+      </section>
+
+      <button type="submit" id="saveAppSettingsButton">Save App Settings</button>
+    </div>
+
+  </form><!-- end #settingsForm -->
+
+  <!-- ── GOALS (own form — cannot nest inside #settingsForm) ── -->
+  <div id="settingsSubGoals" class="settings-subview hidden">
+
+    <section class="panel profile-section" aria-labelledby="sSmartGoalsHeading">
+      <h3 id="sSmartGoalsHeading">SMART Goals</h3>
+      <form id="smartGoalForm">
+        <label for="goalTitle">Goal title</label>
+        <input id="goalTitle" type="text" placeholder="e.g. Squat 150 kg by 1 June 2026" required>
+
+        <label for="goalExercise">Exercise</label>
+        <input id="goalExercise" type="text" placeholder="e.g. Squat" required>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:110px;">
+            <label for="goalTargetValue">Target value</label>
+            <input id="goalTargetValue" type="number" min="0" step="0.1" placeholder="Target" required>
+          </div>
+          <div style="flex:1;min-width:110px;">
+            <label for="goalStartValue">Current value</label>
+            <input id="goalStartValue" type="number" min="0" step="0.1" placeholder="Current" required>
+          </div>
+          <div style="flex:1;min-width:120px;">
+            <label for="goalDueDate">Due date</label>
+            <input id="goalDueDate" type="date" required>
+          </div>
+        </div>
+
+        <label for="goalSpecific">Specific — what exactly?</label>
+        <textarea id="goalSpecific" rows="2" placeholder="What exactly will you achieve?"></textarea>
+
+        <label for="goalMeasurable">Measurable — how tracked?</label>
+        <textarea id="goalMeasurable" rows="2" placeholder="How will progress be measured?"></textarea>
+
+        <label for="goalAchievable">Achievable — why realistic?</label>
+        <textarea id="goalAchievable" rows="2" placeholder="Why is this realistic?"></textarea>
+
+        <label for="goalRelevant">Relevant — why it matters</label>
+        <textarea id="goalRelevant" rows="2" placeholder="Why does this matter to you?"></textarea>
+
+        <label for="goalTimeBound">Time-bound — deadline</label>
+        <textarea id="goalTimeBound" rows="2" placeholder="When will this be completed?"></textarea>
+
+        <label style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <input id="goalSyncBackend" type="checkbox">
+          Sync to backend (if available)
+        </label>
+
+        <button type="submit" style="width:100%;margin-top:8px;">Save SMART Goal</button>
+      </form>
+      <div id="smartGoalFeedback" style="font-size:0.9rem;margin-top:8px;"></div>
     </section>
 
-    <section class="panel profile-section" aria-labelledby="phasePrepHeading">
-      <h3 id="phasePrepHeading">Phase / Prep Settings</h3>
-      <label for="profileCurrentPhase">Current phase</label>
-      <select id="profileCurrentPhase" name="profileCurrentPhase">
-        <option value="improvement">Improvement Season</option>
-        <option value="mini_cut">Mini Cut</option>
-        <option value="contest_prep">Contest Prep</option>
-        <option value="peak_week">Peak Week</option>
-        <option value="show_day">Show Day</option>
-        <option value="post_show">Post-Show</option>
-      </select>
+  </div><!-- end #settingsSubGoals -->
 
-      <label for="profileStartDate">Phase start date</label>
-      <input id="profileStartDate" name="profileStartDate" type="date">
+  <!-- ── NUTRITION (no nested form — uses onclick buttons) ── -->
+  <div id="settingsSubNutrition" class="settings-subview hidden">
 
-      <label for="profileShowDate">Show date</label>
-      <input id="profileShowDate" name="profileShowDate" type="date">
-
-      <label for="profileTargetStageWeight">Target stage weight</label>
-      <input id="profileTargetStageWeight" name="profileTargetStageWeight" type="number" min="0" step="0.1" placeholder="0.0">
-
-      <label for="profileCheckInDay">Check-in day</label>
-      <select id="profileCheckInDay" name="profileCheckInDay">
-        <option>Monday</option>
-        <option>Tuesday</option>
-        <option>Wednesday</option>
-        <option>Thursday</option>
-        <option>Friday</option>
-        <option>Saturday</option>
-        <option selected>Sunday</option>
-      </select>
-
-      <label for="profileCardioBaseline">Cardio baseline</label>
-      <input id="profileCardioBaseline" name="profileCardioBaseline" type="text" placeholder="e.g. 4x25 min LISS">
-
-      <label for="profilePosingFrequency">Posing frequency</label>
-      <input id="profilePosingFrequency" name="profilePosingFrequency" type="text" placeholder="e.g. 5 sessions/week">
-    </section>
-
-    <section class="panel profile-section" aria-labelledby="goalsTargetsHeading">
-      <h3 id="goalsTargetsHeading">Goals / Targets</h3>
-      <label for="profileMacroTargets">Macro targets</label>
-      <input id="profileMacroTargets" name="profileMacroTargets" type="text" placeholder="e.g. 220P / 260C / 55F">
-
-      <label for="profileStepsTarget">Steps target</label>
-      <input id="profileStepsTarget" name="profileStepsTarget" type="number" min="0" step="100" placeholder="10000">
-
-      <label for="profileCardioTarget">Cardio target</label>
-      <input id="profileCardioTarget" name="profileCardioTarget" type="text" placeholder="e.g. 5x30 min/week">
-
-      <label for="profileSleepTarget">Sleep target</label>
-      <input id="profileSleepTarget" name="profileSleepTarget" type="number" min="0" step="0.5" placeholder="8.0">
-    </section>
-
-    <section class="panel profile-section" aria-labelledby="gamificationSummaryHeading">
-      <h3 id="gamificationSummaryHeading">Gamification Summary</h3>
-      <div class="profile-summary-grid">
-        <div><span>Level</span><strong id="profileGamificationLevel">—</strong></div>
-        <div><span>XP</span><strong id="profileGamificationXp">—</strong></div>
-        <div><span>Current Streak</span><strong id="profileGamificationStreak">—</strong></div>
-        <div><span>Badges Unlocked</span><strong id="profileGamificationBadges">—</strong></div>
+    <section class="panel profile-section" aria-labelledby="sCalorieCalcHeading">
+      <h3 id="sCalorieCalcHeading">Calorie Calculator</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:110px;">
+          <label for="calcWeight">Weight (lbs)</label>
+          <input type="number" id="calcWeight" placeholder="e.g. 185">
+        </div>
+        <div style="flex:1;min-width:110px;">
+          <label for="calcHeight">Height (in)</label>
+          <input type="number" id="calcHeight" placeholder="e.g. 70">
+        </div>
       </div>
+      <label for="calcActivity">Activity level</label>
+      <select id="calcActivity">
+        <option value="1.2">Sedentary</option>
+        <option value="1.375">Lightly Active</option>
+        <option value="1.55" selected>Moderately Active</option>
+        <option value="1.725">Very Active</option>
+        <option value="1.9">Extremely Active</option>
+      </select>
+      <button type="button" onclick="calculateCaloriesEquation()" style="width:100%;margin-top:4px;">Calculate Calories</button>
+      <p id="calorieCalcResult" style="margin-top:8px;font-size:0.92rem;"></p>
     </section>
 
-    <section class="panel profile-section" aria-labelledby="appSettingsHeading">
-      <h3 id="appSettingsHeading">App Settings</h3>
-      <label for="defaultUnit">Units</label>
-      <select id="defaultUnit" name="defaultUnit">
-        <option value="kg">Kilograms (kg)</option>
-        <option value="lbs">Pounds (lbs)</option>
+    <section class="panel profile-section" aria-labelledby="sMacroCalcHeading">
+      <h3 id="sMacroCalcHeading">Macro Calculator</h3>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:110px;">
+          <label for="macroWeight">Bodyweight</label>
+          <input type="number" id="macroWeight" placeholder="lbs">
+        </div>
+        <div style="flex:1;min-width:110px;">
+          <label for="macroHeight">Height</label>
+          <input type="number" id="macroHeight" placeholder="height">
+        </div>
+        <div style="flex:0 0 80px;">
+          <label for="heightUnit">Unit</label>
+          <select id="heightUnit">
+            <option value="in">in</option>
+            <option value="cm">cm</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:80px;">
+          <label for="macroAge">Age</label>
+          <input type="number" id="macroAge" placeholder="Age">
+        </div>
+        <div style="flex:1;min-width:90px;">
+          <label for="macroSex">Sex</label>
+          <select id="macroSex">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:90px;">
+          <label for="macroBodyFat">Body-fat %</label>
+          <input type="number" id="macroBodyFat" name="macroBodyFat" step="0.1" min="0" max="60" placeholder="e.g. 15">
+        </div>
+      </div>
+
+      <label for="macroBmrFormula">BMR formula</label>
+      <select id="macroBmrFormula">
+        <option value="mifflin">Mifflin-St Jeor</option>
+        <option value="katch">Katch-McArdle</option>
       </select>
 
-      <label for="theme">Theme</label>
-      <select id="theme" name="theme">
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-        <option value="neon">Neon</option>
+      <label for="macroActivity">Activity level</label>
+      <select id="macroActivity">
+        <option value="1.2">Sedentary</option>
+        <option value="1.375">Lightly Active</option>
+        <option value="1.55" selected>Moderately Active</option>
+        <option value="1.725">Very Active</option>
+        <option value="1.9">Extremely Active</option>
       </select>
 
-      <label for="streakReminderEnabled">
-        <input type="checkbox" id="streakReminderEnabled" name="streakReminderEnabled">
-        Notifications enabled
-      </label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:110px;">
+          <label for="macroGoal">Goal</label>
+          <select id="macroGoal">
+            <option value="cut">Cut</option>
+            <option value="maintain">Maintain</option>
+            <option value="bulk">Bulk</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:110px;">
+          <label for="macroRate">Rate</label>
+          <select id="macroRate">
+            <option value="slow">Slow</option>
+            <option value="moderate" selected>Moderate</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </div>
+      </div>
 
-      <label for="streakReminderTime">Notification time</label>
-      <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00">
-
-      <label for="autoIncrementSetting" style="display:block;margin-top:12px;">
-        <input type="checkbox" id="autoIncrementSetting" name="autoIncrementSetting" checked />
-        Auto-increment suggestions when the last set is at or below target RPE
-      </label>
-
-      <button type="button" id="logoutBtn" class="secondary">Logout</button>
+      <button type="button" onclick="calculateMacroTargets()" style="width:100%;margin-top:4px;">Calculate Macro Targets</button>
     </section>
 
-    <button type="submit" id="saveSettingsButton">Save Profile & Settings</button>
-  </form>
-</div>
+  </div><!-- end #settingsSubNutrition -->
+
+</div><!-- end #settingsPage -->

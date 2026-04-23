@@ -1054,6 +1054,219 @@
 #bodybuildingProgressPanel summary {
   color: #dce7e1;
 }
+
+/* === TRAINING MODE SYSTEM === */
+.mode-bb .pl-only,
+.mode-bb .athlete-only,
+.mode-pl .bb-only,
+.mode-pl .athlete-only,
+.mode-athlete .bb-only,
+.mode-athlete .pl-only {
+  display: none !important;
+}
+
+.mode-switcher {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  background: var(--surface-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: none;
+  margin: 0;
+  text-align: center;
+}
+.mode-btn.active {
+  background: var(--primary);
+  color: var(--text-color);
+  box-shadow: 0 2px 8px rgba(45,125,91,0.35);
+}
+
+/* Settings sub-tabs */
+.settings-subtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.settings-subtabs::-webkit-scrollbar { display: none; }
+.settings-subtab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  color: var(--secondary-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  box-shadow: none;
+  margin: 0;
+  white-space: nowrap;
+}
+.settings-subtab.active {
+  background: var(--primary);
+  color: var(--text-color);
+  border-color: var(--primary);
+}
+.settings-subview { display: block; }
+.settings-subview.hidden { display: none; }
+
+/* Powerlifting tab */
+.pl-subtabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.pl-subtab {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  color: var(--secondary-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: none;
+  margin: 0;
+}
+.pl-subtab.active {
+  background: var(--primary);
+  color: var(--text-color);
+  border-color: var(--primary);
+}
+.pl-subview { display: none; }
+.pl-subview.active { display: block; }
+
+/* Visual plate bar */
+.plate-bar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 90px;
+  margin: 20px 0;
+  overflow-x: auto;
+}
+.bar-sleeve {
+  height: 14px;
+  width: 40px;
+  background: #9e9e9e;
+  border-radius: 4px 0 0 4px;
+  flex-shrink: 0;
+}
+.bar-sleeve.right {
+  border-radius: 0 4px 4px 0;
+}
+.bar-collar {
+  height: 28px;
+  width: 10px;
+  background: #757575;
+  flex-shrink: 0;
+}
+.bar-shaft {
+  height: 10px;
+  flex: 1;
+  min-width: 60px;
+  max-width: 120px;
+  background: #bdbdbd;
+}
+.plate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.plate:hover { opacity: 0.85; }
+
+/* Plate grid selector */
+.plate-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.plate-add-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  box-shadow: none;
+  margin: 0;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.plate-add-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+}
+.plate-add-btn:active { transform: scale(0.96); }
+
+/* 1RM / Meet prep */
+.pl-stat-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.pl-stat-card {
+  flex: 1 1 130px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: center;
+}
+.pl-stat-card .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.pl-stat-card .stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+.meet-week-chip {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--highlight);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -1109,15 +1322,19 @@
       <span class="bn-icon">🏃</span>
       <span class="bn-label">Cardio</span>
     </button>
-    <button class="bn-item" data-tab="posingTab" aria-label="Posing">
+    <button class="bn-item bb-only" data-tab="posingTab" aria-label="Posing">
       <span class="bn-icon">🎭</span>
       <span class="bn-label">Posing</span>
+    </button>
+    <button class="bn-item pl-only" data-tab="powerliftingTab" aria-label="Powerlifting">
+      <span class="bn-icon">🏋️</span>
+      <span class="bn-label">Lifting</span>
     </button>
     <button class="bn-item" data-tab="programTab" aria-label="Programs">
       <span class="bn-icon">🗓️</span>
       <span class="bn-label">Programs</span>
     </button>
-    <button class="bn-item" data-tab="crossfitTab" aria-label="CrossFit">
+    <button class="bn-item athlete-only" data-tab="crossfitTab" aria-label="CrossFit">
       <span class="bn-icon">💪</span>
       <span class="bn-label">CrossFit</span>
     </button>
@@ -1136,10 +1353,6 @@
     <button class="bn-item coach-only" data-tab="coachingTab" aria-label="Coach">
       <span class="bn-icon">🧭</span>
       <span class="bn-label">Coach</span>
-    </button>
-    <button class="bn-item" data-tab="profileTab" aria-label="Profile">
-      <span class="bn-icon">👤</span>
-      <span class="bn-label">Profile</span>
     </button>
     <button class="bn-item" data-tab="settingsTab" aria-label="Settings">
       <span class="bn-icon">⚙️</span>
@@ -1403,6 +1616,132 @@
   <div id="cfHistoryPanel" class="panel">
   <h3 style="margin-top:30px;">Saved CrossFit Workouts</h3>
   <div id="cfWorkoutsContainer"></div>
+  </div>
+</div>
+
+<div id="powerliftingTab" class="tab-content">
+  <div class="panel active">
+    <h2>Powerlifting</h2>
+
+    <!-- Sub-tab nav -->
+    <div class="pl-subtabs">
+      <button class="pl-subtab active" data-pl-subtab="plates">🏋️ Plate Calc</button>
+      <button class="pl-subtab" data-pl-subtab="oneRM">📈 1RM Tracker</button>
+      <button class="pl-subtab" data-pl-subtab="meet">🗓️ Meet Prep</button>
+    </div>
+
+    <!-- ── PLATE CALCULATOR ── -->
+    <div id="plSubPlates" class="pl-subview active">
+      <h3 style="margin-top:0;">Plate Calculator</h3>
+
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="flex:1;min-width:120px;">
+          <label for="plTargetWeight">Target weight</label>
+          <input type="number" id="plTargetWeight" step="0.5" placeholder="e.g. 140" oninput="plCalcUpdate()">
+        </div>
+        <div style="flex:1;min-width:100px;">
+          <label for="plBarWeight">Bar weight</label>
+          <input type="number" id="plBarWeight" step="0.5" value="20" oninput="plCalcUpdate()">
+        </div>
+        <div style="flex:1;min-width:100px;">
+          <label for="plUnit">Unit</label>
+          <select id="plUnit" onchange="plUnitChange()">
+            <option value="kg">kg</option>
+            <option value="lbs">lbs</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Plate selector buttons -->
+      <p style="margin:0 0 6px;font-size:0.8rem;color:var(--text-muted);">Tap to add a plate pair</p>
+      <div class="plate-selector" id="plPlateSelector"></div>
+
+      <!-- Visual bar -->
+      <div class="plate-bar-wrap" id="plBarViz">
+        <div class="bar-sleeve"></div>
+        <div class="bar-collar"></div>
+        <div id="plLeftPlates" style="display:flex;flex-direction:row-reverse;gap:2px;"></div>
+        <div class="bar-shaft"></div>
+        <div id="plRightPlates" style="display:flex;gap:2px;"></div>
+        <div class="bar-collar"></div>
+        <div class="bar-sleeve right"></div>
+      </div>
+
+      <!-- Result -->
+      <div id="plCalcResult" style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:14px 16px;font-size:0.95rem;min-height:50px;"></div>
+
+      <button style="margin-top:12px;width:100%;" onclick="plCalcClear()">Clear plates</button>
+    </div>
+
+    <!-- ── 1RM TRACKER ── -->
+    <div id="plSubOneRM" class="pl-subview">
+      <h3 style="margin-top:0;">1RM Tracker</h3>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+        <div style="flex:2;min-width:130px;">
+          <label for="oneRMExercise">Lift</label>
+          <select id="oneRMExercise" onchange="renderOneRMChart()">
+            <option value="Squat">Squat</option>
+            <option value="Bench Press">Bench Press</option>
+            <option value="Deadlift">Deadlift</option>
+            <option value="Overhead Press">Overhead Press</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:100px;">
+          <label for="oneRMWeight">Weight</label>
+          <input type="number" id="oneRMWeight" step="0.5" placeholder="e.g. 180">
+        </div>
+        <div style="flex:1;min-width:80px;">
+          <label for="oneRMReps">Reps</label>
+          <input type="number" id="oneRMReps" value="1" min="1" max="12" placeholder="1">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:130px;">
+          <label for="oneRMDate">Date</label>
+          <input type="date" id="oneRMDate">
+        </div>
+        <div style="flex:1;min-width:80px;">
+          <label for="oneRMRPE">RPE</label>
+          <input type="number" id="oneRMRPE" step="0.5" min="6" max="10" placeholder="e.g. 9">
+        </div>
+      </div>
+      <button style="width:100%;margin-top:4px;" onclick="saveOneRMEntry()">Log Entry</button>
+
+      <div class="pl-stat-row" id="oneRMStats" style="margin-top:16px;"></div>
+
+      <canvas id="oneRMChart" height="220" style="margin-top:12px;max-width:100%;"></canvas>
+      <div id="oneRMHistory" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- ── MEET PREP ── -->
+    <div id="plSubMeet" class="pl-subview">
+      <h3 style="margin-top:0;">Meet Prep Timeline</h3>
+
+      <label for="meetDate">Meet date</label>
+      <input type="date" id="meetDate" oninput="renderMeetPrep()">
+
+      <label for="meetName">Meet name (optional)</label>
+      <input type="text" id="meetName" placeholder="e.g. Regional Powerlifting Open">
+
+      <label for="meetFed">Federation</label>
+      <select id="meetFed">
+        <option value="">-- Select --</option>
+        <option>USAPL</option>
+        <option>IPF</option>
+        <option>USPA</option>
+        <option>RPS</option>
+        <option>SPF</option>
+        <option>Other</option>
+      </select>
+
+      <label for="meetWeightClass">Weight class</label>
+      <input type="text" id="meetWeightClass" placeholder="e.g. 83kg">
+
+      <button style="width:100%;" onclick="saveMeetDetails()">Save Meet Details</button>
+
+      <div id="meetPrepDisplay" style="margin-top:20px;"></div>
+    </div>
   </div>
 </div>
 
@@ -1878,133 +2217,8 @@
   <div id="coachDashboardContent" class="coach-dashboard"></div>
 </div>
 
-<div id="profileTab" class="tab-content">
-  <h2>Profile</h2>
-  <div id="profileTabContent" class="panel"></div>
-</div>
-
 <div id="settingsTab" class="tab-content">
   <div id="settingsFormContainer" class="panel"></div>
-
-  <section class="panel" aria-labelledby="smartGoalsHeading">
-    <h3 id="smartGoalsHeading">SMART Goals</h3>
-    <form id="smartGoalForm">
-      <input id="goalTitle" type="text" placeholder="Goal title (e.g. Squat 150 kg by 1 June 2026)" required>
-      <input id="goalExercise" type="text" placeholder="Exercise (e.g. Squat)" required>
-      <input id="goalTargetValue" type="number" min="0" step="0.1" placeholder="Target value" required>
-      <input id="goalStartValue" type="number" min="0" step="0.1" placeholder="Current/start value" required>
-      <input id="goalDueDate" type="date" required>
-
-      <label for="goalSpecific">Specific</label>
-      <textarea id="goalSpecific" rows="2" placeholder="What exactly will you achieve?"></textarea>
-      <label for="goalMeasurable">Measurable</label>
-      <textarea id="goalMeasurable" rows="2" placeholder="How will progress be measured?"></textarea>
-      <label for="goalAchievable">Achievable</label>
-      <textarea id="goalAchievable" rows="2" placeholder="Why is this realistic?"></textarea>
-      <label for="goalRelevant">Relevant</label>
-      <textarea id="goalRelevant" rows="2" placeholder="Why does this matter to you?"></textarea>
-      <label for="goalTimeBound">Time-bound</label>
-      <textarea id="goalTimeBound" rows="2" placeholder="When will this be completed?"></textarea>
-
-      <label>
-        <input id="goalSyncBackend" type="checkbox">
-        Sync this goal to backend (if available)
-      </label>
-      <button type="submit">Save SMART Goal</button>
-    </form>
-    <div id="smartGoalFeedback" style="font-size:0.95rem;"></div>
-  </section>
-
-  <section class="panel" aria-labelledby="appModeHeading">
-    <h3 id="appModeHeading">App Mode</h3>
-    <label for="appModeSelect">Account mode</label>
-    <select id="appModeSelect">
-      <option value="athlete">Athlete only</option>
-      <option value="coach">Coach only</option>
-      <option value="both">Athlete + Coach</option>
-    </select>
-    <label>
-      <input type="checkbox" id="coachModeToggle" />
-      Enable Coach Mode
-    </label>
-    <p style="margin:8px 0 0;opacity:0.8;font-size:0.9rem;">
-      Athlete experience remains the default unless Coach Mode is enabled.
-    </p>
-  </section>
-
-  <section class="panel" aria-labelledby="autoIncrementHeading" style="margin-top:20px;">
-    <h3 id="autoIncrementHeading">Progression Suggestions</h3>
-    <label>
-      <input type="checkbox" id="autoIncrementToggle" checked />
-      Auto-increment suggestions when the last set is at or below target RPE
-    </label>
-  </section>
-
-  <section id="legacyThemeSection" class="panel" aria-labelledby="themeSelectLabel" style="margin-top:20px;">
-    <h3 id="themeSelectLabel">Legacy Theme Picker</h3>
-    <p style="margin-top:0;">Use this selector if the primary settings form is unavailable.</p>
-    <select id="themeSelect" onchange="applyTheme(this.value)" style="width:100%;padding:8px;margin-top:6px;">
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-      <option value="neon">Neon Dark</option>
-    </select>
-  </section>
-
-  <div id="calorieCalcSection" class="panel" style="margin-top:20px;">
-    <h3>Calculate Calories</h3>
-    <input type="number" id="calcWeight" placeholder="Weight (lbs)" style="width:100%;padding:8px;margin-bottom:10px;">
-    <input type="number" id="calcHeight" placeholder="Height (in)" style="width:100%;padding:8px;margin-bottom:10px;">
-    <select id="calcActivity" style="width:100%;padding:8px;margin-bottom:10px;">
-      <option value="1.2">Sedentary</option>
-      <option value="1.375">Lightly Active</option>
-      <option value="1.55">Moderately Active</option>
-      <option value="1.725">Very Active</option>
-      <option value="1.9">Extremely Active</option>
-    </select>
-    <button onclick="calculateCaloriesEquation()" style="width:100%;font-size:1.1rem;padding:12px;">Calculate Calories</button>
-    <p id="calorieCalcResult" style="margin-top:10px;"></p>
-  </div>
-  <button id="macroSettingsBtn" onclick="toggleMacroCalcForm()" style="margin-top:20px;">Macro Settings</button>
-
-  <div id="macroCalcForm" style="display:none; margin-top:20px;">
-    <h3>Set Your Macro Targets</h3>
-    <input type="number" id="macroWeight" placeholder="Bodyweight (lbs)" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-    <input type="number" id="macroHeight" placeholder="Height" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-    <select id="heightUnit" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-      <option value="in">in</option>
-      <option value="cm">cm</option>
-    </select>
-    <input type="number" id="macroAge" placeholder="Age" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-    <select id="macroSex" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-      <option value="male">Male</option>
-      <option value="female">Female</option>
-    </select>
-    <label for="macroBodyFat">Body-Fat&nbsp;%</label>
-    <input type="number" id="macroBodyFat" name="macroBodyFat" step="0.1" min="0" max="60" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-    <select id="macroBmrFormula" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-      <option value="mifflin">Mifflin-St Jeor</option>
-      <option value="katch">Katch-McArdle</option>
-    </select>
-    <select id="macroActivity" style="width: 100%; padding: 8px; margin-bottom: 20px;">
-      <option value="1.2">Sedentary</option>
-      <option value="1.375">Lightly Active</option>
-      <option value="1.55">Moderately Active</option>
-      <option value="1.725">Very Active</option>
-      <option value="1.9">Extremely Active</option>
-    </select>
-    <select id="macroGoal" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-      <option value="cut">Cut</option>
-      <option value="maintain">Maintain</option>
-      <option value="bulk">Bulk</option>
-    </select>
-    <select id="macroRate" style="width: 100%; padding: 8px; margin-bottom: 20px;">
-      <option value="slow">Slow</option>
-      <option value="moderate" selected>Moderate</option>
-      <option value="aggressive">Aggressive</option>
-    </select>
-    <button onclick="calculateMacroTargets()" style="width: 100%; font-size: 1.1rem; padding: 12px;">Calculate Targets</button>
-    <button onclick="console.log(planWeek([]))" style="width:100%;font-size:1rem;margin-top:10px;">Plan Week</button>
-  </div> <!-- #macroCalcForm -->
   </div> <!-- #settingsTab -->
   </div> <!-- #appContainer -->
 </div> <!-- #pocketFitContainer -->
@@ -2484,6 +2698,9 @@ function showTab(tabName) {
     case 'crossfitTab':
       renderCrossfitWorkouts();
       break;
+    case 'powerliftingTab':
+      renderPowerliftingTab();
+      break;
     case 'programTab':
       if (typeof window.loadProgramTemplates === 'function') {
         window.loadProgramTemplates();
@@ -2524,7 +2741,7 @@ function showTab(tabName) {
     case 'profileTab':
       ensureProfileTabRendered();
       break;
-    case 'settingsTab':
+    case 'settingsTab': {
       if (!document.getElementById('settingsFormContainer')) {
         console.warn('[Tabs:showTab] Missing #settingsFormContainer container.');
         break;
@@ -2554,7 +2771,36 @@ function showTab(tabName) {
         autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
       }
       initSmartGoalForm();
+
+      // Wire settings sub-tabs via delegation (idempotent)
+      const stc = document.getElementById('settingsFormContainer');
+      if (stc && !stc._subtabsWired) {
+        stc._subtabsWired = true;
+        stc.addEventListener('click', e => {
+          const btn = e.target.closest('.settings-subtab');
+          if (!btn) return;
+          stc.querySelectorAll('.settings-subtab').forEach(b => b.classList.remove('active'));
+          stc.querySelectorAll('.settings-subview').forEach(v => v.classList.add('hidden'));
+          btn.classList.add('active');
+          const key = btn.dataset.settingsSubtab;
+          const targetEl = document.getElementById('settingsSub' + key.charAt(0).toUpperCase() + key.slice(1));
+          if (targetEl) targetEl.classList.remove('hidden');
+          if (key === 'app') {
+            applyTrainingModeClasses(getTrainingMode());
+            const modeDesc = document.getElementById('modeDescription');
+            if (modeDesc) {
+              const modeDescMap = {
+                bodybuilding: 'Shows posing tracker, contest prep timeline, and physique-focused tools.',
+                powerlifting: 'Shows plate calculator, 1RM tracker, and meet prep timeline.',
+                athlete: 'Shows CrossFit tracker and general fitness tools.',
+              };
+              modeDesc.textContent = modeDescMap[getTrainingMode()] || '';
+            }
+          }
+        });
+      }
       break;
+    }
   }
 }
 
@@ -11152,6 +11398,9 @@ async function fetchDailyLogs(username) {
     });
   });
 
+  // Apply saved training mode before first render
+  applyTrainingModeClasses(getTrainingMode());
+
   // Show the first tab initially
   initTrainingCalendar();
   showTab("homeTab");
@@ -11286,6 +11535,442 @@ window.renderRewardSummary = renderRewardSummary;
   }
 
 window.applyTheme = applyTheme;
+
+// ─────────────────────────────────────────────
+// TRAINING MODE SYSTEM
+// ─────────────────────────────────────────────
+function getTrainingMode() {
+  return localStorage.getItem('trainingMode') || 'bodybuilding';
+}
+
+function setTrainingMode(mode) {
+  localStorage.setItem('trainingMode', mode);
+  applyTrainingModeClasses(mode);
+}
+
+function applyTrainingModeClasses(mode) {
+  document.body.classList.remove('mode-bb', 'mode-pl', 'mode-athlete');
+  const map = { bodybuilding: 'mode-bb', powerlifting: 'mode-pl', athlete: 'mode-athlete' };
+  document.body.classList.add(map[mode] || 'mode-bb');
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  // If we're now in a mode where the active tab is hidden, redirect home
+  const activeTabEl = document.querySelector('.tab-content.active');
+  if (activeTabEl) {
+    const plOnlyTabs = ['powerliftingTab'];
+    const bbOnlyTabs = ['posingTab'];
+    const athleteOnlyTabs = ['crossfitTab'];
+    const id = activeTabEl.id;
+    if (mode !== 'powerlifting' && plOnlyTabs.includes(id)) showTab('homeTab');
+    if (mode !== 'bodybuilding' && bbOnlyTabs.includes(id)) showTab('homeTab');
+    if (mode !== 'athlete' && athleteOnlyTabs.includes(id)) showTab('homeTab');
+  }
+}
+
+window.setTrainingMode = setTrainingMode;
+window.getTrainingMode = getTrainingMode;
+
+// ─────────────────────────────────────────────
+// POWERLIFTING TAB
+// ─────────────────────────────────────────────
+
+// Plate definitions: { size, color, textColor, heightPx, widthPx, label }
+const PL_PLATES_KG = [
+  { size: 25,   color: '#d32f2f', textColor: '#fff', h: 82, w: 22, label: '25' },
+  { size: 20,   color: '#1565c0', textColor: '#fff', h: 70, w: 20, label: '20' },
+  { size: 15,   color: '#f57f17', textColor: '#fff', h: 60, w: 18, label: '15' },
+  { size: 10,   color: '#2e7d32', textColor: '#fff', h: 50, w: 16, label: '10' },
+  { size: 5,    color: '#e0e0e0', textColor: '#333', h: 40, w: 14, label: '5'  },
+  { size: 2.5,  color: '#e57373', textColor: '#fff', h: 32, w: 12, label: '2.5'},
+  { size: 1.25, color: '#90a4ae', textColor: '#fff', h: 26, w: 10, label: '1.25'},
+];
+const PL_PLATES_LBS = [
+  { size: 45,  color: '#d32f2f', textColor: '#fff', h: 82, w: 22, label: '45' },
+  { size: 35,  color: '#f57f17', textColor: '#fff', h: 68, w: 20, label: '35' },
+  { size: 25,  color: '#2e7d32', textColor: '#fff', h: 56, w: 18, label: '25' },
+  { size: 10,  color: '#e0e0e0', textColor: '#333', h: 44, w: 14, label: '10' },
+  { size: 5,   color: '#1565c0', textColor: '#fff', h: 34, w: 12, label: '5'  },
+  { size: 2.5, color: '#90a4ae', textColor: '#fff', h: 26, w: 10, label: '2.5'},
+];
+
+let plLoadedPlates = []; // array of plate sizes currently on bar
+
+function getCurrentPlates() {
+  const unit = document.getElementById('plUnit')?.value || 'kg';
+  return unit === 'kg' ? PL_PLATES_KG : PL_PLATES_LBS;
+}
+
+function renderPowerliftingTab() {
+  // Wire sub-tab buttons
+  document.querySelectorAll('.pl-subtab').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.pl-subtab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.pl-subview').forEach(v => v.classList.remove('active'));
+      btn.classList.add('active');
+      const target = document.getElementById('plSub' + btn.dataset.plSubtab.replace(/^\w/, c => c.toUpperCase()));
+      if (target) target.classList.add('active');
+    };
+  });
+
+  // Set today as default date for 1RM
+  const oneRMDate = document.getElementById('oneRMDate');
+  if (oneRMDate && !oneRMDate.value) oneRMDate.value = new Date().toISOString().slice(0, 10);
+
+  // Load saved meet details
+  const savedMeet = JSON.parse(localStorage.getItem('plMeetDetails') || 'null');
+  if (savedMeet) {
+    if (document.getElementById('meetDate')) document.getElementById('meetDate').value = savedMeet.date || '';
+    if (document.getElementById('meetName')) document.getElementById('meetName').value = savedMeet.name || '';
+    if (document.getElementById('meetFed')) document.getElementById('meetFed').value = savedMeet.fed || '';
+    if (document.getElementById('meetWeightClass')) document.getElementById('meetWeightClass').value = savedMeet.weightClass || '';
+    renderMeetPrep();
+  }
+
+  // Init plate calculator defaults
+  const savedUnit = localStorage.getItem('defaultWeightUnit') || 'kg';
+  const plUnitEl = document.getElementById('plUnit');
+  if (plUnitEl) plUnitEl.value = savedUnit;
+  const plBarEl = document.getElementById('plBarWeight');
+  if (plBarEl && !plBarEl.dataset.userSet) plBarEl.value = savedUnit === 'lbs' ? '45' : '20';
+
+  plBuildSelector();
+  plCalcUpdate();
+  renderOneRMChart();
+  renderOneRMStats();
+}
+
+function plBuildSelector() {
+  const container = document.getElementById('plPlateSelector');
+  if (!container) return;
+  container.innerHTML = '';
+  const plates = getCurrentPlates();
+  plates.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'plate-add-btn';
+    btn.style.background = p.color;
+    btn.style.color = p.textColor;
+    btn.textContent = `+${p.label}`;
+    const unit = document.getElementById('plUnit')?.value || 'kg';
+    btn.title = `Add ${p.size}${unit} plate (pair)`;
+    btn.onclick = () => { plLoadedPlates.push(p.size); plCalcUpdate(); };
+    container.appendChild(btn);
+  });
+}
+
+function plUnitChange() {
+  plLoadedPlates = [];
+  const unit = document.getElementById('plUnit')?.value || 'kg';
+  const barEl = document.getElementById('plBarWeight');
+  if (barEl) barEl.value = unit === 'lbs' ? '45' : '20';
+  plBuildSelector();
+  plCalcUpdate();
+}
+
+function plCalcUpdate() {
+  const unit = document.getElementById('plUnit')?.value || 'kg';
+  const barWeight = parseFloat(document.getElementById('plBarWeight')?.value) || (unit === 'lbs' ? 45 : 20);
+  const targetEl = document.getElementById('plTargetWeight');
+  const plates = getCurrentPlates();
+
+  // If target is provided, auto-compute plates
+  if (targetEl && targetEl.value && plLoadedPlates.length === 0) {
+    const target = parseFloat(targetEl.value);
+    if (Number.isFinite(target) && target > barWeight) {
+      const perSide = (target - barWeight) / 2;
+      let remaining = perSide;
+      plLoadedPlates = [];
+      for (const p of plates) {
+        while (remaining >= p.size - 0.001) {
+          plLoadedPlates.push(p.size);
+          remaining -= p.size;
+          if (remaining < 0.001) break;
+        }
+      }
+    }
+  }
+
+  // Calculate total
+  const perSideWeight = plLoadedPlates.reduce((s, v) => s + v, 0);
+  const total = barWeight + perSideWeight * 2;
+
+  // Render bar
+  plRenderBar(plates);
+
+  // Render result
+  const resultEl = document.getElementById('plCalcResult');
+  if (!resultEl) return;
+  if (plLoadedPlates.length === 0) {
+    resultEl.innerHTML = `<span style="color:var(--text-muted)">Add plates above or enter a target weight.</span>`;
+    return;
+  }
+
+  // Build per-side breakdown
+  const counts = {};
+  plLoadedPlates.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+  const breakdown = Object.entries(counts)
+    .sort((a, b) => b[0] - a[0])
+    .map(([s, c]) => `<strong>${s}${unit}</strong> × ${c}`)
+    .join(' &nbsp;+&nbsp; ');
+
+  resultEl.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--primary)">${total.toFixed(total % 1 ? 2 : 0)} ${unit}</div>
+        <div style="font-size:0.8rem;color:var(--text-muted)">total loaded</div>
+      </div>
+      <div style="text-align:right;font-size:0.85rem;color:var(--secondary-text)">
+        <div>Bar: ${barWeight}${unit}</div>
+        <div>Per side: ${perSideWeight}${unit}</div>
+      </div>
+    </div>
+    <div style="margin-top:8px;font-size:0.83rem;color:var(--secondary-text);border-top:1px solid var(--border-color);padding-top:8px;">
+      Per side: ${breakdown}
+    </div>`;
+}
+
+function plRenderBar(plates) {
+  const leftEl = document.getElementById('plLeftPlates');
+  const rightEl = document.getElementById('plRightPlates');
+  if (!leftEl || !rightEl) return;
+
+  // Count plates
+  const counts = {};
+  plLoadedPlates.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+
+  const plateDivs = [];
+  Object.entries(counts)
+    .sort((a, b) => b[0] - a[0])
+    .forEach(([size, count]) => {
+      const def = plates.find(p => p.size === parseFloat(size));
+      if (!def) return;
+      for (let i = 0; i < count; i++) {
+        const d = document.createElement('div');
+        d.className = 'plate';
+        d.style.cssText = `width:${def.w}px;height:${def.h}px;background:${def.color};color:${def.textColor};writing-mode:vertical-rl;font-size:${def.h > 40 ? '0.6rem' : '0.5rem'};`;
+        d.textContent = def.label;
+        d.title = `Click to remove ${def.size}`;
+        d.onclick = () => {
+          const idx = plLoadedPlates.lastIndexOf(def.size);
+          if (idx !== -1) { plLoadedPlates.splice(idx, 1); plCalcUpdate(); }
+        };
+        plateDivs.push(d);
+      }
+    });
+
+  leftEl.innerHTML = '';
+  rightEl.innerHTML = '';
+  plateDivs.forEach(d => {
+    leftEl.appendChild(d.cloneNode(true));
+    const r = d.cloneNode(true);
+    // Re-attach click for right side clones
+    r.onclick = d.onclick;
+    rightEl.appendChild(r);
+  });
+  // Re-attach clicks for left side (cloneNode loses listeners)
+  leftEl.querySelectorAll('.plate').forEach((el, i) => {
+    const size = plateDivs[i]?.title?.match(/[\d.]+/)?.[0];
+    if (size) el.onclick = () => {
+      const idx = plLoadedPlates.lastIndexOf(parseFloat(size));
+      if (idx !== -1) { plLoadedPlates.splice(idx, 1); plCalcUpdate(); }
+    };
+  });
+  rightEl.querySelectorAll('.plate').forEach((el, i) => {
+    const size = plateDivs[i]?.title?.match(/[\d.]+/)?.[0];
+    if (size) el.onclick = () => {
+      const idx = plLoadedPlates.lastIndexOf(parseFloat(size));
+      if (idx !== -1) { plLoadedPlates.splice(idx, 1); plCalcUpdate(); }
+    };
+  });
+}
+
+function plCalcClear() {
+  plLoadedPlates = [];
+  const targetEl = document.getElementById('plTargetWeight');
+  if (targetEl) targetEl.value = '';
+  plCalcUpdate();
+}
+
+window.plCalcUpdate = plCalcUpdate;
+window.plCalcClear = plCalcClear;
+window.plUnitChange = plUnitChange;
+window.renderPowerliftingTab = renderPowerliftingTab;
+
+// ─────────────────────────────────────────────
+// 1RM TRACKER
+// ─────────────────────────────────────────────
+const ONE_RM_KEY = () => `plOneRM_${window.currentUser || 'guest'}`;
+
+function epley1RM(weight, reps) {
+  if (reps <= 1) return weight;
+  return weight * (1 + reps / 30);
+}
+
+function saveOneRMEntry() {
+  const lift = document.getElementById('oneRMExercise')?.value;
+  const weight = parseFloat(document.getElementById('oneRMWeight')?.value);
+  const reps = parseInt(document.getElementById('oneRMReps')?.value, 10) || 1;
+  const date = document.getElementById('oneRMDate')?.value || new Date().toISOString().slice(0, 10);
+  const rpe = parseFloat(document.getElementById('oneRMRPE')?.value) || null;
+  if (!lift || !Number.isFinite(weight) || weight <= 0) {
+    alert('Enter a valid lift and weight.');
+    return;
+  }
+  const estimated = epley1RM(weight, reps);
+  const entries = JSON.parse(localStorage.getItem(ONE_RM_KEY()) || '[]');
+  entries.push({ lift, weight, reps, date, rpe, estimated: parseFloat(estimated.toFixed(2)) });
+  localStorage.setItem(ONE_RM_KEY(), JSON.stringify(entries));
+  document.getElementById('oneRMWeight').value = '';
+  document.getElementById('oneRMRPE').value = '';
+  renderOneRMChart();
+  renderOneRMStats();
+  if (typeof showToast === 'function') showToast('Entry logged!');
+}
+
+let oneRMChartInstance = null;
+
+function renderOneRMChart() {
+  const lift = document.getElementById('oneRMExercise')?.value || 'Squat';
+  const entries = JSON.parse(localStorage.getItem(ONE_RM_KEY()) || '[]')
+    .filter(e => e.lift === lift)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const canvas = document.getElementById('oneRMChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const labels = entries.map(e => e.date);
+  const data = entries.map(e => e.estimated);
+
+  if (oneRMChartInstance) { oneRMChartInstance.destroy(); oneRMChartInstance = null; }
+  oneRMChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: `${lift} Estimated 1RM`,
+        data,
+        borderColor: '#2d7d5b',
+        backgroundColor: 'rgba(45,125,91,0.12)',
+        pointBackgroundColor: '#2d7d5b',
+        tension: 0.35,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#b8c2bc' } } },
+      scales: {
+        x: { ticks: { color: '#8c9891' }, grid: { color: 'rgba(132,157,144,0.15)' } },
+        y: { ticks: { color: '#8c9891' }, grid: { color: 'rgba(132,157,144,0.15)' } }
+      }
+    }
+  });
+
+  renderOneRMHistory(entries);
+}
+
+function renderOneRMStats() {
+  const lift = document.getElementById('oneRMExercise')?.value || 'Squat';
+  const entries = JSON.parse(localStorage.getItem(ONE_RM_KEY()) || '[]').filter(e => e.lift === lift);
+  const container = document.getElementById('oneRMStats');
+  if (!container) return;
+  if (!entries.length) { container.innerHTML = ''; return; }
+  const best = Math.max(...entries.map(e => e.estimated));
+  const last = entries[entries.length - 1]?.estimated || 0;
+  const unit = localStorage.getItem('defaultWeightUnit') || 'kg';
+  container.innerHTML = `
+    <div class="pl-stat-card"><div class="stat-label">Best 1RM (est.)</div><div class="stat-value">${best.toFixed(1)} ${unit}</div></div>
+    <div class="pl-stat-card"><div class="stat-label">Last Entry</div><div class="stat-value">${last.toFixed(1)} ${unit}</div></div>
+    <div class="pl-stat-card"><div class="stat-label">Sessions</div><div class="stat-value">${entries.length}</div></div>`;
+}
+
+function renderOneRMHistory(entries) {
+  const container = document.getElementById('oneRMHistory');
+  if (!container) return;
+  if (!entries.length) { container.innerHTML = '<p style="color:var(--text-muted)">No entries yet.</p>'; return; }
+  const unit = localStorage.getItem('defaultWeightUnit') || 'kg';
+  const rows = [...entries].reverse().slice(0, 10).map(e => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:0.88rem;">
+      <span style="color:var(--secondary-text)">${e.date}</span>
+      <span>${e.weight}${unit} × ${e.reps}${e.rpe ? ` @RPE${e.rpe}` : ''}</span>
+      <span style="color:var(--primary);font-weight:700">≈ ${e.estimated}${unit}</span>
+    </div>`).join('');
+  container.innerHTML = `<h4 style="margin:0 0 4px;font-size:0.85rem;color:var(--text-muted)">Recent entries</h4>${rows}`;
+}
+
+window.saveOneRMEntry = saveOneRMEntry;
+window.renderOneRMChart = renderOneRMChart;
+window.renderOneRMStats = renderOneRMStats;
+
+// ─────────────────────────────────────────────
+// MEET PREP TIMELINE
+// ─────────────────────────────────────────────
+function saveMeetDetails() {
+  const date = document.getElementById('meetDate')?.value;
+  const name = document.getElementById('meetName')?.value || '';
+  const fed = document.getElementById('meetFed')?.value || '';
+  const weightClass = document.getElementById('meetWeightClass')?.value || '';
+  if (!date) { alert('Please enter a meet date.'); return; }
+  localStorage.setItem('plMeetDetails', JSON.stringify({ date, name, fed, weightClass }));
+  renderMeetPrep();
+  if (typeof showToast === 'function') showToast('Meet saved!');
+}
+
+function renderMeetPrep() {
+  const display = document.getElementById('meetPrepDisplay');
+  if (!display) return;
+  const dateVal = document.getElementById('meetDate')?.value;
+  if (!dateVal) { display.innerHTML = ''; return; }
+
+  const meetDate = new Date(dateVal + 'T00:00:00');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diffMs = meetDate - today;
+  const diffDays = Math.round(diffMs / 86400000);
+  const weeksOut = Math.floor(diffDays / 7);
+  const daysRem = diffDays % 7;
+
+  if (diffDays < 0) {
+    display.innerHTML = `<div style="color:var(--text-muted);text-align:center;padding:16px;">Meet has passed. Great lifting!</div>`;
+    return;
+  }
+
+  const savedMeet = JSON.parse(localStorage.getItem('plMeetDetails') || '{}');
+  const meetName = savedMeet.name ? `<div style="font-size:1rem;color:var(--secondary-text);margin-bottom:4px;">${savedMeet.name}</div>` : '';
+  const fedChip = savedMeet.fed ? `<span style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:0.78rem;color:var(--secondary-text);margin-right:6px;">${savedMeet.fed}</span>` : '';
+  const wcChip = savedMeet.weightClass ? `<span style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:0.78rem;color:var(--secondary-text);">${savedMeet.weightClass}</span>` : '';
+
+  // Build phase timeline
+  const phases = [
+    { label: 'Peaking Block', weeks: '4–6 wks out', start: 6, end: 4 },
+    { label: 'Competition Prep', weeks: '3–4 wks out', start: 4, end: 2 },
+    { label: 'Taper / Deload', weeks: '1–2 wks out', start: 2, end: 0 },
+    { label: 'Meet Week', weeks: '0 wks out', start: 0, end: -1 },
+  ];
+
+  const phaseRows = phases.map(p => {
+    const active = weeksOut <= p.start && weeksOut > p.end;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:${active ? 'rgba(45,125,91,0.18)' : 'var(--surface-bg)'};border:1px solid ${active ? 'var(--primary)' : 'var(--border-color)'};margin-bottom:6px;">
+      <span style="font-size:1.1rem;">${active ? '▶' : '○'}</span>
+      <div>
+        <div style="font-weight:600;color:${active ? 'var(--text-color)' : 'var(--secondary-text)'};">${p.label}</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">${p.weeks}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  display.innerHTML = `
+    <div style="text-align:center;margin-bottom:16px;">
+      ${meetName}
+      <div style="margin-bottom:8px;">${fedChip}${wcChip}</div>
+      <div class="meet-week-chip">${weeksOut > 0 ? `${weeksOut}w ${daysRem}d out` : 'Meet Week!'}</div>
+      <div style="font-size:0.85rem;color:var(--text-muted);">${meetDate.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}</div>
+    </div>
+    <h4 style="margin:0 0 8px;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Prep Phases</h4>
+    ${phaseRows}`;
+}
+
+window.saveMeetDetails = saveMeetDetails;
+window.renderMeetPrep = renderMeetPrep;
 
 </script>
 

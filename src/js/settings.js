@@ -855,6 +855,15 @@ function injectSettingsMarkup() {
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
       renderProfileGamificationSummary(container);
+      if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
+      if (typeof applyTrainingModeClasses === 'function') applyTrainingModeClasses(localStorage.getItem('trainingMode') || 'bodybuilding');
+      const appModeSel = container.querySelector('#appModeSelect');
+      if (appModeSel && typeof getCurrentAppMode === 'function') appModeSel.value = getCurrentAppMode();
+      const coachToggle = container.querySelector('#coachModeToggle');
+      if (coachToggle && typeof isCoachModeEnabled === 'function') {
+        coachToggle.checked = isCoachModeEnabled();
+        coachToggle.disabled = getCurrentAppMode() !== 'both';
+      }
     })
     .catch(error => {
       console.error('Failed to load settings page', error);
