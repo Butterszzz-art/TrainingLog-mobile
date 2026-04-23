@@ -500,6 +500,25 @@ app.delete('/api/coach/client/:clientId/notes/:noteId', (req, res) => {
 
 // ── End Coaching Hub ────────────────────────────────────────────────────────
 
+// ── Daily Mission stub ─────────────────────────────────────────────────────
+// dailyMissionEngine.js fires a PUT to sync state and a GET to load it.
+// These stubs prevent the 405 "Method Not Allowed" browser console error while
+// the feature is awaiting full backend implementation.
+const dailyMissionStore = new Map(); // userId → state object
+
+app.get('/api/bodybuilding/daily-mission/:userId', (req, res) => {
+  const state = dailyMissionStore.get(req.params.userId) || null;
+  res.json(state);
+});
+
+app.put('/api/bodybuilding/daily-mission/:userId', (req, res) => {
+  if (req.body && typeof req.body === 'object') {
+    dailyMissionStore.set(req.params.userId, req.body);
+  }
+  res.json({ ok: true });
+});
+// ── End Daily Mission stub ─────────────────────────────────────────────────
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

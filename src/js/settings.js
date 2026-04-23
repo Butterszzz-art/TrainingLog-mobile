@@ -1074,6 +1074,9 @@ function injectSettingsMarkup() {
         el.addEventListener('input', markSettingsDirty);
       });
 
+      // Render the profile hub card now that #profileTabContent exists in the DOM
+      renderProfileTab();
+
       // Try to hydrate from backend (non-blocking); backend wins for profile data
       loadSettingsFromBackend().then(backendSettings => {
         if (!backendSettings || typeof backendSettings !== 'object') return;
