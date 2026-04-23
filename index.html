@@ -1300,6 +1300,310 @@ button[data-loading="true"] {
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* === COACHING HUB EXTENSIONS === */
+
+/* Search / filter / invite bar */
+.ch-search-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.ch-search-bar input[type="search"] { flex: 1; min-width: 160px; }
+.ch-search-bar select { flex: 0 0 auto; }
+.ch-invite-btn { white-space: nowrap; }
+
+/* Status pills */
+.ch-status-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.ch-status--active {
+  background: rgba(43,110,82,0.14);
+  color: #2b6e52;
+  border-color: rgba(43,110,82,0.3);
+}
+.ch-status--pending {
+  background: rgba(191,118,20,0.14);
+  color: #8a5a13;
+  border-color: rgba(191,118,20,0.3);
+}
+.ch-status--inactive {
+  background: rgba(130,130,140,0.12);
+  color: var(--text-muted, #888);
+  border-color: rgba(130,130,140,0.25);
+}
+
+/* Trend indicators */
+.ch-trend-up   { color: #2b6e52; font-weight: 600; }
+.ch-trend-down { color: #b02a37; font-weight: 600; }
+.ch-trend-flat { color: #8a5a13; font-weight: 600; }
+
+/* Invite modal */
+.ch-invite-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.48);
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.ch-invite-modal {
+  background: var(--card-bg, #fff);
+  border-radius: 16px;
+  padding: 24px;
+  width: min(440px, calc(100vw - 32px));
+  box-shadow: 0 10px 40px rgba(0,0,0,0.22);
+}
+.ch-invite-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.ch-invite-header h3 { margin: 0; font-size: 1.05rem; }
+.ch-invite-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--text-muted, #888);
+  padding: 4px 8px;
+}
+.ch-invite-desc {
+  font-size: 0.86rem;
+  color: var(--text-muted, #888);
+  margin: 0 0 14px;
+}
+.ch-invite-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.88rem;
+  margin-bottom: 12px;
+}
+.ch-invite-label input { width: 100%; }
+.ch-invite-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.ch-invite-status {
+  font-size: 0.82rem;
+  min-height: 1.3em;
+  margin: 8px 0 0;
+}
+.ch-pending-title {
+  font-size: 0.82rem;
+  color: var(--text-muted, #888);
+  margin: 16px 0 8px;
+}
+.ch-pending-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ch-pending-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.84rem;
+  padding: 6px 10px;
+  background: var(--surface-bg, #f5f5f5);
+  border-radius: 8px;
+}
+
+/* Coach notes timeline */
+.ch-notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ch-note-item {
+  background: var(--surface-bg, #f5f5f5);
+  border-left: 3px solid var(--border-color, #ddd);
+  border-radius: 0 10px 10px 0;
+  padding: 10px 14px;
+}
+.ch-note--flagged  { border-left-color: var(--danger, #dc3545); }
+.ch-note--milestone { border-left-color: var(--highlight, #2d7d5b); }
+.ch-note-empty {
+  font-size: 0.86rem;
+  color: var(--text-muted, #888);
+  padding: 6px 0;
+}
+.ch-note-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.ch-note-date {
+  font-size: 0.74rem;
+  color: var(--text-muted, #888);
+}
+.ch-note-badges { display: flex; gap: 4px; }
+.ch-note-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.ch-note-badge--flag { background: rgba(220,53,69,0.12); color: #b02a37; }
+.ch-note-badge--ms   { background: rgba(43,110,82,0.12); color: #2b6e52; }
+.ch-note-text {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0 0 6px;
+  word-break: break-word;
+}
+.ch-note-delete {
+  background: none;
+  border: none;
+  font-size: 0.76rem;
+  color: var(--text-muted, #888);
+  cursor: pointer;
+  padding: 0;
+  float: right;
+}
+.ch-note-delete:hover { color: var(--danger, #dc3545); }
+.ch-note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ch-note-form textarea { width: 100%; min-height: 68px; resize: vertical; }
+.ch-note-form-opts {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.86rem;
+}
+
+/* Progress charts */
+.ch-period-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.ch-period-tab {
+  font-size: 0.78rem;
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color, #ddd);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-color, #333);
+  transition: background 0.15s, color 0.15s;
+}
+.ch-period-tab.active {
+  background: var(--highlight, #2d7d5b);
+  color: #fff;
+  border-color: var(--highlight, #2d7d5b);
+}
+.ch-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.ch-chart-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 12px;
+  padding: 14px;
+}
+.ch-chart-title {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.ch-chart-wrap {
+  position: relative;
+  height: 150px;
+}
+.ch-chart-note {
+  font-size: 0.72rem;
+  color: var(--text-muted, #888);
+  margin: 6px 0 0;
+  font-style: italic;
+}
+
+/* Comparison table */
+.ch-comparison-section { margin-top: 24px; }
+.ch-comparison-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-muted, #888);
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ch-comparison-scroll { overflow-x: auto; }
+.ch-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+.ch-comparison-table th {
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border-color, #ddd);
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.76rem;
+  color: var(--text-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ch-comparison-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color, #ddd);
+  vertical-align: top;
+}
+.ch-comparison-table tr:last-child td { border-bottom: none; }
+.ch-table-sub { font-size: 0.76rem; color: var(--text-muted, #888); }
+.ch-inactive-chip {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  background: rgba(220,53,69,0.1);
+  color: #b02a37;
+  border-radius: 999px;
+  margin-left: 4px;
+}
+
+/* Coaching charts wrapper section (added to client detail) */
+#chChartsSection {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 14px;
+}
+#chChartsSection h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+#chChartsSection .coach-dashboard-subtitle {
+  margin: 0 0 14px;
+}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -2245,7 +2549,9 @@ button[data-loading="true"] {
 <div id="coachingTab" class="tab-content coach-only">
   <h2>Coach Dashboard</h2>
   <p style="opacity:0.85; margin-bottom: 14px;">
-    Operational roster view for coach mode. Client summary cards update from backend data when available and use local demo data when relationships are not yet connected.
+    Manage your client hub — invite clients, track compliance and progress metrics,
+    add coach notes, and view training adherence charts. Use the App tab in Settings
+    to enable Coach mode.
   </p>
   <div id="coachDashboardContent" class="coach-dashboard"></div>
 </div>
@@ -2313,6 +2619,7 @@ button[data-loading="true"] {
 
 <script type="module" src="progressUtils.js"></script>
 <script src="src/js/settings.js"></script>
+<script src="src/js/coaching.js"></script>
 <script type="module" src="history.js"></script>
 <!-- Optional runtime configuration -->
 <script src="config.js"></script>
@@ -7876,7 +8183,11 @@ const coachDashboardState = {
   clients: [],
   source: 'demo',
   selectedClientId: null,
-  isBound: false
+  isBound: false,
+  // CoachingHub search / filter / sort state
+  searchQuery: '',
+  filterStatus: 'all',
+  sortBy: 'name',
 };
 
 function getCoachDemoClients() {
@@ -7958,7 +8269,21 @@ function normalizeCoachClientRecord(client = {}) {
     recentProgressSummary: client.recentProgressSummary || client.progressSummary || '',
     currentProgramSummary: client.currentProgramSummary || client.programSummary || '',
     currentNutritionSummary: client.currentNutritionSummary || client.nutritionSummary || '',
-    latestCheckIn: client.latestCheckInEntry || client.latestCheckInData || null
+    latestCheckIn: client.latestCheckInEntry || client.latestCheckInData || null,
+    // Extended fields for CoachingHub
+    weeklyWeightChangePercent: Number.isFinite(Number(client.weeklyWeightChangePercent))
+      ? Number(client.weeklyWeightChangePercent)
+      : Number.isFinite(Number(client.weeklyWeightChangePct))
+        ? Number(client.weeklyWeightChangePct)
+        : null,
+    workoutsLoggedThisWeek: Number.isFinite(Number(client.workoutsLoggedThisWeek))
+      ? Number(client.workoutsLoggedThisWeek)
+      : null,
+    cardioMissedSessions: Number.isFinite(Number(client.cardioMissedSessions))
+      ? Number(client.cardioMissedSessions)
+      : null,
+    status: String(client.status || 'active').toLowerCase(),
+    email: client.email || '',
   };
 }
 
@@ -8428,7 +8753,25 @@ function renderCoachClientDetail(client) {
             <button type="button" style="margin-top:10px;" data-coach-assign-nutrition="${escapeCoachText(safeClient.id)}" data-client-name="${escapeCoachText(safeClient.name)}">Assign Nutrition Plan</button>
           </div>
         </article>
+
+        <!-- Coach Notes — populated by CoachingHub.afterDetailRender -->
+        <article class="coach-client-detail-card" id="chNotesCard" style="grid-column: 1 / -1;">
+          <h4>📝 Coach Notes</h4>
+          <p class="coach-dashboard-subtitle">Notes are visible to this client. Use flags for concerns and milestones for achievements.</p>
+          <div id="chNotesInner">
+            <p class="coach-dashboard-subtitle" style="color:var(--text-muted);">Loading notes…</p>
+          </div>
+        </article>
+
       </section>
+
+      <!-- Progress Charts — populated by CoachingHub.afterDetailRender -->
+      <section id="chChartsSection" style="margin-top:20px;">
+        <h3 style="margin:0 0 4px;">📈 Progress Charts</h3>
+        <p class="coach-dashboard-subtitle" style="margin:0 0 14px;">8-week trend. Live weight log used when available; other series are estimated from compliance metrics.</p>
+        <p class="coach-dashboard-subtitle" style="color:var(--text-muted);">Loading charts…</p>
+      </section>
+
     </section>
   `;
 }
@@ -8472,7 +8815,7 @@ function renderCoachDashboardView() {
   const container = document.getElementById('coachDashboardContent');
   if (!container) return;
   const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
-  const selectedClient = clients.find((client) => normalizeCoachClientRecord(client).id === coachDashboardState.selectedClientId);
+  const selectedClient = clients.find((client) => client.id === coachDashboardState.selectedClientId);
   const avgCompliance = clients.length
     ? Math.round(clients.reduce((sum, client) => sum + (Number(client.compliancePercent) || 0), 0) / clients.length)
     : 0;
@@ -8480,15 +8823,39 @@ function renderCoachDashboardView() {
   const watchCount = clients.filter((client) => getCoachAlertMeta(deriveCoachAlertStatus(client)).className === 'is-watch').length;
   const dataSourceLabel = coachDashboardState.source === 'backend' ? 'Backend relationship data' : 'Local demo fallback';
 
-  container.innerHTML = selectedClient
-    ? renderCoachClientDetail(selectedClient)
-    : `
+  if (selectedClient) {
+    container.innerHTML = renderCoachClientDetail(selectedClient);
+    // Post-render: load notes + mount charts via CoachingHub
+    if (window.CoachingHub) {
+      window.CoachingHub.afterDetailRender(selectedClient.id, selectedClient, container);
+    }
+  } else {
+    // Apply search / filter / sort if CoachingHub is loaded
+    const visibleClients = window.CoachingHub
+      ? window.CoachingHub.filterAndSortClients(clients, coachDashboardState)
+      : clients;
+    const searchBarHtml = window.CoachingHub
+      ? window.CoachingHub.renderSearchBar(coachDashboardState)
+      : '';
+    const compTableHtml = window.CoachingHub
+      ? window.CoachingHub.renderComparisonTable(visibleClients)
+      : '';
+
+    container.innerHTML = `
       <section class="coach-dashboard-header">
         <h3 class="coach-dashboard-title">Client Roster Overview</h3>
         <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action · ${watchCount} on watch</p>
       </section>
-      ${renderCoachClientRoster(clients)}
+      ${searchBarHtml}
+      ${renderCoachClientRoster(visibleClients)}
+      ${compTableHtml}
     `;
+
+    // Wire search / filter / sort / invite button interactions
+    if (window.CoachingHub) {
+      window.CoachingHub.afterRosterRender(container, coachDashboardState);
+    }
+  }
 }
 
 async function renderCoachDashboard() {

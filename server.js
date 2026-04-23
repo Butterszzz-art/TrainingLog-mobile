@@ -27,6 +27,21 @@ const programs = [];
 const sharedPrograms = [];
 const userSettings = new Map(); // username → { ...settings, updatedAt }
 
+// ── Coaching Hub in-memory stores ──────────────────────────────────────────
+// coachHub: coachId → { invites: [{ token, email, status, sentAt, clientId? }],
+//                       relationships: [{ clientId, clientName, email, status, joinedAt }] }
+const coachHub = new Map();
+// coachNotes: `${coachId}::${clientId}` → [{ id, text, date, flagged, milestone }]
+const coachNotes = new Map();
+
+function getCoachHub(cId) {
+  if (!coachHub.has(cId)) coachHub.set(cId, { invites: [], relationships: [] });
+  return coachHub.get(cId);
+}
+function coachNotesKey(cId, clientId) {
+  return `${cId}::${clientId}`;
+}
+
 // sample leaderboard data
 const leaderboard = [
   {
@@ -332,6 +347,158 @@ app.put('/api/user/settings', (req, res) => {
 });
 
 // ── End User Settings ───────────────────────────────────────────────────────
+
+// ── Coaching Hub ───────────────────────────────────────────────────────────
+
+/**
+ * POST /api/coach/invite
+ * Body: { coachId, email }
+ * Creates a pending invite in the coach's hub. Returns { ok, token, inviteLink }.
+ */
+app.post('/api/coach/invite', (req, res) => {
+  const { coachId, email } = req.body || {};
+  if (!coachId || !email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'coachId and email are required' });
+  }
+  const hub = getCoachHub(coachId);
+  const existing = hub.invites.find((i) => i.email === email && i.status === 'pending');
+  if (existing) {
+    return res.status(409).json({ error: 'A pending invitation for this email already exists', token: existing.token });
+  }
+  const token = `${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 10)}`;
+  const invite = { token, email, status: 'pending', sentAt: new Date().toISOString(), clientId: null };
+  hub.invites.push(invite);
+  res.json({ ok: true, token, inviteLink: `/coach/accept?token=${token}` });
+});
+
+/**
+ * POST /api/coach/invite/accept
+ * Body: { token, clientId, clientName? }
+ * Client uses this to accept an invite and join the coach's hub.
+ */
+app.post('/api/coach/invite/accept', (req, res) => {
+  const { token, clientId, clientName } = req.body || {};
+  if (!token || !clientId) {
+    return res.status(400).json({ error: 'token and clientId are required' });
+  }
+  for (const [cId, hub] of coachHub) {
+    const invite = hub.invites.find((i) => i.token === token && i.status === 'pending');
+    if (invite) {
+      invite.status = 'accepted';
+      invite.clientId = clientId;
+      invite.acceptedAt = new Date().toISOString();
+      // Avoid duplicate relationships
+      if (!hub.relationships.some((r) => r.clientId === clientId)) {
+        hub.relationships.push({
+          clientId,
+          clientName: clientName || clientId,
+          email: invite.email,
+          status: 'active',
+          joinedAt: new Date().toISOString(),
+        });
+      }
+      return res.json({ ok: true, coachId: cId });
+    }
+  }
+  res.status(404).json({ error: 'Invalid or expired invite token' });
+});
+
+/**
+ * GET /api/coach/clients?coachId=<coachId>
+ * Returns all clients (active + pending invites) in the coach's hub.
+ */
+app.get('/api/coach/clients', (req, res) => {
+  const { coachId } = req.query;
+  if (!coachId) return res.status(400).json({ error: 'coachId query param is required' });
+  const hub = getCoachHub(coachId);
+  const active = hub.relationships.map((r) => ({
+    id: r.clientId,
+    name: r.clientName,
+    email: r.email,
+    status: r.status,
+    joinedAt: r.joinedAt,
+  }));
+  const pending = hub.invites
+    .filter((i) => i.status === 'pending')
+    .map((i) => ({
+      id: `pending:${i.token}`,
+      name: i.email,
+      email: i.email,
+      status: 'pending',
+      sentAt: i.sentAt,
+    }));
+  res.json([...active, ...pending]);
+});
+
+/**
+ * GET /api/coach/client/:clientId/metrics?coachId=<coachId>
+ * Returns stored settings/metrics for a specific client (if in hub).
+ */
+app.get('/api/coach/client/:clientId/metrics', (req, res) => {
+  const { coachId } = req.query;
+  const { clientId } = req.params;
+  if (!coachId) return res.status(400).json({ error: 'coachId query param is required' });
+  const hub = getCoachHub(coachId);
+  const rel = hub.relationships.find((r) => r.clientId === clientId);
+  if (!rel) return res.status(403).json({ error: 'Client is not in this coach hub' });
+  const settings = userSettings.get(clientId) || {};
+  res.json({ clientId, clientName: rel.clientName, status: rel.status, settings });
+});
+
+/**
+ * GET /api/coach/client/:clientId/notes?coachId=<coachId>
+ * Returns all notes for the client written by the coach.
+ */
+app.get('/api/coach/client/:clientId/notes', (req, res) => {
+  const { coachId } = req.query;
+  const { clientId } = req.params;
+  if (!coachId) return res.status(400).json({ error: 'coachId query param is required' });
+  const key = coachNotesKey(coachId, clientId);
+  res.json(coachNotes.get(key) || []);
+});
+
+/**
+ * POST /api/coach/client/:clientId/notes
+ * Body: { coachId, text, flagged?, milestone? }
+ * Adds a new coach note for the client.
+ */
+app.post('/api/coach/client/:clientId/notes', (req, res) => {
+  const { coachId, text, flagged = false, milestone = false } = req.body || {};
+  const { clientId } = req.params;
+  if (!coachId || !text || !text.trim()) {
+    return res.status(400).json({ error: 'coachId and text are required' });
+  }
+  const key = coachNotesKey(coachId, clientId);
+  if (!coachNotes.has(key)) coachNotes.set(key, []);
+  const notes = coachNotes.get(key);
+  const note = {
+    id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    text: text.trim(),
+    date: new Date().toISOString(),
+    flagged: Boolean(flagged),
+    milestone: Boolean(milestone),
+  };
+  notes.unshift(note);
+  res.status(201).json(note);
+});
+
+/**
+ * DELETE /api/coach/client/:clientId/notes/:noteId?coachId=<coachId>
+ * Removes a specific note.
+ */
+app.delete('/api/coach/client/:clientId/notes/:noteId', (req, res) => {
+  const { coachId } = req.query;
+  const { clientId, noteId } = req.params;
+  if (!coachId) return res.status(400).json({ error: 'coachId query param is required' });
+  const key = coachNotesKey(coachId, clientId);
+  const notes = coachNotes.get(key) || [];
+  const idx = notes.findIndex((n) => n.id === noteId);
+  if (idx === -1) return res.status(404).json({ error: 'Note not found' });
+  notes.splice(idx, 1);
+  res.json({ ok: true });
+});
+
+// ── End Coaching Hub ────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
