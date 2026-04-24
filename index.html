@@ -171,64 +171,6 @@
     </button>
   </nav>
 
-  <!-- More drawer: secondary tabs accessible via the More button -->
-  <div id="moreDrawer" class="more-drawer" role="dialog" aria-modal="true" aria-label="More options" hidden>
-    <div class="more-drawer-scrim" id="moreDrawerScrim"></div>
-    <div class="more-drawer-panel">
-      <div class="more-drawer-handle"></div>
-      <div class="more-drawer-grid">
-        <button class="more-drawer-item" data-tab="macroTab">
-          <span class="more-drawer-icon">🍽️</span>
-          <span>Macros</span>
-        </button>
-        <button class="more-drawer-item" data-tab="checkInTab">
-          <span class="more-drawer-icon">🧾</span>
-          <span>Check-In</span>
-        </button>
-        <button class="more-drawer-item" data-tab="weightTab">
-          <span class="more-drawer-icon">⚖️</span>
-          <span>Weight</span>
-        </button>
-        <button class="more-drawer-item" data-tab="cardioTab">
-          <span class="more-drawer-icon">🏃</span>
-          <span>Cardio</span>
-        </button>
-        <button class="more-drawer-item" data-tab="communityTab">
-          <span class="more-drawer-icon">👥</span>
-          <span>Community</span>
-        </button>
-        <button class="more-drawer-item" data-tab="leaderboardTab">
-          <span class="more-drawer-icon">🏅</span>
-          <span>Leaderboard</span>
-        </button>
-        <button class="more-drawer-item" data-tab="logHistoryTab">
-          <span class="more-drawer-icon">📜</span>
-          <span>History</span>
-        </button>
-        <button class="more-drawer-item coach-only" data-tab="coachingTab">
-          <span class="more-drawer-icon">🧭</span>
-          <span>Coach</span>
-        </button>
-        <button class="more-drawer-item" data-tab="settingsTab">
-          <span class="more-drawer-icon">⚙️</span>
-          <span>Settings</span>
-        </button>
-        <button class="more-drawer-item more-drawer-logout" id="moreDrawerLogoutBtn">
-          <span class="more-drawer-icon">🚪</span>
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Workout focus bar: replaces the nav during an active workout -->
-  <div id="workoutFocusBar" aria-live="polite">
-    <div>
-      <div class="wfb-label">Workout in progress</div>
-      <div class="wfb-timer" id="wfbElapsed">00:00:00</div>
-    </div>
-    <button class="wfb-end-btn" id="wfbEndBtn">End Workout</button>
-  </div>
 
   <div id="appContainer" class="main-content">
 <div id="progressReminder"></div>
@@ -1088,6 +1030,67 @@
   </div> <!-- #settingsTab -->
   </div> <!-- #appContainer -->
 </div> <!-- #pocketFitContainer -->
+
+<!-- More drawer — direct <body> child so position:fixed isn't clipped by
+     the ancestor's transform:scale() stacking context. -->
+<div id="moreDrawer" class="more-drawer" role="dialog" aria-modal="true" aria-label="More options" hidden>
+  <div class="more-drawer-scrim" id="moreDrawerScrim"></div>
+  <div class="more-drawer-panel">
+    <div class="more-drawer-handle"></div>
+    <div class="more-drawer-grid">
+      <button class="more-drawer-item" data-tab="macroTab">
+        <span class="more-drawer-icon">🍽️</span>
+        <span>Macros</span>
+      </button>
+      <button class="more-drawer-item" data-tab="checkInTab">
+        <span class="more-drawer-icon">🧾</span>
+        <span>Check-In</span>
+      </button>
+      <button class="more-drawer-item" data-tab="weightTab">
+        <span class="more-drawer-icon">⚖️</span>
+        <span>Weight</span>
+      </button>
+      <button class="more-drawer-item" data-tab="cardioTab">
+        <span class="more-drawer-icon">🏃</span>
+        <span>Cardio</span>
+      </button>
+      <button class="more-drawer-item" data-tab="communityTab">
+        <span class="more-drawer-icon">👥</span>
+        <span>Community</span>
+      </button>
+      <button class="more-drawer-item" data-tab="leaderboardTab">
+        <span class="more-drawer-icon">🏅</span>
+        <span>Leaderboard</span>
+      </button>
+      <button class="more-drawer-item" data-tab="logHistoryTab">
+        <span class="more-drawer-icon">📜</span>
+        <span>History</span>
+      </button>
+      <button class="more-drawer-item coach-only" data-tab="coachingTab">
+        <span class="more-drawer-icon">🧭</span>
+        <span>Coach</span>
+      </button>
+      <button class="more-drawer-item" data-tab="settingsTab">
+        <span class="more-drawer-icon">⚙️</span>
+        <span>Settings</span>
+      </button>
+      <button class="more-drawer-item more-drawer-logout" id="moreDrawerLogoutBtn">
+        <span class="more-drawer-icon">🚪</span>
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Workout focus bar — direct <body> child for the same reason. -->
+<div id="workoutFocusBar" aria-live="polite">
+  <div>
+    <div class="wfb-label">Workout in progress</div>
+    <div class="wfb-timer" id="wfbElapsed">00:00:00</div>
+  </div>
+  <button class="wfb-end-btn" id="wfbEndBtn">End Workout</button>
+</div>
+
 <div id="pocketLifestyleContainer" class="section" style="display:none;">
   <h2>PocketLifestyle</h2>
   <nav class="lifestyle-nav">
