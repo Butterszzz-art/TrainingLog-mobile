@@ -1,0 +1,182 @@
+/* =============================================================
+   LOG TAB
+   Resistance exercise form layout, workout timer strip,
+   training calendar, and related utilities.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Narrower log-form inputs ───────────────────────────────── */
+
+/*
+ * Constrain the main log inputs to 60% width so they don't stretch
+ * the full card on wide viewports.
+ */
+#exercise,
+#sets,
+#goal,
+#repGoal,
+#weightUnit,
+#entryDate {
+  width: 60%;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+/* ── Resistance section grid ────────────────────────────────── */
+
+#resistance-section {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  column-gap: 24px;
+  align-items: start;
+  margin-bottom: 80px;
+}
+
+#resistance-inputs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#resistance-inputs input,
+#resistance-inputs select {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ── Workout session timer strip ────────────────────────────── */
+
+.workout-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  margin: 12px 0 24px;
+  color: var(--text-color);
+}
+
+.workout-timer-value {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.25rem;
+}
+
+/* ── Training calendar ──────────────────────────────────────── */
+
+#training-calendar {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  margin: 20px auto 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+#training-calendar table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#training-calendar th,
+#training-calendar td {
+  padding: 6px;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+
+#training-calendar td {
+  cursor: pointer;
+}
+
+#training-calendar .calendar-container {
+  transform: translateY(-20px);
+  transition: transform 0.3s ease;
+}
+
+#training-calendar:hover {
+  transform: translateY(-10px);
+}
+
+/* Calendar day state colouring */
+.highlight-past  { background-color: #FFE0B2; }
+.highlight-today { background-color: #FF7043; }
+
+#training-calendar td.calendar-completed {
+  background-color: rgba(46, 160, 67, 0.75);
+  color: #fff;
+}
+
+#training-calendar td.calendar-missed {
+  background-color: rgba(119, 119, 119, 0.35);
+  color: var(--text-color);
+}
+
+#training-calendar td.calendar-planned {
+  box-shadow: inset 0 0 0 2px rgba(255, 167, 38, 0.75);
+}
+
+/* Calendar legend */
+.calendar-widget {
+  margin: 20px auto;
+  width: 60%;
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+.calendar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calendar-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* ── Responsive: single-column below 600 px ─────────────────── */
+
+@media (max-width: 600px) {
+  #resistance-section {
+    display: block;
+  }
+
+  #resistance-section .inputs-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .workout-timer {
+    justify-content: center;
+  }
+
+  #resistance-inputs {
+    flex-direction: column;
+    align-items: stretch;
+    overflow: visible;
+    gap: 8px;
+    padding-bottom: 0;
+  }
+
+  #resistance-inputs input,
+  #resistance-inputs select {
+    flex: none;
+    width: 100%;
+  }
+
+  #restTimerSection {
+    display: flex;
+    gap: 8px;
+  }
+}

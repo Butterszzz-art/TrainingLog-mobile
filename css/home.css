@@ -1,0 +1,577 @@
+/* =============================================================
+   HOME DASHBOARD
+   Hero card, stat chips, mission list, progress bars, sparklines,
+   coach dashboard, and all home-tab animations.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Home tab shell ─────────────────────────────────────────── */
+
+#homeTab {
+  background: radial-gradient(circle at top, rgba(34, 61, 49, 0.28) 0%, #0a0f0d 58%, #070909 100%);
+  border: 1px solid rgba(94, 121, 109, 0.38);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Dashboard grid ─────────────────────────────────────────── */
+
+.home-dashboard {
+  display: grid;
+  gap: 16px;
+}
+
+.home-command-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+/* Staggered card entrance animation */
+.home-command-grid > .home-dashboard-card {
+  animation: homeCardEnter 0.4s ease both;
+}
+.home-command-grid > .home-dashboard-card:nth-child(2) { animation-delay: 0.05s; }
+.home-command-grid > .home-dashboard-card:nth-child(3) { animation-delay: 0.09s; }
+.home-command-grid > .home-dashboard-card:nth-child(4) { animation-delay: 0.13s; }
+.home-command-grid > .home-dashboard-card:nth-child(5) { animation-delay: 0.17s; }
+.home-command-grid > .home-dashboard-card:nth-child(6) { animation-delay: 0.20s; }
+.home-command-grid > .home-dashboard-card:nth-child(7) { animation-delay: 0.24s; }
+
+/* ── Dashboard card ─────────────────────────────────────────── */
+
+.home-dashboard-card {
+  --home-accent: #1f7f59;
+  background: linear-gradient(180deg, rgba(15, 24, 20, 0.96), rgba(10, 16, 13, 0.98));
+  border: 1px solid rgba(96, 126, 113, 0.36);
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 14px;
+  text-align: left;
+  color: #f4f7f5;
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.home-dashboard-card:hover {
+  border-color: rgba(89, 156, 126, 0.5);
+  transform: translateY(-1px);
+}
+
+/* ── Hero card ──────────────────────────────────────────────── */
+
+.home-hero-card {
+  background: radial-gradient(circle at top right, rgba(30, 109, 78, 0.18), transparent 48%),
+              linear-gradient(180deg, rgba(8, 17, 13, 0.98), rgba(7, 13, 10, 0.95));
+  border-color: rgba(63, 145, 108, 0.35);
+}
+
+.home-hero-topline {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c2ccc6;
+  margin-bottom: 8px;
+}
+
+.home-hero-athlete {
+  margin: 0;
+  font-size: 1.7rem;
+}
+
+.home-hero-meta {
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  color: #b5c0ba;
+}
+
+/* ── Card typography ────────────────────────────────────────── */
+
+.home-card-title,
+.home-section-header {
+  margin: 0 0 10px;
+  font-size: 1.12rem;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: #f7faf8;
+}
+
+.home-placeholder-note {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #b0bbb5;
+}
+
+/* ── Coach dashboard ────────────────────────────────────────── */
+
+.coach-dashboard {
+  display: grid;
+  gap: 14px;
+}
+
+.coach-dashboard-header {
+  display: grid;
+  gap: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+  text-align: left;
+}
+
+.coach-dashboard-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.coach-dashboard-subtitle {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: 0.9rem;
+}
+
+.coach-roster-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.coach-client-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: var(--card-bg);
+  padding: 14px;
+  text-align: left;
+}
+
+.coach-client-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.coach-client-name {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.coach-client-meta {
+  margin: 4px 0 0;
+  color: var(--secondary-text);
+  font-size: 0.86rem;
+}
+
+/* Status pills */
+.coach-alert-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.coach-alert-pill.is-ok {
+  background: rgba(43, 110, 82, 0.14);
+  color: #2b6e52;
+  border-color: rgba(43, 110, 82, 0.3);
+}
+
+.coach-alert-pill.is-watch {
+  background: rgba(191, 118, 20, 0.14);
+  color: #8a5a13;
+  border-color: rgba(191, 118, 20, 0.3);
+}
+
+.coach-alert-pill.is-alert {
+  background: rgba(185, 55, 67, 0.16);
+  color: #9d2235;
+  border-color: rgba(185, 55, 67, 0.35);
+}
+
+/* KPI grid */
+.coach-client-kpis {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.coach-client-kpi {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(47, 128, 237, 0.06);
+}
+
+.coach-client-kpi-label {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.coach-client-kpi-value {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.coach-no-clients {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--secondary-text);
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(47, 128, 237, 0.04);
+}
+
+.coach-client-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Client detail view */
+.coach-client-detail {
+  display: grid;
+  gap: 12px;
+}
+
+.coach-client-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.coach-client-detail-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.coach-client-detail-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(47, 128, 237, 0.05);
+}
+
+.coach-client-detail-card h4 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--secondary-text);
+}
+
+.coach-client-detail-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+}
+
+.coach-client-detail-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+@media (min-width: 800px) {
+  .coach-roster-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .coach-roster-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ── Stat chips ─────────────────────────────────────────────── */
+
+.home-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 8px;
+}
+
+.home-stat-chip,
+.home-metric-chip {
+  background: rgba(41, 74, 61, 0.34);
+  border: 1px solid rgba(90, 129, 112, 0.44);
+  border-radius: 10px;
+  padding: 9px;
+}
+
+.home-stat-label {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #a9b8b0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.home-stat-value {
+  margin: 4px 0 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #f5f8f6;
+}
+
+/* ── Mission / upcoming lists ───────────────────────────────── */
+
+.home-mission-list,
+.home-upcoming-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.home-mission-item,
+.home-upcoming-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(122, 145, 134, 0.34);
+  padding-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.home-mission-item:last-child,
+.home-upcoming-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.home-mission-item {
+  align-items: center;
+}
+
+.home-mission-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.home-mission-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #25935f;
+  flex-shrink: 0;
+}
+
+.home-mission-label {
+  color: var(--text-color);
+  transition: color 0.2s ease;
+}
+
+.home-mission-status {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #afbeb6;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.home-mission-item.is-complete .home-mission-label {
+  color: var(--secondary-text);
+  text-decoration: line-through;
+}
+
+.home-mission-item.is-complete .home-mission-status {
+  color: #53c284;
+}
+
+/* ── Mission progress panel ─────────────────────────────────── */
+
+.home-mission-progress,
+.home-muted-panel {
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  color: #bcc9c2;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(30, 56, 46, 0.42);
+  border: 1px solid rgba(101, 136, 121, 0.34);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.home-mission-progress.is-complete {
+  color: #8ce6b5;
+  background: rgba(46, 204, 113, 0.18);
+  border-color: rgba(77, 183, 123, 0.34);
+}
+
+/* ── Status pills ───────────────────────────────────────────── */
+
+.home-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.home-status-pill.is-good {
+  color: #9ae9bf;
+  background: rgba(68, 162, 113, 0.18);
+  border-color: rgba(89, 190, 137, 0.45);
+}
+
+.home-status-pill.is-warn {
+  color: #f0c987;
+  background: rgba(144, 95, 25, 0.2);
+  border-color: rgba(214, 159, 66, 0.42);
+}
+
+.home-status-pill.is-alert {
+  color: #f2a4a4;
+  background: rgba(139, 44, 44, 0.22);
+  border-color: rgba(209, 94, 94, 0.45);
+}
+
+/* ── Goal progress bars ─────────────────────────────────────── */
+
+.home-progress-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(158, 176, 167, 0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+.home-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #247f58, #56b486);
+  transform-origin: left;
+  animation: homeProgressFill 0.6s ease both;
+}
+
+.home-progress-row {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.home-progress-row:last-child {
+  margin-bottom: 0;
+}
+
+.home-progress-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.86rem;
+  color: #e3e9e6;
+}
+
+/* ── Card header ────────────────────────────────────────────── */
+
+.home-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* ── Split / warning rows ───────────────────────────────────── */
+
+.home-split-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.home-warning-row {
+  border: 1px solid rgba(189, 97, 97, 0.5);
+  border-radius: 10px;
+  background: rgba(118, 39, 39, 0.25);
+  color: #ffd2d2;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  margin-top: 10px;
+}
+
+/* ── Sparkline bars ─────────────────────────────────────────── */
+
+.home-sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-height: 28px;
+  margin-top: 8px;
+}
+
+.home-sparkline-bar {
+  flex: 1;
+  min-width: 5px;
+  border-radius: 8px 8px 2px 2px;
+  background: linear-gradient(180deg, rgba(111, 202, 156, 0.88), rgba(44, 119, 84, 0.52));
+  opacity: 0.9;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  .home-command-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-command-grid .home-hero-card {
+    grid-column: 1 / -1;
+  }
+
+  .home-split-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+}
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+
+@keyframes homeCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes homeProgressFill {
+  from { width: 0%; }
+  to   { width: var(--fill-target, 0%); }
+}

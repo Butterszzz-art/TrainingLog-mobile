@@ -1,0 +1,127 @@
+/* =============================================================
+   PROGRESS TAB
+   Three-column layout, chart/calendar panels, and the
+   bodybuilding-specific progress stats panel.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Three-column layout ────────────────────────────────────── */
+
+.progress-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr 300px;
+  gap: 1rem;
+}
+
+.progress-nav button {
+  display: block;
+  margin-bottom: 0.5rem;
+  width: 100%;
+}
+
+.progress-nav button.active {
+  background-color: var(--primary);
+  color: var(--text-color);
+}
+
+/* Stack columns on mobile */
+@media (max-width: 600px) {
+  .progress-layout {
+    display: block;
+  }
+
+  #progressCanvas {
+    height: 300px;
+  }
+}
+
+/* ── Chart and calendar panels ──────────────────────────────── */
+
+.progress-chart,
+.progress-calendar {
+  background: linear-gradient(180deg, rgba(18, 27, 23, 0.94), rgba(12, 18, 15, 0.97));
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+  color: var(--text-color);
+}
+
+/* ── Bodybuilding progress panel ────────────────────────────── */
+
+#bodybuildingProgressPanel {
+  margin-top: 14px;
+  color: var(--text-color);
+}
+
+#bodybuildingProgressPanel h3 {
+  margin: 0 0 10px;
+  color: #f6faf8;
+  letter-spacing: 0.01em;
+}
+
+#bodybuildingProgressPanel h4 {
+  margin: 10px 0 6px;
+  color: #dce7e1;
+  font-size: 1rem;
+}
+
+#bodybuildingProgressPanel table {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(14, 21, 18, 0.92);
+  box-shadow: none;
+}
+
+#bodybuildingProgressPanel th {
+  background: rgba(35, 57, 47, 0.9);
+  color: #f3f8f5;
+  font-weight: 600;
+  border-color: rgba(121, 150, 137, 0.4);
+}
+
+#bodybuildingProgressPanel td {
+  color: #e5ece8;
+  border-color: rgba(115, 143, 131, 0.28);
+}
+
+#bodybuildingProgressPanel .progress-empty {
+  color: #b8c2bc;
+}
+
+/* PR card grid */
+#bodybuildingProgressPanel .bb-pr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+#bodybuildingProgressPanel .bb-pr-card {
+  background: rgba(15, 24, 20, 0.86);
+  border: 1px solid rgba(113, 141, 129, 0.35);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+#bodybuildingProgressPanel ul {
+  margin: 6px 0 0 18px;
+  padding: 0;
+  color: #d7e2dc;
+}
+
+#bodybuildingProgressPanel li {
+  margin: 4px 0;
+}
+
+#bodybuildingProgressPanel details {
+  margin-top: 8px;
+  color: #c2cdc7;
+}
+
+#bodybuildingProgressPanel summary {
+  color: #dce7e1;
+}

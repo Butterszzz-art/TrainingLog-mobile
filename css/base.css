@@ -1,0 +1,262 @@
+/* =============================================================
+   BASE STYLES
+   Global resets, typography, form controls, buttons, tables,
+   and utility rules used throughout the app.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Reset / document ───────────────────────────────────────── */
+
+html,
+body {
+  background-color: var(--bg-color);
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  color: var(--text-color);
+  padding: 8px 12px 16px;
+  margin: 0;
+  width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Typography ─────────────────────────────────────────────── */
+
+h2 {
+  font-size: 1.8rem;
+  line-height: 1.4;
+  margin-top: 0;
+}
+
+h3 {
+  font-size: 1.4rem;
+  line-height: 1.4;
+}
+
+/* Center all tab-section headings */
+.tab-content > h2,
+.tab-content > h1 {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* ── Form controls ──────────────────────────────────────────── */
+
+input,
+select,
+textarea {
+  padding: 10px 14px;
+  margin: 12px 0;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  font-size: 16px;
+  font-family: inherit;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.18);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.suggested-input::placeholder {
+  font-style: italic;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.22), inset 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.form-error {
+  color: var(--danger);
+  margin: 4px 0 0;
+  min-height: 1.2em;
+  font-size: 0.9rem;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+
+button {
+  padding: 10px 22px;
+  margin: 12px 0;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background-color: var(--primary);
+  color: var(--text-color);
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  box-shadow: var(--shadow);
+  transition: background-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+
+button:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.28), 0 6px 20px rgba(45, 125, 91, 0.35);
+}
+
+/* Add-to-log button disabled state */
+#addLogBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Loading button (spinner overlay) ───────────────────────── */
+
+.loading-btn {
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.3s ease;
+}
+
+.loading-btn.disabled,
+.loading-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-btn .spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  margin-left: -8px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: var(--text-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: none;
+}
+
+.loading-btn.loading .spinner {
+  display: block;
+}
+
+.loading-btn.loading span {
+  visibility: hidden;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+  color: var(--text-color);
+}
+
+th,
+td {
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+th {
+  background-color: #f0f0f0;
+}
+
+/* ── Layout containers ──────────────────────────────────────── */
+
+#appContainer {
+  margin: 0;
+  padding-top: 8px;
+  padding-bottom: 80px;
+}
+
+#pocketFitContainer {
+  width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: margin-left 0.3s ease;
+  margin-left: 0;
+}
+
+#programBuilderContainer,
+#programTabReactRoot {
+  min-height: 60vh;
+}
+
+/* ── Section transitions ────────────────────────────────────── */
+
+.section {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.section.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.section.fade-out {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+/* ── Miscellaneous utilities ────────────────────────────────── */
+
+#sidebarLogoutBtn {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--danger);
+  color: var(--text-color);
+  border: none;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#sidebarLogoutBtn:hover {
+  background-color: #c82333;
+}
+
+#goBackBtn {
+  margin-bottom: 20px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  background-color: var(--primary);
+  color: var(--text-color);
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+#goBackBtn:hover {
+  background-color: var(--primary-dark);
+}
+
+.slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}

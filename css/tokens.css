@@ -1,0 +1,42 @@
+/* =============================================================
+   DESIGN TOKENS
+   Global CSS custom properties shared across all stylesheets.
+   Import this file first so every other file can reference the
+   variables without defining them again.
+   ============================================================= */
+
+:root {
+  --bg-color:       #080b0a;
+  --surface-bg:     #0e1411;
+  --card-bg:        #121b17;
+  --elevated-bg:    #18231e;
+  --primary:        #2d7d5b;
+  --primary-dark:   #225f45;
+  --text-color:     #f4f7f5;
+  --secondary-text: #b8c2bc;
+  --text-muted:     #8c9891;
+  --danger:         #dc3545;
+  --border-color:   rgba(132, 157, 144, 0.28);
+  --sidebar-bg:     #0b100e;
+  --highlight:      #c6944f;
+  --shadow:         0 12px 28px rgba(0, 0, 0, 0.34);
+  --shell-shadow:   0 16px 36px rgba(0, 0, 0, 0.42);
+}
+
+/* ── Alternate themes ───────────────────────────────────────── */
+
+body.theme-dark {
+  --bg-color:     #121212;
+  --text-color:   #FFFFFF;
+  --card-bg:      #1E1E1E;
+  --border-color: #333;
+  --sidebar-bg:   #000000;
+}
+
+body.theme-neon {
+  --bg-color:     #000000;
+  --text-color:   #39FF14;
+  --card-bg:      #001100;
+  --border-color: #39FF14;
+  --sidebar-bg:   #003300;
+}

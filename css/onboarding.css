@@ -1,0 +1,231 @@
+/* =============================================================
+   ONBOARDING WIZARD
+   Full-screen 3-step overlay shown to new users after signup.
+   Steps: (1) archetype selection, (2) experience level,
+          (3) unit + theme preferences.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Overlay container ──────────────────────────────────────── */
+
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--bg-color, #0a0f0c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.onboarding-overlay[hidden] {
+  display: none;
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ── Progress indicator (three dots at the top) ─────────────── */
+
+.onboarding-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+
+.ob-step {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--border-color);
+  transition: background 0.3s;
+}
+
+.ob-step.ob-active,
+.ob-step.ob-done {
+  background: var(--primary, #5fa87e);
+}
+
+/* ── Step screens ───────────────────────────────────────────── */
+
+.ob-screen {
+  display: none;
+}
+
+.ob-screen.active {
+  display: block;
+}
+
+.ob-screen h2 {
+  font-size: 1.5rem;
+  margin-bottom: 6px;
+  text-align: left;
+  color: var(--text-color);
+}
+
+.ob-subtitle {
+  color: var(--secondary-text);
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+}
+
+/* ── Step 1: Archetype cards ────────────────────────────────── */
+
+.ob-archetype-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.ob-archetype-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--surface-bg, #141e17);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: 'Poppins', sans-serif;
+}
+
+.ob-archetype-card.selected {
+  border-color: var(--primary, #5fa87e);
+  background: rgba(95, 168, 126, 0.12);
+}
+
+.ob-archetype-card strong {
+  font-size: 0.95rem;
+}
+
+.ob-archetype-card small {
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+}
+
+.ob-arch-icon {
+  font-size: 2rem;
+}
+
+/* ── Step 2: Experience level radio list ────────────────────── */
+
+.ob-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.ob-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  background: var(--surface-bg, #141e17);
+  transition: border-color 0.2s;
+}
+
+/* Highlight selected option via the :has() relational selector */
+.ob-option:has(input:checked) {
+  border-color: var(--primary, #5fa87e);
+}
+
+/* Hide the native radio; the card border signals selection */
+.ob-option input[type="radio"] {
+  display: none;
+}
+
+.ob-option-label {
+  font-weight: 600;
+  flex: 1;
+  color: var(--text-color);
+}
+
+.ob-option-hint {
+  color: var(--secondary-text);
+  font-size: 0.8rem;
+}
+
+/* ── Step 3: Preference toggles ─────────────────────────────── */
+
+.ob-prefs {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.ob-pref-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.ob-toggle-group {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ob-toggle-btn {
+  padding: 8px 18px;
+  border: none;
+  background: transparent;
+  color: var(--secondary-text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.15s, color 0.15s;
+  font-family: 'Poppins', sans-serif;
+}
+
+.ob-toggle-btn.ob-active {
+  background: var(--primary, #5fa87e);
+  color: #fff;
+}
+
+/* ── Shared wizard buttons ──────────────────────────────────── */
+
+.ob-next-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--primary, #5fa87e);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-bottom: 10px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.ob-next-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ob-back-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: var(--secondary-text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: 'Poppins', sans-serif;
+}
