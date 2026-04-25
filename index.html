@@ -22,6 +22,8 @@
   <link rel="stylesheet" href="css/archetype-features.css">
   <link rel="stylesheet" href="css/coaching.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
+  <link rel="stylesheet" href="css/features.css">
+  <link rel="manifest" href="/manifest.json">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
@@ -179,6 +181,16 @@
 <div id="progressReminder"></div>
 
   <div id="homeTab" class="tab-content">
+    <!-- Daily readiness card — populated by readiness-checkin.js -->
+    <div id="readinessHomeCard"></div>
+    <!-- Weekly summary card — populated by weekly-summary.js -->
+    <div id="weeklySummaryCard"></div>
+    <!-- Notification permission banner — shown if permission not yet granted -->
+    <div id="notifPermBanner" class="notif-banner" style="display:none;">
+      <span class="notif-banner-icon">🔔</span>
+      <span class="notif-banner-text">Enable notifications to get rest timer alerts when your phone is locked.</span>
+      <button class="notif-banner-btn" onclick="requestRestTimerNotifications()">Enable</button>
+    </div>
     <div id="homeDashboardContent" class="home-dashboard"></div>
   </div>
 
@@ -189,6 +201,7 @@
     <nav class="log-subtabs" id="logSubtabNav">
       <button class="log-subtab active" data-log-subtab="log">📝 Log</button>
       <button class="log-subtab" data-log-subtab="rest">⏱️ Rest</button>
+      <button class="log-subtab" data-log-subtab="history">🔍 History</button>
       <button class="log-subtab" data-log-subtab="templates">📋 Templates</button>
       <button class="log-subtab" data-log-subtab="streaks">🏆 Streaks</button>
     </nav>
@@ -209,6 +222,8 @@
             <input type="text" id="exercise" placeholder="Exercise" list="exerciseSuggestions" oninput="updateAddButtonState()" />
             <datalist id="exerciseSuggestions"></datalist>
             <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
+            <!-- Progressive overload hint — populated by workout-intelligence.js -->
+            <div id="overloadHint" class="overload-hint" style="grid-column:1/-1;"></div>
 
             <!-- Unit selector -->
             <select id="weightUnit">
@@ -243,6 +258,16 @@
         </div>
       </div>
     </div><!-- /logSub_log -->
+
+    <!-- ══ Sub-view: History Search ════════════════════════════════ -->
+    <div id="logSub_history" class="log-subview">
+      <div class="history-search-wrap">
+        <input type="text" id="historySearchInput" class="history-search-input"
+          placeholder="🔍 Search any exercise (e.g. Bench Press)…"
+          oninput="renderHistoryResults(this.value)" />
+        <div id="historyResults"></div>
+      </div>
+    </div><!-- /logSub_history -->
 
     <!-- ══ Sub-view: Rest Timer ═══════════════════════════════════ -->
     <div id="logSub_rest" class="log-subview">
@@ -319,6 +344,9 @@
 
         <div id="gamificationCard" class="gamification-panel gamification-card-shell" style="margin-top:12px;"></div>
         <div id="gamificationLogMiniSummary" class="gamification-mini-summary" style="margin-top:10px;"></div>
+
+        <!-- PR Board — populated by pr-tracker.js -->
+        <div id="prBoard" style="margin-top:4px;"></div>
       </div>
     </div><!-- /logSub_streaks -->
 
@@ -354,6 +382,41 @@
     <div id="weightChartPanel" class="panel">
       <div id="weightChartPanelContent"></div>
     </div>
+
+    <!-- ── Body Measurements ── -->
+    <details class="measurements-section" id="measurementsSection" style="margin:10px;">
+      <summary>📏 Body Measurements</summary>
+      <div class="measurements-body">
+        <div class="measurements-grid">
+          <label class="measurements-field">Neck (cm)<input type="number" id="measure_neck" step="0.1" min="20" max="60" placeholder="—"></label>
+          <label class="measurements-field">Shoulders (cm)<input type="number" id="measure_shoulders" step="0.1" min="60" max="160" placeholder="—"></label>
+          <label class="measurements-field">Chest (cm)<input type="number" id="measure_chest" step="0.1" min="50" max="160" placeholder="—"></label>
+          <label class="measurements-field">Waist (cm)<input type="number" id="measure_waist" step="0.1" min="40" max="160" placeholder="—"></label>
+          <label class="measurements-field">Hips (cm)<input type="number" id="measure_hips" step="0.1" min="50" max="160" placeholder="—"></label>
+          <label class="measurements-field">Arm (cm)<input type="number" id="measure_arm" step="0.1" min="15" max="60" placeholder="—"></label>
+          <label class="measurements-field">Thigh (cm)<input type="number" id="measure_thigh" step="0.1" min="20" max="90" placeholder="—"></label>
+        </div>
+        <div class="measurements-save-row">
+          <input type="date" id="measureDate" class="measurements-date-input">
+          <button type="button" class="measurements-save-btn" onclick="saveMeasurement()">Save</button>
+        </div>
+
+        <div class="measurements-chart-selector">
+          <button class="measurements-metric-pill active" data-metric="waist" onclick="renderMeasurementsChart('waist')">Waist</button>
+          <button class="measurements-metric-pill" data-metric="chest" onclick="renderMeasurementsChart('chest')">Chest</button>
+          <button class="measurements-metric-pill" data-metric="hips" onclick="renderMeasurementsChart('hips')">Hips</button>
+          <button class="measurements-metric-pill" data-metric="arm" onclick="renderMeasurementsChart('arm')">Arm</button>
+          <button class="measurements-metric-pill" data-metric="thigh" onclick="renderMeasurementsChart('thigh')">Thigh</button>
+          <button class="measurements-metric-pill" data-metric="neck" onclick="renderMeasurementsChart('neck')">Neck</button>
+          <button class="measurements-metric-pill" data-metric="shoulders" onclick="renderMeasurementsChart('shoulders')">Shoulders</button>
+        </div>
+        <div class="measurements-chart-wrap">
+          <canvas id="measurementsCanvas"></canvas>
+        </div>
+
+        <div id="measurementsHistory" style="margin-top:12px;"></div>
+      </div>
+    </details>
   </div>
 
   <div id="checkInTab" class="tab-content">
@@ -701,18 +764,31 @@
 
 <div id="programTab" class="tab-content">
   <div id="programTabContent">
-    <select id="programTemplateSelect" style="display:none;"></select>
-    <div id="programBuilderContainer" class="open">
-      <div id="programStepperContainer"></div>
 
-      <div class="pbv2-layout">
+    <!-- Top navigation: Build vs My Programs -->
+    <nav class="prog-top-nav" id="progTopNav">
+      <button class="prog-top-btn active" onclick="showProgramView('build')">🏗️ Build</button>
+      <button class="prog-top-btn" onclick="showProgramView('list')">📋 My Programs</button>
+    </nav>
+
+    <!-- Builder view (wizard lives here) -->
+    <div id="programBuilderContainer" class="open">
+      <!-- Legacy container shells kept for compatibility; new UI renders into #programBuilderV2Mount -->
+      <div id="programStepperContainer" style="display:none;"></div>
+      <div style="display:none;">
         <div id="programDaysContainer"></div>
         <div id="programStepContainer"></div>
         <div id="programSummaryContainer"></div>
+        <div id="programNavContainer"></div>
       </div>
-
-      <div id="programNavContainer"></div>
     </div>
+
+    <!-- My Programs list view -->
+    <div id="progListView" style="display:none;">
+      <div id="progListContainer"></div>
+    </div>
+
+    <select id="programTemplateSelect" style="display:none;"></select>
   </div>
   <div id="programBuilderPanel" class="panel active"><div id="programTabReactRoot"></div></div>
   <div id="programListPanel" class="panel"></div>
@@ -946,6 +1022,47 @@
             <p style="font-size:1rem;">Fat: <span id="macroFatProgress">0</span> / <span id="macroFatTarget">0</span> g</p>
             <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
             <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="subtractMacro('fat')">–</button><button onclick="addMacro('fat')">+</button></div>
+
+            <!-- ── Water Tracker ── -->
+            <div class="water-tracker-widget">
+              <div class="water-tracker-header">
+                <h3 class="water-tracker-title">💧 Water Intake</h3>
+                <button class="water-tracker-target-btn" onclick="toggleWaterTargetEdit()">Set target</button>
+              </div>
+              <div class="water-tracker-body">
+                <div class="water-ring-wrap">
+                  <svg class="water-ring-svg" viewBox="0 0 76 76">
+                    <circle class="water-ring-track" cx="38" cy="38" r="30"/>
+                    <circle class="water-ring-fill" id="waterRingFill" cx="38" cy="38" r="30"
+                      stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+                  </svg>
+                  <div class="water-ring-inner">
+                    <span class="water-ring-value" id="waterMlVal">0</span>
+                    <span class="water-ring-unit">ml</span>
+                  </div>
+                </div>
+                <div class="water-tracker-right">
+                  <p class="water-tracker-progress-text" id="waterProgressText">0 / 2500 ml · 0%</p>
+                  <div class="water-quick-adds">
+                    <button class="water-add-btn" onclick="addWater(150)">+150</button>
+                    <button class="water-add-btn" onclick="addWater(250)">+250</button>
+                    <button class="water-add-btn" onclick="addWater(500)">+500</button>
+                    <button class="water-add-btn" onclick="addWater(750)">+750</button>
+                  </div>
+                  <div class="water-custom-row">
+                    <input type="number" id="waterCustomInput" class="water-custom-input"
+                      placeholder="Custom ml" min="1" max="2000" />
+                    <button class="water-custom-add-btn" onclick="addWaterCustom()">Add</button>
+                  </div>
+                  <button class="water-reset-link" onclick="resetWater()">Reset today</button>
+                </div>
+              </div>
+              <div class="water-target-row" id="waterTargetRow">
+                <input type="number" id="waterTargetInput" class="water-target-input"
+                  placeholder="Daily target ml" min="500" max="9000" />
+                <button class="water-target-save-btn" onclick="setWaterTarget()">Save</button>
+              </div>
+            </div>
 
             <details class="macro-trends-accordion">
               <summary>📈 Weekly trends</summary>
@@ -1206,7 +1323,31 @@
           <div id="gamificationEventsFeed" class="gamification-events-feed"></div>
         </div>
       </aside>
-      <button onclick="exportCSV()">Export CSV</button>
+      <!-- Export Section -->
+      <div class="export-section">
+        <p class="export-section-title">📤 Export Your Data</p>
+        <p class="export-section-sub">Download your data as CSV files or a full JSON backup.</p>
+        <div class="export-btn-grid">
+          <button class="export-btn" onclick="exportWorkoutsCSV()">
+            <span class="export-btn-icon">🏋️</span>Workout Log
+          </button>
+          <button class="export-btn" onclick="exportWeightCSV()">
+            <span class="export-btn-icon">⚖️</span>Weight Log
+          </button>
+          <button class="export-btn" onclick="exportMeasurementsCSV()">
+            <span class="export-btn-icon">📏</span>Measurements
+          </button>
+          <button class="export-btn" onclick="exportReadinessCSV()">
+            <span class="export-btn-icon">😴</span>Readiness Log
+          </button>
+          <button class="export-btn primary" onclick="exportAllJSON()" style="grid-column:1/-1;">
+            <span class="export-btn-icon">💾</span>Full Backup (JSON)
+          </button>
+          <button class="export-btn primary" onclick="generateProgressReport()" style="grid-column:1/-1;background:var(--primary,#5fa87e);">
+            <span class="export-btn-icon">📊</span>Generate Progress Report (PDF)
+          </button>
+        </div>
+      </div>
       <div id="dashboardPRSummary" class="panel"></div>
     </div>
   </div>
@@ -11388,5 +11529,49 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/workout-archiver.js"></script>
   <script src="src/js/ui-declutter.js"></script>
+  <script src="src/js/pr-tracker.js"></script>
+  <script src="src/js/workout-intelligence.js"></script>
+  <script src="src/js/body-measurements.js"></script>
+  <script src="src/js/readiness-checkin.js"></script>
+  <script src="src/js/data-export.js"></script>
+  <script src="src/js/food-database.js"></script>
+  <script src="src/js/weekly-summary.js"></script>
+  <script src="src/js/challenges.js"></script>
+  <script src="src/js/client-checkins.js"></script>
+  <script src="src/js/progress-report.js"></script>
+  <script>
+    // Render PR board whenever the Streaks sub-tab becomes active
+    document.addEventListener('DOMContentLoaded', function() {
+      var logNav = document.getElementById('logSubtabNav');
+      if (logNav) {
+        logNav.addEventListener('click', function(e) {
+          var btn = e.target.closest('[data-log-subtab]');
+          if (btn && btn.dataset.logSubtab === 'streaks') {
+            setTimeout(function() {
+              if (typeof window.renderPRBoard === 'function') window.renderPRBoard('prBoard');
+            }, 80);
+          }
+        });
+      }
+    });
+  </script>
+  <script>
+    // ── Service Worker registration ──────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').then(function (reg) {
+          console.log('[SW] Registered:', reg.scope);
+          // Listen for SYNC_READY messages from the SW
+          navigator.serviceWorker.addEventListener('message', function (e) {
+            if (e.data && e.data.type === 'SYNC_READY') {
+              console.log('[SW] Back online — flushing offline queue.');
+            }
+          });
+        }).catch(function (err) {
+          console.warn('[SW] Registration failed:', err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
