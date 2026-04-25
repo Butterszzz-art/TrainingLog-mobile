@@ -1,0 +1,20 @@
+{
+  "name": "Pocket Coach",
+  "short_name": "PocketCoach",
+  "description": "Your personal fitness training log and coach.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b130d",
+  "theme_color": "#5fa87e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["fitness", "health", "sports"],
+  "screenshots": []
+}

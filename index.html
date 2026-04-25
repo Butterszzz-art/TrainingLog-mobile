@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="css/coaching.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
+  <link rel="manifest" href="/manifest.json">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
@@ -182,6 +183,8 @@
   <div id="homeTab" class="tab-content">
     <!-- Daily readiness card — populated by readiness-checkin.js -->
     <div id="readinessHomeCard"></div>
+    <!-- Weekly summary card — populated by weekly-summary.js -->
+    <div id="weeklySummaryCard"></div>
     <!-- Notification permission banner — shown if permission not yet granted -->
     <div id="notifPermBanner" class="notif-banner" style="display:none;">
       <span class="notif-banner-icon">🔔</span>
@@ -1339,6 +1342,9 @@
           </button>
           <button class="export-btn primary" onclick="exportAllJSON()" style="grid-column:1/-1;">
             <span class="export-btn-icon">💾</span>Full Backup (JSON)
+          </button>
+          <button class="export-btn primary" onclick="generateProgressReport()" style="grid-column:1/-1;background:var(--primary,#5fa87e);">
+            <span class="export-btn-icon">📊</span>Generate Progress Report (PDF)
           </button>
         </div>
       </div>
@@ -11528,6 +11534,11 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/body-measurements.js"></script>
   <script src="src/js/readiness-checkin.js"></script>
   <script src="src/js/data-export.js"></script>
+  <script src="src/js/food-database.js"></script>
+  <script src="src/js/weekly-summary.js"></script>
+  <script src="src/js/challenges.js"></script>
+  <script src="src/js/client-checkins.js"></script>
+  <script src="src/js/progress-report.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
     document.addEventListener('DOMContentLoaded', function() {
@@ -11543,6 +11554,24 @@ window.renderMeetPrep = renderMeetPrep;
         });
       }
     });
+  </script>
+  <script>
+    // ── Service Worker registration ──────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').then(function (reg) {
+          console.log('[SW] Registered:', reg.scope);
+          // Listen for SYNC_READY messages from the SW
+          navigator.serviceWorker.addEventListener('message', function (e) {
+            if (e.data && e.data.type === 'SYNC_READY') {
+              console.log('[SW] Back online — flushing offline queue.');
+            }
+          });
+        }).catch(function (err) {
+          console.warn('[SW] Registration failed:', err);
+        });
+      });
+    }
   </script>
 </body>
 </html>
