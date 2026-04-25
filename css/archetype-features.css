@@ -1,0 +1,439 @@
+/* =============================================================
+   ARCHETYPE FEATURE STYLES
+   Macro rings, progress photo grid, WOD interval timer,
+   powerlifting attempt sheet, and step-tracking widget.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Macro progress rings ───────────────────────────────────── */
+
+.macro-rings-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px 0 8px;
+  flex-wrap: wrap;
+}
+
+/* Hide the raw <progress> elements; rings read their values */
+#calsBar, #proteinBar, #carbBar, #fatBar {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  height: 0;
+  overflow: hidden;
+}
+
+.macro-ring-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.macro-ring-svg {
+  transform: rotate(-90deg);
+  display: block;
+}
+
+.macro-ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+.macro-ring-fill {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Colour per macro */
+.macro-ring-cals    .macro-ring-fill { stroke: #f0a040; }
+.macro-ring-protein .macro-ring-fill { stroke: #4da8da; }
+.macro-ring-carbs   .macro-ring-fill { stroke: #6fcf97; }
+.macro-ring-fat     .macro-ring-fill { stroke: #eb5757; }
+
+.macro-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.macro-ring-value {
+  font-weight: 700;
+  color: var(--text-color);
+  line-height: 1;
+}
+
+.macro-ring-unit {
+  font-size: 0.62rem;
+  color: var(--secondary-text);
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+/* Large calorie ring */
+.macro-ring-cals .macro-ring-svg    { width: 100px; height: 100px; }
+.macro-ring-cals .macro-ring-track  { stroke-width: 9; }
+.macro-ring-cals .macro-ring-fill   { stroke-width: 9; }
+.macro-ring-cals .macro-ring-value  { font-size: 1.1rem; }
+.macro-ring-cals .macro-ring-unit   { font-size: 0.68rem; }
+
+/* Small rings for P / C / F */
+.macro-ring-sm .macro-ring-svg    { width: 70px; height: 70px; }
+.macro-ring-sm .macro-ring-track  { stroke-width: 8; }
+.macro-ring-sm .macro-ring-fill   { stroke-width: 8; }
+.macro-ring-sm .macro-ring-value  { font-size: 0.88rem; }
+
+.macro-ring-trio {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ── Progress photo upload grid ─────────────────────────────── */
+
+.photo-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.photo-upload-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.photo-upload-slot label {
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.photo-upload-preview {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  border: 2px dashed var(--border-color);
+  background: var(--surface-bg);
+  object-fit: cover;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: var(--text-muted);
+  transition: border-color 0.2s;
+}
+
+.photo-upload-preview.has-photo {
+  border-style: solid;
+  border-color: var(--primary);
+}
+
+.photo-upload-input {
+  display: none;
+}
+
+/* ── WOD Interval timer ─────────────────────────────────────── */
+
+.wod-timer-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.wod-timer-card h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary-text);
+}
+
+.wod-format-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.wod-format-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  color: var(--secondary-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  box-shadow: none;
+  margin: 0;
+  letter-spacing: 0.03em;
+}
+
+.wod-format-btn.active {
+  background: var(--primary);
+  color: var(--text-color);
+  border-color: var(--primary);
+}
+
+.wod-timer-config {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.wod-timer-config label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  font-weight: 600;
+}
+
+.wod-timer-config input {
+  width: 72px;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  margin: 0;
+  text-align: center;
+}
+
+.wod-timer-display {
+  text-align: center;
+  padding: 20px 0 12px;
+}
+
+.wod-timer-clock {
+  font-family: 'Courier New', monospace;
+  font-size: 3.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.wod-timer-phase {
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+  margin-top: 6px;
+  min-height: 1.2em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wod-timer-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.wod-timer-controls button {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin: 0;
+  box-shadow: none;
+}
+
+.wod-start-btn  { background: var(--primary); color: #fff; }
+.wod-pause-btn  { background: var(--surface-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+.wod-reset-btn  { background: transparent; color: var(--secondary-text); border: 1px solid var(--border-color); }
+
+/* ── Powerlifting: attempt selection sheet ──────────────────── */
+
+.attempt-sheet {
+  overflow-x: auto;
+}
+
+.attempt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.attempt-table th {
+  background: var(--surface-bg);
+  color: var(--secondary-text);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+}
+
+.attempt-table td {
+  border: 1px solid var(--border-color);
+  padding: 6px 8px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  vertical-align: middle;
+}
+
+.attempt-table td:first-child {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.attempt-weight-input {
+  width: 80px;
+  padding: 6px 8px;
+  margin: 0;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.attempt-status-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  box-shadow: none;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.attempt-status-btn.pending  { background: rgba(255,255,255,0.08); color: var(--secondary-text); }
+.attempt-status-btn.good     { background: rgba(68,162,113,0.2);   color: #4da87a; border: 1px solid rgba(68,162,113,0.4); }
+.attempt-status-btn.no-lift  { background: rgba(220,53,69,0.18);   color: #e05060; border: 1px solid rgba(220,53,69,0.4); }
+
+.attempt-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.attempt-total-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.attempt-total-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Weigh-in reminder alert */
+.weighin-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: rgba(240, 160, 64, 0.12);
+  border: 1px solid rgba(240, 160, 64, 0.4);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #f0c060;
+}
+
+.weighin-alert-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+/* ── Step tracking widget ───────────────────────────────────── */
+
+.step-widget {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.step-ring-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.step-ring-svg   { width: 80px; height: 80px; transform: rotate(-90deg); display: block; }
+.step-ring-track { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 9; }
+.step-ring-fill  {
+  fill: none;
+  stroke: #a78bfa;
+  stroke-width: 9;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.step-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-ring-count {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-color);
+  line-height: 1;
+}
+
+.step-ring-icon {
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.step-widget-info {
+  flex: 1;
+}
+
+.step-widget-goal {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  margin-bottom: 6px;
+}
+
+.step-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.step-count-input {
+  width: 110px;
+  padding: 8px 10px;
+  margin: 0;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.step-save-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+  box-shadow: none;
+}

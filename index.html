@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/progress.css">
   <link rel="stylesheet" href="css/training-mode.css">
   <link rel="stylesheet" href="css/powerlifting.css">
+  <link rel="stylesheet" href="css/archetype-features.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
@@ -165,70 +166,12 @@
       <span class="bn-label">CrossFit</span>
     </button>
     <!-- More button opens the secondary-tabs drawer -->
-    <button class="bn-item bn-more" id="moreNavBtn" aria-label="More" aria-expanded="false" aria-controls="moreDrawer">
+    <button class="bn-item bn-more" id="moreNavBtn" onclick="openMoreDrawer()" aria-label="More" aria-expanded="false" aria-controls="moreDrawer">
       <span class="bn-icon">⋯</span>
       <span class="bn-label">More</span>
     </button>
   </nav>
 
-  <!-- More drawer: secondary tabs accessible via the More button -->
-  <div id="moreDrawer" class="more-drawer" role="dialog" aria-modal="true" aria-label="More options" hidden>
-    <div class="more-drawer-scrim" id="moreDrawerScrim"></div>
-    <div class="more-drawer-panel">
-      <div class="more-drawer-handle"></div>
-      <div class="more-drawer-grid">
-        <button class="more-drawer-item" data-tab="macroTab">
-          <span class="more-drawer-icon">🍽️</span>
-          <span>Macros</span>
-        </button>
-        <button class="more-drawer-item" data-tab="checkInTab">
-          <span class="more-drawer-icon">🧾</span>
-          <span>Check-In</span>
-        </button>
-        <button class="more-drawer-item" data-tab="weightTab">
-          <span class="more-drawer-icon">⚖️</span>
-          <span>Weight</span>
-        </button>
-        <button class="more-drawer-item" data-tab="cardioTab">
-          <span class="more-drawer-icon">🏃</span>
-          <span>Cardio</span>
-        </button>
-        <button class="more-drawer-item" data-tab="communityTab">
-          <span class="more-drawer-icon">👥</span>
-          <span>Community</span>
-        </button>
-        <button class="more-drawer-item" data-tab="leaderboardTab">
-          <span class="more-drawer-icon">🏅</span>
-          <span>Leaderboard</span>
-        </button>
-        <button class="more-drawer-item" data-tab="logHistoryTab">
-          <span class="more-drawer-icon">📜</span>
-          <span>History</span>
-        </button>
-        <button class="more-drawer-item coach-only" data-tab="coachingTab">
-          <span class="more-drawer-icon">🧭</span>
-          <span>Coach</span>
-        </button>
-        <button class="more-drawer-item" data-tab="settingsTab">
-          <span class="more-drawer-icon">⚙️</span>
-          <span>Settings</span>
-        </button>
-        <button class="more-drawer-item more-drawer-logout" id="moreDrawerLogoutBtn">
-          <span class="more-drawer-icon">🚪</span>
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Workout focus bar: replaces the nav during an active workout -->
-  <div id="workoutFocusBar" aria-live="polite">
-    <div>
-      <div class="wfb-label">Workout in progress</div>
-      <div class="wfb-timer" id="wfbElapsed">00:00:00</div>
-    </div>
-    <button class="wfb-end-btn" id="wfbEndBtn">End Workout</button>
-  </div>
 
   <div id="appContainer" class="main-content">
 <div id="progressReminder"></div>
@@ -444,9 +387,28 @@
         <button type="button" onclick="exportCheckInSummary('json')">Export Summary JSON</button>
         <button type="button" onclick="exportCheckInSummary('txt')">Export Summary TXT</button>
       </section>
-      <input type="text" id="checkInFrontPhotoInput" placeholder="Front photo placeholder URL/path">
-      <input type="text" id="checkInSidePhotoInput" placeholder="Side photo placeholder URL/path">
-      <input type="text" id="checkInBackPhotoInput" placeholder="Back photo placeholder URL/path">
+      <!-- Progress photo upload grid -->
+      <div class="photo-upload-grid">
+        <div class="photo-upload-slot">
+          <label>Front</label>
+          <div class="photo-upload-preview" id="photoSlot_front" onclick="document.getElementById('photoFile_front').click()">📷</div>
+          <input type="file" class="photo-upload-input" id="photoFile_front" accept="image/*">
+        </div>
+        <div class="photo-upload-slot">
+          <label>Side</label>
+          <div class="photo-upload-preview" id="photoSlot_side" onclick="document.getElementById('photoFile_side').click()">📷</div>
+          <input type="file" class="photo-upload-input" id="photoFile_side" accept="image/*">
+        </div>
+        <div class="photo-upload-slot">
+          <label>Back</label>
+          <div class="photo-upload-preview" id="photoSlot_back" onclick="document.getElementById('photoFile_back').click()">📷</div>
+          <input type="file" class="photo-upload-input" id="photoFile_back" accept="image/*">
+        </div>
+      </div>
+      <!-- Hidden legacy inputs kept for saveWeeklyCheckIn() compatibility -->
+      <input type="text" id="checkInFrontPhotoInput" style="display:none">
+      <input type="text" id="checkInSidePhotoInput" style="display:none">
+      <input type="text" id="checkInBackPhotoInput" style="display:none">
       <button onclick="saveWeeklyCheckIn('athlete')">Save Athlete Check-In</button>
       <button type="button" onclick="saveWeeklyCheckIn('coach')">Save Coach Review</button>
 
@@ -469,6 +431,32 @@
   <h3 style="margin-top:20px;">Exercises</h3>
   <div id="cfExercisesContainer"></div>
   <button onclick="addCrossfitExercise()">➕ Add Exercise</button>
+
+  <!-- WOD Interval Timer -->
+  <div class="wod-timer-card athlete-only">
+    <h3>Interval Timer</h3>
+    <div class="wod-format-tabs">
+      <button class="wod-format-btn active" data-wod-format="amrap">AMRAP</button>
+      <button class="wod-format-btn" data-wod-format="emom">EMOM</button>
+      <button class="wod-format-btn" data-wod-format="tabata">TABATA</button>
+      <button class="wod-format-btn" data-wod-format="fortime">For Time</button>
+    </div>
+    <div class="wod-timer-config">
+      <label id="wodConfigDuration">Duration (min)<input type="number" id="wodDuration" value="20" min="1" max="60"></label>
+      <label id="wodConfigRounds" style="display:none">Rounds<input type="number" id="wodRounds" value="10" min="1" max="60"></label>
+      <label id="wodConfigWork" style="display:none">Work (sec)<input type="number" id="wodWork" value="20" min="5" max="300"></label>
+      <label id="wodConfigRest" style="display:none">Rest (sec)<input type="number" id="wodRest" value="10" min="5" max="300"></label>
+    </div>
+    <div class="wod-timer-display">
+      <div class="wod-timer-clock" id="wodClock">00:00</div>
+      <div class="wod-timer-phase" id="wodPhase">Ready</div>
+    </div>
+    <div class="wod-timer-controls">
+      <button class="wod-start-btn" id="wodStartBtn">Start</button>
+      <button class="wod-pause-btn" id="wodPauseBtn" style="display:none">Pause</button>
+      <button class="wod-reset-btn" id="wodResetBtn">Reset</button>
+    </div>
+  </div>
 
   <button style="margin-top:20px;" onclick="saveCrossfitWorkout()">Save CrossFit Workout</button>
 
@@ -494,6 +482,7 @@
       <button class="pl-subtab active" data-pl-subtab="plates">🏋️ Plate Calc</button>
       <button class="pl-subtab" data-pl-subtab="oneRM">📈 1RM Tracker</button>
       <button class="pl-subtab" data-pl-subtab="meet">🗓️ Meet Prep</button>
+      <button class="pl-subtab" data-pl-subtab="meetday">🎯 Meet Day</button>
     </div>
 
     <!-- ── PLATE CALCULATOR ── -->
@@ -578,6 +567,63 @@
 
       <canvas id="oneRMChart" height="220" style="margin-top:12px;max-width:100%;"></canvas>
       <div id="oneRMHistory" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- ── MEET DAY ── -->
+    <div id="plSubMeetday" class="pl-subview">
+      <h3 style="margin-top:0;">Meet Day — Attempt Selection</h3>
+
+      <div class="weighin-alert" id="weighInAlert">
+        <span class="weighin-alert-icon">⚖️</span>
+        <span id="weighInAlertText">Loading weigh-in info…</span>
+      </div>
+
+      <div class="attempt-sheet">
+        <table class="attempt-table" id="attemptSheetTable">
+          <thead>
+            <tr>
+              <th>Lift</th>
+              <th>Opener</th>
+              <th>2nd</th>
+              <th>3rd</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Squat</td>
+              <td><input class="attempt-weight-input" id="attempt_squat_opener" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_squat_opener">— Pending</button></td>
+              <td><input class="attempt-weight-input" id="attempt_squat_second" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_squat_second">— Pending</button></td>
+              <td><input class="attempt-weight-input" id="attempt_squat_third" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_squat_third">— Pending</button></td>
+            </tr>
+            <tr>
+              <td>Bench</td>
+              <td><input class="attempt-weight-input" id="attempt_bench_opener" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_bench_opener">— Pending</button></td>
+              <td><input class="attempt-weight-input" id="attempt_bench_second" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_bench_second">— Pending</button></td>
+              <td><input class="attempt-weight-input" id="attempt_bench_third" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_bench_third">— Pending</button></td>
+            </tr>
+            <tr>
+              <td>Deadlift</td>
+              <td><input class="attempt-weight-input" id="attempt_deadlift_opener" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_deadlift_opener">— Pending</button></td>
+              <td><input class="attempt-weight-input" id="attempt_deadlift_second" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_deadlift_second">— Pending</button></td>
+              <td><input class="attempt-weight-input" id="attempt_deadlift_third" type="number" step="2.5" placeholder="—">
+                  <button class="attempt-status-btn pending" id="status_deadlift_third">— Pending</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="attempt-total-row">
+        <span class="attempt-total-label">Total</span>
+        <span class="attempt-total-value" id="attemptTotal">— kg</span>
+      </div>
     </div>
 
     <!-- ── MEET PREP ── -->
@@ -793,6 +839,56 @@
               </div>
               <p id="assignedNutritionPlanSummary" style="margin:6px 0 0 0;font-size:0.9rem;color:#30445d;"></p>
             </div>
+            <!-- Macro ring visualisations -->
+            <div class="macro-rings-row">
+              <div class="macro-ring-wrap macro-ring-cals">
+                <svg class="macro-ring-svg" viewBox="0 0 100 100">
+                  <circle class="macro-ring-track" cx="50" cy="50" r="44"/>
+                  <circle class="macro-ring-fill" id="calsRingFill" cx="50" cy="50" r="44"
+                    stroke-dasharray="276.46" stroke-dashoffset="276.46"/>
+                </svg>
+                <div class="macro-ring-inner">
+                  <span class="macro-ring-value" id="calsRingValue">0</span>
+                  <span class="macro-ring-unit">kcal</span>
+                </div>
+              </div>
+              <div class="macro-ring-trio">
+                <div class="macro-ring-wrap macro-ring-protein macro-ring-sm">
+                  <svg class="macro-ring-svg" viewBox="0 0 70 70">
+                    <circle class="macro-ring-track" cx="35" cy="35" r="29"/>
+                    <circle class="macro-ring-fill" id="proteinRingFill" cx="35" cy="35" r="29"
+                      stroke-dasharray="182.21" stroke-dashoffset="182.21"/>
+                  </svg>
+                  <div class="macro-ring-inner">
+                    <span class="macro-ring-value" id="proteinRingValue">0</span>
+                    <span class="macro-ring-unit">P</span>
+                  </div>
+                </div>
+                <div class="macro-ring-wrap macro-ring-carbs macro-ring-sm">
+                  <svg class="macro-ring-svg" viewBox="0 0 70 70">
+                    <circle class="macro-ring-track" cx="35" cy="35" r="29"/>
+                    <circle class="macro-ring-fill" id="carbsRingFill" cx="35" cy="35" r="29"
+                      stroke-dasharray="182.21" stroke-dashoffset="182.21"/>
+                  </svg>
+                  <div class="macro-ring-inner">
+                    <span class="macro-ring-value" id="carbsRingValue">0</span>
+                    <span class="macro-ring-unit">C</span>
+                  </div>
+                </div>
+                <div class="macro-ring-wrap macro-ring-fat macro-ring-sm">
+                  <svg class="macro-ring-svg" viewBox="0 0 70 70">
+                    <circle class="macro-ring-track" cx="35" cy="35" r="29"/>
+                    <circle class="macro-ring-fill" id="fatRingFill" cx="35" cy="35" r="29"
+                      stroke-dasharray="182.21" stroke-dashoffset="182.21"/>
+                  </svg>
+                  <div class="macro-ring-inner">
+                    <span class="macro-ring-value" id="fatRingValue">0</span>
+                    <span class="macro-ring-unit">F</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <p style="font-size:1.1rem;">Energy: <span id="macroCalsProgress">0</span> / <span id="macroCalsTarget">0</span> kcal (<span id="macroCalsNet">0</span> net)</p>
             <progress id="calsBar" value="0" max="100" style="width:100%;height:20px;margin-bottom:6px;"></progress>
             <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="subtractMacro('cal')">–</button><button onclick="addMacro('cal')">+</button></div>
@@ -1088,6 +1184,67 @@
   </div> <!-- #settingsTab -->
   </div> <!-- #appContainer -->
 </div> <!-- #pocketFitContainer -->
+
+<!-- More drawer — direct <body> child so position:fixed isn't clipped by
+     the ancestor's transform:scale() stacking context. -->
+<div id="moreDrawer" class="more-drawer" role="dialog" aria-modal="true" aria-label="More options" hidden>
+  <div class="more-drawer-scrim" id="moreDrawerScrim"></div>
+  <div class="more-drawer-panel">
+    <div class="more-drawer-handle"></div>
+    <div class="more-drawer-grid">
+      <button class="more-drawer-item" data-tab="macroTab">
+        <span class="more-drawer-icon">🍽️</span>
+        <span>Macros</span>
+      </button>
+      <button class="more-drawer-item" data-tab="checkInTab">
+        <span class="more-drawer-icon">🧾</span>
+        <span>Check-In</span>
+      </button>
+      <button class="more-drawer-item" data-tab="weightTab">
+        <span class="more-drawer-icon">⚖️</span>
+        <span>Weight</span>
+      </button>
+      <button class="more-drawer-item" data-tab="cardioTab">
+        <span class="more-drawer-icon">🏃</span>
+        <span>Cardio</span>
+      </button>
+      <button class="more-drawer-item" data-tab="communityTab">
+        <span class="more-drawer-icon">👥</span>
+        <span>Community</span>
+      </button>
+      <button class="more-drawer-item" data-tab="leaderboardTab">
+        <span class="more-drawer-icon">🏅</span>
+        <span>Leaderboard</span>
+      </button>
+      <button class="more-drawer-item" data-tab="logHistoryTab">
+        <span class="more-drawer-icon">📜</span>
+        <span>History</span>
+      </button>
+      <button class="more-drawer-item coach-only" data-tab="coachingTab">
+        <span class="more-drawer-icon">🧭</span>
+        <span>Coach</span>
+      </button>
+      <button class="more-drawer-item" data-tab="settingsTab">
+        <span class="more-drawer-icon">⚙️</span>
+        <span>Settings</span>
+      </button>
+      <button class="more-drawer-item more-drawer-logout" id="moreDrawerLogoutBtn">
+        <span class="more-drawer-icon">🚪</span>
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Workout focus bar — direct <body> child for the same reason. -->
+<div id="workoutFocusBar" aria-live="polite">
+  <div>
+    <div class="wfb-label">Workout in progress</div>
+    <div class="wfb-timer" id="wfbElapsed">00:00:00</div>
+  </div>
+  <button class="wfb-end-btn" id="wfbEndBtn">End Workout</button>
+</div>
+
 <div id="pocketLifestyleContainer" class="section" style="display:none;">
   <h2>PocketLifestyle</h2>
   <nav class="lifestyle-nav">
@@ -10463,7 +10620,9 @@ function openMoreDrawer() {
   const btn = document.getElementById('moreNavBtn');
   if (!drawer) return;
   drawer.removeAttribute('hidden');
-  requestAnimationFrame(() => drawer.classList.add('open'));
+  // Double-RAF ensures the browser computes the initial style (translateY(100%))
+  // before adding .open, so the CSS transition actually animates.
+  requestAnimationFrame(() => requestAnimationFrame(() => drawer.classList.add('open')));
   if (btn) btn.setAttribute('aria-expanded', 'true');
   document.addEventListener('keydown', _onDrawerKeydown);
 }
@@ -11103,5 +11262,6 @@ window.renderMeetPrep = renderMeetPrep;
       });
     </script>
 
+  <script src="src/js/archetype-features.js"></script>
 </body>
 </html>
