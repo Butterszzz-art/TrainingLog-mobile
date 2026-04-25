@@ -259,11 +259,17 @@
   }
 
   function syncPhaseStateToBackend(userId, state) {
-    const payload = sanitizeState(state);
-    const resolvedUser = resolveUserId(userId);
+    // localStorage is the source of truth. The network sync is only attempted
+    // when a real Express backend is running (localhost / custom domain).
+    // On GitHub Pages (static host) there is no API, so we skip silently.
     try {
-      // Future backend endpoint: PUT /api/bodybuilding/phase-state/:userId
-      // Keep local storage as the source of truth even when this sync fails.
+      const host = (typeof location !== 'undefined' && location.hostname) || '';
+      const isStaticHost = host.includes('github.io') || host.includes('netlify.app') ||
+                           host.includes('vercel.app') || host === '' || host === 'localhost' && !_hasApiBackend();
+      if (isStaticHost) return false;
+
+      const payload = sanitizeState(state);
+      const resolvedUser = resolveUserId(userId);
       if (typeof globalScope.fetch !== 'function') return false;
       return globalScope.fetch(`/api/bodybuilding/phase-state/${encodeURIComponent(resolvedUser)}`, {
         method: 'PUT',
@@ -273,6 +279,15 @@
     } catch (_error) {
       return false;
     }
+  }
+
+  // Lightweight check: has a /api route responded recently?
+  let _apiBackendConfirmed = false;
+  function _hasApiBackend() { return _apiBackendConfirmed; }
+  if (typeof globalScope.fetch === 'function') {
+    globalScope.fetch('/api/ping', { method: 'HEAD' })
+      .then(r => { if (r.ok) _apiBackendConfirmed = true; })
+      .catch(() => {});
   }
 
   function getDaysUntilShow(showDate) {
