@@ -1242,43 +1242,53 @@
   <div class="more-drawer-panel">
     <div class="more-drawer-handle"></div>
     <div class="more-drawer-grid">
-      <button class="more-drawer-item" data-tab="macroTab">
+      <button class="more-drawer-item" data-tab="macroTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('macroTab'), 220)">
         <span class="more-drawer-icon">🍽️</span>
         <span>Macros</span>
       </button>
-      <button class="more-drawer-item" data-tab="checkInTab">
+      <button class="more-drawer-item" data-tab="checkInTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('checkInTab'), 220)">
         <span class="more-drawer-icon">🧾</span>
         <span>Check-In</span>
       </button>
-      <button class="more-drawer-item" data-tab="weightTab">
+      <button class="more-drawer-item" data-tab="weightTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('weightTab'), 220)">
         <span class="more-drawer-icon">⚖️</span>
         <span>Weight</span>
       </button>
-      <button class="more-drawer-item" data-tab="cardioTab">
+      <button class="more-drawer-item" data-tab="cardioTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('cardioTab'), 220)">
         <span class="more-drawer-icon">🏃</span>
         <span>Cardio</span>
       </button>
-      <button class="more-drawer-item" data-tab="communityTab">
+      <button class="more-drawer-item" data-tab="communityTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('communityTab'), 220)">
         <span class="more-drawer-icon">👥</span>
         <span>Community</span>
       </button>
-      <button class="more-drawer-item" data-tab="leaderboardTab">
+      <button class="more-drawer-item" data-tab="leaderboardTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('leaderboardTab'), 220)">
         <span class="more-drawer-icon">🏅</span>
         <span>Leaderboard</span>
       </button>
-      <button class="more-drawer-item" data-tab="logHistoryTab">
+      <button class="more-drawer-item" data-tab="logHistoryTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('logHistoryTab'), 220)">
         <span class="more-drawer-icon">📜</span>
         <span>History</span>
       </button>
-      <button class="more-drawer-item coach-only" data-tab="coachingTab">
+      <button class="more-drawer-item coach-only" data-tab="coachingTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('coachingTab'), 220)">
         <span class="more-drawer-icon">🧭</span>
         <span>Coach</span>
       </button>
-      <button class="more-drawer-item" data-tab="settingsTab">
+      <button class="more-drawer-item" data-tab="settingsTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('settingsTab'), 220)">
         <span class="more-drawer-icon">⚙️</span>
         <span>Settings</span>
       </button>
-      <button class="more-drawer-item more-drawer-logout" id="moreDrawerLogoutBtn">
+      <button class="more-drawer-item more-drawer-logout" id="moreDrawerLogoutBtn"
+              onclick="closeMoreDrawer(); setTimeout(()=>logout(), 220)">
         <span class="more-drawer-icon">🚪</span>
         <span>Logout</span>
       </button>
