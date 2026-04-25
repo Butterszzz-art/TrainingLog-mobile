@@ -1,0 +1,524 @@
+/* =============================================================
+   HIGH-PRIORITY FEATURES
+   PR Tracker · Progressive Overload Hints · History Search · Water Tracker
+   ============================================================= */
+
+/* ── PR Celebration Modal ────────────────────────────────────── */
+
+.pr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 3000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 90px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.pr-modal-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.pr-modal {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--primary, #5fa87e);
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  width: min(360px, 90vw);
+  text-align: center;
+  transform: translateY(20px);
+  transition: transform 0.3s;
+  box-shadow: 0 0 40px rgba(95,168,126,0.25);
+}
+
+.pr-modal-overlay.visible .pr-modal {
+  transform: translateY(0);
+}
+
+.pr-modal-trophy {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 6px;
+  animation: pr-bounce 0.6s ease;
+}
+
+@keyframes pr-bounce {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.pr-modal-headline {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary, #5fa87e);
+  margin: 0 0 14px;
+}
+
+.pr-modal-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.pr-modal-item {
+  background: rgba(95,168,126,0.08);
+  border: 1px solid rgba(95,168,126,0.2);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.pr-modal-item-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text, #e8f5e9);
+  margin-bottom: 3px;
+}
+
+.pr-modal-item-detail {
+  font-size: 0.8rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+.pr-modal-item-type {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--primary, #5fa87e);
+  color: #0b130d;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.pr-modal-close {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: var(--primary, #5fa87e);
+  color: #0b130d;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+}
+
+/* ── Progressive Overload Hint ───────────────────────────────── */
+
+.overload-hint {
+  margin: 6px 0 4px;
+  min-height: 0;
+  transition: min-height 0.2s;
+}
+
+.overload-hint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(95,168,126,0.1);
+  border: 1px solid rgba(95,168,126,0.25);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  color: var(--primary, #5fa87e);
+  font-weight: 600;
+  animation: hint-fade-in 0.25s ease;
+}
+
+@keyframes hint-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.overload-hint-icon { font-size: 0.9rem; }
+
+.overload-hint-suggest {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted, #7a8f7d);
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+/* ── Workout History Search ───────────────────────────────────── */
+
+.history-search-wrap {
+  padding: 10px;
+}
+
+.history-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 10px;
+  color: var(--text, #e8f5e9);
+  font-size: 0.88rem;
+  font-family: 'Poppins', sans-serif;
+  margin-bottom: 10px;
+}
+
+.history-search-input:focus {
+  outline: none;
+  border-color: var(--primary, #5fa87e);
+}
+
+.history-search-input::placeholder { color: var(--text-muted, #7a8f7d); }
+
+.history-results { display: flex; flex-direction: column; gap: 8px; }
+
+.history-result-card {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.history-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.history-result-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text, #e8f5e9);
+}
+
+.history-result-date {
+  font-size: 0.75rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+.history-result-sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.history-set-chip {
+  background: rgba(95,168,126,0.08);
+  border: 1px solid rgba(95,168,126,0.15);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.76rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+.history-result-best {
+  font-size: 0.78rem;
+  color: var(--primary, #5fa87e);
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 30px 14px;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.85rem;
+}
+
+/* ── PR Board ────────────────────────────────────────────────── */
+
+.pr-board-wrap {
+  margin-top: 16px;
+  padding: 0 2px;
+}
+
+.pr-board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pr-board-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+  margin: 0;
+}
+
+.pr-board-count {
+  font-size: 0.78rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+.pr-board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pr-board-card {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pr-board-medal {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.pr-board-info { flex: 1; min-width: 0; }
+
+.pr-board-exercise {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text, #e8f5e9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pr-board-stats {
+  font-size: 0.75rem;
+  color: var(--text-muted, #7a8f7d);
+  margin-top: 2px;
+}
+
+.pr-board-rm {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--primary, #5fa87e);
+  white-space: nowrap;
+}
+
+.pr-board-rm-label {
+  font-size: 0.66rem;
+  color: var(--text-muted, #7a8f7d);
+  display: block;
+  text-align: right;
+}
+
+.pr-board-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.84rem;
+}
+
+/* ── Water Tracker ───────────────────────────────────────────── */
+
+.water-tracker-widget {
+  margin: 14px 0 6px;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.water-tracker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.water-tracker-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+  margin: 0;
+}
+
+.water-tracker-target-btn {
+  font-size: 0.72rem;
+  color: var(--text-muted, #7a8f7d);
+  background: transparent;
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 20px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+}
+
+.water-tracker-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Ring */
+.water-ring-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 76px;
+  height: 76px;
+}
+
+.water-ring-svg {
+  width: 76px;
+  height: 76px;
+  transform: rotate(-90deg);
+}
+
+.water-ring-track {
+  fill: none;
+  stroke: var(--border, #2a3a2e);
+  stroke-width: 6;
+}
+
+.water-ring-fill {
+  fill: none;
+  stroke: #4da8da;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.water-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.water-ring-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #4da8da;
+}
+
+.water-ring-unit {
+  font-size: 0.6rem;
+  color: var(--text-muted, #7a8f7d);
+  margin-top: 2px;
+}
+
+/* Right side */
+.water-tracker-right { flex: 1; min-width: 0; }
+
+.water-tracker-progress-text {
+  font-size: 0.78rem;
+  color: var(--text-muted, #7a8f7d);
+  margin: 0 0 8px;
+}
+
+.water-tracker-progress-text strong {
+  color: #4da8da;
+}
+
+.water-quick-adds {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 7px;
+}
+
+.water-add-btn {
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid #4da8da;
+  background: transparent;
+  color: #4da8da;
+  font-size: 0.74rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.water-add-btn:hover {
+  background: #4da8da;
+  color: #0b130d;
+}
+
+.water-custom-row {
+  display: flex;
+  gap: 6px;
+}
+
+.water-custom-input {
+  flex: 1;
+  padding: 5px 8px;
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 7px;
+  color: var(--text, #e8f5e9);
+  font-size: 0.78rem;
+  font-family: 'Poppins', sans-serif;
+  min-width: 0;
+}
+
+.water-custom-input:focus { outline: none; border-color: #4da8da; }
+
+.water-custom-add-btn {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: none;
+  background: #4da8da;
+  color: #0b130d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+}
+
+.water-reset-link {
+  font-size: 0.7rem;
+  color: var(--text-muted, #7a8f7d);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0 0;
+  font-family: 'Poppins', sans-serif;
+  text-decoration: underline;
+  display: block;
+  margin-top: 4px;
+}
+
+/* Target edit row (shown/hidden) */
+.water-target-row {
+  display: none;
+  gap: 6px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.water-target-row.visible { display: flex; }
+
+.water-target-input {
+  flex: 1;
+  padding: 6px 8px;
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 7px;
+  color: var(--text, #e8f5e9);
+  font-size: 0.82rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.water-target-input:focus { outline: none; border-color: #4da8da; }
+
+.water-target-save-btn {
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: none;
+  background: var(--primary, #5fa87e);
+  color: #0b130d;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+}

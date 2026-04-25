@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="css/archetype-features.css">
   <link rel="stylesheet" href="css/coaching.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
+  <link rel="stylesheet" href="css/features.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
@@ -189,6 +190,7 @@
     <nav class="log-subtabs" id="logSubtabNav">
       <button class="log-subtab active" data-log-subtab="log">📝 Log</button>
       <button class="log-subtab" data-log-subtab="rest">⏱️ Rest</button>
+      <button class="log-subtab" data-log-subtab="history">🔍 History</button>
       <button class="log-subtab" data-log-subtab="templates">📋 Templates</button>
       <button class="log-subtab" data-log-subtab="streaks">🏆 Streaks</button>
     </nav>
@@ -209,6 +211,8 @@
             <input type="text" id="exercise" placeholder="Exercise" list="exerciseSuggestions" oninput="updateAddButtonState()" />
             <datalist id="exerciseSuggestions"></datalist>
             <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
+            <!-- Progressive overload hint — populated by workout-intelligence.js -->
+            <div id="overloadHint" class="overload-hint" style="grid-column:1/-1;"></div>
 
             <!-- Unit selector -->
             <select id="weightUnit">
@@ -243,6 +247,16 @@
         </div>
       </div>
     </div><!-- /logSub_log -->
+
+    <!-- ══ Sub-view: History Search ════════════════════════════════ -->
+    <div id="logSub_history" class="log-subview">
+      <div class="history-search-wrap">
+        <input type="text" id="historySearchInput" class="history-search-input"
+          placeholder="🔍 Search any exercise (e.g. Bench Press)…"
+          oninput="renderHistoryResults(this.value)" />
+        <div id="historyResults"></div>
+      </div>
+    </div><!-- /logSub_history -->
 
     <!-- ══ Sub-view: Rest Timer ═══════════════════════════════════ -->
     <div id="logSub_rest" class="log-subview">
@@ -319,6 +333,9 @@
 
         <div id="gamificationCard" class="gamification-panel gamification-card-shell" style="margin-top:12px;"></div>
         <div id="gamificationLogMiniSummary" class="gamification-mini-summary" style="margin-top:10px;"></div>
+
+        <!-- PR Board — populated by pr-tracker.js -->
+        <div id="prBoard" style="margin-top:4px;"></div>
       </div>
     </div><!-- /logSub_streaks -->
 
@@ -959,6 +976,47 @@
             <p style="font-size:1rem;">Fat: <span id="macroFatProgress">0</span> / <span id="macroFatTarget">0</span> g</p>
             <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
             <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="subtractMacro('fat')">–</button><button onclick="addMacro('fat')">+</button></div>
+
+            <!-- ── Water Tracker ── -->
+            <div class="water-tracker-widget">
+              <div class="water-tracker-header">
+                <h3 class="water-tracker-title">💧 Water Intake</h3>
+                <button class="water-tracker-target-btn" onclick="toggleWaterTargetEdit()">Set target</button>
+              </div>
+              <div class="water-tracker-body">
+                <div class="water-ring-wrap">
+                  <svg class="water-ring-svg" viewBox="0 0 76 76">
+                    <circle class="water-ring-track" cx="38" cy="38" r="30"/>
+                    <circle class="water-ring-fill" id="waterRingFill" cx="38" cy="38" r="30"
+                      stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+                  </svg>
+                  <div class="water-ring-inner">
+                    <span class="water-ring-value" id="waterMlVal">0</span>
+                    <span class="water-ring-unit">ml</span>
+                  </div>
+                </div>
+                <div class="water-tracker-right">
+                  <p class="water-tracker-progress-text" id="waterProgressText">0 / 2500 ml · 0%</p>
+                  <div class="water-quick-adds">
+                    <button class="water-add-btn" onclick="addWater(150)">+150</button>
+                    <button class="water-add-btn" onclick="addWater(250)">+250</button>
+                    <button class="water-add-btn" onclick="addWater(500)">+500</button>
+                    <button class="water-add-btn" onclick="addWater(750)">+750</button>
+                  </div>
+                  <div class="water-custom-row">
+                    <input type="number" id="waterCustomInput" class="water-custom-input"
+                      placeholder="Custom ml" min="1" max="2000" />
+                    <button class="water-custom-add-btn" onclick="addWaterCustom()">Add</button>
+                  </div>
+                  <button class="water-reset-link" onclick="resetWater()">Reset today</button>
+                </div>
+              </div>
+              <div class="water-target-row" id="waterTargetRow">
+                <input type="number" id="waterTargetInput" class="water-target-input"
+                  placeholder="Daily target ml" min="500" max="9000" />
+                <button class="water-target-save-btn" onclick="setWaterTarget()">Save</button>
+              </div>
+            </div>
 
             <details class="macro-trends-accordion">
               <summary>📈 Weekly trends</summary>
@@ -11401,5 +11459,23 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/workout-archiver.js"></script>
   <script src="src/js/ui-declutter.js"></script>
+  <script src="src/js/pr-tracker.js"></script>
+  <script src="src/js/workout-intelligence.js"></script>
+  <script>
+    // Render PR board whenever the Streaks sub-tab becomes active
+    document.addEventListener('DOMContentLoaded', function() {
+      var logNav = document.getElementById('logSubtabNav');
+      if (logNav) {
+        logNav.addEventListener('click', function(e) {
+          var btn = e.target.closest('[data-log-subtab]');
+          if (btn && btn.dataset.logSubtab === 'streaks') {
+            setTimeout(function() {
+              if (typeof window.renderPRBoard === 'function') window.renderPRBoard('prBoard');
+            }, 80);
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
