@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="css/training-mode.css">
   <link rel="stylesheet" href="css/powerlifting.css">
   <link rel="stylesheet" href="css/archetype-features.css">
+  <link rel="stylesheet" href="css/coaching.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
@@ -1173,10 +1174,59 @@
 
 <div id="coachingTab" class="tab-content coach-only">
   <h2>Coach Dashboard</h2>
-  <p style="opacity:0.85; margin-bottom: 14px;">
-    Operational roster view for coach mode. Client summary cards update from backend data when available and use local demo data when relationships are not yet connected.
-  </p>
-  <div id="coachDashboardContent" class="coach-dashboard"></div>
+
+  <!-- Aggregate stats bar -->
+  <div class="coach-stats-bar" id="coachStatsBar"></div>
+
+  <!-- Sub-tab navigation -->
+  <nav class="coach-subtabs" id="coachSubtabNav" aria-label="Coach sections">
+    <button class="coach-subtab active" data-coach-subtab="roster">👥 Roster</button>
+    <button class="coach-subtab" data-coach-subtab="programs">📋 Programs</button>
+    <button class="coach-subtab" data-coach-subtab="messaging">💬 Messages</button>
+    <button class="coach-subtab" data-coach-subtab="analytics">📊 Insights</button>
+    <button class="coach-subtab" data-coach-subtab="gdpr">🔒 Privacy</button>
+  </nav>
+
+  <!-- ── Roster ── -->
+  <div id="coachSub_roster" class="coach-subview active">
+    <!-- Bulk actions toolbar (hidden until clients are selected) -->
+    <div class="coach-bulk-toolbar" id="coachBulkToolbar" hidden>
+      <span class="coach-bulk-count">0 selected</span>
+      <div class="coach-bulk-actions">
+        <button class="coach-bulk-btn" id="coachBulkAssign">📋 Assign Program</button>
+        <button class="coach-bulk-btn" id="coachBulkMacros">🍽️ Update Macros</button>
+        <button class="coach-bulk-btn" id="coachBulkCSV">📄 Export CSV</button>
+        <button class="coach-bulk-btn" id="coachBulkPDF">🖨️ Export PDF</button>
+        <button class="coach-bulk-btn danger" onclick="_bulkSelected.clear();_updateBulkToolbar();document.querySelectorAll('.coach-client-select').forEach(cb=>cb.checked=false)">✕ Clear</button>
+      </div>
+    </div>
+    <!-- Client roster rendered by existing renderCoachDashboard() -->
+    <div id="coachDashboardContent" class="coach-dashboard"></div>
+  </div>
+
+  <!-- ── Program Builder ── -->
+  <div id="coachSub_programs" class="coach-subview">
+    <!-- Rendered by renderCoachProgramBuilder() -->
+    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading program builder…</p>
+  </div>
+
+  <!-- ── Messaging ── -->
+  <div id="coachSub_messaging" class="coach-subview">
+    <!-- Rendered by renderCoachMessaging() -->
+    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading messages…</p>
+  </div>
+
+  <!-- ── Analytics ── -->
+  <div id="coachSub_analytics" class="coach-subview">
+    <!-- Rendered by renderCoachAnalytics() -->
+    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading insights…</p>
+  </div>
+
+  <!-- ── GDPR / Privacy ── -->
+  <div id="coachSub_gdpr" class="coach-subview">
+    <!-- Rendered by renderCoachGdpr() -->
+    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading privacy settings…</p>
+  </div>
 </div>
 
 <div id="settingsTab" class="tab-content">
@@ -11263,5 +11313,6 @@ window.renderMeetPrep = renderMeetPrep;
     </script>
 
   <script src="src/js/archetype-features.js"></script>
+  <script src="src/js/coaching-enhanced.js"></script>
 </body>
 </html>
