@@ -701,18 +701,31 @@
 
 <div id="programTab" class="tab-content">
   <div id="programTabContent">
-    <select id="programTemplateSelect" style="display:none;"></select>
-    <div id="programBuilderContainer" class="open">
-      <div id="programStepperContainer"></div>
 
-      <div class="pbv2-layout">
+    <!-- Top navigation: Build vs My Programs -->
+    <nav class="prog-top-nav" id="progTopNav">
+      <button class="prog-top-btn active" onclick="showProgramView('build')">🏗️ Build</button>
+      <button class="prog-top-btn" onclick="showProgramView('list')">📋 My Programs</button>
+    </nav>
+
+    <!-- Builder view (wizard lives here) -->
+    <div id="programBuilderContainer" class="open">
+      <!-- Legacy container shells kept for compatibility; new UI renders into #programBuilderV2Mount -->
+      <div id="programStepperContainer" style="display:none;"></div>
+      <div style="display:none;">
         <div id="programDaysContainer"></div>
         <div id="programStepContainer"></div>
         <div id="programSummaryContainer"></div>
+        <div id="programNavContainer"></div>
       </div>
-
-      <div id="programNavContainer"></div>
     </div>
+
+    <!-- My Programs list view -->
+    <div id="progListView" style="display:none;">
+      <div id="progListContainer"></div>
+    </div>
+
+    <select id="programTemplateSelect" style="display:none;"></select>
   </div>
   <div id="programBuilderPanel" class="panel active"><div id="programTabReactRoot"></div></div>
   <div id="programListPanel" class="panel"></div>
