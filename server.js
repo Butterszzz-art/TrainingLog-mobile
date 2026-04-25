@@ -128,6 +128,65 @@ app.get('/dailylogs', async (req, res) => {
   }
 });
 
+// ── Workout log archiver ─────────────────────────────────────
+// POST /workoutlogs/archive
+// Body: { records: [{ Username, CreatedAt, Notes, Units, SetsJson, Date }] }
+// Batches into groups of 10 (Airtable limit) and writes to the WorkoutLogs table.
+// Table name is configurable via AIRTABLE_WORKOUT_TABLE env var (default: WorkoutLogs).
+app.post('/workoutlogs/archive', async (req, res) => {
+  const airtable = getAirtableEnv();
+  if (airtable.error) return res.status(500).json({ error: airtable.error });
+
+  const tableName = process.env.AIRTABLE_WORKOUT_TABLE || 'WorkoutLogs';
+  const { records } = req.body;
+
+  if (!Array.isArray(records) || records.length === 0) {
+    return res.status(400).json({ error: 'records array is required and must not be empty' });
+  }
+
+  // Airtable only accepts 10 records per create request
+  const BATCH_SIZE = 10;
+  const batches = [];
+  for (let i = 0; i < records.length; i += BATCH_SIZE) {
+    batches.push(records.slice(i, i + BATCH_SIZE));
+  }
+
+  const archived = [];
+  const errors   = [];
+
+  for (const batch of batches) {
+    try {
+      const response = await fetch(`https://api.airtable.com/v0/${airtable.baseId}/${encodeURIComponent(tableName)}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${airtable.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          records: batch.map(r => ({ fields: r }))
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        errors.push({ status: response.status, ...data });
+      } else {
+        archived.push(...(data.records || []));
+      }
+    } catch (err) {
+      errors.push({ error: String(err) });
+    }
+  }
+
+  if (errors.length > 0 && archived.length === 0) {
+    return res.status(502).json({ error: 'All batches failed to reach Airtable', details: errors });
+  }
+
+  return res.json({
+    archived: archived.length,
+    ...(errors.length ? { partialErrors: errors } : {})
+  });
+});
+
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   if (username && password) {

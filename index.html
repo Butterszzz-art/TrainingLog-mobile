@@ -1684,6 +1684,10 @@ async function startLogin() {
       if (typeof syncLocalHistoryFromWorkouts === 'function') {
         syncLocalHistoryFromWorkouts();
       }
+      // Archive logs older than 4 weeks to Airtable (runs silently in background)
+      if (typeof window.archiveWorkoutsToAirtable === 'function') {
+        window.archiveWorkoutsToAirtable();
+      }
       const fetchedTargets = await fetchUserMacroTargets(username);
       renderMacroTargets({ useFallback: !fetchedTargets });
       renderWeights();
@@ -11324,5 +11328,6 @@ window.renderMeetPrep = renderMeetPrep;
 
   <script src="src/js/archetype-features.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
+  <script src="src/js/workout-archiver.js"></script>
 </body>
 </html>
