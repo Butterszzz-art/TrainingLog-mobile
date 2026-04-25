@@ -180,6 +180,14 @@
 <div id="progressReminder"></div>
 
   <div id="homeTab" class="tab-content">
+    <!-- Daily readiness card — populated by readiness-checkin.js -->
+    <div id="readinessHomeCard"></div>
+    <!-- Notification permission banner — shown if permission not yet granted -->
+    <div id="notifPermBanner" class="notif-banner" style="display:none;">
+      <span class="notif-banner-icon">🔔</span>
+      <span class="notif-banner-text">Enable notifications to get rest timer alerts when your phone is locked.</span>
+      <button class="notif-banner-btn" onclick="requestRestTimerNotifications()">Enable</button>
+    </div>
     <div id="homeDashboardContent" class="home-dashboard"></div>
   </div>
 
@@ -371,6 +379,41 @@
     <div id="weightChartPanel" class="panel">
       <div id="weightChartPanelContent"></div>
     </div>
+
+    <!-- ── Body Measurements ── -->
+    <details class="measurements-section" id="measurementsSection" style="margin:10px;">
+      <summary>📏 Body Measurements</summary>
+      <div class="measurements-body">
+        <div class="measurements-grid">
+          <label class="measurements-field">Neck (cm)<input type="number" id="measure_neck" step="0.1" min="20" max="60" placeholder="—"></label>
+          <label class="measurements-field">Shoulders (cm)<input type="number" id="measure_shoulders" step="0.1" min="60" max="160" placeholder="—"></label>
+          <label class="measurements-field">Chest (cm)<input type="number" id="measure_chest" step="0.1" min="50" max="160" placeholder="—"></label>
+          <label class="measurements-field">Waist (cm)<input type="number" id="measure_waist" step="0.1" min="40" max="160" placeholder="—"></label>
+          <label class="measurements-field">Hips (cm)<input type="number" id="measure_hips" step="0.1" min="50" max="160" placeholder="—"></label>
+          <label class="measurements-field">Arm (cm)<input type="number" id="measure_arm" step="0.1" min="15" max="60" placeholder="—"></label>
+          <label class="measurements-field">Thigh (cm)<input type="number" id="measure_thigh" step="0.1" min="20" max="90" placeholder="—"></label>
+        </div>
+        <div class="measurements-save-row">
+          <input type="date" id="measureDate" class="measurements-date-input">
+          <button type="button" class="measurements-save-btn" onclick="saveMeasurement()">Save</button>
+        </div>
+
+        <div class="measurements-chart-selector">
+          <button class="measurements-metric-pill active" data-metric="waist" onclick="renderMeasurementsChart('waist')">Waist</button>
+          <button class="measurements-metric-pill" data-metric="chest" onclick="renderMeasurementsChart('chest')">Chest</button>
+          <button class="measurements-metric-pill" data-metric="hips" onclick="renderMeasurementsChart('hips')">Hips</button>
+          <button class="measurements-metric-pill" data-metric="arm" onclick="renderMeasurementsChart('arm')">Arm</button>
+          <button class="measurements-metric-pill" data-metric="thigh" onclick="renderMeasurementsChart('thigh')">Thigh</button>
+          <button class="measurements-metric-pill" data-metric="neck" onclick="renderMeasurementsChart('neck')">Neck</button>
+          <button class="measurements-metric-pill" data-metric="shoulders" onclick="renderMeasurementsChart('shoulders')">Shoulders</button>
+        </div>
+        <div class="measurements-chart-wrap">
+          <canvas id="measurementsCanvas"></canvas>
+        </div>
+
+        <div id="measurementsHistory" style="margin-top:12px;"></div>
+      </div>
+    </details>
   </div>
 
   <div id="checkInTab" class="tab-content">
@@ -1277,7 +1320,28 @@
           <div id="gamificationEventsFeed" class="gamification-events-feed"></div>
         </div>
       </aside>
-      <button onclick="exportCSV()">Export CSV</button>
+      <!-- Export Section -->
+      <div class="export-section">
+        <p class="export-section-title">📤 Export Your Data</p>
+        <p class="export-section-sub">Download your data as CSV files or a full JSON backup.</p>
+        <div class="export-btn-grid">
+          <button class="export-btn" onclick="exportWorkoutsCSV()">
+            <span class="export-btn-icon">🏋️</span>Workout Log
+          </button>
+          <button class="export-btn" onclick="exportWeightCSV()">
+            <span class="export-btn-icon">⚖️</span>Weight Log
+          </button>
+          <button class="export-btn" onclick="exportMeasurementsCSV()">
+            <span class="export-btn-icon">📏</span>Measurements
+          </button>
+          <button class="export-btn" onclick="exportReadinessCSV()">
+            <span class="export-btn-icon">😴</span>Readiness Log
+          </button>
+          <button class="export-btn primary" onclick="exportAllJSON()" style="grid-column:1/-1;">
+            <span class="export-btn-icon">💾</span>Full Backup (JSON)
+          </button>
+        </div>
+      </div>
       <div id="dashboardPRSummary" class="panel"></div>
     </div>
   </div>
@@ -11461,6 +11525,9 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/ui-declutter.js"></script>
   <script src="src/js/pr-tracker.js"></script>
   <script src="src/js/workout-intelligence.js"></script>
+  <script src="src/js/body-measurements.js"></script>
+  <script src="src/js/readiness-checkin.js"></script>
+  <script src="src/js/data-export.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
     document.addEventListener('DOMContentLoaded', function() {
