@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="css/powerlifting.css">
   <link rel="stylesheet" href="css/archetype-features.css">
   <link rel="stylesheet" href="css/coaching.css">
+  <link rel="stylesheet" href="css/ui-declutter.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
@@ -183,106 +184,146 @@
 
   <div id="logTab" class="tab-content">
   <div id="logPanel" class="panel active">
-  <div id="training-calendar" class="slide-up"></div>
-  <h2>Resistance Exercise Log</h2>
 
-  <div id="workoutTimer" class="workout-timer" aria-live="polite">
-    <span class="workout-timer-label">Workout Time:</span>
-    <span id="workoutElapsed" class="workout-timer-value">00:00:00</span>
-    <button id="endWorkoutBtn" type="button" class="workout-timer-end">End Workout</button>
-  </div>
+    <!-- ── Log Sub-tab Navigation ── -->
+    <nav class="log-subtabs" id="logSubtabNav">
+      <button class="log-subtab active" data-log-subtab="log">📝 Log</button>
+      <button class="log-subtab" data-log-subtab="rest">⏱️ Rest</button>
+      <button class="log-subtab" data-log-subtab="templates">📋 Templates</button>
+      <button class="log-subtab" data-log-subtab="streaks">🏆 Streaks</button>
+    </nav>
 
-<div id="resistance-section">
-  <div id="resistance-inputs">
-  <div class="inputs-grid">
-  <input type="text" id="exercise" placeholder="Exercise" list="exerciseSuggestions" oninput="updateAddButtonState()" />
-  <datalist id="exerciseSuggestions"></datalist>
-  <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
+    <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
+    <div id="logSub_log" class="log-subview active">
+      <h2 style="padding:0 10px;">Resistance Exercise Log</h2>
 
-  <!-- Dynamically generated inputs will appear here -->
-  <div id="setInputsContainer" style="grid-column: 1 / -1;"></div>
+      <div id="workoutTimer" class="workout-timer" aria-live="polite">
+        <span class="workout-timer-label">Workout Time:</span>
+        <span id="workoutElapsed" class="workout-timer-value">00:00:00</span>
+        <button id="endWorkoutBtn" type="button" class="workout-timer-end">End Workout</button>
+      </div>
 
-  <!-- Optional goals -->
-  <input type="number" id="goal" placeholder="Target Weight Goal (kg/lbs)" />
-  <input type="number" id="repGoal" placeholder="Target Rep Goal (optional)" />
+      <div id="resistance-section">
+        <div id="resistance-inputs">
+          <div class="inputs-grid">
+            <input type="text" id="exercise" placeholder="Exercise" list="exerciseSuggestions" oninput="updateAddButtonState()" />
+            <datalist id="exerciseSuggestions"></datalist>
+            <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
 
-  <!-- Unit selector -->
-  <select id="weightUnit">
-    <option value="kg">kg</option>
-    <option value="lbs">lbs</option>
-  </select>
-  </div>
+            <!-- Unit selector -->
+            <select id="weightUnit">
+              <option value="kg">kg</option>
+              <option value="lbs">lbs</option>
+            </select>
 
-  <!-- Date selector -->
-  <input type="date" id="entryDate" class="calendar-widget slide-up" />
+            <!-- Dynamically generated inputs -->
+            <div id="setInputsContainer" style="grid-column: 1 / -1;"></div>
+          </div>
 
-  <select id="resistanceTemplateSelect" onchange="loadSelectedResistanceTemplate()" style="margin-top: 10px;">
-  <option value="">Select Template...</option>
-</select>
-  <div id="templateLoadMessage" style="margin-top:6px; color:#b00020; display:none;"></div>
-  <div id="templateBuilder" style="margin-top:12px; border:1px solid #ddd; border-radius:8px; padding:12px;">
-    <h3 style="margin:0 0 10px 0;">Template Builder</h3>
-    <input type="text" id="newTemplateName" placeholder="Template name" />
-    <input type="text" id="newTemplateDescription" placeholder="Description" style="margin-top:6px;" />
-    <input type="text" id="newTemplateTags" placeholder="Tags (comma separated)" style="margin-top:6px;" />
-    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-      <input type="text" id="newTemplateExercise" placeholder="Exercise name" style="flex:1 1 170px;" />
-      <input type="number" id="newTemplateSets" placeholder="Sets" min="1" style="width:90px;" />
-      <input type="text" id="newTemplateReps" placeholder="Target reps" style="width:100px;" />
-      <select id="newTemplateSetType" style="width:120px;">
-        <option value="straight">Straight</option>
-        <option value="superset">Superset</option>
-        <option value="circuit">Circuit</option>
-      </select>
-      <input type="text" id="newTemplateGroupId" placeholder="Group (e.g. A)" style="width:130px;" />
-      <button type="button" onclick="addExerciseToTemplate()">Add Exercise</button>
-    </div>
-    <small>Drag rows to reorder. Use matching group labels to link superset/circuit exercises.</small>
-    <ul id="newTemplateList" style="margin-top:8px; padding-left:18px;"></ul>
-    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-      <button type="button" onclick="saveSimpleTemplate()">Save Built Template</button>
-      <button type="button" onclick="resetTemplateBuilder()">Clear Builder</button>
-    </div>
-  </div>
-  <div id="templateManager" style="margin-top:12px; border:1px solid #ddd; border-radius:8px; padding:12px;">
-    <h3 style="margin:0 0 10px 0;">Template Manager</h3>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-      <button type="button" onclick="editSelectedTemplate()">Edit</button>
-      <button type="button" onclick="duplicateSelectedTemplate()">Duplicate</button>
-      <button type="button" onclick="deleteSelectedTemplate()">Delete</button>
-    </div>
-    <div id="templateLibraryList" style="font-size:0.92rem;"></div>
-  </div>
+          <!-- Template quick-load -->
+          <select id="resistanceTemplateSelect" onchange="loadSelectedResistanceTemplate()" style="margin-top: 10px;">
+            <option value="">Select Template...</option>
+          </select>
+          <div id="templateLoadMessage" style="margin-top:6px; color:#b00020; display:none;"></div>
 
+          <!-- Advanced accordion: goals + date -->
+          <details class="log-advanced" style="margin-top:10px;">
+            <summary>⚙️ Advanced options</summary>
+            <div class="log-advanced-body">
+              <input type="number" id="goal" placeholder="Target Weight Goal (kg/lbs)" />
+              <input type="number" id="repGoal" placeholder="Target Rep Goal (optional)" />
+              <input type="date" id="entryDate" class="calendar-widget slide-up" />
+            </div>
+          </details>
 
-  <div id="restTimerSection" style="margin-top:10px;">
-    <input type="number" id="restMinutes" placeholder="Rest Minutes" style="width:80px;" />
-    <input type="number" id="restSeconds" placeholder="Rest Seconds" style="width:80px;" />
-    <button onclick="startRestTimer()">Start Rest Timer</button>
-    <span id="restTimerDisplay" style="margin-left:10px;"></span>
-  </div>
+          <button id="addLogBtn" onclick="addLogEntry()" disabled style="margin-top:12px;">Add to Log</button>
 
-  <div id="progressComponents" style="margin-top:10px;">
-    <div id="progressBar" class="progress-bar"><div id="progressFill" class="progress-bar-fill"></div></div>
-    <div id="progressText" class="progress-text"></div>
-    <div id="streakCounter" class="streak-counter"></div>
-  </div>
+          <!-- Logs render here -->
+          <div id="workoutsContainer" style="margin-top: 20px;"></div>
+        </div>
+      </div>
+    </div><!-- /logSub_log -->
 
-  <div id="gamificationCard" class="gamification-panel gamification-card-shell" style="margin-top:12px;"></div>
-  <div id="gamificationLogMiniSummary" class="gamification-mini-summary" style="margin-top:10px;"></div>
-  
-        <button id="addLogBtn" onclick="addLogEntry()" disabled>Add to Log</button>
-        <button id="saveTemplateBtn" onclick="saveWorkoutAsTemplate()" style="margin-left: 10px;">Save as Template</button>
-    <!-- Logs will render below this -->
-    <div id="workoutsContainer" style="margin-top: 20px;"></div>
-    </div>
+    <!-- ══ Sub-view: Rest Timer ═══════════════════════════════════ -->
+    <div id="logSub_rest" class="log-subview">
+      <div class="rest-subview-inner" style="padding:10px;">
+        <h3>⏱️ Rest Timer</h3>
+        <div class="rest-presets">
+          <button class="rest-preset-btn" onclick="setRestPreset(1, 0)">1 min</button>
+          <button class="rest-preset-btn" onclick="setRestPreset(1, 30)">90 s</button>
+          <button class="rest-preset-btn" onclick="setRestPreset(2, 0)">2 min</button>
+          <button class="rest-preset-btn" onclick="setRestPreset(3, 0)">3 min</button>
+          <button class="rest-preset-btn" onclick="setRestPreset(5, 0)">5 min</button>
+        </div>
+        <div id="restTimerSection">
+          <input type="number" id="restMinutes" placeholder="Minutes" style="width:80px;" />
+          <input type="number" id="restSeconds" placeholder="Seconds" style="width:80px;" />
+          <button onclick="startRestTimer()">Start</button>
+          <span id="restTimerDisplay" style="margin-left:10px;font-weight:700;font-size:1.4rem;"></span>
+        </div>
+      </div>
+    </div><!-- /logSub_rest -->
 
+    <!-- ══ Sub-view: Templates ════════════════════════════════════ -->
+    <div id="logSub_templates" class="log-subview">
+      <div style="padding:10px;">
+        <div id="templateBuilder" style="margin-bottom:12px; border:1px solid var(--border,#2a3a2e); border-radius:8px; padding:12px;">
+          <h3 style="margin:0 0 10px 0;">📋 Template Builder</h3>
+          <input type="text" id="newTemplateName" placeholder="Template name" />
+          <input type="text" id="newTemplateDescription" placeholder="Description" style="margin-top:6px;" />
+          <input type="text" id="newTemplateTags" placeholder="Tags (comma separated)" style="margin-top:6px;" />
+          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+            <input type="text" id="newTemplateExercise" placeholder="Exercise name" style="flex:1 1 170px;" />
+            <input type="number" id="newTemplateSets" placeholder="Sets" min="1" style="width:90px;" />
+            <input type="text" id="newTemplateReps" placeholder="Target reps" style="width:100px;" />
+            <select id="newTemplateSetType" style="width:120px;">
+              <option value="straight">Straight</option>
+              <option value="superset">Superset</option>
+              <option value="circuit">Circuit</option>
+            </select>
+            <input type="text" id="newTemplateGroupId" placeholder="Group (e.g. A)" style="width:130px;" />
+            <button type="button" onclick="addExerciseToTemplate()">Add Exercise</button>
+          </div>
+          <small>Drag rows to reorder. Use matching group labels to link superset/circuit exercises.</small>
+          <ul id="newTemplateList" style="margin-top:8px; padding-left:18px;"></ul>
+          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+            <button type="button" onclick="saveSimpleTemplate()">Save Built Template</button>
+            <button type="button" onclick="resetTemplateBuilder()">Clear Builder</button>
+          </div>
+        </div>
 
-  </div>
+        <div id="templateManager" style="border:1px solid var(--border,#2a3a2e); border-radius:8px; padding:12px;">
+          <h3 style="margin:0 0 10px 0;">🗂️ Template Manager</h3>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+            <button type="button" onclick="editSelectedTemplate()">Edit</button>
+            <button type="button" onclick="duplicateSelectedTemplate()">Duplicate</button>
+            <button type="button" onclick="deleteSelectedTemplate()">Delete</button>
+          </div>
+          <div id="templateLibraryList" style="font-size:0.92rem;"></div>
+        </div>
 
+        <button id="saveTemplateBtn" onclick="saveWorkoutAsTemplate()" style="margin-top:12px;">Save Current Workout as Template</button>
+      </div>
+    </div><!-- /logSub_templates -->
 
-  </div>
-  </div>
+    <!-- ══ Sub-view: Streaks ══════════════════════════════════════ -->
+    <div id="logSub_streaks" class="log-subview">
+      <div style="padding:10px;">
+        <div id="training-calendar" class="slide-up"></div>
+
+        <div id="progressComponents" style="margin-top:10px;">
+          <div id="progressBar" class="progress-bar"><div id="progressFill" class="progress-bar-fill"></div></div>
+          <div id="progressText" class="progress-text"></div>
+          <div id="streakCounter" class="streak-counter"></div>
+        </div>
+
+        <div id="gamificationCard" class="gamification-panel gamification-card-shell" style="margin-top:12px;"></div>
+        <div id="gamificationLogMiniSummary" class="gamification-mini-summary" style="margin-top:10px;"></div>
+      </div>
+    </div><!-- /logSub_streaks -->
+
+  </div><!-- /logPanel -->
+  </div><!-- /logTab -->
 
   <div id="weightTab" class="tab-content">
     <div id="weightLogPanel" class="panel active">
@@ -906,11 +947,16 @@
             <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
             <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="subtractMacro('fat')">–</button><button onclick="addMacro('fat')">+</button></div>
 
-            <div id="sparkContainer" style="display:flex;justify-content:space-around;margin-top:8px;">
-              <canvas id="calSpark" width="120" height="40"></canvas>
-              <canvas id="proteinSpark" width="120" height="40"></canvas>
-            </div>
-            <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
+            <details class="macro-trends-accordion">
+              <summary>📈 Weekly trends</summary>
+              <div>
+                <div id="sparkContainer" style="display:flex;justify-content:space-around;">
+                  <canvas id="calSpark" width="120" height="40"></canvas>
+                  <canvas id="proteinSpark" width="120" height="40"></canvas>
+                </div>
+                <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
+              </div>
+            </details>
             <div style="margin-top:8px;">
               <label><input type="checkbox" id="trainingDayToggle"> Training Day</label>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:10px;">
@@ -928,21 +974,6 @@
                 </label>
               </div>
               <p id="macroDayProfileSummary" style="font-size:0.9rem;margin-top:8px;color:var(--text-muted,#777);"></p>
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px;">
-                <label style="display:flex;flex-direction:column;gap:4px;">
-                  Hydration (ml)
-                  <input type="number" id="hydrationMlInput" min="0" step="50" placeholder="Optional target">
-                </label>
-                <label style="display:flex;flex-direction:column;gap:4px;">
-                  Sodium (mg)
-                  <input type="number" id="sodiumMgInput" min="0" step="50" placeholder="Optional target">
-                </label>
-              </div>
-              <p id="hydrationSodiumSummary" style="font-size:0.85rem;margin-top:6px;color:var(--text-muted,#777);"></p>
-              <label style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
-                Digestion Notes
-                <textarea id="digestionNotesInput" rows="2" placeholder="Bloating, appetite, bowel regularity, food tolerances..."></textarea>
-              </label>
               <div id="macroDailySummary" style="margin-top:12px;">
                 <h3 style="font-size:1.1rem;margin-bottom:6px;">Daily Summary</h3>
                 <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
@@ -965,7 +996,10 @@
             </div>
           </div>
 
-          <div id="heatmap" class="heatmap"></div>
+          <details class="macro-heatmap-accordion">
+            <summary>📅 Activity heatmap</summary>
+            <div><div id="heatmap" class="heatmap"></div></div>
+          </details>
         </div>
 
         <div id="macroMealsPanel" class="panel">
@@ -1087,6 +1121,30 @@
             <p class="macro-stats">FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
           </div>
         </div>
+
+        <!-- Hydration & Digestion moved here from Targets -->
+        <div class="adjust-macros grid" style="margin-bottom: 30px;">
+          <div class="macro-card hydration-digestion-card">
+            <h3>💧 Hydration &amp; Digestion</h3>
+            <p class="macro-helper">Track your fluid intake and gut health notes.</p>
+            <div class="hd-grid">
+              <label>
+                Hydration (ml)
+                <input type="number" id="hydrationMlInput" min="0" step="50" placeholder="Optional target">
+              </label>
+              <label>
+                Sodium (mg)
+                <input type="number" id="sodiumMgInput" min="0" step="50" placeholder="Optional target">
+              </label>
+            </div>
+            <p id="hydrationSodiumSummary"></p>
+            <label style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
+              Digestion Notes
+              <textarea id="digestionNotesInput" rows="3" placeholder="Bloating, appetite, bowel regularity, food tolerances..."></textarea>
+            </label>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -11329,5 +11387,6 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/archetype-features.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/workout-archiver.js"></script>
+  <script src="src/js/ui-declutter.js"></script>
 </body>
 </html>

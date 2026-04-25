@@ -1,0 +1,209 @@
+/* =============================================================
+   UI DECLUTTER — Log Sub-tabs + Macro Accordions
+   ============================================================= */
+
+/* ── Log sub-tab nav ─────────────────────────────────────────── */
+
+.log-subtabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 10px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border, #2a3a2e);
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.log-subtabs::-webkit-scrollbar { display: none; }
+
+.log-subtab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 20px 20px 0 0;
+  background: transparent;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.log-subtab:hover {
+  background: var(--card-bg, #0f1510);
+  color: var(--primary, #5fa87e);
+}
+
+.log-subtab.active {
+  background: var(--card-bg, #0f1510);
+  color: var(--primary, #5fa87e);
+  border: 1px solid var(--border, #2a3a2e);
+  border-bottom: 1px solid var(--card-bg, #0f1510);
+}
+
+/* ── Log sub-views ───────────────────────────────────────────── */
+
+.log-subview { display: none; }
+.log-subview.active { display: block; }
+
+/* ── Advanced accordion (goal/repGoal/date) ──────────────────── */
+
+.log-advanced {
+  margin-top: 10px;
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.log-advanced > summary {
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted, #7a8f7d);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg, #0f1510);
+  user-select: none;
+}
+
+.log-advanced > summary::before {
+  content: '▶';
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+}
+
+.log-advanced[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.log-advanced-body {
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Rest timer presets ──────────────────────────────────────── */
+
+.rest-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.rest-preset-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--primary, #5fa87e);
+  background: transparent;
+  color: var(--primary, #5fa87e);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+.rest-preset-btn:hover,
+.rest-preset-btn.active-preset {
+  background: var(--primary, #5fa87e);
+  color: #0b130d;
+}
+
+.rest-subview-inner {
+  padding: 4px 0;
+}
+
+.rest-subview-inner h3 {
+  font-size: 1rem;
+  margin: 0 0 10px;
+  color: var(--text, #e8f5e9);
+}
+
+/* ── Macro trends/heatmap accordions ─────────────────────────── */
+
+.macro-trends-accordion,
+.macro-heatmap-accordion {
+  margin-top: 10px;
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.macro-trends-accordion > summary,
+.macro-heatmap-accordion > summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted, #7a8f7d);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg, #0f1510);
+  user-select: none;
+}
+
+.macro-trends-accordion > summary::before,
+.macro-heatmap-accordion > summary::before {
+  content: '▶';
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+}
+
+.macro-trends-accordion[open] > summary::before,
+.macro-heatmap-accordion[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.macro-trends-accordion > div,
+.macro-heatmap-accordion > div {
+  padding: 10px 14px 14px;
+}
+
+/* ── Hydration & digestion card in Personal Details ──────────── */
+
+.hydration-digestion-card {
+  margin-top: 16px;
+}
+
+.hydration-digestion-card h3 {
+  font-size: 1rem;
+  margin: 0 0 10px;
+}
+
+.hydration-digestion-card .hd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.hydration-digestion-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.88rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+.hydration-digestion-card input,
+.hydration-digestion-card textarea {
+  margin-top: 4px;
+}
+
+#hydrationSodiumSummary {
+  font-size: 0.85rem;
+  margin-top: 6px;
+  color: var(--text-muted, #7a8f7d);
+}
