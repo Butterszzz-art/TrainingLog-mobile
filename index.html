@@ -354,37 +354,106 @@
   </div><!-- /logTab -->
 
   <div id="weightTab" class="tab-content">
-    <div id="weightLogPanel" class="panel active">
-    <h2>Bodyweight Tracker</h2>
-    <input type="number" id="currentWeightInput" placeholder="Current Weight (kg)">
-    <button type="button" id="toggleBodyweightUnitBtn" onclick="toggleBodyweightUnit()">Change Unit</button>
-    <input type="date" id="weightDateInput">
-    <button onclick="addWeightEntry()">Add Weight</button>
-    <input type="number" id="avgCalories" placeholder="Average Daily Calories" />
-    <button onclick="estimateCalories()">Estimate Calories</button>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Weight</th>
-          <th>Calories</th>
-          <th>Cardio (min)</th>
-          <th>Remove</th>
-        </tr>
-      </thead>
-      <tbody id="weightBody"></tbody>
-    </table>
-    <table>
-      <thead><tr><th>Scenario</th><th>Estimated Calories</th></tr></thead>
-      <tbody id="calorieEstimateTable"></tbody>
-    </table>
-    </div>
+    <div id="weightLogPanel" class="panel active wt-panel">
+
+      <!-- ── Header ── -->
+      <div class="wt-header">
+        <h2 class="wt-title">⚖️ Bodyweight Tracker</h2>
+        <div id="wtTrendBadge" class="wt-trend-badge" style="display:none;"></div>
+      </div>
+
+      <!-- ── Stat strip (populated by renderWeights) ── -->
+      <div class="wt-stat-strip" id="wtStatStrip" style="display:none;">
+        <div class="wt-stat-item">
+          <span class="wt-stat-val" id="wtStatCurrent">—</span>
+          <span class="wt-stat-lbl">Current</span>
+        </div>
+        <div class="wt-stat-sep"></div>
+        <div class="wt-stat-item">
+          <span class="wt-stat-val" id="wtStatStart">—</span>
+          <span class="wt-stat-lbl">Starting</span>
+        </div>
+        <div class="wt-stat-sep"></div>
+        <div class="wt-stat-item">
+          <span class="wt-stat-val" id="wtStatChange">—</span>
+          <span class="wt-stat-lbl">Total change</span>
+        </div>
+        <div class="wt-stat-sep"></div>
+        <div class="wt-stat-item">
+          <span class="wt-stat-val" id="wtStatEntries">—</span>
+          <span class="wt-stat-lbl">Entries</span>
+        </div>
+      </div>
+
+      <!-- ── Entry card ── -->
+      <div class="wt-entry-card">
+        <div class="wt-entry-row">
+          <div class="wt-field-group">
+            <label class="wt-field-label">Weight</label>
+            <div class="wt-weight-row">
+              <input type="number" id="currentWeightInput" class="wt-input wt-weight-input"
+                placeholder="0.0" step="0.1" min="20" max="500" />
+              <button type="button" id="toggleBodyweightUnitBtn"
+                class="wt-unit-toggle" onclick="toggleBodyweightUnit()">kg</button>
+            </div>
+          </div>
+          <div class="wt-field-group">
+            <label class="wt-field-label">Date</label>
+            <input type="date" id="weightDateInput" class="wt-input wt-date-input" />
+          </div>
+        </div>
+        <button class="wt-add-btn" onclick="addWeightEntry()">＋ Log Weight</button>
+      </div>
+
+      <!-- ── Weight log table ── -->
+      <div class="wt-log-card">
+        <div class="wt-log-header">
+          <span class="wt-log-title">📋 Log</span>
+          <span class="wt-log-count" id="wtLogCount"></span>
+        </div>
+        <div class="wt-table-wrap">
+          <table class="wt-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Weight</th>
+                <th>Calories</th>
+                <th>Cardio</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="weightBody"></tbody>
+          </table>
+          <p class="wt-empty" id="wtEmptyMsg">No entries yet — log your first weight above.</p>
+        </div>
+      </div>
+
+      <!-- ── Calorie estimator (collapsible) ── -->
+      <details class="wt-estimator-section">
+        <summary class="wt-estimator-summary">🔢 Calorie Estimator</summary>
+        <div class="wt-estimator-body">
+          <p class="wt-estimator-hint">Enter your average daily calories to estimate your maintenance based on your logged weight trend. Requires 7+ days of data.</p>
+          <div class="wt-estimator-row">
+            <input type="number" id="avgCalories" class="wt-input"
+              placeholder="Avg daily calories" min="500" max="10000" />
+            <button class="wt-estimate-btn" onclick="estimateCalories()">Estimate</button>
+          </div>
+          <table class="wt-estimate-table">
+            <thead><tr><th>Scenario</th><th>Calories</th></tr></thead>
+            <tbody id="calorieEstimateTable"></tbody>
+          </table>
+        </div>
+      </details>
+
+    </div><!-- /#weightLogPanel -->
+
+    <!-- chart panel kept for Progress tab compatibility -->
     <div id="weightChartPanel" class="panel">
       <div id="weightChartPanelContent"></div>
     </div>
 
     <!-- ── Body Measurements ── -->
-    <details class="measurements-section" id="measurementsSection" style="margin:10px;">
+    <details class="measurements-section" id="measurementsSection" style="margin:10px 10px 0;">
       <summary>📏 Body Measurements</summary>
       <div class="measurements-body">
         <div class="measurements-grid">
@@ -400,7 +469,6 @@
           <input type="date" id="measureDate" class="measurements-date-input">
           <button type="button" class="measurements-save-btn" onclick="saveMeasurement()">Save</button>
         </div>
-
         <div class="measurements-chart-selector">
           <button class="measurements-metric-pill active" data-metric="waist" onclick="renderMeasurementsChart('waist')">Waist</button>
           <button class="measurements-metric-pill" data-metric="chest" onclick="renderMeasurementsChart('chest')">Chest</button>
@@ -413,7 +481,6 @@
         <div class="measurements-chart-wrap">
           <canvas id="measurementsCanvas"></canvas>
         </div>
-
         <div id="measurementsHistory" style="margin-top:12px;"></div>
       </div>
     </details>
@@ -8573,7 +8640,44 @@ function renderWeights() {
   body.innerHTML = '';
   const pref = getBodyweightPreference();
   const displayUnit = pref.unit === 'lb' ? 'lb' : 'kg';
-  log.forEach((entry, index) => {
+
+  // ── Unit toggle button label ──
+  const unitBtn = document.getElementById('toggleBodyweightUnitBtn');
+  if (unitBtn) unitBtn.textContent = displayUnit;
+
+  // ── Stat strip ──
+  const strip   = document.getElementById('wtStatStrip');
+  const emptyMsg = document.getElementById('wtEmptyMsg');
+  const logCount = document.getElementById('wtLogCount');
+  if (log.length > 0) {
+    if (strip)    strip.style.display = 'grid';
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    if (logCount) logCount.textContent = log.length + ' entries';
+
+    const firstKg = getEntryWeightKg(log[0]);
+    const lastKg  = getEntryWeightKg(log[log.length - 1]);
+    const toDisp  = (kg) => kg != null ? convertWeightValue(kg, 'kg', displayUnit, 1) + ' ' + displayUnit : '—';
+    const changeKg = (firstKg != null && lastKg != null) ? lastKg - firstKg : null;
+    const changeDisp = changeKg != null
+      ? (changeKg > 0 ? '+' : '') + convertWeightValue(Math.abs(changeKg), 'kg', displayUnit, 1) + ' ' + displayUnit + (changeKg > 0 ? ' ↑' : ' ↓')
+      : '—';
+
+    const cur = document.getElementById('wtStatCurrent');
+    const sta = document.getElementById('wtStatStart');
+    const chg = document.getElementById('wtStatChange');
+    const ent = document.getElementById('wtStatEntries');
+    if (cur) cur.textContent = toDisp(lastKg);
+    if (sta) sta.textContent = toDisp(firstKg);
+    if (chg) { chg.textContent = changeDisp; chg.className = 'wt-stat-val ' + (changeKg > 0 ? 'wt-up' : changeKg < 0 ? 'wt-down' : ''); }
+    if (ent) ent.textContent = log.length;
+  } else {
+    if (strip)    strip.style.display = 'none';
+    if (emptyMsg) emptyMsg.style.display = 'block';
+    if (logCount) logCount.textContent = '';
+  }
+
+  log.slice().reverse().forEach((entry, revIdx) => {
+    const index = log.length - 1 - revIdx;
     const baseKg = getEntryWeightKg(entry);
     const converted = typeof baseKg === 'number' && !Number.isNaN(baseKg)
       ? convertWeightValue(baseKg, 'kg', displayUnit, 1)
@@ -8581,7 +8685,7 @@ function renderWeights() {
     const weightDisplay = converted !== null && converted !== undefined
       ? `${converted} ${displayUnit}`
       : '-';
-    body.innerHTML += `<tr><td>${entry.date}</td><td>${weightDisplay}</td><td>${entry.calories ?? '-'}</td><td>${entry.cardio ?? '-'}</td><td><button onclick="removeWeightEntry(${index})" class="remove-btn">❌</button></td></tr>`;
+    body.innerHTML += `<tr><td>${entry.date}</td><td><strong>${weightDisplay}</strong></td><td>${entry.calories ?? '—'}</td><td>${entry.cardio != null ? entry.cardio + ' min' : '—'}</td><td><button onclick="removeWeightEntry(${index})" class="wt-del-btn" title="Remove">✕</button></td></tr>`;
   });
   if (document.getElementById('progressTab').classList.contains('active')) {
     const isBodyweightActive = document.getElementById('bodyweightProgressBtn')?.classList.contains('active');
