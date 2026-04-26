@@ -825,3 +825,14 @@
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* Lazy-load placeholder for sub-panels not yet rendered */
+.coach-subtab-placeholder {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--secondary-text, #7a8f7d);
+  font-size: 0.85rem;
+  border: 1px dashed var(--border-color, #2a3a2e);
+  border-radius: 12px;
+  margin: 8px 0;
+}

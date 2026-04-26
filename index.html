@@ -863,69 +863,150 @@
 
 <div id="communityTab" class="tab-content">
   <nav class="community-nav">
-    <button onclick="showCommunitySection('groups')">Groups</button>
-    <button onclick="showCommunitySection('competition')">Leaderboard</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('groups')" id="commNavGroups">👥 Groups</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('feed')"   id="commNavFeed">📣 Feed</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('competition')" id="commNavCompetition">🏆 Leaderboard</button>
   </nav>
+
+  <!-- ── Groups panel ── -->
   <div id="groupsPanel" class="panel active">
-  <h2>Community</h2>
-  <div class="community-search">
-    <label for="groupSearchInput">Search Groups</label>
-    <input id="groupSearchInput" placeholder="Search groups">
-    <label for="goalFilter">Goal</label>
-    <input id="goalFilter" placeholder="Goal">
-    <label for="tagFilter">Tag</label>
-    <input id="tagFilter" list="tagOptions" placeholder="Tag">
-    <datalist id="tagOptions">
-      <option value="strength"></option>
-      <option value="hypertrophy"></option>
-      <option value="conditioning"></option>
-      <option value="crossfit"></option>
-    </datalist>
-    <label for="sortFilter">Sort By</label>
-    <select id="sortFilter" onchange="doGroupSearch()">
-      <option value="">--</option>
-      <option value="members">Most Members</option>
-      <option value="active">Recently Active</option>
-      <option value="alpha">Alphabetical (A-Z)</option>
-    </select>
-    <div class="search-buttons">
-      <button id="groupSearchBtn" class="action-btn loading-btn" onclick="doGroupSearch()"><span>Search</span><span class="spinner"></span></button>
-      <button class="action-btn" onclick="clearGroupFilters()">Clear Filters</button>
+    <h2>Community</h2>
+
+    <!-- ⑩ Weekly challenge card -->
+    <div id="communityChallenge"></div>
+
+    <!-- ⑦ Filter pills replacing raw inputs -->
+    <div class="comm-filter-row">
+      <input id="groupSearchInput" class="comm-search-input" placeholder="🔍 Search groups…"
+             oninput="doGroupSearch()">
+      <button class="comm-clear-btn" onclick="clearGroupFilters()" title="Clear">✕</button>
+    </div>
+    <div class="comm-tag-pills" id="commTagPills">
+      <button class="comm-pill active" data-tag="">All</button>
+      <button class="comm-pill" data-tag="strength">Strength</button>
+      <button class="comm-pill" data-tag="hypertrophy">Hypertrophy</button>
+      <button class="comm-pill" data-tag="conditioning">Conditioning</button>
+      <button class="comm-pill" data-tag="crossfit">CrossFit</button>
+    </div>
+    <div class="comm-sort-row">
+      <span class="comm-sort-label">Sort:</span>
+      <div id="commSortPills">
+        <button class="comm-sort-pill active" data-sort="">Default</button>
+        <button class="comm-sort-pill" data-sort="members">Members</button>
+        <button class="comm-sort-pill" data-sort="active">Active</button>
+        <button class="comm-sort-pill" data-sort="alpha">A-Z</button>
+      </div>
+    </div>
+
+    <!-- Hidden inputs kept for doGroupSearch() compatibility -->
+    <input id="goalFilter"  style="display:none;" value="">
+    <input id="tagFilter"   style="display:none;" value="">
+    <select id="sortFilter" style="display:none;"><option value=""></option><option value="members">Most Members</option><option value="active">Recently Active</option><option value="alpha">Alphabetical (A-Z)</option></select>
+    <button id="groupSearchBtn" style="display:none;"></button>
+
+    <div id="groupList" class="group-list"></div>
+    <div class="community-actions">
+      <button class="action-btn" onclick="showCreateGroup()">+ Create Group</button>
+      <button class="action-btn" onclick="loadGroups()">Refresh</button>
+    </div>
+    <div id="groupDetail" style="display:none;"></div>
+  </div>
+
+  <!-- ⑥⑪ Feed panel: activity + posts -->
+  <div id="feedPanel" class="panel" style="display:none;">
+
+    <!-- ⑪ Post composer -->
+    <div class="feed-composer">
+      <div class="feed-composer-top">
+        <div class="feed-avatar" id="feedComposerAvatar">Y</div>
+        <textarea id="feedPostText" class="feed-textarea"
+                  placeholder="Share a workout, PR, or update…" rows="2"></textarea>
+      </div>
+      <div class="feed-composer-actions">
+        <div class="feed-tag-group">
+          <button class="feed-tag-btn active" data-tag="workout">💪 Workout</button>
+          <button class="feed-tag-btn" data-tag="pr">🏆 PR</button>
+          <button class="feed-tag-btn" data-tag="update">📝 Update</button>
+        </div>
+        <button class="feed-post-btn" onclick="submitCommunityPost()">Post</button>
+      </div>
+    </div>
+
+    <!-- ⑥ Activity feed -->
+    <div id="activityFeed" class="activity-feed">
+      <!-- populated by renderActivityFeed() -->
     </div>
   </div>
-  <div id="groupList" class="group-list"></div>
-  <div class="community-actions">
-    <button class="action-btn" onclick="showCreateGroup()">Create Group</button>
-    <button class="action-btn" onclick="loadGroups()">Refresh Groups</button>
-  </div>
-  <div id="groupDetail" style="display:none;"></div>
-  </div>
+
+  <!-- Competition panel -->
   <div id="competitionPanel" class="panel" style="display:none;">
     <h2>Community Leaderboard</h2>
     <div id="competitionContent"></div>
   </div>
-  <div id="postsPanel" class="panel"></div>
+
+  <!-- Legacy posts panel (kept for compatibility) -->
+  <div id="postsPanel" class="panel" style="display:none;"></div>
 </div>
 
 <div id="leaderboardTab" class="tab-content">
-  <h2>Leaderboard</h2>
-  <div class="leaderboard-screen">
-    <div class="leaderboard-controls">
-      <label for="leaderSortStatic">Sort By</label>
-      <select id="leaderSortStatic">
+  <div class="lb-page">
+
+    <!-- ① Always-visible personal stats (local data, no backend needed) -->
+    <div id="lbPersonalStats" class="lb-personal-stats">
+      <!-- populated by renderPersonalStats() -->
+    </div>
+
+    <!-- ② Your rank banner (shown after backend fetch) -->
+    <div id="lbYourRank" style="display:none;"></div>
+
+    <!-- ③ Sort controls -->
+    <div class="lb-controls">
+      <span class="lb-controls-label">Sort by</span>
+      <div class="lb-sort-pills" id="lbSortPills">
+        <button class="lb-sort-pill active" data-sort="workoutsLogged">Workouts</button>
+        <button class="lb-sort-pill" data-sort="studyHours">Study hrs</button>
+        <button class="lb-sort-pill" data-sort="groupActivity">Activity</button>
+      </div>
+      <!-- hidden select kept for JS compatibility -->
+      <select id="leaderSortStatic" style="display:none;">
         <option value="workoutsLogged">Workouts Logged</option>
         <option value="studyHours">Study Hours</option>
         <option value="groupActivity">Group Activity</option>
       </select>
     </div>
-    <div id="leaderboardContainer"></div>
-    <div id="leaderboardLoading" class="spinner" style="display:none;"></div>
-    <p id="leaderboardEmpty" style="display:none;text-align:center;">No data available.</p>
-    <canvas id="lbBarChart"></canvas>
-    <canvas id="lbLineChart" style="margin-top:20px;"></canvas>
-    <div style="margin-top:10px;">
-      <button onclick="showTab('exerciseLeaderboardTab')">Exercise Leaderboard</button>
+
+    <!-- ④ Rank list -->
+    <div id="leaderboardContainer" class="lb-list"></div>
+    <div id="leaderboardLoading" class="lb-loading" style="display:none;">
+      <div class="lb-spinner"></div><span>Loading leaderboard…</span>
     </div>
+    <p id="leaderboardEmpty" class="lb-empty" style="display:none;">
+      No community data yet — be the first to show up here!
+    </p>
+
+    <!-- ⑤ Charts (collapsible) -->
+    <details class="lb-charts-section">
+      <summary class="lb-charts-summary">📊 Charts</summary>
+      <canvas id="lbBarChart"></canvas>
+      <canvas id="lbLineChart" style="margin-top:16px;"></canvas>
+    </details>
+
+    <!-- ⑨ Exercise leaderboard inline (replaces hidden separate tab) -->
+    <details class="lb-charts-section lb-exercise-section" id="lbExerciseSection">
+      <summary class="lb-charts-summary">🏋️ Exercise Leaderboard</summary>
+      <div class="lb-exercise-inner">
+        <div class="lb-exercise-ctrl">
+          <select id="exerciseLbSelectInline" class="lb-exercise-select"></select>
+          <div class="lb-time-pills">
+            <button class="lb-time-pill active" data-range="weekly">Weekly</button>
+            <button class="lb-time-pill" data-range="monthly">Monthly</button>
+            <button class="lb-time-pill" data-range="all">All-Time</button>
+          </div>
+        </div>
+        <div id="exerciseLeaderboardInline" class="lb-list"></div>
+      </div>
+    </details>
+
   </div>
 </div>
 
@@ -1463,7 +1544,7 @@
         <button class="coach-bulk-btn" id="coachBulkMacros">🍽️ Update Macros</button>
         <button class="coach-bulk-btn" id="coachBulkCSV">📄 Export CSV</button>
         <button class="coach-bulk-btn" id="coachBulkPDF">🖨️ Export PDF</button>
-        <button class="coach-bulk-btn danger" onclick="_bulkSelected.clear();_updateBulkToolbar();document.querySelectorAll('.coach-client-select').forEach(cb=>cb.checked=false)">✕ Clear</button>
+        <button class="coach-bulk-btn danger" onclick="clearBulkSelection()">✕ Clear</button>
       </div>
     </div>
     <!-- Client roster rendered by existing renderCoachDashboard() -->
@@ -1472,26 +1553,26 @@
 
   <!-- ── Program Builder ── -->
   <div id="coachSub_programs" class="coach-subview">
-    <!-- Rendered by renderCoachProgramBuilder() -->
-    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading program builder…</p>
+    <!-- Rendered by renderCoachProgramBuilder() on first click -->
+    <p class="coach-subtab-placeholder">📋 Click to load the program builder</p>
   </div>
 
   <!-- ── Messaging ── -->
   <div id="coachSub_messaging" class="coach-subview">
-    <!-- Rendered by renderCoachMessaging() -->
-    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading messages…</p>
+    <!-- Rendered by renderCoachMessaging() on first click -->
+    <p class="coach-subtab-placeholder">💬 Click to load client messages</p>
   </div>
 
   <!-- ── Analytics ── -->
   <div id="coachSub_analytics" class="coach-subview">
-    <!-- Rendered by renderCoachAnalytics() -->
-    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading insights…</p>
+    <!-- Rendered by renderCoachAnalytics() on first click -->
+    <p class="coach-subtab-placeholder">📊 Click to load insights</p>
   </div>
 
   <!-- ── GDPR / Privacy ── -->
   <div id="coachSub_gdpr" class="coach-subview">
-    <!-- Rendered by renderCoachGdpr() -->
-    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading privacy settings…</p>
+    <!-- Rendered by renderCoachGdpr() on first click -->
+    <p class="coach-subtab-placeholder">🔒 Click to load privacy settings</p>
   </div>
 </div>
 
@@ -7206,6 +7287,9 @@ const coachDashboardState = {
   selectedClientId: null,
   isBound: false
 };
+// Expose on window so coaching-enhanced.js (external script) can read it.
+// `const` at the top level of an inline <script> is NOT a property of window.
+window.coachDashboardState = coachDashboardState;
 
 function getCoachDemoClients() {
   return [
@@ -11684,6 +11768,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/challenges.js"></script>
   <script src="src/js/client-checkins.js"></script>
   <script src="src/js/progress-report.js"></script>
+  <script src="src/js/community-feed.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
     document.addEventListener('DOMContentLoaded', function() {
