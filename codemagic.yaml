@@ -1,0 +1,120 @@
+workflows:
+
+  # ─────────────────────────────────────────────────────────────────
+  # iOS – development / TestFlight build
+  # ─────────────────────────────────────────────────────────────────
+  ios-capacitor:
+    name: Pocket Coach – iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      # Uncomment + configure once you have an Apple Developer account
+      # ios_signing:
+      #   distribution_type: app_store          # or development
+      #   bundle_identifier: com.pocketcoach.app
+      vars:
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+        BUNDLE_ID: com.pocketcoach.app
+      node: 20
+
+    scripts:
+      - name: Install JS dependencies
+        script: |
+          npm ci || npm install
+
+      - name: Install Capacitor packages (if not in package.json yet)
+        script: |
+          npm list @capacitor/core >/dev/null 2>&1 || \
+            npm install @capacitor/core @capacitor/cli @capacitor/ios
+
+      - name: Capacitor sync  (copies web assets → ios/)
+        script: |
+          npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App && pod install --repo-update
+
+      - name: Build unsigned IPA (no signing required for simulator test)
+        script: |
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build | xcpretty
+
+      # ── Uncomment this block when you're ready for a real device / TestFlight build ──
+      # - name: Build signed IPA
+      #   script: |
+      #     xcode-project use-profiles
+      #     xcode-project build-ipa \
+      #       --workspace "$XCODE_WORKSPACE" \
+      #       --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+
+    publishing:
+      email:
+        recipients:
+          - armanbahali@gmail.com
+        notify:
+          success: true
+          failure: true
+      # Uncomment once signing is set up:
+      # app_store_connect:
+      #   api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+      #   key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+      #   issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+      #   submit_to_testflight: true
+
+  # ─────────────────────────────────────────────────────────────────
+  # Android – debug APK
+  # ─────────────────────────────────────────────────────────────────
+  android-capacitor:
+    name: Pocket Coach – Android
+    max_build_duration: 60
+    instance_type: linux_x2
+
+    environment:
+      vars:
+        PACKAGE_NAME: com.pocketcoach.app
+      node: 20
+
+    scripts:
+      - name: Install JS dependencies
+        script: |
+          npm ci || npm install
+
+      - name: Install Capacitor packages (if not in package.json yet)
+        script: |
+          npm list @capacitor/core >/dev/null 2>&1 || \
+            npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Capacitor sync  (copies web assets → android/)
+        script: |
+          npx cap sync android
+
+      - name: Build debug APK
+        script: |
+          cd android && ./gradlew assembleDebug
+
+    artifacts:
+      - android/app/build/outputs/**/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - armanbahali@gmail.com
+        notify:
+          success: true
+          failure: true
