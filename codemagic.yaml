@@ -1,7 +1,9 @@
 workflows:
 
   # ─────────────────────────────────────────────────────────────────
-  # iOS – development / TestFlight build
+  # iOS – Capacitor build (no local Mac needed)
+  # Codemagic installs Capacitor and generates the ios/ project
+  # fresh on every build run.
   # ─────────────────────────────────────────────────────────────────
   ios-capacitor:
     name: Pocket Coach – iOS
@@ -9,35 +11,45 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
-      # Uncomment + configure once you have an Apple Developer account
+      # ── Uncomment + fill in once you have an Apple Developer account ──
       # ios_signing:
-      #   distribution_type: app_store          # or development
+      #   distribution_type: development          # change to app_store for TestFlight
       #   bundle_identifier: com.pocketcoach.app
       vars:
         XCODE_WORKSPACE: ios/App/App.xcworkspace
         XCODE_SCHEME: App
         BUNDLE_ID: com.pocketcoach.app
+        CAP_VERSION: "6"          # major Capacitor version to install
       node: 20
 
     scripts:
       - name: Install JS dependencies
         script: |
-          npm ci || npm install
+          npm install
 
-      - name: Install Capacitor packages (if not in package.json yet)
+      - name: Install Capacitor core + iOS
         script: |
-          npm list @capacitor/core >/dev/null 2>&1 || \
-            npm install @capacitor/core @capacitor/cli @capacitor/ios
+          npm install \
+            @capacitor/core@^${CAP_VERSION} \
+            @capacitor/cli@^${CAP_VERSION} \
+            @capacitor/ios@^${CAP_VERSION}
 
-      - name: Capacitor sync  (copies web assets → ios/)
+      - name: Generate iOS native project
+        script: |
+          # Only add if the folder doesn't already exist in the repo
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+
+      - name: Sync web assets into ios/
         script: |
           npx cap sync ios
 
-      - name: Install CocoaPods dependencies
+      - name: Install CocoaPods
         script: |
           cd ios/App && pod install --repo-update
 
-      - name: Build unsigned IPA (no signing required for simulator test)
+      - name: Build (simulator – unsigned, no Apple account needed)
         script: |
           xcodebuild \
             -workspace "$XCODE_WORKSPACE" \
@@ -48,9 +60,10 @@ workflows:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            build | xcpretty
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            build | xcpretty --color
 
-      # ── Uncomment this block when you're ready for a real device / TestFlight build ──
+      # ── REAL DEVICE / TESTFLIGHT (uncomment when Apple account is ready) ──
       # - name: Build signed IPA
       #   script: |
       #     xcode-project use-profiles
@@ -59,9 +72,10 @@ workflows:
       #       --scheme "$XCODE_SCHEME"
 
     artifacts:
-      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      # Signed build artifact (uncomment with signing):
+      # - build/ios/ipa/*.ipa
 
     publishing:
       email:
@@ -70,15 +84,10 @@ workflows:
         notify:
           success: true
           failure: true
-      # Uncomment once signing is set up:
-      # app_store_connect:
-      #   api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-      #   key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-      #   issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-      #   submit_to_testflight: true
+
 
   # ─────────────────────────────────────────────────────────────────
-  # Android – debug APK
+  # Android – debug APK (no Mac needed)
   # ─────────────────────────────────────────────────────────────────
   android-capacitor:
     name: Pocket Coach – Android
@@ -88,25 +97,34 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: com.pocketcoach.app
+        CAP_VERSION: "6"
       node: 20
 
     scripts:
       - name: Install JS dependencies
         script: |
-          npm ci || npm install
+          npm install
 
-      - name: Install Capacitor packages (if not in package.json yet)
+      - name: Install Capacitor core + Android
         script: |
-          npm list @capacitor/core >/dev/null 2>&1 || \
-            npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install \
+            @capacitor/core@^${CAP_VERSION} \
+            @capacitor/cli@^${CAP_VERSION} \
+            @capacitor/android@^${CAP_VERSION}
 
-      - name: Capacitor sync  (copies web assets → android/)
+      - name: Generate Android native project
+        script: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+
+      - name: Sync web assets into android/
         script: |
           npx cap sync android
 
       - name: Build debug APK
         script: |
-          cd android && ./gradlew assembleDebug
+          cd android && chmod +x gradlew && ./gradlew assembleDebug
 
     artifacts:
       - android/app/build/outputs/**/*.apk
