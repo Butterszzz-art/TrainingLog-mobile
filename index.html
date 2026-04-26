@@ -1544,7 +1544,7 @@
         <button class="coach-bulk-btn" id="coachBulkMacros">🍽️ Update Macros</button>
         <button class="coach-bulk-btn" id="coachBulkCSV">📄 Export CSV</button>
         <button class="coach-bulk-btn" id="coachBulkPDF">🖨️ Export PDF</button>
-        <button class="coach-bulk-btn danger" onclick="_bulkSelected.clear();_updateBulkToolbar();document.querySelectorAll('.coach-client-select').forEach(cb=>cb.checked=false)">✕ Clear</button>
+        <button class="coach-bulk-btn danger" onclick="clearBulkSelection()">✕ Clear</button>
       </div>
     </div>
     <!-- Client roster rendered by existing renderCoachDashboard() -->
@@ -1553,26 +1553,26 @@
 
   <!-- ── Program Builder ── -->
   <div id="coachSub_programs" class="coach-subview">
-    <!-- Rendered by renderCoachProgramBuilder() -->
-    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading program builder…</p>
+    <!-- Rendered by renderCoachProgramBuilder() on first click -->
+    <p class="coach-subtab-placeholder">📋 Click to load the program builder</p>
   </div>
 
   <!-- ── Messaging ── -->
   <div id="coachSub_messaging" class="coach-subview">
-    <!-- Rendered by renderCoachMessaging() -->
-    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading messages…</p>
+    <!-- Rendered by renderCoachMessaging() on first click -->
+    <p class="coach-subtab-placeholder">💬 Click to load client messages</p>
   </div>
 
   <!-- ── Analytics ── -->
   <div id="coachSub_analytics" class="coach-subview">
-    <!-- Rendered by renderCoachAnalytics() -->
-    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading insights…</p>
+    <!-- Rendered by renderCoachAnalytics() on first click -->
+    <p class="coach-subtab-placeholder">📊 Click to load insights</p>
   </div>
 
   <!-- ── GDPR / Privacy ── -->
   <div id="coachSub_gdpr" class="coach-subview">
-    <!-- Rendered by renderCoachGdpr() -->
-    <p style="color:var(--secondary-text);font-size:0.85rem;">Loading privacy settings…</p>
+    <!-- Rendered by renderCoachGdpr() on first click -->
+    <p class="coach-subtab-placeholder">🔒 Click to load privacy settings</p>
   </div>
 </div>
 
@@ -7287,6 +7287,9 @@ const coachDashboardState = {
   selectedClientId: null,
   isBound: false
 };
+// Expose on window so coaching-enhanced.js (external script) can read it.
+// `const` at the top level of an inline <script> is NOT a property of window.
+window.coachDashboardState = coachDashboardState;
 
 function getCoachDemoClients() {
   return [

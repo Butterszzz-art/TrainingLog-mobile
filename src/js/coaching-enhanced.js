@@ -87,6 +87,15 @@ function renderCoachStatsBar() {
    ══════════════════════════════════════════════════════════════ */
 
 const _bulkSelected = new Set();
+// Expose on window so inline onclick handlers in index.html can reach it
+window._bulkSelected = _bulkSelected;
+
+// Global helper called by the "Clear" bulk toolbar button
+window.clearBulkSelection = function () {
+  _bulkSelected.clear();
+  _updateBulkToolbar();
+  document.querySelectorAll('.coach-client-select').forEach(cb => { cb.checked = false; });
+};
 
 function initBulkActions() {
   // Delegate checkbox changes on the roster grid
