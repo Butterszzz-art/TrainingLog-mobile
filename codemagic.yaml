@@ -19,7 +19,7 @@ workflows:
         XCODE_WORKSPACE: ios/App/App.xcworkspace
         XCODE_SCHEME: App
         BUNDLE_ID: com.pocketcoach.app
-        CAP_VERSION: "6"          # major Capacitor version to install
+        CAP_VERSION: "6"
       node: 20
 
     scripts:
@@ -34,9 +34,27 @@ workflows:
             @capacitor/cli@^${CAP_VERSION} \
             @capacitor/ios@^${CAP_VERSION}
 
+      - name: Bundle web assets into www/
+        script: |
+          # Capacitor requires a named webDir folder (not ".").
+          # Copy all app files into www/, skipping native/build folders.
+          mkdir -p www
+          rsync -a --exclude='www' \
+                   --exclude='ios' \
+                   --exclude='android' \
+                   --exclude='node_modules' \
+                   --exclude='.git' \
+                   --exclude='.claude' \
+                   --exclude='scripts' \
+                   --exclude='tests' \
+                   --exclude='codemagic.yaml' \
+                   --exclude='server.js' \
+                   --exclude='package*.json' \
+                   --exclude='babel.config.json' \
+                   . www/
+
       - name: Generate iOS native project
         script: |
-          # Only add if the folder doesn't already exist in the repo
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
@@ -111,6 +129,23 @@ workflows:
             @capacitor/core@^${CAP_VERSION} \
             @capacitor/cli@^${CAP_VERSION} \
             @capacitor/android@^${CAP_VERSION}
+
+      - name: Bundle web assets into www/
+        script: |
+          mkdir -p www
+          rsync -a --exclude='www' \
+                   --exclude='ios' \
+                   --exclude='android' \
+                   --exclude='node_modules' \
+                   --exclude='.git' \
+                   --exclude='.claude' \
+                   --exclude='scripts' \
+                   --exclude='tests' \
+                   --exclude='codemagic.yaml' \
+                   --exclude='server.js' \
+                   --exclude='package*.json' \
+                   --exclude='babel.config.json' \
+                   . www/
 
       - name: Generate Android native project
         script: |

@@ -1,7 +1,7 @@
 {
   "appId": "com.pocketcoach.app",
   "appName": "Pocket Coach",
-  "webDir": ".",
+  "webDir": "www",
   "server": {
     "androidScheme": "https"
   },
