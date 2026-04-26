@@ -1681,3 +1681,343 @@
   font-family: 'Poppins', sans-serif;
   cursor: pointer;
 }
+
+/* =============================================================
+   BODYWEIGHT TRACKER — Redesigned
+   ============================================================= */
+
+.wt-panel {
+  padding: 14px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Header ── */
+.wt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.wt-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+  margin: 0;
+}
+
+.wt-trend-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(95,168,126,0.15);
+  color: var(--primary, #5fa87e);
+}
+
+/* ── Stat strip ── */
+.wt-stat-strip {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+  align-items: center;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 12px;
+  padding: 12px 10px;
+  gap: 0;
+}
+
+.wt-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.wt-stat-val {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+  white-space: nowrap;
+}
+
+.wt-stat-val.wt-up   { color: #eb5757; }
+.wt-stat-val.wt-down { color: var(--primary, #5fa87e); }
+
+.wt-stat-lbl {
+  font-size: 0.62rem;
+  color: var(--text-muted, #7a8f7d);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.wt-stat-sep {
+  width: 1px;
+  height: 32px;
+  background: var(--border, #2a3a2e);
+  margin: 0 6px;
+}
+
+/* ── Entry card ── */
+.wt-entry-card {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wt-entry-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.wt-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.wt-field-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted, #7a8f7d);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wt-input {
+  width: 100%;
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 8px;
+  color: var(--text, #e8f5e9);
+  padding: 9px 11px;
+  font-size: 0.95rem;
+  font-family: 'Poppins', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.wt-input:focus { border-color: var(--primary, #5fa87e); }
+
+.wt-weight-row {
+  display: flex;
+  gap: 6px;
+}
+
+.wt-weight-input { flex: 1; }
+
+.wt-unit-toggle {
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--primary, #5fa87e);
+  border-radius: 8px;
+  color: var(--primary, #5fa87e);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  padding: 0 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+.wt-unit-toggle:hover {
+  background: var(--primary, #5fa87e);
+  color: #fff;
+}
+
+.wt-date-input { width: 100%; }
+
+.wt-add-btn {
+  width: 100%;
+  background: var(--primary, #5fa87e);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.wt-add-btn:hover { opacity: 0.85; }
+
+/* ── Log card ── */
+.wt-log-card {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.wt-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg, #0b130d);
+  border-bottom: 1px solid var(--border, #2a3a2e);
+}
+
+.wt-log-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+}
+
+.wt-log-count {
+  font-size: 0.72rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+.wt-table-wrap {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.wt-empty {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted, #7a8f7d);
+  padding: 20px;
+  margin: 0;
+}
+
+.wt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.wt-table thead th {
+  background: var(--bg, #0b130d);
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 7px 12px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.wt-table tbody tr {
+  border-bottom: 1px solid var(--border, #2a3a2e);
+  transition: background 0.15s;
+}
+.wt-table tbody tr:last-child { border-bottom: none; }
+.wt-table tbody tr:hover { background: rgba(95,168,126,0.04); }
+
+.wt-table tbody td {
+  padding: 9px 12px;
+  color: var(--text, #e8f5e9);
+}
+
+.wt-table tbody td:first-child { color: var(--text-muted, #7a8f7d); font-size: 0.78rem; }
+.wt-table tbody td strong { color: var(--primary, #5fa87e); }
+
+.wt-del-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #7a8f7d);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.wt-del-btn:hover { color: #eb5757; background: rgba(235,87,87,0.1); }
+
+/* ── Calorie estimator ── */
+.wt-estimator-section {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.wt-estimator-summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+  list-style: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wt-estimator-summary::marker,
+.wt-estimator-summary::-webkit-details-marker { display: none; }
+.wt-estimator-section[open] .wt-estimator-summary::before { content: '▼ '; font-size: 0.65rem; color: var(--text-muted, #7a8f7d); }
+.wt-estimator-section:not([open]) .wt-estimator-summary::before { content: '▶ '; font-size: 0.65rem; color: var(--text-muted, #7a8f7d); }
+
+.wt-estimator-body {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--border, #2a3a2e);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wt-estimator-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted, #7a8f7d);
+  line-height: 1.4;
+  margin: 10px 0 0;
+}
+
+.wt-estimator-row {
+  display: flex;
+  gap: 8px;
+}
+
+.wt-estimate-btn {
+  background: var(--primary, #5fa87e);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+.wt-estimate-btn:hover { opacity: 0.85; }
+
+.wt-estimate-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.wt-estimate-table thead th {
+  background: var(--bg, #0b130d);
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 6px 10px;
+  text-align: left;
+}
+.wt-estimate-table tbody td {
+  padding: 8px 10px;
+  color: var(--text, #e8f5e9);
+  border-bottom: 1px solid var(--border, #2a3a2e);
+}
+.wt-estimate-table tbody tr:last-child td { border-bottom: none; }
+.wt-estimate-table tbody td:last-child { font-weight: 700; color: var(--primary, #5fa87e); }
