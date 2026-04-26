@@ -489,16 +489,31 @@ let competitionChart;
 function showCommunitySection(section) {
   currentCommunitySection = section;
   const panels = {
-    groups: document.getElementById('groupsPanel'),
+    groups:      document.getElementById('groupsPanel'),
     competition: document.getElementById('competitionPanel'),
-    posts: document.getElementById('postsPanel')
+    posts:       document.getElementById('postsPanel'),
+    feed:        document.getElementById('feedPanel'),
   };
   Object.values(panels).forEach(p => { if (p) p.style.display = 'none'; });
   if (panels[section]) panels[section].style.display = 'block';
+
+  // Update nav active class
+  const navMap = {
+    groups:      'commNavGroups',
+    feed:        'commNavFeed',
+    competition: 'commNavCompetition',
+  };
+  document.querySelectorAll('.comm-nav-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(navMap[section]);
+  if (activeBtn) activeBtn.classList.add('active');
+
   if (section === 'groups') {
     loadGroups();
+    if (window.renderWeeklyChallenge) renderWeeklyChallenge();
   } else if (section === 'competition') {
     renderCompetition();
+  } else if (section === 'feed') {
+    if (window.renderActivityFeed) renderActivityFeed();
   }
 }
 

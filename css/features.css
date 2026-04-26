@@ -2421,3 +2421,405 @@
 @media (max-width: 360px) {
   .lb-ps-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* =============================================================
+   COMMUNITY IMPROVEMENTS  ⑥⑦⑨⑩⑪
+   Activity feed · Filter pills · Exercise LB · Challenge · Posts
+   ============================================================= */
+
+/* ── Community nav ─────────────────────────────────────────── */
+
+.community-nav {
+  display: flex;
+  gap: 6px;
+  padding: 4px 0 10px;
+  border-bottom: 1px solid var(--border, #2a3a2e);
+  margin-bottom: 14px;
+}
+
+.comm-nav-btn {
+  flex: 1;
+  padding: 8px 6px;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  color: var(--text-muted, #7a8f7d);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.comm-nav-btn.active,
+.comm-nav-btn:hover {
+  background: var(--primary, #5fa87e);
+  border-color: var(--primary, #5fa87e);
+  color: #fff;
+}
+
+/* ── ⑦ Filter pills ─────────────────────────────────────────── */
+
+.comm-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.comm-search-input {
+  flex: 1;
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text, #e8f5e9);
+  font-size: 0.85rem;
+  font-family: 'Poppins', sans-serif;
+  outline: none;
+  transition: border-color 0.18s;
+}
+.comm-search-input:focus { border-color: var(--primary, #5fa87e); }
+
+.comm-clear-btn {
+  background: transparent;
+  border: 1px solid var(--border, #2a3a2e);
+  color: var(--text-muted, #7a8f7d);
+  border-radius: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: color 0.18s, border-color 0.18s;
+}
+.comm-clear-btn:hover { color: var(--text, #e8f5e9); border-color: var(--text-muted, #7a8f7d); }
+
+.comm-tag-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.comm-pill {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  color: var(--text-muted, #7a8f7d);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.77rem;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+.comm-pill.active,
+.comm-pill:hover {
+  background: var(--primary, #5fa87e);
+  border-color: var(--primary, #5fa87e);
+  color: #fff;
+}
+
+.comm-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.comm-sort-label {
+  font-size: 0.7rem;
+  color: var(--text-muted, #7a8f7d);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+#commSortPills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.comm-sort-pill {
+  background: transparent;
+  border: 1px solid var(--border, #2a3a2e);
+  color: var(--text-muted, #7a8f7d);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.comm-sort-pill.active,
+.comm-sort-pill:hover {
+  background: rgba(95,168,126,0.15);
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+}
+
+/* ── ⑩ Weekly challenge card ─────────────────────────────────── */
+
+.comm-challenge-card {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  transition: border-color 0.2s;
+}
+.comm-challenge-card.done {
+  border-color: var(--primary, #5fa87e);
+  background: rgba(95,168,126,0.06);
+}
+
+.comm-challenge-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.comm-challenge-icon { font-size: 1.3rem; flex-shrink: 0; }
+
+.comm-challenge-info { flex: 1; }
+
+.comm-challenge-title {
+  font-size: 0.65rem;
+  color: var(--text-muted, #7a8f7d);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.comm-challenge-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text, #e8f5e9);
+}
+
+.comm-challenge-count {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary, #5fa87e);
+  white-space: nowrap;
+}
+
+.comm-challenge-bar-wrap {
+  height: 5px;
+  background: var(--border, #2a3a2e);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.comm-challenge-bar {
+  height: 100%;
+  background: var(--primary, #5fa87e);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.comm-challenge-card.done .comm-challenge-bar { background: #81c784; }
+
+.comm-challenge-badge {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--primary, #5fa87e);
+  font-weight: 600;
+}
+
+/* ── ⑥⑪ Activity feed + post composer ───────────────────────── */
+
+.feed-composer {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.feed-composer-top {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.feed-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary, #5fa87e);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.feed-textarea {
+  flex: 1;
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text, #e8f5e9);
+  font-size: 0.85rem;
+  font-family: 'Poppins', sans-serif;
+  resize: none;
+  outline: none;
+  transition: border-color 0.18s;
+}
+.feed-textarea:focus { border-color: var(--primary, #5fa87e); }
+
+.feed-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.feed-tag-group { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.feed-tag-btn {
+  background: transparent;
+  border: 1px solid var(--border, #2a3a2e);
+  color: var(--text-muted, #7a8f7d);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.feed-tag-btn.active,
+.feed-tag-btn:hover {
+  background: rgba(95,168,126,0.15);
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+}
+
+.feed-post-btn {
+  background: var(--primary, #5fa87e);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  padding: 7px 18px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.feed-post-btn:hover { opacity: 0.85; }
+
+/* Feed card */
+
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feed-card {
+  display: flex;
+  gap: 10px;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 12px;
+  padding: 10px 12px;
+  transition: border-color 0.18s;
+}
+.feed-card:hover { border-color: var(--primary, #5fa87e); }
+
+.feed-card-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--border, #2a3a2e);
+  color: var(--text, #e8f5e9);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.feed-card-body { flex: 1; min-width: 0; }
+
+.feed-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  flex-wrap: wrap;
+}
+
+.feed-card-name { color: var(--text, #e8f5e9); font-size: 0.85rem; }
+.feed-card-type { font-size: 0.9rem; }
+.feed-card-time { margin-left: auto; font-size: 0.7rem; color: var(--text-muted, #7a8f7d); }
+
+.feed-card-text {
+  font-size: 0.82rem;
+  color: var(--text-muted, #7a8f7d);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.feed-empty {
+  text-align: center;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.85rem;
+  padding: 24px 16px;
+}
+
+/* ── ⑨ Inline exercise leaderboard ──────────────────────────── */
+
+.lb-exercise-section { margin-top: 2px; }
+
+.lb-exercise-inner { padding: 10px 14px 14px; }
+
+.lb-exercise-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.lb-exercise-select {
+  flex: 1;
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text, #e8f5e9);
+  font-size: 0.83rem;
+  font-family: 'Poppins', sans-serif;
+  outline: none;
+}
+
+.lb-time-pills {
+  display: flex;
+  gap: 5px;
+}
+
+.lb-time-pill {
+  background: transparent;
+  border: 1px solid var(--border, #2a3a2e);
+  color: var(--text-muted, #7a8f7d);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.lb-time-pill.active,
+.lb-time-pill:hover {
+  background: rgba(95,168,126,0.15);
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+}
