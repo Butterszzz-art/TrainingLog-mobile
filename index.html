@@ -908,24 +908,52 @@
 </div>
 
 <div id="leaderboardTab" class="tab-content">
-  <h2>Leaderboard</h2>
-  <div class="leaderboard-screen">
-    <div class="leaderboard-controls">
-      <label for="leaderSortStatic">Sort By</label>
-      <select id="leaderSortStatic">
+  <div class="lb-page">
+
+    <!-- ① Always-visible personal stats (local data, no backend needed) -->
+    <div id="lbPersonalStats" class="lb-personal-stats">
+      <!-- populated by renderPersonalStats() -->
+    </div>
+
+    <!-- ② Your rank banner (shown after backend fetch) -->
+    <div id="lbYourRank" style="display:none;"></div>
+
+    <!-- ③ Sort controls -->
+    <div class="lb-controls">
+      <span class="lb-controls-label">Sort by</span>
+      <div class="lb-sort-pills" id="lbSortPills">
+        <button class="lb-sort-pill active" data-sort="workoutsLogged">Workouts</button>
+        <button class="lb-sort-pill" data-sort="studyHours">Study hrs</button>
+        <button class="lb-sort-pill" data-sort="groupActivity">Activity</button>
+      </div>
+      <!-- hidden select kept for JS compatibility -->
+      <select id="leaderSortStatic" style="display:none;">
         <option value="workoutsLogged">Workouts Logged</option>
         <option value="studyHours">Study Hours</option>
         <option value="groupActivity">Group Activity</option>
       </select>
     </div>
-    <div id="leaderboardContainer"></div>
-    <div id="leaderboardLoading" class="spinner" style="display:none;"></div>
-    <p id="leaderboardEmpty" style="display:none;text-align:center;">No data available.</p>
-    <canvas id="lbBarChart"></canvas>
-    <canvas id="lbLineChart" style="margin-top:20px;"></canvas>
-    <div style="margin-top:10px;">
-      <button onclick="showTab('exerciseLeaderboardTab')">Exercise Leaderboard</button>
+
+    <!-- ④ Rank list -->
+    <div id="leaderboardContainer" class="lb-list"></div>
+    <div id="leaderboardLoading" class="lb-loading" style="display:none;">
+      <div class="lb-spinner"></div><span>Loading leaderboard…</span>
     </div>
+    <p id="leaderboardEmpty" class="lb-empty" style="display:none;">
+      No community data yet — be the first to show up here!
+    </p>
+
+    <!-- ⑤ Charts (collapsible) -->
+    <details class="lb-charts-section">
+      <summary class="lb-charts-summary">📊 Charts</summary>
+      <canvas id="lbBarChart"></canvas>
+      <canvas id="lbLineChart" style="margin-top:16px;"></canvas>
+    </details>
+
+    <button class="lb-exercise-btn" onclick="showTab('exerciseLeaderboardTab')">
+      🏋️ Exercise Leaderboard →
+    </button>
+
   </div>
 </div>
 
