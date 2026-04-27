@@ -2000,7 +2000,7 @@ async function startLogin() {
     }
 
     if (result && result.success === false) {
-      const message = result.message || "Invalid username or password.";
+      const message = result.error?.message || result.message || "Invalid username or password.";
       if (errorEl) {
         errorEl.textContent = message;
       } else {
@@ -2375,46 +2375,41 @@ async function startSignup() {
   setLoading(btn, true);
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
+  const errorEl = document.getElementById('loginError');
+
+  if (errorEl) errorEl.textContent = '';
 
   if (!username || !password) {
-    alert("Please fill in both username and password.");
+    if (errorEl) errorEl.textContent = "Please fill in both username and password.";
     setLoading(btn, false);
     return;
   }
 
   try {
-    const response = await fetch(`${window.SERVER_URL}/signup`, {
+    // POST /register — returns token directly, no second login call needed
+    const response = await fetch(`${window.SERVER_URL}/register`, {
       method: 'POST',
-        credentials: "include",
+      credentials: "include",
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
 
     const result = await response.json();
 
-    if (result.success) {
-      // Auto-login after signup so onboarding can persist settings to the right user
-      const loginResponse = await fetch(`${window.SERVER_URL}/login`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const loginResult = await loginResponse.json();
-      if (loginResult.success || loginResult.token) {
-        if (loginResult.token) localStorage.setItem('token', loginResult.token);
-        setCurrentUser(username);
-        document.getElementById('loginContainer').style.display = 'none';
-        showOnboarding();
-      } else {
-        alert("Account created! Please log in to continue.");
-      }
+    if (result.success && result.token) {
+      persistLoginIdentity(result.username || username, result.token);
+      setCurrentUser(result.username || username);
+      document.getElementById('loginContainer').style.display = 'none';
+      showOnboarding();
     } else {
-      alert(result.message || "Signup failed.");
+      const message = result.error?.message || result.message || "Signup failed. Please try again.";
+      if (errorEl) errorEl.textContent = message;
+      else alert(message);
     }
   } catch (error) {
     console.error('Signup error:', error);
-    alert("Error connecting to server.");
+    if (errorEl) errorEl.textContent = "Error connecting to server. Please try again.";
+    else alert("Error connecting to server.");
   } finally {
     setLoading(btn, false);
   }
@@ -10809,19 +10804,7 @@ async function findUser(username) {
   return data.records[0];
 }
 
-async function createUser(username, password) {
-  const url = `/airtable/${airtableBaseId}/${usersTableName}`;
-  await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${airtableToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      fields: { Username: username, Password: password }
-    })
-  });
-}
+// createUser removed — registration now handled via POST /register on the backend
 
 async function fetchDailyLogs(username) {
   const token = getAuthToken();
