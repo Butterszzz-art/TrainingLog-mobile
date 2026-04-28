@@ -66,22 +66,22 @@
       <h2>What's your training focus?</h2>
       <p class="ob-subtitle">We'll personalise the app for you</p>
       <div class="ob-archetype-grid">
-        <button class="ob-archetype-card" data-archetype="bodybuilder">
+        <button class="ob-archetype-card" data-archetype="bodybuilder" onclick="window._selectArchetype(this)">
           <span class="ob-arch-icon">💪</span>
           <strong>Bodybuilder</strong>
           <small>Physique &amp; hypertrophy</small>
         </button>
-        <button class="ob-archetype-card" data-archetype="powerlifter">
+        <button class="ob-archetype-card" data-archetype="powerlifter" onclick="window._selectArchetype(this)">
           <span class="ob-arch-icon">🏋️</span>
           <strong>Powerlifter</strong>
           <small>Squat, bench &amp; deadlift</small>
         </button>
-        <button class="ob-archetype-card" data-archetype="hybrid">
+        <button class="ob-archetype-card" data-archetype="hybrid" onclick="window._selectArchetype(this)">
           <span class="ob-arch-icon">⚡</span>
           <strong>Hybrid</strong>
           <small>Strength &amp; conditioning</small>
         </button>
-        <button class="ob-archetype-card" data-archetype="recreational">
+        <button class="ob-archetype-card" data-archetype="recreational" onclick="window._selectArchetype(this)">
           <span class="ob-arch-icon">🌱</span>
           <strong>Recreational</strong>
           <small>General fitness</small>
@@ -11241,6 +11241,7 @@ function showOnboarding() {
   const overlay = document.getElementById('onboardingOverlay');
   if (overlay) {
     overlay.removeAttribute('hidden');
+    _initOnboarding(); // ensure delegation is wired up before first interaction
     _obGoToStep(1);
   }
 }
@@ -11255,52 +11256,58 @@ function _obGoToStep(step) {
   });
 }
 
+// Global handler callable from inline onclick — works regardless of init order
+window._ob = _ob;
+window._selectArchetype = function(card) {
+  document.querySelectorAll('.ob-archetype-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  window._ob.archetype = card.dataset.archetype;
+  const btn = document.getElementById('obNext1');
+  if (btn) btn.disabled = false;
+};
+
 function _initOnboarding() {
-  // Step 1: archetype card selection
-  document.querySelectorAll('.ob-archetype-card').forEach(card => {
-    card.addEventListener('click', () => {
-      document.querySelectorAll('.ob-archetype-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      _ob.archetype = card.dataset.archetype;
-      const btn = document.getElementById('obNext1');
-      if (btn) btn.disabled = false;
-    });
+  const overlay = document.getElementById('onboardingOverlay');
+  if (!overlay || overlay._obDelegated) return;
+  overlay._obDelegated = true;
+
+  // Single delegated listener on the overlay — survives hidden/show cycles
+  // and fires even if direct card listeners were never attached.
+  overlay.addEventListener('click', (e) => {
+    // Archetype card
+    const card = e.target.closest('.ob-archetype-card');
+    if (card) { window._selectArchetype(card); return; }
+
+    if (e.target.closest('#obNext1')) { _obGoToStep(2); return; }
+    if (e.target.closest('#obBack2')) { _obGoToStep(1); return; }
+    if (e.target.closest('#obNext2')) { _obGoToStep(3); return; }
+    if (e.target.closest('#obBack3')) { _obGoToStep(2); return; }
+    if (e.target.closest('#obFinish')) { _finishOnboarding(); return; }
+
+    const unitBtn = e.target.closest('#obUnitToggle .ob-toggle-btn');
+    if (unitBtn) {
+      document.querySelectorAll('#obUnitToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
+      unitBtn.classList.add('ob-active');
+      window._ob.unit = unitBtn.dataset.unit;
+      return;
+    }
+    const themeBtn = e.target.closest('#obThemeToggle .ob-toggle-btn');
+    if (themeBtn) {
+      document.querySelectorAll('#obThemeToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
+      themeBtn.classList.add('ob-active');
+      window._ob.theme = themeBtn.dataset.theme;
+      return;
+    }
   });
 
-  document.getElementById('obNext1')?.addEventListener('click', () => _obGoToStep(2));
-  document.getElementById('obBack2')?.addEventListener('click', () => _obGoToStep(1));
-
-  // Step 2: experience radio
-  document.querySelectorAll('[name="obExperience"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      _ob.experience = radio.value;
+  // Experience level uses change (radio), not click
+  overlay.addEventListener('change', (e) => {
+    if (e.target.name === 'obExperience') {
+      window._ob.experience = e.target.value;
       const btn = document.getElementById('obNext2');
       if (btn) btn.disabled = false;
-    });
+    }
   });
-
-  document.getElementById('obNext2')?.addEventListener('click', () => _obGoToStep(3));
-  document.getElementById('obBack3')?.addEventListener('click', () => _obGoToStep(2));
-
-  // Step 3: unit toggle
-  document.querySelectorAll('#obUnitToggle .ob-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#obUnitToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
-      btn.classList.add('ob-active');
-      _ob.unit = btn.dataset.unit;
-    });
-  });
-
-  // Step 3: theme toggle
-  document.querySelectorAll('#obThemeToggle .ob-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#obThemeToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
-      btn.classList.add('ob-active');
-      _ob.theme = btn.dataset.theme;
-    });
-  });
-
-  document.getElementById('obFinish')?.addEventListener('click', _finishOnboarding);
 }
 
 function _finishOnboarding() {
