@@ -1965,6 +1965,46 @@ function setLoading(btn, state) {
 
   
 // LOGIN
+// ── Local credential cache (SHA-256 hash, stored in localStorage) ──────────
+// Lets the app log in offline / when the server is unreachable.
+async function _hashCredential(username, password) {
+  try {
+    const data = new TextEncoder().encode(username.toLowerCase() + ':' + password);
+    const buf  = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch { return null; }
+}
+async function _saveLocalCredentials(username, password) {
+  try {
+    const hash  = await _hashCredential(username, password);
+    if (!hash) return;
+    const store = JSON.parse(localStorage.getItem('_localAuth') || '{}');
+    store[username.toLowerCase()] = hash;
+    localStorage.setItem('_localAuth', JSON.stringify(store));
+  } catch { /* non-critical */ }
+}
+async function _checkLocalCredentials(username, password) {
+  try {
+    const hash  = await _hashCredential(username, password);
+    const store = JSON.parse(localStorage.getItem('_localAuth') || '{}');
+    return !!hash && store[username.toLowerCase()] === hash;
+  } catch { return false; }
+}
+function _doLocalLogin(username) {
+  setCurrentUser(username);
+  localStorage.setItem('fitnessAppUser', username);
+  const el = document.getElementById('loginContainer');
+  if (el) el.style.display = 'none';
+  openSection('pocketFit');
+  if (typeof window.renderWorkouts === 'function') window.renderWorkouts();
+  if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
+  renderWeights?.();
+  renderCardio?.();
+  loadTemplateDropdown?.();
+  renderDailyMacroProgress?.();
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 async function startLogin() {
   const btn = document.getElementById('loginButton');
   setLoading(btn, true);
@@ -2032,6 +2072,7 @@ async function startLogin() {
       setCurrentUser(username);
       localStorage.setItem("fitnessAppUser", username);
       persistLoginIdentity(username, result.token);
+      _saveLocalCredentials(username, password); // cache for offline login
 
       // BUGFIX: null-safe — #userDisplay may not exist in the current DOM
       const userDisplayEl = document.getElementById("userDisplay");
@@ -2065,13 +2106,18 @@ async function startLogin() {
     }
   } catch (error) {
     console.error('Login error:', error);
+    // Server unreachable — try cached local credentials
+    const localOk = await _checkLocalCredentials(username, password);
+    if (localOk) {
+      console.info('Server offline — using cached local credentials');
+      _doLocalLogin(username);
+      await loadTemplateDropdown();
+      return;
+    }
     if (errorEl) {
       errorEl.textContent = "Unable to connect to the server. Please try again later.";
-    } else {
-      console.error('Unable to connect to the server. Please try again later.');
     }
-
-    await loadTemplateDropdown(); // ✅ Load templates after login
+    await loadTemplateDropdown();
   } finally {
     setLoading(btn, false);
   }
@@ -2416,6 +2462,7 @@ async function startSignup() {
       if (loginResult.success || loginResult.token) {
         if (loginResult.token) localStorage.setItem('token', loginResult.token);
         setCurrentUser(username);
+        _saveLocalCredentials(username, password); // cache for offline login
         document.getElementById('loginContainer').style.display = 'none';
         showOnboarding();
       } else {
@@ -2426,7 +2473,7 @@ async function startSignup() {
     }
   } catch (error) {
     console.error('Signup error:', error);
-    alert("Error connecting to server.");
+    alert("Error connecting to server. If you already have an account, try logging in instead.");
   } finally {
     setLoading(btn, false);
   }
