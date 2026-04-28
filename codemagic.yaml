@@ -76,7 +76,7 @@ workflows:
             -scheme "$XCODE_SCHEME" \
             -configuration Debug \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$CM_BUILD_DIR/DerivedData" \
             SYMROOT="$CM_BUILD_DIR/build" \
             CODE_SIGN_IDENTITY="" \
