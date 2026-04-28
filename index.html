@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="css/coaching.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="manifest.json">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
@@ -6085,7 +6085,6 @@ loadMacroDayContext();
 
 
 async function saveDailyMacroLog(username, date, meals, totals) {
-  const token = getAuthToken();
   let dayContext = null;
   try {
     dayContext = JSON.parse(localStorage.getItem(getMacroDayContextKey()) || 'null');
@@ -6109,7 +6108,7 @@ async function saveDailyMacroLog(username, date, meals, totals) {
     const response = await fetch("/dailylogs", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + token,
+        ...getAuthHeaders(),
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
@@ -10807,12 +10806,11 @@ async function findUser(username) {
 // createUser removed — registration now handled via POST /register on the backend
 
 async function fetchDailyLogs(username) {
-  const token = getAuthToken();
   const params = new URLSearchParams({ username });
 
   try {
     const response = await fetch(`/dailylogs?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: getAuthHeaders()
     });
     const data = await response.json();
     if (!response.ok) {
@@ -10829,9 +10827,6 @@ async function fetchDailyLogs(username) {
   const loginEl = document.getElementById("loginContainer");
   const dash = document.getElementById("dashboardContainer");
   const fit = document.getElementById("pocketFitContainer");
-
-  // Force a fresh auth handshake by clearing any persisted JWT on app load.
-  forceFreshLogin();
 
   if (savedUser) {
     setCurrentUser(savedUser);

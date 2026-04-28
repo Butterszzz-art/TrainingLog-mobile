@@ -154,7 +154,8 @@
       // Future backend endpoint: PUT /api/bodybuilding/daily-mission/:userId
       // Sync errors are intentionally ignored to keep the app fully usable offline.
       if (typeof globalScope.fetch !== 'function') return false;
-      return globalScope.fetch(`/api/bodybuilding/daily-mission/${encodeURIComponent(resolvedUser)}`, {
+      const _serverBase = (typeof window !== 'undefined' && window.SERVER_URL) || '';
+      return globalScope.fetch(`${_serverBase}/api/bodybuilding/daily-mission/${encodeURIComponent(resolvedUser)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(state || {})

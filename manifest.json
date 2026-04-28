@@ -2,7 +2,7 @@
   "name": "Pocket Coach",
   "short_name": "PocketCoach",
   "description": "Your personal fitness training log and coach.",
-  "start_url": "/",
+  "start_url": "/TrainingLog-mobile/",
   "display": "standalone",
   "background_color": "#0b130d",
   "theme_color": "#5fa87e",
