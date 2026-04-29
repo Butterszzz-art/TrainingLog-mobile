@@ -217,6 +217,31 @@
       <span class="notif-banner-text">Enable notifications to get rest timer alerts when your phone is locked.</span>
       <button class="notif-banner-btn" onclick="requestRestTimerNotifications()">Enable</button>
     </div>
+    <!-- Step tracking widget — JS in archetype-features.js (initStepWidget) -->
+    <div id="stepWidgetCard" style="margin:0 12px 8px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:16px; padding:14px 16px;">
+      <div class="step-widget">
+        <div class="step-ring-wrap">
+          <svg class="step-ring-svg" viewBox="0 0 80 80">
+            <circle class="step-ring-track" cx="40" cy="40" r="34"/>
+            <circle id="stepRingFill" class="step-ring-fill" cx="40" cy="40" r="34"
+                    stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          </svg>
+          <div class="step-ring-inner">
+            <span id="stepRingCount" class="step-ring-count">0</span>
+            <span class="step-ring-icon">👟</span>
+          </div>
+        </div>
+        <div class="step-widget-info">
+          <div id="stepGoalLabel" class="step-widget-goal">Goal: 10,000 steps</div>
+          <div class="step-input-row">
+            <input id="stepCountInput" type="number" class="step-count-input"
+                   placeholder="Steps today" min="0" inputmode="numeric"/>
+            <button id="stepSaveBtn" class="step-save-btn">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="homeDashboardContent" class="home-dashboard"></div>
   </div>
 
@@ -12591,7 +12616,7 @@ function saveMeetDetails() {
   const name = document.getElementById('meetName')?.value || '';
   const fed = document.getElementById('meetFed')?.value || '';
   const weightClass = document.getElementById('meetWeightClass')?.value || '';
-  if (!date) { alert('Please enter a meet date.'); return; }
+  if (!date) { window.showToast?.('Please enter a meet date.', 'warn'); return; }
   localStorage.setItem('plMeetDetails', JSON.stringify({ date, name, fed, weightClass }));
   renderMeetPrep();
   if (typeof showToast === 'function') showToast('Meet saved!');
