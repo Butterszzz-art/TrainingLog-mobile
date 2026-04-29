@@ -338,7 +338,7 @@ async function fetchLeaderboard() {
   if (spinner) spinner.style.display = 'flex';
   if (empty)   empty.style.display   = 'none';
   try {
-    const res = await fetch(`${window.SERVER_URL}/leaderboard`, { headers: getAuthHeaders() });
+    const res = await fetch(`${window.SERVER_URL}/leaderboard`, { headers: getAuthHeaders(), signal: AbortSignal.timeout(5000) });
     leaderboardData = await res.json();
   } catch (e) {
     console.warn('fetch leaderboard failed', e);

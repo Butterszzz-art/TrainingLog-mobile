@@ -350,7 +350,8 @@ function initProgramTabV1(root) {
           credentials: "include",
           method: "POST",
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(5000)
         });
       } catch (_error) {
         // Local save is still authoritative.
@@ -371,7 +372,8 @@ function initProgramTabV1(root) {
       credentials: "include",
       method: "POST",
       headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ programId: state.shareId, recipientUsername: username })
+      body: JSON.stringify({ programId: state.shareId, recipientUsername: username }),
+      signal: AbortSignal.timeout(5000)
     });
     state.showShare = false;
     render();

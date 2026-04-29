@@ -548,7 +548,8 @@
       return globalScope.fetch(`/api/bodybuilding/checkins/${encodeURIComponent(resolvedUser)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Array.isArray(state) ? state : [])
+        body: JSON.stringify(Array.isArray(state) ? state : []),
+        signal: AbortSignal.timeout(5000)
       }).then(() => true).catch(() => false);
     } catch (_error) {
       return false;

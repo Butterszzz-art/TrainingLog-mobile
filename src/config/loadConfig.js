@@ -30,7 +30,7 @@ function resolveServerUrl() {
 
 async function loadConfig() {
   const serverUrl = resolveServerUrl();
-  const res = await fetch(`${serverUrl}/config`);
+  const res = await fetch(`${serverUrl}/config`, { signal: AbortSignal.timeout(5000) });
   const config = await res.json();
 
   if (typeof window !== 'undefined') {

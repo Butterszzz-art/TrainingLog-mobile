@@ -234,7 +234,8 @@ export async function syncWorkoutToBackend(workout) {
         ...getAuthHeaders()
       },
       credentials: 'include',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(5000)
     });
 
     const data = await res.json().catch(() => null);
@@ -288,7 +289,8 @@ async function fetchWorkoutHistoryResponse(username) {
     headers: {
       ...authHeaders,
       Authorization: `Bearer ${token}`
-    }
+    },
+    signal: AbortSignal.timeout(5000)
   });
 
   return { response, url, hasAuth };

@@ -78,11 +78,12 @@ async function createGroup(name, goal = '', tags = []) {
   if (typeof fetch !== 'undefined' && window && window.currentUser) {
     try {
       const res = await fetch(`${window.SERVER_URL}/community/groups`, {
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-  body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags })
-});
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags }),
+        signal: AbortSignal.timeout(5000)
+      });
       const g = normalizeGroup(await res.json());
       groups.push(g);
       saveGroups();
@@ -108,7 +109,8 @@ async function fetchGroups(userId) {
     const res = await fetch(`${window.SERVER_URL}/community/groups?userId=${encodeURIComponent(userId)}`, {
       method: 'GET',
       credentials: 'include',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       groups = normalizeGroups(await res.json());
@@ -129,7 +131,8 @@ async function searchGroups(opts = {}) {
     const res = await fetch(`${window.SERVER_URL}/community/groups?${params.toString()}`, {
       method: 'GET',
       credentials: 'include',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       groups = normalizeGroups(await res.json());
@@ -181,7 +184,8 @@ async function fetchPosts(groupId) {
     const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/posts`, {
       method: 'GET',
       credentials: 'include',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       const posts = await res.json();
@@ -206,7 +210,8 @@ async function inviteUserToGroup(groupId, invitedUserId) {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ invitedUserId })
+      body: JSON.stringify({ invitedUserId }),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       const g = groups.find(gr => gr.id === groupId);
@@ -236,7 +241,8 @@ async function shareProgramToGroup(groupId, programData) {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ senderId: window.currentUser, programData })
+      body: JSON.stringify({ senderId: window.currentUser, programData }),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       alert('Program shared');
@@ -256,7 +262,8 @@ async function fetchProgress(groupId) {
     const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/progress`, {
       method: 'GET',
       credentials: 'include',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) return await res.json();
   } catch (e) {
@@ -306,7 +313,8 @@ async function addPost(groupId, user, text) {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ userId: user, text })
+        body: JSON.stringify({ userId: user, text }),
+        signal: AbortSignal.timeout(5000)
       });
     } catch (e) {
       console.warn('addPost failed', e);

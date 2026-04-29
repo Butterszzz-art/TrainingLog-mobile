@@ -838,7 +838,7 @@ function injectSettingsMarkup() {
 
   container.dataset.loaded = 'loading';
 
-  fetch('src/html/settings.html')
+  fetch('src/html/settings.html', { signal: AbortSignal.timeout(5000) })
     .then(response => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.text();

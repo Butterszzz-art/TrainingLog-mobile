@@ -189,7 +189,8 @@ async function syncGoalsToBackend(user, goals, options = {}) {
         'Content-Type': 'application/json',
         Authorization: options?.token ? `Bearer ${options.token}` : ''
       },
-      body: JSON.stringify({ user, goals })
+      body: JSON.stringify({ user, goals }),
+      signal: AbortSignal.timeout(5000)
     });
     return { skipped: false, ok: response.ok };
   } catch (error) {
