@@ -689,3 +689,81 @@
   border-radius: 50%;
   background: var(--primary, #5fa87e);
 }
+
+/* ── Vacation Mode card (session-context.js) ──────────────────── */
+
+.vm-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 0 0 10px;
+  transition: border-color 0.2s;
+}
+
+.vm-card--active {
+  border-color: #e6a817;
+  background: rgba(230, 168, 23, 0.06);
+}
+
+.vm-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vm-icon { font-size: 1.5rem; }
+
+.vm-title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, #e8f5e9);
+}
+
+.vm-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted, #7a8f7d);
+  margin-top: 2px;
+}
+
+.vm-toggle {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: transparent;
+  color: var(--text, #e8f5e9);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.vm-toggle--on {
+  background: rgba(230, 168, 23, 0.15);
+  border-color: #e6a817;
+  color: #e6a817;
+}
+
+/* Active vacation banner (top of home tab) */
+#vacationModeBanner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: rgba(230, 168, 23, 0.1);
+  border: 1px solid #e6a817;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: #e6a817;
+}
+
+#vacationModeBanner .vm-banner-icon { font-size: 1.1rem; }
+#vacationModeBanner .vm-since { margin-left: auto; opacity: 0.7; font-size: 0.72rem; }

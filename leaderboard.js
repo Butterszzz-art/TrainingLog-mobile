@@ -42,15 +42,21 @@ function buildLocalStats(username) {
   const weightLog   = _parse(`weightLog_${username}`) || _parse('weightEntries') || [];
   const readiness   = _parse('dailyReadiness_v1') || {};
 
-  // Workout streak
-  const workedDates = new Set(workouts.map(w => w.date).filter(Boolean));
+  // Workout streak (vacation days count as "kept" so they don't break the streak)
+  const workedDates   = new Set(workouts.map(w => w.date).filter(Boolean));
+  const _isVacation   = typeof window.isVacationDate === 'function' ? window.isVacationDate : () => false;
   let streak = 0;
   const today = new Date();
   const check = new Date(today);
   check.setHours(0, 0, 0, 0);
-  while (workedDates.has(check.toISOString().slice(0, 10))) {
-    streak++;
-    check.setDate(check.getDate() - 1);
+  while (true) {
+    const ds = check.toISOString().slice(0, 10);
+    if (workedDates.has(ds) || _isVacation(ds)) {
+      streak++;
+      check.setDate(check.getDate() - 1);
+    } else {
+      break;
+    }
   }
 
   // Workouts this month

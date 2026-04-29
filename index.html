@@ -193,8 +193,16 @@
 <div id="progressReminder"></div>
 
   <div id="homeTab" class="tab-content">
+    <!-- Vacation mode active banner -->
+    <div id="vacationModeBanner">
+      <span class="vm-banner-icon">🏖️</span>
+      <span>Vacation Mode — streak &amp; program tracking paused</span>
+      <span class="vm-since"></span>
+    </div>
     <!-- Today's program day + weekly split — populated by today-program.js -->
     <div id="todayProgramCard"></div>
+    <!-- Vacation mode card — populated by session-context.js -->
+    <div id="vacationModeCard"></div>
     <!-- Daily readiness card — populated by readiness-checkin.js -->
     <div id="readinessHomeCard"></div>
     <!-- Weekly summary card — populated by weekly-summary.js -->
@@ -223,6 +231,9 @@
     <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
     <div id="logSub_log" class="log-subview active">
       <h2 style="padding:0 10px;">Resistance Exercise Log</h2>
+
+      <!-- Session context flags: alt-machine / alt-gym -->
+      <div id="sessionContextBar"></div>
 
       <div id="workoutTimer" class="workout-timer" aria-live="polite">
         <span class="workout-timer-label">Workout Time:</span>
@@ -2005,6 +2016,7 @@ function _doLocalLogin(username) {
   loadTemplateDropdown?.();
   renderDailyMacroProgress?.();
   if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+  if (typeof window.initSessionContext === 'function') window.initSessionContext();
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -2107,6 +2119,7 @@ async function startLogin() {
       saveDailyMacroProgress(0, 0, 0); // reset progress on login
       renderDailyMacroProgress();
       if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+      if (typeof window.initSessionContext === 'function') window.initSessionContext();
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -11840,6 +11853,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/progress-report.js"></script>
   <script src="src/js/community-feed.js"></script>
   <script src="src/js/today-program.js"></script>
+  <script src="src/js/session-context.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
     document.addEventListener('DOMContentLoaded', function() {
