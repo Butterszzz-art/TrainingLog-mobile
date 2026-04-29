@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="css/features.css">
   <link rel="stylesheet" href="css/cardio.css">
   <link rel="stylesheet" href="css/checkin.css">
+  <link rel="stylesheet" href="css/community-share.css">
   <link rel="manifest" href="/manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1013,9 +1014,10 @@
 
 <div id="communityTab" class="tab-content">
   <nav class="community-nav">
-    <button class="comm-nav-btn" onclick="showCommunitySection('groups')" id="commNavGroups">👥 Groups</button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('feed')"   id="commNavFeed">📣 Feed</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('groups')"      id="commNavGroups">👥 Groups</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('feed')"        id="commNavFeed">📣 Feed</button>
     <button class="comm-nav-btn" onclick="showCommunitySection('competition')" id="commNavCompetition">🏆 Leaderboard</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('share')"       id="commNavShare">🔗 Share<span id="commShareBadge" class="comm-nav-badge" style="display:none">0</span></button>
   </nav>
 
   <!-- ── Groups panel ── -->
@@ -1096,7 +1098,76 @@
 
   <!-- Legacy posts panel (kept for compatibility) -->
   <div id="postsPanel" class="panel" style="display:none;"></div>
-</div>
+
+  <!-- ── Share Panel ── -->
+  <div id="commSharePanel" class="panel" style="display:none;">
+
+    <!-- ① SEND section -->
+    <div class="comm-share-card">
+      <h3 class="comm-share-card-title">📤 Send Program or Template</h3>
+
+      <!-- Mode: user vs group -->
+      <div class="comm-share-mode-row">
+        <button class="comm-share-mode-btn active" data-mode="user"  onclick="commShareSetMode('user')">👤 To a User</button>
+        <button class="comm-share-mode-btn"        data-mode="group" onclick="commShareSetMode('group')">👥 To a Group</button>
+      </div>
+
+      <!-- User mode -->
+      <div id="commShareUserMode">
+        <div class="comm-share-field">
+          <label for="commShareRecipient">Recipient username</label>
+          <input type="text" id="commShareRecipient" placeholder="e.g. john_lifts" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Group mode (hidden by default) -->
+      <div id="commShareGroupMode" style="display:none">
+        <div class="comm-share-field">
+          <label for="commShareGroupSelect">Choose group</label>
+          <select id="commShareGroupSelect">
+            <option value="">— select a group —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Type selector -->
+      <div class="comm-share-type-row">
+        <button class="comm-share-type-btn active" data-type="template" onclick="commShareSetType('template')">📋 Templates</button>
+        <button class="comm-share-type-btn"        data-type="program"  onclick="commShareSetType('program')">🗓 Programs</button>
+      </div>
+
+      <!-- Selectable item list -->
+      <div id="commShareItemList" class="comm-share-item-list">
+        <div class="comm-share-empty">Open the Share tab to load your library.</div>
+      </div>
+
+      <!-- Optional message -->
+      <div class="comm-share-field">
+        <label for="commShareMessage">Note <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <textarea id="commShareMessage" placeholder="e.g. This is the program I mentioned — give it a try!"></textarea>
+      </div>
+
+      <button class="comm-share-send-btn" onclick="commSendShare()">📤 Send</button>
+    </div>
+
+    <!-- ② INBOX section -->
+    <div class="comm-share-card">
+      <h3 class="comm-share-card-title">📥 Received</h3>
+      <div id="commShareInbox">
+        <div class="comm-share-empty">Loading…</div>
+      </div>
+    </div>
+
+    <!-- ③ SENT history -->
+    <div class="comm-share-card">
+      <h3 class="comm-share-card-title">📨 Sent</h3>
+      <div id="commShareOutbox">
+        <div class="comm-share-empty">Nothing sent yet.</div>
+      </div>
+    </div>
+
+  </div><!-- /commSharePanel -->
+</div><!-- /communityTab -->
 
 <div id="leaderboardTab" class="tab-content">
   <div class="lb-page">
@@ -2400,6 +2471,13 @@ function showTab(tabName) {
       break;
     case 'communityTab':
       if (window.showCommunitySection) showCommunitySection('groups');
+      // Refresh inbox badge whenever community tab is opened
+      if (currentUser) {
+        const _cInbox = (JSON.parse(localStorage.getItem(`communityInbox_${currentUser}`)) || [])
+          .filter(i => !i.accepted && !i.dismissed);
+        const _cBadge = document.getElementById('commShareBadge');
+        if (_cBadge) { _cBadge.style.display = _cInbox.length ? '' : 'none'; _cBadge.textContent = _cInbox.length; }
+      }
       break;
     case 'leaderboardTab':
       if (window.initLeaderboard) initLeaderboard();
@@ -11424,6 +11502,383 @@ window.completeCardioSession = completeCardioSession;
 window.loadSelectedTemplate = loadSelectedTemplate;
 window.loadSelectedResistanceTemplate = loadSelectedResistanceTemplate;
 window.sendTemplate = sendTemplate;
+
+/* ══════════════════════════════════════════════════════════════
+   COMMUNITY SHARE — peer-to-peer program & template sharing
+   localStorage keys:
+     communityInbox_${u}  — items received by user u
+     communityOutbox_${u} — items sent by user u
+   ═════════════════════════════════════════════════════════════ */
+
+let _commShareMode = 'user';       // 'user' | 'group'
+let _commShareType = 'template';   // 'template' | 'program'
+let _commShareSelectedId = null;
+
+/* Switch delivery mode (direct user vs community group) */
+function commShareSetMode(mode) {
+  _commShareMode = mode;
+  document.querySelectorAll('.comm-share-mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode));
+  const userEl  = document.getElementById('commShareUserMode');
+  const groupEl = document.getElementById('commShareGroupMode');
+  if (userEl)  userEl.style.display  = mode === 'user'  ? '' : 'none';
+  if (groupEl) groupEl.style.display = mode === 'group' ? '' : 'none';
+  if (mode === 'group') _populateCommShareGroups();
+}
+
+/* Switch item type (templates vs programs) */
+function commShareSetType(type) {
+  _commShareType = type;
+  _commShareSelectedId = null;
+  document.querySelectorAll('.comm-share-type-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === type));
+  renderCommShareItemList();
+}
+
+/* Populate the group select with groups the user has joined */
+function _populateCommShareGroups() {
+  const sel = document.getElementById('commShareGroupSelect');
+  if (!sel) return;
+  const grps = (typeof groups !== 'undefined' ? groups : [])
+    .filter(g => g.members?.some(m => (m.userId || m) === currentUser));
+  if (!grps.length) {
+    sel.innerHTML = '<option value="">No groups joined yet</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— select a group —</option>' +
+    grps.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+}
+
+/* Render the selectable list of user's own templates or programs */
+function renderCommShareItemList() {
+  const listEl = document.getElementById('commShareItemList');
+  if (!listEl || !currentUser) return;
+
+  let items = [];
+  if (_commShareType === 'template') {
+    const raw = JSON.parse(localStorage.getItem(`managedTemplates_${currentUser}`)) || [];
+    items = raw.map(t => ({
+      id: t.localId || t.id || `t_${Math.random()}`,
+      name: t.name || t.data?.title || 'Untitled Template',
+      desc: `${(t.data?.exercises || []).length} exercises`,
+    }));
+  } else {
+    const raw = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
+    items = raw.map(p => ({
+      id: p.id,
+      name: p.name || 'Untitled Program',
+      desc: `${(p.days || []).length} days · ${p.wizard?.weeks || (p.generatedWeeks?.length) || '?'} weeks`,
+    }));
+  }
+
+  if (!items.length) {
+    listEl.innerHTML = `<div class="comm-share-empty">No ${_commShareType}s saved yet.<br>Save some first from the ${_commShareType === 'template' ? 'Logbook' : 'Programs'} tab.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = items.map(item => `
+    <div class="comm-share-item" data-id="${item.id}" onclick="commShareSelectItem('${item.id}')">
+      <div class="comm-share-item-check">✓</div>
+      <div class="comm-share-item-info">
+        <div class="comm-share-item-name">${item.name}</div>
+        <div class="comm-share-item-desc">${item.desc}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* Highlight a selected item in the list */
+function commShareSelectItem(id) {
+  _commShareSelectedId = id;
+  document.querySelectorAll('#commShareItemList .comm-share-item').forEach(el =>
+    el.classList.toggle('selected', el.dataset.id === id));
+}
+
+/* Main send handler — dispatches to user or group path */
+async function commSendShare() {
+  if (!_commShareSelectedId) {
+    window.showToast?.('Select a program or template first.', 'warn'); return;
+  }
+  const message = document.getElementById('commShareMessage')?.value.trim() || '';
+  if (_commShareMode === 'user') {
+    const recipient = document.getElementById('commShareRecipient')?.value.trim();
+    if (!recipient)                  { window.showToast?.('Enter a recipient username.', 'warn'); return; }
+    if (recipient === currentUser)   { window.showToast?.("You can't share with yourself.", 'warn'); return; }
+    await _commSendToUser(recipient, message);
+  } else {
+    const groupId = document.getElementById('commShareGroupSelect')?.value;
+    if (!groupId) { window.showToast?.('Select a group first.', 'warn'); return; }
+    await _commSendToGroup(groupId, message);
+  }
+}
+
+/* Resolve the selected item's data and name */
+function _commResolveItem() {
+  if (_commShareType === 'template') {
+    const raw = JSON.parse(localStorage.getItem(`managedTemplates_${currentUser}`)) || [];
+    const tpl = raw.find(t => (t.localId || t.id) === _commShareSelectedId);
+    if (!tpl) return null;
+    return { data: tpl.data, name: tpl.name || tpl.data?.title || 'Untitled Template', type: 'template' };
+  } else {
+    const raw = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
+    const prog = raw.find(p => p.id === _commShareSelectedId);
+    if (!prog) return null;
+    return { data: prog, name: prog.name || 'Untitled Program', type: 'program' };
+  }
+}
+
+async function _commSendToUser(recipient, message) {
+  const item = _commResolveItem();
+  if (!item) { window.showToast?.('Could not find the selected item.', 'warn'); return; }
+
+  /* Try backend (best-effort; template endpoint already exists) */
+  if (item.type === 'template') {
+    try {
+      await fetch(`${window.SERVER_URL}/sendTemplate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          fromUser: currentUser,
+          toUser: recipient,
+          templateName: `${item.name} (from @${currentUser})`,
+          templateData: item.data,
+          message
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+    } catch (e) { console.warn('Community sendTemplate backend unavailable, using local', e); }
+  } else {
+    try {
+      await fetch(`${window.SERVER_URL}/shareProgram`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          fromUser: currentUser,
+          toUser: recipient,
+          programData: item.data,
+          message
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+    } catch (e) { console.warn('Community shareProgram backend unavailable, using local', e); }
+  }
+
+  /* Always persist to recipient's local inbox (works same-device; server handles cross-device) */
+  const inboxKey = `communityInbox_${recipient}`;
+  const inbox = JSON.parse(localStorage.getItem(inboxKey)) || [];
+  inbox.unshift({
+    id: `share_${Date.now()}`,
+    type: item.type,
+    name: item.name,
+    from: currentUser,
+    data: item.data,
+    message,
+    date: new Date().toISOString().slice(0, 10),
+    accepted: false
+  });
+  localStorage.setItem(inboxKey, JSON.stringify(inbox));
+
+  /* Record in sender's outbox */
+  _commAddToOutbox({ type: item.type, name: item.name, to: `@${recipient}`, toType: 'user', date: new Date().toISOString().slice(0, 10) });
+
+  window.showToast?.(`📤 "${item.name}" sent to @${recipient}!`, 'success', 3500);
+  if (document.getElementById('commShareRecipient')) document.getElementById('commShareRecipient').value = '';
+  if (document.getElementById('commShareMessage'))   document.getElementById('commShareMessage').value   = '';
+  _commShareSelectedId = null;
+  renderCommShareItemList();
+  renderCommShareOutbox();
+}
+
+async function _commSendToGroup(groupId, message) {
+  const item = _commResolveItem();
+  if (!item) { window.showToast?.('Could not find the selected item.', 'warn'); return; }
+
+  const groupEl   = document.getElementById('commShareGroupSelect');
+  const groupName = groupEl?.options[groupEl?.selectedIndex]?.text || 'Group';
+
+  /* Piggyback on existing shareProgramToGroup from community.js */
+  if (typeof shareProgramToGroup === 'function') {
+    try {
+      await shareProgramToGroup(groupId, {
+        ...item.data,
+        _type: item.type,
+        _sharedBy: currentUser,
+        _itemName: item.name,
+        _message: message
+      });
+    } catch (e) { console.warn('shareProgramToGroup failed', e); }
+  }
+
+  _commAddToOutbox({ type: item.type, name: item.name, to: groupName, toType: 'group', date: new Date().toISOString().slice(0, 10) });
+
+  window.showToast?.(`📤 "${item.name}" shared to ${groupName}!`, 'success', 3500);
+  if (document.getElementById('commShareMessage')) document.getElementById('commShareMessage').value = '';
+  _commShareSelectedId = null;
+  renderCommShareItemList();
+  renderCommShareOutbox();
+}
+
+/* Append an entry to the sender's outbox (capped at 50) */
+function _commAddToOutbox(item) {
+  const key = `communityOutbox_${currentUser}`;
+  const outbox = JSON.parse(localStorage.getItem(key)) || [];
+  outbox.unshift({ id: `out_${Date.now()}`, ...item });
+  if (outbox.length > 50) outbox.length = 50;
+  localStorage.setItem(key, JSON.stringify(outbox));
+}
+
+/* Render inbox (received items) */
+function renderCommShareInbox() {
+  const el = document.getElementById('commShareInbox');
+  if (!el || !currentUser) return;
+
+  const inbox = (JSON.parse(localStorage.getItem(`communityInbox_${currentUser}`)) || [])
+    .filter(i => !i.accepted && !i.dismissed);
+
+  _renderCommInboxItems(el, inbox);
+
+  /* Also try backend non-blocking */
+  _fetchCommBackendInbox().then(backendItems => {
+    if (!backendItems?.length) return;
+    const existing = new Set(inbox.map(i => i.id));
+    backendItems.filter(b => !existing.has(b.id)).forEach(b => inbox.unshift(b));
+    _renderCommInboxItems(el, inbox);
+    _updateCommShareBadge(inbox.length);
+  });
+
+  _updateCommShareBadge(inbox.length);
+}
+
+async function _fetchCommBackendInbox() {
+  try {
+    const res = await fetch(
+      `${window.SERVER_URL}/shared-inbox?username=${encodeURIComponent(currentUser)}`,
+      { credentials: 'include', headers: getAuthHeaders(), signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Array.isArray(data?.items) ? data.items : null;
+  } catch { return null; }
+}
+
+function _renderCommInboxItems(el, items) {
+  if (!items?.length) {
+    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When someone shares a program or template with you, it appears here. 📬</div>`;
+    return;
+  }
+  const typeColors = { template: '#5295e0', program: '#9070d8' };
+  const typeLabels = { template: '📋 Template', program: '🗓 Program' };
+  el.innerHTML = items.map(item => `
+    <div class="comm-inbox-item" id="commInboxItem_${item.id}">
+      <div class="comm-inbox-header">
+        <span class="comm-inbox-from">@${item.from || 'unknown'}</span>
+        <span class="comm-inbox-type-badge"
+              style="background:${typeColors[item.type] || '#888'}22;color:${typeColors[item.type] || '#aaa'};border:1px solid ${typeColors[item.type] || '#888'}44">
+          ${typeLabels[item.type] || item.type}
+        </span>
+        <span class="comm-inbox-date">${item.date || ''}</span>
+      </div>
+      <div class="comm-inbox-item-name">${item.name}</div>
+      ${item.message ? `<div class="comm-inbox-message">"${item.message}"</div>` : ''}
+      <div class="comm-inbox-actions">
+        <button class="comm-inbox-accept-btn"  onclick="commAcceptShare('${item.id}')">✅ Accept &amp; Save</button>
+        <button class="comm-inbox-dismiss-btn" onclick="commDismissShare('${item.id}')">Dismiss</button>
+      </div>
+    </div>`).join('');
+}
+
+/* Render outbox (sent history) */
+function renderCommShareOutbox() {
+  const el = document.getElementById('commShareOutbox');
+  if (!el || !currentUser) return;
+  const outbox = JSON.parse(localStorage.getItem(`communityOutbox_${currentUser}`)) || [];
+  if (!outbox.length) {
+    el.innerHTML = `<div class="comm-share-empty">Nothing sent yet.</div>`; return;
+  }
+  const icons = { user: '👤', group: '👥' };
+  el.innerHTML = outbox.slice(0, 15).map(item => `
+    <div class="comm-outbox-item">
+      <div class="comm-outbox-to">
+        <div class="comm-outbox-to-name">${icons[item.toType] || '👤'} ${item.to}</div>
+        <div class="comm-outbox-to-desc">${item.type === 'template' ? '📋' : '🗓'} ${item.name}</div>
+      </div>
+      <div class="comm-outbox-date">${item.date || ''}</div>
+    </div>`).join('');
+}
+
+/* Accept an inbox item → add to local library */
+function commAcceptShare(shareId) {
+  const key   = `communityInbox_${currentUser}`;
+  const inbox = JSON.parse(localStorage.getItem(key)) || [];
+  const item  = inbox.find(i => i.id === shareId);
+  if (!item) return;
+
+  if (item.type === 'template') {
+    const tplKey = `managedTemplates_${currentUser}`;
+    const tpls   = JSON.parse(localStorage.getItem(tplKey)) || [];
+    tpls.unshift({
+      localId: `local_${Date.now()}`,
+      name: `${item.name} (from @${item.from})`,
+      data: item.data,
+      source: 'community'
+    });
+    localStorage.setItem(tplKey, JSON.stringify(tpls));
+    window.showToast?.(`✅ "${item.name}" added to your Templates!`, 'success', 3500);
+  } else {
+    const progKey = `programs_${currentUser}`;
+    const progs   = JSON.parse(localStorage.getItem(progKey)) || [];
+    progs.unshift({
+      ...item.data,
+      id: `comm_${Date.now()}`,
+      name: `${item.name} (from @${item.from})`,
+      _sharedBy: item.from
+    });
+    localStorage.setItem(progKey, JSON.stringify(progs));
+    window.showToast?.(`✅ "${item.name}" added to your Programs!`, 'success', 3500);
+  }
+
+  item.accepted = true;
+  localStorage.setItem(key, JSON.stringify(inbox));
+  document.getElementById(`commInboxItem_${shareId}`)?.remove();
+  _updateCommShareBadge(
+    (JSON.parse(localStorage.getItem(key)) || []).filter(i => !i.accepted && !i.dismissed).length
+  );
+}
+
+/* Dismiss an inbox item */
+function commDismissShare(shareId) {
+  const key   = `communityInbox_${currentUser}`;
+  const inbox = JSON.parse(localStorage.getItem(key)) || [];
+  const item  = inbox.find(i => i.id === shareId);
+  if (item) { item.dismissed = true; localStorage.setItem(key, JSON.stringify(inbox)); }
+  document.getElementById(`commInboxItem_${shareId}`)?.remove();
+}
+
+/* Show/hide the red badge on the Share nav button */
+function _updateCommShareBadge(count) {
+  const badge = document.getElementById('commShareBadge');
+  if (!badge) return;
+  badge.style.display = count > 0 ? '' : 'none';
+  badge.textContent   = count;
+}
+
+/* Orchestrate the whole share panel on open */
+function renderSharePanel() {
+  renderCommShareItemList();
+  renderCommShareInbox();
+  renderCommShareOutbox();
+  if (_commShareMode === 'group') _populateCommShareGroups();
+}
+
+/* Expose all public API */
+window.commShareSetMode    = commShareSetMode;
+window.commShareSetType    = commShareSetType;
+window.commShareSelectItem = commShareSelectItem;
+window.commSendShare       = commSendShare;
+window.commAcceptShare     = commAcceptShare;
+window.commDismissShare    = commDismissShare;
+window.renderSharePanel    = renderSharePanel;
 window.renderWorkouts = renderWorkouts;
 window.toggleWorkoutDetails = toggleWorkoutDetails;
 window.removeWorkout = removeWorkout;               // ✅ Add this

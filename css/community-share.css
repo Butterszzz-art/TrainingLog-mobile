@@ -1,0 +1,356 @@
+/* =============================================================
+   COMMUNITY SHARE PANEL  (comm-share-* / comm-inbox-* namespace)
+   Peer-to-peer program & template sharing inside the
+   Community tab.
+   ============================================================= */
+
+/* ── Panel wrapper ──────────────────────────────────────────── */
+#commSharePanel {
+  padding: 12px 12px 80px;
+}
+
+/* ── Section card ───────────────────────────────────────────── */
+.comm-share-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.comm-share-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Mode toggle (To a User / To a Group) ───────────────────── */
+.comm-share-mode-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.comm-share-mode-btn {
+  flex: 1;
+  padding: 9px 6px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-color);
+  background: var(--elevated-bg);
+  color: var(--secondary-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.comm-share-mode-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* ── Type tabs (Templates / Programs) ───────────────────────── */
+.comm-share-type-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.comm-share-type-btn {
+  flex: 1;
+  padding: 7px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-color);
+  background: var(--elevated-bg);
+  color: var(--secondary-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.comm-share-type-btn.active {
+  background: rgba(45,125,91,0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── Field (label + input) ──────────────────────────────────── */
+.comm-share-field {
+  margin-bottom: 10px;
+}
+
+.comm-share-field label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.comm-share-field input,
+.comm-share-field select,
+.comm-share-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--elevated-bg);
+  color: var(--text-color);
+  font-size: 1rem;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+
+.comm-share-field input:focus,
+.comm-share-field select:focus,
+.comm-share-field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(45,125,91,0.18);
+}
+
+.comm-share-field input::placeholder,
+.comm-share-field textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
+.comm-share-field textarea { min-height: 60px; resize: vertical; }
+
+/* ── Selectable item list ───────────────────────────────────── */
+.comm-share-item-list {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 230px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.comm-share-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.comm-share-item:last-child { border-bottom: none; }
+.comm-share-item:active     { background: rgba(45,125,91,0.08); }
+
+.comm-share-item.selected {
+  background: rgba(45,125,91,0.1);
+}
+
+.comm-share-item-check {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  color: transparent;
+  transition: all 0.15s;
+}
+
+.comm-share-item.selected .comm-share-item-check {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.comm-share-item-info { flex: 1; min-width: 0; }
+
+.comm-share-item-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comm-share-item-desc {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* ── Empty state ────────────────────────────────────────────── */
+.comm-share-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 24px 16px;
+  line-height: 1.6;
+}
+
+/* ── Send button ────────────────────────────────────────────── */
+.comm-share-send-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 2px;
+  transition: background 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.comm-share-send-btn:active {
+  background: var(--primary-dark);
+  transform: scale(0.98);
+}
+
+/* ── Inbox items (received) ─────────────────────────────────── */
+.comm-inbox-item {
+  background: var(--elevated-bg);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--primary);
+  border-radius: 12px;
+  padding: 13px;
+  margin-bottom: 8px;
+}
+
+.comm-inbox-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.comm-inbox-from {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.comm-inbox-type-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.comm-inbox-date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.comm-inbox-item-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.comm-inbox-message {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  font-style: italic;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.comm-inbox-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.comm-inbox-accept-btn {
+  flex: 1;
+  padding: 9px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.comm-inbox-accept-btn:active { background: var(--primary-dark); }
+
+.comm-inbox-dismiss-btn {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Sent history items ─────────────────────────────────────── */
+.comm-outbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--elevated-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.comm-outbox-to { flex: 1; min-width: 0; }
+
+.comm-outbox-to-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comm-outbox-to-desc {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comm-outbox-date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Inbox badge on nav button ──────────────────────────────── */
+.comm-nav-badge {
+  display: inline-block;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 5px;
+  margin-left: 3px;
+  vertical-align: middle;
+  line-height: 1.4;
+}

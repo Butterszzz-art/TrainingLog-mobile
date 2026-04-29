@@ -505,6 +505,7 @@ function showCommunitySection(section) {
     competition: document.getElementById('competitionPanel'),
     posts:       document.getElementById('postsPanel'),
     feed:        document.getElementById('feedPanel'),
+    share:       document.getElementById('commSharePanel'),
   };
   Object.values(panels).forEach(p => { if (p) p.style.display = 'none'; });
   if (panels[section]) panels[section].style.display = 'block';
@@ -514,6 +515,7 @@ function showCommunitySection(section) {
     groups:      'commNavGroups',
     feed:        'commNavFeed',
     competition: 'commNavCompetition',
+    share:       'commNavShare',
   };
   document.querySelectorAll('.comm-nav-btn').forEach(b => b.classList.remove('active'));
   const activeBtn = document.getElementById(navMap[section]);
@@ -526,6 +528,8 @@ function showCommunitySection(section) {
     renderCompetition();
   } else if (section === 'feed') {
     if (window.renderActivityFeed) renderActivityFeed();
+  } else if (section === 'share') {
+    if (typeof window.renderSharePanel === 'function') window.renderSharePanel();
   }
 }
 
