@@ -716,23 +716,61 @@
           <div class="ci-photo-slot">
             <label>Front</label>
             <div class="ci-photo-preview photo-upload-preview" id="photoSlot_front"
-                 onclick="document.getElementById('photoFile_front').click()">📷</div>
+                 onclick="document.getElementById('photoFile_front').click()">
+              <span class="photo-placeholder">📷</span>
+              <img id="photoPreview_front" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Front progress photo">
+            </div>
             <input type="file" class="photo-upload-input" id="photoFile_front" accept="image/*">
           </div>
           <div class="ci-photo-slot">
             <label>Side</label>
             <div class="ci-photo-preview photo-upload-preview" id="photoSlot_side"
-                 onclick="document.getElementById('photoFile_side').click()">📷</div>
+                 onclick="document.getElementById('photoFile_side').click()">
+              <span class="photo-placeholder">📷</span>
+              <img id="photoPreview_side" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Side progress photo">
+            </div>
             <input type="file" class="photo-upload-input" id="photoFile_side" accept="image/*">
           </div>
           <div class="ci-photo-slot">
             <label>Back</label>
             <div class="ci-photo-preview photo-upload-preview" id="photoSlot_back"
-                 onclick="document.getElementById('photoFile_back').click()">📷</div>
+                 onclick="document.getElementById('photoFile_back').click()">
+              <span class="photo-placeholder">📷</span>
+              <img id="photoPreview_back" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Back progress photo">
+            </div>
             <input type="file" class="photo-upload-input" id="photoFile_back" accept="image/*">
           </div>
         </div>
       </div>
+
+      <!-- Side-by-side comparison card -->
+      <div class="ci-card">
+        <h3 class="ci-card-title">🔄 Side-by-Side Comparison</h3>
+        <p class="ci-card-desc">Compare your current photos with a previous check-in.</p>
+        <div style="margin-bottom:10px;">
+          <label for="photoCompareSelect" style="font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;display:block;margin-bottom:5px;">Compare with</label>
+          <select id="photoCompareSelect" onchange="renderPhotoComparison()" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--elevated-bg);color:var(--text-color);font-size:1rem;-webkit-appearance:none;">
+            <option value="">-- Select a previous check-in --</option>
+          </select>
+        </div>
+        <div id="photoComparisonGrid" style="display:none;">
+          <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:0 0 8px;">Front view</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div style="text-align:center;">
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Then</div>
+              <img id="photoCompare_front_old" style="width:100%;border-radius:10px;aspect-ratio:3/4;object-fit:cover;background:var(--elevated-bg);" alt="Previous front">
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Now</div>
+              <img id="photoCompare_front_new" style="width:100%;border-radius:10px;aspect-ratio:3/4;object-fit:cover;background:var(--elevated-bg);" alt="Current front">
+            </div>
+          </div>
+        </div>
+        <div id="photoComparisonEmpty" style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:16px 0;">
+          Add photos and save a check-in to unlock comparisons.
+        </div>
+      </div>
+
       <button class="ci-save-btn" onclick="saveWeeklyCheckIn('athlete')">Save with Photos ✓</button>
     </div><!-- /ciPanel_photos -->
 
@@ -829,6 +867,7 @@
     <div class="pl-subtabs">
       <button class="pl-subtab active" data-pl-subtab="plates">🏋️ Plate Calc</button>
       <button class="pl-subtab" data-pl-subtab="oneRM">📈 1RM Tracker</button>
+      <button class="pl-subtab" data-pl-subtab="scores">🏅 Scores</button>
       <button class="pl-subtab" data-pl-subtab="meet">🗓️ Meet Prep</button>
       <button class="pl-subtab" data-pl-subtab="meetday">🎯 Meet Day</button>
     </div>
@@ -975,6 +1014,81 @@
     </div>
 
     <!-- ── MEET PREP ── -->
+    <!-- ── STRENGTH SCORES (Wilks / DOTS / IPF GL) ── -->
+    <div id="plSubScores" class="pl-subview">
+      <h3 style="margin-top:0;">Strength Scores</h3>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin:-4px 0 14px;">Compare your total across weight classes &amp; formulas.</p>
+
+      <!-- Inputs -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label for="scoreBodyweight">Bodyweight</label>
+          <input type="number" id="scoreBodyweight" step="0.1" placeholder="e.g. 83" oninput="calcStrengthScores()">
+        </div>
+        <div>
+          <label for="scoreUnit">Unit</label>
+          <select id="scoreUnit" onchange="calcStrengthScores()">
+            <option value="kg">kg</option>
+            <option value="lbs">lbs</option>
+          </select>
+        </div>
+        <div>
+          <label for="scoreSex">Sex</label>
+          <select id="scoreSex" onchange="calcStrengthScores()">
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </div>
+        <div>
+          <label for="scoreEquipment">Equipment</label>
+          <select id="scoreEquipment" onchange="calcStrengthScores()">
+            <option value="raw">Raw</option>
+            <option value="equipped">Equipped</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <label for="scoreSquat">Squat</label>
+          <input type="number" id="scoreSquat" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+        </div>
+        <div>
+          <label for="scoreBench">Bench</label>
+          <input type="number" id="scoreBench" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+        </div>
+        <div>
+          <label for="scoreDeadlift">Deadlift</label>
+          <input type="number" id="scoreDeadlift" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="scoreResults" style="display:none;">
+        <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+          <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:10px;">
+            Total: <span id="scoreTotal" style="color:var(--text-color);font-size:1rem;"></span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
+              <div id="scoreWilks" style="font-size:1.4rem;font-weight:800;color:var(--primary);line-height:1;">—</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">Wilks</div>
+            </div>
+            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
+              <div id="scoreDots" style="font-size:1.4rem;font-weight:800;color:#7c6ef0;line-height:1;">—</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">DOTS</div>
+            </div>
+            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
+              <div id="scoreIpfgl" style="font-size:1.4rem;font-weight:800;color:#e07c30;line-height:1;">—</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">IPF GL</div>
+            </div>
+          </div>
+        </div>
+        <!-- Performance tier badge -->
+        <div id="scoreTier" style="text-align:center;padding:10px;border-radius:10px;font-size:0.88rem;font-weight:700;"></div>
+      </div>
+    </div>
+
     <div id="plSubMeet" class="pl-subview">
       <h3 style="margin-top:0;">Meet Prep Timeline</h3>
 
@@ -6949,6 +7063,46 @@ function renderHeroPhaseHeader(profile, username) {
   const statusPill = getHomeStatusPillClass(currentStatus);
   const todayLabel = formatExactDate(new Date().toISOString());
 
+  // Recreational hero: habit-centric, skip show-day / peak-week content
+  if (archetype === 'recreational') {
+    const stepsToday = (() => {
+      const userId2 = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+      const todayKey = new Date().toISOString().slice(0,10);
+      const data = JSON.parse(localStorage.getItem('dailySteps') || '{}');
+      return parseInt(data[todayKey] || 0);
+    })();
+    const settings2 = (() => {
+      const userId2 = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+      return JSON.parse(localStorage.getItem(`settings_${userId2}`) || '{}');
+    })();
+    const stepsGoal = settings2?.profile?.goals?.stepsTarget || 10000;
+    const stepsPct  = Math.round(Math.min(stepsToday / stepsGoal, 1) * 100);
+    const gamification = getHomeGamificationSummary(profile, username);
+    const streakCount  = gamification?.habitStreak || gamification?.currentStreak || 0;
+    return `
+      <section class="home-dashboard-card home-hero-card">
+        <div class="home-card-header">
+          <p class="home-hero-topline">Habit Command Center</p>
+          <span class="home-status-pill ${statusPill}">${currentStatus}</span>
+        </div>
+        <div class="home-split-grid">
+          <div>
+            <h2 class="home-hero-athlete">${athleteName}</h2>
+            <p class="home-hero-meta">📅 ${todayLabel}</p>
+            <p class="home-hero-meta">🔥 Habit Streak: <strong>${streakCount} day${streakCount !== 1 ? 's' : ''}</strong></p>
+            <p class="home-hero-meta">👟 Steps today: <strong>${stepsToday.toLocaleString()} / ${stepsGoal.toLocaleString()} (${stepsPct}%)</strong></p>
+          </div>
+          <div class="home-muted-panel">
+            <p class="home-stat-label">Daily Status</p>
+            <p class="home-stat-value" style="margin-bottom:8px;">${currentStatus}</p>
+            <p class="home-stat-label">Next Check-in</p>
+            <p class="home-stat-value">${nextReview}</p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
   return `
     <section class="home-dashboard-card home-hero-card">
       <div class="home-card-header">
@@ -7602,7 +7756,8 @@ function getHomeDashboardCardOrder(archetype) {
     bodybuilder: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
     powerlifter: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
     hybrid: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
-    recreational: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights']
+    // Recreational: habit-first, skip "Upcoming Prep Events" (show-day / peak week irrelevant)
+    recreational: ['hero', 'mission', 'status', 'progression', 'weekly', 'focus', 'macro', 'insights']
   };
   return orders[archetype] || baseOrder;
 }
@@ -8294,6 +8449,10 @@ function switchCheckInTab(panel) {
   if (panel === 'history') {
     generateCheckInSummary?.();
   }
+  // Populate photo compare picker when switching to photos
+  if (panel === 'photos') {
+    populatePhotoCompareSelect?.();
+  }
 }
 window.switchCheckInTab = switchCheckInTab;
 
@@ -8423,6 +8582,61 @@ function getCheckInPhaseState() {
   return window.prepModeApi?.getCurrentPhaseState?.(userId) || {};
 }
 
+/**
+ * Auto-fill the cardioAdherence slider (1–10) from this week's cardio log.
+ * Only sets a value if the slider hasn't already been manually adjusted.
+ * Mapping: sessions ≥ target → 10, 0 sessions → 1, proportional in between.
+ */
+function autoFillCardioAdherenceSlider(userId) {
+  const slider = document.getElementById('checkInField_cardioAdherence');
+  if (!slider) return; // field not shown for this archetype
+
+  // Don't overwrite if user already moved the slider away from the default (5)
+  if (slider.dataset.userEdited === 'true') return;
+
+  const log = JSON.parse(localStorage.getItem(`cardioLog_${userId}`)) || [];
+  if (!log.length) return;
+
+  // Determine "this week" window (Mon–Sun)
+  const today = new Date();
+  const dayOfWeek = (today.getDay() + 6) % 7; // 0 = Mon … 6 = Sun
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - dayOfWeek);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekStartStr = weekStart.toISOString().slice(0, 10);
+  const todayStr     = today.toISOString().slice(0, 10);
+
+  const sessionsThisWeek = log.filter(e => e.date >= weekStartStr && e.date <= todayStr).length;
+  if (sessionsThisWeek === 0) return; // leave slider at default
+
+  // Pull weekly cardio target from settings; default 3 sessions/week
+  const settings  = JSON.parse(localStorage.getItem(`settings_${userId}`) || '{}');
+  const target    = settings?.profile?.goals?.cardioSessionsPerWeek || 3;
+
+  const pct   = Math.min(sessionsThisWeek / target, 1);
+  const score = Math.max(1, Math.min(10, Math.round(1 + pct * 9)));
+
+  slider.value = score;
+  const display = document.getElementById('checkInFieldValue_cardioAdherence');
+  if (display) display.textContent = score;
+
+  // Apply colour coding that bindCheckInSliderDisplays normally handles
+  if (score >= 7) display?.setAttribute('data-score-high', '');
+  else if (score >= 4) display?.setAttribute('data-score-mid', '');
+  else display?.setAttribute('data-score-low', '');
+
+  // Tag with a hint so the UI can show "auto-filled"
+  slider.dataset.autoFilled = 'true';
+  const header = slider.closest('.checkin-slider-field')?.querySelector('.checkin-slider-title');
+  if (header && !header.querySelector('.ci-autofill-tag')) {
+    const tag = document.createElement('span');
+    tag.className = 'ci-autofill-tag';
+    tag.textContent = ` (${sessionsThisWeek}/${target} sessions)`;
+    tag.style.cssText = 'font-size:0.7rem;color:var(--text-muted);font-weight:400;';
+    header.appendChild(tag);
+  }
+}
+
 function renderCheckInTab() {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
@@ -8451,6 +8665,7 @@ function renderCheckInTab() {
   renderCheckInArchetypeFields(archetype, latestCheckIn);
   hydrateCheckInFormFromLatestEntry(checkIns);
   bindCheckInSliderDisplays();
+  autoFillCardioAdherenceSlider(userId);
 
   const timeline = document.getElementById('checkInTimeline');
   if (!timeline) return;
@@ -8590,7 +8805,7 @@ function bindCheckInSliderDisplays() {
       const percent = max > min ? ((current - min) / (max - min)) * 100 : 0;
       slider.style.setProperty('--checkin-slider-progress', `${Math.max(0, Math.min(100, percent))}%`);
     };
-    slider.oninput = updateValue;
+    slider.oninput = () => { slider.dataset.userEdited = 'true'; updateValue(); };
     updateValue();
   });
 }
@@ -8711,6 +8926,48 @@ function exportCheckInSummary(format = 'json') {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+/** Populate the comparison date picker from historical check-ins that have photos */
+function populatePhotoCompareSelect() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId || !window.checkinEngine) return;
+  const sel = document.getElementById('photoCompareSelect');
+  if (!sel) return;
+  const checkIns = window.checkinEngine.loadCheckIns(userId) || [];
+  const withPhotos = checkIns.filter(e => e.frontPhoto || e.sidePhoto || e.backPhoto);
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- Select a previous check-in --</option>' +
+    withPhotos.map(e => `<option value="${e.date}">${e.date}</option>`).join('');
+  if (current) sel.value = current;
+  // Show empty state if no historical photos
+  const empty = document.getElementById('photoComparisonEmpty');
+  if (empty) empty.style.display = withPhotos.length ? 'none' : '';
+}
+
+function renderPhotoComparison() {
+  const sel = document.getElementById('photoCompareSelect');
+  const date = sel?.value;
+  const grid = document.getElementById('photoComparisonGrid');
+  const empty = document.getElementById('photoComparisonEmpty');
+  if (!date || !grid) { if(grid) grid.style.display='none'; return; }
+
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const checkIns = window.checkinEngine?.loadCheckIns(userId) || [];
+  const entry = checkIns.find(e => e.date === date);
+  if (!entry) { grid.style.display = 'none'; return; }
+
+  // "now" = latest photo stored for current user
+  const nowFront = localStorage.getItem(`progressPhoto_${userId}_front`) || '';
+  const oldFront = entry.frontPhoto || '';
+
+  const imgOld = document.getElementById('photoCompare_front_old');
+  const imgNew = document.getElementById('photoCompare_front_new');
+  if (imgOld) { imgOld.src = oldFront; imgOld.style.opacity = oldFront ? '1' : '0.3'; }
+  if (imgNew) { imgNew.src = nowFront; imgNew.style.opacity = nowFront ? '1' : '0.3'; }
+
+  grid.style.display = '';
+  if (empty) empty.style.display = 'none';
 }
 
 function saveWeeklyCheckIn(actor = 'athlete') {
@@ -12609,6 +12866,89 @@ window.renderOneRMChart = renderOneRMChart;
 window.renderOneRMStats = renderOneRMStats;
 
 // ─────────────────────────────────────────────
+// STRENGTH SCORES  (Wilks 2020 · DOTS · IPF GL)
+// ─────────────────────────────────────────────
+function calcStrengthScores() {
+  const bwRaw   = parseFloat(document.getElementById('scoreBodyweight')?.value) || 0;
+  const unit    = document.getElementById('scoreUnit')?.value || 'kg';
+  const sex     = document.getElementById('scoreSex')?.value || 'M';
+  const equip   = document.getElementById('scoreEquipment')?.value || 'raw';
+  const squat   = parseFloat(document.getElementById('scoreSquat')?.value) || 0;
+  const bench   = parseFloat(document.getElementById('scoreBench')?.value) || 0;
+  const deadl   = parseFloat(document.getElementById('scoreDeadlift')?.value) || 0;
+
+  const toKg = v => unit === 'lbs' ? v * 0.453592 : v;
+  const bw   = toKg(bwRaw);
+  const total= toKg(squat + bench + deadl);
+
+  const resEl = document.getElementById('scoreResults');
+  if (!resEl) return;
+
+  if (bw <= 0 || total <= 0) { resEl.style.display = 'none'; return; }
+  resEl.style.display = '';
+
+  // ── Wilks 2020 coefficients ──
+  const WC = {
+    M: [-216.0475144, 16.2606339, -0.002388645, -0.00113732, 7.01863E-06, -1.291E-08],
+    F: [594.31747775582, -27.23842536447, 0.82112226871, -0.00930733913, 0.00004731582, -0.00000009054],
+  };
+  function wilks(bwKg, totalKg, s) {
+    const c = WC[s];
+    const denom = c[0] + c[1]*bwKg + c[2]*bwKg**2 + c[3]*bwKg**3 + c[4]*bwKg**4 + c[5]*bwKg**5;
+    return denom > 0 ? +(totalKg * (600 / denom)).toFixed(2) : 0;
+  }
+
+  // ── DOTS coefficients ──
+  const DC = {
+    M: [-307.75076, 24.0900756, -0.1918759221, 0.0007391293, -0.000001093],
+    F: [-57.96288, 13.6175032, -0.1126655495, 0.0005158568, -0.0000010706],
+  };
+  function dots(bwKg, totalKg, s) {
+    const c = DC[s];
+    const denom = c[0] + c[1]*bwKg + c[2]*bwKg**2 + c[3]*bwKg**3 + c[4]*bwKg**4;
+    return denom > 0 ? +(totalKg * (500 / denom)).toFixed(2) : 0;
+  }
+
+  // ── IPF GL (Good Lift Points) ──
+  // Coefficients: [a, b, c] for raw/equipped × M/F
+  const GL = {
+    M: { raw: [1236.25115, 1449.21864, 0.01644], equipped: [1734.7591, 1979.6376, 0.01644] },
+    F: { raw: [758.63878, 949.31382, 0.02435], equipped: [1056.01593, 1327.58983, 0.02435] },
+  };
+  function ipfgl(bwKg, totalKg, s, e) {
+    const [a, b, c] = GL[s][e];
+    const denom = a - b * Math.exp(-c * bwKg);
+    return denom > 0 ? +(100 * totalKg / denom).toFixed(2) : 0;
+  }
+
+  const w  = wilks(bw, total, sex);
+  const d  = dots(bw, total, sex);
+  const g  = ipfgl(bw, total, sex, equip);
+
+  document.getElementById('scoreTotal').textContent =
+    unit === 'lbs' ? `${(squat+bench+deadl).toFixed(1)} lbs (${total.toFixed(1)} kg)` : `${total.toFixed(1)} kg`;
+  document.getElementById('scoreWilks').textContent = w;
+  document.getElementById('scoreDots').textContent  = d;
+  document.getElementById('scoreIpfgl').textContent = g;
+
+  // Tier based on Wilks (rough community benchmarks, raw)
+  const tierEl = document.getElementById('scoreTier');
+  if (tierEl) {
+    const tiers = [
+      { min: 500, label: '🏆 Elite',       bg: 'rgba(255,215,0,0.15)',  color: '#f0c040' },
+      { min: 400, label: '⭐ Advanced',     bg: 'rgba(82,214,138,0.12)', color: '#52d68a' },
+      { min: 300, label: '📈 Intermediate', bg: 'rgba(82,148,224,0.12)', color: '#5294e0' },
+      { min: 200, label: '🌱 Novice',       bg: 'rgba(160,125,192,0.12)',color: '#a07dc0' },
+      { min:   0, label: '🔰 Beginner',     bg: 'rgba(99,110,114,0.1)',  color: '#9eabb0' },
+    ];
+    const tier = tiers.find(t => w >= t.min) || tiers[tiers.length - 1];
+    tierEl.textContent     = tier.label;
+    tierEl.style.background = tier.bg;
+    tierEl.style.color      = tier.color;
+    tierEl.style.border     = `1px solid ${tier.color}33`;
+  }
+}
+
 // MEET PREP TIMELINE
 // ─────────────────────────────────────────────
 function saveMeetDetails() {
