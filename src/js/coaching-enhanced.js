@@ -125,7 +125,7 @@ function _updateBulkToolbar() {
 function bulkAssignProgram() {
   if (!_bulkSelected.size) return;
   const programs = _coachStore('coachPrograms_v1') || [];
-  if (!programs.length) { alert('No saved programs. Create one in the Programs tab first.'); return; }
+  if (!programs.length) { window.showToast('No saved programs. Create one in the Programs tab first.', 'warn'); return; }
 
   const opts = programs.map((p,i) => `<option value="${i}">${p.name}</option>`).join('');
   const modal = document.createElement('div');
@@ -531,12 +531,14 @@ window.filterExLib = function(q) {
 window.applyProgTemplate = function(key) {
   const tmpl = PROGRAM_TEMPLATES[key];
   if (!tmpl) return;
-  if (!confirm(`Load "${tmpl.name}" template? This will replace the current week.`)) return;
-  _progState.name = tmpl.name;
-  _progState.days = Object.fromEntries(DAYS.map(d => [d, [...(tmpl.days[d] || [])]]));
-  const nameInput = document.getElementById('progNameInput');
-  if (nameInput) nameInput.value = _progState.name;
-  DAYS.forEach(d => _refreshDayCol(d));
+  window.showConfirm(`Load "${tmpl.name}" template? This will replace the current week.`).then(ok => {
+    if (!ok) return;
+    _progState.name = tmpl.name;
+    _progState.days = Object.fromEntries(DAYS.map(d => [d, [...(tmpl.days[d] || [])]]));
+    const nameInput = document.getElementById('progNameInput');
+    if (nameInput) nameInput.value = _progState.name;
+    DAYS.forEach(d => _refreshDayCol(d));
+  });
 };
 
 window.clearProgram = function() {
@@ -559,7 +561,7 @@ window.saveCoachProgram = function() {
 
 window.loadCoachProgramList = function() {
   const programs = _coachStore('coachPrograms_v1') || [];
-  if (!programs.length) { alert('No saved programs yet.'); return; }
+  if (!programs.length) { window.showToast('No saved programs yet.', 'warn'); return; }
   const opts = programs.map((p,i) => `<option value="${i}">${p.name} (${p.savedAt?.slice(0,10)})</option>`).join('');
   const modal = document.createElement('div');
   modal.className = 'gdpr-modal-overlay';
@@ -589,10 +591,10 @@ window._confirmLoadProgram = function() {
 
 window.assignProgramToClient = function() {
   const clientId = document.getElementById('progAssignClient')?.value;
-  if (!clientId) { alert('Select a client first.'); return; }
+  if (!clientId) { window.showToast('Select a client first.', 'warn'); return; }
   const programs = _coachStore('coachPrograms_v1') || [];
   const prog = programs.find(p => p.id === _progState.id);
-  if (!prog) { alert('Save the program before assigning.'); return; }
+  if (!prog) { window.showToast('Save the program before assigning.', 'warn'); return; }
   const assignments = _coachStore('coachProgramAssignments_v1') || {};
   assignments[clientId] = { programId: prog.id, programName: prog.name, assignedAt: new Date().toISOString() };
   _coachStore('coachProgramAssignments_v1', assignments);
@@ -634,10 +636,12 @@ window._loadProgIdx = function(i) {
 
 window._deleteProgIdx = function(i) {
   const programs = _coachStore('coachPrograms_v1') || [];
-  if (!confirm(`Delete "${programs[i]?.name}"?`)) return;
-  programs.splice(i, 1);
-  _coachStore('coachPrograms_v1', programs);
-  renderSavedProgramsList();
+  window.showConfirm(`Delete "${programs[i]?.name}"?`, { danger: true }).then(ok => {
+    if (!ok) return;
+    programs.splice(i, 1);
+    _coachStore('coachPrograms_v1', programs);
+    renderSavedProgramsList();
+  });
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -1033,10 +1037,12 @@ window.sendConsentRequest = function(clientId) {
   const store   = _getGdprStore();
   const consent = store[clientId] || {};
   if (consent.status === 'consented') {
-    if (!confirm('Revoke consent for this client? This will stop data collection.')) return;
-    store[clientId] = { ...consent, status: 'withdrawn', revokedAt: new Date().toISOString() };
-    _saveGdprStore(store);
-    renderCoachGdpr();
+    window.showConfirm('Revoke consent for this client? This will stop data collection.', { danger: true }).then(ok => {
+      if (!ok) return;
+      store[clientId] = { ...consent, status: 'withdrawn', revokedAt: new Date().toISOString() };
+      _saveGdprStore(store);
+      renderCoachGdpr();
+    });
     return;
   }
   // Show consent request modal
@@ -1097,16 +1103,15 @@ window.exportClientData = function(clientId) {
 window.deleteClientData = function(clientId) {
   const clients = (window.coachDashboardState?.clients) || [];
   const client  = clients.find(c => c.id === clientId);
-  if (!confirm(`Permanently delete all data for ${client?.name || clientId}? This cannot be undone.`)) return;
-
-  // Remove from all stores
-  const msgStore = _getMsgStore();         delete msgStore[clientId];         _saveMsgStore(msgStore);
-  const asnStore = _coachStore('coachProgramAssignments_v1') || {}; delete asnStore[clientId]; _coachStore('coachProgramAssignments_v1', asnStore);
-  const nutStore = _coachStore('coachNutritionAssignments_v1') || {}; delete nutStore[clientId]; _coachStore('coachNutritionAssignments_v1', nutStore);
-  const gdprStore = _getGdprStore(); delete gdprStore[clientId]; _saveGdprStore(gdprStore);
-
-  renderCoachGdpr();
-  _showExportToast(`Data for ${client?.name || clientId} deleted`);
+  window.showConfirm(`Permanently delete all data for ${client?.name || clientId}? This cannot be undone.`, { danger: true }).then(ok => {
+    if (!ok) return;
+    const msgStore = _getMsgStore();         delete msgStore[clientId];         _saveMsgStore(msgStore);
+    const asnStore = _coachStore('coachProgramAssignments_v1') || {}; delete asnStore[clientId]; _coachStore('coachProgramAssignments_v1', asnStore);
+    const nutStore = _coachStore('coachNutritionAssignments_v1') || {}; delete nutStore[clientId]; _coachStore('coachNutritionAssignments_v1', nutStore);
+    const gdprStore = _getGdprStore(); delete gdprStore[clientId]; _saveGdprStore(gdprStore);
+    renderCoachGdpr();
+    _showExportToast(`Data for ${client?.name || clientId} deleted`);
+  });
 };
 
 window.exportAllCoachData = function() {
@@ -1129,12 +1134,14 @@ window.exportAllCoachData = function() {
 };
 
 window.deleteAllCoachData = function() {
-  if (!confirm('Delete ALL coaching data (programs, messages, assignments)? This cannot be undone.')) return;
-  ['coachPrograms_v1','coachMessages_v1','coachProgramAssignments_v1',
-   'coachNutritionAssignments_v1','coachGdprConsents_v1',
-   'coachDataSettings_v1','coachNotifSettings_v1'].forEach(k => localStorage.removeItem(k));
-  renderCoachGdpr();
-  _showExportToast('All coach data deleted');
+  window.showConfirm('Delete ALL coaching data (programs, messages, assignments)? This cannot be undone.', { danger: true, confirmText: 'Delete All' }).then(ok => {
+    if (!ok) return;
+    ['coachPrograms_v1','coachMessages_v1','coachProgramAssignments_v1',
+     'coachNutritionAssignments_v1','coachGdprConsents_v1',
+     'coachDataSettings_v1','coachNotifSettings_v1'].forEach(k => localStorage.removeItem(k));
+    renderCoachGdpr();
+    _showExportToast('All coach data deleted');
+  });
 };
 
 /* ── Utility: export toast ───────────────────────────────────── */

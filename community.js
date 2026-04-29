@@ -474,12 +474,15 @@ function shareProgramInput(id, dataStr) {
 }
 
 function showCreateGroup() {
-  const name = prompt('Group name?');
-  if (!name) return;
-  const goal = prompt('Group goal? (optional)') || '';
-  const tagsStr = prompt('Tags? (comma separated)') || '';
-  const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
-  createGroup(name, goal, tags).then(() => renderGroups(groups));
+  window.showPrompt('Group name?').then(name => {
+    if (!name) return;
+    window.showPrompt('Group goal? (optional)').then(goal => {
+      window.showPrompt('Tags? (comma separated)').then(tagsStr => {
+        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+        createGroup(name, goal || '', tags).then(() => renderGroups(groups));
+      });
+    });
+  });
 }
 
 // ----- Competition Features -----

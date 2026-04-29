@@ -130,17 +130,17 @@
   window.submitReadiness = function () {
     const { sleep, soreness, motivation } = _ratings;
     if (!sleep || !soreness || !motivation) {
-      alert('Please answer all 3 questions.');
+      window.showToast('Please answer all 3 questions.', 'warn');
       return;
     }
     const score = saveEntry(sleep, soreness, motivation);
     dismissReadiness();
     renderReadinessHomeCard();
 
-    // Show inline tip if low
+    // Show tip if low readiness
     const tier = _tier(score);
     if (tier.cls !== 'high') {
-      setTimeout(() => alert('ℹ️ ' + tier.tip), 300);
+      setTimeout(() => window.showToast('ℹ️ ' + tier.tip, 'info', 5000), 300);
     }
   };
 

@@ -218,20 +218,23 @@
     function renameDay(dayId) {
       const day = draft.days.find(d => d.dayId === dayId);
       if (!day) return;
-      const name = prompt('Rename day:', day.name);
-      if (!name || !name.trim()) return;
-      day.name = name.trim();
-      persistDraft();
-      render();
+      window.showPrompt('Rename day:', { defaultValue: day.name }).then(name => {
+        if (!name || !name.trim()) return;
+        day.name = name.trim();
+        persistDraft();
+        render();
+      });
     }
 
     function deleteDay(dayId) {
-      if (!confirm('Delete this day and all its exercises?')) return;
-      draft.days = (draft.days || []).filter(d => d.dayId !== dayId);
-      if (selectedDayId === dayId) selectedDayId = draft.days[0]?.dayId || null;
-      if (draft.split) draft.split.daysPerWeek = draft.days.length;
-      persistDraft();
-      render();
+      window.showConfirm('Delete this day and all its exercises?', { danger: true }).then(ok => {
+        if (!ok) return;
+        draft.days = (draft.days || []).filter(d => d.dayId !== dayId);
+        if (selectedDayId === dayId) selectedDayId = draft.days[0]?.dayId || null;
+        if (draft.split) draft.split.daysPerWeek = draft.days.length;
+        persistDraft();
+        render();
+      });
     }
 
     function selectDay(dayId) {
@@ -322,14 +325,16 @@
     }
 
     function startFresh() {
-      if (!confirm('Clear the current draft and start a new program?')) return;
-      draft = core.normalizeDraft(core.createEmptyDraft(userId));
-      selectedDayId = null;
-      pickerQuery = '';
-      pickerCategory = 'All';
-      step = 'goal';
-      persistDraft();
-      render();
+      window.showConfirm('Clear the current draft and start a new program?').then(ok => {
+        if (!ok) return;
+        draft = core.normalizeDraft(core.createEmptyDraft(userId));
+        selectedDayId = null;
+        pickerQuery = '';
+        pickerCategory = 'All';
+        step = 'goal';
+        persistDraft();
+        render();
+      });
     }
 
     /* ── Picker helpers ─ */
@@ -921,13 +926,15 @@
 
       card.querySelector('.prog-card-del').addEventListener('click', () => {
         const name = prog.name || prog.title || 'this program';
-        if (!confirm(`Delete "${name}"?`)) return;
-        const core = window.programBuilderV2Core;
-        if (!core) return;
-        const all = core.loadPrograms(window);
-        all.splice(origIdx, 1);
-        core.savePrograms(window, all);
-        renderProgramList(); // refresh
+        window.showConfirm(`Delete "${name}"?`, { danger: true }).then(ok => {
+          if (!ok) return;
+          const core = window.programBuilderV2Core;
+          if (!core) return;
+          const all = core.loadPrograms(window);
+          all.splice(origIdx, 1);
+          core.savePrograms(window, all);
+          renderProgramList();
+        });
       });
 
       container.appendChild(card);

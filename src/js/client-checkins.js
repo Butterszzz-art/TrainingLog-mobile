@@ -255,9 +255,11 @@
   };
 
   window.ccDeleteCheckin = function (clientId, idx) {
-    if (!confirm('Delete this check-in?')) return;
-    deleteCheckin(clientId, idx);
-    _renderHistory(document.getElementById('ccHistoryFilter')?.value || '');
+    window.showConfirm('Delete this check-in?', { danger: true }).then(ok => {
+      if (!ok) return;
+      deleteCheckin(clientId, idx);
+      _renderHistory(document.getElementById('ccHistoryFilter')?.value || '');
+    });
   };
 
   function _showMsg(msg, type) {
