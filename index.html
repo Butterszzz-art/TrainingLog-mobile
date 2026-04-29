@@ -505,7 +505,7 @@
           <button class="measurements-metric-pill" data-metric="shoulders" onclick="renderMeasurementsChart('shoulders')">Shoulders</button>
         </div>
         <div class="measurements-chart-wrap">
-          <canvas id="measurementsCanvas"></canvas>
+          <canvas id="measurementsCanvas" height="220"></canvas>
         </div>
         <div id="measurementsHistory" style="margin-top:12px;"></div>
       </div>
@@ -1013,8 +1013,8 @@
     <!-- ⑤ Charts (collapsible) -->
     <details class="lb-charts-section">
       <summary class="lb-charts-summary">📊 Charts</summary>
-      <canvas id="lbBarChart"></canvas>
-      <canvas id="lbLineChart" style="margin-top:16px;"></canvas>
+      <canvas id="lbBarChart" height="220"></canvas>
+      <canvas id="lbLineChart" height="200" style="margin-top:16px;"></canvas>
     </details>
 
     <!-- ⑨ Exercise leaderboard inline (replaces hidden separate tab) -->
@@ -1460,7 +1460,7 @@
       <section class="progress-chart">
         <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
         <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
-        <canvas id="progressCanvas"></canvas>
+        <canvas id="progressCanvas" height="220"></canvas>
         <div id="exerciseProgress" style="display:none;"></div>
         <div id="trainingLoadPanel" style="margin-top:14px;">
           <h3 style="margin-bottom:6px;">Training Stress
@@ -1470,8 +1470,8 @@
             <strong title="Higher values indicate less day-to-day variation in training load.">Monotony</strong> and
             <strong title="Strain combines weekly work and monotony to estimate total stress.">Strain</strong> are calculated from weekly volume and intensity load.
           </p>
-          <canvas id="monotonyCanvas" style="max-height:180px; margin-bottom:10px;"></canvas>
-          <canvas id="strainCanvas" style="max-height:180px;"></canvas>
+          <canvas id="monotonyCanvas" height="180" style="max-height:180px; margin-bottom:10px;"></canvas>
+          <canvas id="strainCanvas" height="180" style="max-height:180px;"></canvas>
           <div id="loadAlerts" style="margin-top:8px;"></div>
         </div>
         <div id="bodybuildingProgressPanel"></div>

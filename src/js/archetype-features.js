@@ -57,11 +57,25 @@ function _fmt(totalSeconds) {
 
   function syncAll() { RING_CONFIGS.forEach(syncRing); }
 
-  // Poll at 300 ms so we don't need to touch every JS call that sets bar values
+  // Poll at 300 ms so we don't need to touch every JS call that sets bar values.
+  // Interval is paused when the app is backgrounded to avoid draining battery.
   document.addEventListener('DOMContentLoaded', () => {
-    setInterval(syncAll, 300);
+    let _pollId = setInterval(syncAll, 300);
     syncAll();
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearInterval(_pollId);
+        _pollId = 0;
+      } else if (!_pollId) {
+        _pollId = setInterval(syncAll, 300);
+        syncAll(); // immediate sync on resume
+      }
+    });
   });
+
+  // Expose for callers that update bar values programmatically
+  window.syncMacroRings = syncAll;
 })();
 
 // ── Progress photo upload ─────────────────────────────────────

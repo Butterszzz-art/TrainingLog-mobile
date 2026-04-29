@@ -566,7 +566,7 @@ function renderCompetition(metric = 'workouts') {
         <option value="engagement">Group Activity</option>
       </select>
       <div class="leaderboard">${rows}</div>
-      <canvas id="competitionChart"></canvas>
+      <canvas id="competitionChart" height="200"></canvas>
       <div id="leaderDetails" class="leader-details" style="display:none;"></div>
     </div>`;
 
