@@ -193,6 +193,8 @@
 <div id="progressReminder"></div>
 
   <div id="homeTab" class="tab-content">
+    <!-- Today's program day + weekly split — populated by today-program.js -->
+    <div id="todayProgramCard"></div>
     <!-- Daily readiness card — populated by readiness-checkin.js -->
     <div id="readinessHomeCard"></div>
     <!-- Weekly summary card — populated by weekly-summary.js -->
@@ -2002,6 +2004,7 @@ function _doLocalLogin(username) {
   renderCardio?.();
   loadTemplateDropdown?.();
   renderDailyMacroProgress?.();
+  if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -2103,6 +2106,7 @@ async function startLogin() {
       loadUserExercises();
       saveDailyMacroProgress(0, 0, 0); // reset progress on login
       renderDailyMacroProgress();
+      if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -11835,6 +11839,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/client-checkins.js"></script>
   <script src="src/js/progress-report.js"></script>
   <script src="src/js/community-feed.js"></script>
+  <script src="src/js/today-program.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
     document.addEventListener('DOMContentLoaded', function() {
