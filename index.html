@@ -1895,6 +1895,7 @@ async function startLogin() {
       renderCrossfitWorkouts();
       loadTemplateDropdown(); // ✅ Load saved templates
       loadProgramTemplates();
+      loadProgramsFromBackend(username); // ✅ Sync programs from Airtable
       if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
         loadProgramDropdown();
         checkActiveProgram();
@@ -10740,6 +10741,78 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   window.renderWorkoutHistory = renderWorkoutHistory;
   window.renderMacroHistory = renderMacroHistory;
   if (typeof window.addDayToProgram !== "function") window.addDayToProgram = () => {};
+  // ── Program backend sync ──────────────────────────────────────────────────
+
+  // Load all programs for the logged-in user from the backend and merge into localStorage
+  async function loadProgramsFromBackend(username) {
+    if (!username || !window.SERVER_URL) return;
+    try {
+      const res = await fetch(
+        `${window.SERVER_URL}/programs?username=${encodeURIComponent(username)}`,
+        { headers: getAuthHeaders() }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.items)) return;
+
+      // Merge remote programs into localStorage, keyed by record id
+      const localRaw = localStorage.getItem(`programs_${username}`) || localStorage.getItem('programs') || '[]';
+      const local = JSON.parse(localRaw);
+      const localIds = new Set(local.map(p => p.id));
+
+      data.items.forEach(item => {
+        if (item.programData && !localIds.has(item.programData.id)) {
+          local.push({ ...item.programData, _airtableId: item.id });
+        }
+      });
+
+      localStorage.setItem(`programs_${username}`, JSON.stringify(local));
+      localStorage.setItem('programs', JSON.stringify(local));
+
+      // Restore active program if one is flagged in Airtable
+      const activeItem = data.items.find(i => i.isActive);
+      if (activeItem?.programData && !localStorage.getItem(`activeProgram_${username}`)) {
+        localStorage.setItem(`activeProgram_${username}`, JSON.stringify(activeItem.programData));
+        localStorage.setItem('activeProgram', JSON.stringify(activeItem.programData));
+      }
+
+      console.info(`[Programs] Loaded ${data.items.length} programs from backend for ${username}`);
+    } catch (err) {
+      console.warn('[Programs] Failed to load from backend:', err?.message);
+    }
+  }
+
+  // Delete a program from Airtable by its _airtableId, then remove from localStorage
+  async function deleteProgramFromBackend(airtableId, username) {
+    if (!airtableId || !window.SERVER_URL) return;
+    try {
+      const res = await fetch(
+        `${window.SERVER_URL}/programs/${encodeURIComponent(airtableId)}`,
+        { method: 'DELETE', headers: getAuthHeaders() }
+      );
+      if (!res.ok) console.warn('[Programs] Delete failed:', await res.json());
+    } catch (err) {
+      console.warn('[Programs] Delete error:', err?.message);
+    }
+  }
+
+  // Set a program as active in Airtable
+  async function setActiveProgramInBackend(airtableId, username) {
+    if (!airtableId || !window.SERVER_URL) return;
+    try {
+      await fetch(
+        `${window.SERVER_URL}/programs/${encodeURIComponent(airtableId)}/active?username=${encodeURIComponent(username)}`,
+        { method: 'PATCH', headers: getAuthHeaders() }
+      );
+    } catch (err) {
+      console.warn('[Programs] Set active error:', err?.message);
+    }
+  }
+
+  window.loadProgramsFromBackend   = loadProgramsFromBackend;
+  window.deleteProgramFromBackend  = deleteProgramFromBackend;
+  window.setActiveProgramInBackend = setActiveProgramInBackend;
+
   // Legacy exports kept only for backwards compatibility
   if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
     window.loadProgramTemplates = loadProgramTemplates;
