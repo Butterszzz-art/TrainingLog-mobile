@@ -3721,33 +3721,16 @@ function logRestBreak(mins) {
 
 // Save a workout template to Airtable
 async function saveTemplate(username, templateName, templateData) {
-  // Ensure Airtable credentials are loaded before posting.
-  if (!airtableBaseId || !airtableToken) {
-    // fetchAirtableConfig sets airtableBaseId and airtableToken from /config.
-    await fetchAirtableConfig();
-    if (!airtableBaseId || !airtableToken) {
-      throw new Error('Missing Airtable configuration; cannot save template.');
-    }
-  }
-  const url = `/airtable/${airtableBaseId}/${templatesTableName}`;
   try {
-    const response = await fetch(url, {
+    const response = await fetch(`${window.SERVER_URL}/templates`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        fields: {
-          Username: username,
-          TemplateName: templateName,
-          TemplateData: JSON.stringify(templateData)
-        }
-      })
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, templateName, templateData })
     });
 
     if (!response.ok) {
-      throw new Error(`Airtable API error: ${response.statusText}`);
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Server error: ${response.status}`);
     }
 
     const result = await response.json();
@@ -4287,16 +4270,34 @@ function duplicateSelectedTemplate() {
   loadTemplateDropdown();
 }
 
-function deleteSelectedTemplate() {
+async function deleteSelectedTemplate() {
   const selected = getSelectedTemplateRecord();
   if (!selected) return alert('Select a template to delete.');
-  if (!selected.id.startsWith('local_')) {
-    alert('Only locally managed templates can be deleted in-app.');
-    return;
+  if (!confirm(`Delete template "${selected.name}"?`)) return;
+
+  if (selected.id.startsWith('local_')) {
+    // Local-only template — remove from localStorage
+    const localTemplates = getLocalManagedTemplates().filter(tpl => tpl.localId !== selected.id);
+    saveLocalManagedTemplates(localTemplates);
+    loadTemplateDropdown();
+  } else {
+    // Airtable-backed template — delete via backend
+    try {
+      const response = await fetch(`${window.SERVER_URL}/templates/${encodeURIComponent(selected.id)}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(result?.error?.message || 'Failed to delete template.');
+        return;
+      }
+      loadTemplateDropdown();
+    } catch (err) {
+      console.error('Delete template error:', err);
+      alert('Error connecting to server.');
+    }
   }
-  const localTemplates = getLocalManagedTemplates().filter(tpl => tpl.localId !== selected.id);
-  saveLocalManagedTemplates(localTemplates);
-  loadTemplateDropdown();
 }
 
 async function completeWorkout() {
