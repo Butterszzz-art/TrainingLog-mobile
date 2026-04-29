@@ -2181,39 +2181,22 @@ function loadMacroTargetsFromLocal() {
 }
 
 async function fetchUserMacroTargets(username) {
-  if (!username) {
-    return false;
-  }
+  if (!username) return false;
   try {
-    // Ensure Airtable credentials are loaded
-    if (!airtableBaseId || !airtableToken) {
-      await fetchAirtableConfig();
-    }
-    const url = `${MacroTargetsApiUrl}` +
-      `?filterByFormula={Username}='${encodeURIComponent(username)}'` +
-      `&sort[0][field]=CreatedAt&sort[0][direction]=desc` +
-      `&maxRecords=1`;
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${airtableToken}` }
-    });
+    const response = await fetch(
+      `${window.SERVER_URL}/macrotargets?username=${encodeURIComponent(username)}`,
+      { headers: getAuthHeaders() }
+    );
     const data = await response.json();
+    if (!data.success || !data.item) throw new Error('No macro targets found for this user');
 
-    if (!Array.isArray(data.records) || data.records.length === 0) {
-      throw new Error('No macro targets found for this user');
-    }
-
-    const record = data.records[0];
-    const fields = record.fields;
-
-    // ✅ Update local UI display bars
+    const fields = data.item;
     saveMacroTargetsToTop(fields);
-
-    // ✅ Store locally so they persist on refresh
     localStorage.setItem('macroTargets', JSON.stringify(fields));
     localStorage.setItem(`macroTargets_${username}`, JSON.stringify(fields));
     return true;
   } catch (error) {
-    console.warn('Unable to fetch macro targets from Airtable', error);
+    console.warn('Unable to fetch macro targets:', error);
     return false;
   }
 }
@@ -5644,27 +5627,21 @@ function updateSliderMacros() {
 
 
 async function saveToAirtable(username, target) {
-  const url = MacroTargetsApiUrl;
   try {
-    const r = await fetch(url, {
+    const r = await fetch(`${window.SERVER_URL}/macrotargets`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        "Content-Type": "application/json"
-      },
+      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({
-        fields: {
-          Username: username,
-          Calories: target.calories,
-          Protein:  target.protein,
-          Fat:      target.fat,
-          Carbs:    target.carbs
-        }
+        username,
+        calories: target.calories,
+        protein:  target.protein,
+        fat:      target.fat,
+        carbs:    target.carbs
       })
     });
     const d = await r.json();
     if (!r.ok) {
-      console.error("Airtable save error:", d);
+      console.error("Macro targets save error:", d);
       alert(`Could not save macros: ${d.error?.message || "unknown"}`);
     }
   } catch (err) {
@@ -5957,13 +5934,10 @@ async function saveDailyMacroLog(username, date, meals, totals) {
   };
 
   try {
-    const response = await fetch("/dailylogs", {
+    const response = await fetch(`${window.SERVER_URL}/dailylogs`, {
       method: "POST",
-      headers: {
-        ...getAuthHeaders(),
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
+      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload.fields)
     });
     const data = await response.json();
     if (!response.ok) {
@@ -10621,7 +10595,7 @@ async function fetchDailyLogs(username) {
   const params = new URLSearchParams({ username });
 
   try {
-    const response = await fetch(`/dailylogs?${params.toString()}`, {
+    const response = await fetch(`${window.SERVER_URL}/dailylogs?${params.toString()}`, {
       headers: getAuthHeaders()
     });
     const data = await response.json();
