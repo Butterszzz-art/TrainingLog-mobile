@@ -210,14 +210,16 @@
   };
 
   window.ccSetRating = function (n) {
-    document.getElementById('ccRating').value = n;
+    const ratingEl = document.getElementById('ccRating');
+    if (ratingEl) ratingEl.value = n;
     document.querySelectorAll('.cc-star').forEach((s, i) => {
       s.classList.toggle('active', i < n);
     });
   };
 
   window.ccSetMood = function (val, emoji) {
-    document.getElementById('ccMood').value = emoji;
+    const moodEl = document.getElementById('ccMood');
+    if (moodEl) moodEl.value = emoji;
     document.querySelectorAll('.cc-mood-btn').forEach((b, i) => {
       b.classList.toggle('active', i + 1 === val);
     });
@@ -243,7 +245,8 @@
     if (document.getElementById('ccNotes'))   document.getElementById('ccNotes').value = '';
     if (document.getElementById('ccActions')) document.getElementById('ccActions').value = '';
     ccSetRating(0);
-    document.getElementById('ccMood').value = '';
+    const ccMoodEl = document.getElementById('ccMood');
+    if (ccMoodEl) ccMoodEl.value = '';
     document.querySelectorAll('.cc-mood-btn').forEach(b => b.classList.remove('active'));
 
     _showMsg('✅ Check-in saved!', 'ok');

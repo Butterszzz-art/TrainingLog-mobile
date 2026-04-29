@@ -503,7 +503,7 @@
   border-radius: 6px;
   color: var(--text, #e8f5e9);
   padding: 5px 4px;
-  font-size: 0.82rem;
+  font-size: 1rem; /* ≥16px — prevent iOS auto-zoom */
   text-align: center;
   font-family: 'Poppins', sans-serif;
 }
@@ -565,7 +565,7 @@
   border: 1px solid var(--border, #2a3a2e);
   border-radius: 8px;
   color: var(--text, #e8f5e9);
-  font-size: 0.86rem;
+  font-size: 1rem; /* ≥16px — prevent iOS auto-zoom */
   font-family: 'Poppins', sans-serif;
   margin-bottom: 16px;
 }
@@ -712,7 +712,7 @@
   border-radius: 8px;
   color: var(--text, #e8f5e9);
   padding: 8px 10px;
-  font-size: 0.84rem;
+  font-size: 1rem; /* ≥16px — prevent iOS auto-zoom */
   font-family: 'Poppins', sans-serif;
 }
 

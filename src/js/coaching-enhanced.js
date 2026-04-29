@@ -785,7 +785,8 @@ window.sendCoachMessage = function() {
   const type = document.getElementById('msgType')?.value || 'note';
   if (!text || !_activeThreadClientId) return;
   _addMessage(_activeThreadClientId, text, type, true);
-  document.getElementById('msgText').value = '';
+  const msgTextEl = document.getElementById('msgText');
+  if (msgTextEl) msgTextEl.value = '';
   const threadContainer = document.getElementById('coachThreadContainer');
   if (threadContainer) threadContainer.innerHTML = _buildThreadHTML(_activeThreadClientId);
   // Scroll to bottom

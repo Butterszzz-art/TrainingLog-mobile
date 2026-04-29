@@ -19,6 +19,7 @@ body {
   margin: 0;
   width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport — hides mobile browser chrome */
   overflow-x: hidden;
 }
 
@@ -190,6 +191,7 @@ th {
 #pocketFitContainer {
   width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport */
   overflow-x: hidden;
   transition: margin-left 0.3s ease;
   margin-left: 0;

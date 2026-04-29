@@ -281,10 +281,10 @@ function loadGroups() {
 }
 
 function doGroupSearch() {
-  const search = document.getElementById('groupSearchInput').value.trim();
-  const goal = document.getElementById('goalFilter').value.trim();
-  const tag = document.getElementById('tagFilter').value.trim();
-  const sort = document.getElementById('sortFilter').value;
+  const search = document.getElementById('groupSearchInput')?.value.trim() ?? '';
+  const goal = document.getElementById('goalFilter')?.value.trim() ?? '';
+  const tag = document.getElementById('tagFilter')?.value.trim() ?? '';
+  const sort = document.getElementById('sortFilter')?.value ?? '';
   const btn = document.getElementById('groupSearchBtn');
   if (btn) btn.classList.add('loading');
   setTimeout(() => {
@@ -296,10 +296,11 @@ function doGroupSearch() {
 }
 
 function clearGroupFilters() {
-  document.getElementById('groupSearchInput').value = '';
-  document.getElementById('goalFilter').value = '';
-  document.getElementById('tagFilter').value = '';
-  document.getElementById('sortFilter').value = '';
+  const _g = id => document.getElementById(id);
+  if (_g('groupSearchInput')) _g('groupSearchInput').value = '';
+  if (_g('goalFilter'))       _g('goalFilter').value = '';
+  if (_g('tagFilter'))        _g('tagFilter').value = '';
+  if (_g('sortFilter'))       _g('sortFilter').value = '';
   renderGroups(sortGroups(groups));
 }
 
