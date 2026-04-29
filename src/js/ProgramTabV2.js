@@ -557,6 +557,71 @@
       host.appendChild(addBtn);
     }
 
+    /* ── Template helpers ─────────────────────────────────────── */
+
+    /** Pull all workout templates the user has saved. */
+    function _getAvailableTemplates() {
+      // Prefer the in-memory cache populated when the Logbook Templates tab loads
+      if (Array.isArray(window.resistanceTemplatesCache) && window.resistanceTemplatesCache.length) {
+        return window.resistanceTemplatesCache;
+      }
+      // Fallback: read directly from localStorage
+      const user = window.currentUser || localStorage.getItem('fitnessAppUser') || '';
+      if (!user) return [];
+      try {
+        const raw = JSON.parse(localStorage.getItem(`managedTemplates_${user}`)) || [];
+        return raw
+          .map(t => ({
+            id:   t.localId || t.id || String(Date.now()),
+            name: t.name || 'Untitled',
+            data: typeof t.data === 'string' ? JSON.parse(t.data) : t.data
+          }))
+          .filter(t => t.data && typeof t.data === 'object');
+      } catch { return []; }
+    }
+
+    /** Load all exercises from a template into the currently selected day. */
+    function _loadTemplateIntoDay(dayId, templateId) {
+      if (!dayId) return;
+      const tpl = _getAvailableTemplates().find(t => t.id === templateId);
+      if (!tpl) return;
+
+      const day = (draft.days || []).find(d => d.dayId === dayId);
+      if (!day) return;
+
+      const tplExercises = Array.isArray(tpl.data?.exercises) ? tpl.data.exercises : [];
+      if (!tplExercises.length) {
+        window.showToast('This template has no exercises.', 'warn');
+        return;
+      }
+
+      // Map template exercise format → program-builder exercise format
+      const mapped = tplExercises.map(ex => ({
+        exerciseId: uuid(),
+        name:       ex.name || 'Exercise',
+        notes:      ex.notes || '',
+        rirNote: '', rpeNote: '', progressionNotes: '',
+        archetypeTags: [draft.archetype || 'general'],
+        sets: (Array.isArray(ex.sets) && ex.sets.length
+          ? ex.sets.map(s => ({
+              setType: s.setType || 'straight',
+              reps:    Number(s.targetReps)  || 8,
+              weight:  Number(s.targetWeight) || null,
+              rpe: null, rir: null, restSec: 120
+            }))
+          : [{ setType: 'straight', reps: 8, weight: null, rpe: null, rir: null, restSec: 120 }]
+        )
+      }));
+
+      day.exercises = [...(day.exercises || []), ...mapped];
+      persistDraft();
+      renderExercisesPane();
+      window.showToast(
+        `✅ "${tpl.name}" loaded — ${mapped.length} exercise${mapped.length !== 1 ? 's' : ''} added`,
+        'success', 4000
+      );
+    }
+
     function _renderExercisePane(host) {
       host.innerHTML = '';
 
@@ -567,6 +632,37 @@
       if (!day) {
         host.innerHTML = '<div class="pbv2-no-exercises">Add a day first →</div>';
         return;
+      }
+
+      /* ── Template loader strip ──────────────────────────────── */
+      const availableTpls = _getAvailableTemplates();
+      if (availableTpls.length) {
+        const strip = document.createElement('div');
+        strip.className = 'pbv2-template-strip';
+        strip.title = 'Load a saved workout template into this day';
+
+        const sel = document.createElement('select');
+        sel.className = 'pbv2-template-select';
+        sel.innerHTML =
+          '<option value="">📋 Load from template…</option>' +
+          availableTpls.map(t =>
+            `<option value="${esc(t.id)}">${esc(t.name)}</option>`
+          ).join('');
+
+        const loadBtn = document.createElement('button');
+        loadBtn.type = 'button';
+        loadBtn.className = 'pbv2-template-load-btn';
+        loadBtn.textContent = 'Load';
+        loadBtn.addEventListener('click', () => {
+          const id = sel.value;
+          if (!id) { window.showToast('Choose a template first.', 'warn'); return; }
+          _loadTemplateIntoDay(selectedDayId, id);
+          sel.value = '';
+        });
+
+        strip.appendChild(sel);
+        strip.appendChild(loadBtn);
+        host.appendChild(strip);
       }
 
       /* Exercise picker */

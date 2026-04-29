@@ -4001,7 +4001,7 @@ async function saveTemplate(username, templateName, templateData) {
     console.log('Template saved:', result);
   } catch (error) {
     console.error('Error saving template:', error);
-    alert('Failed to save template. Please try again.');
+    window.showToast('Failed to save template. Please try again.', 'error');
   }
 }
   
@@ -4188,37 +4188,39 @@ function buildTemplateFromWorkout(workout, metadata = {}) {
 
 // Save last workout as template
 function saveWorkoutAsTemplate() {
-  const name = prompt("Template name:");
-  if (!name) return;
-  const description = prompt('Template description (optional):') || '';
-  const tagsInput = prompt('Template tags (comma separated, optional):') || '';
-  const tags = tagsInput.split(',').map(tag => tag.trim()).filter(Boolean);
+  window.showPrompt('Template name:').then(name => {
+    if (!name || !name.trim()) return;
+    window.showPrompt('Description (optional):').then(description => {
+      window.showPrompt('Tags (comma separated, optional):').then(tagsInput => {
+        const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  if (!workouts.length) return alert("No workout to save.");
-  const template = buildTemplateFromWorkout(workouts[workouts.length - 1], {
-    name,
-    description,
-    tags
-  });
-  const localTemplates = getLocalManagedTemplates();
-  localTemplates.push({
-    localId: `local_${Date.now()}`,
-    name,
-    data: template,
-    source: 'local'
-  });
-  saveLocalManagedTemplates(localTemplates);
+        const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+        if (!workouts.length) { window.showToast('No workout to save.', 'warn'); return; }
+        const template = buildTemplateFromWorkout(workouts[workouts.length - 1], {
+          name: name.trim(), description: description || '', tags
+        });
+        const localTemplates = getLocalManagedTemplates();
+        localTemplates.push({
+          localId: `local_${Date.now()}`,
+          name: name.trim(),
+          data: template,
+          source: 'local'
+        });
+        saveLocalManagedTemplates(localTemplates);
 
-  saveTemplate(currentUser, name, template)
-    .then(() => {
-      alert("Template saved!");
-      loadTemplateDropdown(); // Refresh dropdown
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Failed to save template.");
+        saveTemplate(currentUser, name.trim(), template)
+          .then(() => {
+            window.showToast('✅ Template saved!', 'success');
+            loadTemplateDropdown();
+          })
+          .catch(err => {
+            console.error(err);
+            window.showToast('Failed to save template to server — saved locally.', 'warn');
+            loadTemplateDropdown();
+          });
+      });
     });
+  });
 }
 
 
@@ -4238,7 +4240,7 @@ function loadSelectedResistanceTemplate() {
   const template = value;
 
   if (!template || typeof template !== 'object') {
-    alert('Invalid template format.');
+    window.showToast('Invalid template format.', 'warn');
     return;
   }
 
@@ -4273,7 +4275,7 @@ function loadSelectedResistanceTemplate() {
       : []);
 
   if (!templateLog.length) {
-    alert('Template has no exercises to load.');
+    window.showToast('Template has no exercises to load.', 'warn');
     return;
   }
 
@@ -4287,23 +4289,23 @@ function loadSelectedResistanceTemplate() {
   });
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   renderWorkouts();
-  alert('Template loaded!');
+  window.showToast('✅ Template loaded!', 'success');
 }
 
 // SEND TEMPLATE TO ANOTHER USER
 async function sendTemplate() {
   const otherUser = document.getElementById("shareWithUser").value.trim();
-  if (!otherUser) return alert("Enter username to share with.");
+  if (!otherUser) { window.showToast('Enter a username to share with.', 'warn'); return; }
 
   const select = document.getElementById('resistanceTemplateSelect');
   if (!select || !select.value) {
-    alert('Select a template first.');
+    window.showToast('Select a template first.', 'warn');
     return;
   }
 
   const selected = resistanceTemplatesCache.find(tpl => tpl.id === select.value);
   const templateData = selected?.data;
-  if (!templateData) return alert('Failed to share template.');
+  if (!templateData) { window.showToast('Failed to share template.', 'warn'); return; }
 
   try {
     const response = await fetch(`${window.SERVER_URL}/sendTemplate`, {
@@ -4320,13 +4322,13 @@ async function sendTemplate() {
 
     const result = await response.json();
     if (result.success) {
-      alert("Template sent successfully!");
+      window.showToast('✅ Template sent!', 'success');
     } else {
-      alert(result.message || "Failed to send template.");
+      window.showToast(result.message || 'Failed to send template.', 'warn');
     }
   } catch (error) {
     console.error('Send template error:', error);
-    alert("Error sending template.");
+    window.showToast('Error sending template.', 'error');
   }
 }
 
@@ -4430,7 +4432,7 @@ function saveSimpleTemplate() {
     .split(',')
     .map(tag => tag.trim())
     .filter(Boolean);
-  if (!name || newTemplateExercises.length === 0) return alert('Template info missing');
+  if (!name || newTemplateExercises.length === 0) { window.showToast('Add a name and at least one exercise.', 'warn'); return; }
   const templateData = {
     title: name,
     date: new Date().toISOString().split('T')[0],
