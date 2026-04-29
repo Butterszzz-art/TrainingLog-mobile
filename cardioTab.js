@@ -1,22 +1,35 @@
 (function (global) {
   const MET_VALUES = {
-    run: 9.8,
-    running: 9.8,
-    jog: 7,
-    jogging: 7,
-    walk: 3.8,
-    walking: 3.8,
-    bike: 7.5,
-    cycling: 7.5,
-    swim: 8,
-    swimming: 8,
-    row: 7,
-    rowing: 7,
+    run: 9.8, running: 9.8,
+    jog: 7, jogging: 7,
+    walk: 3.8, walking: 3.8,
+    bike: 7.5, cycling: 7.5, cycle: 7.5,
+    swim: 8, swimming: 8,
+    row: 7, rowing: 7,
     hiit: 10,
-    stair: 8.8,
+    stair: 8.8, stairs: 8.8,
     elliptical: 5.5,
-    jump: 8.5,
+    jump: 8.5, 'jump rope': 8.5,
+    hike: 5.3, hiking: 5.3,
+    yoga: 2.5,
+    pilates: 3.0,
+    dance: 5.5,
+    other: 6,
     default: 6,
+  };
+
+  /* Activity display config — icon, colour accent, metric type */
+  const ACTIVITY_CONFIG = {
+    run:        { label: 'Run',        icon: '🏃', metric: 'pace',  color: '#e05252' },
+    walk:       { label: 'Walk',       icon: '🚶', metric: 'pace',  color: '#52c078' },
+    cycle:      { label: 'Cycle',      icon: '🚴', metric: 'speed', color: '#5295e0' },
+    swim:       { label: 'Swim',       icon: '🏊', metric: 'pace',  color: '#52c0d8' },
+    row:        { label: 'Row',        icon: '🚣', metric: 'speed', color: '#9070d8' },
+    hiit:       { label: 'HIIT',       icon: '💪', metric: null,    color: '#e0943a' },
+    hike:       { label: 'Hike',       icon: '🥾', metric: 'pace',  color: '#7ab848' },
+    yoga:       { label: 'Yoga',       icon: '🧘', metric: null,    color: '#a07dc0' },
+    elliptical: { label: 'Elliptical', icon: '⚙️', metric: 'speed', color: '#7f9891' },
+    other:      { label: 'Other',      icon: '🏅', metric: null,    color: '#8c9891' },
   };
 
   function normalizeType(type) {
@@ -26,6 +39,36 @@
   function resolveMET(type) {
     const value = MET_VALUES[normalizeType(type)];
     return Number.isFinite(value) ? value : MET_VALUES.default;
+  }
+
+  /**
+   * Compute pace (min/km → "M:SS /km") or speed (km/h → "X.X km/h")
+   * based on the activity type. Returns null when not applicable.
+   */
+  function computePaceOrSpeed({ type, durationMinutes, distanceKm }) {
+    const dur  = Number(durationMinutes);
+    const dist = Number(distanceKm);
+    if (!Number.isFinite(dur) || dur <= 0 || !Number.isFinite(dist) || dist <= 0) return null;
+
+    const norm = normalizeType(type);
+    const cfg  = ACTIVITY_CONFIG[norm] || ACTIVITY_CONFIG.other;
+
+    if (cfg.metric === 'pace') {
+      const totalSec = (dur / dist) * 60;
+      const mins = Math.floor(totalSec / 60);
+      const secs = Math.round(totalSec % 60).toString().padStart(2, '0');
+      return { value: `${mins}:${secs} /km`, label: 'Pace', icon: '⚡' };
+    }
+    if (cfg.metric === 'speed') {
+      const kmh = dist / (dur / 60);
+      return { value: `${kmh.toFixed(1)} km/h`, label: 'Speed', icon: '🚀' };
+    }
+    return null;
+  }
+
+  /** Return the ACTIVITY_CONFIG entry for a type, falling back gracefully */
+  function getActivityConfig(type) {
+    return ACTIVITY_CONFIG[normalizeType(type)] || { label: type || 'Other', icon: '🏅', metric: null, color: '#8c9891' };
   }
 
   function estimateCardioCalories({ type, durationMinutes, weightKg }) {
@@ -74,11 +117,14 @@
 
   const api = {
     MET_VALUES,
+    ACTIVITY_CONFIG,
     normalizeType,
     resolveMET,
     estimateCardioCalories,
     computeDailyCardioExpenditure,
     applyCardioMacroAdjustment,
+    computePaceOrSpeed,
+    getActivityConfig,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

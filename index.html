@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="css/coaching.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
+  <link rel="stylesheet" href="css/cardio.css">
   <link rel="manifest" href="/manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1068,22 +1069,74 @@
 </div>
 
   <div id="cardioTab" class="tab-content">
-    <div id="cardioFormPanel" class="panel active">
-    <h2>Cardio Tracker</h2>
-    <input type="text" id="cardioType" placeholder="Type (e.g. Running)">
-    <input type="number" id="cardioDuration" placeholder="Duration (min)">
-    <input type="number" id="cardioDistance" placeholder="Distance (km)">
-    <input type="number" id="cardioCalories" placeholder="Calories burned (optional)">
-    <input type="text" id="cardioNotes" placeholder="Notes (optional)">
-    <button onclick="addCardioEntry()">Add Cardio</button>
-    <button onclick="completeCardioSession()">Complete Cardio Session</button>
+
+    <!-- Weekly summary chips -->
+    <div id="cardioWeeklySummary" class="cardio-weekly-strip"></div>
+
+    <!-- Log form -->
+    <div class="cardio-form-card">
+      <h3 class="cardio-form-title">🏃 Log Cardio</h3>
+
+      <!-- Activity type pills -->
+      <div class="cardio-type-picker" id="cardioTypePicker">
+        <button class="cardio-type-btn active" data-type="run"        onclick="selectCardioType('run')">🏃 Run</button>
+        <button class="cardio-type-btn"        data-type="walk"       onclick="selectCardioType('walk')">🚶 Walk</button>
+        <button class="cardio-type-btn"        data-type="cycle"      onclick="selectCardioType('cycle')">🚴 Cycle</button>
+        <button class="cardio-type-btn"        data-type="swim"       onclick="selectCardioType('swim')">🏊 Swim</button>
+        <button class="cardio-type-btn"        data-type="row"        onclick="selectCardioType('row')">🚣 Row</button>
+        <button class="cardio-type-btn"        data-type="hiit"       onclick="selectCardioType('hiit')">💪 HIIT</button>
+        <button class="cardio-type-btn"        data-type="hike"       onclick="selectCardioType('hike')">🥾 Hike</button>
+        <button class="cardio-type-btn"        data-type="yoga"       onclick="selectCardioType('yoga')">🧘 Yoga</button>
+        <button class="cardio-type-btn"        data-type="other"      onclick="selectCardioType('other')">＋ Other</button>
+      </div>
+      <!-- Hidden canonical type value -->
+      <input type="hidden" id="cardioType" value="run">
+      <!-- Custom type text input, shown only when "Other" is active -->
+      <div class="cardio-custom-type-wrap" id="cardioCustomTypeWrap" style="display:none">
+        <input type="text" id="cardioCustomType" placeholder="Describe activity…"
+               oninput="document.getElementById('cardioType').value = this.value.trim() || 'other'">
+      </div>
+
+      <!-- Duration + Distance -->
+      <div class="cardio-form-row">
+        <div class="cardio-form-field">
+          <label for="cardioDuration">Duration (min)</label>
+          <input type="number" id="cardioDuration" placeholder="30" min="1"
+                 oninput="updateCardioPacePreview()">
+        </div>
+        <div class="cardio-form-field">
+          <label for="cardioDistance">Distance (km)</label>
+          <input type="number" id="cardioDistance" placeholder="optional" step="0.1" min="0"
+                 oninput="updateCardioPacePreview()">
+        </div>
+      </div>
+
+      <!-- Live pace / speed preview -->
+      <div id="cardioPacePreview" class="cardio-pace-preview" style="display:none">
+        <span class="pace-icon" id="cardioPaceIcon">⚡</span>
+        <span class="pace-value" id="cardioPaceValue"></span>
+      </div>
+
+      <!-- Calories (optional) + Notes -->
+      <div class="cardio-form-row">
+        <div class="cardio-form-field">
+          <label for="cardioCalories">Calories (optional)</label>
+          <input type="number" id="cardioCalories" placeholder="auto-estimated" min="0">
+        </div>
+        <div class="cardio-form-field">
+          <label for="cardioNotes">Notes</label>
+          <input type="text" id="cardioNotes" placeholder="e.g. morning run">
+        </div>
+      </div>
+
+      <button class="cardio-submit-btn" onclick="addCardioEntry()">➕ Add Session</button>
     </div>
-    <div id="cardioHistoryPanel" class="panel">
-      <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Distance</th><th>Calories</th><th>Notes</th><th>Remove</th></tr></thead>
-        <tbody id="cardioBody"></tbody>
-      </table>
-    </div>
+
+    <!-- History list (populated by renderCardio) -->
+    <div id="cardioHistoryList" class="cardio-history-list"></div>
+
+    <!-- Legacy table body kept for backward compat with any direct cardioBody refs -->
+    <table style="display:none"><tbody id="cardioBody"></tbody></table>
   </div>
 
   <div id="posingTab" class="tab-content">
@@ -8901,64 +8954,227 @@ function calculateCaloriesEquation() {
 }
 
 // ===== CARDIO TRACKER =====
+
+/** Switch the active activity-type pill and update the hidden input */
+function selectCardioType(type) {
+  document.getElementById('cardioType').value = type;
+  document.querySelectorAll('#cardioTypePicker .cardio-type-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
+  const customWrap = document.getElementById('cardioCustomTypeWrap');
+  if (customWrap) {
+    customWrap.style.display = type === 'other' ? 'block' : 'none';
+    if (type !== 'other') {
+      const customInput = document.getElementById('cardioCustomType');
+      if (customInput) customInput.value = '';
+    }
+  }
+  updateCardioPacePreview();
+}
+
+/** Live-update the pace/speed preview chip under duration+distance fields */
+function updateCardioPacePreview() {
+  const previewEl = document.getElementById('cardioPacePreview');
+  if (!previewEl) return;
+  const type     = document.getElementById('cardioType')?.value || 'run';
+  const duration = parseFloat(document.getElementById('cardioDuration')?.value);
+  const distance = parseFloat(document.getElementById('cardioDistance')?.value);
+
+  const result = window.cardioTab?.computePaceOrSpeed
+    ? window.cardioTab.computePaceOrSpeed({ type, durationMinutes: duration, distanceKm: distance })
+    : null;
+
+  if (result) {
+    previewEl.style.display = 'flex';
+    const iconEl  = document.getElementById('cardioPaceIcon');
+    const valueEl = document.getElementById('cardioPaceValue');
+    if (iconEl)  iconEl.textContent  = result.icon;
+    if (valueEl) valueEl.textContent = `${result.label}: ${result.value}`;
+  } else {
+    previewEl.style.display = 'none';
+  }
+}
+
 function addCardioEntry() {
-  const type = document.getElementById("cardioType").value.trim();
-  const duration = +document.getElementById("cardioDuration").value;
-  const distance = document.getElementById("cardioDistance").value;
-  const caloriesInput = +document.getElementById("cardioCalories").value || 0;
-  const notes = document.getElementById("cardioNotes").value;
+  const type = document.getElementById('cardioType')?.value.trim() || '';
+  const duration = parseFloat(document.getElementById('cardioDuration')?.value);
+  const distanceRaw = parseFloat(document.getElementById('cardioDistance')?.value);
+  const distance = Number.isFinite(distanceRaw) && distanceRaw > 0 ? distanceRaw : null;
+  const caloriesInput = parseFloat(document.getElementById('cardioCalories')?.value) || 0;
+  const notes = document.getElementById('cardioNotes')?.value.trim() || '';
   const date = new Date().toISOString().split('T')[0];
-  if (!type || !duration) return alert("Type and Duration are required");
+
+  if (!type || !Number.isFinite(duration) || duration <= 0) {
+    window.showToast?.('Choose an activity and enter a duration.', 'warn') ||
+      alert('Choose an activity and enter a duration.');
+    return;
+  }
 
   const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   const fallbackWeightKg = Number(JSON.parse(localStorage.getItem('personalDetails') || 'null')?.weightKg) || 70;
-  const latestWeightKg = bodyweightLog.length ? (getEntryWeightKg(bodyweightLog[bodyweightLog.length - 1]) || fallbackWeightKg) : fallbackWeightKg;
+  const latestWeightKg = bodyweightLog.length
+    ? (getEntryWeightKg(bodyweightLog[bodyweightLog.length - 1]) || fallbackWeightKg)
+    : fallbackWeightKg;
+
   const estimatedCalories = window.cardioTab?.estimateCardioCalories
     ? window.cardioTab.estimateCardioCalories({ type, durationMinutes: duration, weightKg: latestWeightKg })
     : 0;
   const calories = caloriesInput > 0 ? caloriesInput : estimatedCalories;
-  const met = window.cardioTab?.resolveMET ? window.cardioTab.resolveMET(type) : null;
+  const met      = window.cardioTab?.resolveMET ? window.cardioTab.resolveMET(type) : null;
+  const paceOrSpeed = window.cardioTab?.computePaceOrSpeed
+    ? window.cardioTab.computePaceOrSpeed({ type, durationMinutes: duration, distanceKm: distance })
+    : null;
 
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const entry = { date, type, duration, distance, calories, estimatedCalories, met, notes };
+  const entry = { date, type, duration, distance, calories, estimatedCalories, met, paceOrSpeed, notes };
   log.push(entry);
   localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
+
   try {
-    if (window.dailyMissionEngine?.syncMissionFromCardioEntry) {
-      window.dailyMissionEngine.syncMissionFromCardioEntry(entry, currentUser);
-    }
+    window.dailyMissionEngine?.syncMissionFromCardioEntry?.(entry, currentUser);
   } catch (missionErr) {
     console.warn('Daily mission cardio sync failed.', missionErr);
   }
+
+  // Clear form
+  if (document.getElementById('cardioDuration'))  document.getElementById('cardioDuration').value  = '';
+  if (document.getElementById('cardioDistance'))  document.getElementById('cardioDistance').value  = '';
+  if (document.getElementById('cardioCalories'))  document.getElementById('cardioCalories').value  = '';
+  if (document.getElementById('cardioNotes'))     document.getElementById('cardioNotes').value     = '';
+  updateCardioPacePreview();
+
+  const cfg = window.cardioTab?.getActivityConfig?.(type) || { icon: '🏃', label: type };
+  const calText = calories > 0 ? ` · ${calories} kcal` : '';
+  const paceText = paceOrSpeed ? ` · ${paceOrSpeed.value}` : '';
+  window.showToast?.(`${cfg.icon} ${Math.round(duration)} min ${cfg.label}${paceText}${calText} logged!`, 'success', 3000);
+
   renderCardio();
   updateMacroUI();
 }
 
+/** Legacy function kept so any external references don't break.
+ *  The old "Session Complete" dummy entry is no longer created.
+ *  Calling this now just signals the mission engine directly. */
 function completeCardioSession() {
-  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const date = new Date().toISOString().split('T')[0];
-  const entry = { date, type: 'Session Complete', duration: 0, distance: 0, calories: 0, notes: '' };
-  log.push(entry);
-  localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
   try {
-    if (window.dailyMissionEngine?.syncMissionFromCardioEntry) {
-      window.dailyMissionEngine.syncMissionFromCardioEntry(entry, currentUser);
-    }
-  } catch (missionErr) {
-    console.warn('Daily mission cardio completion sync failed.', missionErr);
-  }
-  renderCardio();
-  updateMacroUI();
+    const entry = { date: new Date().toISOString().split('T')[0], type: 'session_complete' };
+    window.dailyMissionEngine?.syncMissionFromCardioEntry?.(entry, currentUser);
+  } catch (e) { /* silent */ }
+  window.showToast?.('Cardio session marked complete! 🎉', 'success', 3000);
 }
 
 function renderCardio() {
+  if (!currentUser) return;
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const body = document.getElementById("cardioBody");
-  body.innerHTML = '';
-  log.forEach((entry, index) => {
-    body.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn">❌</button></td></tr>`;
+
+  /* ── Weekly summary (rolling 7 days) ────────────────────── */
+  const today = new Date();
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 6);
+  const weekStart = weekAgo.toISOString().slice(0, 10);
+  const weekEntries = log.filter(e => (e.date || '') >= weekStart);
+
+  const weekSessions = weekEntries.length;
+  const weekMins     = weekEntries.reduce((s, e) => s + (parseFloat(e.duration) || 0), 0);
+  const weekKm       = weekEntries.reduce((s, e) => s + (parseFloat(e.distance) || 0), 0);
+  const weekKcal     = weekEntries.reduce((s, e) => s + (parseFloat(e.calories) || 0), 0);
+
+  const summaryEl = document.getElementById('cardioWeeklySummary');
+  if (summaryEl) {
+    summaryEl.innerHTML = [
+      { val: weekSessions,                        lbl: 'Sessions (7d)' },
+      { val: Math.round(weekMins) + ' min',       lbl: 'Active time'   },
+      { val: weekKm > 0 ? weekKm.toFixed(1)+' km' : '—', lbl: 'Distance' },
+      { val: weekKcal > 0 ? Math.round(weekKcal)+' kcal' : '—', lbl: 'Calories' },
+    ].map(c => `
+      <div class="cardio-stat-chip">
+        <span class="chip-val">${c.val}</span>
+        <span class="chip-lbl">${c.lbl}</span>
+      </div>`).join('');
+  }
+
+  /* ── History cards grouped by date ──────────────────────── */
+  const historyEl = document.getElementById('cardioHistoryList');
+  if (!historyEl) return;
+
+  if (log.length === 0) {
+    historyEl.innerHTML = `
+      <div class="cardio-history-empty">
+        No cardio sessions logged yet.<br>
+        <span style="font-size:1.6rem;display:block;margin-top:8px">🏃</span>
+      </div>`;
+    return;
+  }
+
+  // Group entries by date descending
+  const grouped = {};
+  // Iterate in reverse so we render newest first and index is preserved
+  [...log].forEach((entry, idx) => {
+    const d = entry.date || 'Unknown';
+    if (!grouped[d]) grouped[d] = [];
+    grouped[d].push({ entry, idx });
   });
-  if (document.getElementById('progressTab').classList.contains('active')) {
+
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+  const todayStr     = today.toISOString().slice(0, 10);
+  const yesterdayStr = new Date(today.getTime() - 86400000).toISOString().slice(0, 10);
+
+  function _dateLabel(d) {
+    if (d === todayStr)     return 'Today';
+    if (d === yesterdayStr) return 'Yesterday';
+    try {
+      return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch { return d; }
+  }
+
+  historyEl.innerHTML = sortedDates.map(date => {
+    const entries = grouped[date];
+    const cards   = entries.map(({ entry, idx }) => {
+      const cfg   = window.cardioTab?.getActivityConfig?.(entry.type) || { icon: '🏅', label: entry.type || 'Other', color: '#8c9891' };
+      const dur   = entry.duration > 0 ? `⏱ ${Math.round(entry.duration)} min` : null;
+      const dist  = parseFloat(entry.distance) > 0 ? `📏 ${parseFloat(entry.distance).toFixed(1)} km` : null;
+      const pace  = entry.paceOrSpeed
+        ? `${entry.paceOrSpeed.icon} ${entry.paceOrSpeed.value}`
+        : (dist && dur
+            ? (() => {
+                const r = window.cardioTab?.computePaceOrSpeed?.({ type: entry.type, durationMinutes: entry.duration, distanceKm: entry.distance });
+                return r ? `${r.icon} ${r.value}` : null;
+              })()
+            : null);
+      const kcal  = parseFloat(entry.calories) > 0 ? `🔥 ${Math.round(entry.calories)} kcal` : null;
+
+      const tags  = [dur, dist, pace, kcal].filter(Boolean).map((t, i) =>
+        `<span class="cardio-stat-tag${i === 2 && pace ? ' highlight' : ''}">${t}</span>`
+      ).join('');
+
+      return `
+        <div class="cardio-entry-card" style="--c-accent:${cfg.color}">
+          <div class="cardio-entry-icon">${cfg.icon}</div>
+          <div class="cardio-entry-info">
+            <div class="cardio-entry-title">${cfg.label}</div>
+            <div class="cardio-entry-stats">${tags}</div>
+            ${entry.notes ? `<div class="cardio-entry-notes">${entry.notes}</div>` : ''}
+          </div>
+          <button class="cardio-remove-btn" onclick="removeCardioEntry(${idx})" title="Remove">🗑</button>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="cardio-day-group">
+        <div class="cardio-day-header">${_dateLabel(date)} &nbsp;·&nbsp; ${date}</div>
+        ${cards}
+      </div>`;
+  }).join('');
+
+  // Keep legacy cardioBody in sync for anything that still reads it
+  const legacyBody = document.getElementById('cardioBody');
+  if (legacyBody) {
+    legacyBody.innerHTML = '';
+    log.forEach((entry, index) => {
+      legacyBody.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes || ''}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn">❌</button></td></tr>`;
+    });
+  }
+
+  if (document.getElementById('progressTab')?.classList.contains('active')) {
     showWorkoutProgress();
   }
 }
