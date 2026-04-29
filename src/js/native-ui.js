@@ -156,9 +156,77 @@
 
   window.alert = function (msg) { showToast(String(msg), 'info'); };
 
+  // ── openReportWindow ──────────────────────────────────────────────────────
+  /**
+   * Open an HTML report document for viewing / printing / sharing.
+   *
+   * • Native Capacitor  → Web Share API (native share sheet).
+   *                       Falls back to a data: URI if Share is unavailable.
+   * • Web browser       → window.open() with HTML written in (existing behaviour).
+   *
+   * @param {string} html          Full HTML document string
+   * @param {{ title?: string, filename?: string }} [opts]
+   */
+  async function openReportWindow(html, opts) {
+    const title    = (opts && opts.title)    || 'Report';
+    const filename = (opts && opts.filename) || 'report.html';
+    const isNative = !!(
+      window.Capacitor &&
+      typeof window.Capacitor.isNativePlatform === 'function' &&
+      window.Capacitor.isNativePlatform()
+    );
+
+    if (isNative) {
+      // ── Native path: Web Share API ───────────────────────────────────────
+      if (typeof navigator.share === 'function') {
+        const blob = new Blob([html], { type: 'text/html' });
+        const file = new File([blob], filename, { type: 'text/html' });
+        try {
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title });
+          } else {
+            // Fallback: share plain-text summary (strips HTML tags)
+            const text = html
+              .replace(/<style[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s{2,}/g, ' ')
+              .trim()
+              .substring(0, 3000);
+            await navigator.share({ title, text });
+          }
+          return;
+        } catch (e) {
+          if (e.name === 'AbortError') return; // user cancelled — not an error
+          console.warn('[openReportWindow] Share API failed, trying data URI', e);
+        }
+      }
+
+      // ── Native fallback: data URI in a new window ────────────────────────
+      try {
+        const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+        const w = window.open(dataUrl, '_blank');
+        if (w) return;
+      } catch (_) {}
+
+      showToast('Could not open report on this device.', 'warn');
+      return;
+    }
+
+    // ── Web path: open new window and write HTML into it ──────────────────
+    const win = window.open('', '_blank', 'width=960,height=800,scrollbars=yes');
+    if (!win) {
+      showToast('Pop-up blocked — allow pop-ups for this site and try again.', 'warn');
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+  }
+
   // ── Exports ───────────────────────────────────────────────────────────────
 
-  window.showToast    = showToast;
-  window.showConfirm  = showConfirm;
-  window.showPrompt   = showPrompt;
+  window.showToast        = showToast;
+  window.showConfirm      = showConfirm;
+  window.showPrompt       = showPrompt;
+  window.openReportWindow = openReportWindow;
 })();

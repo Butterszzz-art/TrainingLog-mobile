@@ -263,8 +263,7 @@ function bulkExportPDF() {
     <script>window.onload=()=>window.print()<\/script>
     </body></html>`;
 
-  const blob = new Blob([html], { type: 'text/html' });
-  window.open(URL.createObjectURL(blob), '_blank');
+  window.openReportWindow(html, { title: 'Coach Progress Report', filename: 'coach-report.html' });
   _showExportToast('PDF report opened for printing');
 }
 
