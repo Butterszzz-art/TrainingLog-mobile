@@ -24,7 +24,7 @@ export async function scanBarcode() {
 
 export async function importRecipe(url) {
   try {
-    const res = await fetch(url, { credentials: "include" });
+    const res = await fetch(url, { credentials: "include", signal: AbortSignal.timeout(5000) });
     const text = await res.text();
     const m = text.match(/(protein|fat|carb)s?\s*:?\s*(\d+)/gi);
     if (!m) return null;

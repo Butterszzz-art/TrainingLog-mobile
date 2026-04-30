@@ -14,7 +14,7 @@ export async function processQueue() {
   for (let i = 0; i < pendingActions.length; i++) {
     const { url, options } = pendingActions[i];
     try {
-      await fetch(url, { ...options, credentials: "include" });
+      await fetch(url, { ...options, credentials: "include", signal: AbortSignal.timeout(5000) });
       pendingActions.splice(i, 1);
       i--;
     } catch (e) {

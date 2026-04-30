@@ -75,7 +75,7 @@ function showUserStats(name) {
     <table><tr><th>Date</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Weight</th></tr>${workouts}</table>
     <h4>Exercise Summary</h4>
     <table><tr><th>Exercise</th><th>Total Volume</th></tr>${volumes}</table>
-    <canvas id="userVolumeChart"></canvas>
+    <canvas id="userVolumeChart" height="200"></canvas>
     <div style="margin-top:10px;"><button onclick="showTab('leaderboardTab')">Back to Leaderboard</button></div>
   `;
   showTab('userStatsTab');
@@ -119,7 +119,7 @@ function showGroupStats(id) {
     <ul>${contributors}</ul>
     <h4>Exercise Totals</h4>
     <table><tr><th>Exercise</th><th>Total Volume</th></tr>${volumes}</table>
-    <canvas id="groupVolumeChart"></canvas>
+    <canvas id="groupVolumeChart" height="200"></canvas>
     <div style="margin-top:10px;"><button onclick="showTab('communityTab'); if(window.showCommunitySection) showCommunitySection('competition');">Back to Leaderboard</button></div>
   `;
   showTab('groupStatsTab');

@@ -1,0 +1,117 @@
+/* =============================================================
+   TABS & SUB-TABS
+   Tab content panels (fade/scale transitions), Settings sub-tabs,
+   and Powerlifting sub-tabs.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Tab content panels ─────────────────────────────────────── */
+
+.tab-content {
+  display: none;
+  padding: 20px;
+  background: linear-gradient(180deg, rgba(15, 21, 18, 0.96), rgba(11, 16, 14, 0.98));
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shell-shadow);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  color: var(--text-color);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tab-content.active {
+  display: block !important;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.tab-content.fade-out {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+/* ── Settings sub-tabs ──────────────────────────────────────── */
+
+.settings-subtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.settings-subtabs::-webkit-scrollbar {
+  display: none;
+}
+
+.settings-subtab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  color: var(--secondary-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  box-shadow: none;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.settings-subtab.active {
+  background: var(--primary);
+  color: var(--text-color);
+  border-color: var(--primary);
+}
+
+.settings-subview {
+  display: block;
+}
+
+.settings-subview.hidden {
+  display: none;
+}
+
+/* ── Powerlifting sub-tabs ──────────────────────────────────── */
+
+.pl-subtabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.pl-subtab {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  color: var(--secondary-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: none;
+  margin: 0;
+}
+
+.pl-subtab.active {
+  background: var(--primary);
+  color: var(--text-color);
+  border-color: var(--primary);
+}
+
+.pl-subview {
+  display: none;
+}
+
+.pl-subview.active {
+  display: block;
+}

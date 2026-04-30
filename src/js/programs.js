@@ -416,12 +416,14 @@
         method: "POST",
         headers,
         body: JSON.stringify({ draft: payload }),
+        signal: AbortSignal.timeout(5000)
       });
       if (first.ok) return;
       await fetch(endpoint, {
         method: "POST",
         headers,
         body: JSON.stringify({ program: payload }),
+        signal: AbortSignal.timeout(5000)
       });
     }
 

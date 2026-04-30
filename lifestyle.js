@@ -12,7 +12,8 @@ function initLifestyle(){
     btn.addEventListener('click',()=>showLifestyleTab(btn.dataset.ltab));
   });
   showLifestyleTab('dailyTab');
-  document.getElementById('scheduleDate').value = new Date().toISOString().split('T')[0];
+  const _sd = document.getElementById('scheduleDate');
+  if (_sd) _sd.value = new Date().toISOString().split('T')[0];
   renderSchedule();
   renderStudy();
   renderTodos();
@@ -28,7 +29,7 @@ function showLifestyleTab(id){
 function renderSchedule(){
   const list=document.getElementById('scheduleList');
   if(!list) return;
-  const date=document.getElementById('scheduleDate').value;
+  const date=document.getElementById('scheduleDate')?.value;
   const items=load('schedule').filter(i=>i.date===date);
   list.innerHTML='';
   items.forEach(item=>{
@@ -42,7 +43,7 @@ function renderSchedule(){
 function openScheduleForm(){
   const text=prompt('Schedule item');
   if(!text) return;
-  const date=document.getElementById('scheduleDate').value;
+  const date=document.getElementById('scheduleDate')?.value;
   const data=load('schedule');
   data.push({id:Date.now(),date,text,done:false});
   save('schedule',data);
@@ -79,8 +80,8 @@ function addSubject(){
   if(!sub) return;
   const opt=document.createElement('option');
   opt.textContent=sub; opt.value=sub;
-  document.getElementById('subjectFilter').appendChild(opt);
-  document.getElementById('subjectFilter').value=sub;
+  const sf=document.getElementById('subjectFilter');
+  if(sf){ sf.appendChild(opt); sf.value=sub; }
 }
 function startStudySession(){
   const btn=document.getElementById('studyTimerBtn');
@@ -88,7 +89,7 @@ function startStudySession(){
   if(studyTimer){
     clearInterval(studyTimer); studyTimer=null;
     const mins=Math.round((Date.now()-studyStart)/60000);
-    const subject=document.getElementById('subjectFilter').value || 'General';
+    const subject=document.getElementById('subjectFilter')?.value || 'General';
     const date=new Date().toISOString().split('T')[0];
     const data=load('study');
     data.push({id:Date.now(),date,subject,duration:mins});
@@ -148,13 +149,13 @@ function addTodoCategory(){
   const c=prompt('New category');
   if(!c) return;
   const opt=document.createElement('option'); opt.textContent=c; opt.value=c;
-  document.getElementById('todoCategoryFilter').appendChild(opt);
-  document.getElementById('todoCategoryFilter').value=c;
+  const cf=document.getElementById('todoCategoryFilter');
+  if(cf){ cf.appendChild(opt); cf.value=c; }
 }
 function openTodoForm(){
   const text=prompt('Task');
   if(!text) return;
-  const cat=document.getElementById('todoCategoryFilter').value||'General';
+  const cat=document.getElementById('todoCategoryFilter')?.value||'General';
   const todos=load('todo');
   todos.push({id:Date.now(),text,category:cat,done:false});
   save('todo',todos); renderTodos();

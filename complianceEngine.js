@@ -122,7 +122,8 @@
       return globalScope.fetch(`/api/bodybuilding/compliance-summary/${encodeURIComponent(resolvedUser)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state || {})
+        body: JSON.stringify(state || {}),
+        signal: AbortSignal.timeout(5000)
       }).then(() => true).catch(() => false);
     } catch (_error) {
       return false;

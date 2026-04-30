@@ -78,11 +78,12 @@ async function createGroup(name, goal = '', tags = []) {
   if (typeof fetch !== 'undefined' && window && window.currentUser) {
     try {
       const res = await fetch(`${window.SERVER_URL}/community/groups`, {
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-  body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags })
-});
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags }),
+        signal: AbortSignal.timeout(5000)
+      });
       const g = normalizeGroup(await res.json());
       groups.push(g);
       saveGroups();
@@ -108,7 +109,8 @@ async function fetchGroups(userId) {
     const res = await fetch(`${window.SERVER_URL}/community/groups?userId=${encodeURIComponent(userId)}`, {
       method: 'GET',
       credentials: 'include',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       groups = normalizeGroups(await res.json());
@@ -129,7 +131,8 @@ async function searchGroups(opts = {}) {
     const res = await fetch(`${window.SERVER_URL}/community/groups?${params.toString()}`, {
       method: 'GET',
       credentials: 'include',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       groups = normalizeGroups(await res.json());
@@ -181,7 +184,8 @@ async function fetchPosts(groupId) {
     const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/posts`, {
       method: 'GET',
       credentials: 'include',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       const posts = await res.json();
@@ -206,7 +210,8 @@ async function inviteUserToGroup(groupId, invitedUserId) {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ invitedUserId })
+      body: JSON.stringify({ invitedUserId }),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       const g = groups.find(gr => gr.id === groupId);
@@ -236,7 +241,8 @@ async function shareProgramToGroup(groupId, programData) {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ senderId: window.currentUser, programData })
+      body: JSON.stringify({ senderId: window.currentUser, programData }),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) {
       alert('Program shared');
@@ -256,7 +262,8 @@ async function fetchProgress(groupId) {
     const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/progress`, {
       method: 'GET',
       credentials: 'include',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      signal: AbortSignal.timeout(5000)
     });
     if (res.ok) return await res.json();
   } catch (e) {
@@ -274,10 +281,10 @@ function loadGroups() {
 }
 
 function doGroupSearch() {
-  const search = document.getElementById('groupSearchInput').value.trim();
-  const goal = document.getElementById('goalFilter').value.trim();
-  const tag = document.getElementById('tagFilter').value.trim();
-  const sort = document.getElementById('sortFilter').value;
+  const search = document.getElementById('groupSearchInput')?.value.trim() ?? '';
+  const goal = document.getElementById('goalFilter')?.value.trim() ?? '';
+  const tag = document.getElementById('tagFilter')?.value.trim() ?? '';
+  const sort = document.getElementById('sortFilter')?.value ?? '';
   const btn = document.getElementById('groupSearchBtn');
   if (btn) btn.classList.add('loading');
   setTimeout(() => {
@@ -289,10 +296,11 @@ function doGroupSearch() {
 }
 
 function clearGroupFilters() {
-  document.getElementById('groupSearchInput').value = '';
-  document.getElementById('goalFilter').value = '';
-  document.getElementById('tagFilter').value = '';
-  document.getElementById('sortFilter').value = '';
+  const _g = id => document.getElementById(id);
+  if (_g('groupSearchInput')) _g('groupSearchInput').value = '';
+  if (_g('goalFilter'))       _g('goalFilter').value = '';
+  if (_g('tagFilter'))        _g('tagFilter').value = '';
+  if (_g('sortFilter'))       _g('sortFilter').value = '';
   renderGroups(sortGroups(groups));
 }
 
@@ -306,7 +314,8 @@ async function addPost(groupId, user, text) {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ userId: user, text })
+        body: JSON.stringify({ userId: user, text }),
+        signal: AbortSignal.timeout(5000)
       });
     } catch (e) {
       console.warn('addPost failed', e);
@@ -474,12 +483,15 @@ function shareProgramInput(id, dataStr) {
 }
 
 function showCreateGroup() {
-  const name = prompt('Group name?');
-  if (!name) return;
-  const goal = prompt('Group goal? (optional)') || '';
-  const tagsStr = prompt('Tags? (comma separated)') || '';
-  const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
-  createGroup(name, goal, tags).then(() => renderGroups(groups));
+  window.showPrompt('Group name?').then(name => {
+    if (!name) return;
+    window.showPrompt('Group goal? (optional)').then(goal => {
+      window.showPrompt('Tags? (comma separated)').then(tagsStr => {
+        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+        createGroup(name, goal || '', tags).then(() => renderGroups(groups));
+      });
+    });
+  });
 }
 
 // ----- Competition Features -----
@@ -489,16 +501,35 @@ let competitionChart;
 function showCommunitySection(section) {
   currentCommunitySection = section;
   const panels = {
-    groups: document.getElementById('groupsPanel'),
+    groups:      document.getElementById('groupsPanel'),
     competition: document.getElementById('competitionPanel'),
-    posts: document.getElementById('postsPanel')
+    posts:       document.getElementById('postsPanel'),
+    feed:        document.getElementById('feedPanel'),
+    share:       document.getElementById('commSharePanel'),
   };
   Object.values(panels).forEach(p => { if (p) p.style.display = 'none'; });
   if (panels[section]) panels[section].style.display = 'block';
+
+  // Update nav active class
+  const navMap = {
+    groups:      'commNavGroups',
+    feed:        'commNavFeed',
+    competition: 'commNavCompetition',
+    share:       'commNavShare',
+  };
+  document.querySelectorAll('.comm-nav-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(navMap[section]);
+  if (activeBtn) activeBtn.classList.add('active');
+
   if (section === 'groups') {
     loadGroups();
+    if (window.renderWeeklyChallenge) renderWeeklyChallenge();
   } else if (section === 'competition') {
     renderCompetition();
+  } else if (section === 'feed') {
+    if (window.renderActivityFeed) renderActivityFeed();
+  } else if (section === 'share') {
+    if (typeof window.renderSharePanel === 'function') window.renderSharePanel();
   }
 }
 
@@ -539,7 +570,7 @@ function renderCompetition(metric = 'workouts') {
         <option value="engagement">Group Activity</option>
       </select>
       <div class="leaderboard">${rows}</div>
-      <canvas id="competitionChart"></canvas>
+      <canvas id="competitionChart" height="200"></canvas>
       <div id="leaderDetails" class="leader-details" style="display:none;"></div>
     </div>`;
 

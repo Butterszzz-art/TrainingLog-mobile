@@ -838,7 +838,7 @@ function injectSettingsMarkup() {
 
   container.dataset.loaded = 'loading';
 
-  fetch('src/html/settings.html')
+  fetch('src/html/settings.html', { signal: AbortSignal.timeout(5000) })
     .then(response => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.text();
@@ -855,6 +855,15 @@ function injectSettingsMarkup() {
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
       renderProfileGamificationSummary(container);
+      if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
+      if (typeof applyTrainingModeClasses === 'function') applyTrainingModeClasses(localStorage.getItem('trainingMode') || 'bodybuilding');
+      const appModeSel = container.querySelector('#appModeSelect');
+      if (appModeSel && typeof getCurrentAppMode === 'function') appModeSel.value = getCurrentAppMode();
+      const coachToggle = container.querySelector('#coachModeToggle');
+      if (coachToggle && typeof isCoachModeEnabled === 'function') {
+        coachToggle.checked = isCoachModeEnabled();
+        coachToggle.disabled = getCurrentAppMode() !== 'both';
+      }
     })
     .catch(error => {
       console.error('Failed to load settings page', error);

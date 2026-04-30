@@ -1,0 +1,58 @@
+/* =============================================================
+   TRAINING MODE SYSTEM
+   Body-level mode classes (mode-bb / mode-pl / mode-athlete) that
+   conditionally hide archetype-specific elements, plus the inline
+   mode-switcher component used in the Settings tab.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Archetype visibility rules ─────────────────────────────── */
+
+/*
+ * The body receives one of these classes based on the active training
+ * mode: mode-bb (bodybuilding), mode-pl (powerlifting), mode-athlete.
+ * Elements tagged with bb-only / pl-only / athlete-only are hidden
+ * when the mode doesn't match.
+ */
+.mode-bb .pl-only,
+.mode-bb .athlete-only,
+.mode-pl .bb-only,
+.mode-pl .athlete-only,
+.mode-athlete .bb-only,
+.mode-athlete .pl-only {
+  display: none !important;
+}
+
+/* ── Mode switcher component ────────────────────────────────── */
+
+.mode-switcher {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  background: var(--surface-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: none;
+  margin: 0;
+  text-align: center;
+}
+
+.mode-btn.active {
+  background: var(--primary);
+  color: var(--text-color);
+  box-shadow: 0 2px 8px rgba(45, 125, 91, 0.35);
+}

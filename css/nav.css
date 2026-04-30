@@ -1,0 +1,222 @@
+/* =============================================================
+   NAVIGATION
+   Bottom navigation bar, More drawer (secondary tabs), and the
+   workout focus bar that replaces the nav during active sessions.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Bottom navigation bar ──────────────────────────────────── */
+
+/* One fixed bar, equal-width items — no horizontal scroll. */
+#bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(10, 15, 12, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(132, 157, 144, 0.22);
+  display: flex;
+  align-items: stretch;
+  z-index: 1000;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Slide nav off-screen while a workout is in progress */
+.workout-active #bottomNav {
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+/* ── Nav items ──────────────────────────────────────────────── */
+
+.bn-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  padding: 0 6px;
+  margin: 0;
+  box-shadow: none;
+  transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bn-item:hover {
+  background: none;
+  transform: none;
+  color: var(--text-color);
+}
+
+.bn-item.active {
+  color: var(--primary);
+}
+
+.bn-item .bn-icon {
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.bn-item.active .bn-icon {
+  transform: translateY(-2px);
+}
+
+.bn-item .bn-label {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* More button never highlights with the primary colour */
+.bn-item.bn-more.active {
+  color: var(--secondary-text);
+}
+
+/* ── More drawer ────────────────────────────────────────────── */
+
+/*
+ * Full-screen overlay with a translucent scrim and a slide-up panel.
+ * Toggle `.open` on #moreDrawer to show/hide.
+ */
+.more-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.more-drawer[hidden] {
+  display: none;
+}
+
+.more-drawer-scrim {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+}
+
+.more-drawer-panel {
+  background: var(--card-bg, #0f1510);
+  border-top: 1px solid var(--border-color);
+  border-radius: 20px 20px 0 0;
+  /* Bottom padding accounts for the 64 px nav bar */
+  padding: 8px 16px 80px;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.more-drawer.open .more-drawer-panel {
+  transform: translateY(0);
+}
+
+/* Drag handle pill */
+.more-drawer-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+/* 4-column icon grid */
+.more-drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.more-drawer-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: none;
+  background: var(--surface-bg, #141e17);
+  border-radius: 12px;
+  color: var(--text-color);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  font-family: 'Poppins', sans-serif;
+}
+
+.more-drawer-item:active {
+  transform: scale(0.95);
+  background: var(--border-color);
+}
+
+.more-drawer-icon {
+  font-size: 22px;
+}
+
+.more-drawer-logout {
+  color: #c05060;
+}
+
+/* ── Workout focus bar ──────────────────────────────────────── */
+
+/*
+ * Minimal bar that replaces the hidden nav during an active workout.
+ * Shows elapsed time + End Workout button.
+ */
+#workoutFocusBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(10, 15, 12, 0.97);
+  border-top: 1px solid var(--primary, #5fa87e);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 1001;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.workout-active #workoutFocusBar {
+  transform: translateY(0);
+}
+
+.wfb-timer {
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary, #5fa87e);
+}
+
+.wfb-label {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+}
+
+.wfb-end-btn {
+  padding: 8px 18px;
+  border-radius: 10px;
+  background: #c05060;
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+}
