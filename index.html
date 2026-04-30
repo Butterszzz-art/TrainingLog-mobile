@@ -10091,37 +10091,292 @@ function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) 
   });
 }
 
-function renderExerciseProgress() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const progressMap = {};
+/* ── Exercise Progress Chart ─────────────────────────────────── */
+let _exChart = null; // Chart.js instance for exercise chart
 
-  // gather last two entries for each exercise
+function _buildExerciseMap() {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const map = {}; // exercise name → [{date, entry}]
   workouts.sort((a, b) => a.date.localeCompare(b.date));
   workouts.forEach(w => {
     (w.log || []).forEach(e => {
-      if (!progressMap[e.exercise]) progressMap[e.exercise] = [];
-      progressMap[e.exercise].push(e);
-      if (progressMap[e.exercise].length > 2) {
-        progressMap[e.exercise].shift();
+      if (!e.exercise) return;
+      if (!map[e.exercise]) map[e.exercise] = [];
+      map[e.exercise].push({ date: w.date, entry: e });
+    });
+  });
+  return map;
+}
+
+function _exSessionPoints(sessions, metric) {
+  // sessions: [{date, entry}]
+  return sessions.map(({ date, entry }) => {
+    const weights = entry.weightsArray || [];
+    const reps = entry.repsArray || [];
+    let val = 0;
+    if (metric === 'weight') {
+      val = Math.max(...weights.map(w => Number(w) || 0), 0);
+    } else if (metric === 'volume') {
+      val = weights.reduce((s, w, i) => s + (Number(w) || 0) * (Number(reps[i]) || 0), 0);
+    } else if (metric === 'e1rm') {
+      val = Math.max(...weights.map((w, i) => {
+        const r = Number(reps[i]) || 0;
+        return r > 0 ? (Number(w) || 0) * (1 + r / 30) : 0;
+      }), 0);
+    } else if (metric === 'reps') {
+      val = reps.reduce((s, r) => s + (Number(r) || 0), 0);
+    }
+    return { date, val: Math.round(val * 10) / 10 };
+  });
+}
+
+function renderExerciseChart(exerciseName, metric = 'weight') {
+  const container = document.getElementById('exerciseProgress');
+  if (!container) return;
+
+  const map = _buildExerciseMap();
+
+  // ── if no exercise selected, render a grid of mini-summary cards ──
+  if (!exerciseName) {
+    // show all-exercise summary cards
+    renderExerciseSummaryCards(map, container, metric);
+    return;
+  }
+
+  const sessions = (map[exerciseName] || []);
+  // Apply date range filter
+  const startEl = document.getElementById('startRange');
+  const endEl = document.getElementById('endRange');
+  const filtered = sessions.filter(s => {
+    if (startEl?.value && s.date < startEl.value) return false;
+    if (endEl?.value && s.date > endEl.value) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    const noData = container.querySelector('.ex-chart-empty');
+    if (noData) noData.style.display = 'block';
+    const canvas = container.querySelector('#exerciseDetailCanvas');
+    if (canvas) canvas.style.display = 'none';
+    const summary = container.querySelector('.ex-chart-summary');
+    if (summary) summary.innerHTML = '<span style="color:var(--text-muted)">No sessions in selected date range.</span>';
+    if (_exChart) { _exChart.destroy(); _exChart = null; }
+    return;
+  }
+
+  const points = _exSessionPoints(filtered, metric);
+  const labels = points.map(p => {
+    const d = new Date(p.date + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  });
+  const values = points.map(p => p.val);
+  const unit = (filtered[0]?.entry?.unit) || 'kg';
+
+  const metricLabel = { weight: `Max Weight (${unit})`, volume: `Volume (${unit})`, e1rm: `Est. 1RM (${unit})`, reps: 'Total Reps' }[metric];
+
+  // compute a simple linear trend
+  const n = values.length;
+  let trend = null;
+  if (n >= 3) {
+    const xi = values.map((_, i) => i);
+    const meanX = xi.reduce((a, b) => a + b, 0) / n;
+    const meanY = values.reduce((a, b) => a + b, 0) / n;
+    const slope = xi.reduce((s, x, i) => s + (x - meanX) * (values[i] - meanY), 0) /
+                  xi.reduce((s, x) => s + (x - meanX) ** 2, 0);
+    const intercept = meanY - slope * meanX;
+    trend = xi.map(x => Math.round((intercept + slope * x) * 10) / 10);
+  }
+
+  // Update the chart
+  const canvas = container.querySelector('#exerciseDetailCanvas');
+  if (!canvas) return;
+  canvas.style.display = 'block';
+  const noData = container.querySelector('.ex-chart-empty');
+  if (noData) noData.style.display = 'none';
+  const ctx = canvas.getContext('2d');
+  if (_exChart) _exChart.destroy();
+  _exChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: metricLabel,
+          data: values,
+          borderColor: '#2d7d5b',
+          backgroundColor: 'rgba(45,125,91,0.10)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#2d7d5b',
+          pointRadius: values.length <= 12 ? 5 : 3,
+          pointHoverRadius: 7,
+          tension: 0.35,
+          fill: true,
+        },
+        trend ? {
+          label: 'Trend',
+          data: trend,
+          borderColor: 'rgba(99,102,241,0.65)',
+          borderDash: [6, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+        } : null,
+      ].filter(Boolean),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: trend !== null, labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}${metric !== 'reps' ? ' ' + unit : ''}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { maxRotation: 45, font: { size: 11 } }, grid: { display: false } },
+        y: { beginAtZero: false, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Update summary row
+  const max = Math.max(...values);
+  const latest = values[values.length - 1];
+  const first = values[0];
+  const delta = latest - first;
+  const deltaSign = delta > 0 ? '▲' : delta < 0 ? '▼' : '—';
+  const deltaColor = delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : 'var(--text-muted)';
+  const sessions2 = filtered.length;
+  const summaryEl = container.querySelector('.ex-chart-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="ex-stat-chip"><span class="ex-stat-val">${max}${metric !== 'reps' ? ' ' + unit : ''}</span><span class="ex-stat-lbl">All-time high</span></div>
+      <div class="ex-stat-chip"><span class="ex-stat-val">${latest}${metric !== 'reps' ? ' ' + unit : ''}</span><span class="ex-stat-lbl">Latest</span></div>
+      <div class="ex-stat-chip"><span class="ex-stat-val" style="color:${deltaColor}">${deltaSign} ${Math.abs(Math.round(delta * 10) / 10)}${metric !== 'reps' ? ' ' + unit : ''}</span><span class="ex-stat-lbl">vs first</span></div>
+      <div class="ex-stat-chip"><span class="ex-stat-val">${sessions2}</span><span class="ex-stat-lbl">Sessions</span></div>
+    `;
+  }
+}
+
+function renderExerciseSummaryCards(map, container, metric) {
+  // Destroy old chart
+  if (_exChart) { _exChart.destroy(); _exChart = null; }
+  const canvas = container.querySelector('#exerciseDetailCanvas');
+  if (canvas) canvas.style.display = 'none';
+  const noData = container.querySelector('.ex-chart-empty');
+  const cardsEl = container.querySelector('.ex-all-cards');
+  if (!cardsEl) return;
+  cardsEl.innerHTML = '';
+
+  const entries = Object.entries(map);
+  if (entries.length === 0) {
+    if (noData) noData.style.display = 'block';
+    return;
+  }
+  if (noData) noData.style.display = 'none';
+
+  entries.sort((a, b) => a[0].localeCompare(b[0])).forEach(([name, sessions]) => {
+    if (sessions.length < 1) return;
+    const latest = sessions[sessions.length - 1];
+    const first = sessions[0];
+    const lPoints = _exSessionPoints([latest], metric);
+    const fPoints = _exSessionPoints([first], metric);
+    const lVal = lPoints[0]?.val ?? 0;
+    const fVal = fPoints[0]?.val ?? 0;
+    const delta = lVal - fVal;
+    const unit = latest.entry?.unit || 'kg';
+    const deltaSign = delta > 0 ? '▲' : delta < 0 ? '▼' : '—';
+    const deltaColor = delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : 'var(--text-muted)';
+
+    const card = document.createElement('button');
+    card.className = 'ex-summary-card';
+    card.innerHTML = `
+      <div class="ex-summary-name">${name}</div>
+      <div class="ex-summary-val">${lVal}${metric !== 'reps' ? ' ' + unit : ''}</div>
+      <div class="ex-summary-delta" style="color:${deltaColor}">${deltaSign} ${Math.abs(Math.round(delta * 10) / 10)} <span style="font-size:0.65rem;opacity:0.7;">vs first</span></div>
+      <div class="ex-summary-sessions">${sessions.length} sessions</div>
+    `;
+    card.addEventListener('click', () => {
+      const picker = container.querySelector('#exPicker');
+      if (picker) picker.value = name;
+      renderExerciseChart(name, metric);
+      cardsEl.style.display = 'none';
+    });
+    cardsEl.appendChild(card);
+  });
+}
+
+function renderExerciseProgress() {
+  const container = document.getElementById('exerciseProgress');
+  if (!container) return;
+
+  // Build exercise list
+  const map = _buildExerciseMap();
+  const exercises = Object.keys(map).sort();
+
+  container.innerHTML = `
+    <!-- ── Picker row ─────────────────────────────── -->
+    <div class="ex-picker-row">
+      <select id="exPicker" class="ex-picker-select">
+        <option value="">All exercises</option>
+        ${exercises.map(name => `<option value="${name}">${name}</option>`).join('')}
+      </select>
+      <div class="ex-metric-tabs" role="group" aria-label="Metric">
+        <button class="ex-metric-btn active" data-metric="weight">Weight</button>
+        <button class="ex-metric-btn" data-metric="volume">Volume</button>
+        <button class="ex-metric-btn" data-metric="e1rm">Est 1RM</button>
+        <button class="ex-metric-btn" data-metric="reps">Reps</button>
+      </div>
+    </div>
+
+    <!-- ── Chart canvas ───────────────────────────── -->
+    <div class="ex-chart-wrap">
+      <canvas id="exerciseDetailCanvas" style="display:none;"></canvas>
+      <p class="ex-chart-empty" style="display:none;text-align:center;color:var(--text-muted);padding:32px 0;">No data for selected range.</p>
+    </div>
+
+    <!-- ── Summary strip ─────────────────────────── -->
+    <div class="ex-chart-summary"></div>
+
+    <!-- ── All-exercises mini card grid ─────────── -->
+    <div class="ex-all-cards"></div>
+  `;
+
+  let currentMetric = 'weight';
+  const picker = container.querySelector('#exPicker');
+  const metricBtns = container.querySelectorAll('.ex-metric-btn');
+  const cardsEl = container.querySelector('.ex-all-cards');
+
+  picker.addEventListener('change', () => {
+    const name = picker.value;
+    if (name) {
+      cardsEl.style.display = 'none';
+    } else {
+      cardsEl.style.display = '';
+    }
+    renderExerciseChart(name || null, currentMetric);
+  });
+
+  metricBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      metricBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMetric = btn.dataset.metric;
+      const name = picker.value || null;
+      if (!name) {
+        renderExerciseSummaryCards(map, container, currentMetric);
+      } else {
+        renderExerciseChart(name, currentMetric);
       }
     });
   });
 
-  const container = document.getElementById('exerciseProgress');
-  container.innerHTML = '';
-
-  Object.entries(progressMap).forEach(([name, entries]) => {
-    if (entries.length < 2) return;
-    const prev = entries[0];
-    const latest = entries[1];
-
-    const prevText = `${prev.weightsArray[0]} ${prev.unit || ''} x ${prev.repsArray[0]}`;
-    const latestText = `${latest.weightsArray[0]} ${latest.unit || ''} x ${latest.repsArray[0]}`;
-
-    const p = document.createElement('p');
-    p.innerHTML = `<strong>${name}</strong> <del>${prevText}</del> → ${latestText}`;
-    container.appendChild(p);
-  });
+  // Initial render: show all-exercise summary grid
+  renderExerciseSummaryCards(map, container, currentMetric);
 }
 
 function renderBodybuildingProgressPanel(workouts) {
@@ -10585,7 +10840,20 @@ function showExerciseProgress() {
 }
 
 function refreshProgress() {
-  if (document.getElementById('workoutTabBtn')?.classList.contains('active') || true) {
+  // Re-render whichever progress sub-tab is currently active
+  const activeBtn = document.querySelector('.progress-nav button.active');
+  if (!activeBtn) { showWorkoutProgress(); return; }
+  const id = activeBtn.id;
+  if (id === 'exerciseProgressBtn') {
+    // Re-run the chart with the updated date range
+    const picker = document.querySelector('#exPicker');
+    const metric = document.querySelector('.ex-metric-btn.active')?.dataset.metric || 'weight';
+    if (picker) renderExerciseChart(picker.value || null, metric);
+  } else if (id === 'cardioProgressBtn') {
+    showCardioProgress();
+  } else if (id === 'bodyweightProgressBtn') {
+    showBodyweightProgress();
+  } else {
     showWorkoutProgress();
   }
 }
