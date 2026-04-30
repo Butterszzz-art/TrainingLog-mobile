@@ -3035,16 +3035,33 @@ function addNewSet() {
 
 function getSetInputHTML(i) {
   return `
-    <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
-      <label style="min-width: 60px;">Set ${i + 1}</label>
-      <input type="number" id="reps_${i}" placeholder="Reps" style="width: 80px;" oninput="updateAddButtonState()" />
-      <input type="number" id="weight_${i}" placeholder="Weight" style="width: 100px;" oninput="updateAddButtonState()" />
-      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;">Plate Calc</button>
-      <label style="font-size:12px;"><input type="checkbox" id="dropset_${i}" /> Dropset</label>
-      <label style="font-size:12px;"><input type="checkbox" id="restPause_${i}" /> Rest Pause</label>
+    <div style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
+      <label style="min-width: 52px; font-size: 0.85rem;">Set ${i + 1}</label>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <input type="number" id="reps_${i}" placeholder="Reps" style="width: 72px;" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
+        <span id="repsLabel_${i}" style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;"></span>
+      </div>
+      <input type="number" id="weight_${i}" placeholder="Weight" style="width: 90px;" oninput="updateAddButtonState()" />
+      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;">🏋️</button>
+      <label style="font-size:12px;"><input type="checkbox" id="dropset_${i}" /> Drop</label>
+      <label style="font-size:12px;"><input type="checkbox" id="restPause_${i}" /> RP</label>
+      <label style="font-size:12px;" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /> L/R</label>
       <button onclick="removeSet(${i})" style="background-color: #dc3545; color: var(--text-color); border: none; padding: 4px 8px; border-radius: 4px;">❌</button>
     </div>
   `;
+}
+
+function updateRepsLabel(i) {
+  const repsEl = document.getElementById(`reps_${i}`);
+  const uniEl = document.getElementById(`unilateral_${i}`);
+  const labelEl = document.getElementById(`repsLabel_${i}`);
+  if (!repsEl || !uniEl || !labelEl) return;
+  const reps = parseInt(repsEl.value, 10);
+  if (uniEl.checked && reps > 0) {
+    labelEl.textContent = `× 2 = ${reps * 2} total`;
+  } else {
+    labelEl.textContent = '';
+  }
 }
 
 function removeSet(indexToRemove) {
@@ -3053,6 +3070,7 @@ function removeSet(indexToRemove) {
   const weights = [];
   const drops = [];
   const rests = [];
+  const unis = [];
 
   for (let i = 0; i < currentSetCount + 1; i++) {
     if (i !== indexToRemove) {
@@ -3060,6 +3078,7 @@ function removeSet(indexToRemove) {
       weights.push(document.getElementById(`weight_${i}`).value);
       drops.push(document.getElementById(`dropset_${i}`).checked);
       rests.push(document.getElementById(`restPause_${i}`).checked);
+      unis.push(document.getElementById(`unilateral_${i}`)?.checked || false);
     }
   }
 
@@ -3069,6 +3088,9 @@ function removeSet(indexToRemove) {
     document.getElementById(`weight_${i}`).value = weights[i];
     document.getElementById(`dropset_${i}`).checked = drops[i];
     document.getElementById(`restPause_${i}`).checked = rests[i];
+    const uniEl = document.getElementById(`unilateral_${i}`);
+    if (uniEl) uniEl.checked = unis[i];
+    updateRepsLabel(i);
   }
   document.getElementById("sets").value = currentSetCount;
   updateAddButtonState();
@@ -3121,6 +3143,7 @@ function addLogEntry() {
   const completedArray = [];
   const setTypeArray = [];
   const advancedArray = [];
+  const unilateralArray = [];
 
   for (let i = 0; i < sets; i++) {
     const reps = +document.getElementById(`reps_${i}`).value;
@@ -3129,6 +3152,7 @@ function addLogEntry() {
     const rpe = rpeInput ? +rpeInput.value : null;
     const ds = document.getElementById(`dropset_${i}`).checked;
     const rp = document.getElementById(`restPause_${i}`).checked;
+    const uni = document.getElementById(`unilateral_${i}`)?.checked || false;
     if (isNaN(reps) || isNaN(weight)) {
       alert("Please enter valid reps and weight for all sets.");
       return;
@@ -3138,6 +3162,7 @@ function addLogEntry() {
     rpeArray.push(Number.isFinite(rpe) ? rpe : null);
     dropsetArray.push(ds);
     restPauseArray.push(rp);
+    unilateralArray.push(uni);
     skippedArray.push(false);
     completedArray.push(false);
     if (ds) {
@@ -3174,6 +3199,7 @@ function addLogEntry() {
     rpeArray,
     dropsetArray,
     restPauseArray,
+    unilateralArray,
     skippedArray,
     completedArray,
     setTypeArray,
@@ -3710,6 +3736,24 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
     card.appendChild(recommendationBar);
   }
 
+  // ── Per-exercise progress strip ─────────────────────────────
+  const totalSets = (entry.repsArray || []).length;
+  const doneSets = (entry.completedArray || []).filter(Boolean).length;
+  if (totalSets > 0) {
+    const progressStrip = document.createElement('div');
+    progressStrip.className = 'ex-progress-strip';
+    progressStrip.id = `exProgress_${workoutIndex}_${entryIndex}`;
+    const pct = Math.round((doneSets / totalSets) * 100);
+    const allDone = doneSets === totalSets;
+    progressStrip.innerHTML = `
+      <div class="ex-progress-bar-wrap">
+        <div class="ex-progress-bar" style="width:${pct}%;background:${allDone ? 'var(--primary)' : 'rgba(45,125,91,0.55)'};"></div>
+      </div>
+      <span class="ex-progress-label">${allDone ? '✅' : `${doneSets}/${totalSets}`} sets</span>
+    `;
+    card.appendChild(progressStrip);
+  }
+
   const setList = document.createElement('div');
   setList.className = 'set-list';
 
@@ -3784,13 +3828,22 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   repsWrapper.className = 'set-field';
   const repsLabel = document.createElement('span');
   repsLabel.className = 'set-field-label';
-  repsLabel.textContent = 'Reps';
+  const isUnilateral = entry.unilateralArray?.[setIndex] || false;
+  repsLabel.textContent = isUnilateral ? 'Reps/side' : 'Reps';
   const repsInput = document.createElement('input');
   repsInput.type = 'number';
   repsInput.value = entry.repsArray?.[setIndex] ?? '';
   repsInput.addEventListener('change', event => editSetValue(workoutIndex, entryIndex, 'rep', event.target.value, setIndex));
   repsWrapper.appendChild(repsLabel);
   repsWrapper.appendChild(repsInput);
+  if (isUnilateral) {
+    const uniTag = document.createElement('span');
+    uniTag.className = 'set-type-pill';
+    uniTag.title = 'Unilateral — each side done separately';
+    uniTag.style.cssText = 'background:rgba(99,102,241,0.15);color:#818cf8;border-color:rgba(99,102,241,0.4);font-size:0.68rem;';
+    uniTag.textContent = '⟺ L/R';
+    repsWrapper.appendChild(uniTag);
+  }
   setRow.appendChild(repsWrapper);
 
   if (setType && setType !== DEFAULT_SET_TYPE) {
@@ -4182,12 +4235,39 @@ function renderWorkouts() {
     const workoutWrapper = document.createElement('div');
     workoutWrapper.className = 'workout-entry';
 
+    // Header row: toggle button + rename pencil
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
     const toggleButton = document.createElement('button');
     toggleButton.type = 'button';
     toggleButton.className = 'workout-toggle';
+    toggleButton.style.flex = '1';
     toggleButton.textContent = workout.title || `Workout ${workoutIndex + 1}`;
     toggleButton.addEventListener('click', () => toggleWorkoutDetails(workoutIndex));
-    workoutWrapper.appendChild(toggleButton);
+    headerRow.appendChild(toggleButton);
+
+    const renameBtn = document.createElement('button');
+    renameBtn.type = 'button';
+    renameBtn.title = 'Rename workout';
+    renameBtn.style.cssText = 'flex-shrink:0;background:none;border:none;cursor:pointer;font-size:1rem;padding:6px;opacity:0.55;border-radius:6px;color:var(--text-muted);transition:opacity 0.15s;';
+    renameBtn.textContent = '✏️';
+    renameBtn.addEventListener('mouseenter', () => { renameBtn.style.opacity = '1'; });
+    renameBtn.addEventListener('mouseleave', () => { renameBtn.style.opacity = '0.55'; });
+    renameBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newName = prompt('Rename workout:', workout.title || `Workout ${workoutIndex + 1}`);
+      if (newName && newName.trim()) {
+        const ws = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+        if (ws[workoutIndex]) {
+          ws[workoutIndex].title = newName.trim();
+          localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(ws));
+          renderWorkouts();
+        }
+      }
+    });
+    headerRow.appendChild(renameBtn);
+    workoutWrapper.appendChild(headerRow);
 
     const details = document.createElement('div');
     details.className = 'workout-details';
@@ -12752,16 +12832,38 @@ function plBuildSelector() {
   if (!container) return;
   container.innerHTML = '';
   const plates = getCurrentPlates();
+  const unit = document.getElementById('plUnit')?.value || 'kg';
   plates.forEach(p => {
     const btn = document.createElement('button');
     btn.className = 'plate-add-btn';
+    btn.dataset.plateSize = p.size;
     btn.style.background = p.color;
     btn.style.color = p.textColor;
-    btn.textContent = `+${p.label}`;
-    const unit = document.getElementById('plUnit')?.value || 'kg';
-    btn.title = `Add ${p.size}${unit} plate (pair)`;
+    btn.title = `Add ${p.size}${unit} plate (pair). Click to add, right-click to remove last.`;
+    btn.innerHTML = `
+      <span class="plate-btn-weight">${p.label}</span>
+      <span class="plate-btn-unit">${unit}</span>
+      <span class="plate-count-badge">0</span>
+    `;
     btn.onclick = () => { plLoadedPlates.push(p.size); plCalcUpdate(); };
+    btn.oncontextmenu = (e) => {
+      e.preventDefault();
+      const idx = plLoadedPlates.lastIndexOf(p.size);
+      if (idx !== -1) { plLoadedPlates.splice(idx, 1); plCalcUpdate(); }
+    };
     container.appendChild(btn);
+  });
+}
+
+function plUpdateSelectorBadges() {
+  const counts = {};
+  plLoadedPlates.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+  document.querySelectorAll('.plate-add-btn[data-plate-size]').forEach(btn => {
+    const size = parseFloat(btn.dataset.plateSize);
+    const count = counts[size] || 0;
+    const badge = btn.querySelector('.plate-count-badge');
+    if (badge) badge.textContent = `×${count}`;
+    btn.classList.toggle('has-plates', count > 0);
   });
 }
 
@@ -12803,6 +12905,7 @@ function plCalcUpdate() {
 
   // Render bar
   plRenderBar(plates);
+  plUpdateSelectorBadges();
 
   // Render result
   const resultEl = document.getElementById('plCalcResult');

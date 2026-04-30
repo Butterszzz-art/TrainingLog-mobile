@@ -554,6 +554,34 @@ body.theme-dark .set-row {
   font-size: 0.75rem;
 }
 
+/* ── Per-exercise progress strip ─────────────────────────────── */
+.ex-progress-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+.ex-progress-bar-wrap {
+  flex: 1;
+  height: 5px;
+  background: var(--border-color);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.ex-progress-bar {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+.ex-progress-label {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 52px;
+  text-align: right;
+}
+
 .set-complete {
   display: flex;
   align-items: center;

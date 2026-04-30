@@ -122,6 +122,18 @@ export function attachWorkoutTimerUI(elapsedElId = 'workoutElapsed') {
 
     const ms = Math.max(0, Date.now() - active.startTimeMs);
     el.textContent = _formatHHMMSS(ms);
+
+    // ── 1h30 limit alert (fires once per session) ────────────
+    const LIMIT_MS = 90 * 60 * 1000; // 90 minutes
+    if (ms >= LIMIT_MS && !active._alertedLimit) {
+      // Patch flag so we only fire once
+      const patched = { ...active, _alertedLimit: true };
+      _writeTimer(patched);
+      const toast = typeof window?.showToast === 'function'
+        ? window.showToast
+        : (msg) => console.warn('[Timer]', msg);
+      toast('⏱️ Workout is over 1h 30m — consider wrapping up soon!', 'warn');
+    }
   };
 
   render();
