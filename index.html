@@ -2935,12 +2935,6 @@ async function startSignup() {
       } else {
         alert("Account created! Please log in to continue.");
       }
-
-    if (result.success && result.token) {
-      persistLoginIdentity(result.username || username, result.token);
-      setCurrentUser(result.username || username);
-      document.getElementById('loginContainer').style.display = 'none';
-      showOnboarding();
     } else {
       const message = result.error?.message || result.message || "Signup failed. Please try again.";
       if (errorEl) errorEl.textContent = message;
