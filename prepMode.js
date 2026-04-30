@@ -274,7 +274,8 @@
       return globalScope.fetch(`/api/bodybuilding/phase-state/${encodeURIComponent(resolvedUser)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(5000)
       }).then(() => true).catch(() => false);
     } catch (_error) {
       return false;
@@ -285,7 +286,7 @@
   let _apiBackendConfirmed = false;
   function _hasApiBackend() { return _apiBackendConfirmed; }
   if (typeof globalScope.fetch === 'function') {
-    globalScope.fetch('/api/ping', { method: 'HEAD' })
+    globalScope.fetch('/api/ping', { method: 'HEAD', signal: AbortSignal.timeout(5000) })
       .then(r => { if (r.ok) _apiBackendConfirmed = true; })
       .catch(() => {});
   }

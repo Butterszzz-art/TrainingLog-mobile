@@ -91,7 +91,8 @@ async function login(username, password, serverUrl) {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ username, password }),
+    signal: AbortSignal.timeout(5000)
   });
 
   const data = await parseJsonResponse(response);
@@ -110,7 +111,8 @@ async function login(username, password, serverUrl) {
 async function fetchProtected(serverUrl) {
   const url = `${resolveServerUrl(serverUrl)}/protected-route`;
   const response = await fetch(url, {
-    headers: getAuthHeaders()
+    headers: getAuthHeaders(),
+    signal: AbortSignal.timeout(5000)
   });
 
   const data = await parseJsonResponse(response);
@@ -129,7 +131,8 @@ async function fetchProtected(serverUrl) {
 async function loadTemplates(username, serverUrl) {
   const url = `${resolveServerUrl(serverUrl)}/templates?username=${encodeURIComponent(username)}`;
   const response = await fetch(url, {
-    headers: getAuthHeaders()
+    headers: getAuthHeaders(),
+    signal: AbortSignal.timeout(5000)
   });
 
   const data = await parseJsonResponse(response);

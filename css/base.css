@@ -19,6 +19,7 @@ body {
   margin: 0;
   width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport — hides mobile browser chrome */
   overflow-x: hidden;
 }
 
@@ -190,6 +191,7 @@ th {
 #pocketFitContainer {
   width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport */
   overflow-x: hidden;
   transition: margin-left 0.3s ease;
   margin-left: 0;
@@ -262,4 +264,122 @@ th {
 @keyframes slide-up {
   from { transform: translateY(20px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Native UI — Toast & Modal (native-ui.js) ─────────────────── */
+
+/* Toast */
+#nativeToast {
+  position: fixed;
+  bottom: 80px;          /* above bottom nav */
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  max-width: calc(100vw - 32px);
+  min-width: 220px;
+  background: #1c2e22;
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 14px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text, #e8f5e9);
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+#nativeToast.native-toast--show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.native-toast--success { border-color: var(--primary, #5fa87e); }
+.native-toast--error   { border-color: #e05060; }
+.native-toast--warn    { border-color: #e6a817; }
+
+.nt-icon { font-size: 1rem; flex-shrink: 0; }
+.nt-msg  { flex: 1; line-height: 1.4; }
+
+/* Modal overlay */
+.nm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0,0,0,0.65);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  backdrop-filter: blur(2px);
+}
+
+.nm-dialog {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 18px;
+  padding: 24px 20px 20px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+.nm-body {
+  font-size: 0.95rem;
+  color: var(--text, #e8f5e9);
+  line-height: 1.5;
+  margin: 0 0 20px;
+  text-align: center;
+}
+
+.nm-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: var(--bg, #0b130d);
+  color: var(--text, #e8f5e9);
+  font-size: 1rem;       /* ≥16px — no iOS auto-zoom */
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.nm-input:focus { border-color: var(--primary, #5fa87e); }
+
+.nm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.nm-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #2a3a2e);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.nm-btn--cancel {
+  background: transparent;
+  color: var(--text-muted, #7a8f7d);
+}
+
+.nm-btn--confirm {
+  background: var(--primary, #5fa87e);
+  border-color: var(--primary, #5fa87e);
+  color: #0b130d;
+}
+
+.nm-btn--danger {
+  background: #e05060;
+  border-color: #e05060;
+  color: #fff;
 }

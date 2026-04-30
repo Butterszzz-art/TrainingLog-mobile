@@ -1,0 +1,530 @@
+/* =============================================================
+   CHECK-IN TAB  (ci-* namespace)
+   Modern sub-tabbed weekly check-in with cards, sliders,
+   adjustment toggles, and timeline history cards.
+   ============================================================= */
+
+/* ── Tab wrapper ────────────────────────────────────────────── */
+#checkInTab {
+  padding: 0 0 80px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* ── Sub-tab nav strip ──────────────────────────────────────── */
+.ci-nav {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.ci-nav::-webkit-scrollbar { display: none; }
+
+.ci-nav-btn {
+  flex-shrink: 0;
+  padding: 8px 16px 10px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  margin-bottom: -1px; /* overlap the border-bottom of .ci-nav */
+}
+
+.ci-nav-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* ── Phase banner ───────────────────────────────────────────── */
+.ci-phase-banner {
+  margin: 14px 12px 0;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(45,125,91,0.15), rgba(45,125,91,0.06));
+  border: 1px solid rgba(45,125,91,0.3);
+  border-radius: 12px;
+  font-size: 0.82rem;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* ── Panel (each sub-tab content area) ──────────────────────── */
+.ci-panel {
+  padding: 12px;
+}
+
+/* ── Card container ─────────────────────────────────────────── */
+.ci-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.ci-card-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ci-card-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: -8px 0 12px;
+  line-height: 1.5;
+}
+
+/* ── Field rows ─────────────────────────────────────────────── */
+.ci-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ci-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ci-field label {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ci-opt {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.7rem;
+}
+
+.ci-field input,
+.ci-field select,
+.ci-field textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--elevated-bg);
+  color: var(--text-color);
+  font-size: 1rem;           /* ≥ 16px – prevents iOS auto-zoom */
+  width: 100%;
+  -webkit-appearance: none;
+  font-family: inherit;
+}
+
+.ci-field input:focus,
+.ci-field select:focus,
+.ci-field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(45,125,91,0.2);
+}
+
+.ci-field input::placeholder,
+.ci-field textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.ci-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* full-width field variant */
+.ci-field-full {
+  margin-bottom: 10px;
+}
+
+/* ── Sliders ────────────────────────────────────────────────── */
+/* Keep existing .checkin-slider-* class names for JS compat;
+   override / enhance visuals here */
+
+.checkin-slider-field {
+  margin-bottom: 14px;
+}
+.checkin-slider-field:last-child { margin-bottom: 0; }
+
+.checkin-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.checkin-slider-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.checkin-slider-value {
+  min-width: 32px;
+  text-align: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+
+/* color-code slider value badge */
+.checkin-slider-value[data-score-low]   { background: #c62828; }
+.checkin-slider-value[data-score-mid]   { background: #e65100; }
+.checkin-slider-value[data-score-high]  { background: var(--primary); }
+
+.checkin-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* ── Adjustment toggle rows ─────────────────────────────────── */
+.ci-adjust-row {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.ci-adjust-row:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.ci-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 6px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide the native checkbox */
+.ci-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Custom toggle track */
+.ci-toggle-track {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+  background: var(--elevated-bg);
+  border: 1.5px solid var(--border-color);
+  border-radius: 11px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.ci-toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: left 0.2s, background 0.2s;
+}
+
+.ci-toggle-input:checked + .ci-toggle-track {
+  background: rgba(45,125,91,0.25);
+  border-color: var(--primary);
+}
+.ci-toggle-input:checked + .ci-toggle-track::after {
+  left: 20px;
+  background: var(--primary);
+}
+
+.ci-toggle-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.ci-adjust-notes {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--elevated-bg);
+  color: var(--text-color);
+  font-size: 1rem;
+  font-family: inherit;
+}
+.ci-adjust-notes:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.ci-adjust-notes::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+/* ── Save / action buttons ──────────────────────────────────── */
+.ci-save-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  transition: background 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ci-save-btn:active {
+  background: var(--primary-dark);
+  transform: scale(0.98);
+}
+
+.ci-sec-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ci-sec-btn:active { background: rgba(45,125,91,0.12); }
+
+.ci-btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ── Summary output card ────────────────────────────────────── */
+.ci-summary-output {
+  background: var(--elevated-bg);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+  line-height: 1.6;
+  margin-bottom: 10px;
+  min-height: 52px;
+}
+.ci-summary-output strong { color: var(--primary); }
+
+/* ── Photos grid ────────────────────────────────────────────── */
+.ci-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.ci-photo-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ci-photo-slot label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.ci-photo-preview {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  border: 2px dashed var(--border-color);
+  background: var(--elevated-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.ci-photo-preview:active { border-color: var(--primary); }
+.ci-photo-preview.has-photo {
+  border-style: solid;
+  border-color: var(--primary);
+}
+.ci-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Timeline cards ─────────────────────────────────────────── */
+.ci-timeline-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 32px 16px;
+  background: var(--card-bg);
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+}
+
+.ci-timeline-group {
+  margin-bottom: 20px;
+}
+
+.ci-timeline-group-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 0 2px 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 10px;
+}
+
+.ci-tc {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--ci-status-color, var(--primary));
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+}
+
+/* Status colours for left border */
+.ci-tc[data-status="approved"]       { --ci-status-color: #2e7d55; }
+.ci-tc[data-status="reviewed"]       { --ci-status-color: #3a8fc9; }
+.ci-tc[data-status="needs_changes"]  { --ci-status-color: #e07c30; }
+.ci-tc[data-status="pending"]        { --ci-status-color: #636e72; }
+
+.ci-tc-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.ci-tc-date {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-color);
+}
+
+.ci-tc-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--elevated-bg);
+  color: var(--secondary-text);
+}
+
+.ci-tc-status-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: auto;
+}
+.ci-tc-status-badge.approved      { background: rgba(46,125,85,0.15); color: #52d68a; }
+.ci-tc-status-badge.reviewed      { background: rgba(58,143,201,0.15); color: #67b4e8; }
+.ci-tc-status-badge.needs_changes { background: rgba(224,124,48,0.15); color: #f0a060; }
+.ci-tc-status-badge.pending       { background: rgba(99,110,114,0.15); color: #9eabb0; }
+
+.ci-tc-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ci-tc-stat {
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--elevated-bg);
+  border: 1px solid var(--border-color);
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  white-space: nowrap;
+}
+.ci-tc-stat.good   { color: #52d68a; border-color: rgba(82,214,138,0.3);  background: rgba(82,214,138,0.07);  }
+.ci-tc-stat.mid    { color: #f0c060; border-color: rgba(240,192,96,0.3);  background: rgba(240,192,96,0.07);  }
+.ci-tc-stat.poor   { color: #f07070; border-color: rgba(240,112,112,0.3); background: rgba(240,112,112,0.07); }
+
+.ci-tc-archetype {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.ci-tc-insight {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  background: rgba(45,125,91,0.08);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 8px 8px 0;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.ci-tc-adjust {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.ci-tc-notes {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.ci-tc-coach {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-color);
+}
+
+/* ── Narrow screens ─────────────────────────────────────────── */
+@media (max-width: 380px) {
+  .ci-nav-btn { padding: 8px 12px 10px; font-size: 0.78rem; }
+  .ci-row-2   { grid-template-columns: 1fr; }
+}

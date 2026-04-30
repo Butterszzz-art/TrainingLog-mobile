@@ -296,24 +296,27 @@
 }
 
 .attempt-weight-input {
-  width: 80px;
-  padding: 6px 8px;
+  width: 100%;
+  min-width: 72px;
+  padding: 9px 8px;
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 1rem;        /* ≥16px prevents iOS auto-zoom */
   text-align: center;
 }
 
 .attempt-status-btn {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.72rem;
+  padding: 9px 12px;      /* min 44px tap target height */
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   box-shadow: none;
   margin: 0;
   white-space: nowrap;
+  min-height: 36px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .attempt-status-btn.pending  { background: rgba(255,255,255,0.08); color: var(--secondary-text); }
@@ -425,7 +428,7 @@
   width: 110px;
   padding: 8px 10px;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1rem;    /* ≥16px prevents iOS auto-zoom */
   text-align: center;
 }
 
@@ -436,4 +439,10 @@
   font-weight: 700;
   margin: 0;
   box-shadow: none;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
+.step-save-btn:active { background: var(--primary-dark); }

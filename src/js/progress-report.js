@@ -267,20 +267,12 @@
 
   window.generateProgressReport = function () {
     const username = _user();
-    if (!username) { alert('Please log in first.'); return; }
+    if (!username) { window.showToast('Please log in first.', 'warn'); return; }
 
     const data = _gatherData(username);
     const html = _buildReportHTML(data);
-
-    const win = window.open('', '_blank', 'width=960,height=800,scrollbars=yes');
-    if (!win) {
-      alert('Pop-up blocked. Please allow pop-ups for this site and try again.');
-      return;
-    }
-    win.document.write(html);
-    win.document.close();
-    // Auto-focus so user can immediately press print or Ctrl+P
-    win.focus();
+    // openReportWindow handles native (Web Share API) vs web (new window) automatically
+    window.openReportWindow(html, { title: 'Progress Report', filename: 'progress-report.html' });
   };
 
 })();

@@ -575,3 +575,195 @@
   from { width: 0%; }
   to   { width: var(--fill-target, 0%); }
 }
+
+/* ── Today's Program Card (today-program.js) ──────────────────── */
+
+.tpc-card {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 16px;
+  padding: 14px 16px 12px;
+  margin: 0 0 10px;
+}
+
+.tpc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.tpc-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--primary, #5fa87e);
+}
+
+.tpc-week-badge {
+  font-size: 0.72rem;
+  color: var(--text-muted, #7a8f7d);
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 20px;
+  padding: 2px 10px;
+}
+
+.tpc-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tpc-day-name {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+  line-height: 1.1;
+}
+
+.tpc-day-name--rest {
+  color: var(--text-muted, #7a8f7d);
+}
+
+.tpc-program-name {
+  font-size: 0.78rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+/* Weekly split strip */
+.tpc-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.tpc-split-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px 9px;
+  border-radius: 10px;
+  background: var(--bg, #0b130d);
+  border: 1px solid transparent;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.tpc-split-cell--today {
+  border-color: var(--primary, #5fa87e);
+  background: rgba(95, 168, 126, 0.1);
+}
+
+.tpc-split-cell--rest {
+  opacity: 0.4;
+}
+
+.tpc-split-cell--done .tpc-split-name {
+  color: var(--primary, #5fa87e);
+}
+
+.tpc-split-abbr {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted, #7a8f7d);
+  text-transform: uppercase;
+}
+
+.tpc-split-name {
+  font-size: 0.58rem;
+  color: var(--text, #e8f5e9);
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.tpc-split-dot {
+  position: absolute;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary, #5fa87e);
+}
+
+/* ── Vacation Mode card (session-context.js) ──────────────────── */
+
+.vm-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 0 0 10px;
+  transition: border-color 0.2s;
+}
+
+.vm-card--active {
+  border-color: #e6a817;
+  background: rgba(230, 168, 23, 0.06);
+}
+
+.vm-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vm-icon { font-size: 1.5rem; }
+
+.vm-title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, #e8f5e9);
+}
+
+.vm-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted, #7a8f7d);
+  margin-top: 2px;
+}
+
+.vm-toggle {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: transparent;
+  color: var(--text, #e8f5e9);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.vm-toggle--on {
+  background: rgba(230, 168, 23, 0.15);
+  border-color: #e6a817;
+  color: #e6a817;
+}
+
+/* Active vacation banner (top of home tab) */
+#vacationModeBanner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: rgba(230, 168, 23, 0.1);
+  border: 1px solid #e6a817;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: #e6a817;
+}
+
+#vacationModeBanner .vm-banner-icon { font-size: 1.1rem; }
+#vacationModeBanner .vm-since { margin-left: auto; opacity: 0.7; font-size: 0.72rem; }

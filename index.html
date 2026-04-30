@@ -23,6 +23,24 @@
   <link rel="stylesheet" href="css/coaching.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
+  <link rel="stylesheet" href="css/cardio.css">
+  <link rel="stylesheet" href="css/checkin.css">
+  <link rel="stylesheet" href="css/community-share.css">
+  <link rel="manifest" href="/manifest.json">
+  <!-- iOS PWA / Capacitor meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pocket Coach">
+  <link rel="apple-touch-icon" href="/public/icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/public/icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/public/icons/icon-144.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="/public/icons/icon-128.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="/public/icons/icon-96.png">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/public/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/public/icons/favicon-16.png">
+  <script src="src/js/native-ui.js"></script>
+
   <link rel="manifest" href="manifest.json">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -54,22 +72,22 @@
       <h2>What's your training focus?</h2>
       <p class="ob-subtitle">We'll personalise the app for you</p>
       <div class="ob-archetype-grid">
-        <button class="ob-archetype-card" data-archetype="bodybuilder">
+        <button class="ob-archetype-card" data-archetype="bodybuilder" onclick="window._selectArchetype(this)">
           <span class="ob-arch-icon">💪</span>
           <strong>Bodybuilder</strong>
           <small>Physique &amp; hypertrophy</small>
         </button>
-        <button class="ob-archetype-card" data-archetype="powerlifter">
+        <button class="ob-archetype-card" data-archetype="powerlifter" onclick="window._selectArchetype(this)">
           <span class="ob-arch-icon">🏋️</span>
           <strong>Powerlifter</strong>
           <small>Squat, bench &amp; deadlift</small>
         </button>
-        <button class="ob-archetype-card" data-archetype="hybrid">
+        <button class="ob-archetype-card" data-archetype="hybrid" onclick="window._selectArchetype(this)">
           <span class="ob-arch-icon">⚡</span>
           <strong>Hybrid</strong>
           <small>Strength &amp; conditioning</small>
         </button>
-        <button class="ob-archetype-card" data-archetype="recreational">
+        <button class="ob-archetype-card" data-archetype="recreational" onclick="window._selectArchetype(this)">
           <span class="ob-arch-icon">🌱</span>
           <strong>Recreational</strong>
           <small>General fitness</small>
@@ -181,6 +199,16 @@
 <div id="progressReminder"></div>
 
   <div id="homeTab" class="tab-content">
+    <!-- Vacation mode active banner -->
+    <div id="vacationModeBanner">
+      <span class="vm-banner-icon">🏖️</span>
+      <span>Vacation Mode — streak &amp; program tracking paused</span>
+      <span class="vm-since"></span>
+    </div>
+    <!-- Today's program day + weekly split — populated by today-program.js -->
+    <div id="todayProgramCard"></div>
+    <!-- Vacation mode card — populated by session-context.js -->
+    <div id="vacationModeCard"></div>
     <!-- Daily readiness card — populated by readiness-checkin.js -->
     <div id="readinessHomeCard"></div>
     <!-- Weekly summary card — populated by weekly-summary.js -->
@@ -191,6 +219,31 @@
       <span class="notif-banner-text">Enable notifications to get rest timer alerts when your phone is locked.</span>
       <button class="notif-banner-btn" onclick="requestRestTimerNotifications()">Enable</button>
     </div>
+    <!-- Step tracking widget — JS in archetype-features.js (initStepWidget) -->
+    <div id="stepWidgetCard" style="margin:0 12px 8px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:16px; padding:14px 16px;">
+      <div class="step-widget">
+        <div class="step-ring-wrap">
+          <svg class="step-ring-svg" viewBox="0 0 80 80">
+            <circle class="step-ring-track" cx="40" cy="40" r="34"/>
+            <circle id="stepRingFill" class="step-ring-fill" cx="40" cy="40" r="34"
+                    stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          </svg>
+          <div class="step-ring-inner">
+            <span id="stepRingCount" class="step-ring-count">0</span>
+            <span class="step-ring-icon">👟</span>
+          </div>
+        </div>
+        <div class="step-widget-info">
+          <div id="stepGoalLabel" class="step-widget-goal">Goal: 10,000 steps</div>
+          <div class="step-input-row">
+            <input id="stepCountInput" type="number" class="step-count-input"
+                   placeholder="Steps today" min="0" inputmode="numeric"/>
+            <button id="stepSaveBtn" class="step-save-btn">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="homeDashboardContent" class="home-dashboard"></div>
   </div>
 
@@ -209,6 +262,9 @@
     <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
     <div id="logSub_log" class="log-subview active">
       <h2 style="padding:0 10px;">Resistance Exercise Log</h2>
+
+      <!-- Session context flags: alt-machine / alt-gym -->
+      <div id="sessionContextBar"></div>
 
       <div id="workoutTimer" class="workout-timer" aria-live="polite">
         <span class="workout-timer-label">Workout Time:</span>
@@ -479,7 +535,7 @@
           <button class="measurements-metric-pill" data-metric="shoulders" onclick="renderMeasurementsChart('shoulders')">Shoulders</button>
         </div>
         <div class="measurements-chart-wrap">
-          <canvas id="measurementsCanvas"></canvas>
+          <canvas id="measurementsCanvas" height="220"></canvas>
         </div>
         <div id="measurementsHistory" style="margin-top:12px;"></div>
       </div>
@@ -487,107 +543,267 @@
   </div>
 
   <div id="checkInTab" class="tab-content">
-    <div class="panel active">
-      <h2>Weekly Athlete Check-In</h2>
-      <p style="margin-top:-6px;">Track weekly readiness with prompts tailored to your athlete archetype.</p>
-      <div id="checkInNextDate" class="home-mission-progress"></div>
 
-      <section class="checkin-form-section">
-        <h3>Physical</h3>
-        <input type="date" id="checkInDateInput">
-        <input type="text" id="checkInPhaseInput" placeholder="Phase (contest prep, improvement, mini cut)">
-        <input type="text" id="checkInWeekLabelInput" placeholder="Week label (auto if blank)">
-        <input type="number" step="0.1" id="checkInBodyweightInput" placeholder="Bodyweight">
-        <input type="number" step="0.1" id="checkInWaistInput" placeholder="Waist">
-      </section>
+    <!-- ── Sub-tab navigation ── -->
+    <nav class="ci-nav" id="ciNav">
+      <button class="ci-nav-btn active" data-panel="log"     onclick="switchCheckInTab('log')">📋 Log</button>
+      <button class="ci-nav-btn"        data-panel="adjust"  onclick="switchCheckInTab('adjust')">⚙️ Adjust</button>
+      <button class="ci-nav-btn"        data-panel="photos"  onclick="switchCheckInTab('photos')">📷 Photos</button>
+      <button class="ci-nav-btn"        data-panel="history" onclick="switchCheckInTab('history')">📊 History</button>
+    </nav>
 
-      <section class="checkin-form-section">
-        <h3>Recovery</h3>
+    <!-- ════════════════════════════════════════════════════════
+         PANEL 1 · LOG
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="ciPanel_log" class="ci-panel">
+
+      <!-- Phase banner -->
+      <div id="checkInNextDate" class="ci-phase-banner"></div>
+
+      <!-- Physical -->
+      <div class="ci-card">
+        <h3 class="ci-card-title">📏 Physical</h3>
+        <div class="ci-row-2">
+          <div class="ci-field">
+            <label for="checkInDateInput">Date</label>
+            <input type="date" id="checkInDateInput">
+          </div>
+          <div class="ci-field">
+            <label for="checkInBodyweightInput">Bodyweight (kg)</label>
+            <input type="number" step="0.1" id="checkInBodyweightInput" placeholder="e.g. 82.5">
+          </div>
+        </div>
+        <div class="ci-row-2">
+          <div class="ci-field">
+            <label for="checkInWaistInput">Waist (cm)</label>
+            <input type="number" step="0.1" id="checkInWaistInput" placeholder="e.g. 74">
+          </div>
+          <div class="ci-field">
+            <label for="checkInPhaseInput">Phase</label>
+            <input type="text" id="checkInPhaseInput" placeholder="e.g. contest prep">
+          </div>
+        </div>
+        <div class="ci-field ci-field-full">
+          <label for="checkInWeekLabelInput">Week label <span class="ci-opt">(auto if blank)</span></label>
+          <input type="text" id="checkInWeekLabelInput" placeholder="e.g. 8 Weeks Out">
+        </div>
+      </div>
+
+      <!-- Recovery -->
+      <div class="ci-card">
+        <h3 class="ci-card-title">😴 Recovery</h3>
         <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span class="checkin-slider-title">Energy</span><strong class="checkin-slider-value" id="checkInEnergyValue">5</strong></div>
+          <div class="checkin-slider-header">
+            <span class="checkin-slider-title">⚡ Energy</span>
+            <strong class="checkin-slider-value" id="checkInEnergyValue">5</strong>
+          </div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInEnergyInput" data-value-target="checkInEnergyValue">
           <div class="checkin-slider-labels"><span>Drained</span><span>High Energy</span></div>
         </div>
         <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span class="checkin-slider-title">Sleep Quality</span><strong class="checkin-slider-value" id="checkInSleepValue">5</strong></div>
+          <div class="checkin-slider-header">
+            <span class="checkin-slider-title">🌙 Sleep Quality</span>
+            <strong class="checkin-slider-value" id="checkInSleepValue">5</strong>
+          </div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInSleepInput" data-value-target="checkInSleepValue">
           <div class="checkin-slider-labels"><span>Poor Sleep</span><span>Excellent Sleep</span></div>
         </div>
         <div class="checkin-slider-field">
-          <div class="checkin-slider-header"><span class="checkin-slider-title">Stress</span><strong class="checkin-slider-value" id="checkInStressValue">5</strong></div>
+          <div class="checkin-slider-header">
+            <span class="checkin-slider-title">🧠 Stress</span>
+            <strong class="checkin-slider-value" id="checkInStressValue">5</strong>
+          </div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInStressInput" data-value-target="checkInStressValue">
           <div class="checkin-slider-labels"><span>Low Stress</span><span>High Stress</span></div>
         </div>
-      </section>
+      </div>
 
-      <section class="checkin-form-section">
-        <h3 id="checkInArchetypeSectionTitle">Archetype Focus</h3>
-        <p id="checkInArchetypeSectionDescription" class="home-mission-progress">Loading archetype-specific prompts…</p>
+      <!-- Archetype focus -->
+      <div class="ci-card">
+        <h3 class="ci-card-title" id="checkInArchetypeSectionTitle">🎯 Archetype Focus</h3>
+        <p class="ci-card-desc" id="checkInArchetypeSectionDescription">Loading archetype-specific prompts…</p>
         <div id="checkInArchetypeFields"></div>
-      </section>
+      </div>
 
-      <section class="checkin-form-section">
-        <h3>Notes</h3>
-        <textarea id="checkInNotesInput" placeholder="Notes"></textarea>
-      </section>
-      <section class="checkin-form-section">
-        <h3>Weekly Adjustments</h3>
-        <label><input type="checkbox" id="checkInAdjustmentMacrosChanged"> Macros changed</label>
-        <input type="text" id="checkInAdjustmentMacrosNotes" placeholder="Macro adjustment details">
-        <label><input type="checkbox" id="checkInAdjustmentCardioChanged"> Cardio changed</label>
-        <input type="text" id="checkInAdjustmentCardioNotes" placeholder="Cardio adjustment details">
-        <label><input type="checkbox" id="checkInAdjustmentStepsChanged"> Steps changed</label>
-        <input type="text" id="checkInAdjustmentStepsNotes" placeholder="Step target adjustment details">
-        <label><input type="checkbox" id="checkInAdjustmentRefeedAdded"> Refeed added</label>
-        <input type="text" id="checkInAdjustmentRefeedNotes" placeholder="Refeed details">
-      </section>
-      <section class="checkin-form-section">
-        <h3>Coach Review</h3>
-        <select id="checkInReviewStatusInput">
-          <option value="pending">Pending coach review</option>
-          <option value="reviewed">Reviewed</option>
-          <option value="approved">Approved</option>
-          <option value="needs_changes">Needs changes</option>
-        </select>
-        <textarea id="checkInCoachNotesInput" placeholder="Coach notes"></textarea>
-        <textarea id="checkInCoachActionItemsInput" placeholder="Coach action items for next week"></textarea>
-      </section>
-      <section class="checkin-form-section">
-        <h3>Summary & Export</h3>
-        <div id="checkInSummaryOutput" class="home-mission-progress">Save or select a check-in to generate a prep summary.</div>
-        <button type="button" onclick="generateCheckInSummary()">Generate Summary</button>
-        <button type="button" onclick="exportCheckInSummary('json')">Export Summary JSON</button>
-        <button type="button" onclick="exportCheckInSummary('txt')">Export Summary TXT</button>
-      </section>
-      <!-- Progress photo upload grid -->
-      <div class="photo-upload-grid">
-        <div class="photo-upload-slot">
-          <label>Front</label>
-          <div class="photo-upload-preview" id="photoSlot_front" onclick="document.getElementById('photoFile_front').click()">📷</div>
-          <input type="file" class="photo-upload-input" id="photoFile_front" accept="image/*">
-        </div>
-        <div class="photo-upload-slot">
-          <label>Side</label>
-          <div class="photo-upload-preview" id="photoSlot_side" onclick="document.getElementById('photoFile_side').click()">📷</div>
-          <input type="file" class="photo-upload-input" id="photoFile_side" accept="image/*">
-        </div>
-        <div class="photo-upload-slot">
-          <label>Back</label>
-          <div class="photo-upload-preview" id="photoSlot_back" onclick="document.getElementById('photoFile_back').click()">📷</div>
-          <input type="file" class="photo-upload-input" id="photoFile_back" accept="image/*">
+      <!-- Notes -->
+      <div class="ci-card">
+        <h3 class="ci-card-title">📝 Notes</h3>
+        <div class="ci-field ci-field-full">
+          <textarea id="checkInNotesInput" placeholder="How did the week go? Any key observations…"></textarea>
         </div>
       </div>
-      <!-- Hidden legacy inputs kept for saveWeeklyCheckIn() compatibility -->
-      <input type="text" id="checkInFrontPhotoInput" style="display:none">
-      <input type="text" id="checkInSidePhotoInput" style="display:none">
-      <input type="text" id="checkInBackPhotoInput" style="display:none">
-      <button onclick="saveWeeklyCheckIn('athlete')">Save Athlete Check-In</button>
-      <button type="button" onclick="saveWeeklyCheckIn('coach')">Save Coach Review</button>
 
-      <h3>Check-In Timeline</h3>
+      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('athlete')">Save Check-In ✓</button>
+    </div><!-- /ciPanel_log -->
+
+    <!-- ════════════════════════════════════════════════════════
+         PANEL 2 · ADJUSTMENTS + COACH REVIEW
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="ciPanel_adjust" class="ci-panel" style="display:none">
+
+      <!-- Weekly adjustments -->
+      <div class="ci-card">
+        <h3 class="ci-card-title">📐 Weekly Adjustments</h3>
+
+        <div class="ci-adjust-row">
+          <label class="ci-toggle-label">
+            <input type="checkbox" class="ci-toggle-input" id="checkInAdjustmentMacrosChanged">
+            <span class="ci-toggle-track"></span>
+            <span class="ci-toggle-text">🥗 Macros Changed</span>
+          </label>
+          <input type="text" class="ci-adjust-notes" id="checkInAdjustmentMacrosNotes" placeholder="e.g. +10g carbs on training days">
+        </div>
+
+        <div class="ci-adjust-row">
+          <label class="ci-toggle-label">
+            <input type="checkbox" class="ci-toggle-input" id="checkInAdjustmentCardioChanged">
+            <span class="ci-toggle-track"></span>
+            <span class="ci-toggle-text">🏃 Cardio Changed</span>
+          </label>
+          <input type="text" class="ci-adjust-notes" id="checkInAdjustmentCardioNotes" placeholder="e.g. added 20 min LISS morning">
+        </div>
+
+        <div class="ci-adjust-row">
+          <label class="ci-toggle-label">
+            <input type="checkbox" class="ci-toggle-input" id="checkInAdjustmentStepsChanged">
+            <span class="ci-toggle-track"></span>
+            <span class="ci-toggle-text">👟 Steps Target Changed</span>
+          </label>
+          <input type="text" class="ci-adjust-notes" id="checkInAdjustmentStepsNotes" placeholder="e.g. 12,000 → 10,000/day">
+        </div>
+
+        <div class="ci-adjust-row">
+          <label class="ci-toggle-label">
+            <input type="checkbox" class="ci-toggle-input" id="checkInAdjustmentRefeedAdded">
+            <span class="ci-toggle-track"></span>
+            <span class="ci-toggle-text">🍚 Refeed Added</span>
+          </label>
+          <input type="text" class="ci-adjust-notes" id="checkInAdjustmentRefeedNotes" placeholder="e.g. Saturday 2,600 kcal refeed">
+        </div>
+      </div>
+
+      <!-- Coach review -->
+      <div class="ci-card">
+        <h3 class="ci-card-title">👨‍💼 Coach Review</h3>
+        <div class="ci-field ci-field-full" style="margin-bottom:10px">
+          <label for="checkInReviewStatusInput">Review Status</label>
+          <select id="checkInReviewStatusInput">
+            <option value="pending">⏳ Pending review</option>
+            <option value="reviewed">👁 Reviewed</option>
+            <option value="approved">✅ Approved</option>
+            <option value="needs_changes">✏️ Needs changes</option>
+          </select>
+        </div>
+        <div class="ci-field ci-field-full" style="margin-bottom:10px">
+          <label for="checkInCoachNotesInput">Coach Notes</label>
+          <textarea id="checkInCoachNotesInput" placeholder="Feedback for the athlete…"></textarea>
+        </div>
+        <div class="ci-field ci-field-full">
+          <label for="checkInCoachActionItemsInput">Action Items (next week)</label>
+          <textarea id="checkInCoachActionItemsInput" placeholder="e.g. Increase cardio to 5× this week…"></textarea>
+        </div>
+      </div>
+
+      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('coach')">Save Coach Review ✓</button>
+    </div><!-- /ciPanel_adjust -->
+
+    <!-- ════════════════════════════════════════════════════════
+         PANEL 3 · PROGRESS PHOTOS
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="ciPanel_photos" class="ci-panel" style="display:none">
+      <div class="ci-card">
+        <h3 class="ci-card-title">📷 Progress Photos</h3>
+        <p class="ci-card-desc">Tap a slot to upload. Photos are stored locally on your device.</p>
+        <div class="ci-photo-grid">
+          <div class="ci-photo-slot">
+            <label>Front</label>
+            <div class="ci-photo-preview photo-upload-preview" id="photoSlot_front"
+                 onclick="document.getElementById('photoFile_front').click()">
+              <span class="photo-placeholder">📷</span>
+              <img id="photoPreview_front" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Front progress photo">
+            </div>
+            <input type="file" class="photo-upload-input" id="photoFile_front" accept="image/*">
+          </div>
+          <div class="ci-photo-slot">
+            <label>Side</label>
+            <div class="ci-photo-preview photo-upload-preview" id="photoSlot_side"
+                 onclick="document.getElementById('photoFile_side').click()">
+              <span class="photo-placeholder">📷</span>
+              <img id="photoPreview_side" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Side progress photo">
+            </div>
+            <input type="file" class="photo-upload-input" id="photoFile_side" accept="image/*">
+          </div>
+          <div class="ci-photo-slot">
+            <label>Back</label>
+            <div class="ci-photo-preview photo-upload-preview" id="photoSlot_back"
+                 onclick="document.getElementById('photoFile_back').click()">
+              <span class="photo-placeholder">📷</span>
+              <img id="photoPreview_back" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Back progress photo">
+            </div>
+            <input type="file" class="photo-upload-input" id="photoFile_back" accept="image/*">
+          </div>
+        </div>
+      </div>
+
+      <!-- Side-by-side comparison card -->
+      <div class="ci-card">
+        <h3 class="ci-card-title">🔄 Side-by-Side Comparison</h3>
+        <p class="ci-card-desc">Compare your current photos with a previous check-in.</p>
+        <div style="margin-bottom:10px;">
+          <label for="photoCompareSelect" style="font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;display:block;margin-bottom:5px;">Compare with</label>
+          <select id="photoCompareSelect" onchange="renderPhotoComparison()" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--elevated-bg);color:var(--text-color);font-size:1rem;-webkit-appearance:none;">
+            <option value="">-- Select a previous check-in --</option>
+          </select>
+        </div>
+        <div id="photoComparisonGrid" style="display:none;">
+          <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:0 0 8px;">Front view</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div style="text-align:center;">
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Then</div>
+              <img id="photoCompare_front_old" style="width:100%;border-radius:10px;aspect-ratio:3/4;object-fit:cover;background:var(--elevated-bg);" alt="Previous front">
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Now</div>
+              <img id="photoCompare_front_new" style="width:100%;border-radius:10px;aspect-ratio:3/4;object-fit:cover;background:var(--elevated-bg);" alt="Current front">
+            </div>
+          </div>
+        </div>
+        <div id="photoComparisonEmpty" style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:16px 0;">
+          Add photos and save a check-in to unlock comparisons.
+        </div>
+      </div>
+
+      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('athlete')">Save with Photos ✓</button>
+    </div><!-- /ciPanel_photos -->
+
+    <!-- ════════════════════════════════════════════════════════
+         PANEL 4 · HISTORY + SUMMARY
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="ciPanel_history" class="ci-panel" style="display:none">
+
+      <!-- Summary card -->
+      <div class="ci-card">
+        <h3 class="ci-card-title">📊 Latest Summary</h3>
+        <div id="checkInSummaryOutput" class="ci-summary-output">
+          Save your first check-in to generate a prep summary.
+        </div>
+        <div class="ci-btn-row">
+          <button class="ci-sec-btn" onclick="generateCheckInSummary()">🔄 Refresh</button>
+          <button class="ci-sec-btn" onclick="exportCheckInSummary('txt')">📄 Export TXT</button>
+          <button class="ci-sec-btn" onclick="exportCheckInSummary('json')">⬇️ Export JSON</button>
+        </div>
+      </div>
+
+      <!-- Timeline (rendered by renderCheckInTab) -->
       <div id="checkInTimeline"></div>
-    </div>
-  </div>
+    </div><!-- /ciPanel_history -->
+
+    <!-- Legacy hidden inputs kept for saveWeeklyCheckIn() compatibility -->
+    <input type="text" id="checkInFrontPhotoInput" style="display:none">
+    <input type="text" id="checkInSidePhotoInput"  style="display:none">
+    <input type="text" id="checkInBackPhotoInput"  style="display:none">
+
+  </div><!-- /checkInTab -->
   
 <div id="crossfitTab" class="tab-content">
   <div id="cfEntryPanel" class="panel active">
@@ -653,6 +869,7 @@
     <div class="pl-subtabs">
       <button class="pl-subtab active" data-pl-subtab="plates">🏋️ Plate Calc</button>
       <button class="pl-subtab" data-pl-subtab="oneRM">📈 1RM Tracker</button>
+      <button class="pl-subtab" data-pl-subtab="scores">🏅 Scores</button>
       <button class="pl-subtab" data-pl-subtab="meet">🗓️ Meet Prep</button>
       <button class="pl-subtab" data-pl-subtab="meetday">🎯 Meet Day</button>
     </div>
@@ -799,6 +1016,81 @@
     </div>
 
     <!-- ── MEET PREP ── -->
+    <!-- ── STRENGTH SCORES (Wilks / DOTS / IPF GL) ── -->
+    <div id="plSubScores" class="pl-subview">
+      <h3 style="margin-top:0;">Strength Scores</h3>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin:-4px 0 14px;">Compare your total across weight classes &amp; formulas.</p>
+
+      <!-- Inputs -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label for="scoreBodyweight">Bodyweight</label>
+          <input type="number" id="scoreBodyweight" step="0.1" placeholder="e.g. 83" oninput="calcStrengthScores()">
+        </div>
+        <div>
+          <label for="scoreUnit">Unit</label>
+          <select id="scoreUnit" onchange="calcStrengthScores()">
+            <option value="kg">kg</option>
+            <option value="lbs">lbs</option>
+          </select>
+        </div>
+        <div>
+          <label for="scoreSex">Sex</label>
+          <select id="scoreSex" onchange="calcStrengthScores()">
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </div>
+        <div>
+          <label for="scoreEquipment">Equipment</label>
+          <select id="scoreEquipment" onchange="calcStrengthScores()">
+            <option value="raw">Raw</option>
+            <option value="equipped">Equipped</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <label for="scoreSquat">Squat</label>
+          <input type="number" id="scoreSquat" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+        </div>
+        <div>
+          <label for="scoreBench">Bench</label>
+          <input type="number" id="scoreBench" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+        </div>
+        <div>
+          <label for="scoreDeadlift">Deadlift</label>
+          <input type="number" id="scoreDeadlift" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="scoreResults" style="display:none;">
+        <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+          <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:10px;">
+            Total: <span id="scoreTotal" style="color:var(--text-color);font-size:1rem;"></span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
+              <div id="scoreWilks" style="font-size:1.4rem;font-weight:800;color:var(--primary);line-height:1;">—</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">Wilks</div>
+            </div>
+            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
+              <div id="scoreDots" style="font-size:1.4rem;font-weight:800;color:#7c6ef0;line-height:1;">—</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">DOTS</div>
+            </div>
+            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
+              <div id="scoreIpfgl" style="font-size:1.4rem;font-weight:800;color:#e07c30;line-height:1;">—</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">IPF GL</div>
+            </div>
+          </div>
+        </div>
+        <!-- Performance tier badge -->
+        <div id="scoreTier" style="text-align:center;padding:10px;border-radius:10px;font-size:0.88rem;font-weight:700;"></div>
+      </div>
+    </div>
+
     <div id="plSubMeet" class="pl-subview">
       <h3 style="margin-top:0;">Meet Prep Timeline</h3>
 
@@ -863,9 +1155,10 @@
 
 <div id="communityTab" class="tab-content">
   <nav class="community-nav">
-    <button class="comm-nav-btn" onclick="showCommunitySection('groups')" id="commNavGroups">👥 Groups</button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('feed')"   id="commNavFeed">📣 Feed</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('groups')"      id="commNavGroups">👥 Groups</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('feed')"        id="commNavFeed">📣 Feed</button>
     <button class="comm-nav-btn" onclick="showCommunitySection('competition')" id="commNavCompetition">🏆 Leaderboard</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('share')"       id="commNavShare">🔗 Share<span id="commShareBadge" class="comm-nav-badge" style="display:none">0</span></button>
   </nav>
 
   <!-- ── Groups panel ── -->
@@ -946,7 +1239,76 @@
 
   <!-- Legacy posts panel (kept for compatibility) -->
   <div id="postsPanel" class="panel" style="display:none;"></div>
-</div>
+
+  <!-- ── Share Panel ── -->
+  <div id="commSharePanel" class="panel" style="display:none;">
+
+    <!-- ① SEND section -->
+    <div class="comm-share-card">
+      <h3 class="comm-share-card-title">📤 Send Program or Template</h3>
+
+      <!-- Mode: user vs group -->
+      <div class="comm-share-mode-row">
+        <button class="comm-share-mode-btn active" data-mode="user"  onclick="commShareSetMode('user')">👤 To a User</button>
+        <button class="comm-share-mode-btn"        data-mode="group" onclick="commShareSetMode('group')">👥 To a Group</button>
+      </div>
+
+      <!-- User mode -->
+      <div id="commShareUserMode">
+        <div class="comm-share-field">
+          <label for="commShareRecipient">Recipient username</label>
+          <input type="text" id="commShareRecipient" placeholder="e.g. john_lifts" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Group mode (hidden by default) -->
+      <div id="commShareGroupMode" style="display:none">
+        <div class="comm-share-field">
+          <label for="commShareGroupSelect">Choose group</label>
+          <select id="commShareGroupSelect">
+            <option value="">— select a group —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Type selector -->
+      <div class="comm-share-type-row">
+        <button class="comm-share-type-btn active" data-type="template" onclick="commShareSetType('template')">📋 Templates</button>
+        <button class="comm-share-type-btn"        data-type="program"  onclick="commShareSetType('program')">🗓 Programs</button>
+      </div>
+
+      <!-- Selectable item list -->
+      <div id="commShareItemList" class="comm-share-item-list">
+        <div class="comm-share-empty">Open the Share tab to load your library.</div>
+      </div>
+
+      <!-- Optional message -->
+      <div class="comm-share-field">
+        <label for="commShareMessage">Note <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <textarea id="commShareMessage" placeholder="e.g. This is the program I mentioned — give it a try!"></textarea>
+      </div>
+
+      <button class="comm-share-send-btn" onclick="commSendShare()">📤 Send</button>
+    </div>
+
+    <!-- ② INBOX section -->
+    <div class="comm-share-card">
+      <h3 class="comm-share-card-title">📥 Received</h3>
+      <div id="commShareInbox">
+        <div class="comm-share-empty">Loading…</div>
+      </div>
+    </div>
+
+    <!-- ③ SENT history -->
+    <div class="comm-share-card">
+      <h3 class="comm-share-card-title">📨 Sent</h3>
+      <div id="commShareOutbox">
+        <div class="comm-share-empty">Nothing sent yet.</div>
+      </div>
+    </div>
+
+  </div><!-- /commSharePanel -->
+</div><!-- /communityTab -->
 
 <div id="leaderboardTab" class="tab-content">
   <div class="lb-page">
@@ -987,8 +1349,8 @@
     <!-- ⑤ Charts (collapsible) -->
     <details class="lb-charts-section">
       <summary class="lb-charts-summary">📊 Charts</summary>
-      <canvas id="lbBarChart"></canvas>
-      <canvas id="lbLineChart" style="margin-top:16px;"></canvas>
+      <canvas id="lbBarChart" height="220"></canvas>
+      <canvas id="lbLineChart" height="200" style="margin-top:16px;"></canvas>
     </details>
 
     <!-- ⑨ Exercise leaderboard inline (replaces hidden separate tab) -->
@@ -1042,22 +1404,139 @@
 </div>
 
   <div id="cardioTab" class="tab-content">
-    <div id="cardioFormPanel" class="panel active">
-    <h2>Cardio Tracker</h2>
-    <input type="text" id="cardioType" placeholder="Type (e.g. Running)">
-    <input type="number" id="cardioDuration" placeholder="Duration (min)">
-    <input type="number" id="cardioDistance" placeholder="Distance (km)">
-    <input type="number" id="cardioCalories" placeholder="Calories burned (optional)">
-    <input type="text" id="cardioNotes" placeholder="Notes (optional)">
-    <button onclick="addCardioEntry()">Add Cardio</button>
-    <button onclick="completeCardioSession()">Complete Cardio Session</button>
+
+    <!-- Weekly summary chips -->
+    <div id="cardioWeeklySummary" class="cardio-weekly-strip"></div>
+
+    <!-- Log form -->
+    <div class="cardio-form-card">
+      <div class="cardio-form-header">
+        <h3 class="cardio-form-title">Log Cardio</h3>
+        <span class="cardio-form-date-chip" id="cardioDateChip"></span>
+      </div>
+
+      <!-- Activity type pills -->
+      <div class="cardio-type-picker" id="cardioTypePicker">
+        <button class="cardio-type-btn active" data-type="run"        onclick="selectCardioType('run')">🏃 Run</button>
+        <button class="cardio-type-btn"        data-type="walk"       onclick="selectCardioType('walk')">🚶 Walk</button>
+        <button class="cardio-type-btn"        data-type="cycle"      onclick="selectCardioType('cycle')">🚴 Cycle</button>
+        <button class="cardio-type-btn"        data-type="swim"       onclick="selectCardioType('swim')">🏊 Swim</button>
+        <button class="cardio-type-btn"        data-type="row"        onclick="selectCardioType('row')">🚣 Row</button>
+        <button class="cardio-type-btn"        data-type="hiit"       onclick="selectCardioType('hiit')">💪 HIIT</button>
+        <button class="cardio-type-btn"        data-type="hike"       onclick="selectCardioType('hike')">🥾 Hike</button>
+        <button class="cardio-type-btn"        data-type="yoga"       onclick="selectCardioType('yoga')">🧘 Yoga</button>
+        <button class="cardio-type-btn"        data-type="other"      onclick="selectCardioType('other')">＋ Other</button>
+      </div>
+      <!-- Hidden canonical type value -->
+      <input type="hidden" id="cardioType" value="run">
+      <!-- Custom type text input, shown only when "Other" is active -->
+      <div class="cardio-custom-type-wrap" id="cardioCustomTypeWrap" style="display:none">
+        <div class="cardio-input-wrap">
+          <span class="cardio-input-icon">✏️</span>
+          <input type="text" id="cardioCustomType" placeholder="Describe activity…"
+                 oninput="document.getElementById('cardioType').value = this.value.trim() || 'other'">
+        </div>
+      </div>
+
+      <!-- Core metrics: Duration + Distance -->
+      <div class="cardio-section-label">Core Metrics</div>
+      <div class="cardio-row-2">
+        <div class="cardio-field">
+          <label class="cardio-field-label" for="cardioDuration">Duration</label>
+          <div class="cardio-input-wrap">
+            <span class="cardio-input-icon">⏱</span>
+            <input type="number" id="cardioDuration" placeholder="30" min="1" inputmode="decimal"
+                   oninput="updateCardioPacePreview()">
+            <span class="cardio-input-unit">min</span>
+          </div>
+        </div>
+        <div class="cardio-field">
+          <label class="cardio-field-label" for="cardioDistance">Distance <span class="cardio-opt">optional</span></label>
+          <div class="cardio-input-wrap">
+            <span class="cardio-input-icon">📍</span>
+            <input type="number" id="cardioDistance" placeholder="—" step="0.1" min="0" inputmode="decimal"
+                   oninput="updateCardioPacePreview()">
+            <span class="cardio-input-unit">km</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live pace / speed preview -->
+      <div id="cardioPacePreview" class="cardio-pace-preview" style="display:none">
+        <span class="pace-icon" id="cardioPaceIcon">⚡</span>
+        <span class="pace-value" id="cardioPaceValue"></span>
+      </div>
+
+      <!-- Effort level -->
+      <div class="cardio-field" style="margin-bottom:14px;">
+        <label class="cardio-field-label">Effort level</label>
+        <div class="cardio-intensity-row" id="cardioIntensityPicker">
+          <button class="cardio-intensity-btn" data-intensity="easy"     onclick="selectCardioIntensity('easy')">😌 Easy</button>
+          <button class="cardio-intensity-btn active" data-intensity="moderate" onclick="selectCardioIntensity('moderate')">💪 Moderate</button>
+          <button class="cardio-intensity-btn" data-intensity="hard"     onclick="selectCardioIntensity('hard')">🔥 Hard</button>
+          <button class="cardio-intensity-btn" data-intensity="max"      onclick="selectCardioIntensity('max')">⚡ Max</button>
+        </div>
+        <input type="hidden" id="cardioIntensity" value="moderate">
+      </div>
+
+      <!-- Optional fields accordion -->
+      <details class="cardio-optional" id="cardioOptional">
+        <summary class="cardio-optional-toggle">
+          <span class="cardio-optional-label">More options</span>
+          <span class="cardio-optional-arrow">›</span>
+        </summary>
+        <div class="cardio-optional-body">
+
+          <div class="cardio-section-label" style="margin-top:4px;">Performance</div>
+          <div class="cardio-row-2">
+            <div class="cardio-field">
+              <label class="cardio-field-label" for="cardioCalories">Calories <span class="cardio-opt">override</span></label>
+              <div class="cardio-input-wrap">
+                <span class="cardio-input-icon">🔥</span>
+                <input type="number" id="cardioCalories" placeholder="auto" min="0" inputmode="decimal">
+                <span class="cardio-input-unit">kcal</span>
+              </div>
+            </div>
+            <div class="cardio-field">
+              <label class="cardio-field-label" for="cardioHeartRate">Avg heart rate <span class="cardio-opt">optional</span></label>
+              <div class="cardio-input-wrap">
+                <span class="cardio-input-icon">❤️</span>
+                <input type="number" id="cardioHeartRate" placeholder="—" min="40" max="230" inputmode="numeric">
+                <span class="cardio-input-unit">bpm</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="cardio-row-2">
+            <div class="cardio-field">
+              <label class="cardio-field-label" for="cardioDate">Date</label>
+              <div class="cardio-input-wrap">
+                <span class="cardio-input-icon">📅</span>
+                <input type="date" id="cardioDate">
+              </div>
+            </div>
+            <div class="cardio-field">
+              <label class="cardio-field-label" for="cardioNotes">Notes</label>
+              <div class="cardio-input-wrap">
+                <span class="cardio-input-icon">📝</span>
+                <input type="text" id="cardioNotes" placeholder="e.g. felt great">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </details>
+
+      <button class="cardio-submit-btn" onclick="addCardioEntry()">
+        <span id="cardioSubmitIcon">🏃</span> Log Session
+      </button>
     </div>
-    <div id="cardioHistoryPanel" class="panel">
-      <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Distance</th><th>Calories</th><th>Notes</th><th>Remove</th></tr></thead>
-        <tbody id="cardioBody"></tbody>
-      </table>
-    </div>
+
+    <!-- History list (populated by renderCardio) -->
+    <div id="cardioHistoryList" class="cardio-history-list"></div>
+
+    <!-- Legacy table body kept for backward compat with any direct cardioBody refs -->
+    <table style="display:none"><tbody id="cardioBody"></tbody></table>
   </div>
 
   <div id="posingTab" class="tab-content">
@@ -1434,7 +1913,7 @@
       <section class="progress-chart">
         <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
         <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
-        <canvas id="progressCanvas"></canvas>
+        <canvas id="progressCanvas" height="220"></canvas>
         <div id="exerciseProgress" style="display:none;"></div>
         <div id="trainingLoadPanel" style="margin-top:14px;">
           <h3 style="margin-bottom:6px;">Training Stress
@@ -1444,8 +1923,8 @@
             <strong title="Higher values indicate less day-to-day variation in training load.">Monotony</strong> and
             <strong title="Strain combines weekly work and monotony to estimate total stress.">Strain</strong> are calculated from weekly volume and intensity load.
           </p>
-          <canvas id="monotonyCanvas" style="max-height:180px; margin-bottom:10px;"></canvas>
-          <canvas id="strainCanvas" style="max-height:180px;"></canvas>
+          <canvas id="monotonyCanvas" height="180" style="max-height:180px; margin-bottom:10px;"></canvas>
+          <canvas id="strainCanvas" height="180" style="max-height:180px;"></canvas>
           <div id="loadAlerts" style="margin-top:8px;"></div>
         </div>
         <div id="bodybuildingProgressPanel"></div>
@@ -1953,6 +2432,48 @@ function setLoading(btn, state) {
 
   
 // LOGIN
+// ── Local credential cache (SHA-256 hash, stored in localStorage) ──────────
+// Lets the app log in offline / when the server is unreachable.
+async function _hashCredential(username, password) {
+  try {
+    const data = new TextEncoder().encode(username.toLowerCase() + ':' + password);
+    const buf  = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch { return null; }
+}
+async function _saveLocalCredentials(username, password) {
+  try {
+    const hash  = await _hashCredential(username, password);
+    if (!hash) return;
+    const store = JSON.parse(localStorage.getItem('_localAuth') || '{}');
+    store[username.toLowerCase()] = hash;
+    localStorage.setItem('_localAuth', JSON.stringify(store));
+  } catch { /* non-critical */ }
+}
+async function _checkLocalCredentials(username, password) {
+  try {
+    const hash  = await _hashCredential(username, password);
+    const store = JSON.parse(localStorage.getItem('_localAuth') || '{}');
+    return !!hash && store[username.toLowerCase()] === hash;
+  } catch { return false; }
+}
+function _doLocalLogin(username) {
+  setCurrentUser(username);
+  localStorage.setItem('fitnessAppUser', username);
+  const el = document.getElementById('loginContainer');
+  if (el) el.style.display = 'none';
+  openSection('pocketFit');
+  if (typeof window.renderWorkouts === 'function') window.renderWorkouts();
+  if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
+  renderWeights?.();
+  renderCardio?.();
+  loadTemplateDropdown?.();
+  renderDailyMacroProgress?.();
+  if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+  if (typeof window.initSessionContext === 'function') window.initSessionContext();
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 async function startLogin() {
   const btn = document.getElementById('loginButton');
   setLoading(btn, true);
@@ -2020,6 +2541,7 @@ async function startLogin() {
       setCurrentUser(username);
       localStorage.setItem("fitnessAppUser", username);
       persistLoginIdentity(username, result.token);
+      _saveLocalCredentials(username, password); // cache for offline login
 
       // BUGFIX: null-safe — #userDisplay may not exist in the current DOM
       const userDisplayEl = document.getElementById("userDisplay");
@@ -2039,6 +2561,7 @@ async function startLogin() {
       renderMacroTargets({ useFallback: !fetchedTargets });
       renderWeights();
       renderCardio();
+      initCardioDateChip?.();
       renderPosingTab();
       renderCrossfitWorkouts();
       loadTemplateDropdown(); // ✅ Load saved templates
@@ -2051,16 +2574,23 @@ async function startLogin() {
       loadUserExercises();
       saveDailyMacroProgress(0, 0, 0); // reset progress on login
       renderDailyMacroProgress();
+      if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+      if (typeof window.initSessionContext === 'function') window.initSessionContext();
     }
   } catch (error) {
     console.error('Login error:', error);
+    // Server unreachable — try cached local credentials
+    const localOk = await _checkLocalCredentials(username, password);
+    if (localOk) {
+      console.info('Server offline — using cached local credentials');
+      _doLocalLogin(username);
+      await loadTemplateDropdown();
+      return;
+    }
     if (errorEl) {
       errorEl.textContent = "Unable to connect to the server. Please try again later.";
-    } else {
-      console.error('Unable to connect to the server. Please try again later.');
     }
-
-    await loadTemplateDropdown(); // ✅ Load templates after login
+    await loadTemplateDropdown();
   } finally {
     setLoading(btn, false);
   }
@@ -2149,6 +2679,13 @@ function showTab(tabName) {
       break;
     case 'communityTab':
       if (window.showCommunitySection) showCommunitySection('groups');
+      // Refresh inbox badge whenever community tab is opened
+      if (currentUser) {
+        const _cInbox = (JSON.parse(localStorage.getItem(`communityInbox_${currentUser}`)) || [])
+          .filter(i => !i.accepted && !i.dismissed);
+        const _cBadge = document.getElementById('commShareBadge');
+        if (_cBadge) { _cBadge.style.display = _cInbox.length ? '' : 'none'; _cBadge.textContent = _cInbox.length; }
+      }
       break;
     case 'leaderboardTab':
       if (window.initLeaderboard) initLeaderboard();
@@ -2380,6 +2917,25 @@ async function startSignup() {
 
     const result = await response.json();
 
+    if (result.success) {
+      // Auto-login after signup so onboarding can persist settings to the right user
+      const loginResponse = await fetch(`${window.SERVER_URL}/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const loginResult = await loginResponse.json();
+      if (loginResult.success || loginResult.token) {
+        if (loginResult.token) localStorage.setItem('token', loginResult.token);
+        setCurrentUser(username);
+        _saveLocalCredentials(username, password); // cache for offline login
+        document.getElementById('loginContainer').style.display = 'none';
+        showOnboarding();
+      } else {
+        alert("Account created! Please log in to continue.");
+      }
+
     if (result.success && result.token) {
       persistLoginIdentity(result.username || username, result.token);
       setCurrentUser(result.username || username);
@@ -2392,6 +2948,8 @@ async function startSignup() {
     }
   } catch (error) {
     console.error('Signup error:', error);
+    alert("Error connecting to server. If you already have an account, try logging in instead.");
+
     if (errorEl) errorEl.textContent = "Error connecting to server. Please try again.";
     else alert("Error connecting to server.");
   } finally {
@@ -3886,7 +4444,7 @@ async function saveTemplate(username, templateName, templateData) {
     console.log('Template saved:', result);
   } catch (error) {
     console.error('Error saving template:', error);
-    alert('Failed to save template. Please try again.');
+    window.showToast('Failed to save template. Please try again.', 'error');
   }
 }
   
@@ -4073,37 +4631,39 @@ function buildTemplateFromWorkout(workout, metadata = {}) {
 
 // Save last workout as template
 function saveWorkoutAsTemplate() {
-  const name = prompt("Template name:");
-  if (!name) return;
-  const description = prompt('Template description (optional):') || '';
-  const tagsInput = prompt('Template tags (comma separated, optional):') || '';
-  const tags = tagsInput.split(',').map(tag => tag.trim()).filter(Boolean);
+  window.showPrompt('Template name:').then(name => {
+    if (!name || !name.trim()) return;
+    window.showPrompt('Description (optional):').then(description => {
+      window.showPrompt('Tags (comma separated, optional):').then(tagsInput => {
+        const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  if (!workouts.length) return alert("No workout to save.");
-  const template = buildTemplateFromWorkout(workouts[workouts.length - 1], {
-    name,
-    description,
-    tags
-  });
-  const localTemplates = getLocalManagedTemplates();
-  localTemplates.push({
-    localId: `local_${Date.now()}`,
-    name,
-    data: template,
-    source: 'local'
-  });
-  saveLocalManagedTemplates(localTemplates);
+        const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+        if (!workouts.length) { window.showToast('No workout to save.', 'warn'); return; }
+        const template = buildTemplateFromWorkout(workouts[workouts.length - 1], {
+          name: name.trim(), description: description || '', tags
+        });
+        const localTemplates = getLocalManagedTemplates();
+        localTemplates.push({
+          localId: `local_${Date.now()}`,
+          name: name.trim(),
+          data: template,
+          source: 'local'
+        });
+        saveLocalManagedTemplates(localTemplates);
 
-  saveTemplate(currentUser, name, template)
-    .then(() => {
-      alert("Template saved!");
-      loadTemplateDropdown(); // Refresh dropdown
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Failed to save template.");
+        saveTemplate(currentUser, name.trim(), template)
+          .then(() => {
+            window.showToast('✅ Template saved!', 'success');
+            loadTemplateDropdown();
+          })
+          .catch(err => {
+            console.error(err);
+            window.showToast('Failed to save template to server — saved locally.', 'warn');
+            loadTemplateDropdown();
+          });
+      });
     });
+  });
 }
 
 
@@ -4123,7 +4683,7 @@ function loadSelectedResistanceTemplate() {
   const template = value;
 
   if (!template || typeof template !== 'object') {
-    alert('Invalid template format.');
+    window.showToast('Invalid template format.', 'warn');
     return;
   }
 
@@ -4158,7 +4718,7 @@ function loadSelectedResistanceTemplate() {
       : []);
 
   if (!templateLog.length) {
-    alert('Template has no exercises to load.');
+    window.showToast('Template has no exercises to load.', 'warn');
     return;
   }
 
@@ -4172,23 +4732,23 @@ function loadSelectedResistanceTemplate() {
   });
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   renderWorkouts();
-  alert('Template loaded!');
+  window.showToast('✅ Template loaded!', 'success');
 }
 
 // SEND TEMPLATE TO ANOTHER USER
 async function sendTemplate() {
   const otherUser = document.getElementById("shareWithUser").value.trim();
-  if (!otherUser) return alert("Enter username to share with.");
+  if (!otherUser) { window.showToast('Enter a username to share with.', 'warn'); return; }
 
   const select = document.getElementById('resistanceTemplateSelect');
   if (!select || !select.value) {
-    alert('Select a template first.');
+    window.showToast('Select a template first.', 'warn');
     return;
   }
 
   const selected = resistanceTemplatesCache.find(tpl => tpl.id === select.value);
   const templateData = selected?.data;
-  if (!templateData) return alert('Failed to share template.');
+  if (!templateData) { window.showToast('Failed to share template.', 'warn'); return; }
 
   try {
     const response = await fetch(`${window.SERVER_URL}/sendTemplate`, {
@@ -4205,13 +4765,13 @@ async function sendTemplate() {
 
     const result = await response.json();
     if (result.success) {
-      alert("Template sent successfully!");
+      window.showToast('✅ Template sent!', 'success');
     } else {
-      alert(result.message || "Failed to send template.");
+      window.showToast(result.message || 'Failed to send template.', 'warn');
     }
   } catch (error) {
     console.error('Send template error:', error);
-    alert("Error sending template.");
+    window.showToast('Error sending template.', 'error');
   }
 }
 
@@ -4315,7 +4875,7 @@ function saveSimpleTemplate() {
     .split(',')
     .map(tag => tag.trim())
     .filter(Boolean);
-  if (!name || newTemplateExercises.length === 0) return alert('Template info missing');
+  if (!name || newTemplateExercises.length === 0) { window.showToast('Add a name and at least one exercise.', 'warn'); return; }
   const templateData = {
     title: name,
     date: new Date().toISOString().split('T')[0],
@@ -6561,6 +7121,46 @@ function renderHeroPhaseHeader(profile, username) {
   const statusPill = getHomeStatusPillClass(currentStatus);
   const todayLabel = formatExactDate(new Date().toISOString());
 
+  // Recreational hero: habit-centric, skip show-day / peak-week content
+  if (archetype === 'recreational') {
+    const stepsToday = (() => {
+      const userId2 = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+      const todayKey = new Date().toISOString().slice(0,10);
+      const data = JSON.parse(localStorage.getItem('dailySteps') || '{}');
+      return parseInt(data[todayKey] || 0);
+    })();
+    const settings2 = (() => {
+      const userId2 = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+      return JSON.parse(localStorage.getItem(`settings_${userId2}`) || '{}');
+    })();
+    const stepsGoal = settings2?.profile?.goals?.stepsTarget || 10000;
+    const stepsPct  = Math.round(Math.min(stepsToday / stepsGoal, 1) * 100);
+    const gamification = getHomeGamificationSummary(profile, username);
+    const streakCount  = gamification?.habitStreak || gamification?.currentStreak || 0;
+    return `
+      <section class="home-dashboard-card home-hero-card">
+        <div class="home-card-header">
+          <p class="home-hero-topline">Habit Command Center</p>
+          <span class="home-status-pill ${statusPill}">${currentStatus}</span>
+        </div>
+        <div class="home-split-grid">
+          <div>
+            <h2 class="home-hero-athlete">${athleteName}</h2>
+            <p class="home-hero-meta">📅 ${todayLabel}</p>
+            <p class="home-hero-meta">🔥 Habit Streak: <strong>${streakCount} day${streakCount !== 1 ? 's' : ''}</strong></p>
+            <p class="home-hero-meta">👟 Steps today: <strong>${stepsToday.toLocaleString()} / ${stepsGoal.toLocaleString()} (${stepsPct}%)</strong></p>
+          </div>
+          <div class="home-muted-panel">
+            <p class="home-stat-label">Daily Status</p>
+            <p class="home-stat-value" style="margin-bottom:8px;">${currentStatus}</p>
+            <p class="home-stat-label">Next Check-in</p>
+            <p class="home-stat-value">${nextReview}</p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
   return `
     <section class="home-dashboard-card home-hero-card">
       <div class="home-card-header">
@@ -7214,7 +7814,8 @@ function getHomeDashboardCardOrder(archetype) {
     bodybuilder: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
     powerlifter: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
     hybrid: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
-    recreational: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights']
+    // Recreational: habit-first, skip "Upcoming Prep Events" (show-day / peak week irrelevant)
+    recreational: ['hero', 'mission', 'status', 'progression', 'weekly', 'focus', 'macro', 'insights']
   };
   return orders[archetype] || baseOrder;
 }
@@ -7893,6 +8494,26 @@ window.renderCoachClientRoster = renderCoachClientRoster;
 window.renderCoachClientCard = renderCoachClientCard;
 window.renderCoachClientDetail = renderCoachClientDetail;
 
+/* ── Check-in sub-tab switcher ──────────────────────────────── */
+function switchCheckInTab(panel) {
+  ['log', 'adjust', 'photos', 'history'].forEach(p => {
+    const el = document.getElementById(`ciPanel_${p}`);
+    if (el) el.style.display = p === panel ? '' : 'none';
+  });
+  document.querySelectorAll('#ciNav .ci-nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.panel === panel);
+  });
+  // Refresh history when switching to it
+  if (panel === 'history') {
+    generateCheckInSummary?.();
+  }
+  // Populate photo compare picker when switching to photos
+  if (panel === 'photos') {
+    populatePhotoCompareSelect?.();
+  }
+}
+window.switchCheckInTab = switchCheckInTab;
+
 const CHECKIN_ARCHETYPE_SCHEMAS = Object.freeze({
   bodybuilder: {
     label: 'Bodybuilder Check-In',
@@ -8019,6 +8640,61 @@ function getCheckInPhaseState() {
   return window.prepModeApi?.getCurrentPhaseState?.(userId) || {};
 }
 
+/**
+ * Auto-fill the cardioAdherence slider (1–10) from this week's cardio log.
+ * Only sets a value if the slider hasn't already been manually adjusted.
+ * Mapping: sessions ≥ target → 10, 0 sessions → 1, proportional in between.
+ */
+function autoFillCardioAdherenceSlider(userId) {
+  const slider = document.getElementById('checkInField_cardioAdherence');
+  if (!slider) return; // field not shown for this archetype
+
+  // Don't overwrite if user already moved the slider away from the default (5)
+  if (slider.dataset.userEdited === 'true') return;
+
+  const log = JSON.parse(localStorage.getItem(`cardioLog_${userId}`)) || [];
+  if (!log.length) return;
+
+  // Determine "this week" window (Mon–Sun)
+  const today = new Date();
+  const dayOfWeek = (today.getDay() + 6) % 7; // 0 = Mon … 6 = Sun
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - dayOfWeek);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekStartStr = weekStart.toISOString().slice(0, 10);
+  const todayStr     = today.toISOString().slice(0, 10);
+
+  const sessionsThisWeek = log.filter(e => e.date >= weekStartStr && e.date <= todayStr).length;
+  if (sessionsThisWeek === 0) return; // leave slider at default
+
+  // Pull weekly cardio target from settings; default 3 sessions/week
+  const settings  = JSON.parse(localStorage.getItem(`settings_${userId}`) || '{}');
+  const target    = settings?.profile?.goals?.cardioSessionsPerWeek || 3;
+
+  const pct   = Math.min(sessionsThisWeek / target, 1);
+  const score = Math.max(1, Math.min(10, Math.round(1 + pct * 9)));
+
+  slider.value = score;
+  const display = document.getElementById('checkInFieldValue_cardioAdherence');
+  if (display) display.textContent = score;
+
+  // Apply colour coding that bindCheckInSliderDisplays normally handles
+  if (score >= 7) display?.setAttribute('data-score-high', '');
+  else if (score >= 4) display?.setAttribute('data-score-mid', '');
+  else display?.setAttribute('data-score-low', '');
+
+  // Tag with a hint so the UI can show "auto-filled"
+  slider.dataset.autoFilled = 'true';
+  const header = slider.closest('.checkin-slider-field')?.querySelector('.checkin-slider-title');
+  if (header && !header.querySelector('.ci-autofill-tag')) {
+    const tag = document.createElement('span');
+    tag.className = 'ci-autofill-tag';
+    tag.textContent = ` (${sessionsThisWeek}/${target} sessions)`;
+    tag.style.cssText = 'font-size:0.7rem;color:var(--text-muted);font-weight:400;';
+    header.appendChild(tag);
+  }
+}
+
 function renderCheckInTab() {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
@@ -8047,56 +8723,77 @@ function renderCheckInTab() {
   renderCheckInArchetypeFields(archetype, latestCheckIn);
   hydrateCheckInFormFromLatestEntry(checkIns);
   bindCheckInSliderDisplays();
+  autoFillCardioAdherenceSlider(userId);
 
   const timeline = document.getElementById('checkInTimeline');
   if (!timeline) return;
-  timeline.innerHTML = '<p class="home-mission-progress">Loading weekly check-ins…</p>';
 
   const entriesWithInsights = window.checkinEngine.getCheckInInsightTimeline?.(checkIns) || checkIns;
   const groupedTimeline = window.checkinEngine.groupCheckInsForTimeline?.(entriesWithInsights) || [];
   if (!groupedTimeline.length) {
-    timeline.innerHTML = '<p class="home-mission-progress">No weekly ritual logged yet. Save your first check-in to build your prep timeline.</p>';
+    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<br><span style="font-size:1.6rem;display:block;margin-top:8px">📋</span></div>`;
     return;
   }
 
-  timeline.innerHTML = groupedTimeline.map((weeksOutGroup) => {
-    const phaseWeekBlocks = weeksOutGroup.phaseWeeks.map((phaseWeekGroup) => {
-      const entries = phaseWeekGroup.entries.map((entry) => `
-        <li style="margin-bottom:10px;">
-          <strong>${entry.date}</strong> · Phase: ${entry.phase || '—'}<br />
-          Archetype: ${entry.archetype || 'legacy'}<br />
-          BW: ${entry.bodyweight || '—'} · Waist: ${entry.waist || '—'} · Recovery (E/S/St): ${entry.recoveryRatings?.energy || entry.energy || '—'}/${entry.recoveryRatings?.sleep || entry.sleep || '—'}/${entry.recoveryRatings?.stress || entry.stress || '—'}<br />
-          ${formatCheckInArchetypeMetricSummary(entry)}
-          <div style="font-size:0.9rem; opacity:0.85;">${entry.notes || 'No notes logged.'}</div>
-          <div style="font-size:0.88rem; margin-top:4px;">
-            <strong>Weekly adjustments:</strong> ${formatAdjustmentSummary(entry.adjustments)}
-          </div>
-          <div style="font-size:0.88rem; margin-top:4px;">
-            <strong>Coach review:</strong> ${(entry.review?.status || 'pending').replace('_', ' ')}
-            ${entry.review?.coachActionItems ? ` · Action items: ${entry.review.coachActionItems}` : ''}
-          </div>
-          <div style="font-size:0.88rem; opacity:0.9;">${entry.coachNotes ? `Coach notes: ${entry.coachNotes}` : 'Coach notes pending.'}</div>
-          <div style="font-size:0.86rem; opacity:0.95; margin-top:6px; border-left:3px solid rgba(47,128,237,0.45); padding-left:8px;">
-            <strong>Coach insight:</strong> ${(entry.insights?.summaryShort) || 'More check-ins needed for trend feedback.'}
-            ${entry.insights?.summaryFull?.length ? `<div style="margin-top:4px;">${entry.insights.summaryFull.map(line => `<div>• ${line}</div>`).join('')}</div>` : ''}
-          </div>
-        </li>
-      `).join('');
+  function _scoreClass(val, invert) {
+    const n = Number(val);
+    if (!Number.isFinite(n)) return '';
+    if (invert) return n >= 7 ? 'poor' : n >= 4 ? 'mid' : 'good'; // stress: high = bad
+    return n >= 7 ? 'good' : n >= 4 ? 'mid' : 'poor';
+  }
 
-      return `
-        <article class="checkin-timeline-subgroup">
-          <h5>${phaseWeekGroup.phaseWeekLabel}</h5>
-          <ul>${entries}</ul>
-        </article>
-      `;
-    }).join('');
+  function _statusLabel(status) {
+    return { approved: '✅ Approved', reviewed: '👁 Reviewed', needs_changes: '✏️ Needs changes', pending: '⏳ Pending' }[status] || '⏳ Pending';
+  }
+
+  timeline.innerHTML = groupedTimeline.map((weeksOutGroup) => {
+    const cards = weeksOutGroup.phaseWeeks.flatMap((phaseWeekGroup) =>
+      phaseWeekGroup.entries.map((entry) => {
+        const status  = entry.review?.status || 'pending';
+        const energy  = entry.recoveryRatings?.energy || entry.energy || '';
+        const sleep   = entry.recoveryRatings?.sleep  || entry.sleep  || '';
+        const stress  = entry.recoveryRatings?.stress || entry.stress || '';
+        const adjText = formatAdjustmentSummary(entry.adjustments);
+        const insight = entry.insights?.summaryShort || '';
+        const insightFull = (entry.insights?.summaryFull || []).join(' · ');
+        const archetypeMetrics = formatCheckInArchetypeMetricSummary(entry);
+        const dateLabel = (() => {
+          try { return new Date(entry.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); } catch { return entry.date; }
+        })();
+
+        return `
+          <div class="ci-tc" data-status="${status}">
+            <div class="ci-tc-header">
+              <span class="ci-tc-date">${dateLabel}</span>
+              ${entry.phase ? `<span class="ci-tc-badge">${entry.phase}</span>` : ''}
+              ${phaseWeekGroup.phaseWeekLabel ? `<span class="ci-tc-badge">${phaseWeekGroup.phaseWeekLabel}</span>` : ''}
+              <span class="ci-tc-status-badge ${status}">${_statusLabel(status)}</span>
+            </div>
+            <div class="ci-tc-stats">
+              ${entry.bodyweight ? `<span class="ci-tc-stat">⚖️ ${entry.bodyweight} kg</span>` : ''}
+              ${entry.waist      ? `<span class="ci-tc-stat">📏 ${entry.waist} cm</span>`  : ''}
+              ${energy !== ''    ? `<span class="ci-tc-stat ${_scoreClass(energy, false)}">⚡ E:${energy}</span>` : ''}
+              ${sleep  !== ''    ? `<span class="ci-tc-stat ${_scoreClass(sleep, false)}">🌙 S:${sleep}</span>`  : ''}
+              ${stress !== ''    ? `<span class="ci-tc-stat ${_scoreClass(stress, true)}">🧠 St:${stress}</span>` : ''}
+            </div>
+            ${archetypeMetrics ? `<div class="ci-tc-archetype">${archetypeMetrics}</div>` : ''}
+            ${(insight || insightFull) ? `<div class="ci-tc-insight">💡 ${insight}${insightFull ? '<br><span style="opacity:0.8">'+insightFull+'</span>' : ''}</div>` : ''}
+            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust">⚙️ ${adjText}</div>` : ''}
+            ${entry.notes     ? `<div class="ci-tc-notes">"${entry.notes}"</div>` : ''}
+            ${(entry.coachNotes || entry.review?.coachActionItems) ? `
+              <div class="ci-tc-coach">
+                ${entry.coachNotes ? `<div>📝 ${entry.coachNotes}</div>` : ''}
+                ${entry.review?.coachActionItems ? `<div>→ ${entry.review.coachActionItems}</div>` : ''}
+              </div>` : ''}
+          </div>`;
+      })
+    ).join('');
 
     return `
-      <section class="home-dashboard-card checkin-timeline-group">
-        <h4>${weeksOutGroup.weeksOutLabel}</h4>
-        ${phaseWeekBlocks}
-      </section>
-    `;
+      <div class="ci-timeline-group">
+        <div class="ci-timeline-group-label">${weeksOutGroup.weeksOutLabel}</div>
+        ${cards}
+      </div>`;
   }).join('');
   generateCheckInSummary();
 }
@@ -8166,7 +8863,7 @@ function bindCheckInSliderDisplays() {
       const percent = max > min ? ((current - min) / (max - min)) * 100 : 0;
       slider.style.setProperty('--checkin-slider-progress', `${Math.max(0, Math.min(100, percent))}%`);
     };
-    slider.oninput = updateValue;
+    slider.oninput = () => { slider.dataset.userEdited = 'true'; updateValue(); };
     updateValue();
   });
 }
@@ -8289,6 +8986,48 @@ function exportCheckInSummary(format = 'json') {
   URL.revokeObjectURL(url);
 }
 
+/** Populate the comparison date picker from historical check-ins that have photos */
+function populatePhotoCompareSelect() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId || !window.checkinEngine) return;
+  const sel = document.getElementById('photoCompareSelect');
+  if (!sel) return;
+  const checkIns = window.checkinEngine.loadCheckIns(userId) || [];
+  const withPhotos = checkIns.filter(e => e.frontPhoto || e.sidePhoto || e.backPhoto);
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- Select a previous check-in --</option>' +
+    withPhotos.map(e => `<option value="${e.date}">${e.date}</option>`).join('');
+  if (current) sel.value = current;
+  // Show empty state if no historical photos
+  const empty = document.getElementById('photoComparisonEmpty');
+  if (empty) empty.style.display = withPhotos.length ? 'none' : '';
+}
+
+function renderPhotoComparison() {
+  const sel = document.getElementById('photoCompareSelect');
+  const date = sel?.value;
+  const grid = document.getElementById('photoComparisonGrid');
+  const empty = document.getElementById('photoComparisonEmpty');
+  if (!date || !grid) { if(grid) grid.style.display='none'; return; }
+
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const checkIns = window.checkinEngine?.loadCheckIns(userId) || [];
+  const entry = checkIns.find(e => e.date === date);
+  if (!entry) { grid.style.display = 'none'; return; }
+
+  // "now" = latest photo stored for current user
+  const nowFront = localStorage.getItem(`progressPhoto_${userId}_front`) || '';
+  const oldFront = entry.frontPhoto || '';
+
+  const imgOld = document.getElementById('photoCompare_front_old');
+  const imgNew = document.getElementById('photoCompare_front_new');
+  if (imgOld) { imgOld.src = oldFront; imgOld.style.opacity = oldFront ? '1' : '0.3'; }
+  if (imgNew) { imgNew.src = nowFront; imgNew.style.opacity = nowFront ? '1' : '0.3'; }
+
+  grid.style.display = '';
+  if (empty) empty.style.display = 'none';
+}
+
 function saveWeeklyCheckIn(actor = 'athlete') {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
@@ -8353,8 +9092,14 @@ function saveWeeklyCheckIn(actor = 'athlete') {
 
   const weekLabelInput = document.getElementById('checkInWeekLabelInput');
   if (weekLabelInput) weekLabelInput.value = draft.weekLabel;
+
+  const saveLabel = actor === 'coach' ? 'Coach review saved ✓' : `Check-in saved — ${draft.weekLabel || draft.date} ✓`;
+  window.showToast?.(saveLabel, 'success', 3500);
+
   renderCheckInTab();
   generateCheckInSummary();
+  // Auto-navigate to history so the user sees their new entry
+  switchCheckInTab('history');
 }
 
 window.saveWeeklyCheckIn = saveWeeklyCheckIn;
@@ -8792,64 +9537,263 @@ function calculateCaloriesEquation() {
 }
 
 // ===== CARDIO TRACKER =====
+
+/** Switch the active activity-type pill and update the hidden input */
+function selectCardioType(type) {
+  document.getElementById('cardioType').value = type;
+  document.querySelectorAll('#cardioTypePicker .cardio-type-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
+  const customWrap = document.getElementById('cardioCustomTypeWrap');
+  if (customWrap) {
+    customWrap.style.display = type === 'other' ? 'block' : 'none';
+    if (type !== 'other') {
+      const customInput = document.getElementById('cardioCustomType');
+      if (customInput) customInput.value = '';
+    }
+  }
+  // Update submit button icon to match selected activity
+  const cfg = window.cardioTab?.getActivityConfig?.(type);
+  const iconEl = document.getElementById('cardioSubmitIcon');
+  if (iconEl && cfg?.icon) iconEl.textContent = cfg.icon;
+  updateCardioPacePreview();
+}
+
+function selectCardioIntensity(level) {
+  document.getElementById('cardioIntensity').value = level;
+  document.querySelectorAll('#cardioIntensityPicker .cardio-intensity-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.intensity === level);
+  });
+}
+
+/** Initialise date chip in the form header to show today */
+function initCardioDateChip() {
+  const chip = document.getElementById('cardioDateChip');
+  if (!chip) return;
+  const d = new Date();
+  chip.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  // Default the hidden date input to today
+  const dateInput = document.getElementById('cardioDate');
+  if (dateInput && !dateInput.value) dateInput.value = d.toISOString().slice(0, 10);
+}
+
+/** Live-update the pace/speed preview chip under duration+distance fields */
+function updateCardioPacePreview() {
+  const previewEl = document.getElementById('cardioPacePreview');
+  if (!previewEl) return;
+  const type     = document.getElementById('cardioType')?.value || 'run';
+  const duration = parseFloat(document.getElementById('cardioDuration')?.value);
+  const distance = parseFloat(document.getElementById('cardioDistance')?.value);
+
+  const result = window.cardioTab?.computePaceOrSpeed
+    ? window.cardioTab.computePaceOrSpeed({ type, durationMinutes: duration, distanceKm: distance })
+    : null;
+
+  if (result) {
+    previewEl.style.display = 'flex';
+    const iconEl  = document.getElementById('cardioPaceIcon');
+    const valueEl = document.getElementById('cardioPaceValue');
+    if (iconEl)  iconEl.textContent  = result.icon;
+    if (valueEl) valueEl.textContent = `${result.label}: ${result.value}`;
+  } else {
+    previewEl.style.display = 'none';
+  }
+}
+
 function addCardioEntry() {
-  const type = document.getElementById("cardioType").value.trim();
-  const duration = +document.getElementById("cardioDuration").value;
-  const distance = document.getElementById("cardioDistance").value;
-  const caloriesInput = +document.getElementById("cardioCalories").value || 0;
-  const notes = document.getElementById("cardioNotes").value;
-  const date = new Date().toISOString().split('T')[0];
-  if (!type || !duration) return alert("Type and Duration are required");
+  const type = document.getElementById('cardioType')?.value.trim() || '';
+  const duration = parseFloat(document.getElementById('cardioDuration')?.value);
+  const distanceRaw = parseFloat(document.getElementById('cardioDistance')?.value);
+  const distance = Number.isFinite(distanceRaw) && distanceRaw > 0 ? distanceRaw : null;
+  const caloriesInput = parseFloat(document.getElementById('cardioCalories')?.value) || 0;
+  const notes = document.getElementById('cardioNotes')?.value.trim() || '';
+  const intensity = document.getElementById('cardioIntensity')?.value || 'moderate';
+  const hrRaw = parseFloat(document.getElementById('cardioHeartRate')?.value);
+  const heartRate = Number.isFinite(hrRaw) && hrRaw > 0 ? hrRaw : null;
+  const date = document.getElementById('cardioDate')?.value || new Date().toISOString().split('T')[0];
+
+  if (!type || !Number.isFinite(duration) || duration <= 0) {
+    window.showToast?.('Choose an activity and enter a duration.', 'warn') ||
+      alert('Choose an activity and enter a duration.');
+    return;
+  }
 
   const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   const fallbackWeightKg = Number(JSON.parse(localStorage.getItem('personalDetails') || 'null')?.weightKg) || 70;
-  const latestWeightKg = bodyweightLog.length ? (getEntryWeightKg(bodyweightLog[bodyweightLog.length - 1]) || fallbackWeightKg) : fallbackWeightKg;
+  const latestWeightKg = bodyweightLog.length
+    ? (getEntryWeightKg(bodyweightLog[bodyweightLog.length - 1]) || fallbackWeightKg)
+    : fallbackWeightKg;
+
   const estimatedCalories = window.cardioTab?.estimateCardioCalories
     ? window.cardioTab.estimateCardioCalories({ type, durationMinutes: duration, weightKg: latestWeightKg })
     : 0;
   const calories = caloriesInput > 0 ? caloriesInput : estimatedCalories;
-  const met = window.cardioTab?.resolveMET ? window.cardioTab.resolveMET(type) : null;
+  const met      = window.cardioTab?.resolveMET ? window.cardioTab.resolveMET(type) : null;
+  const paceOrSpeed = window.cardioTab?.computePaceOrSpeed
+    ? window.cardioTab.computePaceOrSpeed({ type, durationMinutes: duration, distanceKm: distance })
+    : null;
 
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const entry = { date, type, duration, distance, calories, estimatedCalories, met, notes };
+  const entry = { date, type, duration, distance, calories, estimatedCalories, met, paceOrSpeed, notes, intensity, heartRate };
   log.push(entry);
   localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
+
   try {
-    if (window.dailyMissionEngine?.syncMissionFromCardioEntry) {
-      window.dailyMissionEngine.syncMissionFromCardioEntry(entry, currentUser);
-    }
+    window.dailyMissionEngine?.syncMissionFromCardioEntry?.(entry, currentUser);
   } catch (missionErr) {
     console.warn('Daily mission cardio sync failed.', missionErr);
   }
+
+  // Clear form
+  ['cardioDuration','cardioDistance','cardioCalories','cardioNotes','cardioHeartRate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  // Reset date to today and close optional accordion
+  const dateInput = document.getElementById('cardioDate');
+  if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+  const opt = document.getElementById('cardioOptional');
+  if (opt) opt.removeAttribute('open');
+  // Reset intensity to moderate
+  selectCardioIntensity('moderate');
+  updateCardioPacePreview();
+
+  const cfg = window.cardioTab?.getActivityConfig?.(type) || { icon: '🏃', label: type };
+  const calText = calories > 0 ? ` · ${calories} kcal` : '';
+  const paceText = paceOrSpeed ? ` · ${paceOrSpeed.value}` : '';
+  window.showToast?.(`${cfg.icon} ${Math.round(duration)} min ${cfg.label}${paceText}${calText} logged!`, 'success', 3000);
+
   renderCardio();
   updateMacroUI();
 }
 
+/** Legacy function kept so any external references don't break.
+ *  The old "Session Complete" dummy entry is no longer created.
+ *  Calling this now just signals the mission engine directly. */
 function completeCardioSession() {
-  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const date = new Date().toISOString().split('T')[0];
-  const entry = { date, type: 'Session Complete', duration: 0, distance: 0, calories: 0, notes: '' };
-  log.push(entry);
-  localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
   try {
-    if (window.dailyMissionEngine?.syncMissionFromCardioEntry) {
-      window.dailyMissionEngine.syncMissionFromCardioEntry(entry, currentUser);
-    }
-  } catch (missionErr) {
-    console.warn('Daily mission cardio completion sync failed.', missionErr);
-  }
-  renderCardio();
-  updateMacroUI();
+    const entry = { date: new Date().toISOString().split('T')[0], type: 'session_complete' };
+    window.dailyMissionEngine?.syncMissionFromCardioEntry?.(entry, currentUser);
+  } catch (e) { /* silent */ }
+  window.showToast?.('Cardio session marked complete! 🎉', 'success', 3000);
 }
 
 function renderCardio() {
+  if (!currentUser) return;
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const body = document.getElementById("cardioBody");
-  body.innerHTML = '';
-  log.forEach((entry, index) => {
-    body.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn">❌</button></td></tr>`;
+
+  /* ── Weekly summary (rolling 7 days) ────────────────────── */
+  const today = new Date();
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 6);
+  const weekStart = weekAgo.toISOString().slice(0, 10);
+  const weekEntries = log.filter(e => (e.date || '') >= weekStart);
+
+  const weekSessions = weekEntries.length;
+  const weekMins     = weekEntries.reduce((s, e) => s + (parseFloat(e.duration) || 0), 0);
+  const weekKm       = weekEntries.reduce((s, e) => s + (parseFloat(e.distance) || 0), 0);
+  const weekKcal     = weekEntries.reduce((s, e) => s + (parseFloat(e.calories) || 0), 0);
+
+  const summaryEl = document.getElementById('cardioWeeklySummary');
+  if (summaryEl) {
+    summaryEl.innerHTML = [
+      { val: weekSessions,                        lbl: 'Sessions (7d)' },
+      { val: Math.round(weekMins) + ' min',       lbl: 'Active time'   },
+      { val: weekKm > 0 ? weekKm.toFixed(1)+' km' : '—', lbl: 'Distance' },
+      { val: weekKcal > 0 ? Math.round(weekKcal)+' kcal' : '—', lbl: 'Calories' },
+    ].map(c => `
+      <div class="cardio-stat-chip">
+        <span class="chip-val">${c.val}</span>
+        <span class="chip-lbl">${c.lbl}</span>
+      </div>`).join('');
+  }
+
+  /* ── History cards grouped by date ──────────────────────── */
+  const historyEl = document.getElementById('cardioHistoryList');
+  if (!historyEl) return;
+
+  if (log.length === 0) {
+    historyEl.innerHTML = `
+      <div class="cardio-history-empty">
+        No cardio sessions logged yet.<br>
+        <span style="font-size:1.6rem;display:block;margin-top:8px">🏃</span>
+      </div>`;
+    return;
+  }
+
+  // Group entries by date descending
+  const grouped = {};
+  // Iterate in reverse so we render newest first and index is preserved
+  [...log].forEach((entry, idx) => {
+    const d = entry.date || 'Unknown';
+    if (!grouped[d]) grouped[d] = [];
+    grouped[d].push({ entry, idx });
   });
-  if (document.getElementById('progressTab').classList.contains('active')) {
+
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+  const todayStr     = today.toISOString().slice(0, 10);
+  const yesterdayStr = new Date(today.getTime() - 86400000).toISOString().slice(0, 10);
+
+  function _dateLabel(d) {
+    if (d === todayStr)     return 'Today';
+    if (d === yesterdayStr) return 'Yesterday';
+    try {
+      return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch { return d; }
+  }
+
+  historyEl.innerHTML = sortedDates.map(date => {
+    const entries = grouped[date];
+    const cards   = entries.map(({ entry, idx }) => {
+      const cfg   = window.cardioTab?.getActivityConfig?.(entry.type) || { icon: '🏅', label: entry.type || 'Other', color: '#8c9891' };
+      const dur   = entry.duration > 0 ? `⏱ ${Math.round(entry.duration)} min` : null;
+      const dist  = parseFloat(entry.distance) > 0 ? `📏 ${parseFloat(entry.distance).toFixed(1)} km` : null;
+      const pace  = entry.paceOrSpeed
+        ? `${entry.paceOrSpeed.icon} ${entry.paceOrSpeed.value}`
+        : (dist && dur
+            ? (() => {
+                const r = window.cardioTab?.computePaceOrSpeed?.({ type: entry.type, durationMinutes: entry.duration, distanceKm: entry.distance });
+                return r ? `${r.icon} ${r.value}` : null;
+              })()
+            : null);
+      const kcal  = parseFloat(entry.calories) > 0 ? `🔥 ${Math.round(entry.calories)} kcal` : null;
+      const hr    = parseFloat(entry.heartRate) > 0 ? `❤️ ${Math.round(entry.heartRate)} bpm` : null;
+      const intBadge = entry.intensity && entry.intensity !== 'moderate'
+        ? { easy: '😌 Easy', hard: '🔥 Hard', max: '⚡ Max' }[entry.intensity] || null
+        : null;
+
+      const tags  = [dur, dist, pace, kcal, hr, intBadge].filter(Boolean).map((t, i) =>
+        `<span class="cardio-stat-tag${t === pace && pace ? ' highlight' : ''}">${t}</span>`
+      ).join('');
+
+      return `
+        <div class="cardio-entry-card" style="--c-accent:${cfg.color}">
+          <div class="cardio-entry-icon">${cfg.icon}</div>
+          <div class="cardio-entry-info">
+            <div class="cardio-entry-title">${cfg.label}</div>
+            <div class="cardio-entry-stats">${tags}</div>
+            ${entry.notes ? `<div class="cardio-entry-notes">${entry.notes}</div>` : ''}
+          </div>
+          <button class="cardio-remove-btn" onclick="removeCardioEntry(${idx})" title="Remove">🗑</button>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="cardio-day-group">
+        <div class="cardio-day-header">${_dateLabel(date)} &nbsp;·&nbsp; ${date}</div>
+        ${cards}
+      </div>`;
+  }).join('');
+
+  // Keep legacy cardioBody in sync for anything that still reads it
+  const legacyBody = document.getElementById('cardioBody');
+  if (legacyBody) {
+    legacyBody.innerHTML = '';
+    log.forEach((entry, index) => {
+      legacyBody.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes || ''}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn">❌</button></td></tr>`;
+    });
+  }
+
+  if (document.getElementById('progressTab')?.classList.contains('active')) {
     showWorkoutProgress();
   }
 }
@@ -10918,6 +11862,383 @@ window.completeCardioSession = completeCardioSession;
 window.loadSelectedTemplate = loadSelectedTemplate;
 window.loadSelectedResistanceTemplate = loadSelectedResistanceTemplate;
 window.sendTemplate = sendTemplate;
+
+/* ══════════════════════════════════════════════════════════════
+   COMMUNITY SHARE — peer-to-peer program & template sharing
+   localStorage keys:
+     communityInbox_${u}  — items received by user u
+     communityOutbox_${u} — items sent by user u
+   ═════════════════════════════════════════════════════════════ */
+
+let _commShareMode = 'user';       // 'user' | 'group'
+let _commShareType = 'template';   // 'template' | 'program'
+let _commShareSelectedId = null;
+
+/* Switch delivery mode (direct user vs community group) */
+function commShareSetMode(mode) {
+  _commShareMode = mode;
+  document.querySelectorAll('.comm-share-mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode));
+  const userEl  = document.getElementById('commShareUserMode');
+  const groupEl = document.getElementById('commShareGroupMode');
+  if (userEl)  userEl.style.display  = mode === 'user'  ? '' : 'none';
+  if (groupEl) groupEl.style.display = mode === 'group' ? '' : 'none';
+  if (mode === 'group') _populateCommShareGroups();
+}
+
+/* Switch item type (templates vs programs) */
+function commShareSetType(type) {
+  _commShareType = type;
+  _commShareSelectedId = null;
+  document.querySelectorAll('.comm-share-type-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === type));
+  renderCommShareItemList();
+}
+
+/* Populate the group select with groups the user has joined */
+function _populateCommShareGroups() {
+  const sel = document.getElementById('commShareGroupSelect');
+  if (!sel) return;
+  const grps = (typeof groups !== 'undefined' ? groups : [])
+    .filter(g => g.members?.some(m => (m.userId || m) === currentUser));
+  if (!grps.length) {
+    sel.innerHTML = '<option value="">No groups joined yet</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— select a group —</option>' +
+    grps.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+}
+
+/* Render the selectable list of user's own templates or programs */
+function renderCommShareItemList() {
+  const listEl = document.getElementById('commShareItemList');
+  if (!listEl || !currentUser) return;
+
+  let items = [];
+  if (_commShareType === 'template') {
+    const raw = JSON.parse(localStorage.getItem(`managedTemplates_${currentUser}`)) || [];
+    items = raw.map(t => ({
+      id: t.localId || t.id || `t_${Math.random()}`,
+      name: t.name || t.data?.title || 'Untitled Template',
+      desc: `${(t.data?.exercises || []).length} exercises`,
+    }));
+  } else {
+    const raw = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
+    items = raw.map(p => ({
+      id: p.id,
+      name: p.name || 'Untitled Program',
+      desc: `${(p.days || []).length} days · ${p.wizard?.weeks || (p.generatedWeeks?.length) || '?'} weeks`,
+    }));
+  }
+
+  if (!items.length) {
+    listEl.innerHTML = `<div class="comm-share-empty">No ${_commShareType}s saved yet.<br>Save some first from the ${_commShareType === 'template' ? 'Logbook' : 'Programs'} tab.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = items.map(item => `
+    <div class="comm-share-item" data-id="${item.id}" onclick="commShareSelectItem('${item.id}')">
+      <div class="comm-share-item-check">✓</div>
+      <div class="comm-share-item-info">
+        <div class="comm-share-item-name">${item.name}</div>
+        <div class="comm-share-item-desc">${item.desc}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* Highlight a selected item in the list */
+function commShareSelectItem(id) {
+  _commShareSelectedId = id;
+  document.querySelectorAll('#commShareItemList .comm-share-item').forEach(el =>
+    el.classList.toggle('selected', el.dataset.id === id));
+}
+
+/* Main send handler — dispatches to user or group path */
+async function commSendShare() {
+  if (!_commShareSelectedId) {
+    window.showToast?.('Select a program or template first.', 'warn'); return;
+  }
+  const message = document.getElementById('commShareMessage')?.value.trim() || '';
+  if (_commShareMode === 'user') {
+    const recipient = document.getElementById('commShareRecipient')?.value.trim();
+    if (!recipient)                  { window.showToast?.('Enter a recipient username.', 'warn'); return; }
+    if (recipient === currentUser)   { window.showToast?.("You can't share with yourself.", 'warn'); return; }
+    await _commSendToUser(recipient, message);
+  } else {
+    const groupId = document.getElementById('commShareGroupSelect')?.value;
+    if (!groupId) { window.showToast?.('Select a group first.', 'warn'); return; }
+    await _commSendToGroup(groupId, message);
+  }
+}
+
+/* Resolve the selected item's data and name */
+function _commResolveItem() {
+  if (_commShareType === 'template') {
+    const raw = JSON.parse(localStorage.getItem(`managedTemplates_${currentUser}`)) || [];
+    const tpl = raw.find(t => (t.localId || t.id) === _commShareSelectedId);
+    if (!tpl) return null;
+    return { data: tpl.data, name: tpl.name || tpl.data?.title || 'Untitled Template', type: 'template' };
+  } else {
+    const raw = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
+    const prog = raw.find(p => p.id === _commShareSelectedId);
+    if (!prog) return null;
+    return { data: prog, name: prog.name || 'Untitled Program', type: 'program' };
+  }
+}
+
+async function _commSendToUser(recipient, message) {
+  const item = _commResolveItem();
+  if (!item) { window.showToast?.('Could not find the selected item.', 'warn'); return; }
+
+  /* Try backend (best-effort; template endpoint already exists) */
+  if (item.type === 'template') {
+    try {
+      await fetch(`${window.SERVER_URL}/sendTemplate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          fromUser: currentUser,
+          toUser: recipient,
+          templateName: `${item.name} (from @${currentUser})`,
+          templateData: item.data,
+          message
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+    } catch (e) { console.warn('Community sendTemplate backend unavailable, using local', e); }
+  } else {
+    try {
+      await fetch(`${window.SERVER_URL}/shareProgram`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          fromUser: currentUser,
+          toUser: recipient,
+          programData: item.data,
+          message
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+    } catch (e) { console.warn('Community shareProgram backend unavailable, using local', e); }
+  }
+
+  /* Always persist to recipient's local inbox (works same-device; server handles cross-device) */
+  const inboxKey = `communityInbox_${recipient}`;
+  const inbox = JSON.parse(localStorage.getItem(inboxKey)) || [];
+  inbox.unshift({
+    id: `share_${Date.now()}`,
+    type: item.type,
+    name: item.name,
+    from: currentUser,
+    data: item.data,
+    message,
+    date: new Date().toISOString().slice(0, 10),
+    accepted: false
+  });
+  localStorage.setItem(inboxKey, JSON.stringify(inbox));
+
+  /* Record in sender's outbox */
+  _commAddToOutbox({ type: item.type, name: item.name, to: `@${recipient}`, toType: 'user', date: new Date().toISOString().slice(0, 10) });
+
+  window.showToast?.(`📤 "${item.name}" sent to @${recipient}!`, 'success', 3500);
+  if (document.getElementById('commShareRecipient')) document.getElementById('commShareRecipient').value = '';
+  if (document.getElementById('commShareMessage'))   document.getElementById('commShareMessage').value   = '';
+  _commShareSelectedId = null;
+  renderCommShareItemList();
+  renderCommShareOutbox();
+}
+
+async function _commSendToGroup(groupId, message) {
+  const item = _commResolveItem();
+  if (!item) { window.showToast?.('Could not find the selected item.', 'warn'); return; }
+
+  const groupEl   = document.getElementById('commShareGroupSelect');
+  const groupName = groupEl?.options[groupEl?.selectedIndex]?.text || 'Group';
+
+  /* Piggyback on existing shareProgramToGroup from community.js */
+  if (typeof shareProgramToGroup === 'function') {
+    try {
+      await shareProgramToGroup(groupId, {
+        ...item.data,
+        _type: item.type,
+        _sharedBy: currentUser,
+        _itemName: item.name,
+        _message: message
+      });
+    } catch (e) { console.warn('shareProgramToGroup failed', e); }
+  }
+
+  _commAddToOutbox({ type: item.type, name: item.name, to: groupName, toType: 'group', date: new Date().toISOString().slice(0, 10) });
+
+  window.showToast?.(`📤 "${item.name}" shared to ${groupName}!`, 'success', 3500);
+  if (document.getElementById('commShareMessage')) document.getElementById('commShareMessage').value = '';
+  _commShareSelectedId = null;
+  renderCommShareItemList();
+  renderCommShareOutbox();
+}
+
+/* Append an entry to the sender's outbox (capped at 50) */
+function _commAddToOutbox(item) {
+  const key = `communityOutbox_${currentUser}`;
+  const outbox = JSON.parse(localStorage.getItem(key)) || [];
+  outbox.unshift({ id: `out_${Date.now()}`, ...item });
+  if (outbox.length > 50) outbox.length = 50;
+  localStorage.setItem(key, JSON.stringify(outbox));
+}
+
+/* Render inbox (received items) */
+function renderCommShareInbox() {
+  const el = document.getElementById('commShareInbox');
+  if (!el || !currentUser) return;
+
+  const inbox = (JSON.parse(localStorage.getItem(`communityInbox_${currentUser}`)) || [])
+    .filter(i => !i.accepted && !i.dismissed);
+
+  _renderCommInboxItems(el, inbox);
+
+  /* Also try backend non-blocking */
+  _fetchCommBackendInbox().then(backendItems => {
+    if (!backendItems?.length) return;
+    const existing = new Set(inbox.map(i => i.id));
+    backendItems.filter(b => !existing.has(b.id)).forEach(b => inbox.unshift(b));
+    _renderCommInboxItems(el, inbox);
+    _updateCommShareBadge(inbox.length);
+  });
+
+  _updateCommShareBadge(inbox.length);
+}
+
+async function _fetchCommBackendInbox() {
+  try {
+    const res = await fetch(
+      `${window.SERVER_URL}/shared-inbox?username=${encodeURIComponent(currentUser)}`,
+      { credentials: 'include', headers: getAuthHeaders(), signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Array.isArray(data?.items) ? data.items : null;
+  } catch { return null; }
+}
+
+function _renderCommInboxItems(el, items) {
+  if (!items?.length) {
+    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When someone shares a program or template with you, it appears here. 📬</div>`;
+    return;
+  }
+  const typeColors = { template: '#5295e0', program: '#9070d8' };
+  const typeLabels = { template: '📋 Template', program: '🗓 Program' };
+  el.innerHTML = items.map(item => `
+    <div class="comm-inbox-item" id="commInboxItem_${item.id}">
+      <div class="comm-inbox-header">
+        <span class="comm-inbox-from">@${item.from || 'unknown'}</span>
+        <span class="comm-inbox-type-badge"
+              style="background:${typeColors[item.type] || '#888'}22;color:${typeColors[item.type] || '#aaa'};border:1px solid ${typeColors[item.type] || '#888'}44">
+          ${typeLabels[item.type] || item.type}
+        </span>
+        <span class="comm-inbox-date">${item.date || ''}</span>
+      </div>
+      <div class="comm-inbox-item-name">${item.name}</div>
+      ${item.message ? `<div class="comm-inbox-message">"${item.message}"</div>` : ''}
+      <div class="comm-inbox-actions">
+        <button class="comm-inbox-accept-btn"  onclick="commAcceptShare('${item.id}')">✅ Accept &amp; Save</button>
+        <button class="comm-inbox-dismiss-btn" onclick="commDismissShare('${item.id}')">Dismiss</button>
+      </div>
+    </div>`).join('');
+}
+
+/* Render outbox (sent history) */
+function renderCommShareOutbox() {
+  const el = document.getElementById('commShareOutbox');
+  if (!el || !currentUser) return;
+  const outbox = JSON.parse(localStorage.getItem(`communityOutbox_${currentUser}`)) || [];
+  if (!outbox.length) {
+    el.innerHTML = `<div class="comm-share-empty">Nothing sent yet.</div>`; return;
+  }
+  const icons = { user: '👤', group: '👥' };
+  el.innerHTML = outbox.slice(0, 15).map(item => `
+    <div class="comm-outbox-item">
+      <div class="comm-outbox-to">
+        <div class="comm-outbox-to-name">${icons[item.toType] || '👤'} ${item.to}</div>
+        <div class="comm-outbox-to-desc">${item.type === 'template' ? '📋' : '🗓'} ${item.name}</div>
+      </div>
+      <div class="comm-outbox-date">${item.date || ''}</div>
+    </div>`).join('');
+}
+
+/* Accept an inbox item → add to local library */
+function commAcceptShare(shareId) {
+  const key   = `communityInbox_${currentUser}`;
+  const inbox = JSON.parse(localStorage.getItem(key)) || [];
+  const item  = inbox.find(i => i.id === shareId);
+  if (!item) return;
+
+  if (item.type === 'template') {
+    const tplKey = `managedTemplates_${currentUser}`;
+    const tpls   = JSON.parse(localStorage.getItem(tplKey)) || [];
+    tpls.unshift({
+      localId: `local_${Date.now()}`,
+      name: `${item.name} (from @${item.from})`,
+      data: item.data,
+      source: 'community'
+    });
+    localStorage.setItem(tplKey, JSON.stringify(tpls));
+    window.showToast?.(`✅ "${item.name}" added to your Templates!`, 'success', 3500);
+  } else {
+    const progKey = `programs_${currentUser}`;
+    const progs   = JSON.parse(localStorage.getItem(progKey)) || [];
+    progs.unshift({
+      ...item.data,
+      id: `comm_${Date.now()}`,
+      name: `${item.name} (from @${item.from})`,
+      _sharedBy: item.from
+    });
+    localStorage.setItem(progKey, JSON.stringify(progs));
+    window.showToast?.(`✅ "${item.name}" added to your Programs!`, 'success', 3500);
+  }
+
+  item.accepted = true;
+  localStorage.setItem(key, JSON.stringify(inbox));
+  document.getElementById(`commInboxItem_${shareId}`)?.remove();
+  _updateCommShareBadge(
+    (JSON.parse(localStorage.getItem(key)) || []).filter(i => !i.accepted && !i.dismissed).length
+  );
+}
+
+/* Dismiss an inbox item */
+function commDismissShare(shareId) {
+  const key   = `communityInbox_${currentUser}`;
+  const inbox = JSON.parse(localStorage.getItem(key)) || [];
+  const item  = inbox.find(i => i.id === shareId);
+  if (item) { item.dismissed = true; localStorage.setItem(key, JSON.stringify(inbox)); }
+  document.getElementById(`commInboxItem_${shareId}`)?.remove();
+}
+
+/* Show/hide the red badge on the Share nav button */
+function _updateCommShareBadge(count) {
+  const badge = document.getElementById('commShareBadge');
+  if (!badge) return;
+  badge.style.display = count > 0 ? '' : 'none';
+  badge.textContent   = count;
+}
+
+/* Orchestrate the whole share panel on open */
+function renderSharePanel() {
+  renderCommShareItemList();
+  renderCommShareInbox();
+  renderCommShareOutbox();
+  if (_commShareMode === 'group') _populateCommShareGroups();
+}
+
+/* Expose all public API */
+window.commShareSetMode    = commShareSetMode;
+window.commShareSetType    = commShareSetType;
+window.commShareSelectItem = commShareSelectItem;
+window.commSendShare       = commSendShare;
+window.commAcceptShare     = commAcceptShare;
+window.commDismissShare    = commDismissShare;
+window.renderSharePanel    = renderSharePanel;
 window.renderWorkouts = renderWorkouts;
 window.toggleWorkoutDetails = toggleWorkoutDetails;
 window.removeWorkout = removeWorkout;               // ✅ Add this
@@ -11255,6 +12576,7 @@ function showOnboarding() {
   const overlay = document.getElementById('onboardingOverlay');
   if (overlay) {
     overlay.removeAttribute('hidden');
+    _initOnboarding(); // ensure delegation is wired up before first interaction
     _obGoToStep(1);
   }
 }
@@ -11269,52 +12591,58 @@ function _obGoToStep(step) {
   });
 }
 
+// Global handler callable from inline onclick — works regardless of init order
+window._ob = _ob;
+window._selectArchetype = function(card) {
+  document.querySelectorAll('.ob-archetype-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  window._ob.archetype = card.dataset.archetype;
+  const btn = document.getElementById('obNext1');
+  if (btn) btn.disabled = false;
+};
+
 function _initOnboarding() {
-  // Step 1: archetype card selection
-  document.querySelectorAll('.ob-archetype-card').forEach(card => {
-    card.addEventListener('click', () => {
-      document.querySelectorAll('.ob-archetype-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      _ob.archetype = card.dataset.archetype;
-      const btn = document.getElementById('obNext1');
-      if (btn) btn.disabled = false;
-    });
+  const overlay = document.getElementById('onboardingOverlay');
+  if (!overlay || overlay._obDelegated) return;
+  overlay._obDelegated = true;
+
+  // Single delegated listener on the overlay — survives hidden/show cycles
+  // and fires even if direct card listeners were never attached.
+  overlay.addEventListener('click', (e) => {
+    // Archetype card
+    const card = e.target.closest('.ob-archetype-card');
+    if (card) { window._selectArchetype(card); return; }
+
+    if (e.target.closest('#obNext1')) { _obGoToStep(2); return; }
+    if (e.target.closest('#obBack2')) { _obGoToStep(1); return; }
+    if (e.target.closest('#obNext2')) { _obGoToStep(3); return; }
+    if (e.target.closest('#obBack3')) { _obGoToStep(2); return; }
+    if (e.target.closest('#obFinish')) { _finishOnboarding(); return; }
+
+    const unitBtn = e.target.closest('#obUnitToggle .ob-toggle-btn');
+    if (unitBtn) {
+      document.querySelectorAll('#obUnitToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
+      unitBtn.classList.add('ob-active');
+      window._ob.unit = unitBtn.dataset.unit;
+      return;
+    }
+    const themeBtn = e.target.closest('#obThemeToggle .ob-toggle-btn');
+    if (themeBtn) {
+      document.querySelectorAll('#obThemeToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
+      themeBtn.classList.add('ob-active');
+      window._ob.theme = themeBtn.dataset.theme;
+      return;
+    }
   });
 
-  document.getElementById('obNext1')?.addEventListener('click', () => _obGoToStep(2));
-  document.getElementById('obBack2')?.addEventListener('click', () => _obGoToStep(1));
-
-  // Step 2: experience radio
-  document.querySelectorAll('[name="obExperience"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      _ob.experience = radio.value;
+  // Experience level uses change (radio), not click
+  overlay.addEventListener('change', (e) => {
+    if (e.target.name === 'obExperience') {
+      window._ob.experience = e.target.value;
       const btn = document.getElementById('obNext2');
       if (btn) btn.disabled = false;
-    });
+    }
   });
-
-  document.getElementById('obNext2')?.addEventListener('click', () => _obGoToStep(3));
-  document.getElementById('obBack3')?.addEventListener('click', () => _obGoToStep(2));
-
-  // Step 3: unit toggle
-  document.querySelectorAll('#obUnitToggle .ob-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#obUnitToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
-      btn.classList.add('ob-active');
-      _ob.unit = btn.dataset.unit;
-    });
-  });
-
-  // Step 3: theme toggle
-  document.querySelectorAll('#obThemeToggle .ob-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#obThemeToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
-      btn.classList.add('ob-active');
-      _ob.theme = btn.dataset.theme;
-    });
-  });
-
-  document.getElementById('obFinish')?.addEventListener('click', _finishOnboarding);
 }
 
 function _finishOnboarding() {
@@ -11688,6 +13016,89 @@ window.renderOneRMChart = renderOneRMChart;
 window.renderOneRMStats = renderOneRMStats;
 
 // ─────────────────────────────────────────────
+// STRENGTH SCORES  (Wilks 2020 · DOTS · IPF GL)
+// ─────────────────────────────────────────────
+function calcStrengthScores() {
+  const bwRaw   = parseFloat(document.getElementById('scoreBodyweight')?.value) || 0;
+  const unit    = document.getElementById('scoreUnit')?.value || 'kg';
+  const sex     = document.getElementById('scoreSex')?.value || 'M';
+  const equip   = document.getElementById('scoreEquipment')?.value || 'raw';
+  const squat   = parseFloat(document.getElementById('scoreSquat')?.value) || 0;
+  const bench   = parseFloat(document.getElementById('scoreBench')?.value) || 0;
+  const deadl   = parseFloat(document.getElementById('scoreDeadlift')?.value) || 0;
+
+  const toKg = v => unit === 'lbs' ? v * 0.453592 : v;
+  const bw   = toKg(bwRaw);
+  const total= toKg(squat + bench + deadl);
+
+  const resEl = document.getElementById('scoreResults');
+  if (!resEl) return;
+
+  if (bw <= 0 || total <= 0) { resEl.style.display = 'none'; return; }
+  resEl.style.display = '';
+
+  // ── Wilks 2020 coefficients ──
+  const WC = {
+    M: [-216.0475144, 16.2606339, -0.002388645, -0.00113732, 7.01863E-06, -1.291E-08],
+    F: [594.31747775582, -27.23842536447, 0.82112226871, -0.00930733913, 0.00004731582, -0.00000009054],
+  };
+  function wilks(bwKg, totalKg, s) {
+    const c = WC[s];
+    const denom = c[0] + c[1]*bwKg + c[2]*bwKg**2 + c[3]*bwKg**3 + c[4]*bwKg**4 + c[5]*bwKg**5;
+    return denom > 0 ? +(totalKg * (600 / denom)).toFixed(2) : 0;
+  }
+
+  // ── DOTS coefficients ──
+  const DC = {
+    M: [-307.75076, 24.0900756, -0.1918759221, 0.0007391293, -0.000001093],
+    F: [-57.96288, 13.6175032, -0.1126655495, 0.0005158568, -0.0000010706],
+  };
+  function dots(bwKg, totalKg, s) {
+    const c = DC[s];
+    const denom = c[0] + c[1]*bwKg + c[2]*bwKg**2 + c[3]*bwKg**3 + c[4]*bwKg**4;
+    return denom > 0 ? +(totalKg * (500 / denom)).toFixed(2) : 0;
+  }
+
+  // ── IPF GL (Good Lift Points) ──
+  // Coefficients: [a, b, c] for raw/equipped × M/F
+  const GL = {
+    M: { raw: [1236.25115, 1449.21864, 0.01644], equipped: [1734.7591, 1979.6376, 0.01644] },
+    F: { raw: [758.63878, 949.31382, 0.02435], equipped: [1056.01593, 1327.58983, 0.02435] },
+  };
+  function ipfgl(bwKg, totalKg, s, e) {
+    const [a, b, c] = GL[s][e];
+    const denom = a - b * Math.exp(-c * bwKg);
+    return denom > 0 ? +(100 * totalKg / denom).toFixed(2) : 0;
+  }
+
+  const w  = wilks(bw, total, sex);
+  const d  = dots(bw, total, sex);
+  const g  = ipfgl(bw, total, sex, equip);
+
+  document.getElementById('scoreTotal').textContent =
+    unit === 'lbs' ? `${(squat+bench+deadl).toFixed(1)} lbs (${total.toFixed(1)} kg)` : `${total.toFixed(1)} kg`;
+  document.getElementById('scoreWilks').textContent = w;
+  document.getElementById('scoreDots').textContent  = d;
+  document.getElementById('scoreIpfgl').textContent = g;
+
+  // Tier based on Wilks (rough community benchmarks, raw)
+  const tierEl = document.getElementById('scoreTier');
+  if (tierEl) {
+    const tiers = [
+      { min: 500, label: '🏆 Elite',       bg: 'rgba(255,215,0,0.15)',  color: '#f0c040' },
+      { min: 400, label: '⭐ Advanced',     bg: 'rgba(82,214,138,0.12)', color: '#52d68a' },
+      { min: 300, label: '📈 Intermediate', bg: 'rgba(82,148,224,0.12)', color: '#5294e0' },
+      { min: 200, label: '🌱 Novice',       bg: 'rgba(160,125,192,0.12)',color: '#a07dc0' },
+      { min:   0, label: '🔰 Beginner',     bg: 'rgba(99,110,114,0.1)',  color: '#9eabb0' },
+    ];
+    const tier = tiers.find(t => w >= t.min) || tiers[tiers.length - 1];
+    tierEl.textContent     = tier.label;
+    tierEl.style.background = tier.bg;
+    tierEl.style.color      = tier.color;
+    tierEl.style.border     = `1px solid ${tier.color}33`;
+  }
+}
+
 // MEET PREP TIMELINE
 // ─────────────────────────────────────────────
 function saveMeetDetails() {
@@ -11695,7 +13106,7 @@ function saveMeetDetails() {
   const name = document.getElementById('meetName')?.value || '';
   const fed = document.getElementById('meetFed')?.value || '';
   const weightClass = document.getElementById('meetWeightClass')?.value || '';
-  if (!date) { alert('Please enter a meet date.'); return; }
+  if (!date) { window.showToast?.('Please enter a meet date.', 'warn'); return; }
   localStorage.setItem('plMeetDetails', JSON.stringify({ date, name, fed, weightClass }));
   renderMeetPrep();
   if (typeof showToast === 'function') showToast('Meet saved!');
@@ -11795,6 +13206,8 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/client-checkins.js"></script>
   <script src="src/js/progress-report.js"></script>
   <script src="src/js/community-feed.js"></script>
+  <script src="src/js/today-program.js"></script>
+  <script src="src/js/session-context.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
     document.addEventListener('DOMContentLoaded', function() {

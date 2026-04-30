@@ -180,3 +180,72 @@
     gap: 8px;
   }
 }
+
+/* ── Session Context Bar (alt-machine / alt-gym) ──────────────── */
+
+#sessionContextBar {
+  margin: 0 0 10px;
+}
+
+.scb-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.scb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: var(--card-bg, #0f1510);
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.scb-chip--on {
+  border-color: var(--primary, #5fa87e);
+  background: rgba(95, 168, 126, 0.12);
+  color: var(--primary, #5fa87e);
+}
+
+.scb-chip-icon { font-size: 0.9rem; }
+
+.scb-chip-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: var(--primary, #5fa87e);
+  color: #0b130d;
+  border-radius: 6px;
+  padding: 1px 5px;
+  margin-left: 2px;
+}
+
+.scb-gym-input {
+  flex: 1;
+  min-width: 130px;
+  max-width: 220px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--primary, #5fa87e);
+  background: var(--card-bg, #0f1510);
+  color: var(--text, #e8f5e9);
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.scb-note {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  color: #e6a817;
+  padding: 6px 10px;
+  background: rgba(230, 168, 23, 0.07);
+  border-radius: 8px;
+  border: 1px solid rgba(230, 168, 23, 0.25);
+}

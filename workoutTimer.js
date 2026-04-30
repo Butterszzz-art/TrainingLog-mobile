@@ -253,7 +253,7 @@ async function _syncDayRemote(day) {
   };
 
   try {
-    const res = await fetch(action.url, { ...action.options, credentials: 'include' });
+    const res = await fetch(action.url, { ...action.options, credentials: 'include', signal: AbortSignal.timeout(5000) });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }

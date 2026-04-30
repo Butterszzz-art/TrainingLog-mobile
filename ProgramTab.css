@@ -3,6 +3,52 @@
    Dark theme matching the app's green palette.
    ============================================================= */
 
+/* ── Template loader strip ──────────────────────────────────── */
+
+.pbv2-template-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: var(--card-bg, #0f1510);
+  border: 1px dashed var(--border, #2a3a2e);
+  border-radius: 10px;
+}
+
+.pbv2-template-select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 1rem; /* ≥16px — no iOS zoom */
+  background: var(--bg, #0b130d);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 8px;
+  color: var(--text, #e8f5e9);
+  font-family: 'Poppins', sans-serif;
+  margin: 0; /* override global input margin */
+  width: auto;
+}
+
+.pbv2-template-load-btn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  font-size: 0.88rem;
+  background: var(--primary, #5fa87e);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.pbv2-template-load-btn:hover {
+  background: var(--primary-dark, #3d7a5a);
+  transform: none;
+  box-shadow: none;
+}
+
 /* ── Top nav ─────────────────────────────────────────────────── */
 
 .prog-top-nav {
@@ -503,7 +549,7 @@
   border-radius: 6px;
   color: var(--text, #e8f5e9);
   padding: 5px 4px;
-  font-size: 0.82rem;
+  font-size: 1rem; /* ≥16px — prevent iOS auto-zoom */
   text-align: center;
   font-family: 'Poppins', sans-serif;
 }
@@ -565,7 +611,7 @@
   border: 1px solid var(--border, #2a3a2e);
   border-radius: 8px;
   color: var(--text, #e8f5e9);
-  font-size: 0.86rem;
+  font-size: 1rem; /* ≥16px — prevent iOS auto-zoom */
   font-family: 'Poppins', sans-serif;
   margin-bottom: 16px;
 }
@@ -712,7 +758,7 @@
   border-radius: 8px;
   color: var(--text, #e8f5e9);
   padding: 8px 10px;
-  font-size: 0.84rem;
+  font-size: 1rem; /* ≥16px — prevent iOS auto-zoom */
   font-family: 'Poppins', sans-serif;
 }
 
