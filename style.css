@@ -153,7 +153,6 @@
   position: sticky;
   top: 12px;
   max-height: calc(100vh - 24px);
-  max-height: calc(100dvh - 24px); /* dynamic viewport */
   overflow: auto;
 }
 
@@ -256,15 +255,9 @@
 .pbv2-addDay {
   width: 100%;
   padding: 10px;
-  border-radius: 12px;
+  border-radius: 999px;
 }
 
-/* sidebar background is dark, force link/text to white */
-.side-menu,
-.side-menu .menu-title,
-.side-menu ul li a {
-  color: #fff !important;
-}
 /* also for any dark-themed headers/footers */
 header, .dark-bg, .coach-only {
   color: #fff;
@@ -325,8 +318,8 @@ header, .dark-bg, .coach-only {
   flex: 1;
 }
 .action-btn {
-  padding: 12px 20px;
-  border-radius: 8px;
+  padding: 12px 24px;
+  border-radius: 999px;
   margin: 0;
 }
 
@@ -901,7 +894,7 @@ body.theme-dark .set-row {
 .modal-content input,
 .modal-content select {
   width: 100%;
-  margin: 6px 0;
+  padding: 8px;
 }
 
 .modal-actions {
@@ -1070,7 +1063,9 @@ body.theme-dark .set-row {
 }
 .adv-row input {
   width: 100%;
-  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 .adv-btn {
   padding: 6px 10px;
@@ -1127,7 +1122,9 @@ body.theme-dark .set-row {
 }
 .tag-input input {
   width: 100%;
-  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 .set-state {
   display: flex;
