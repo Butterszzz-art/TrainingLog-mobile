@@ -1408,7 +1408,10 @@
 
     <!-- Log form -->
     <div class="cardio-form-card">
-      <h3 class="cardio-form-title">🏃 Log Cardio</h3>
+      <div class="cardio-form-header">
+        <h3 class="cardio-form-title">Log Cardio</h3>
+        <span class="cardio-form-date-chip" id="cardioDateChip"></span>
+      </div>
 
       <!-- Activity type pills -->
       <div class="cardio-type-picker" id="cardioTypePicker">
@@ -1426,21 +1429,33 @@
       <input type="hidden" id="cardioType" value="run">
       <!-- Custom type text input, shown only when "Other" is active -->
       <div class="cardio-custom-type-wrap" id="cardioCustomTypeWrap" style="display:none">
-        <input type="text" id="cardioCustomType" placeholder="Describe activity…"
-               oninput="document.getElementById('cardioType').value = this.value.trim() || 'other'">
+        <div class="cardio-input-wrap">
+          <span class="cardio-input-icon">✏️</span>
+          <input type="text" id="cardioCustomType" placeholder="Describe activity…"
+                 oninput="document.getElementById('cardioType').value = this.value.trim() || 'other'">
+        </div>
       </div>
 
-      <!-- Duration + Distance -->
-      <div class="cardio-form-row">
-        <div class="cardio-form-field">
-          <label for="cardioDuration">Duration (min)</label>
-          <input type="number" id="cardioDuration" placeholder="30" min="1"
-                 oninput="updateCardioPacePreview()">
+      <!-- Core metrics: Duration + Distance -->
+      <div class="cardio-section-label">Core Metrics</div>
+      <div class="cardio-row-2">
+        <div class="cardio-field">
+          <label class="cardio-field-label" for="cardioDuration">Duration</label>
+          <div class="cardio-input-wrap">
+            <span class="cardio-input-icon">⏱</span>
+            <input type="number" id="cardioDuration" placeholder="30" min="1" inputmode="decimal"
+                   oninput="updateCardioPacePreview()">
+            <span class="cardio-input-unit">min</span>
+          </div>
         </div>
-        <div class="cardio-form-field">
-          <label for="cardioDistance">Distance (km)</label>
-          <input type="number" id="cardioDistance" placeholder="optional" step="0.1" min="0"
-                 oninput="updateCardioPacePreview()">
+        <div class="cardio-field">
+          <label class="cardio-field-label" for="cardioDistance">Distance <span class="cardio-opt">optional</span></label>
+          <div class="cardio-input-wrap">
+            <span class="cardio-input-icon">📍</span>
+            <input type="number" id="cardioDistance" placeholder="—" step="0.1" min="0" inputmode="decimal"
+                   oninput="updateCardioPacePreview()">
+            <span class="cardio-input-unit">km</span>
+          </div>
         </div>
       </div>
 
@@ -1450,19 +1465,69 @@
         <span class="pace-value" id="cardioPaceValue"></span>
       </div>
 
-      <!-- Calories (optional) + Notes -->
-      <div class="cardio-form-row">
-        <div class="cardio-form-field">
-          <label for="cardioCalories">Calories (optional)</label>
-          <input type="number" id="cardioCalories" placeholder="auto-estimated" min="0">
+      <!-- Effort level -->
+      <div class="cardio-field" style="margin-bottom:14px;">
+        <label class="cardio-field-label">Effort level</label>
+        <div class="cardio-intensity-row" id="cardioIntensityPicker">
+          <button class="cardio-intensity-btn" data-intensity="easy"     onclick="selectCardioIntensity('easy')">😌 Easy</button>
+          <button class="cardio-intensity-btn active" data-intensity="moderate" onclick="selectCardioIntensity('moderate')">💪 Moderate</button>
+          <button class="cardio-intensity-btn" data-intensity="hard"     onclick="selectCardioIntensity('hard')">🔥 Hard</button>
+          <button class="cardio-intensity-btn" data-intensity="max"      onclick="selectCardioIntensity('max')">⚡ Max</button>
         </div>
-        <div class="cardio-form-field">
-          <label for="cardioNotes">Notes</label>
-          <input type="text" id="cardioNotes" placeholder="e.g. morning run">
-        </div>
+        <input type="hidden" id="cardioIntensity" value="moderate">
       </div>
 
-      <button class="cardio-submit-btn" onclick="addCardioEntry()">➕ Add Session</button>
+      <!-- Optional fields accordion -->
+      <details class="cardio-optional" id="cardioOptional">
+        <summary class="cardio-optional-toggle">
+          <span class="cardio-optional-label">More options</span>
+          <span class="cardio-optional-arrow">›</span>
+        </summary>
+        <div class="cardio-optional-body">
+
+          <div class="cardio-section-label" style="margin-top:4px;">Performance</div>
+          <div class="cardio-row-2">
+            <div class="cardio-field">
+              <label class="cardio-field-label" for="cardioCalories">Calories <span class="cardio-opt">override</span></label>
+              <div class="cardio-input-wrap">
+                <span class="cardio-input-icon">🔥</span>
+                <input type="number" id="cardioCalories" placeholder="auto" min="0" inputmode="decimal">
+                <span class="cardio-input-unit">kcal</span>
+              </div>
+            </div>
+            <div class="cardio-field">
+              <label class="cardio-field-label" for="cardioHeartRate">Avg heart rate <span class="cardio-opt">optional</span></label>
+              <div class="cardio-input-wrap">
+                <span class="cardio-input-icon">❤️</span>
+                <input type="number" id="cardioHeartRate" placeholder="—" min="40" max="230" inputmode="numeric">
+                <span class="cardio-input-unit">bpm</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="cardio-row-2">
+            <div class="cardio-field">
+              <label class="cardio-field-label" for="cardioDate">Date</label>
+              <div class="cardio-input-wrap">
+                <span class="cardio-input-icon">📅</span>
+                <input type="date" id="cardioDate">
+              </div>
+            </div>
+            <div class="cardio-field">
+              <label class="cardio-field-label" for="cardioNotes">Notes</label>
+              <div class="cardio-input-wrap">
+                <span class="cardio-input-icon">📝</span>
+                <input type="text" id="cardioNotes" placeholder="e.g. felt great">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </details>
+
+      <button class="cardio-submit-btn" onclick="addCardioEntry()">
+        <span id="cardioSubmitIcon">🏃</span> Log Session
+      </button>
     </div>
 
     <!-- History list (populated by renderCardio) -->
@@ -2494,6 +2559,7 @@ async function startLogin() {
       renderMacroTargets({ useFallback: !fetchedTargets });
       renderWeights();
       renderCardio();
+      initCardioDateChip?.();
       renderPosingTab();
       renderCrossfitWorkouts();
       loadTemplateDropdown(); // ✅ Load saved templates
@@ -9494,7 +9560,29 @@ function selectCardioType(type) {
       if (customInput) customInput.value = '';
     }
   }
+  // Update submit button icon to match selected activity
+  const cfg = window.cardioTab?.getActivityConfig?.(type);
+  const iconEl = document.getElementById('cardioSubmitIcon');
+  if (iconEl && cfg?.icon) iconEl.textContent = cfg.icon;
   updateCardioPacePreview();
+}
+
+function selectCardioIntensity(level) {
+  document.getElementById('cardioIntensity').value = level;
+  document.querySelectorAll('#cardioIntensityPicker .cardio-intensity-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.intensity === level);
+  });
+}
+
+/** Initialise date chip in the form header to show today */
+function initCardioDateChip() {
+  const chip = document.getElementById('cardioDateChip');
+  if (!chip) return;
+  const d = new Date();
+  chip.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  // Default the hidden date input to today
+  const dateInput = document.getElementById('cardioDate');
+  if (dateInput && !dateInput.value) dateInput.value = d.toISOString().slice(0, 10);
 }
 
 /** Live-update the pace/speed preview chip under duration+distance fields */
@@ -9527,7 +9615,10 @@ function addCardioEntry() {
   const distance = Number.isFinite(distanceRaw) && distanceRaw > 0 ? distanceRaw : null;
   const caloriesInput = parseFloat(document.getElementById('cardioCalories')?.value) || 0;
   const notes = document.getElementById('cardioNotes')?.value.trim() || '';
-  const date = new Date().toISOString().split('T')[0];
+  const intensity = document.getElementById('cardioIntensity')?.value || 'moderate';
+  const hrRaw = parseFloat(document.getElementById('cardioHeartRate')?.value);
+  const heartRate = Number.isFinite(hrRaw) && hrRaw > 0 ? hrRaw : null;
+  const date = document.getElementById('cardioDate')?.value || new Date().toISOString().split('T')[0];
 
   if (!type || !Number.isFinite(duration) || duration <= 0) {
     window.showToast?.('Choose an activity and enter a duration.', 'warn') ||
@@ -9551,7 +9642,7 @@ function addCardioEntry() {
     : null;
 
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const entry = { date, type, duration, distance, calories, estimatedCalories, met, paceOrSpeed, notes };
+  const entry = { date, type, duration, distance, calories, estimatedCalories, met, paceOrSpeed, notes, intensity, heartRate };
   log.push(entry);
   localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
 
@@ -9562,10 +9653,17 @@ function addCardioEntry() {
   }
 
   // Clear form
-  if (document.getElementById('cardioDuration'))  document.getElementById('cardioDuration').value  = '';
-  if (document.getElementById('cardioDistance'))  document.getElementById('cardioDistance').value  = '';
-  if (document.getElementById('cardioCalories'))  document.getElementById('cardioCalories').value  = '';
-  if (document.getElementById('cardioNotes'))     document.getElementById('cardioNotes').value     = '';
+  ['cardioDuration','cardioDistance','cardioCalories','cardioNotes','cardioHeartRate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  // Reset date to today and close optional accordion
+  const dateInput = document.getElementById('cardioDate');
+  if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+  const opt = document.getElementById('cardioOptional');
+  if (opt) opt.removeAttribute('open');
+  // Reset intensity to moderate
+  selectCardioIntensity('moderate');
   updateCardioPacePreview();
 
   const cfg = window.cardioTab?.getActivityConfig?.(type) || { icon: '🏃', label: type };
@@ -9666,9 +9764,13 @@ function renderCardio() {
               })()
             : null);
       const kcal  = parseFloat(entry.calories) > 0 ? `🔥 ${Math.round(entry.calories)} kcal` : null;
+      const hr    = parseFloat(entry.heartRate) > 0 ? `❤️ ${Math.round(entry.heartRate)} bpm` : null;
+      const intBadge = entry.intensity && entry.intensity !== 'moderate'
+        ? { easy: '😌 Easy', hard: '🔥 Hard', max: '⚡ Max' }[entry.intensity] || null
+        : null;
 
-      const tags  = [dur, dist, pace, kcal].filter(Boolean).map((t, i) =>
-        `<span class="cardio-stat-tag${i === 2 && pace ? ' highlight' : ''}">${t}</span>`
+      const tags  = [dur, dist, pace, kcal, hr, intBadge].filter(Boolean).map((t, i) =>
+        `<span class="cardio-stat-tag${t === pace && pace ? ' highlight' : ''}">${t}</span>`
       ).join('');
 
       return `
