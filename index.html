@@ -2043,6 +2043,7 @@ async function startLogin() {
       renderCrossfitWorkouts();
       loadTemplateDropdown(); // ✅ Load saved templates
       loadProgramTemplates();
+      loadProgramsFromBackend(username); // ✅ Sync programs from Airtable
       if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
         loadProgramDropdown();
         checkActiveProgram();
@@ -2329,39 +2330,22 @@ function loadMacroTargetsFromLocal() {
 }
 
 async function fetchUserMacroTargets(username) {
-  if (!username) {
-    return false;
-  }
+  if (!username) return false;
   try {
-    // Ensure Airtable credentials are loaded
-    if (!airtableBaseId || !airtableToken) {
-      await fetchAirtableConfig();
-    }
-    const url = `${MacroTargetsApiUrl}` +
-      `?filterByFormula={Username}='${encodeURIComponent(username)}'` +
-      `&sort[0][field]=CreatedAt&sort[0][direction]=desc` +
-      `&maxRecords=1`;
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${airtableToken}` }
-    });
+    const response = await fetch(
+      `${window.SERVER_URL}/macrotargets?username=${encodeURIComponent(username)}`,
+      { headers: getAuthHeaders() }
+    );
     const data = await response.json();
+    if (!data.success || !data.item) throw new Error('No macro targets found for this user');
 
-    if (!Array.isArray(data.records) || data.records.length === 0) {
-      throw new Error('No macro targets found for this user');
-    }
-
-    const record = data.records[0];
-    const fields = record.fields;
-
-    // ✅ Update local UI display bars
+    const fields = data.item;
     saveMacroTargetsToTop(fields);
-
-    // ✅ Store locally so they persist on refresh
     localStorage.setItem('macroTargets', JSON.stringify(fields));
     localStorage.setItem(`macroTargets_${username}`, JSON.stringify(fields));
     return true;
   } catch (error) {
-    console.warn('Unable to fetch macro targets from Airtable', error);
+    console.warn('Unable to fetch macro targets:', error);
     return false;
   }
 }
@@ -3886,33 +3870,16 @@ function logRestBreak(mins) {
 
 // Save a workout template to Airtable
 async function saveTemplate(username, templateName, templateData) {
-  // Ensure Airtable credentials are loaded before posting.
-  if (!airtableBaseId || !airtableToken) {
-    // fetchAirtableConfig sets airtableBaseId and airtableToken from /config.
-    await fetchAirtableConfig();
-    if (!airtableBaseId || !airtableToken) {
-      throw new Error('Missing Airtable configuration; cannot save template.');
-    }
-  }
-  const url = `/airtable/${airtableBaseId}/${templatesTableName}`;
   try {
-    const response = await fetch(url, {
+    const response = await fetch(`${window.SERVER_URL}/templates`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        fields: {
-          Username: username,
-          TemplateName: templateName,
-          TemplateData: JSON.stringify(templateData)
-        }
-      })
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, templateName, templateData })
     });
 
     if (!response.ok) {
-      throw new Error(`Airtable API error: ${response.statusText}`);
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Server error: ${response.status}`);
     }
 
     const result = await response.json();
@@ -4452,16 +4419,34 @@ function duplicateSelectedTemplate() {
   loadTemplateDropdown();
 }
 
-function deleteSelectedTemplate() {
+async function deleteSelectedTemplate() {
   const selected = getSelectedTemplateRecord();
   if (!selected) return alert('Select a template to delete.');
-  if (!selected.id.startsWith('local_')) {
-    alert('Only locally managed templates can be deleted in-app.');
-    return;
+  if (!confirm(`Delete template "${selected.name}"?`)) return;
+
+  if (selected.id.startsWith('local_')) {
+    // Local-only template — remove from localStorage
+    const localTemplates = getLocalManagedTemplates().filter(tpl => tpl.localId !== selected.id);
+    saveLocalManagedTemplates(localTemplates);
+    loadTemplateDropdown();
+  } else {
+    // Airtable-backed template — delete via backend
+    try {
+      const response = await fetch(`${window.SERVER_URL}/templates/${encodeURIComponent(selected.id)}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(result?.error?.message || 'Failed to delete template.');
+        return;
+      }
+      loadTemplateDropdown();
+    } catch (err) {
+      console.error('Delete template error:', err);
+      alert('Error connecting to server.');
+    }
   }
-  const localTemplates = getLocalManagedTemplates().filter(tpl => tpl.localId !== selected.id);
-  saveLocalManagedTemplates(localTemplates);
-  loadTemplateDropdown();
 }
 
 async function completeWorkout() {
@@ -5792,27 +5777,21 @@ function updateSliderMacros() {
 
 
 async function saveToAirtable(username, target) {
-  const url = MacroTargetsApiUrl;
   try {
-    const r = await fetch(url, {
+    const r = await fetch(`${window.SERVER_URL}/macrotargets`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${airtableToken}`,
-        "Content-Type": "application/json"
-      },
+      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({
-        fields: {
-          Username: username,
-          Calories: target.calories,
-          Protein:  target.protein,
-          Fat:      target.fat,
-          Carbs:    target.carbs
-        }
+        username,
+        calories: target.calories,
+        protein:  target.protein,
+        fat:      target.fat,
+        carbs:    target.carbs
       })
     });
     const d = await r.json();
     if (!r.ok) {
-      console.error("Airtable save error:", d);
+      console.error("Macro targets save error:", d);
       alert(`Could not save macros: ${d.error?.message || "unknown"}`);
     }
   } catch (err) {
@@ -6105,13 +6084,10 @@ async function saveDailyMacroLog(username, date, meals, totals) {
   };
 
   try {
-    const response = await fetch("/dailylogs", {
+    const response = await fetch(`${window.SERVER_URL}/dailylogs`, {
       method: "POST",
-      headers: {
-        ...getAuthHeaders(),
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
+      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload.fields)
     });
     const data = await response.json();
     if (!response.ok) {
@@ -10809,7 +10785,7 @@ async function fetchDailyLogs(username) {
   const params = new URLSearchParams({ username });
 
   try {
-    const response = await fetch(`/dailylogs?${params.toString()}`, {
+    const response = await fetch(`${window.SERVER_URL}/dailylogs?${params.toString()}`, {
       headers: getAuthHeaders()
     });
     const data = await response.json();
@@ -10953,6 +10929,78 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   window.renderWorkoutHistory = renderWorkoutHistory;
   window.renderMacroHistory = renderMacroHistory;
   if (typeof window.addDayToProgram !== "function") window.addDayToProgram = () => {};
+  // ── Program backend sync ──────────────────────────────────────────────────
+
+  // Load all programs for the logged-in user from the backend and merge into localStorage
+  async function loadProgramsFromBackend(username) {
+    if (!username || !window.SERVER_URL) return;
+    try {
+      const res = await fetch(
+        `${window.SERVER_URL}/programs?username=${encodeURIComponent(username)}`,
+        { headers: getAuthHeaders() }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.items)) return;
+
+      // Merge remote programs into localStorage, keyed by record id
+      const localRaw = localStorage.getItem(`programs_${username}`) || localStorage.getItem('programs') || '[]';
+      const local = JSON.parse(localRaw);
+      const localIds = new Set(local.map(p => p.id));
+
+      data.items.forEach(item => {
+        if (item.programData && !localIds.has(item.programData.id)) {
+          local.push({ ...item.programData, _airtableId: item.id });
+        }
+      });
+
+      localStorage.setItem(`programs_${username}`, JSON.stringify(local));
+      localStorage.setItem('programs', JSON.stringify(local));
+
+      // Restore active program if one is flagged in Airtable
+      const activeItem = data.items.find(i => i.isActive);
+      if (activeItem?.programData && !localStorage.getItem(`activeProgram_${username}`)) {
+        localStorage.setItem(`activeProgram_${username}`, JSON.stringify(activeItem.programData));
+        localStorage.setItem('activeProgram', JSON.stringify(activeItem.programData));
+      }
+
+      console.info(`[Programs] Loaded ${data.items.length} programs from backend for ${username}`);
+    } catch (err) {
+      console.warn('[Programs] Failed to load from backend:', err?.message);
+    }
+  }
+
+  // Delete a program from Airtable by its _airtableId, then remove from localStorage
+  async function deleteProgramFromBackend(airtableId, username) {
+    if (!airtableId || !window.SERVER_URL) return;
+    try {
+      const res = await fetch(
+        `${window.SERVER_URL}/programs/${encodeURIComponent(airtableId)}`,
+        { method: 'DELETE', headers: getAuthHeaders() }
+      );
+      if (!res.ok) console.warn('[Programs] Delete failed:', await res.json());
+    } catch (err) {
+      console.warn('[Programs] Delete error:', err?.message);
+    }
+  }
+
+  // Set a program as active in Airtable
+  async function setActiveProgramInBackend(airtableId, username) {
+    if (!airtableId || !window.SERVER_URL) return;
+    try {
+      await fetch(
+        `${window.SERVER_URL}/programs/${encodeURIComponent(airtableId)}/active?username=${encodeURIComponent(username)}`,
+        { method: 'PATCH', headers: getAuthHeaders() }
+      );
+    } catch (err) {
+      console.warn('[Programs] Set active error:', err?.message);
+    }
+  }
+
+  window.loadProgramsFromBackend   = loadProgramsFromBackend;
+  window.deleteProgramFromBackend  = deleteProgramFromBackend;
+  window.setActiveProgramInBackend = setActiveProgramInBackend;
+
   // Legacy exports kept only for backwards compatibility
   if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
     window.loadProgramTemplates = loadProgramTemplates;
