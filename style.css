@@ -651,6 +651,37 @@ body.theme-dark .set-row {
   align-self: flex-start;
 }
 
+/* ── Share Story button ─────────────────────────────────────── */
+.share-story-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #2d7d5b 0%, #1a5c3f 100%);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(45,125,91,0.35);
+  margin: 0;
+  transition: transform 0.12s, box-shadow 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  letter-spacing: 0.01em;
+}
+
+.share-story-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(45,125,91,0.45);
+}
+
+.share-story-btn:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
 @media (max-width: 520px) {
   .set-row {
     align-items: flex-start;

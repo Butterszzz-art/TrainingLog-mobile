@@ -4307,6 +4307,13 @@ function renderWorkouts() {
       meta.appendChild(rest);
     }
 
+    const shareWorkoutButton = document.createElement('button');
+    shareWorkoutButton.type = 'button';
+    shareWorkoutButton.className = 'share-story-btn';
+    shareWorkoutButton.innerHTML = '📤 Share as Story';
+    shareWorkoutButton.addEventListener('click', () => openWorkoutStoryModal(workoutIndex));
+    meta.appendChild(shareWorkoutButton);
+
     const deleteWorkoutButton = document.createElement('button');
     deleteWorkoutButton.type = 'button';
     deleteWorkoutButton.className = 'remove-btn';
@@ -13629,6 +13636,350 @@ window.renderMeetPrep = renderMeetPrep;
         });
       });
     }
+  </script>
+
+  <!-- ── Workout Story Modal ────────────────────────────────────── -->
+  <div id="workoutStoryModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow-y:auto;padding:24px 16px;">
+    <div style="max-width:420px;margin:0 auto;">
+      <!-- Preview card -->
+      <div style="border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.6);margin-bottom:20px;">
+        <canvas id="workoutStoryCanvas" style="display:block;width:100%;height:auto;"></canvas>
+      </div>
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;">
+        <button id="storyDownloadBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:#2d7d5b;color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          ⬇️ Save Image
+        </button>
+        <button id="storyShareBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.12);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;gap:8px;">
+          🔗 Share
+        </button>
+        <button onclick="closeWorkoutStoryModal()" style="padding:14px 18px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:0.9rem;cursor:pointer;">
+          ✕
+        </button>
+      </div>
+      <p style="text-align:center;color:rgba(255,255,255,0.35);font-size:0.75rem;margin-top:12px;">
+        Save to camera roll · Post to your story 📸
+      </p>
+    </div>
+  </div>
+
+  <script>
+  /* ── Workout Story Generator ─────────────────────────────────── */
+
+  function closeWorkoutStoryModal() {
+    document.getElementById('workoutStoryModal').style.display = 'none';
+  }
+
+  function openWorkoutStoryModal(workoutIndex) {
+    const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+    const workout = workouts[workoutIndex];
+    if (!workout) return;
+    const modal = document.getElementById('workoutStoryModal');
+    modal.style.display = 'block';
+    // Small delay so modal is visible before heavy canvas draw
+    requestAnimationFrame(() => drawWorkoutStory(workout));
+  }
+
+  function drawWorkoutStory(workout) {
+    const canvas = document.getElementById('workoutStoryCanvas');
+    // Story dimensions: 1080 × 1920 (drawn at half res for speed, exported full)
+    const W = 1080, H = 1920;
+    canvas.width  = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    /* ── helpers ── */
+    const em = (n) => Math.round(n * (W / 375)); // scale from 375px design width
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+    function wrapText(text, x, y, maxW, lineH) {
+      const words = text.split(' ');
+      let line = '';
+      let yy = y;
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxW && line) {
+          ctx.fillText(line, x, yy);
+          line = word;
+          yy += lineH;
+        } else {
+          line = test;
+        }
+      }
+      ctx.fillText(line, x, yy);
+      return yy;
+    }
+
+    /* ── 1. Background gradient ── */
+    const bg = ctx.createLinearGradient(0, 0, W * 0.3, H);
+    bg.addColorStop(0,   '#0b1810');
+    bg.addColorStop(0.4, '#0f2318');
+    bg.addColorStop(1,   '#060d0a');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    /* ── 2. Subtle radial glow top-right ── */
+    const glow = ctx.createRadialGradient(W * 0.85, H * 0.08, 0, W * 0.85, H * 0.08, W * 0.7);
+    glow.addColorStop(0,   'rgba(45,125,91,0.22)');
+    glow.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    /* ── 3. Decorative diagonal stripe ── */
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = '#2d7d5b';
+    ctx.beginPath();
+    ctx.moveTo(W * 0.55, 0); ctx.lineTo(W, 0); ctx.lineTo(W, H * 0.45); ctx.lineTo(W * 0.55 - H * 0.45, H * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    /* ── 4. Top accent bar ── */
+    const barH = em(5);
+    const accent = ctx.createLinearGradient(0, 0, W, 0);
+    accent.addColorStop(0, '#2d7d5b');
+    accent.addColorStop(1, '#52d68a');
+    ctx.fillStyle = accent;
+    ctx.fillRect(0, 0, W, barH);
+
+    /* ── 5. Logo / app name ── */
+    const logoY = em(28);
+    ctx.font = `600 ${em(14)}px -apple-system, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.letterSpacing = `${em(2)}px`;
+    ctx.fillText('POCKET COACH', em(36), logoY);
+    ctx.letterSpacing = '0px';
+
+    /* ── 6. Date ── */
+    const dateStr = (() => {
+      try {
+        const d = new Date(workout.date + 'T00:00:00');
+        return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+      } catch { return (workout.date || '').toUpperCase(); }
+    })();
+    ctx.font = `700 ${em(13)}px -apple-system, sans-serif`;
+    ctx.fillStyle = '#52d68a';
+    ctx.letterSpacing = `${em(1.5)}px`;
+    ctx.fillText(dateStr, em(36), em(58));
+    ctx.letterSpacing = '0px';
+
+    /* ── 7. Workout title ── */
+    const titleY = em(116);
+    const titleText = workout.title || `Workout · ${workout.date}`;
+    ctx.font = `800 ${em(52)}px -apple-system, sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    const maxTitleW = W - em(72);
+    // scale font to fit
+    let titleFontSize = em(52);
+    while (ctx.measureText(titleText).width > maxTitleW && titleFontSize > em(28)) {
+      titleFontSize -= 2;
+      ctx.font = `800 ${titleFontSize}px -apple-system, sans-serif`;
+    }
+    wrapText(titleText, em(36), titleY, maxTitleW, titleFontSize * 1.2);
+
+    /* ── 8. Divider ── */
+    const divY = em(188);
+    const grad2 = ctx.createLinearGradient(em(36), 0, em(36) + W * 0.55, 0);
+    grad2.addColorStop(0,   'rgba(82,214,138,0.9)');
+    grad2.addColorStop(0.6, 'rgba(45,125,91,0.5)');
+    grad2.addColorStop(1,   'rgba(45,125,91,0)');
+    ctx.fillStyle = grad2;
+    ctx.fillRect(em(36), divY, W - em(72), em(2.5));
+
+    /* ── 9. Exercise list ── */
+    const log = workout.log || [];
+    const unit = log[0]?.unit || 'kg';
+    let curY = em(218);
+    const rowH = em(80);
+    const maxExercises = Math.min(log.length, Math.floor((H * 0.55) / rowH));
+
+    log.slice(0, maxExercises).forEach((entry, idx) => {
+      const weights = entry.weightsArray || [];
+      const reps   = entry.repsArray || [];
+      const maxW   = Math.max(...weights.map(Number), 0);
+      const totalR = reps.reduce((s, r) => s + Number(r || 0), 0);
+      const totalS = reps.length;
+
+      /* row background */
+      const rowBg = ctx.createLinearGradient(em(24), 0, W - em(24), 0);
+      rowBg.addColorStop(0, 'rgba(45,125,91,0.12)');
+      rowBg.addColorStop(1, 'rgba(45,125,91,0.04)');
+      ctx.fillStyle = rowBg;
+      roundRect(em(24), curY - em(16), W - em(48), rowH - em(8), em(14));
+      ctx.fill();
+
+      /* left accent stripe */
+      ctx.fillStyle = '#2d7d5b';
+      roundRect(em(24), curY - em(16), em(4), rowH - em(8), em(2));
+      ctx.fill();
+
+      /* exercise name */
+      ctx.font = `700 ${em(20)}px -apple-system, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      const exName = entry.exercise || 'Exercise';
+      // truncate if too long
+      let displayName = exName;
+      while (ctx.measureText(displayName).width > em(380) && displayName.length > 4) {
+        displayName = displayName.slice(0, -1);
+      }
+      if (displayName !== exName) displayName += '…';
+      ctx.fillText(displayName, em(42), curY + em(10));
+
+      /* set chips */
+      const setStr = weights.slice(0, 5).map((w, i) => `${reps[i] || 0}×${w}${unit}`).join('  ·  ');
+      ctx.font = `500 ${em(15)}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(82,214,138,0.85)';
+      ctx.fillText(setStr, em(42), curY + em(34));
+
+      /* stat pills: max weight + total reps */
+      const pillY = curY + em(52);
+      [[`🏆 ${maxW}${unit}`, em(42)], [`🔁 ${totalR} reps`, em(180)], [`${totalS} sets`, em(310)]].forEach(([txt, px]) => {
+        ctx.font = `600 ${em(13)}px -apple-system, sans-serif`;
+        const tw = ctx.measureText(txt).width + em(18);
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        roundRect(px, pillY - em(12), tw, em(20), em(10));
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillText(txt, px + em(9), pillY + em(5));
+      });
+
+      curY += rowH;
+    });
+
+    if (log.length > maxExercises) {
+      ctx.font = `500 ${em(15)}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fillText(`+ ${log.length - maxExercises} more exercise${log.length - maxExercises > 1 ? 's' : ''}…`, em(42), curY + em(10));
+      curY += em(36);
+    }
+
+    /* ── 10. Stats row ── */
+    const statsY = H - em(280);
+    const totalVol = (() => {
+      let v = 0;
+      log.forEach(e => {
+        (e.weightsArray || []).forEach((w, i) => { v += Number(w || 0) * Number((e.repsArray || [])[i] || 0); });
+      });
+      return v.toLocaleString();
+    })();
+    const totalSetsAll = log.reduce((s, e) => s + (e.repsArray || []).length, 0);
+    const totalExercises = log.length;
+
+    /* stats background pill */
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    roundRect(em(24), statsY - em(24), W - em(48), em(88), em(20));
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(82,214,138,0.2)';
+    ctx.lineWidth = em(1);
+    roundRect(em(24), statsY - em(24), W - em(48), em(88), em(20));
+    ctx.stroke();
+
+    const statItems = [
+      { icon: '📦', label: 'Volume', val: `${totalVol} ${unit}` },
+      { icon: '💪', label: 'Sets',    val: String(totalSetsAll) },
+      { icon: '🏋️', label: 'Exercises',val: String(totalExercises) },
+    ];
+    const colW = (W - em(48)) / 3;
+    statItems.forEach((s, i) => {
+      const cx = em(24) + colW * i + colW / 2;
+      ctx.textAlign = 'center';
+      ctx.font = `800 ${em(26)}px -apple-system, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(s.val, cx, statsY + em(18));
+      ctx.font = `500 ${em(13)}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillText(s.icon + ' ' + s.label, cx, statsY + em(42));
+    });
+    ctx.textAlign = 'left';
+
+    /* ── 11. Motivational quote ── */
+    const quotes = [
+      'Every rep counts. 💪',
+      'Progress is progress. 🔥',
+      'Show up. Grind. Repeat.',
+      'Built different. 🏆',
+      'No days off. 🦾',
+      'Outwork yesterday. ⚡',
+      'Trust the process. 🌿',
+    ];
+    const quote = quotes[Math.floor(Math.random() * quotes.length)];
+    ctx.textAlign = 'center';
+    ctx.font = `600 italic ${em(20)}px -apple-system, sans-serif`;
+    ctx.fillStyle = 'rgba(82,214,138,0.55)';
+    ctx.fillText(`"${quote}"`, W / 2, H - em(142));
+    ctx.textAlign = 'left';
+
+    /* ── 12. Bottom branding ── */
+    const brandY = H - em(80);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    roundRect(em(24), brandY - em(20), W - em(48), em(52), em(14));
+    ctx.fill();
+
+    ctx.textAlign = 'center';
+    ctx.font = `600 ${em(16)}px -apple-system, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.fillText('Logged with Pocket Coach', W / 2, brandY + em(12));
+    ctx.textAlign = 'left';
+
+    /* ── 13. Wire up action buttons ── */
+    const downloadBtn = document.getElementById('storyDownloadBtn');
+    const shareBtn    = document.getElementById('storyShareBtn');
+
+    const getBlob = () => new Promise(res => canvas.toBlob(res, 'image/png'));
+
+    downloadBtn.onclick = () => {
+      const link = document.createElement('a');
+      link.download = `workout-story-${workout.date || 'today'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+
+    shareBtn.onclick = async () => {
+      try {
+        if (navigator.share && navigator.canShare) {
+          const blob = await getBlob();
+          const file = new File([blob], `workout-${workout.date || 'today'}.png`, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: workout.title || 'My Workout', text: `Check out my workout! 💪` });
+            return;
+          }
+        }
+        // Fallback: copy to clipboard
+        if (navigator.clipboard?.write) {
+          const blob = await getBlob();
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          window.showToast?.('📋 Image copied to clipboard!', 'success');
+        } else {
+          // Last resort: open in new tab
+          window.open(canvas.toDataURL('image/png'), '_blank');
+        }
+      } catch(e) {
+        console.warn('Share failed:', e);
+        window.showToast?.('⬇️ Use Save Image instead', 'warn');
+      }
+    };
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('workoutStoryModal').addEventListener('click', function(e) {
+    if (e.target === this) closeWorkoutStoryModal();
+  });
+
+  window.openWorkoutStoryModal = openWorkoutStoryModal;
+  window.closeWorkoutStoryModal = closeWorkoutStoryModal;
   </script>
 </body>
 </html>
