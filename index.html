@@ -1898,6 +1898,8 @@ async function startLogin() {
       loadProgramsFromBackend(username);          // ✅ Sync programs from Airtable
       archiveBodyweightToAirtable(username);      // ✅ Archive bodyweight if 4+ weeks elapsed
       syncMeasurementsToAirtable(username);       // ✅ Sync new measurement entries
+      syncCardioToAirtable(username);             // ✅ Sync cardio log if 4+ weeks elapsed
+      syncCrossfitToAirtable(username);           // ✅ Sync CrossFit log if 4+ weeks elapsed
       if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
         loadProgramDropdown();
         checkActiveProgram();
@@ -8641,6 +8643,10 @@ function addCardioEntry() {
   }
   renderCardio();
   updateMacroUI();
+  // Silently sync to Airtable if 4+ weeks of unsynced entries exist
+  if (typeof window.syncCardioToAirtable === 'function') {
+    window.syncCardioToAirtable(currentUser).catch(() => {});
+  }
 }
 
 function completeCardioSession() {
@@ -10023,6 +10029,10 @@ function saveCrossfitWorkout() {
   crossfitExercises = [];
   
   renderCrossfitWorkouts();
+  // Silently sync to Airtable if 4+ weeks of unsynced entries exist
+  if (typeof window.syncCrossfitToAirtable === 'function') {
+    window.syncCrossfitToAirtable(currentUser).catch(() => {});
+  }
 }
 
 function renderCrossfitWorkouts() {
@@ -10901,8 +10911,79 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
     }
   }
 
+  const CARDIO_SYNC_KEY   = 'cardioLastSynced_';
+  const CROSSFIT_SYNC_KEY = 'crossfitLastSynced_';
+
+  async function syncCardioToAirtable(username) {
+    if (!username || !window.SERVER_URL) return;
+
+    const lastSynced = localStorage.getItem(CARDIO_SYNC_KEY + username);
+    const now = Date.now();
+    if (lastSynced && now - Number(lastSynced) < FOUR_WEEKS_MS) return;
+
+    const entries = JSON.parse(localStorage.getItem(`cardioLog_${username}`) || '[]');
+    if (!entries.length) return;
+
+    const cutoffDate = lastSynced
+      ? new Date(Number(lastSynced)).toISOString().slice(0, 10)
+      : '1970-01-01';
+    const toSync = entries.filter(e => e.date > cutoffDate);
+    if (!toSync.length) return;
+
+    try {
+      const res = await fetch(`${window.SERVER_URL}/cardio/sync`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, entries: toSync })
+      });
+      if (res.ok) {
+        localStorage.setItem(CARDIO_SYNC_KEY + username, String(now));
+        console.info(`[Cardio] Synced ${toSync.length} entries to Airtable`);
+      } else {
+        console.warn('[Cardio] Sync failed:', await res.json().catch(() => ({})));
+      }
+    } catch (err) {
+      console.warn('[Cardio] Sync error:', err?.message);
+    }
+  }
+
+  async function syncCrossfitToAirtable(username) {
+    if (!username || !window.SERVER_URL) return;
+
+    const lastSynced = localStorage.getItem(CROSSFIT_SYNC_KEY + username);
+    const now = Date.now();
+    if (lastSynced && now - Number(lastSynced) < FOUR_WEEKS_MS) return;
+
+    const entries = JSON.parse(localStorage.getItem(`crossfitLog_${username}`) || '[]');
+    if (!entries.length) return;
+
+    const cutoffDate = lastSynced
+      ? new Date(Number(lastSynced)).toISOString().slice(0, 10)
+      : '1970-01-01';
+    const toSync = entries.filter(e => e.date > cutoffDate);
+    if (!toSync.length) return;
+
+    try {
+      const res = await fetch(`${window.SERVER_URL}/crossfit/sync`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, entries: toSync })
+      });
+      if (res.ok) {
+        localStorage.setItem(CROSSFIT_SYNC_KEY + username, String(now));
+        console.info(`[CrossFit] Synced ${toSync.length} entries to Airtable`);
+      } else {
+        console.warn('[CrossFit] Sync failed:', await res.json().catch(() => ({})));
+      }
+    } catch (err) {
+      console.warn('[CrossFit] Sync error:', err?.message);
+    }
+  }
+
   window.archiveBodyweightToAirtable  = archiveBodyweightToAirtable;
   window.syncMeasurementsToAirtable   = syncMeasurementsToAirtable;
+  window.syncCardioToAirtable         = syncCardioToAirtable;
+  window.syncCrossfitToAirtable       = syncCrossfitToAirtable;
 
   // Legacy exports kept only for backwards compatibility
   if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
