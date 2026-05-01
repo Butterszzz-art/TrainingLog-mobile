@@ -1895,7 +1895,9 @@ async function startLogin() {
       renderCrossfitWorkouts();
       loadTemplateDropdown(); // ✅ Load saved templates
       loadProgramTemplates();
-      loadProgramsFromBackend(username); // ✅ Sync programs from Airtable
+      loadProgramsFromBackend(username);          // ✅ Sync programs from Airtable
+      archiveBodyweightToAirtable(username);      // ✅ Archive bodyweight if 4+ weeks elapsed
+      syncMeasurementsToAirtable(username);       // ✅ Sync new measurement entries
       if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
         loadProgramDropdown();
         checkActiveProgram();
@@ -8535,6 +8537,10 @@ function addWeightEntry() {
   if (dateField) dateField.value = '';
   renderWeights();
   updateMacroUI();
+  // Silently archive to Airtable if 4+ weeks have elapsed since last archive
+  if (typeof archiveBodyweightToAirtable === 'function') {
+    archiveBodyweightToAirtable(currentUser).catch(() => {});
+  }
 }
 
 function renderWeights() {
@@ -10812,6 +10818,91 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   window.loadProgramsFromBackend   = loadProgramsFromBackend;
   window.deleteProgramFromBackend  = deleteProgramFromBackend;
   window.setActiveProgramInBackend = setActiveProgramInBackend;
+
+  // ── Bodyweight 4-week archive ─────────────────────────────────────────────
+  const BW_ARCHIVE_KEY = 'bwLastArchived_';
+  const MEAS_SYNC_KEY  = 'measLastSynced_';
+  const FOUR_WEEKS_MS  = 28 * 24 * 60 * 60 * 1000;
+
+  async function archiveBodyweightToAirtable(username) {
+    if (!username || !window.SERVER_URL) return;
+
+    const lastArchived = localStorage.getItem(BW_ARCHIVE_KEY + username);
+    const now = Date.now();
+    if (lastArchived && now - Number(lastArchived) < FOUR_WEEKS_MS) return; // not yet
+
+    const log = JSON.parse(localStorage.getItem(`bodyweightLog_${username}`) || '[]');
+    if (log.length < 2) return; // not enough data to archive
+
+    // Take last 4 weeks of entries
+    const cutoff = new Date(now - FOUR_WEEKS_MS).toISOString().slice(0, 10);
+    const period  = log.filter(e => e.date >= cutoff);
+    if (!period.length) return;
+
+    const periodStart = period[0].date;
+    const periodEnd   = period[period.length - 1].date;
+
+    // Read stored weight trend
+    let trend = null;
+    try { trend = JSON.parse(localStorage.getItem(`weightTrend_${username}`) || 'null'); } catch {}
+
+    try {
+      const res = await fetch(`${window.SERVER_URL}/bodyweight/archive`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, periodStart, periodEnd, entries: period, trend })
+      });
+      if (res.ok) {
+        localStorage.setItem(BW_ARCHIVE_KEY + username, String(now));
+        console.info(`[Bodyweight] Archived ${period.length} entries (${periodStart} → ${periodEnd})`);
+      } else {
+        console.warn('[Bodyweight] Archive failed:', await res.json().catch(() => ({})));
+      }
+    } catch (err) {
+      console.warn('[Bodyweight] Archive error:', err?.message);
+    }
+  }
+
+  // ── Body measurements sync (individual entries, not archived in bulk) ──────
+  async function syncMeasurementsToAirtable(username) {
+    if (!username || !window.SERVER_URL) return;
+
+    const lastSynced = localStorage.getItem(MEAS_SYNC_KEY + username);
+    const now = Date.now();
+    if (lastSynced && now - Number(lastSynced) < FOUR_WEEKS_MS) return;
+
+    const entries = typeof window.loadMeasurements === 'function'
+      ? window.loadMeasurements(username)
+      : JSON.parse(localStorage.getItem(`bodyMeasurements_${username}`) || '[]');
+
+    if (!entries.length) return;
+
+    // Only sync entries newer than the last sync date
+    const cutoffDate = lastSynced
+      ? new Date(Number(lastSynced)).toISOString().slice(0, 10)
+      : '1970-01-01';
+    const toSync = entries.filter(e => e.date > cutoffDate);
+    if (!toSync.length) return;
+
+    try {
+      const res = await fetch(`${window.SERVER_URL}/measurements/sync`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, entries: toSync })
+      });
+      if (res.ok) {
+        localStorage.setItem(MEAS_SYNC_KEY + username, String(now));
+        console.info(`[Measurements] Synced ${toSync.length} entries to Airtable`);
+      } else {
+        console.warn('[Measurements] Sync failed:', await res.json().catch(() => ({})));
+      }
+    } catch (err) {
+      console.warn('[Measurements] Sync error:', err?.message);
+    }
+  }
+
+  window.archiveBodyweightToAirtable  = archiveBodyweightToAirtable;
+  window.syncMeasurementsToAirtable   = syncMeasurementsToAirtable;
 
   // Legacy exports kept only for backwards compatibility
   if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
