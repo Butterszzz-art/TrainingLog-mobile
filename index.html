@@ -3175,7 +3175,8 @@ function addLogEntry() {
     advancedArray.push(createDefaultAdvancedSet());
   }
 
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const _activeUser = getActiveUsername() || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${_activeUser}`)) || [];
   if (typeof startWorkoutTimer === 'function') {
     try {
       startWorkoutTimer();
@@ -3184,10 +3185,10 @@ function addLogEntry() {
       console.warn('Unable to start workout timer', err);
     }
   }
-  if (
-    workouts.length === 0 ||
-    workouts[workouts.length - 1].date !== date
-  ) {
+  // Search the full array for today's session instead of only checking the last element.
+  // This prevents duplicate sessions after an API sync that returns workouts in a different order.
+  const todayIndex = workouts.findIndex(w => w.date === date);
+  if (todayIndex === -1) {
     workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
   }
 
@@ -3209,7 +3210,8 @@ function addLogEntry() {
     goal,
     repGoal
   };
-  workouts[workouts.length - 1].log.push(newEntry);
+  const activeWorkoutIndex = workouts.findIndex(w => w.date === date);
+  workouts[activeWorkoutIndex].log.push(newEntry);
 
   if (typeof suggestNextSession === 'function') {
     const recommendation = suggestNextSession(newEntry, workouts);
@@ -3219,7 +3221,7 @@ function addLogEntry() {
     }
   }
 
-  const activeWorkout = workouts[workouts.length - 1];
+  const activeWorkout = workouts[activeWorkoutIndex];
   const computedMetrics = typeof calculateWorkoutMetrics === 'function'
     ? calculateWorkoutMetrics(activeWorkout)
     : {
@@ -3236,12 +3238,12 @@ function addLogEntry() {
     oneRM: computedMetrics.estimated1RM
   };
 
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  localStorage.setItem(`workouts_${_activeUser}`, JSON.stringify(workouts));
   if (typeof saveWorkoutToBackend === 'function') {
     saveWorkoutToBackend(activeWorkout);
   }
-  updatePRs(currentUser, activeWorkout, calculateWorkoutVolume);
-  updateGoalProgress(currentUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
+  updatePRs(_activeUser, activeWorkout, calculateWorkoutVolume);
+  updateGoalProgress(_activeUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
   renderPRs();
   const prog = analyzeProgress ? analyzeProgress(currentUser) : [];
   const deload = prog.find(p => p.type === 'deload');
@@ -13018,8 +13020,8 @@ function _finishOnboarding() {
     settings.profile.experienceLevel = _ob.experience;
     localStorage.setItem(key, JSON.stringify(settings));
 
-    // Apply unit preference
-    localStorage.setItem('weightUnit', _ob.unit);
+    // Apply unit preference — must match the key used everywhere else in the app
+    localStorage.setItem('defaultWeightUnit', _ob.unit);
 
     // Apply theme if handler exists
     if (typeof window.applyTheme === 'function') window.applyTheme(_ob.theme);
