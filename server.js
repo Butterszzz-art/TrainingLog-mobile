@@ -2,12 +2,23 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ── Security headers ─────────────────────────────────────────────────────────
+app.use(helmet({
+  // Allow inline scripts that the PWA relies on
+  contentSecurityPolicy: false
+}));
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
   : [];
@@ -15,93 +26,226 @@ const corsOptions = allowedOrigins.length
   ? { origin: allowedOrigins, credentials: true }
   : { origin: true, credentials: true };
 app.use(cors(corsOptions));
+
 app.use(express.json());
 app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── JWT helpers ───────────────────────────────────────────────────────────────
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  console.warn('[AUTH] JWT_SECRET env var not set — using an insecure default. Set it in production!');
+  return 'change-me-in-production-please';
+})();
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-const { calculateLeaderboard } = require('./community');
+function signToken(payload) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
 
-const groups = [];
-const programs = [];
-const sharedPrograms = [];
-
-// sample leaderboard data
-const leaderboard = [
-  {
-    id: 1,
-    name: 'Alice',
-    workoutsLogged: 45,
-    studyHours: 30,
-    groupActivity: 120,
-    weeklyVolume: [500, 700, 650, 800],
-    progress: [10, 12, 14, 15, 16]
-  },
-  {
-    id: 2,
-    name: 'Bob',
-    workoutsLogged: 30,
-    studyHours: 40,
-    groupActivity: 100,
-    weeklyVolume: [400, 600, 550, 500],
-    progress: [8, 9, 11, 13, 14]
-  },
-  {
-    id: 3,
-    name: 'Cara',
-    workoutsLogged: 35,
-    studyHours: 55,
-    groupActivity: 90,
-    weeklyVolume: [450, 500, 470, 520],
-    progress: [15, 14, 16, 18, 20]
-  }
-];
-
-app.get('/config', (req, res) => {
-  res.json({
-    serverUrl: process.env.SERVER_URL || ''
-  });
+// ── Rate limiter — login / register ─────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,                   // 20 attempts per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many attempts — please wait 15 minutes before trying again.' }
 });
 
+// ── Airtable helpers ─────────────────────────────────────────────────────────
 function getAirtableEnv() {
   const token = process.env.AIRTABLE_TOKEN;
   const baseId = process.env.AIRTABLE_BASE_ID;
-
   if (!token || !baseId) {
     return { error: 'AIRTABLE_TOKEN and AIRTABLE_BASE_ID must be configured on the backend.' };
   }
-
   return { token, baseId };
 }
 
-app.post('/dailylogs', async (req, res) => {
-  const airtable = getAirtableEnv();
-  if (airtable.error) {
-    return res.status(500).json({ error: airtable.error });
-  }
+const AIRTABLE_TIMEOUT_MS = 8000;
 
+async function airtableFetch(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AIRTABLE_TIMEOUT_MS);
   try {
-    const response = await fetch(`https://api.airtable.com/v0/${airtable.baseId}/DailyLogs`, {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ── User lookup / creation via Airtable ─────────────────────────────────────
+const USERS_TABLE = process.env.AIRTABLE_USERS_TABLE || 'Users';
+
+async function findUserByUsername(airtable, username) {
+  const params = new URLSearchParams({
+    filterByFormula: `{Username}='${username.replace(/'/g, "\\'")}'`,
+    maxRecords: '1'
+  });
+  const res = await airtableFetch(
+    `https://api.airtable.com/v0/${airtable.baseId}/${encodeURIComponent(USERS_TABLE)}?${params}`,
+    { headers: { Authorization: `Bearer ${airtable.token}` } }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.records?.[0] || null;
+}
+
+async function createUserInAirtable(airtable, username, passwordHash) {
+  const res = await airtableFetch(
+    `https://api.airtable.com/v0/${airtable.baseId}/${encodeURIComponent(USERS_TABLE)}`,
+    {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${airtable.token}`,
         'Content-Type': 'application/json'
       },
+      body: JSON.stringify({
+        records: [{ fields: { Username: username, PasswordHash: passwordHash, CreatedAt: new Date().toISOString() } }]
+      })
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Failed to create user');
+  return data.records?.[0];
+}
+
+// ── Input validation ─────────────────────────────────────────────────────────
+function validateCredentials(username, password) {
+  if (!username || typeof username !== 'string' || username.length < 2 || username.length > 64) {
+    return 'Username must be between 2 and 64 characters.';
+  }
+  if (!password || typeof password !== 'string' || password.length < 6 || password.length > 128) {
+    return 'Password must be between 6 and 128 characters.';
+  }
+  return null;
+}
+
+// ── POST /login ──────────────────────────────────────────────────────────────
+app.post('/login', authLimiter, async (req, res) => {
+  const { username, password } = req.body || {};
+
+  const validationError = validateCredentials(username, password);
+  if (validationError) {
+    return res.status(400).json({ success: false, message: validationError });
+  }
+
+  const airtable = getAirtableEnv();
+  if (airtable.error) {
+    return res.status(500).json({ success: false, message: 'Server configuration error.' });
+  }
+
+  try {
+    const record = await findUserByUsername(airtable, username);
+
+    if (!record) {
+      // Constant-time delay to prevent user enumeration
+      await bcrypt.compare(password, '$2b$12$invalidhashpadding000000000000000000000000000000000000000');
+      return res.status(401).json({ success: false, message: 'Invalid username or password.' });
+    }
+
+    const storedHash = record.fields?.PasswordHash;
+    if (!storedHash) {
+      return res.status(401).json({ success: false, message: 'Account not set up for password login.' });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, storedHash);
+    if (!passwordMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid username or password.' });
+    }
+
+    const token = signToken({ username, recordId: record.id });
+    return res.json({ success: true, token, username });
+
+  } catch (err) {
+    console.error('[Login] Error:', err.message);
+    if (err.name === 'AbortError') {
+      return res.status(504).json({ success: false, message: 'User service timed out. Please try again.' });
+    }
+    return res.status(502).json({ success: false, message: 'Unable to reach user service. Please try again.' });
+  }
+});
+
+// ── POST /register ───────────────────────────────────────────────────────────
+app.post('/register', authLimiter, async (req, res) => {
+  const { username, password } = req.body || {};
+
+  const validationError = validateCredentials(username, password);
+  if (validationError) {
+    return res.status(400).json({ success: false, message: validationError });
+  }
+
+  const airtable = getAirtableEnv();
+  if (airtable.error) {
+    return res.status(500).json({ success: false, message: 'Server configuration error.' });
+  }
+
+  try {
+    // Check if user already exists
+    const existing = await findUserByUsername(airtable, username);
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Username already taken.' });
+    }
+
+    const BCRYPT_ROUNDS = 12;
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await createUserInAirtable(airtable, username, passwordHash);
+
+    const token = signToken({ username });
+    return res.status(201).json({ success: true, token, username });
+
+  } catch (err) {
+    console.error('[Register] Error:', err.message);
+    if (err.name === 'AbortError') {
+      return res.status(504).json({ success: false, message: 'User service timed out. Please try again.' });
+    }
+    return res.status(502).json({ success: false, message: 'Unable to create account. Please try again.' });
+  }
+});
+
+// ── JWT verification middleware (for protected routes) ────────────────────────
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Missing or invalid authorization header.' });
+  }
+  const token = authHeader.slice(7);
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Token expired or invalid. Please log in again.' });
+  }
+}
+
+// ── GET /config ──────────────────────────────────────────────────────────────
+app.get('/config', (req, res) => {
+  res.json({ serverUrl: process.env.SERVER_URL || '' });
+});
+
+// ── POST /dailylogs ──────────────────────────────────────────────────────────
+app.post('/dailylogs', async (req, res) => {
+  const airtable = getAirtableEnv();
+  if (airtable.error) return res.status(500).json({ error: airtable.error });
+
+  try {
+    const response = await airtableFetch(`https://api.airtable.com/v0/${airtable.baseId}/DailyLogs`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${airtable.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body)
     });
-
     const data = await response.json();
     return res.status(response.status).json(data);
   } catch (error) {
+    if (error.name === 'AbortError') return res.status(504).json({ error: 'Airtable request timed out' });
     return res.status(502).json({ error: 'Failed to reach Airtable', details: String(error) });
   }
 });
 
+// ── GET /dailylogs ───────────────────────────────────────────────────────────
 app.get('/dailylogs', async (req, res) => {
   const airtable = getAirtableEnv();
-  if (airtable.error) {
-    return res.status(500).json({ error: airtable.error });
-  }
+  if (airtable.error) return res.status(500).json({ error: airtable.error });
 
   const username = req.query.username;
   if (!username || typeof username !== 'string') {
@@ -115,24 +259,19 @@ app.get('/dailylogs', async (req, res) => {
   });
 
   try {
-    const response = await fetch(`https://api.airtable.com/v0/${airtable.baseId}/DailyLogs?${params.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${airtable.token}`
-      }
-    });
-
+    const response = await airtableFetch(
+      `https://api.airtable.com/v0/${airtable.baseId}/DailyLogs?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${airtable.token}` } }
+    );
     const data = await response.json();
     return res.status(response.status).json(data);
   } catch (error) {
+    if (error.name === 'AbortError') return res.status(504).json({ error: 'Airtable request timed out' });
     return res.status(502).json({ error: 'Failed to reach Airtable', details: String(error) });
   }
 });
 
-// ── Workout log archiver ─────────────────────────────────────
-// POST /workoutlogs/archive
-// Body: { records: [{ Username, CreatedAt, Notes, Units, SetsJson, Date }] }
-// Batches into groups of 10 (Airtable limit) and writes to the WorkoutLogs table.
-// Table name is configurable via AIRTABLE_WORKOUT_TABLE env var (default: WorkoutLogs).
+// ── POST /workoutlogs/archive ────────────────────────────────────────────────
 app.post('/workoutlogs/archive', async (req, res) => {
   const airtable = getAirtableEnv();
   if (airtable.error) return res.status(500).json({ error: airtable.error });
@@ -144,7 +283,6 @@ app.post('/workoutlogs/archive', async (req, res) => {
     return res.status(400).json({ error: 'records array is required and must not be empty' });
   }
 
-  // Airtable only accepts 10 records per create request
   const BATCH_SIZE = 10;
   const batches = [];
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
@@ -152,26 +290,21 @@ app.post('/workoutlogs/archive', async (req, res) => {
   }
 
   const archived = [];
-  const errors   = [];
+  const errors = [];
 
   for (const batch of batches) {
     try {
-      const response = await fetch(`https://api.airtable.com/v0/${airtable.baseId}/${encodeURIComponent(tableName)}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${airtable.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          records: batch.map(r => ({ fields: r }))
-        })
-      });
+      const response = await airtableFetch(
+        `https://api.airtable.com/v0/${airtable.baseId}/${encodeURIComponent(tableName)}`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${airtable.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ records: batch.map(r => ({ fields: r })) })
+        }
+      );
       const data = await response.json();
-      if (!response.ok) {
-        errors.push({ status: response.status, ...data });
-      } else {
-        archived.push(...(data.records || []));
-      }
+      if (!response.ok) errors.push({ status: response.status, ...data });
+      else archived.push(...(data.records || []));
     } catch (err) {
       errors.push({ error: String(err) });
     }
@@ -180,66 +313,38 @@ app.post('/workoutlogs/archive', async (req, res) => {
   if (errors.length > 0 && archived.length === 0) {
     return res.status(502).json({ error: 'All batches failed to reach Airtable', details: errors });
   }
-
-  return res.json({
-    archived: archived.length,
-    ...(errors.length ? { partialErrors: errors } : {})
-  });
+  return res.json({ archived: archived.length, ...(errors.length ? { partialErrors: errors } : {}) });
 });
 
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  if (username && password) {
-    return res.json({ success: true });
-  }
-  res.status(401).json({ success: false, message: 'Invalid credentials' });
-});
+// ── Community groups ─────────────────────────────────────────────────────────
+const { calculateLeaderboard } = require('./community');
+const groups = [];
+const programs = [];
+const sharedPrograms = [];
 
-// Groups API
 app.get('/community/groups', (req, res) => {
   const { userId, goal, tag, search } = req.query;
   let result = groups;
-  if (userId) {
-    result = result.filter(g => (g.members || []).includes(userId));
-  }
-  if (goal) {
-    const gl = goal.toLowerCase();
-    result = result.filter(g => (g.goal || '').toLowerCase().includes(gl));
-  }
-  if (tag) {
-    const tg = tag.toLowerCase();
-    result = result.filter(g => (g.tags || []).some(t => t.toLowerCase().includes(tg)));
-  }
-  if (search) {
-    const s = search.toLowerCase();
-    result = result.filter(g => g.name.toLowerCase().includes(s));
-  }
+  if (userId) result = result.filter(g => (g.members || []).includes(userId));
+  if (goal) result = result.filter(g => (g.goal || '').toLowerCase().includes(goal.toLowerCase()));
+  if (tag) result = result.filter(g => (g.tags || []).some(t => t.toLowerCase().includes(tag.toLowerCase())));
+  if (search) result = result.filter(g => g.name.toLowerCase().includes(search.toLowerCase()));
   res.json(result);
 });
 
 app.post('/community/groups', (req, res) => {
   const { name, creatorId, goal = '', tags = [] } = req.body;
-  if (!name || !creatorId) {
-    return res.status(400).json({ error: 'name and creatorId required' });
-  }
+  if (!name || !creatorId) return res.status(400).json({ error: 'name and creatorId required' });
   const group = {
-    id: groups.length + 1,
-    name,
-    goal,
+    id: groups.length + 1, name, goal,
     tags: Array.isArray(tags) ? tags : [],
-    members: [creatorId],
-    sharedPrograms: [],
-    progress: {},
-    posts: [],
-    programId: null
+    members: [creatorId], sharedPrograms: [], progress: {}, posts: [], programId: null
   };
   groups.push(group);
   res.json(group);
 });
 
-app.get('/api/groups', (req, res) => {
-  res.json(groups);
-});
+app.get('/api/groups', (req, res) => res.json(groups));
 
 app.post('/api/groups', (req, res) => {
   const { name } = req.body;
@@ -249,12 +354,9 @@ app.post('/api/groups', (req, res) => {
   res.json(group);
 });
 
-// Program creation
 async function handleCreateProgram(req, res) {
   const program = req.body;
-  if (!program || !program.name) {
-    return res.status(400).json({ error: 'program name required' });
-  }
+  if (!program || !program.name) return res.status(400).json({ error: 'program name required' });
   program.id = programs.length + 1;
   programs.push(program);
   res.json({ id: program.id });
@@ -263,17 +365,13 @@ async function handleCreateProgram(req, res) {
 app.post('/createProgram', handleCreateProgram);
 app.post('/saveProgram', handleCreateProgram);
 
-// Program sharing
 app.post('/shareProgram', (req, res) => {
   const { programId, recipientUsername } = req.body;
-  if (!programId || !recipientUsername) {
-    return res.status(400).json({ error: 'programId and recipientUsername required' });
-  }
+  if (!programId || !recipientUsername) return res.status(400).json({ error: 'programId and recipientUsername required' });
   sharedPrograms.push({ programId, recipientUsername });
   res.json({ ok: true });
 });
 
-// Posts
 app.get('/community/groups/:groupId/posts', (req, res) => {
   const g = groups.find(gr => gr.id === Number(req.params.groupId));
   if (!g) return res.status(404).json({ error: 'group not found' });
@@ -290,69 +388,56 @@ app.post('/community/groups/:groupId/posts', (req, res) => {
   res.json({ ok: true });
 });
 
-// Program sharing API
 app.post('/community/groups/:groupId/share', (req, res) => {
-  const { groupId } = req.params;
-  const g = groups.find(gr => gr.id === Number(groupId));
+  const g = groups.find(gr => gr.id === Number(req.params.groupId));
   if (!g) return res.status(404).json({ error: 'group not found' });
   const { senderId, programData } = req.body;
-  if (!senderId || !programData) {
-    return res.status(400).json({ error: 'senderId and programData required' });
-  }
+  if (!senderId || !programData) return res.status(400).json({ error: 'senderId and programData required' });
   g.sharedPrograms.push({ senderId, programData });
   res.json({ ok: true });
 });
 
-// Progress and leaderboard API
 app.get('/community/groups/:groupId/progress', (req, res) => {
-  const { groupId } = req.params;
-  const g = groups.find(gr => gr.id === Number(groupId));
+  const g = groups.find(gr => gr.id === Number(req.params.groupId));
   if (!g) return res.status(404).json({ error: 'group not found' });
-  const members = Object.entries(g.progress || {}).map(([id, data]) => ({
-    userId: id,
-    ...data
-  }));
-  const lb = calculateLeaderboard(members);
-  res.json({ members, leaderboard: lb });
+  const members = Object.entries(g.progress || {}).map(([id, data]) => ({ userId: id, ...data }));
+  res.json({ members, leaderboard: calculateLeaderboard(members) });
 });
 
-// basic leaderboard endpoint
-app.get('/leaderboard', (req, res) => {
-  res.json(leaderboard);
-});
+// ── Leaderboard ──────────────────────────────────────────────────────────────
+const leaderboard = [
+  { id: 1, name: 'Alice', workoutsLogged: 45, studyHours: 30, groupActivity: 120, weeklyVolume: [500, 700, 650, 800], progress: [10, 12, 14, 15, 16] },
+  { id: 2, name: 'Bob',   workoutsLogged: 30, studyHours: 40, groupActivity: 100, weeklyVolume: [400, 600, 550, 500], progress: [8, 9, 11, 13, 14] },
+  { id: 3, name: 'Cara',  workoutsLogged: 35, studyHours: 55, groupActivity: 90,  weeklyVolume: [450, 500, 470, 520], progress: [15, 14, 16, 18, 20] }
+];
+app.get('/leaderboard', (req, res) => res.json(leaderboard));
 
-
+// ── Airtable proxy ───────────────────────────────────────────────────────────
 app.all('/airtable/:baseId/:table', async (req, res) => {
   const airtable = getAirtableEnv();
-  if (airtable.error) {
-    return res.status(500).json({ error: airtable.error });
-  }
+  if (airtable.error) return res.status(500).json({ error: airtable.error });
 
   const { baseId, table } = req.params;
-  if (baseId !== airtable.baseId) {
-    return res.status(403).json({ error: 'Invalid Airtable base requested.' });
-  }
+  if (baseId !== airtable.baseId) return res.status(403).json({ error: 'Invalid Airtable base requested.' });
 
   const query = new URLSearchParams(req.query).toString();
   const url = `https://api.airtable.com/v0/${baseId}/${table}${query ? `?${query}` : ''}`;
 
   try {
-    const response = await fetch(url, {
+    const response = await airtableFetch(url, {
       method: req.method,
-      headers: {
-        Authorization: `Bearer ${airtable.token}`,
-        'Content-Type': 'application/json'
-      },
+      headers: { Authorization: `Bearer ${airtable.token}`, 'Content-Type': 'application/json' },
       body: req.method === 'GET' || req.method === 'HEAD' ? undefined : JSON.stringify(req.body)
     });
-
     const data = await response.json();
     return res.status(response.status).json(data);
   } catch (error) {
+    if (error.name === 'AbortError') return res.status(504).json({ error: 'Airtable request timed out' });
     return res.status(502).json({ error: 'Failed to reach Airtable', details: String(error) });
   }
 });
 
+// ── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

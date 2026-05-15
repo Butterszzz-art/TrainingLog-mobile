@@ -2543,43 +2543,49 @@ async function startLogin() {
       persistLoginIdentity(username, result.token);
       _saveLocalCredentials(username, password); // cache for offline login
 
-      // BUGFIX: null-safe — #userDisplay may not exist in the current DOM
       const userDisplayEl = document.getElementById("userDisplay");
       if (userDisplayEl) userDisplayEl.textContent = username;
       const loginContainerEl = document.getElementById("loginContainer");
       if (loginContainerEl) loginContainerEl.style.display = "none";
+
+      // ── Render immediately from local data so the UI appears without waiting ──
       openSection('pocketFit');
-      window.renderWorkouts(); // ✅ Render workouts
-      if (typeof syncLocalHistoryFromWorkouts === 'function') {
-        syncLocalHistoryFromWorkouts();
-      }
-      // Archive logs older than 4 weeks to Airtable (runs silently in background)
-      if (typeof window.archiveWorkoutsToAirtable === 'function') {
-        window.archiveWorkoutsToAirtable();
-      }
-      const fetchedTargets = await fetchUserMacroTargets(username);
-      renderMacroTargets({ useFallback: !fetchedTargets });
+      window.renderWorkouts();
+      renderMacroTargets({ useFallback: true }); // show cached targets instantly
       renderWeights();
       renderCardio();
       initCardioDateChip?.();
       renderPosingTab();
       renderCrossfitWorkouts();
-      loadTemplateDropdown(); // ✅ Load saved templates
+      loadTemplateDropdown();
       loadProgramTemplates();
-      loadProgramsFromBackend(username);          // ✅ Sync programs from Airtable
-      archiveBodyweightToAirtable(username);      // ✅ Archive bodyweight if 4+ weeks elapsed
-      syncMeasurementsToAirtable(username);       // ✅ Sync new measurement entries
-      syncCardioToAirtable(username);             // ✅ Sync cardio log if 4+ weeks elapsed
-      syncCrossfitToAirtable(username);           // ✅ Sync CrossFit log if 4+ weeks elapsed
+      renderDailyMacroProgress();
+      if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+      if (typeof window.initSessionContext === 'function') window.initSessionContext();
       if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
         loadProgramDropdown();
         checkActiveProgram();
       }
       loadUserExercises();
-      saveDailyMacroProgress(0, 0, 0); // reset progress on login
-      renderDailyMacroProgress();
-      if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
-      if (typeof window.initSessionContext === 'function') window.initSessionContext();
+
+      // ── Background syncs — fire-and-forget so they don't delay the UI ────────
+      Promise.resolve().then(async () => {
+        try {
+          if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
+          if (typeof window.archiveWorkoutsToAirtable === 'function') window.archiveWorkoutsToAirtable();
+          // Fetch fresh macro targets and re-render if they differ from cache
+          const fetchedTargets = await fetchUserMacroTargets(username);
+          if (fetchedTargets) renderMacroTargets({ useFallback: false });
+          // Non-critical Airtable syncs
+          loadProgramsFromBackend(username);
+          archiveBodyweightToAirtable(username);
+          syncMeasurementsToAirtable(username);
+          syncCardioToAirtable(username);
+          syncCrossfitToAirtable(username);
+        } catch (syncErr) {
+          console.warn('[Login] Background sync error:', syncErr);
+        }
+      });
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -2598,12 +2604,6 @@ async function startLogin() {
   } finally {
     setLoading(btn, false);
   }
-
-if (savedUser) {
-  setCurrentUser(savedUser);
-  renderMacroTargets();  // ✅ Restore progress bar + sliders
-}
-  
 }
   
 function showTab(tabName) {
