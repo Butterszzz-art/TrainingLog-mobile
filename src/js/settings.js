@@ -854,15 +854,51 @@ function injectSettingsMarkup() {
       bindLogoutAction(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
+      // Render the Profile Hub summary now that #profileTabContent exists in the DOM
+      renderProfileTab();
       renderProfileGamificationSummary(container);
       if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
       if (typeof applyTrainingModeClasses === 'function') applyTrainingModeClasses(localStorage.getItem('trainingMode') || 'bodybuilding');
       const appModeSel = container.querySelector('#appModeSelect');
       if (appModeSel && typeof getCurrentAppMode === 'function') appModeSel.value = getCurrentAppMode();
+      // Wire up coach mode toggle — must be done here because settings.html
+      // is fetched async, so the element doesn't exist at DOMContentLoaded
+      // when index.html tries to bind it.
       const coachToggle = container.querySelector('#coachModeToggle');
       if (coachToggle && typeof isCoachModeEnabled === 'function') {
         coachToggle.checked = isCoachModeEnabled();
         coachToggle.disabled = getCurrentAppMode() !== 'both';
+        coachToggle.addEventListener('change', (e) => {
+          if (typeof setCoachModeEnabled === 'function') setCoachModeEnabled(e.target.checked);
+          if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
+          coachToggle.disabled = getCurrentAppMode() !== 'both';
+          const isEnabled = typeof isCoachModeEnabled === 'function' && isCoachModeEnabled();
+          if (isEnabled) {
+            if (typeof showTab === 'function') showTab('clientsTab');
+          } else {
+            const activeId = document.querySelector('.tab-content.active')?.id;
+            if (activeId === 'clientsTab' || activeId === 'coachOpsTab') {
+              if (typeof showTab === 'function') showTab('homeTab');
+            }
+          }
+          if (typeof showToast === 'function') {
+            showToast(isEnabled ? '🏆 Coach Mode enabled' : 'Coach Mode disabled');
+          }
+        });
+      }
+
+      // Also wire appModeSelect if it isn't already bound by index.html
+      const appModeSel = container.querySelector('#appModeSelect');
+      if (appModeSel && typeof getCurrentAppMode === 'function') {
+        appModeSel.value = getCurrentAppMode();
+        appModeSel.addEventListener('change', (e) => {
+          if (typeof setCurrentAppMode === 'function') setCurrentAppMode(e.target.value);
+          if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
+          if (coachToggle) {
+            coachToggle.checked = typeof isCoachModeEnabled === 'function' && isCoachModeEnabled();
+            coachToggle.disabled = e.target.value !== 'both';
+          }
+        });
       }
     })
     .catch(error => {

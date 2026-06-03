@@ -187,6 +187,15 @@
       <span class="bn-icon">💪</span>
       <span class="bn-label">CrossFit</span>
     </button>
+    <!-- Coach-mode tabs — hidden until coach mode is enabled -->
+    <button class="bn-item coach-only" data-tab="clientsTab" aria-label="Clients" style="display:none;">
+      <span class="bn-icon">👥</span>
+      <span class="bn-label">Clients</span>
+    </button>
+    <button class="bn-item coach-only" data-tab="coachOpsTab" aria-label="Coach" style="display:none;">
+      <span class="bn-icon">🏆</span>
+      <span class="bn-label">Coach</span>
+    </button>
     <!-- More button opens the secondary-tabs drawer -->
     <button class="bn-item bn-more" id="moreNavBtn" onclick="openMoreDrawer()" aria-label="More" aria-expanded="false" aria-controls="moreDrawer">
       <span class="bn-icon">⋯</span>
@@ -1998,62 +2007,58 @@
   </div>
 </div>
 
-<div id="coachingTab" class="tab-content coach-only">
-  <h2>Coach Dashboard</h2>
+<!-- ── CLIENTS TAB — roster & individual client management ── -->
+<div id="clientsTab" class="tab-content coach-only">
+  <div class="coach-page-header">
+    <h2>Clients</h2>
+    <div class="coach-stats-bar" id="coachStatsBar"></div>
+  </div>
 
-  <!-- Aggregate stats bar -->
-  <div class="coach-stats-bar" id="coachStatsBar"></div>
+  <!-- Bulk actions toolbar (hidden until clients are selected) -->
+  <div class="coach-bulk-toolbar" id="coachBulkToolbar" hidden>
+    <span class="coach-bulk-count">0 selected</span>
+    <div class="coach-bulk-actions">
+      <button class="coach-bulk-btn" id="coachBulkAssign">📋 Assign Program</button>
+      <button class="coach-bulk-btn" id="coachBulkMacros">🍽️ Update Macros</button>
+      <button class="coach-bulk-btn" id="coachBulkCSV">📄 Export CSV</button>
+      <button class="coach-bulk-btn" id="coachBulkPDF">🖨️ Export PDF</button>
+      <button class="coach-bulk-btn danger" onclick="clearBulkSelection()">✕ Clear</button>
+    </div>
+  </div>
 
-  <!-- Sub-tab navigation -->
-  <nav class="coach-subtabs" id="coachSubtabNav" aria-label="Coach sections">
-    <button class="coach-subtab active" data-coach-subtab="roster">👥 Roster</button>
-    <button class="coach-subtab" data-coach-subtab="programs">📋 Programs</button>
+  <!-- Client roster rendered by renderCoachDashboard() -->
+  <div id="coachDashboardContent" class="coach-dashboard"></div>
+</div>
+
+<!-- ── COACH OPS TAB — programs, messages, analytics, privacy ── -->
+<div id="coachOpsTab" class="tab-content coach-only">
+  <div class="coach-page-header">
+    <h2>Coach</h2>
+  </div>
+
+  <nav class="coach-subtabs" id="coachOpsSubtabNav" aria-label="Coach operations">
+    <button class="coach-subtab active" data-coach-subtab="programs">📋 Programs</button>
     <button class="coach-subtab" data-coach-subtab="messaging">💬 Messages</button>
     <button class="coach-subtab" data-coach-subtab="analytics">📊 Insights</button>
     <button class="coach-subtab" data-coach-subtab="gdpr">🔒 Privacy</button>
   </nav>
 
-  <!-- ── Roster ── -->
-  <div id="coachSub_roster" class="coach-subview active">
-    <!-- Bulk actions toolbar (hidden until clients are selected) -->
-    <div class="coach-bulk-toolbar" id="coachBulkToolbar" hidden>
-      <span class="coach-bulk-count">0 selected</span>
-      <div class="coach-bulk-actions">
-        <button class="coach-bulk-btn" id="coachBulkAssign">📋 Assign Program</button>
-        <button class="coach-bulk-btn" id="coachBulkMacros">🍽️ Update Macros</button>
-        <button class="coach-bulk-btn" id="coachBulkCSV">📄 Export CSV</button>
-        <button class="coach-bulk-btn" id="coachBulkPDF">🖨️ Export PDF</button>
-        <button class="coach-bulk-btn danger" onclick="clearBulkSelection()">✕ Clear</button>
-      </div>
-    </div>
-    <!-- Client roster rendered by existing renderCoachDashboard() -->
-    <div id="coachDashboardContent" class="coach-dashboard"></div>
+  <div id="coachOpsSub_programs" class="coach-subview active">
+    <p class="coach-subtab-placeholder">📋 Loading program builder…</p>
   </div>
-
-  <!-- ── Program Builder ── -->
-  <div id="coachSub_programs" class="coach-subview">
-    <!-- Rendered by renderCoachProgramBuilder() on first click -->
-    <p class="coach-subtab-placeholder">📋 Click to load the program builder</p>
+  <div id="coachOpsSub_messaging" class="coach-subview">
+    <p class="coach-subtab-placeholder">💬 Loading client messages…</p>
   </div>
-
-  <!-- ── Messaging ── -->
-  <div id="coachSub_messaging" class="coach-subview">
-    <!-- Rendered by renderCoachMessaging() on first click -->
-    <p class="coach-subtab-placeholder">💬 Click to load client messages</p>
+  <div id="coachOpsSub_analytics" class="coach-subview">
+    <p class="coach-subtab-placeholder">📊 Loading insights…</p>
   </div>
-
-  <!-- ── Analytics ── -->
-  <div id="coachSub_analytics" class="coach-subview">
-    <!-- Rendered by renderCoachAnalytics() on first click -->
-    <p class="coach-subtab-placeholder">📊 Click to load insights</p>
-  </div>
-
-  <!-- ── GDPR / Privacy ── -->
-  <div id="coachSub_gdpr" class="coach-subview">
-    <!-- Rendered by renderCoachGdpr() on first click -->
-    <p class="coach-subtab-placeholder">🔒 Click to load privacy settings</p>
+  <div id="coachOpsSub_gdpr" class="coach-subview">
+    <p class="coach-subtab-placeholder">🔒 Loading privacy settings…</p>
   </div>
 </div>
+
+<!-- Legacy alias — redirects any old coachingTab references to clientsTab -->
+<div id="coachingTab" class="tab-content coach-only" style="display:none;" aria-hidden="true"></div>
 
 <div id="settingsTab" class="tab-content">
   <div id="settingsFormContainer" class="panel"></div>
@@ -2103,9 +2108,14 @@
         <span class="more-drawer-icon">📜</span>
         <span>History</span>
       </button>
-      <button class="more-drawer-item coach-only" data-tab="coachingTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('coachingTab'), 220)">
-        <span class="more-drawer-icon">🧭</span>
+      <button class="more-drawer-item coach-only" data-tab="clientsTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('clientsTab'), 220)">
+        <span class="more-drawer-icon">👥</span>
+        <span>Clients</span>
+      </button>
+      <button class="more-drawer-item coach-only" data-tab="coachOpsTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('coachOpsTab'), 220)">
+        <span class="more-drawer-icon">🏆</span>
         <span>Coach</span>
       </button>
       <button class="more-drawer-item" data-tab="settingsTab"
@@ -2607,7 +2617,11 @@ async function startLogin() {
 }
   
 function showTab(tabName) {
-  if (tabName === 'coachingTab' && !isCoachModeEnabled()) {
+  // Redirect legacy coachingTab references to the new split tabs
+  if (tabName === 'coachingTab') {
+    tabName = isCoachModeEnabled() ? 'clientsTab' : 'homeTab';
+  }
+  if ((tabName === 'clientsTab' || tabName === 'coachOpsTab') && !isCoachModeEnabled()) {
     tabName = 'homeTab';
   }
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -2631,8 +2645,14 @@ function showTab(tabName) {
     case 'homeTab':
       renderHomeDashboard();
       break;
-    case 'coachingTab':
+    case 'clientsTab':
       renderCoachDashboard();
+      if (typeof renderCoachStatsBar === 'function') renderCoachStatsBar();
+      break;
+    case 'coachOpsTab':
+      initCoachOpsSubtabs();
+      // Render the first active sub-tab (programs) on first visit
+      if (typeof renderCoachProgramBuilder === 'function') renderCoachProgramBuilder();
       break;
     case 'macroTab':
       if (window.renderSparklines) {
@@ -6977,9 +6997,33 @@ function setCoachModeEnabled(value) {
 function applyAppModeToNavigation() {
   const coachModeEnabled = isCoachModeEnabled();
   document.querySelectorAll('.coach-only').forEach((el) => {
-    // Use empty string to revert to the stylesheet default (e.g. flex for
-    // .bn-item) instead of forcing 'block', which would break the nav layout.
+    // Tab-content divs (display:block) vs bn-item nav buttons (display:flex)
+    // Use empty string to revert to stylesheet default rather than forcing 'block'.
+    if (el.classList.contains('tab-content')) {
+      // Tab panels are shown/hidden by the tab system, not by display directly
+      return;
+    }
     el.style.display = coachModeEnabled ? '' : 'none';
+  });
+}
+
+function initCoachOpsSubtabs() {
+  const nav = document.getElementById('coachOpsSubtabNav');
+  if (!nav || nav.dataset.bound) return;
+  nav.dataset.bound = 'true';
+  nav.addEventListener('click', e => {
+    const btn = e.target.closest('.coach-subtab');
+    if (!btn) return;
+    nav.querySelectorAll('.coach-subtab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.coachSubtab;
+    document.querySelectorAll('#coachOpsTab .coach-subview').forEach(v =>
+      v.classList.toggle('active', v.id === `coachOpsSub_${target}`)
+    );
+    if (target === 'analytics'  && typeof renderCoachAnalytics === 'function')  renderCoachAnalytics();
+    if (target === 'messaging'  && typeof renderCoachMessaging === 'function')  renderCoachMessaging();
+    if (target === 'gdpr'       && typeof renderCoachGdpr === 'function')       renderCoachGdpr();
+    if (target === 'programs'   && typeof renderCoachProgramBuilder === 'function') renderCoachProgramBuilder();
   });
 }
 
@@ -7009,21 +7053,25 @@ document.addEventListener('DOMContentLoaded', () => {
       syncModeControls();
       applyAppModeToNavigation();
       if (isCoachModeEnabled()) {
-        showTab('coachingTab');
-      } else if (activeTab && activeTab.id === 'coachingTab') {
+        showTab('clientsTab');
+      } else if (activeTab && (activeTab.id === 'clientsTab' || activeTab.id === 'coachOpsTab')) {
         showTab('homeTab');
       }
     });
   }
 
+  // NOTE: coachModeToggle lives inside settings.html which loads asynchronously.
+  // The handler below binds to a static element that doesn't exist yet at
+  // DOMContentLoaded. The real binding happens inside bindCoachModeToggle()
+  // which is called from injectSettingsMarkup() after the HTML is injected.
   if (coachModeToggle) {
     coachModeToggle.addEventListener('change', (event) => {
       setCoachModeEnabled(event.target.checked);
       syncModeControls();
       applyAppModeToNavigation();
       if (isCoachModeEnabled()) {
-        showTab('coachingTab');
-      } else if (activeTab && activeTab.id === 'coachingTab') {
+        showTab('clientsTab');
+      } else if (activeTab && (activeTab.id === 'clientsTab' || activeTab.id === 'coachOpsTab')) {
         showTab('homeTab');
       }
     });
