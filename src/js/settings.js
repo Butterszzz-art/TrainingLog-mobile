@@ -854,8 +854,6 @@ function injectSettingsMarkup() {
       bindLogoutAction(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
-      // Render the Profile Hub summary now that #profileTabContent exists in the DOM
-      renderProfileTab();
       renderProfileGamificationSummary(container);
       if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
       if (typeof applyTrainingModeClasses === 'function') applyTrainingModeClasses(localStorage.getItem('trainingMode') || 'bodybuilding');
