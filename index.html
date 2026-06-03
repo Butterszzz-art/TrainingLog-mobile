@@ -2594,13 +2594,13 @@ async function startLogin() {
     if (localOk) {
       console.info('Server offline — using cached local credentials');
       _doLocalLogin(username);
-      await loadTemplateDropdown();
+      // loadTemplateDropdown is called inside _doLocalLogin; no token so only local templates load
       return;
     }
     if (errorEl) {
       errorEl.textContent = "Unable to connect to the server. Please try again later.";
     }
-    await loadTemplateDropdown();
+    // Don't call loadTemplateDropdown here — no token means remote fetch would 401
   } finally {
     setLoading(btn, false);
   }
@@ -4548,41 +4548,50 @@ function setTemplateLoadMessage(message) {
 }
 
 async function fetchTemplates(username) {
-  if (!airtableBaseId || !airtableToken) {
-    await fetchAirtableConfig();
+  // No username = nothing to fetch; caller will fall back to local templates
+  if (!username) return [];
+
+  const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+  if (!token) {
+    // Not logged in yet — skip the network call silently; local templates still load
+    return [];
   }
+
   const params = new URLSearchParams({ username });
   const url = `${window.SERVER_URL}/templates?${params.toString()}`;
-  const res = await fetch(url, {
-    credentials: 'include',
-    headers: getAuthHeaders()
-  });
+
+  let res;
+  try {
+    res = await fetch(url, { credentials: 'include', headers: getAuthHeaders() });
+  } catch (networkErr) {
+    // Server unreachable — silently return empty; local templates will still show
+    console.warn('[Templates] Network error, using local only:', networkErr.message);
+    return [];
+  }
+
   if (res.status === 401 || res.status === 403) {
-    setTemplateLoadMessage('Authorization failed. Please log in again.');
-    throw new Error('Authorization failed. Please log in again.');
+    // Token expired or invalid — don't crash, just use local templates
+    console.warn('[Templates] Auth error fetching remote templates — using local only');
+    return [];
   }
   if (res.status === 422) {
     let errMsg = 'Unable to load templates. Please confirm your username and try again.';
     try {
       const body = await res.json();
       const detail = body?.error?.detail || body?.error?.message || body?.detail || body?.message;
-      if (typeof detail === 'string' && detail.trim()) {
-        errMsg = `Unable to load templates: ${detail}`;
-      }
-    } catch {
-      // ignore JSON parse errors
-    }
+      if (typeof detail === 'string' && detail.trim()) errMsg = `Unable to load templates: ${detail}`;
+    } catch { /* ignore */ }
     setTemplateLoadMessage(errMsg);
-    throw new Error(`Templates HTTP 422: ${errMsg}`);
+    return [];
   }
   if (!res.ok) {
-    setTemplateLoadMessage('Unable to load templates right now. Please try again later.');
-    throw new Error(`Templates HTTP ${res.status}`);
+    console.warn(`[Templates] HTTP ${res.status} — using local only`);
+    return [];
   }
+
   setTemplateLoadMessage('');
   const data = await res.json();
-  const items = Array.isArray(data.items) ? data.items : [];
-  return items;
+  return Array.isArray(data.items) ? data.items : [];
 }
 
 let resistanceTemplatesCache = [];

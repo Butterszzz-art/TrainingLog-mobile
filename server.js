@@ -271,6 +271,110 @@ app.get('/dailylogs', async (req, res) => {
   }
 });
 
+// ── Templates (GET / POST / DELETE) ─────────────────────────────────────────
+const TEMPLATES_TABLE = process.env.AIRTABLE_TEMPLATES_TABLE || 'ResistanceTemplates';
+
+app.get('/templates', async (req, res) => {
+  const airtable = getAirtableEnv();
+  if (airtable.error) return res.status(500).json({ success: false, error: airtable.error });
+
+  const username = req.query.username;
+  if (!username || typeof username !== 'string') {
+    return res.status(400).json({ success: false, error: 'username query param is required' });
+  }
+
+  const params = new URLSearchParams({
+    filterByFormula: `{Username}='${username.replace(/'/g, "\\'")}'`,
+    'sort[0][field]': 'TemplateName',
+    'sort[0][direction]': 'asc'
+  });
+
+  try {
+    const response = await airtableFetch(
+      `https://api.airtable.com/v0/${airtable.baseId}/${encodeURIComponent(TEMPLATES_TABLE)}?${params}`,
+      { headers: { Authorization: `Bearer ${airtable.token}` } }
+    );
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ success: false, error: data?.error?.message || 'Airtable error' });
+    }
+    const items = (data.records || []).map(r => ({
+      id: r.id,
+      name: r.fields?.TemplateName || 'Untitled',
+      TemplateName: r.fields?.TemplateName,
+      TemplateData: r.fields?.TemplateData,
+      username: r.fields?.Username
+    }));
+    return res.json({ success: true, items });
+  } catch (err) {
+    if (err.name === 'AbortError') return res.status(504).json({ success: false, error: 'Request timed out' });
+    return res.status(502).json({ success: false, error: 'Failed to reach Airtable' });
+  }
+});
+
+app.post('/templates', async (req, res) => {
+  const airtable = getAirtableEnv();
+  if (airtable.error) return res.status(500).json({ success: false, error: airtable.error });
+
+  const { username, templateName, templateData } = req.body || {};
+  if (!username || !templateName) {
+    return res.status(400).json({ success: false, error: 'username and templateName are required' });
+  }
+
+  try {
+    const response = await airtableFetch(
+      `https://api.airtable.com/v0/${airtable.baseId}/${encodeURIComponent(TEMPLATES_TABLE)}`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${airtable.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          records: [{
+            fields: {
+              Username: username,
+              TemplateName: templateName,
+              TemplateData: typeof templateData === 'string' ? templateData : JSON.stringify(templateData)
+            }
+          }]
+        })
+      }
+    );
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ success: false, error: data?.error?.message || 'Airtable error' });
+    }
+    return res.status(201).json({ success: true, record: data.records?.[0] });
+  } catch (err) {
+    if (err.name === 'AbortError') return res.status(504).json({ success: false, error: 'Request timed out' });
+    return res.status(502).json({ success: false, error: 'Failed to reach Airtable' });
+  }
+});
+
+app.delete('/templates/:recordId', async (req, res) => {
+  const airtable = getAirtableEnv();
+  if (airtable.error) return res.status(500).json({ success: false, error: airtable.error });
+
+  const { recordId } = req.params;
+  if (!recordId) return res.status(400).json({ success: false, error: 'recordId is required' });
+
+  try {
+    const response = await airtableFetch(
+      `https://api.airtable.com/v0/${airtable.baseId}/${encodeURIComponent(TEMPLATES_TABLE)}/${encodeURIComponent(recordId)}`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${airtable.token}` }
+      }
+    );
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ success: false, error: data?.error?.message || 'Airtable error' });
+    }
+    return res.json({ success: true, deleted: data.deleted });
+  } catch (err) {
+    if (err.name === 'AbortError') return res.status(504).json({ success: false, error: 'Request timed out' });
+    return res.status(502).json({ success: false, error: 'Failed to reach Airtable' });
+  }
+});
+
 // ── POST /workoutlogs/archive ────────────────────────────────────────────────
 app.post('/workoutlogs/archive', async (req, res) => {
   const airtable = getAirtableEnv();
