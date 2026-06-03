@@ -7200,10 +7200,11 @@ function normalizeCoachClientRecord(client = {}) {
 async function loadCoachClients() {
   const coachId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'coach';
   const fallback = getCoachDemoClients().map(normalizeCoachClientRecord);
-  const endpoint = `/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
+  const base = (typeof window !== 'undefined' && window.SERVER_URL) ? window.SERVER_URL : '';
+  const endpoint = `${base}/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
 
   try {
-    const response = await fetch(endpoint);
+    const response = await fetch(endpoint, { headers: getAuthHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     const list = Array.isArray(payload)
