@@ -151,7 +151,6 @@
   <h2>Welcome to Pocket Coach</h2>
   <button onclick="openSection('pocketFit')">PocketFit</button>
   <button onclick="openSection('pocketLifestyle')">PocketLifestyle</button>
-  <button onclick="openSection('pocketFinance')">PocketFinance</button>
 </div>
 
 <div id="pocketFitContainer" class="section" style="display:none;">
@@ -2044,18 +2043,10 @@
   </nav>
 
   <!-- IDs kept as coachSub_* to match the lookup in coaching-enhanced.js -->
-  <div id="coachSub_programs" class="coach-subview active">
-    <p class="coach-subtab-placeholder">📋 Loading program builder…</p>
-  </div>
-  <div id="coachSub_messaging" class="coach-subview">
-    <p class="coach-subtab-placeholder">💬 Loading client messages…</p>
-  </div>
-  <div id="coachSub_analytics" class="coach-subview">
-    <p class="coach-subtab-placeholder">📊 Loading insights…</p>
-  </div>
-  <div id="coachSub_gdpr" class="coach-subview">
-    <p class="coach-subtab-placeholder">🔒 Loading privacy settings…</p>
-  </div>
+  <div id="coachSub_programs" class="coach-subview active"></div>
+  <div id="coachSub_messaging" class="coach-subview"></div>
+  <div id="coachSub_analytics" class="coach-subview"></div>
+  <div id="coachSub_gdpr" class="coach-subview"></div>
 </div>
 
 <!-- Legacy alias — redirects any old coachingTab references to clientsTab -->

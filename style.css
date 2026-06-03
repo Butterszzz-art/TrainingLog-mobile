@@ -743,6 +743,16 @@ body.theme-dark .set-row {
 }
 
 .history-back-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--elevated-bg);
+  color: var(--text-color);
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
 .history-item-header {
   display: flex;
   align-items: center;
