@@ -2043,16 +2043,17 @@
     <button class="coach-subtab" data-coach-subtab="gdpr">🔒 Privacy</button>
   </nav>
 
-  <div id="coachOpsSub_programs" class="coach-subview active">
+  <!-- IDs kept as coachSub_* to match the lookup in coaching-enhanced.js -->
+  <div id="coachSub_programs" class="coach-subview active">
     <p class="coach-subtab-placeholder">📋 Loading program builder…</p>
   </div>
-  <div id="coachOpsSub_messaging" class="coach-subview">
+  <div id="coachSub_messaging" class="coach-subview">
     <p class="coach-subtab-placeholder">💬 Loading client messages…</p>
   </div>
-  <div id="coachOpsSub_analytics" class="coach-subview">
+  <div id="coachSub_analytics" class="coach-subview">
     <p class="coach-subtab-placeholder">📊 Loading insights…</p>
   </div>
-  <div id="coachOpsSub_gdpr" class="coach-subview">
+  <div id="coachSub_gdpr" class="coach-subview">
     <p class="coach-subtab-placeholder">🔒 Loading privacy settings…</p>
   </div>
 </div>
@@ -7018,7 +7019,7 @@ function initCoachOpsSubtabs() {
     btn.classList.add('active');
     const target = btn.dataset.coachSubtab;
     document.querySelectorAll('#coachOpsTab .coach-subview').forEach(v =>
-      v.classList.toggle('active', v.id === `coachOpsSub_${target}`)
+      v.classList.toggle('active', v.id === `coachSub_${target}`)
     );
     if (target === 'analytics'  && typeof renderCoachAnalytics === 'function')  renderCoachAnalytics();
     if (target === 'messaging'  && typeof renderCoachMessaging === 'function')  renderCoachMessaging();
@@ -8092,10 +8093,11 @@ function normalizeCoachClientRecord(client = {}) {
 async function loadCoachClients() {
   const coachId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'coach';
   const fallback = getCoachDemoClients().map(normalizeCoachClientRecord);
-  const endpoint = `/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
+  const base = (window.SERVER_URL || '').replace(/\/$/, '');
+  const endpoint = `${base}/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
 
   try {
-    const response = await fetch(endpoint);
+    const response = await fetch(endpoint, { headers: getAuthHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     const list = Array.isArray(payload)
