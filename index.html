@@ -2296,6 +2296,15 @@ function getDefaultServerUrl() {
   return 'https://traininglog-backend.onrender.com';
 }
 
+// Wrapper that aborts slow backend calls rather than hanging forever.
+// Render free tier cold-starts can take 30-90 s; we don't want to block the UI.
+function fetchWithTimeout(url, options = {}, ms = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(id));
+}
+
 function ensureServerUrl() {
   if (typeof window === 'undefined') {
     return getDefaultServerUrl();
@@ -2502,12 +2511,12 @@ async function startLogin() {
     if (typeof window.login === 'function') {
       result = await window.login(username, password);
     } else {
-      const response = await fetch(`${window.SERVER_URL}/login`, {
+      const response = await fetchWithTimeout(`${window.SERVER_URL}/login`, {
         method: 'POST',
         credentials: "include",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
-      });
+      }, 12000);
 
       try {
         result = await response.json();
@@ -2596,11 +2605,13 @@ async function startLogin() {
     if (localOk) {
       console.info('Server offline — using cached local credentials');
       _doLocalLogin(username);
-      // loadTemplateDropdown is called inside _doLocalLogin; no token so only local templates load
       return;
     }
     if (errorEl) {
-      errorEl.textContent = "Unable to connect to the server. Please try again later.";
+      const isTimeout = error.name === 'AbortError';
+      errorEl.textContent = isTimeout
+        ? 'Server is starting up (this can take ~30 s on first load). Please try again in a moment.'
+        : 'Unable to connect to the server. Please try again later.';
     }
     // Don't call loadTemplateDropdown here — no token means remote fetch would 401
   } finally {
@@ -2885,9 +2896,10 @@ function loadMacroTargetsFromLocal() {
 async function fetchUserMacroTargets(username) {
   if (!username) return false;
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${window.SERVER_URL}/macrotargets?username=${encodeURIComponent(username)}`,
-      { headers: getAuthHeaders() }
+      { headers: getAuthHeaders() },
+      8000
     );
     const data = await response.json();
     if (!data.success || !data.item) throw new Error('No macro targets found for this user');
@@ -4574,7 +4586,7 @@ async function fetchTemplates(username) {
 
   let res;
   try {
-    res = await fetch(url, { credentials: 'include', headers: getAuthHeaders() });
+    res = await fetchWithTimeout(url, { credentials: 'include', headers: getAuthHeaders() }, 8000);
   } catch (networkErr) {
     // Server unreachable — silently return empty; local templates will still show
     console.warn('[Templates] Network error, using local only:', networkErr.message);
@@ -12673,9 +12685,10 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   async function loadProgramsFromBackend(username) {
     if (!username || !window.SERVER_URL) return;
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${window.SERVER_URL}/programs?username=${encodeURIComponent(username)}`,
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeaders() },
+        8000
       );
       if (!res.ok) return;
       const data = await res.json();
