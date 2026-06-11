@@ -188,6 +188,11 @@ th {
   padding-bottom: 80px;
 }
 
+/* Extra clearance when the focus bar is visible above the nav */
+.workout-active #appContainer {
+  padding-bottom: 128px; /* 64px nav + 44px focus bar + 20px breathing room */
+}
+
 #pocketFitContainer {
   width: 100vw;
   min-height: 100vh;
