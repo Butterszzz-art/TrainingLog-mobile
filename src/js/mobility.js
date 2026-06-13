@@ -206,6 +206,9 @@
   let _editing = null;
   let _libFilter = 'all';
 
+  // Timer state: { [exId]: { remaining, total, interval, done } }
+  const _timers = {};
+
   // ─── Main render ─────────────────────────────────────────────
   function render() {
     const wrap = document.getElementById('mobilityTabContent');
@@ -260,9 +263,10 @@
               <strong style="font-size:0.95rem;color:var(--text-color);">${esc(r.name)}</strong>
               ${badge(r.type)}
               ${r.assignedByCoach ? '<span title="Coach assigned" style="font-size:1rem;">🧭</span>' : ''}
+              ${(r.streakCount || 0) >= 2 ? `<span style="background:rgba(255,140,0,0.15);color:#e07800;padding:2px 7px;border-radius:20px;font-size:0.73rem;font-weight:700;">🔥 ${r.streakCount}</span>` : ''}
             </div>
             <div style="font-size:0.78rem;color:var(--secondary-text);">
-              📍 ${esc(r.targetArea)} &nbsp;·&nbsp; ${wk} / ${r.frequencyPerWeek} this week &nbsp;·&nbsp; Last: ${last ? new Date(last).toLocaleDateString() : 'Never'}
+              📍 ${esc(r.targetArea)} &nbsp;·&nbsp; ${wk} / ${r.frequencyPerWeek} this week &nbsp;·&nbsp; Last: ${last ? new Date(last).toLocaleDateString() : 'Never'}${(r.longestStreak||0) >= 2 ? ` &nbsp;·&nbsp; Best: ${r.longestStreak}` : ''}
             </div>
           </div>
           <div style="display:flex;gap:5px;flex-shrink:0;">
@@ -283,38 +287,137 @@
   }
 
   // ─── Log Session ──────────────────────────────────────────────
+  function fmtMmSs(sec) {
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function renderExerciseTimers(container, routine) {
+    if (!routine || !routine.exercises?.length) { container.innerHTML = ''; return; }
+    container.innerHTML = routine.exercises.map(ex => {
+      const hasDur = ex.durationSeconds != null && ex.durationSeconds > 0;
+      const exId = ex.id;
+      if (hasDur) {
+        return `
+          <div class="mob-ex-row" data-ex-id="${exId}" style="background:var(--elevated-bg);border:1px solid var(--border-color);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+              <div style="flex:1;">
+                <strong style="font-size:0.88rem;color:var(--text-color);">${esc(ex.name)}</strong>
+                <div style="font-size:0.76rem;color:var(--secondary-text);margin-top:2px;">${esc(ex.detail)}</div>
+              </div>
+              <span class="mob-done-label" style="display:none;color:var(--primary);font-weight:700;font-size:0.82rem;margin-left:8px;white-space:nowrap;">Done ✅</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+              <span class="mob-timer-display" style="font-family:'Courier New',monospace;font-size:1.2rem;font-weight:700;color:var(--primary);min-width:52px;">${fmtMmSs(ex.durationSeconds)}</span>
+              <button class="mob-timer-start" data-ex-id="${exId}" data-dur="${ex.durationSeconds}" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Start</button>
+              <button class="mob-timer-reset" data-ex-id="${exId}" data-dur="${ex.durationSeconds}" style="background:none;border:1px solid var(--border-color);border-radius:7px;padding:5px 10px;font-size:0.8rem;color:var(--secondary-text);cursor:pointer;font-family:Poppins,sans-serif;">Reset</button>
+            </div>
+          </div>`;
+      } else {
+        const repStr = (ex.reps && ex.sets) ? `${ex.sets} × ${ex.reps} reps` : (ex.reps ? `${ex.reps} reps` : '');
+        return `
+          <div style="background:var(--elevated-bg);border:1px solid var(--border-color);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+            <strong style="font-size:0.88rem;color:var(--text-color);">${esc(ex.name)}</strong>
+            ${repStr ? `<span style="margin-left:8px;font-size:0.78rem;color:var(--primary);font-weight:600;">${repStr}</span>` : ''}
+            <div style="font-size:0.76rem;color:var(--secondary-text);margin-top:2px;">${esc(ex.detail)}</div>
+          </div>`;
+      }
+    }).join('');
+
+    // Wire up timer buttons
+    container.querySelectorAll('.mob-timer-start').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const exId = btn.dataset.exId;
+        const row = container.querySelector(`.mob-ex-row[data-ex-id="${exId}"]`);
+        const display = row?.querySelector('.mob-timer-display');
+        const t = _timers[exId];
+
+        if (t?.interval) {
+          // Pause
+          clearInterval(t.interval); t.interval = null;
+          btn.textContent = 'Resume';
+          btn.style.background = 'var(--secondary-text)';
+        } else {
+          // Start / Resume
+          if (!_timers[exId]) _timers[exId] = { remaining: +btn.dataset.dur, total: +btn.dataset.dur, interval: null, done: false };
+          if (_timers[exId].done) return;
+          btn.textContent = 'Pause';
+          btn.style.background = '#e07800';
+          _timers[exId].interval = setInterval(() => {
+            _timers[exId].remaining -= 1;
+            if (display) display.textContent = fmtMmSs(Math.max(0, _timers[exId].remaining));
+            if (_timers[exId].remaining <= 0) {
+              clearInterval(_timers[exId].interval); _timers[exId].interval = null; _timers[exId].done = true;
+              if (display) { display.textContent = '00:00'; display.style.color = 'var(--primary)'; }
+              btn.textContent = 'Done'; btn.disabled = true; btn.style.background = 'rgba(95,168,126,0.3)';
+              const doneLabel = row?.querySelector('.mob-done-label');
+              if (doneLabel) doneLabel.style.display = 'inline';
+              navigator.vibrate?.(400);
+            }
+          }, 1000);
+        }
+      });
+    });
+
+    container.querySelectorAll('.mob-timer-reset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const exId = btn.dataset.exId;
+        const row = container.querySelector(`.mob-ex-row[data-ex-id="${exId}"]`);
+        const display = row?.querySelector('.mob-timer-display');
+        const startBtn = row?.querySelector('.mob-timer-start');
+        const doneLabel = row?.querySelector('.mob-done-label');
+        if (_timers[exId]?.interval) clearInterval(_timers[exId].interval);
+        _timers[exId] = { remaining: +btn.dataset.dur, total: +btn.dataset.dur, interval: null, done: false };
+        if (display) { display.textContent = fmtMmSs(+btn.dataset.dur); display.style.color = 'var(--secondary-text)'; }
+        if (startBtn) { startBtn.textContent = 'Start'; startBtn.disabled = false; startBtn.style.background = 'var(--primary)'; }
+        if (doneLabel) doneLabel.style.display = 'none';
+      });
+    });
+  }
+
   function renderLogSession(sub) {
     const routines = getRoutines();
     const today = new Date().toISOString().slice(0,10);
 
+    if (!routines.length) {
+      sub.innerHTML = `<div class="panel" style="padding:16px;margin-top:4px;"><p style="color:var(--secondary-text);font-size:0.88rem;">Add a routine first from <strong>My Routines</strong>.</p></div>`;
+      return;
+    }
+
     sub.innerHTML = `
       <div class="panel" style="padding:16px;margin-top:4px;">
         <h3 style="margin:0 0 14px;font-size:1rem;font-weight:700;color:var(--text-color);">Log a Session</h3>
-        ${!routines.length
-          ? `<p style="color:var(--secondary-text);font-size:0.88rem;">Add a routine first from <strong>My Routines</strong>.</p>`
-          : `
-          <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Routine</label>
-          <select id="mobLogR" style="width:100%;margin-bottom:12px;">${routines.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
-          <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Date</label>
-          <input type="date" id="mobLogD" value="${today}" style="width:100%;margin-bottom:12px;">
-          <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Notes (optional)</label>
-          <textarea id="mobLogN" rows="2" placeholder="How did it feel?" style="width:100%;border-radius:8px;border:1px solid var(--border-color);background:var(--elevated-bg);color:var(--text-color);padding:8px;font-family:Poppins,sans-serif;font-size:0.83rem;box-sizing:border-box;margin-bottom:14px;resize:vertical;"></textarea>
-          <button id="mobLogSubmit" style="width:100%;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:Poppins,sans-serif;">Mark Complete ✅</button>
-        `}
+        <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Routine</label>
+        <select id="mobLogR" style="width:100%;margin-bottom:12px;">${routines.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
+        <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Date</label>
+        <input type="date" id="mobLogD" value="${today}" style="width:100%;margin-bottom:12px;">
+        <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Notes (optional)</label>
+        <textarea id="mobLogN" rows="2" placeholder="How did it feel?" style="width:100%;border-radius:8px;border:1px solid var(--border-color);background:var(--elevated-bg);color:var(--text-color);padding:8px;font-family:Poppins,sans-serif;font-size:0.83rem;box-sizing:border-box;margin-bottom:14px;resize:vertical;"></textarea>
+        <button id="mobLogSubmit" style="width:100%;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:Poppins,sans-serif;">Mark Complete ✅</button>
       </div>
+      <div id="mobExTimers" style="margin-top:12px;"></div>
     `;
 
-    const btn = sub.querySelector('#mobLogSubmit');
-    if (btn) {
-      btn.addEventListener('click', async () => {
-        const id    = sub.querySelector('#mobLogR').value;
-        const date  = sub.querySelector('#mobLogD').value;
-        const notes = sub.querySelector('#mobLogN').value.trim();
-        await doLog(id, date, notes);
-        _tab = 'myRoutines';
-        render();
-      });
+    const timerContainer = sub.querySelector('#mobExTimers');
+    const sel = sub.querySelector('#mobLogR');
+
+    function refreshTimers() {
+      const r = getRoutines().find(r => r.id === sel.value);
+      renderExerciseTimers(timerContainer, r);
     }
+    sel.addEventListener('change', refreshTimers);
+    refreshTimers();
+
+    sub.querySelector('#mobLogSubmit').addEventListener('click', async () => {
+      const id    = sel.value;
+      const date  = sub.querySelector('#mobLogD').value;
+      const notes = sub.querySelector('#mobLogN').value.trim();
+      // Clear all running timers for this view
+      Object.values(_timers).forEach(t => { if (t.interval) clearInterval(t.interval); });
+      await doLog(id, date, notes);
+      _tab = 'myRoutines';
+      render();
+    });
   }
 
   // ─── Library ──────────────────────────────────────────────────
@@ -503,9 +606,44 @@
   }
 
   async function doLog(routineId, dateStr, notes) {
-    const session = { id: genId(), routineId, username: getUser(), completedAt: dateStr ? new Date(dateStr).toISOString() : new Date().toISOString(), notes: notes||'' };
-    const list = getSessions(); list.push(session); saveSessions(list);
+    const u = getUser();
+    const completedAt = dateStr ? new Date(dateStr).toISOString() : new Date().toISOString();
+    const session = { id: genId(), routineId, username: u, completedAt, notes: notes||'' };
+    const sList = getSessions(); sList.push(session); saveSessions(sList);
     atSyncSession(session);
+
+    // ── Streak tracking on the routine ────────────────────────────
+    const rList = getRoutines();
+    const rIdx  = rList.findIndex(r => r.id === routineId);
+    if (rIdx !== -1) {
+      const r = rList[rIdx];
+      const today  = completedAt.slice(0, 10);
+      const prevDay = r.lastCompletedDate ? r.lastCompletedDate.slice(0, 10) : null;
+      const prevLastDate = r.lastCompletedDate; // for gamification pass-through
+      if (!prevDay) {
+        r.streakCount = 1;
+      } else {
+        const diff = Math.round((new Date(today) - new Date(prevDay)) / 86400000);
+        if (diff === 0) { /* same day — no change */ }
+        else if (diff === 1) r.streakCount = (r.streakCount || 0) + 1;
+        else r.streakCount = 1;
+      }
+      r.longestStreak  = Math.max(r.longestStreak || 0, r.streakCount || 0);
+      r.lastCompletedDate = completedAt;
+      rList[rIdx] = r;
+      saveRoutines(rList);
+
+      // ── Gamification ──────────────────────────────────────────
+      if (window.gamification?.awardXp) {
+        window.gamification.awardXp(u, 'mobility_session', {
+          date: completedAt,
+          routineId,
+          rewardId: `mobility:${session.id}`,
+          lastMobilityDate: prevLastDate
+        });
+      }
+    }
+
     toast('Session logged ✅');
     window.renderHomeDashboard?.();
   }
