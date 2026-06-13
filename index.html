@@ -2055,6 +2055,11 @@
 <div id="settingsTab" class="tab-content">
   <div id="settingsFormContainer" class="panel"></div>
   </div> <!-- #settingsTab -->
+
+<div id="mobilityTab" class="tab-content">
+  <div id="mobilityTabContent"></div>
+</div>
+
   </div> <!-- #appContainer -->
 </div> <!-- #pocketFitContainer -->
 
@@ -2109,6 +2114,11 @@
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('coachOpsTab'), 220)">
         <span class="more-drawer-icon">🏆</span>
         <span>Coach</span>
+      </button>
+      <button class="more-drawer-item" data-tab="mobilityTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('mobilityTab'), 220)">
+        <span class="more-drawer-icon">🧘</span>
+        <span>Flexibility</span>
       </button>
       <button class="more-drawer-item" data-tab="settingsTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('settingsTab'), 220)">
@@ -2713,6 +2723,9 @@ function showTab(tabName) {
         const _cBadge = document.getElementById('commShareBadge');
         if (_cBadge) { _cBadge.style.display = _cInbox.length ? '' : 'none'; _cBadge.textContent = _cInbox.length; }
       }
+      break;
+    case 'mobilityTab':
+      if (typeof window.initMobilityTab === 'function') window.initMobilityTab();
       break;
     case 'leaderboardTab':
       if (window.initLeaderboard) initLeaderboard();
@@ -7957,13 +7970,12 @@ function renderHomeDashboard() {
 }
 
 function getHomeDashboardCardOrder(archetype) {
-  const baseOrder = ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'];
+  const baseOrder = ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'];
   const orders = {
-    bodybuilder: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
-    powerlifter: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
-    hybrid: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
-    // Recreational: habit-first, skip "Upcoming Prep Events" (show-day / peak week irrelevant)
-    recreational: ['hero', 'mission', 'status', 'progression', 'weekly', 'focus', 'macro', 'insights']
+    bodybuilder: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
+    powerlifter: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
+    hybrid: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
+    recreational: ['hero', 'mission', 'status', 'progression', 'weekly', 'mobility', 'focus', 'macro', 'insights']
   };
   return orders[archetype] || baseOrder;
 }
@@ -7977,6 +7989,7 @@ function getHomeDashboardCardRenderers(profile, username, archetype) {
     status: () => renderStatusSummary(profile, username, archetype),
     mission: () => renderTodaysMission(profile, username, archetype),
     weekly: () => renderWeeklyComplianceCard(profile, username),
+    mobility: () => window.renderMobilityDashboardCard?.(profile, username),
     upcoming: () => renderUpcomingPrepEvents(profile, username),
     insights: () => renderCheckInInsightSummary(profile, username)
   };
@@ -14218,5 +14231,6 @@ window.renderMeetPrep = renderMeetPrep;
   window.openWorkoutStoryModal = openWorkoutStoryModal;
   window.closeWorkoutStoryModal = closeWorkoutStoryModal;
   </script>
+  <script src="src/js/mobility.js"></script>
 </body>
 </html>
