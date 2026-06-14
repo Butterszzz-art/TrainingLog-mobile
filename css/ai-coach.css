@@ -1,0 +1,436 @@
+/* =============================================================
+   AI COACH CHAT WIDGET
+   Floating action button + slide-up chat panel.
+   Depends on: tokens.css, nav.css
+   ============================================================= */
+
+/* ── Floating action button ─────────────────────────────────── */
+
+#aiCoachFab {
+  position: fixed;
+  bottom: 80px; /* above 64px nav + 8px gap */
+  right: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--primary, #5fa87e);
+  border: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(95, 168, 126, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  z-index: 998; /* below nav (1000) and focus bar (999) */
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease;
+  padding: 0;
+  margin: 0;
+}
+
+#aiCoachFab:hover {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(95, 168, 126, 0.4);
+}
+
+#aiCoachFab:active {
+  transform: scale(0.95);
+}
+
+#aiCoachFab[hidden] {
+  display: none;
+}
+
+/* Pulse ring when panel is closed (draw attention once) */
+#aiCoachFab.aic-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--primary, #5fa87e);
+  animation: aic-ring 1.4s ease-out 3;
+}
+
+@keyframes aic-ring {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
+/* Shift FAB up when workout focus bar is visible */
+.workout-active #aiCoachFab {
+  bottom: 126px; /* 64px nav + 44px focus bar + 18px gap */
+}
+
+/* ── Chat panel backdrop ─────────────────────────────────────── */
+
+#aiCoachBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  z-index: 1050;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#aiCoachBackdrop.aic-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Chat panel ─────────────────────────────────────────────── */
+
+#aiCoachPanel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72vh;
+  max-height: calc(100dvh - 64px); /* never cover the nav */
+  background: var(--card-bg, #0f1510);
+  border-radius: 22px 22px 0 0;
+  border-top: 1px solid var(--border-color, #2a3a2e);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.55);
+  z-index: 1060;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+#aiCoachPanel.aic-open {
+  transform: translateY(0);
+}
+
+/* ── Panel header ───────────────────────────────────────────── */
+
+.aic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border-color, #2a3a2e);
+  flex-shrink: 0;
+}
+
+.aic-header-drag {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 4px;
+  background: var(--border-color, #2a3a2e);
+  border-radius: 2px;
+}
+
+.aic-header-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.aic-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3a28 0%, #2d5c40 100%);
+  border: 2px solid var(--primary, #5fa87e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.aic-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.aic-status {
+  font-size: 0.72rem;
+  color: var(--secondary-text);
+}
+
+.aic-status.aic-typing {
+  color: var(--primary, #5fa87e);
+}
+
+.aic-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.aic-clear-btn,
+.aic-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-bg, #141e17);
+  color: var(--secondary-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.aic-clear-btn:hover,
+.aic-close-btn:hover {
+  background: var(--border-color, #2a3a2e);
+  color: var(--text-color);
+  transform: none;
+  box-shadow: none;
+}
+
+/* ── Messages area ──────────────────────────────────────────── */
+
+.aic-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.aic-messages::-webkit-scrollbar {
+  width: 3px;
+}
+.aic-messages::-webkit-scrollbar-track { background: transparent; }
+.aic-messages::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+/* Welcome / empty state */
+.aic-welcome {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--secondary-text);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.aic-welcome-icon {
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+}
+
+.aic-welcome h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 6px;
+}
+
+.aic-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.aic-suggestion-chip {
+  background: var(--surface-bg, #141e17);
+  border: 1px solid var(--border-color, #2a3a2e);
+  color: var(--text-color);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  box-shadow: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.aic-suggestion-chip:hover {
+  background: var(--border-color, #2a3a2e);
+  border-color: var(--primary, #5fa87e);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Message bubbles */
+.aic-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 82%;
+}
+
+.aic-msg--user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.aic-msg--ai {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.aic-bubble {
+  padding: 9px 13px;
+  border-radius: 18px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.aic-msg--user .aic-bubble {
+  background: var(--primary, #5fa87e);
+  color: #0b130d;
+  border-bottom-right-radius: 5px;
+}
+
+.aic-msg--ai .aic-bubble {
+  background: var(--surface-bg, #141e17);
+  color: var(--text-color);
+  border: 1px solid var(--border-color, #2a3a2e);
+  border-bottom-left-radius: 5px;
+}
+
+.aic-msg-time {
+  font-size: 0.68rem;
+  color: var(--secondary-text);
+  margin-top: 3px;
+  padding: 0 4px;
+}
+
+/* Typing indicator */
+.aic-typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background: var(--surface-bg, #141e17);
+  border: 1px solid var(--border-color, #2a3a2e);
+  border-radius: 18px;
+  border-bottom-left-radius: 5px;
+  align-self: flex-start;
+  width: fit-content;
+}
+
+.aic-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--secondary-text);
+  border-radius: 50%;
+  animation: aic-bounce 1.2s ease-in-out infinite;
+}
+.aic-dot:nth-child(2) { animation-delay: 0.2s; }
+.aic-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes aic-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30%            { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Error state */
+.aic-msg--error .aic-bubble {
+  background: rgba(224, 80, 96, 0.12);
+  border-color: rgba(224, 80, 96, 0.35);
+  color: #e05060;
+}
+
+/* ── Input area ─────────────────────────────────────────────── */
+
+.aic-input-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border-color, #2a3a2e);
+  background: var(--card-bg, #0f1510);
+  flex-shrink: 0;
+}
+
+.aic-input {
+  flex: 1;
+  background: var(--surface-bg, #141e17);
+  border: 1px solid var(--border-color, #2a3a2e);
+  border-radius: 22px;
+  padding: 10px 14px;
+  color: var(--text-color);
+  font-size: 15px; /* ≥16px avoids iOS zoom */
+  font-family: 'Poppins', sans-serif;
+  resize: none;
+  max-height: 120px;
+  min-height: 44px;
+  line-height: 1.4;
+  margin: 0;
+  transition: border-color 0.2s ease;
+  box-shadow: none;
+  /* override base.css textarea styles */
+  width: auto;
+  box-sizing: border-box;
+}
+
+.aic-input:focus {
+  outline: none;
+  border-color: var(--primary, #5fa87e);
+  box-shadow: 0 0 0 2px rgba(95, 168, 126, 0.2);
+}
+
+.aic-send-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary, #5fa87e);
+  border: none;
+  color: #0b130d;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  transition: background 0.15s, transform 0.15s, opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aic-send-btn:hover {
+  background: var(--primary-dark, #3d7a5a);
+  transform: scale(1.08);
+  box-shadow: none;
+}
+
+.aic-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Embedded view (inside Coach tab) ──────────────────────────*/
+
+.aic-embedded {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 200px);
+  min-height: 400px;
+  background: var(--card-bg, #0f1510);
+  border-radius: 16px;
+  border: 1px solid var(--border-color, #2a3a2e);
+  overflow: hidden;
+  margin: 8px 0 16px;
+}
+
+.aic-embedded .aic-messages {
+  flex: 1;
+}
+
+.aic-embedded .aic-input-area {
+  border-radius: 0 0 16px 16px;
+}

@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="css/cardio.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
+  <link rel="stylesheet" href="css/ai-coach.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2039,6 +2040,7 @@
     <button class="coach-subtab active" data-coach-subtab="programs">📋 Programs</button>
     <button class="coach-subtab" data-coach-subtab="messaging">💬 Messages</button>
     <button class="coach-subtab" data-coach-subtab="analytics">📊 Insights</button>
+    <button class="coach-subtab" data-coach-subtab="ai">🤖 AI</button>
     <button class="coach-subtab" data-coach-subtab="gdpr">🔒 Privacy</button>
   </nav>
 
@@ -2046,6 +2048,7 @@
   <div id="coachSub_programs" class="coach-subview active"></div>
   <div id="coachSub_messaging" class="coach-subview"></div>
   <div id="coachSub_analytics" class="coach-subview"></div>
+  <div id="coachSub_ai" class="coach-subview"></div>
   <div id="coachSub_gdpr" class="coach-subview"></div>
 </div>
 
@@ -2657,6 +2660,7 @@ function showTab(tabName) {
   switch (tabName) {
     case 'homeTab':
       renderHomeDashboard();
+      if (typeof window.initAiCoach === 'function' && currentUser) window.initAiCoach(currentUser);
       break;
     case 'clientsTab':
       renderCoachDashboard();
@@ -7041,6 +7045,14 @@ function initCoachOpsSubtabs() {
     if (target === 'messaging'  && typeof renderCoachMessaging === 'function')  renderCoachMessaging();
     if (target === 'gdpr'       && typeof renderCoachGdpr === 'function')       renderCoachGdpr();
     if (target === 'programs'   && typeof renderCoachProgramBuilder === 'function') renderCoachProgramBuilder();
+    if (target === 'ai' && typeof window.initAiCoachEmbed === 'function') {
+      const aiContainer = document.getElementById('coachSub_ai');
+      if (aiContainer && !aiContainer.dataset.aicInit) {
+        aiContainer.dataset.aicInit = 'true';
+        const u = (typeof getActiveUsername === 'function' ? getActiveUsername() : null) || currentUser;
+        window.initAiCoachEmbed(aiContainer, u);
+      }
+    }
   });
 }
 
@@ -14232,5 +14244,6 @@ window.renderMeetPrep = renderMeetPrep;
   window.closeWorkoutStoryModal = closeWorkoutStoryModal;
   </script>
   <script src="src/js/mobility.js"></script>
+  <script src="src/js/ai-coach.js"></script>
 </body>
 </html>
