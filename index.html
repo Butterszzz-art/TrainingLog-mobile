@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="css/cardio.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
+  <link rel="stylesheet" href="css/ai-coach.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2039,6 +2040,7 @@
     <button class="coach-subtab active" data-coach-subtab="programs">📋 Programs</button>
     <button class="coach-subtab" data-coach-subtab="messaging">💬 Messages</button>
     <button class="coach-subtab" data-coach-subtab="analytics">📊 Insights</button>
+    <button class="coach-subtab" data-coach-subtab="ai">🤖 AI</button>
     <button class="coach-subtab" data-coach-subtab="gdpr">🔒 Privacy</button>
   </nav>
 
@@ -2046,6 +2048,7 @@
   <div id="coachSub_programs" class="coach-subview active"></div>
   <div id="coachSub_messaging" class="coach-subview"></div>
   <div id="coachSub_analytics" class="coach-subview"></div>
+  <div id="coachSub_ai" class="coach-subview"></div>
   <div id="coachSub_gdpr" class="coach-subview"></div>
 </div>
 
@@ -2055,6 +2058,11 @@
 <div id="settingsTab" class="tab-content">
   <div id="settingsFormContainer" class="panel"></div>
   </div> <!-- #settingsTab -->
+
+<div id="mobilityTab" class="tab-content">
+  <div id="mobilityTabContent"></div>
+</div>
+
   </div> <!-- #appContainer -->
 </div> <!-- #pocketFitContainer -->
 
@@ -2109,6 +2117,11 @@
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('coachOpsTab'), 220)">
         <span class="more-drawer-icon">🏆</span>
         <span>Coach</span>
+      </button>
+      <button class="more-drawer-item" data-tab="mobilityTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('mobilityTab'), 220)">
+        <span class="more-drawer-icon">🧘</span>
+        <span>Flexibility</span>
       </button>
       <button class="more-drawer-item" data-tab="settingsTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('settingsTab'), 220)">
@@ -2647,6 +2660,7 @@ function showTab(tabName) {
   switch (tabName) {
     case 'homeTab':
       renderHomeDashboard();
+      if (typeof window.initAiCoach === 'function' && currentUser) window.initAiCoach(currentUser);
       break;
     case 'clientsTab':
       renderCoachDashboard();
@@ -2713,6 +2727,9 @@ function showTab(tabName) {
         const _cBadge = document.getElementById('commShareBadge');
         if (_cBadge) { _cBadge.style.display = _cInbox.length ? '' : 'none'; _cBadge.textContent = _cInbox.length; }
       }
+      break;
+    case 'mobilityTab':
+      if (typeof window.initMobilityTab === 'function') window.initMobilityTab();
       break;
     case 'leaderboardTab':
       if (window.initLeaderboard) initLeaderboard();
@@ -7028,6 +7045,14 @@ function initCoachOpsSubtabs() {
     if (target === 'messaging'  && typeof renderCoachMessaging === 'function')  renderCoachMessaging();
     if (target === 'gdpr'       && typeof renderCoachGdpr === 'function')       renderCoachGdpr();
     if (target === 'programs'   && typeof renderCoachProgramBuilder === 'function') renderCoachProgramBuilder();
+    if (target === 'ai' && typeof window.initAiCoachEmbed === 'function') {
+      const aiContainer = document.getElementById('coachSub_ai');
+      if (aiContainer && !aiContainer.dataset.aicInit) {
+        aiContainer.dataset.aicInit = 'true';
+        const u = (typeof getActiveUsername === 'function' ? getActiveUsername() : null) || currentUser;
+        window.initAiCoachEmbed(aiContainer, u);
+      }
+    }
   });
 }
 
@@ -7957,13 +7982,12 @@ function renderHomeDashboard() {
 }
 
 function getHomeDashboardCardOrder(archetype) {
-  const baseOrder = ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'];
+  const baseOrder = ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'];
   const orders = {
-    bodybuilder: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
-    powerlifter: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
-    hybrid: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'upcoming', 'insights'],
-    // Recreational: habit-first, skip "Upcoming Prep Events" (show-day / peak week irrelevant)
-    recreational: ['hero', 'mission', 'status', 'progression', 'weekly', 'focus', 'macro', 'insights']
+    bodybuilder: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
+    powerlifter: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
+    hybrid: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
+    recreational: ['hero', 'mission', 'status', 'progression', 'weekly', 'mobility', 'focus', 'macro', 'insights']
   };
   return orders[archetype] || baseOrder;
 }
@@ -7977,6 +8001,7 @@ function getHomeDashboardCardRenderers(profile, username, archetype) {
     status: () => renderStatusSummary(profile, username, archetype),
     mission: () => renderTodaysMission(profile, username, archetype),
     weekly: () => renderWeeklyComplianceCard(profile, username),
+    mobility: () => window.renderMobilityDashboardCard?.(profile, username),
     upcoming: () => renderUpcomingPrepEvents(profile, username),
     insights: () => renderCheckInInsightSummary(profile, username)
   };
@@ -14218,5 +14243,7 @@ window.renderMeetPrep = renderMeetPrep;
   window.openWorkoutStoryModal = openWorkoutStoryModal;
   window.closeWorkoutStoryModal = closeWorkoutStoryModal;
   </script>
+  <script src="src/js/mobility.js"></script>
+  <script src="src/js/ai-coach.js"></script>
 </body>
 </html>

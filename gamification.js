@@ -13,7 +13,8 @@
     posing_complete: 20,
     pr_hit: 45,
     full_daily_compliance: 70,
-    full_weekly_compliance: 220
+    full_weekly_compliance: 220,
+    mobility_session: 20
   });
 
   const LEVEL_CURVE = Object.freeze({
@@ -62,6 +63,16 @@
       title: 'Posing Technician',
       description: 'Log 7 posing sessions.',
       predicate: state => state.metrics.posingSessions >= 7
+    },
+    first_mobility_session: {
+      title: 'First Movement Session',
+      description: 'Complete your first flexibility or mobility session.',
+      predicate: state => (state.metrics.mobilitySessions || 0) >= 1
+    },
+    mobility_streak_7: {
+      title: 'Fluid Motion',
+      description: 'Log mobility or flexibility sessions 7 days in a row.',
+      predicate: state => (state.metrics.mobilityStreak || 0) >= 7
     },
     locked_in: {
       title: 'Locked In',
@@ -144,6 +155,8 @@
         posingSessions: 0,
         posingMinutes: 0,
         prHits: 0,
+        mobilitySessions: 0,
+        mobilityStreak: 0,
         fullComplianceDays: 0,
         perfectWeeks: 0,
         singleDigitWeeksOutUnlocked: false,
@@ -406,6 +419,19 @@
     if (sourceKey === 'checkin_submitted') state.metrics.checkinsSubmitted += 1;
     if (sourceKey === 'posing_complete') state.metrics.posingSessions += 1;
     if (sourceKey === 'posing_complete') state.metrics.posingMinutes += Math.max(0, Number(metadata.minutes) || 0);
+    if (sourceKey === 'mobility_session') {
+      state.metrics.mobilitySessions += 1;
+      // update per-metric mobility streak using same day-diff logic as updateStreak
+      const dayKey = getTodayIsoDate(metadata.date);
+      const prev = metadata.lastMobilityDate ? getTodayIsoDate(metadata.lastMobilityDate) : null;
+      if (!prev) {
+        state.metrics.mobilityStreak = 1;
+      } else {
+        const diff = Math.round((new Date(dayKey) - new Date(prev)) / 86400000);
+        if (diff === 1) state.metrics.mobilityStreak = (state.metrics.mobilityStreak || 0) + 1;
+        else if (diff > 1) state.metrics.mobilityStreak = 1;
+      }
+    }
     if (sourceKey === 'full_daily_compliance') {
       state.metrics.fullComplianceDays += 1;
       updateStreak(state, metadata.date);
