@@ -790,6 +790,9 @@
     ═══════════════════════════════════════════════════════════ -->
     <div id="ciPanel_history" class="ci-panel" style="display:none">
 
+      <!-- AI Summary card — populated by saveWeeklyCheckIn after each save -->
+      <div id="checkInAiSummaryCard" style="display:none"></div>
+
       <!-- Summary card -->
       <div class="ci-card">
         <h3 class="ci-card-title">📊 Latest Summary</h3>
@@ -9202,6 +9205,129 @@ function renderPhotoComparison() {
   if (empty) empty.style.display = 'none';
 }
 
+// ── Pro user gate ─────────────────────────────────────────────────────────────
+// Replace with real billing check when subscription is added.
+function isProUser() {
+  const u = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  return localStorage.getItem(`proUser_${u}`) === 'true' || true; // default open during beta
+}
+
+// ── AI check-in summary ───────────────────────────────────────────────────────
+async function requestAiCheckInSummary(draft, compliancePercent) {
+  const card = document.getElementById('checkInAiSummaryCard');
+  if (!card) return;
+
+  if (!isProUser()) {
+    card.style.display = '';
+    card.innerHTML = `
+      <div class="ci-ai-card ci-ai-card--locked">
+        <span class="ci-ai-label">✨ AI Summary</span>
+        <p>Upgrade to Pro to get an AI-generated summary of every check-in.</p>
+        <button class="ci-ai-upgrade-btn" onclick="window.showToast?.('Pro subscriptions coming soon!','info',3000)">Upgrade</button>
+      </div>`;
+    return;
+  }
+
+  // Show loading state
+  card.style.display = '';
+  card.innerHTML = `
+    <div class="ci-ai-card">
+      <span class="ci-ai-label">✨ AI Summary</span>
+      <div class="ci-ai-loading">
+        <div class="ci-ai-spinner"></div>
+        <span>Generating your summary…</span>
+      </div>
+    </div>`;
+
+  const phaseState = getCheckInPhaseState();
+  const goalRaw = String(phaseState.mode || draft.phase || 'maintain').toLowerCase();
+  const goal = goalRaw.includes('cut') ? 'cut' : goalRaw.includes('bulk') ? 'bulk' : 'maintain';
+
+  // Previous bodyweight for delta
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const allCheckIns = window.checkinEngine?.loadCheckIns(userId) || [];
+  const prior = allCheckIns
+    .filter(c => c.date < draft.date && c.bodyweight)
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  const bodyweightLastWeek = prior ? Number(prior.bodyweight) : null;
+
+  const payload = {
+    sleep:               Number(draft.sleep)               || 5,
+    energy:              Number(draft.energy)              || 5,
+    stress:              Number(draft.stress)              || 5,
+    hunger:              Number(draft.hunger)              || '',
+    digestion:           Number(draft.digestion)           || '',
+    trainingPerformance: Number(draft.trainingPerformance) || '',
+    bodyweightThisWeek:  Number(draft.bodyweight)          || 0,
+    bodyweightLastWeek,
+    compliancePercent:   Number(compliancePercent)         || 0,
+    adjustmentNotes:     draft.notes || '',
+    goal,
+    archetype:           draft.archetype || 'bodybuilder',
+  };
+
+  try {
+    const serverUrl = (typeof window.getServerUrl === 'function' ? window.getServerUrl() : null)
+      || window.SERVER_URL
+      || 'https://traininglog-backend.onrender.com';
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    const res = await fetch(`${serverUrl}/api/ai/checkin-summary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Server ${res.status}`);
+    }
+
+    const { summary } = await res.json();
+
+    // Persist summary back onto the check-in record
+    const entries = window.checkinEngine?.loadCheckIns(userId) || [];
+    const idx = entries.findIndex(e => e.date === draft.date);
+    if (idx !== -1) {
+      entries[idx].aiSummary = summary;
+      localStorage.setItem(`checkIns_${userId}`, JSON.stringify(entries));
+
+      // Airtable: patch the record if it has an id
+      if (entries[idx].airtableId && airtableBaseId && airtableToken) {
+        fetchWithTimeout(`${window.SERVER_URL}/airtable/${airtableBaseId}/CheckIns`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${airtableToken}` },
+          body: JSON.stringify({ records: [{ id: entries[idx].airtableId, fields: { AISummary: summary } }] }),
+        }, 8000).catch(() => {}); // fire-and-forget, non-blocking
+      }
+    }
+
+    card.innerHTML = `
+      <div class="ci-ai-card">
+        <span class="ci-ai-label">✨ AI Summary</span>
+        <p class="ci-ai-text">${summary.replace(/</g, '&lt;')}</p>
+      </div>`;
+  } catch (err) {
+    const msg = err.name === 'AbortError'
+      ? 'Summary timed out — try refreshing.'
+      : err.message === 'AI_NOT_CONFIGURED'
+        ? 'AI summaries not yet enabled on this server.'
+        : 'Could not generate summary right now.';
+    card.innerHTML = `
+      <div class="ci-ai-card ci-ai-card--error">
+        <span class="ci-ai-label">✨ AI Summary</span>
+        <p>${msg}</p>
+      </div>`;
+  }
+}
+
 function saveWeeklyCheckIn(actor = 'athlete') {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
@@ -9272,7 +9398,18 @@ function saveWeeklyCheckIn(actor = 'athlete') {
 
   renderCheckInTab();
   generateCheckInSummary();
-  // Auto-navigate to history so the user sees their new entry
+
+  // AI summary — only for athlete saves (not coach review edits)
+  if (actor === 'athlete') {
+    const aiCard = document.getElementById('checkInAiSummaryCard');
+    if (aiCard) aiCard.style.display = 'none'; // reset from prior save
+    const compPct = window.complianceEngine?.calculateWeeklyCompliance?.(
+      userId, draft.date, draft.archetype
+    )?.averagePercent ?? 0;
+    requestAiCheckInSummary(draft, Math.round(compPct));
+  }
+
+  // Auto-navigate to history so the user sees their new entry + AI card
   switchCheckInTab('history');
 }
 

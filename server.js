@@ -516,6 +516,10 @@ const leaderboard = [
 ];
 app.get('/leaderboard', (req, res) => res.json(leaderboard));
 
+// ── AI routes ────────────────────────────────────────────────────────────────
+const aiRoutes = require('./src/routes/ai');
+app.use('/api/ai', aiRoutes);
+
 // ── Airtable proxy ───────────────────────────────────────────────────────────
 app.all('/airtable/:baseId/:table', async (req, res) => {
   const airtable = getAirtableEnv();
