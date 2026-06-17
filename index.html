@@ -1934,6 +1934,7 @@
       </div>
       <div id="progressChartsPanel" class="panel">
       <section class="progress-chart">
+        <div id="aiPlateauCard" style="display:none;margin-bottom:12px;"></div>
         <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
         <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
         <canvas id="progressCanvas" height="220"></canvas>
@@ -2764,6 +2765,7 @@ function showTab(tabName) {
       if (typeof window.renderGamificationUI === 'function' && currentUser) {
         window.renderGamificationUI(currentUser);
       }
+      runPlateauCheck(currentUser);
       break;
     case 'logHistoryTab':
       renderWorkoutHistoryTab();
@@ -11070,6 +11072,146 @@ function setActiveProgress(btnId) {
   document.querySelectorAll('.progress-nav button').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById(btnId);
   if (btn) btn.classList.add('active');
+}
+
+/* ── AI Plateau Detector ──────────────────────────────────────────────────── */
+
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function buildPlateauRecentLogs(workouts) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 56);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  return workouts
+    .filter(w => w.date && w.date >= cutoffStr && Array.isArray(w.log) && w.log.length)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-20)
+    .map(w => ({
+      date: w.date,
+      exercises: (w.log || []).map(entry => {
+        const repsArr = (entry.repsArray || []).filter(r => r != null && r !== '').map(Number);
+        const wtsArr  = (entry.weightsArray || []).filter(v => v != null && v !== '').map(Number);
+        const avgReps   = repsArr.length ? Math.round(repsArr.reduce((s, v) => s + v, 0) / repsArr.length) : 0;
+        const avgWeight = wtsArr.length  ? wtsArr.reduce((s, v) => s + v, 0) / wtsArr.length : 0;
+        const unit = entry.unit || 'kg';
+        const weightKg = unit === 'lb' ? Math.round(avgWeight * 4.5359) / 10 : Math.round(avgWeight * 10) / 10;
+        return {
+          name: entry.exercise || 'Exercise',
+          sets: Math.max(repsArr.length, wtsArr.length),
+          reps: String(avgReps),
+          weightKg,
+        };
+      }).filter(ex => ex.sets > 0),
+    }));
+}
+
+function injectPlateauCard(result, dismissKey) {
+  const cardEl = document.getElementById('aiPlateauCard');
+  if (!cardEl) return;
+  const parts = [];
+  if (result.stall)    parts.push(result.stall);
+  if (result.duration) parts.push(`stalled for ${result.duration}`);
+  if (result.suggestion) parts.push(result.suggestion);
+  const text = parts.join('. ');
+  cardEl.innerHTML = `
+    <div class="plateau-alert-card">
+      <div class="plateau-alert-body">
+        <span class="plateau-alert-icon">🔔</span>
+        <div>
+          <strong class="plateau-alert-heading">Plateau detected</strong>
+          <p class="plateau-alert-text">${escapeCoachText(text)}</p>
+        </div>
+      </div>
+      <button type="button" class="plateau-alert-dismiss" aria-label="Dismiss plateau alert">✕</button>
+    </div>
+  `;
+  cardEl.style.display = 'block';
+  cardEl.querySelector('.plateau-alert-dismiss').addEventListener('click', () => {
+    cardEl.style.display = 'none';
+    try { localStorage.setItem(dismissKey, '1'); } catch {}
+  });
+}
+
+async function runPlateauCheck(username) {
+  if (!isProUser()) return;
+  const u = username || currentUser || localStorage.getItem('currentUser') || '';
+  if (!u) return;
+
+  const now = new Date();
+  const weekTag = `${now.getFullYear()}_w${getISOWeek(now)}`;
+  const cacheKey   = `aiPlateauCheck_${u}_${weekTag}`;
+  const dismissKey = `aiPlateauDismiss_${u}_${weekTag}`;
+
+  // Don't show if dismissed this week
+  if (localStorage.getItem(dismissKey) === '1') return;
+
+  // Show cached result immediately if fresh (< 24h)
+  const cachedRaw = localStorage.getItem(cacheKey);
+  if (cachedRaw) {
+    try {
+      const cached = JSON.parse(cachedRaw);
+      const age = Date.now() - (cached._ts || 0);
+      if (age < 86400000) {
+        if (cached.plateauDetected) injectPlateauCard(cached, dismissKey);
+        return;
+      }
+    } catch {}
+  }
+
+  // Build payload
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${u}`) || '[]');
+  const recentLogs = buildPlateauRecentLogs(workouts);
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 56);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  const rawBwLog = JSON.parse(localStorage.getItem(`bodyweightLog_${u}`) || '[]');
+  const bodyweightHistory = rawBwLog
+    .filter(e => e.date && e.date >= cutoffStr)
+    .map(e => {
+      const kg = typeof getEntryWeightKg === 'function' ? getEntryWeightKg(e) : (e.weightKg || e.weight || null);
+      return { date: e.date, weight: typeof kg === 'number' ? Math.round(kg * 10) / 10 : null };
+    })
+    .filter(e => e.weight != null);
+
+  const checkIns = window.checkinEngine?.loadCheckIns?.(u) || [];
+  const recentPerformanceScores = checkIns
+    .slice(0, 4)
+    .map(c => Number(c.trainingPerformance))
+    .filter(v => Number.isFinite(v));
+
+  const settings = JSON.parse(localStorage.getItem(`settings_${u}`) || '{}');
+  const trainingMode = settings.profile?.athleteArchetype || 'general';
+
+  // Need enough data to be worth calling
+  if (recentLogs.length < 3 && bodyweightHistory.length < 4) return;
+
+  const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
+    || 'https://traininglog-backend.onrender.com';
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    const res = await fetch(`${serverUrl}/api/ai/plateau-check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recentLogs, bodyweightHistory, trainingMode, recentPerformanceScores }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return;
+    const result = await res.json();
+    // Cache with timestamp
+    try { localStorage.setItem(cacheKey, JSON.stringify({ ...result, _ts: Date.now() })); } catch {}
+    if (result.plateauDetected) injectPlateauCard(result, dismissKey);
+  } catch {
+    // Silent fail — no error UI shown
+  }
 }
 
 async function showWorkoutProgress(data) {

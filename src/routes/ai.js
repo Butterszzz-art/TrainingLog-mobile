@@ -221,6 +221,91 @@ router.post('/program-analysis', async (req, res) => {
   }
 });
 
+// ── Plateau Detector ──────────────────────────────────────────────────────────
+
+const PLATEAU_SYSTEM_PROMPT = `You are analysing training data inside Pocket Coach to detect stagnation \
+or plateaus. Look for: exercises with no weight or volume increase over \
+4+ weeks, bodyweight stalling against the user's implied goal, declining \
+performance scores. Only report a plateau if you find clear evidence. \
+If no plateau is detected, return plateauDetected: false and nothing else. \
+If detected, be specific about which lift or metric has stalled and for \
+how long, and give one concrete actionable suggestion. \
+Respond ONLY with valid JSON: \
+{ "plateauDetected": boolean, "stall": string|null, "duration": string|null, "suggestion": string|null }`;
+
+router.post('/plateau-check', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+
+  const { recentLogs, bodyweightHistory, trainingMode, recentPerformanceScores } = req.body;
+
+  if (!Array.isArray(recentLogs) && !Array.isArray(bodyweightHistory)) {
+    return res.status(400).json({ error: 'Missing training data' });
+  }
+
+  const logText = Array.isArray(recentLogs) && recentLogs.length
+    ? recentLogs.map(session => {
+        const exList = (session.exercises || [])
+          .map(ex => `  ${ex.name}: ${ex.sets}×${ex.reps} @ ${ex.weightKg}kg`)
+          .join('\n');
+        return `${session.date}:\n${exList || '  (no exercises)'}`;
+      }).join('\n\n')
+    : 'No workout data provided.';
+
+  const bwText = Array.isArray(bodyweightHistory) && bodyweightHistory.length
+    ? bodyweightHistory.map(e => `${e.date}: ${e.weight}kg`).join(', ')
+    : 'No bodyweight data provided.';
+
+  const perfText = Array.isArray(recentPerformanceScores) && recentPerformanceScores.length
+    ? `Recent training performance scores (newest first): ${recentPerformanceScores.join(', ')}/10`
+    : 'No performance scores available.';
+
+  const userPrompt = [
+    `Training mode: ${trainingMode || 'general'}`,
+    '',
+    'WORKOUT SESSIONS (last 8 weeks):',
+    logText,
+    '',
+    `BODYWEIGHT HISTORY: ${bwText}`,
+    '',
+    perfText,
+  ].join('\n');
+
+  try {
+    const client = new Anthropic();
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 256,
+      system: PLATEAU_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+
+    const raw = (message.content?.[0]?.text || '').trim();
+    // Strip markdown code fences if present
+    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+
+    let result;
+    try {
+      result = JSON.parse(jsonStr);
+    } catch {
+      // If JSON parse fails, treat as no plateau (safe default)
+      return res.json({ plateauDetected: false, stall: null, duration: null, suggestion: null });
+    }
+
+    // Sanitise: ensure required shape
+    return res.json({
+      plateauDetected: Boolean(result.plateauDetected),
+      stall: result.stall || null,
+      duration: result.duration || null,
+      suggestion: result.suggestion || null,
+    });
+  } catch (err) {
+    console.error('[AI plateau-check]', err.message);
+    return res.status(502).json({ error: 'AI request failed', details: err.message });
+  }
+});
+
 // ── Coach Draft Message ────────────────────────────────────────────────────────
 
 const COACH_DRAFT_SYSTEM_PROMPT = `You are drafting a weekly check-in response message on behalf of a fitness \
