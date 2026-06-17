@@ -221,4 +221,77 @@ router.post('/program-analysis', async (req, res) => {
   }
 });
 
+// ── Coach Draft Message ────────────────────────────────────────────────────────
+
+const COACH_DRAFT_SYSTEM_PROMPT = `You are drafting a weekly check-in response message on behalf of a fitness \
+coach using Pocket Coach. The message will be sent directly to the athlete. \
+Write in a professional but warm coaching tone — not corporate. Be specific, \
+reference the actual numbers. Do not use generic encouragement. Address any \
+alerts or concerns directly. Keep it under 150 words. Do not use bullet points \
+— write in natural prose paragraphs. Start with the athlete's first name.`;
+
+router.post('/coach-draft-message', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+
+  const {
+    clientName, archetype, currentPhase,
+    compliancePercent, checkIn, bodyweightChange,
+    alerts, currentProgramSummary, currentNutritionSummary, coachNotes,
+  } = req.body;
+
+  if (!clientName) {
+    return res.status(400).json({ error: 'Missing required field: clientName' });
+  }
+
+  const firstName = clientName.split(' ')[0];
+  const parts = [
+    `Draft a check-in response for ${firstName}, a ${archetype || 'athlete'} in a ${currentPhase || 'general'} phase.`,
+    `Compliance this week: ${compliancePercent ?? '?'}%.`,
+  ];
+
+  if (checkIn) {
+    const { sleep, energy, stress, hunger, trainingPerformance } = checkIn;
+    const metrics = [];
+    if (sleep != null)              metrics.push(`sleep ${sleep}/10`);
+    if (energy != null)             metrics.push(`energy ${energy}/10`);
+    if (stress != null)             metrics.push(`stress ${stress}/10`);
+    if (hunger != null)             metrics.push(`hunger ${hunger}/10`);
+    if (trainingPerformance != null) metrics.push(`training performance ${trainingPerformance}/10`);
+    if (metrics.length) parts.push(`Recovery metrics: ${metrics.join(', ')}.`);
+  }
+
+  if (bodyweightChange != null) {
+    const sign = Number(bodyweightChange) >= 0 ? '+' : '';
+    parts.push(`Bodyweight change this week: ${sign}${Number(bodyweightChange).toFixed(1)} kg.`);
+  }
+
+  if (Array.isArray(alerts) && alerts.length) {
+    const alertText = alerts.map(a => `${a.label} (${a.reason})`).join('; ');
+    parts.push(`Active alerts: ${alertText}.`);
+  }
+
+  if (currentProgramSummary) parts.push(`Current program: ${currentProgramSummary}.`);
+  if (currentNutritionSummary) parts.push(`Current nutrition: ${currentNutritionSummary}.`);
+  if (coachNotes)              parts.push(`Coach notes to incorporate: ${coachNotes}.`);
+
+  const userPrompt = parts.join(' ');
+
+  try {
+    const client = new Anthropic();
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      system: COACH_DRAFT_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+    const draft = message.content?.[0]?.text?.trim() || '';
+    return res.json({ draft });
+  } catch (err) {
+    console.error('[AI coach-draft-message]', err.message);
+    return res.status(502).json({ error: 'AI request failed', details: err.message });
+  }
+});
+
 module.exports = router;

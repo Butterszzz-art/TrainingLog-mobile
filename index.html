@@ -8521,7 +8521,10 @@ function renderCoachClientDetail(client) {
             <h3 class="coach-dashboard-title">${escapeCoachText(safeClient.name)}</h3>
             <p class="coach-dashboard-subtitle">Client detail overview · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
           </div>
-          <button type="button" data-coach-back>← Back to roster</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn" data-coach-draft-msg="${escapeCoachText(safeClient.id)}">Draft message ✨</button>` : ''}
+            <button type="button" data-coach-back>← Back to roster</button>
+          </div>
         </div>
       </section>
       <section class="coach-client-detail-grid">
@@ -8600,6 +8603,22 @@ function renderCoachClientDetail(client) {
           </div>
         </article>
       </section>
+      <section style="margin-top:16px;">
+        ${isProUser() ? `
+          <article class="coach-client-detail-card">
+            <h4>Coach Message</h4>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:0.85rem;color:var(--secondary-text,#666);">
+              Coach notes (optional — incorporated into draft)
+              <textarea id="coachAiDraftNotes" rows="2" placeholder="e.g. great push week, tighten up cardio next block..." style="resize:vertical;margin-top:4px;"></textarea>
+            </label>
+            <div id="coachAiDraftSection" style="margin-top:12px;"></div>
+          </article>
+        ` : `
+          <article class="coach-client-detail-card" style="opacity:0.7;">
+            <p style="margin:0;font-size:0.9rem;">🔒 AI Draft Message is a Pro feature.</p>
+          </article>
+        `}
+      </section>
     </section>
   `;
 }
@@ -8610,6 +8629,94 @@ function renderCoachClientRoster(clients = []) {
   }
   const cards = clients.map((client) => renderCoachClientCard(client)).join('');
   return `<section class="coach-roster-grid" aria-label="Coach client roster">${cards}</section>`;
+}
+
+async function requestCoachDraftMessage(clientId) {
+  const draftSection = document.getElementById('coachAiDraftSection');
+  if (!draftSection) return;
+
+  const coachNotes = (document.getElementById('coachAiDraftNotes')?.value || '').trim();
+
+  // Find client from state
+  const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
+  const client = clients.find(c => normalizeCoachClientRecord(c).id === clientId);
+  if (!client) { draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Client data not found.</p>'; return; }
+
+  const safeClient = normalizeCoachClientRecord(client);
+  const localData = getLocalCoachClientData(safeClient);
+  const latestCheckIn = safeClient.latestCheckIn || localData.latestCheckIn || null;
+  const derivedAlerts = deriveCoachClientAlerts(safeClient);
+  const snapshot = getComplianceSnapshot(localData.profile || {}, safeClient.id, normalizeArchetype(safeClient.archetype));
+  const compliancePercent = snapshot.weekly?.averagePercent ?? safeClient.compliancePercent ?? 0;
+  const nutritionTargets = localData.macroTargets
+    ? `${localData.macroTargets.calories || 0} kcal · ${localData.macroTargets.protein || 0}P / ${localData.macroTargets.carbs || 0}C / ${localData.macroTargets.fat || 0}F`
+    : '';
+  const bodyweightChange = latestCheckIn?.bodyweightChange ?? latestCheckIn?.weeklyWeightChange ?? latestCheckIn?.weightChange ?? null;
+
+  draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;">✨ Drafting message…</p>`;
+
+  const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
+    || 'https://traininglog-backend.onrender.com';
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    const res = await fetch(`${serverUrl}/api/ai/coach-draft-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientName: safeClient.name,
+        archetype: safeClient.archetype,
+        currentPhase: safeClient.currentPhase,
+        compliancePercent: Math.round(compliancePercent),
+        checkIn: latestCheckIn ? {
+          sleep: latestCheckIn.sleep ?? null,
+          energy: latestCheckIn.energy ?? null,
+          stress: latestCheckIn.stress ?? null,
+          hunger: latestCheckIn.hunger ?? null,
+          trainingPerformance: latestCheckIn.trainingPerformance ?? null,
+        } : null,
+        bodyweightChange,
+        alerts: derivedAlerts.map(a => ({ label: a.label, reason: a.reason })),
+        currentProgramSummary: safeClient.currentProgramSummary || localData.activeProgramName || '',
+        currentNutritionSummary: safeClient.currentNutritionSummary || nutritionTargets || '',
+        coachNotes,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (err.error === 'AI_NOT_CONFIGURED') {
+        draftSection.innerHTML = '<p style="color:var(--secondary-text,#888);font-size:0.9rem;">AI drafting is not enabled on this server.</p>';
+      } else {
+        draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Draft failed. Please try again.</p>';
+      }
+      return;
+    }
+
+    const data = await res.json();
+    const draft = data.draft || '';
+    draftSection.innerHTML = `
+      <textarea id="coachAiDraftTextarea" rows="6" style="width:100%;box-sizing:border-box;resize:vertical;font-size:0.92rem;line-height:1.5;padding:10px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:var(--card-bg,#fff);color:var(--text-color,#222);">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <button type="button" data-coach-copy-draft style="flex:1;">Copy to clipboard</button>
+        <button type="button" data-coach-clear-draft style="flex:0 0 auto;background:transparent;border:1px solid var(--border-color,#ddd);color:var(--secondary-text,#888);">Clear</button>
+      </div>
+    `;
+    // Auto-resize textarea to content
+    const ta = document.getElementById('coachAiDraftTextarea');
+    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Request timed out. Please try again.</p>';
+    } else if (!navigator.onLine) {
+      draftSection.innerHTML = '<p style="color:var(--secondary-text,#888);font-size:0.9rem;">You are offline.</p>';
+    } else {
+      draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Draft failed. Please try again.</p>';
+    }
+  }
 }
 
 function ensureCoachDashboardInteractions() {
@@ -8634,6 +8741,34 @@ function ensureCoachDashboardInteractions() {
     if (backBtn) {
       coachDashboardState.selectedClientId = null;
       renderCoachDashboardView();
+      return;
+    }
+    const draftMsgBtn = event.target.closest('[data-coach-draft-msg]');
+    if (draftMsgBtn) {
+      const clientId = draftMsgBtn.getAttribute('data-coach-draft-msg');
+      requestCoachDraftMessage(clientId);
+      return;
+    }
+    const copyDraftBtn = event.target.closest('[data-coach-copy-draft]');
+    if (copyDraftBtn) {
+      const textarea = document.getElementById('coachAiDraftTextarea');
+      if (textarea) {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          copyDraftBtn.textContent = 'Copied!';
+          setTimeout(() => { copyDraftBtn.textContent = 'Copy to clipboard'; }, 2000);
+        }).catch(() => {
+          textarea.select();
+          document.execCommand('copy');
+          copyDraftBtn.textContent = 'Copied!';
+          setTimeout(() => { copyDraftBtn.textContent = 'Copy to clipboard'; }, 2000);
+        });
+      }
+      return;
+    }
+    const clearDraftBtn = event.target.closest('[data-coach-clear-draft]');
+    if (clearDraftBtn) {
+      const textarea = document.getElementById('coachAiDraftTextarea');
+      if (textarea) { textarea.value = ''; textarea.style.height = 'auto'; }
     }
   });
   coachDashboardState.isBound = true;
