@@ -1141,6 +1141,12 @@
       <button class="prog-top-btn active" onclick="showProgramView('build')">🏗️ Build</button>
       <button class="prog-top-btn" onclick="showProgramView('list')">📋 My Programs</button>
     </nav>
+    <div id="progAiGenBtnWrap" style="padding:10px 12px 0;">
+      <button id="progAiGenBtn" onclick="openProgAiGen()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 2px 12px rgba(95,168,126,0.35);">
+        <span>✨</span><span>Generate with AI</span>
+      </button>
+      <div id="progAiGenLocked" style="display:none;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;">🔒 AI Program Generator — Pro feature</div>
+    </div>
 
     <!-- Builder view (wizard lives here) -->
     <div id="programBuilderContainer" class="open">
@@ -14862,5 +14868,312 @@ window.renderMeetPrep = renderMeetPrep;
   };
 })();
 </script>
+
+<!-- ── AI Program Generator panel ──────────────────────────────────────── -->
+<div id="progAiGenBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);z-index:1050;" onclick="closeProgAiGen()"></div>
+<div id="progAiGenPanel" role="dialog" aria-modal="true" aria-label="AI Program Generator"
+  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:88vh;background:var(--card-bg,#0f1510);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">✨</div>
+      <div>
+        <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Program Generator</div>
+        <div id="progAiGenStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
+      </div>
+    </div>
+    <button onclick="closeProgAiGen()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="progAiGenBody" style="flex:1;overflow-y:auto;padding:14px 16px 32px;-webkit-overflow-scrolling:touch;"></div>
+</div>
+
+<script>
+(function () {
+  var _lastGenerated = null;
+
+  function _u() {
+    return (typeof currentUser !== 'undefined' && currentUser)
+      || localStorage.getItem('currentUser')
+      || localStorage.getItem('username')
+      || 'anonymous';
+  }
+
+  function _settings() {
+    try { return JSON.parse(localStorage.getItem('settings_' + _u()) || '{}'); } catch { return {}; }
+  }
+
+  function _currentMaxes() {
+    try {
+      var prs = JSON.parse(localStorage.getItem('prs_' + _u()) || '{}');
+      var maxes = {};
+      var squat = prs['back squat'] || prs['squat'] || prs['barbell squat'] || prs['Squat'] || prs['Back Squat'];
+      var bench = prs['bench press'] || prs['barbell bench press'] || prs['Bench Press'];
+      var dead  = prs['deadlift'] || prs['conventional deadlift'] || prs['Deadlift'];
+      if (squat && squat.weight) maxes.squat = squat.weight;
+      if (bench && bench.weight) maxes.bench = bench.weight;
+      if (dead  && dead.weight)  maxes.deadlift = dead.weight;
+      return Object.keys(maxes).length ? maxes : null;
+    } catch { return null; }
+  }
+
+  function _cachedProgram() {
+    if (_lastGenerated) return _lastGenerated;
+    try {
+      var raw = localStorage.getItem('aiGeneratedProgram_' + _u());
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  function _saveCache(prog) {
+    _lastGenerated = prog;
+    try { localStorage.setItem('aiGeneratedProgram_' + _u(), JSON.stringify(prog)); } catch {}
+  }
+
+  function _parseRepsMin(repsStr) {
+    var nums = String(repsStr).match(/\d+/g);
+    return nums ? Number(nums[0]) : 8;
+  }
+
+  function _convertToBuilderFormat(aiProg) {
+    var now = new Date().toISOString();
+    return {
+      name: aiProg.name,
+      title: aiProg.name,
+      progressionType: 'linear',
+      splitMode: 'custom',
+      archetype: (_settings().profile && _settings().profile.athleteArchetype) || 'general',
+      progressionNotes: aiProg.progressionNotes || '',
+      deloadRecommendation: aiProg.deloadRecommendation || '',
+      aiGenerated: true,
+      createdAt: now,
+      updatedAt: now,
+      split: { type: 'custom', name: '', daysPerWeek: aiProg.daysPerWeek || (aiProg.days || []).length },
+      days: (aiProg.days || []).map(function (day) {
+        return {
+          name: day.name,
+          focus: day.focus || '',
+          exercises: (day.exercises || []).map(function (ex) {
+            return {
+              name: ex.name,
+              notes: ex.notes || '',
+              sets: Array.from({ length: ex.sets || 3 }, function () {
+                return { setType: 'straight', reps: _parseRepsMin(ex.reps), restSec: ex.restSeconds || 120, weight: null, rpe: null, rir: null };
+              }),
+            };
+          }),
+        };
+      }),
+    };
+  }
+
+  function _renderForm(cached) {
+    var s = _settings();
+    var profile = s.profile || {};
+    var mode = profile.athleteArchetype || profile.archetype || 'bodybuilding';
+    var expLevel = profile.experienceLevel || 'intermediate';
+
+    var modeOptions = ['bodybuilding','powerlifting','athlete','recreational'].map(function (m) {
+      return '<option value="' + m + '"' + (m === mode ? ' selected' : '') + '>' + (m.charAt(0).toUpperCase() + m.slice(1)) + '</option>';
+    }).join('');
+
+    var expOptions = ['beginner','intermediate','advanced'].map(function (e) {
+      return '<option value="' + e + '"' + (e === expLevel ? ' selected' : '') + '>' + (e.charAt(0).toUpperCase() + e.slice(1)) + '</option>';
+    }).join('');
+
+    return '<div style="display:grid;gap:14px;">'
+      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Goal<input id="pagGoal" type="text" placeholder="e.g. build muscle and improve my bench" style="margin-top:2px;" value="' + (cached ? '' : '') + '"></label>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Days / week<select id="pagDays"><option value="3">3 days</option><option value="4" selected>4 days</option><option value="5">5 days</option><option value="6">6 days</option></select></label>'
+      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Session length<select id="pagLength"><option value="45">45 min</option><option value="60" selected>60 min</option><option value="75">75 min</option><option value="90">90 min</option></select></label>'
+      + '</div>'
+      + '<div style="font-size:0.88rem;color:var(--secondary-text);margin-bottom:2px;">Equipment available</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqBarbell" checked> Barbell</label>'
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqDumbbells" checked> Dumbbells</label>'
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqCables" checked> Cables / Machine</label>'
+      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqBodyweight"> Bodyweight only</label>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Training mode<select id="pagMode">' + modeOptions + '</select></label>'
+      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Experience<select id="pagExp">' + expOptions + '</select></label>'
+      + '</div>'
+      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Focus areas <span style="font-weight:400;">(optional)</span><input id="pagFocus" type="text" placeholder="e.g. need more back volume, lagging quads"></label>'
+      + '<button id="pagSubmitBtn" onclick="submitProgAiGen()" style="padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;">Generate Program</button>'
+      + (cached ? '<button onclick="showProgAiPreview()" style="margin-top:-6px;padding:10px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.85rem;cursor:pointer;width:100%;">↩ View last generated program</button>' : '')
+      + '</div>';
+  }
+
+  function _renderPreview(prog) {
+    var rows = (prog.days || []).map(function (day, i) {
+      var exCount = (day.exercises || []).length;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color,#2a3a2e);">'
+        + '<div><div style="font-size:0.9rem;font-weight:600;">' + escapeCoachText(day.name) + '</div>'
+        + (day.focus ? '<div style="font-size:0.78rem;color:var(--secondary-text);">' + escapeCoachText(day.focus) + '</div>' : '')
+        + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--secondary-text);">' + exCount + ' exercise' + (exCount !== 1 ? 's' : '') + '</div>'
+        + '</div>';
+    }).join('');
+
+    return '<div style="background:rgba(95,168,126,0.08);border:1px solid var(--primary,#5fa87e);border-radius:12px;padding:12px 14px;margin-bottom:14px;">'
+      + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--primary,#5fa87e);margin-bottom:6px;">Generated Program</div>'
+      + '<div style="font-size:1rem;font-weight:700;margin-bottom:10px;">' + escapeCoachText(prog.name) + '</div>'
+      + rows
+      + (prog.progressionNotes ? '<div style="margin-top:10px;font-size:0.82rem;color:var(--secondary-text);"><strong>Progression:</strong> ' + escapeCoachText(prog.progressionNotes) + '</div>' : '')
+      + (prog.deloadRecommendation ? '<div style="margin-top:4px;font-size:0.82rem;color:var(--secondary-text);"><strong>Deload:</strong> ' + escapeCoachText(prog.deloadRecommendation) + '</div>' : '')
+      + '</div>'
+      + '<div style="display:flex;gap:8px;">'
+      + '<button onclick="saveGeneratedProgram()" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.92rem;font-weight:700;cursor:pointer;">Save to Programs</button>'
+      + '<button onclick="progAiGenShowForm()" style="padding:13px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.88rem;cursor:pointer;">Regenerate</button>'
+      + '</div>';
+  }
+
+  window.openProgAiGen = function () {
+    if (typeof isProUser === 'function' && !isProUser()) {
+      var wrap = document.getElementById('progAiGenBtnWrap');
+      if (wrap) {
+        var btn = wrap.querySelector('button');
+        var lock = document.getElementById('progAiGenLocked');
+        if (btn) btn.style.display = 'none';
+        if (lock) lock.style.display = 'block';
+      }
+      return;
+    }
+    var backdrop = document.getElementById('progAiGenBackdrop');
+    var panel    = document.getElementById('progAiGenPanel');
+    if (!backdrop || !panel) return;
+    backdrop.style.display = 'block';
+    panel.style.display = 'flex';
+    requestAnimationFrame(function () { panel.style.transform = 'translateY(0)'; });
+    // Render form (with cached-program hint if available)
+    var body = document.getElementById('progAiGenBody');
+    if (body) body.innerHTML = _renderForm(_cachedProgram());
+  };
+
+  window.closeProgAiGen = function () {
+    var panel    = document.getElementById('progAiGenPanel');
+    var backdrop = document.getElementById('progAiGenBackdrop');
+    if (!panel) return;
+    panel.style.transform = 'translateY(100%)';
+    setTimeout(function () {
+      if (panel) panel.style.display = 'none';
+      if (backdrop) backdrop.style.display = 'none';
+    }, 340);
+  };
+
+  window.progAiGenShowForm = function () {
+    var body = document.getElementById('progAiGenBody');
+    var status = document.getElementById('progAiGenStatus');
+    if (body) body.innerHTML = _renderForm(_cachedProgram());
+    if (status) status.textContent = 'Powered by Claude';
+  };
+
+  window.showProgAiPreview = function () {
+    var cached = _cachedProgram();
+    if (!cached) return;
+    var body = document.getElementById('progAiGenBody');
+    if (body) body.innerHTML = _renderPreview(cached);
+  };
+
+  window.submitProgAiGen = function () {
+    var goal   = (document.getElementById('pagGoal')?.value || '').trim();
+    var days   = Number(document.getElementById('pagDays')?.value || 4);
+    var length = Number(document.getElementById('pagLength')?.value || 60);
+    var mode   = document.getElementById('pagMode')?.value || 'bodybuilding';
+    var exp    = document.getElementById('pagExp')?.value || 'intermediate';
+    var focus  = (document.getElementById('pagFocus')?.value || '').trim();
+
+    if (!goal) {
+      var goalEl = document.getElementById('pagGoal');
+      if (goalEl) { goalEl.focus(); goalEl.style.borderColor = '#eb5757'; setTimeout(function () { goalEl.style.borderColor = ''; }, 2000); }
+      return;
+    }
+
+    var equipment = [];
+    if (document.getElementById('pagEqBarbell')?.checked)    equipment.push('barbell');
+    if (document.getElementById('pagEqDumbbells')?.checked)  equipment.push('dumbbells');
+    if (document.getElementById('pagEqCables')?.checked)     equipment.push('cables');
+    if (document.getElementById('pagEqBodyweight')?.checked) equipment.push('bodyweight');
+    if (!equipment.length) equipment.push('bodyweight');
+
+    // Loading state
+    var btn = document.getElementById('pagSubmitBtn');
+    var body = document.getElementById('progAiGenBody');
+    var status = document.getElementById('progAiGenStatus');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Building your program…';
+      btn.style.animation = 'pag-pulse 1.2s ease-in-out infinite';
+    }
+    if (status) status.textContent = 'Building your program…';
+
+    var serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
+      || 'https://traininglog-backend.onrender.com';
+
+    var payload = { goal: goal, daysPerWeek: days, sessionLengthMinutes: length, equipment: equipment, trainingMode: mode, experienceLevel: exp };
+    if (focus) payload.focusAreas = focus;
+    var maxes = _currentMaxes();
+    if (maxes) payload.currentMaxes = maxes;
+
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 45000);
+
+    fetch(serverUrl + '/api/ai/generate-program', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    }).then(function (res) {
+      clearTimeout(timer);
+      if (!res.ok) return res.json().then(function (e) { throw new Error(e.error || 'Failed'); });
+      return res.json();
+    }).then(function (prog) {
+      _saveCache(prog);
+      if (status) status.textContent = 'Program ready';
+      if (body) body.innerHTML = _renderPreview(prog);
+    }).catch(function (err) {
+      if (status) status.textContent = 'Powered by Claude';
+      var msg = err.name === 'AbortError'
+        ? 'Request timed out — please try again.'
+        : (!navigator.onLine ? 'You are offline.' : "Couldn't generate a program — please try again.");
+      if (body) body.innerHTML = '<div style="color:#eb5757;font-size:0.9rem;padding:16px 0;">' + msg + '</div>'
+        + '<button onclick="progAiGenShowForm()" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.88rem;cursor:pointer;">← Back to form</button>';
+    });
+  };
+
+  window.saveGeneratedProgram = function () {
+    var prog = _cachedProgram();
+    if (!prog) return;
+    var core = window.programBuilderV2Core;
+    if (!core) { alert('Program core not loaded.'); return; }
+    var converted = _convertToBuilderFormat(prog);
+    core.upsertProgram(window, converted);
+    closeProgAiGen();
+    // Switch to list view and refresh
+    if (typeof window.showProgramView === 'function') {
+      window.showProgramView('list');
+    }
+    if (typeof window.showToast === 'function') {
+      window.showToast('Program saved! ✅', 'success', 3000);
+    }
+  };
+
+  // Show/hide the button based on Pro status after DOM ready
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof isProUser === 'function' && !isProUser()) {
+      var btn = document.getElementById('progAiGenBtn');
+      var lock = document.getElementById('progAiGenLocked');
+      if (btn) btn.style.display = 'none';
+      if (lock) lock.style.display = 'block';
+    }
+  });
+
+})();
+</script>
+
+<style>
+@keyframes pag-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
+}
+</style>
 </body>
 </html>

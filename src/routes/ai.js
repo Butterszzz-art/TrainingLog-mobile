@@ -221,6 +221,119 @@ router.post('/program-analysis', async (req, res) => {
   }
 });
 
+// ── AI Program Generator ──────────────────────────────────────────────────────
+
+const GENERATE_PROGRAM_SYSTEM_PROMPT = `You are an expert program designer inside Pocket Coach. Generate a complete, \
+structured training program based on the user's inputs. Apply sound periodisation \
+principles appropriate to their training mode and experience level. \
+Respond ONLY with valid JSON in this exact structure: \
+{ \
+  "name": string, \
+  "daysPerWeek": number, \
+  "days": [{ \
+    "name": string, \
+    "focus": string, \
+    "exercises": [{ \
+      "name": string, \
+      "sets": number, \
+      "reps": string, \
+      "restSeconds": number, \
+      "notes": string \
+    }] \
+  }], \
+  "progressionNotes": string, \
+  "deloadRecommendation": string \
+} \
+Use standard exercise names. Rep ranges as strings e.g. '8-12' or '5'. Rest in seconds.`;
+
+router.post('/generate-program', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+
+  const {
+    goal, daysPerWeek, sessionLengthMinutes,
+    equipment, trainingMode, experienceLevel,
+    focusAreas, currentMaxes,
+  } = req.body;
+
+  if (!goal || !daysPerWeek) {
+    return res.status(400).json({ error: 'Missing required fields: goal, daysPerWeek' });
+  }
+
+  const parts = [
+    `Goal: ${goal}`,
+    `Training days per week: ${daysPerWeek}`,
+    `Session length: ${sessionLengthMinutes || 60} minutes`,
+    `Training mode: ${trainingMode || 'general'}`,
+    `Experience level: ${experienceLevel || 'intermediate'}`,
+    `Available equipment: ${Array.isArray(equipment) && equipment.length ? equipment.join(', ') : 'full gym'}`,
+  ];
+  if (focusAreas) parts.push(`Focus areas / lagging points: ${focusAreas}`);
+  if (currentMaxes) {
+    const maxLines = [];
+    if (currentMaxes.squat) maxLines.push(`squat ${currentMaxes.squat}kg`);
+    if (currentMaxes.bench) maxLines.push(`bench ${currentMaxes.bench}kg`);
+    if (currentMaxes.deadlift) maxLines.push(`deadlift ${currentMaxes.deadlift}kg`);
+    if (maxLines.length) parts.push(`Current 1RMs: ${maxLines.join(', ')}`);
+  }
+  parts.push(`Generate exactly ${daysPerWeek} training days.`);
+
+  const userPrompt = parts.join('\n');
+
+  try {
+    const client = new Anthropic();
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
+      system: GENERATE_PROGRAM_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+
+    const raw = (message.content?.[0]?.text || '').trim();
+    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+
+    let prog;
+    try {
+      prog = JSON.parse(jsonStr);
+    } catch {
+      console.error('[AI generate-program] JSON parse failed:', jsonStr.slice(0, 200));
+      return res.status(502).json({ error: 'AI returned invalid JSON' });
+    }
+
+    // Validate minimum structure
+    if (!prog.name || !Array.isArray(prog.days) || !prog.days.length) {
+      return res.status(502).json({ error: 'AI returned incomplete program structure' });
+    }
+
+    // Sanitise each day and exercise
+    prog.days = prog.days.map((day, i) => ({
+      name: String(day.name || `Day ${i + 1}`),
+      focus: String(day.focus || ''),
+      exercises: Array.isArray(day.exercises)
+        ? day.exercises.map(ex => ({
+            name: String(ex.name || 'Exercise'),
+            sets: Math.max(1, Number(ex.sets) || 3),
+            reps: String(ex.reps || '8-12'),
+            restSeconds: Math.max(30, Number(ex.restSeconds) || 90),
+            notes: String(ex.notes || ''),
+          }))
+        : [],
+    }));
+
+    return res.json({
+      name: String(prog.name),
+      daysPerWeek: Number(prog.daysPerWeek) || daysPerWeek,
+      days: prog.days,
+      progressionNotes: String(prog.progressionNotes || ''),
+      deloadRecommendation: String(prog.deloadRecommendation || ''),
+    });
+  } catch (err) {
+    console.error('[AI generate-program]', err.message);
+    return res.status(502).json({ error: 'AI request failed', details: err.message });
+  }
+});
+
 // ── Plateau Detector ──────────────────────────────────────────────────────────
 
 const PLATEAU_SYSTEM_PROMPT = `You are analysing training data inside Pocket Coach to detect stagnation \
