@@ -150,4 +150,75 @@ router.post('/macro-advice', async (req, res) => {
   }
 });
 
+// ── Program Analyser ──────────────────────────────────────────────────────────
+
+const PROGRAM_SYSTEM_PROMPT = `You are an elite strength and conditioning coach reviewing training programs \
+inside Pocket Coach. You identify specific structural issues, recovery gaps, volume imbalances, and progression \
+problems. Be direct and specific — reference actual exercise names and day numbers from the program. \
+Tailor feedback to the training mode. Format your response as:\n\
+VERDICT: one sentence overall assessment\n\
+ISSUES: bullet list of 2-4 specific problems found (or 'None identified')\n\
+SUGGESTIONS: bullet list of 2-4 concrete improvements with specifics`;
+
+function parseProgramAnalysis(text) {
+  const verdict = (text.match(/VERDICT:\s*(.+?)(?:\n|$)/i)?.[1] || '').trim();
+
+  const issuesRaw     = text.match(/ISSUES:\s*([\s\S]+?)(?=SUGGESTIONS:|$)/i)?.[1] || '';
+  const suggestionsRaw = text.match(/SUGGESTIONS:\s*([\s\S]+?)$/i)?.[1] || '';
+
+  function bullets(raw) {
+    return raw.split('\n')
+      .map(l => l.replace(/^[\s•\-*\d.]+/, '').trim())
+      .filter(l => l.length > 0 && !/^none\s+identified$/i.test(l));
+  }
+
+  return { verdict, issues: bullets(issuesRaw), suggestions: bullets(suggestionsRaw) };
+}
+
+router.post('/program-analysis', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+
+  const { program, trainingMode, experienceLevel, goal, daysPerWeek } = req.body;
+  if (!program || !Array.isArray(program.days)) {
+    return res.status(400).json({ error: 'Missing required field: program.days' });
+  }
+
+  // Serialise program for the prompt
+  const programText = program.days.map((day, i) => {
+    const dayLabel = `Day ${i + 1}${day.name ? ` - ${day.name}` : ''}`;
+    const exList = (day.exercises || []).map(ex => {
+      const parts = [ex.name || 'Unknown'];
+      if (ex.sets)       parts.push(`${ex.sets}×${ex.reps || '?'}`);
+      if (ex.restSeconds) parts.push(`${ex.restSeconds}s rest`);
+      return parts.join(' ');
+    });
+    return `${dayLabel}: ${exList.join(', ') || 'No exercises'}`;
+  }).join('\n');
+
+  const userPrompt = [
+    `Analyse this ${trainingMode || 'general'} program for a ${experienceLevel || 'intermediate'} athlete`,
+    `targeting ${goal || 'general fitness'}, training ${daysPerWeek || program.days.length} days/week:`,
+    '',
+    programText,
+  ].join('\n');
+
+  try {
+    const client = new Anthropic();
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system: PROGRAM_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+
+    const raw = message.content?.[0]?.text?.trim() || '';
+    return res.json(parseProgramAnalysis(raw));
+  } catch (err) {
+    console.error('[AI program-analysis]', err.message);
+    return res.status(502).json({ error: 'AI request failed', details: err.message });
+  }
+});
+
 module.exports = router;
