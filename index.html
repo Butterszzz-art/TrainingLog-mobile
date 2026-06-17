@@ -790,6 +790,9 @@
     ═══════════════════════════════════════════════════════════ -->
     <div id="ciPanel_history" class="ci-panel" style="display:none">
 
+      <!-- AI Summary card — populated by saveWeeklyCheckIn after each save -->
+      <div id="checkInAiSummaryCard" style="display:none"></div>
+
       <!-- Summary card -->
       <div class="ci-card">
         <h3 class="ci-card-title">📊 Latest Summary</h3>
@@ -1753,6 +1756,17 @@
             <summary>📅 Activity heatmap</summary>
             <div><div id="heatmap" class="heatmap"></div></div>
           </details>
+
+          <!-- AI Macro Advisor -->
+          <div style="padding:12px 0 4px;">
+            <button id="macroAiAdvisorBtn" onclick="openMacroAiAdvisor()"
+              style="width:100%;background:var(--primary);color:#0b130d;border:none;border-radius:14px;padding:13px 20px;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 12px rgba(95,168,126,0.3);">
+              <span>✨</span><span>AI Macro Advisor</span>
+            </button>
+            <div id="macroAiAdvisorLocked" style="display:none;text-align:center;margin-top:8px;font-size:0.8rem;color:var(--secondary-text);">
+              🔒 Pro feature — upgrade to unlock
+            </div>
+          </div>
         </div>
 
         <div id="macroMealsPanel" class="panel">
@@ -8507,7 +8521,10 @@ function renderCoachClientDetail(client) {
             <h3 class="coach-dashboard-title">${escapeCoachText(safeClient.name)}</h3>
             <p class="coach-dashboard-subtitle">Client detail overview · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
           </div>
-          <button type="button" data-coach-back>← Back to roster</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn" data-coach-draft-msg="${escapeCoachText(safeClient.id)}">Draft message ✨</button>` : ''}
+            <button type="button" data-coach-back>← Back to roster</button>
+          </div>
         </div>
       </section>
       <section class="coach-client-detail-grid">
@@ -8586,6 +8603,22 @@ function renderCoachClientDetail(client) {
           </div>
         </article>
       </section>
+      <section style="margin-top:16px;">
+        ${isProUser() ? `
+          <article class="coach-client-detail-card">
+            <h4>Coach Message</h4>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:0.85rem;color:var(--secondary-text,#666);">
+              Coach notes (optional — incorporated into draft)
+              <textarea id="coachAiDraftNotes" rows="2" placeholder="e.g. great push week, tighten up cardio next block..." style="resize:vertical;margin-top:4px;"></textarea>
+            </label>
+            <div id="coachAiDraftSection" style="margin-top:12px;"></div>
+          </article>
+        ` : `
+          <article class="coach-client-detail-card" style="opacity:0.7;">
+            <p style="margin:0;font-size:0.9rem;">🔒 AI Draft Message is a Pro feature.</p>
+          </article>
+        `}
+      </section>
     </section>
   `;
 }
@@ -8596,6 +8629,94 @@ function renderCoachClientRoster(clients = []) {
   }
   const cards = clients.map((client) => renderCoachClientCard(client)).join('');
   return `<section class="coach-roster-grid" aria-label="Coach client roster">${cards}</section>`;
+}
+
+async function requestCoachDraftMessage(clientId) {
+  const draftSection = document.getElementById('coachAiDraftSection');
+  if (!draftSection) return;
+
+  const coachNotes = (document.getElementById('coachAiDraftNotes')?.value || '').trim();
+
+  // Find client from state
+  const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
+  const client = clients.find(c => normalizeCoachClientRecord(c).id === clientId);
+  if (!client) { draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Client data not found.</p>'; return; }
+
+  const safeClient = normalizeCoachClientRecord(client);
+  const localData = getLocalCoachClientData(safeClient);
+  const latestCheckIn = safeClient.latestCheckIn || localData.latestCheckIn || null;
+  const derivedAlerts = deriveCoachClientAlerts(safeClient);
+  const snapshot = getComplianceSnapshot(localData.profile || {}, safeClient.id, normalizeArchetype(safeClient.archetype));
+  const compliancePercent = snapshot.weekly?.averagePercent ?? safeClient.compliancePercent ?? 0;
+  const nutritionTargets = localData.macroTargets
+    ? `${localData.macroTargets.calories || 0} kcal · ${localData.macroTargets.protein || 0}P / ${localData.macroTargets.carbs || 0}C / ${localData.macroTargets.fat || 0}F`
+    : '';
+  const bodyweightChange = latestCheckIn?.bodyweightChange ?? latestCheckIn?.weeklyWeightChange ?? latestCheckIn?.weightChange ?? null;
+
+  draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;">✨ Drafting message…</p>`;
+
+  const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
+    || 'https://traininglog-backend.onrender.com';
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    const res = await fetch(`${serverUrl}/api/ai/coach-draft-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientName: safeClient.name,
+        archetype: safeClient.archetype,
+        currentPhase: safeClient.currentPhase,
+        compliancePercent: Math.round(compliancePercent),
+        checkIn: latestCheckIn ? {
+          sleep: latestCheckIn.sleep ?? null,
+          energy: latestCheckIn.energy ?? null,
+          stress: latestCheckIn.stress ?? null,
+          hunger: latestCheckIn.hunger ?? null,
+          trainingPerformance: latestCheckIn.trainingPerformance ?? null,
+        } : null,
+        bodyweightChange,
+        alerts: derivedAlerts.map(a => ({ label: a.label, reason: a.reason })),
+        currentProgramSummary: safeClient.currentProgramSummary || localData.activeProgramName || '',
+        currentNutritionSummary: safeClient.currentNutritionSummary || nutritionTargets || '',
+        coachNotes,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (err.error === 'AI_NOT_CONFIGURED') {
+        draftSection.innerHTML = '<p style="color:var(--secondary-text,#888);font-size:0.9rem;">AI drafting is not enabled on this server.</p>';
+      } else {
+        draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Draft failed. Please try again.</p>';
+      }
+      return;
+    }
+
+    const data = await res.json();
+    const draft = data.draft || '';
+    draftSection.innerHTML = `
+      <textarea id="coachAiDraftTextarea" rows="6" style="width:100%;box-sizing:border-box;resize:vertical;font-size:0.92rem;line-height:1.5;padding:10px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:var(--card-bg,#fff);color:var(--text-color,#222);">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <button type="button" data-coach-copy-draft style="flex:1;">Copy to clipboard</button>
+        <button type="button" data-coach-clear-draft style="flex:0 0 auto;background:transparent;border:1px solid var(--border-color,#ddd);color:var(--secondary-text,#888);">Clear</button>
+      </div>
+    `;
+    // Auto-resize textarea to content
+    const ta = document.getElementById('coachAiDraftTextarea');
+    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Request timed out. Please try again.</p>';
+    } else if (!navigator.onLine) {
+      draftSection.innerHTML = '<p style="color:var(--secondary-text,#888);font-size:0.9rem;">You are offline.</p>';
+    } else {
+      draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Draft failed. Please try again.</p>';
+    }
+  }
 }
 
 function ensureCoachDashboardInteractions() {
@@ -8620,6 +8741,34 @@ function ensureCoachDashboardInteractions() {
     if (backBtn) {
       coachDashboardState.selectedClientId = null;
       renderCoachDashboardView();
+      return;
+    }
+    const draftMsgBtn = event.target.closest('[data-coach-draft-msg]');
+    if (draftMsgBtn) {
+      const clientId = draftMsgBtn.getAttribute('data-coach-draft-msg');
+      requestCoachDraftMessage(clientId);
+      return;
+    }
+    const copyDraftBtn = event.target.closest('[data-coach-copy-draft]');
+    if (copyDraftBtn) {
+      const textarea = document.getElementById('coachAiDraftTextarea');
+      if (textarea) {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          copyDraftBtn.textContent = 'Copied!';
+          setTimeout(() => { copyDraftBtn.textContent = 'Copy to clipboard'; }, 2000);
+        }).catch(() => {
+          textarea.select();
+          document.execCommand('copy');
+          copyDraftBtn.textContent = 'Copied!';
+          setTimeout(() => { copyDraftBtn.textContent = 'Copy to clipboard'; }, 2000);
+        });
+      }
+      return;
+    }
+    const clearDraftBtn = event.target.closest('[data-coach-clear-draft]');
+    if (clearDraftBtn) {
+      const textarea = document.getElementById('coachAiDraftTextarea');
+      if (textarea) { textarea.value = ''; textarea.style.height = 'auto'; }
     }
   });
   coachDashboardState.isBound = true;
@@ -9202,6 +9351,129 @@ function renderPhotoComparison() {
   if (empty) empty.style.display = 'none';
 }
 
+// ── Pro user gate ─────────────────────────────────────────────────────────────
+// Replace with real billing check when subscription is added.
+function isProUser() {
+  const u = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  return localStorage.getItem(`proUser_${u}`) === 'true' || true; // default open during beta
+}
+
+// ── AI check-in summary ───────────────────────────────────────────────────────
+async function requestAiCheckInSummary(draft, compliancePercent) {
+  const card = document.getElementById('checkInAiSummaryCard');
+  if (!card) return;
+
+  if (!isProUser()) {
+    card.style.display = '';
+    card.innerHTML = `
+      <div class="ci-ai-card ci-ai-card--locked">
+        <span class="ci-ai-label">✨ AI Summary</span>
+        <p>Upgrade to Pro to get an AI-generated summary of every check-in.</p>
+        <button class="ci-ai-upgrade-btn" onclick="window.showToast?.('Pro subscriptions coming soon!','info',3000)">Upgrade</button>
+      </div>`;
+    return;
+  }
+
+  // Show loading state
+  card.style.display = '';
+  card.innerHTML = `
+    <div class="ci-ai-card">
+      <span class="ci-ai-label">✨ AI Summary</span>
+      <div class="ci-ai-loading">
+        <div class="ci-ai-spinner"></div>
+        <span>Generating your summary…</span>
+      </div>
+    </div>`;
+
+  const phaseState = getCheckInPhaseState();
+  const goalRaw = String(phaseState.mode || draft.phase || 'maintain').toLowerCase();
+  const goal = goalRaw.includes('cut') ? 'cut' : goalRaw.includes('bulk') ? 'bulk' : 'maintain';
+
+  // Previous bodyweight for delta
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const allCheckIns = window.checkinEngine?.loadCheckIns(userId) || [];
+  const prior = allCheckIns
+    .filter(c => c.date < draft.date && c.bodyweight)
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  const bodyweightLastWeek = prior ? Number(prior.bodyweight) : null;
+
+  const payload = {
+    sleep:               Number(draft.sleep)               || 5,
+    energy:              Number(draft.energy)              || 5,
+    stress:              Number(draft.stress)              || 5,
+    hunger:              Number(draft.hunger)              || '',
+    digestion:           Number(draft.digestion)           || '',
+    trainingPerformance: Number(draft.trainingPerformance) || '',
+    bodyweightThisWeek:  Number(draft.bodyweight)          || 0,
+    bodyweightLastWeek,
+    compliancePercent:   Number(compliancePercent)         || 0,
+    adjustmentNotes:     draft.notes || '',
+    goal,
+    archetype:           draft.archetype || 'bodybuilder',
+  };
+
+  try {
+    const serverUrl = (typeof window.getServerUrl === 'function' ? window.getServerUrl() : null)
+      || window.SERVER_URL
+      || 'https://traininglog-backend.onrender.com';
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    const res = await fetch(`${serverUrl}/api/ai/checkin-summary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Server ${res.status}`);
+    }
+
+    const { summary } = await res.json();
+
+    // Persist summary back onto the check-in record
+    const entries = window.checkinEngine?.loadCheckIns(userId) || [];
+    const idx = entries.findIndex(e => e.date === draft.date);
+    if (idx !== -1) {
+      entries[idx].aiSummary = summary;
+      localStorage.setItem(`checkIns_${userId}`, JSON.stringify(entries));
+
+      // Airtable: patch the record if it has an id
+      if (entries[idx].airtableId && airtableBaseId && airtableToken) {
+        fetchWithTimeout(`${window.SERVER_URL}/airtable/${airtableBaseId}/CheckIns`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${airtableToken}` },
+          body: JSON.stringify({ records: [{ id: entries[idx].airtableId, fields: { AISummary: summary } }] }),
+        }, 8000).catch(() => {}); // fire-and-forget, non-blocking
+      }
+    }
+
+    card.innerHTML = `
+      <div class="ci-ai-card">
+        <span class="ci-ai-label">✨ AI Summary</span>
+        <p class="ci-ai-text">${summary.replace(/</g, '&lt;')}</p>
+      </div>`;
+  } catch (err) {
+    const msg = err.name === 'AbortError'
+      ? 'Summary timed out — try refreshing.'
+      : err.message === 'AI_NOT_CONFIGURED'
+        ? 'AI summaries not yet enabled on this server.'
+        : 'Could not generate summary right now.';
+    card.innerHTML = `
+      <div class="ci-ai-card ci-ai-card--error">
+        <span class="ci-ai-label">✨ AI Summary</span>
+        <p>${msg}</p>
+      </div>`;
+  }
+}
+
 function saveWeeklyCheckIn(actor = 'athlete') {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
@@ -9272,7 +9544,18 @@ function saveWeeklyCheckIn(actor = 'athlete') {
 
   renderCheckInTab();
   generateCheckInSummary();
-  // Auto-navigate to history so the user sees their new entry
+
+  // AI summary — only for athlete saves (not coach review edits)
+  if (actor === 'athlete') {
+    const aiCard = document.getElementById('checkInAiSummaryCard');
+    if (aiCard) aiCard.style.display = 'none'; // reset from prior save
+    const compPct = window.complianceEngine?.calculateWeeklyCompliance?.(
+      userId, draft.date, draft.archetype
+    )?.averagePercent ?? 0;
+    requestAiCheckInSummary(draft, Math.round(compPct));
+  }
+
+  // Auto-navigate to history so the user sees their new entry + AI card
   switchCheckInTab('history');
 }
 
@@ -14245,5 +14528,197 @@ window.renderMeetPrep = renderMeetPrep;
   </script>
   <script src="src/js/mobility.js"></script>
   <script src="src/js/ai-coach.js"></script>
+
+<!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
+<div id="macroAiBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);z-index:1050;" onclick="closeMacroAiAdvisor()"></div>
+<div id="macroAiPanel" role="dialog" aria-modal="true" aria-label="AI Macro Advisor"
+  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--card-bg,#0f1510);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">✨</div>
+      <div>
+        <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Macro Advisor</div>
+        <div id="macroAiStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
+      </div>
+    </div>
+    <button onclick="closeMacroAiAdvisor()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;margin:0;box-shadow:none;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="macroAiBody" style="flex:1;overflow-y:auto;padding:14px 16px 24px;-webkit-overflow-scrolling:touch;"></div>
+</div>
+
+<script>
+(function () {
+  function getAiMacroData() {
+    const u = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+
+    // Current targets
+    const saved = JSON.parse(localStorage.getItem('macroTargets_' + u) || 'null') || {};
+    const currentTargets = {
+      protein:  Number(saved.protein  || saved.proteinTarget  || 0),
+      carbs:    Number(saved.carbs    || saved.carbTarget      || 0),
+      fats:     Number(saved.fat      || saved.fatTarget       || 0),
+      calories: Number(saved.calories || saved.calorieTarget   || 0),
+    };
+
+    // Goal + rate from preset select
+    const presetVal = document.getElementById('macroPreset')?.value || 'maintain';
+    const preset = (window.presetMap || {})[presetVal] || { goal: 'maintain', rate: 'moderate' };
+
+    // Bodyweight history — last 4 entries
+    const bwLog = JSON.parse(localStorage.getItem('bodyweightLog_' + u) || '[]');
+    const bodyweightHistory = bwLog
+      .filter(e => e.date && (e.weight || e.weightKg || e.value))
+      .map(e => ({ date: e.date, weight: Number(e.weight || e.weightKg || e.value) }))
+      .slice(-4);
+
+    // Average hunger from last 2 check-ins
+    const checkIns = window.checkinEngine?.loadCheckIns?.(u) || [];
+    const recentHunger = checkIns
+      .slice(-2)
+      .map(c => Number(c.hunger || c.archetypeMetrics?.hunger))
+      .filter(n => n > 0);
+    const averageHunger = recentHunger.length
+      ? Math.round(recentHunger.reduce((a, b) => a + b, 0) / recentHunger.length * 10) / 10
+      : null;
+
+    // Sex + archetype
+    const personal = JSON.parse(localStorage.getItem('personalDetails') || '{}');
+    const sex = personal.sex || 'male';
+    const archetype = (function() {
+      try {
+        const s = JSON.parse(localStorage.getItem('settings_' + u) || '{}');
+        return s.profile?.archetype || s.archetype || 'bodybuilder';
+      } catch { return 'bodybuilder'; }
+    })();
+
+    return { currentTargets, goal: preset.goal, ratePreference: preset.rate, bodyweightHistory, averageHunger, sex, archetype };
+  }
+
+  function renderMacroAiLoading(body, status) {
+    status.textContent = 'Analysing your trends…';
+    body.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:24px 0;color:var(--secondary-text);font-size:0.88rem;"><div style="width:18px;height:18px;border:2px solid var(--border-color);border-top-color:var(--primary,#5fa87e);border-radius:50%;animation:spin 0.9s linear infinite;flex-shrink:0;"></div>Analysing your trends…</div>';
+  }
+
+  function renderMacroAiResult(body, status, data) {
+    status.textContent = 'Powered by Claude';
+    const { advice, suggestedTargets, currentTargets } = data;
+
+    function arrow(cur, sug, unit) {
+      const diff = sug - cur;
+      if (Math.abs(diff) < 1) return '<span style="color:var(--secondary-text)">→</span> ' + sug + unit;
+      const col = diff > 0 ? '#4caf82' : '#e05060';
+      const sym = diff > 0 ? '↑' : '↓';
+      return '<span style="color:' + col + ';font-weight:700;">' + sym + ' ' + sug + unit + '</span>';
+    }
+
+    const rows = [
+      { label: 'Protein', cur: currentTargets.protein,  sug: suggestedTargets.protein,  unit: 'g' },
+      { label: 'Carbs',   cur: currentTargets.carbs,    sug: suggestedTargets.carbs,    unit: 'g' },
+      { label: 'Fats',    cur: currentTargets.fats,     sug: suggestedTargets.fats,     unit: 'g' },
+      { label: 'Calories',cur: currentTargets.calories, sug: suggestedTargets.calories, unit: ' kcal' },
+    ];
+
+    body.innerHTML =
+      '<div style="background:var(--card-bg,#0f1510);border:1px solid var(--border-color,#2a3a2e);border-left:3px solid var(--primary,#5fa87e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
+        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--primary,#5fa87e);margin-bottom:8px;">✨ AI Advice</div>' +
+        '<p style="font-size:0.88rem;line-height:1.6;color:var(--text-color);margin:0;">' + advice.replace(/</g, '&lt;') + '</p>' +
+      '</div>' +
+      '<div style="background:var(--surface-bg,#141e17);border:1px solid var(--border-color,#2a3a2e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
+        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--secondary-text);margin-bottom:12px;">Suggested vs Current</div>' +
+        rows.map(r =>
+          '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">' +
+            '<span style="font-size:0.85rem;color:var(--secondary-text);">' + r.label + '</span>' +
+            '<div style="font-size:0.85rem;display:flex;gap:12px;align-items:center;">' +
+              '<span style="color:var(--text-muted,#6a7f6d);">' + r.cur + r.unit + '</span>' +
+              '<span>→</span>' +
+              arrow(r.cur, r.sug, r.unit) +
+            '</div>' +
+          '</div>'
+        ).join('') +
+      '</div>' +
+      '<button onclick="applyMacroAiTargets(' + JSON.stringify(suggestedTargets) + ')" ' +
+        'style="width:100%;background:var(--primary,#5fa87e);color:#0b130d;border:none;border-radius:14px;padding:13px;font-size:0.95rem;font-weight:700;cursor:pointer;margin:0;box-shadow:none;">' +
+        'Apply suggested targets' +
+      '</button>';
+  }
+
+  function renderMacroAiError(body, status, msg) {
+    status.textContent = 'Powered by Claude';
+    body.innerHTML = '<div style="background:rgba(224,80,96,0.1);border:1px solid rgba(224,80,96,0.3);border-radius:14px;padding:14px 16px;color:#e05060;font-size:0.88rem;">⚠️ ' + msg + '</div>';
+  }
+
+  window.openMacroAiAdvisor = async function () {
+    if (!isProUser()) {
+      const btn = document.getElementById('macroAiAdvisorBtn');
+      const locked = document.getElementById('macroAiAdvisorLocked');
+      if (btn) { btn.style.opacity = '0.45'; btn.disabled = true; }
+      if (locked) locked.style.display = '';
+      return;
+    }
+
+    const backdrop = document.getElementById('macroAiBackdrop');
+    const panel    = document.getElementById('macroAiPanel');
+    const body     = document.getElementById('macroAiBody');
+    const status   = document.getElementById('macroAiStatus');
+    if (!panel || !body) return;
+
+    backdrop.style.display = '';
+    panel.style.display = 'flex';
+    requestAnimationFrame(() => panel.style.transform = 'translateY(0)');
+    renderMacroAiLoading(body, status);
+
+    const payload = getAiMacroData();
+
+    try {
+      const serverUrl = (typeof window.getServerUrl === 'function' ? window.getServerUrl() : null)
+        || window.SERVER_URL || 'https://traininglog-backend.onrender.com';
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      const res = await fetch(serverUrl + '/api/ai/macro-advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 404) throw new Error('AI advisor not yet enabled on this server.');
+        throw new Error(err.error || 'Server error ' + res.status);
+      }
+      const result = await res.json();
+      renderMacroAiResult(body, status, { ...result, currentTargets: payload.currentTargets });
+    } catch (err) {
+      const msg = err.name === 'AbortError' ? 'Request timed out — try again.' : (err.message || 'Something went wrong.');
+      renderMacroAiError(body, status, msg);
+    }
+  };
+
+  window.closeMacroAiAdvisor = function () {
+    const panel   = document.getElementById('macroAiPanel');
+    const backdrop = document.getElementById('macroAiBackdrop');
+    if (!panel) return;
+    panel.style.transform = 'translateY(100%)';
+    setTimeout(() => { panel.style.display = 'none'; backdrop.style.display = 'none'; }, 320);
+  };
+
+  window.applyMacroAiTargets = function (suggested) {
+    // Populate the Adjust Macros sliders, then switch to that subtab
+    const ps = document.getElementById('proteinSlider');
+    const fs = document.getElementById('fatSlider');
+    const cs = document.getElementById('carbSlider');
+    if (ps) ps.value = suggested.protein  || 0;
+    if (fs) fs.value = suggested.fats     || 0;
+    if (cs) cs.value = suggested.carbs    || 0;
+    if (typeof updateSliderMacros === 'function') updateSliderMacros();
+    closeMacroAiAdvisor();
+    if (typeof showMacroSubTab === 'function') showMacroSubTab('adjust');
+    window.showToast?.('Targets pre-filled — review and click Save Macros to confirm.', 'info', 4000);
+  };
+})();
+</script>
 </body>
 </html>

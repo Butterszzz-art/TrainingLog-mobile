@@ -293,6 +293,20 @@
   gap: 10px;
 }
 
+.coach-draft-msg-btn {
+  background: var(--primary, #5fa87e);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.coach-draft-msg-btn:hover { filter: brightness(1.1); }
+.coach-draft-msg-btn:active { transform: scale(0.97); }
+
 @media (min-width: 800px) {
   .coach-roster-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

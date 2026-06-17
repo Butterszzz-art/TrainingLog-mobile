@@ -939,6 +939,147 @@
   }
 
   /* ══════════════════════════════════════════════════════════════
+     AI PROGRAM ANALYSER
+  ══════════════════════════════════════════════════════════════ */
+
+  function deriveRepsString(sets) {
+    if (!Array.isArray(sets) || !sets.length) return '?';
+    const vals = sets.map(s => Number(s.reps || 0)).filter(Boolean);
+    if (!vals.length) return '?';
+    const mn = Math.min(...vals), mx = Math.max(...vals);
+    return mn === mx ? String(mn) : `${mn}-${mx}`;
+  }
+
+  function normaliseProgramForApi(prog) {
+    return {
+      name: prog.name || prog.title || 'Untitled',
+      days: (prog.days || []).map((day, i) => ({
+        name: day.name || `Day ${i + 1}`,
+        exercises: (day.exercises || []).map(ex => ({
+          name: ex.name || 'Unknown',
+          sets: Array.isArray(ex.sets) ? ex.sets.length : (ex.sets || 3),
+          reps: Array.isArray(ex.sets) ? deriveRepsString(ex.sets) : (ex.reps || '?'),
+          restSeconds: Array.isArray(ex.sets)
+            ? (ex.sets[0]?.restSec || 120)
+            : (ex.restSeconds || ex.restSec || 120),
+        })),
+      })),
+    };
+  }
+
+  async function analyseProgram(prog, panelEl) {
+    const cacheKey = prog.programId || prog.id || (prog.name || 'prog').replace(/\s+/g, '_');
+    const storageKey = `aiProgramAnalysis_${cacheKey}`;
+
+    function renderResult(data, fromCache) {
+      const issuesHtml = (data.issues || []).map(s =>
+        `<li class="prog-ai-item"><span class="prog-ai-item-icon">⚠️</span>${s}</li>`
+      ).join('') || '<li class="prog-ai-item">None identified.</li>';
+
+      const suggestionsHtml = (data.suggestions || []).map(s =>
+        `<li class="prog-ai-item"><span class="prog-ai-item-icon">💡</span>${s}</li>`
+      ).join('') || '<li class="prog-ai-item">No suggestions.</li>';
+
+      panelEl.innerHTML = `
+        <div class="prog-ai-verdict">
+          <div class="prog-ai-verdict-label">Verdict</div>
+          <div>${data.verdict || '—'}</div>
+        </div>
+        <div class="prog-ai-section">
+          <div class="prog-ai-section-title">Issues</div>
+          <ul style="margin:0;padding:0;list-style:none">${issuesHtml}</ul>
+        </div>
+        <div class="prog-ai-section">
+          <div class="prog-ai-section-title">Suggestions</div>
+          <ul style="margin:0;padding:0;list-style:none">${suggestionsHtml}</ul>
+        </div>
+        <div class="prog-ai-footer">
+          ${fromCache ? '<span style="font-size:11px;color:var(--secondary-text)">Cached result</span>' : ''}
+          <button type="button" class="prog-ai-reanalyse">Re-analyse</button>
+        </div>
+      `;
+
+      panelEl.querySelector('.prog-ai-reanalyse').addEventListener('click', () => {
+        localStorage.removeItem(storageKey);
+        panelEl.innerHTML = '';
+        analyseProgram(prog, panelEl);
+      });
+    }
+
+    // Check cache first
+    const cached = localStorage.getItem(storageKey);
+    if (cached) {
+      try {
+        renderResult(JSON.parse(cached), true);
+        return;
+      } catch {}
+    }
+
+    // Loading state
+    panelEl.innerHTML = `
+      <div class="prog-ai-loading">
+        <div class="prog-ai-spinner"></div>
+        <span>Analysing program…</span>
+      </div>
+    `;
+
+    // Gather settings context
+    const u = (typeof getActiveUsername === 'function' ? getActiveUsername() : null)
+      || (typeof window.getActiveUsername === 'function' ? window.getActiveUsername() : null)
+      || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'anonymous';
+    let trainingMode = 'general', experienceLevel = 'intermediate';
+    try {
+      const settings = JSON.parse(localStorage.getItem(`settings_${u}`) || '{}');
+      trainingMode = settings.profile?.athleteArchetype || trainingMode;
+      experienceLevel = settings.profile?.experienceLevel || experienceLevel;
+    } catch {}
+
+    const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
+      || 'https://traininglog-backend.onrender.com';
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+
+      const res = await fetch(`${serverUrl}/api/ai/program-analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          program: normaliseProgramForApi(prog),
+          trainingMode,
+          experienceLevel,
+          goal: prog.archetype || 'general',
+          daysPerWeek: (prog.days || []).length,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (err.error === 'AI_NOT_CONFIGURED') {
+          panelEl.innerHTML = '<div class="prog-ai-loading" style="color:var(--secondary-text)">AI analysis is not enabled on this server.</div>';
+        } else {
+          panelEl.innerHTML = '<div class="prog-ai-loading" style="color:#eb5757">Analysis failed. Please try again.</div>';
+        }
+        return;
+      }
+
+      const data = await res.json();
+      localStorage.setItem(storageKey, JSON.stringify(data));
+      renderResult(data, false);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        panelEl.innerHTML = '<div class="prog-ai-loading" style="color:#eb5757">Request timed out. Please try again.</div>';
+      } else if (!navigator.onLine) {
+        panelEl.innerHTML = '<div class="prog-ai-loading" style="color:var(--secondary-text)">You are offline. Connect to the internet to analyse programs.</div>';
+      } else {
+        panelEl.innerHTML = '<div class="prog-ai-loading" style="color:#eb5757">Analysis failed. Please try again.</div>';
+      }
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
      MY PROGRAMS — list view
   ══════════════════════════════════════════════════════════════ */
 
@@ -998,6 +1139,7 @@
           <button type="button" class="prog-card-load" data-idx="${origIdx}">Load into Builder</button>
           <button type="button" class="prog-card-del" data-idx="${origIdx}">Delete</button>
         </div>
+        <button type="button" class="prog-card-analyse">✨ Analyse with AI</button>
       `;
 
       card.querySelector('.prog-card-load').addEventListener('click', () => {
@@ -1033,7 +1175,22 @@
         });
       });
 
+      // Analysis panel lives directly below the card
+      const analysisPanel = document.createElement('div');
+      analysisPanel.className = 'prog-ai-panel';
+      analysisPanel.style.display = 'none';
+
+      card.querySelector('.prog-card-analyse').addEventListener('click', () => {
+        if (analysisPanel.style.display !== 'none') {
+          analysisPanel.style.display = 'none';
+          return;
+        }
+        analysisPanel.style.display = 'block';
+        analyseProgram(prog, analysisPanel);
+      });
+
       container.appendChild(card);
+      container.appendChild(analysisPanel);
     });
   }
 
