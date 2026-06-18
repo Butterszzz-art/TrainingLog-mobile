@@ -837,3 +837,26 @@
   align-self: flex-start;
 }
 .plateau-alert-dismiss:hover { color: var(--text-color, #222); }
+
+/* ── Global card polish ─────────────────────────────────────────
+   Adds a subtle green-tinted top accent to all generic article
+   cards across every tab, giving depth without per-card overrides.
+   ─────────────────────────────────────────────────────────────── */
+
+.tab-content article,
+.tab-content .card {
+  border-top: 1px solid rgba(45, 125, 91, 0.28);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Key stat numbers — glow on the primary green values */
+.stat-value,
+.big-stat,
+.readiness-score {
+  text-shadow: 0 0 18px rgba(45, 125, 91, 0.45);
+}
+
+/* Focus bar label — tighten up the glow for the timer */
+.wfb-timer {
+  text-shadow: 0 0 10px rgba(95, 168, 126, 0.5);
+}

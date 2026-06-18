@@ -5,60 +5,128 @@
    Depends on: tokens.css
    ============================================================= */
 
-/* ── Narrower log-form inputs ───────────────────────────────── */
+/* ── Log sub-view padding ───────────────────────────────────── */
 
-/*
- * Constrain the main log inputs to 60% width so they don't stretch
- * the full card on wide viewports.
- */
+#logSub_log {
+  padding-bottom: 20px;
+}
+
+/* ── Workout session timer banner ───────────────────────────── */
+
+.workout-timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 12px 12px;
+  padding: 10px 14px;
+  background: rgba(45, 125, 91, 0.08);
+  border: 1px solid rgba(45, 125, 91, 0.22);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 10px 10px 0;
+}
+
+.workout-timer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.workout-timer-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--secondary-text);
+  font-weight: 600;
+}
+
+.workout-timer-value {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.workout-timer-end {
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: #c05060;
+  border-radius: 8px;
+  color: #fff;
+  border: none;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* ── Resistance section ─────────────────────────────────────── */
+
+#resistance-section {
+  display: block;
+  margin-bottom: 20px;
+  padding: 0 12px;
+}
+
+/* ── Form card ──────────────────────────────────────────────── */
+
+.log-form-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(96, 126, 113, 0.36);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.log-form-card input,
+.log-form-card select {
+  width: 100%;
+  margin: 0 0 8px;
+}
+
+/* Sets + unit side-by-side */
+.sets-unit-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+}
+
+.sets-unit-row input,
+.sets-unit-row select {
+  margin: 0 0 8px;
+}
+
+/* Template select — secondary visual weight */
+.log-template-select {
+  color: var(--secondary-text);
+  font-size: 0.88rem;
+  margin-bottom: 8px !important;
+}
+
+/* Full-width Add to Log button */
+.log-add-btn {
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 13px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* Inputs inside resistance inputs don't need the 60% centring */
 #exercise,
 #sets,
 #goal,
 #repGoal,
 #weightUnit,
 #entryDate {
-  width: 60%;
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
-}
-
-/* ── Resistance section grid ────────────────────────────────── */
-
-#resistance-section {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  column-gap: 24px;
-  align-items: start;
-  margin-bottom: 80px;
-}
-
-#resistance-inputs {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-#resistance-inputs input,
-#resistance-inputs select {
   width: 100%;
-  max-width: 100%;
-}
-
-/* ── Workout session timer strip ────────────────────────────── */
-
-.workout-timer {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-  margin: 12px 0 24px;
-  color: var(--text-color);
-}
-
-.workout-timer-value {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.25rem;
+  margin-left: 0;
+  margin-right: 0;
+  display: block;
 }
 
 /* ── Training calendar ──────────────────────────────────────── */
@@ -147,34 +215,6 @@
 /* ── Responsive: single-column below 600 px ─────────────────── */
 
 @media (max-width: 600px) {
-  #resistance-section {
-    display: block;
-  }
-
-  #resistance-section .inputs-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .workout-timer {
-    justify-content: center;
-  }
-
-  #resistance-inputs {
-    flex-direction: column;
-    align-items: stretch;
-    overflow: visible;
-    gap: 8px;
-    padding-bottom: 0;
-  }
-
-  #resistance-inputs input,
-  #resistance-inputs select {
-    flex: none;
-    width: 100%;
-  }
-
   #restTimerSection {
     display: flex;
     gap: 8px;

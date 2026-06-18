@@ -95,19 +95,24 @@ button {
   margin: 12px 0;
   box-sizing: border-box;
   border-radius: 999px;
-  background-color: var(--primary);
+  background: linear-gradient(135deg, #38a870 0%, var(--primary) 55%, #245f47 100%);
   color: var(--text-color);
   border: none;
   cursor: pointer;
   font-size: 15px;
   box-shadow: var(--shadow);
-  transition: background-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
 }
 
 button:hover {
-  background-color: var(--primary-dark);
+  background: linear-gradient(135deg, #42bf80 0%, #35956b 55%, #2d7d5b 100%);
   transform: translateY(-2px);
-  box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.28), 0 6px 20px rgba(45, 125, 91, 0.35);
+  box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.28), 0 6px 20px rgba(45, 125, 91, 0.38);
+}
+
+button:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow);
 }
 
 /* Add-to-log button disabled state */
