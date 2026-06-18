@@ -174,7 +174,7 @@
  */
 #workoutFocusBar {
   position: fixed;
-  bottom: 64px; /* sit above the 64px bottom nav */
+  bottom: 65px; /* sit above the bottom nav (64px height + 1px border-top) */
   left: 0;
   right: 0;
   height: 44px;
