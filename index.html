@@ -270,45 +270,50 @@
 
     <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
     <div id="logSub_log" class="log-subview active">
-      <h2 style="padding:0 10px;">Resistance Exercise Log</h2>
 
       <!-- Session context flags: alt-machine / alt-gym -->
-      <div id="sessionContextBar"></div>
+      <div id="sessionContextBar" style="padding:0 12px;"></div>
 
+      <!-- Workout session timer — styled as a full-width banner -->
       <div id="workoutTimer" class="workout-timer" aria-live="polite">
-        <span class="workout-timer-label">Workout Time:</span>
-        <span id="workoutElapsed" class="workout-timer-value">00:00:00</span>
-        <button id="endWorkoutBtn" type="button" class="workout-timer-end">End Workout</button>
+        <div class="workout-timer-info">
+          <span class="workout-timer-label">Workout in progress</span>
+          <span id="workoutElapsed" class="workout-timer-value">00:00:00</span>
+        </div>
+        <button id="endWorkoutBtn" type="button" class="workout-timer-end">End</button>
       </div>
 
+      <!-- Main entry form card -->
       <div id="resistance-section">
-        <div id="resistance-inputs">
-          <div class="inputs-grid">
-            <input type="text" id="exercise" placeholder="Exercise" list="exerciseSuggestions" oninput="updateAddButtonState()" />
-            <datalist id="exerciseSuggestions"></datalist>
-            <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
-            <!-- Progressive overload hint — populated by workout-intelligence.js -->
-            <div id="overloadHint" class="overload-hint" style="grid-column:1/-1;"></div>
+        <div id="resistance-inputs" class="log-form-card">
 
-            <!-- Unit selector -->
+          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState()" />
+          <datalist id="exerciseSuggestions"></datalist>
+
+          <!-- Progressive overload hint -->
+          <div id="overloadHint" class="overload-hint"></div>
+
+          <!-- Sets + unit on one row -->
+          <div class="sets-unit-row">
+            <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
             <select id="weightUnit">
               <option value="kg">kg</option>
               <option value="lbs">lbs</option>
             </select>
-
-            <!-- Dynamically generated inputs -->
-            <div id="setInputsContainer" style="grid-column: 1 / -1;"></div>
           </div>
 
+          <!-- Dynamically generated set inputs -->
+          <div id="setInputsContainer"></div>
+
           <!-- Template quick-load -->
-          <select id="resistanceTemplateSelect" onchange="loadSelectedResistanceTemplate()" style="margin-top: 10px;">
-            <option value="">Select Template...</option>
+          <select id="resistanceTemplateSelect" class="log-template-select" onchange="loadSelectedResistanceTemplate()">
+            <option value="">Load a template…</option>
           </select>
-          <div id="templateLoadMessage" style="margin-top:6px; color:#b00020; display:none;"></div>
+          <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
 
           <!-- Advanced accordion: goals + date -->
-          <details class="log-advanced" style="margin-top:10px;">
-            <summary>⚙️ Advanced options</summary>
+          <details class="log-advanced">
+            <summary>Advanced options</summary>
             <div class="log-advanced-body">
               <input type="number" id="goal" placeholder="Target Weight Goal (kg/lbs)" />
               <input type="number" id="repGoal" placeholder="Target Rep Goal (optional)" />
@@ -316,11 +321,12 @@
             </div>
           </details>
 
-          <button id="addLogBtn" onclick="addLogEntry()" disabled style="margin-top:12px;">Add to Log</button>
+          <button id="addLogBtn" onclick="addLogEntry()" disabled class="log-add-btn">+ Add to Log</button>
 
-          <!-- Logs render here -->
-          <div id="workoutsContainer" style="margin-top: 20px;"></div>
-        </div>
+        </div><!-- /log-form-card -->
+
+        <!-- Logs render here -->
+        <div id="workoutsContainer" style="margin-top:16px;"></div>
       </div>
     </div><!-- /logSub_log -->
 
