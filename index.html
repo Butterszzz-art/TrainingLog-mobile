@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/onboarding.css">
   <link rel="stylesheet" href="css/tutorial.css">
   <link rel="stylesheet" href="css/sleep.css">
+  <link rel="stylesheet" href="css/friends.css">
   <link rel="stylesheet" href="css/tabs.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/log.css">
@@ -1256,6 +1257,7 @@
     <button class="comm-nav-btn" onclick="showCommunitySection('feed')"        id="commNavFeed">📣 Feed</button>
     <button class="comm-nav-btn" onclick="showCommunitySection('competition')" id="commNavCompetition">🏆 Leaderboard</button>
     <button class="comm-nav-btn" onclick="showCommunitySection('share')"       id="commNavShare">🔗 Share<span id="commShareBadge" class="comm-nav-badge" style="display:none">0</span></button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('friends')"     id="commNavFriends">🤝 Friends<span id="commFriendsBadge" class="comm-nav-badge" style="display:none">0</span></button>
   </nav>
 
   <!-- ── Groups panel ── -->
@@ -1405,6 +1407,12 @@
     </div>
 
   </div><!-- /commSharePanel -->
+
+  <!-- ── Friends Panel ── -->
+  <div id="friendsPanel" class="panel" style="display:none;">
+    <!-- Rendered by renderFriendsPanel() in friends.js -->
+  </div>
+
 </div><!-- /communityTab -->
 
 <div id="leaderboardTab" class="tab-content">
@@ -14931,6 +14939,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/client-checkins.js"></script>
   <script src="src/js/progress-report.js"></script>
   <script src="src/js/community-feed.js"></script>
+  <script src="src/js/friends.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>

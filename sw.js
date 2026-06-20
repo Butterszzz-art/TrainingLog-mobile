@@ -63,6 +63,8 @@ const APP_SHELL = [
   '/src/js/mobility.js',
   '/src/js/ai-coach.js',
   '/src/js/archetype-config.js',
+  '/src/js/friends.js',
+  '/css/friends.css',
 ];
 
 /* ── Install: pre-cache app shell ─────────────────────────── */

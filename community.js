@@ -506,6 +506,7 @@ function showCommunitySection(section) {
     posts:       document.getElementById('postsPanel'),
     feed:        document.getElementById('feedPanel'),
     share:       document.getElementById('commSharePanel'),
+    friends:     document.getElementById('friendsPanel'),
   };
   Object.values(panels).forEach(p => { if (p) p.style.display = 'none'; });
   if (panels[section]) panels[section].style.display = 'block';
@@ -516,6 +517,7 @@ function showCommunitySection(section) {
     feed:        'commNavFeed',
     competition: 'commNavCompetition',
     share:       'commNavShare',
+    friends:     'commNavFriends',
   };
   document.querySelectorAll('.comm-nav-btn').forEach(b => b.classList.remove('active'));
   const activeBtn = document.getElementById(navMap[section]);
@@ -530,6 +532,8 @@ function showCommunitySection(section) {
     if (window.renderActivityFeed) renderActivityFeed();
   } else if (section === 'share') {
     if (typeof window.renderSharePanel === 'function') window.renderSharePanel();
+  } else if (section === 'friends') {
+    if (typeof window.renderFriendsPanel === 'function') window.renderFriendsPanel();
   }
 }
 
