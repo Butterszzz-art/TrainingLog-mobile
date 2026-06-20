@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/onboarding.css">
+  <link rel="stylesheet" href="css/tutorial.css">
   <link rel="stylesheet" href="css/tabs.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/log.css">
@@ -148,6 +149,94 @@
   </div>
 </div>
 
+<!-- ── App Tutorial (feature tour, shown once after onboarding) ────── -->
+<div id="tutorialOverlay" class="tutorial-overlay" hidden>
+  <button class="tutorial-skip" id="tutorialSkip">Skip</button>
+
+  <div class="tutorial-track" id="tutorialTrack">
+    <!-- Slide 1: Welcome -->
+    <div class="tutorial-slide">
+      <div class="tutorial-icon tutorial-icon--highlight">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <h2 class="tutorial-title">Welcome to Pocket Coach</h2>
+      <p class="tutorial-desc">Your all-in-one training companion. Let's take a quick look at what you can do.</p>
+    </div>
+
+    <!-- Slide 2: Log -->
+    <div class="tutorial-slide">
+      <div class="tutorial-icon">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </div>
+      <h2 class="tutorial-title">Log Your Workouts</h2>
+      <p class="tutorial-desc">Track every set, rep, and weight. The app remembers your history and suggests progressive overload.</p>
+      <div class="tutorial-chips">
+        <span class="tutorial-chip">Resistance</span>
+        <span class="tutorial-chip">Cardio</span>
+        <span class="tutorial-chip">Templates</span>
+        <span class="tutorial-chip">Rest Timer</span>
+      </div>
+    </div>
+
+    <!-- Slide 3: Progress -->
+    <div class="tutorial-slide">
+      <div class="tutorial-icon">
+        <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      </div>
+      <h2 class="tutorial-title">Track Your Progress</h2>
+      <p class="tutorial-desc">Visualise strength trends, personal records, and workout consistency over time.</p>
+      <div class="tutorial-chips">
+        <span class="tutorial-chip">Strength Charts</span>
+        <span class="tutorial-chip">PRs</span>
+        <span class="tutorial-chip">Streaks</span>
+      </div>
+    </div>
+
+    <!-- Slide 4: Weight -->
+    <div class="tutorial-slide">
+      <div class="tutorial-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="9" width="20" height="12" rx="2"/><path d="M8 9a4 4 0 0 1 8 0"/><line x1="12" y1="14" x2="12" y2="17"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+      </div>
+      <h2 class="tutorial-title">Bodyweight Tracking</h2>
+      <p class="tutorial-desc">Log daily weigh-ins and see your trend line. Great for cuts, bulks, or maintaining.</p>
+    </div>
+
+    <!-- Slide 5: Macros -->
+    <div class="tutorial-slide">
+      <div class="tutorial-icon">
+        <svg viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+      </div>
+      <h2 class="tutorial-title">Nutrition & Macros</h2>
+      <p class="tutorial-desc">Set calorie and macro targets, then track your daily intake with a simple tap interface.</p>
+      <div class="tutorial-chips">
+        <span class="tutorial-chip">Protein</span>
+        <span class="tutorial-chip">Carbs</span>
+        <span class="tutorial-chip">Fat</span>
+        <span class="tutorial-chip">Calories</span>
+      </div>
+    </div>
+
+    <!-- Slide 6: More features -->
+    <div class="tutorial-slide">
+      <div class="tutorial-icon tutorial-icon--highlight">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+      <h2 class="tutorial-title">And Much More</h2>
+      <p class="tutorial-desc">Explore AI-generated programs, posing guides, training calendars, and gamification — all in the More tab.</p>
+      <div class="tutorial-chips">
+        <span class="tutorial-chip">AI Programs</span>
+        <span class="tutorial-chip">Posing</span>
+        <span class="tutorial-chip">XP & Badges</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tutorial-controls">
+    <div class="tutorial-dots" id="tutorialDots"></div>
+    <button class="tutorial-cta" id="tutorialCta">Next</button>
+  </div>
+</div>
+
 <div id="dashboardContainer" class="section" style="display:none; text-align:center;">
   <h2>Welcome to Pocket Coach</h2>
   <button onclick="openSection('pocketFit')">PocketFit</button>
@@ -156,13 +245,9 @@
 
 <div id="pocketFitContainer" class="section" style="display:none;">
   
-  <!-- Simplified Navigation Bar: 5 core tabs + archetype specialty + More -->
+  <!-- Bottom Navigation: Log, Progress, Weight, Macro + More -->
   <nav id="bottomNav" aria-label="Main navigation">
-    <button class="bn-item active" data-tab="homeTab" aria-label="Home">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
-      <span class="bn-label">Home</span>
-    </button>
-    <button class="bn-item" data-tab="logTab" aria-label="Log">
+    <button class="bn-item active" data-tab="logTab" aria-label="Log">
       <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
       <span class="bn-label">Log</span>
     </button>
@@ -170,31 +255,13 @@
       <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
       <span class="bn-label">Progress</span>
     </button>
-    <button class="bn-item" data-tab="programTab" aria-label="Programs">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-      <span class="bn-label">Programs</span>
+    <button class="bn-item" data-tab="weightTab" aria-label="Weight">
+      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="20" height="12" rx="2"/><path d="M8 9a4 4 0 0 1 8 0"/><line x1="12" y1="14" x2="12" y2="17"/><line x1="10" y1="17" x2="14" y2="17"/></svg></span>
+      <span class="bn-label">Weight</span>
     </button>
-    <!-- Archetype-specific specialty tab (only one is visible at a time via mode classes) -->
-    <button class="bn-item bb-only" data-tab="posingTab" aria-label="Posing">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
-      <span class="bn-label">Posing</span>
-    </button>
-    <button class="bn-item pl-only" data-tab="powerliftingTab" aria-label="Powerlifting">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6.5" y1="12" x2="17.5" y2="12"/><line x1="2" y1="10" x2="2" y2="14"/><line x1="4" y1="8.5" x2="4" y2="15.5"/><line x1="20" y1="8.5" x2="20" y2="15.5"/><line x1="22" y1="10" x2="22" y2="14"/></svg></span>
-      <span class="bn-label">Lifting</span>
-    </button>
-    <button class="bn-item athlete-only" data-tab="crossfitTab" aria-label="CrossFit">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-      <span class="bn-label">CrossFit</span>
-    </button>
-    <!-- Coach-mode tabs — hidden until coach mode is enabled -->
-    <button class="bn-item coach-only" data-tab="clientsTab" aria-label="Clients" style="display:none;">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-      <span class="bn-label">Clients</span>
-    </button>
-    <button class="bn-item coach-only" data-tab="coachOpsTab" aria-label="Coach" style="display:none;">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></span>
-      <span class="bn-label">Coach</span>
+    <button class="bn-item" data-tab="macroTab" aria-label="Macros">
+      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span>
+      <span class="bn-label">Macros</span>
     </button>
     <!-- More button opens the secondary-tabs drawer -->
     <button class="bn-item bn-more" id="moreNavBtn" onclick="openMoreDrawer()" aria-label="More" aria-expanded="false" aria-controls="moreDrawer">
@@ -220,6 +287,8 @@
     <div id="vacationModeCard"></div>
     <!-- Daily readiness card — populated by readiness-checkin.js -->
     <div id="readinessHomeCard"></div>
+    <!-- AI Profile summary card -->
+    <div id="archetypeProfileCard"></div>
     <!-- Weekly summary card — populated by weekly-summary.js -->
     <div id="weeklySummaryCard"></div>
     <!-- Notification permission banner — shown if permission not yet granted -->
@@ -282,6 +351,9 @@
         </div>
         <button id="endWorkoutBtn" type="button" class="workout-timer-end">End</button>
       </div>
+
+      <!-- Archetype smart tip -->
+      <div id="logSmartTip" class="apc-cue" style="margin:0 12px 10px;display:none;"></div>
 
       <!-- Main entry form card -->
       <div id="resistance-section">
@@ -2100,20 +2172,20 @@
   <div class="more-drawer-panel">
     <div class="more-drawer-handle"></div>
     <div class="more-drawer-grid">
-      <button class="more-drawer-item" data-tab="macroTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('macroTab'), 220)">
-        <span class="more-drawer-icon">🍽️</span>
-        <span>Macros</span>
+      <button class="more-drawer-item" data-tab="homeTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('homeTab'), 220)">
+        <span class="more-drawer-icon">🏠</span>
+        <span>Home</span>
+      </button>
+      <button class="more-drawer-item" data-tab="programTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('programTab'), 220)">
+        <span class="more-drawer-icon">📅</span>
+        <span>Programs</span>
       </button>
       <button class="more-drawer-item" data-tab="checkInTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('checkInTab'), 220)">
         <span class="more-drawer-icon">🧾</span>
         <span>Check-In</span>
-      </button>
-      <button class="more-drawer-item" data-tab="weightTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('weightTab'), 220)">
-        <span class="more-drawer-icon">⚖️</span>
-        <span>Weight</span>
       </button>
       <button class="more-drawer-item" data-tab="cardioTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('cardioTab'), 220)">
@@ -2134,6 +2206,21 @@
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('logHistoryTab'), 220)">
         <span class="more-drawer-icon">📜</span>
         <span>History</span>
+      </button>
+      <button class="more-drawer-item bb-only" data-tab="posingTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('posingTab'), 220)">
+        <span class="more-drawer-icon">⭐</span>
+        <span>Posing</span>
+      </button>
+      <button class="more-drawer-item pl-only" data-tab="powerliftingTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('powerliftingTab'), 220)">
+        <span class="more-drawer-icon">🏋️</span>
+        <span>Lifting</span>
+      </button>
+      <button class="more-drawer-item athlete-only" data-tab="crossfitTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('crossfitTab'), 220)">
+        <span class="more-drawer-icon">⚡</span>
+        <span>CrossFit</span>
       </button>
       <button class="more-drawer-item coach-only" data-tab="clientsTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('clientsTab'), 220)">
@@ -2687,6 +2774,7 @@ function showTab(tabName) {
   switch (tabName) {
     case 'homeTab':
       renderHomeDashboard();
+      if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
       if (typeof window.initAiCoach === 'function' && currentUser) window.initAiCoach(currentUser);
       break;
     case 'clientsTab':
@@ -2715,6 +2803,12 @@ function showTab(tabName) {
       if (typeof window.renderGamificationUI === 'function' && currentUser) {
         window.renderGamificationUI(currentUser);
       }
+      if (typeof getSmartTip === 'function') {
+        const tip = getSmartTip('logScreen');
+        const tipEl = document.getElementById('logSmartTip');
+        if (tipEl && tip) { tipEl.textContent = tip; tipEl.style.display = ''; }
+      }
+      if (typeof applyArchetypeDefaults === 'function') applyArchetypeDefaults();
       break;
     case 'weightTab':
       renderWeights();
@@ -7112,7 +7206,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isCoachModeEnabled()) {
         showTab('clientsTab');
       } else if (activeTab && (activeTab.id === 'clientsTab' || activeTab.id === 'coachOpsTab')) {
-        showTab('homeTab');
+        showTab('logTab');
       }
     });
   }
@@ -7129,7 +7223,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isCoachModeEnabled()) {
         showTab('clientsTab');
       } else if (activeTab && (activeTab.id === 'clientsTab' || activeTab.id === 'coachOpsTab')) {
-        showTab('homeTab');
+        showTab('logTab');
       }
     });
   }
@@ -7202,7 +7296,7 @@ function openSection(section) {
   const el = document.getElementById(section + 'Container');
   animateSwitch(el);
   if (section === 'pocketFit') {
-    showTab('homeTab');
+    showTab('logTab');
   } else if (section === 'pocketLifestyle') {
     if (!window.lifestyleInitialized && window.initLifestyle) {
       window.initLifestyle();
@@ -13725,12 +13819,197 @@ function _finishOnboarding() {
   }
 
   document.getElementById('onboardingOverlay').setAttribute('hidden', '');
-  openSection('pocketFit');
+  showTutorial();
 }
 
 document.addEventListener('DOMContentLoaded', _initOnboarding);
 
 window.showOnboarding = showOnboarding;
+
+// ─────────────────────────────────────────────
+// APP TUTORIAL (feature walkthrough)
+// ─────────────────────────────────────────────
+
+function showTutorial() {
+  const user = window.currentUser || localStorage.getItem('fitnessAppUser');
+  const key = user ? `tutorial_seen_${user}` : 'tutorial_seen';
+  if (localStorage.getItem(key)) { openSection('pocketFit'); return; }
+
+  const overlay = document.getElementById('tutorialOverlay');
+  if (!overlay) { openSection('pocketFit'); return; }
+
+  const track = document.getElementById('tutorialTrack');
+  const dots  = document.getElementById('tutorialDots');
+  const cta   = document.getElementById('tutorialCta');
+  const slides = track.querySelectorAll('.tutorial-slide');
+  const total  = slides.length;
+  let current  = 0;
+
+  // Build dots
+  dots.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('span');
+    d.className = 'tutorial-dot' + (i === 0 ? ' active' : '');
+    dots.appendChild(d);
+  }
+  const allDots = dots.querySelectorAll('.tutorial-dot');
+
+  function updateUI() {
+    allDots.forEach((d, i) => d.classList.toggle('active', i === current));
+    cta.textContent = current === total - 1 ? "Get Started" : "Next";
+  }
+
+  let programmatic = false;
+
+  function goTo(idx) {
+    current = idx;
+    programmatic = true;
+    track.scrollTo({ left: idx * track.offsetWidth, behavior: 'smooth' });
+    updateUI();
+    setTimeout(() => { programmatic = false; }, 400);
+  }
+
+  function finish() {
+    localStorage.setItem(key, '1');
+    overlay.setAttribute('hidden', '');
+    openSection('pocketFit');
+  }
+
+  // Scroll-snap tracking (swipe gestures)
+  let scrollTimer;
+  track.addEventListener('scroll', () => {
+    if (programmatic) return;
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const idx = Math.round(track.scrollLeft / track.offsetWidth);
+      if (idx !== current && idx >= 0 && idx < total) {
+        current = idx;
+        updateUI();
+      }
+    }, 120);
+  });
+
+  cta.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (current < total - 1) goTo(current + 1);
+    else finish();
+  });
+
+  document.getElementById('tutorialSkip').addEventListener('click', (e) => {
+    e.stopPropagation();
+    finish();
+  });
+
+  overlay.removeAttribute('hidden');
+  updateUI();
+}
+
+window.showTutorial = showTutorial;
+
+// ─────────────────────────────────────────────
+// ARCHETYPE PROFILE CARD
+// ─────────────────────────────────────────────
+
+function renderArchetypeProfileCard() {
+  const container = document.getElementById('archetypeProfileCard');
+  if (!container) return;
+  if (typeof getCurrentArchetypeConfig !== 'function') return;
+
+  const user = window.currentUser || localStorage.getItem('fitnessAppUser');
+  if (!user) { container.innerHTML = ''; return; }
+
+  const archetype = getUserArchetype();
+  const cfg = getArchetypeConfig(archetype);
+  const cue = getRandomCoachingCue(archetype);
+
+  // Check for cached AI summary
+  const cacheKey = `aiProfile_${user}`;
+  let aiSummary = null;
+  try { aiSummary = JSON.parse(localStorage.getItem(cacheKey)); } catch {}
+
+  const focusChips = (aiSummary?.keyFocusAreas || cfg.periodisation.phases)
+    .map(f => `<span class="apc-chip">${f}</span>`).join('');
+
+  container.innerHTML = `
+    <div class="apc-card" style="margin:0 12px 12px;background:var(--card-bg);border:1px solid var(--border-color);border-radius:16px;padding:16px;position:relative;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="apc-badge">${cfg.label.charAt(0)}</div>
+        <div>
+          <div style="font-weight:700;font-size:1rem;color:var(--text-color);">${cfg.label}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">${cfg.defaults.repRange} reps · ${cfg.defaults.restSeconds}s rest · ${cfg.defaults.setsPerExercise} sets</div>
+        </div>
+      </div>
+      ${aiSummary ? `
+        <div style="font-size:0.88rem;color:var(--secondary-text);line-height:1.5;margin-bottom:10px;">
+          ${aiSummary.philosophy}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          <span class="apc-meta">${aiSummary.splitRecommendation}</span>
+          <span class="apc-meta">${aiSummary.weeklyStructure}</span>
+          <span class="apc-meta">${aiSummary.estimatedSessionLength}</span>
+        </div>
+      ` : `
+        <div style="font-size:0.88rem;color:var(--secondary-text);line-height:1.5;margin-bottom:10px;">
+          ${cfg.nutritionFocus.proteinPerKg}g protein/kg · ${cfg.nutritionFocus.mealFrequency} · Deload ${cfg.periodisation.deloadFrequency.toLowerCase()}
+        </div>
+      `}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+        ${focusChips}
+      </div>
+      <div class="apc-cue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;flex-shrink:0;"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>${cue}</span>
+      </div>
+      ${!aiSummary ? `
+        <button id="generateProfileBtn" onclick="generateAiProfileSummary()" class="apc-gen-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Generate AI Profile
+        </button>
+      ` : ''}
+    </div>`;
+}
+
+async function generateAiProfileSummary() {
+  const btn = document.getElementById('generateProfileBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+  const user = window.currentUser || localStorage.getItem('fitnessAppUser');
+  const archetype = getUserArchetype();
+
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem('settings_' + user) || '{}'); } catch {}
+
+  const payload = {
+    archetype,
+    experienceLevel: settings?.profile?.experienceLevel || 'intermediate',
+    goal: settings?.profile?.currentGoal || 'general fitness',
+    daysPerWeek: settings?.profile?.daysPerWeek || 4,
+    sex: settings?.profile?.sex,
+    bodyweight: settings?.profile?.bodyweight,
+    unit: localStorage.getItem('defaultWeightUnit') || 'kg',
+  };
+
+  try {
+    const resp = await fetch((window.SERVER_URL || '') + '/api/ai/profile-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) throw new Error('Request failed');
+    const data = await resp.json();
+    localStorage.setItem('aiProfile_' + user, JSON.stringify(data));
+    renderArchetypeProfileCard();
+    if (typeof nativeToast === 'function') nativeToast('Profile generated!', 'success');
+  } catch (err) {
+    console.error('[Profile AI]', err);
+    if (btn) { btn.disabled = false; btn.textContent = 'Generate AI Profile'; }
+    if (typeof nativeToast === 'function') nativeToast('Could not generate profile — try again later', 'error');
+  }
+}
+
+window.renderArchetypeProfileCard = renderArchetypeProfileCard;
+window.generateAiProfileSummary = generateAiProfileSummary;
 
 // ─────────────────────────────────────────────
 // POWERLIFTING TAB
@@ -14262,6 +14541,7 @@ window.renderMeetPrep = renderMeetPrep;
       });
     </script>
 
+  <script src="src/js/archetype-config.js"></script>
   <script src="src/js/archetype-features.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/workout-archiver.js"></script>

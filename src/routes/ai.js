@@ -492,4 +492,76 @@ router.post('/coach-draft-message', async (req, res) => {
   }
 });
 
+// ── AI Profile Summary ───────────────────────────────────────────────────────
+
+const PROFILE_SUMMARY_SYSTEM_PROMPT = `You are an expert fitness coach inside Pocket Coach creating a personalized \
+training profile summary. Based on the user's archetype, experience level, and goals, generate a concise, \
+motivating profile that feels personal — not generic. \
+Respond ONLY with valid JSON in this exact structure: \
+{ \
+  "philosophy": string (1-2 sentences — their training philosophy based on archetype), \
+  "splitRecommendation": string (specific split recommendation e.g. "Push/Pull/Legs" or "Upper/Lower"), \
+  "weeklyStructure": string (e.g. "4 days lifting, 2 days cardio, 1 rest"), \
+  "keyFocusAreas": [string] (3-4 specific focus areas for their archetype + experience), \
+  "estimatedSessionLength": string (e.g. "60-75 minutes"), \
+  "coachNote": string (1-2 sentences — a personal coaching insight, reference their specific archetype and level) \
+}`;
+
+router.post('/profile-summary', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+
+  const { archetype, experienceLevel, goal, daysPerWeek, sex, bodyweight, unit } = req.body;
+
+  if (!archetype) {
+    return res.status(400).json({ error: 'Missing required field: archetype' });
+  }
+
+  const parts = [
+    `Generate a personalized training profile summary for:`,
+    `Archetype: ${archetype}`,
+    `Experience: ${experienceLevel || 'intermediate'}`,
+    `Primary goal: ${goal || 'general fitness'}`,
+  ];
+  if (daysPerWeek) parts.push(`Available training days: ${daysPerWeek} per week`);
+  if (sex) parts.push(`Sex: ${sex}`);
+  if (bodyweight && unit) parts.push(`Bodyweight: ${bodyweight}${unit}`);
+
+  const userPrompt = parts.join('\n');
+
+  try {
+    const client = new Anthropic();
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system: PROFILE_SUMMARY_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+
+    const raw = (message.content?.[0]?.text || '').trim();
+    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+
+    let profile;
+    try {
+      profile = JSON.parse(jsonStr);
+    } catch {
+      console.error('[AI profile-summary] JSON parse failed:', jsonStr.slice(0, 200));
+      return res.status(502).json({ error: 'AI returned invalid JSON' });
+    }
+
+    return res.json({
+      philosophy: String(profile.philosophy || ''),
+      splitRecommendation: String(profile.splitRecommendation || ''),
+      weeklyStructure: String(profile.weeklyStructure || ''),
+      keyFocusAreas: Array.isArray(profile.keyFocusAreas) ? profile.keyFocusAreas.map(String) : [],
+      estimatedSessionLength: String(profile.estimatedSessionLength || ''),
+      coachNote: String(profile.coachNote || ''),
+    });
+  } catch (err) {
+    console.error('[AI profile-summary]', err.message);
+    return res.status(502).json({ error: 'AI request failed', details: err.message });
+  }
+});
+
 module.exports = router;

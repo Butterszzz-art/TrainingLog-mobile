@@ -182,7 +182,8 @@ td {
 }
 
 th {
-  background-color: #f0f0f0;
+  background-color: var(--surface-bg);
+  color: var(--secondary-text);
 }
 
 /* ── Layout containers ──────────────────────────────────────── */
