@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/onboarding.css">
   <link rel="stylesheet" href="css/tutorial.css">
+  <link rel="stylesheet" href="css/sleep.css">
+  <link rel="stylesheet" href="css/friends.css">
   <link rel="stylesheet" href="css/tabs.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/log.css">
@@ -1255,6 +1257,7 @@
     <button class="comm-nav-btn" onclick="showCommunitySection('feed')"        id="commNavFeed">📣 Feed</button>
     <button class="comm-nav-btn" onclick="showCommunitySection('competition')" id="commNavCompetition">🏆 Leaderboard</button>
     <button class="comm-nav-btn" onclick="showCommunitySection('share')"       id="commNavShare">🔗 Share<span id="commShareBadge" class="comm-nav-badge" style="display:none">0</span></button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('friends')"     id="commNavFriends">🤝 Friends<span id="commFriendsBadge" class="comm-nav-badge" style="display:none">0</span></button>
   </nav>
 
   <!-- ── Groups panel ── -->
@@ -1404,6 +1407,12 @@
     </div>
 
   </div><!-- /commSharePanel -->
+
+  <!-- ── Friends Panel ── -->
+  <div id="friendsPanel" class="panel" style="display:none;">
+    <!-- Rendered by renderFriendsPanel() in friends.js -->
+  </div>
+
 </div><!-- /communityTab -->
 
 <div id="leaderboardTab" class="tab-content">
@@ -2158,6 +2167,103 @@
   <div id="settingsFormContainer" class="panel"></div>
   </div> <!-- #settingsTab -->
 
+<!-- ── Sleep Tab ──────────────────────────────────────────────── -->
+<div id="sleepTab" class="tab-content">
+  <h2>Sleep</h2>
+  <div id="sleepTabContent">
+
+    <!-- AI insight (populated after enough data) -->
+    <div id="sleepAiCard" class="sleep-ai-card" style="display:none;">
+      <div class="sleep-ai-header">
+        <span>🧠 AI Sleep Insight</span>
+      </div>
+      <div class="sleep-ai-body" id="sleepAiBody">Analysing your sleep patterns…</div>
+      <button class="sleep-ai-btn" id="sleepAiBtn" onclick="requestSleepInsight()">Analyse My Sleep</button>
+    </div>
+
+    <!-- Stats summary -->
+    <div class="sleep-stats" id="sleepStats">
+      <div class="sleep-stat-card">
+        <div class="sleep-stat-value" id="sleepAvgDuration">—</div>
+        <div class="sleep-stat-label">Avg Duration</div>
+      </div>
+      <div class="sleep-stat-card">
+        <div class="sleep-stat-value" id="sleepAvgQuality">—</div>
+        <div class="sleep-stat-label">Avg Quality</div>
+      </div>
+      <div class="sleep-stat-card">
+        <div class="sleep-stat-value" id="sleepStreak">0</div>
+        <div class="sleep-stat-label">Day Streak</div>
+      </div>
+    </div>
+
+    <!-- Log form -->
+    <div class="sleep-log-card">
+      <h3>Log Sleep</h3>
+      <div class="sleep-form-row">
+        <label>
+          Date
+          <input type="date" id="sleepDate">
+        </label>
+        <label>&nbsp;</label>
+      </div>
+      <div class="sleep-form-row">
+        <label>
+          Bedtime
+          <input type="time" id="sleepBedtime" value="22:30">
+        </label>
+        <label>
+          Wake time
+          <input type="time" id="sleepWakeTime" value="06:30">
+        </label>
+      </div>
+
+      <div class="sleep-quality-row">
+        <span class="sleep-quality-label">Quality</span>
+        <div class="sleep-quality-stars" id="sleepQualityStars">
+          <button class="sleep-star" data-val="1">1</button>
+          <button class="sleep-star" data-val="2">2</button>
+          <button class="sleep-star active" data-val="3">3</button>
+          <button class="sleep-star" data-val="4">4</button>
+          <button class="sleep-star" data-val="5">5</button>
+        </div>
+      </div>
+
+      <div class="sleep-tags" id="sleepTags">
+        <button class="sleep-tag" data-tag="caffeine">☕ Caffeine</button>
+        <button class="sleep-tag" data-tag="stress">😰 Stress</button>
+        <button class="sleep-tag" data-tag="nap">💤 Nap</button>
+        <button class="sleep-tag" data-tag="alcohol">🍷 Alcohol</button>
+        <button class="sleep-tag" data-tag="screens">📱 Screens</button>
+        <button class="sleep-tag" data-tag="exercise">🏋️ Late Exercise</button>
+      </div>
+
+      <textarea class="sleep-notes" id="sleepNotes" placeholder="Optional notes…"></textarea>
+      <button class="sleep-save-btn" id="sleepSaveBtn" onclick="saveSleepEntry()">Save Sleep Log</button>
+    </div>
+
+    <!-- Trend chart -->
+    <div class="sleep-chart-card">
+      <h3>Sleep Trend</h3>
+      <div class="sleep-chart-period" id="sleepChartPeriod">
+        <button class="sleep-period-btn active" data-days="7">7d</button>
+        <button class="sleep-period-btn" data-days="14">14d</button>
+        <button class="sleep-period-btn" data-days="30">30d</button>
+      </div>
+      <div class="sleep-bars" id="sleepBars"></div>
+    </div>
+
+    <!-- History -->
+    <div class="sleep-history-card">
+      <h3>Recent Logs</h3>
+      <div id="sleepHistoryList">
+        <div class="sleep-empty">No sleep data yet — log your first night above.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <div id="mobilityTab" class="tab-content">
   <div id="mobilityTabContent"></div>
 </div>
@@ -2186,6 +2292,11 @@
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('checkInTab'), 220)">
         <span class="more-drawer-icon">🧾</span>
         <span>Check-In</span>
+      </button>
+      <button class="more-drawer-item" data-tab="sleepTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('sleepTab'), 220)">
+        <span class="more-drawer-icon">😴</span>
+        <span>Sleep</span>
       </button>
       <button class="more-drawer-item" data-tab="cardioTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('cardioTab'), 220)">
@@ -2338,7 +2449,7 @@
 <script src="progressAI.js"></script>
 <script src="gamification.js"></script>
 <script src="src/js/crossfit.js"></script>
-<script type="module" src="offline.js"></script>
+<script src="offline.js"></script>
 <script type="module" src="autoProgression.js"></script>
 <script type="module" src="periodization.js"></script>
 <script type="module" src="macrosFeatures.js"></script>
@@ -14012,6 +14123,277 @@ window.renderArchetypeProfileCard = renderArchetypeProfileCard;
 window.generateAiProfileSummary = generateAiProfileSummary;
 
 // ─────────────────────────────────────────────
+// SLEEP TAB
+// ─────────────────────────────────────────────
+
+(function initSleepTab() {
+  const _u = () => window.currentUser || localStorage.getItem('fitnessAppUser') || 'anon';
+  const STORAGE_KEY = () => 'sleepLog_' + _u();
+
+  function getSleepLog() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY()) || '[]'); } catch { return []; }
+  }
+
+  function setSleepLog(data) {
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(data));
+  }
+
+  function calcDurationHours(bedtime, wakeTime) {
+    const [bh, bm] = bedtime.split(':').map(Number);
+    const [wh, wm] = wakeTime.split(':').map(Number);
+    let mins = (wh * 60 + wm) - (bh * 60 + bm);
+    if (mins <= 0) mins += 24 * 60;
+    return mins / 60;
+  }
+
+  function fmtDuration(hours) {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return h + 'h ' + (m < 10 ? '0' : '') + m + 'm';
+  }
+
+  function fmtDateShort(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  function fmtDay(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { weekday: 'short' });
+  }
+
+  // Quality stars interaction
+  document.getElementById('sleepQualityStars')?.addEventListener('click', (e) => {
+    const star = e.target.closest('.sleep-star');
+    if (!star) return;
+    const val = Number(star.dataset.val);
+    document.querySelectorAll('#sleepQualityStars .sleep-star').forEach(s => {
+      s.classList.toggle('active', Number(s.dataset.val) <= val);
+    });
+  });
+
+  // Tags toggle
+  document.getElementById('sleepTags')?.addEventListener('click', (e) => {
+    const tag = e.target.closest('.sleep-tag');
+    if (tag) tag.classList.toggle('active');
+  });
+
+  // Period selector
+  document.getElementById('sleepChartPeriod')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.sleep-period-btn');
+    if (!btn) return;
+    document.querySelectorAll('#sleepChartPeriod .sleep-period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderSleepChart(Number(btn.dataset.days));
+  });
+
+  // Set default date to today
+  function initDateField() {
+    const dateEl = document.getElementById('sleepDate');
+    if (dateEl && !dateEl.value) {
+      dateEl.value = new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  // Save entry
+  window.saveSleepEntry = function () {
+    const date = document.getElementById('sleepDate')?.value;
+    const bedtime = document.getElementById('sleepBedtime')?.value;
+    const wakeTime = document.getElementById('sleepWakeTime')?.value;
+    if (!date || !bedtime || !wakeTime) {
+      if (typeof nativeToast === 'function') nativeToast('Please fill in date and times', 'warn');
+      return;
+    }
+
+    const activeStars = document.querySelectorAll('#sleepQualityStars .sleep-star.active');
+    const quality = activeStars.length;
+    const tags = [...document.querySelectorAll('#sleepTags .sleep-tag.active')].map(t => t.dataset.tag);
+    const notes = document.getElementById('sleepNotes')?.value?.trim() || '';
+    const duration = calcDurationHours(bedtime, wakeTime);
+
+    const entry = { date, bedtime, wakeTime, duration: Math.round(duration * 100) / 100, quality, tags, notes, ts: Date.now() };
+
+    const log = getSleepLog();
+    // Replace if same date exists
+    const idx = log.findIndex(e => e.date === date);
+    if (idx >= 0) log[idx] = entry;
+    else log.push(entry);
+    log.sort((a, b) => b.date.localeCompare(a.date));
+    setSleepLog(log);
+
+    // Reset form
+    document.getElementById('sleepNotes').value = '';
+    document.querySelectorAll('#sleepTags .sleep-tag.active').forEach(t => t.classList.remove('active'));
+
+    if (typeof nativeToast === 'function') nativeToast('Sleep logged!', 'success');
+    renderSleepTab();
+  };
+
+  // Delete entry
+  window.deleteSleepEntry = function (date) {
+    const log = getSleepLog().filter(e => e.date !== date);
+    setSleepLog(log);
+    renderSleepTab();
+  };
+
+  // Render stats
+  function renderSleepStats() {
+    const log = getSleepLog();
+    const recent = log.slice(0, 7);
+
+    const avgDurEl = document.getElementById('sleepAvgDuration');
+    const avgQualEl = document.getElementById('sleepAvgQuality');
+    const streakEl = document.getElementById('sleepStreak');
+
+    if (!recent.length) {
+      if (avgDurEl) avgDurEl.textContent = '—';
+      if (avgQualEl) avgQualEl.textContent = '—';
+      if (streakEl) streakEl.textContent = '0';
+      return;
+    }
+
+    const avgDur = recent.reduce((s, e) => s + e.duration, 0) / recent.length;
+    const avgQual = recent.reduce((s, e) => s + (e.quality || 3), 0) / recent.length;
+    if (avgDurEl) avgDurEl.textContent = fmtDuration(avgDur);
+    if (avgQualEl) avgQualEl.textContent = avgQual.toFixed(1) + '/5';
+
+    // Streak: consecutive days logged backwards from today
+    let streak = 0;
+    const today = new Date();
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      if (log.find(e => e.date === ds)) streak++;
+      else break;
+    }
+    if (streakEl) streakEl.textContent = streak;
+  }
+
+  // Render bar chart
+  function renderSleepChart(days) {
+    days = days || 7;
+    const container = document.getElementById('sleepBars');
+    if (!container) return;
+    const log = getSleepLog();
+    const today = new Date();
+    const bars = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      const entry = log.find(e => e.date === ds);
+      bars.push({ date: ds, duration: entry?.duration || 0, quality: entry?.quality || 0 });
+    }
+
+    const maxH = Math.max(10, ...bars.map(b => b.duration));
+
+    container.innerHTML = bars.map(b => {
+      const pct = b.duration ? (b.duration / maxH * 100) : 0;
+      const cls = b.duration >= 7 ? 'good' : b.duration >= 5 ? 'fair' : b.duration > 0 ? 'poor' : '';
+      const label = days <= 14 ? fmtDay(b.date) : fmtDateShort(b.date);
+      return '<div class="sleep-bar-col">'
+        + '<div class="sleep-bar ' + cls + '" style="height:' + pct + '%"'
+        + (b.duration ? ' title="' + fmtDuration(b.duration) + '"' : '') + '></div>'
+        + '<span class="sleep-bar-label">' + label + '</span>'
+        + '</div>';
+    }).join('');
+  }
+
+  // Render history list
+  function renderSleepHistory() {
+    const container = document.getElementById('sleepHistoryList');
+    if (!container) return;
+    const log = getSleepLog().slice(0, 14);
+
+    if (!log.length) {
+      container.innerHTML = '<div class="sleep-empty">No sleep data yet — log your first night above.</div>';
+      return;
+    }
+
+    container.innerHTML = log.map(e => {
+      const tagHtml = (e.tags || []).map(t => '<span class="sleep-entry-tag">' + t + '</span>').join('');
+      const stars = '★'.repeat(e.quality || 0) + '☆'.repeat(5 - (e.quality || 0));
+      return '<div class="sleep-entry">'
+        + '<div class="sleep-entry-left">'
+        + '<span class="sleep-entry-date">' + fmtDateShort(e.date) + '</span>'
+        + '<span class="sleep-entry-times">' + e.bedtime + ' → ' + e.wakeTime + '</span>'
+        + (tagHtml ? '<div class="sleep-entry-tags">' + tagHtml + '</div>' : '')
+        + '</div>'
+        + '<div class="sleep-entry-right">'
+        + '<div>'
+        + '<div class="sleep-entry-duration">' + fmtDuration(e.duration) + '</div>'
+        + '<div class="sleep-entry-quality">' + stars + '</div>'
+        + '</div>'
+        + '<button class="sleep-entry-delete" onclick="deleteSleepEntry(\'' + e.date + '\')" title="Delete">✕</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // Show/hide AI card
+  function renderAiCard() {
+    const card = document.getElementById('sleepAiCard');
+    if (!card) return;
+    const log = getSleepLog();
+    card.style.display = log.length >= 3 ? '' : 'none';
+  }
+
+  // AI Sleep Insight
+  window.requestSleepInsight = async function () {
+    const log = getSleepLog().slice(0, 14);
+    if (log.length < 3) {
+      if (typeof nativeToast === 'function') nativeToast('Need at least 3 nights of data', 'warn');
+      return;
+    }
+
+    const btn = document.getElementById('sleepAiBtn');
+    const body = document.getElementById('sleepAiBody');
+    if (btn) { btn.disabled = true; btn.textContent = 'Analysing…'; }
+
+    const serverUrl = window.SERVER_URL || '';
+    const archetype = (typeof getUserArchetype === 'function') ? getUserArchetype() : 'hybrid';
+
+    try {
+      const resp = await fetch(serverUrl + '/api/ai/sleep-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sleepLog: log, archetype }),
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      if (body) body.textContent = data.insight || 'No insight available.';
+    } catch (err) {
+      if (body) body.textContent = 'Could not generate insight — check your connection.';
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Analyse My Sleep'; }
+  };
+
+  function renderSleepTab() {
+    initDateField();
+    renderSleepStats();
+    renderSleepChart(7);
+    renderSleepHistory();
+    renderAiCard();
+  }
+
+  // Re-render when tab becomes visible
+  const observer = new MutationObserver(() => {
+    const tab = document.getElementById('sleepTab');
+    if (tab && tab.classList.contains('active')) renderSleepTab();
+  });
+  const sleepTab = document.getElementById('sleepTab');
+  if (sleepTab) observer.observe(sleepTab, { attributes: true, attributeFilter: ['class'] });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('sleepTab')?.classList.contains('active')) renderSleepTab();
+  });
+
+  window.renderSleepTab = renderSleepTab;
+})();
+
+// ─────────────────────────────────────────────
 // POWERLIFTING TAB
 // ─────────────────────────────────────────────
 
@@ -14557,6 +14939,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/client-checkins.js"></script>
   <script src="src/js/progress-report.js"></script>
   <script src="src/js/community-feed.js"></script>
+  <script src="src/js/friends.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>

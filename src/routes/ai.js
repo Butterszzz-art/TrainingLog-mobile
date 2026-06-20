@@ -564,4 +564,59 @@ router.post('/profile-summary', async (req, res) => {
   }
 });
 
+// ── Sleep Insight ────────────────────────────────────────────────────────────
+
+const SLEEP_INSIGHT_SYSTEM_PROMPT = `You are a sleep and recovery specialist inside Pocket Coach, a fitness app. \
+Analyse the user's recent sleep data and provide one actionable insight. Reference specific numbers \
+from their data (average duration, quality trends, patterns with tags like caffeine or stress). \
+Relate sleep to training recovery based on their archetype. \
+Keep response to 2-3 sentences max. Write in second person. Be specific, not generic.`;
+
+router.post('/sleep-insight', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+
+  const { sleepLog, archetype } = req.body;
+  if (!Array.isArray(sleepLog) || sleepLog.length < 3) {
+    return res.status(400).json({ error: 'Need at least 3 sleep entries' });
+  }
+
+  const avgDuration = sleepLog.reduce((s, e) => s + (e.duration || 0), 0) / sleepLog.length;
+  const avgQuality = sleepLog.reduce((s, e) => s + (e.quality || 3), 0) / sleepLog.length;
+  const allTags = sleepLog.flatMap(e => e.tags || []);
+  const tagCounts = {};
+  allTags.forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; });
+  const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  const entries = sleepLog.slice(0, 10).map(e =>
+    `${e.date}: ${e.duration?.toFixed(1)}h, quality ${e.quality}/5` +
+    (e.tags?.length ? ` [${e.tags.join(', ')}]` : '')
+  ).join('\n');
+
+  const parts = [
+    `Analyse sleep data for a ${archetype || 'hybrid'} athlete.`,
+    `Average duration: ${avgDuration.toFixed(1)}h. Average quality: ${avgQuality.toFixed(1)}/5.`,
+    topTags.length ? `Common factors: ${topTags.map(([t, c]) => `${t} (${c}x)`).join(', ')}.` : '',
+    '',
+    'Recent entries:',
+    entries,
+  ];
+
+  try {
+    const client = new Anthropic();
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      system: SLEEP_INSIGHT_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: parts.join('\n') }],
+    });
+    const insight = message.content?.[0]?.text?.trim() || '';
+    return res.json({ insight });
+  } catch (err) {
+    console.error('[AI sleep-insight]', err.message);
+    return res.status(502).json({ error: 'AI request failed', details: err.message });
+  }
+});
+
 module.exports = router;

@@ -1,0 +1,397 @@
+/* =============================================================
+   SLEEP TAB
+   Manual sleep logging, quality rating, trend chart, and
+   AI sleep analysis integration.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Tab layout ────────────────────────────────────────────── */
+
+#sleepTabContent {
+  padding: 0 12px 24px;
+}
+
+/* ── Log form card ─────────────────────────────────────────── */
+
+.sleep-log-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sleep-log-card h3 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+.sleep-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sleep-form-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  font-weight: 600;
+}
+
+.sleep-form-row input[type="time"],
+.sleep-form-row input[type="date"] {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+/* ── Quality rating stars ──────────────────────────────────── */
+
+.sleep-quality-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sleep-quality-label {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sleep-quality-stars {
+  display: flex;
+  gap: 6px;
+}
+
+.sleep-star {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+
+.sleep-star.active {
+  background: rgba(45, 125, 91, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── Tags row ──────────────────────────────────────────────── */
+
+.sleep-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.sleep-tag {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  color: var(--secondary-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin: 0;
+  box-shadow: none;
+}
+
+.sleep-tag.active {
+  background: rgba(45, 125, 91, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── Notes ─────────────────────────────────────────────────── */
+
+.sleep-notes {
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  resize: vertical;
+}
+
+/* ── Save button ───────────────────────────────────────────── */
+
+.sleep-save-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ── Stats summary cards ───────────────────────────────────── */
+
+.sleep-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.sleep-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.sleep-stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.sleep-stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Trend chart ───────────────────────────────────────────── */
+
+.sleep-chart-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sleep-chart-card h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+.sleep-chart-period {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.sleep-period-btn {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: none;
+}
+
+.sleep-period-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* Bar chart */
+.sleep-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 120px;
+  padding: 0 2px;
+}
+
+.sleep-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.sleep-bar {
+  width: 100%;
+  max-width: 28px;
+  border-radius: 4px 4px 0 0;
+  background: var(--primary);
+  opacity: 0.7;
+  transition: height 0.3s ease;
+  min-height: 2px;
+}
+
+.sleep-bar.good { opacity: 1; }
+.sleep-bar.poor { background: #c05060; opacity: 0.8; }
+.sleep-bar.fair { background: var(--highlight); opacity: 0.8; }
+
+.sleep-bar-label {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── History list ──────────────────────────────────────────── */
+
+.sleep-history-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sleep-history-card h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+.sleep-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sleep-entry:last-child {
+  border-bottom: none;
+}
+
+.sleep-entry-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sleep-entry-date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.sleep-entry-times {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sleep-entry-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sleep-entry-duration {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.sleep-entry-quality {
+  font-size: 0.75rem;
+  color: var(--secondary-text);
+}
+
+.sleep-entry-tags {
+  display: flex;
+  gap: 4px;
+}
+
+.sleep-entry-tag {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(45, 125, 91, 0.1);
+  color: var(--text-muted);
+}
+
+.sleep-entry-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px;
+  margin: 0;
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+.sleep-entry-delete:hover {
+  opacity: 1;
+  color: #c05060;
+}
+
+.sleep-empty {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ── AI insight card ───────────────────────────────────────── */
+
+.sleep-ai-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(45, 125, 91, 0.25);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 12px 12px 0;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.sleep-ai-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sleep-ai-header span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+}
+
+.sleep-ai-body {
+  font-size: 0.88rem;
+  color: var(--secondary-text);
+  line-height: 1.5;
+}
+
+.sleep-ai-btn {
+  margin-top: 10px;
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  border-radius: 10px;
+  width: 100%;
+}
