@@ -1,0 +1,326 @@
+/* =============================================================
+   REHAB & INJURY TRACKING
+   Injury log, rehab routines, body map, and recovery status.
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Injury log card ───────────────────────────────────────── */
+
+.rehab-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.rehab-card h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+/* ── Add injury form ───────────────────────────────────────── */
+
+.rehab-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rehab-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.75rem;
+  color: var(--secondary-text);
+  font-weight: 600;
+}
+
+.rehab-form-grid input,
+.rehab-form-grid select {
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 0.88rem;
+}
+
+.rehab-form-full {
+  grid-column: 1 / -1;
+}
+
+/* Severity slider */
+.rehab-severity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.rehab-severity-label {
+  font-size: 0.75rem;
+  color: var(--secondary-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rehab-severity-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.rehab-sev-pill {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+
+.rehab-sev-pill.sev-1.active { background: rgba(45,125,91,0.2); border-color: var(--primary); color: var(--primary); }
+.rehab-sev-pill.sev-2.active { background: rgba(198,148,79,0.2); border-color: var(--highlight); color: var(--highlight); }
+.rehab-sev-pill.sev-3.active { background: rgba(230,168,23,0.2); border-color: #e6a817; color: #e6a817; }
+.rehab-sev-pill.sev-4.active { background: rgba(220,120,50,0.2); border-color: #dc7832; color: #dc7832; }
+.rehab-sev-pill.sev-5.active { background: rgba(192,80,96,0.2); border-color: #c05060; color: #c05060; }
+
+.rehab-save-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ── Injury list ───────────────────────────────────────────── */
+
+.injury-item {
+  padding: 12px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.injury-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.injury-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-color);
+}
+
+.injury-status {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.injury-status.active { background: rgba(192,80,96,0.15); color: #c05060; }
+.injury-status.recovering { background: rgba(230,168,23,0.15); color: #e6a817; }
+.injury-status.resolved { background: rgba(45,125,91,0.15); color: var(--primary); }
+
+.injury-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.injury-severity-bar {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.injury-sev-dot {
+  width: 16px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-color);
+}
+
+.injury-sev-dot.filled-1 { background: var(--primary); }
+.injury-sev-dot.filled-2 { background: var(--highlight); }
+.injury-sev-dot.filled-3 { background: #e6a817; }
+.injury-sev-dot.filled-4 { background: #dc7832; }
+.injury-sev-dot.filled-5 { background: #c05060; }
+
+.injury-notes {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+.injury-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.injury-action-btn {
+  padding: 6px 14px;
+  margin: 0;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.injury-action-secondary {
+  padding: 6px 14px;
+  margin: 0;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--secondary-text);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+/* ── Rehab routine card ────────────────────────────────────── */
+
+.rehab-routine-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(45,125,91,0.25);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 12px 12px 0;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.rehab-routine-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  margin-bottom: 4px;
+}
+
+.rehab-routine-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.rehab-exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.rehab-exercise {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-bg);
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.rehab-ex-name {
+  flex: 1;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.rehab-ex-detail {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.rehab-log-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ── AI rehab card ─────────────────────────────────────────── */
+
+.rehab-ai-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(45,125,91,0.25);
+  border-left: 3px solid var(--highlight);
+  border-radius: 0 12px 12px 0;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.rehab-ai-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--highlight);
+  margin-bottom: 6px;
+}
+
+.rehab-ai-body {
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+  line-height: 1.5;
+}
+
+.rehab-ai-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+
+/* ── Empty state ───────────────────────────────────────────── */
+
+.rehab-empty {
+  text-align: center;
+  padding: 20px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ── Exercise warning banner (for Log tab) ─────────────────── */
+
+.injury-warn-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(192,80,96,0.08);
+  border: 1px solid rgba(192,80,96,0.2);
+  border-left: 3px solid #c05060;
+  border-radius: 0 10px 10px 0;
+  margin: 0 12px 10px;
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  line-height: 1.4;
+}
+
+.injury-warn-banner strong {
+  color: #c05060;
+}
