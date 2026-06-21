@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/tutorial.css">
   <link rel="stylesheet" href="css/sleep.css">
   <link rel="stylesheet" href="css/friends.css">
+  <link rel="stylesheet" href="css/rehab.css">
   <link rel="stylesheet" href="css/tabs.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/log.css">
@@ -357,11 +358,14 @@
       <!-- Archetype smart tip -->
       <div id="logSmartTip" class="apc-cue" style="margin:0 12px 10px;display:none;"></div>
 
+      <!-- Injury warning banner (shown when exercise matches active injury) -->
+      <div id="injuryWarnBanner" class="injury-warn-banner" style="display:none;"></div>
+
       <!-- Main entry form card -->
       <div id="resistance-section">
         <div id="resistance-inputs" class="log-form-card">
 
-          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState()" />
+          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value);" />
           <datalist id="exerciseSuggestions"></datalist>
 
           <!-- Progressive overload hint -->
@@ -14940,6 +14944,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/progress-report.js"></script>
   <script src="src/js/community-feed.js"></script>
   <script src="src/js/friends.js"></script>
+  <script src="src/js/rehab.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>

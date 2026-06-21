@@ -619,4 +619,44 @@ router.post('/sleep-insight', async (req, res) => {
   }
 });
 
+// ── Rehab Plan ──────────────────────────────────────────────────────────────
+
+const REHAB_SYSTEM_PROMPT = `You are a sports physiotherapy specialist inside Pocket Coach. \
+Generate a concise, specific rehab recommendation for the described injury. \
+Include: (1) phase assessment (acute/subacute/remodelling), (2) 3-4 specific exercises with sets, reps or hold times, \
+(3) what to avoid, (4) when to progress. Tailor to the athlete's training style. \
+Keep response under 200 words. Write in second person. Be specific, not generic.`;
+
+router.post('/rehab-plan', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+
+  const { bodyPart, injuryType, severity, daysSinceInjury, status, archetype } = req.body;
+  if (!bodyPart || !injuryType) {
+    return res.status(400).json({ error: 'Missing required fields: bodyPart, injuryType' });
+  }
+
+  const prompt = [
+    `Generate a rehab plan for a ${archetype || 'hybrid'} athlete with a ${injuryType} in their ${bodyPart}.`,
+    `Severity: ${severity || 3}/5. Days since injury: ${daysSinceInjury || 'unknown'}. Current status: ${status || 'active'}.`,
+    `Provide phase-appropriate exercises and clear progression criteria.`,
+  ].join(' ');
+
+  try {
+    const client = new Anthropic();
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 350,
+      system: REHAB_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const plan = message.content?.[0]?.text?.trim() || '';
+    return res.json({ plan });
+  } catch (err) {
+    console.error('[AI rehab-plan]', err.message);
+    return res.status(502).json({ error: 'AI request failed', details: err.message });
+  }
+});
+
 module.exports = router;

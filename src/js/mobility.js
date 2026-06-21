@@ -214,6 +214,9 @@
     const wrap = document.getElementById('mobilityTabContent');
     if (!wrap) return;
 
+    const activeInjuries = typeof window.getActiveInjuries === 'function' ? window.getActiveInjuries().length : 0;
+    const rehabLabel = activeInjuries > 0 ? `Rehab (${activeInjuries})` : 'Rehab';
+
     wrap.innerHTML = `
       <div style="padding:0 0 16px;">
         <h2 style="margin:0 0 12px;font-size:1.25rem;font-weight:700;color:var(--text-color);">🧘 Flexibility & Mobility</h2>
@@ -221,6 +224,7 @@
           <button type="button" class="settings-subtab${_tab==='myRoutines'?' active':''}" data-mob="myRoutines">My Routines</button>
           <button type="button" class="settings-subtab${_tab==='logSession'?' active':''}" data-mob="logSession">Log Session</button>
           <button type="button" class="settings-subtab${_tab==='library'?' active':''}" data-mob="library">Browse Library</button>
+          <button type="button" class="settings-subtab${_tab==='rehab'?' active':''}" data-mob="rehab">${rehabLabel}</button>
         </div>
         <div id="mobSub"></div>
       </div>
@@ -233,7 +237,8 @@
     const sub = wrap.querySelector('#mobSub');
     if (_tab === 'myRoutines')  renderMyRoutines(sub);
     else if (_tab === 'logSession') renderLogSession(sub);
-    else renderLibrary(sub);
+    else if (_tab === 'rehab' && typeof window.renderRehabTab === 'function') window.renderRehabTab(sub);
+    else if (_tab !== 'rehab') renderLibrary(sub);
   }
 
   // ─── My Routines ──────────────────────────────────────────────
