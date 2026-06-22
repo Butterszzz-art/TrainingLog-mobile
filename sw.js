@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v3';
+const CACHE_VERSION = 'pocket-coach-v4';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -120,19 +120,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: cache-first, then network
+  // Navigation requests (HTML pages): network-first so users always get latest
+  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(request).then(c => c || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // Static assets (JS, CSS, images): cache-first with background update
   event.respondWith(
     caches.match(request).then((cached) => {
-      // Return cached immediately, but also update in background (stale-while-revalidate)
       const fetchPromise = fetch(request).then((response) => {
         if (
           response.ok &&
           (url.pathname.endsWith('.js') ||
            url.pathname.endsWith('.css') ||
-           url.pathname.endsWith('.html') ||
            url.pathname.endsWith('.ico') ||
-           url.pathname.endsWith('.json') ||
-           url.pathname === '/')
+           url.pathname.endsWith('.json'))
         ) {
           const clone = response.clone();
           caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
@@ -141,19 +152,11 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => null);
 
       if (cached) {
-        // Stale-while-revalidate: serve cached, update in background
-        fetchPromise; // fire-and-forget
+        fetchPromise; // stale-while-revalidate for JS/CSS
         return cached;
       }
 
-      // No cache — wait for network
-      return fetchPromise.then((resp) => {
-        if (resp) return resp;
-        // Last resort: serve index.html for navigation requests
-        if (request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-      });
+      return fetchPromise.then((resp) => resp || undefined);
     })
   );
 });
