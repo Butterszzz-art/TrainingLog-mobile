@@ -31,6 +31,10 @@
 
       const targetPanel = document.getElementById('logSub_' + target);
       if (targetPanel) targetPanel.classList.add('active');
+
+      if (target === 'history' && typeof window.renderSessionHistory === 'function') {
+        window.renderSessionHistory();
+      }
     });
   }
 

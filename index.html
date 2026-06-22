@@ -414,6 +414,29 @@
         <input type="text" id="historySearchInput" class="history-search-input"
           placeholder="🔍 Search any exercise (e.g. Bench Press)…"
           oninput="renderHistoryResults(this.value)" />
+
+        <!-- Filters row -->
+        <div class="hist-filters" id="histFilters">
+          <div class="hist-period-pills" id="histPeriodPills">
+            <button class="hist-pill active" data-period="7">7d</button>
+            <button class="hist-pill" data-period="30">30d</button>
+            <button class="hist-pill" data-period="90">90d</button>
+            <button class="hist-pill" data-period="0">All</button>
+          </div>
+          <select id="histMuscleFilter" class="hist-muscle-select" onchange="renderSessionHistory()">
+            <option value="">All muscles</option>
+            <option value="chest">Chest</option>
+            <option value="back">Back</option>
+            <option value="shoulders">Shoulders</option>
+            <option value="legs">Legs</option>
+            <option value="arms">Arms</option>
+            <option value="core">Core</option>
+          </select>
+        </div>
+
+        <!-- Session-level history (below search results) -->
+        <div id="sessionHistoryList" class="session-history-list"></div>
+
         <div id="historyResults"></div>
       </div>
     </div><!-- /logSub_history -->
@@ -2093,6 +2116,13 @@
           <div id="gamificationEventsFeed" class="gamification-events-feed"></div>
         </div>
       </aside>
+      <!-- Reminders Section -->
+      <div class="export-section" style="margin-bottom:16px;">
+        <p class="export-section-title">🔔 Reminders</p>
+        <p class="export-section-sub">Get notified to log workouts, weigh-ins, and more.</p>
+        <div id="remindersPanel"></div>
+      </div>
+
       <!-- Export Section -->
       <div class="export-section">
         <p class="export-section-title">📤 Export Your Data</p>
@@ -3046,6 +3076,7 @@ function showTab(tabName) {
         autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
       }
       initSmartGoalForm();
+      if (typeof renderRemindersPanel === 'function') renderRemindersPanel();
 
       // Wire settings sub-tabs via delegation (idempotent)
       const stc = document.getElementById('settingsFormContainer');
@@ -14257,6 +14288,152 @@ window.renderArchetypeProfileCard = renderArchetypeProfileCard;
 window.generateAiProfileSummary = generateAiProfileSummary;
 
 // ─────────────────────────────────────────────
+// SESSION HISTORY (filters + session cards in History sub-tab)
+// ─────────────────────────────────────────────
+
+const MUSCLE_GROUP_MAP = {
+  chest: ['bench press','incline press','dumbbell press','chest fly','push up','pushup','dips','cable fly','pec deck','dumbbell fly'],
+  back: ['deadlift','barbell row','pull up','pullup','lat pulldown','seated row','t-bar row','chin up','cable row','face pull','bent over row'],
+  shoulders: ['overhead press','military press','lateral raise','front raise','shoulder press','arnold press','upright row','rear delt'],
+  legs: ['squat','leg press','lunge','leg extension','leg curl','hack squat','step up','split squat','front squat','hip thrust','calf raise','romanian deadlift','good morning','glute bridge'],
+  arms: ['curl','bicep curl','tricep extension','skull crusher','hammer curl','preacher curl','cable curl','close grip bench','dips','concentration curl'],
+  core: ['plank','crunch','sit up','leg raise','ab wheel','russian twist','cable crunch','hanging leg raise','woodchop'],
+};
+
+function getExerciseMuscleGroup(name) {
+  const n = (name || '').toLowerCase();
+  for (const [group, exercises] of Object.entries(MUSCLE_GROUP_MAP)) {
+    if (exercises.some(ex => n.includes(ex) || ex.includes(n))) return group;
+  }
+  return 'other';
+}
+
+function renderSessionHistory() {
+  const container = document.getElementById('sessionHistoryList');
+  if (!container) return;
+
+  const user = window.currentUser || localStorage.getItem('fitnessAppUser');
+  if (!user) { container.innerHTML = '<div class="hist-empty">Log in to see history.</div>'; return; }
+
+  const workouts = JSON.parse(localStorage.getItem('workouts_' + user) || '[]');
+  if (!workouts.length) {
+    container.innerHTML = '<div class="hist-empty">No workout sessions logged yet.</div>';
+    return;
+  }
+
+  // Get filter values
+  const activePill = document.querySelector('#histPeriodPills .hist-pill.active');
+  const periodDays = activePill ? Number(activePill.dataset.period) : 7;
+  const muscleFilter = document.getElementById('histMuscleFilter')?.value || '';
+
+  // Filter by date
+  const now = Date.now();
+  let filtered = workouts.map((w, i) => ({ ...w, _idx: i }));
+  if (periodDays > 0) {
+    const cutoff = now - periodDays * 86400000;
+    filtered = filtered.filter(w => {
+      const d = w.date || w.performedAt;
+      return d && new Date(d).getTime() >= cutoff;
+    });
+  }
+
+  // Sort newest first
+  filtered.sort((a, b) => {
+    const da = a.date || a.performedAt || '';
+    const db = b.date || b.performedAt || '';
+    return db.localeCompare(da);
+  });
+
+  // Filter by muscle group
+  if (muscleFilter) {
+    filtered = filtered.filter(w => {
+      const exercises = w.log || [];
+      return exercises.some(ex => getExerciseMuscleGroup(ex.exercise) === muscleFilter);
+    });
+  }
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="hist-empty">No sessions match your filters.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(w => {
+    const exercises = w.log || [];
+    const dateStr = w.date || w.performedAt || '';
+    const d = new Date(dateStr);
+    const dateLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const title = w.title || w.name || 'Workout';
+    const unit = exercises[0]?.unit || 'kg';
+
+    // Calculate session stats
+    let totalSets = 0, totalVolume = 0;
+    const exCount = exercises.length;
+    exercises.forEach(ex => {
+      const reps = ex.repsArray || [];
+      const weights = ex.weightsArray || [];
+      totalSets += reps.length;
+      reps.forEach((r, i) => {
+        const wt = Number(weights[i]) || 0;
+        totalVolume += (Number(r) || 0) * wt;
+      });
+    });
+
+    const exHtml = exercises.map(ex => {
+      const reps = ex.repsArray || [];
+      const weights = ex.weightsArray || [];
+      const setCount = reps.length;
+      const bestWeight = Math.max(0, ...weights.map(Number).filter(n => !isNaN(n)));
+      const detail = setCount + ' sets' + (bestWeight ? ' · ' + bestWeight + ' ' + unit : '');
+      const name = ex.exercise || 'Exercise';
+
+      let muscleTag = '';
+      if (muscleFilter) {
+        const mg = getExerciseMuscleGroup(name);
+        if (mg === muscleFilter) muscleTag = ' ✓';
+      }
+
+      return '<div class="session-exercise">'
+        + '<span class="session-ex-name">' + name + muscleTag + '</span>'
+        + '<span class="session-ex-detail">' + detail + '</span>'
+        + '</div>';
+    }).join('');
+
+    const volDisplay = totalVolume > 0 ? (totalVolume >= 1000 ? (totalVolume / 1000).toFixed(1) + 'k' : totalVolume) + ' ' + unit : '—';
+
+    return '<div class="session-card" onclick="this.classList.toggle(\'open\')">'
+      + '<div class="session-card-header">'
+      + '<div class="session-card-left">'
+      + '<span class="session-card-date">' + dateLabel + '</span>'
+      + '<span class="session-card-meta">' + title + '</span>'
+      + '</div>'
+      + '<div class="session-card-right">'
+      + '<span class="session-card-count">' + exCount + ' exercises</span>'
+      + '<span class="session-card-chevron">▸</span>'
+      + '</div></div>'
+      + '<div class="session-card-body">'
+      + exHtml
+      + '<div class="session-summary-row">'
+      + '<div class="session-summary-item"><span>Sets:</span><span class="session-summary-val">' + totalSets + '</span></div>'
+      + '<div class="session-summary-item"><span>Volume:</span><span class="session-summary-val">' + volDisplay + '</span></div>'
+      + '<div class="session-summary-item"><span>Exercises:</span><span class="session-summary-val">' + exCount + '</span></div>'
+      + '</div></div></div>';
+  }).join('');
+}
+
+// Wire up period filter pills
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('histPeriodPills')?.addEventListener('click', e => {
+    const pill = e.target.closest('.hist-pill');
+    if (!pill) return;
+    document.querySelectorAll('#histPeriodPills .hist-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    renderSessionHistory();
+  });
+});
+
+window.renderSessionHistory = renderSessionHistory;
+
+// ─────────────────────────────────────────────
 // SLEEP TAB
 // ─────────────────────────────────────────────
 
@@ -15075,6 +15252,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/community-feed.js"></script>
   <script src="src/js/friends.js"></script>
   <script src="src/js/rehab.js"></script>
+  <script src="src/js/reminders.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>
