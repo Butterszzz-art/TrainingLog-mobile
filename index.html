@@ -2116,6 +2116,13 @@
           <div id="gamificationEventsFeed" class="gamification-events-feed"></div>
         </div>
       </aside>
+      <!-- Reminders Section -->
+      <div class="export-section" style="margin-bottom:16px;">
+        <p class="export-section-title">🔔 Reminders</p>
+        <p class="export-section-sub">Get notified to log workouts, weigh-ins, and more.</p>
+        <div id="remindersPanel"></div>
+      </div>
+
       <!-- Export Section -->
       <div class="export-section">
         <p class="export-section-title">📤 Export Your Data</p>
@@ -3069,6 +3076,7 @@ function showTab(tabName) {
         autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
       }
       initSmartGoalForm();
+      if (typeof renderRemindersPanel === 'function') renderRemindersPanel();
 
       // Wire settings sub-tabs via delegation (idempotent)
       const stc = document.getElementById('settingsFormContainer');
@@ -15244,6 +15252,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/community-feed.js"></script>
   <script src="src/js/friends.js"></script>
   <script src="src/js/rehab.js"></script>
+  <script src="src/js/reminders.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>
