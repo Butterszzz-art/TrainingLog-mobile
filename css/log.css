@@ -289,3 +289,168 @@
   border-radius: 8px;
   border: 1px solid rgba(230, 168, 23, 0.25);
 }
+
+/* ── History filters ───────────────────────────────────────── */
+
+.hist-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.hist-period-pills {
+  display: flex;
+  gap: 4px;
+}
+
+.hist-pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: none;
+}
+
+.hist-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.hist-muscle-select {
+  flex: 1;
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  min-width: 0;
+}
+
+/* ── Session history cards ─────────────────────────────────── */
+
+.session-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.session-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.session-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.session-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-card-date {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.session-card-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.session-card-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-card-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+}
+
+.session-card-chevron {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.session-card.open .session-card-chevron {
+  transform: rotate(90deg);
+}
+
+.session-card-body {
+  display: none;
+  padding: 0 14px 12px;
+}
+
+.session-card.open .session-card-body {
+  display: block;
+}
+
+.session-exercise {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.82rem;
+}
+
+.session-exercise:last-child {
+  border-bottom: none;
+}
+
+.session-ex-name {
+  font-weight: 600;
+  color: var(--text-color);
+  flex: 1;
+}
+
+.session-ex-detail {
+  color: var(--secondary-text);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.session-summary-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.session-summary-item {
+  display: flex;
+  gap: 3px;
+}
+
+.session-summary-val {
+  font-weight: 700;
+  color: var(--secondary-text);
+}
+
+.hist-empty {
+  text-align: center;
+  padding: 16px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
