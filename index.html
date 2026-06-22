@@ -534,6 +534,28 @@
         </div>
       </div>
 
+      <!-- ── Weekly averages & rate card ── -->
+      <div class="wt-weekly-card" id="wtWeeklyCard" style="display:none;">
+        <div class="wt-weekly-header">
+          <span class="wt-weekly-title">📊 Weekly Breakdown</span>
+        </div>
+        <div class="wt-weekly-grid" id="wtWeeklyGrid"></div>
+        <div class="wt-rate-row" id="wtRateRow">
+          <div class="wt-rate-item">
+            <span class="wt-rate-val" id="wtRateWeekly">—</span>
+            <span class="wt-rate-lbl">Rate / week</span>
+          </div>
+          <div class="wt-rate-item">
+            <span class="wt-rate-val" id="wtRateMonthly">—</span>
+            <span class="wt-rate-lbl">Projected / month</span>
+          </div>
+          <div class="wt-rate-item">
+            <span class="wt-rate-val" id="wtRateDirection">—</span>
+            <span class="wt-rate-lbl">Trend</span>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Entry card ── -->
       <div class="wt-entry-card">
         <div class="wt-entry-row">
@@ -10153,10 +10175,15 @@ function renderWeights() {
     if (sta) sta.textContent = toDisp(firstKg);
     if (chg) { chg.textContent = changeDisp; chg.className = 'wt-stat-val ' + (changeKg > 0 ? 'wt-up' : changeKg < 0 ? 'wt-down' : ''); }
     if (ent) ent.textContent = log.length;
+
+    // ── Weekly averages & rate ──
+    renderWeeklyBreakdown(log, displayUnit);
   } else {
     if (strip)    strip.style.display = 'none';
     if (emptyMsg) emptyMsg.style.display = 'block';
     if (logCount) logCount.textContent = '';
+    const wkCard = document.getElementById('wtWeeklyCard');
+    if (wkCard) wkCard.style.display = 'none';
   }
 
   log.slice().reverse().forEach((entry, revIdx) => {
@@ -10178,6 +10205,109 @@ function renderWeights() {
       showWorkoutProgress();
     }
   }
+}
+
+function renderWeeklyBreakdown(log, displayUnit) {
+  const card = document.getElementById('wtWeeklyCard');
+  const grid = document.getElementById('wtWeeklyGrid');
+  if (!card || !grid) return;
+
+  if (log.length < 2) { card.style.display = 'none'; return; }
+
+  // Group entries by ISO week (Mon-Sun)
+  const sorted = log.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const weeks = {};
+  sorted.forEach(entry => {
+    const d = new Date(entry.date + 'T00:00:00');
+    const day = d.getDay() || 7;
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - day + 1);
+    const key = mon.toISOString().slice(0, 10);
+    if (!weeks[key]) weeks[key] = [];
+    const kg = getEntryWeightKg(entry);
+    if (kg != null) weeks[key].push(kg);
+  });
+
+  const weekKeys = Object.keys(weeks).sort().slice(-6);
+  if (weekKeys.length < 1) { card.style.display = 'none'; return; }
+
+  const weekData = weekKeys.map(key => {
+    const vals = weeks[key];
+    const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
+    return { key, avg, count: vals.length };
+  });
+
+  // Compute week-over-week change
+  let html = '';
+  weekData.forEach((wk, i) => {
+    const mon = new Date(wk.key + 'T00:00:00');
+    const sun = new Date(mon);
+    sun.setDate(sun.getDate() + 6);
+    const label = mon.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      + ' – ' + sun.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const avgDisp = convertWeightValue(wk.avg, 'kg', displayUnit, 1) + ' ' + displayUnit;
+
+    let changeHtml = '';
+    if (i > 0) {
+      const delta = wk.avg - weekData[i - 1].avg;
+      const deltaDisp = convertWeightValue(Math.abs(delta), 'kg', displayUnit, 1);
+      const cls = Math.abs(delta) < 0.05 ? 'flat' : delta > 0 ? 'up' : 'down';
+      const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
+      changeHtml = '<span class="wt-week-change ' + cls + '">' + sign + deltaDisp + '</span>';
+    } else {
+      changeHtml = '<span class="wt-week-change flat">—</span>';
+    }
+
+    html += '<div class="wt-week-row">'
+      + '<span class="wt-week-label">' + label + '</span>'
+      + '<span class="wt-week-avg">' + avgDisp + '</span>'
+      + changeHtml
+      + '<span class="wt-week-count">' + wk.count + 'd</span>'
+      + '</div>';
+  });
+  grid.innerHTML = html;
+
+  // Rate calculations (last 3 weeks if available, otherwise all)
+  const rateWeeks = weekData.length >= 3 ? weekData.slice(-3) : weekData;
+  const rateWeeklyEl = document.getElementById('wtRateWeekly');
+  const rateMonthlyEl = document.getElementById('wtRateMonthly');
+  const rateDirEl = document.getElementById('wtRateDirection');
+
+  if (rateWeeks.length >= 2) {
+    const first = rateWeeks[0];
+    const last = rateWeeks[rateWeeks.length - 1];
+    const weeksBetween = Math.max(1, rateWeeks.length - 1);
+    const rateKgPerWeek = (last.avg - first.avg) / weeksBetween;
+    const ratePerMonth = rateKgPerWeek * 4.33;
+
+    const rateDisp = convertWeightValue(Math.abs(rateKgPerWeek), 'kg', displayUnit, 2);
+    const monthDisp = convertWeightValue(Math.abs(ratePerMonth), 'kg', displayUnit, 1);
+    const sign = rateKgPerWeek > 0 ? '+' : rateKgPerWeek < 0 ? '−' : '';
+
+    const cls = Math.abs(rateKgPerWeek) < 0.05 ? 'wt-stable'
+      : rateKgPerWeek > 0 ? 'wt-gaining' : 'wt-losing';
+
+    if (rateWeeklyEl) {
+      rateWeeklyEl.textContent = sign + rateDisp + ' ' + displayUnit;
+      rateWeeklyEl.className = 'wt-rate-val ' + cls;
+    }
+    if (rateMonthlyEl) {
+      rateMonthlyEl.textContent = sign + monthDisp + ' ' + displayUnit;
+      rateMonthlyEl.className = 'wt-rate-val ' + cls;
+    }
+    if (rateDirEl) {
+      const dir = Math.abs(rateKgPerWeek) < 0.05 ? 'Maintaining'
+        : rateKgPerWeek > 0 ? 'Gaining' : 'Losing';
+      rateDirEl.textContent = dir;
+      rateDirEl.className = 'wt-rate-val ' + cls;
+    }
+  } else {
+    if (rateWeeklyEl) rateWeeklyEl.textContent = '—';
+    if (rateMonthlyEl) rateMonthlyEl.textContent = '—';
+    if (rateDirEl) rateDirEl.textContent = 'Need more data';
+  }
+
+  card.style.display = '';
 }
 
 function removeWeightEntry(index) {
