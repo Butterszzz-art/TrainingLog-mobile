@@ -13,7 +13,8 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: rgba(10, 15, 12, 0.92);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -144,8 +145,7 @@
   background: var(--card-bg, #0f1510);
   border-top: 1px solid var(--border-color);
   border-radius: 20px 20px 0 0;
-  /* Bottom padding accounts for the 64 px nav bar */
-  padding: 8px 16px 80px;
+  padding: 8px 16px calc(80px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -207,7 +207,7 @@
  */
 #workoutFocusBar {
   position: fixed;
-  bottom: 65px; /* sit above the bottom nav (64px height + 1px border-top) */
+  bottom: calc(65px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   height: 44px;
@@ -218,7 +218,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  z-index: 999; /* below the nav so it never blocks it */
+  z-index: 999;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
