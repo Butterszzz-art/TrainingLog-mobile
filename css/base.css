@@ -191,12 +191,12 @@ th {
 #appContainer {
   margin: 0;
   padding-top: 8px;
-  padding-bottom: 80px;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Extra clearance when the focus bar is visible above the nav */
 .workout-active #appContainer {
-  padding-bottom: 128px; /* 64px nav + 44px focus bar + 20px breathing room */
+  padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
 }
 
 #pocketFitContainer {
