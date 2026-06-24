@@ -2221,6 +2221,39 @@
 
 <div id="settingsTab" class="tab-content">
   <div id="settingsFormContainer" class="panel"></div>
+
+  <!-- Knowledge Base Admin Section -->
+  <div id="knowledgeBaseSection" class="export-section" style="margin-top:16px;">
+    <p class="export-section-title">🧠 PT Knowledge Base</p>
+    <p class="export-section-sub">Upload PT methodology PDF modules. Each module is processed by AI and stored as structured knowledge used by all AI features.</p>
+
+    <div class="rehab-card">
+      <h3>Upload Module</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <input type="text" id="kbModuleName" placeholder="Module name (e.g. Hypertrophy Programming)" />
+        <select id="kbTopic">
+          <option value="">Select topic…</option>
+          <option value="training">Training</option>
+          <option value="nutrition">Nutrition</option>
+          <option value="recovery">Recovery</option>
+          <option value="mobility">Mobility</option>
+          <option value="mindset">Mindset</option>
+        </select>
+        <input type="file" id="kbPdfFile" accept=".pdf" style="padding:8px 0;font-size:0.88rem;" />
+        <button id="kbUploadBtn" onclick="uploadKnowledgeModule()">Upload &amp; Process</button>
+        <div id="kbUploadStatus" style="font-size:0.82rem;min-height:1.2rem;color:var(--secondary-text);"></div>
+      </div>
+    </div>
+
+    <div class="rehab-card" style="margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="margin:0;">Ingested Modules</h3>
+        <button onclick="loadKnowledgeModules()" style="font-size:0.75rem;padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);cursor:pointer;box-shadow:none;margin:0;">Refresh</button>
+      </div>
+      <div id="kbModuleList" style="font-size:0.85rem;color:var(--text-muted);">Loading modules…</div>
+    </div>
+  </div>
+
   </div> <!-- #settingsTab -->
 
 <!-- ── Sleep Tab ──────────────────────────────────────────────── -->
@@ -3077,6 +3110,7 @@ function showTab(tabName) {
       }
       initSmartGoalForm();
       if (typeof renderRemindersPanel === 'function') renderRemindersPanel();
+      loadKnowledgeModules();
 
       // Wire settings sub-tabs via delegation (idempotent)
       const stc = document.getElementById('settingsFormContainer');
@@ -14286,6 +14320,92 @@ async function generateAiProfileSummary() {
 
 window.renderArchetypeProfileCard = renderArchetypeProfileCard;
 window.generateAiProfileSummary = generateAiProfileSummary;
+
+// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// KNOWLEDGE BASE
+// ─────────────────────────────────────────────
+
+async function uploadKnowledgeModule() {
+  const moduleName = document.getElementById('kbModuleName').value.trim();
+  const topic = document.getElementById('kbTopic').value;
+  const fileInput = document.getElementById('kbPdfFile');
+  const statusEl = document.getElementById('kbUploadStatus');
+  const btn = document.getElementById('kbUploadBtn');
+
+  if (!moduleName) return (statusEl.textContent = 'Please enter a module name.');
+  if (!topic) return (statusEl.textContent = 'Please select a topic.');
+  if (!fileInput.files[0]) return (statusEl.textContent = 'Please select a PDF file.');
+
+  btn.disabled = true;
+  statusEl.textContent = 'Uploading and processing… this may take 20-40 seconds.';
+
+  const formData = new FormData();
+  formData.append('pdf', fileInput.files[0]);
+  formData.append('moduleName', moduleName);
+  formData.append('topic', topic);
+
+  try {
+    const res = await fetch(`${window.SERVER_URL}/admin/ingest-pdf`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      statusEl.textContent = 'Error: ' + (data.error || 'Upload failed');
+    } else {
+      statusEl.textContent = 'Success! "' + data.moduleName + '" processed. Fields: ' + data.fieldsExtracted.join(', ');
+      document.getElementById('kbModuleName').value = '';
+      document.getElementById('kbTopic').value = '';
+      fileInput.value = '';
+      loadKnowledgeModules();
+    }
+  } catch (err) {
+    statusEl.textContent = 'Network error. Please try again.';
+    console.error('[KnowledgeBase] Upload error:', err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadKnowledgeModules() {
+  const listEl = document.getElementById('kbModuleList');
+  if (!listEl) return;
+
+  try {
+    const res = await fetch(`${window.SERVER_URL}/admin/knowledge-modules`);
+    const data = await res.json();
+
+    if (!data.modules || data.modules.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;padding:12px 0;color:var(--text-muted);">No modules ingested yet.</div>';
+      return;
+    }
+
+    const topicColors = {
+      training: 'var(--primary)',
+      nutrition: '#c6944f',
+      recovery: '#60a5fa',
+      mobility: '#f472b6',
+      mindset: '#a78bfa'
+    };
+
+    listEl.innerHTML = data.modules.map(function (m) {
+      const color = topicColors[m.topic] || 'var(--secondary-text)';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">'
+        + '<span style="color:var(--text-color);font-weight:600;">' + (m.moduleName || 'Unnamed') + '</span>'
+        + '<span style="font-size:0.72rem;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);color:' + color + ';font-weight:600;">' + (m.topic || '—') + '</span>'
+        + '</div>';
+    }).join('');
+  } catch (err) {
+    listEl.innerHTML = '<div style="color:var(--text-muted);">Unable to load modules.</div>';
+    console.error('[KnowledgeBase] Load error:', err);
+  }
+}
+
+window.uploadKnowledgeModule = uploadKnowledgeModule;
+window.loadKnowledgeModules = loadKnowledgeModules;
 
 // ─────────────────────────────────────────────
 // SESSION HISTORY (filters + session cards in History sub-tab)
