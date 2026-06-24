@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const { upload, extractKnowledgeWithClaude, saveToAirtable, getActiveModules } = require('./knowledgeBase');
 
 dotenv.config();
 
@@ -542,6 +543,99 @@ app.all('/airtable/:baseId/:table', async (req, res) => {
   } catch (error) {
     if (error.name === 'AbortError') return res.status(504).json({ error: 'Airtable request timed out' });
     return res.status(502).json({ error: 'Failed to reach Airtable', details: String(error) });
+  }
+});
+
+// ── Knowledge Base routes ────────────────────────────────────────────────────
+
+// POST /admin/ingest-pdf — upload and process a PDF module
+app.post('/admin/ingest-pdf', upload.single('pdf'), async (req, res) => {
+  try {
+    const { moduleName, topic } = req.body;
+
+    if (!req.file) return res.status(400).json({ error: 'No PDF file received' });
+    if (!moduleName) return res.status(400).json({ error: 'moduleName is required' });
+    if (!topic) return res.status(400).json({ error: 'topic is required' });
+
+    const airtable = getAirtableEnv();
+    if (airtable.error) return res.status(500).json({ error: airtable.error });
+
+    const pdfData = await pdfParse(req.file.buffer);
+    const text = pdfData.text;
+
+    if (!text || text.trim().length < 100) {
+      return res.status(422).json({ error: 'PDF appears to be empty or unreadable' });
+    }
+
+    const extracted = await extractKnowledgeWithClaude(text, moduleName, topic);
+
+    const record = await saveToAirtable(airtable.token, airtable.baseId, {
+      ModuleName: moduleName,
+      Topic: topic,
+      SourceFile: req.file.originalname,
+      ExtractedJSON: JSON.stringify(extracted),
+      Version: 1,
+      ProcessedAt: new Date().toISOString().slice(0, 10),
+      IsActive: true
+    });
+
+    res.json({
+      success: true,
+      recordId: record.id,
+      moduleName,
+      topic,
+      fieldsExtracted: Object.keys(extracted).filter(k =>
+        Array.isArray(extracted[k]) ? extracted[k].length > 0 : !!extracted[k]
+      )
+    });
+
+  } catch (err) {
+    console.error('[KnowledgeBase] Ingest error:', err);
+    res.status(500).json({ error: 'Ingestion failed', details: err.message });
+  }
+});
+
+// GET /admin/knowledge-modules — list all ingested modules
+app.get('/admin/knowledge-modules', async (req, res) => {
+  try {
+    const airtable = getAirtableEnv();
+    if (airtable.error) return res.status(500).json({ error: airtable.error });
+
+    const modules = await getActiveModules(airtable.token, airtable.baseId);
+    res.json({ modules });
+  } catch (err) {
+    console.error('[KnowledgeBase] Fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch modules' });
+  }
+});
+
+// GET /knowledge-context?topics=training,nutrition — used by AI router
+app.get('/knowledge-context', async (req, res) => {
+  try {
+    const airtable = getAirtableEnv();
+    if (airtable.error) return res.status(500).json({ error: airtable.error });
+
+    const topicsParam = req.query.topics;
+    const topics = topicsParam ? topicsParam.split(',').map(t => t.trim()) : null;
+
+    let allModules = [];
+    if (topics && topics.length > 0) {
+      const fetches = topics.map(t => getActiveModules(airtable.token, airtable.baseId, t));
+      const results = await Promise.all(fetches);
+      allModules = results.flat();
+    } else {
+      allModules = await getActiveModules(airtable.token, airtable.baseId);
+    }
+
+    const context = allModules.reduce((acc, mod) => {
+      acc[mod.moduleName] = mod.extractedJSON;
+      return acc;
+    }, {});
+
+    res.json({ context, modulesLoaded: allModules.map(m => m.moduleName) });
+  } catch (err) {
+    console.error('[KnowledgeBase] Context error:', err);
+    res.status(500).json({ error: 'Failed to build knowledge context' });
   }
 });
 
