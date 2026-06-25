@@ -199,17 +199,16 @@
 
   /* ── Boot ─────────────────────────────────────────────────── */
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Render home card immediately
-    setTimeout(renderReadinessHomeCard, 1200);
+  function showReadinessIfNeeded() {
+    const entry = getTodayEntry();
+    if (!entry) _buildModal();
+  }
 
-    // Show modal if not already completed or skipped today
-    setTimeout(() => {
-      const entry = getTodayEntry();
-      if (!entry) _buildModal();
-    }, 2500);
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(renderReadinessHomeCard, 1200);
   });
 
   window.renderReadinessHomeCard = renderReadinessHomeCard;
+  window.showReadinessIfNeeded = showReadinessIfNeeded;
 
 })();
