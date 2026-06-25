@@ -275,7 +275,6 @@
 
 
   <div id="appContainer" class="main-content">
-<div id="progressReminder"></div>
 
   <div id="homeTab" class="tab-content">
     <!-- Vacation mode active banner -->
@@ -5738,22 +5737,8 @@ function handleExerciseBlur() {
   if (!name) return;
 
   const suggestion = getSuggestedSetsForExercise(name);
-  const msgDiv = document.getElementById('progressReminder');
-  if (msgDiv) msgDiv.innerHTML = '';
 
   if (!suggestion.sets.length) return;
-
-  const reps = suggestion.sets.map(set => set.reps).join(', ');
-  const weights = suggestion.sets.map(set => set.weight).join(', ');
-
-  if (msgDiv) {
-    msgDiv.innerHTML = `
-      <div style="margin:10px 0; color: var(--highlight); font-weight:bold;">
-        Suggested from last session: ${reps} reps at ${weights} ${suggestion.unit}
-        ${suggestion.recommendationMessage ? `<br><span style="font-style:italic; font-weight:normal;">${suggestion.recommendationMessage}</span>` : ''}
-        ${suggestion.autoIncrementApplied ? '<br><span style="font-style:italic; font-weight:normal;">Auto-increment applied because last set met target RPE.</span>' : ''}
-      </div>`;
-  }
 
   const setsInput = document.getElementById('sets');
   if (setsInput && (!setsInput.value || Number(setsInput.value) !== suggestion.sets.length)) {
