@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pocket Coach — Coach Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="coach.css">
+</head>
+<body>
+
+  <!-- Mobile warning -->
+  <div id="mobileWarning" class="mobile-warning">
+    <div class="mobile-warning-card">
+      <h2>🖥️ Desktop Required</h2>
+      <p>The Coach Dashboard is designed for desktop screens. Open this page on a laptop or desktop for the best experience.</p>
+      <a href="../index.html" class="mobile-warning-link">← Back to Pocket Coach</a>
+    </div>
+  </div>
+
+  <!-- Login gate -->
+  <div id="loginGate" class="login-gate">
+    <div class="login-card">
+      <div class="login-logo">🏋️ Pocket Coach</div>
+      <h2>Coach Login</h2>
+      <input type="text" id="loginUsername" placeholder="Username" autocomplete="username">
+      <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+      <button id="loginBtn" onclick="doCoachLogin()">Sign In</button>
+      <div id="loginError" class="login-error"></div>
+    </div>
+  </div>
+
+  <!-- Main app shell -->
+  <div id="appShell" class="app-shell" style="display:none;">
+
+    <!-- Header -->
+    <header class="top-header">
+      <div class="header-left">
+        <span class="header-logo">🏋️</span>
+        <span class="header-title">Pocket Coach</span>
+        <span class="header-badge">COACH</span>
+      </div>
+      <div class="header-right">
+        <span class="header-user" id="headerUser">—</span>
+        <button class="header-logout" onclick="doLogout()">Sign Out</button>
+      </div>
+    </header>
+
+    <!-- Sidebar: Client Roster -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h3 class="sidebar-title">Clients</h3>
+        <button class="sidebar-invite-btn" onclick="showInviteModal()">+ Invite</button>
+      </div>
+
+      <!-- Search -->
+      <div class="sidebar-search">
+        <input type="text" id="clientSearch" placeholder="Search clients…" oninput="filterClients()">
+      </div>
+
+      <!-- Filter tabs -->
+      <div class="sidebar-filters" id="statusFilters">
+        <button class="filter-tab active" data-filter="all">All</button>
+        <button class="filter-tab" data-filter="action">Needs Action</button>
+        <button class="filter-tab" data-filter="watch">Watch</button>
+        <button class="filter-tab" data-filter="ok">Stable</button>
+      </div>
+
+      <!-- Client list -->
+      <div class="client-list" id="clientList">
+        <div class="client-list-loading">Loading clients…</div>
+      </div>
+
+      <!-- Bulk actions -->
+      <div class="sidebar-bulk" id="bulkBar" style="display:none;">
+        <span id="bulkCount">0 selected</span>
+        <button class="bulk-action-btn" onclick="bulkMessage()">📤 Message All</button>
+      </div>
+    </aside>
+
+    <!-- Main panel: Client Detail -->
+    <main class="main-panel" id="mainPanel">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">👈</div>
+        <h2>Select a client</h2>
+        <p>Choose a client from the roster to view their details, check-ins, and program.</p>
+      </div>
+
+      <!-- Client detail (hidden until selected) -->
+      <div id="clientDetail" style="display:none;">
+
+        <!-- Athlete header -->
+        <div class="detail-header" id="detailHeader"></div>
+
+        <!-- Detail tabs -->
+        <div class="detail-tabs" id="detailTabs">
+          <button class="detail-tab active" data-dtab="overview">Overview</button>
+          <button class="detail-tab" data-dtab="checkin">Check-In</button>
+          <button class="detail-tab" data-dtab="program">Program</button>
+          <button class="detail-tab" data-dtab="nutrition">Nutrition</button>
+          <button class="detail-tab" data-dtab="notes">Notes</button>
+        </div>
+
+        <!-- Tab panels -->
+        <div class="detail-panel active" id="dtab_overview"></div>
+        <div class="detail-panel" id="dtab_checkin"></div>
+        <div class="detail-panel" id="dtab_program"></div>
+        <div class="detail-panel" id="dtab_nutrition"></div>
+        <div class="detail-panel" id="dtab_notes"></div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="coach.js"></script>
+</body>
+</html>
