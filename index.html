@@ -2808,6 +2808,7 @@ function _doLocalLogin(username) {
   renderDailyMacroProgress?.();
   if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
   if (typeof window.initSessionContext === 'function') window.initSessionContext();
+  setTimeout(() => { if (typeof showReadinessIfNeeded === 'function') showReadinessIfNeeded(); }, 1500);
 }
 // ────────────────────────────────────────────────────────────────────────────
 
