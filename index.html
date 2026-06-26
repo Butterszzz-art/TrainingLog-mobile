@@ -47,6 +47,7 @@
   <script src="src/js/native-ui.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
 </head>
 
@@ -8352,6 +8353,18 @@ function toggleMissionItem(itemKey, checked) {
     existing[itemKey] = false;
     engine.saveDailyMissionState(userId, date, existing);
   }
+  // Check if mission just completed — fire confetti once per day
+  const missionState = engine.getDailyMissionState(userId, date);
+  const compliance = engine.calculateDailyCompliance?.(missionState);
+  if (compliance?.isComplete) {
+    const missionCelebKey = 'missionCelebrated_' + userId + '_' + date;
+    if (!localStorage.getItem(missionCelebKey)) {
+      localStorage.setItem(missionCelebKey, '1');
+      if (typeof window.confetti === 'function') {
+        window.confetti({ particleCount: 60, spread: 50, origin: { x: 0.5, y: 0.6 }, colors: ['#52b788', '#95d5b2', '#d8f3dc', '#ffd166'], ticks: 120, gravity: 1.2, scalar: 0.9 });
+      }
+    }
+  }
   renderHomeDashboard();
 }
 
@@ -9362,7 +9375,7 @@ function renderCoachClientDetail(client) {
 
 function renderCoachClientRoster(clients = []) {
   if (!Array.isArray(clients) || !clients.length) {
-    return '<p class="coach-no-clients">No clients assigned yet. Demo roster will appear once coach relationships are configured.</p>';
+    return '<div style="text-align:center;padding:40px 20px;border:1px dashed var(--border-color);border-radius:12px;background:rgba(45,125,91,0.03);"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:14px;opacity:0.5;"><circle cx="32" cy="20" r="10" fill="var(--primary)"/><path d="M12 52 Q12 36 32 36 Q52 36 52 52" fill="var(--primary)" opacity="0.7"/></svg><p style="font-size:0.95rem;font-weight:600;color:var(--text-color);margin:0 0 6px;">No clients yet</p><p style="font-size:0.85rem;color:var(--secondary-text,#888);margin:0 0 14px;">Invite your first athlete to get started.</p></div>';
   }
   const cards = clients.map((client) => renderCoachClientCard(client)).join('');
   return `<section class="coach-roster-grid" aria-label="Coach client roster">${cards}</section>`;
@@ -12311,7 +12324,7 @@ function renderPRs() {
 
   if (!visibleCount) {
     const empty = document.createElement('div');
-    empty.textContent = 'No PRs found for the selected timeframe.';
+    empty.innerHTML = '<div style="text-align:center;padding:32px 16px;opacity:0.8;"><svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:12px;opacity:0.55;"><path d="M18 10 H38 V30 Q38 44 28 46 Q18 44 18 30 Z" fill="var(--primary)"/><path d="M18 14 Q8 14 8 22 Q8 30 18 28" stroke="var(--primary)" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M38 14 Q48 14 48 22 Q48 30 38 28" stroke="var(--primary)" stroke-width="3" fill="none" stroke-linecap="round"/><rect x="24" y="46" width="8" height="4" rx="1" fill="var(--primary-dark,#245f47)"/><rect x="18" y="50" width="20" height="4" rx="2" fill="var(--primary-dark,#245f47)"/></svg><p style="font-size:0.9rem;font-weight:600;color:var(--text-color);margin:0 0 4px;">No PRs yet</p><p style="font-size:0.8rem;color:var(--secondary-text,#888);margin:0;">Log workouts to start tracking personal records.</p></div>';
     panel.appendChild(empty);
   }
 }
@@ -13270,7 +13283,7 @@ function renderWorkoutHistoryFallback(container) {
   ).filter(entry => !userKey || !entry?.userId || entry.userId === userKey);
 
   if (!logs.length) {
-    container.innerHTML = '<p style="opacity:.7;">No workouts saved yet. Start logging in the Log tab to build your history.</p>';
+    container.innerHTML = '<div style="text-align:center;padding:40px 20px;opacity:0.85;"><svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:16px;opacity:0.6;"><rect x="8" y="36" width="64" height="8" rx="4" fill="var(--primary)"/><rect x="4" y="26" width="10" height="28" rx="5" fill="var(--primary-dark,#245f47)"/><rect x="66" y="26" width="10" height="28" rx="5" fill="var(--primary-dark,#245f47)"/><rect x="14" y="32" width="6" height="16" rx="2" fill="var(--primary)"/><rect x="60" y="32" width="6" height="16" rx="2" fill="var(--primary)"/></svg><p style="font-size:1rem;font-weight:600;color:var(--text-color);margin:0 0 6px;">No workouts logged yet</p><p style="font-size:0.875rem;color:var(--secondary-text,#888);margin:0;">Head to the Log tab to record your first session.</p></div>';
     return;
   }
 
