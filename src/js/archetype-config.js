@@ -32,7 +32,7 @@
       ],
       progressMetrics: ['volume', 'muscleGroupBalance', 'bodyweight', 'measurements'],
       visibleTabs: ['posingTab'],
-      hiddenTabs: ['powerliftingTab', 'crossfitTab'],
+      hiddenTabs: ['powerliftingTab', 'functionalTab'],
       periodisation: {
         phases: ['hypertrophy', 'intensification', 'deload'],
         blockLengthWeeks: 6,
@@ -74,7 +74,7 @@
       ],
       progressMetrics: ['estimated1RM', 'wilksScore', 'totalKg', 'bodyweight'],
       visibleTabs: ['powerliftingTab'],
-      hiddenTabs: ['posingTab', 'crossfitTab'],
+      hiddenTabs: ['posingTab', 'functionalTab'],
       periodisation: {
         phases: ['accumulation', 'transmutation', 'realisation', 'deload'],
         blockLengthWeeks: 4,
@@ -116,7 +116,7 @@
       ],
       progressMetrics: ['volume', 'estimated1RM', 'cardioCapacity', 'bodyweight'],
       visibleTabs: [],
-      hiddenTabs: ['posingTab', 'powerliftingTab', 'crossfitTab'],
+      hiddenTabs: ['posingTab', 'powerliftingTab', 'functionalTab'],
       periodisation: {
         phases: ['strength', 'conditioning', 'hybrid', 'deload'],
         blockLengthWeeks: 4,
@@ -158,7 +158,7 @@
       ],
       progressMetrics: ['streaks', 'totalWorkouts', 'bodyweight'],
       visibleTabs: [],
-      hiddenTabs: ['posingTab', 'powerliftingTab', 'crossfitTab'],
+      hiddenTabs: ['posingTab', 'powerliftingTab', 'functionalTab'],
       periodisation: {
         phases: ['general', 'deload'],
         blockLengthWeeks: 8,

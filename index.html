@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/sleep.css">
   <link rel="stylesheet" href="css/friends.css">
   <link rel="stylesheet" href="css/rehab.css">
+  <link rel="stylesheet" href="css/functional.css">
   <link rel="stylesheet" href="css/tabs.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/log.css">
@@ -945,59 +946,228 @@
 
   </div><!-- /checkInTab -->
   
-<div id="crossfitTab" class="tab-content">
-  <div id="cfEntryPanel" class="panel active">
+<div id="functionalTab" class="tab-content">
 
-  <h2>CrossFit Workout Tracker</h2>
+  <!-- Functional Fitness sub-nav -->
+  <h2>Functional Fitness</h2>
+  <nav class="log-subtabs" id="funcSubNav">
+    <button class="log-subtab active" data-fsub="crossfit">🏋️ CrossFit</button>
+    <button class="log-subtab" data-fsub="hyrox">🏃 HYROX</button>
+    <button class="log-subtab" data-fsub="circuits">⚡ Circuits</button>
+  </nav>
 
-  <input type="text" id="cfWorkoutName" placeholder="Workout Name (e.g., Murph)">
-  <input type="number" id="cfMinutes" placeholder="Time (Minutes)">
-  <input type="number" id="cfSeconds" placeholder="Time (Seconds)">
-  <input type="number" id="cfRounds" placeholder="Rounds Completed (optional)">
-  <textarea id="cfNotes" placeholder="Notes (optional)" style="width:100%;height:80px;margin-top:10px;"></textarea>
+  <!-- ══ Sub: CrossFit WODs ══════════════════════════════════ -->
+  <div id="fSub_crossfit" class="func-subview active">
+    <div id="cfEntryPanel" class="panel active">
+      <input type="text" id="cfWorkoutName" placeholder="Workout Name (e.g., Murph)">
+      <input type="number" id="cfMinutes" placeholder="Time (Minutes)">
+      <input type="number" id="cfSeconds" placeholder="Time (Seconds)">
+      <input type="number" id="cfRounds" placeholder="Rounds Completed (optional)">
+      <textarea id="cfNotes" placeholder="Notes (optional)" style="width:100%;height:80px;margin-top:10px;"></textarea>
 
-  <h3 style="margin-top:20px;">Exercises</h3>
-  <div id="cfExercisesContainer"></div>
-  <button onclick="addCrossfitExercise()">➕ Add Exercise</button>
+      <h3 style="margin-top:20px;">Exercises</h3>
+      <div id="cfExercisesContainer"></div>
+      <button onclick="addCrossfitExercise()">➕ Add Exercise</button>
 
-  <!-- WOD Interval Timer -->
-  <div class="wod-timer-card athlete-only">
-    <h3>Interval Timer</h3>
-    <div class="wod-format-tabs">
-      <button class="wod-format-btn active" data-wod-format="amrap">AMRAP</button>
-      <button class="wod-format-btn" data-wod-format="emom">EMOM</button>
-      <button class="wod-format-btn" data-wod-format="tabata">TABATA</button>
-      <button class="wod-format-btn" data-wod-format="fortime">For Time</button>
+      <div class="wod-timer-card">
+        <h3>Interval Timer</h3>
+        <div class="wod-format-tabs">
+          <button class="wod-format-btn active" data-wod-format="amrap">AMRAP</button>
+          <button class="wod-format-btn" data-wod-format="emom">EMOM</button>
+          <button class="wod-format-btn" data-wod-format="tabata">TABATA</button>
+          <button class="wod-format-btn" data-wod-format="fortime">For Time</button>
+        </div>
+        <div class="wod-timer-config">
+          <label id="wodConfigDuration">Duration (min)<input type="number" id="wodDuration" value="20" min="1" max="60"></label>
+          <label id="wodConfigRounds" style="display:none">Rounds<input type="number" id="wodRounds" value="10" min="1" max="60"></label>
+          <label id="wodConfigWork" style="display:none">Work (sec)<input type="number" id="wodWork" value="20" min="5" max="300"></label>
+          <label id="wodConfigRest" style="display:none">Rest (sec)<input type="number" id="wodRest" value="10" min="5" max="300"></label>
+        </div>
+        <div class="wod-timer-display">
+          <div class="wod-timer-clock" id="wodClock">00:00</div>
+          <div class="wod-timer-phase" id="wodPhase">Ready</div>
+        </div>
+        <div class="wod-timer-controls">
+          <button class="wod-start-btn" id="wodStartBtn">Start</button>
+          <button class="wod-pause-btn" id="wodPauseBtn" style="display:none">Pause</button>
+          <button class="wod-reset-btn" id="wodResetBtn">Reset</button>
+        </div>
+      </div>
+
+      <button style="margin-top:20px;" onclick="saveCrossfitWorkout()">Save Workout</button>
+
+      <div class="cf-template-controls" style="margin-top:20px;">
+        <label for="crossfitTemplateSelect">Load Saved Template</label>
+        <select id="crossfitTemplateSelect" onchange="loadCrossfitTemplate()" style="margin-top:10px;">
+          <option value="">-- Load Saved Template --</option>
+        </select>
+      </div>
     </div>
-    <div class="wod-timer-config">
-      <label id="wodConfigDuration">Duration (min)<input type="number" id="wodDuration" value="20" min="1" max="60"></label>
-      <label id="wodConfigRounds" style="display:none">Rounds<input type="number" id="wodRounds" value="10" min="1" max="60"></label>
-      <label id="wodConfigWork" style="display:none">Work (sec)<input type="number" id="wodWork" value="20" min="5" max="300"></label>
-      <label id="wodConfigRest" style="display:none">Rest (sec)<input type="number" id="wodRest" value="10" min="5" max="300"></label>
-    </div>
-    <div class="wod-timer-display">
-      <div class="wod-timer-clock" id="wodClock">00:00</div>
-      <div class="wod-timer-phase" id="wodPhase">Ready</div>
-    </div>
-    <div class="wod-timer-controls">
-      <button class="wod-start-btn" id="wodStartBtn">Start</button>
-      <button class="wod-pause-btn" id="wodPauseBtn" style="display:none">Pause</button>
-      <button class="wod-reset-btn" id="wodResetBtn">Reset</button>
+    <div id="cfHistoryPanel" class="panel">
+      <h3>Saved Workouts</h3>
+      <div id="cfWorkoutsContainer"></div>
     </div>
   </div>
 
-  <button style="margin-top:20px;" onclick="saveCrossfitWorkout()">Save CrossFit Workout</button>
+  <!-- ══ Sub: HYROX ══════════════════════════════════════════ -->
+  <div id="fSub_hyrox" class="func-subview">
+    <div class="rehab-card">
+      <h3>HYROX Race Simulation</h3>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px;">Log times for each station. Track your progress across simulations.</p>
 
-  <div class="cf-template-controls" style="margin-top:20px;">
-    <label for="crossfitTemplateSelect">Load Saved Template</label>
-    <select id="crossfitTemplateSelect" onchange="loadCrossfitTemplate()" style="margin-top: 10px;">
-      <option value="">-- Load Saved Template --</option>
-    </select>
+      <div class="hyrox-date-row">
+        <label style="font-size:0.78rem;color:var(--secondary-text);font-weight:600;">
+          Date <input type="date" id="hyroxDate" style="margin:0;">
+        </label>
+      </div>
+
+      <div class="hyrox-stations" id="hyroxStations">
+        <div class="hyrox-station" data-station="1">
+          <span class="hyrox-station-num">1</span>
+          <span class="hyrox-station-name">1km Run</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run1">
+        </div>
+        <div class="hyrox-station" data-station="2">
+          <span class="hyrox-station-num">2</span>
+          <span class="hyrox-station-name">SkiErg (1km)</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="skierg">
+        </div>
+        <div class="hyrox-station" data-station="3">
+          <span class="hyrox-station-num">3</span>
+          <span class="hyrox-station-name">1km Run</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run2">
+        </div>
+        <div class="hyrox-station" data-station="4">
+          <span class="hyrox-station-num">4</span>
+          <span class="hyrox-station-name">Sled Push (50m)</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="sledpush">
+        </div>
+        <div class="hyrox-station" data-station="5">
+          <span class="hyrox-station-num">5</span>
+          <span class="hyrox-station-name">1km Run</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run3">
+        </div>
+        <div class="hyrox-station" data-station="6">
+          <span class="hyrox-station-num">6</span>
+          <span class="hyrox-station-name">Sled Pull (50m)</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="sledpull">
+        </div>
+        <div class="hyrox-station" data-station="7">
+          <span class="hyrox-station-num">7</span>
+          <span class="hyrox-station-name">1km Run</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run4">
+        </div>
+        <div class="hyrox-station" data-station="8">
+          <span class="hyrox-station-num">8</span>
+          <span class="hyrox-station-name">Burpee Broad Jump (80m)</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="burpees">
+        </div>
+        <div class="hyrox-station" data-station="9">
+          <span class="hyrox-station-num">9</span>
+          <span class="hyrox-station-name">1km Run</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run5">
+        </div>
+        <div class="hyrox-station" data-station="10">
+          <span class="hyrox-station-num">10</span>
+          <span class="hyrox-station-name">Rowing (1km)</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="row">
+        </div>
+        <div class="hyrox-station" data-station="11">
+          <span class="hyrox-station-num">11</span>
+          <span class="hyrox-station-name">1km Run</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run6">
+        </div>
+        <div class="hyrox-station" data-station="12">
+          <span class="hyrox-station-num">12</span>
+          <span class="hyrox-station-name">Farmers Carry (200m)</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="farmers">
+        </div>
+        <div class="hyrox-station" data-station="13">
+          <span class="hyrox-station-num">13</span>
+          <span class="hyrox-station-name">1km Run</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run7">
+        </div>
+        <div class="hyrox-station" data-station="14">
+          <span class="hyrox-station-num">14</span>
+          <span class="hyrox-station-name">Sandbag Lunges (200m)</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="lunges">
+        </div>
+        <div class="hyrox-station" data-station="15">
+          <span class="hyrox-station-num">15</span>
+          <span class="hyrox-station-name">1km Run</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run8">
+        </div>
+        <div class="hyrox-station" data-station="16">
+          <span class="hyrox-station-num">16</span>
+          <span class="hyrox-station-name">Wall Balls (100 reps)</span>
+          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="wallballs">
+        </div>
+      </div>
+
+      <div class="hyrox-total" id="hyroxTotal">Total: —</div>
+      <button onclick="saveHyroxSimulation()" style="width:100%;margin-top:10px;">Save Simulation</button>
+    </div>
+
+    <!-- HYROX History -->
+    <div class="rehab-card" style="margin-top:12px;">
+      <h3>Past Simulations</h3>
+      <div id="hyroxHistory">
+        <div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No simulations logged yet.</div>
+      </div>
+    </div>
   </div>
-  </div>
-  <div id="cfHistoryPanel" class="panel">
-  <h3 style="margin-top:30px;">Saved CrossFit Workouts</h3>
-  <div id="cfWorkoutsContainer"></div>
+
+  <!-- ══ Sub: Functional Circuits ════════════════════════════ -->
+  <div id="fSub_circuits" class="func-subview">
+    <div class="rehab-card">
+      <h3>Quick Circuit Builder</h3>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px;">Build a timed functional circuit. Set exercises, work/rest intervals, and rounds.</p>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input type="text" id="circuitName" placeholder="Circuit name (e.g. Full Body Blitz)">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
+            Rounds <input type="number" id="circuitRounds" value="3" min="1" max="20" style="margin:0;">
+          </label>
+          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
+            Work (s) <input type="number" id="circuitWork" value="40" min="10" max="120" style="margin:0;">
+          </label>
+          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
+            Rest (s) <input type="number" id="circuitRest" value="20" min="5" max="60" style="margin:0;">
+          </label>
+        </div>
+
+        <div id="circuitExercises">
+          <div class="circuit-ex-row">
+            <input type="text" placeholder="Exercise 1" class="circuit-ex-input">
+          </div>
+        </div>
+        <button onclick="addCircuitExercise()" style="align-self:flex-start;padding:6px 14px;font-size:0.82rem;">+ Add Exercise</button>
+        <button onclick="startCircuitTimer()" style="width:100%;margin-top:8px;">▶ Start Circuit</button>
+      </div>
+    </div>
+
+    <!-- Circuit timer display -->
+    <div class="rehab-card" id="circuitTimerCard" style="margin-top:12px;display:none;">
+      <div style="text-align:center;">
+        <div id="circuitTimerPhase" style="font-size:0.8rem;color:var(--primary);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Ready</div>
+        <div id="circuitTimerClock" style="font-family:'Courier New',monospace;font-size:2.5rem;font-weight:700;color:var(--text-color);margin:8px 0;">00:00</div>
+        <div id="circuitTimerExercise" style="font-size:1rem;font-weight:600;color:var(--secondary-text);"></div>
+        <div id="circuitTimerRound" style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;"></div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+          <button id="circuitPauseBtn" onclick="toggleCircuitPause()" style="padding:10px 24px;">⏸ Pause</button>
+          <button onclick="stopCircuitTimer()" style="padding:10px 24px;background:#c05060;">⏹ Stop</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Saved circuits -->
+    <div class="rehab-card" style="margin-top:12px;">
+      <h3>Saved Circuits</h3>
+      <div id="circuitHistory">
+        <div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No circuits saved yet.</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2439,10 +2609,10 @@
         <span class="more-drawer-icon">🏋️</span>
         <span>Lifting</span>
       </button>
-      <button class="more-drawer-item athlete-only" data-tab="crossfitTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('crossfitTab'), 220)">
+      <button class="more-drawer-item athlete-only" data-tab="functionalTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('functionalTab'), 220)">
         <span class="more-drawer-icon">⚡</span>
-        <span>CrossFit</span>
+        <span>Functional</span>
       </button>
       <button class="more-drawer-item coach-only" data-tab="clientsTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('clientsTab'), 220)">
@@ -3045,7 +3215,7 @@ function showTab(tabName) {
     case 'posingTab':
       renderPosingTab();
       break;
-    case 'crossfitTab':
+    case 'functionalTab':
       renderCrossfitWorkouts();
       break;
     case 'powerliftingTab':
@@ -12600,6 +12770,200 @@ function loadCrossfitTemplate() {
   renderCrossfitEntries();
 }
 
+// ─────────────────────────────────────────────
+// FUNCTIONAL TAB — sub-tabs, HYROX, circuits
+// ─────────────────────────────────────────────
+
+(function initFunctionalSubTabs() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const nav = document.getElementById('funcSubNav');
+    if (!nav) return;
+    nav.addEventListener('click', e => {
+      const btn = e.target.closest('.log-subtab');
+      if (!btn) return;
+      const target = btn.dataset.fsub;
+      if (!target) return;
+      nav.querySelectorAll('.log-subtab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.func-subview').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('fSub_' + target);
+      if (panel) panel.classList.add('active');
+      if (target === 'hyrox') renderHyroxHistory();
+    });
+
+    // Set HYROX date to today
+    const dateEl = document.getElementById('hyroxDate');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+
+    // Auto-calc HYROX total on input
+    document.getElementById('hyroxStations')?.addEventListener('input', calcHyroxTotal);
+  });
+})();
+
+// ── HYROX ─────────────────────────────────────────────────────
+
+function parseMMSS(str) {
+  if (!str) return 0;
+  const parts = str.split(':').map(Number);
+  if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
+  return Number(str) || 0;
+}
+
+function fmtMMSS(totalSec) {
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function calcHyroxTotal() {
+  const inputs = document.querySelectorAll('.hyrox-time-input');
+  let total = 0;
+  inputs.forEach(inp => { total += parseMMSS(inp.value); });
+  const el = document.getElementById('hyroxTotal');
+  if (el) el.textContent = total > 0 ? 'Total: ' + fmtMMSS(total) : 'Total: —';
+}
+
+function saveHyroxSimulation() {
+  const user = currentUser || localStorage.getItem('fitnessAppUser');
+  if (!user) return;
+  const date = document.getElementById('hyroxDate')?.value || new Date().toISOString().slice(0, 10);
+  const stations = {};
+  let total = 0;
+  document.querySelectorAll('.hyrox-time-input').forEach(inp => {
+    const field = inp.dataset.field;
+    const secs = parseMMSS(inp.value);
+    stations[field] = secs;
+    total += secs;
+  });
+  if (total === 0) { if (typeof nativeToast === 'function') nativeToast('Enter times first', 'warn'); return; }
+
+  const log = JSON.parse(localStorage.getItem('hyroxLog_' + user) || '[]');
+  log.unshift({ date, stations, total, ts: Date.now() });
+  localStorage.setItem('hyroxLog_' + user, JSON.stringify(log));
+
+  // Clear inputs
+  document.querySelectorAll('.hyrox-time-input').forEach(inp => { inp.value = ''; });
+  calcHyroxTotal();
+  if (typeof nativeToast === 'function') nativeToast('HYROX simulation saved!', 'success');
+  renderHyroxHistory();
+}
+
+function renderHyroxHistory() {
+  const container = document.getElementById('hyroxHistory');
+  if (!container) return;
+  const user = currentUser || localStorage.getItem('fitnessAppUser');
+  if (!user) return;
+  const log = JSON.parse(localStorage.getItem('hyroxLog_' + user) || '[]');
+
+  if (!log.length) {
+    container.innerHTML = '<div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No simulations logged yet.</div>';
+    return;
+  }
+
+  container.innerHTML = log.slice(0, 10).map((entry, i) => {
+    const d = new Date(entry.date + 'T00:00:00');
+    const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return '<div class="hyrox-hist-item">'
+      + '<span class="hyrox-hist-date">' + label + '</span>'
+      + '<span class="hyrox-hist-total">' + fmtMMSS(entry.total) + '</span>'
+      + '<button class="hyrox-hist-delete" onclick="deleteHyrox(' + i + ')">✕</button>'
+      + '</div>';
+  }).join('');
+}
+
+function deleteHyrox(index) {
+  const user = currentUser || localStorage.getItem('fitnessAppUser');
+  if (!user) return;
+  const log = JSON.parse(localStorage.getItem('hyroxLog_' + user) || '[]');
+  log.splice(index, 1);
+  localStorage.setItem('hyroxLog_' + user, JSON.stringify(log));
+  renderHyroxHistory();
+}
+
+window.saveHyroxSimulation = saveHyroxSimulation;
+window.renderHyroxHistory = renderHyroxHistory;
+window.deleteHyrox = deleteHyrox;
+
+// ── Functional Circuits ───────────────────────────────────────
+
+function addCircuitExercise() {
+  const container = document.getElementById('circuitExercises');
+  if (!container) return;
+  const count = container.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'circuit-ex-row';
+  row.innerHTML = '<input type="text" placeholder="Exercise ' + count + '" class="circuit-ex-input">'
+    + '<button class="circuit-ex-remove" onclick="this.parentElement.remove()">✕</button>';
+  container.appendChild(row);
+}
+
+let _circuitInterval = null;
+let _circuitPaused = false;
+
+function startCircuitTimer() {
+  const exercises = [...document.querySelectorAll('.circuit-ex-input')].map(i => i.value.trim()).filter(Boolean);
+  if (!exercises.length) { if (typeof nativeToast === 'function') nativeToast('Add exercises first', 'warn'); return; }
+
+  const rounds = Number(document.getElementById('circuitRounds')?.value) || 3;
+  const workSec = Number(document.getElementById('circuitWork')?.value) || 40;
+  const restSec = Number(document.getElementById('circuitRest')?.value) || 20;
+
+  const card = document.getElementById('circuitTimerCard');
+  if (card) card.style.display = '';
+
+  let round = 1, exIdx = 0, phase = 'work', remaining = workSec;
+  _circuitPaused = false;
+
+  function update() {
+    const clockEl = document.getElementById('circuitTimerClock');
+    const phaseEl = document.getElementById('circuitTimerPhase');
+    const exEl = document.getElementById('circuitTimerExercise');
+    const roundEl = document.getElementById('circuitTimerRound');
+    if (clockEl) clockEl.textContent = fmtMMSS(remaining);
+    if (phaseEl) { phaseEl.textContent = phase === 'work' ? 'WORK' : 'REST'; phaseEl.style.color = phase === 'work' ? 'var(--primary)' : 'var(--highlight)'; }
+    if (exEl) exEl.textContent = phase === 'work' ? exercises[exIdx] : 'Rest';
+    if (roundEl) roundEl.textContent = 'Round ' + round + '/' + rounds + ' · Exercise ' + (exIdx + 1) + '/' + exercises.length;
+  }
+
+  update();
+
+  _circuitInterval = setInterval(() => {
+    if (_circuitPaused) return;
+    remaining--;
+    if (remaining <= 0) {
+      if (phase === 'work') {
+        phase = 'rest';
+        remaining = restSec;
+      } else {
+        phase = 'work';
+        exIdx++;
+        if (exIdx >= exercises.length) { exIdx = 0; round++; }
+        if (round > rounds) { stopCircuitTimer(); if (typeof nativeToast === 'function') nativeToast('Circuit complete!', 'success'); return; }
+        remaining = workSec;
+      }
+    }
+    update();
+  }, 1000);
+}
+
+function toggleCircuitPause() {
+  _circuitPaused = !_circuitPaused;
+  const btn = document.getElementById('circuitPauseBtn');
+  if (btn) btn.textContent = _circuitPaused ? '▶ Resume' : '⏸ Pause';
+}
+
+function stopCircuitTimer() {
+  clearInterval(_circuitInterval);
+  _circuitInterval = null;
+  const card = document.getElementById('circuitTimerCard');
+  if (card) card.style.display = 'none';
+}
+
+window.addCircuitExercise = addCircuitExercise;
+window.startCircuitTimer = startCircuitTimer;
+window.toggleCircuitPause = toggleCircuitPause;
+window.stopCircuitTimer = stopCircuitTimer;
+
 function addMacroHistoryEntry(date, meals, totals) {
   const key = `macroHistory_${currentUser}`;
   const macroHistory = JSON.parse(localStorage.getItem(key)) || [];
@@ -13929,7 +14293,7 @@ function applyTrainingModeClasses(mode) {
   if (activeTabEl) {
     const plOnlyTabs = ['powerliftingTab'];
     const bbOnlyTabs = ['posingTab'];
-    const athleteOnlyTabs = ['crossfitTab'];
+    const athleteOnlyTabs = ['functionalTab'];
     const id = activeTabEl.id;
     if (mode !== 'powerlifting' && plOnlyTabs.includes(id)) showTab('homeTab');
     if (mode !== 'bodybuilding' && bbOnlyTabs.includes(id)) showTab('homeTab');
