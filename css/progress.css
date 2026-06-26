@@ -35,6 +35,16 @@
   }
 }
 
+/* ── Progress sub-views (mini tabs) ────────────────────────── */
+
+.progress-subview {
+  display: none;
+}
+
+.progress-subview.active {
+  display: block;
+}
+
 /* ── Chart and calendar panels ──────────────────────────────── */
 
 .progress-chart,

@@ -2062,59 +2062,82 @@
 
   <div id="progressTab" class="tab-content">
     <h2>Progress Overview</h2>
-    <div class="progress-layout">
-      <div id="progressTogglePanel" class="panel active">
-      <nav class="progress-nav">
-        <button id="workoutProgressBtn" onclick="showWorkoutProgress()">Workout</button>
-        <button id="cardioProgressBtn" onclick="showCardioProgress()">Cardio</button>
-        <button id="bodyweightProgressBtn" onclick="showBodyweightProgress()">Bodyweight</button>
-        <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
-        <input type="date" id="startRange" onchange="refreshProgress()">
-        <input type="date" id="endRange" onchange="refreshProgress()">
-      </nav>
+
+    <!-- Progress mini-tab nav -->
+    <nav class="log-subtabs" id="progressSubNav">
+      <button class="log-subtab active" data-psub="charts">📈 Charts</button>
+      <button class="log-subtab" data-psub="prs">🏆 PRs</button>
+      <button class="log-subtab" data-psub="gamification">⭐ XP</button>
+      <button class="log-subtab" data-psub="tools">🔧 Tools</button>
+    </nav>
+
+    <!-- ══ Sub: Charts ═══════════════════════════════════════════ -->
+    <div id="pSub_charts" class="progress-subview active">
+      <div class="progress-layout">
+        <div id="progressTogglePanel" class="panel active">
+        <nav class="progress-nav">
+          <button id="workoutProgressBtn" onclick="showWorkoutProgress()">Workout</button>
+          <button id="cardioProgressBtn" onclick="showCardioProgress()">Cardio</button>
+          <button id="bodyweightProgressBtn" onclick="showBodyweightProgress()">Bodyweight</button>
+          <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
+          <input type="date" id="startRange" onchange="refreshProgress()">
+          <input type="date" id="endRange" onchange="refreshProgress()">
+        </nav>
+        </div>
+        <div id="progressChartsPanel" class="panel">
+        <section class="progress-chart">
+          <div id="aiPlateauCard" style="display:none;margin-bottom:12px;"></div>
+          <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
+          <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
+          <canvas id="progressCanvas" height="220"></canvas>
+          <div id="exerciseProgress" style="display:none;"></div>
+          <div id="trainingLoadPanel" style="margin-top:14px;">
+            <h3 style="margin-bottom:6px;">Training Stress
+              <span title="Monotony = mean daily load / standard deviation of daily load. Strain = monotony × weekly load." style="cursor:help;">ⓘ</span>
+            </h3>
+            <p style="margin:0 0 8px; font-size:.9rem;">
+              <strong>Monotony</strong> and <strong>Strain</strong> are calculated from weekly volume and intensity load.
+            </p>
+            <canvas id="monotonyCanvas" height="180" style="max-height:180px; margin-bottom:10px;"></canvas>
+            <canvas id="strainCanvas" height="180" style="max-height:180px;"></canvas>
+            <div id="loadAlerts" style="margin-top:8px;"></div>
+          </div>
+          <div id="bodybuildingProgressPanel"></div>
+          <div id="goalBar" style="margin-top:10px;"></div>
+          <div id="goalProgressList" style="margin-top:10px;"></div>
+          <div id="coachCorner" style="margin-top:10px;"></div>
+        </section>
       </div>
-      <div id="progressChartsPanel" class="panel">
-      <section class="progress-chart">
-        <div id="aiPlateauCard" style="display:none;margin-bottom:12px;"></div>
-        <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
-        <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
-        <canvas id="progressCanvas" height="220"></canvas>
-        <div id="exerciseProgress" style="display:none;"></div>
-        <div id="trainingLoadPanel" style="margin-top:14px;">
-          <h3 style="margin-bottom:6px;">Training Stress
-            <span title="Monotony = mean daily load / standard deviation of daily load. Strain = monotony × weekly load." style="cursor:help;">ⓘ</span>
-          </h3>
-          <p style="margin:0 0 8px; font-size:.9rem;">
-            <strong title="Higher values indicate less day-to-day variation in training load.">Monotony</strong> and
-            <strong title="Strain combines weekly work and monotony to estimate total stress.">Strain</strong> are calculated from weekly volume and intensity load.
-          </p>
-          <canvas id="monotonyCanvas" height="180" style="max-height:180px; margin-bottom:10px;"></canvas>
-          <canvas id="strainCanvas" height="180" style="max-height:180px;"></canvas>
-          <div id="loadAlerts" style="margin-top:8px;"></div>
-        </div>
-        <div id="bodybuildingProgressPanel"></div>
-        <div id="goalBar" style="margin-top:10px;"></div>
-        <div id="goalProgressList" style="margin-top:10px;"></div>
-        <div id="coachCorner" style="margin-top:10px;"></div>
-      </section>
-      <aside class="progress-calendar">
-        <div id="progressCalendar"></div>
-        <label for="prTimeframe" style="display:block;margin-top:10px;">PR Timeframe</label>
-        <select id="prTimeframe" onchange="renderPRs()" style="width:100%;margin-bottom:8px;">
-          <option value="all">All time</option>
-          <option value="year">Last year</option>
-        </select>
-        <div id="prPanel"></div>
-        <div id="milestoneBadges"></div>
-        <div id="gamificationBadgeSection" class="gamification-panel" style="margin-top:12px;">
-          <h3 style="margin:0 0 8px;">Badge Gallery</h3>
-          <div id="gamificationBadgeGallery" class="gamification-badge-grid"></div>
-        </div>
-        <div id="gamificationEventsSection" class="gamification-panel" style="margin-top:12px;">
-          <h3 style="margin:0 0 8px;">Recent Events</h3>
-          <div id="gamificationEventsFeed" class="gamification-events-feed"></div>
-        </div>
-      </aside>
+    </div>
+    </div>
+
+    <!-- ══ Sub: PRs ══════════════════════════════════════════════ -->
+    <div id="pSub_prs" class="progress-subview">
+      <div id="progressCalendar" style="margin-bottom:12px;"></div>
+      <label for="prTimeframe" style="display:block;margin-top:10px;font-size:0.82rem;color:var(--secondary-text);">PR Timeframe</label>
+      <select id="prTimeframe" onchange="renderPRs()" style="width:100%;margin-bottom:8px;">
+        <option value="all">All time</option>
+        <option value="year">Last year</option>
+      </select>
+      <div id="prPanel"></div>
+      <div id="milestoneBadges" style="margin-top:12px;"></div>
+      <div id="dashboardPRSummary" class="panel" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- ══ Sub: Gamification ═════════════════════════════════════ -->
+    <div id="pSub_gamification" class="progress-subview">
+      <div id="gamificationBadgeSection" class="gamification-panel" style="margin-bottom:12px;">
+        <h3 style="margin:0 0 8px;">Badge Gallery</h3>
+        <div id="gamificationBadgeGallery" class="gamification-badge-grid"></div>
+      </div>
+      <div id="gamificationEventsSection" class="gamification-panel" style="margin-bottom:12px;">
+        <h3 style="margin:0 0 8px;">Recent Events</h3>
+        <div id="gamificationEventsFeed" class="gamification-events-feed"></div>
+      </div>
+    </div>
+
+    <!-- ══ Sub: Tools (Export + Reminders) ════════════════════════ -->
+    <div id="pSub_tools" class="progress-subview">
       <!-- Reminders Section -->
       <div class="export-section" style="margin-bottom:16px;">
         <p class="export-section-title">🔔 Reminders</p>
@@ -3072,6 +3095,7 @@ function showTab(tabName) {
         window.renderGamificationUI(currentUser);
       }
       runPlateauCheck(currentUser);
+      initProgressSubTabs();
       break;
     case 'logHistoryTab':
       renderWorkoutHistoryTab();
@@ -11614,6 +11638,34 @@ async function runPlateauCheck(username) {
   } catch {
     // Silent fail — no error UI shown
   }
+}
+
+function initProgressSubTabs() {
+  const nav = document.getElementById('progressSubNav');
+  if (!nav || nav._wired) return;
+  nav._wired = true;
+
+  nav.addEventListener('click', function (e) {
+    const btn = e.target.closest('.log-subtab');
+    if (!btn) return;
+    const target = btn.dataset.psub;
+    if (!target) return;
+
+    nav.querySelectorAll('.log-subtab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    document.querySelectorAll('.progress-subview').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('pSub_' + target);
+    if (panel) panel.classList.add('active');
+
+    if (target === 'prs') {
+      renderDashboardPRSummary();
+      if (typeof renderPRs === 'function') renderPRs();
+    }
+    if (target === 'gamification' && typeof window.renderGamificationUI === 'function' && currentUser) {
+      window.renderGamificationUI(currentUser);
+    }
+  });
 }
 
 async function showWorkoutProgress(data) {
