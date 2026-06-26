@@ -2306,6 +2306,34 @@
 
     <!-- ══ Sub: Tools (Export + Reminders) ════════════════════════ -->
     <div id="pSub_tools" class="progress-subview">
+      <!-- Subscription Section -->
+      <div class="export-section" style="margin-bottom:16px;">
+        <p class="export-section-title">💎 Subscription</p>
+        <div id="subscriptionPanel" style="font-size:0.88rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--surface-bg);border:1px solid var(--border-color);border-radius:12px;margin-bottom:8px;">
+            <div>
+              <div style="font-weight:700;color:var(--text-color);" id="subPlanLabel">Free Plan</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);" id="subStatusLabel">No active subscription</div>
+            </div>
+            <button onclick="openManageBilling()" style="padding:8px 16px;border-radius:10px;font-size:0.78rem;font-weight:700;margin:0;box-shadow:none;" id="subActionBtn">Upgrade</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Referral Section -->
+      <div class="export-section" style="margin-bottom:16px;">
+        <p class="export-section-title">🎁 Refer a Friend</p>
+        <p class="export-section-sub">Share your link. When a friend upgrades, you both get 1 month free.</p>
+        <div id="referralPanel">
+          <div class="referral-link-row">
+            <input class="referral-link-input" id="referralLinkInput" value="" readonly>
+            <button class="referral-copy-btn" onclick="copyReferralLink()">Copy</button>
+          </div>
+          <div id="referralCreditBadge" style="display:none;" class="referral-credit-badge"></div>
+          <p id="referralStats" style="font-size:0.78rem;color:var(--text-muted);margin:4px 0 0;"></p>
+        </div>
+      </div>
+
       <!-- Reminders Section -->
       <div class="export-section" style="margin-bottom:16px;">
         <p class="export-section-title">🔔 Reminders</p>
@@ -2999,8 +3027,225 @@ function _doLocalLogin(username) {
   renderDailyMacroProgress?.();
   if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
   if (typeof window.initSessionContext === 'function') window.initSessionContext();
+  loadUserPlan();
   setTimeout(() => { if (typeof showReadinessIfNeeded === 'function') showReadinessIfNeeded(); }, 1500);
 }
+
+// ── Plan helpers ──────────────────────────────────────────────
+
+async function loadUserPlan() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) { window.currentUserPlan = 'free'; return; }
+    const res = await fetch(`${window.SERVER_URL}/api/user/plan`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    window.currentUserPlan = data.plan || 'free';
+    window.currentSubStatus = data.status || 'none';
+    window.currentReferralCode = data.referralCode || '';
+    window.currentReferralCredits = data.referralCredits || 0;
+    localStorage.setItem('userPlan', window.currentUserPlan);
+  } catch {
+    window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
+  }
+}
+
+function isPro() { return window.currentUserPlan === 'pro' || window.currentUserPlan === 'coach'; }
+function isCoach() { return window.currentUserPlan === 'coach'; }
+function isActiveSub() { return ['active', 'trialing'].includes(window.currentSubStatus); }
+
+window.isPro = isPro;
+window.isCoach = isCoach;
+window.isActiveSub = isActiveSub;
+
+function renderLockedCard(featureName, requiredPlan) {
+  requiredPlan = requiredPlan || 'pro';
+  var planLabel = requiredPlan === 'coach' ? 'Coach' : 'Pro';
+  var price = requiredPlan === 'coach' ? '£16' : '£9';
+  return '<div class="locked-feature-card">'
+    + '<div class="locked-icon">🔒</div>'
+    + '<div class="locked-title">' + featureName + '</div>'
+    + '<div class="locked-desc">Available on ' + planLabel + ' (from ' + price + '/month)</div>'
+    + '<button class="upgrade-cta-btn" onclick="openUpgradeModal(\'' + requiredPlan + '\')">Unlock with ' + planLabel + '</button>'
+    + '</div>';
+}
+
+function openCheckout(plan) {
+  var billing = localStorage.getItem('billingCycle') || 'annual';
+  var modal = document.createElement('div');
+  modal.className = 'payment-method-modal';
+  modal.innerHTML = '<div class="payment-method-inner">'
+    + '<h3>Choose payment method</h3>'
+    + '<p class="payment-sub">Both options include a 7-day free trial</p>'
+    + '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')">💳 Pay with Card</button>'
+    + '<p class="payment-note">Secure checkout powered by Stripe</p>'
+    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()">✕</button>'
+    + '</div>';
+  document.body.appendChild(modal);
+}
+
+async function checkoutWithStripe(plan, billing) {
+  document.querySelector('.payment-method-modal')?.remove();
+  var username = window.currentUser || localStorage.getItem('fitnessAppUser');
+  try {
+    var res = await fetch(window.SERVER_URL + '/api/stripe/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, plan: plan, billing: billing })
+    });
+    var data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else if (typeof nativeToast === 'function') nativeToast('Could not start checkout', 'error');
+  } catch {
+    if (typeof nativeToast === 'function') nativeToast('Connection error', 'error');
+  }
+}
+
+function openUpgradeModal(defaultPlan) {
+  defaultPlan = defaultPlan || 'pro';
+  var billing = localStorage.getItem('billingCycle') || 'annual';
+  var isAnnual = billing === 'annual';
+
+  var overlay = document.createElement('div');
+  overlay.className = 'payment-method-modal';
+  overlay.innerHTML = '<div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:20px;padding:24px;max-width:500px;width:95%;max-height:85vh;overflow-y:auto;position:relative;">'
+    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()">✕</button>'
+    + '<h3 style="text-align:center;margin:0 0 4px;">Upgrade Pocket Coach</h3>'
+    + '<p style="text-align:center;color:var(--secondary-text);font-size:0.82rem;margin:0 0 16px;">Unlock AI features and coaching tools</p>'
+    + '<div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px;align-items:center;">'
+    + '<span style="font-size:0.82rem;color:' + (!isAnnual ? 'var(--text-color)' : 'var(--text-muted)') + ';">Monthly</span>'
+    + '<label class="reminder-toggle" style="width:44px;height:24px;"><input type="checkbox" id="modalBillingToggle" ' + (isAnnual ? 'checked' : '') + ' onchange="toggleModalBilling()"><span class="reminder-toggle-track"></span></label>'
+    + '<span style="font-size:0.82rem;color:' + (isAnnual ? 'var(--text-color)' : 'var(--text-muted)') + ';">Annual</span>'
+    + '<span style="background:var(--primary);color:#fff;font-size:0.68rem;padding:3px 8px;border-radius:4px;font-weight:700;">SAVE 20%</span>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    // Pro card
+    + '<div style="border:2px solid var(--primary);border-radius:16px;padding:20px;position:relative;">'
+    + '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;font-size:0.65rem;padding:3px 10px;border-radius:10px;font-weight:700;">MOST POPULAR</div>'
+    + '<div style="font-size:1rem;font-weight:700;margin-bottom:4px;">Pro</div>'
+    + '<div id="modalProPrice" style="font-size:1.4rem;font-weight:700;color:var(--primary);">' + (isAnnual ? '£7' : '£9') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span></div>'
+    + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £84/year · save £24</div>' : '')
+    + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">7-day free trial</div>'
+    + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
+    + '<li style="margin-bottom:4px;">✨ AI check-in summaries</li>'
+    + '<li style="margin-bottom:4px;">✨ AI macro advisor</li>'
+    + '<li style="margin-bottom:4px;">✨ AI program generator</li>'
+    + '<li style="margin-bottom:4px;">✨ AI plateau detector</li>'
+    + '<li>✨ Priority support</li></ul>'
+    + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'pro\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
+    + '</div>'
+    // Coach card
+    + '<div style="border:2px solid #c6944f;border-radius:16px;padding:20px;position:relative;">'
+    + '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#c6944f;color:#fff;font-size:0.65rem;padding:3px 10px;border-radius:10px;font-weight:700;">FOR COACHES</div>'
+    + '<div style="font-size:1rem;font-weight:700;margin-bottom:4px;">Coach</div>'
+    + '<div id="modalCoachPrice" style="font-size:1.4rem;font-weight:700;color:#c6944f;">' + (isAnnual ? '£13' : '£16') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span></div>'
+    + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £156/year · save £36</div>' : '')
+    + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">Everything in Pro, plus:</div>'
+    + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
+    + '<li style="margin-bottom:4px;">👥 Full coaching dashboard</li>'
+    + '<li style="margin-bottom:4px;">📋 Client roster</li>'
+    + '<li style="margin-bottom:4px;">✍️ AI draft messages</li>'
+    + '<li style="margin-bottom:4px;">📊 Compliance tracking</li>'
+    + '<li>💰 Flat fee — no per-client</li></ul>'
+    + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'coach\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:#c6944f;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
+    + '</div></div></div>';
+  document.body.appendChild(overlay);
+}
+
+function toggleModalBilling() {
+  var isAnnual = document.getElementById('modalBillingToggle')?.checked;
+  localStorage.setItem('billingCycle', isAnnual ? 'annual' : 'monthly');
+  var proPrice = document.getElementById('modalProPrice');
+  var coachPrice = document.getElementById('modalCoachPrice');
+  if (proPrice) proPrice.innerHTML = (isAnnual ? '£7' : '£9') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span>';
+  if (coachPrice) coachPrice.innerHTML = (isAnnual ? '£13' : '£16') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span>';
+}
+
+async function openManageBilling() {
+  var username = window.currentUser || localStorage.getItem('fitnessAppUser');
+  if (!isPro() && !isCoach()) { openUpgradeModal(); return; }
+  try {
+    var res = await fetch(window.SERVER_URL + '/api/stripe/portal?username=' + encodeURIComponent(username));
+    var data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else if (typeof nativeToast === 'function') nativeToast('Could not open billing portal', 'error');
+  } catch {
+    if (typeof nativeToast === 'function') nativeToast('Connection error', 'error');
+  }
+}
+
+window.openUpgradeModal = openUpgradeModal;
+window.openCheckout = openCheckout;
+window.openManageBilling = openManageBilling;
+window.renderLockedCard = renderLockedCard;
+window.loadUserPlan = loadUserPlan;
+
+function renderSubscriptionPanel() {
+  var plan = window.currentUserPlan || 'free';
+  var label = document.getElementById('subPlanLabel');
+  var status = document.getElementById('subStatusLabel');
+  var btn = document.getElementById('subActionBtn');
+  if (label) label.textContent = plan === 'coach' ? 'Coach Plan' : plan === 'pro' ? 'Pro Plan' : 'Free Plan';
+  if (status) {
+    var s = window.currentSubStatus || 'none';
+    status.textContent = s === 'active' ? 'Active subscription' : s === 'trialing' ? 'Free trial active' : s === 'past_due' ? 'Payment issue' : 'No active subscription';
+  }
+  if (btn) {
+    btn.textContent = (plan === 'pro' || plan === 'coach') ? 'Manage Billing' : 'Upgrade';
+    btn.style.background = (plan === 'pro' || plan === 'coach') ? 'transparent' : '';
+    btn.style.border = (plan === 'pro' || plan === 'coach') ? '1px solid var(--border-color)' : '';
+    btn.style.color = (plan === 'pro' || plan === 'coach') ? 'var(--secondary-text)' : '';
+  }
+}
+
+async function loadReferralPanel() {
+  var username = window.currentUser || localStorage.getItem('fitnessAppUser');
+  var linkInput = document.getElementById('referralLinkInput');
+  var badge = document.getElementById('referralCreditBadge');
+  var statsEl = document.getElementById('referralStats');
+
+  if (window.currentReferralCode) {
+    var url = 'https://butterszzz-art.github.io/TrainingLog-mobile/#signup?ref=' + window.currentReferralCode;
+    if (linkInput) linkInput.value = url;
+  }
+
+  try {
+    var res = await fetch(window.SERVER_URL + '/api/referral/stats?username=' + encodeURIComponent(username));
+    var data = await res.json();
+    if (linkInput && data.referralCode) {
+      linkInput.value = 'https://butterszzz-art.github.io/TrainingLog-mobile/#signup?ref=' + data.referralCode;
+    }
+    if (badge && data.referralCredits > 0) {
+      badge.style.display = '';
+      badge.innerHTML = '🎉 You have <strong>' + data.referralCredits + ' free month' + (data.referralCredits > 1 ? 's' : '') + '</strong> — applied on your next upgrade';
+    }
+    if (statsEl) statsEl.textContent = data.referralCount + ' friend' + (data.referralCount !== 1 ? 's' : '') + ' referred';
+  } catch {
+    if (statsEl) statsEl.textContent = '';
+  }
+}
+
+function copyReferralLink() {
+  var input = document.getElementById('referralLinkInput');
+  if (!input || !input.value) return;
+  navigator.clipboard?.writeText(input.value).then(function () {
+    if (typeof nativeToast === 'function') nativeToast('Referral link copied!', 'success');
+  }).catch(function () {
+    input.select();
+    document.execCommand('copy');
+    if (typeof nativeToast === 'function') nativeToast('Referral link copied!', 'success');
+  });
+}
+
+window.renderSubscriptionPanel = renderSubscriptionPanel;
+window.loadReferralPanel = loadReferralPanel;
+window.copyReferralLink = copyReferralLink;
+
+// Restore plan on page load
+window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
+window.currentSubStatus = 'none';
+
 // ────────────────────────────────────────────────────────────────────────────
 
 async function startLogin() {
@@ -3304,6 +3549,8 @@ function showTab(tabName) {
       initSmartGoalForm();
       if (typeof renderRemindersPanel === 'function') renderRemindersPanel();
       loadKnowledgeModules();
+      renderSubscriptionPanel();
+      loadReferralPanel();
 
       // Wire settings sub-tabs via delegation (idempotent)
       const stc = document.getElementById('settingsFormContainer');

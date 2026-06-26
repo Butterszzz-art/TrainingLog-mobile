@@ -1959,3 +1959,142 @@ body.theme-dark .set-row {
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* ── Locked feature cards ──────────────────────────────────── */
+
+.locked-feature-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 36px 24px;
+  border: 1px dashed var(--border-color);
+  border-radius: 16px;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.locked-icon { font-size: 2rem; opacity: 0.6; }
+.locked-title { font-size: 1.1rem; font-weight: 600; color: var(--text-color); }
+.locked-desc { font-size: 0.88rem; color: var(--secondary-text); }
+
+.upgrade-cta-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: none;
+}
+
+.upgrade-cta-btn:hover { filter: brightness(1.12); transform: none; }
+
+/* ── Payment method modal ──────────────────────────────────── */
+
+.payment-method-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.payment-method-inner {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 32px 28px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+}
+
+.payment-method-inner h3 { margin: 0 0 6px; font-size: 1.2rem; }
+.payment-sub { color: var(--secondary-text); font-size: 0.85rem; margin: 0 0 24px; }
+
+.pay-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  margin-bottom: 12px;
+  box-shadow: none;
+}
+
+.pay-btn:hover { filter: brightness(1.1); transform: none; }
+.pay-stripe { background: var(--primary); color: #fff; }
+
+.payment-note { font-size: 0.78rem; color: var(--secondary-text); margin: 8px 0 0; }
+
+.close-payment-modal {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--secondary-text);
+  cursor: pointer;
+  box-shadow: none;
+  margin: 0;
+  padding: 4px;
+}
+
+/* ── Referral section ──────────────────────────────────────── */
+
+.referral-link-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.referral-link-input {
+  flex: 1;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  font-family: monospace;
+  margin: 0;
+}
+
+.referral-copy-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  margin: 0;
+  box-shadow: none;
+}
+
+.referral-credit-badge {
+  background: rgba(45,125,91,0.15);
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  color: var(--text-color);
+}
