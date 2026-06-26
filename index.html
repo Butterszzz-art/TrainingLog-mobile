@@ -39,15 +39,13 @@
   <meta name="apple-mobile-web-app-title" content="Pocket Coach">
   <link rel="apple-touch-icon" href="/public/icons/icon-180.png">
   <link rel="apple-touch-icon" sizes="152x152" href="/public/icons/icon-152.png">
-  <link rel="apple-touch-icon" sizes="144x144" href="/public/icons/icon-144.png">
+  <link rel="apple-touch-icon" href="public/icons/icon.svg">
   <link rel="apple-touch-icon" sizes="120x120" href="/public/icons/icon-128.png">
   <link rel="apple-touch-icon" sizes="76x76" href="/public/icons/icon-96.png">
   <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/public/icons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/public/icons/favicon-16.png">
+  <link rel="icon" type="image/svg+xml" href="public/icons/icon.svg">
   <script src="src/js/native-ui.js"></script>
 
-  <link rel="manifest" href="manifest.json">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
@@ -3031,12 +3029,13 @@ async function startLogin() {
     if (typeof window.login === 'function') {
       result = await window.login(username, password);
     } else {
+      if (errorEl) errorEl.textContent = 'Connecting to server…';
       const response = await fetchWithTimeout(`${window.SERVER_URL}/login`, {
         method: 'POST',
         credentials: "include",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
-      }, 12000);
+      }, 35000);
 
       try {
         result = await response.json();
@@ -3470,7 +3469,7 @@ async function startSignup() {
   }
 
   try {
-    // POST /register — returns token directly, no second login call needed
+    if (errorEl) errorEl.textContent = 'Creating your account…';
     const response = await fetch(`${window.SERVER_URL}/register`, {
       method: 'POST',
       credentials: "include",
