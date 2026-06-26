@@ -3207,7 +3207,7 @@ async function loadReferralPanel() {
   var statsEl = document.getElementById('referralStats');
 
   if (window.currentReferralCode) {
-    var url = 'https://butterszzz-art.github.io/TrainingLog-mobile/#signup?ref=' + window.currentReferralCode;
+    var url = 'https://pocketcoachcoms.org/#signup?ref=' + window.currentReferralCode;
     if (linkInput) linkInput.value = url;
   }
 
@@ -3215,7 +3215,7 @@ async function loadReferralPanel() {
     var res = await fetch(window.SERVER_URL + '/api/referral/stats?username=' + encodeURIComponent(username));
     var data = await res.json();
     if (linkInput && data.referralCode) {
-      linkInput.value = 'https://butterszzz-art.github.io/TrainingLog-mobile/#signup?ref=' + data.referralCode;
+      linkInput.value = 'https://pocketcoachcoms.org/#signup?ref=' + data.referralCode;
     }
     if (badge && data.referralCredits > 0) {
       badge.style.display = '';
