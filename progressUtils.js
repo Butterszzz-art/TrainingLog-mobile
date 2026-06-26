@@ -91,12 +91,17 @@ function getSessionDateStamp(workout, fallback = Date.now()) {
 
 function notifyPR(message) {
   if (typeof window === 'undefined' || !message) return;
+  if (typeof window.confetti === 'function') {
+    window.confetti({
+      particleCount: 100, spread: 70,
+      origin: { x: 0.5, y: 0.85 },
+      colors: ['#2d6a4f', '#52b788', '#95d5b2', '#ffd166', '#ffffff'],
+      ticks: 180
+    });
+  }
   if (typeof window.showToast === 'function') {
     window.showToast(message);
     return;
-  }
-  if (typeof window.alert === 'function') {
-    window.alert(message);
   }
 }
 

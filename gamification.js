@@ -262,6 +262,20 @@
 
   function showCelebration(type, message) {
     if (typeof document === 'undefined' || !message) return;
+
+    if (type === 'pr_bonus' && typeof window.confetti === 'function') {
+      window.confetti({
+        particleCount: 120, spread: 80,
+        origin: { x: 0.5, y: 0.85 },
+        colors: ['#2d6a4f', '#52b788', '#95d5b2', '#d8f3dc', '#ffd166', '#ffffff'],
+        ticks: 200, gravity: 0.9, scalar: 1.1
+      });
+      setTimeout(() => {
+        window.confetti({ particleCount: 40, angle: 60, spread: 55, origin: { x: 0, y: 0.8 }, colors: ['#52b788', '#ffd166'] });
+        window.confetti({ particleCount: 40, angle: 120, spread: 55, origin: { x: 1, y: 0.8 }, colors: ['#52b788', '#ffd166'] });
+      }, 150);
+    }
+
     const root = ensureCelebrationContainer();
     if (!root) return;
 
@@ -294,7 +308,7 @@
       card.style.opacity = '0';
       card.style.transform = 'translateY(6px)';
       setTimeout(() => card.remove(), 180);
-    }, 2000);
+    }, 3000);
   }
 
   function normalizeXpBuckets(state, dateLike) {
@@ -513,7 +527,7 @@
 
   function renderBadgeGallery(state) {
     const badges = ensureArray(state.badges);
-    if (!badges.length) return '<p class="gamification-empty">No badges unlocked yet.</p>';
+    if (!badges.length) return '<div style="text-align:center;padding:24px 16px;opacity:0.75;"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:10px;opacity:0.5;"><polygon points="24,4 29,17 44,17 32,26 37,40 24,31 11,40 16,26 4,17 19,17" fill="var(--primary,#2d7d5b)" opacity="0.7"/></svg><p style="font-size:0.85rem;color:var(--secondary-text,#888);margin:0;">Complete workouts and missions to unlock badges.</p></div>';
     return badges.slice().reverse().map(badge => `<div class="gamification-badge-pill" title="${badge.description || ''}">${badge.title}</div>`).join('');
   }
 
