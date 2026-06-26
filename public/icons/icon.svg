@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0b130d"/>
+  <rect x="24" y="24" width="464" height="464" rx="80" fill="#121b17" stroke="#2d7d5b" stroke-width="4"/>
+  <g transform="translate(256,240)" fill="none" stroke="#2d7d5b" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Dumbbell -->
+    <line x1="-120" y1="0" x2="120" y2="0"/>
+    <rect x="-160" y="-40" width="50" height="80" rx="8" fill="#2d7d5b"/>
+    <rect x="110" y="-40" width="50" height="80" rx="8" fill="#2d7d5b"/>
+    <rect x="-180" y="-28" width="28" height="56" rx="6" fill="#245f47"/>
+    <rect x="152" y="-28" width="28" height="56" rx="6" fill="#245f47"/>
+  </g>
+  <text x="256" y="400" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="72" fill="#f4f7f5">POCKET</text>
+  <text x="256" y="460" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="52" fill="#2d7d5b">COACH</text>
+</svg>
