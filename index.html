@@ -10611,7 +10611,15 @@ function addWeightEntry() {
   const dateField = document.getElementById("weightDateInput");
   const date = dateField.value || new Date().toISOString().split('T')[0];
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  log.push({ weight, unit, weightKg, date, calories: null, cardio: null });
+  // Replace if same date exists, otherwise add
+  const existingIdx = log.findIndex(e => e.date === date);
+  if (existingIdx >= 0) {
+    log[existingIdx] = { weight, unit, weightKg, date, calories: log[existingIdx].calories, cardio: log[existingIdx].cardio };
+  } else {
+    log.push({ weight, unit, weightKg, date, calories: null, cardio: null });
+  }
+  // Sort by date ascending so oldest is first, newest is last
+  log.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   localStorage.setItem(`bodyweightLog_${currentUser}`, JSON.stringify(log));
   try {
     if (window.dailyMissionEngine?.syncMissionFromBodyweightEntry) {
@@ -10647,6 +10655,8 @@ function addWeightEntry() {
 
 function renderWeights() {
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
+  // Ensure sorted by date ascending
+  log.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const body = document.getElementById("weightBody");
   body.innerHTML = '';
   const pref = getBodyweightPreference();
