@@ -2027,20 +2027,27 @@
                 <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
               </div>
             </details>
-            <div style="margin-top:8px;">
-              <label><input type="checkbox" id="trainingDayToggle"> Training Day</label>
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:10px;">
-                <label style="display:flex;flex-direction:column;gap:4px;">
+            <div style="margin-top:12px;">
+              <div style="display:flex;gap:10px;margin-bottom:12px;">
+                <label class="macro-toggle-card" id="trainingDayCard" onclick="document.getElementById('trainingDayToggle').click()">
+                  <input type="checkbox" id="trainingDayToggle" style="display:none;">
+                  <span class="macro-toggle-icon">🏋️</span>
+                  <span class="macro-toggle-label">Training Day</span>
+                </label>
+                <label class="macro-toggle-card" id="refeedDayCard" onclick="document.getElementById('refeedDayToggle').click()">
+                  <input type="checkbox" id="refeedDayToggle" style="display:none;">
+                  <span class="macro-toggle-icon">🍚</span>
+                  <span class="macro-toggle-label">Refeed Day</span>
+                </label>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+                <label style="font-size:0.75rem;font-weight:600;color:var(--secondary-text);text-transform:uppercase;letter-spacing:0.04em;">
                   Carb Day
-                  <select id="carbCycleSelect">
+                  <select id="carbCycleSelect" style="margin-top:4px;">
                     <option value="normal">Normal</option>
                     <option value="high">High Day</option>
                     <option value="low">Low Day</option>
                   </select>
-                </label>
-                <label style="display:flex;align-items:center;gap:6px;padding-top:20px;white-space:nowrap;">
-                  <input type="checkbox" id="refeedDayToggle">
-                  Refeed Day
                 </label>
               </div>
               <p id="macroDayProfileSummary" style="font-size:0.9rem;margin-top:8px;color:var(--text-muted,#777);"></p>

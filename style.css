@@ -2089,6 +2089,42 @@ body.theme-dark .set-row {
   box-shadow: none;
 }
 
+/* ── Macro toggle cards (Training Day / Refeed Day) ────────── */
+
+.macro-toggle-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border: 2px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--surface-bg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.macro-toggle-card:has(input:checked) {
+  border-color: var(--primary);
+  background: rgba(45, 125, 91, 0.1);
+}
+
+.macro-toggle-icon {
+  font-size: 1.4rem;
+}
+
+.macro-toggle-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+  transition: color 0.15s;
+}
+
+.macro-toggle-card:has(input:checked) .macro-toggle-label {
+  color: var(--primary);
+}
+
 .referral-credit-badge {
   background: rgba(45,125,91,0.15);
   border: 1px solid var(--primary);
