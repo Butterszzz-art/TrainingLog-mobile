@@ -2061,19 +2061,19 @@
               <p id="macroDayProfileSummary" style="font-size:0.9rem;margin-top:8px;color:var(--text-muted,#777);"></p>
               <div id="macroDailySummary" style="margin-top:12px;">
                 <h3 style="font-size:1.1rem;margin-bottom:6px;">Daily Summary</h3>
-                <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+                <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:var(--surface-bg,#141e17);border-left:3px solid var(--primary);">
                   <span>Calories</span>
                   <span id="macroSummaryCals">0 / 0 kcal</span>
                 </div>
-                <div class="macro-summary-row" data-macro="protein" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+                <div class="macro-summary-row" data-macro="protein" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:var(--surface-bg,#141e17);border-left:3px solid var(--primary);">
                   <span>Protein</span>
                   <span id="macroSummaryProtein">0 / 0 g</span>
                 </div>
-                <div class="macro-summary-row" data-macro="carbs" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#f5f5f5;">
+                <div class="macro-summary-row" data-macro="carbs" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:var(--surface-bg,#141e17);border-left:3px solid var(--primary);">
                   <span>Carbs</span>
                   <span id="macroSummaryCarbs">0 / 0 g</span>
                 </div>
-                <div class="macro-summary-row" data-macro="fat" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:#f5f5f5;">
+                <div class="macro-summary-row" data-macro="fat" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:var(--surface-bg,#141e17);border-left:3px solid var(--primary);">
                   <span>Fat</span>
                   <span id="macroSummaryFat">0 / 0 g</span>
                 </div>
@@ -6371,16 +6371,30 @@ window.presetMap = presetMap;
 
 // ---------- Personal details (single source of truth) ----------
 function readPersonalDetailsFromDOM() {
-  const w = document.getElementById('weight');
-  const h = document.getElementById('height');
-  const a = document.getElementById('age');
-  const s = document.getElementById('sex');
-  const bf = document.getElementById('bodyFat');
-  const act = document.getElementById('activity');
+  // Try primary fields first, then Settings Nutrition form fields
+  const w = document.getElementById('weight') || document.getElementById('macroWeight');
+  const h = document.getElementById('height') || document.getElementById('macroHeight');
+  const a = document.getElementById('age') || document.getElementById('macroAge');
+  const s = document.getElementById('sex') || document.getElementById('macroSex');
+  const bf = document.getElementById('bodyFat') || document.getElementById('macroBodyFat');
+  const act = document.getElementById('activity') || document.getElementById('macroActivity');
+  const hUnit = document.getElementById('heightUnit');
+
+  let weightKg = w ? parseFloat(w.value) : null;
+  let heightCm = h ? parseFloat(h.value) : null;
+
+  // Convert lbs to kg if the macro form uses lbs (macroWeight placeholder says "lbs")
+  if (w && w.id === 'macroWeight' && weightKg) {
+    weightKg = weightKg * 0.453592;
+  }
+  // Convert height if unit selector says "in"
+  if (hUnit && hUnit.value === 'in' && heightCm) {
+    heightCm = heightCm * 2.54;
+  }
 
   return {
-    weightKg: w ? parseFloat(w.value) : null,
-    heightCm: h ? parseFloat(h.value) : null,
+    weightKg: weightKg,
+    heightCm: heightCm,
     ageYears: a ? parseInt(a.value, 10) : null,
     sex: s ? s.value : null,
     bodyFatPercent: bf && bf.value !== '' ? parseFloat(bf.value) : null,
@@ -6596,6 +6610,18 @@ function calculateMacroTargets(goalOverride, rateOverride) {
   const msBtn = document.getElementById("macroSettingsBtn");
   if (msBtn) msBtn.textContent = "Macro Settings";
   adjustMacros();
+
+  // Auto-save calculated targets so Macro tab picks them up immediately
+  const autoTargets = {
+    calories: targetCalories,
+    protein: macros.proteinGrams,
+    fat: macros.fatGrams,
+    carbs: macros.carbGrams,
+  };
+  if (currentUser) {
+    localStorage.setItem('macroTargets_' + currentUser, JSON.stringify(autoTargets));
+    saveMacroTargetsToTop(autoTargets);
+  }
 }
 
 function getMacroTargetValues() {
