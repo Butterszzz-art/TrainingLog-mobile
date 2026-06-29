@@ -254,13 +254,13 @@
   
   <!-- Bottom Navigation: Log, Progress, Weight, Macro + More -->
   <nav id="bottomNav" aria-label="Main navigation">
+    <button class="bn-item" data-tab="homeTab" aria-label="Home">
+      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+      <span class="bn-label">Home</span>
+    </button>
     <button class="bn-item active" data-tab="logTab" aria-label="Log">
       <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
       <span class="bn-label">Log</span>
-    </button>
-    <button class="bn-item" data-tab="progressTab" aria-label="Progress">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
-      <span class="bn-label">Progress</span>
     </button>
     <button class="bn-item" data-tab="weightTab" aria-label="Weight">
       <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="20" height="12" rx="2"/><path d="M8 9a4 4 0 0 1 8 0"/><line x1="12" y1="14" x2="12" y2="17"/><line x1="10" y1="17" x2="14" y2="17"/></svg></span>
@@ -287,10 +287,18 @@
       <span>Vacation Mode — streak &amp; program tracking paused</span>
       <span class="vm-since"></span>
     </div>
+    <!-- Sick mode active banner -->
+    <div id="sickModeBanner" style="display:none;">
+      <span class="vm-banner-icon">🤒</span>
+      <span>Sick Mode — progress paused while you recover</span>
+      <span class="sm-since"></span>
+    </div>
     <!-- Today's program day + weekly split — populated by today-program.js -->
     <div id="todayProgramCard"></div>
     <!-- Vacation mode card — populated by session-context.js -->
     <div id="vacationModeCard"></div>
+    <!-- Sick mode card -->
+    <div id="sickModeCard"></div>
     <!-- Daily readiness card — populated by readiness-checkin.js -->
     <div id="readinessHomeCard"></div>
     <!-- AI Profile summary card -->
@@ -2385,17 +2393,21 @@
 
 <div id="logHistoryTab" class="tab-content">
   <h2>Log History</h2>
-  <div id="historyNav" style="margin-bottom:10px;">
-    <button onclick="showHistoryMiniTab('workout')">Workout History</button>
-    <button onclick="showHistoryMiniTab('macro')">Macro History</button>
-  </div>
-  <div id="historyWorkoutPanel" class="panel active">
+  <nav class="log-subtabs" id="historySubNav">
+    <button class="log-subtab active" data-histsub="workout">🏋️ Workouts</button>
+    <button class="log-subtab" data-histsub="bodyweight">⚖️ Bodyweight</button>
+    <button class="log-subtab" data-histsub="macro">🥗 Macros</button>
+  </nav>
+  <div id="historyWorkoutPanel" class="hist-subview active">
     <div id="workoutHistoryMiniTab">
       <div id="logHistoryContainer"></div>
     </div>
   </div>
-  <div id="historyMacroPanel" class="panel">
-    <div id="macroHistoryMiniTab" style="display:none;">
+  <div id="historyBodyweightPanel" class="hist-subview">
+    <div id="bwMonthlyHistory"></div>
+  </div>
+  <div id="historyMacroPanel" class="hist-subview">
+    <div id="macroHistoryMiniTab">
       <div id="macroHistoryContainer"></div>
     </div>
   </div>
@@ -2597,10 +2609,10 @@
   <div class="more-drawer-panel">
     <div class="more-drawer-handle"></div>
     <div class="more-drawer-grid">
-      <button class="more-drawer-item" data-tab="homeTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('homeTab'), 220)">
-        <span class="more-drawer-icon">🏠</span>
-        <span>Home</span>
+      <button class="more-drawer-item" data-tab="progressTab"
+              onclick="closeMoreDrawer(); setTimeout(()=>showTab('progressTab'), 220)">
+        <span class="more-drawer-icon">📈</span>
+        <span>Progress</span>
       </button>
       <button class="more-drawer-item" data-tab="programTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('programTab'), 220)">
@@ -2681,14 +2693,7 @@
   </div>
 </div>
 
-<!-- Workout focus bar — direct <body> child for the same reason. -->
-<div id="workoutFocusBar" aria-live="polite">
-  <div>
-    <div class="wfb-label">Workout in progress</div>
-    <div class="wfb-timer" id="wfbElapsed">00:00:00</div>
-  </div>
-  <button class="wfb-end-btn" id="wfbEndBtn">End Workout</button>
-</div>
+<!-- Workout focus bar removed — timer is already in the Log tab -->
 
 <div id="pocketLifestyleContainer" class="section" style="display:none;">
   <h2>PocketLifestyle</h2>
@@ -7934,7 +7939,7 @@ function openSection(section) {
   const el = document.getElementById(section + 'Container');
   animateSwitch(el);
   if (section === 'pocketFit') {
-    showTab('logTab');
+    showTab('homeTab');
   } else if (section === 'pocketLifestyle') {
     if (!window.lifestyleInitialized && window.initLifestyle) {
       window.initLifestyle();
@@ -10833,6 +10838,88 @@ function renderWeeklyBreakdown(log, displayUnit) {
   card.style.display = '';
 }
 
+// ── Bodyweight monthly history (for Log History tab) ──────────
+
+function renderBwMonthlyHistory() {
+  const container = document.getElementById('bwMonthlyHistory');
+  if (!container) return;
+  const user = window.currentUser || localStorage.getItem('fitnessAppUser');
+  if (!user) { container.innerHTML = '<div class="hist-empty">Log in to see history.</div>'; return; }
+
+  const log = JSON.parse(localStorage.getItem('bodyweightLog_' + user) || '[]');
+  if (!log.length) {
+    container.innerHTML = '<div class="hist-empty">No bodyweight entries yet.</div>';
+    return;
+  }
+
+  const pref = getBodyweightPreference();
+  const unit = pref.unit === 'lb' ? 'lb' : 'kg';
+  const sorted = log.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+
+  // Group by month
+  var months = {};
+  sorted.forEach(function (entry) {
+    var d = entry.date || '';
+    var key = d.slice(0, 7); // YYYY-MM
+    if (!months[key]) months[key] = [];
+    months[key].push(entry);
+  });
+
+  var html = '';
+  Object.keys(months).sort().reverse().forEach(function (monthKey) {
+    var entries = months[monthKey];
+    var d = new Date(monthKey + '-01T00:00:00');
+    var monthLabel = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    // Calculate month stats
+    var weights = entries.map(function (e) { return getEntryWeightKg(e); }).filter(function (w) { return w != null; });
+    var avg = weights.length ? weights.reduce(function (s, v) { return s + v; }, 0) / weights.length : 0;
+    var min = weights.length ? Math.min.apply(null, weights) : 0;
+    var max = weights.length ? Math.max.apply(null, weights) : 0;
+    var change = weights.length >= 2 ? weights[0] - weights[weights.length - 1] : 0;
+    var avgDisp = convertWeightValue(avg, 'kg', unit, 1);
+    var minDisp = convertWeightValue(min, 'kg', unit, 1);
+    var maxDisp = convertWeightValue(max, 'kg', unit, 1);
+    var changeDisp = convertWeightValue(Math.abs(change), 'kg', unit, 1);
+    var changeCls = Math.abs(change) < 0.05 ? '' : change > 0 ? 'wt-up' : 'wt-down';
+    var changeSign = change > 0 ? '+' : change < 0 ? '−' : '';
+
+    html += '<div class="session-card" onclick="this.classList.toggle(\'open\')">'
+      + '<div class="session-card-header">'
+      + '<div class="session-card-left">'
+      + '<span class="session-card-date">' + monthLabel + '</span>'
+      + '<span class="session-card-meta">Avg: ' + avgDisp + ' ' + unit + ' · ' + entries.length + ' entries</span>'
+      + '</div>'
+      + '<div class="session-card-right">'
+      + '<span class="session-card-count ' + changeCls + '">' + changeSign + changeDisp + ' ' + unit + '</span>'
+      + '<span class="session-card-chevron">▸</span>'
+      + '</div></div>'
+      + '<div class="session-card-body">'
+      + '<div class="session-summary-row" style="margin-bottom:10px;">'
+      + '<div class="session-summary-item"><span>Min:</span><span class="session-summary-val">' + minDisp + '</span></div>'
+      + '<div class="session-summary-item"><span>Max:</span><span class="session-summary-val">' + maxDisp + '</span></div>'
+      + '<div class="session-summary-item"><span>Avg:</span><span class="session-summary-val">' + avgDisp + '</span></div>'
+      + '<div class="session-summary-item"><span>Entries:</span><span class="session-summary-val">' + entries.length + '</span></div>'
+      + '</div>';
+
+    entries.forEach(function (e) {
+      var baseKg = getEntryWeightKg(e);
+      var wDisp = baseKg != null ? convertWeightValue(baseKg, 'kg', unit, 1) + ' ' + unit : '—';
+      var dateLabel = new Date(e.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      html += '<div class="session-exercise">'
+        + '<span class="session-ex-name">' + dateLabel + '</span>'
+        + '<span class="session-ex-detail">' + wDisp + (e.calories ? ' · ' + e.calories + ' kcal' : '') + '</span>'
+        + '</div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  container.innerHTML = html;
+}
+
+window.renderBwMonthlyHistory = renderBwMonthlyHistory;
+
 function removeWeightEntry(index) {
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   log.splice(index, 1);
@@ -13318,6 +13405,26 @@ function renderWorkoutHistoryFallback(container) {
 
   container.innerHTML = `<ul style="display:grid; gap:10px; padding-left:20px;">${rows}</ul>`;
 }
+
+// History sub-tab switching
+document.addEventListener('DOMContentLoaded', function () {
+  var nav = document.getElementById('historySubNav');
+  if (!nav) return;
+  nav.addEventListener('click', function (e) {
+    var btn = e.target.closest('.log-subtab');
+    if (!btn) return;
+    var target = btn.dataset.histsub;
+    if (!target) return;
+    nav.querySelectorAll('.log-subtab').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.hist-subview').forEach(function (p) { p.classList.remove('active'); });
+    var panel = document.getElementById('history' + target.charAt(0).toUpperCase() + target.slice(1) + 'Panel');
+    if (panel) panel.classList.add('active');
+    if (target === 'bodyweight') renderBwMonthlyHistory();
+    if (target === 'workout') showHistoryMiniTab('workout');
+    if (target === 'macro') showHistoryMiniTab('macro');
+  });
+});
 
 function showHistoryMiniTab(type) {
   const resolvedType = type === 'macro' ? 'macro' : 'workout';

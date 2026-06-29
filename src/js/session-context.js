@@ -99,6 +99,79 @@
     renderVacationCard();
   }
 
+  // ── SICK MODE (pause progress tracking, keep logging available) ────────────
+
+  const SICK_KEY = 'sickMode';
+
+  function getSickMode() {
+    return _get(SICK_KEY) || { active: false, since: null };
+  }
+
+  function setSickMode(active) {
+    const prev = getSickMode();
+    const now = new Date().toISOString().slice(0, 10);
+    _set(SICK_KEY, {
+      active,
+      since: active ? (prev.since || now) : null,
+      recoveredOn: active ? null : now,
+    });
+    renderSickBanner();
+    if (typeof window.renderPersonalStats === 'function') window.renderPersonalStats();
+    if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+  }
+
+  function isSickDate(dateStr) {
+    const s = getSickMode();
+    if (!s.since) return false;
+    const recovered = s.recoveredOn || new Date().toISOString().slice(0, 10);
+    return dateStr >= s.since && dateStr <= recovered;
+  }
+
+  function renderSickBanner() {
+    const el = document.getElementById('sickModeBanner');
+    if (!el) return;
+    const s = getSickMode();
+    if (s.active) {
+      el.style.display = 'flex';
+      const sinceEl = el.querySelector('.sm-since');
+      if (sinceEl) sinceEl.textContent = 'Since ' + s.since;
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  function renderSickCard() {
+    const el = document.getElementById('sickModeCard');
+    if (!el) return;
+    const s = getSickMode();
+    const days = s.active && s.since ? Math.floor((Date.now() - new Date(s.since).getTime()) / 86400000) : 0;
+    el.innerHTML = '<div class="sm-card ' + (s.active ? 'sm-card--active' : '') + '">'
+      + '<div class="vm-card-left">'
+      + '<span class="vm-icon">' + (s.active ? '🤒' : '💪') + '</span>'
+      + '<div>'
+      + '<span class="vm-title">' + (s.active ? 'Sick Mode — Day ' + days : 'Feeling unwell?') + '</span>'
+      + '<span class="vm-sub">' + (s.active
+        ? 'Streaks, XP & missions paused. Bodyweight & macros still tracked.'
+        : 'Pause progress tracking while you recover') + '</span>'
+      + '</div></div>'
+      + '<button class="vm-toggle ' + (s.active ? 'sm-toggle--on' : '') + '" onclick="window.toggleSickMode()">'
+      + (s.active ? 'I\'m better!' : 'I\'m sick') + '</button>'
+      + '</div>';
+  }
+
+  function toggleSickMode() {
+    const s = getSickMode();
+    setSickMode(!s.active);
+    renderSickCard();
+  }
+
+  window.getSickMode = getSickMode;
+  window.setSickMode = setSickMode;
+  window.toggleSickMode = toggleSickMode;
+  window.isSickDate = isSickDate;
+  window.renderSickCard = renderSickCard;
+  window.renderSickBanner = renderSickBanner;
+
   // ── 2 & 3. ALT-MACHINE / ALT-GYM (per-session flags) ──────────────────────
 
   const SESSION_CTX_KEY = 'sessionContext';
@@ -193,6 +266,8 @@
   function initSessionContext() {
     renderVacationBanner();
     renderVacationCard();
+    renderSickBanner();
+    renderSickCard();
     renderSessionContextBar();
   }
 
