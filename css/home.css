@@ -765,6 +765,44 @@
   color: #e6a817;
 }
 
+/* ── Sick mode card ────────────────────────────────────────── */
+
+.sm-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 0 0 10px;
+  transition: border-color 0.2s;
+}
+
+.sm-card--active {
+  border-color: #c05060;
+  background: rgba(192, 80, 96, 0.06);
+}
+
+.sm-toggle--on {
+  background: rgba(45, 125, 91, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+#sickModeBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(192, 80, 96, 0.08);
+  border-bottom: 1px solid rgba(192, 80, 96, 0.25);
+  font-size: 0.82rem;
+  color: #c05060;
+  font-weight: 600;
+}
+
 /* Active vacation banner (top of home tab) */
 #vacationModeBanner {
   display: none;
