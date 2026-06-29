@@ -2789,8 +2789,8 @@
 <script src="src/js/ProgramTabV2.js"></script>
 <script>
 
-let currentUser = null;
-let savedUser = localStorage.getItem("fitnessAppUser");
+let currentUser = localStorage.getItem("fitnessAppUser") || localStorage.getItem("username") || localStorage.getItem("Username") || null;
+let savedUser = currentUser;
 let activeSection = null;
 let activeTab = null;
 
@@ -2803,10 +2803,8 @@ function forceFreshLogin() {
   } else {
     localStorage.removeItem('token');
     localStorage.removeItem('authToken');
-    localStorage.removeItem('fitnessAppUser');
   }
-
-  localStorage.removeItem('fitnessAppUser');
+  // Do NOT remove fitnessAppUser — data keys depend on it
   savedUser = null;
 }
 

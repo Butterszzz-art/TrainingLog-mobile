@@ -31,7 +31,9 @@ function clearAuthState() {
   const storage = resolveStorage();
   storage.removeItem('token');
   storage.removeItem('authToken');
-  storage.removeItem('fitnessAppUser');
+  // Do NOT remove fitnessAppUser — it's the key used to find all user data
+  // in localStorage. Removing it makes bodyweight, workout, and macro data
+  // inaccessible until the user logs in again.
 }
 
 function isInvalidSignatureError(value) {
