@@ -3948,6 +3948,21 @@ async function startSignup() {
     setLoading(btn, false);
     return;
   }
+  if (username.length < 2 || username.length > 64) {
+    if (errorEl) errorEl.textContent = "Username must be between 2 and 64 characters.";
+    setLoading(btn, false);
+    return;
+  }
+  if (password.length < 6) {
+    if (errorEl) errorEl.textContent = "Password must be at least 6 characters.";
+    setLoading(btn, false);
+    return;
+  }
+  if (password.length > 128) {
+    if (errorEl) errorEl.textContent = "Password is too long (max 128 characters).";
+    setLoading(btn, false);
+    return;
+  }
 
   try {
     if (errorEl) errorEl.textContent = 'Creating your account…';
