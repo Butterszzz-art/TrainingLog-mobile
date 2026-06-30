@@ -150,14 +150,23 @@
 
   function syncDailyMissionStateToBackend(userId, state) {
     const resolvedUser = resolveUserId(userId);
+    // Don't fire unauthenticated requests — 'guest' means no one is logged in yet.
+    if (resolvedUser === 'guest') return false;
     try {
       // Future backend endpoint: PUT /api/bodybuilding/daily-mission/:userId
       // Sync errors are intentionally ignored to keep the app fully usable offline.
       if (typeof globalScope.fetch !== 'function') return false;
       const _serverBase = (typeof window !== 'undefined' && window.SERVER_URL) || '';
+      const token = typeof globalScope.localStorage !== 'undefined'
+        ? (globalScope.localStorage.getItem('token') || globalScope.localStorage.getItem('authToken'))
+        : null;
+      if (!token) return false;
       return globalScope.fetch(`${_serverBase}/api/bodybuilding/daily-mission/${encodeURIComponent(resolvedUser)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(state || {}),
         signal: AbortSignal.timeout(5000)
       }).then(() => true).catch(() => false);

@@ -19,6 +19,7 @@ const APP_SHELL = [
   '/css/tokens.css',
   '/css/base.css',
   '/css/nav.css',
+  '/css/login.css',
   '/css/onboarding.css',
   '/css/tutorial.css',
   '/css/sleep.css',
