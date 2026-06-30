@@ -1,8 +1,8 @@
 /* =============================================================
    ONBOARDING WIZARD
-   Full-screen 3-step overlay shown to new users after signup.
-   Steps: (1) archetype selection, (2) experience level,
-          (3) unit + theme preferences.
+   Full-screen 6-step overlay shown to new users after signup.
+   Steps: (1) archetype, (2) goal, (3) experience,
+          (4) body stats, (5) activity, (6) preferences.
    Depends on: tokens.css
    ============================================================= */
 
@@ -228,4 +228,162 @@
   cursor: pointer;
   font-size: 0.9rem;
   font-family: 'Poppins', sans-serif;
+}
+
+/* ── Step counter label ──────────────────────────────────────── */
+
+.ob-step-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary, #5fa87e);
+  margin-bottom: 6px;
+}
+
+/* ── Option icon + text layout (steps 2, 3, 5) ──────────────── */
+
+.ob-option-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+
+.ob-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+/* ── Step 4: Body stats ──────────────────────────────────────── */
+
+.ob-unit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ob-unit-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.ob-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.ob-stat-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ob-stat-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ob-stat-input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--surface-bg, #141e17);
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 0 12px 0 0;
+}
+
+.ob-stat-input-wrap input {
+  flex: 1;
+  padding: 11px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 1rem;
+  font-family: 'Poppins', sans-serif;
+  outline: none;
+  min-width: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.ob-stat-input-wrap span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ob-stat-field .ob-toggle-group {
+  border-radius: 8px;
+}
+
+.ob-stat-field .ob-toggle-btn {
+  flex: 1;
+  padding: 10px 10px;
+  font-size: 0.82rem;
+}
+
+/* ── Step 6: Macro preview card ──────────────────────────────── */
+
+.ob-macro-preview {
+  background: rgba(45, 125, 91, 0.08);
+  border: 1px solid rgba(45, 125, 91, 0.25);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.ob-macro-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary, #5fa87e);
+  margin-bottom: 10px;
+}
+
+.ob-macro-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.ob-macro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ob-macro-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.ob-macro-lbl {
+  font-size: 0.7rem;
+  color: var(--secondary-text);
+}
+
+.ob-macro-protein .ob-macro-val { color: #7ec8a4; }
+.ob-macro-carbs   .ob-macro-val { color: #f0b84b; }
+.ob-macro-fat     .ob-macro-val { color: #e07b6a; }
+
+.ob-macro-note {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
 }
