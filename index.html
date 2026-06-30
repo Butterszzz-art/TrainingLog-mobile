@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="css/powerlifting.css">
   <link rel="stylesheet" href="css/archetype-features.css">
   <link rel="stylesheet" href="css/coaching.css">
+  <link rel="stylesheet" href="css/login.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
   <link rel="stylesheet" href="css/cardio.css">
@@ -57,17 +58,71 @@
  
 <body>
 
-<div id="loginContainer" class="section active" style="max-width:400px;margin:40px auto;background:var(--card-bg);padding:20px;box-shadow:var(--shadow);border-radius:10px;color:var(--text-color);">
-  <h2>Login to Pocket Coach</h2>
-  <input type="text" id="username" placeholder="Enter Username" />
-  <input type="password" id="password" placeholder="Enter Password" />
-  <p id="loginError" class="form-error" role="alert" aria-live="polite"></p>
-  <button id="loginButton" class="loading-btn" onclick="startLogin()"><span>Login</span><span class="spinner"></span></button>
-  <button id="signupButton" class="loading-btn" onclick="startSignup()"><span>Sign Up</span><span class="spinner"></span></button>
-  <a href="pricing.html" style="display:block;text-align:center;margin-top:12px;color:var(--primary);font-size:0.85rem;font-weight:600;text-decoration:none;">View pricing & plans →</a>
-  <div style="margin-top:16px;padding:10px 14px;border-radius:10px;background:rgba(230,168,23,0.08);border:1px solid rgba(230,168,23,0.25);font-size:0.78rem;color:#e6a817;line-height:1.5;text-align:center;">
-    ⚡ <strong>Beta notice:</strong> The server may take up to 30 seconds to wake up on first login. If it hangs, wait a moment and tap Login again.
+<div id="loginContainer" class="login-screen">
+
+  <!-- Branding -->
+  <div class="login-brand">
+    <div class="login-logo">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="15" width="4" height="6" rx="2" fill="#5fa87e"/>
+        <rect x="28" y="15" width="4" height="6" rx="2" fill="#5fa87e"/>
+        <rect x="8" y="12" width="4" height="12" rx="2" fill="#7ec8a4"/>
+        <rect x="24" y="12" width="4" height="12" rx="2" fill="#7ec8a4"/>
+        <rect x="12" y="16.5" width="12" height="3" rx="1.5" fill="#5fa87e"/>
+      </svg>
+    </div>
+    <h1 class="login-app-name">Pocket Coach</h1>
+    <p class="login-tagline">Your AI-powered training companion</p>
   </div>
+
+  <!-- Tab switcher: Log In / Sign Up -->
+  <div class="login-tabs">
+    <button class="login-tab login-tab--active" id="loginTabBtn" type="button" onclick="_switchLoginTab('login')">Log In</button>
+    <button class="login-tab" id="signupTabBtn" type="button" onclick="_switchLoginTab('signup')">Sign Up</button>
+  </div>
+
+  <!-- Form card -->
+  <div class="login-card">
+    <p class="login-heading" id="loginTabHeading">Welcome back</p>
+
+    <div class="login-fields">
+      <div class="login-field">
+        <label class="login-field-label" for="username">Username</label>
+        <input type="text" id="username" class="login-input" placeholder="Enter your username"
+               autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false" />
+      </div>
+      <div class="login-field">
+        <label class="login-field-label" for="password">Password</label>
+        <div class="login-pw-wrap">
+          <input type="password" id="password" class="login-input" placeholder="Enter your password"
+                 autocomplete="current-password" />
+          <button type="button" class="login-pw-eye" onclick="_toggleLoginPw(this)" tabindex="-1" aria-label="Show password">
+            <svg id="loginEyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
+
+    <div class="login-beta">
+      ⚡ <strong>Beta:</strong> Server may take ~30s to wake on first use — wait and try again if it hangs.
+    </div>
+
+    <button id="loginButton" class="login-cta loading-btn" onclick="startLogin()">
+      <span>Log In</span><span class="spinner"></span>
+    </button>
+    <button id="signupButton" class="login-cta login-cta--hidden loading-btn" onclick="startSignup()">
+      <span>Create Account</span><span class="spinner"></span>
+    </button>
+
+    <a href="pricing.html" class="login-pricing-link">See pricing &amp; plans →</a>
+  </div>
+
 </div>
 <!-- ── Onboarding Wizard (shown after first signup) ─────────────────── -->
 <div id="onboardingOverlay" class="onboarding-overlay" hidden>
@@ -14215,6 +14270,39 @@ window.openDashboard = openDashboard;
 window.startLogin = startLogin;
 window.fetchWorkoutHistory = fetchWorkoutHistory;
 window.startSignup = startSignup;
+
+// ── Login screen helpers ──────────────────────────────────────
+function _switchLoginTab(mode) {
+  const isLogin = mode === 'login';
+  document.getElementById('loginTabBtn')?.classList.toggle('login-tab--active', isLogin);
+  document.getElementById('signupTabBtn')?.classList.toggle('login-tab--active', !isLogin);
+  const heading = document.getElementById('loginTabHeading');
+  if (heading) heading.textContent = isLogin ? 'Welcome back' : 'Create your account';
+  const loginBtn  = document.getElementById('loginButton');
+  const signupBtn = document.getElementById('signupButton');
+  if (loginBtn)  loginBtn.classList.toggle('login-cta--hidden', !isLogin);
+  if (signupBtn) signupBtn.classList.toggle('login-cta--hidden', isLogin);
+  const pw = document.getElementById('password');
+  if (pw) pw.autocomplete = isLogin ? 'current-password' : 'new-password';
+  const err = document.getElementById('loginError');
+  if (err) err.textContent = '';
+}
+
+function _toggleLoginPw(btn) {
+  const input = document.getElementById('password');
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  const icon = document.getElementById('loginEyeIcon');
+  if (icon) {
+    icon.innerHTML = show
+      ? '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+      : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+
+window._switchLoginTab = _switchLoginTab;
+window._toggleLoginPw  = _toggleLoginPw;
 window.logout = logout;
 window.addLogEntry = addLogEntry;
 window.completeWorkout = completeWorkout;
