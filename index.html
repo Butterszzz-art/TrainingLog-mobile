@@ -15473,6 +15473,9 @@ function _finishOnboarding() {
             fat:      plan.macros.fatGrams,
           };
           localStorage.setItem(`macroTargets_${user}`, JSON.stringify(targets));
+          // Refresh the macro tab display immediately so targets aren't shown as 0
+          if (typeof renderMacroTargets === 'function') renderMacroTargets();
+          if (typeof loadMacroDayContext === 'function') loadMacroDayContext();
         } catch (err) {
           console.warn('[Onboarding] Macro engine error:', err);
         }
