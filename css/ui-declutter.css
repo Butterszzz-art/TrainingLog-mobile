@@ -52,43 +52,159 @@
 
 /* ── Advanced accordion (goal/repGoal/date) ──────────────────── */
 
+/* ── Advanced options panel ──────────────────────────────────── */
+
 .log-advanced {
   margin-top: 10px;
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 8px;
-  padding: 0;
+  border: 1px solid var(--border-color, #2a3a2e);
+  border-radius: 10px;
   overflow: hidden;
+  background: var(--card-bg, #0f1510);
 }
 
-.log-advanced > summary {
-  padding: 8px 14px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted, #7a8f7d);
-  list-style: none;
+.log-adv-toggle {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--card-bg, #0f1510);
-  user-select: none;
+  justify-content: space-between;
+  padding: 9px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.82rem;
+  font-weight: 600;
+  gap: 8px;
+  transition: color 0.15s;
 }
 
-.log-advanced > summary::before {
-  content: '▶';
-  font-size: 0.7rem;
+.log-adv-toggle:hover,
+.log-adv-toggle[aria-expanded="true"] {
+  color: var(--secondary-text, #b8c2bc);
+}
+
+.log-adv-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.log-adv-icon {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.log-adv-dot {
+  display: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary, #5fa87e);
+  flex-shrink: 0;
+}
+
+.log-adv-chevron {
+  flex-shrink: 0;
   transition: transform 0.2s;
+  opacity: 0.6;
 }
 
-.log-advanced[open] > summary::before {
-  transform: rotate(90deg);
+.log-adv-toggle[aria-expanded="true"] .log-adv-chevron {
+  transform: rotate(180deg);
 }
 
 .log-advanced-body {
-  padding: 10px 14px 14px;
+  padding: 4px 14px 14px;
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border-color, #2a3a2e);
+}
+
+/* 2-column grid for numeric inputs */
+.log-adv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.log-adv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-adv-field--full {
+  grid-column: 1 / -1;
+}
+
+.log-adv-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #7a8f7d);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.log-adv-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted, #7a8f7d);
+  opacity: 0.7;
+  font-size: 0.7rem;
+}
+
+.log-adv-field input {
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #2a3a2e);
+  background: var(--surface-bg, #141e17);
+  color: var(--text-color);
+  width: 100%;
+}
+
+/* RPE scale bar */
+.log-adv-rpe-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+}
+
+.log-adv-rpe-scale {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.rpe-tick {
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rpe-easy { color: #7ec8a4; }
+.rpe-hard { color: #e07b6a; }
+
+.rpe-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #7ec8a4, #f0b84b, #e07b6a);
+}
+
+.log-adv-rir-note {
+  font-size: 0.68rem;
+  color: var(--text-muted, #7a8f7d);
+  white-space: nowrap;
 }
 
 /* ── Rest timer presets ──────────────────────────────────────── */

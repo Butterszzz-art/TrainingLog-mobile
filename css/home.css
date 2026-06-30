@@ -11,6 +11,90 @@
   background: radial-gradient(circle at top, rgba(34, 61, 49, 0.28) 0%, #0a0f0d 58%, #070909 100%);
   border: 1px solid rgba(94, 121, 109, 0.38);
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+  padding-bottom: 12px;
+}
+
+/* ── Visual zones ───────────────────────────────────────────── */
+
+.home-zone {
+  padding: 0 12px;
+}
+
+/* Hero: today's program gets extra breathing room at the top */
+.home-zone--hero {
+  padding-top: 4px;
+  padding-bottom: 2px;
+}
+
+/* Action zone: readiness + archetype — tighter gap, no extra padding */
+.home-zone--action {
+  padding-top: 0;
+}
+
+/* Weekly grid zone */
+.home-zone--weekly {
+  padding-top: 4px;
+}
+
+/* Modes zone: visually demoted — smaller, pushed to bottom */
+.home-zone--modes {
+  padding-top: 4px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(95, 168, 126, 0.1);
+}
+
+/* ── Section labels ─────────────────────────────────────────── */
+
+.home-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted, #7a8f7d);
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+
+/* ── Weekly 2-col grid ──────────────────────────────────────── */
+
+.home-weekly-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+/* Step card — replaces the heavy inline styles */
+.home-step-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+/* Shrink the mode cards when they're in the demoted zone */
+.home-zone--modes .vm-card,
+.home-zone--modes .sm-card {
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.home-zone--modes .vm-icon {
+  font-size: 1.15rem;
+}
+
+.home-zone--modes .vm-title {
+  font-size: 0.82rem;
+}
+
+.home-zone--modes .vm-sub {
+  font-size: 0.68rem;
+}
+
+.home-zone--modes .vm-toggle {
+  font-size: 0.72rem;
+  padding: 5px 12px;
 }
 
 /* ── Dashboard grid ─────────────────────────────────────────── */

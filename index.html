@@ -440,62 +440,76 @@
   <div id="appContainer" class="main-content">
 
   <div id="homeTab" class="tab-content">
-    <!-- Vacation mode active banner -->
-    <div id="vacationModeBanner">
-      <span class="vm-banner-icon">🏖️</span>
-      <span>Vacation Mode — streak &amp; program tracking paused</span>
-      <span class="vm-since"></span>
-    </div>
-    <!-- Sick mode active banner -->
-    <div id="sickModeBanner" style="display:none;">
-      <span class="vm-banner-icon">🤒</span>
-      <span>Sick Mode — progress paused while you recover</span>
-      <span class="sm-since"></span>
-    </div>
-    <!-- Today's program day + weekly split — populated by today-program.js -->
-    <div id="todayProgramCard"></div>
-    <!-- Vacation mode card — populated by session-context.js -->
-    <div id="vacationModeCard"></div>
-    <!-- Sick mode card -->
-    <div id="sickModeCard"></div>
-    <!-- Daily readiness card — populated by readiness-checkin.js -->
-    <div id="readinessHomeCard"></div>
-    <!-- AI Profile summary card -->
-    <div id="archetypeProfileCard"></div>
-    <!-- Weekly summary card — populated by weekly-summary.js -->
-    <div id="weeklySummaryCard"></div>
-    <!-- Notification permission banner — shown if permission not yet granted -->
+
+    <!-- ── Conditional banners (only rendered when active) ──────── -->
     <div id="notifPermBanner" class="notif-banner" style="display:none;">
       <span class="notif-banner-icon">🔔</span>
       <span class="notif-banner-text">Enable notifications to get rest timer alerts when your phone is locked.</span>
       <button class="notif-banner-btn" onclick="requestRestTimerNotifications()">Enable</button>
     </div>
-    <!-- Step tracking widget — JS in archetype-features.js (initStepWidget) -->
-    <div id="stepWidgetCard" style="margin:0 12px 8px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:16px; padding:14px 16px;">
-      <div class="step-widget">
-        <div class="step-ring-wrap">
-          <svg class="step-ring-svg" viewBox="0 0 80 80">
-            <circle class="step-ring-track" cx="40" cy="40" r="34"/>
-            <circle id="stepRingFill" class="step-ring-fill" cx="40" cy="40" r="34"
-                    stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
-          </svg>
-          <div class="step-ring-inner">
-            <span id="stepRingCount" class="step-ring-count">0</span>
-            <span class="step-ring-icon">👟</span>
-          </div>
-        </div>
-        <div class="step-widget-info">
-          <div id="stepGoalLabel" class="step-widget-goal">Goal: 10,000 steps</div>
-          <div class="step-input-row">
-            <input id="stepCountInput" type="number" class="step-count-input"
-                   placeholder="Steps today" min="0" inputmode="numeric"/>
-            <button id="stepSaveBtn" class="step-save-btn">Save</button>
+    <div id="vacationModeBanner">
+      <span class="vm-banner-icon">🏖️</span>
+      <span>Vacation Mode — streak &amp; program tracking paused</span>
+      <span class="vm-since"></span>
+    </div>
+    <div id="sickModeBanner" style="display:none;">
+      <span class="vm-banner-icon">🤒</span>
+      <span>Sick Mode — progress paused while you recover</span>
+      <span class="sm-since"></span>
+    </div>
+
+    <!-- ── Zone 1: Hero — today's program ───────────────────────── -->
+    <div class="home-zone home-zone--hero">
+      <div id="todayProgramCard"></div>
+    </div>
+
+    <!-- ── Zone 2: Action — readiness + archetype prompt ─────────── -->
+    <div class="home-zone home-zone--action">
+      <div id="readinessHomeCard"></div>
+      <div id="archetypeProfileCard"></div>
+    </div>
+
+    <!-- ── Zone 3: Weekly glance — summary + steps (2-col) ─────── -->
+    <div class="home-zone home-zone--weekly">
+      <div class="home-section-label">This week</div>
+      <div class="home-weekly-grid">
+        <div id="weeklySummaryCard"></div>
+        <div id="stepWidgetCard" class="home-step-card">
+          <div class="step-widget">
+            <div class="step-ring-wrap">
+              <svg class="step-ring-svg" viewBox="0 0 80 80">
+                <circle class="step-ring-track" cx="40" cy="40" r="34"/>
+                <circle id="stepRingFill" class="step-ring-fill" cx="40" cy="40" r="34"
+                        stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+              </svg>
+              <div class="step-ring-inner">
+                <span id="stepRingCount" class="step-ring-count">0</span>
+                <span class="step-ring-icon">👟</span>
+              </div>
+            </div>
+            <div class="step-widget-info">
+              <div id="stepGoalLabel" class="step-widget-goal">Goal: 10,000 steps</div>
+              <div class="step-input-row">
+                <input id="stepCountInput" type="number" class="step-count-input"
+                       placeholder="Steps today" min="0" inputmode="numeric"/>
+                <button id="stepSaveBtn" class="step-save-btn">Save</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- ── Zone 4: Dashboard extras (JS-rendered cards) ──────────── -->
     <div id="homeDashboardContent" class="home-dashboard"></div>
+
+    <!-- ── Zone 5: Status modes (demoted — utility, not training) ── -->
+    <div class="home-zone home-zone--modes">
+      <div class="home-section-label">Status</div>
+      <div id="vacationModeCard"></div>
+      <div id="sickModeCard"></div>
+    </div>
+
   </div>
 
   <div id="logTab" class="tab-content">
@@ -559,15 +573,61 @@
           </select>
           <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
 
-          <!-- Advanced accordion: goals + date -->
-          <details class="log-advanced">
-            <summary>Advanced options</summary>
-            <div class="log-advanced-body">
-              <input type="number" id="goal" placeholder="Target Weight Goal (kg/lbs)" />
-              <input type="number" id="repGoal" placeholder="Target Rep Goal (optional)" />
-              <input type="date" id="entryDate" class="calendar-widget slide-up" />
+          <!-- Advanced options panel (modern custom toggle) -->
+          <div class="log-advanced" id="logAdvancedPanel">
+            <button class="log-adv-toggle" id="logAdvToggle" aria-expanded="false" type="button" onclick="toggleLogAdvanced()">
+              <span class="log-adv-left">
+                <svg class="log-adv-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                  <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                  <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+                  <line x1="17" y1="16" x2="23" y2="16"/>
+                </svg>
+                Advanced
+                <span class="log-adv-dot" id="logAdvDot"></span>
+              </span>
+              <svg class="log-adv-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="log-advanced-body" id="logAdvBody" hidden>
+              <div class="log-adv-grid">
+                <div class="log-adv-field">
+                  <label class="log-adv-label" for="goal">Target weight</label>
+                  <input type="number" id="goal" placeholder="e.g. 100" oninput="_updateLogAdvDot()" />
+                </div>
+                <div class="log-adv-field">
+                  <label class="log-adv-label" for="repGoal">Target reps</label>
+                  <input type="number" id="repGoal" placeholder="e.g. 8" oninput="_updateLogAdvDot()" />
+                </div>
+                <div class="log-adv-field">
+                  <label class="log-adv-label" for="targetRPE">
+                    RPE <span class="log-adv-hint">1–10</span>
+                  </label>
+                  <input type="number" id="targetRPE" placeholder="e.g. 8" min="1" max="10" step="0.5" inputmode="decimal" oninput="_updateLogAdvDot()" />
+                </div>
+                <div class="log-adv-field">
+                  <label class="log-adv-label" for="targetRIR">
+                    RIR <span class="log-adv-hint">0–5</span>
+                  </label>
+                  <input type="number" id="targetRIR" placeholder="e.g. 2" min="0" max="5" step="1" inputmode="numeric" oninput="_updateLogAdvDot()" />
+                </div>
+              </div>
+              <div class="log-adv-rpe-row">
+                <span class="log-adv-rpe-scale">
+                  <span class="rpe-tick rpe-easy">6 Easy</span>
+                  <span class="rpe-bar"></span>
+                  <span class="rpe-tick rpe-hard">10 Max</span>
+                </span>
+                <span class="log-adv-rir-note">RPE + RIR ≈ 10</span>
+              </div>
+              <div class="log-adv-field log-adv-field--full">
+                <label class="log-adv-label" for="entryDate">Log date</label>
+                <input type="date" id="entryDate" oninput="_updateLogAdvDot()" />
+              </div>
             </div>
-          </details>
+          </div>
 
           <button id="addLogBtn" onclick="addLogEntry()" disabled class="log-add-btn">+ Add to Log</button>
 
@@ -4101,12 +4161,32 @@ function updateAddButtonState() {
   updateProgressBar();
 }
 
-  
+function toggleLogAdvanced() {
+  const btn  = document.getElementById('logAdvToggle');
+  const body = document.getElementById('logAdvBody');
+  if (!btn || !body) return;
+  const open = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', String(!open));
+  open ? body.setAttribute('hidden', '') : body.removeAttribute('hidden');
+}
+
+function _updateLogAdvDot() {
+  const dot = document.getElementById('logAdvDot');
+  if (!dot) return;
+  const hasValue = ['goal','repGoal','targetRPE','targetRIR','entryDate'].some(id => {
+    const el = document.getElementById(id);
+    return el && el.value !== '' && el.value !== null;
+  });
+  dot.style.display = hasValue ? 'inline-block' : 'none';
+}
+
 function addLogEntry() {
   const exercise = document.getElementById("exercise").value.trim();
   const sets = +document.getElementById("sets").value;
   const goal = +document.getElementById("goal").value;
   const repGoal = +document.getElementById("repGoal").value;
+  const targetRPE = parseFloat(document.getElementById("targetRPE")?.value) || null;
+  const targetRIR = document.getElementById("targetRIR")?.value !== '' ? parseInt(document.getElementById("targetRIR")?.value, 10) : null;
   const unit = document.getElementById("weightUnit").value || 'kg';
   const dateInput = document.getElementById("entryDate");
   const date = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().split('T')[0];
@@ -4191,7 +4271,9 @@ function addLogEntry() {
     unit,
     date,
     goal,
-    repGoal
+    repGoal,
+    targetRPE: Number.isFinite(targetRPE) ? targetRPE : null,
+    targetRIR: Number.isFinite(targetRIR) ? targetRIR : null,
   };
   const activeWorkoutIndex = workouts.findIndex(w => w.date === date);
   workouts[activeWorkoutIndex].log.push(newEntry);
