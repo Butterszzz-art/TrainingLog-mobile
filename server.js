@@ -224,6 +224,24 @@ app.get('/config', (req, res) => {
   res.json({ serverUrl: process.env.SERVER_URL || '' });
 });
 
+// ── GET /health ───────────────────────────────────────────────────────────────
+// Open endpoint — shows which env vars are set without exposing values.
+app.get('/health', (req, res) => {
+  const checks = {
+    AIRTABLE_TOKEN:   !!process.env.AIRTABLE_TOKEN,
+    AIRTABLE_BASE_ID: !!process.env.AIRTABLE_BASE_ID,
+    JWT_SECRET:       !!process.env.JWT_SECRET,
+    AIRTABLE_USERS_TABLE: process.env.AIRTABLE_USERS_TABLE || '(default: Users)',
+  };
+  const allOk = checks.AIRTABLE_TOKEN && checks.AIRTABLE_BASE_ID;
+  res.status(allOk ? 200 : 503).json({
+    status: allOk ? 'ok' : 'misconfigured',
+    checks,
+    missing: Object.entries(checks).filter(([, v]) => v === false).map(([k]) => k),
+    hint: allOk ? 'All required env vars are set.' : 'Set the missing env vars in your Render dashboard under Environment.',
+  });
+});
+
 // ── POST /dailylogs ──────────────────────────────────────────────────────────
 app.post('/dailylogs', async (req, res) => {
   const airtable = getAirtableEnv();
