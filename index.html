@@ -440,62 +440,76 @@
   <div id="appContainer" class="main-content">
 
   <div id="homeTab" class="tab-content">
-    <!-- Vacation mode active banner -->
-    <div id="vacationModeBanner">
-      <span class="vm-banner-icon">🏖️</span>
-      <span>Vacation Mode — streak &amp; program tracking paused</span>
-      <span class="vm-since"></span>
-    </div>
-    <!-- Sick mode active banner -->
-    <div id="sickModeBanner" style="display:none;">
-      <span class="vm-banner-icon">🤒</span>
-      <span>Sick Mode — progress paused while you recover</span>
-      <span class="sm-since"></span>
-    </div>
-    <!-- Today's program day + weekly split — populated by today-program.js -->
-    <div id="todayProgramCard"></div>
-    <!-- Vacation mode card — populated by session-context.js -->
-    <div id="vacationModeCard"></div>
-    <!-- Sick mode card -->
-    <div id="sickModeCard"></div>
-    <!-- Daily readiness card — populated by readiness-checkin.js -->
-    <div id="readinessHomeCard"></div>
-    <!-- AI Profile summary card -->
-    <div id="archetypeProfileCard"></div>
-    <!-- Weekly summary card — populated by weekly-summary.js -->
-    <div id="weeklySummaryCard"></div>
-    <!-- Notification permission banner — shown if permission not yet granted -->
+
+    <!-- ── Conditional banners (only rendered when active) ──────── -->
     <div id="notifPermBanner" class="notif-banner" style="display:none;">
       <span class="notif-banner-icon">🔔</span>
       <span class="notif-banner-text">Enable notifications to get rest timer alerts when your phone is locked.</span>
       <button class="notif-banner-btn" onclick="requestRestTimerNotifications()">Enable</button>
     </div>
-    <!-- Step tracking widget — JS in archetype-features.js (initStepWidget) -->
-    <div id="stepWidgetCard" style="margin:0 12px 8px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:16px; padding:14px 16px;">
-      <div class="step-widget">
-        <div class="step-ring-wrap">
-          <svg class="step-ring-svg" viewBox="0 0 80 80">
-            <circle class="step-ring-track" cx="40" cy="40" r="34"/>
-            <circle id="stepRingFill" class="step-ring-fill" cx="40" cy="40" r="34"
-                    stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
-          </svg>
-          <div class="step-ring-inner">
-            <span id="stepRingCount" class="step-ring-count">0</span>
-            <span class="step-ring-icon">👟</span>
-          </div>
-        </div>
-        <div class="step-widget-info">
-          <div id="stepGoalLabel" class="step-widget-goal">Goal: 10,000 steps</div>
-          <div class="step-input-row">
-            <input id="stepCountInput" type="number" class="step-count-input"
-                   placeholder="Steps today" min="0" inputmode="numeric"/>
-            <button id="stepSaveBtn" class="step-save-btn">Save</button>
+    <div id="vacationModeBanner">
+      <span class="vm-banner-icon">🏖️</span>
+      <span>Vacation Mode — streak &amp; program tracking paused</span>
+      <span class="vm-since"></span>
+    </div>
+    <div id="sickModeBanner" style="display:none;">
+      <span class="vm-banner-icon">🤒</span>
+      <span>Sick Mode — progress paused while you recover</span>
+      <span class="sm-since"></span>
+    </div>
+
+    <!-- ── Zone 1: Hero — today's program ───────────────────────── -->
+    <div class="home-zone home-zone--hero">
+      <div id="todayProgramCard"></div>
+    </div>
+
+    <!-- ── Zone 2: Action — readiness + archetype prompt ─────────── -->
+    <div class="home-zone home-zone--action">
+      <div id="readinessHomeCard"></div>
+      <div id="archetypeProfileCard"></div>
+    </div>
+
+    <!-- ── Zone 3: Weekly glance — summary + steps (2-col) ─────── -->
+    <div class="home-zone home-zone--weekly">
+      <div class="home-section-label">This week</div>
+      <div class="home-weekly-grid">
+        <div id="weeklySummaryCard"></div>
+        <div id="stepWidgetCard" class="home-step-card">
+          <div class="step-widget">
+            <div class="step-ring-wrap">
+              <svg class="step-ring-svg" viewBox="0 0 80 80">
+                <circle class="step-ring-track" cx="40" cy="40" r="34"/>
+                <circle id="stepRingFill" class="step-ring-fill" cx="40" cy="40" r="34"
+                        stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+              </svg>
+              <div class="step-ring-inner">
+                <span id="stepRingCount" class="step-ring-count">0</span>
+                <span class="step-ring-icon">👟</span>
+              </div>
+            </div>
+            <div class="step-widget-info">
+              <div id="stepGoalLabel" class="step-widget-goal">Goal: 10,000 steps</div>
+              <div class="step-input-row">
+                <input id="stepCountInput" type="number" class="step-count-input"
+                       placeholder="Steps today" min="0" inputmode="numeric"/>
+                <button id="stepSaveBtn" class="step-save-btn">Save</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- ── Zone 4: Dashboard extras (JS-rendered cards) ──────────── -->
     <div id="homeDashboardContent" class="home-dashboard"></div>
+
+    <!-- ── Zone 5: Status modes (demoted — utility, not training) ── -->
+    <div class="home-zone home-zone--modes">
+      <div class="home-section-label">Status</div>
+      <div id="vacationModeCard"></div>
+      <div id="sickModeCard"></div>
+    </div>
+
   </div>
 
   <div id="logTab" class="tab-content">
