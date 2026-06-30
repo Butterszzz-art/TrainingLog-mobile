@@ -77,10 +77,14 @@
       <span class="ob-step ob-active" data-step="1"></span>
       <span class="ob-step" data-step="2"></span>
       <span class="ob-step" data-step="3"></span>
+      <span class="ob-step" data-step="4"></span>
+      <span class="ob-step" data-step="5"></span>
+      <span class="ob-step" data-step="6"></span>
     </div>
 
-    <!-- Step 1: Training style -->
+    <!-- Step 1: Training focus -->
     <div class="ob-screen active" id="obStep1">
+      <div class="ob-step-label">Step 1 of 6</div>
       <h2>What's your training focus?</h2>
       <p class="ob-subtitle">We'll personalise the app for you</p>
       <div class="ob-archetype-grid">
@@ -108,38 +112,190 @@
       <button class="ob-next-btn" id="obNext1" disabled>Continue</button>
     </div>
 
-    <!-- Step 2: Experience level -->
+    <!-- Step 2: Primary goal -->
     <div class="ob-screen" id="obStep2">
-      <h2>Your experience level</h2>
-      <p class="ob-subtitle">Helps us set smart starting defaults</p>
+      <div class="ob-step-label">Step 2 of 6</div>
+      <h2>What's your main goal?</h2>
+      <p class="ob-subtitle">Shapes your macro targets and coaching style</p>
       <div class="ob-option-list" role="radiogroup">
         <label class="ob-option">
-          <input type="radio" name="obExperience" value="beginner">
-          <span class="ob-option-label">Beginner</span>
-          <span class="ob-option-hint">Under 1 year</span>
+          <input type="radio" name="obGoal" value="cut">
+          <span class="ob-option-icon">🔥</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Lose fat</span>
+            <span class="ob-option-hint">Caloric deficit, preserve muscle</span>
+          </div>
         </label>
         <label class="ob-option">
-          <input type="radio" name="obExperience" value="intermediate">
-          <span class="ob-option-label">Intermediate</span>
-          <span class="ob-option-hint">1–3 years</span>
+          <input type="radio" name="obGoal" value="bulk">
+          <span class="ob-option-icon">💪</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Build muscle</span>
+            <span class="ob-option-hint">Slight caloric surplus</span>
+          </div>
         </label>
         <label class="ob-option">
-          <input type="radio" name="obExperience" value="advanced">
-          <span class="ob-option-label">Advanced</span>
-          <span class="ob-option-hint">3+ years</span>
+          <input type="radio" name="obGoal" value="recomp">
+          <span class="ob-option-icon">⚖️</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Body recomposition</span>
+            <span class="ob-option-hint">Lose fat while gaining muscle</span>
+          </div>
+        </label>
+        <label class="ob-option">
+          <input type="radio" name="obGoal" value="maintain">
+          <span class="ob-option-icon">🏃</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Performance / health</span>
+            <span class="ob-option-hint">Maintain weight, optimise fitness</span>
+          </div>
         </label>
       </div>
       <button class="ob-next-btn" id="obNext2" disabled>Continue</button>
       <button class="ob-back-btn" id="obBack2">Back</button>
     </div>
 
-    <!-- Step 3: Quick preferences -->
+    <!-- Step 3: Experience level -->
     <div class="ob-screen" id="obStep3">
-      <h2>A few quick preferences</h2>
-      <p class="ob-subtitle">You can change these any time in Settings</p>
+      <div class="ob-step-label">Step 3 of 6</div>
+      <h2>Your experience level</h2>
+      <p class="ob-subtitle">Helps us set smart starting defaults</p>
+      <div class="ob-option-list" role="radiogroup">
+        <label class="ob-option">
+          <input type="radio" name="obExperience" value="beginner">
+          <span class="ob-option-icon">🌱</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Beginner</span>
+            <span class="ob-option-hint">Under 1 year</span>
+          </div>
+        </label>
+        <label class="ob-option">
+          <input type="radio" name="obExperience" value="intermediate">
+          <span class="ob-option-icon">📈</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Intermediate</span>
+            <span class="ob-option-hint">1–3 years</span>
+          </div>
+        </label>
+        <label class="ob-option">
+          <input type="radio" name="obExperience" value="advanced">
+          <span class="ob-option-icon">🏆</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Advanced</span>
+            <span class="ob-option-hint">3+ years</span>
+          </div>
+        </label>
+      </div>
+      <button class="ob-next-btn" id="obNext3" disabled>Continue</button>
+      <button class="ob-back-btn" id="obBack3">Back</button>
+    </div>
+
+    <!-- Step 4: Body stats -->
+    <div class="ob-screen" id="obStep4">
+      <div class="ob-step-label">Step 4 of 6</div>
+      <h2>Your body stats</h2>
+      <p class="ob-subtitle">Used to calculate your personalised macros</p>
+      <div class="ob-unit-row">
+        <span class="ob-unit-label">Units</span>
+        <div class="ob-toggle-group" id="obStatsUnitToggle">
+          <button class="ob-toggle-btn ob-active" data-statsunit="metric">kg / cm</button>
+          <button class="ob-toggle-btn" data-statsunit="imperial">lbs / in</button>
+        </div>
+      </div>
+      <div class="ob-stats-grid">
+        <div class="ob-stat-field">
+          <label for="obWeight">Weight</label>
+          <div class="ob-stat-input-wrap">
+            <input type="number" id="obWeight" placeholder="75" min="30" max="400" inputmode="decimal">
+            <span id="obWeightUnitLabel">kg</span>
+          </div>
+        </div>
+        <div class="ob-stat-field">
+          <label for="obHeight">Height</label>
+          <div class="ob-stat-input-wrap">
+            <input type="number" id="obHeight" placeholder="178" min="50" max="300" inputmode="decimal">
+            <span id="obHeightUnitLabel">cm</span>
+          </div>
+        </div>
+        <div class="ob-stat-field">
+          <label for="obAge">Age</label>
+          <div class="ob-stat-input-wrap">
+            <input type="number" id="obAge" placeholder="25" min="13" max="99" inputmode="numeric">
+            <span>yrs</span>
+          </div>
+        </div>
+        <div class="ob-stat-field">
+          <label>Sex</label>
+          <div class="ob-toggle-group" id="obSexToggle">
+            <button class="ob-toggle-btn" data-sex="male">Male</button>
+            <button class="ob-toggle-btn" data-sex="female">Female</button>
+          </div>
+        </div>
+      </div>
+      <button class="ob-next-btn" id="obNext4" disabled>Continue</button>
+      <button class="ob-back-btn" id="obBack4">Back</button>
+    </div>
+
+    <!-- Step 5: Activity level -->
+    <div class="ob-screen" id="obStep5">
+      <div class="ob-step-label">Step 5 of 6</div>
+      <h2>How active are you?</h2>
+      <p class="ob-subtitle">Outside of your gym sessions</p>
+      <div class="ob-option-list" role="radiogroup">
+        <label class="ob-option">
+          <input type="radio" name="obActivity" value="1.2">
+          <span class="ob-option-icon">🛋️</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Sedentary</span>
+            <span class="ob-option-hint">Desk job, little movement</span>
+          </div>
+        </label>
+        <label class="ob-option">
+          <input type="radio" name="obActivity" value="1.375">
+          <span class="ob-option-icon">🚶</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Lightly active</span>
+            <span class="ob-option-hint">Light exercise 1–3 days/week</span>
+          </div>
+        </label>
+        <label class="ob-option">
+          <input type="radio" name="obActivity" value="1.55">
+          <span class="ob-option-icon">🏃</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Moderately active</span>
+            <span class="ob-option-hint">Exercise 3–5 days/week</span>
+          </div>
+        </label>
+        <label class="ob-option">
+          <input type="radio" name="obActivity" value="1.725">
+          <span class="ob-option-icon">⚡</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Very active</span>
+            <span class="ob-option-hint">Hard training 6–7 days/week</span>
+          </div>
+        </label>
+        <label class="ob-option">
+          <input type="radio" name="obActivity" value="1.9">
+          <span class="ob-option-icon">🏅</span>
+          <div class="ob-option-text">
+            <span class="ob-option-label">Athlete</span>
+            <span class="ob-option-hint">Twice-a-day or physical job</span>
+          </div>
+        </label>
+      </div>
+      <button class="ob-next-btn" id="obNext5" disabled>Continue</button>
+      <button class="ob-back-btn" id="obBack5">Back</button>
+    </div>
+
+    <!-- Step 6: Preferences + macro preview -->
+    <div class="ob-screen" id="obStep6">
+      <div class="ob-step-label">Step 6 of 6</div>
+      <h2>Almost done!</h2>
+      <p class="ob-subtitle">A few preferences — editable any time in Settings</p>
+      <div id="obMacroPreview" class="ob-macro-preview" style="display:none"></div>
       <div class="ob-prefs">
         <div class="ob-pref-row">
-          <span>Weight unit</span>
+          <span>Display unit</span>
           <div class="ob-toggle-group" id="obUnitToggle">
             <button class="ob-toggle-btn ob-active" data-unit="kg">kg</button>
             <button class="ob-toggle-btn" data-unit="lbs">lbs</button>
@@ -153,8 +309,8 @@
           </div>
         </div>
       </div>
-      <button class="ob-next-btn" id="obFinish">Let's go!</button>
-      <button class="ob-back-btn" id="obBack3">Back</button>
+      <button class="ob-next-btn" id="obFinish">Let's go! 🚀</button>
+      <button class="ob-back-btn" id="obBack6">Back</button>
     </div>
   </div>
 </div>
@@ -14838,13 +14994,25 @@ document.addEventListener('DOMContentLoaded', () => {
 // ONBOARDING WIZARD
 // ─────────────────────────────────────────────
 
-const _ob = { archetype: null, experience: null, unit: 'kg', theme: 'dark' };
+const _ob = {
+  archetype: null,
+  goal: null,
+  experience: null,
+  statsUnit: 'metric',   // 'metric' | 'imperial'
+  weightRaw: null,       // as entered by user
+  heightRaw: null,
+  age: null,
+  sex: null,
+  activityFactor: null,
+  unit: 'kg',            // display unit for rest of app
+  theme: 'dark',
+};
 
 function showOnboarding() {
   const overlay = document.getElementById('onboardingOverlay');
   if (overlay) {
     overlay.removeAttribute('hidden');
-    _initOnboarding(); // ensure delegation is wired up before first interaction
+    _initOnboarding();
     _obGoToStep(1);
   }
 }
@@ -14857,9 +15025,9 @@ function _obGoToStep(step) {
     dot.classList.toggle('ob-active', i + 1 === step);
     dot.classList.toggle('ob-done', i + 1 < step);
   });
+  if (step === 6) _obRenderMacroPreview();
 }
 
-// Global handler callable from inline onclick — works regardless of init order
 window._ob = _ob;
 window._selectArchetype = function(card) {
   document.querySelectorAll('.ob-archetype-card').forEach(c => c.classList.remove('selected'));
@@ -14869,24 +15037,137 @@ window._selectArchetype = function(card) {
   if (btn) btn.disabled = false;
 };
 
+function _obValidateStats() {
+  const w = document.getElementById('obWeight')?.value;
+  const h = document.getElementById('obHeight')?.value;
+  const a = document.getElementById('obAge')?.value;
+  const ok = w && h && a && window._ob.sex;
+  const btn = document.getElementById('obNext4');
+  if (btn) btn.disabled = !ok;
+}
+
+function _obUpdateStatsUnit(unit) {
+  window._ob.statsUnit = unit;
+  document.querySelectorAll('#obStatsUnitToggle .ob-toggle-btn').forEach(b => {
+    b.classList.toggle('ob-active', b.dataset.statsunit === unit);
+  });
+  const wLabel = document.getElementById('obWeightUnitLabel');
+  const hLabel = document.getElementById('obHeightUnitLabel');
+  const wInput = document.getElementById('obWeight');
+  const hInput = document.getElementById('obHeight');
+  if (unit === 'imperial') {
+    if (wLabel) wLabel.textContent = 'lbs';
+    if (hLabel) hLabel.textContent = 'in';
+    if (wInput) wInput.placeholder = '165';
+    if (hInput) hInput.placeholder = '70';
+  } else {
+    if (wLabel) wLabel.textContent = 'kg';
+    if (hLabel) hLabel.textContent = 'cm';
+    if (wInput) wInput.placeholder = '75';
+    if (hInput) hInput.placeholder = '178';
+  }
+  // Also sync the display-unit toggle on step 6
+  const displayUnit = unit === 'imperial' ? 'lbs' : 'kg';
+  window._ob.unit = displayUnit;
+  document.querySelectorAll('#obUnitToggle .ob-toggle-btn').forEach(b => {
+    b.classList.toggle('ob-active', b.dataset.unit === displayUnit);
+  });
+}
+
+function _obRenderMacroPreview() {
+  const el = document.getElementById('obMacroPreview');
+  if (!el) return;
+  if (!window._ob.weightRaw || !window._ob.heightRaw || !window._ob.age || !window._ob.sex || !window._ob.activityFactor) {
+    el.style.display = 'none';
+    return;
+  }
+  const isImperial = window._ob.statsUnit === 'imperial';
+  const weightKg = isImperial ? window._ob.weightRaw * 0.453592 : window._ob.weightRaw;
+  const heightCm = isImperial ? window._ob.heightRaw * 2.54 : window._ob.heightRaw;
+  const age = window._ob.age;
+  const sex = window._ob.sex;
+  const activity = window._ob.activityFactor;
+
+  // Mifflin-St Jeor BMR
+  const bmr = sex === 'male'
+    ? (10 * weightKg + 6.25 * heightCm - 5 * age + 5)
+    : (10 * weightKg + 6.25 * heightCm - 5 * age - 161);
+  const tdee = Math.round(bmr * activity);
+
+  const goalAdj = { cut: -400, bulk: 300, recomp: 0, maintain: 0 };
+  const calories = tdee + (goalAdj[window._ob.goal] || 0);
+  const protein  = Math.round(weightKg * 2.0);
+  const fat      = Math.round((calories * 0.28) / 9);
+  const carbs    = Math.round((calories - protein * 4 - fat * 9) / 4);
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="ob-macro-title">Your estimated daily targets</div>
+    <div class="ob-macro-grid">
+      <div class="ob-macro-item">
+        <span class="ob-macro-val">${calories}</span>
+        <span class="ob-macro-lbl">kcal</span>
+      </div>
+      <div class="ob-macro-item ob-macro-protein">
+        <span class="ob-macro-val">${protein}g</span>
+        <span class="ob-macro-lbl">Protein</span>
+      </div>
+      <div class="ob-macro-item ob-macro-carbs">
+        <span class="ob-macro-val">${carbs}g</span>
+        <span class="ob-macro-lbl">Carbs</span>
+      </div>
+      <div class="ob-macro-item ob-macro-fat">
+        <span class="ob-macro-val">${fat}g</span>
+        <span class="ob-macro-lbl">Fat</span>
+      </div>
+    </div>
+    <div class="ob-macro-note">Fine-tune anytime in the Macro tab</div>`;
+}
+
 function _initOnboarding() {
   const overlay = document.getElementById('onboardingOverlay');
   if (!overlay || overlay._obDelegated) return;
   overlay._obDelegated = true;
 
-  // Single delegated listener on the overlay — survives hidden/show cycles
-  // and fires even if direct card listeners were never attached.
   overlay.addEventListener('click', (e) => {
-    // Archetype card
+    // Step 1 — archetype card
     const card = e.target.closest('.ob-archetype-card');
     if (card) { window._selectArchetype(card); return; }
 
+    // Navigation
     if (e.target.closest('#obNext1')) { _obGoToStep(2); return; }
     if (e.target.closest('#obBack2')) { _obGoToStep(1); return; }
     if (e.target.closest('#obNext2')) { _obGoToStep(3); return; }
     if (e.target.closest('#obBack3')) { _obGoToStep(2); return; }
+    if (e.target.closest('#obNext3')) { _obGoToStep(4); return; }
+    if (e.target.closest('#obBack4')) { _obGoToStep(3); return; }
+    if (e.target.closest('#obNext4')) {
+      window._ob.weightRaw = parseFloat(document.getElementById('obWeight')?.value);
+      window._ob.heightRaw = parseFloat(document.getElementById('obHeight')?.value);
+      window._ob.age = parseInt(document.getElementById('obAge')?.value, 10);
+      _obGoToStep(5);
+      return;
+    }
+    if (e.target.closest('#obBack5')) { _obGoToStep(4); return; }
+    if (e.target.closest('#obNext5')) { _obGoToStep(6); return; }
+    if (e.target.closest('#obBack6')) { _obGoToStep(5); return; }
     if (e.target.closest('#obFinish')) { _finishOnboarding(); return; }
 
+    // Stats unit toggle
+    const statsUnitBtn = e.target.closest('#obStatsUnitToggle .ob-toggle-btn');
+    if (statsUnitBtn) { _obUpdateStatsUnit(statsUnitBtn.dataset.statsunit); return; }
+
+    // Sex toggle
+    const sexBtn = e.target.closest('#obSexToggle .ob-toggle-btn');
+    if (sexBtn) {
+      document.querySelectorAll('#obSexToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
+      sexBtn.classList.add('ob-active');
+      window._ob.sex = sexBtn.dataset.sex;
+      _obValidateStats();
+      return;
+    }
+
+    // Display unit toggle
     const unitBtn = e.target.closest('#obUnitToggle .ob-toggle-btn');
     if (unitBtn) {
       document.querySelectorAll('#obUnitToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
@@ -14894,6 +15175,8 @@ function _initOnboarding() {
       window._ob.unit = unitBtn.dataset.unit;
       return;
     }
+
+    // Theme toggle
     const themeBtn = e.target.closest('#obThemeToggle .ob-toggle-btn');
     if (themeBtn) {
       document.querySelectorAll('#obThemeToggle .ob-toggle-btn').forEach(b => b.classList.remove('ob-active'));
@@ -14903,12 +15186,29 @@ function _initOnboarding() {
     }
   });
 
-  // Experience level uses change (radio), not click
+  // Radio inputs (goal, experience, activity)
   overlay.addEventListener('change', (e) => {
-    if (e.target.name === 'obExperience') {
-      window._ob.experience = e.target.value;
+    if (e.target.name === 'obGoal') {
+      window._ob.goal = e.target.value;
       const btn = document.getElementById('obNext2');
       if (btn) btn.disabled = false;
+    }
+    if (e.target.name === 'obExperience') {
+      window._ob.experience = e.target.value;
+      const btn = document.getElementById('obNext3');
+      if (btn) btn.disabled = false;
+    }
+    if (e.target.name === 'obActivity') {
+      window._ob.activityFactor = parseFloat(e.target.value);
+      const btn = document.getElementById('obNext5');
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  // Stats inputs — validate on each keystroke
+  overlay.addEventListener('input', (e) => {
+    if (['obWeight', 'obHeight', 'obAge'].includes(e.target.id)) {
+      _obValidateStats();
     }
   });
 }
@@ -14916,31 +15216,85 @@ function _initOnboarding() {
 function _finishOnboarding() {
   const user = window.currentUser || localStorage.getItem('fitnessAppUser');
 
-  if (user && _ob.archetype) {
-    // Map archetype → training mode
-    const archetypeToMode = {
-      bodybuilder: 'bodybuilding',
-      powerlifter: 'powerlifting',
-      hybrid: 'bodybuilding',
-      recreational: 'bodybuilding',
-      athlete: 'athlete'
-    };
-    setTrainingMode(archetypeToMode[_ob.archetype] || 'bodybuilding');
+  if (user) {
+    // ── 1. Training mode from archetype ──────────────────────────
+    if (_ob.archetype) {
+      const archetypeToMode = {
+        bodybuilder: 'bodybuilding',
+        powerlifter: 'powerlifting',
+        hybrid: 'bodybuilding',
+        recreational: 'bodybuilding',
+        athlete: 'athlete'
+      };
+      if (typeof setTrainingMode === 'function') setTrainingMode(archetypeToMode[_ob.archetype] || 'bodybuilding');
+    }
 
-    // Persist to settings
-    const key = `settings_${user}`;
-    const settings = (() => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; } })();
-    settings.unit = _ob.unit;
+    // ── 2. Persist profile + preferences to settings ─────────────
+    const settingsKey = `settings_${user}`;
+    const settings = (() => { try { return JSON.parse(localStorage.getItem(settingsKey) || '{}'); } catch { return {}; } })();
+    settings.unit  = _ob.unit;
     settings.theme = _ob.theme;
     settings.profile = settings.profile || {};
     settings.profile.athleteArchetype = _ob.archetype;
-    settings.profile.experienceLevel = _ob.experience;
-    localStorage.setItem(key, JSON.stringify(settings));
-
-    // Apply unit preference — must match the key used everywhere else in the app
+    settings.profile.experienceLevel  = _ob.experience;
+    settings.profile.primaryGoal      = _ob.goal;
+    localStorage.setItem(settingsKey, JSON.stringify(settings));
     localStorage.setItem('defaultWeightUnit', _ob.unit);
 
-    // Apply theme if handler exists
+    // ── 3. Save body stats as personalDetails ────────────────────
+    if (_ob.weightRaw && _ob.heightRaw && _ob.age && _ob.sex) {
+      const isImperial = _ob.statsUnit === 'imperial';
+      const weightKg = isImperial ? Math.round(_ob.weightRaw * 0.453592 * 10) / 10 : _ob.weightRaw;
+      const heightCm = isImperial ? Math.round(_ob.heightRaw * 2.54)           : _ob.heightRaw;
+      const personalDetails = {
+        weightKg,
+        heightCm,
+        ageYears:       _ob.age,
+        sex:            _ob.sex,
+        activityFactor: _ob.activityFactor || 1.375,
+        bodyFatPercent: null,
+      };
+      localStorage.setItem('personalDetails', JSON.stringify(personalDetails));
+
+      // Mirror into Settings fields so the Macro tab can read them immediately
+      const macroSettings = {
+        weight:         weightKg,
+        height:         heightCm,
+        age:            _ob.age,
+        sex:            _ob.sex,
+        activityLevel:  _ob.activityFactor || 1.375,
+        macroGoal:      _ob.goal || 'maintain',
+      };
+      localStorage.setItem(`macroSettings_${user}`, JSON.stringify(macroSettings));
+
+      // ── 4. Run macro calculation immediately ─────────────────────
+      if (typeof window.macroEngine?.computeMacroPlan === 'function') {
+        const goalMap = { cut: 'cut', bulk: 'bulk', recomp: 'maintain', maintain: 'maintain' };
+        try {
+          const plan = window.macroEngine.computeMacroPlan({
+            weightKg,
+            heightCm,
+            ageYears:       _ob.age,
+            sex:            _ob.sex,
+            activityFactor: _ob.activityFactor || 1.375,
+            goal:           goalMap[_ob.goal] || 'maintain',
+            rate:           'moderate',
+            formula:        'mifflin',
+          });
+          const targets = {
+            calories: Math.round(plan.energy.targetCalories),
+            protein:  plan.macros.proteinGrams,
+            carbs:    plan.macros.carbGrams,
+            fat:      plan.macros.fatGrams,
+          };
+          localStorage.setItem(`macroTargets_${user}`, JSON.stringify(targets));
+        } catch (err) {
+          console.warn('[Onboarding] Macro engine error:', err);
+        }
+      }
+    }
+
+    // ── 5. Apply theme ───────────────────────────────────────────
     if (typeof window.applyTheme === 'function') window.applyTheme(_ob.theme);
   }
 
