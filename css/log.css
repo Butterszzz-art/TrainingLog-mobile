@@ -60,6 +60,107 @@
   flex-shrink: 0;
 }
 
+/* ── Rest timer banner (persistent, above workout timer) ─────── */
+
+.rest-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 12px 4px;
+  padding: 10px 14px 10px 12px;
+  background: rgba(240, 160, 64, 0.07);
+  border: 1px solid rgba(240, 160, 64, 0.22);
+  border-left: 3px solid #f0a040;
+  border-radius: 0 10px 10px 0;
+}
+
+.rest-banner[hidden] { display: none !important; }
+
+/* Circular ring */
+.rest-banner-ring-wrap {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+
+.rest-banner-ring-svg {
+  width: 50px;
+  height: 50px;
+  display: block;
+  transform: rotate(-90deg);
+}
+
+.rest-banner-ring-track {
+  fill: none;
+  stroke: rgba(240, 160, 64, 0.15);
+  stroke-width: 5;
+}
+
+.rest-banner-ring-fill {
+  fill: none;
+  stroke: #f0a040;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s linear;
+}
+
+.rest-banner-ring-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #f0a040;
+  pointer-events: none;
+}
+
+/* Text info */
+.rest-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.rest-banner-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted, #7a8f7d);
+  font-weight: 600;
+}
+
+.rest-banner-time {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f0a040;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* Skip button */
+.rest-banner-skip {
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid rgba(240, 160, 64, 0.35);
+  border-radius: 8px;
+  color: #f0a040;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: 'Poppins', sans-serif;
+  transition: background 0.15s;
+}
+
+.rest-banner-skip:hover {
+  background: rgba(240, 160, 64, 0.1);
+}
+
 /* ── Resistance section ─────────────────────────────────────── */
 
 #resistance-section {
