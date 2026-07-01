@@ -5,6 +5,154 @@
    Depends on: tokens.css
    ============================================================= */
 
+/* ── Macro tracker cards ────────────────────────────────────── */
+
+.macro-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 4px;
+}
+
+.macro-card {
+  background: var(--surface-bg, #141e17);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 14px;
+  padding: 14px 16px 12px;
+}
+
+.macro-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.macro-card-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.macro-card-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.macro-dot-cal     { background: #f0a040; box-shadow: 0 0 6px #f0a04066; }
+.macro-dot-protein { background: #4da8da; box-shadow: 0 0 6px #4da8da66; }
+.macro-dot-carbs   { background: #6fcf97; box-shadow: 0 0 6px #6fcf9766; }
+.macro-dot-fat     { background: #eb5757; box-shadow: 0 0 6px #eb575766; }
+
+.macro-card-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.macro-card-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.macro-card-consumed {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+  font-variant-numeric: tabular-nums;
+}
+
+.macro-card-sep {
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.macro-card-target {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-muted, #7a8f7d);
+  font-variant-numeric: tabular-nums;
+}
+
+.macro-card-unit {
+  font-size: 0.75rem;
+  color: var(--text-muted, #7a8f7d);
+  font-weight: 600;
+}
+
+.macro-card-bar-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.macro-card-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.macro-bar-cal     { background: #f0a040; }
+.macro-bar-protein { background: #4da8da; }
+.macro-bar-carbs   { background: #6fcf97; }
+.macro-bar-fat     { background: #eb5757; }
+
+.macro-card-net {
+  font-size: 0.72rem;
+  color: var(--text-muted, #7a8f7d);
+  margin-bottom: 10px;
+  margin-top: -4px;
+}
+
+.macro-card-qa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.macro-qa-input {
+  width: 72px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: var(--card-bg, #0f1510);
+  color: var(--text, #e8f5e9);
+  font-size: 0.9rem;
+  text-align: center;
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+}
+
+.macro-qa-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary, #5fa87e);
+  color: #0b130d;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.macro-qa-btn:active { transform: scale(0.88); }
+
 /* ── Macro progress rings ───────────────────────────────────── */
 
 .macro-rings-row {
