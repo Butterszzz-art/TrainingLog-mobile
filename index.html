@@ -17445,12 +17445,12 @@ window.renderMeetPrep = renderMeetPrep;
       + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Days / week<select id="pagDays"><option value="3">3 days</option><option value="4" selected>4 days</option><option value="5">5 days</option><option value="6">6 days</option></select></label>'
       + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Session length<select id="pagLength"><option value="45">45 min</option><option value="60" selected>60 min</option><option value="75">75 min</option><option value="90">90 min</option></select></label>'
       + '</div>'
-      + '<div style="font-size:0.88rem;color:var(--secondary-text);margin-bottom:2px;">Equipment available</div>'
+      + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted,#7a8f7d);">Equipment available</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqBarbell" checked> Barbell</label>'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqDumbbells" checked> Dumbbells</label>'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqCables" checked> Cables / Machine</label>'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqBodyweight"> Bodyweight only</label>'
+      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">🏋️ Barbell</button>'
+      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">💪 Dumbbells</button>'
+      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">🔗 Cables / Machine</button>'
+      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" onclick="this.classList.toggle(\'active\')">🤸 Bodyweight</button>'
       + '</div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
       + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Training mode<select id="pagMode">' + modeOptions + '</select></label>'
@@ -17548,10 +17548,10 @@ window.renderMeetPrep = renderMeetPrep;
     }
 
     var equipment = [];
-    if (document.getElementById('pagEqBarbell')?.checked)    equipment.push('barbell');
-    if (document.getElementById('pagEqDumbbells')?.checked)  equipment.push('dumbbells');
-    if (document.getElementById('pagEqCables')?.checked)     equipment.push('cables');
-    if (document.getElementById('pagEqBodyweight')?.checked) equipment.push('bodyweight');
+    if (document.getElementById('pagEqBarbell')?.classList.contains('active'))    equipment.push('barbell');
+    if (document.getElementById('pagEqDumbbells')?.classList.contains('active'))  equipment.push('dumbbells');
+    if (document.getElementById('pagEqCables')?.classList.contains('active'))     equipment.push('cables');
+    if (document.getElementById('pagEqBodyweight')?.classList.contains('active')) equipment.push('bodyweight');
     if (!equipment.length) equipment.push('bodyweight');
 
     // Loading state
