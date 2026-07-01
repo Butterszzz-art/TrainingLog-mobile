@@ -153,6 +153,12 @@
 
 .macro-qa-btn:active { transform: scale(0.88); }
 
+/* Override global .macro-card input[type="number"] { width:100% } for quick-add inputs */
+.macro-card .macro-card-qa .macro-qa-input {
+  width: 72px !important;
+  flex-shrink: 0;
+}
+
 /* ── Macro progress rings ───────────────────────────────────── */
 
 .macro-rings-row {
