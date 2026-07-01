@@ -585,6 +585,23 @@
       <!-- Session context flags: alt-machine / alt-gym -->
       <div id="sessionContextBar" style="padding:0 12px;"></div>
 
+      <!-- Rest timer banner — shown while a rest is active -->
+      <div id="restBanner" class="rest-banner" hidden aria-live="polite">
+        <div class="rest-banner-ring-wrap">
+          <svg class="rest-banner-ring-svg" viewBox="0 0 56 56">
+            <circle class="rest-banner-ring-track" cx="28" cy="28" r="22"/>
+            <circle class="rest-banner-ring-fill" id="restBannerRingFill" cx="28" cy="28" r="22"
+              stroke-dasharray="138.23" stroke-dashoffset="0"/>
+          </svg>
+          <span class="rest-banner-ring-pct" id="restBannerPct">100%</span>
+        </div>
+        <div class="rest-banner-info">
+          <span class="rest-banner-label">Rest timer</span>
+          <span class="rest-banner-time" id="restBannerTime">0:00</span>
+        </div>
+        <button class="rest-banner-skip" type="button" onclick="skipRestTimer()">Skip ✕</button>
+      </div>
+
       <!-- Workout session timer — styled as a full-width banner -->
       <div id="workoutTimer" class="workout-timer" aria-live="polite">
         <div class="workout-timer-info">
@@ -5683,6 +5700,19 @@ function changeSetType(workoutIndex, entryIndex, setIndex, type) {
 }
 
 let restInterval;
+function _updateRestBanner(remaining, total) {
+  const banner   = document.getElementById('restBanner');
+  const timeEl   = document.getElementById('restBannerTime');
+  const pctEl    = document.getElementById('restBannerPct');
+  const ringFill = document.getElementById('restBannerRingFill');
+  if (!banner) return;
+  const pct = total > 0 ? remaining / total : 0;
+  const C = 138.23; // 2π × r(22)
+  if (timeEl)   timeEl.textContent   = formatRestTime(remaining);
+  if (pctEl)    pctEl.textContent    = Math.ceil(pct * 100) + '%';
+  if (ringFill) ringFill.style.strokeDashoffset = C * (1 - pct);
+}
+
 function startRestTimer() {
   const minutes = +document.getElementById('restMinutes').value || 0;
   const seconds = +document.getElementById('restSeconds').value || 0;
@@ -5692,19 +5722,35 @@ function startRestTimer() {
     return;
   }
   let remaining = totalSeconds;
+
+  // Show the persistent banner in the log view
+  const banner = document.getElementById('restBanner');
+  if (banner) banner.hidden = false;
+  _updateRestBanner(remaining, totalSeconds);
+
   const display = document.getElementById('restTimerDisplay');
-  display.textContent = formatRestTime(remaining);
+  if (display) display.textContent = formatRestTime(remaining);
   clearInterval(restInterval);
   restInterval = setInterval(() => {
     remaining--;
     if (remaining <= 0) {
       clearInterval(restInterval);
-      display.textContent = 'Rest Over!';
+      if (display) display.textContent = 'Rest Over!';
+      if (banner) banner.hidden = true;
       logRestBreak(totalSeconds / 60);
     } else {
-      display.textContent = formatRestTime(remaining);
+      if (display) display.textContent = formatRestTime(remaining);
+      _updateRestBanner(remaining, totalSeconds);
     }
   }, 1000);
+}
+
+function skipRestTimer() {
+  clearInterval(restInterval);
+  const banner  = document.getElementById('restBanner');
+  const display = document.getElementById('restTimerDisplay');
+  if (banner)  banner.hidden = true;
+  if (display) display.textContent = '';
 }
 
 function formatRestTime(sec) {
