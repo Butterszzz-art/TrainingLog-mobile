@@ -55,7 +55,25 @@ function _fmt(totalSeconds) {
     val.textContent = Math.round(bar.value);
   }
 
-  function syncAll() { RING_CONFIGS.forEach(syncRing); }
+  const VIS_BAR_CONFIGS = [
+    { barId: 'calsBar',    fillId: 'calsVisBar' },
+    { barId: 'proteinBar', fillId: 'proteinVisBar' },
+    { barId: 'carbBar',    fillId: 'carbsVisBar' },
+    { barId: 'fatBar',     fillId: 'fatVisBar' },
+  ];
+
+  function syncVisBar({ barId, fillId }) {
+    const bar  = document.getElementById(barId);
+    const fill = document.getElementById(fillId);
+    if (!bar || !fill) return;
+    const pct = bar.max > 0 ? Math.min((bar.value / bar.max) * 100, 100) : 0;
+    fill.style.width = pct + '%';
+  }
+
+  function syncAll() {
+    RING_CONFIGS.forEach(syncRing);
+    VIS_BAR_CONFIGS.forEach(syncVisBar);
+  }
 
   // Poll at 300 ms so we don't need to touch every JS call that sets bar values.
   // Interval is paused when the app is backgrounded to avoid draining battery.

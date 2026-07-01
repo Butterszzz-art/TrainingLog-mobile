@@ -2242,21 +2242,107 @@
               </div>
             </div>
 
-            <p style="font-size:1.1rem;">Energy: <span id="macroCalsProgress">0</span> / <span id="macroCalsTarget">0</span> kcal (<span id="macroCalsNet">0</span> net)</p>
-            <progress id="calsBar" value="0" max="100" style="width:100%;height:20px;margin-bottom:6px;"></progress>
-            <div class="quick-add"><input id="qaCals" type="number" value="100"><button onclick="subtractMacro('cal')">–</button><button onclick="addMacro('cal')">+</button></div>
+            <!-- Macro tracker cards -->
+            <div class="macro-cards">
 
-            <p style="font-size:1rem;">Protein: <span id="macroProteinProgress">0</span> / <span id="macroProteinTarget">0</span> g</p>
-            <progress id="proteinBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-            <div class="quick-add"><input id="qaProtein" type="number" value="10"><button onclick="subtractMacro('protein')">–</button><button onclick="addMacro('protein')">+</button></div>
+              <div class="macro-card">
+                <div class="macro-card-header">
+                  <div class="macro-card-label">
+                    <span class="macro-card-dot macro-dot-cal"></span>
+                    <span class="macro-card-name">Energy</span>
+                  </div>
+                  <div class="macro-card-nums">
+                    <span class="macro-card-consumed" id="macroCalsProgress">0</span>
+                    <span class="macro-card-sep"> / </span>
+                    <span class="macro-card-target" id="macroCalsTarget">0</span>
+                    <span class="macro-card-unit"> kcal</span>
+                  </div>
+                </div>
+                <div class="macro-card-bar-track">
+                  <div class="macro-card-bar-fill macro-bar-cal" id="calsVisBar"></div>
+                </div>
+                <div class="macro-card-net"><span id="macroCalsNet">0</span> kcal net</div>
+                <div class="macro-card-qa">
+                  <input id="qaCals" type="number" value="100" class="macro-qa-input">
+                  <button class="macro-qa-btn" onclick="subtractMacro('cal')">–</button>
+                  <button class="macro-qa-btn" onclick="addMacro('cal')">+</button>
+                </div>
+                <progress id="calsBar" value="0" max="100"></progress>
+              </div>
 
-            <p style="font-size:1rem;">Carbs: <span id="macroCarbsProgress">0</span> / <span id="macroCarbsTarget">0</span> g</p>
-            <progress id="carbBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-            <div class="quick-add"><input id="qaCarbs" type="number" value="10"><button onclick="subtractMacro('carbs')">–</button><button onclick="addMacro('carbs')">+</button></div>
+              <div class="macro-card">
+                <div class="macro-card-header">
+                  <div class="macro-card-label">
+                    <span class="macro-card-dot macro-dot-protein"></span>
+                    <span class="macro-card-name">Protein</span>
+                  </div>
+                  <div class="macro-card-nums">
+                    <span class="macro-card-consumed" id="macroProteinProgress">0</span>
+                    <span class="macro-card-sep"> / </span>
+                    <span class="macro-card-target" id="macroProteinTarget">0</span>
+                    <span class="macro-card-unit"> g</span>
+                  </div>
+                </div>
+                <div class="macro-card-bar-track">
+                  <div class="macro-card-bar-fill macro-bar-protein" id="proteinVisBar"></div>
+                </div>
+                <div class="macro-card-qa">
+                  <input id="qaProtein" type="number" value="10" class="macro-qa-input">
+                  <button class="macro-qa-btn" onclick="subtractMacro('protein')">–</button>
+                  <button class="macro-qa-btn" onclick="addMacro('protein')">+</button>
+                </div>
+                <progress id="proteinBar" value="0" max="100"></progress>
+              </div>
 
-            <p style="font-size:1rem;">Fat: <span id="macroFatProgress">0</span> / <span id="macroFatTarget">0</span> g</p>
-            <progress id="fatBar" value="0" max="100" style="width:100%;height:15px;margin-bottom:6px;"></progress>
-            <div class="quick-add"><input id="qaFat" type="number" value="5"><button onclick="subtractMacro('fat')">–</button><button onclick="addMacro('fat')">+</button></div>
+              <div class="macro-card">
+                <div class="macro-card-header">
+                  <div class="macro-card-label">
+                    <span class="macro-card-dot macro-dot-carbs"></span>
+                    <span class="macro-card-name">Carbs</span>
+                  </div>
+                  <div class="macro-card-nums">
+                    <span class="macro-card-consumed" id="macroCarbsProgress">0</span>
+                    <span class="macro-card-sep"> / </span>
+                    <span class="macro-card-target" id="macroCarbsTarget">0</span>
+                    <span class="macro-card-unit"> g</span>
+                  </div>
+                </div>
+                <div class="macro-card-bar-track">
+                  <div class="macro-card-bar-fill macro-bar-carbs" id="carbsVisBar"></div>
+                </div>
+                <div class="macro-card-qa">
+                  <input id="qaCarbs" type="number" value="10" class="macro-qa-input">
+                  <button class="macro-qa-btn" onclick="subtractMacro('carbs')">–</button>
+                  <button class="macro-qa-btn" onclick="addMacro('carbs')">+</button>
+                </div>
+                <progress id="carbBar" value="0" max="100"></progress>
+              </div>
+
+              <div class="macro-card">
+                <div class="macro-card-header">
+                  <div class="macro-card-label">
+                    <span class="macro-card-dot macro-dot-fat"></span>
+                    <span class="macro-card-name">Fat</span>
+                  </div>
+                  <div class="macro-card-nums">
+                    <span class="macro-card-consumed" id="macroFatProgress">0</span>
+                    <span class="macro-card-sep"> / </span>
+                    <span class="macro-card-target" id="macroFatTarget">0</span>
+                    <span class="macro-card-unit"> g</span>
+                  </div>
+                </div>
+                <div class="macro-card-bar-track">
+                  <div class="macro-card-bar-fill macro-bar-fat" id="fatVisBar"></div>
+                </div>
+                <div class="macro-card-qa">
+                  <input id="qaFat" type="number" value="5" class="macro-qa-input">
+                  <button class="macro-qa-btn" onclick="subtractMacro('fat')">–</button>
+                  <button class="macro-qa-btn" onclick="addMacro('fat')">+</button>
+                </div>
+                <progress id="fatBar" value="0" max="100"></progress>
+              </div>
+
+            </div><!-- /.macro-cards -->
 
             <!-- ── Water Tracker ── -->
             <div class="water-tracker-widget">
@@ -17445,12 +17531,12 @@ window.renderMeetPrep = renderMeetPrep;
       + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Days / week<select id="pagDays"><option value="3">3 days</option><option value="4" selected>4 days</option><option value="5">5 days</option><option value="6">6 days</option></select></label>'
       + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Session length<select id="pagLength"><option value="45">45 min</option><option value="60" selected>60 min</option><option value="75">75 min</option><option value="90">90 min</option></select></label>'
       + '</div>'
-      + '<div style="font-size:0.88rem;color:var(--secondary-text);margin-bottom:2px;">Equipment available</div>'
+      + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted,#7a8f7d);">Equipment available</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqBarbell" checked> Barbell</label>'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqDumbbells" checked> Dumbbells</label>'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqCables" checked> Cables / Machine</label>'
-      + '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;"><input type="checkbox" id="pagEqBodyweight"> Bodyweight only</label>'
+      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">🏋️ Barbell</button>'
+      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">💪 Dumbbells</button>'
+      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">🔗 Cables / Machine</button>'
+      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" onclick="this.classList.toggle(\'active\')">🤸 Bodyweight</button>'
       + '</div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
       + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Training mode<select id="pagMode">' + modeOptions + '</select></label>'
@@ -17548,10 +17634,10 @@ window.renderMeetPrep = renderMeetPrep;
     }
 
     var equipment = [];
-    if (document.getElementById('pagEqBarbell')?.checked)    equipment.push('barbell');
-    if (document.getElementById('pagEqDumbbells')?.checked)  equipment.push('dumbbells');
-    if (document.getElementById('pagEqCables')?.checked)     equipment.push('cables');
-    if (document.getElementById('pagEqBodyweight')?.checked) equipment.push('bodyweight');
+    if (document.getElementById('pagEqBarbell')?.classList.contains('active'))    equipment.push('barbell');
+    if (document.getElementById('pagEqDumbbells')?.classList.contains('active'))  equipment.push('dumbbells');
+    if (document.getElementById('pagEqCables')?.classList.contains('active'))     equipment.push('cables');
+    if (document.getElementById('pagEqBodyweight')?.classList.contains('active')) equipment.push('bodyweight');
     if (!equipment.length) equipment.push('bodyweight');
 
     // Loading state

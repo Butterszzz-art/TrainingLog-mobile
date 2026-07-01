@@ -493,19 +493,17 @@
       return wrap;
     }
 
-    /* ── Exercises step — layout shell ─ */
+    /* ── Exercises step — mobile-first stacked layout ─ */
     function buildExercisesStep() {
       const wrap = document.createElement('div');
       wrap.id = 'pbv2ExWrap';
       wrap.innerHTML = `
         <div class="pbv2-step-heading" style="padding-bottom:0;">
-          <h2>Add exercises to each day</h2>
-          <p>Search the library or type any name to add a custom exercise.</p>
+          <h2>Build your days</h2>
+          <p>Pick a day, search for exercises, tap to add.</p>
         </div>
-        <div class="pbv2-ex-layout">
-          <div class="pbv2-day-pane" id="pbv2DayPane"></div>
-          <div class="pbv2-exercise-pane" id="pbv2ExPane"></div>
-        </div>
+        <div class="pbv2-day-tabs-row" id="pbv2DayPane"></div>
+        <div class="pbv2-ex-stack" id="pbv2ExPane"></div>
       `;
       _renderDayPane(wrap.querySelector('#pbv2DayPane'));
       _renderExercisePane(wrap.querySelector('#pbv2ExPane'));
@@ -519,6 +517,9 @@
       if (!dayPane || !exPane) { render(); return; }
       _renderDayPane(dayPane);
       _renderExercisePane(exPane);
+      // Scroll newly added exercise card into view
+      const cards = exPane.querySelectorAll('.pbv2-ex-card');
+      if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function _renderDayPane(host) {
@@ -526,14 +527,14 @@
       (draft.days || []).forEach(day => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'pbv2-day-btn' + (day.dayId === selectedDayId ? ' active' : '');
+        btn.className = 'pbv2-day-tab' + (day.dayId === selectedDayId ? ' active' : '');
         const exCount = (day.exercises || []).length;
         btn.innerHTML = `
-          ${esc(day.name)}
-          <span class="pbv2-day-btn-meta">${exCount} exercise${exCount !== 1 ? 's' : ''}</span>
-          <span class="pbv2-day-actions">
-            <span class="pbv2-day-action-btn" data-act="rename" data-id="${day.dayId}" title="Rename">✏️</span>
-            <span class="pbv2-day-action-btn" data-act="delete" data-id="${day.dayId}" title="Delete">🗑️</span>
+          <span class="pbv2-day-tab-name">${esc(day.name)}</span>
+          ${exCount ? `<span class="pbv2-day-tab-count">${exCount}</span>` : ''}
+          <span class="pbv2-day-tab-actions">
+            <span data-act="rename" data-id="${day.dayId}" title="Rename">✏️</span>
+            <span data-act="delete" data-id="${day.dayId}" title="Delete">🗑</span>
           </span>
         `;
         btn.addEventListener('click', e => {
@@ -551,8 +552,8 @@
 
       const addBtn = document.createElement('button');
       addBtn.type = 'button';
-      addBtn.className = 'pbv2-add-day-btn';
-      addBtn.textContent = '+ Add Day';
+      addBtn.className = 'pbv2-day-tab pbv2-day-tab-add';
+      addBtn.textContent = '+ Day';
       addBtn.addEventListener('click', addDay);
       host.appendChild(addBtn);
     }
@@ -625,65 +626,66 @@
     function _renderExercisePane(host) {
       host.innerHTML = '';
 
-      // Ensure a day is selected
       if (!selectedDayId && draft.days?.length) selectedDayId = draft.days[0].dayId;
       const day = (draft.days || []).find(d => d.dayId === selectedDayId);
 
       if (!day) {
-        host.innerHTML = '<div class="pbv2-no-exercises">Add a day first →</div>';
+        host.innerHTML = '<div class="pbv2-no-exercises">Tap a day above to get started.</div>';
         return;
       }
 
-      /* ── Template loader strip ──────────────────────────────── */
+      /* ── 1. Already-added exercises — always visible at top ─ */
+      const addedSection = document.createElement('div');
+      addedSection.className = 'pbv2-added-section';
+
+      if ((day.exercises || []).length === 0) {
+        addedSection.innerHTML = '<div class="pbv2-added-empty">No exercises yet — search below to add some.</div>';
+      } else {
+        const addedHeader = document.createElement('div');
+        addedHeader.className = 'pbv2-added-header';
+        addedHeader.innerHTML = `<span>${day.exercises.length} exercise${day.exercises.length !== 1 ? 's' : ''} in ${esc(day.name)}</span>`;
+        addedSection.appendChild(addedHeader);
+
+        (day.exercises || []).forEach(ex => {
+          addedSection.appendChild(_buildExCard(day.dayId, ex));
+        });
+      }
+      host.appendChild(addedSection);
+
+      /* ── 2. Template loader ─ */
       const availableTpls = _getAvailableTemplates();
       if (availableTpls.length) {
         const strip = document.createElement('div');
         strip.className = 'pbv2-template-strip';
-        strip.title = 'Load a saved workout template into this day';
-
         const sel = document.createElement('select');
         sel.className = 'pbv2-template-select';
-        sel.innerHTML =
-          '<option value="">📋 Load from template…</option>' +
-          availableTpls.map(t =>
-            `<option value="${esc(t.id)}">${esc(t.name)}</option>`
-          ).join('');
-
+        sel.innerHTML = '<option value="">📋 Load from template…</option>' +
+          availableTpls.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('');
         const loadBtn = document.createElement('button');
         loadBtn.type = 'button';
         loadBtn.className = 'pbv2-template-load-btn';
         loadBtn.textContent = 'Load';
         loadBtn.addEventListener('click', () => {
-          const id = sel.value;
-          if (!id) { window.showToast('Choose a template first.', 'warn'); return; }
-          _loadTemplateIntoDay(selectedDayId, id);
+          if (!sel.value) { window.showToast('Choose a template first.', 'warn'); return; }
+          _loadTemplateIntoDay(selectedDayId, sel.value);
           sel.value = '';
         });
-
         strip.appendChild(sel);
         strip.appendChild(loadBtn);
         host.appendChild(strip);
       }
 
-      /* Exercise picker */
+      /* ── 3. Exercise picker ─ */
       const picker = document.createElement('div');
       picker.className = 'pbv2-picker';
-
-      const pickerHeader = document.createElement('div');
-      pickerHeader.className = 'pbv2-picker-header';
 
       const searchInput = document.createElement('input');
       searchInput.type = 'text';
       searchInput.className = 'pbv2-picker-search';
       searchInput.placeholder = '🔍 Search or type any exercise…';
       searchInput.value = pickerQuery;
-      searchInput.addEventListener('input', e => {
-        pickerQuery = e.target.value;
-        _updatePickerList(pickerList);
-      });
-      pickerHeader.appendChild(searchInput);
+      searchInput.addEventListener('input', e => { pickerQuery = e.target.value; _updatePickerList(pickerList); });
 
-      // Category pills
       const catsRow = document.createElement('div');
       catsRow.className = 'pbv2-picker-cats';
       ['All', ...Object.keys(EXERCISE_LIB)].forEach(cat => {
@@ -700,7 +702,7 @@
         catsRow.appendChild(pill);
       });
 
-      picker.appendChild(pickerHeader);
+      picker.appendChild(searchInput);
       picker.appendChild(catsRow);
 
       const pickerList = document.createElement('div');
@@ -708,18 +710,6 @@
       _updatePickerList(pickerList);
       picker.appendChild(pickerList);
       host.appendChild(picker);
-
-      /* Current exercises for this day */
-      if ((day.exercises || []).length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'pbv2-no-exercises';
-        empty.textContent = 'Tap an exercise above to add it here.';
-        host.appendChild(empty);
-      } else {
-        (day.exercises || []).forEach(ex => {
-          host.appendChild(_buildExCard(day.dayId, ex));
-        });
-      }
     }
 
     function _updatePickerList(listEl) {
@@ -1217,5 +1207,18 @@
   };
 
   window.initProgramTabV2 = initProgramTabV2;
+
+  // Wire up the entry point called by the tab switcher
+  window.initProgramBuilder = function () {
+    let mount = document.getElementById('programBuilderV2Mount');
+    if (!mount) {
+      const container = document.getElementById('programBuilderContainer');
+      if (!container) return;
+      mount = document.createElement('div');
+      mount.id = 'programBuilderV2Mount';
+      container.appendChild(mount);
+    }
+    initProgramTabV2(mount);
+  };
 
 })();
