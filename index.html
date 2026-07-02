@@ -585,6 +585,14 @@
       <!-- Session context flags: alt-machine / alt-gym -->
       <div id="sessionContextBar" style="padding:0 12px;"></div>
 
+      <!-- Coach: log on behalf of a client (visible in coach mode only) -->
+      <div id="coachLogForBar" class="coach-logfor-bar" style="display:none;">
+        <span class="coach-logfor-label">🏋️ Logging for</span>
+        <select id="coachLogForSelect" class="coach-logfor-select" onchange="setCoachLoggingClient(this.value)">
+          <option value="">Myself</option>
+        </select>
+      </div>
+
       <!-- Rest timer banner — shown while a rest is active -->
       <div id="restBanner" class="rest-banner" hidden aria-live="polite">
         <div class="rest-banner-ring-wrap">
@@ -621,11 +629,14 @@
       <div id="resistance-section">
         <div id="resistance-inputs" class="log-form-card">
 
-          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value);" />
+          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value);" />
           <datalist id="exerciseSuggestions"></datalist>
 
           <!-- Progressive overload hint -->
           <div id="overloadHint" class="overload-hint"></div>
+
+          <!-- Coach technique video hint -->
+          <div id="exerciseVideoHint" class="exercise-video-hint" style="display:none;"></div>
 
           <!-- Sets + unit on one row -->
           <div class="sets-unit-row">
@@ -2824,6 +2835,7 @@
     <button class="coach-subtab" data-coach-subtab="messaging">💬 Messages</button>
     <button class="coach-subtab" data-coach-subtab="analytics">📊 Insights</button>
     <button class="coach-subtab" data-coach-subtab="ai">🤖 AI</button>
+    <button class="coach-subtab" data-coach-subtab="videos">🎬 Videos</button>
     <button class="coach-subtab" data-coach-subtab="gdpr">🔒 Privacy</button>
   </nav>
 
@@ -2832,6 +2844,28 @@
   <div id="coachSub_messaging" class="coach-subview"></div>
   <div id="coachSub_analytics" class="coach-subview"></div>
   <div id="coachSub_ai" class="coach-subview"></div>
+  <div id="coachSub_videos" class="coach-subview">
+    <div style="padding:12px;">
+      <div class="rehab-card">
+        <h3 style="margin:0 0 4px;">🎬 Exercise Technique Videos</h3>
+        <p style="font-size:0.82rem;color:var(--secondary-text);margin:0 0 12px;">Attach a video link per exercise. Your clients see a ▶ Watch button when they log that exercise.</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input type="text" id="coachVideoExercise" placeholder="Exercise name (e.g. Barbell Squat)" list="exerciseSuggestions" />
+          <input type="url" id="coachVideoUrl" placeholder="Video link (YouTube, Loom, Drive…)" />
+          <input type="text" id="coachVideoNotes" placeholder="Coaching cue (optional)" />
+          <button onclick="saveCoachExerciseVideo()">Save Video</button>
+          <div id="coachVideoStatus" style="font-size:0.82rem;min-height:1.1rem;color:var(--secondary-text);"></div>
+        </div>
+      </div>
+      <div class="rehab-card" style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h3 style="margin:0;">Your Videos</h3>
+          <button onclick="loadCoachExerciseVideos()" style="font-size:0.75rem;padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);cursor:pointer;box-shadow:none;margin:0;">Refresh</button>
+        </div>
+        <div id="coachVideoList" style="font-size:0.85rem;color:var(--text-muted);">No videos yet.</div>
+      </div>
+    </div>
+  </div>
   <div id="coachSub_gdpr" class="coach-subview"></div>
 </div>
 
@@ -4259,10 +4293,10 @@ function getSetInputHTML(i) {
       </div>
       <input type="number" id="weight_${i}" placeholder="Weight" style="width: 90px;" oninput="updateAddButtonState()" />
       <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;">🏋️</button>
-      <label style="font-size:12px;"><input type="checkbox" id="dropset_${i}" /> Drop</label>
-      <label style="font-size:12px;"><input type="checkbox" id="restPause_${i}" /> RP</label>
-      <label style="font-size:12px;" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /> L/R</label>
-      <button onclick="removeSet(${i})" style="background-color: #dc3545; color: var(--text-color); border: none; padding: 4px 8px; border-radius: 4px;">❌</button>
+      <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
+      <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
+      <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
+      <button class="set-remove-btn" onclick="removeSet(${i})" title="Remove set">✕</button>
     </div>
   `;
 }
@@ -4411,7 +4445,7 @@ function addLogEntry() {
     advancedArray.push(createDefaultAdvancedSet());
   }
 
-  const _activeUser = getActiveUsername() || currentUser;
+  const _activeUser = window.coachLoggingClient || getActiveUsername() || currentUser;
   const workouts = JSON.parse(localStorage.getItem(`workouts_${_activeUser}`)) || [];
   if (typeof startWorkoutTimer === 'function') {
     try {
@@ -4477,7 +4511,9 @@ function addLogEntry() {
   };
 
   localStorage.setItem(`workouts_${_activeUser}`, JSON.stringify(workouts));
-  if (typeof saveWorkoutToBackend === 'function') {
+  if (window.coachLoggingClient) {
+    saveClientWorkoutToBackend(activeWorkout, window.coachLoggingClient);
+  } else if (typeof saveWorkoutToBackend === 'function') {
     saveWorkoutToBackend(activeWorkout);
   }
   updatePRs(_activeUser, activeWorkout, calculateWorkoutVolume);
@@ -5455,8 +5491,9 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 document.addEventListener('scroll', closeContextMenu, true);
 
 function renderWorkouts() {
-  archiveOldWorkouts(currentUser);
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const _logUser = window.coachLoggingClient || currentUser;
+  archiveOldWorkouts(_logUser);
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
   const container = document.getElementById("workoutsContainer");
   if (!container) return;
 
@@ -5713,6 +5750,37 @@ function _updateRestBanner(remaining, total) {
   if (ringFill) ringFill.style.strokeDashoffset = C * (1 - pct);
 }
 
+// Rest timer is wall-clock based and persisted so it survives app
+// backgrounding / page reloads (iOS suspends JS timers).
+const REST_TIMER_KEY = 'tl_rest_timer_v1';
+
+function _readRestTimer() {
+  try { return JSON.parse(localStorage.getItem(REST_TIMER_KEY)); } catch { return null; }
+}
+
+function _tickRestTimer() {
+  const state = _readRestTimer();
+  const banner  = document.getElementById('restBanner');
+  const display = document.getElementById('restTimerDisplay');
+  if (!state || typeof state.endTimeMs !== 'number') {
+    clearInterval(restInterval);
+    if (banner) banner.hidden = true;
+    return;
+  }
+  const remaining = Math.round((state.endTimeMs - Date.now()) / 1000);
+  if (remaining <= 0) {
+    clearInterval(restInterval);
+    localStorage.removeItem(REST_TIMER_KEY);
+    if (display) display.textContent = 'Rest Over!';
+    if (banner) banner.hidden = true;
+    logRestBreak(state.totalSeconds / 60);
+  } else {
+    if (banner) banner.hidden = false;
+    if (display) display.textContent = formatRestTime(remaining);
+    _updateRestBanner(remaining, state.totalSeconds);
+  }
+}
+
 function startRestTimer() {
   const minutes = +document.getElementById('restMinutes').value || 0;
   const seconds = +document.getElementById('restSeconds').value || 0;
@@ -5721,32 +5789,31 @@ function startRestTimer() {
     alert('Enter rest time');
     return;
   }
-  let remaining = totalSeconds;
-
-  // Show the persistent banner in the log view
-  const banner = document.getElementById('restBanner');
-  if (banner) banner.hidden = false;
-  _updateRestBanner(remaining, totalSeconds);
-
-  const display = document.getElementById('restTimerDisplay');
-  if (display) display.textContent = formatRestTime(remaining);
+  localStorage.setItem(REST_TIMER_KEY, JSON.stringify({
+    endTimeMs: Date.now() + totalSeconds * 1000,
+    totalSeconds
+  }));
   clearInterval(restInterval);
-  restInterval = setInterval(() => {
-    remaining--;
-    if (remaining <= 0) {
-      clearInterval(restInterval);
-      if (display) display.textContent = 'Rest Over!';
-      if (banner) banner.hidden = true;
-      logRestBreak(totalSeconds / 60);
-    } else {
-      if (display) display.textContent = formatRestTime(remaining);
-      _updateRestBanner(remaining, totalSeconds);
-    }
-  }, 1000);
+  _tickRestTimer();
+  restInterval = setInterval(_tickRestTimer, 1000);
 }
+
+// Resume an in-flight rest timer after a reload / returning to the app
+function resumeRestTimer() {
+  const state = _readRestTimer();
+  if (!state) return;
+  clearInterval(restInterval);
+  _tickRestTimer();
+  restInterval = setInterval(_tickRestTimer, 1000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) resumeRestTimer();
+});
 
 function skipRestTimer() {
   clearInterval(restInterval);
+  localStorage.removeItem(REST_TIMER_KEY);
   const banner  = document.getElementById('restBanner');
   const display = document.getElementById('restTimerDisplay');
   if (banner)  banner.hidden = true;
@@ -8264,6 +8331,8 @@ function applyAppModeToNavigation() {
     }
     el.style.display = coachModeEnabled ? '' : 'none';
   });
+  // Show/hide the "Logging for" client picker in the log tab
+  if (typeof window.initCoachLogForBar === 'function') window.initCoachLogForBar();
 }
 
 function initCoachOpsSubtabs() {
@@ -8283,6 +8352,7 @@ function initCoachOpsSubtabs() {
     if (target === 'messaging'  && typeof renderCoachMessaging === 'function')  renderCoachMessaging();
     if (target === 'gdpr'       && typeof renderCoachGdpr === 'function')       renderCoachGdpr();
     if (target === 'programs'   && typeof renderCoachProgramBuilder === 'function') renderCoachProgramBuilder();
+    if (target === 'videos'     && typeof loadCoachExerciseVideos === 'function')   loadCoachExerciseVideos();
     if (target === 'ai' && typeof window.initAiCoachEmbed === 'function') {
       const aiContainer = document.getElementById('coachSub_ai');
       if (aiContainer && !aiContainer.dataset.aicInit) {
@@ -9351,6 +9421,7 @@ function normalizeCoachClientRecord(client = {}) {
   const pct = Number(client.compliancePercent);
   return {
     id: client.id || client.clientId || `client-${Math.random().toString(36).slice(2, 8)}`,
+    clientId: client.clientId || client.clientUsername || client.username || null,
     name: client.name || client.clientName || 'Unnamed client',
     archetype: client.archetype || client.athleteArchetype || 'Unassigned',
     currentPhase: client.currentPhase || client.phase || 'Phase not set',
@@ -9397,6 +9468,215 @@ async function loadCoachClients() {
     return { clients: fallback, source: 'demo' };
   }
 }
+
+// ── Coach: log on behalf of a client ─────────────────────────
+// When set, log entries are written to the client's logbook (local key +
+// backend /coach/workouts) instead of the coach's own.
+window.coachLoggingClient = null;
+
+function setCoachLoggingClient(clientUsername) {
+  window.coachLoggingClient = clientUsername || null;
+  const sel = document.getElementById('coachLogForSelect');
+  if (sel && sel.value !== (clientUsername || '')) sel.value = clientUsername || '';
+  const bar = document.getElementById('coachLogForBar');
+  if (bar) bar.classList.toggle('is-client', !!clientUsername);
+  if (clientUsername) {
+    showToast(`Logging for ${clientUsername} — entries go to their logbook`);
+  } else {
+    showToast('Back to your own logbook');
+  }
+  if (typeof renderWorkouts === 'function') renderWorkouts();
+}
+window.setCoachLoggingClient = setCoachLoggingClient;
+
+async function initCoachLogForBar() {
+  const bar = document.getElementById('coachLogForBar');
+  if (!bar) return;
+  if (typeof isCoachModeEnabled !== 'function' || !isCoachModeEnabled()) {
+    bar.style.display = 'none';
+    window.coachLoggingClient = null;
+    return;
+  }
+  bar.style.display = '';
+  try {
+    const { clients } = await loadCoachClients();
+    const sel = document.getElementById('coachLogForSelect');
+    if (!sel) return;
+    const current = window.coachLoggingClient || '';
+    const options = clients.map(c => {
+      const norm = normalizeCoachClientRecord(c);
+      const uname = norm.clientId || norm.name;
+      return `<option value="${uname}">${norm.name}</option>`;
+    }).join('');
+    sel.innerHTML = '<option value="">Myself</option>' + options;
+    sel.value = current;
+  } catch (err) {
+    console.warn('[CoachLogFor] init failed', err);
+  }
+}
+window.initCoachLogForBar = initCoachLogForBar;
+
+// Send a workout to a linked client's backend logbook
+async function saveClientWorkoutToBackend(workout, clientUsername) {
+  try {
+    const res = await fetch(`${window.SERVER_URL}/coach/workouts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      credentials: 'include',
+      body: JSON.stringify({
+        clientUsername,
+        date: workout?.date,
+        title: workout?.title,
+        workout
+      })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) {
+      throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    }
+    showToast(`Synced to ${clientUsername}'s logbook ✓`);
+    return true;
+  } catch (err) {
+    console.warn('[CoachLogFor] client sync failed', err);
+    showToast(`Saved locally — could not sync to ${clientUsername}'s account`, 'error');
+    return false;
+  }
+}
+
+// ── Exercise technique videos ─────────────────────────────────
+// Coach side: manage videos in the Coach tab. Client side: cached list
+// powers the ▶ Watch hint in the log form.
+window.exerciseVideosCache = [];
+
+function _escVideoHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+async function saveCoachExerciseVideo() {
+  const exerciseName = document.getElementById('coachVideoExercise')?.value.trim();
+  const videoUrl = document.getElementById('coachVideoUrl')?.value.trim();
+  const notes = document.getElementById('coachVideoNotes')?.value.trim();
+  const status = document.getElementById('coachVideoStatus');
+  if (!exerciseName || !videoUrl) {
+    if (status) status.textContent = 'Exercise name and video link are required.';
+    return;
+  }
+  if (!/^https?:\/\//i.test(videoUrl)) {
+    if (status) status.textContent = 'The video link must start with http(s)://';
+    return;
+  }
+  if (status) status.textContent = 'Saving…';
+  try {
+    const res = await fetch(`${window.SERVER_URL}/coach/exercise-videos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      credentials: 'include',
+      body: JSON.stringify({ exerciseName, videoUrl, notes })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    if (status) status.textContent = '';
+    showToast(`Video saved for ${exerciseName} ✓`);
+    document.getElementById('coachVideoExercise').value = '';
+    document.getElementById('coachVideoUrl').value = '';
+    document.getElementById('coachVideoNotes').value = '';
+    loadCoachExerciseVideos();
+  } catch (err) {
+    console.warn('[Videos] save failed', err);
+    if (status) status.textContent = 'Could not save — check your connection and try again.';
+  }
+}
+window.saveCoachExerciseVideo = saveCoachExerciseVideo;
+
+async function loadCoachExerciseVideos() {
+  const list = document.getElementById('coachVideoList');
+  if (!list) return;
+  list.textContent = 'Loading…';
+  try {
+    const res = await fetch(`${window.SERVER_URL}/coach/exercise-videos`, {
+      headers: getAuthHeaders(),
+      credentials: 'include'
+    });
+    const data = await res.json().catch(() => null);
+    const items = data?.items || [];
+    if (!items.length) {
+      list.textContent = 'No videos yet — add your first one above.';
+      return;
+    }
+    list.innerHTML = items.map(v => `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color,#2a3a2e);">
+        <div style="min-width:0;">
+          <div style="font-weight:600;color:var(--text-color);">${_escVideoHtml(v.exerciseName)}</div>
+          ${v.notes ? `<div style="font-size:0.78rem;color:var(--secondary-text);">${_escVideoHtml(v.notes)}</div>` : ''}
+          <a href="${_escVideoHtml(v.videoUrl)}" target="_blank" rel="noopener" style="font-size:0.78rem;color:#4da8da;word-break:break-all;">${_escVideoHtml(v.videoUrl)}</a>
+        </div>
+        <button onclick="deleteCoachExerciseVideo('${_escVideoHtml(v.id)}')" style="flex-shrink:0;background:transparent;border:1px solid rgba(192,80,96,0.4);color:#c05060;border-radius:8px;padding:4px 10px;font-size:0.75rem;cursor:pointer;box-shadow:none;margin:0;">Remove</button>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.warn('[Videos] list failed', err);
+    list.textContent = 'Could not load videos.';
+  }
+}
+window.loadCoachExerciseVideos = loadCoachExerciseVideos;
+
+async function deleteCoachExerciseVideo(id) {
+  try {
+    const res = await fetch(`${window.SERVER_URL}/coach/exercise-videos/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      credentials: 'include'
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    showToast('Video removed');
+    loadCoachExerciseVideos();
+  } catch (err) {
+    console.warn('[Videos] delete failed', err);
+    showToast('Could not remove video', 'error');
+  }
+}
+window.deleteCoachExerciseVideo = deleteCoachExerciseVideo;
+
+// Client side: fetch videos shared by my coach(es)
+async function loadExerciseVideosForClient() {
+  try {
+    const res = await fetch(`${window.SERVER_URL}/exercise-videos`, {
+      headers: getAuthHeaders(),
+      credentials: 'include'
+    });
+    const data = await res.json().catch(() => null);
+    window.exerciseVideosCache = Array.isArray(data?.items) ? data.items : [];
+  } catch (err) {
+    console.info('[Videos] client fetch skipped', err?.message);
+  }
+}
+window.loadExerciseVideosForClient = loadExerciseVideosForClient;
+
+// Show a ▶ Watch technique hint under the exercise input when a video exists
+function renderExerciseVideoHint(exerciseName) {
+  const hint = document.getElementById('exerciseVideoHint');
+  if (!hint) return;
+  const name = String(exerciseName || '').trim().toLowerCase();
+  const match = name && (window.exerciseVideosCache || []).find(
+    v => String(v.exerciseName || '').trim().toLowerCase() === name
+  );
+  if (!match) {
+    hint.style.display = 'none';
+    hint.innerHTML = '';
+    return;
+  }
+  hint.style.display = '';
+  hint.innerHTML = `
+    <a href="${_escVideoHtml(match.videoUrl)}" target="_blank" rel="noopener" class="exercise-video-link">
+      ▶ Watch technique video${match.coachId ? ` — from ${_escVideoHtml(match.coachId)}` : ''}
+    </a>
+    ${match.notes ? `<span class="exercise-video-note">${_escVideoHtml(match.notes)}</span>` : ''}
+  `;
+}
+window.renderExerciseVideoHint = renderExerciseVideoHint;
 
 function getCoachAlertMeta(status = 'watch') {
   const normalized = String(status || 'watch').toLowerCase();
@@ -13999,6 +14279,15 @@ function showHistoryMiniTab(type) {
     if (typeof window.attachWorkoutTimerUI === 'function') {
       window.attachWorkoutTimerUI();
     }
+
+    // Resume an in-flight rest timer that survived a reload
+    if (typeof resumeRestTimer === 'function') resumeRestTimer();
+
+    // Coach mode: populate the "Logging for" client picker
+    if (typeof initCoachLogForBar === 'function') initCoachLogForBar();
+
+    // Fetch technique videos shared by this user's coach
+    if (typeof loadExerciseVideosForClient === 'function') loadExerciseVideosForClient();
 
     const endWorkoutBtn = document.getElementById('endWorkoutBtn');
     if (endWorkoutBtn) {

@@ -60,6 +60,76 @@
   flex-shrink: 0;
 }
 
+/* ── Coach technique video hint ──────────────────────────────── */
+
+.exercise-video-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  background: rgba(77, 168, 218, 0.08);
+  border: 1px solid rgba(77, 168, 218, 0.25);
+  border-radius: 10px;
+}
+
+.exercise-video-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4da8da;
+  text-decoration: none;
+}
+
+.exercise-video-link:hover {
+  text-decoration: underline;
+}
+
+.exercise-video-note {
+  font-size: 0.75rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+/* ── Coach "Logging for" client picker ───────────────────────── */
+
+.coach-logfor-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 12px 4px;
+  padding: 8px 14px;
+  background: rgba(77, 168, 218, 0.07);
+  border: 1px solid rgba(77, 168, 218, 0.22);
+  border-left: 3px solid #4da8da;
+  border-radius: 0 10px 10px 0;
+}
+
+.coach-logfor-bar.is-client {
+  background: rgba(77, 168, 218, 0.14);
+  border-color: #4da8da;
+}
+
+.coach-logfor-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #4da8da;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.coach-logfor-select {
+  flex: 1;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(77, 168, 218, 0.35);
+  background: var(--card-bg, #0f1510);
+  color: var(--text, #e8f5e9);
+  font-size: 0.88rem;
+  font-family: 'Poppins', sans-serif;
+}
+
 /* ── Rest timer banner (persistent, above workout timer) ─────── */
 
 .rest-banner {
@@ -159,6 +229,69 @@
 
 .rest-banner-skip:hover {
   background: rgba(240, 160, 64, 0.1);
+}
+
+/* ── Set option pills (Drop / RP / L/R) ──────────────────────── */
+
+.set-opt-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: transparent;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.set-opt-pill input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.set-opt-pill:hover {
+  border-color: var(--text-muted, #7a8f7d);
+  color: var(--text, #e8f5e9);
+}
+
+.set-opt-pill:has(input:checked) {
+  background: rgba(95, 168, 126, 0.14);
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+}
+
+.set-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(192, 80, 96, 0.4);
+  background: transparent;
+  color: #c05060;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background 0.15s;
+}
+
+.set-remove-btn:hover {
+  background: rgba(192, 80, 96, 0.12);
 }
 
 /* ── Resistance section ─────────────────────────────────────── */
