@@ -60,6 +60,76 @@
   flex-shrink: 0;
 }
 
+/* ── Coach technique video hint ──────────────────────────────── */
+
+.exercise-video-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  background: rgba(77, 168, 218, 0.08);
+  border: 1px solid rgba(77, 168, 218, 0.25);
+  border-radius: 10px;
+}
+
+.exercise-video-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4da8da;
+  text-decoration: none;
+}
+
+.exercise-video-link:hover {
+  text-decoration: underline;
+}
+
+.exercise-video-note {
+  font-size: 0.75rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+/* ── Coach "Logging for" client picker ───────────────────────── */
+
+.coach-logfor-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 12px 4px;
+  padding: 8px 14px;
+  background: rgba(77, 168, 218, 0.07);
+  border: 1px solid rgba(77, 168, 218, 0.22);
+  border-left: 3px solid #4da8da;
+  border-radius: 0 10px 10px 0;
+}
+
+.coach-logfor-bar.is-client {
+  background: rgba(77, 168, 218, 0.14);
+  border-color: #4da8da;
+}
+
+.coach-logfor-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #4da8da;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.coach-logfor-select {
+  flex: 1;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(77, 168, 218, 0.35);
+  background: var(--card-bg, #0f1510);
+  color: var(--text, #e8f5e9);
+  font-size: 0.88rem;
+  font-family: 'Poppins', sans-serif;
+}
+
 /* ── Rest timer banner (persistent, above workout timer) ─────── */
 
 .rest-banner {
