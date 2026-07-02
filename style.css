@@ -85,8 +85,8 @@
 
 .fab {
   position: fixed;
-  bottom: 80px;
-  right: 20px;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
   width: 48px;
   height: 48px;
   border-radius: 50%;

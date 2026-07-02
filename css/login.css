@@ -13,7 +13,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px));
   background: radial-gradient(ellipse at top, rgba(30, 75, 55, 0.35) 0%, #080b0a 55%);
   box-sizing: border-box;
 }

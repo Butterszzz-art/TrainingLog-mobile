@@ -4259,10 +4259,10 @@ function getSetInputHTML(i) {
       </div>
       <input type="number" id="weight_${i}" placeholder="Weight" style="width: 90px;" oninput="updateAddButtonState()" />
       <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;">🏋️</button>
-      <label style="font-size:12px;"><input type="checkbox" id="dropset_${i}" /> Drop</label>
-      <label style="font-size:12px;"><input type="checkbox" id="restPause_${i}" /> RP</label>
-      <label style="font-size:12px;" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /> L/R</label>
-      <button onclick="removeSet(${i})" style="background-color: #dc3545; color: var(--text-color); border: none; padding: 4px 8px; border-radius: 4px;">❌</button>
+      <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
+      <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
+      <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
+      <button class="set-remove-btn" onclick="removeSet(${i})" title="Remove set">✕</button>
     </div>
   `;
 }
@@ -5713,6 +5713,37 @@ function _updateRestBanner(remaining, total) {
   if (ringFill) ringFill.style.strokeDashoffset = C * (1 - pct);
 }
 
+// Rest timer is wall-clock based and persisted so it survives app
+// backgrounding / page reloads (iOS suspends JS timers).
+const REST_TIMER_KEY = 'tl_rest_timer_v1';
+
+function _readRestTimer() {
+  try { return JSON.parse(localStorage.getItem(REST_TIMER_KEY)); } catch { return null; }
+}
+
+function _tickRestTimer() {
+  const state = _readRestTimer();
+  const banner  = document.getElementById('restBanner');
+  const display = document.getElementById('restTimerDisplay');
+  if (!state || typeof state.endTimeMs !== 'number') {
+    clearInterval(restInterval);
+    if (banner) banner.hidden = true;
+    return;
+  }
+  const remaining = Math.round((state.endTimeMs - Date.now()) / 1000);
+  if (remaining <= 0) {
+    clearInterval(restInterval);
+    localStorage.removeItem(REST_TIMER_KEY);
+    if (display) display.textContent = 'Rest Over!';
+    if (banner) banner.hidden = true;
+    logRestBreak(state.totalSeconds / 60);
+  } else {
+    if (banner) banner.hidden = false;
+    if (display) display.textContent = formatRestTime(remaining);
+    _updateRestBanner(remaining, state.totalSeconds);
+  }
+}
+
 function startRestTimer() {
   const minutes = +document.getElementById('restMinutes').value || 0;
   const seconds = +document.getElementById('restSeconds').value || 0;
@@ -5721,32 +5752,31 @@ function startRestTimer() {
     alert('Enter rest time');
     return;
   }
-  let remaining = totalSeconds;
-
-  // Show the persistent banner in the log view
-  const banner = document.getElementById('restBanner');
-  if (banner) banner.hidden = false;
-  _updateRestBanner(remaining, totalSeconds);
-
-  const display = document.getElementById('restTimerDisplay');
-  if (display) display.textContent = formatRestTime(remaining);
+  localStorage.setItem(REST_TIMER_KEY, JSON.stringify({
+    endTimeMs: Date.now() + totalSeconds * 1000,
+    totalSeconds
+  }));
   clearInterval(restInterval);
-  restInterval = setInterval(() => {
-    remaining--;
-    if (remaining <= 0) {
-      clearInterval(restInterval);
-      if (display) display.textContent = 'Rest Over!';
-      if (banner) banner.hidden = true;
-      logRestBreak(totalSeconds / 60);
-    } else {
-      if (display) display.textContent = formatRestTime(remaining);
-      _updateRestBanner(remaining, totalSeconds);
-    }
-  }, 1000);
+  _tickRestTimer();
+  restInterval = setInterval(_tickRestTimer, 1000);
 }
+
+// Resume an in-flight rest timer after a reload / returning to the app
+function resumeRestTimer() {
+  const state = _readRestTimer();
+  if (!state) return;
+  clearInterval(restInterval);
+  _tickRestTimer();
+  restInterval = setInterval(_tickRestTimer, 1000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) resumeRestTimer();
+});
 
 function skipRestTimer() {
   clearInterval(restInterval);
+  localStorage.removeItem(REST_TIMER_KEY);
   const banner  = document.getElementById('restBanner');
   const display = document.getElementById('restTimerDisplay');
   if (banner)  banner.hidden = true;
@@ -13999,6 +14029,9 @@ function showHistoryMiniTab(type) {
     if (typeof window.attachWorkoutTimerUI === 'function') {
       window.attachWorkoutTimerUI();
     }
+
+    // Resume an in-flight rest timer that survived a reload
+    if (typeof resumeRestTimer === 'function') resumeRestTimer();
 
     const endWorkoutBtn = document.getElementById('endWorkoutBtn');
     if (endWorkoutBtn) {
