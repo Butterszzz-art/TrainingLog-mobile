@@ -53,6 +53,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
+  <!-- Firebase Auth (Phase 1 migration) — compat SDK for this script-tag codebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="src/js/firebase-config.js"></script>
+  <script src="src/js/firebase-auth.js"></script>
+
 </head>
 
  
@@ -91,6 +97,11 @@
         <input type="text" id="username" class="login-input" placeholder="Enter your username"
                autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false" />
       </div>
+      <div class="login-field" id="signupEmailField" style="display:none;">
+        <label class="login-field-label" for="signupEmail">Email</label>
+        <input type="email" id="signupEmail" class="login-input" placeholder="Enter your email"
+               autocomplete="email" autocorrect="off" autocapitalize="none" spellcheck="false" />
+      </div>
       <div class="login-field">
         <label class="login-field-label" for="password">Password</label>
         <div class="login-pw-wrap">
@@ -123,6 +134,22 @@
     <a href="pricing.html" class="login-pricing-link">See pricing &amp; plans →</a>
   </div>
 
+</div>
+
+<!-- ── Verify-email screen (Firebase signups; server blocks unverified accounts) ── -->
+<div id="verifyEmailContainer" class="login-screen" style="display:none;">
+  <div class="login-card">
+    <p class="login-heading">Check your email</p>
+    <p>We sent a verification link to <strong id="verifyEmailAddress"></strong>. You need to verify before you can use Pocket Coach.</p>
+    <p style="font-size:0.85em;opacity:0.75;">Don't see it? Check your spam folder.</p>
+    <p id="verifyEmailError" class="login-error" role="alert" aria-live="polite"></p>
+    <button id="verifiedContinueButton" class="login-cta loading-btn" onclick="continueAfterVerification()">
+      <span>I've verified — continue</span><span class="spinner"></span>
+    </button>
+    <button id="resendVerificationButton" class="login-cta loading-btn" onclick="resendVerificationEmail()">
+      <span>Resend email</span><span class="spinner"></span>
+    </button>
+  </div>
 </div>
 <!-- ── Onboarding Wizard (shown after first signup) ─────────────────── -->
 <div id="onboardingOverlay" class="onboarding-overlay" hidden>
@@ -3677,7 +3704,7 @@ window.currentSubStatus = 'none';
 async function startLogin() {
   const btn = document.getElementById('loginButton');
   setLoading(btn, true);
-  const username = document.getElementById("username").value.trim();
+  let username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
   const errorEl = document.getElementById('loginError');
 
@@ -3697,7 +3724,32 @@ async function startLogin() {
 
   try {
     let result;
-    if (typeof window.login === 'function') {
+
+    // ── Firebase Auth path (Phase 1 migration) ──────────────────────────────
+    // Resolves username → email server-side, signs in via Firebase, and hands
+    // the ID token to the same post-login flow the legacy JWT used. Unknown
+    // usernames fall through to legacy /login for pre-migration accounts.
+    if (window.firebaseAuth?.isAvailable()) {
+      try {
+        const fb = await window.firebaseAuth.login({ usernameOrEmail: username, password });
+        if (fb.needsVerification) {
+          showVerifyEmailScreen(username, 'login');
+          return;
+        }
+        if (fb.username) username = fb.username;
+        result = { success: true, token: fb.token, username };
+      } catch (fbErr) {
+        if (!fbErr.tryLegacy) {
+          if (errorEl) errorEl.textContent = fbErr.message || 'Login failed.';
+          return;
+        }
+        // No Firebase account for this username — try the legacy server login below
+      }
+    }
+
+    if (result) {
+      // handled by Firebase — skip legacy fetch
+    } else if (typeof window.login === 'function') {
       result = await window.login(username, password);
     } else {
       if (errorEl) errorEl.textContent = 'Connecting to server…';
@@ -4156,6 +4208,32 @@ async function startSignup() {
     return;
   }
 
+  // ── Firebase Auth path (Phase 1 migration) ────────────────────────────────
+  // Signup collects all three: username (login identifier), email (new —
+  // Firebase identity + verification), password (owned by Firebase). The
+  // email field is shown by _switchLoginTab when this path is active.
+  if (window.firebaseAuth?.isAvailable()) {
+    const email = document.getElementById('signupEmail')?.value.trim() || '';
+    if (!email || !email.includes('@')) {
+      if (errorEl) errorEl.textContent = 'Please enter a valid email address.';
+      setLoading(btn, false);
+      return;
+    }
+    try {
+      if (errorEl) errorEl.textContent = 'Creating your account…';
+      await window.firebaseAuth.signup({ username, email, password });
+      // Identity is stored, but the app stays locked until email verification —
+      // the server rejects every protected route for unverified accounts.
+      persistLoginIdentity(username, null);
+      showVerifyEmailScreen(email, 'signup');
+    } catch (fbErr) {
+      if (errorEl) errorEl.textContent = fbErr.message || 'Signup failed. Please try again.';
+    } finally {
+      setLoading(btn, false);
+    }
+    return;
+  }
+
   try {
     if (errorEl) errorEl.textContent = 'Creating your account…';
     const response = await fetch(`${window.SERVER_URL}/register`, {
@@ -4200,7 +4278,73 @@ async function startSignup() {
     setLoading(btn, false);
   }
 }
-  
+
+// ── Verify-email screen (Firebase signups/logins) ───────────────────────────
+// The server rejects every protected route until email_verified is true, so
+// the app stays on this screen instead of dropping the user into a broken UI.
+let _verifyEmailContext = null; // 'signup' | 'login'
+
+function showVerifyEmailScreen(emailOrUsername, context) {
+  _verifyEmailContext = context || 'signup';
+  const loginEl = document.getElementById('loginContainer');
+  const verifyEl = document.getElementById('verifyEmailContainer');
+  const addressEl = document.getElementById('verifyEmailAddress');
+  if (addressEl) addressEl.textContent = emailOrUsername || 'your email';
+  if (loginEl) loginEl.style.display = 'none';
+  if (verifyEl) verifyEl.style.display = '';
+}
+
+async function continueAfterVerification() {
+  const btn = document.getElementById('verifiedContinueButton');
+  const errorEl = document.getElementById('verifyEmailError');
+  setLoading(btn, true);
+  if (errorEl) errorEl.textContent = '';
+  try {
+    const res = await window.firebaseAuth.reloadAndGetToken();
+    if (!res.verified) {
+      if (errorEl) errorEl.textContent = "Not verified yet — click the link in your email first.";
+      return;
+    }
+    const username = localStorage.getItem('username') || '';
+    if (username) {
+      setCurrentUser(username);
+      localStorage.setItem('fitnessAppUser', username);
+    }
+    const verifyEl = document.getElementById('verifyEmailContainer');
+    if (verifyEl) verifyEl.style.display = 'none';
+    if (_verifyEmailContext === 'signup') {
+      showOnboarding();
+    } else {
+      // Login flow: stored token + fitnessAppUser make the normal session
+      // restore path take over on reload
+      window.location.reload();
+    }
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message || 'Could not confirm verification.';
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+async function resendVerificationEmail() {
+  const btn = document.getElementById('resendVerificationButton');
+  const errorEl = document.getElementById('verifyEmailError');
+  setLoading(btn, true);
+  if (errorEl) errorEl.textContent = '';
+  try {
+    await window.firebaseAuth.resendVerification();
+    if (errorEl) errorEl.textContent = 'Verification email sent again — check spam too.';
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message || 'Could not resend. Wait a minute and retry.';
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+window.showVerifyEmailScreen = showVerifyEmailScreen;
+window.continueAfterVerification = continueAfterVerification;
+window.resendVerificationEmail = resendVerificationEmail;
+
 function toggleWorkoutDetails(index) {
   const el = document.getElementById(`workoutDetails${index}`);
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
@@ -8434,8 +8578,11 @@ function logout(options = {}) {
   localStorage.removeItem('authToken');
   localStorage.removeItem('username');
   localStorage.removeItem('Username');
+  // Firebase keeps its session in IndexedDB — sign out there too, or the
+  // onIdTokenChanged listener re-populates the token on next load
+  const fbSignOut = window.firebaseAuth?.logout?.() || Promise.resolve();
   if (!options.suppressReload) {
-    location.reload();
+    Promise.resolve(fbSignOut).finally(() => location.reload());
   }
 }
 function animateSwitch(newEl) {
@@ -14713,6 +14860,11 @@ function _switchLoginTab(mode) {
   const signupBtn = document.getElementById('signupButton');
   if (loginBtn)  loginBtn.classList.toggle('login-cta--hidden', !isLogin);
   if (signupBtn) signupBtn.classList.toggle('login-cta--hidden', isLogin);
+  // Firebase signups collect email (new field — legacy accounts have none)
+  const emailField = document.getElementById('signupEmailField');
+  if (emailField) {
+    emailField.style.display = (!isLogin && window.firebaseAuth?.isAvailable()) ? '' : 'none';
+  }
   const pw = document.getElementById('password');
   if (pw) pw.autocomplete = isLogin ? 'current-password' : 'new-password';
   const err = document.getElementById('loginError');
