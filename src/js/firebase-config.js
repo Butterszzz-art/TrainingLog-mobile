@@ -8,10 +8,10 @@
 // before the Firebase project exists.
 (function () {
   const config = {
-    apiKey: 'REPLACE_ME',
-    authDomain: 'REPLACE_ME.firebaseapp.com',
-    projectId: 'REPLACE_ME',
-    appId: 'REPLACE_ME'
+    apiKey: 'AIzaSyCgZTztfMhwQdRfc4no_ZduDEfOv30gMcY',
+    authDomain: 'pocketcoach-280c4.firebaseapp.com',
+    projectId: 'pocketcoach-280c4',
+    appId: '1:1030123531276:web:237753650da87b6d285229'
   };
 
   const configured = Object.values(config).every(v => typeof v === 'string' && !v.includes('REPLACE_ME'));
