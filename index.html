@@ -5381,16 +5381,28 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   advancedBlock.dataset.workout = workoutIndex;
   advancedBlock.dataset.entry = entryIndex;
   advancedBlock.dataset.set = setIndex;
+  // Collapsed by default — a plain set is just Weight/Reps/Done, like a
+  // paper logbook. Only sets that already have a method/state/tag set
+  // (e.g. re-opening a workout mid-session) start expanded.
+  const hasAdvancedContent = Boolean(
+    advancedData.method || advancedData.state || Object.values(advancedData.tags || {}).some(Boolean)
+  );
+  if (hasAdvancedContent) advancedBlock.classList.add('expanded');
   advancedBlock.innerHTML = `
     <div class="set-advanced-header">Advanced</div>
-    <div class="method-pills">${methodPills}</div>
-    ${renderMethodForm(advancedData, baseWeight)}
-    <div class="set-state">${stateRow}</div>
-    <div class="tag-row">${tagsRow}</div>
-    <div class="tag-input" id="${tagInputId}" style="display:none;">
-      <input type="text" data-adv="tagText" placeholder="Type and press Enter" />
+    <div class="set-advanced-body">
+      <div class="method-pills">${methodPills}</div>
+      ${renderMethodForm(advancedData, baseWeight)}
+      <div class="set-state">${stateRow}</div>
+      <div class="tag-row">${tagsRow}</div>
+      <div class="tag-input" id="${tagInputId}" style="display:none;">
+        <input type="text" data-adv="tagText" placeholder="Type and press Enter" />
+      </div>
     </div>
   `;
+  advancedBlock.querySelector('.set-advanced-header').addEventListener('click', () => {
+    advancedBlock.classList.toggle('expanded');
+  });
 
   wrapper.appendChild(advancedBlock);
   return wrapper;
