@@ -11304,6 +11304,13 @@ function toggleWorkoutDetails(index) {
 
 function calculateWorkoutVolume(workout) {
   let total = 0;
+  // Guard matches calculateWorkoutVolume.js's tested behavior — several
+  // callers pass workouts straight from a stored/history array where an
+  // entry can be malformed or missing .log; this used to throw and could
+  // crash whatever list was being rendered.
+  if (!workout || !Array.isArray(workout.log)) {
+    return total;
+  }
 
   workout.log.forEach(entry => {
     const reps = entry.repsArray || [];

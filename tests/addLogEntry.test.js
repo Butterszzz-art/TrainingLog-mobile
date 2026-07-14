@@ -52,8 +52,17 @@ describe('addLogEntry', () => {
       showToast: () => {},
       updateAddButtonState: () => {},
       alert: () => {},
-      currentSetCount: 0
+      currentSetCount: 0,
+      // addLogEntry() now resolves the active user via
+      // `window.coachLoggingClient || getActiveUsername() || currentUser`
+      // (coach-logging-on-behalf-of-client support) and stamps each set
+      // with `createDefaultAdvancedSet()` — both added after this test's
+      // sandbox was written, so calling addLogEntry() threw a bare
+      // ReferenceError before either was stubbed here.
+      getActiveUsername: () => 'u1',
+      createDefaultAdvancedSet: () => ({})
     };
+    context.window = context; // so `window.coachLoggingClient` resolves (to undefined, falling through to getActiveUsername())
     vm.createContext(context);
     context.addLogEntry = loadAddLogEntry(context);
   });

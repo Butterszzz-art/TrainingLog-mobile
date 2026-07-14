@@ -634,13 +634,20 @@ function showLeaderDetail(groupId) {
 
   const selectEl = document.getElementById('exerciseSelect');
   const timeEl = document.getElementById('timeFilter');
-  const render = () => renderExerciseLeaderboard(selectEl.value, timeEl.value);
+  const render = () => renderGroupExerciseLeaderboard(selectEl.value, timeEl.value);
   selectEl.onchange = render;
   timeEl.onchange = render;
   render();
 }
 
-function renderExerciseLeaderboard(exercise, timeframe) {
+// Renamed from renderExerciseLeaderboard — that name collided with an
+// unrelated, differently-shaped function of the same name in
+// exerciseLeaderboard.js (zero-arg, reads its own #exerciseLbSelect/
+// #exerciseLeaderboardContainer). Since exerciseLeaderboard.js loads after
+// this file, its version silently won every call, meaning the Exercise
+// Comparison panel inside a group's leader detail view has been rendering
+// nothing since whichever script started shadowing this one.
+function renderGroupExerciseLeaderboard(exercise, timeframe) {
   const container = document.getElementById('exerciseLb');
   if (!container) return;
   const data = sampleExerciseData[exercise] || [];

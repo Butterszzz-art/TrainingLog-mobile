@@ -291,11 +291,15 @@
       .catch(() => {});
   }
 
-  function getDaysUntilShow(showDate) {
+  function getDaysUntilShow(showDate, referenceDate) {
     const parsed = new Date(showDate);
     if (!showDate || Number.isNaN(parsed.getTime())) return null;
 
-    const today = new Date();
+    // referenceDate lets callers (and tests) ask "how many days as of this
+    // date" instead of always the real system clock — previously ignored
+    // here even though sanitizeState/getSeasonWeekNumber already supported
+    // it, so passing a referenceDate only partially worked.
+    const today = referenceDate ? new Date(referenceDate) : new Date();
     const startOfToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
     const showDay = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()));
 
@@ -303,8 +307,8 @@
     return Math.round(diffMs / 86400000);
   }
 
-  function getWeeksOut(showDate) {
-    const days = getDaysUntilShow(showDate);
+  function getWeeksOut(showDate, referenceDate) {
+    const days = getDaysUntilShow(showDate, referenceDate);
     if (days === null) return null;
     return days >= 0 ? Math.ceil(days / 7) : Math.floor(days / 7);
   }
@@ -323,7 +327,7 @@
 
   function getPrepWeekLabel(state = {}) {
     const normalized = sanitizeState(state);
-    const daysUntilShow = getDaysUntilShow(normalized.showDate);
+    const daysUntilShow = getDaysUntilShow(normalized.showDate, normalized.referenceDate);
     if (daysUntilShow === null) {
       return `Contest Prep Week ${getSeasonWeekNumber(normalized.referenceDate, normalized.prepStartDate || normalized.startDate)}`;
     }
@@ -348,8 +352,8 @@
     return `Improvement Season Week ${week}`;
   }
 
-  function inferModeFromShowDate(showDate, fallbackMode) {
-    const days = getDaysUntilShow(showDate);
+  function inferModeFromShowDate(showDate, fallbackMode, referenceDate) {
+    const days = getDaysUntilShow(showDate, referenceDate);
     if (days === null) return fallbackMode;
     if (days < 0) return 'post_show';
     if (days === 0) return 'show_day';
@@ -360,7 +364,7 @@
   function resolveEffectiveMode(state) {
     const normalized = sanitizeState(state);
     const mode = normalizeMode(normalized.mode, 'improvement');
-    const showDateMode = inferModeFromShowDate(normalized.showDate, mode);
+    const showDateMode = inferModeFromShowDate(normalized.showDate, mode, normalized.referenceDate);
 
     if (mode === 'contest_prep') return showDateMode;
     if (mode === 'peak_week') {
@@ -380,8 +384,8 @@
   function getPhaseContext(state) {
     const normalized = sanitizeState(state);
     const effectiveMode = resolveEffectiveMode(normalized);
-    const daysUntilShow = getDaysUntilShow(normalized.showDate);
-    const weeksOut = getWeeksOut(normalized.showDate);
+    const daysUntilShow = getDaysUntilShow(normalized.showDate, normalized.referenceDate);
+    const weeksOut = getWeeksOut(normalized.showDate, normalized.referenceDate);
     const label = getCurrentPhaseLabel(normalized);
 
     // Future dashboard cards can consume this object to drive phase-aware
