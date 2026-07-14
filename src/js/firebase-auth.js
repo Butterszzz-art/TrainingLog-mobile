@@ -63,7 +63,12 @@
   // email → /auth/signup-complete (claims username, sets custom claims).
   // Returns { needsVerification: true } — the server rejects all protected
   // routes until the email is verified, so the UI must show the verify screen.
-  async function signup({ username, email, password, referredBy }) {
+  //
+  // Phase 2: a username matching an existing (pre-Firebase) Airtable account
+  // is "reclaimable", not simply taken — the UI should prompt for that
+  // account's old password and pass it as legacyPassword. If correct, the
+  // server migrates that account's data onto the new uid.
+  async function signup({ username, email, password, referredBy, legacyPassword }) {
     if (!available()) throw new Error('Firebase is not configured.');
 
     const availRes = await fetch(
@@ -71,7 +76,16 @@
     );
     const avail = await availRes.json().catch(() => ({}));
     if (availRes.ok && avail.available === false) {
-      throw new Error('That username is already taken.');
+      if (avail.reclaimable && !legacyPassword) {
+        const err = new Error('This username belongs to an existing account. Enter its password to reclaim it.');
+        err.needsLegacyPassword = true;
+        throw err;
+      }
+      if (!avail.reclaimable) {
+        throw new Error('That username is already taken.');
+      }
+      // reclaimable && legacyPassword provided — fall through, let
+      // signup-complete verify it (it owns the real check against the hash).
     }
 
     let cred;
@@ -88,10 +102,24 @@
     }
 
     const idToken = await cred.user.getIdToken();
-    const complete = await postJson('/auth/signup-complete', { username, referredBy }, idToken);
+    const complete = await postJson('/auth/signup-complete', { username, referredBy, legacyPassword }, idToken);
     if (!complete.ok) {
+      const code = complete.data?.error?.code;
       const message = complete.data?.error?.message || 'Could not complete signup.';
-      if (complete.data?.error?.code === 'auth.username_taken') {
+      if (code === 'auth.legacy_verification_required') {
+        // Someone else claimed the username between the availability check and
+        // now, or the caller skipped it — prompt for the old password and retry
+        // via completeSignup (the Firebase account itself was already created).
+        const err = new Error(message);
+        err.needsLegacyPassword = true;
+        throw err;
+      }
+      if (code === 'auth.legacy_password_invalid') {
+        const err = new Error(message);
+        err.legacyPasswordInvalid = true;
+        throw err;
+      }
+      if (code === 'auth.username_taken') {
         // Auth account exists but the username was taken in a race — the UI
         // should prompt for a different username and call completeSignup again.
         const err = new Error(message);
@@ -104,13 +132,28 @@
     return { username, email, needsVerification: !cred.user.emailVerified };
   }
 
-  // Retry only the username-claim step (after a 409 race in signup).
-  async function completeSignup({ username, referredBy }) {
+  // Retry only the username-claim step (after a 409 race in signup, or after
+  // the user supplies a legacyPassword following a needsLegacyPassword error).
+  async function completeSignup({ username, referredBy, legacyPassword }) {
     const user = firebase.auth().currentUser;
     if (!user) throw new Error('Not signed in.');
     const idToken = await user.getIdToken();
-    const complete = await postJson('/auth/signup-complete', { username, referredBy }, idToken);
-    if (!complete.ok) throw new Error(complete.data?.error?.message || 'Could not complete signup.');
+    const complete = await postJson('/auth/signup-complete', { username, referredBy, legacyPassword }, idToken);
+    if (!complete.ok) {
+      const code = complete.data?.error?.code;
+      const message = complete.data?.error?.message || 'Could not complete signup.';
+      if (code === 'auth.legacy_verification_required') {
+        const err = new Error(message);
+        err.needsLegacyPassword = true;
+        throw err;
+      }
+      if (code === 'auth.legacy_password_invalid') {
+        const err = new Error(message);
+        err.legacyPasswordInvalid = true;
+        throw err;
+      }
+      throw new Error(message);
+    }
     return { username };
   }
 

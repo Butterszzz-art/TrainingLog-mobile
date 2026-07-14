@@ -102,6 +102,11 @@
         <input type="email" id="signupEmail" class="login-input" placeholder="Enter your email"
                autocomplete="email" autocorrect="off" autocapitalize="none" spellcheck="false" />
       </div>
+      <div class="login-field" id="legacySignupPasswordField" style="display:none;">
+        <label class="login-field-label" for="legacySignupPassword">Existing account password</label>
+        <input type="password" id="legacySignupPassword" class="login-input"
+               placeholder="Password for this username's existing account" autocomplete="off" />
+      </div>
       <div class="login-field">
         <label class="login-field-label" for="password">Password</label>
         <div class="login-pw-wrap">
@@ -4219,15 +4224,35 @@ async function startSignup() {
       setLoading(btn, false);
       return;
     }
+    // Phase 2: this username may belong to a pre-Firebase Airtable account —
+    // if so the field below is visible and the server verifies it against
+    // that account's password, then migrates its data onto the new uid.
+    const legacyField = document.getElementById('legacySignupPasswordField');
+    const legacyPassword = document.getElementById('legacySignupPassword')?.value || '';
     try {
       if (errorEl) errorEl.textContent = 'Creating your account…';
-      await window.firebaseAuth.signup({ username, email, password });
+      // If a prior attempt already created the Firebase account (we're
+      // retrying after a needsLegacyPassword prompt), don't call
+      // createUserWithEmailAndPassword again — it would fail as
+      // "already in use". completeSignup reuses the signed-in session instead.
+      const alreadyCreated = typeof firebase !== 'undefined' && firebase.auth?.().currentUser;
+      const result = alreadyCreated
+        ? await window.firebaseAuth.completeSignup({ username, legacyPassword })
+        : await window.firebaseAuth.signup({ username, email, password, legacyPassword });
       // Identity is stored, but the app stays locked until email verification —
       // the server rejects every protected route for unverified accounts.
       persistLoginIdentity(username, null);
       showVerifyEmailScreen(email, 'signup');
     } catch (fbErr) {
-      if (errorEl) errorEl.textContent = fbErr.message || 'Signup failed. Please try again.';
+      if (fbErr.needsLegacyPassword) {
+        if (legacyField) legacyField.style.display = '';
+        document.getElementById('legacySignupPassword')?.focus();
+        if (errorEl) errorEl.textContent = fbErr.message || 'Enter the existing account\'s password, then tap Sign Up again.';
+      } else if (fbErr.legacyPasswordInvalid) {
+        if (errorEl) errorEl.textContent = fbErr.message || 'That password doesn\'t match the existing account.';
+      } else {
+        if (errorEl) errorEl.textContent = fbErr.message || 'Signup failed. Please try again.';
+      }
     } finally {
       setLoading(btn, false);
     }
@@ -14865,6 +14890,9 @@ function _switchLoginTab(mode) {
   if (emailField) {
     emailField.style.display = (!isLogin && window.firebaseAuth?.isAvailable()) ? '' : 'none';
   }
+  // Only shown reactively after a needsLegacyPassword error — reset on tab switch
+  const legacyField = document.getElementById('legacySignupPasswordField');
+  if (legacyField) legacyField.style.display = 'none';
   const pw = document.getElementById('password');
   if (pw) pw.autocomplete = isLogin ? 'current-password' : 'new-password';
   const err = document.getElementById('loginError');
