@@ -3400,12 +3400,18 @@ const defaultExercises = [
   'Leg Extension', 'Calf Raise'
 ];
 let userExercises = [];
+// Firestore-backed exercise library (~870 entries) — fetched once and cached
+// in localStorage so the datalist populates instantly on future loads
+// without re-fetching every page load.
+let exerciseLibraryNames = [];
+const EXERCISE_LIBRARY_CACHE_KEY = 'exerciseLibraryCache_v1';
+const EXERCISE_LIBRARY_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function updateExerciseSuggestions() {
   const list = document.getElementById('exerciseSuggestions');
   if (!list) return;
   list.innerHTML = '';
-  const all = Array.from(new Set([...defaultExercises, ...userExercises]));
+  const all = Array.from(new Set([...defaultExercises, ...exerciseLibraryNames, ...userExercises]));
   all.forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
@@ -3413,11 +3419,37 @@ function updateExerciseSuggestions() {
   });
 }
 
+async function loadExerciseLibrary() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(EXERCISE_LIBRARY_CACHE_KEY) || 'null');
+    if (cached && Array.isArray(cached.names) && (Date.now() - cached.cachedAt) < EXERCISE_LIBRARY_CACHE_MAX_AGE_MS) {
+      exerciseLibraryNames = cached.names;
+      updateExerciseSuggestions();
+      return;
+    }
+  } catch { /* corrupt cache — fall through to a fresh fetch */ }
+
+  try {
+    const serverUrl = ensureServerUrl();
+    const res = await fetch(`${serverUrl}/exercises?limit=1000`, { headers: getAuthHeaders() });
+    if (!res.ok) return; // keep whatever's cached (possibly nothing) — non-fatal
+    const data = await res.json();
+    const names = (data.items || []).map(e => e.name).filter(Boolean);
+    if (!names.length) return;
+    exerciseLibraryNames = names;
+    localStorage.setItem(EXERCISE_LIBRARY_CACHE_KEY, JSON.stringify({ names, cachedAt: Date.now() }));
+    updateExerciseSuggestions();
+  } catch (err) {
+    console.warn('[ExerciseLibrary] Fetch failed, using cached/default list only:', err.message);
+  }
+}
+
 function loadUserExercises() {
   if (!currentUser) return;
   const data = JSON.parse(localStorage.getItem(`exercises_${currentUser}`)) || [];
   userExercises = Array.isArray(data) ? data : [];
   updateExerciseSuggestions();
+  loadExerciseLibrary(); // fire-and-forget — renders with defaults/cache immediately, upgrades when it resolves
 }
 
 function saveUserExercise(name) {
