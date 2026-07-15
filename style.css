@@ -1284,6 +1284,34 @@ body.theme-dark .set-row {
   display: block;
 }
 
+/* Generic inline icon — sized off the current font-size so it drops into
+   any button/label/title that used to carry an emoji prefix. Sits one line
+   height tall via 1em, vertically centered against adjacent text. */
+.ui-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+}
+.ui-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Icon SVGs injected (via the [data-icon] loader in index.html) directly
+   into a pre-existing sized wrapper (.more-drawer-icon, .ob-arch-icon, etc.)
+   rather than a fresh .ui-icon span — size relative to that wrapper. */
+[data-icon] svg {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.15em;
+}
+
 .gamification-panel {
   border: 1px solid var(--border-color, rgba(132,157,144,0.28));
   border-radius: 10px;
