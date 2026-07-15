@@ -126,7 +126,7 @@
     <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
 
     <div class="login-beta">
-      ⚡ <strong>Beta:</strong> Server may take ~30s to wake on first use — wait and try again if it hangs.
+      <span class="ui-icon" data-icon="zap"></span> <strong>Beta:</strong> Server may take ~30s to wake on first use — wait and try again if it hangs.
     </div>
 
     <button id="loginButton" class="login-cta loading-btn" onclick="startLogin()">
@@ -396,7 +396,7 @@
           </div>
         </div>
       </div>
-      <button class="ob-next-btn" id="obFinish">Let's go! 🚀</button>
+      <button class="ob-next-btn" id="obFinish">Let's go!</button>
       <button class="ob-back-btn" id="obBack6">Back</button>
     </div>
   </div>
@@ -759,7 +759,7 @@
     <div id="logSub_history" class="log-subview">
       <div class="history-search-wrap">
         <input type="text" id="historySearchInput" class="history-search-input"
-          placeholder="🔍 Search any exercise (e.g. Bench Press)…"
+          placeholder="Search any exercise (e.g. Bench Press)…"
           oninput="renderHistoryResults(this.value)" />
 
         <!-- Filters row -->
@@ -1174,9 +1174,9 @@
           <label for="checkInReviewStatusInput">Review Status</label>
           <select id="checkInReviewStatusInput">
             <option value="pending">⏳ Pending review</option>
-            <option value="reviewed">👁 Reviewed</option>
-            <option value="approved">✅ Approved</option>
-            <option value="needs_changes">✏️ Needs changes</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="approved">Approved</option>
+            <option value="needs_changes">Needs changes</option>
           </select>
         </div>
         <div class="ci-field ci-field-full" style="margin-bottom:10px">
@@ -1834,7 +1834,7 @@
 
     <!-- ⑦ Filter pills replacing raw inputs -->
     <div class="comm-filter-row">
-      <input id="groupSearchInput" class="comm-search-input" placeholder="🔍 Search groups…"
+      <input id="groupSearchInput" class="comm-search-input" placeholder="Search groups…"
              oninput="doGroupSearch()">
       <button class="comm-clear-btn" onclick="clearGroupFilters()" title="Clear"><span class="ui-icon" data-icon="x"></span></button>
     </div>
@@ -2635,7 +2635,7 @@
             </select>
 
             <button id="savePersonalDetailsBtn" type="button">Save Details</button>
-            <div id="personalDetailsSavedMsg" style="display:none;margin-top:8px;">✅ Saved</div>
+            <div id="personalDetailsSavedMsg" style="display:none;margin-top:8px;"><span class="ui-icon" data-icon="check"></span> Saved</div>
             <p class="macro-stats">FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
           </div>
         </div>
@@ -3308,7 +3308,10 @@
     package: ICON_SVG_OPEN + '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><line x1="12" y1="22" x2="12" y2="12"/></svg>',
     gauge: ICON_SVG_OPEN + '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
     save: ICON_SVG_OPEN + '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
-    zap: ICON_SVG_OPEN + '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+    zap: ICON_SVG_OPEN + '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    chevronDown: ICON_SVG_OPEN + '<polyline points="6 9 12 15 18 9"/></svg>',
+    lightbulb: ICON_SVG_OPEN + '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A5.5 5.5 0 1 0 6 8.5c0 1.61.71 2.9 1.5 3.99C8.27 13.26 8.74 14 8.91 14z"/></svg>',
+    alertTriangle: ICON_SVG_OPEN + '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
   };
   // Static markup uses <span data-icon="name"></span> (name → ICONS key)
   // instead of repeating raw SVG at every call site. Deferred to
@@ -3653,7 +3656,7 @@ function openCheckout(plan) {
   modal.innerHTML = '<div class="payment-method-inner">'
     + '<h3>Choose payment method</h3>'
     + '<p class="payment-sub">Both options include a 7-day free trial</p>'
-    + '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')">💳 Pay with Card</button>'
+    + '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Pay with Card</button>'
     + '<p class="payment-note">Secure checkout powered by Stripe</p>'
     + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
     + '</div>';
@@ -3703,11 +3706,11 @@ function openUpgradeModal(defaultPlan) {
     + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £84/year · save £24</div>' : '')
     + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">7-day free trial</div>'
     + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
-    + '<li style="margin-bottom:4px;">✨ AI check-in summaries</li>'
-    + '<li style="margin-bottom:4px;">✨ AI macro advisor</li>'
-    + '<li style="margin-bottom:4px;">✨ AI program generator</li>'
-    + '<li style="margin-bottom:4px;">✨ AI plateau detector</li>'
-    + '<li>✨ Priority support</li></ul>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI check-in summaries</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI macro advisor</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI program generator</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI plateau detector</li>'
+    + '<li><span class="ui-icon">' + ICONS.sparkles + '</span> Priority support</li></ul>'
     + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'pro\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
     + '</div>'
     // Coach card
@@ -3718,11 +3721,11 @@ function openUpgradeModal(defaultPlan) {
     + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £156/year · save £36</div>' : '')
     + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">Everything in Pro, plus:</div>'
     + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
-    + '<li style="margin-bottom:4px;">👥 Full coaching dashboard</li>'
-    + '<li style="margin-bottom:4px;">📋 Client roster</li>'
-    + '<li style="margin-bottom:4px;">✍️ AI draft messages</li>'
-    + '<li style="margin-bottom:4px;">📊 Compliance tracking</li>'
-    + '<li>💰 Flat fee — no per-client</li></ul>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.users + '</span> Full coaching dashboard</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.clipboard + '</span> Client roster</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.pencil + '</span> AI draft messages</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.barChart + '</span> Compliance tracking</li>'
+    + '<li><span class="ui-icon">' + ICONS.creditCard + '</span> Flat fee — no per-client</li></ul>'
     + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'coach\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:#c6944f;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
     + '</div></div></div>';
   document.body.appendChild(overlay);
@@ -3793,7 +3796,7 @@ async function loadReferralPanel() {
     }
     if (badge && data.referralCredits > 0) {
       badge.style.display = '';
-      badge.innerHTML = '🎉 You have <strong>' + data.referralCredits + ' free month' + (data.referralCredits > 1 ? 's' : '') + '</strong> — applied on your next upgrade';
+      badge.innerHTML = '<span class="ui-icon">' + ICONS.gift + '</span> You have <strong>' + data.referralCredits + ' free month' + (data.referralCredits > 1 ? 's' : '') + '</strong> — applied on your next upgrade';
     }
     if (statsEl) statsEl.textContent = data.referralCount + ' friend' + (data.referralCount !== 1 ? 's' : '') + ' referred';
   } catch {
@@ -4578,7 +4581,7 @@ function getSetInputHTML(i) {
         <span id="repsLabel_${i}" style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;"></span>
       </div>
       <input type="number" id="weight_${i}" placeholder="Weight" style="width: 90px;" oninput="updateAddButtonState()" />
-      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;">🏋️</button>
+      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;"><span class="ui-icon">${ICONS.dumbbell}</span></button>
       <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
       <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
       <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
@@ -5323,7 +5326,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
       <div class="ex-progress-bar-wrap">
         <div class="ex-progress-bar" style="width:${pct}%;background:${allDone ? 'var(--primary)' : 'rgba(45,125,91,0.55)'};"></div>
       </div>
-      <span class="ex-progress-label">${allDone ? '✅' : `${doneSets}/${totalSets}`} sets</span>
+      <span class="ex-progress-label">${allDone ? `<span class="ui-icon">${ICONS.check}</span>` : `${doneSets}/${totalSets}`} sets</span>
     `;
     card.appendChild(progressStrip);
   }
@@ -5838,7 +5841,7 @@ function renderWorkouts() {
     renameBtn.type = 'button';
     renameBtn.title = 'Rename workout';
     renameBtn.style.cssText = 'flex-shrink:0;background:none;border:none;cursor:pointer;font-size:1rem;padding:6px;opacity:0.55;border-radius:6px;color:var(--text-muted);transition:opacity 0.15s;';
-    renameBtn.textContent = '✏️';
+    renameBtn.innerHTML = '<span class="ui-icon">' + ICONS.pencil + '</span>';
     renameBtn.addEventListener('mouseenter', () => { renameBtn.style.opacity = '1'; });
     renameBtn.addEventListener('mouseleave', () => { renameBtn.style.opacity = '0.55'; });
     renameBtn.addEventListener('click', (e) => {
@@ -5897,7 +5900,7 @@ function renderWorkouts() {
     const shareWorkoutButton = document.createElement('button');
     shareWorkoutButton.type = 'button';
     shareWorkoutButton.className = 'share-story-btn';
-    shareWorkoutButton.innerHTML = '📤 Share as Story';
+    shareWorkoutButton.innerHTML = '<span class="ui-icon">' + ICONS.share + '</span> Share as Story';
     shareWorkoutButton.addEventListener('click', () => openWorkoutStoryModal(workoutIndex));
     meta.appendChild(shareWorkoutButton);
 
@@ -6389,7 +6392,7 @@ function saveWorkoutAsTemplate() {
 
         saveTemplate(currentUser, name.trim(), template)
           .then(() => {
-            window.showToast('✅ Template saved!', 'success');
+            window.showToast('Template saved!', 'success');
             loadTemplateDropdown();
           })
           .catch(err => {
@@ -6468,7 +6471,7 @@ function loadSelectedResistanceTemplate() {
   });
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   renderWorkouts();
-  window.showToast('✅ Template loaded!', 'success');
+  window.showToast('Template loaded!', 'success');
 }
 
 // SEND TEMPLATE TO ANOTHER USER
@@ -6501,7 +6504,7 @@ async function sendTemplate() {
 
     const result = await response.json();
     if (result.success) {
-      window.showToast('✅ Template sent!', 'success');
+      window.showToast('Template sent!', 'success');
     } else {
       window.showToast(result.message || 'Failed to send template.', 'warn');
     }
@@ -7032,7 +7035,7 @@ function addMacroMeal() {
     const container = document.getElementById("macroMealContainer");
     container.insertAdjacentHTML("beforeend", `
       <div id="meal${idx}" style="border:1px solid var(--border-color); padding:10px; margin:10px 0;">
-        <button data-idx="${idx}" class="toggle-meal">➕ Meal ${idx+1}</button>
+        <button data-idx="${idx}" class="toggle-meal"><span class="ui-icon meal-toggle-icon">${ICONS.plus}</span> Meal ${idx+1}</button>
         <div id="mealContent${idx}" style="display:block; margin-top:10px;">
           <label>Timing Slot:</label>
           <select id="mealSlot${idx}">
@@ -7049,8 +7052,8 @@ function addMacroMeal() {
           <label>Fats:</label>
           <input type="number" id="fats${idx}" placeholder="g">
           <br>
-          <button data-idx="${idx}" class="meal-submit">➕ Add to Tracker</button>
-          <button data-idx="${idx}" class="remove-meal">❌ Remove</button>
+          <button data-idx="${idx}" class="meal-submit"><span class="ui-icon">${ICONS.plus}</span> Add to Tracker</button>
+          <button data-idx="${idx}" class="remove-meal"><span class="ui-icon">${ICONS.x}</span> Remove</button>
         </div>
       </div>
     `);
@@ -7060,12 +7063,13 @@ function addMacroMeal() {
     const toggleBtn = document.querySelector(`#meal${idx} .toggle-meal`);
     const content  = document.getElementById(`mealContent${idx}`);
     toggleBtn.addEventListener("click", () => {
+      const icon = toggleBtn.querySelector(".meal-toggle-icon");
       if (content.style.display === "none") {
         content.style.display = "block";
-        toggleBtn.textContent = toggleBtn.textContent.replace("➕","🔽");
+        if (icon) icon.innerHTML = ICONS.chevronDown;
       } else {
         content.style.display = "none";
-        toggleBtn.textContent = toggleBtn.textContent.replace("🔽","➕");
+        if (icon) icon.innerHTML = ICONS.plus;
       }
     });
     document.querySelector(`#meal${idx} .meal-submit`)
@@ -7077,12 +7081,13 @@ function addMacroMeal() {
 
 function toggleMeal(contentId, btn) {
   const div = document.getElementById(contentId);
+  const icon = btn.querySelector(".meal-toggle-icon");
   if (div.style.display === "none") {
     div.style.display = "block";
-    btn.innerText = btn.innerText.replace("➕", "🔽");
+    if (icon) icon.innerHTML = ICONS.chevronDown;
   } else {
     div.style.display = "none";
-    btn.innerText = btn.innerText.replace("🔽", "➕");
+    if (icon) icon.innerHTML = ICONS.plus;
   }
 }
 
@@ -7120,8 +7125,8 @@ function submitMeal(idx) {
   const content = document.getElementById(`mealContent${idx}`);
   if (content) {
     content.style.display = "none";
-    document.querySelector(`#meal${idx} .toggle-meal`).textContent =
-      document.querySelector(`#meal${idx} .toggle-meal`).textContent.replace("🔽", "➕");
+    const icon = document.querySelector(`#meal${idx} .toggle-meal .meal-toggle-icon`);
+    if (icon) icon.innerHTML = ICONS.plus;
   }
 
   const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
@@ -8575,7 +8580,7 @@ function toggleMacroCalcForm() {
   if (!form || !btn) return;
   if (form.style.display === 'none') {
     form.style.display = 'block';
-    btn.textContent = '⬅️ Back';
+    btn.textContent = 'Back';
   } else {
     form.style.display = 'none';
     btn.textContent = 'Macro Settings';
@@ -8940,9 +8945,9 @@ function renderHeroPhaseHeader(profile, username) {
         <div class="home-split-grid">
           <div>
             <h2 class="home-hero-athlete">${athleteName}</h2>
-            <p class="home-hero-meta">📅 ${todayLabel}</p>
-            <p class="home-hero-meta">🔥 Habit Streak: <strong>${streakCount} day${streakCount !== 1 ? 's' : ''}</strong></p>
-            <p class="home-hero-meta">👟 Steps today: <strong>${stepsToday.toLocaleString()} / ${stepsGoal.toLocaleString()} (${stepsPct}%)</strong></p>
+            <p class="home-hero-meta"><span class="ui-icon">${ICONS.calendar}</span> ${todayLabel}</p>
+            <p class="home-hero-meta"><span class="ui-icon">${ICONS.flame}</span> Habit Streak: <strong>${streakCount} day${streakCount !== 1 ? 's' : ''}</strong></p>
+            <p class="home-hero-meta"><span class="ui-icon">${ICONS.footprints}</span> Steps today: <strong>${stepsToday.toLocaleString()} / ${stepsGoal.toLocaleString()} (${stepsPct}%)</strong></p>
           </div>
           <div class="home-muted-panel">
             <p class="home-stat-label">Daily Status</p>
@@ -10309,7 +10314,7 @@ function assignCoachNutritionPlan(clientId, clientName) {
   if (clientName) {
     localStorage.setItem(`clientName_${clientId}`, clientName);
   }
-  alert(`Nutrition plan assigned to ${clientName || clientId} ✅`);
+  alert(`Nutrition plan assigned to ${clientName || clientId}`);
   renderCoachDashboardView();
 }
 
@@ -10351,7 +10356,7 @@ function renderCoachClientDetail(client) {
             <p class="coach-dashboard-subtitle">Client detail overview · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn" data-coach-draft-msg="${escapeCoachText(safeClient.id)}">Draft message ✨</button>` : ''}
+            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn" data-coach-draft-msg="${escapeCoachText(safeClient.id)}">Draft message <span class="ui-icon">${ICONS.sparkles}</span></button>` : ''}
             <button type="button" data-coach-back>← Back to roster</button>
           </div>
         </div>
@@ -10482,7 +10487,7 @@ async function requestCoachDraftMessage(clientId) {
     : '';
   const bodyweightChange = latestCheckIn?.bodyweightChange ?? latestCheckIn?.weeklyWeightChange ?? latestCheckIn?.weightChange ?? null;
 
-  draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;">✨ Drafting message…</p>`;
+  draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
 
   const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
     || 'https://traininglog-backend.onrender.com';
@@ -10883,7 +10888,7 @@ function renderCheckInTab() {
   const entriesWithInsights = window.checkinEngine.getCheckInInsightTimeline?.(checkIns) || checkIns;
   const groupedTimeline = window.checkinEngine.groupCheckInsForTimeline?.(entriesWithInsights) || [];
   if (!groupedTimeline.length) {
-    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<br><span style="font-size:1.6rem;display:block;margin-top:8px">📋</span></div>`;
+    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<br><span class="ui-icon" style="width:1.6rem;height:1.6rem;display:block;margin:8px auto 0">${ICONS.clipboard}</span></div>`;
     return;
   }
 
@@ -10895,7 +10900,12 @@ function renderCheckInTab() {
   }
 
   function _statusLabel(status) {
-    return { approved: '✅ Approved', reviewed: '👁 Reviewed', needs_changes: '✏️ Needs changes', pending: '⏳ Pending' }[status] || '⏳ Pending';
+    return {
+      approved: `<span class="ui-icon">${ICONS.check}</span> Approved`,
+      reviewed: `<span class="ui-icon">${ICONS.eye}</span> Reviewed`,
+      needs_changes: `<span class="ui-icon">${ICONS.pencil}</span> Needs changes`,
+      pending: `<span class="ui-icon">${ICONS.clock}</span> Pending`
+    }[status] || `<span class="ui-icon">${ICONS.clock}</span> Pending`;
   }
 
   timeline.innerHTML = groupedTimeline.map((weeksOutGroup) => {
@@ -10922,19 +10932,19 @@ function renderCheckInTab() {
               <span class="ci-tc-status-badge ${status}">${_statusLabel(status)}</span>
             </div>
             <div class="ci-tc-stats">
-              ${entry.bodyweight ? `<span class="ci-tc-stat">⚖️ ${entry.bodyweight} kg</span>` : ''}
-              ${entry.waist      ? `<span class="ci-tc-stat">📏 ${entry.waist} cm</span>`  : ''}
-              ${energy !== ''    ? `<span class="ci-tc-stat ${_scoreClass(energy, false)}">⚡ E:${energy}</span>` : ''}
-              ${sleep  !== ''    ? `<span class="ci-tc-stat ${_scoreClass(sleep, false)}">🌙 S:${sleep}</span>`  : ''}
-              ${stress !== ''    ? `<span class="ci-tc-stat ${_scoreClass(stress, true)}">🧠 St:${stress}</span>` : ''}
+              ${entry.bodyweight ? `<span class="ci-tc-stat"><span class="ui-icon">${ICONS.scale}</span> ${entry.bodyweight} kg</span>` : ''}
+              ${entry.waist      ? `<span class="ci-tc-stat"><span class="ui-icon">${ICONS.scale}</span> ${entry.waist} cm</span>`  : ''}
+              ${energy !== ''    ? `<span class="ci-tc-stat ${_scoreClass(energy, false)}"><span class="ui-icon">${ICONS.zap}</span> E:${energy}</span>` : ''}
+              ${sleep  !== ''    ? `<span class="ci-tc-stat ${_scoreClass(sleep, false)}"><span class="ui-icon">${ICONS.moon}</span> S:${sleep}</span>`  : ''}
+              ${stress !== ''    ? `<span class="ci-tc-stat ${_scoreClass(stress, true)}"><span class="ui-icon">${ICONS.brain}</span> St:${stress}</span>` : ''}
             </div>
             ${archetypeMetrics ? `<div class="ci-tc-archetype">${archetypeMetrics}</div>` : ''}
-            ${(insight || insightFull) ? `<div class="ci-tc-insight">💡 ${insight}${insightFull ? '<br><span style="opacity:0.8">'+insightFull+'</span>' : ''}</div>` : ''}
-            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust">⚙️ ${adjText}</div>` : ''}
+            ${(insight || insightFull) ? `<div class="ci-tc-insight"><span class="ui-icon">${ICONS.lightbulb}</span> ${insight}${insightFull ? '<br><span style="opacity:0.8">'+insightFull+'</span>' : ''}</div>` : ''}
+            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust"><span class="ui-icon">${ICONS.settings}</span> ${adjText}</div>` : ''}
             ${entry.notes     ? `<div class="ci-tc-notes">"${entry.notes}"</div>` : ''}
             ${(entry.coachNotes || entry.review?.coachActionItems) ? `
               <div class="ci-tc-coach">
-                ${entry.coachNotes ? `<div>📝 ${entry.coachNotes}</div>` : ''}
+                ${entry.coachNotes ? `<div><span class="ui-icon">${ICONS.pencil}</span> ${entry.coachNotes}</div>` : ''}
                 ${entry.review?.coachActionItems ? `<div>→ ${entry.review.coachActionItems}</div>` : ''}
               </div>` : ''}
           </div>`;
@@ -11196,7 +11206,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
     card.style.display = '';
     card.innerHTML = `
       <div class="ci-ai-card ci-ai-card--locked">
-        <span class="ci-ai-label">✨ AI Summary</span>
+        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
         <p>Upgrade to Pro to get an AI-generated summary of every check-in.</p>
         <button class="ci-ai-upgrade-btn" onclick="window.showToast?.('Pro subscriptions coming soon!','info',3000)">Upgrade</button>
       </div>`;
@@ -11207,7 +11217,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
   card.style.display = '';
   card.innerHTML = `
     <div class="ci-ai-card">
-      <span class="ci-ai-label">✨ AI Summary</span>
+      <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
       <div class="ci-ai-loading">
         <div class="ci-ai-spinner"></div>
         <span>Generating your summary…</span>
@@ -11286,7 +11296,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
 
     card.innerHTML = `
       <div class="ci-ai-card">
-        <span class="ci-ai-label">✨ AI Summary</span>
+        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
         <p class="ci-ai-text">${summary.replace(/</g, '&lt;')}</p>
       </div>`;
   } catch (err) {
@@ -11297,7 +11307,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
         : 'Could not generate summary right now.';
     card.innerHTML = `
       <div class="ci-ai-card ci-ai-card--error">
-        <span class="ci-ai-label">✨ AI Summary</span>
+        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
         <p>${msg}</p>
       </div>`;
   }
@@ -12176,7 +12186,7 @@ function completeCardioSession() {
     const entry = { date: new Date().toISOString().split('T')[0], type: 'session_complete' };
     window.dailyMissionEngine?.syncMissionFromCardioEntry?.(entry, currentUser);
   } catch (e) { /* silent */ }
-  window.showToast?.('Cardio session marked complete! 🎉', 'success', 3000);
+  window.showToast?.('Cardio session marked complete!', 'success', 3000);
 }
 
 function renderCardio() {
@@ -12216,7 +12226,7 @@ function renderCardio() {
     historyEl.innerHTML = `
       <div class="cardio-history-empty">
         No cardio sessions logged yet.<br>
-        <span style="font-size:1.6rem;display:block;margin-top:8px">🏃</span>
+        <span class="ui-icon" style="width:1.6rem;height:1.6rem;display:block;margin:8px auto 0">${ICONS.activity}</span>
       </div>`;
     return;
   }
@@ -12246,8 +12256,8 @@ function renderCardio() {
     const entries = grouped[date];
     const cards   = entries.map(({ entry, idx }) => {
       const cfg   = window.cardioTab?.getActivityConfig?.(entry.type) || { icon: '🏅', label: entry.type || 'Other', color: '#8c9891' };
-      const dur   = entry.duration > 0 ? `⏱ ${Math.round(entry.duration)} min` : null;
-      const dist  = parseFloat(entry.distance) > 0 ? `📏 ${parseFloat(entry.distance).toFixed(1)} km` : null;
+      const dur   = entry.duration > 0 ? `<span class="ui-icon">${ICONS.timer}</span> ${Math.round(entry.duration)} min` : null;
+      const dist  = parseFloat(entry.distance) > 0 ? `<span class="ui-icon">${ICONS.mapPin}</span> ${parseFloat(entry.distance).toFixed(1)} km` : null;
       const pace  = entry.paceOrSpeed
         ? `${entry.paceOrSpeed.icon} ${entry.paceOrSpeed.value}`
         : (dist && dur
@@ -12256,10 +12266,14 @@ function renderCardio() {
                 return r ? `${r.icon} ${r.value}` : null;
               })()
             : null);
-      const kcal  = parseFloat(entry.calories) > 0 ? `🔥 ${Math.round(entry.calories)} kcal` : null;
-      const hr    = parseFloat(entry.heartRate) > 0 ? `❤️ ${Math.round(entry.heartRate)} bpm` : null;
+      const kcal  = parseFloat(entry.calories) > 0 ? `<span class="ui-icon">${ICONS.flame}</span> ${Math.round(entry.calories)} kcal` : null;
+      const hr    = parseFloat(entry.heartRate) > 0 ? `<span class="ui-icon">${ICONS.heart}</span> ${Math.round(entry.heartRate)} bpm` : null;
       const intBadge = entry.intensity && entry.intensity !== 'moderate'
-        ? { easy: '😌 Easy', hard: '🔥 Hard', max: '⚡ Max' }[entry.intensity] || null
+        ? {
+            easy: `<span class="ui-icon">${ICONS.leaf}</span> Easy`,
+            hard: `<span class="ui-icon">${ICONS.flame}</span> Hard`,
+            max: `<span class="ui-icon">${ICONS.zap}</span> Max`
+          }[entry.intensity] || null
         : null;
 
       const tags  = [dur, dist, pace, kcal, hr, intBadge].filter(Boolean).map((t, i) =>
@@ -12467,8 +12481,8 @@ function renderTrainingLoadCharts(workouts) {
 
   const riskWeeks = weekly.filter(w => w.weeklyMonotony > SAFE_MONOTONY_THRESHOLD || w.weeklyStrain > SAFE_STRAIN_THRESHOLD);
   alerts.innerHTML = riskWeeks.length
-    ? `<strong>⚠️ Deload suggestion:</strong> High stress detected in week(s) ${riskWeeks.map(w => w.weekStart).join(', ')}. Consider reducing volume/intensity by 20–40%.`
-    : '<strong>✅ Load balance looks good.</strong> No high monotony/strain weeks detected in selected range.';
+    ? `<strong><span class="ui-icon">${ICONS.alertTriangle}</span> Deload suggestion:</strong> High stress detected in week(s) ${riskWeeks.map(w => w.weekStart).join(', ')}. Consider reducing volume/intensity by 20–40%.`
+    : `<strong><span class="ui-icon">${ICONS.check}</span> Load balance looks good.</strong> No high monotony/strain weeks detected in selected range.`;
 }
 
 function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) {
@@ -13155,7 +13169,7 @@ function injectPlateauCard(result, dismissKey) {
   cardEl.innerHTML = `
     <div class="plateau-alert-card">
       <div class="plateau-alert-body">
-        <span class="plateau-alert-icon">🔔</span>
+        <span class="plateau-alert-icon"><span class="ui-icon">${ICONS.bell}</span></span>
         <div>
           <strong class="plateau-alert-heading">Plateau detected</strong>
           <p class="plateau-alert-text">${escapeCoachText(text)}</p>
@@ -13583,7 +13597,7 @@ async function submitSmartGoalForm(event) {
   }
 
   event.target.reset();
-  if (feedback) feedback.textContent = '✅ SMART goal saved.';
+  if (feedback) feedback.textContent = 'SMART goal saved.';
   renderGoalBar();
   if (typeof renderGoalProgressList === 'function') {
     renderGoalProgressList();
@@ -15253,7 +15267,7 @@ async function _commSendToUser(recipient, message) {
   /* Record in sender's outbox */
   _commAddToOutbox({ type: item.type, name: item.name, to: `@${recipient}`, toType: 'user', date: new Date().toISOString().slice(0, 10) });
 
-  window.showToast?.(`📤 "${item.name}" sent to @${recipient}!`, 'success', 3500);
+  window.showToast?.(`"${item.name}" sent to @${recipient}!`, 'success', 3500);
   if (document.getElementById('commShareRecipient')) document.getElementById('commShareRecipient').value = '';
   if (document.getElementById('commShareMessage'))   document.getElementById('commShareMessage').value   = '';
   _commShareSelectedId = null;
@@ -15283,7 +15297,7 @@ async function _commSendToGroup(groupId, message) {
 
   _commAddToOutbox({ type: item.type, name: item.name, to: groupName, toType: 'group', date: new Date().toISOString().slice(0, 10) });
 
-  window.showToast?.(`📤 "${item.name}" shared to ${groupName}!`, 'success', 3500);
+  window.showToast?.(`"${item.name}" shared to ${groupName}!`, 'success', 3500);
   if (document.getElementById('commShareMessage')) document.getElementById('commShareMessage').value = '';
   _commShareSelectedId = null;
   renderCommShareItemList();
@@ -15335,11 +15349,11 @@ async function _fetchCommBackendInbox() {
 
 function _renderCommInboxItems(el, items) {
   if (!items?.length) {
-    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When someone shares a program or template with you, it appears here. 📬</div>`;
+    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When someone shares a program or template with you, it appears here. <span class="ui-icon">${ICONS.download}</span></div>`;
     return;
   }
   const typeColors = { template: '#5295e0', program: '#9070d8' };
-  const typeLabels = { template: '📋 Template', program: '🗓 Program' };
+  const typeLabels = { template: `<span class="ui-icon">${ICONS.clipboard}</span> Template`, program: `<span class="ui-icon">${ICONS.calendar}</span> Program` };
   el.innerHTML = items.map(item => `
     <div class="comm-inbox-item" id="commInboxItem_${item.id}">
       <div class="comm-inbox-header">
@@ -15353,7 +15367,7 @@ function _renderCommInboxItems(el, items) {
       <div class="comm-inbox-item-name">${item.name}</div>
       ${item.message ? `<div class="comm-inbox-message">"${item.message}"</div>` : ''}
       <div class="comm-inbox-actions">
-        <button class="comm-inbox-accept-btn"  onclick="commAcceptShare('${item.id}')">✅ Accept &amp; Save</button>
+        <button class="comm-inbox-accept-btn"  onclick="commAcceptShare('${item.id}')"><span class="ui-icon">${ICONS.check}</span> Accept &amp; Save</button>
         <button class="comm-inbox-dismiss-btn" onclick="commDismissShare('${item.id}')">Dismiss</button>
       </div>
     </div>`).join('');
@@ -15367,12 +15381,12 @@ function renderCommShareOutbox() {
   if (!outbox.length) {
     el.innerHTML = `<div class="comm-share-empty">Nothing sent yet.</div>`; return;
   }
-  const icons = { user: '👤', group: '👥' };
+  const icons = { user: `<span class="ui-icon">${ICONS.users}</span>`, group: `<span class="ui-icon">${ICONS.users}</span>` };
   el.innerHTML = outbox.slice(0, 15).map(item => `
     <div class="comm-outbox-item">
       <div class="comm-outbox-to">
-        <div class="comm-outbox-to-name">${icons[item.toType] || '👤'} ${item.to}</div>
-        <div class="comm-outbox-to-desc">${item.type === 'template' ? '📋' : '🗓'} ${item.name}</div>
+        <div class="comm-outbox-to-name">${icons[item.toType] || `<span class="ui-icon">${ICONS.users}</span>`} ${item.to}</div>
+        <div class="comm-outbox-to-desc">${item.type === 'template' ? `<span class="ui-icon">${ICONS.clipboard}</span>` : `<span class="ui-icon">${ICONS.calendar}</span>`} ${item.name}</div>
       </div>
       <div class="comm-outbox-date">${item.date || ''}</div>
     </div>`).join('');
@@ -15395,7 +15409,7 @@ function commAcceptShare(shareId) {
       source: 'community'
     });
     localStorage.setItem(tplKey, JSON.stringify(tpls));
-    window.showToast?.(`✅ "${item.name}" added to your Templates!`, 'success', 3500);
+    window.showToast?.(`"${item.name}" added to your Templates!`, 'success', 3500);
   } else {
     const progKey = `programs_${currentUser}`;
     const progs   = JSON.parse(localStorage.getItem(progKey)) || [];
@@ -15406,7 +15420,7 @@ function commAcceptShare(shareId) {
       _sharedBy: item.from
     });
     localStorage.setItem(progKey, JSON.stringify(progs));
-    window.showToast?.(`✅ "${item.name}" added to your Programs!`, 'success', 3500);
+    window.showToast?.(`"${item.name}" added to your Programs!`, 'success', 3500);
   }
 
   item.accepted = true;
@@ -17365,11 +17379,11 @@ function calcStrengthScores() {
   const tierEl = document.getElementById('scoreTier');
   if (tierEl) {
     const tiers = [
-      { min: 500, label: '🏆 Elite',       bg: 'rgba(255,215,0,0.15)',  color: '#f0c040' },
-      { min: 400, label: '⭐ Advanced',     bg: 'rgba(82,214,138,0.12)', color: '#52d68a' },
-      { min: 300, label: '📈 Intermediate', bg: 'rgba(82,148,224,0.12)', color: '#5294e0' },
-      { min: 200, label: '🌱 Novice',       bg: 'rgba(160,125,192,0.12)',color: '#a07dc0' },
-      { min:   0, label: '🔰 Beginner',     bg: 'rgba(99,110,114,0.1)',  color: '#9eabb0' },
+      { min: 500, label: 'Elite',       bg: 'rgba(255,215,0,0.15)',  color: '#f0c040' },
+      { min: 400, label: 'Advanced',     bg: 'rgba(82,214,138,0.12)', color: '#52d68a' },
+      { min: 300, label: 'Intermediate', bg: 'rgba(82,148,224,0.12)', color: '#5294e0' },
+      { min: 200, label: 'Novice',       bg: 'rgba(160,125,192,0.12)',color: '#a07dc0' },
+      { min:   0, label: 'Beginner',     bg: 'rgba(99,110,114,0.1)',  color: '#9eabb0' },
     ];
     const tier = tiers.find(t => w >= t.min) || tiers[tiers.length - 1];
     tierEl.textContent     = tier.label;
@@ -17570,7 +17584,7 @@ window.renderMeetPrep = renderMeetPrep;
         </button>
       </div>
       <p style="text-align:center;color:rgba(255,255,255,0.35);font-size:0.75rem;margin-top:12px;">
-        Save to camera roll · Post to your story 📸
+        Save to camera roll · Post to your story <span class="ui-icon" data-icon="camera"></span>
       </p>
     </div>
   </div>
@@ -17873,14 +17887,14 @@ window.renderMeetPrep = renderMeetPrep;
         if (navigator.clipboard?.write) {
           const blob = await getBlob();
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          window.showToast?.('📋 Image copied to clipboard!', 'success');
+          window.showToast?.('Image copied to clipboard!', 'success');
         } else {
           // Last resort: open in new tab
           window.open(canvas.toDataURL('image/png'), '_blank');
         }
       } catch(e) {
         console.warn('Share failed:', e);
-        window.showToast?.('⬇️ Use Save Image instead', 'warn');
+        window.showToast?.('Use Save Image instead', 'warn');
       }
     };
   }
@@ -17902,7 +17916,7 @@ window.renderMeetPrep = renderMeetPrep;
   style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--card-bg,#0f1510);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">✨</div>
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
       <div>
         <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Macro Advisor</div>
         <div id="macroAiStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
@@ -17987,7 +18001,7 @@ window.renderMeetPrep = renderMeetPrep;
 
     body.innerHTML =
       '<div style="background:var(--card-bg,#0f1510);border:1px solid var(--border-color,#2a3a2e);border-left:3px solid var(--primary,#5fa87e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
-        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--primary,#5fa87e);margin-bottom:8px;">✨ AI Advice</div>' +
+        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--primary,#5fa87e);margin-bottom:8px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI Advice</div>' +
         '<p style="font-size:0.88rem;line-height:1.6;color:var(--text-color);margin:0;">' + advice.replace(/</g, '&lt;') + '</p>' +
       '</div>' +
       '<div style="background:var(--surface-bg,#141e17);border:1px solid var(--border-color,#2a3a2e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
@@ -18011,7 +18025,7 @@ window.renderMeetPrep = renderMeetPrep;
 
   function renderMacroAiError(body, status, msg) {
     status.textContent = 'Powered by Claude';
-    body.innerHTML = '<div style="background:rgba(224,80,96,0.1);border:1px solid rgba(224,80,96,0.3);border-radius:14px;padding:14px 16px;color:#e05060;font-size:0.88rem;">⚠️ ' + msg + '</div>';
+    body.innerHTML = '<div style="background:rgba(224,80,96,0.1);border:1px solid rgba(224,80,96,0.3);border-radius:14px;padding:14px 16px;color:#e05060;font-size:0.88rem;"><span class="ui-icon">' + ICONS.alertTriangle + '</span> ' + msg + '</div>';
   }
 
   window.openMacroAiAdvisor = async function () {
@@ -18094,7 +18108,7 @@ window.renderMeetPrep = renderMeetPrep;
   style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:88vh;background:var(--card-bg,#0f1510);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">✨</div>
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
       <div>
         <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Program Generator</div>
         <div id="progAiGenStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
@@ -18206,10 +18220,10 @@ window.renderMeetPrep = renderMeetPrep;
       + '</div>'
       + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted,#7a8f7d);">Equipment available</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">🏋️ Barbell</button>'
-      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">💪 Dumbbells</button>'
-      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">🔗 Cables / Machine</button>'
-      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" onclick="this.classList.toggle(\'active\')">🤸 Bodyweight</button>'
+      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.dumbbell + '</span> Barbell</button>'
+      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.dumbbell + '</span> Dumbbells</button>'
+      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.link + '</span> Cables / Machine</button>'
+      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.activity + '</span> Bodyweight</button>'
       + '</div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
       + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Training mode<select id="pagMode">' + modeOptions + '</select></label>'
@@ -18371,7 +18385,7 @@ window.renderMeetPrep = renderMeetPrep;
       window.showProgramView('list');
     }
     if (typeof window.showToast === 'function') {
-      window.showToast('Program saved! ✅', 'success', 3000);
+      window.showToast('Program saved!', 'success', 3000);
     }
   };
 
