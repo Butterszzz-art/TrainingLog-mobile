@@ -126,7 +126,7 @@
     <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
 
     <div class="login-beta">
-      ⚡ <strong>Beta:</strong> Server may take ~30s to wake on first use — wait and try again if it hangs.
+      <span class="ui-icon" data-icon="zap"></span> <strong>Beta:</strong> Server may take ~30s to wake on first use — wait and try again if it hangs.
     </div>
 
     <button id="loginButton" class="login-cta loading-btn" onclick="startLogin()">
@@ -176,22 +176,22 @@
       <p class="ob-subtitle">We'll personalise the app for you</p>
       <div class="ob-archetype-grid">
         <button class="ob-archetype-card" data-archetype="bodybuilder" onclick="window._selectArchetype(this)">
-          <span class="ob-arch-icon">💪</span>
+          <span class="ob-arch-icon" data-icon="dumbbell"></span>
           <strong>Bodybuilder</strong>
           <small>Physique &amp; hypertrophy</small>
         </button>
         <button class="ob-archetype-card" data-archetype="powerlifter" onclick="window._selectArchetype(this)">
-          <span class="ob-arch-icon">🏋️</span>
+          <span class="ob-arch-icon" data-icon="gauge"></span>
           <strong>Powerlifter</strong>
           <small>Squat, bench &amp; deadlift</small>
         </button>
         <button class="ob-archetype-card" data-archetype="hybrid" onclick="window._selectArchetype(this)">
-          <span class="ob-arch-icon">⚡</span>
+          <span class="ob-arch-icon" data-icon="zap"></span>
           <strong>Hybrid</strong>
           <small>Strength &amp; conditioning</small>
         </button>
         <button class="ob-archetype-card" data-archetype="recreational" onclick="window._selectArchetype(this)">
-          <span class="ob-arch-icon">🌱</span>
+          <span class="ob-arch-icon" data-icon="leaf"></span>
           <strong>Recreational</strong>
           <small>General fitness</small>
         </button>
@@ -207,7 +207,7 @@
       <div class="ob-option-list" role="radiogroup">
         <label class="ob-option">
           <input type="radio" name="obGoal" value="cut">
-          <span class="ob-option-icon">🔥</span>
+          <span class="ob-option-icon" data-icon="flame"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Lose fat</span>
             <span class="ob-option-hint">Caloric deficit, preserve muscle</span>
@@ -215,7 +215,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obGoal" value="bulk">
-          <span class="ob-option-icon">💪</span>
+          <span class="ob-option-icon" data-icon="dumbbell"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Build muscle</span>
             <span class="ob-option-hint">Slight caloric surplus</span>
@@ -223,7 +223,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obGoal" value="recomp">
-          <span class="ob-option-icon">⚖️</span>
+          <span class="ob-option-icon" data-icon="scale"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Body recomposition</span>
             <span class="ob-option-hint">Lose fat while gaining muscle</span>
@@ -231,7 +231,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obGoal" value="maintain">
-          <span class="ob-option-icon">🏃</span>
+          <span class="ob-option-icon" data-icon="activity"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Performance / health</span>
             <span class="ob-option-hint">Maintain weight, optimise fitness</span>
@@ -250,7 +250,7 @@
       <div class="ob-option-list" role="radiogroup">
         <label class="ob-option">
           <input type="radio" name="obExperience" value="beginner">
-          <span class="ob-option-icon">🌱</span>
+          <span class="ob-option-icon" data-icon="leaf"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Beginner</span>
             <span class="ob-option-hint">Under 1 year</span>
@@ -258,7 +258,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obExperience" value="intermediate">
-          <span class="ob-option-icon">📈</span>
+          <span class="ob-option-icon" data-icon="barChart"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Intermediate</span>
             <span class="ob-option-hint">1–3 years</span>
@@ -266,7 +266,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obExperience" value="advanced">
-          <span class="ob-option-icon">🏆</span>
+          <span class="ob-option-icon" data-icon="trophy"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Advanced</span>
             <span class="ob-option-hint">3+ years</span>
@@ -331,7 +331,7 @@
       <div class="ob-option-list" role="radiogroup">
         <label class="ob-option">
           <input type="radio" name="obActivity" value="1.2">
-          <span class="ob-option-icon">🛋️</span>
+          <span class="ob-option-icon" data-icon="couch"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Sedentary</span>
             <span class="ob-option-hint">Desk job, little movement</span>
@@ -339,7 +339,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obActivity" value="1.375">
-          <span class="ob-option-icon">🚶</span>
+          <span class="ob-option-icon" data-icon="footprints"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Lightly active</span>
             <span class="ob-option-hint">Light exercise 1–3 days/week</span>
@@ -347,7 +347,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obActivity" value="1.55">
-          <span class="ob-option-icon">🏃</span>
+          <span class="ob-option-icon" data-icon="activity"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Moderately active</span>
             <span class="ob-option-hint">Exercise 3–5 days/week</span>
@@ -355,7 +355,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obActivity" value="1.725">
-          <span class="ob-option-icon">⚡</span>
+          <span class="ob-option-icon" data-icon="zap"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Very active</span>
             <span class="ob-option-hint">Hard training 6–7 days/week</span>
@@ -363,7 +363,7 @@
         </label>
         <label class="ob-option">
           <input type="radio" name="obActivity" value="1.9">
-          <span class="ob-option-icon">🏅</span>
+          <span class="ob-option-icon" data-icon="award"></span>
           <div class="ob-option-text">
             <span class="ob-option-label">Athlete</span>
             <span class="ob-option-hint">Twice-a-day or physical job</span>
@@ -396,7 +396,7 @@
           </div>
         </div>
       </div>
-      <button class="ob-next-btn" id="obFinish">Let's go! 🚀</button>
+      <button class="ob-next-btn" id="obFinish">Let's go!</button>
       <button class="ob-back-btn" id="obBack6">Back</button>
     </div>
   </div>
@@ -530,17 +530,17 @@
 
     <!-- ── Conditional banners (only rendered when active) ──────── -->
     <div id="notifPermBanner" class="notif-banner" style="display:none;">
-      <span class="notif-banner-icon">🔔</span>
+      <span class="notif-banner-icon" data-icon="bell"></span>
       <span class="notif-banner-text">Enable notifications to get rest timer alerts when your phone is locked.</span>
       <button class="notif-banner-btn" onclick="requestRestTimerNotifications()">Enable</button>
     </div>
     <div id="vacationModeBanner">
-      <span class="vm-banner-icon">🏖️</span>
+      <span class="vm-banner-icon" data-icon="waves"></span>
       <span>Vacation Mode — streak &amp; program tracking paused</span>
       <span class="vm-since"></span>
     </div>
     <div id="sickModeBanner" style="display:none;">
-      <span class="vm-banner-icon">🤒</span>
+      <span class="vm-banner-icon" data-icon="heart"></span>
       <span>Sick Mode — progress paused while you recover</span>
       <span class="sm-since"></span>
     </div>
@@ -571,7 +571,7 @@
               </svg>
               <div class="step-ring-inner">
                 <span id="stepRingCount" class="step-ring-count">0</span>
-                <span class="step-ring-icon">👟</span>
+                <span class="step-ring-icon" data-icon="footprints"></span>
               </div>
             </div>
             <div class="step-widget-info">
@@ -602,13 +602,15 @@
   <div id="logTab" class="tab-content">
   <div id="logPanel" class="panel active">
 
-    <!-- ── Log Sub-tab Navigation ── -->
+    <!-- ── Log Sub-tab Navigation ──
+         PREVIEW: emoji labels (📝⏱️🔍📋🏆) replaced with inline line-icons,
+         same style/pattern as the bottom nav's .bn-icon (css/nav.css). -->
     <nav class="log-subtabs" id="logSubtabNav">
-      <button class="log-subtab active" data-log-subtab="log">📝 Log</button>
-      <button class="log-subtab" data-log-subtab="rest">⏱️ Rest</button>
-      <button class="log-subtab" data-log-subtab="history">🔍 History</button>
-      <button class="log-subtab" data-log-subtab="templates">📋 Templates</button>
-      <button class="log-subtab" data-log-subtab="streaks">🏆 Streaks</button>
+      <button class="log-subtab active" data-log-subtab="log"><span class="subtab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Log</button>
+      <button class="log-subtab" data-log-subtab="rest"><span class="subtab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Rest</button>
+      <button class="log-subtab" data-log-subtab="history"><span class="subtab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg></span>History</button>
+      <button class="log-subtab" data-log-subtab="templates"><span class="subtab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="M9 12h6"/><path d="M9 16h6"/></svg></span>Templates</button>
+      <button class="log-subtab" data-log-subtab="streaks"><span class="subtab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2a2 2 0 0 1 2 2 4 4 0 0 1-4 4"/><path d="M7 5H5a2 2 0 0 0-2 2 4 4 0 0 0 4 4"/></svg></span>Streaks</button>
     </nav>
 
     <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
@@ -619,7 +621,7 @@
 
       <!-- Coach: log on behalf of a client (visible in coach mode only) -->
       <div id="coachLogForBar" class="coach-logfor-bar" style="display:none;">
-        <span class="coach-logfor-label">🏋️ Logging for</span>
+        <span class="coach-logfor-label"><span class="ui-icon" data-icon="dumbbell"></span> Logging for</span>
         <select id="coachLogForSelect" class="coach-logfor-select" onchange="setCoachLoggingClient(this.value)">
           <option value="">Myself</option>
         </select>
@@ -639,7 +641,7 @@
           <span class="rest-banner-label">Rest timer</span>
           <span class="rest-banner-time" id="restBannerTime">0:00</span>
         </div>
-        <button class="rest-banner-skip" type="button" onclick="skipRestTimer()">Skip ✕</button>
+        <button class="rest-banner-skip" type="button" onclick="skipRestTimer()">Skip <span class="ui-icon" data-icon="x"></span></button>
       </div>
 
       <!-- Workout session timer — styled as a full-width banner -->
@@ -757,7 +759,7 @@
     <div id="logSub_history" class="log-subview">
       <div class="history-search-wrap">
         <input type="text" id="historySearchInput" class="history-search-input"
-          placeholder="🔍 Search any exercise (e.g. Bench Press)…"
+          placeholder="Search any exercise (e.g. Bench Press)…"
           oninput="renderHistoryResults(this.value)" />
 
         <!-- Filters row -->
@@ -810,7 +812,7 @@
     <div id="logSub_templates" class="log-subview">
       <div style="padding:10px;">
         <div id="templateBuilder" style="margin-bottom:12px; border:1px solid var(--border,#2a3a2e); border-radius:8px; padding:12px;">
-          <h3 style="margin:0 0 10px 0;">📋 Template Builder</h3>
+          <h3 style="margin:0 0 10px 0;"><span class="ui-icon" data-icon="clipboard"></span> Template Builder</h3>
           <input type="text" id="newTemplateName" placeholder="Template name" />
           <input type="text" id="newTemplateDescription" placeholder="Description" style="margin-top:6px;" />
           <input type="text" id="newTemplateTags" placeholder="Tags (comma separated)" style="margin-top:6px;" />
@@ -835,7 +837,7 @@
         </div>
 
         <div id="templateManager" style="border:1px solid var(--border,#2a3a2e); border-radius:8px; padding:12px;">
-          <h3 style="margin:0 0 10px 0;">🗂️ Template Manager</h3>
+          <h3 style="margin:0 0 10px 0;"><span class="ui-icon" data-icon="package"></span> Template Manager</h3>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
             <button type="button" onclick="editSelectedTemplate()">Edit</button>
             <button type="button" onclick="duplicateSelectedTemplate()">Duplicate</button>
@@ -875,7 +877,7 @@
 
       <!-- ── Header ── -->
       <div class="wt-header">
-        <h2 class="wt-title">⚖️ Bodyweight Tracker</h2>
+        <h2 class="wt-title"><span class="ui-icon" data-icon="scale"></span> Bodyweight Tracker</h2>
         <div id="wtTrendBadge" class="wt-trend-badge" style="display:none;"></div>
       </div>
 
@@ -905,7 +907,7 @@
       <!-- ── Weekly averages & rate card ── -->
       <div class="wt-weekly-card" id="wtWeeklyCard" style="display:none;">
         <div class="wt-weekly-header">
-          <span class="wt-weekly-title">📊 Weekly Breakdown</span>
+          <span class="wt-weekly-title"><span class="ui-icon" data-icon="barChart"></span> Weekly Breakdown</span>
         </div>
         <div class="wt-weekly-grid" id="wtWeeklyGrid"></div>
         <div class="wt-rate-row" id="wtRateRow">
@@ -947,7 +949,7 @@
       <!-- ── Weight log table ── -->
       <div class="wt-log-card">
         <div class="wt-log-header">
-          <span class="wt-log-title">📋 Log</span>
+          <span class="wt-log-title"><span class="ui-icon" data-icon="clipboard"></span> Log</span>
           <span class="wt-log-count" id="wtLogCount"></span>
         </div>
         <div class="wt-table-wrap">
@@ -969,7 +971,7 @@
 
       <!-- ── Calorie estimator (collapsible) ── -->
       <details class="wt-estimator-section">
-        <summary class="wt-estimator-summary">🔢 Calorie Estimator</summary>
+        <summary class="wt-estimator-summary"><span class="ui-icon" data-icon="gauge"></span> Calorie Estimator</summary>
         <div class="wt-estimator-body">
           <p class="wt-estimator-hint">Enter your average daily calories to estimate your maintenance based on your logged weight trend. Requires 7+ days of data.</p>
           <div class="wt-estimator-row">
@@ -993,7 +995,7 @@
 
     <!-- ── Body Measurements ── -->
     <details class="measurements-section" id="measurementsSection" style="margin:10px 10px 0;">
-      <summary>📏 Body Measurements</summary>
+      <summary><span class="ui-icon" data-icon="scale"></span> Body Measurements</summary>
       <div class="measurements-body">
         <div class="measurements-grid">
           <label class="measurements-field">Neck (cm)<input type="number" id="measure_neck" step="0.1" min="20" max="60" placeholder="—"></label>
@@ -1029,10 +1031,10 @@
 
     <!-- ── Sub-tab navigation ── -->
     <nav class="ci-nav" id="ciNav">
-      <button class="ci-nav-btn active" data-panel="log"     onclick="switchCheckInTab('log')">📋 Log</button>
-      <button class="ci-nav-btn"        data-panel="adjust"  onclick="switchCheckInTab('adjust')">⚙️ Adjust</button>
-      <button class="ci-nav-btn"        data-panel="photos"  onclick="switchCheckInTab('photos')">📷 Photos</button>
-      <button class="ci-nav-btn"        data-panel="history" onclick="switchCheckInTab('history')">📊 History</button>
+      <button class="ci-nav-btn active" data-panel="log"     onclick="switchCheckInTab('log')"><span class="ui-icon" data-icon="clipboard"></span> Log</button>
+      <button class="ci-nav-btn"        data-panel="adjust"  onclick="switchCheckInTab('adjust')"><span class="ui-icon" data-icon="settings"></span> Adjust</button>
+      <button class="ci-nav-btn"        data-panel="photos"  onclick="switchCheckInTab('photos')"><span class="ui-icon" data-icon="camera"></span> Photos</button>
+      <button class="ci-nav-btn"        data-panel="history" onclick="switchCheckInTab('history')"><span class="ui-icon" data-icon="barChart"></span> History</button>
     </nav>
 
     <!-- ════════════════════════════════════════════════════════
@@ -1045,7 +1047,7 @@
 
       <!-- Physical -->
       <div class="ci-card">
-        <h3 class="ci-card-title">📏 Physical</h3>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="scale"></span> Physical</h3>
         <div class="ci-row-2">
           <div class="ci-field">
             <label for="checkInDateInput">Date</label>
@@ -1074,10 +1076,10 @@
 
       <!-- Recovery -->
       <div class="ci-card">
-        <h3 class="ci-card-title">😴 Recovery</h3>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="moon"></span> Recovery</h3>
         <div class="checkin-slider-field">
           <div class="checkin-slider-header">
-            <span class="checkin-slider-title">⚡ Energy</span>
+            <span class="checkin-slider-title"><span class="ui-icon" data-icon="zap"></span> Energy</span>
             <strong class="checkin-slider-value" id="checkInEnergyValue">5</strong>
           </div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInEnergyInput" data-value-target="checkInEnergyValue">
@@ -1085,7 +1087,7 @@
         </div>
         <div class="checkin-slider-field">
           <div class="checkin-slider-header">
-            <span class="checkin-slider-title">🌙 Sleep Quality</span>
+            <span class="checkin-slider-title"><span class="ui-icon" data-icon="moon"></span> Sleep Quality</span>
             <strong class="checkin-slider-value" id="checkInSleepValue">5</strong>
           </div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInSleepInput" data-value-target="checkInSleepValue">
@@ -1093,7 +1095,7 @@
         </div>
         <div class="checkin-slider-field">
           <div class="checkin-slider-header">
-            <span class="checkin-slider-title">🧠 Stress</span>
+            <span class="checkin-slider-title"><span class="ui-icon" data-icon="brain"></span> Stress</span>
             <strong class="checkin-slider-value" id="checkInStressValue">5</strong>
           </div>
           <input type="range" min="1" max="10" step="1" value="5" id="checkInStressInput" data-value-target="checkInStressValue">
@@ -1103,20 +1105,20 @@
 
       <!-- Archetype focus -->
       <div class="ci-card">
-        <h3 class="ci-card-title" id="checkInArchetypeSectionTitle">🎯 Archetype Focus</h3>
+        <h3 class="ci-card-title" id="checkInArchetypeSectionTitle"><span class="ui-icon" data-icon="target"></span> Archetype Focus</h3>
         <p class="ci-card-desc" id="checkInArchetypeSectionDescription">Loading archetype-specific prompts…</p>
         <div id="checkInArchetypeFields"></div>
       </div>
 
       <!-- Notes -->
       <div class="ci-card">
-        <h3 class="ci-card-title">📝 Notes</h3>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="pencil"></span> Notes</h3>
         <div class="ci-field ci-field-full">
           <textarea id="checkInNotesInput" placeholder="How did the week go? Any key observations…"></textarea>
         </div>
       </div>
 
-      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('athlete')">Save Check-In ✓</button>
+      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('athlete')">Save Check-In <span class="ui-icon" data-icon="check"></span></button>
     </div><!-- /ciPanel_log -->
 
     <!-- ════════════════════════════════════════════════════════
@@ -1126,13 +1128,13 @@
 
       <!-- Weekly adjustments -->
       <div class="ci-card">
-        <h3 class="ci-card-title">📐 Weekly Adjustments</h3>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="settings"></span> Weekly Adjustments</h3>
 
         <div class="ci-adjust-row">
           <label class="ci-toggle-label">
             <input type="checkbox" class="ci-toggle-input" id="checkInAdjustmentMacrosChanged">
             <span class="ci-toggle-track"></span>
-            <span class="ci-toggle-text">🥗 Macros Changed</span>
+            <span class="ci-toggle-text"><span class="ui-icon" data-icon="package"></span> Macros Changed</span>
           </label>
           <input type="text" class="ci-adjust-notes" id="checkInAdjustmentMacrosNotes" placeholder="e.g. +10g carbs on training days">
         </div>
@@ -1141,7 +1143,7 @@
           <label class="ci-toggle-label">
             <input type="checkbox" class="ci-toggle-input" id="checkInAdjustmentCardioChanged">
             <span class="ci-toggle-track"></span>
-            <span class="ci-toggle-text">🏃 Cardio Changed</span>
+            <span class="ci-toggle-text"><span class="ui-icon" data-icon="activity"></span> Cardio Changed</span>
           </label>
           <input type="text" class="ci-adjust-notes" id="checkInAdjustmentCardioNotes" placeholder="e.g. added 20 min LISS morning">
         </div>
@@ -1150,7 +1152,7 @@
           <label class="ci-toggle-label">
             <input type="checkbox" class="ci-toggle-input" id="checkInAdjustmentStepsChanged">
             <span class="ci-toggle-track"></span>
-            <span class="ci-toggle-text">👟 Steps Target Changed</span>
+            <span class="ci-toggle-text"><span class="ui-icon" data-icon="footprints"></span> Steps Target Changed</span>
           </label>
           <input type="text" class="ci-adjust-notes" id="checkInAdjustmentStepsNotes" placeholder="e.g. 12,000 → 10,000/day">
         </div>
@@ -1159,7 +1161,7 @@
           <label class="ci-toggle-label">
             <input type="checkbox" class="ci-toggle-input" id="checkInAdjustmentRefeedAdded">
             <span class="ci-toggle-track"></span>
-            <span class="ci-toggle-text">🍚 Refeed Added</span>
+            <span class="ci-toggle-text"><span class="ui-icon" data-icon="flame"></span> Refeed Added</span>
           </label>
           <input type="text" class="ci-adjust-notes" id="checkInAdjustmentRefeedNotes" placeholder="e.g. Saturday 2,600 kcal refeed">
         </div>
@@ -1167,14 +1169,14 @@
 
       <!-- Coach review -->
       <div class="ci-card">
-        <h3 class="ci-card-title">👨‍💼 Coach Review</h3>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="users"></span> Coach Review</h3>
         <div class="ci-field ci-field-full" style="margin-bottom:10px">
           <label for="checkInReviewStatusInput">Review Status</label>
           <select id="checkInReviewStatusInput">
             <option value="pending">⏳ Pending review</option>
-            <option value="reviewed">👁 Reviewed</option>
-            <option value="approved">✅ Approved</option>
-            <option value="needs_changes">✏️ Needs changes</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="approved">Approved</option>
+            <option value="needs_changes">Needs changes</option>
           </select>
         </div>
         <div class="ci-field ci-field-full" style="margin-bottom:10px">
@@ -1187,7 +1189,7 @@
         </div>
       </div>
 
-      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('coach')">Save Coach Review ✓</button>
+      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('coach')">Save Coach Review <span class="ui-icon" data-icon="check"></span></button>
     </div><!-- /ciPanel_adjust -->
 
     <!-- ════════════════════════════════════════════════════════
@@ -1195,14 +1197,14 @@
     ═══════════════════════════════════════════════════════════ -->
     <div id="ciPanel_photos" class="ci-panel" style="display:none">
       <div class="ci-card">
-        <h3 class="ci-card-title">📷 Progress Photos</h3>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="camera"></span> Progress Photos</h3>
         <p class="ci-card-desc">Tap a slot to upload. Photos are stored locally on your device.</p>
         <div class="ci-photo-grid">
           <div class="ci-photo-slot">
             <label>Front</label>
             <div class="ci-photo-preview photo-upload-preview" id="photoSlot_front"
                  onclick="document.getElementById('photoFile_front').click()">
-              <span class="photo-placeholder">📷</span>
+              <span class="photo-placeholder" data-icon="camera"></span>
               <img id="photoPreview_front" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Front progress photo">
             </div>
             <input type="file" class="photo-upload-input" id="photoFile_front" accept="image/*">
@@ -1211,7 +1213,7 @@
             <label>Side</label>
             <div class="ci-photo-preview photo-upload-preview" id="photoSlot_side"
                  onclick="document.getElementById('photoFile_side').click()">
-              <span class="photo-placeholder">📷</span>
+              <span class="photo-placeholder" data-icon="camera"></span>
               <img id="photoPreview_side" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Side progress photo">
             </div>
             <input type="file" class="photo-upload-input" id="photoFile_side" accept="image/*">
@@ -1220,7 +1222,7 @@
             <label>Back</label>
             <div class="ci-photo-preview photo-upload-preview" id="photoSlot_back"
                  onclick="document.getElementById('photoFile_back').click()">
-              <span class="photo-placeholder">📷</span>
+              <span class="photo-placeholder" data-icon="camera"></span>
               <img id="photoPreview_back" style="display:none;width:100%;height:100%;object-fit:cover;" alt="Back progress photo">
             </div>
             <input type="file" class="photo-upload-input" id="photoFile_back" accept="image/*">
@@ -1230,7 +1232,7 @@
 
       <!-- Side-by-side comparison card -->
       <div class="ci-card">
-        <h3 class="ci-card-title">🔄 Side-by-Side Comparison</h3>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="refresh"></span> Side-by-Side Comparison</h3>
         <p class="ci-card-desc">Compare your current photos with a previous check-in.</p>
         <div style="margin-bottom:10px;">
           <label for="photoCompareSelect" style="font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;display:block;margin-bottom:5px;">Compare with</label>
@@ -1256,7 +1258,7 @@
         </div>
       </div>
 
-      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('athlete')">Save with Photos ✓</button>
+      <button class="ci-save-btn" onclick="saveWeeklyCheckIn('athlete')">Save with Photos <span class="ui-icon" data-icon="check"></span></button>
     </div><!-- /ciPanel_photos -->
 
     <!-- ════════════════════════════════════════════════════════
@@ -1269,14 +1271,14 @@
 
       <!-- Summary card -->
       <div class="ci-card">
-        <h3 class="ci-card-title">📊 Latest Summary</h3>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="barChart"></span> Latest Summary</h3>
         <div id="checkInSummaryOutput" class="ci-summary-output">
           Save your first check-in to generate a prep summary.
         </div>
         <div class="ci-btn-row">
-          <button class="ci-sec-btn" onclick="generateCheckInSummary()">🔄 Refresh</button>
-          <button class="ci-sec-btn" onclick="exportCheckInSummary('txt')">📄 Export TXT</button>
-          <button class="ci-sec-btn" onclick="exportCheckInSummary('json')">⬇️ Export JSON</button>
+          <button class="ci-sec-btn" onclick="generateCheckInSummary()"><span class="ui-icon" data-icon="refresh"></span> Refresh</button>
+          <button class="ci-sec-btn" onclick="exportCheckInSummary('txt')"><span class="ui-icon" data-icon="fileText"></span> Export TXT</button>
+          <button class="ci-sec-btn" onclick="exportCheckInSummary('json')"><span class="ui-icon" data-icon="download"></span> Export JSON</button>
         </div>
       </div>
 
@@ -1296,9 +1298,9 @@
   <!-- Functional Fitness sub-nav -->
   <h2>Functional Fitness</h2>
   <nav class="log-subtabs" id="funcSubNav">
-    <button class="log-subtab active" data-fsub="crossfit">🏋️ CrossFit</button>
-    <button class="log-subtab" data-fsub="hyrox">🏃 HYROX</button>
-    <button class="log-subtab" data-fsub="circuits">⚡ Circuits</button>
+    <button class="log-subtab active" data-fsub="crossfit"><span class="ui-icon" data-icon="dumbbell"></span> CrossFit</button>
+    <button class="log-subtab" data-fsub="hyrox"><span class="ui-icon" data-icon="activity"></span> HYROX</button>
+    <button class="log-subtab" data-fsub="circuits"><span class="ui-icon" data-icon="zap"></span> Circuits</button>
   </nav>
 
   <!-- ══ Sub: CrossFit WODs ══════════════════════════════════ -->
@@ -1312,7 +1314,7 @@
 
       <h3 style="margin-top:20px;">Exercises</h3>
       <div id="cfExercisesContainer"></div>
-      <button onclick="addCrossfitExercise()">➕ Add Exercise</button>
+      <button onclick="addCrossfitExercise()"><span class="ui-icon" data-icon="plus"></span> Add Exercise</button>
 
       <div class="wod-timer-card">
         <h3>Interval Timer</h3>
@@ -1522,11 +1524,11 @@
 
     <!-- Sub-tab nav -->
     <div class="pl-subtabs">
-      <button class="pl-subtab active" data-pl-subtab="plates">🏋️ Plate Calc</button>
-      <button class="pl-subtab" data-pl-subtab="oneRM">📈 1RM Tracker</button>
-      <button class="pl-subtab" data-pl-subtab="scores">🏅 Scores</button>
-      <button class="pl-subtab" data-pl-subtab="meet">🗓️ Meet Prep</button>
-      <button class="pl-subtab" data-pl-subtab="meetday">🎯 Meet Day</button>
+      <button class="pl-subtab active" data-pl-subtab="plates"><span class="ui-icon" data-icon="dumbbell"></span> Plate Calc</button>
+      <button class="pl-subtab" data-pl-subtab="oneRM"><span class="ui-icon" data-icon="barChart"></span> 1RM Tracker</button>
+      <button class="pl-subtab" data-pl-subtab="scores"><span class="ui-icon" data-icon="award"></span> Scores</button>
+      <button class="pl-subtab" data-pl-subtab="meet"><span class="ui-icon" data-icon="calendar"></span> Meet Prep</button>
+      <button class="pl-subtab" data-pl-subtab="meetday"><span class="ui-icon" data-icon="target"></span> Meet Day</button>
     </div>
 
     <!-- ── PLATE CALCULATOR ── -->
@@ -1618,7 +1620,7 @@
       <h3 style="margin-top:0;">Meet Day — Attempt Selection</h3>
 
       <div class="weighin-alert" id="weighInAlert">
-        <span class="weighin-alert-icon">⚖️</span>
+        <span class="weighin-alert-icon" data-icon="scale"></span>
         <span id="weighInAlertText">Loading weigh-in info…</span>
       </div>
 
@@ -1781,14 +1783,14 @@
 
     <!-- Top navigation: Build vs My Programs -->
     <nav class="prog-top-nav" id="progTopNav">
-      <button class="prog-top-btn active" onclick="showProgramView('build')">🏗️ Build</button>
-      <button class="prog-top-btn" onclick="showProgramView('list')">📋 My Programs</button>
+      <button class="prog-top-btn active" onclick="showProgramView('build')"><span class="ui-icon" data-icon="settings"></span> Build</button>
+      <button class="prog-top-btn" onclick="showProgramView('list')"><span class="ui-icon" data-icon="clipboard"></span> My Programs</button>
     </nav>
     <div id="progAiGenBtnWrap" style="padding:10px 12px 0;">
       <button id="progAiGenBtn" onclick="openProgAiGen()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 2px 12px rgba(95,168,126,0.35);">
-        <span>✨</span><span>Generate with AI</span>
+        <span class="ui-icon" data-icon="sparkles"></span><span>Generate with AI</span>
       </button>
-      <div id="progAiGenLocked" style="display:none;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;">🔒 AI Program Generator — Pro feature</div>
+      <div id="progAiGenLocked" style="display:none;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;"><span class="ui-icon" data-icon="lock"></span> AI Program Generator — Pro feature</div>
     </div>
 
     <!-- Builder view (wizard lives here) -->
@@ -1816,11 +1818,11 @@
 
 <div id="communityTab" class="tab-content">
   <nav class="community-nav">
-    <button class="comm-nav-btn" onclick="showCommunitySection('groups')"      id="commNavGroups">👥 Groups</button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('feed')"        id="commNavFeed">📣 Feed</button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('competition')" id="commNavCompetition">🏆 Leaderboard</button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('share')"       id="commNavShare">🔗 Share<span id="commShareBadge" class="comm-nav-badge" style="display:none">0</span></button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('friends')"     id="commNavFriends">🤝 Friends<span id="commFriendsBadge" class="comm-nav-badge" style="display:none">0</span></button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('groups')"      id="commNavGroups"><span class="ui-icon" data-icon="users"></span> Groups</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('feed')"        id="commNavFeed"><span class="ui-icon" data-icon="megaphone"></span> Feed</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('competition')" id="commNavCompetition"><span class="ui-icon" data-icon="trophy"></span> Leaderboard</button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('share')"       id="commNavShare"><span class="ui-icon" data-icon="link"></span> Share<span id="commShareBadge" class="comm-nav-badge" style="display:none">0</span></button>
+    <button class="comm-nav-btn" onclick="showCommunitySection('friends')"     id="commNavFriends"><span class="ui-icon" data-icon="handshake"></span> Friends<span id="commFriendsBadge" class="comm-nav-badge" style="display:none">0</span></button>
   </nav>
 
   <!-- ── Groups panel ── -->
@@ -1832,9 +1834,9 @@
 
     <!-- ⑦ Filter pills replacing raw inputs -->
     <div class="comm-filter-row">
-      <input id="groupSearchInput" class="comm-search-input" placeholder="🔍 Search groups…"
+      <input id="groupSearchInput" class="comm-search-input" placeholder="Search groups…"
              oninput="doGroupSearch()">
-      <button class="comm-clear-btn" onclick="clearGroupFilters()" title="Clear">✕</button>
+      <button class="comm-clear-btn" onclick="clearGroupFilters()" title="Clear"><span class="ui-icon" data-icon="x"></span></button>
     </div>
     <div class="comm-tag-pills" id="commTagPills">
       <button class="comm-pill active" data-tag="">All</button>
@@ -1879,9 +1881,9 @@
       </div>
       <div class="feed-composer-actions">
         <div class="feed-tag-group">
-          <button class="feed-tag-btn active" data-tag="workout">💪 Workout</button>
-          <button class="feed-tag-btn" data-tag="pr">🏆 PR</button>
-          <button class="feed-tag-btn" data-tag="update">📝 Update</button>
+          <button class="feed-tag-btn active" data-tag="workout"><span class="ui-icon" data-icon="dumbbell"></span> Workout</button>
+          <button class="feed-tag-btn" data-tag="pr"><span class="ui-icon" data-icon="trophy"></span> PR</button>
+          <button class="feed-tag-btn" data-tag="update"><span class="ui-icon" data-icon="pencil"></span> Update</button>
         </div>
         <button class="feed-post-btn" onclick="submitCommunityPost()">Post</button>
       </div>
@@ -1907,12 +1909,12 @@
 
     <!-- ① SEND section -->
     <div class="comm-share-card">
-      <h3 class="comm-share-card-title">📤 Send Program or Template</h3>
+      <h3 class="comm-share-card-title"><span class="ui-icon" data-icon="share"></span> Send Program or Template</h3>
 
       <!-- Mode: user vs group -->
       <div class="comm-share-mode-row">
-        <button class="comm-share-mode-btn active" data-mode="user"  onclick="commShareSetMode('user')">👤 To a User</button>
-        <button class="comm-share-mode-btn"        data-mode="group" onclick="commShareSetMode('group')">👥 To a Group</button>
+        <button class="comm-share-mode-btn active" data-mode="user"  onclick="commShareSetMode('user')"><span class="ui-icon" data-icon="users"></span> To a User</button>
+        <button class="comm-share-mode-btn"        data-mode="group" onclick="commShareSetMode('group')"><span class="ui-icon" data-icon="users"></span> To a Group</button>
       </div>
 
       <!-- User mode -->
@@ -1935,8 +1937,8 @@
 
       <!-- Type selector -->
       <div class="comm-share-type-row">
-        <button class="comm-share-type-btn active" data-type="template" onclick="commShareSetType('template')">📋 Templates</button>
-        <button class="comm-share-type-btn"        data-type="program"  onclick="commShareSetType('program')">🗓 Programs</button>
+        <button class="comm-share-type-btn active" data-type="template" onclick="commShareSetType('template')"><span class="ui-icon" data-icon="clipboard"></span> Templates</button>
+        <button class="comm-share-type-btn"        data-type="program"  onclick="commShareSetType('program')"><span class="ui-icon" data-icon="calendar"></span> Programs</button>
       </div>
 
       <!-- Selectable item list -->
@@ -1950,12 +1952,12 @@
         <textarea id="commShareMessage" placeholder="e.g. This is the program I mentioned — give it a try!"></textarea>
       </div>
 
-      <button class="comm-share-send-btn" onclick="commSendShare()">📤 Send</button>
+      <button class="comm-share-send-btn" onclick="commSendShare()"><span class="ui-icon" data-icon="share"></span> Send</button>
     </div>
 
     <!-- ② INBOX section -->
     <div class="comm-share-card">
-      <h3 class="comm-share-card-title">📥 Received</h3>
+      <h3 class="comm-share-card-title"><span class="ui-icon" data-icon="download"></span> Received</h3>
       <div id="commShareInbox">
         <div class="comm-share-empty">Loading…</div>
       </div>
@@ -1963,7 +1965,7 @@
 
     <!-- ③ SENT history -->
     <div class="comm-share-card">
-      <h3 class="comm-share-card-title">📨 Sent</h3>
+      <h3 class="comm-share-card-title"><span class="ui-icon" data-icon="share"></span> Sent</h3>
       <div id="commShareOutbox">
         <div class="comm-share-empty">Nothing sent yet.</div>
       </div>
@@ -2016,14 +2018,14 @@
 
     <!-- ⑤ Charts (collapsible) -->
     <details class="lb-charts-section">
-      <summary class="lb-charts-summary">📊 Charts</summary>
+      <summary class="lb-charts-summary"><span class="ui-icon" data-icon="barChart"></span> Charts</summary>
       <canvas id="lbBarChart" height="220"></canvas>
       <canvas id="lbLineChart" height="200" style="margin-top:16px;"></canvas>
     </details>
 
     <!-- ⑨ Exercise leaderboard inline (replaces hidden separate tab) -->
     <details class="lb-charts-section lb-exercise-section" id="lbExerciseSection">
-      <summary class="lb-charts-summary">🏋️ Exercise Leaderboard</summary>
+      <summary class="lb-charts-summary"><span class="ui-icon" data-icon="dumbbell"></span> Exercise Leaderboard</summary>
       <div class="lb-exercise-inner">
         <div class="lb-exercise-ctrl">
           <select id="exerciseLbSelectInline" class="lb-exercise-select"></select>
@@ -2085,22 +2087,22 @@
 
       <!-- Activity type pills -->
       <div class="cardio-type-picker" id="cardioTypePicker">
-        <button class="cardio-type-btn active" data-type="run"        onclick="selectCardioType('run')">🏃 Run</button>
-        <button class="cardio-type-btn"        data-type="walk"       onclick="selectCardioType('walk')">🚶 Walk</button>
-        <button class="cardio-type-btn"        data-type="cycle"      onclick="selectCardioType('cycle')">🚴 Cycle</button>
-        <button class="cardio-type-btn"        data-type="swim"       onclick="selectCardioType('swim')">🏊 Swim</button>
-        <button class="cardio-type-btn"        data-type="row"        onclick="selectCardioType('row')">🚣 Row</button>
-        <button class="cardio-type-btn"        data-type="hiit"       onclick="selectCardioType('hiit')">💪 HIIT</button>
-        <button class="cardio-type-btn"        data-type="hike"       onclick="selectCardioType('hike')">🥾 Hike</button>
-        <button class="cardio-type-btn"        data-type="yoga"       onclick="selectCardioType('yoga')">🧘 Yoga</button>
-        <button class="cardio-type-btn"        data-type="other"      onclick="selectCardioType('other')">＋ Other</button>
+        <button class="cardio-type-btn active" data-type="run"        onclick="selectCardioType('run')"><span class="ui-icon" data-icon="activity"></span> Run</button>
+        <button class="cardio-type-btn"        data-type="walk"       onclick="selectCardioType('walk')"><span class="ui-icon" data-icon="footprints"></span> Walk</button>
+        <button class="cardio-type-btn"        data-type="cycle"      onclick="selectCardioType('cycle')"><span class="ui-icon" data-icon="bike"></span> Cycle</button>
+        <button class="cardio-type-btn"        data-type="swim"       onclick="selectCardioType('swim')"><span class="ui-icon" data-icon="waves"></span> Swim</button>
+        <button class="cardio-type-btn"        data-type="row"        onclick="selectCardioType('row')"><span class="ui-icon" data-icon="waves"></span> Row</button>
+        <button class="cardio-type-btn"        data-type="hiit"       onclick="selectCardioType('hiit')"><span class="ui-icon" data-icon="zap"></span> HIIT</button>
+        <button class="cardio-type-btn"        data-type="hike"       onclick="selectCardioType('hike')"><span class="ui-icon" data-icon="mountain"></span> Hike</button>
+        <button class="cardio-type-btn"        data-type="yoga"       onclick="selectCardioType('yoga')"><span class="ui-icon" data-icon="flower"></span> Yoga</button>
+        <button class="cardio-type-btn"        data-type="other"      onclick="selectCardioType('other')"><span class="ui-icon" data-icon="plus"></span> Other</button>
       </div>
       <!-- Hidden canonical type value -->
       <input type="hidden" id="cardioType" value="run">
       <!-- Custom type text input, shown only when "Other" is active -->
       <div class="cardio-custom-type-wrap" id="cardioCustomTypeWrap" style="display:none">
         <div class="cardio-input-wrap">
-          <span class="cardio-input-icon">✏️</span>
+          <span class="cardio-input-icon" data-icon="pencil"></span>
           <input type="text" id="cardioCustomType" placeholder="Describe activity…"
                  oninput="document.getElementById('cardioType').value = this.value.trim() || 'other'">
         </div>
@@ -2112,7 +2114,7 @@
         <div class="cardio-field">
           <label class="cardio-field-label" for="cardioDuration">Duration</label>
           <div class="cardio-input-wrap">
-            <span class="cardio-input-icon">⏱</span>
+            <span class="cardio-input-icon" data-icon="timer"></span>
             <input type="number" id="cardioDuration" placeholder="30" min="1" inputmode="decimal"
                    oninput="updateCardioPacePreview()">
             <span class="cardio-input-unit">min</span>
@@ -2121,7 +2123,7 @@
         <div class="cardio-field">
           <label class="cardio-field-label" for="cardioDistance">Distance <span class="cardio-opt">optional</span></label>
           <div class="cardio-input-wrap">
-            <span class="cardio-input-icon">📍</span>
+            <span class="cardio-input-icon" data-icon="mapPin"></span>
             <input type="number" id="cardioDistance" placeholder="—" step="0.1" min="0" inputmode="decimal"
                    oninput="updateCardioPacePreview()">
             <span class="cardio-input-unit">km</span>
@@ -2131,7 +2133,7 @@
 
       <!-- Live pace / speed preview -->
       <div id="cardioPacePreview" class="cardio-pace-preview" style="display:none">
-        <span class="pace-icon" id="cardioPaceIcon">⚡</span>
+        <span class="pace-icon" id="cardioPaceIcon" data-icon="zap"></span>
         <span class="pace-value" id="cardioPaceValue"></span>
       </div>
 
@@ -2139,10 +2141,10 @@
       <div class="cardio-field" style="margin-bottom:14px;">
         <label class="cardio-field-label">Effort level</label>
         <div class="cardio-intensity-row" id="cardioIntensityPicker">
-          <button class="cardio-intensity-btn" data-intensity="easy"     onclick="selectCardioIntensity('easy')">😌 Easy</button>
-          <button class="cardio-intensity-btn active" data-intensity="moderate" onclick="selectCardioIntensity('moderate')">💪 Moderate</button>
-          <button class="cardio-intensity-btn" data-intensity="hard"     onclick="selectCardioIntensity('hard')">🔥 Hard</button>
-          <button class="cardio-intensity-btn" data-intensity="max"      onclick="selectCardioIntensity('max')">⚡ Max</button>
+          <button class="cardio-intensity-btn" data-intensity="easy"     onclick="selectCardioIntensity('easy')"><span class="ui-icon" data-icon="leaf"></span> Easy</button>
+          <button class="cardio-intensity-btn active" data-intensity="moderate" onclick="selectCardioIntensity('moderate')"><span class="ui-icon" data-icon="dumbbell"></span> Moderate</button>
+          <button class="cardio-intensity-btn" data-intensity="hard"     onclick="selectCardioIntensity('hard')"><span class="ui-icon" data-icon="flame"></span> Hard</button>
+          <button class="cardio-intensity-btn" data-intensity="max"      onclick="selectCardioIntensity('max')"><span class="ui-icon" data-icon="zap"></span> Max</button>
         </div>
         <input type="hidden" id="cardioIntensity" value="moderate">
       </div>
@@ -2160,7 +2162,7 @@
             <div class="cardio-field">
               <label class="cardio-field-label" for="cardioCalories">Calories <span class="cardio-opt">override</span></label>
               <div class="cardio-input-wrap">
-                <span class="cardio-input-icon">🔥</span>
+                <span class="cardio-input-icon" data-icon="flame"></span>
                 <input type="number" id="cardioCalories" placeholder="auto" min="0" inputmode="decimal">
                 <span class="cardio-input-unit">kcal</span>
               </div>
@@ -2168,7 +2170,7 @@
             <div class="cardio-field">
               <label class="cardio-field-label" for="cardioHeartRate">Avg heart rate <span class="cardio-opt">optional</span></label>
               <div class="cardio-input-wrap">
-                <span class="cardio-input-icon">❤️</span>
+                <span class="cardio-input-icon" data-icon="heart"></span>
                 <input type="number" id="cardioHeartRate" placeholder="—" min="40" max="230" inputmode="numeric">
                 <span class="cardio-input-unit">bpm</span>
               </div>
@@ -2179,14 +2181,14 @@
             <div class="cardio-field">
               <label class="cardio-field-label" for="cardioDate">Date</label>
               <div class="cardio-input-wrap">
-                <span class="cardio-input-icon">📅</span>
+                <span class="cardio-input-icon" data-icon="calendar"></span>
                 <input type="date" id="cardioDate">
               </div>
             </div>
             <div class="cardio-field">
               <label class="cardio-field-label" for="cardioNotes">Notes</label>
               <div class="cardio-input-wrap">
-                <span class="cardio-input-icon">📝</span>
+                <span class="cardio-input-icon" data-icon="pencil"></span>
                 <input type="text" id="cardioNotes" placeholder="e.g. felt great">
               </div>
             </div>
@@ -2196,7 +2198,7 @@
       </details>
 
       <button class="cardio-submit-btn" onclick="addCardioEntry()">
-        <span id="cardioSubmitIcon">🏃</span> Log Session
+        <span id="cardioSubmitIcon" class="ui-icon" data-icon="activity"></span> Log Session
       </button>
     </div>
 
@@ -2244,7 +2246,7 @@
       <div id="macrosMainContent" style="max-width: 600px; margin: 0 auto;">
         <div id="macroTargetsPanel" class="panel active">
           <div id="targetsCard" class="card sticky">
-            <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;">🕒 Offline</span></h2>
+            <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;"><span class="ui-icon" data-icon="clock"></span> Offline</span></h2>
             <div id="assignedNutritionPlanCard" style="display:none;margin:10px 0;padding:10px;border:1px solid #dbe7ff;border-radius:10px;background:#f5f9ff;">
               <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
                 <strong>Coach Nutrition Plan</strong>
@@ -2407,7 +2409,7 @@
             <!-- ── Water Tracker ── -->
             <div class="water-tracker-widget">
               <div class="water-tracker-header">
-                <h3 class="water-tracker-title">💧 Water Intake</h3>
+                <h3 class="water-tracker-title"><span class="ui-icon" data-icon="droplet"></span> Water Intake</h3>
                 <button class="water-tracker-target-btn" onclick="toggleWaterTargetEdit()">Set target</button>
               </div>
               <div class="water-tracker-body">
@@ -2446,7 +2448,7 @@
             </div>
 
             <details class="macro-trends-accordion">
-              <summary>📈 Weekly trends</summary>
+              <summary><span class="ui-icon" data-icon="barChart"></span> Weekly trends</summary>
               <div>
                 <div id="sparkContainer" style="display:flex;justify-content:space-around;">
                   <canvas id="calSpark" width="120" height="40"></canvas>
@@ -2459,12 +2461,12 @@
               <div style="display:flex;gap:10px;margin-bottom:12px;">
                 <label class="macro-toggle-card" id="trainingDayCard" onclick="document.getElementById('trainingDayToggle').click()">
                   <input type="checkbox" id="trainingDayToggle" style="display:none;">
-                  <span class="macro-toggle-icon">🏋️</span>
+                  <span class="macro-toggle-icon" data-icon="dumbbell"></span>
                   <span class="macro-toggle-label">Training Day</span>
                 </label>
                 <label class="macro-toggle-card" id="refeedDayCard" onclick="document.getElementById('refeedDayToggle').click()">
                   <input type="checkbox" id="refeedDayToggle" style="display:none;">
-                  <span class="macro-toggle-icon">🍚</span>
+                  <span class="macro-toggle-icon" data-icon="flame"></span>
                   <span class="macro-toggle-label">Refeed Day</span>
                 </label>
               </div>
@@ -2502,7 +2504,7 @@
           </div>
 
           <details class="macro-heatmap-accordion">
-            <summary>📅 Activity heatmap</summary>
+            <summary><span class="ui-icon" data-icon="calendar"></span> Activity heatmap</summary>
             <div><div id="heatmap" class="heatmap"></div></div>
           </details>
 
@@ -2510,17 +2512,17 @@
           <div style="padding:12px 0 4px;">
             <button id="macroAiAdvisorBtn" onclick="openMacroAiAdvisor()"
               style="width:100%;background:var(--primary);color:#0b130d;border:none;border-radius:14px;padding:13px 20px;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 12px rgba(95,168,126,0.3);">
-              <span>✨</span><span>AI Macro Advisor</span>
+              <span class="ui-icon" data-icon="sparkles"></span><span>AI Macro Advisor</span>
             </button>
             <div id="macroAiAdvisorLocked" style="display:none;text-align:center;margin-top:8px;font-size:0.8rem;color:var(--secondary-text);">
-              🔒 Pro feature — upgrade to unlock
+              <span class="ui-icon" data-icon="lock"></span> Pro feature — upgrade to unlock
             </div>
           </div>
         </div>
 
         <div id="macroMealsPanel" class="panel">
           <details id="mealsCard" class="card" style="margin-top:10px;">
-            <summary>Meals <button onclick="scanBarcode()" class="icon-btn">📷</button></summary>
+            <summary>Meals <button onclick="scanBarcode()" class="icon-btn"><span class="ui-icon" data-icon="camera"></span></button></summary>
             <div style="margin-top:10px;">
               <div style="margin-bottom:10px;">
                 <select id="favSelect" onchange="logFavorite(this.value)">
@@ -2633,7 +2635,7 @@
             </select>
 
             <button id="savePersonalDetailsBtn" type="button">Save Details</button>
-            <div id="personalDetailsSavedMsg" style="display:none;margin-top:8px;">✅ Saved</div>
+            <div id="personalDetailsSavedMsg" style="display:none;margin-top:8px;"><span class="ui-icon" data-icon="check"></span> Saved</div>
             <p class="macro-stats">FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
           </div>
         </div>
@@ -2641,7 +2643,7 @@
         <!-- Hydration & Digestion moved here from Targets -->
         <div class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card hydration-digestion-card">
-            <h3>💧 Hydration &amp; Digestion</h3>
+            <h3><span class="ui-icon" data-icon="droplet"></span> Hydration &amp; Digestion</h3>
             <p class="macro-helper">Track your fluid intake and gut health notes.</p>
             <div class="hd-grid">
               <label>
@@ -2673,10 +2675,10 @@
 
     <!-- Progress mini-tab nav -->
     <nav class="log-subtabs" id="progressSubNav">
-      <button class="log-subtab active" data-psub="charts">📈 Charts</button>
-      <button class="log-subtab" data-psub="prs">🏆 PRs</button>
-      <button class="log-subtab" data-psub="gamification">⭐ XP</button>
-      <button class="log-subtab" data-psub="tools">🔧 Tools</button>
+      <button class="log-subtab active" data-psub="charts"><span class="ui-icon" data-icon="barChart"></span> Charts</button>
+      <button class="log-subtab" data-psub="prs"><span class="ui-icon" data-icon="trophy"></span> PRs</button>
+      <button class="log-subtab" data-psub="gamification"><span class="ui-icon" data-icon="award"></span> XP</button>
+      <button class="log-subtab" data-psub="tools"><span class="ui-icon" data-icon="settings"></span> Tools</button>
     </nav>
 
     <!-- ══ Sub: Charts ═══════════════════════════════════════════ -->
@@ -2748,7 +2750,7 @@
     <div id="pSub_tools" class="progress-subview">
       <!-- Subscription Section -->
       <div class="export-section" style="margin-bottom:16px;">
-        <p class="export-section-title">💎 Subscription</p>
+        <p class="export-section-title"><span class="ui-icon" data-icon="creditCard"></span> Subscription</p>
         <div id="subscriptionPanel" style="font-size:0.88rem;">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--surface-bg);border:1px solid var(--border-color);border-radius:12px;margin-bottom:8px;">
             <div>
@@ -2762,7 +2764,7 @@
 
       <!-- Referral Section -->
       <div class="export-section" style="margin-bottom:16px;">
-        <p class="export-section-title">🎁 Refer a Friend</p>
+        <p class="export-section-title"><span class="ui-icon" data-icon="gift"></span> Refer a Friend</p>
         <p class="export-section-sub">Share your link. When a friend upgrades, you both get 1 month free.</p>
         <div id="referralPanel">
           <div class="referral-link-row">
@@ -2776,33 +2778,33 @@
 
       <!-- Reminders Section -->
       <div class="export-section" style="margin-bottom:16px;">
-        <p class="export-section-title">🔔 Reminders</p>
+        <p class="export-section-title"><span class="ui-icon" data-icon="bell"></span> Reminders</p>
         <p class="export-section-sub">Get notified to log workouts, weigh-ins, and more.</p>
         <div id="remindersPanel"></div>
       </div>
 
       <!-- Export Section -->
       <div class="export-section">
-        <p class="export-section-title">📤 Export Your Data</p>
+        <p class="export-section-title"><span class="ui-icon" data-icon="download"></span> Export Your Data</p>
         <p class="export-section-sub">Download your data as CSV files or a full JSON backup.</p>
         <div class="export-btn-grid">
           <button class="export-btn" onclick="exportWorkoutsCSV()">
-            <span class="export-btn-icon">🏋️</span>Workout Log
+            <span class="export-btn-icon" data-icon="dumbbell"></span>Workout Log
           </button>
           <button class="export-btn" onclick="exportWeightCSV()">
-            <span class="export-btn-icon">⚖️</span>Weight Log
+            <span class="export-btn-icon" data-icon="scale"></span>Weight Log
           </button>
           <button class="export-btn" onclick="exportMeasurementsCSV()">
-            <span class="export-btn-icon">📏</span>Measurements
+            <span class="export-btn-icon" data-icon="scale"></span>Measurements
           </button>
           <button class="export-btn" onclick="exportReadinessCSV()">
-            <span class="export-btn-icon">😴</span>Readiness Log
+            <span class="export-btn-icon" data-icon="moon"></span>Readiness Log
           </button>
           <button class="export-btn primary" onclick="exportAllJSON()" style="grid-column:1/-1;">
-            <span class="export-btn-icon">💾</span>Full Backup (JSON)
+            <span class="export-btn-icon" data-icon="save"></span>Full Backup (JSON)
           </button>
           <button class="export-btn primary" onclick="generateProgressReport()" style="grid-column:1/-1;background:var(--primary,#5fa87e);">
-            <span class="export-btn-icon">📊</span>Generate Progress Report (PDF)
+            <span class="export-btn-icon" data-icon="barChart"></span>Generate Progress Report (PDF)
           </button>
         </div>
       </div>
@@ -2814,9 +2816,9 @@
 <div id="logHistoryTab" class="tab-content">
   <h2>Log History</h2>
   <nav class="log-subtabs" id="historySubNav">
-    <button class="log-subtab active" data-histsub="workout">🏋️ Workouts</button>
-    <button class="log-subtab" data-histsub="bodyweight">⚖️ Bodyweight</button>
-    <button class="log-subtab" data-histsub="macro">🥗 Macros</button>
+    <button class="log-subtab active" data-histsub="workout"><span class="ui-icon" data-icon="dumbbell"></span> Workouts</button>
+    <button class="log-subtab" data-histsub="bodyweight"><span class="ui-icon" data-icon="scale"></span> Bodyweight</button>
+    <button class="log-subtab" data-histsub="macro"><span class="ui-icon" data-icon="package"></span> Macros</button>
   </nav>
   <div id="historyWorkoutPanel" class="hist-subview active">
     <div id="workoutHistoryMiniTab">
@@ -2844,11 +2846,11 @@
   <div class="coach-bulk-toolbar" id="coachBulkToolbar" hidden>
     <span class="coach-bulk-count">0 selected</span>
     <div class="coach-bulk-actions">
-      <button class="coach-bulk-btn" id="coachBulkAssign">📋 Assign Program</button>
-      <button class="coach-bulk-btn" id="coachBulkMacros">🍽️ Update Macros</button>
-      <button class="coach-bulk-btn" id="coachBulkCSV">📄 Export CSV</button>
-      <button class="coach-bulk-btn" id="coachBulkPDF">🖨️ Export PDF</button>
-      <button class="coach-bulk-btn danger" onclick="clearBulkSelection()">✕ Clear</button>
+      <button class="coach-bulk-btn" id="coachBulkAssign"><span class="ui-icon" data-icon="clipboard"></span> Assign Program</button>
+      <button class="coach-bulk-btn" id="coachBulkMacros"><span class="ui-icon" data-icon="package"></span> Update Macros</button>
+      <button class="coach-bulk-btn" id="coachBulkCSV"><span class="ui-icon" data-icon="fileText"></span> Export CSV</button>
+      <button class="coach-bulk-btn" id="coachBulkPDF"><span class="ui-icon" data-icon="printer"></span> Export PDF</button>
+      <button class="coach-bulk-btn danger" onclick="clearBulkSelection()"><span class="ui-icon" data-icon="x"></span> Clear</button>
     </div>
   </div>
 
@@ -2863,12 +2865,12 @@
   </div>
 
   <nav class="coach-subtabs" id="coachOpsSubtabNav" aria-label="Coach operations">
-    <button class="coach-subtab active" data-coach-subtab="programs">📋 Programs</button>
-    <button class="coach-subtab" data-coach-subtab="messaging">💬 Messages</button>
-    <button class="coach-subtab" data-coach-subtab="analytics">📊 Insights</button>
-    <button class="coach-subtab" data-coach-subtab="ai">🤖 AI</button>
-    <button class="coach-subtab" data-coach-subtab="videos">🎬 Videos</button>
-    <button class="coach-subtab" data-coach-subtab="gdpr">🔒 Privacy</button>
+    <button class="coach-subtab active" data-coach-subtab="programs"><span class="ui-icon" data-icon="clipboard"></span> Programs</button>
+    <button class="coach-subtab" data-coach-subtab="messaging"><span class="ui-icon" data-icon="message"></span> Messages</button>
+    <button class="coach-subtab" data-coach-subtab="analytics"><span class="ui-icon" data-icon="barChart"></span> Insights</button>
+    <button class="coach-subtab" data-coach-subtab="ai"><span class="ui-icon" data-icon="bot"></span> AI</button>
+    <button class="coach-subtab" data-coach-subtab="videos"><span class="ui-icon" data-icon="video"></span> Videos</button>
+    <button class="coach-subtab" data-coach-subtab="gdpr"><span class="ui-icon" data-icon="lock"></span> Privacy</button>
   </nav>
 
   <!-- IDs kept as coachSub_* to match the lookup in coaching-enhanced.js -->
@@ -2879,7 +2881,7 @@
   <div id="coachSub_videos" class="coach-subview">
     <div style="padding:12px;">
       <div class="rehab-card">
-        <h3 style="margin:0 0 4px;">🎬 Exercise Technique Videos</h3>
+        <h3 style="margin:0 0 4px;"><span class="ui-icon" data-icon="video"></span> Exercise Technique Videos</h3>
         <p style="font-size:0.82rem;color:var(--secondary-text);margin:0 0 12px;">Attach a video link per exercise. Your clients see a ▶ Watch button when they log that exercise.</p>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <input type="text" id="coachVideoExercise" placeholder="Exercise name (e.g. Barbell Squat)" list="exerciseSuggestions" />
@@ -2909,7 +2911,7 @@
 
   <!-- Knowledge Base Admin Section -->
   <div id="knowledgeBaseSection" class="export-section" style="margin-top:16px;">
-    <p class="export-section-title">🧠 PT Knowledge Base</p>
+    <p class="export-section-title"><span class="ui-icon" data-icon="bookOpen"></span> PT Knowledge Base</p>
     <p class="export-section-sub">Upload PT methodology PDF modules. Each module is processed by AI and stored as structured knowledge used by all AI features.</p>
 
     <div class="rehab-card">
@@ -2949,7 +2951,7 @@
     <!-- AI insight (populated after enough data) -->
     <div id="sleepAiCard" class="sleep-ai-card" style="display:none;">
       <div class="sleep-ai-header">
-        <span>🧠 AI Sleep Insight</span>
+        <span class="ui-icon" data-icon="brain"></span><span>AI Sleep Insight</span>
       </div>
       <div class="sleep-ai-body" id="sleepAiBody">Analysing your sleep patterns…</div>
       <button class="sleep-ai-btn" id="sleepAiBtn" onclick="requestSleepInsight()">Analyse My Sleep</button>
@@ -3004,12 +3006,12 @@
       </div>
 
       <div class="sleep-tags" id="sleepTags">
-        <button class="sleep-tag" data-tag="caffeine">☕ Caffeine</button>
-        <button class="sleep-tag" data-tag="stress">😰 Stress</button>
-        <button class="sleep-tag" data-tag="nap">💤 Nap</button>
-        <button class="sleep-tag" data-tag="alcohol">🍷 Alcohol</button>
-        <button class="sleep-tag" data-tag="screens">📱 Screens</button>
-        <button class="sleep-tag" data-tag="exercise">🏋️ Late Exercise</button>
+        <button class="sleep-tag" data-tag="caffeine"><span class="ui-icon" data-icon="coffee"></span> Caffeine</button>
+        <button class="sleep-tag" data-tag="stress"><span class="ui-icon" data-icon="brain"></span> Stress</button>
+        <button class="sleep-tag" data-tag="nap"><span class="ui-icon" data-icon="moon"></span> Nap</button>
+        <button class="sleep-tag" data-tag="alcohol"><span class="ui-icon" data-icon="wine"></span> Alcohol</button>
+        <button class="sleep-tag" data-tag="screens"><span class="ui-icon" data-icon="smartphone"></span> Screens</button>
+        <button class="sleep-tag" data-tag="exercise"><span class="ui-icon" data-icon="dumbbell"></span> Late Exercise</button>
       </div>
 
       <textarea class="sleep-notes" id="sleepNotes" placeholder="Optional notes…"></textarea>
@@ -3054,82 +3056,82 @@
     <div class="more-drawer-grid">
       <button class="more-drawer-item" data-tab="progressTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('progressTab'), 220)">
-        <span class="more-drawer-icon">📈</span>
+        <span class="more-drawer-icon" data-icon="barChart"></span>
         <span>Progress</span>
       </button>
       <button class="more-drawer-item" data-tab="programTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('programTab'), 220)">
-        <span class="more-drawer-icon">📅</span>
+        <span class="more-drawer-icon" data-icon="calendar"></span>
         <span>Programs</span>
       </button>
       <button class="more-drawer-item" data-tab="checkInTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('checkInTab'), 220)">
-        <span class="more-drawer-icon">🧾</span>
+        <span class="more-drawer-icon" data-icon="clipboard"></span>
         <span>Check-In</span>
       </button>
       <button class="more-drawer-item" data-tab="sleepTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('sleepTab'), 220)">
-        <span class="more-drawer-icon">😴</span>
+        <span class="more-drawer-icon" data-icon="moon"></span>
         <span>Sleep</span>
       </button>
       <button class="more-drawer-item" data-tab="cardioTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('cardioTab'), 220)">
-        <span class="more-drawer-icon">🏃</span>
+        <span class="more-drawer-icon" data-icon="activity"></span>
         <span>Cardio</span>
       </button>
       <button class="more-drawer-item" data-tab="communityTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('communityTab'), 220)">
-        <span class="more-drawer-icon">👥</span>
+        <span class="more-drawer-icon" data-icon="users"></span>
         <span>Community</span>
       </button>
       <button class="more-drawer-item" data-tab="leaderboardTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('leaderboardTab'), 220)">
-        <span class="more-drawer-icon">🏅</span>
+        <span class="more-drawer-icon" data-icon="award"></span>
         <span>Leaderboard</span>
       </button>
       <button class="more-drawer-item" data-tab="logHistoryTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('logHistoryTab'), 220)">
-        <span class="more-drawer-icon">📜</span>
+        <span class="more-drawer-icon" data-icon="fileText"></span>
         <span>History</span>
       </button>
       <button class="more-drawer-item bb-only" data-tab="posingTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('posingTab'), 220)">
-        <span class="more-drawer-icon">⭐</span>
+        <span class="more-drawer-icon" data-icon="award"></span>
         <span>Posing</span>
       </button>
       <button class="more-drawer-item pl-only" data-tab="powerliftingTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('powerliftingTab'), 220)">
-        <span class="more-drawer-icon">🏋️</span>
+        <span class="more-drawer-icon" data-icon="dumbbell"></span>
         <span>Lifting</span>
       </button>
       <button class="more-drawer-item athlete-only" data-tab="functionalTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('functionalTab'), 220)">
-        <span class="more-drawer-icon">⚡</span>
+        <span class="more-drawer-icon" data-icon="zap"></span>
         <span>Functional</span>
       </button>
       <button class="more-drawer-item coach-only" data-tab="clientsTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('clientsTab'), 220)">
-        <span class="more-drawer-icon">👥</span>
+        <span class="more-drawer-icon" data-icon="users"></span>
         <span>Clients</span>
       </button>
       <button class="more-drawer-item coach-only" data-tab="coachOpsTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('coachOpsTab'), 220)">
-        <span class="more-drawer-icon">🏆</span>
+        <span class="more-drawer-icon" data-icon="trophy"></span>
         <span>Coach</span>
       </button>
       <button class="more-drawer-item" data-tab="mobilityTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('mobilityTab'), 220)">
-        <span class="more-drawer-icon">🧘</span>
+        <span class="more-drawer-icon" data-icon="flower"></span>
         <span>Flexibility</span>
       </button>
       <button class="more-drawer-item" data-tab="settingsTab"
               onclick="closeMoreDrawer(); setTimeout(()=>showTab('settingsTab'), 220)">
-        <span class="more-drawer-icon">⚙️</span>
+        <span class="more-drawer-icon" data-icon="settings"></span>
         <span>Settings</span>
       </button>
       <button class="more-drawer-item more-drawer-logout" id="moreDrawerLogoutBtn"
               onclick="closeMoreDrawer(); setTimeout(()=>logout(), 220)">
-        <span class="more-drawer-icon">🚪</span>
+        <span class="more-drawer-icon" data-icon="arrowLeft"></span>
         <span>Logout</span>
       </button>
     </div>
@@ -3242,6 +3244,92 @@
 
 <!-- Then V2 UI -->
 <script src="src/js/ProgramTabV2.js"></script>
+<script>
+  // Shared inline-SVG icon set (Feather/Lucide style: stroke=currentColor,
+  // viewBox 0 0 24 24) replacing keyboard/HTML emoji used as functional UI
+  // icons — nav tabs, drawers, and icon-only action buttons. Matches the
+  // pattern already used by the bottom nav (.bn-icon, css/nav.css).
+  const ICON_SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+  const ICONS = {
+    dumbbell: ICON_SVG_OPEN + '<path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>',
+    timer: ICON_SVG_OPEN + '<line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg>',
+    search: ICON_SVG_OPEN + '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    clipboard: ICON_SVG_OPEN + '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/></svg>',
+    trophy: ICON_SVG_OPEN + '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2a2 2 0 0 1 2 2 4 4 0 0 1-4 4"/><path d="M7 5H5a2 2 0 0 0-2 2 4 4 0 0 0 4 4"/></svg>',
+    scale: ICON_SVG_OPEN + '<path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
+    footprints: ICON_SVG_OPEN + '<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3-2 5.5-2 8.5v2a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3 2 5.5 2 8.5v2a2 2 0 1 0 4 0Z"/></svg>',
+    flame: ICON_SVG_OPEN + '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    leaf: ICON_SVG_OPEN + '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+    award: ICON_SVG_OPEN + '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
+    couch: ICON_SVG_OPEN + '<path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M2 11v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-4 0v2H6v-2a2 2 0 0 0-4 0Z"/><path d="M4 17v2"/><path d="M20 17v2"/></svg>',
+    activity: ICON_SVG_OPEN + '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+    bike: ICON_SVG_OPEN + '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm-3 11.5V14l-3-3 4-3 2 3h2"/></svg>',
+    waves: ICON_SVG_OPEN + '<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>',
+    mountain: ICON_SVG_OPEN + '<path d="m8 21 4-7 4 7"/><path d="M3 21 12 3l9 18"/></svg>',
+    flower: ICON_SVG_OPEN + '<circle cx="12" cy="7.5" r="2.5"/><circle cx="16.5" cy="12" r="2.5"/><circle cx="7.5" cy="12" r="2.5"/><circle cx="12" cy="16.5" r="2.5"/><circle cx="12" cy="12" r="2"/><path d="M12 18v3"/></svg>',
+    moon: ICON_SVG_OPEN + '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
+    brain: ICON_SVG_OPEN + '<path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>',
+    target: ICON_SVG_OPEN + '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+    settings: ICON_SVG_OPEN + '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    camera: ICON_SVG_OPEN + '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>',
+    users: ICON_SVG_OPEN + '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    megaphone: ICON_SVG_OPEN + '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>',
+    link: ICON_SVG_OPEN + '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    handshake: ICON_SVG_OPEN + '<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.94.56"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>',
+    message: ICON_SVG_OPEN + '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    barChart: ICON_SVG_OPEN + '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    bot: ICON_SVG_OPEN + '<path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>',
+    video: ICON_SVG_OPEN + '<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>',
+    lock: ICON_SVG_OPEN + '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+    x: ICON_SVG_OPEN + '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    plus: ICON_SVG_OPEN + '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    pencil: ICON_SVG_OPEN + '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>',
+    check: ICON_SVG_OPEN + '<polyline points="20 6 9 17 4 12"/></svg>',
+    eye: ICON_SVG_OPEN + '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    clock: ICON_SVG_OPEN + '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    droplet: ICON_SVG_OPEN + '<path d="M12 2.69s5 5.5 5 9.7a5 5 0 0 1-10 0c0-4.2 5-9.7 5-9.7Z"/></svg>',
+    gift: ICON_SVG_OPEN + '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8Z"/><path d="M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8Z"/></svg>',
+    creditCard: ICON_SVG_OPEN + '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
+    download: ICON_SVG_OPEN + '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+    printer: ICON_SVG_OPEN + '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+    bell: ICON_SVG_OPEN + '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+    sparkles: ICON_SVG_OPEN + '<path d="m12 3-1.9 4.9L5 9.8l4.9 1.9L12 16.6l1.9-4.9 4.9-1.9-4.9-1.9Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>',
+    bookOpen: ICON_SVG_OPEN + '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2Z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7Z"/></svg>',
+    coffee: ICON_SVG_OPEN + '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>',
+    wine: ICON_SVG_OPEN + '<path d="M8 22h8"/><path d="M7 10h10"/><path d="M12 15v7"/><path d="M12 15a5 5 0 0 0 5-5c0-2-2.5-5.5-3.5-7.5a2 2 0 0 0-3 0C9.5 4.5 7 8 7 10a5 5 0 0 0 5 5Z"/></svg>',
+    smartphone: ICON_SVG_OPEN + '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+    heart: ICON_SVG_OPEN + '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>',
+    mapPin: ICON_SVG_OPEN + '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+    calendar: ICON_SVG_OPEN + '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    arrowLeft: ICON_SVG_OPEN + '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+    share: ICON_SVG_OPEN + '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>',
+    refresh: ICON_SVG_OPEN + '<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M8 16H3v5"/></svg>',
+    fileText: ICON_SVG_OPEN + '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    package: ICON_SVG_OPEN + '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><line x1="12" y1="22" x2="12" y2="12"/></svg>',
+    gauge: ICON_SVG_OPEN + '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
+    save: ICON_SVG_OPEN + '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+    zap: ICON_SVG_OPEN + '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    chevronDown: ICON_SVG_OPEN + '<polyline points="6 9 12 15 18 9"/></svg>',
+    lightbulb: ICON_SVG_OPEN + '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A5.5 5.5 0 1 0 6 8.5c0 1.61.71 2.9 1.5 3.99C8.27 13.26 8.74 14 8.91 14z"/></svg>',
+    alertTriangle: ICON_SVG_OPEN + '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  };
+  // Static markup uses <span data-icon="name"></span> (name → ICONS key)
+  // instead of repeating raw SVG at every call site. Deferred to
+  // DOMContentLoaded rather than run inline here, since some data-icon spans
+  // (e.g. the Workout Story Modal) sit later in the document than this
+  // script tag and wouldn't exist yet if this ran immediately.
+  function injectStaticIcons() {
+    document.querySelectorAll('[data-icon]').forEach(el => {
+      const svg = ICONS[el.dataset.icon];
+      if (svg) el.innerHTML = svg;
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectStaticIcons);
+  } else {
+    injectStaticIcons();
+  }
+</script>
 <script>
 
 let currentUser = localStorage.getItem("fitnessAppUser") || localStorage.getItem("username") || localStorage.getItem("Username") || null;
@@ -3554,7 +3642,7 @@ function renderLockedCard(featureName, requiredPlan) {
   var planLabel = requiredPlan === 'coach' ? 'Coach' : 'Pro';
   var price = requiredPlan === 'coach' ? '£16' : '£9';
   return '<div class="locked-feature-card">'
-    + '<div class="locked-icon">🔒</div>'
+    + '<div class="locked-icon">' + ICONS.lock + '</div>'
     + '<div class="locked-title">' + featureName + '</div>'
     + '<div class="locked-desc">Available on ' + planLabel + ' (from ' + price + '/month)</div>'
     + '<button class="upgrade-cta-btn" onclick="openUpgradeModal(\'' + requiredPlan + '\')">Unlock with ' + planLabel + '</button>'
@@ -3568,9 +3656,9 @@ function openCheckout(plan) {
   modal.innerHTML = '<div class="payment-method-inner">'
     + '<h3>Choose payment method</h3>'
     + '<p class="payment-sub">Both options include a 7-day free trial</p>'
-    + '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')">💳 Pay with Card</button>'
+    + '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Pay with Card</button>'
     + '<p class="payment-note">Secure checkout powered by Stripe</p>'
-    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()">✕</button>'
+    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
     + '</div>';
   document.body.appendChild(modal);
 }
@@ -3600,7 +3688,7 @@ function openUpgradeModal(defaultPlan) {
   var overlay = document.createElement('div');
   overlay.className = 'payment-method-modal';
   overlay.innerHTML = '<div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:20px;padding:24px;max-width:500px;width:95%;max-height:85vh;overflow-y:auto;position:relative;">'
-    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()">✕</button>'
+    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
     + '<h3 style="text-align:center;margin:0 0 4px;">Upgrade Pocket Coach</h3>'
     + '<p style="text-align:center;color:var(--secondary-text);font-size:0.82rem;margin:0 0 16px;">Unlock AI features and coaching tools</p>'
     + '<div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px;align-items:center;">'
@@ -3618,11 +3706,11 @@ function openUpgradeModal(defaultPlan) {
     + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £84/year · save £24</div>' : '')
     + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">7-day free trial</div>'
     + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
-    + '<li style="margin-bottom:4px;">✨ AI check-in summaries</li>'
-    + '<li style="margin-bottom:4px;">✨ AI macro advisor</li>'
-    + '<li style="margin-bottom:4px;">✨ AI program generator</li>'
-    + '<li style="margin-bottom:4px;">✨ AI plateau detector</li>'
-    + '<li>✨ Priority support</li></ul>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI check-in summaries</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI macro advisor</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI program generator</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI plateau detector</li>'
+    + '<li><span class="ui-icon">' + ICONS.sparkles + '</span> Priority support</li></ul>'
     + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'pro\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
     + '</div>'
     // Coach card
@@ -3633,11 +3721,11 @@ function openUpgradeModal(defaultPlan) {
     + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £156/year · save £36</div>' : '')
     + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">Everything in Pro, plus:</div>'
     + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
-    + '<li style="margin-bottom:4px;">👥 Full coaching dashboard</li>'
-    + '<li style="margin-bottom:4px;">📋 Client roster</li>'
-    + '<li style="margin-bottom:4px;">✍️ AI draft messages</li>'
-    + '<li style="margin-bottom:4px;">📊 Compliance tracking</li>'
-    + '<li>💰 Flat fee — no per-client</li></ul>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.users + '</span> Full coaching dashboard</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.clipboard + '</span> Client roster</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.pencil + '</span> AI draft messages</li>'
+    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.barChart + '</span> Compliance tracking</li>'
+    + '<li><span class="ui-icon">' + ICONS.creditCard + '</span> Flat fee — no per-client</li></ul>'
     + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'coach\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:#c6944f;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
     + '</div></div></div>';
   document.body.appendChild(overlay);
@@ -3708,7 +3796,7 @@ async function loadReferralPanel() {
     }
     if (badge && data.referralCredits > 0) {
       badge.style.display = '';
-      badge.innerHTML = '🎉 You have <strong>' + data.referralCredits + ' free month' + (data.referralCredits > 1 ? 's' : '') + '</strong> — applied on your next upgrade';
+      badge.innerHTML = '<span class="ui-icon">' + ICONS.gift + '</span> You have <strong>' + data.referralCredits + ' free month' + (data.referralCredits > 1 ? 's' : '') + '</strong> — applied on your next upgrade';
     }
     if (statsEl) statsEl.textContent = data.referralCount + ' friend' + (data.referralCount !== 1 ? 's' : '') + ' referred';
   } catch {
@@ -4493,11 +4581,11 @@ function getSetInputHTML(i) {
         <span id="repsLabel_${i}" style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;"></span>
       </div>
       <input type="number" id="weight_${i}" placeholder="Weight" style="width: 90px;" oninput="updateAddButtonState()" />
-      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;">🏋️</button>
+      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;"><span class="ui-icon">${ICONS.dumbbell}</span></button>
       <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
       <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
       <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
-      <button class="set-remove-btn" onclick="removeSet(${i})" title="Remove set">✕</button>
+      <button class="set-remove-btn" onclick="removeSet(${i})" title="Remove set"><span class="ui-icon">${ICONS.x}</span></button>
     </div>
   `;
 }
@@ -4783,11 +4871,23 @@ const ADVANCED_METHODS = [
   { key: 'amrap', label: 'AMRAP' }
 ];
 
+// PREVIEW: line-icon set replacing keyboard-emoji labels (✅/⚠️/❌/💤),
+// matching the stroke="currentColor" style already used by the bottom nav
+// (see .bn-icon in css/nav.css). If this direction lands, the full ~127
+// emoji sweep (see PHASE2-NOTES-style audit) would extract these into a
+// shared icons.js module instead of repeating svg markup inline like this.
+const STATE_ICONS = {
+  hit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  grind: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  miss: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+  fatigued: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="13" x2="23" y2="11"/><line x1="5" y1="10" x2="5" y2="14"/></svg>'
+};
+
 const ADVANCED_STATES = [
-  { key: 'hit', label: '✅ Hit' },
-  { key: 'grind', label: '⚠️ Grind' },
-  { key: 'miss', label: '❌ Miss' },
-  { key: 'fatigued', label: '💤 Fatigued' }
+  { key: 'hit', label: 'Hit' },
+  { key: 'grind', label: 'Grind' },
+  { key: 'miss', label: 'Miss' },
+  { key: 'fatigued', label: 'Fatigued' }
 ];
 
 const ADVANCED_TAGS = [
@@ -4838,7 +4938,7 @@ function renderMethodForm(adv, baseWeight) {
           <div class="adv-row">
             <input type="number" step="0.5" data-adv="dropWeight" data-index="${i}" value="${drop.weight ?? ''}" placeholder="Weight" />
             <input type="number" step="1" data-adv="dropReps" data-index="${i}" value="${drop.reps ?? ''}" placeholder="Reps" />
-            <button class="adv-btn" type="button" data-adv="removeDrop" data-index="${i}">✕</button>
+            <button class="adv-btn" type="button" data-adv="removeDrop" data-index="${i}"><span class="ui-icon">${ICONS.x}</span></button>
           </div>
         `
       )
@@ -4854,7 +4954,7 @@ function renderMethodForm(adv, baseWeight) {
 
   if (adv.method === 'restpause') {
     const pills = adv.restPauseExtras
-      .map((r, i) => `<button class="adv-btn" type="button" data-adv="removeRP" data-index="${i}">+${r} ✕</button>`)
+      .map((r, i) => `<button class="adv-btn" type="button" data-adv="removeRP" data-index="${i}">+${r} <span class="ui-icon">${ICONS.x}</span></button>`)
       .join(' ');
     return `
       <div>
@@ -4873,7 +4973,7 @@ function renderMethodForm(adv, baseWeight) {
 
   if (adv.method === 'myoreps') {
     const clusters = (adv.myo?.clusters || [])
-      .map((r, i) => `<button class="adv-btn" type="button" data-adv="removeMyo" data-index="${i}">+${r} ✕</button>`)
+      .map((r, i) => `<button class="adv-btn" type="button" data-adv="removeMyo" data-index="${i}">+${r} <span class="ui-icon">${ICONS.x}</span></button>`)
       .join(' ');
     return `
       <div>
@@ -5226,7 +5326,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
       <div class="ex-progress-bar-wrap">
         <div class="ex-progress-bar" style="width:${pct}%;background:${allDone ? 'var(--primary)' : 'rgba(45,125,91,0.55)'};"></div>
       </div>
-      <span class="ex-progress-label">${allDone ? '✅' : `${doneSets}/${totalSets}`} sets</span>
+      <span class="ex-progress-label">${allDone ? `<span class="ui-icon">${ICONS.check}</span>` : `${doneSets}/${totalSets}`} sets</span>
     `;
     card.appendChild(progressStrip);
   }
@@ -5362,7 +5462,7 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   const stateRow = ADVANCED_STATES.map(state => `
     <button type="button" class="state-btn ${advancedData.state === state.key ? 'active' : ''}"
       data-adv="setState" data-state="${state.key}">
-      ${state.label}
+      <span class="state-icon">${STATE_ICONS[state.key]}</span>${state.label}
     </button>
   `).join('');
 
@@ -5741,7 +5841,7 @@ function renderWorkouts() {
     renameBtn.type = 'button';
     renameBtn.title = 'Rename workout';
     renameBtn.style.cssText = 'flex-shrink:0;background:none;border:none;cursor:pointer;font-size:1rem;padding:6px;opacity:0.55;border-radius:6px;color:var(--text-muted);transition:opacity 0.15s;';
-    renameBtn.textContent = '✏️';
+    renameBtn.innerHTML = '<span class="ui-icon">' + ICONS.pencil + '</span>';
     renameBtn.addEventListener('mouseenter', () => { renameBtn.style.opacity = '1'; });
     renameBtn.addEventListener('mouseleave', () => { renameBtn.style.opacity = '0.55'; });
     renameBtn.addEventListener('click', (e) => {
@@ -5800,7 +5900,7 @@ function renderWorkouts() {
     const shareWorkoutButton = document.createElement('button');
     shareWorkoutButton.type = 'button';
     shareWorkoutButton.className = 'share-story-btn';
-    shareWorkoutButton.innerHTML = '📤 Share as Story';
+    shareWorkoutButton.innerHTML = '<span class="ui-icon">' + ICONS.share + '</span> Share as Story';
     shareWorkoutButton.addEventListener('click', () => openWorkoutStoryModal(workoutIndex));
     meta.appendChild(shareWorkoutButton);
 
@@ -6292,7 +6392,7 @@ function saveWorkoutAsTemplate() {
 
         saveTemplate(currentUser, name.trim(), template)
           .then(() => {
-            window.showToast('✅ Template saved!', 'success');
+            window.showToast('Template saved!', 'success');
             loadTemplateDropdown();
           })
           .catch(err => {
@@ -6371,7 +6471,7 @@ function loadSelectedResistanceTemplate() {
   });
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   renderWorkouts();
-  window.showToast('✅ Template loaded!', 'success');
+  window.showToast('Template loaded!', 'success');
 }
 
 // SEND TEMPLATE TO ANOTHER USER
@@ -6404,7 +6504,7 @@ async function sendTemplate() {
 
     const result = await response.json();
     if (result.success) {
-      window.showToast('✅ Template sent!', 'success');
+      window.showToast('Template sent!', 'success');
     } else {
       window.showToast(result.message || 'Failed to send template.', 'warn');
     }
@@ -6935,7 +7035,7 @@ function addMacroMeal() {
     const container = document.getElementById("macroMealContainer");
     container.insertAdjacentHTML("beforeend", `
       <div id="meal${idx}" style="border:1px solid var(--border-color); padding:10px; margin:10px 0;">
-        <button data-idx="${idx}" class="toggle-meal">➕ Meal ${idx+1}</button>
+        <button data-idx="${idx}" class="toggle-meal"><span class="ui-icon meal-toggle-icon">${ICONS.plus}</span> Meal ${idx+1}</button>
         <div id="mealContent${idx}" style="display:block; margin-top:10px;">
           <label>Timing Slot:</label>
           <select id="mealSlot${idx}">
@@ -6952,8 +7052,8 @@ function addMacroMeal() {
           <label>Fats:</label>
           <input type="number" id="fats${idx}" placeholder="g">
           <br>
-          <button data-idx="${idx}" class="meal-submit">➕ Add to Tracker</button>
-          <button data-idx="${idx}" class="remove-meal">❌ Remove</button>
+          <button data-idx="${idx}" class="meal-submit"><span class="ui-icon">${ICONS.plus}</span> Add to Tracker</button>
+          <button data-idx="${idx}" class="remove-meal"><span class="ui-icon">${ICONS.x}</span> Remove</button>
         </div>
       </div>
     `);
@@ -6963,12 +7063,13 @@ function addMacroMeal() {
     const toggleBtn = document.querySelector(`#meal${idx} .toggle-meal`);
     const content  = document.getElementById(`mealContent${idx}`);
     toggleBtn.addEventListener("click", () => {
+      const icon = toggleBtn.querySelector(".meal-toggle-icon");
       if (content.style.display === "none") {
         content.style.display = "block";
-        toggleBtn.textContent = toggleBtn.textContent.replace("➕","🔽");
+        if (icon) icon.innerHTML = ICONS.chevronDown;
       } else {
         content.style.display = "none";
-        toggleBtn.textContent = toggleBtn.textContent.replace("🔽","➕");
+        if (icon) icon.innerHTML = ICONS.plus;
       }
     });
     document.querySelector(`#meal${idx} .meal-submit`)
@@ -6980,12 +7081,13 @@ function addMacroMeal() {
 
 function toggleMeal(contentId, btn) {
   const div = document.getElementById(contentId);
+  const icon = btn.querySelector(".meal-toggle-icon");
   if (div.style.display === "none") {
     div.style.display = "block";
-    btn.innerText = btn.innerText.replace("➕", "🔽");
+    if (icon) icon.innerHTML = ICONS.chevronDown;
   } else {
     div.style.display = "none";
-    btn.innerText = btn.innerText.replace("🔽", "➕");
+    if (icon) icon.innerHTML = ICONS.plus;
   }
 }
 
@@ -7023,8 +7125,8 @@ function submitMeal(idx) {
   const content = document.getElementById(`mealContent${idx}`);
   if (content) {
     content.style.display = "none";
-    document.querySelector(`#meal${idx} .toggle-meal`).textContent =
-      document.querySelector(`#meal${idx} .toggle-meal`).textContent.replace("🔽", "➕");
+    const icon = document.querySelector(`#meal${idx} .toggle-meal .meal-toggle-icon`);
+    if (icon) icon.innerHTML = ICONS.plus;
   }
 
   const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
@@ -8478,7 +8580,7 @@ function toggleMacroCalcForm() {
   if (!form || !btn) return;
   if (form.style.display === 'none') {
     form.style.display = 'block';
-    btn.textContent = '⬅️ Back';
+    btn.textContent = 'Back';
   } else {
     form.style.display = 'none';
     btn.textContent = 'Macro Settings';
@@ -8843,9 +8945,9 @@ function renderHeroPhaseHeader(profile, username) {
         <div class="home-split-grid">
           <div>
             <h2 class="home-hero-athlete">${athleteName}</h2>
-            <p class="home-hero-meta">📅 ${todayLabel}</p>
-            <p class="home-hero-meta">🔥 Habit Streak: <strong>${streakCount} day${streakCount !== 1 ? 's' : ''}</strong></p>
-            <p class="home-hero-meta">👟 Steps today: <strong>${stepsToday.toLocaleString()} / ${stepsGoal.toLocaleString()} (${stepsPct}%)</strong></p>
+            <p class="home-hero-meta"><span class="ui-icon">${ICONS.calendar}</span> ${todayLabel}</p>
+            <p class="home-hero-meta"><span class="ui-icon">${ICONS.flame}</span> Habit Streak: <strong>${streakCount} day${streakCount !== 1 ? 's' : ''}</strong></p>
+            <p class="home-hero-meta"><span class="ui-icon">${ICONS.footprints}</span> Steps today: <strong>${stepsToday.toLocaleString()} / ${stepsGoal.toLocaleString()} (${stepsPct}%)</strong></p>
           </div>
           <div class="home-muted-panel">
             <p class="home-stat-label">Daily Status</p>
@@ -9389,7 +9491,7 @@ function renderPosingTab() {
 
   const rows = window.posingEngine.getPosingHistory(userId, { limit: 30 });
   body.innerHTML = rows.length
-    ? rows.map(entry => `<tr><td>${entry.date}</td><td>${entry.minutes}</td><td>${entry.notes || '—'}</td><td><button class="remove-btn" onclick="removePosingSession('${entry.id}')">❌</button></td></tr>`).join('')
+    ? rows.map(entry => `<tr><td>${entry.date}</td><td>${entry.minutes}</td><td>${entry.notes || '—'}</td><td><button class="remove-btn" onclick="removePosingSession('${entry.id}')"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`).join('')
     : '<tr><td colspan="4" style="opacity:.75;">No posing sessions yet.</td></tr>';
 }
 
@@ -10212,7 +10314,7 @@ function assignCoachNutritionPlan(clientId, clientName) {
   if (clientName) {
     localStorage.setItem(`clientName_${clientId}`, clientName);
   }
-  alert(`Nutrition plan assigned to ${clientName || clientId} ✅`);
+  alert(`Nutrition plan assigned to ${clientName || clientId}`);
   renderCoachDashboardView();
 }
 
@@ -10254,7 +10356,7 @@ function renderCoachClientDetail(client) {
             <p class="coach-dashboard-subtitle">Client detail overview · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn" data-coach-draft-msg="${escapeCoachText(safeClient.id)}">Draft message ✨</button>` : ''}
+            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn" data-coach-draft-msg="${escapeCoachText(safeClient.id)}">Draft message <span class="ui-icon">${ICONS.sparkles}</span></button>` : ''}
             <button type="button" data-coach-back>← Back to roster</button>
           </div>
         </div>
@@ -10347,7 +10449,7 @@ function renderCoachClientDetail(client) {
           </article>
         ` : `
           <article class="coach-client-detail-card" style="opacity:0.7;">
-            <p style="margin:0;font-size:0.9rem;">🔒 AI Draft Message is a Pro feature.</p>
+            <p style="margin:0;font-size:0.9rem;"><span class="ui-icon">${ICONS.lock}</span> AI Draft Message is a Pro feature.</p>
           </article>
         `}
       </section>
@@ -10385,7 +10487,7 @@ async function requestCoachDraftMessage(clientId) {
     : '';
   const bodyweightChange = latestCheckIn?.bodyweightChange ?? latestCheckIn?.weeklyWeightChange ?? latestCheckIn?.weightChange ?? null;
 
-  draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;">✨ Drafting message…</p>`;
+  draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
 
   const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
     || 'https://traininglog-backend.onrender.com';
@@ -10786,7 +10888,7 @@ function renderCheckInTab() {
   const entriesWithInsights = window.checkinEngine.getCheckInInsightTimeline?.(checkIns) || checkIns;
   const groupedTimeline = window.checkinEngine.groupCheckInsForTimeline?.(entriesWithInsights) || [];
   if (!groupedTimeline.length) {
-    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<br><span style="font-size:1.6rem;display:block;margin-top:8px">📋</span></div>`;
+    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<br><span class="ui-icon" style="width:1.6rem;height:1.6rem;display:block;margin:8px auto 0">${ICONS.clipboard}</span></div>`;
     return;
   }
 
@@ -10798,7 +10900,12 @@ function renderCheckInTab() {
   }
 
   function _statusLabel(status) {
-    return { approved: '✅ Approved', reviewed: '👁 Reviewed', needs_changes: '✏️ Needs changes', pending: '⏳ Pending' }[status] || '⏳ Pending';
+    return {
+      approved: `<span class="ui-icon">${ICONS.check}</span> Approved`,
+      reviewed: `<span class="ui-icon">${ICONS.eye}</span> Reviewed`,
+      needs_changes: `<span class="ui-icon">${ICONS.pencil}</span> Needs changes`,
+      pending: `<span class="ui-icon">${ICONS.clock}</span> Pending`
+    }[status] || `<span class="ui-icon">${ICONS.clock}</span> Pending`;
   }
 
   timeline.innerHTML = groupedTimeline.map((weeksOutGroup) => {
@@ -10825,19 +10932,19 @@ function renderCheckInTab() {
               <span class="ci-tc-status-badge ${status}">${_statusLabel(status)}</span>
             </div>
             <div class="ci-tc-stats">
-              ${entry.bodyweight ? `<span class="ci-tc-stat">⚖️ ${entry.bodyweight} kg</span>` : ''}
-              ${entry.waist      ? `<span class="ci-tc-stat">📏 ${entry.waist} cm</span>`  : ''}
-              ${energy !== ''    ? `<span class="ci-tc-stat ${_scoreClass(energy, false)}">⚡ E:${energy}</span>` : ''}
-              ${sleep  !== ''    ? `<span class="ci-tc-stat ${_scoreClass(sleep, false)}">🌙 S:${sleep}</span>`  : ''}
-              ${stress !== ''    ? `<span class="ci-tc-stat ${_scoreClass(stress, true)}">🧠 St:${stress}</span>` : ''}
+              ${entry.bodyweight ? `<span class="ci-tc-stat"><span class="ui-icon">${ICONS.scale}</span> ${entry.bodyweight} kg</span>` : ''}
+              ${entry.waist      ? `<span class="ci-tc-stat"><span class="ui-icon">${ICONS.scale}</span> ${entry.waist} cm</span>`  : ''}
+              ${energy !== ''    ? `<span class="ci-tc-stat ${_scoreClass(energy, false)}"><span class="ui-icon">${ICONS.zap}</span> E:${energy}</span>` : ''}
+              ${sleep  !== ''    ? `<span class="ci-tc-stat ${_scoreClass(sleep, false)}"><span class="ui-icon">${ICONS.moon}</span> S:${sleep}</span>`  : ''}
+              ${stress !== ''    ? `<span class="ci-tc-stat ${_scoreClass(stress, true)}"><span class="ui-icon">${ICONS.brain}</span> St:${stress}</span>` : ''}
             </div>
             ${archetypeMetrics ? `<div class="ci-tc-archetype">${archetypeMetrics}</div>` : ''}
-            ${(insight || insightFull) ? `<div class="ci-tc-insight">💡 ${insight}${insightFull ? '<br><span style="opacity:0.8">'+insightFull+'</span>' : ''}</div>` : ''}
-            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust">⚙️ ${adjText}</div>` : ''}
+            ${(insight || insightFull) ? `<div class="ci-tc-insight"><span class="ui-icon">${ICONS.lightbulb}</span> ${insight}${insightFull ? '<br><span style="opacity:0.8">'+insightFull+'</span>' : ''}</div>` : ''}
+            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust"><span class="ui-icon">${ICONS.settings}</span> ${adjText}</div>` : ''}
             ${entry.notes     ? `<div class="ci-tc-notes">"${entry.notes}"</div>` : ''}
             ${(entry.coachNotes || entry.review?.coachActionItems) ? `
               <div class="ci-tc-coach">
-                ${entry.coachNotes ? `<div>📝 ${entry.coachNotes}</div>` : ''}
+                ${entry.coachNotes ? `<div><span class="ui-icon">${ICONS.pencil}</span> ${entry.coachNotes}</div>` : ''}
                 ${entry.review?.coachActionItems ? `<div>→ ${entry.review.coachActionItems}</div>` : ''}
               </div>` : ''}
           </div>`;
@@ -11099,7 +11206,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
     card.style.display = '';
     card.innerHTML = `
       <div class="ci-ai-card ci-ai-card--locked">
-        <span class="ci-ai-label">✨ AI Summary</span>
+        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
         <p>Upgrade to Pro to get an AI-generated summary of every check-in.</p>
         <button class="ci-ai-upgrade-btn" onclick="window.showToast?.('Pro subscriptions coming soon!','info',3000)">Upgrade</button>
       </div>`;
@@ -11110,7 +11217,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
   card.style.display = '';
   card.innerHTML = `
     <div class="ci-ai-card">
-      <span class="ci-ai-label">✨ AI Summary</span>
+      <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
       <div class="ci-ai-loading">
         <div class="ci-ai-spinner"></div>
         <span>Generating your summary…</span>
@@ -11189,7 +11296,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
 
     card.innerHTML = `
       <div class="ci-ai-card">
-        <span class="ci-ai-label">✨ AI Summary</span>
+        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
         <p class="ci-ai-text">${summary.replace(/</g, '&lt;')}</p>
       </div>`;
   } catch (err) {
@@ -11200,7 +11307,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
         : 'Could not generate summary right now.';
     card.innerHTML = `
       <div class="ci-ai-card ci-ai-card--error">
-        <span class="ci-ai-label">✨ AI Summary</span>
+        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
         <p>${msg}</p>
       </div>`;
   }
@@ -11699,7 +11806,7 @@ function renderWeights() {
     const weightDisplay = converted !== null && converted !== undefined
       ? `${converted} ${displayUnit}`
       : '-';
-    body.innerHTML += `<tr><td>${entry.date}</td><td><strong>${weightDisplay}</strong></td><td>${entry.calories ?? '—'}</td><td>${entry.cardio != null ? entry.cardio + ' min' : '—'}</td><td><button onclick="removeWeightEntry(${index})" class="wt-del-btn" title="Remove">✕</button></td></tr>`;
+    body.innerHTML += `<tr><td>${entry.date}</td><td><strong>${weightDisplay}</strong></td><td>${entry.calories ?? '—'}</td><td>${entry.cardio != null ? entry.cardio + ' min' : '—'}</td><td><button onclick="removeWeightEntry(${index})" class="wt-del-btn" title="Remove"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`;
   });
   if (document.getElementById('progressTab').classList.contains('active')) {
     const isBodyweightActive = document.getElementById('bodyweightProgressBtn')?.classList.contains('active');
@@ -12079,7 +12186,7 @@ function completeCardioSession() {
     const entry = { date: new Date().toISOString().split('T')[0], type: 'session_complete' };
     window.dailyMissionEngine?.syncMissionFromCardioEntry?.(entry, currentUser);
   } catch (e) { /* silent */ }
-  window.showToast?.('Cardio session marked complete! 🎉', 'success', 3000);
+  window.showToast?.('Cardio session marked complete!', 'success', 3000);
 }
 
 function renderCardio() {
@@ -12119,7 +12226,7 @@ function renderCardio() {
     historyEl.innerHTML = `
       <div class="cardio-history-empty">
         No cardio sessions logged yet.<br>
-        <span style="font-size:1.6rem;display:block;margin-top:8px">🏃</span>
+        <span class="ui-icon" style="width:1.6rem;height:1.6rem;display:block;margin:8px auto 0">${ICONS.activity}</span>
       </div>`;
     return;
   }
@@ -12149,8 +12256,8 @@ function renderCardio() {
     const entries = grouped[date];
     const cards   = entries.map(({ entry, idx }) => {
       const cfg   = window.cardioTab?.getActivityConfig?.(entry.type) || { icon: '🏅', label: entry.type || 'Other', color: '#8c9891' };
-      const dur   = entry.duration > 0 ? `⏱ ${Math.round(entry.duration)} min` : null;
-      const dist  = parseFloat(entry.distance) > 0 ? `📏 ${parseFloat(entry.distance).toFixed(1)} km` : null;
+      const dur   = entry.duration > 0 ? `<span class="ui-icon">${ICONS.timer}</span> ${Math.round(entry.duration)} min` : null;
+      const dist  = parseFloat(entry.distance) > 0 ? `<span class="ui-icon">${ICONS.mapPin}</span> ${parseFloat(entry.distance).toFixed(1)} km` : null;
       const pace  = entry.paceOrSpeed
         ? `${entry.paceOrSpeed.icon} ${entry.paceOrSpeed.value}`
         : (dist && dur
@@ -12159,10 +12266,14 @@ function renderCardio() {
                 return r ? `${r.icon} ${r.value}` : null;
               })()
             : null);
-      const kcal  = parseFloat(entry.calories) > 0 ? `🔥 ${Math.round(entry.calories)} kcal` : null;
-      const hr    = parseFloat(entry.heartRate) > 0 ? `❤️ ${Math.round(entry.heartRate)} bpm` : null;
+      const kcal  = parseFloat(entry.calories) > 0 ? `<span class="ui-icon">${ICONS.flame}</span> ${Math.round(entry.calories)} kcal` : null;
+      const hr    = parseFloat(entry.heartRate) > 0 ? `<span class="ui-icon">${ICONS.heart}</span> ${Math.round(entry.heartRate)} bpm` : null;
       const intBadge = entry.intensity && entry.intensity !== 'moderate'
-        ? { easy: '😌 Easy', hard: '🔥 Hard', max: '⚡ Max' }[entry.intensity] || null
+        ? {
+            easy: `<span class="ui-icon">${ICONS.leaf}</span> Easy`,
+            hard: `<span class="ui-icon">${ICONS.flame}</span> Hard`,
+            max: `<span class="ui-icon">${ICONS.zap}</span> Max`
+          }[entry.intensity] || null
         : null;
 
       const tags  = [dur, dist, pace, kcal, hr, intBadge].filter(Boolean).map((t, i) =>
@@ -12177,7 +12288,7 @@ function renderCardio() {
             <div class="cardio-entry-stats">${tags}</div>
             ${entry.notes ? `<div class="cardio-entry-notes">${entry.notes}</div>` : ''}
           </div>
-          <button class="cardio-remove-btn" onclick="removeCardioEntry(${idx})" title="Remove">🗑</button>
+          <button class="cardio-remove-btn" onclick="removeCardioEntry(${idx})" title="Remove"><span class="ui-icon">${ICONS.x}</span></button>
         </div>`;
     }).join('');
 
@@ -12193,7 +12304,7 @@ function renderCardio() {
   if (legacyBody) {
     legacyBody.innerHTML = '';
     log.forEach((entry, index) => {
-      legacyBody.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes || ''}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn">❌</button></td></tr>`;
+      legacyBody.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes || ''}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`;
     });
   }
 
@@ -12370,8 +12481,8 @@ function renderTrainingLoadCharts(workouts) {
 
   const riskWeeks = weekly.filter(w => w.weeklyMonotony > SAFE_MONOTONY_THRESHOLD || w.weeklyStrain > SAFE_STRAIN_THRESHOLD);
   alerts.innerHTML = riskWeeks.length
-    ? `<strong>⚠️ Deload suggestion:</strong> High stress detected in week(s) ${riskWeeks.map(w => w.weekStart).join(', ')}. Consider reducing volume/intensity by 20–40%.`
-    : '<strong>✅ Load balance looks good.</strong> No high monotony/strain weeks detected in selected range.';
+    ? `<strong><span class="ui-icon">${ICONS.alertTriangle}</span> Deload suggestion:</strong> High stress detected in week(s) ${riskWeeks.map(w => w.weekStart).join(', ')}. Consider reducing volume/intensity by 20–40%.`
+    : `<strong><span class="ui-icon">${ICONS.check}</span> Load balance looks good.</strong> No high monotony/strain weeks detected in selected range.`;
 }
 
 function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) {
@@ -13058,13 +13169,13 @@ function injectPlateauCard(result, dismissKey) {
   cardEl.innerHTML = `
     <div class="plateau-alert-card">
       <div class="plateau-alert-body">
-        <span class="plateau-alert-icon">🔔</span>
+        <span class="plateau-alert-icon"><span class="ui-icon">${ICONS.bell}</span></span>
         <div>
           <strong class="plateau-alert-heading">Plateau detected</strong>
           <p class="plateau-alert-text">${escapeCoachText(text)}</p>
         </div>
       </div>
-      <button type="button" class="plateau-alert-dismiss" aria-label="Dismiss plateau alert">✕</button>
+      <button type="button" class="plateau-alert-dismiss" aria-label="Dismiss plateau alert"><span class="ui-icon">${ICONS.x}</span></button>
     </div>
   `;
   cardEl.style.display = 'block';
@@ -13486,7 +13597,7 @@ async function submitSmartGoalForm(event) {
   }
 
   event.target.reset();
-  if (feedback) feedback.textContent = '✅ SMART goal saved.';
+  if (feedback) feedback.textContent = 'SMART goal saved.';
   renderGoalBar();
   if (typeof renderGoalProgressList === 'function') {
     renderGoalProgressList();
@@ -13940,7 +14051,7 @@ function addCrossfitExercise() {
       <input type="number" placeholder="Sets" id="cfExerciseSets${index}">
       <input type="number" placeholder="Reps per Set" id="cfExerciseReps${index}">
       <input type="number" placeholder="Weight per Set (optional)" id="cfExerciseWeight${index}">
-      <button onclick="removeCrossfitExercise(${index})" class="remove-btn" style="margin-top:5px;">❌ Remove</button>
+      <button onclick="removeCrossfitExercise(${index})" class="remove-btn" style="margin-top:5px;"><span class="ui-icon">${ICONS.x}</span> Remove</button>
     </div>
   `;
   
@@ -14012,7 +14123,7 @@ function renderCrossfitWorkouts() {
         Rounds: ${wod.rounds || '-'}<br>
         Notes: ${wod.notes || '-'}<br>
         <ul>${exercisesList}</ul>
-        <button onclick="removeCrossfitWorkout(${index})" class="remove-btn">❌ Delete</button>
+        <button onclick="removeCrossfitWorkout(${index})" class="remove-btn"><span class="ui-icon">${ICONS.x}</span> Delete</button>
       </div>
     `;
   });
@@ -14207,7 +14318,7 @@ function renderHyroxHistory() {
     return '<div class="hyrox-hist-item">'
       + '<span class="hyrox-hist-date">' + label + '</span>'
       + '<span class="hyrox-hist-total">' + fmtMMSS(entry.total) + '</span>'
-      + '<button class="hyrox-hist-delete" onclick="deleteHyrox(' + i + ')">✕</button>'
+      + '<button class="hyrox-hist-delete" onclick="deleteHyrox(' + i + ')"><span class="ui-icon">' + ICONS.x + '</span></button>'
       + '</div>';
   }).join('');
 }
@@ -14234,7 +14345,7 @@ function addCircuitExercise() {
   const row = document.createElement('div');
   row.className = 'circuit-ex-row';
   row.innerHTML = '<input type="text" placeholder="Exercise ' + count + '" class="circuit-ex-input">'
-    + '<button class="circuit-ex-remove" onclick="this.parentElement.remove()">✕</button>';
+    + '<button class="circuit-ex-remove" onclick="this.parentElement.remove()"><span class="ui-icon">' + ICONS.x + '</span></button>';
   container.appendChild(row);
 }
 
@@ -15156,7 +15267,7 @@ async function _commSendToUser(recipient, message) {
   /* Record in sender's outbox */
   _commAddToOutbox({ type: item.type, name: item.name, to: `@${recipient}`, toType: 'user', date: new Date().toISOString().slice(0, 10) });
 
-  window.showToast?.(`📤 "${item.name}" sent to @${recipient}!`, 'success', 3500);
+  window.showToast?.(`"${item.name}" sent to @${recipient}!`, 'success', 3500);
   if (document.getElementById('commShareRecipient')) document.getElementById('commShareRecipient').value = '';
   if (document.getElementById('commShareMessage'))   document.getElementById('commShareMessage').value   = '';
   _commShareSelectedId = null;
@@ -15186,7 +15297,7 @@ async function _commSendToGroup(groupId, message) {
 
   _commAddToOutbox({ type: item.type, name: item.name, to: groupName, toType: 'group', date: new Date().toISOString().slice(0, 10) });
 
-  window.showToast?.(`📤 "${item.name}" shared to ${groupName}!`, 'success', 3500);
+  window.showToast?.(`"${item.name}" shared to ${groupName}!`, 'success', 3500);
   if (document.getElementById('commShareMessage')) document.getElementById('commShareMessage').value = '';
   _commShareSelectedId = null;
   renderCommShareItemList();
@@ -15238,11 +15349,11 @@ async function _fetchCommBackendInbox() {
 
 function _renderCommInboxItems(el, items) {
   if (!items?.length) {
-    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When someone shares a program or template with you, it appears here. 📬</div>`;
+    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When someone shares a program or template with you, it appears here. <span class="ui-icon">${ICONS.download}</span></div>`;
     return;
   }
   const typeColors = { template: '#5295e0', program: '#9070d8' };
-  const typeLabels = { template: '📋 Template', program: '🗓 Program' };
+  const typeLabels = { template: `<span class="ui-icon">${ICONS.clipboard}</span> Template`, program: `<span class="ui-icon">${ICONS.calendar}</span> Program` };
   el.innerHTML = items.map(item => `
     <div class="comm-inbox-item" id="commInboxItem_${item.id}">
       <div class="comm-inbox-header">
@@ -15256,7 +15367,7 @@ function _renderCommInboxItems(el, items) {
       <div class="comm-inbox-item-name">${item.name}</div>
       ${item.message ? `<div class="comm-inbox-message">"${item.message}"</div>` : ''}
       <div class="comm-inbox-actions">
-        <button class="comm-inbox-accept-btn"  onclick="commAcceptShare('${item.id}')">✅ Accept &amp; Save</button>
+        <button class="comm-inbox-accept-btn"  onclick="commAcceptShare('${item.id}')"><span class="ui-icon">${ICONS.check}</span> Accept &amp; Save</button>
         <button class="comm-inbox-dismiss-btn" onclick="commDismissShare('${item.id}')">Dismiss</button>
       </div>
     </div>`).join('');
@@ -15270,12 +15381,12 @@ function renderCommShareOutbox() {
   if (!outbox.length) {
     el.innerHTML = `<div class="comm-share-empty">Nothing sent yet.</div>`; return;
   }
-  const icons = { user: '👤', group: '👥' };
+  const icons = { user: `<span class="ui-icon">${ICONS.users}</span>`, group: `<span class="ui-icon">${ICONS.users}</span>` };
   el.innerHTML = outbox.slice(0, 15).map(item => `
     <div class="comm-outbox-item">
       <div class="comm-outbox-to">
-        <div class="comm-outbox-to-name">${icons[item.toType] || '👤'} ${item.to}</div>
-        <div class="comm-outbox-to-desc">${item.type === 'template' ? '📋' : '🗓'} ${item.name}</div>
+        <div class="comm-outbox-to-name">${icons[item.toType] || `<span class="ui-icon">${ICONS.users}</span>`} ${item.to}</div>
+        <div class="comm-outbox-to-desc">${item.type === 'template' ? `<span class="ui-icon">${ICONS.clipboard}</span>` : `<span class="ui-icon">${ICONS.calendar}</span>`} ${item.name}</div>
       </div>
       <div class="comm-outbox-date">${item.date || ''}</div>
     </div>`).join('');
@@ -15298,7 +15409,7 @@ function commAcceptShare(shareId) {
       source: 'community'
     });
     localStorage.setItem(tplKey, JSON.stringify(tpls));
-    window.showToast?.(`✅ "${item.name}" added to your Templates!`, 'success', 3500);
+    window.showToast?.(`"${item.name}" added to your Templates!`, 'success', 3500);
   } else {
     const progKey = `programs_${currentUser}`;
     const progs   = JSON.parse(localStorage.getItem(progKey)) || [];
@@ -15309,7 +15420,7 @@ function commAcceptShare(shareId) {
       _sharedBy: item.from
     });
     localStorage.setItem(progKey, JSON.stringify(progs));
-    window.showToast?.(`✅ "${item.name}" added to your Programs!`, 'success', 3500);
+    window.showToast?.(`"${item.name}" added to your Programs!`, 'success', 3500);
   }
 
   item.accepted = true;
@@ -16777,7 +16888,7 @@ window.renderSessionHistory = renderSessionHistory;
         + '<div class="sleep-entry-duration">' + fmtDuration(e.duration) + '</div>'
         + '<div class="sleep-entry-quality">' + stars + '</div>'
         + '</div>'
-        + '<button class="sleep-entry-delete" onclick="deleteSleepEntry(\'' + e.date + '\')" title="Delete">✕</button>'
+        + '<button class="sleep-entry-delete" onclick="deleteSleepEntry(\'' + e.date + '\')" title="Delete"><span class="ui-icon">' + ICONS.x + '</span></button>'
         + '</div>'
         + '</div>';
     }).join('');
@@ -17268,11 +17379,11 @@ function calcStrengthScores() {
   const tierEl = document.getElementById('scoreTier');
   if (tierEl) {
     const tiers = [
-      { min: 500, label: '🏆 Elite',       bg: 'rgba(255,215,0,0.15)',  color: '#f0c040' },
-      { min: 400, label: '⭐ Advanced',     bg: 'rgba(82,214,138,0.12)', color: '#52d68a' },
-      { min: 300, label: '📈 Intermediate', bg: 'rgba(82,148,224,0.12)', color: '#5294e0' },
-      { min: 200, label: '🌱 Novice',       bg: 'rgba(160,125,192,0.12)',color: '#a07dc0' },
-      { min:   0, label: '🔰 Beginner',     bg: 'rgba(99,110,114,0.1)',  color: '#9eabb0' },
+      { min: 500, label: 'Elite',       bg: 'rgba(255,215,0,0.15)',  color: '#f0c040' },
+      { min: 400, label: 'Advanced',     bg: 'rgba(82,214,138,0.12)', color: '#52d68a' },
+      { min: 300, label: 'Intermediate', bg: 'rgba(82,148,224,0.12)', color: '#5294e0' },
+      { min: 200, label: 'Novice',       bg: 'rgba(160,125,192,0.12)',color: '#a07dc0' },
+      { min:   0, label: 'Beginner',     bg: 'rgba(99,110,114,0.1)',  color: '#9eabb0' },
     ];
     const tier = tiers.find(t => w >= t.min) || tiers[tiers.length - 1];
     tierEl.textContent     = tier.label;
@@ -17463,17 +17574,17 @@ window.renderMeetPrep = renderMeetPrep;
       <!-- Actions -->
       <div style="display:flex;gap:10px;">
         <button id="storyDownloadBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:#2d7d5b;color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-          ⬇️ Save Image
+          <span class="ui-icon" data-icon="download"></span> Save Image
         </button>
         <button id="storyShareBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.12);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;gap:8px;">
-          🔗 Share
+          <span class="ui-icon" data-icon="share"></span> Share
         </button>
         <button onclick="closeWorkoutStoryModal()" style="padding:14px 18px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:0.9rem;cursor:pointer;">
-          ✕
+          <span class="ui-icon" data-icon="x"></span>
         </button>
       </div>
       <p style="text-align:center;color:rgba(255,255,255,0.35);font-size:0.75rem;margin-top:12px;">
-        Save to camera roll · Post to your story 📸
+        Save to camera roll · Post to your story <span class="ui-icon" data-icon="camera"></span>
       </p>
     </div>
   </div>
@@ -17776,14 +17887,14 @@ window.renderMeetPrep = renderMeetPrep;
         if (navigator.clipboard?.write) {
           const blob = await getBlob();
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          window.showToast?.('📋 Image copied to clipboard!', 'success');
+          window.showToast?.('Image copied to clipboard!', 'success');
         } else {
           // Last resort: open in new tab
           window.open(canvas.toDataURL('image/png'), '_blank');
         }
       } catch(e) {
         console.warn('Share failed:', e);
-        window.showToast?.('⬇️ Use Save Image instead', 'warn');
+        window.showToast?.('Use Save Image instead', 'warn');
       }
     };
   }
@@ -17805,13 +17916,13 @@ window.renderMeetPrep = renderMeetPrep;
   style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--card-bg,#0f1510);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">✨</div>
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
       <div>
         <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Macro Advisor</div>
         <div id="macroAiStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
       </div>
     </div>
-    <button onclick="closeMacroAiAdvisor()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;margin:0;box-shadow:none;display:flex;align-items:center;justify-content:center;">✕</button>
+    <button onclick="closeMacroAiAdvisor()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;margin:0;box-shadow:none;display:flex;align-items:center;justify-content:center;"><span class="ui-icon">${ICONS.x}</span></button>
   </div>
   <div id="macroAiBody" style="flex:1;overflow-y:auto;padding:14px 16px 24px;-webkit-overflow-scrolling:touch;"></div>
 </div>
@@ -17890,7 +18001,7 @@ window.renderMeetPrep = renderMeetPrep;
 
     body.innerHTML =
       '<div style="background:var(--card-bg,#0f1510);border:1px solid var(--border-color,#2a3a2e);border-left:3px solid var(--primary,#5fa87e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
-        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--primary,#5fa87e);margin-bottom:8px;">✨ AI Advice</div>' +
+        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--primary,#5fa87e);margin-bottom:8px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI Advice</div>' +
         '<p style="font-size:0.88rem;line-height:1.6;color:var(--text-color);margin:0;">' + advice.replace(/</g, '&lt;') + '</p>' +
       '</div>' +
       '<div style="background:var(--surface-bg,#141e17);border:1px solid var(--border-color,#2a3a2e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
@@ -17914,7 +18025,7 @@ window.renderMeetPrep = renderMeetPrep;
 
   function renderMacroAiError(body, status, msg) {
     status.textContent = 'Powered by Claude';
-    body.innerHTML = '<div style="background:rgba(224,80,96,0.1);border:1px solid rgba(224,80,96,0.3);border-radius:14px;padding:14px 16px;color:#e05060;font-size:0.88rem;">⚠️ ' + msg + '</div>';
+    body.innerHTML = '<div style="background:rgba(224,80,96,0.1);border:1px solid rgba(224,80,96,0.3);border-radius:14px;padding:14px 16px;color:#e05060;font-size:0.88rem;"><span class="ui-icon">' + ICONS.alertTriangle + '</span> ' + msg + '</div>';
   }
 
   window.openMacroAiAdvisor = async function () {
@@ -17997,13 +18108,13 @@ window.renderMeetPrep = renderMeetPrep;
   style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:88vh;background:var(--card-bg,#0f1510);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">✨</div>
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
       <div>
         <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Program Generator</div>
         <div id="progAiGenStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
       </div>
     </div>
-    <button onclick="closeProgAiGen()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;display:flex;align-items:center;justify-content:center;">✕</button>
+    <button onclick="closeProgAiGen()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;display:flex;align-items:center;justify-content:center;"><span class="ui-icon">${ICONS.x}</span></button>
   </div>
   <div id="progAiGenBody" style="flex:1;overflow-y:auto;padding:14px 16px 32px;-webkit-overflow-scrolling:touch;"></div>
 </div>
@@ -18109,10 +18220,10 @@ window.renderMeetPrep = renderMeetPrep;
       + '</div>'
       + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted,#7a8f7d);">Equipment available</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">🏋️ Barbell</button>'
-      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">💪 Dumbbells</button>'
-      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')">🔗 Cables / Machine</button>'
-      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" onclick="this.classList.toggle(\'active\')">🤸 Bodyweight</button>'
+      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.dumbbell + '</span> Barbell</button>'
+      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.dumbbell + '</span> Dumbbells</button>'
+      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.link + '</span> Cables / Machine</button>'
+      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.activity + '</span> Bodyweight</button>'
       + '</div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
       + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Training mode<select id="pagMode">' + modeOptions + '</select></label>'
@@ -18274,7 +18385,7 @@ window.renderMeetPrep = renderMeetPrep;
       window.showProgramView('list');
     }
     if (typeof window.showToast === 'function') {
-      window.showToast('Program saved! ✅', 'success', 3000);
+      window.showToast('Program saved!', 'success', 3000);
     }
   };
 
