@@ -856,6 +856,7 @@ function injectSettingsMarkup() {
       applySettingsToUI(hydrated);
       renderProfileGamificationSummary(container);
       if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
+      if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
       if (typeof applyTrainingModeClasses === 'function') applyTrainingModeClasses(localStorage.getItem('trainingMode') || 'bodybuilding');
       // Wire up appModeSelect and coachModeToggle here — settings.html is
       // fetched async so these elements don't exist at DOMContentLoaded.
