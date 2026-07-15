@@ -279,3 +279,209 @@
 #bodybuildingProgressPanel summary {
   color: #dce7e1;
 }
+
+/* ── Recovery Map panel ──────────────────────────────────────── */
+
+.recovery-panel {
+  margin-top: 14px;
+  color: var(--text-color);
+  /* fatigue scale — semantic, deliberately separate from --primary/--highlight */
+  --scale-0: #f2ece0;
+  --scale-1: #f3d36b;
+  --scale-2: #e8863f;
+  --scale-3: var(--danger);
+}
+
+.recovery-sub {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.recovery-figures {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recovery-figure-col {
+  text-align: center;
+  width: 170px;
+}
+
+.recovery-figure-col svg {
+  width: 100%;
+  height: auto;
+}
+
+.recovery-figure-label {
+  margin: 2px 0 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+}
+
+.recovery-zone {
+  stroke: var(--card-bg);
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: opacity 0.15s ease, stroke-width 0.15s ease;
+}
+
+.recovery-zone.is-dim {
+  opacity: 0.28;
+}
+
+.recovery-zone.is-active {
+  stroke: var(--text-color);
+  stroke-width: 2.5;
+}
+
+.recovery-neutral {
+  fill: var(--elevated-bg);
+  stroke: var(--border-color);
+  stroke-width: 1;
+}
+
+.recovery-legend {
+  max-width: 380px;
+  margin: 20px auto 0;
+}
+
+.recovery-legend-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--scale-0), var(--scale-1), var(--scale-2), var(--scale-3));
+}
+
+.recovery-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.recovery-hint {
+  text-align: center;
+  margin: 14px 0 10px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.recovery-table-wrap {
+  overflow-x: auto;
+}
+
+.recovery-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  background: rgba(14, 21, 18, 0.92);
+}
+
+.recovery-table th {
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.recovery-table th.num {
+  text-align: right;
+}
+
+.recovery-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(132, 157, 144, 0.12);
+  color: #e5ece8;
+  vertical-align: middle;
+}
+
+.recovery-table td.muscle {
+  font-weight: 600;
+}
+
+.recovery-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.recovery-table td.recovery-days {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.recovery-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.recovery-table tbody tr:hover {
+  background: rgba(244, 247, 245, 0.03);
+}
+
+.recovery-table tbody tr.is-dim {
+  opacity: 0.35;
+}
+
+.recovery-table tbody tr.is-active {
+  background: rgba(198, 148, 79, 0.08);
+}
+
+.ratio-track {
+  position: relative;
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--elevated-bg);
+  overflow: hidden;
+}
+
+.ratio-fill {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: var(--primary);
+  border-radius: 3px;
+}
+
+.ratio-track.is-over .ratio-fill {
+  background: var(--highlight);
+}
+
+.recovery-table .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.recovery-table .chip .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+@media (max-width: 460px) {
+  .recovery-table th:nth-child(4),
+  .recovery-table td:nth-child(4) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recovery-zone,
+  .recovery-table tbody tr,
+  .ratio-fill {
+    transition: none;
+  }
+}

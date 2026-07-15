@@ -1913,6 +1913,7 @@
         <button id="workoutProgressBtn" onclick="showWorkoutProgress()">Workout</button>
         <button id="cardioProgressBtn" onclick="showCardioProgress()">Cardio</button>
         <button id="bodyweightProgressBtn" onclick="showBodyweightProgress()">Bodyweight</button>
+        <button id="recoveryProgressBtn" onclick="showRecoveryProgress()">Recovery</button>
         <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
         <input type="date" id="startRange" onchange="refreshProgress()">
         <input type="date" id="endRange" onchange="refreshProgress()">
@@ -1935,6 +1936,96 @@
           <canvas id="monotonyCanvas" height="180" style="max-height:180px; margin-bottom:10px;"></canvas>
           <canvas id="strainCanvas" height="180" style="max-height:180px;"></canvas>
           <div id="loadAlerts" style="margin-top:8px;"></div>
+        <div id="recoveryPanel" class="recovery-panel" style="display:none;">
+          <h3 style="margin-bottom:6px;">Recovery Map</h3>
+          <p class="recovery-sub">Trailing 7-day set volume and estimated fatigue per muscle group.</p>
+          <div class="recovery-figures">
+            <div class="recovery-figure-col">
+              <svg viewBox="0 0 220 440" xmlns="http://www.w3.org/2000/svg">
+                <circle class="recovery-neutral" cx="110" cy="30" r="20"></circle>
+                <rect class="recovery-neutral" x="100" y="48" width="20" height="12" rx="4"></rect>
+
+                <circle class="recovery-zone" data-muscle="shoulders" cx="58" cy="72" r="17"></circle>
+                <circle class="recovery-zone" data-muscle="shoulders" cx="162" cy="72" r="17"></circle>
+
+                <rect class="recovery-zone" data-muscle="biceps" x="30" y="76" width="24" height="64" rx="12"></rect>
+                <rect class="recovery-zone" data-muscle="biceps" x="166" y="76" width="24" height="64" rx="12"></rect>
+
+                <rect class="recovery-zone" data-muscle="chest" x="72" y="66" width="76" height="56" rx="18"></rect>
+                <rect class="recovery-zone" data-muscle="abs" x="84" y="126" width="52" height="56" rx="14"></rect>
+
+                <rect class="recovery-zone" data-muscle="forearms" x="24" y="144" width="22" height="64" rx="11"></rect>
+                <rect class="recovery-zone" data-muscle="forearms" x="174" y="144" width="22" height="64" rx="11"></rect>
+                <circle class="recovery-neutral" cx="35" cy="216" r="11"></circle>
+                <circle class="recovery-neutral" cx="185" cy="216" r="11"></circle>
+
+                <rect class="recovery-neutral" x="78" y="182" width="64" height="22" rx="10"></rect>
+
+                <rect class="recovery-zone" data-muscle="quads" x="62" y="204" width="34" height="110" rx="16"></rect>
+                <rect class="recovery-zone" data-muscle="quads" x="124" y="204" width="34" height="110" rx="16"></rect>
+                <rect class="recovery-zone" data-muscle="adductors" x="96" y="214" width="28" height="70" rx="12"></rect>
+
+                <circle class="recovery-neutral" cx="79" cy="320" r="12"></circle>
+                <circle class="recovery-neutral" cx="141" cy="320" r="12"></circle>
+                <rect class="recovery-neutral" x="68" y="326" width="24" height="86" rx="10"></rect>
+                <rect class="recovery-neutral" x="128" y="326" width="24" height="86" rx="10"></rect>
+                <rect class="recovery-neutral" x="64" y="412" width="32" height="14" rx="6"></rect>
+                <rect class="recovery-neutral" x="124" y="412" width="32" height="14" rx="6"></rect>
+              </svg>
+              <p class="recovery-figure-label">FRONT</p>
+            </div>
+            <div class="recovery-figure-col">
+              <svg viewBox="0 0 220 440" xmlns="http://www.w3.org/2000/svg">
+                <circle class="recovery-neutral" cx="110" cy="30" r="20"></circle>
+                <rect class="recovery-neutral" x="100" y="48" width="20" height="12" rx="4"></rect>
+
+                <rect class="recovery-zone" data-muscle="traps" x="88" y="64" width="44" height="30" rx="8"></rect>
+                <circle class="recovery-zone" data-muscle="shoulders" cx="58" cy="72" r="17"></circle>
+                <circle class="recovery-zone" data-muscle="shoulders" cx="162" cy="72" r="17"></circle>
+
+                <rect class="recovery-zone" data-muscle="triceps" x="30" y="76" width="24" height="64" rx="12"></rect>
+                <rect class="recovery-zone" data-muscle="triceps" x="166" y="76" width="24" height="64" rx="12"></rect>
+
+                <rect class="recovery-zone" data-muscle="back" x="72" y="92" width="76" height="90" rx="20"></rect>
+
+                <rect class="recovery-zone" data-muscle="forearms" x="24" y="144" width="22" height="64" rx="11"></rect>
+                <rect class="recovery-zone" data-muscle="forearms" x="174" y="144" width="22" height="64" rx="11"></rect>
+                <circle class="recovery-neutral" cx="35" cy="216" r="11"></circle>
+                <circle class="recovery-neutral" cx="185" cy="216" r="11"></circle>
+
+                <rect class="recovery-zone" data-muscle="glutes" x="74" y="184" width="72" height="44" rx="20"></rect>
+
+                <rect class="recovery-zone" data-muscle="hamstrings" x="66" y="214" width="34" height="100" rx="16"></rect>
+                <rect class="recovery-zone" data-muscle="hamstrings" x="120" y="214" width="34" height="100" rx="16"></rect>
+                <rect class="recovery-zone" data-muscle="abductors" x="58" y="214" width="16" height="90" rx="8"></rect>
+                <rect class="recovery-zone" data-muscle="abductors" x="146" y="214" width="16" height="90" rx="8"></rect>
+
+                <circle class="recovery-neutral" cx="79" cy="320" r="12"></circle>
+                <circle class="recovery-neutral" cx="141" cy="320" r="12"></circle>
+                <rect class="recovery-zone" data-muscle="calves" x="68" y="326" width="24" height="86" rx="10"></rect>
+                <rect class="recovery-zone" data-muscle="calves" x="128" y="326" width="24" height="86" rx="10"></rect>
+                <rect class="recovery-neutral" x="64" y="412" width="32" height="14" rx="6"></rect>
+                <rect class="recovery-neutral" x="124" y="412" width="32" height="14" rx="6"></rect>
+              </svg>
+              <p class="recovery-figure-label">BACK</p>
+            </div>
+          </div>
+          <div class="recovery-legend">
+            <div class="recovery-legend-bar"></div>
+            <div class="recovery-legend-labels">
+              <span>Fresh</span><span>Moderate</span><span>Fatigued</span><span>Overreached</span>
+            </div>
+          </div>
+          <p class="recovery-hint">Tap a muscle to isolate it in the table below</p>
+          <div class="recovery-table-wrap">
+            <table class="recovery-table">
+              <thead>
+                <tr><th>Muscle</th><th class="num">Sets</th><th>Volume</th><th>Last trained</th><th>Status</th></tr>
+              </thead>
+              <tbody id="recoveryTableBody"></tbody>
+            </table>
+          </div>
+        </div>
         </div>
         <div id="bodybuildingProgressPanel"></div>
         <div id="goalBar" style="margin-top:10px;"></div>
@@ -2206,7 +2297,9 @@
 <script src="archiveOldWorkouts.js"></script>
 <script src="progressiveOverload.js"></script>
 <script src="community.js"></script>
+<script src="exerciseMuscleMap.js"></script>
 <script src="leaderboard.js"></script>
+<script src="recoveryMap.js"></script>
 <script src="exerciseLeaderboard.js"></script>
 <script src="stats.js"></script>
 <script src="src/config/constants.js"></script>
@@ -2759,6 +2852,7 @@ function showTab(tabName) {
       }
       const coachModeToggle = document.getElementById('coachModeToggle');
       if (coachModeToggle) {
+      if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
         coachModeToggle.checked = isCoachModeEnabled();
         coachModeToggle.disabled = getCurrentAppMode() !== 'both';
       }
@@ -10780,6 +10874,7 @@ async function showWorkoutProgress(data) {
     : await fetchWorkoutHistory();
   const filtered = applyDateRange(history);
   const filteredWorkouts = applyDateRange(rawWorkouts);
+  document.getElementById('recoveryPanel').style.display = 'none';
   const dates = filtered.map(h => h.date);
   const vols = filtered.map(h => h.volume);
   const intensities = filtered.map(h => Number(h.averageIntensity || 0));
@@ -10804,6 +10899,7 @@ async function showWorkoutProgress(data) {
 
 async function showCardioProgress() {
   setActiveProgress('cardioProgressBtn');
+  document.getElementById('recoveryPanel').style.display = 'none';
   const cardioHistory = await fetchCardioHistory();
   const filtered = applyDateRange(cardioHistory);
   const dates = filtered.map(h => h.date);
@@ -10826,6 +10922,7 @@ async function showCardioProgress() {
 
 async function showBodyweightProgress() {
   setActiveProgress('bodyweightProgressBtn');
+  document.getElementById('recoveryPanel').style.display = 'none';
   const bodyweightHistory = await fetchBodyweightHistory();
   const filtered = applyDateRange(bodyweightHistory);
   const dates = filtered.map(h => h.date);
@@ -10897,6 +10994,7 @@ async function showBodyweightProgress() {
     cardioHistory: applyDateRange(await fetchCardioHistory()),
     bodyweightHistory: filtered
   });
+  document.getElementById('recoveryPanel').style.display = 'none';
 }
 
 function showExerciseProgress() {
@@ -10910,6 +11008,107 @@ function showExerciseProgress() {
   Promise.all([fetchWorkouts(), fetchWorkoutHistory(), fetchCardioHistory(), fetchBodyweightHistory()]).then(([workouts, workoutHistory, cardioHistory, bodyweightHistory]) => {
     renderProgressArchetypeSpotlight({
       workouts: applyDateRange(workouts),
+function getTodaySorenessForRecovery() {
+  try {
+    const all = JSON.parse(localStorage.getItem('dailyReadiness_v1')) || {};
+    const entry = all[new Date().toDateString()];
+    return entry && Number.isFinite(entry.soreness) ? entry.soreness : null;
+  } catch {
+    return null;
+  }
+}
+
+function initRecoveryPanelInteractions() {
+  const panel = document.getElementById('recoveryPanel');
+  if (!panel || panel.dataset.boundInteractions) return;
+  panel.dataset.boundInteractions = '1';
+
+  let focused = null;
+  function setFocus(muscle) {
+    focused = (focused === muscle) ? null : muscle;
+    panel.querySelectorAll('.recovery-zone').forEach((el) => {
+      const m = el.dataset.muscle;
+      el.classList.toggle('is-dim', !!focused && m !== focused);
+      el.classList.toggle('is-active', !!focused && m === focused);
+    });
+    panel.querySelectorAll('#recoveryTableBody tr').forEach((tr) => {
+      const m = tr.dataset.muscle;
+      tr.classList.toggle('is-dim', !!focused && m !== focused);
+      tr.classList.toggle('is-active', !!focused && m === focused);
+    });
+  }
+
+  panel.addEventListener('click', (e) => {
+    const zone = e.target.closest('.recovery-zone');
+    const row = e.target.closest('#recoveryTableBody tr');
+    const muscle = zone?.dataset.muscle || row?.dataset.muscle;
+    if (muscle) setFocus(muscle);
+  });
+}
+
+function renderRecoveryProgress(workouts) {
+  const panel = document.getElementById('recoveryPanel');
+  if (!panel || typeof computeMuscleRecoverySummary !== 'function') return;
+
+  const soreness = getTodaySorenessForRecovery();
+  let savedTargets = null;
+  try {
+    savedTargets = JSON.parse(localStorage.getItem(`muscleWeeklyTargets_${currentUser}`));
+  } catch {
+    savedTargets = null;
+  }
+
+  const summary = computeMuscleRecoverySummary(workouts, {
+    soreness,
+    weeklyTargets: savedTargets || undefined
+  });
+  const byMuscle = {};
+  summary.forEach((row) => { byMuscle[row.muscle] = row; });
+
+  panel.querySelectorAll('.recovery-zone').forEach((zone) => {
+    const row = byMuscle[zone.dataset.muscle];
+    if (row) zone.style.fill = row.color;
+  });
+
+  const tbody = document.getElementById('recoveryTableBody');
+  if (tbody) {
+    tbody.innerHTML = summary.map((row) => {
+      const pct = Math.round(Math.min(1, row.ratio) * 100);
+      const over = row.sets > row.target;
+      const label = row.muscle.charAt(0).toUpperCase() + row.muscle.slice(1);
+      const daysLabel = row.daysSinceTrained === null
+        ? 'Not trained'
+        : (row.daysSinceTrained === 0 ? 'Today' : `${row.daysSinceTrained}d ago`);
+      return `<tr data-muscle="${row.muscle}">
+        <td class="muscle">${label}</td>
+        <td class="num mono">${row.sets.toFixed(1)} / ${row.target}</td>
+        <td><div class="ratio-track${over ? ' is-over' : ''}"><div class="ratio-fill" style="width:${pct}%"></div></div></td>
+        <td class="recovery-days">${daysLabel}</td>
+        <td><span class="chip"><span class="dot" style="background:${row.color}"></span>${row.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  initRecoveryPanelInteractions();
+}
+
+async function showRecoveryProgress() {
+  setActiveProgress('recoveryProgressBtn');
+  document.getElementById('progressCanvas').style.display = 'none';
+  document.getElementById('exerciseProgress').style.display = 'none';
+  document.getElementById('trainingLoadPanel').style.display = 'none';
+  document.getElementById('recoveryPanel').style.display = 'block';
+  const workouts = await fetchWorkouts();
+  renderRecoveryProgress(workouts);
+  renderProgressComplianceSummary();
+  renderProgressArchetypeSpotlight({
+    workouts: applyDateRange(workouts),
+    workoutHistory: applyDateRange(await fetchWorkoutHistory()),
+    cardioHistory: applyDateRange(await fetchCardioHistory()),
+    bodyweightHistory: applyDateRange(await fetchBodyweightHistory())
+  });
+}
+
       workoutHistory: applyDateRange(workoutHistory),
       cardioHistory: applyDateRange(cardioHistory),
       bodyweightHistory: applyDateRange(bodyweightHistory)
@@ -10924,6 +11123,8 @@ function refreshProgress() {
   const id = activeBtn.id;
   if (id === 'exerciseProgressBtn') {
     // Re-run the chart with the updated date range
+  } else if (id === 'recoveryProgressBtn') {
+    showRecoveryProgress();
     const picker = document.querySelector('#exPicker');
     const metric = document.querySelector('.ex-metric-btn.active')?.dataset.metric || 'weight';
     if (picker) renderExerciseChart(picker.value || null, metric);
@@ -11070,6 +11271,88 @@ async function submitSmartGoalForm(event) {
   renderGoalBar();
   if (typeof renderGoalProgressList === 'function') {
     renderGoalProgressList();
+  }
+}
+
+function getMuscleTargetsStorageKey() {
+  return `muscleWeeklyTargets_${currentUser}`;
+}
+
+function getMuscleTargetKeys() {
+  if (typeof DEFAULT_WEEKLY_MUSCLE_TARGETS === 'object' && DEFAULT_WEEKLY_MUSCLE_TARGETS) {
+    return Object.keys(DEFAULT_WEEKLY_MUSCLE_TARGETS);
+  }
+  return ['chest', 'back', 'shoulders', 'traps', 'biceps', 'triceps', 'forearms', 'quads', 'hamstrings', 'glutes', 'calves', 'adductors', 'abductors', 'abs'];
+}
+
+function loadMuscleTargetsIntoForm() {
+  const defaults = (typeof DEFAULT_WEEKLY_MUSCLE_TARGETS === 'object' && DEFAULT_WEEKLY_MUSCLE_TARGETS) || {};
+  let saved = null;
+  try {
+    saved = JSON.parse(localStorage.getItem(getMuscleTargetsStorageKey()));
+  } catch {
+    saved = null;
+  }
+  getMuscleTargetKeys().forEach((key) => {
+    const input = document.getElementById(`muscleTarget_${key}`);
+    if (!input) return;
+    const raw = (saved && Number.isFinite(saved[key])) ? saved[key] : defaults[key];
+    const value = typeof clampMuscleTarget === 'function' ? clampMuscleTarget(key, raw) : raw;
+    input.value = Number.isFinite(value) ? value : '';
+  });
+}
+
+function saveMuscleWeeklyTargets() {
+  const targets = {};
+  let clampedAny = false;
+  getMuscleTargetKeys().forEach((key) => {
+    const input = document.getElementById(`muscleTarget_${key}`);
+    if (!input || input.value === '') return;
+    const rawValue = Number(input.value);
+    if (!Number.isFinite(rawValue)) return;
+    const clampedValue = typeof clampMuscleTarget === 'function' ? clampMuscleTarget(key, rawValue) : rawValue;
+    if (clampedValue !== rawValue) clampedAny = true;
+    targets[key] = clampedValue;
+    input.value = clampedValue;
+  });
+  localStorage.setItem(getMuscleTargetsStorageKey(), JSON.stringify(targets));
+
+  const feedback = document.getElementById('muscleTargetsFeedback');
+  if (feedback) {
+    feedback.textContent = clampedAny
+      ? 'Weekly targets saved (some values were adjusted to stay within a sane range).'
+      : 'Weekly targets saved.';
+  }
+  if (typeof showToast === 'function') showToast('Weekly muscle targets saved');
+
+  // Keep the Recovery Map in sync if it's the tab currently on screen
+  const recoveryPanel = document.getElementById('recoveryPanel');
+  if (recoveryPanel && recoveryPanel.style.display !== 'none' && typeof showRecoveryProgress === 'function') {
+    showRecoveryProgress();
+  }
+}
+
+function resetMuscleWeeklyTargets() {
+  localStorage.removeItem(getMuscleTargetsStorageKey());
+  loadMuscleTargetsIntoForm();
+  const feedback = document.getElementById('muscleTargetsFeedback');
+  if (feedback) feedback.textContent = 'Reset to defaults.';
+}
+
+function initMuscleTargetsForm() {
+  const grid = document.getElementById('muscleTargetsGrid');
+  if (!grid) return;
+  loadMuscleTargetsIntoForm();
+
+  const saveBtn = document.getElementById('saveMuscleTargetsButton');
+  if (saveBtn && saveBtn.dataset.bound !== '1') {
+    saveBtn.addEventListener('click', saveMuscleWeeklyTargets);
+    saveBtn.dataset.bound = '1';
+  }
+  const resetBtn = document.getElementById('resetMuscleTargetsButton');
+  if (resetBtn && resetBtn.dataset.bound !== '1') {
+    resetBtn.addEventListener('click', resetMuscleWeeklyTargets);
+    resetBtn.dataset.bound = '1';
   }
 }
 

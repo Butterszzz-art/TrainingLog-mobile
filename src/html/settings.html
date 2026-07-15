@@ -226,6 +226,32 @@
         </label>
 
         <button type="submit" style="width:100%;margin-top:8px;">Save SMART Goal</button>
+    <section class="panel profile-section" aria-labelledby="sMuscleTargetsHeading">
+      <h3 id="sMuscleTargetsHeading">Weekly Muscle Set Targets</h3>
+      <p style="font-size:0.83rem;color:var(--secondary-text);margin:0 0 10px;">Sets per week used by the Recovery Map on the Progress tab. Leave the defaults if you're not sure.</p>
+      <div class="profile-field-grid" id="muscleTargetsGrid">
+        <label>Chest<input type="number" id="muscleTarget_chest" min="0" max="24" step="1"></label>
+        <label>Back<input type="number" id="muscleTarget_back" min="0" max="28" step="1"></label>
+        <label>Shoulders<input type="number" id="muscleTarget_shoulders" min="0" max="24" step="1"></label>
+        <label>Traps<input type="number" id="muscleTarget_traps" min="0" max="18" step="1"></label>
+        <label>Biceps<input type="number" id="muscleTarget_biceps" min="0" max="22" step="1"></label>
+        <label>Triceps<input type="number" id="muscleTarget_triceps" min="0" max="20" step="1"></label>
+        <label>Forearms<input type="number" id="muscleTarget_forearms" min="0" max="18" step="1"></label>
+        <label>Quads<input type="number" id="muscleTarget_quads" min="0" max="24" step="1"></label>
+        <label>Hamstrings<input type="number" id="muscleTarget_hamstrings" min="0" max="20" step="1"></label>
+        <label>Glutes<input type="number" id="muscleTarget_glutes" min="0" max="20" step="1"></label>
+        <label>Calves<input type="number" id="muscleTarget_calves" min="0" max="22" step="1"></label>
+        <label>Adductors<input type="number" id="muscleTarget_adductors" min="0" max="14" step="1"></label>
+        <label>Abductors<input type="number" id="muscleTarget_abductors" min="0" max="14" step="1"></label>
+        <label>Abs<input type="number" id="muscleTarget_abs" min="0" max="22" step="1"></label>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+        <button type="button" id="saveMuscleTargetsButton">Save Weekly Targets</button>
+        <button type="button" id="resetMuscleTargetsButton" class="secondary">Reset to Defaults</button>
+      </div>
+      <div id="muscleTargetsFeedback" style="font-size:0.85rem;margin-top:8px;"></div>
+    </section>
+
       </form>
       <div id="smartGoalFeedback" style="font-size:0.9rem;margin-top:8px;"></div>
     </section>

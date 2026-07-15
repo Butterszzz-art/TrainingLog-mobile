@@ -856,6 +856,7 @@ function injectSettingsMarkup() {
       applySettingsToUI(hydrated);
       // Render the Profile Hub summary now that #profileTabContent exists in the DOM
       renderProfileTab();
+      if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
       renderProfileGamificationSummary(container);
       if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
       if (typeof applyTrainingModeClasses === 'function') applyTrainingModeClasses(localStorage.getItem('trainingMode') || 'bodybuilding');
