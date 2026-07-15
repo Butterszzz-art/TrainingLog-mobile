@@ -19,6 +19,9 @@
 .log-subtabs::-webkit-scrollbar { display: none; }
 
 .log-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   flex-shrink: 0;
   padding: 8px 14px;
   border: none;
@@ -31,6 +34,20 @@
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   white-space: nowrap;
+}
+
+/* PREVIEW: icon set replacing emoji labels — see index.html's
+   #logSubtabNav comment. Sized/styled like the bottom nav's .bn-icon. */
+.subtab-icon {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.subtab-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .log-subtab:hover {

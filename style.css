@@ -1256,6 +1256,9 @@ body.theme-dark .set-row {
   flex-wrap: wrap;
 }
 .state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 3px 6px;
@@ -1268,6 +1271,17 @@ body.theme-dark .set-row {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
+}
+.state-icon {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+.state-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .gamification-panel {
