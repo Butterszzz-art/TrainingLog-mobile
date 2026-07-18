@@ -114,6 +114,128 @@
     }, 3200);
   }
 
+  /* ── PDF export ──────────────────────────────────────────────── */
+
+  const SPLIT_LABELS = { fullbody: 'Full Body', upperlower: 'Upper / Lower', ppl: 'Push / Pull / Legs', custom: 'Custom' };
+  const GOAL_LABELS  = { strength: 'Strength', hypertrophy: 'Muscle Growth', 'fat-loss': 'Fat Loss', general: 'General Fitness' };
+
+  function buildProgramReportHTML(program) {
+    const p = program || {};
+    const title = p.title || p.name || 'Untitled Program';
+    const days = Array.isArray(p.days) ? p.days : [];
+    const wdNames = (p.schedule?.weekdays || []).map(d => WEEKDAYS[d - 1]).filter(Boolean).join(', ');
+    const splitLabel = SPLIT_LABELS[p.split?.type] || p.split?.type || '—';
+    const goalLabel = GOAL_LABELS[p.archetype] || p.archetype || '—';
+
+    const dayBlocks = days.length
+      ? days.map(day => {
+          const exercises = Array.isArray(day.exercises) ? day.exercises : [];
+          const exBlocks = exercises.length
+            ? exercises.map(ex => {
+                const sets = Array.isArray(ex.sets) ? ex.sets : [];
+                const setRows = sets.length
+                  ? sets.map((s, i) => `
+                      <tr>
+                        <td>${i + 1}</td>
+                        <td>${s.reps ?? '—'}</td>
+                        <td>${s.weight ?? '—'}</td>
+                        <td>${s.rpe ?? '—'}</td>
+                      </tr>
+                    `).join('')
+                  : `<tr><td colspan="4" style="text-align:center;color:#aaa">No sets</td></tr>`;
+                return `
+                  <div class="ex-block">
+                    <div class="ex-name">${esc(ex.name)} <span class="ex-set-count">${sets.length} set${sets.length !== 1 ? 's' : ''}</span></div>
+                    ${ex.notes ? `<div class="ex-notes">${esc(ex.notes)}</div>` : ''}
+                    <table>
+                      <thead><tr><th>Set</th><th>Reps</th><th>Weight</th><th>RPE</th></tr></thead>
+                      <tbody>${setRows}</tbody>
+                    </table>
+                  </div>
+                `;
+              }).join('')
+            : '<p class="empty-note">No exercises added to this day.</p>';
+          return `
+            <div class="day-section">
+              <h2>${esc(day.name)}</h2>
+              ${day.notes ? `<p class="day-notes">${esc(day.notes)}</p>` : ''}
+              ${exBlocks}
+            </div>
+          `;
+        }).join('')
+      : '<p class="empty-note">No training days added yet.</p>';
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${esc(title)} — Program</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      padding: 32px 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.8rem; color: #2e7d55; margin-bottom: 4px; }
+    h2 { font-size: 1.15rem; color: #2e7d55; margin: 20px 0 8px; border-bottom: 2px solid #2e7d55; padding-bottom: 4px; }
+    .meta { font-size: 0.85rem; color: #666; margin-bottom: 20px; }
+    .day-section { margin-bottom: 20px; page-break-inside: avoid; }
+    .day-notes { font-size: 0.85rem; color: #666; margin-bottom: 10px; font-style: italic; }
+    .ex-block { margin-bottom: 14px; }
+    .ex-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+    .ex-set-count { font-weight: 400; font-size: 0.78rem; color: #888; }
+    .ex-notes { font-size: 0.8rem; color: #666; margin-bottom: 6px; }
+    .empty-note { color: #aaa; font-size: 0.9rem; padding: 8px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 4px; }
+    th { background: #f0faf4; color: #2e7d55; text-align: left; padding: 6px 10px; border-bottom: 2px solid #c8e6c9; }
+    td { padding: 6px 10px; border-bottom: 1px solid #eee; }
+    tr:last-child td { border-bottom: none; }
+    .footer { margin-top: 28px; font-size: 0.75rem; color: #aaa; text-align: center; border-top: 1px solid #eee; padding-top: 12px; }
+    @media print {
+      body { padding: 16px 20px; }
+      .no-print { display: none; }
+      @page { margin: 15mm; }
+    }
+  </style>
+</head>
+<body>
+  <button class="no-print" onclick="window.print()"
+    style="float:right;padding:8px 20px;background:#2e7d55;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;">
+    🖨️ Print / Save PDF
+  </button>
+  <h1>${esc(title)}</h1>
+  <p class="meta">
+    Goal: <strong>${esc(goalLabel)}</strong> &nbsp;·&nbsp;
+    Split: <strong>${esc(splitLabel)}</strong> &nbsp;·&nbsp;
+    Schedule: <strong>${esc(wdNames || 'Not set')}</strong>
+  </p>
+  ${p.progressionNotes ? `<h2>Progression Notes</h2><p style="font-size:0.9rem;">${esc(p.progressionNotes)}</p>` : ''}
+  ${dayBlocks}
+  <div class="footer">Generated by Pocket Coach &nbsp;·&nbsp; ${new Date().toLocaleString()}</div>
+</body>
+</html>`;
+  }
+
+  function exportProgramPDF(program) {
+    const html = buildProgramReportHTML(program);
+    const title = (program && (program.title || program.name)) || 'Program';
+    const filename = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'program';
+    if (typeof window.openReportWindow === 'function') {
+      window.openReportWindow(html, { title, filename: `${filename}.html` });
+    } else {
+      const win = window.open('', '_blank', 'width=960,height=800,scrollbars=yes');
+      if (!win) { showToast('Pop-up blocked — allow pop-ups for this site and try again.', true); return; }
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+    }
+  }
+
   /* ── initProgramTabV2 ────────────────────────────────────────── */
 
   function initProgramTabV2(mountEl) {
@@ -777,7 +899,7 @@
           <td><input type="number" min="1" max="10" step="0.5" value="${s.rpe ?? ''}" placeholder="—"></td>
           <td><button type="button" class="pbv2-del-set-btn" title="Remove set">✕</button></td>
         `;
-        const [, repsInp, weightInp, rpeInp] = tr.querySelectorAll('input');
+        const [repsInp, weightInp, rpeInp] = tr.querySelectorAll('input');
         repsInp.addEventListener('change', e => updateSetField(dayId, ex.exerciseId, idx, 'reps', e.target.value));
         weightInp.addEventListener('change', e => updateSetField(dayId, ex.exerciseId, idx, 'weight', e.target.value));
         rpeInp.addEventListener('change', e => updateSetField(dayId, ex.exerciseId, idx, 'rpe', e.target.value));
@@ -891,6 +1013,7 @@
           </div>
 
           <button type="button" class="pbv2-save-btn" id="pbv2SaveFinalBtn">Save Program ✅</button>
+          <button type="button" class="pbv2-advanced-btn" id="pbv2ExportPdfBtn" style="width:100%;margin-top:8px;">📄 Export as PDF</button>
 
           <details class="pbv2-save-advanced">
             <summary>Advanced — Templates &amp; Client Assignment</summary>
@@ -928,6 +1051,7 @@
       wrap.querySelector('#pbv2AssignNotes').addEventListener('input', e => { advancedForm.assignmentNotes = e.target.value; });
 
       wrap.querySelector('#pbv2SaveFinalBtn').addEventListener('click', saveFinal);
+      wrap.querySelector('#pbv2ExportPdfBtn').addEventListener('click', () => exportProgramPDF(core.normalizeDraft(draft)));
       wrap.querySelector('#pbv2SaveTplBtn').addEventListener('click', saveTemplate);
       wrap.querySelector('#pbv2AssignBtn').addEventListener('click', assignToClient);
 
@@ -996,9 +1120,12 @@
         </div>
         <div class="prog-card-actions">
           <button type="button" class="prog-card-load" data-idx="${origIdx}">Load into Builder</button>
+          <button type="button" class="prog-card-export" data-idx="${origIdx}" title="Export as PDF">📄 PDF</button>
           <button type="button" class="prog-card-del" data-idx="${origIdx}">Delete</button>
         </div>
       `;
+
+      card.querySelector('.prog-card-export').addEventListener('click', () => exportProgramPDF(prog));
 
       card.querySelector('.prog-card-load').addEventListener('click', () => {
         // Load this program into the draft and switch to builder

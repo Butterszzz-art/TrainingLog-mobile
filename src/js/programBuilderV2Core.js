@@ -246,10 +246,10 @@
                   const safeSet = set && typeof set === "object" ? set : {};
                   return {
                     setType: typeof safeSet.setType === "string" && safeSet.setType ? safeSet.setType : "straight",
-                    reps: Number.isFinite(Number(safeSet.reps)) ? Number(safeSet.reps) : null,
-                    weight: Number.isFinite(Number(safeSet.weight)) ? Number(safeSet.weight) : null,
-                    rpe: Number.isFinite(Number(safeSet.rpe)) ? Number(safeSet.rpe) : null,
-                    rir: Number.isFinite(Number(safeSet.rir)) ? Number(safeSet.rir) : null,
+                    reps: safeSet.reps === null || safeSet.reps === undefined || safeSet.reps === "" ? null : (Number.isFinite(Number(safeSet.reps)) ? Number(safeSet.reps) : null),
+                    weight: safeSet.weight === null || safeSet.weight === undefined || safeSet.weight === "" ? null : (Number.isFinite(Number(safeSet.weight)) ? Number(safeSet.weight) : null),
+                    rpe: safeSet.rpe === null || safeSet.rpe === undefined || safeSet.rpe === "" ? null : (Number.isFinite(Number(safeSet.rpe)) ? Number(safeSet.rpe) : null),
+                    rir: safeSet.rir === null || safeSet.rir === undefined || safeSet.rir === "" ? null : (Number.isFinite(Number(safeSet.rir)) ? Number(safeSet.rir) : null),
                     restSec: Number.isFinite(Number(safeSet.restSec)) ? Number(safeSet.restSec) : 120,
                   };
                 }),
