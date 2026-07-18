@@ -943,6 +943,20 @@
 }
 .prog-card-load:hover { background: var(--primary, #5fa87e); color: #0b130d; }
 
+.prog-card-export {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: transparent;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.84rem;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+.prog-card-export:hover { border-color: var(--primary, #5fa87e); color: var(--primary, #5fa87e); }
+
 .prog-card-del {
   padding: 9px 12px;
   border-radius: 8px;
