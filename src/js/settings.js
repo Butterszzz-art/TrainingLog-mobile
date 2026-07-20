@@ -859,13 +859,25 @@ function injectSettingsMarkup() {
       if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
       renderProfileGamificationSummary(container);
       if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
+      if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
       if (typeof applyTrainingModeClasses === 'function') applyTrainingModeClasses(localStorage.getItem('trainingMode') || 'bodybuilding');
+      // Wire up appModeSelect and coachModeToggle here — settings.html is
+      // fetched async so these elements don't exist at DOMContentLoaded.
       const appModeSel = container.querySelector('#appModeSelect');
-      if (appModeSel && typeof getCurrentAppMode === 'function') appModeSel.value = getCurrentAppMode();
-      // Wire up coach mode toggle — must be done here because settings.html
-      // is fetched async, so the element doesn't exist at DOMContentLoaded
-      // when index.html tries to bind it.
       const coachToggle = container.querySelector('#coachModeToggle');
+
+      if (appModeSel && typeof getCurrentAppMode === 'function') {
+        appModeSel.value = getCurrentAppMode();
+        appModeSel.addEventListener('change', (e) => {
+          if (typeof setCurrentAppMode === 'function') setCurrentAppMode(e.target.value);
+          if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
+          if (coachToggle) {
+            coachToggle.checked = typeof isCoachModeEnabled === 'function' && isCoachModeEnabled();
+            coachToggle.disabled = e.target.value !== 'both';
+          }
+        });
+      }
+
       if (coachToggle && typeof isCoachModeEnabled === 'function') {
         coachToggle.checked = isCoachModeEnabled();
         coachToggle.disabled = getCurrentAppMode() !== 'both';
@@ -884,20 +896,6 @@ function injectSettingsMarkup() {
           }
           if (typeof showToast === 'function') {
             showToast(isEnabled ? '🏆 Coach Mode enabled' : 'Coach Mode disabled');
-          }
-        });
-      }
-
-      // Also wire appModeSelect if it isn't already bound by index.html
-      const appModeSel = container.querySelector('#appModeSelect');
-      if (appModeSel && typeof getCurrentAppMode === 'function') {
-        appModeSel.value = getCurrentAppMode();
-        appModeSel.addEventListener('change', (e) => {
-          if (typeof setCurrentAppMode === 'function') setCurrentAppMode(e.target.value);
-          if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
-          if (coachToggle) {
-            coachToggle.checked = typeof isCoachModeEnabled === 'function' && isCoachModeEnabled();
-            coachToggle.disabled = e.target.value !== 'both';
           }
         });
       }

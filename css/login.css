@@ -1,0 +1,267 @@
+/* =============================================================
+   LOGIN SCREEN
+   Full-viewport auth screen shown before the app loads.
+   Zones: branding → tab switcher → form card
+   Depends on: tokens.css
+   ============================================================= */
+
+/* ── Full-screen shell ──────────────────────────────────────── */
+
+.login-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(ellipse at top, rgba(30, 75, 55, 0.35) 0%, #080b0a 55%);
+  box-sizing: border-box;
+}
+
+/* ── Branding block ─────────────────────────────────────────── */
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: rgba(95, 168, 126, 0.12);
+  border: 1.5px solid rgba(95, 168, 126, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  box-shadow: 0 0 28px rgba(95, 168, 126, 0.18);
+}
+
+.login-app-name {
+  margin: 0 0 6px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-color, #e8f5e9);
+}
+
+.login-tagline {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+/* ── Tab switcher ───────────────────────────────────────────── */
+
+.login-tabs {
+  display: flex;
+  background: var(--card-bg, #121b17);
+  border: 1px solid var(--border-color, rgba(132,157,144,0.28));
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.login-tab {
+  flex: 1;
+  padding: 9px 0;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  margin: 0;
+  box-shadow: none;
+  font-family: 'Poppins', sans-serif;
+}
+
+.login-tab:hover {
+  background: rgba(95, 168, 126, 0.08);
+  color: var(--secondary-text, #b8c2bc);
+  transform: none;
+  box-shadow: none;
+}
+
+.login-tab--active {
+  background: var(--primary, #2d7d5b) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(45, 125, 91, 0.35) !important;
+}
+
+/* ── Form card ──────────────────────────────────────────────── */
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--card-bg, #121b17);
+  border: 1px solid var(--border-color, rgba(132,157,144,0.28));
+  border-radius: 20px;
+  padding: 24px 22px 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+}
+
+.login-heading {
+  margin: 0 0 20px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-color, #e8f5e9);
+}
+
+/* ── Fields ─────────────────────────────────────────────────── */
+
+.login-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.login-field-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #7a8f7d);
+}
+
+.login-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 11px;
+  border: 1.5px solid var(--border-color, rgba(132,157,144,0.28));
+  background: rgba(8, 11, 10, 0.6);
+  color: var(--text-color, #e8f5e9);
+  font-size: 0.97rem;
+  font-family: 'Poppins', sans-serif;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.login-input:focus {
+  border-color: var(--primary, #2d7d5b);
+  box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.18);
+}
+
+/* Password row with eye toggle */
+.login-pw-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-pw-wrap .login-input {
+  padding-right: 44px;
+}
+
+.login-pw-eye {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  color: var(--text-muted, #7a8f7d);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.login-pw-eye:hover {
+  color: var(--secondary-text, #b8c2bc);
+  background: none;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ── Error message ──────────────────────────────────────────── */
+
+.login-error {
+  min-height: 1.2em;
+  font-size: 0.82rem;
+  color: #e07070;
+  margin: 8px 0 0;
+  line-height: 1.4;
+}
+
+/* ── Beta notice ────────────────────────────────────────────── */
+
+.login-beta {
+  margin: 10px 0 14px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: rgba(230, 168, 23, 0.07);
+  border: 1px solid rgba(230, 168, 23, 0.22);
+  font-size: 0.74rem;
+  color: #c9961a;
+  line-height: 1.5;
+}
+
+/* ── CTA buttons ────────────────────────────────────────────── */
+
+.login-cta {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #38a870, var(--primary, #2d7d5b));
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: 0 4px 16px rgba(45, 125, 91, 0.35);
+  font-family: 'Poppins', sans-serif;
+  transition: filter 0.15s, transform 0.15s;
+}
+
+.login-cta:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(45, 125, 91, 0.45);
+  background: linear-gradient(135deg, #38a870, var(--primary, #2d7d5b));
+}
+
+.login-cta:active {
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
+
+.login-cta--hidden {
+  display: none !important;
+}
+
+/* ── Pricing link ───────────────────────────────────────────── */
+
+.login-pricing-link {
+  display: block;
+  text-align: center;
+  margin-top: 14px;
+  color: var(--primary, #5fa87e);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+.login-pricing-link:hover {
+  opacity: 1;
+}

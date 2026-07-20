@@ -1,0 +1,138 @@
+/* =============================================================
+   FUNCTIONAL FITNESS TAB
+   Sub-views for CrossFit, HYROX, and Circuits.
+   Depends on: tokens.css
+   ============================================================= */
+
+.func-subview { display: none; }
+.func-subview.active { display: block; }
+
+/* ── HYROX stations ────────────────────────────────────────── */
+
+.hyrox-date-row {
+  margin-bottom: 12px;
+}
+
+.hyrox-stations {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hyrox-station {
+  display: grid;
+  grid-template-columns: 28px 1fr 80px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-bg, #141e17);
+  border-radius: 8px;
+}
+
+.hyrox-station-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hyrox-station:nth-child(odd) .hyrox-station-num {
+  background: rgba(45,125,91,0.3);
+  color: var(--primary);
+}
+
+.hyrox-station-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.hyrox-time-input {
+  margin: 0 !important;
+  padding: 6px 8px !important;
+  font-size: 0.85rem !important;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+}
+
+.hyrox-total {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 14px;
+  padding: 10px;
+  background: rgba(45,125,91,0.08);
+  border-radius: 10px;
+}
+
+/* HYROX history */
+.hyrox-hist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.hyrox-hist-item:last-child { border-bottom: none; }
+
+.hyrox-hist-date {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-color);
+}
+
+.hyrox-hist-total {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.hyrox-hist-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px;
+  margin: 0;
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+.hyrox-hist-delete:hover { opacity: 1; color: #c05060; }
+
+/* ── Circuit builder ───────────────────────────────────────── */
+
+.circuit-ex-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.circuit-ex-input {
+  flex: 1;
+  margin: 0 !important;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+}
+
+.circuit-ex-remove {
+  padding: 6px 10px;
+  margin: 0;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  box-shadow: none;
+}

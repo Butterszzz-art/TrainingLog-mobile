@@ -5,60 +5,362 @@
    Depends on: tokens.css
    ============================================================= */
 
-/* ── Narrower log-form inputs ───────────────────────────────── */
+/* ── Log sub-view padding ───────────────────────────────────── */
 
-/*
- * Constrain the main log inputs to 60% width so they don't stretch
- * the full card on wide viewports.
- */
+#logSub_log {
+  padding-bottom: 20px;
+}
+
+/* ── Workout session timer banner ───────────────────────────── */
+
+.workout-timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 12px 12px;
+  padding: 10px 14px;
+  background: rgba(45, 125, 91, 0.08);
+  border: 1px solid rgba(45, 125, 91, 0.22);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 10px 10px 0;
+}
+
+.workout-timer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.workout-timer-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--secondary-text);
+  font-weight: 600;
+}
+
+.workout-timer-value {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.workout-timer-end {
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: #c05060;
+  border-radius: 8px;
+  color: #fff;
+  border: none;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* ── Coach technique video hint ──────────────────────────────── */
+
+.exercise-video-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  background: rgba(77, 168, 218, 0.08);
+  border: 1px solid rgba(77, 168, 218, 0.25);
+  border-radius: 10px;
+}
+
+.exercise-video-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4da8da;
+  text-decoration: none;
+}
+
+.exercise-video-link:hover {
+  text-decoration: underline;
+}
+
+.exercise-video-note {
+  font-size: 0.75rem;
+  color: var(--text-muted, #7a8f7d);
+}
+
+/* ── Coach "Logging for" client picker ───────────────────────── */
+
+.coach-logfor-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 12px 4px;
+  padding: 8px 14px;
+  background: rgba(77, 168, 218, 0.07);
+  border: 1px solid rgba(77, 168, 218, 0.22);
+  border-left: 3px solid #4da8da;
+  border-radius: 0 10px 10px 0;
+}
+
+.coach-logfor-bar.is-client {
+  background: rgba(77, 168, 218, 0.14);
+  border-color: #4da8da;
+}
+
+.coach-logfor-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #4da8da;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.coach-logfor-select {
+  flex: 1;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(77, 168, 218, 0.35);
+  background: var(--card-bg, #0f1510);
+  color: var(--text, #e8f5e9);
+  font-size: 0.88rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ── Rest timer banner (persistent, above workout timer) ─────── */
+
+.rest-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 12px 4px;
+  padding: 10px 14px 10px 12px;
+  background: rgba(240, 160, 64, 0.07);
+  border: 1px solid rgba(240, 160, 64, 0.22);
+  border-left: 3px solid #f0a040;
+  border-radius: 0 10px 10px 0;
+}
+
+.rest-banner[hidden] { display: none !important; }
+
+/* Circular ring */
+.rest-banner-ring-wrap {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+
+.rest-banner-ring-svg {
+  width: 50px;
+  height: 50px;
+  display: block;
+  transform: rotate(-90deg);
+}
+
+.rest-banner-ring-track {
+  fill: none;
+  stroke: rgba(240, 160, 64, 0.15);
+  stroke-width: 5;
+}
+
+.rest-banner-ring-fill {
+  fill: none;
+  stroke: #f0a040;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s linear;
+}
+
+.rest-banner-ring-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #f0a040;
+  pointer-events: none;
+}
+
+/* Text info */
+.rest-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.rest-banner-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted, #7a8f7d);
+  font-weight: 600;
+}
+
+.rest-banner-time {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f0a040;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* Skip button */
+.rest-banner-skip {
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid rgba(240, 160, 64, 0.35);
+  border-radius: 8px;
+  color: #f0a040;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: 'Poppins', sans-serif;
+  transition: background 0.15s;
+}
+
+.rest-banner-skip:hover {
+  background: rgba(240, 160, 64, 0.1);
+}
+
+/* ── Set option pills (Drop / RP / L/R) ──────────────────────── */
+
+.set-opt-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: transparent;
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.set-opt-pill input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.set-opt-pill:hover {
+  border-color: var(--text-muted, #7a8f7d);
+  color: var(--text, #e8f5e9);
+}
+
+.set-opt-pill:has(input:checked) {
+  background: rgba(95, 168, 126, 0.14);
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+}
+
+.set-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(192, 80, 96, 0.4);
+  background: transparent;
+  color: #c05060;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background 0.15s;
+}
+
+.set-remove-btn:hover {
+  background: rgba(192, 80, 96, 0.12);
+}
+
+/* ── Resistance section ─────────────────────────────────────── */
+
+#resistance-section {
+  display: block;
+  margin-bottom: 20px;
+  padding: 0 12px;
+}
+
+/* ── Form card ──────────────────────────────────────────────── */
+
+.log-form-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(96, 126, 113, 0.36);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.log-form-card input,
+.log-form-card select {
+  width: 100%;
+  margin: 0 0 8px;
+}
+
+/* Sets + unit side-by-side */
+.sets-unit-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+}
+
+.sets-unit-row input,
+.sets-unit-row select {
+  margin: 0 0 8px;
+}
+
+/* Template select — secondary visual weight */
+.log-template-select {
+  color: var(--secondary-text);
+  font-size: 0.88rem;
+  margin-bottom: 8px !important;
+}
+
+/* Full-width Add to Log button */
+.log-add-btn {
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 13px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* Inputs inside resistance inputs don't need the 60% centring */
 #exercise,
 #sets,
 #goal,
 #repGoal,
 #weightUnit,
 #entryDate {
-  width: 60%;
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
-}
-
-/* ── Resistance section grid ────────────────────────────────── */
-
-#resistance-section {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  column-gap: 24px;
-  align-items: start;
-  margin-bottom: 80px;
-}
-
-#resistance-inputs {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-#resistance-inputs input,
-#resistance-inputs select {
   width: 100%;
-  max-width: 100%;
-}
-
-/* ── Workout session timer strip ────────────────────────────── */
-
-.workout-timer {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-  margin: 12px 0 24px;
-  color: var(--text-color);
-}
-
-.workout-timer-value {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.25rem;
+  margin-left: 0;
+  margin-right: 0;
+  display: block;
 }
 
 /* ── Training calendar ──────────────────────────────────────── */
@@ -147,34 +449,6 @@
 /* ── Responsive: single-column below 600 px ─────────────────── */
 
 @media (max-width: 600px) {
-  #resistance-section {
-    display: block;
-  }
-
-  #resistance-section .inputs-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .workout-timer {
-    justify-content: center;
-  }
-
-  #resistance-inputs {
-    flex-direction: column;
-    align-items: stretch;
-    overflow: visible;
-    gap: 8px;
-    padding-bottom: 0;
-  }
-
-  #resistance-inputs input,
-  #resistance-inputs select {
-    flex: none;
-    width: 100%;
-  }
-
   #restTimerSection {
     display: flex;
     gap: 8px;
@@ -248,4 +522,179 @@
   background: rgba(230, 168, 23, 0.07);
   border-radius: 8px;
   border: 1px solid rgba(230, 168, 23, 0.25);
+}
+
+/* ── History filters ───────────────────────────────────────── */
+
+.hist-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.hist-period-pills {
+  display: flex;
+  gap: 4px;
+}
+
+.hist-pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: none;
+}
+
+.hist-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.hist-muscle-select {
+  flex: 1;
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  min-width: 0;
+}
+
+/* ── Session history cards ─────────────────────────────────── */
+
+.session-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.session-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.session-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.session-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-card-date {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.session-card-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.session-card-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-card-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+}
+
+.session-card-chevron {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.session-card.open .session-card-chevron {
+  transform: rotate(90deg);
+}
+
+.session-card-body {
+  display: none;
+  padding: 0 14px 12px;
+}
+
+.session-card.open .session-card-body {
+  display: block;
+}
+
+.session-exercise {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.82rem;
+}
+
+.session-exercise:last-child {
+  border-bottom: none;
+}
+
+.session-ex-name {
+  font-weight: 600;
+  color: var(--text-color);
+  flex: 1;
+}
+
+.session-ex-detail {
+  color: var(--secondary-text);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.session-summary-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.session-summary-item {
+  display: flex;
+  gap: 3px;
+}
+
+.session-summary-val {
+  font-weight: 700;
+  color: var(--secondary-text);
+}
+
+.hist-empty {
+  text-align: center;
+  padding: 16px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ── History sub-views ─────────────────────────────────────── */
+
+.hist-subview {
+  display: none;
+}
+
+.hist-subview.active {
+  display: block;
 }

@@ -18,18 +18,24 @@
 }
 
 .macros-subtab {
-  background: #fff;
-  border: 3px solid #111;
+  background: var(--card-bg, #121b17);
+  border: 1px solid var(--border-color, rgba(132,157,144,0.28));
   border-radius: 18px;
-  padding: 18px 26px;
-  font-weight: 700;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
-  min-width: 180px;
+  min-width: 120px;
   text-align: center;
+  color: var(--secondary-text, #b8c2bc);
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
 .macros-subtab.active {
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #38a870 0%, var(--primary, #2d7d5b) 55%, #245f47 100%);
+  border-color: var(--primary, #2d7d5b);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(45, 125, 91, 0.35);
   transform: translateY(-1px);
 }
 
@@ -79,8 +85,8 @@
 
 .fab {
   position: fixed;
-  bottom: 80px;
-  right: 20px;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -110,7 +116,7 @@
 .heatmap div {
   width:12px;
   height:12px;
-  background:#eee;
+  background: rgba(255,255,255,0.08);
 }
 
 .coach-only {
@@ -199,12 +205,12 @@
 .pbv2-step {
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(0, 0, 0, .1);
-  background: white;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
 }
 
 .pbv2-step.active {
-  border-color: rgba(0, 0, 0, .3);
+  border-color: var(--primary);
   font-weight: 700;
 }
 
@@ -216,14 +222,14 @@
 .pbv2-dayRow {
   padding: 10px;
   border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, .08);
+  border: 1px solid var(--border-color);
   margin-bottom: 8px;
   cursor: pointer;
-  background: white;
+  background: var(--card-bg);
 }
 
 .pbv2-dayRow.active {
-  border-color: rgba(0, 0, 0, .25);
+  border-color: var(--primary);
 }
 
 .pbv2-dayActions button {
@@ -233,9 +239,9 @@
 .pbv2-exCard {
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, .08);
+  border: 1px solid var(--border-color);
   margin-top: 10px;
-  background: white;
+  background: var(--card-bg);
 }
 
 .pbv2-exHeader {
@@ -480,16 +486,16 @@ body.theme-dark .set-menu-btn:hover {
 .set-row-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .set-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  padding: 0.75rem;
-  border-radius: 10px;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
   border: 1px solid var(--border-color);
   background: rgba(0, 0, 0, 0.02);
 }
@@ -519,26 +525,34 @@ body.theme-dark .set-row {
 
 .set-index {
   font-weight: 600;
-  min-width: 48px;
+  font-size: 0.8rem;
+  min-width: 38px;
 }
 
 .set-field {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 90px;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .set-field-label {
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   color: var(--secondary-text);
+  white-space: nowrap;
 }
 
 .set-field input {
-  width: 110px;
+  width: 4.2rem;
   margin: 0;
+  padding: 0.25rem 0.4rem;
+  /* Deliberately kept at 16px, not shrunk further — iOS Safari zooms the
+     whole page in on focus for any input with font-size below 16px, which
+     would be a worse regression than a slightly taller box. */
+  font-size: 1rem;
+  border-radius: 6px;
 }
 
 .set-unit {
@@ -585,8 +599,14 @@ body.theme-dark .set-row {
 .set-complete {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.85rem;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+}
+
+.set-complete input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
 }
 
 .goal-row {
@@ -683,12 +703,13 @@ body.theme-dark .set-row {
 }
 
 @media (max-width: 520px) {
+  /* Deliberately NOT stretching inputs to full width here anymore — that
+     was the main cause of the oversized, spaced-out feel on phones. Weight
+     and Reps now stay compact and sit side by side, like a paper logbook,
+     instead of stacking as two full-width blocks. */
   .set-row {
-    align-items: flex-start;
-  }
-
-  .set-field input {
-    width: 100%;
+    align-items: center;
+    padding: 0.35rem 0.5rem;
   }
 
   .menu-button,
@@ -743,6 +764,16 @@ body.theme-dark .set-row {
 }
 
 .history-back-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--elevated-bg);
+  color: var(--text-color);
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
 .history-item-header {
   display: flex;
   align-items: center;
@@ -920,7 +951,7 @@ body.theme-dark .set-row {
 }
 
 /* Progressive Overload Components */
-.progress-bar{background:#eee;height:10px;border-radius:6px;overflow:hidden;width:100%;}
+.progress-bar{background:rgba(255,255,255,0.1);height:10px;border-radius:6px;overflow:hidden;width:100%;}
 .progress-bar-fill{background:var(--primary);height:100%;width:0;transition:width 0.3s;}
 .progress-text{text-align:center;font-size:0.9rem;margin-top:4px;}
 .streak-counter{text-align:center;font-weight:bold;margin-top:6px;}
@@ -939,8 +970,8 @@ body.theme-dark .set-row {
 }
 
 .modal-content {
-  background: #fff;
-  color: #222;
+  background: var(--card-bg);
+  color: var(--text-color);
   border-radius: 12px;
   padding: 20px;
   width: min(90vw, 420px);
@@ -976,11 +1007,11 @@ body.theme-dark .set-row {
 }
 
 .macro-card {
-  background: #f9f9f9;
-  border: 1px solid #d9d9d9;
+  background: var(--card-bg, #121b17);
+  border: 1px solid var(--border-color, rgba(132,157,144,0.28));
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .macro-card h3 {
@@ -1008,7 +1039,7 @@ body.theme-dark .set-row {
 .macro-helper {
   margin-top: 10px;
   font-size: 0.9rem;
-  color: #4b4b4b;
+  color: var(--secondary-text, #b8c2bc);
 }
 
 .macro-stats {
@@ -1023,7 +1054,7 @@ body.theme-dark .set-row {
 
 .macro-advanced {
   margin-top: 12px;
-  border-top: 1px dashed #c9c9c9;
+  border-top: 1px dashed var(--border-color, rgba(132,157,144,0.28));
   padding-top: 10px;
 }
 
@@ -1070,12 +1101,13 @@ body.theme-dark .set-row {
 }
 
 .macros-mini-tab {
-  border: 1px solid #d6dce8;
-  background: #f2f5fb;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
   border-radius: 999px;
   padding: 8px 14px;
   cursor: pointer;
   font-weight: 600;
+  color: var(--secondary-text);
 }
 
 .macros-mini-tab.is-active {
@@ -1098,118 +1130,192 @@ body.theme-dark .set-row {
   }
 }
 
-/* Advanced set logging UI */
+/* Advanced set logging UI — collapsed by default (see .set-advanced-header
+   click handler in createSetRow) so a plain set is just Weight/Reps/Done,
+   like a paper logbook. Only sets that already have something set (a
+   method, a state, a tag) default open. */
 .set-advanced {
-  margin-top: 8px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  background: #fafafa;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg);
 }
 .set-advanced-header {
-  font-weight: 700;
-  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.set-advanced-header::before {
+  content: '▸';
+  display: inline-block;
+  font-size: 0.7em;
+  transition: transform 0.15s ease;
+}
+.set-advanced.expanded .set-advanced-header::before {
+  transform: rotate(90deg);
+}
+.set-advanced-body {
+  display: none;
+  margin-top: 6px;
+}
+.set-advanced.expanded .set-advanced-body {
+  display: block;
 }
 .adv-row {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .adv-row.single {
   grid-template-columns: 1fr;
 }
 .adv-row input {
   width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  padding: 0.25rem 0.4rem;
+  font-size: 1rem; /* keep >=16px — see .set-field input comment on iOS zoom */
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
 }
 .adv-btn {
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   cursor: pointer;
-  background: #fff;
-  font-size: 12px;
+  background: var(--surface-bg);
+  color: var(--text-color);
+  font-size: 11px;
 }
 .adv-btn.primary {
-  border-color: #1e88e5;
-  background: #1e88e5;
+  border-color: var(--primary);
+  background: var(--primary);
   color: #fff;
 }
 .method-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-  margin-bottom: 6px;
+  gap: 4px;
+  margin-top: 4px;
+  margin-bottom: 4px;
 }
 .method-pill {
-  padding: 6px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
-  border: 1px solid #111;
-  font-size: 12px;
+  border: 1px solid var(--border-color);
+  font-size: 11px;
   cursor: pointer;
-  background: #fff;
+  background: var(--surface-bg);
+  color: var(--secondary-text);
 }
 .method-pill.active {
-  background: #111;
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
 }
 .tag-row {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .tag-chip {
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 3px 8px;
+  font-size: 11px;
   cursor: pointer;
-  background: #fff;
+  background: var(--surface-bg);
+  color: var(--secondary-text);
 }
 .tag-chip.active {
-  border-color: #1e88e5;
-  color: #1e88e5;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 .tag-input {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 .tag-input input {
   width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  padding: 0.25rem 0.4rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
 }
 .set-state {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 6px;
   flex-wrap: wrap;
 }
 .state-btn {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 3px 6px;
   cursor: pointer;
-  background: #fff;
-  font-size: 12px;
+  background: var(--surface-bg);
+  color: var(--secondary-text);
+  font-size: 11px;
 }
 .state-btn.active {
-  border-color: #111;
-  background: #111;
+  border-color: var(--primary);
+  background: var(--primary);
   color: #fff;
+}
+.state-icon {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+.state-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Generic inline icon — sized off the current font-size so it drops into
+   any button/label/title that used to carry an emoji prefix. Sits one line
+   height tall via 1em, vertically centered against adjacent text. */
+.ui-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+}
+.ui-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Icon SVGs injected (via the [data-icon] loader in index.html) directly
+   into a pre-existing sized wrapper (.more-drawer-icon, .ob-arch-icon, etc.)
+   rather than a fresh .ui-icon span — size relative to that wrapper. */
+[data-icon] svg {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.15em;
 }
 
 .gamification-panel {
-  border: 1px solid #e3e8f5;
+  border: 1px solid var(--border-color, rgba(132,157,144,0.28));
   border-radius: 10px;
-  background: #f8faff;
+  background: var(--card-bg, #121b17);
   padding: 10px;
 }
 
@@ -1233,17 +1339,17 @@ body.theme-dark .set-row {
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #64748b;
+  color: var(--text-muted, #8c9891);
 }
 
 .gamification-level {
   font-size: 1.15rem;
-  color: #0f172a;
+  color: var(--text-color, #f4f7f5);
 }
 
 .gamification-muted-row {
   font-size: 0.82rem;
-  color: #475569;
+  color: var(--secondary-text, #b8c2bc);
 }
 
 .gamification-meta-row {
@@ -1252,7 +1358,7 @@ body.theme-dark .set-row {
   gap: 8px;
   flex-wrap: wrap;
   font-size: 0.8rem;
-  color: #334155;
+  color: var(--secondary-text, #b8c2bc);
 }
 
 .gamification-card-title {
@@ -1265,13 +1371,13 @@ body.theme-dark .set-row {
 .gamification-hint-row {
   margin: 0;
   font-size: 0.88rem;
-  color: #2f3a54;
+  color: var(--secondary-text, #b8c2bc);
 }
 
 .gamification-xp-track {
   height: 10px;
   border-radius: 999px;
-  background: #e8edf8;
+  background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
 
@@ -1288,26 +1394,26 @@ body.theme-dark .set-row {
 }
 
 .gamification-stat-chip {
-  border: 1px solid #d9e2f5;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: #fff;
+  background: var(--card-bg);
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 3px;
   font-size: 0.78rem;
-  color: #4b5877;
+  color: var(--secondary-text);
 }
 
 .gamification-stat-chip strong {
-  color: #1f2a44;
+  color: var(--text-color);
   font-size: 0.96rem;
 }
 
 .gamification-mini-summary {
-  border: 1px solid #e3e8f5;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: #fff;
+  background: var(--card-bg);
   padding: 10px;
 }
 
@@ -1316,13 +1422,13 @@ body.theme-dark .set-row {
   flex-wrap: wrap;
   gap: 8px 10px;
   font-size: 0.82rem;
-  color: #334155;
+  color: var(--secondary-text, #b8c2bc);
 }
 
 .gamification-mini-summary-note {
   margin: 8px 0 0;
   font-size: 0.82rem;
-  color: #55627f;
+  color: var(--text-muted, #8c9891);
 }
 
 .gamification-badge-grid {
@@ -1332,11 +1438,12 @@ body.theme-dark .set-row {
 }
 
 .gamification-badge-pill {
-  background: #ffffff;
-  border: 1px solid #dbe2ff;
+  background: rgba(45, 125, 91, 0.15);
+  border: 1px solid rgba(45, 125, 91, 0.35);
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 0.85rem;
+  color: var(--secondary-text);
 }
 
 .gamification-events-feed {
@@ -1350,19 +1457,20 @@ body.theme-dark .set-row {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  background: #fff;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 6px 8px;
   font-size: 0.85rem;
 }
 
 .gamification-event-item small {
-  color: #65708a;
+  color: var(--text-muted);
 }
 
 .gamification-empty {
   margin: 0;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .profile-hub-form {
@@ -1390,18 +1498,18 @@ body.theme-dark .set-row {
 .profile-archetype-current {
   margin: 10px 0 6px;
   font-size: 0.92rem;
-  color: #3f4a64;
+  color: var(--secondary-text);
 }
 
 .profile-archetype-descriptions {
   margin: 0;
   padding: 10px 12px 10px 28px;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(255, 255, 255, 0.03);
   display: grid;
   gap: 6px;
   font-size: 0.86rem;
-  color: #4b5673;
+  color: var(--secondary-text);
 }
 
 .profile-edit-actions {
@@ -1418,7 +1526,8 @@ body.theme-dark .set-row {
 }
 
 .profile-summary-grid div {
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px;
   display: flex;
@@ -1432,12 +1541,12 @@ body.theme-dark .set-row {
 
 .season-archive-empty {
   margin: 0;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .season-archive-summary {
   margin: 0 0 10px;
-  color: #4d5875;
+  color: var(--secondary-text);
 }
 
 .season-archive-list {
@@ -1448,7 +1557,8 @@ body.theme-dark .set-row {
 }
 
 .season-archive-item {
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 10px;
 }
@@ -1462,7 +1572,7 @@ body.theme-dark .set-row {
 
 .season-archive-meta {
   font-size: 0.85rem;
-  color: #5e6a89;
+  color: var(--text-muted);
 }
 
 .season-archive-compare {
@@ -1665,4 +1775,446 @@ body.theme-dark .set-row {
   .checkin-slider-labels {
     font-size: 0.72rem;
   }
+}
+
+/* ── Litepicker dark theme overrides ────────────────────────── */
+.litepicker .container__months {
+  background: var(--card-bg, #121b17) !important;
+  color: var(--text-color, #f4f7f5) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  border: 1px solid var(--border-color, rgba(132,157,144,0.28)) !important;
+}
+.litepicker .month-item-header {
+  color: var(--text-color, #f4f7f5) !important;
+}
+.litepicker .month-item-weekdays-row > div {
+  color: var(--text-muted, #8c9891) !important;
+}
+.litepicker .day-item {
+  color: var(--secondary-text, #b8c2bc) !important;
+}
+.litepicker .day-item:hover {
+  background: rgba(45,125,91,0.2) !important;
+  color: var(--text-color) !important;
+}
+.litepicker .day-item.is-today {
+  color: var(--primary, #2d7d5b) !important;
+  font-weight: 700;
+}
+.litepicker .day-item.is-start-date,
+.litepicker .day-item.is-end-date {
+  background: var(--primary, #2d7d5b) !important;
+  color: #fff !important;
+}
+.litepicker .day-item.is-in-range {
+  background: rgba(45,125,91,0.15) !important;
+  color: var(--text-color) !important;
+}
+.litepicker .day-item.is-locked {
+  color: var(--text-muted, #8c9891) !important;
+  opacity: 0.4;
+}
+.litepicker .container__tooltip {
+  background: var(--card-bg, #121b17) !important;
+  color: var(--text-color, #f4f7f5) !important;
+  border: 1px solid var(--border-color) !important;
+}
+.litepicker button.previous-button,
+.litepicker button.next-button {
+  background: transparent !important;
+  color: var(--secondary-text) !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* ── Archetype Profile Card ────────────────────────────────── */
+
+.apc-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(45,125,91,0.2), rgba(45,125,91,0.08));
+  border: 1px solid rgba(45,125,91,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+.apc-chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(45,125,91,0.25);
+  background: rgba(45,125,91,0.08);
+  color: var(--secondary-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.apc-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 3px 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.apc-cue {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(45,125,91,0.06);
+  border: 1px solid rgba(45,125,91,0.18);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 10px 10px 0;
+  font-size: 0.82rem;
+  color: var(--secondary-text);
+  line-height: 1.45;
+}
+
+.apc-gen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(45,125,91,0.4);
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.apc-gen-btn:hover {
+  background: rgba(45,125,91,0.08);
+  transform: none;
+  box-shadow: none;
+}
+
+/* ── Reminders ─────────────────────────────────────────────── */
+
+.reminder-perm-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(45,125,91,0.08);
+  border: 1px solid rgba(45,125,91,0.25);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+  color: var(--secondary-text);
+}
+
+.reminder-perm-banner.denied {
+  background: rgba(192,80,96,0.08);
+  border-color: rgba(192,80,96,0.25);
+}
+
+.reminder-perm-btn {
+  padding: 6px 16px;
+  margin: 0;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.reminder-item {
+  background: var(--surface-bg, #141e17);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.reminder-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+.reminder-item-label {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-color);
+}
+
+.reminder-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.reminder-toggle input { display: none; }
+
+.reminder-toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: var(--border-color);
+  transition: background 0.2s;
+}
+
+.reminder-toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s;
+}
+
+.reminder-toggle input:checked + .reminder-toggle-track {
+  background: var(--primary);
+}
+
+.reminder-toggle input:checked + .reminder-toggle-track::after {
+  transform: translateX(20px);
+}
+
+.reminder-item-body {
+  padding: 0 14px 12px;
+}
+
+.reminder-item-body.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.reminder-time-row {
+  margin-bottom: 8px;
+}
+
+.reminder-time-input {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  width: auto;
+}
+
+.reminder-days {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.reminder-day {
+  width: 32px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+
+.reminder-day.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.reminder-msg {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Locked feature cards ──────────────────────────────────── */
+
+.locked-feature-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 36px 24px;
+  border: 1px dashed var(--border-color);
+  border-radius: 16px;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.locked-icon { font-size: 2rem; opacity: 0.6; }
+.locked-title { font-size: 1.1rem; font-weight: 600; color: var(--text-color); }
+.locked-desc { font-size: 0.88rem; color: var(--secondary-text); }
+
+.upgrade-cta-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: none;
+}
+
+.upgrade-cta-btn:hover { filter: brightness(1.12); transform: none; }
+
+/* ── Payment method modal ──────────────────────────────────── */
+
+.payment-method-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.payment-method-inner {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 32px 28px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+}
+
+.payment-method-inner h3 { margin: 0 0 6px; font-size: 1.2rem; }
+.payment-sub { color: var(--secondary-text); font-size: 0.85rem; margin: 0 0 24px; }
+
+.pay-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  margin-bottom: 12px;
+  box-shadow: none;
+}
+
+.pay-btn:hover { filter: brightness(1.1); transform: none; }
+.pay-stripe { background: var(--primary); color: #fff; }
+
+.payment-note { font-size: 0.78rem; color: var(--secondary-text); margin: 8px 0 0; }
+
+.close-payment-modal {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--secondary-text);
+  cursor: pointer;
+  box-shadow: none;
+  margin: 0;
+  padding: 4px;
+}
+
+/* ── Referral section ──────────────────────────────────────── */
+
+.referral-link-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.referral-link-input {
+  flex: 1;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  font-family: monospace;
+  margin: 0;
+}
+
+.referral-copy-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* ── Macro toggle cards (Training Day / Refeed Day) ────────── */
+
+.macro-toggle-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border: 2px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--surface-bg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.macro-toggle-card:has(input:checked) {
+  border-color: var(--primary);
+  background: rgba(45, 125, 91, 0.1);
+}
+
+.macro-toggle-icon {
+  font-size: 1.4rem;
+}
+
+.macro-toggle-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+  transition: color 0.15s;
+}
+
+.macro-toggle-card:has(input:checked) .macro-toggle-label {
+  color: var(--primary);
+}
+
+.referral-credit-badge {
+  background: rgba(45,125,91,0.15);
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  color: var(--text-color);
 }

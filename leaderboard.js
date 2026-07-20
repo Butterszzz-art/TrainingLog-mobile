@@ -45,13 +45,14 @@ function buildLocalStats(username) {
   // Workout streak (vacation days count as "kept" so they don't break the streak)
   const workedDates   = new Set(workouts.map(w => w.date).filter(Boolean));
   const _isVacation   = typeof window.isVacationDate === 'function' ? window.isVacationDate : () => false;
+  const _isSick       = typeof window.isSickDate === 'function' ? window.isSickDate : () => false;
   let streak = 0;
   const today = new Date();
   const check = new Date(today);
   check.setHours(0, 0, 0, 0);
   while (true) {
     const ds = check.toISOString().slice(0, 10);
-    if (workedDates.has(ds) || _isVacation(ds)) {
+    if (workedDates.has(ds) || _isVacation(ds) || _isSick(ds)) {
       streak++;
       check.setDate(check.getDate() - 1);
     } else {

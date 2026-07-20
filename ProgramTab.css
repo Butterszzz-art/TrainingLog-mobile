@@ -970,7 +970,142 @@
 }
 .prog-card-del:hover { border-color: #eb5757; color: #eb5757; }
 
-/* ── Builder toast ────────────────────────────────────────────── */
+/* ── AI Analyse button (inside .prog-card-actions) ───────────── */
+.prog-card-analyse {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--primary, #5fa87e);
+  background: rgba(95, 168, 126, 0.1);
+  color: var(--primary, #5fa87e);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.prog-card-analyse:hover  { background: var(--primary, #5fa87e); color: #0b130d; }
+.prog-card-analyse:active { transform: scale(0.96); }
+.prog-card-analyse--locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── AI analysis panel (below the program card) ──────────────── */
+.prog-ai-panel {
+  margin: -6px 14px 14px;
+  border: 1px solid var(--border-color, #2a3a2e);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  background: var(--surface-bg, #141e17);
+  overflow: hidden;
+  animation: prog-ai-reveal 0.22s ease-out;
+}
+
+@keyframes prog-ai-reveal {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.prog-ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+}
+
+.prog-ai-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color, #2a3a2e);
+  border-top-color: var(--primary, #5fa87e);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Verdict box */
+.prog-ai-verdict {
+  margin: 12px 12px 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: rgba(95, 168, 126, 0.12);
+  border: 1px solid rgba(95, 168, 126, 0.25);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-color);
+}
+
+.prog-ai-verdict-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--primary, #5fa87e);
+  margin-bottom: 4px;
+}
+
+/* Issues / Suggestions sections */
+.prog-ai-section {
+  padding: 10px 12px 4px;
+}
+
+.prog-ai-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+  margin-bottom: 6px;
+}
+
+.prog-ai-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 5px;
+  border-radius: 8px;
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border-color, #2a3a2e);
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: var(--text-color);
+}
+
+.prog-ai-item-icon { flex-shrink: 0; font-size: 0.9rem; }
+
+/* Re-analyse button row */
+.prog-ai-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px 12px;
+}
+
+.prog-ai-reanalyse {
+  background: transparent;
+  border: 1px solid var(--border-color, #2a3a2e);
+  color: var(--secondary-text);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+.prog-ai-reanalyse:hover {
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Builder toast ────────────────────────────────────────────── */
 
 #pbv2Toast {
   position: fixed;
@@ -1052,4 +1187,159 @@
   .pbv2-sets-table input[type="number"] { width: 44px; padding: 4px 2px; }
 
   .pbv2-step-label { display: none; } /* too cramped on small screens */
+}
+
+/* ── New stacked exercise builder layout ─────────────────────────── */
+
+/* Horizontal day tab row */
+.pbv2-day-tabs-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 14px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border, #2a3a2e);
+}
+.pbv2-day-tabs-row::-webkit-scrollbar { display: none; }
+
+/* Individual day pill tab */
+.pbv2-day-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--border, #2a3a2e);
+  border-bottom: none;
+  background: transparent;
+  color: var(--text-muted, #7a8f7d);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+.pbv2-day-tab:hover {
+  background: var(--card-bg, #0f1510);
+  color: var(--text, #e8f5e9);
+}
+.pbv2-day-tab.active {
+  background: var(--card-bg, #0f1510);
+  color: var(--primary, #5fa87e);
+  border-color: var(--primary, #5fa87e);
+}
+
+/* Exercise count badge on the tab */
+.pbv2-day-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--primary, #5fa87e);
+  color: #0b130d;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+/* Inline rename/delete actions inside the tab pill */
+.pbv2-day-tab-actions {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  margin-left: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pbv2-day-tab:hover .pbv2-day-tab-actions,
+.pbv2-day-tab.active .pbv2-day-tab-actions {
+  opacity: 1;
+}
+.pbv2-day-tab-actions span {
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 3px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.pbv2-day-tab-actions span:hover {
+  background: var(--surface-bg, #141e17);
+}
+
+/* Add-day pill (+ tab) */
+.pbv2-day-tab-add {
+  border-style: dashed;
+  color: var(--text-muted, #7a8f7d);
+  opacity: 0.7;
+}
+.pbv2-day-tab-add:hover { opacity: 1; }
+
+/* Vertical exercise stack — full-width scrollable body */
+.pbv2-ex-stack {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Added-exercises section at the top of the stack */
+.pbv2-added-section {
+  background: var(--surface-bg, #141e17);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.pbv2-added-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #7a8f7d);
+  margin-bottom: 8px;
+}
+
+.pbv2-added-empty {
+  font-size: 0.85rem;
+  color: var(--text-muted, #7a8f7d);
+  text-align: center;
+  padding: 14px 0;
+  opacity: 0.7;
+}
+
+/* ── AI generator equipment pill toggles ─────────────────────────── */
+
+.pag-eq-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border, #2a3a2e);
+  background: transparent;
+  color: var(--text-muted, #7a8f7d);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+.pag-eq-pill.active {
+  background: rgba(95, 168, 126, 0.12);
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+}
+.pag-eq-pill:hover:not(.active) {
+  border-color: var(--text-muted, #7a8f7d);
+  color: var(--text, #e8f5e9);
 }

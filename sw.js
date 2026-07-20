@@ -1,18 +1,43 @@
 /* =============================================================
    SERVICE WORKER — Pocket Coach
    Cache-first for the app shell; network-first for API calls.
+   Queues failed POST/PUT requests for background sync.
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v1';
+const CACHE_VERSION = 'pocket-coach-v4';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
+const CACHE_API     = `${CACHE_VERSION}-api`;
 
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/css/features.css',
-  '/css/ui-declutter.css',
+  '/style.css',
   '/ProgramTab.css',
+  '/offline.js',
+  // CSS modules
+  '/css/tokens.css',
+  '/css/base.css',
+  '/css/nav.css',
+  '/css/login.css',
+  '/css/onboarding.css',
+  '/css/tutorial.css',
+  '/css/sleep.css',
+  '/css/tabs.css',
+  '/css/home.css',
+  '/css/log.css',
+  '/css/training-mode.css',
+  '/css/ui-declutter.css',
+  '/css/features.css',
+  '/css/community-share.css',
+  '/css/archetype-features.css',
+  '/css/cardio.css',
+  '/css/coaching.css',
+  '/css/powerlifting.css',
+  '/css/progress.css',
+  '/css/ai-coach.css',
+  '/css/checkin.css',
+  // JS modules
   '/src/js/ui-declutter.js',
   '/src/js/pr-tracker.js',
   '/src/js/workout-intelligence.js',
@@ -26,6 +51,23 @@ const APP_SHELL = [
   '/src/js/progress-report.js',
   '/src/js/ProgramTabV2.js',
   '/src/js/programBuilderV2Core.js',
+  '/src/js/crossfit.js',
+  '/src/js/community-feed.js',
+  '/src/js/today-program.js',
+  '/src/js/session-context.js',
+  '/src/js/programs.js',
+  '/src/js/workout-archiver.js',
+  '/src/js/archetype-features.js',
+  '/src/js/native-ui.js',
+  '/src/js/coaching-enhanced.js',
+  '/src/js/settings.js',
+  '/src/js/mobility.js',
+  '/src/js/ai-coach.js',
+  '/src/js/archetype-config.js',
+  '/src/js/friends.js',
+  '/src/js/rehab.js',
+  '/css/friends.css',
+  '/css/rehab.css',
 ];
 
 /* ── Install: pre-cache app shell ─────────────────────────── */
@@ -33,7 +75,6 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_STATIC).then((cache) => {
-      // addAll fails if any request fails — use individual adds for resilience
       return Promise.allSettled(
         APP_SHELL.map((url) => cache.add(url).catch(() => {}))
       );
@@ -48,69 +89,96 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k.startsWith('pocket-coach-') && k !== CACHE_STATIC)
+          .filter((k) => k.startsWith('pocket-coach-') && k !== CACHE_STATIC && k !== CACHE_API)
           .map((k) => caches.delete(k))
       )
     ).then(() => self.clients.claim())
   );
 });
 
-/* ── Fetch: cache-first for app shell, network-first for API */
+/* ── Fetch strategy ───────────────────────────────────────── */
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Always hit the network for external API calls (USDA, Airtable, etc.)
-  if (url.origin !== location.origin) {
+  // Skip non-GET requests (POST/PUT handled by offline queue in main thread)
+  if (request.method !== 'GET') return;
+
+  // API GET requests: network-first, fall back to cached response
+  if (url.pathname.startsWith('/api/') || url.origin !== location.origin) {
     event.respondWith(
-      fetch(request).catch(() => caches.match(request))
+      fetch(request)
+        .then((response) => {
+          if (response.ok && url.origin !== location.origin) {
+            const clone = response.clone();
+            caches.open(CACHE_API).then((c) => c.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }
 
-  // Cache-first for same-origin static assets
+  // Navigation requests (HTML pages): network-first so users always get latest
+  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(request).then(c => c || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // Static assets (JS, CSS, images): cache-first with background update
   event.respondWith(
     caches.match(request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(request).then((response) => {
-        // Only cache successful GET responses for same-origin assets
+      const fetchPromise = fetch(request).then((response) => {
         if (
           response.ok &&
-          request.method === 'GET' &&
           (url.pathname.endsWith('.js') ||
            url.pathname.endsWith('.css') ||
-           url.pathname.endsWith('.html') ||
            url.pathname.endsWith('.ico') ||
-           url.pathname === '/')
+           url.pathname.endsWith('.json'))
         ) {
           const clone = response.clone();
           caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
         }
         return response;
-      }).catch(() => {
-        // Offline fallback: serve index.html for navigation requests
-        if (request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-      });
+      }).catch(() => null);
+
+      if (cached) {
+        fetchPromise; // stale-while-revalidate for JS/CSS
+        return cached;
+      }
+
+      return fetchPromise.then((resp) => resp || undefined);
     })
   );
 });
 
-/* ── Background sync: queue failed Airtable writes ──────── */
+/* ── Background sync ──────────────────────────────────────── */
 
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-workout-data') {
-    event.waitUntil(_flushOfflineQueue());
+  if (event.tag === 'sync-offline-queue') {
+    event.waitUntil(_notifyClients());
   }
 });
 
-async function _flushOfflineQueue() {
-  // Offline queue is managed by the main thread via localStorage.
-  // When back online, the main app will detect connectivity and retry.
-  // This event just signals the app to do so.
+async function _notifyClients() {
   const clients = await self.clients.matchAll();
   clients.forEach((c) => c.postMessage({ type: 'SYNC_READY' }));
 }
+
+/* ── Push notification placeholder ────────────────────────── */
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

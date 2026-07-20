@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const { upload, extractKnowledgeWithClaude, saveToAirtable, getActiveModules } = require('./knowledgeBase');
 
 dotenv.config();
 
@@ -238,6 +239,21 @@ app.get('/health', (req, res) => {
       AIRTABLE_USERS_TABLE: process.env.AIRTABLE_USERS_TABLE || '(default: Users)',
     },
     fix: ok ? null : 'Add the missing variables in Render → your service → Environment, then redeploy.',
+
+// Open endpoint — shows which env vars are set without exposing values.
+app.get('/health', (req, res) => {
+  const checks = {
+    AIRTABLE_TOKEN:   !!process.env.AIRTABLE_TOKEN,
+    AIRTABLE_BASE_ID: !!process.env.AIRTABLE_BASE_ID,
+    JWT_SECRET:       !!process.env.JWT_SECRET,
+    AIRTABLE_USERS_TABLE: process.env.AIRTABLE_USERS_TABLE || '(default: Users)',
+  };
+  const allOk = checks.AIRTABLE_TOKEN && checks.AIRTABLE_BASE_ID;
+  res.status(allOk ? 200 : 503).json({
+    status: allOk ? 'ok' : 'misconfigured',
+    checks,
+    missing: Object.entries(checks).filter(([, v]) => v === false).map(([k]) => k),
+    hint: allOk ? 'All required env vars are set.' : 'Set the missing env vars in your Render dashboard under Environment.',
   });
 });
 
@@ -534,6 +550,10 @@ const leaderboard = [
 ];
 app.get('/leaderboard', (req, res) => res.json(leaderboard));
 
+// ── AI routes ────────────────────────────────────────────────────────────────
+const aiRoutes = require('./src/routes/ai');
+app.use('/api/ai', aiRoutes);
+
 // ── Airtable proxy ───────────────────────────────────────────────────────────
 app.all('/airtable/:baseId/:table', async (req, res) => {
   const airtable = getAirtableEnv();
@@ -626,6 +646,96 @@ app.post('/ai/chat', requireAuth, aiChatLimiter, async (req, res) => {
   } catch (err) {
     console.error('[AI Chat] Error:', err.message);
     return res.status(502).json({ error: 'AI request failed', details: err.message });
+// ── Knowledge Base routes ────────────────────────────────────────────────────
+
+// POST /admin/ingest-pdf — upload and process a PDF module
+app.post('/admin/ingest-pdf', upload.single('pdf'), async (req, res) => {
+  try {
+    const { moduleName, topic } = req.body;
+
+    if (!req.file) return res.status(400).json({ error: 'No PDF file received' });
+    if (!moduleName) return res.status(400).json({ error: 'moduleName is required' });
+    if (!topic) return res.status(400).json({ error: 'topic is required' });
+
+    const airtable = getAirtableEnv();
+    if (airtable.error) return res.status(500).json({ error: airtable.error });
+
+    const pdfData = await pdfParse(req.file.buffer);
+    const text = pdfData.text;
+
+    if (!text || text.trim().length < 100) {
+      return res.status(422).json({ error: 'PDF appears to be empty or unreadable' });
+    }
+
+    const extracted = await extractKnowledgeWithClaude(text, moduleName, topic);
+
+    const record = await saveToAirtable(airtable.token, airtable.baseId, {
+      ModuleName: moduleName,
+      Topic: topic,
+      SourceFile: req.file.originalname,
+      ExtractedJSON: JSON.stringify(extracted),
+      Version: 1,
+      ProcessedAt: new Date().toISOString().slice(0, 10),
+      IsActive: true
+    });
+
+    res.json({
+      success: true,
+      recordId: record.id,
+      moduleName,
+      topic,
+      fieldsExtracted: Object.keys(extracted).filter(k =>
+        Array.isArray(extracted[k]) ? extracted[k].length > 0 : !!extracted[k]
+      )
+    });
+
+  } catch (err) {
+    console.error('[KnowledgeBase] Ingest error:', err);
+    res.status(500).json({ error: 'Ingestion failed', details: err.message });
+  }
+});
+
+// GET /admin/knowledge-modules — list all ingested modules
+app.get('/admin/knowledge-modules', async (req, res) => {
+  try {
+    const airtable = getAirtableEnv();
+    if (airtable.error) return res.status(500).json({ error: airtable.error });
+
+    const modules = await getActiveModules(airtable.token, airtable.baseId);
+    res.json({ modules });
+  } catch (err) {
+    console.error('[KnowledgeBase] Fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch modules' });
+  }
+});
+
+// GET /knowledge-context?topics=training,nutrition — used by AI router
+app.get('/knowledge-context', async (req, res) => {
+  try {
+    const airtable = getAirtableEnv();
+    if (airtable.error) return res.status(500).json({ error: airtable.error });
+
+    const topicsParam = req.query.topics;
+    const topics = topicsParam ? topicsParam.split(',').map(t => t.trim()) : null;
+
+    let allModules = [];
+    if (topics && topics.length > 0) {
+      const fetches = topics.map(t => getActiveModules(airtable.token, airtable.baseId, t));
+      const results = await Promise.all(fetches);
+      allModules = results.flat();
+    } else {
+      allModules = await getActiveModules(airtable.token, airtable.baseId);
+    }
+
+    const context = allModules.reduce((acc, mod) => {
+      acc[mod.moduleName] = mod.extractedJSON;
+      return acc;
+    }, {});
+
+    res.json({ context, modulesLoaded: allModules.map(m => m.moduleName) });
+  } catch (err) {
+    console.error('[KnowledgeBase] Context error:', err);
+    res.status(500).json({ error: 'Failed to build knowledge context' });
   }
 });
 

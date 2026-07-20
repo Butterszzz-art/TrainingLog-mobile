@@ -1761,6 +1761,104 @@
   margin: 0 6px;
 }
 
+/* ── Weekly breakdown card ── */
+.wt-weekly-card {
+  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--border, #2a3a2e);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 10px;
+}
+
+.wt-weekly-header {
+  margin-bottom: 10px;
+}
+
+.wt-weekly-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+}
+
+.wt-weekly-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.wt-week-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface-bg, #141e17);
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.wt-week-label {
+  color: var(--secondary-text, #b8c2bc);
+  font-weight: 600;
+}
+
+.wt-week-avg {
+  color: var(--text, #e8f5e9);
+  font-weight: 700;
+  text-align: right;
+}
+
+.wt-week-change {
+  font-weight: 700;
+  text-align: right;
+  min-width: 55px;
+}
+
+.wt-week-change.up { color: #eb5757; }
+.wt-week-change.down { color: var(--primary, #5fa87e); }
+.wt-week-change.flat { color: var(--text-muted, #7a8f7d); }
+
+.wt-week-count {
+  color: var(--text-muted, #7a8f7d);
+  font-size: 0.7rem;
+  text-align: right;
+  min-width: 20px;
+}
+
+.wt-rate-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #2a3a2e);
+}
+
+.wt-rate-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.wt-rate-val {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text, #e8f5e9);
+}
+
+.wt-rate-val.wt-gaining { color: #eb5757; }
+.wt-rate-val.wt-losing  { color: var(--primary, #5fa87e); }
+.wt-rate-val.wt-stable   { color: var(--highlight, #c6944f); }
+
+.wt-rate-lbl {
+  font-size: 0.62rem;
+  color: var(--text-muted, #7a8f7d);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
 /* ── Entry card ── */
 .wt-entry-card {
   background: var(--card-bg, #0f1510);

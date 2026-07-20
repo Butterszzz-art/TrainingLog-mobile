@@ -10,6 +10,15 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
 
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
     environment:
       # ── Uncomment + fill in once you have an Apple Developer account ──
       # ios_signing:
@@ -134,6 +143,15 @@ workflows:
     name: Pocket Coach – Android
     max_build_duration: 60
     instance_type: linux_x2
+
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
 
     environment:
       vars:
