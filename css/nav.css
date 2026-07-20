@@ -192,7 +192,15 @@
 }
 
 .more-drawer-icon {
-  font-size: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 20px;
+  line-height: 1;
+  overflow: hidden;
+  font-family: 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', 'Poppins', sans-serif;
 }
 
 .more-drawer-logout {

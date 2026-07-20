@@ -207,6 +207,28 @@
   font-size: 1.05rem;
 }
 
+.coach-dashboard-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.coach-add-client-btn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: none;
+}
+
 .coach-dashboard-subtitle {
   margin: 0;
   color: var(--secondary-text);

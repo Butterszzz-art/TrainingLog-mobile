@@ -2672,6 +2672,143 @@
 
   <div id="progressTab" class="tab-content">
     <h2>Progress Overview</h2>
+    <div class="progress-layout">
+      <div id="progressTogglePanel" class="panel active">
+      <nav class="progress-nav">
+        <button id="workoutProgressBtn" onclick="showWorkoutProgress()">Workout</button>
+        <button id="cardioProgressBtn" onclick="showCardioProgress()">Cardio</button>
+        <button id="bodyweightProgressBtn" onclick="showBodyweightProgress()">Bodyweight</button>
+        <button id="recoveryProgressBtn" onclick="showRecoveryProgress()">Recovery</button>
+        <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
+        <input type="date" id="startRange" onchange="refreshProgress()">
+        <input type="date" id="endRange" onchange="refreshProgress()">
+      </nav>
+      </div>
+      <div id="progressChartsPanel" class="panel">
+      <section class="progress-chart">
+        <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
+        <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
+        <canvas id="progressCanvas" height="220"></canvas>
+        <div id="exerciseProgress" style="display:none;"></div>
+        <div id="trainingLoadPanel" style="margin-top:14px;">
+          <h3 style="margin-bottom:6px;">Training Stress
+            <span title="Monotony = mean daily load / standard deviation of daily load. Strain = monotony × weekly load." style="cursor:help;">ⓘ</span>
+          </h3>
+          <p style="margin:0 0 8px; font-size:.9rem;">
+            <strong title="Higher values indicate less day-to-day variation in training load.">Monotony</strong> and
+            <strong title="Strain combines weekly work and monotony to estimate total stress.">Strain</strong> are calculated from weekly volume and intensity load.
+          </p>
+          <canvas id="monotonyCanvas" height="180" style="max-height:180px; margin-bottom:10px;"></canvas>
+          <canvas id="strainCanvas" height="180" style="max-height:180px;"></canvas>
+          <div id="loadAlerts" style="margin-top:8px;"></div>
+        <div id="recoveryPanel" class="recovery-panel" style="display:none;">
+          <h3 style="margin-bottom:6px;">Recovery Map</h3>
+          <p class="recovery-sub">Trailing 7-day set volume and estimated fatigue per muscle group.</p>
+          <div class="recovery-figures">
+            <div class="recovery-figure-col">
+              <svg viewBox="0 0 220 440" xmlns="http://www.w3.org/2000/svg">
+                <circle class="recovery-neutral" cx="110" cy="30" r="20"></circle>
+                <rect class="recovery-neutral" x="100" y="48" width="20" height="12" rx="4"></rect>
+
+                <circle class="recovery-zone" data-muscle="shoulders" cx="58" cy="72" r="17"></circle>
+                <circle class="recovery-zone" data-muscle="shoulders" cx="162" cy="72" r="17"></circle>
+
+                <rect class="recovery-zone" data-muscle="biceps" x="30" y="76" width="24" height="64" rx="12"></rect>
+                <rect class="recovery-zone" data-muscle="biceps" x="166" y="76" width="24" height="64" rx="12"></rect>
+
+                <rect class="recovery-zone" data-muscle="chest" x="72" y="66" width="76" height="56" rx="18"></rect>
+                <rect class="recovery-zone" data-muscle="abs" x="84" y="126" width="52" height="56" rx="14"></rect>
+
+                <rect class="recovery-zone" data-muscle="forearms" x="24" y="144" width="22" height="64" rx="11"></rect>
+                <rect class="recovery-zone" data-muscle="forearms" x="174" y="144" width="22" height="64" rx="11"></rect>
+                <circle class="recovery-neutral" cx="35" cy="216" r="11"></circle>
+                <circle class="recovery-neutral" cx="185" cy="216" r="11"></circle>
+
+                <rect class="recovery-neutral" x="78" y="182" width="64" height="22" rx="10"></rect>
+
+                <rect class="recovery-zone" data-muscle="quads" x="62" y="204" width="34" height="110" rx="16"></rect>
+                <rect class="recovery-zone" data-muscle="quads" x="124" y="204" width="34" height="110" rx="16"></rect>
+                <rect class="recovery-zone" data-muscle="adductors" x="96" y="214" width="28" height="70" rx="12"></rect>
+
+                <circle class="recovery-neutral" cx="79" cy="320" r="12"></circle>
+                <circle class="recovery-neutral" cx="141" cy="320" r="12"></circle>
+                <rect class="recovery-neutral" x="68" y="326" width="24" height="86" rx="10"></rect>
+                <rect class="recovery-neutral" x="128" y="326" width="24" height="86" rx="10"></rect>
+                <rect class="recovery-neutral" x="64" y="412" width="32" height="14" rx="6"></rect>
+                <rect class="recovery-neutral" x="124" y="412" width="32" height="14" rx="6"></rect>
+              </svg>
+              <p class="recovery-figure-label">FRONT</p>
+            </div>
+            <div class="recovery-figure-col">
+              <svg viewBox="0 0 220 440" xmlns="http://www.w3.org/2000/svg">
+                <circle class="recovery-neutral" cx="110" cy="30" r="20"></circle>
+                <rect class="recovery-neutral" x="100" y="48" width="20" height="12" rx="4"></rect>
+
+                <rect class="recovery-zone" data-muscle="traps" x="88" y="64" width="44" height="30" rx="8"></rect>
+                <circle class="recovery-zone" data-muscle="shoulders" cx="58" cy="72" r="17"></circle>
+                <circle class="recovery-zone" data-muscle="shoulders" cx="162" cy="72" r="17"></circle>
+
+                <rect class="recovery-zone" data-muscle="triceps" x="30" y="76" width="24" height="64" rx="12"></rect>
+                <rect class="recovery-zone" data-muscle="triceps" x="166" y="76" width="24" height="64" rx="12"></rect>
+
+                <rect class="recovery-zone" data-muscle="back" x="72" y="92" width="76" height="90" rx="20"></rect>
+
+                <rect class="recovery-zone" data-muscle="forearms" x="24" y="144" width="22" height="64" rx="11"></rect>
+                <rect class="recovery-zone" data-muscle="forearms" x="174" y="144" width="22" height="64" rx="11"></rect>
+                <circle class="recovery-neutral" cx="35" cy="216" r="11"></circle>
+                <circle class="recovery-neutral" cx="185" cy="216" r="11"></circle>
+
+                <rect class="recovery-zone" data-muscle="glutes" x="74" y="184" width="72" height="44" rx="20"></rect>
+
+                <rect class="recovery-zone" data-muscle="hamstrings" x="66" y="214" width="34" height="100" rx="16"></rect>
+                <rect class="recovery-zone" data-muscle="hamstrings" x="120" y="214" width="34" height="100" rx="16"></rect>
+                <rect class="recovery-zone" data-muscle="abductors" x="58" y="214" width="16" height="90" rx="8"></rect>
+                <rect class="recovery-zone" data-muscle="abductors" x="146" y="214" width="16" height="90" rx="8"></rect>
+
+                <circle class="recovery-neutral" cx="79" cy="320" r="12"></circle>
+                <circle class="recovery-neutral" cx="141" cy="320" r="12"></circle>
+                <rect class="recovery-zone" data-muscle="calves" x="68" y="326" width="24" height="86" rx="10"></rect>
+                <rect class="recovery-zone" data-muscle="calves" x="128" y="326" width="24" height="86" rx="10"></rect>
+                <rect class="recovery-neutral" x="64" y="412" width="32" height="14" rx="6"></rect>
+                <rect class="recovery-neutral" x="124" y="412" width="32" height="14" rx="6"></rect>
+              </svg>
+              <p class="recovery-figure-label">BACK</p>
+            </div>
+          </div>
+          <div class="recovery-legend">
+            <div class="recovery-legend-bar"></div>
+            <div class="recovery-legend-labels">
+              <span>Fresh</span><span>Moderate</span><span>Fatigued</span><span>Overreached</span>
+            </div>
+          </div>
+          <p class="recovery-hint">Tap a muscle to isolate it in the table below</p>
+          <div class="recovery-table-wrap">
+            <table class="recovery-table">
+              <thead>
+                <tr><th>Muscle</th><th class="num">Sets</th><th>Volume</th><th>Last trained</th><th>Status</th></tr>
+              </thead>
+              <tbody id="recoveryTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        </div>
+        <div id="bodybuildingProgressPanel"></div>
+        <div id="goalBar" style="margin-top:10px;"></div>
+        <div id="goalProgressList" style="margin-top:10px;"></div>
+        <div id="coachCorner" style="margin-top:10px;"></div>
+      </section>
+      <aside class="progress-calendar">
+        <div id="progressCalendar"></div>
+        <label for="prTimeframe" style="display:block;margin-top:10px;">PR Timeframe</label>
+        <select id="prTimeframe" onchange="renderPRs()" style="width:100%;margin-bottom:8px;">
+          <option value="all">All time</option>
+          <option value="year">Last year</option>
+        </select>
+        <div id="prPanel"></div>
+        <div id="milestoneBadges"></div>
+        <div id="gamificationBadgeSection" class="gamification-panel" style="margin-top:12px;">
+          <h3 style="margin:0 0 8px;">Badge Gallery</h3>
+          <div id="gamificationBadgeGallery" class="gamification-badge-grid"></div>
 
     <!-- Progress mini-tab nav -->
     <nav class="log-subtabs" id="progressSubNav">
@@ -4235,6 +4372,7 @@ function showTab(tabName) {
       }
       const coachModeToggle = document.getElementById('coachModeToggle');
       if (coachModeToggle) {
+      if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
         coachModeToggle.checked = isCoachModeEnabled();
         coachModeToggle.disabled = getCurrentAppMode() !== 'both';
       }
@@ -9851,9 +9989,18 @@ function normalizeCoachClientRecord(client = {}) {
   };
 }
 
+function getManualCoachClients() {
+  try { return JSON.parse(localStorage.getItem('coachManualClients_v1')) || []; } catch { return []; }
+}
+
+function saveManualCoachClients(list) {
+  localStorage.setItem('coachManualClients_v1', JSON.stringify(list));
+}
+
 async function loadCoachClients() {
   const coachId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'coach';
   const fallback = getCoachDemoClients().map(normalizeCoachClientRecord);
+  const manual = getManualCoachClients().map(normalizeCoachClientRecord);
   const base = (window.SERVER_URL || '').replace(/\/$/, '');
   const endpoint = `${base}/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
 
@@ -9868,16 +10015,16 @@ async function loadCoachClients() {
         : [];
 
     if (!list.length) {
-      return { clients: fallback, source: 'demo' };
+      return { clients: [...manual, ...fallback], source: 'demo' };
     }
 
     return {
-      clients: list.map(normalizeCoachClientRecord),
+      clients: [...manual, ...list.map(normalizeCoachClientRecord)],
       source: 'backend'
     };
   } catch (error) {
     console.info('[CoachDashboard] falling back to demo roster data.', error);
-    return { clients: fallback, source: 'demo' };
+    return { clients: [...manual, ...fallback], source: 'demo' };
   }
 }
 
@@ -10718,7 +10865,10 @@ function renderCoachDashboardView() {
     ? renderCoachClientDetail(selectedClient)
     : `
       <section class="coach-dashboard-header">
-        <h3 class="coach-dashboard-title">Client Roster Overview</h3>
+        <div class="coach-dashboard-header-row">
+          <h3 class="coach-dashboard-title">Client Roster Overview</h3>
+          <button type="button" class="coach-add-client-btn" onclick="openAddClientModal()">+ Add Client</button>
+        </div>
         <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action · ${watchCount} on watch</p>
       </section>
       ${renderCoachClientRoster(clients)}
@@ -10744,6 +10894,78 @@ window.renderCoachDashboard = renderCoachDashboard;
 window.renderCoachClientRoster = renderCoachClientRoster;
 window.renderCoachClientCard = renderCoachClientCard;
 window.renderCoachClientDetail = renderCoachClientDetail;
+
+/* ── Add Client modal ──────────────────────────────────────── */
+
+window.closeAddClientModal = function() {
+  document.getElementById('addClientModalOverlay')?.remove();
+};
+
+window.openAddClientModal = function() {
+  closeAddClientModal();
+  const modal = document.createElement('div');
+  modal.className = 'gdpr-modal-overlay';
+  modal.id = 'addClientModalOverlay';
+  modal.innerHTML = `
+    <div class="gdpr-modal">
+      <h3>Add New Client</h3>
+      <p>Add someone to your roster to start tracking their check-ins and assigning programs.</p>
+      <div class="add-client-form">
+        <label for="addClientName">Name *</label>
+        <input type="text" id="addClientName" placeholder="Client name" maxlength="80">
+        <label for="addClientEmail">Email or username</label>
+        <input type="text" id="addClientEmail" placeholder="client@example.com">
+        <label for="addClientArchetype">Archetype</label>
+        <select id="addClientArchetype">
+          <option value="Bodybuilder">Bodybuilder</option>
+          <option value="Powerlifter">Powerlifter</option>
+          <option value="Hybrid">Hybrid</option>
+          <option value="General" selected>General Fitness</option>
+        </select>
+        <label for="addClientPhase">Current phase</label>
+        <input type="text" id="addClientPhase" placeholder="e.g. Base Build · Week 1">
+      </div>
+      <div class="gdpr-modal-actions">
+        <button class="gdpr-export-btn" onclick="closeAddClientModal()">Cancel</button>
+        <button class="gdpr-save-btn" onclick="submitAddClient()">Add Client</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('addClientName')?.focus();
+};
+
+window.submitAddClient = function() {
+  const nameInput = document.getElementById('addClientName');
+  const name = nameInput?.value.trim() || '';
+  if (!name) {
+    if (window.showToast) window.showToast('Client name is required.');
+    nameInput?.focus();
+    return;
+  }
+  const email = document.getElementById('addClientEmail')?.value.trim() || '';
+  const archetype = document.getElementById('addClientArchetype')?.value || 'General';
+  const currentPhase = document.getElementById('addClientPhase')?.value.trim() || 'Phase not set';
+
+  const record = normalizeCoachClientRecord({
+    id: `manual-${Date.now().toString(36)}`,
+    name,
+    email,
+    archetype,
+    currentPhase,
+    alertStatus: 'ok',
+    compliancePercent: 0,
+    primaryStatusMetric: 'No check-ins yet'
+  });
+
+  const manual = getManualCoachClients();
+  manual.unshift(record);
+  saveManualCoachClients(manual);
+
+  coachDashboardState.clients = [record, ...coachDashboardState.clients.filter((c) => c.id !== record.id)];
+  closeAddClientModal();
+  renderCoachDashboardView();
+  if (window.showToast) window.showToast(`${name} added to your roster.`);
+};
 
 /* ── Check-in sub-tab switcher ──────────────────────────────── */
 function switchCheckInTab(panel) {
@@ -13540,6 +13762,107 @@ function showExerciseProgress() {
   Promise.all([fetchWorkouts(), fetchWorkoutHistory(), fetchCardioHistory(), fetchBodyweightHistory()]).then(([workouts, workoutHistory, cardioHistory, bodyweightHistory]) => {
     renderProgressArchetypeSpotlight({
       workouts: applyDateRange(workouts),
+function getTodaySorenessForRecovery() {
+  try {
+    const all = JSON.parse(localStorage.getItem('dailyReadiness_v1')) || {};
+    const entry = all[new Date().toDateString()];
+    return entry && Number.isFinite(entry.soreness) ? entry.soreness : null;
+  } catch {
+    return null;
+  }
+}
+
+function initRecoveryPanelInteractions() {
+  const panel = document.getElementById('recoveryPanel');
+  if (!panel || panel.dataset.boundInteractions) return;
+  panel.dataset.boundInteractions = '1';
+
+  let focused = null;
+  function setFocus(muscle) {
+    focused = (focused === muscle) ? null : muscle;
+    panel.querySelectorAll('.recovery-zone').forEach((el) => {
+      const m = el.dataset.muscle;
+      el.classList.toggle('is-dim', !!focused && m !== focused);
+      el.classList.toggle('is-active', !!focused && m === focused);
+    });
+    panel.querySelectorAll('#recoveryTableBody tr').forEach((tr) => {
+      const m = tr.dataset.muscle;
+      tr.classList.toggle('is-dim', !!focused && m !== focused);
+      tr.classList.toggle('is-active', !!focused && m === focused);
+    });
+  }
+
+  panel.addEventListener('click', (e) => {
+    const zone = e.target.closest('.recovery-zone');
+    const row = e.target.closest('#recoveryTableBody tr');
+    const muscle = zone?.dataset.muscle || row?.dataset.muscle;
+    if (muscle) setFocus(muscle);
+  });
+}
+
+function renderRecoveryProgress(workouts) {
+  const panel = document.getElementById('recoveryPanel');
+  if (!panel || typeof computeMuscleRecoverySummary !== 'function') return;
+
+  const soreness = getTodaySorenessForRecovery();
+  let savedTargets = null;
+  try {
+    savedTargets = JSON.parse(localStorage.getItem(`muscleWeeklyTargets_${currentUser}`));
+  } catch {
+    savedTargets = null;
+  }
+
+  const summary = computeMuscleRecoverySummary(workouts, {
+    soreness,
+    weeklyTargets: savedTargets || undefined
+  });
+  const byMuscle = {};
+  summary.forEach((row) => { byMuscle[row.muscle] = row; });
+
+  panel.querySelectorAll('.recovery-zone').forEach((zone) => {
+    const row = byMuscle[zone.dataset.muscle];
+    if (row) zone.style.fill = row.color;
+  });
+
+  const tbody = document.getElementById('recoveryTableBody');
+  if (tbody) {
+    tbody.innerHTML = summary.map((row) => {
+      const pct = Math.round(Math.min(1, row.ratio) * 100);
+      const over = row.sets > row.target;
+      const label = row.muscle.charAt(0).toUpperCase() + row.muscle.slice(1);
+      const daysLabel = row.daysSinceTrained === null
+        ? 'Not trained'
+        : (row.daysSinceTrained === 0 ? 'Today' : `${row.daysSinceTrained}d ago`);
+      return `<tr data-muscle="${row.muscle}">
+        <td class="muscle">${label}</td>
+        <td class="num mono">${row.sets.toFixed(1)} / ${row.target}</td>
+        <td><div class="ratio-track${over ? ' is-over' : ''}"><div class="ratio-fill" style="width:${pct}%"></div></div></td>
+        <td class="recovery-days">${daysLabel}</td>
+        <td><span class="chip"><span class="dot" style="background:${row.color}"></span>${row.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  initRecoveryPanelInteractions();
+}
+
+async function showRecoveryProgress() {
+  setActiveProgress('recoveryProgressBtn');
+  document.getElementById('progressCanvas').style.display = 'none';
+  document.getElementById('exerciseProgress').style.display = 'none';
+  document.getElementById('trainingLoadPanel').style.display = 'none';
+  document.getElementById('recoveryPanel').style.display = 'block';
+  const workouts = await fetchWorkouts();
+  renderRecoveryProgress(workouts);
+  renderProgressComplianceSummary();
+  renderProgressArchetypeSpotlight({
+    workouts: applyDateRange(workouts),
+    workoutHistory: applyDateRange(await fetchWorkoutHistory()),
+    cardioHistory: applyDateRange(await fetchCardioHistory()),
+    bodyweightHistory: applyDateRange(await fetchBodyweightHistory())
+  });
+}
+
       workoutHistory: applyDateRange(workoutHistory),
       cardioHistory: applyDateRange(cardioHistory),
       bodyweightHistory: applyDateRange(bodyweightHistory)
@@ -13655,6 +13978,8 @@ function refreshProgress() {
   const id = activeBtn.id;
   if (id === 'exerciseProgressBtn') {
     // Re-run the chart with the updated date range
+  } else if (id === 'recoveryProgressBtn') {
+    showRecoveryProgress();
     const picker = document.querySelector('#exPicker');
     const metric = document.querySelector('.ex-metric-btn.active')?.dataset.metric || 'weight';
     if (picker) renderExerciseChart(picker.value || null, metric);

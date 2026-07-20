@@ -385,6 +385,10 @@ function renderCoachProgramBuilder() {
       <div class="exercise-library">
         <h4>Exercise Library</h4>
         <input type="text" class="exercise-library-search" id="exLibSearch" placeholder="Search exercises…" oninput="filterExLib(this.value)">
+        <div class="exercise-custom-add">
+          <input type="text" id="exCustomInput" placeholder="Add custom exercise…" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomExercise();}">
+          <button type="button" class="exercise-custom-add-btn" onclick="addCustomExercise()">+ Add</button>
+        </div>
         <div id="exLibList">${_buildExLibHTML()}</div>
       </div>
 
@@ -430,12 +434,82 @@ function renderCoachProgramBuilder() {
     </div>`;
 
   _bindDragAndDrop();
+  _bindExLibClicks();
   renderSavedProgramsList();
 }
 
+/* ── Custom exercises (coach-defined, not in the premade library) ─── */
+
+function _getCustomExercises() {
+  return _coachStore('coachCustomExercises_v1') || [];
+}
+
+function _saveCustomExercises(list) {
+  _coachStore('coachCustomExercises_v1', list);
+}
+
+function _buildCustomExHTML(filter) {
+  const custom = _getCustomExercises();
+  const filtered = filter ? custom.filter(name => name.toLowerCase().includes(filter)) : custom;
+  if (!filtered.length) return '';
+  return `<div class="exercise-category exercise-category-custom">
+    <div class="exercise-category-label">Custom</div>
+    ${filtered.map(name => `
+      <div class="exercise-item exercise-item-custom" draggable="true" data-exercise="${_escH(name)}">
+        <span class="exercise-item-icon">✏️</span>
+        <span class="exercise-item-name">${_escH(name)}</span>
+        <button type="button" class="exercise-item-remove" title="Remove custom exercise">×</button>
+      </div>`).join('')}
+  </div>`;
+}
+
+function _refreshExLib(filter) {
+  const exLibList = document.getElementById('exLibList');
+  if (!exLibList) return;
+  exLibList.innerHTML = _buildExLibHTML(filter);
+  _bindDragAndDrop();
+}
+
+function _bindExLibClicks() {
+  const list = document.getElementById('exLibList');
+  if (!list || list._customBound) return;
+  list.addEventListener('click', e => {
+    const btn = e.target.closest('.exercise-item-remove');
+    if (!btn) return;
+    e.stopPropagation();
+    const name = btn.closest('.exercise-item')?.dataset.exercise;
+    if (name) removeCustomExercise(name);
+  });
+  list._customBound = true;
+}
+
+window.addCustomExercise = function() {
+  const input = document.getElementById('exCustomInput');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+  const custom = _getCustomExercises();
+  if (custom.some(n => n.toLowerCase() === name.toLowerCase())) {
+    if (window.showToast) window.showToast('Already in your custom list.');
+    input.value = '';
+    return;
+  }
+  custom.unshift(name);
+  _saveCustomExercises(custom);
+  input.value = '';
+  _refreshExLib(document.getElementById('exLibSearch')?.value || '');
+  input.focus();
+};
+
+window.removeCustomExercise = function(name) {
+  _saveCustomExercises(_getCustomExercises().filter(n => n.toLowerCase() !== String(name).toLowerCase()));
+  _refreshExLib(document.getElementById('exLibSearch')?.value || '');
+};
+
 function _buildExLibHTML(filter) {
   filter = (filter || '').toLowerCase();
-  return Object.entries(EXERCISE_LIBRARY).map(([cat, exercises]) => {
+  const customHTML = _buildCustomExHTML(filter);
+  const builtInHTML = Object.entries(EXERCISE_LIBRARY).map(([cat, exercises]) => {
     const filtered = filter
       ? exercises.filter(e => e.name.toLowerCase().includes(filter))
       : exercises;
@@ -449,6 +523,7 @@ function _buildExLibHTML(filter) {
         </div>`).join('')}
     </div>`;
   }).join('');
+  return customHTML + builtInHTML;
 }
 
 function _buildDayColHTML(day) {
@@ -472,8 +547,9 @@ function _buildClientOptions() {
   return clients.map(c => `<option value="${_escH(c.id)}">${_escH(c.name)}</option>`).join('');
 }
 
-function _bindDragAndDrop() {
-  // Library items → drag start
+function _bindExerciseItemDrag() {
+  // Library items → drag start. Items are recreated on every library refresh
+  // (search, add/remove custom exercise), so they're safe to rebind each time.
   document.querySelectorAll('.exercise-item').forEach(item => {
     item.addEventListener('dragstart', e => {
       e.dataTransfer.setData('text/exercise', item.dataset.exercise);
@@ -481,40 +557,39 @@ function _bindDragAndDrop() {
     });
     item.addEventListener('dragend', () => item.classList.remove('dragging'));
   });
-
-  // Day columns → drop targets
-  document.querySelectorAll('.prog-day-col').forEach(col => {
-    col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
-    col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
-    col.addEventListener('drop', e => {
-      e.preventDefault();
-      col.classList.remove('drag-over');
-      const exercise = e.dataTransfer.getData('text/exercise');
-      const day = col.dataset.day;
-      if (exercise && day) {
-        _progState.days[day] = [...(_progState.days[day] || []), exercise];
-        _refreshDayCol(day);
-      }
-    });
-  });
 }
 
-function _refreshDayCol(day) {
-  const col = document.getElementById('progDay_' + day);
-  if (!col) return;
-  col.innerHTML = `<div class="prog-day-label">${day}</div>` + _buildDayColHTML(day).replace(/^[\s\S]*<div class="prog-day-label">[^<]*<\/div>/, '');
-  // Re-bind drop on the refreshed col
+function _bindDayColDrop(col) {
+  // Day columns persist across drops/refreshes (only their innerHTML changes),
+  // so guard against rebinding the same listeners on top of themselves —
+  // that would fire one drop N times after N rebinds.
+  if (col._dropBound) return;
   col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
   col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
   col.addEventListener('drop', e => {
     e.preventDefault();
     col.classList.remove('drag-over');
     const exercise = e.dataTransfer.getData('text/exercise');
-    if (exercise) {
-      _progState.days[day].push(exercise);
+    const day = col.dataset.day;
+    if (exercise && day) {
+      _progState.days[day] = [...(_progState.days[day] || []), exercise];
       _refreshDayCol(day);
     }
   });
+  col._dropBound = true;
+}
+
+function _bindDragAndDrop() {
+  _bindExerciseItemDrag();
+  document.querySelectorAll('.prog-day-col').forEach(_bindDayColDrop);
+}
+
+function _refreshDayCol(day) {
+  const col = document.getElementById('progDay_' + day);
+  if (!col) return;
+  // col itself isn't replaced, so its drop listener (bound once in
+  // _bindDayColDrop) stays attached — no re-binding needed here.
+  col.innerHTML = `<div class="prog-day-label">${day}</div>` + _buildDayColHTML(day).replace(/^[\s\S]*<div class="prog-day-label">[^<]*<\/div>/, '');
 }
 
 window.removeProgExercise = function(day, idx) {
@@ -523,8 +598,7 @@ window.removeProgExercise = function(day, idx) {
 };
 
 window.filterExLib = function(q) {
-  const list = document.getElementById('exLibList');
-  if (list) { list.innerHTML = _buildExLibHTML(q); _bindDragAndDrop(); }
+  _refreshExLib(q);
 };
 
 window.applyProgTemplate = function(key) {

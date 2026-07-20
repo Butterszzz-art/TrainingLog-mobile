@@ -225,6 +225,21 @@ app.get('/config', (req, res) => {
 });
 
 // ── GET /health ───────────────────────────────────────────────────────────────
+app.get('/health', (req, res) => {
+  const hasToken  = !!process.env.AIRTABLE_TOKEN;
+  const hasBaseId = !!process.env.AIRTABLE_BASE_ID;
+  const hasJwt    = !!process.env.JWT_SECRET;
+  const ok = hasToken && hasBaseId;
+  res.status(ok ? 200 : 503).json({
+    status: ok ? 'ok' : 'misconfigured',
+    env: {
+      AIRTABLE_TOKEN:   hasToken  ? 'SET' : 'MISSING',
+      AIRTABLE_BASE_ID: hasBaseId ? 'SET' : 'MISSING',
+      JWT_SECRET:       hasJwt    ? 'SET' : 'using insecure default',
+      AIRTABLE_USERS_TABLE: process.env.AIRTABLE_USERS_TABLE || '(default: Users)',
+    },
+    fix: ok ? null : 'Add the missing variables in Render → your service → Environment, then redeploy.',
+
 // Open endpoint — shows which env vars are set without exposing values.
 app.get('/health', (req, res) => {
   const checks = {
@@ -564,6 +579,73 @@ app.all('/airtable/:baseId/:table', async (req, res) => {
   }
 });
 
+// ── POST /ai/chat ─────────────────────────────────────────────────────────────
+const aiChatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many AI requests — please wait a minute before trying again.' }
+});
+
+app.post('/ai/chat', requireAuth, aiChatLimiter, async (req, res) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+
+  const { message, history = [], context = {} } = req.body || {};
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'message is required' });
+  }
+
+  const { profile = {}, recentWorkouts = [], recentMobilitySessions = [], currentDate = '' } = context;
+
+  const workoutSummary = recentWorkouts.length
+    ? recentWorkouts.map(w => `  • ${w.date}: ${w.name} (${w.sets} sets)`).join('\n')
+    : '  (no recent workouts logged)';
+
+  const mobilitySummary = recentMobilitySessions.length
+    ? recentMobilitySessions.map(m => `  • ${m.date}: ${m.routine}`).join('\n')
+    : '  (no recent mobility sessions)';
+
+  const systemPrompt = [
+    `You are a personal training coach inside the TrainingLog app. Today is ${currentDate || new Date().toISOString().slice(0, 10)}.`,
+    profile.name ? `Your athlete's name is ${profile.name}.` : '',
+    profile.mode ? `Coaching mode: ${profile.mode}.` : '',
+    profile.archetype ? `Athlete archetype: ${profile.archetype}.` : '',
+    profile.goals && Object.keys(profile.goals).length
+      ? `Goals: ${JSON.stringify(profile.goals)}.`
+      : '',
+    '',
+    'Recent workouts (last few sessions):',
+    workoutSummary,
+    '',
+    'Recent mobility sessions:',
+    mobilitySummary,
+    '',
+    'Keep responses concise and practical. Use the athlete\'s training history to personalise advice. Do not invent workouts or data not shown above.'
+  ].filter(Boolean).join('\n');
+
+  const messages = [
+    ...history.filter(m => m.role && m.content),
+    { role: 'user', content: message }
+  ];
+
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic.default({ apiKey });
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages
+    });
+    const reply = response.content?.[0]?.text ?? '';
+    return res.json({ reply });
+  } catch (err) {
+    console.error('[AI Chat] Error:', err.message);
+    return res.status(502).json({ error: 'AI request failed', details: err.message });
 // ── Knowledge Base routes ────────────────────────────────────────────────────
 
 // POST /admin/ingest-pdf — upload and process a PDF module

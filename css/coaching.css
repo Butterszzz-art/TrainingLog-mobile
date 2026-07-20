@@ -21,12 +21,15 @@
 .coach-subtab {
   flex: 1;
   min-width: 70px;
+  height: 36px;
   padding: 8px 10px;
   border-radius: 8px;
   border: none;
   background: transparent;
   color: var(--secondary-text);
+  font-family: 'Poppins', 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif;
   font-size: 0.75rem;
+  line-height: 1.3;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -34,6 +37,7 @@
   box-shadow: none;
   margin: 0;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .coach-subtab.active {
@@ -217,6 +221,58 @@
 }
 
 .exercise-item-icon { font-size: 0.9rem; flex-shrink: 0; }
+.exercise-item-name { flex: 1; }
+
+.exercise-custom-add {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.exercise-custom-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.exercise-custom-add-btn {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: none;
+}
+
+.exercise-item-remove {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  line-height: 14px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 0.85rem;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.exercise-item-remove:hover {
+  background: rgba(220,53,69,0.15);
+  color: #e05060;
+}
 
 /* Program canvas (weekly grid) */
 .prog-canvas {
@@ -799,6 +855,31 @@
   gap: 8px;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+/* Add-client form (reuses .gdpr-modal chrome) */
+.add-client-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.add-client-form label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 8px;
+}
+
+.add-client-form input,
+.add-client-form select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  margin: 0;
 }
 
 /* ── Export progress overlay ─────────────────────────────────── */
