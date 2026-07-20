@@ -8183,13 +8183,23 @@ function normalizeCoachClientRecord(client = {}) {
   };
 }
 
+function getManualCoachClients() {
+  try { return JSON.parse(localStorage.getItem('coachManualClients_v1')) || []; } catch { return []; }
+}
+
+function saveManualCoachClients(list) {
+  localStorage.setItem('coachManualClients_v1', JSON.stringify(list));
+}
+
 async function loadCoachClients() {
   const coachId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'coach';
   const fallback = getCoachDemoClients().map(normalizeCoachClientRecord);
-  const endpoint = `/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
+  const manual = getManualCoachClients().map(normalizeCoachClientRecord);
+  const base = (window.SERVER_URL || '').replace(/\/$/, '');
+  const endpoint = `${base}/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
 
   try {
-    const response = await fetch(endpoint);
+    const response = await fetch(endpoint, { headers: getAuthHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     const list = Array.isArray(payload)
@@ -8199,16 +8209,16 @@ async function loadCoachClients() {
         : [];
 
     if (!list.length) {
-      return { clients: fallback, source: 'demo' };
+      return { clients: [...manual, ...fallback], source: 'demo' };
     }
 
     return {
-      clients: list.map(normalizeCoachClientRecord),
+      clients: [...manual, ...list.map(normalizeCoachClientRecord)],
       source: 'backend'
     };
   } catch (error) {
     console.info('[CoachDashboard] falling back to demo roster data.', error);
-    return { clients: fallback, source: 'demo' };
+    return { clients: [...manual, ...fallback], source: 'demo' };
   }
 }
 
@@ -8705,7 +8715,10 @@ function renderCoachDashboardView() {
     ? renderCoachClientDetail(selectedClient)
     : `
       <section class="coach-dashboard-header">
-        <h3 class="coach-dashboard-title">Client Roster Overview</h3>
+        <div class="coach-dashboard-header-row">
+          <h3 class="coach-dashboard-title">Client Roster Overview</h3>
+          <button type="button" class="coach-add-client-btn" onclick="openAddClientModal()">+ Add Client</button>
+        </div>
         <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action · ${watchCount} on watch</p>
       </section>
       ${renderCoachClientRoster(clients)}
@@ -8731,6 +8744,78 @@ window.renderCoachDashboard = renderCoachDashboard;
 window.renderCoachClientRoster = renderCoachClientRoster;
 window.renderCoachClientCard = renderCoachClientCard;
 window.renderCoachClientDetail = renderCoachClientDetail;
+
+/* ── Add Client modal ──────────────────────────────────────── */
+
+window.closeAddClientModal = function() {
+  document.getElementById('addClientModalOverlay')?.remove();
+};
+
+window.openAddClientModal = function() {
+  closeAddClientModal();
+  const modal = document.createElement('div');
+  modal.className = 'gdpr-modal-overlay';
+  modal.id = 'addClientModalOverlay';
+  modal.innerHTML = `
+    <div class="gdpr-modal">
+      <h3>Add New Client</h3>
+      <p>Add someone to your roster to start tracking their check-ins and assigning programs.</p>
+      <div class="add-client-form">
+        <label for="addClientName">Name *</label>
+        <input type="text" id="addClientName" placeholder="Client name" maxlength="80">
+        <label for="addClientEmail">Email or username</label>
+        <input type="text" id="addClientEmail" placeholder="client@example.com">
+        <label for="addClientArchetype">Archetype</label>
+        <select id="addClientArchetype">
+          <option value="Bodybuilder">Bodybuilder</option>
+          <option value="Powerlifter">Powerlifter</option>
+          <option value="Hybrid">Hybrid</option>
+          <option value="General" selected>General Fitness</option>
+        </select>
+        <label for="addClientPhase">Current phase</label>
+        <input type="text" id="addClientPhase" placeholder="e.g. Base Build · Week 1">
+      </div>
+      <div class="gdpr-modal-actions">
+        <button class="gdpr-export-btn" onclick="closeAddClientModal()">Cancel</button>
+        <button class="gdpr-save-btn" onclick="submitAddClient()">Add Client</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('addClientName')?.focus();
+};
+
+window.submitAddClient = function() {
+  const nameInput = document.getElementById('addClientName');
+  const name = nameInput?.value.trim() || '';
+  if (!name) {
+    if (window.showToast) window.showToast('Client name is required.');
+    nameInput?.focus();
+    return;
+  }
+  const email = document.getElementById('addClientEmail')?.value.trim() || '';
+  const archetype = document.getElementById('addClientArchetype')?.value || 'General';
+  const currentPhase = document.getElementById('addClientPhase')?.value.trim() || 'Phase not set';
+
+  const record = normalizeCoachClientRecord({
+    id: `manual-${Date.now().toString(36)}`,
+    name,
+    email,
+    archetype,
+    currentPhase,
+    alertStatus: 'ok',
+    compliancePercent: 0,
+    primaryStatusMetric: 'No check-ins yet'
+  });
+
+  const manual = getManualCoachClients();
+  manual.unshift(record);
+  saveManualCoachClients(manual);
+
+  coachDashboardState.clients = [record, ...coachDashboardState.clients.filter((c) => c.id !== record.id)];
+  closeAddClientModal();
+  renderCoachDashboardView();
+  if (window.showToast) window.showToast(`${name} added to your roster.`);
+};
 
 /* ── Check-in sub-tab switcher ──────────────────────────────── */
 function switchCheckInTab(panel) {
