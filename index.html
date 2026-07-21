@@ -7569,8 +7569,8 @@ function calculateMacroTargets(goalOverride, rateOverride) {
   const sex = d.sex;
   const bodyFatValue = Number.isFinite(d.bodyFatPercent) ? d.bodyFatPercent : NaN;
   const activity = d.activityFactor;
-  const goal = goalOverride || document.getElementById("macroGoal").value || "maintain";
-  const rate = rateOverride || document.getElementById("macroRate").value || "moderate";
+  const goal = goalOverride || document.getElementById("macroGoal")?.value || "maintain";
+  const rate = rateOverride || document.getElementById("macroRate")?.value || "moderate";
   const formula = document.getElementById("macroBmrFormula")?.value || "mifflin";
   const bodyFat = Number.isFinite(bodyFatValue) ? bodyFatValue : null;
   const heightM = heightCm / 100;
@@ -7624,14 +7624,16 @@ function calculateMacroTargets(goalOverride, rateOverride) {
   const targetCalories = Math.round(plan.energy.targetCalories);
   const macros = plan.macros;
 
+  const ffmDisplayEl = document.getElementById("ffmDisplay");
+  const ffmiDisplayEl = document.getElementById("ffmiDisplay");
   if (!Number.isNaN(bodyFatValue)) {
     const leanMass = weightKg * (1 - bodyFatValue / 100);
     const ffmi = leanMass / (heightM * heightM);
-    document.getElementById("ffmDisplay").textContent = `${leanMass.toFixed(1)} kg`;
-    document.getElementById("ffmiDisplay").textContent = ffmi.toFixed(1);
+    if (ffmDisplayEl) ffmDisplayEl.textContent = `${leanMass.toFixed(1)} kg`;
+    if (ffmiDisplayEl) ffmiDisplayEl.textContent = ffmi.toFixed(1);
   } else {
-    document.getElementById("ffmDisplay").textContent = "–";
-    document.getElementById("ffmiDisplay").textContent = "–";
+    if (ffmDisplayEl) ffmDisplayEl.textContent = "–";
+    if (ffmiDisplayEl) ffmiDisplayEl.textContent = "–";
   }
 
   const pMin = Math.round(macros.proteinGrams * 0.8);
@@ -7648,22 +7650,39 @@ function calculateMacroTargets(goalOverride, rateOverride) {
     tdee: targetCalories,
   };
 
-  // reveal the slider section when saved targets are loaded
-  document.getElementById("adjustMacroSection").style.display = "block";
-  document.getElementById("proteinSlider").min = pMin;
-  document.getElementById("proteinSlider").max = pMax;
-  document.getElementById("proteinSlider").value = macros.proteinGrams;
+  // reveal the slider section when saved targets are loaded (no-op if the
+  // Macros tab isn't mounted yet - this can run at page-load init before
+  // the user has ever opened that tab)
+  const adjustMacroSectionEl = document.getElementById("adjustMacroSection");
+  if (adjustMacroSectionEl) adjustMacroSectionEl.style.display = "block";
 
-  document.getElementById("fatSlider").min = fMin;
-  document.getElementById("fatSlider").max = fMax;
-  document.getElementById("fatSlider").value = macros.fatGrams;
+  const proteinSliderEl = document.getElementById("proteinSlider");
+  if (proteinSliderEl) {
+    proteinSliderEl.min = pMin;
+    proteinSliderEl.max = pMax;
+    proteinSliderEl.value = macros.proteinGrams;
+  }
 
-  document.getElementById("carbSlider").min = cMin;
-  document.getElementById("carbSlider").max = cMax;
-  document.getElementById("carbSlider").value = macros.carbGrams;
+  const fatSliderEl = document.getElementById("fatSlider");
+  if (fatSliderEl) {
+    fatSliderEl.min = fMin;
+    fatSliderEl.max = fMax;
+    fatSliderEl.value = macros.fatGrams;
+  }
 
-  document.getElementById("calTarget").textContent = targetCalories;
-  document.getElementById("macroCalcForm").style.display = "none";
+  const carbSliderEl = document.getElementById("carbSlider");
+  if (carbSliderEl) {
+    carbSliderEl.min = cMin;
+    carbSliderEl.max = cMax;
+    carbSliderEl.value = macros.carbGrams;
+  }
+
+  const calTargetEl = document.getElementById("calTarget");
+  if (calTargetEl) calTargetEl.textContent = targetCalories;
+
+  const macroCalcFormEl = document.getElementById("macroCalcForm");
+  if (macroCalcFormEl) macroCalcFormEl.style.display = "none";
+
   const msBtn = document.getElementById("macroSettingsBtn");
   if (msBtn) msBtn.textContent = "Macro Settings";
   adjustMacros();
