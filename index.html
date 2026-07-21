@@ -7571,7 +7571,7 @@ function calculateMacroTargets(goalOverride, rateOverride) {
   const activity = d.activityFactor;
   const goal = goalOverride || document.getElementById("macroGoal").value || "maintain";
   const rate = rateOverride || document.getElementById("macroRate").value || "moderate";
-  const formula = document.getElementById("macroBmrFormula").value || "mifflin";
+  const formula = document.getElementById("macroBmrFormula")?.value || "mifflin";
   const bodyFat = Number.isFinite(bodyFatValue) ? bodyFatValue : null;
   const heightM = heightCm / 100;
 
