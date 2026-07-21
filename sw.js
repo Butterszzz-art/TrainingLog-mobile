@@ -121,10 +121,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests (HTML pages): network-first so users always get latest
+  // Navigation requests (HTML pages): network-first so users always get latest.
+  // Use cache: 'reload' to bypass the browser/CDN HTTP cache (GitHub Pages
+  // sends Cache-Control: max-age=600 on index.html) - otherwise a plain
+  // fetch(request) can still return a stale response for up to 10 minutes
+  // after a deploy, even though this handler is "network-first".
   if (request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
     event.respondWith(
-      fetch(request).then((response) => {
+      fetch(request.url, { cache: 'reload' }).then((response) => {
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
