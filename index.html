@@ -13742,8 +13742,6 @@ function refreshProgress() {
   const id = activeBtn.id;
   if (id === 'exerciseProgressBtn') {
     // Re-run the chart with the updated date range
-  } else if (id === 'recoveryProgressBtn') {
-    showRecoveryProgress();
     const picker = document.querySelector('#exPicker');
     const metric = document.querySelector('.ex-metric-btn.active')?.dataset.metric || 'weight';
     if (picker) renderExerciseChart(picker.value || null, metric);
