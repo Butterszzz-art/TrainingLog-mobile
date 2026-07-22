@@ -434,6 +434,22 @@ header, .dark-bg, .coach-only {
   font-size: 1.1rem;
 }
 
+.exercise-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.exercise-trend-badge {
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: default;
+}
+
+.exercise-trend-badge.trend-flat {
+  opacity: 0.6;
+}
+
 .exercise-tag {
   background: var(--highlight);
   color: var(--card-bg);
