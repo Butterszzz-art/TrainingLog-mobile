@@ -15008,7 +15008,12 @@ function showHistoryMiniTab(type) {
           }
         }
         if (typeof exitWorkoutFocusMode === 'function') exitWorkoutFocusMode();
-        finishAndClearCurrentLog();
+        // Ending a workout should not immediately archive it — it needs to
+        // stay visible in the Log tab until archiveOldWorkouts() ages it out
+        // (finishAndClearCurrentLog() pops it straight to history, which made
+        // just-finished workouts vanish from the Log tab instantly).
+        renderWorkouts();
+        if (typeof renderWorkoutHistory === 'function') renderWorkoutHistory();
       });
     }
 
