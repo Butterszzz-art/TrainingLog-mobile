@@ -50,7 +50,13 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h3 class="sidebar-title">Clients</h3>
-        <button class="sidebar-invite-btn" onclick="showInviteModal()">+ Invite</button>
+        <button class="sidebar-invite-btn" id="sidebarInviteBtn" onclick="showInviteModal()">+ Invite</button>
+      </div>
+
+      <!-- Roster / Leads toggle -->
+      <div class="sidebar-mode-toggle" id="sidebarModeToggle">
+        <button class="mode-tab active" data-mode="clients">Clients</button>
+        <button class="mode-tab" data-mode="leads">Leads<span id="leadsBadge" class="mode-tab-badge" hidden>0</span></button>
       </div>
 
       <!-- Search -->
@@ -107,6 +113,12 @@
         <div class="detail-panel" id="dtab_program"></div>
         <div class="detail-panel" id="dtab_nutrition"></div>
         <div class="detail-panel" id="dtab_notes"></div>
+      </div>
+
+      <!-- Lead detail (pre-signup intake submission) -->
+      <div id="leadDetail" style="display:none;">
+        <div class="detail-header" id="leadDetailHeader"></div>
+        <div id="leadDetailBody"></div>
       </div>
     </main>
 

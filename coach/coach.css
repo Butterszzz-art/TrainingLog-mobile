@@ -270,6 +270,50 @@ body {
   border-color: var(--primary);
 }
 
+/* Roster / Leads toggle */
+.sidebar-mode-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px 0;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mode-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.mode-tab-badge {
+  background: var(--highlight);
+  color: #1a1410;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.mode-tab.active .mode-tab-badge {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
 /* Filter tabs */
 .sidebar-filters {
   display: flex;
@@ -476,6 +520,7 @@ body {
 .detail-status.ok { background: rgba(45,125,91,0.15); color: var(--primary); }
 .detail-status.watch { background: rgba(198,148,79,0.15); color: var(--highlight); }
 .detail-status.action { background: rgba(192,80,96,0.15); color: var(--danger); }
+.detail-status.new { background: rgba(198,148,79,0.15); color: var(--highlight); }
 
 /* ── Detail tabs ───────────────────────────────────────────── */
 
@@ -555,6 +600,53 @@ body {
   letter-spacing: 0.03em;
   margin-top: 3px;
 }
+
+.d-stat-sub {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Lead detail (client intake) ───────────────────────────── */
+
+.lead-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.lead-table th, .lead-table td {
+  padding: 7px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(132,157,144,0.1);
+  color: var(--text-sec);
+}
+
+.lead-table th {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+
+.lead-table tr.post-training td:nth-child(2) {
+  color: var(--highlight);
+  font-weight: 600;
+}
+
+.lead-flag {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--border);
+}
+
+.lead-flag--rood { background: rgba(192,80,96,0.12); border-left-color: var(--danger); color: var(--text); }
+.lead-flag--oranje { background: rgba(198,148,79,0.12); border-left-color: var(--highlight); color: var(--text); }
+.lead-flag--info { background: rgba(132,157,144,0.1); border-left-color: var(--text-muted); color: var(--text-sec); }
 
 /* Checkin scores bar */
 .checkin-score-row {

@@ -13,6 +13,9 @@ let _activeFilter = 'all';
 let _searchQuery = '';
 let _selectedClientId = null;
 let _bulkSelected = new Set();
+let _leads = [];
+let _sidebarMode = 'clients';
+let _selectedLeadId = null;
 
 function authHeaders() {
   return { Authorization: 'Bearer ' + _token, 'Content-Type': 'application/json' };
@@ -26,6 +29,7 @@ function checkAuth() {
     document.getElementById('appShell').style.display = '';
     document.getElementById('headerUser').textContent = _username;
     loadClients();
+    loadLeads();
   }
 }
 
@@ -63,6 +67,7 @@ async function doCoachLogin() {
     document.getElementById('appShell').style.display = '';
     document.getElementById('headerUser').textContent = _username;
     loadClients();
+    loadLeads();
   } catch {
     errorEl.textContent = 'Connection error — server may be starting up. Try again in 30s.';
   } finally {
@@ -164,8 +169,13 @@ document.getElementById('statusFilters')?.addEventListener('click', e => {
 
 function filterClients() {
   _searchQuery = document.getElementById('clientSearch')?.value || '';
-  renderClientList();
+  if (_sidebarMode === 'leads') renderLeadList(); else renderClientList();
 }
+
+document.getElementById('sidebarModeToggle')?.addEventListener('click', e => {
+  const tab = e.target.closest('.mode-tab');
+  if (tab) switchSidebarMode(tab.dataset.mode);
+});
 
 function toggleBulk(id) {
   if (_bulkSelected.has(id)) _bulkSelected.delete(id);
@@ -619,6 +629,233 @@ function useAiDraft() {
   if (!draftEl) return;
   const text = draftEl.textContent;
   navigator.clipboard?.writeText(text).then(() => alert('Draft copied to clipboard!'));
+}
+
+// ══════════════════════════════════════════════════════════════
+// COACH-8: Leads (Client Intake)
+// ══════════════════════════════════════════════════════════════
+// A "lead" is a pre-signup intake submission (POST /api/intake, no auth
+// required on that side) — the person hasn't necessarily created a Pocket
+// Coach account yet, so they can't appear in the real client roster above.
+// This mirrors ClientIntake's calculation-review screen, ported into this
+// dashboard's existing d-card/d-stat visual language instead of its own.
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function fmt(n, decimals = 0) {
+  if (n == null || Number.isNaN(n)) return '—';
+  return Number(n).toLocaleString('en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+async function loadLeads() {
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/leads', { headers: authHeaders() });
+    const data = await res.json();
+    _leads = (data.success && Array.isArray(data.leads)) ? data.leads : [];
+  } catch {
+    _leads = [];
+  }
+  updateLeadsBadge();
+  if (_sidebarMode === 'leads') renderLeadList();
+}
+
+function updateLeadsBadge() {
+  const badge = document.getElementById('leadsBadge');
+  if (!badge) return;
+  badge.hidden = _leads.length === 0;
+  badge.textContent = String(_leads.length);
+}
+
+function switchSidebarMode(mode) {
+  _sidebarMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  document.getElementById('statusFilters').style.display = mode === 'clients' ? '' : 'none';
+  const inviteBtn = document.getElementById('sidebarInviteBtn');
+  if (inviteBtn) inviteBtn.style.display = mode === 'clients' ? '' : 'none';
+
+  if (mode === 'clients') renderClientList(); else renderLeadList();
+
+  // Reset the main panel to the empty state — whatever was selected in the
+  // other list doesn't make sense to keep showing here.
+  _selectedClientId = null;
+  _selectedLeadId = null;
+  document.getElementById('emptyState').style.display = '';
+  document.getElementById('clientDetail').style.display = 'none';
+  document.getElementById('leadDetail').style.display = 'none';
+}
+
+function renderLeadList() {
+  const listEl = document.getElementById('clientList');
+  let filtered = _leads.slice();
+  if (_searchQuery) {
+    const q = _searchQuery.toLowerCase();
+    filtered = filtered.filter(l => (l.naam || '').toLowerCase().includes(q));
+  }
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="client-list-loading">No leads yet.</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(l => {
+    const initials = (l.naam || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const isActive = l.id === _selectedLeadId;
+    const createdMs = l.createdAt?._seconds ? l.createdAt._seconds * 1000 : l.createdAt;
+    const created = createdMs ? new Date(createdMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—';
+
+    return '<div class="client-row' + (isActive ? ' active' : '') + '" onclick="selectLead(\'' + l.id + '\')">'
+      + '<div class="client-avatar">' + escapeHtml(initials) + '</div>'
+      + '<div class="client-info"><div class="client-name">' + escapeHtml(l.naam || 'Unnamed') + '</div>'
+      + '<div class="client-meta">' + escapeHtml(created) + ' · ' + escapeHtml(l.status || 'new') + '</div></div>'
+      + '</div>';
+  }).join('');
+}
+
+function selectLead(id) {
+  _selectedLeadId = id;
+  renderLeadList();
+  const lead = _leads.find(l => l.id === id);
+  if (!lead) return;
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('clientDetail').style.display = 'none';
+  document.getElementById('leadDetail').style.display = '';
+
+  renderLeadDetail(lead);
+}
+
+function kerncijfer(label, value, unit, sub) {
+  return '<div class="d-stat"><div class="d-stat-val">' + value + (unit ? ' <span style="font-size:0.6em;">' + escapeHtml(unit) + '</span>' : '') + '</div>'
+    + '<div class="d-stat-lbl">' + escapeHtml(label) + '</div>'
+    + (sub ? '<div class="d-stat-sub">' + escapeHtml(sub) + '</div>' : '') + '</div>';
+}
+
+function mealTable(meals) {
+  const rows = (meals || []).map(m => '<tr' + (m.postTraining ? ' class="post-training"' : '') + '>'
+    + '<td>Meal ' + m.maaltijd + (m.postTraining ? ' (post-training)' : '') + '</td>'
+    + '<td>' + fmt(m.eiwit, 1) + ' g</td><td>' + fmt(m.vet, 1) + ' g</td><td>' + fmt(m.koolhydraten, 1) + ' g</td><td>' + fmt(m.kcal) + ' kcal</td></tr>').join('');
+  return '<table class="lead-table"><thead><tr><th>Meal</th><th>Protein</th><th>Fat</th><th>Carbs</th><th>Kcal</th></tr></thead><tbody>'
+    + (rows || '<tr><td colspan="5" style="color:var(--text-muted);">No data.</td></tr>') + '</tbody></table>';
+}
+
+function renderLeadDetail(lead) {
+  const i = lead.intake || {};
+  const c = lead.calculations || {};
+  const p = i.persoonsgegevens || {};
+
+  const initials = (lead.naam || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const statusBadge = lead.status === 'converted' ? '<span class="detail-status ok">CONVERTED</span>'
+    : lead.status === 'dismissed' ? '<span class="detail-status action">DISMISSED</span>'
+    : '<span class="detail-status new">LEAD</span>';
+
+  document.getElementById('leadDetailHeader').innerHTML =
+    '<div class="detail-avatar">' + escapeHtml(initials) + '</div>'
+    + '<div class="detail-info"><div class="detail-name">' + escapeHtml(lead.naam || 'Unnamed') + '</div>'
+    + '<div class="detail-meta">' + (p.leeftijd ?? '—') + ' yrs · ' + (p.gewicht ?? '—') + ' kg · ' + (p.vetpercentage ?? '—') + '% body fat · Goal: '
+    + escapeHtml(i.doel?.categorie || '—') + (p.email ? ' · ' + escapeHtml(p.email) : '') + '</div></div>'
+    + statusBadge;
+
+  const flags = (c.rodeVlaggen || []).length
+    ? c.rodeVlaggen.map(v => '<div class="lead-flag lead-flag--' + escapeHtml(v.niveau) + '">' + escapeHtml(v.bericht) + '</div>').join('')
+    : '<p style="color:var(--text-muted);font-size:0.85rem;">No flags detected.</p>';
+
+  const motivatie = i.motivatieMindset?.motivatie;
+  const mentaleInstelling = i.motivatieMindset?.mentaleInstelling;
+
+  const blessureBlokken = [];
+  if (i.blessures?.tekst) blessureBlokken.push('<p><strong>Reported:</strong> ' + escapeHtml(i.blessures.tekst) + '</p>');
+  for (const oef of (i.blessures?.vermijdenOefeningen || [])) blessureBlokken.push('<p><strong>Avoid:</strong> ' + escapeHtml(oef) + '</p>');
+  for (const conflict of (c.advies?.blessureConflicten || [])) blessureBlokken.push('<p><strong>' + escapeHtml(conflict.oefening) + ':</strong> ' + escapeHtml(conflict.reden) + '</p>');
+
+  const rmRows = (c.rm || []).map(r => '<tr><td>' + escapeHtml(r.oefening) + '</td><td>' + fmt(r.kg, 1) + ' kg</td><td>' + r.herhalingen + '</td><td>' + r.sets + '</td><td>' + fmt(r.geschat1RM, 1) + ' kg</td></tr>').join('');
+
+  const convertCard = lead.status === 'converted'
+    ? '<div class="d-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+      + '<div style="font-size:0.85rem;color:var(--text-sec);">This lead has been linked to a Pocket Coach account and now appears in your Clients list.</div></div>'
+    : '<div class="d-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+      + '<div style="font-size:0.85rem;color:var(--text-sec);">Once they\'ve created a Pocket Coach account, link them here as a real client.</div>'
+      + '<button class="sidebar-invite-btn" onclick="convertLead(\'' + lead.id + '\')">Convert to Client</button></div>';
+
+  document.getElementById('leadDetailBody').innerHTML =
+    convertCard
+    + '<div class="d-card"><div class="d-card-title">Key Numbers</div><div class="d-stat-grid">'
+    + kerncijfer('BMR', fmt(c.bmr), 'kcal')
+    + kerncijfer('Maintenance/day', fmt(c.onderhoudPerDag), 'kcal')
+    + kerncijfer('Target — rest day', fmt(c.beoogdeInnameRustdag), 'kcal', c.bereiken ? 'range ' + fmt(c.bereiken.beoogdeInname.min) + '–' + fmt(c.bereiken.beoogdeInname.max) + ' kcal' : '')
+    + kerncijfer('Target — training day', fmt(c.beoogdeInnameTrainingsdag), 'kcal')
+    + kerncijfer('Protein', fmt(c.macros?.eiwit, 1), 'g', c.bereiken ? 'range ' + fmt(c.bereiken.eiwit.min) + '–' + fmt(c.bereiken.eiwit.maxSlank) + ' g' : '')
+    + kerncijfer('Fat', fmt(c.macros?.vet, 1), 'g', c.bereiken ? 'range ' + fmt(c.bereiken.vet.min) + '–' + fmt(c.bereiken.vet.max) + ' g' : '')
+    + kerncijfer('Carbs — rest day', fmt(c.macros?.koolhydratenRustdag, 1), 'g')
+    + kerncijfer('Carbs — training day', fmt(c.macros?.koolhydratenTrainingsdag, 1), 'g')
+    + '</div></div>'
+
+    + '<div class="d-card"><div class="d-card-title">Flags</div>' + flags + '</div>'
+
+    + ((motivatie || mentaleInstelling) ? '<div class="d-card"><div class="d-card-title">Motivation &amp; Mindset</div>'
+      + (motivatie ? '<p><strong>Motivation:</strong> ' + escapeHtml(motivatie) + '</p>' : '')
+      + (mentaleInstelling ? '<p><strong>Mentality:</strong> ' + escapeHtml(mentaleInstelling) + '</p>' : '')
+      + '</div>' : '')
+
+    + (c.advies?.splitsdagen ? '<div class="d-card"><div class="d-card-title">Training Advice</div>'
+      + '<p><strong>Suggested split (' + (c.instellingenGebruikt?.trainingsdagenPerWeek ?? '—') + 'x/week):</strong> ' + escapeHtml(c.advies.splitsdagen.naam) + '</p>'
+      + '<p>' + c.advies.splitsdagen.dagen.map(escapeHtml).join(' → ') + '</p></div>' : '')
+
+    + '<div class="d-card"><div class="d-card-title">Nutrition — Rest Day vs. Training Day</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'
+    + '<div><p style="font-weight:600;margin-bottom:6px;">Rest day</p>' + mealTable(c.maaltijdVerdeling?.rustdag) + '</div>'
+    + '<div><p style="font-weight:600;margin-bottom:6px;">Training day</p>' + mealTable(c.maaltijdVerdeling?.trainingsdag) + '</div>'
+    + '</div></div>'
+
+    + '<div class="d-card"><div class="d-card-title">Injuries &amp; Notes</div>'
+    + (blessureBlokken.join('') || '<p style="color:var(--text-muted);font-size:0.85rem;">No injuries reported.</p>') + '</div>'
+
+    + '<div class="d-card"><div class="d-card-title">Strength (' + fmt(c.frameSize?.enkelomtrek, 1) + ' cm ankle — '
+    + (c.frameSize?.binnenNorm ? 'within norm' : 'outside norm') + ')</div>'
+    + '<table class="lead-table"><thead><tr><th>Exercise</th><th>Kg</th><th>Reps</th><th>Sets</th><th>Est. 1RM</th></tr></thead>'
+    + '<tbody>' + (rmRows || '<tr><td colspan="5" style="color:var(--text-muted);">No strength data.</td></tr>') + '</tbody></table></div>';
+}
+
+// Converts a lead into a real roster client by calling the actual
+// coach-client invite endpoint (POST /api/coach/clients/invite) — this is
+// the real, server-verified relationship, not the local invite-code demo
+// above (COACH-6). Requires the prospect to already have a Pocket Coach
+// account; the coach asks them for their username directly (e.g. via the
+// email/WhatsApp thread the intake generated).
+async function convertLead(leadId) {
+  const lead = _leads.find(l => l.id === leadId);
+  if (!lead) return;
+
+  const username = prompt("Enter the client's Pocket Coach username (they must already have an account):");
+  if (!username?.trim()) return;
+
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/clients/invite', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ clientUsername: username.trim() })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert(data?.error?.message || 'Could not send invite.');
+      return;
+    }
+
+    await fetch(SERVER_URL + '/api/coach/leads/' + encodeURIComponent(leadId), {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ status: 'converted' })
+    }).catch(() => {});
+
+    lead.status = 'converted';
+    alert('Invite sent to ' + username.trim() + '. They\'ll appear in your Clients list once they accept it.');
+    loadClients();
+    renderLeadList();
+    renderLeadDetail(lead);
+  } catch {
+    alert('Connection error — try again.');
+  }
 }
 
 // ── Boot ──────────────────────────────────────────────────────
