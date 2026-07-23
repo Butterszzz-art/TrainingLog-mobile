@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="meta.title">Trainingsintake — Arman Bahali</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-header__brand">
+    <span class="app-header__mark">AB</span>
+    <h1 data-i18n="header.brand">Trainingsintake</h1>
+  </div>
+  <label class="taal-switcher">
+    <span data-i18n="taal.label">Taal</span>
+    <select id="taal-keuze">
+      <option value="nl">Nederlands</option>
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="pt">Português</option>
+    </select>
+  </label>
+</header>
+
+<main id="app">
+
+  <!-- ============ VIEW: INTAKE FORMULIER ============ -->
+  <section id="view-form" class="view active">
+    <div class="view-header">
+      <h2 data-i18n="form.heading">Vertel me over jezelf</h2>
+      <div class="view-header__actions">
+        <button type="submit" form="intake-form" class="btn btn--accent" data-i18n="form.submit">Versturen &rarr;</button>
+      </div>
+    </div>
+    <p class="hint" data-i18n="form.intro">Hoi, ik ben Arman Bahali — dit formulier komt rechtstreeks bij mij persoonlijk binnen,
+      niet bij een team. Vul het zo volledig en eerlijk mogelijk in zodat ik je goed kan leren kennen voordat we beginnen.
+      Na het versturen wordt je intake automatisch opgeslagen in mijn dashboard; je krijgt daarnaast ook een bestand als eigen back-up.</p>
+
+    <form id="intake-form">
+
+      <fieldset class="card">
+        <legend data-i18n="section.persoonsgegevens">Persoonsgegevens</legend>
+        <div class="form-grid">
+          <label><span data-i18n="field.naam">Naam</span>
+            <input type="text" id="f-naam" required>
+          </label>
+          <label><span data-i18n="field.email">E-mailadres (optioneel, zodat ik kan reageren)</span>
+            <input type="email" id="f-email" data-i18n-placeholder="placeholder.email" placeholder="jij@voorbeeld.nl">
+          </label>
+          <label><span data-i18n="field.leeftijd">Leeftijd (jaar)</span>
+            <input type="number" id="f-leeftijd" min="10" max="100" required>
+          </label>
+          <label><span data-i18n="field.lengte">Lengte (cm)</span>
+            <input type="number" id="f-lengte" min="100" max="250" required>
+          </label>
+          <label><span data-i18n="field.gewicht">Gewicht (kg)</span>
+            <input type="number" step="0.1" id="f-gewicht" min="30" max="250" required>
+          </label>
+          <label><span data-i18n="field.vetpercentage">Vetpercentage (%)</span>
+            <input type="number" step="0.1" id="f-vetpercentage" min="3" max="60" required>
+          </label>
+          <label><span data-i18n="field.geslacht">Geslacht</span>
+            <select id="f-geslacht">
+              <option value="man" data-i18n="opt.geslacht.man">Man</option>
+              <option value="vrouw" data-i18n="opt.geslacht.vrouw">Vrouw</option>
+              <option value="anders" data-i18n="opt.geslacht.anders">Anders</option>
+            </select>
+          </label>
+          <label><span data-i18n="field.trainingservaring">Trainingservaring (jaar)</span>
+            <input type="number" step="0.5" id="f-trainingservaring" min="0" max="60">
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="f-huidplooimeter">
+            <span data-i18n="field.huidplooimeter">Vetpercentage gemeten met huidplooimeter</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.kracht">Huidige kracht</legend>
+        <table class="kracht-tabel">
+          <thead>
+            <tr>
+              <th data-i18n="th.oefening">Oefening</th>
+              <th data-i18n="th.kg">Kg</th>
+              <th data-i18n="th.herhalingen">Herhalingen</th>
+              <th data-i18n="th.sets">Sets</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="kracht-tbody"></tbody>
+        </table>
+        <button type="button" class="btn btn--ghost btn--small" id="btn-kracht-rij-toevoegen" data-i18n="btn.krachtRijToevoegen">+ Rij toevoegen</button>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.doel">Doel</legend>
+        <div class="form-grid">
+          <label><span data-i18n="field.doelCategorie">Categorie</span>
+            <select id="f-doel-categorie">
+              <option value="vetverlies" data-i18n="opt.doel.vetverlies">Vetverlies</option>
+              <option value="spieropbouw" data-i18n="opt.doel.spieropbouw">Spieropbouw</option>
+              <option value="onderhoud" data-i18n="opt.doel.onderhoud">Onderhoud</option>
+              <option value="krachttoename" data-i18n="opt.doel.krachttoename">Krachttoename</option>
+            </select>
+          </label>
+        </div>
+        <label><span data-i18n="field.toelichting">Toelichting</span>
+          <textarea id="f-doel-tekst" rows="2" data-i18n-placeholder="placeholder.doelTekst" placeholder="Vrije tekst, bv. specifieke wedstrijd, deadline, motivatie..."></textarea>
+        </label>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.motivatie">Motivatie &amp; mindset</legend>
+        <p class="hint" data-i18n="hint.motivatie">Dit helpt me om je beter te begrijpen als persoon, niet alleen als cijfers op een formulier.</p>
+        <label><span data-i18n="field.motivatie">Wat motiveert je om dit doel te bereiken?</span>
+          <textarea id="f-motivatie" rows="3" data-i18n-placeholder="placeholder.motivatie" placeholder="Waarom wil je dit? Wat maakt dit belangrijk voor je?"></textarea>
+        </label>
+        <label><span data-i18n="field.mentaleInstelling">Hoe zou je jezelf mentaal omschrijven?</span>
+          <textarea id="f-mentale-instelling" rows="3" data-i18n-placeholder="placeholder.mentaleInstelling" placeholder="Bv. doorzettingsvermogen, hoe je omgaat met tegenslag of mindere dagen, stressbestendigheid, wat je in het verleden heeft geholpen (of juist niet) om een doel vol te houden..."></textarea>
+        </label>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.trainingsfrequentie">Trainingsfrequentie &amp; baan</legend>
+        <div class="form-grid">
+          <label><span data-i18n="field.trainingsfrequentie">Trainingsfrequentie huidig (dagen/week)</span>
+            <input type="number" id="f-trainingsfrequentie" min="1" max="7" value="3">
+          </label>
+          <label><span data-i18n="field.baanType">Type baan</span>
+            <input type="text" id="f-baan-type" data-i18n-placeholder="placeholder.baanType" placeholder="bv. kantoorbaan">
+          </label>
+          <label><span data-i18n="field.urenZittend">Uren zittend per dag</span>
+            <input type="number" step="0.5" id="f-baan-uren-zittend" min="0" max="24">
+          </label>
+          <label><span data-i18n="field.urenStaand">Uren staand per dag</span>
+            <input type="number" step="0.5" id="f-baan-uren-staand" min="0" max="24">
+          </label>
+        </div>
+        <label><span data-i18n="field.trainingsmomenten">Trainingsmomenten (tijdvakken)</span></label>
+        <div class="tag-input" id="tags-trainingsmomenten" data-i18n-placeholder="placeholder.trainingsmomenten" data-placeholder="bv. ma/wo/vr 18:00-19:00, Enter om toe te voegen"></div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.blessures">Blessures</legend>
+        <label><span data-i18n="field.toelichting">Toelichting</span>
+          <textarea id="f-blessures-tekst" rows="2" data-i18n-placeholder="placeholder.blessuresTekst" placeholder="Vrije tekst over blessures/klachten"></textarea>
+        </label>
+        <label><span data-i18n="field.vermijdenOefeningen">Oefeningen die vermeden moeten worden</span></label>
+        <div class="tag-input" id="tags-vermijden-oefeningen" data-i18n-placeholder="placeholder.vermijdenOefeningen" data-placeholder="Naam oefening, Enter om toe te voegen"></div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.dieet">Dieet</legend>
+        <label><span data-i18n="field.dieetHuidig">Huidig dieet</span>
+          <textarea id="f-dieet-huidig" rows="2" data-i18n-placeholder="algemeen.vrijeTekst" placeholder="Vrije tekst"></textarea>
+        </label>
+        <label><span data-i18n="field.voorkeuren">Voorkeuren</span></label>
+        <div class="tag-input" id="tags-voorkeuren" data-i18n-placeholder="placeholder.voorkeuren" data-placeholder="bv. veel eiwit, Enter om toe te voegen"></div>
+        <label><span data-i18n="field.afkeuren">Afkeuren</span></label>
+        <div class="tag-input" id="tags-afkeuren" data-i18n-placeholder="placeholder.afkeuren" data-placeholder="bv. geen groente, glutenvrij, Enter om toe te voegen"></div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.peds">PEDs</legend>
+        <label class="checkbox-label">
+          <input type="checkbox" id="f-peds-gebruikt">
+          <span data-i18n="field.pedsGebruikt">Ik gebruik PEDs</span>
+        </label>
+        <label><span data-i18n="field.toelichting">Toelichting</span>
+          <textarea id="f-peds-toelichting" rows="2"></textarea>
+        </label>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.lifestyle">Lifestyle</legend>
+        <div class="form-grid">
+          <label><span data-i18n="field.activityLevel">Activiteitsniveau (buiten training)</span>
+            <select id="f-activity-level">
+              <option value="sedentair" data-i18n="opt.activity.sedentair">Sedentair</option>
+              <option value="licht actief" data-i18n="opt.activity.licht_actief">Licht actief</option>
+              <option value="actief" data-i18n="opt.activity.actief">Actief</option>
+            </select>
+          </label>
+          <label><span data-i18n="field.stressLevel">Stressniveau</span>
+            <select id="f-stress-level">
+              <option value="laag" data-i18n="opt.stress.laag">Laag</option>
+              <option value="gemiddeld" data-i18n="opt.stress.gemiddeld">Gemiddeld</option>
+              <option value="hoog" data-i18n="opt.stress.hoog">Hoog</option>
+            </select>
+          </label>
+          <label><span data-i18n="field.slaapUren">Slaap (uren/nacht)</span>
+            <input type="number" step="0.5" id="f-slaap-uren" min="0" max="14">
+          </label>
+          <label><span data-i18n="field.slaapKwaliteit">Slaapkwaliteit</span>
+            <select id="f-slaap-kwaliteit">
+              <option value="slecht" data-i18n="opt.slaap.slecht">Slecht</option>
+              <option value="matig" data-i18n="opt.slaap.matig">Matig</option>
+              <option value="goed" data-i18n="opt.slaap.goed">Goed</option>
+            </select>
+          </label>
+          <label><span data-i18n="field.cafeine">Cafeïne-inname (mg/dag)</span>
+            <input type="number" id="f-cafeine" min="0" max="2000">
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.materiaal">Materiaal &amp; toegang</legend>
+        <p class="hint" data-i18n="hint.materiaal">Waar ga je trainen? Vink aan wat beschikbaar is (bv. thuis-gym of je sportschool).</p>
+        <div class="form-grid">
+          <label><span data-i18n="field.laagstePlaat">Gewicht laagste plaat (kg)</span>
+            <input type="number" step="0.25" id="f-laagste-plaat" min="0" max="20">
+          </label>
+          <label><span data-i18n="field.dumbbellStap">Dumbbell-stapgrootte (kg)</span>
+            <input type="number" step="0.5" id="f-dumbbell-stap" min="0" max="10">
+          </label>
+        </div>
+        <label><span data-i18n="field.apparatuur">Beschikbare apparatuur</span></label>
+        <div class="checklist" id="apparatuur-checklist"></div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.supplementen">Supplementen</legend>
+        <label><span data-i18n="algemeen.vrijeTekst">Vrije tekst</span>
+          <textarea id="f-supplementen" rows="2"></textarea>
+        </label>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend data-i18n="section.genen">Genen</legend>
+        <div class="form-grid">
+          <label><span data-i18n="field.polsomtrek">Polsomtrek (cm)</span>
+            <input type="number" step="0.1" id="f-polsomtrek" min="10" max="30">
+          </label>
+          <label><span data-i18n="field.enkelomtrek">Enkelomtrek (cm)</span>
+            <input type="number" step="0.1" id="f-enkelomtrek" min="12" max="35">
+          </label>
+          <label><span data-i18n="field.gewichtVoorheen">Gewicht voorheen (context)</span>
+            <input type="text" id="f-gewicht-voorheen" data-i18n-placeholder="placeholder.gewichtVoorheen" placeholder="bv. was 65kg 2 jaar geleden">
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="f-zware-baby">
+            <span data-i18n="field.zwareBaby">Was een zware baby (&gt;4kg bij geboorte)</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="view-header__actions" style="justify-content: flex-end; margin-bottom: 2rem;">
+        <button type="submit" class="btn btn--accent" data-i18n="form.submit">Versturen &rarr;</button>
+      </div>
+
+    </form>
+  </section>
+
+  <!-- ============ VIEW: BEDANKT ============ -->
+  <section id="view-bedankt" class="view">
+    <div class="card bedankt-card">
+      <h2><span data-i18n="bedankt.groet">Bedankt</span>, <span id="bedankt-naam"></span>!</h2>
+      <p id="verzend-status" class="verzend-status" data-i18n="status.bezig">Bezig met opslaan...</p>
+      <p><span data-i18n="bedankt.kopieVoor">Er is ook een kopie gedownload als</span> <code id="bedankt-bestandsnaam"></code> <span data-i18n="bedankt.kopieNa">— bewaar die zelf als back-up.</span></p>
+      <p class="hint" data-i18n="bedankt.hint">Lukt het opslaan onverhoopt niet? Stuur dat bestand dan even naar mij (Arman) via WhatsApp of
+        e-mail. Het bevat persoonlijke gegevens (o.a. gewicht en blessures) — stuur het daarom alleen rechtstreeks naar mij.</p>
+      <div class="bedankt-acties">
+        <a class="btn btn--accent" id="btn-mail-backup" href="#" data-i18n="btn.mailBackup">Mail dit bestand naar Arman</a>
+        <button type="button" class="btn btn--ghost" id="btn-opnieuw-downloaden" data-i18n="btn.opnieuwDownloaden">Bestand opnieuw downloaden</button>
+        <button type="button" class="btn btn--ghost" id="btn-nieuw-formulier" data-i18n="btn.nieuwFormulier">Nieuw formulier</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="coach-toegang">
+  <a href="../coach/index.html" class="coach-toegang__toggle" data-i18n="coach.link">Coach</a>
+</footer>
+
+<script type="module" src="intake.js?v=1"></script>
+</body>
+</html>
