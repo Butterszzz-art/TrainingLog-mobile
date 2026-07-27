@@ -3989,6 +3989,20 @@ async function startLogin() {
       persistLoginIdentity(username, result.token);
     }
 
+    if (result && result.error?.code === 'auth.legacy_migration_required') {
+      // Hard cutover: this account still only exists in the old system.
+      // Route into the same Firebase reclaim flow signup already uses instead
+      // of dead-ending on a login error.
+      _switchLoginTab('signup');
+      const legacyField = document.getElementById('legacySignupPasswordField');
+      if (legacyField) legacyField.style.display = '';
+      document.getElementById('legacySignupPassword')?.focus();
+      if (errorEl) {
+        errorEl.textContent = 'This account needs to be migrated. Enter an email above and this account\'s existing password below, then tap Sign Up.';
+      }
+      return;
+    }
+
     if (result && result.success === false) {
       const message = result.error?.message || result.message || "Invalid username or password.";
       if (errorEl) {
