@@ -4055,7 +4055,8 @@ async function startLogin() {
       Promise.resolve().then(async () => {
         try {
           if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
-          if (typeof window.archiveWorkoutsToAirtable === 'function') window.archiveWorkoutsToAirtable();
+          if (typeof window.archiveWorkoutsToBackend === 'function') window.archiveWorkoutsToBackend();
+          if (typeof window.refreshRemoteOverloadCache === 'function') window.refreshRemoteOverloadCache(username);
           // Fetch fresh macro targets and re-render if they differ from cache
           const fetchedTargets = await fetchUserMacroTargets(username);
           if (fetchedTargets) renderMacroTargets({ useFallback: false });
@@ -5253,6 +5254,75 @@ function _bestSetE1RM(exercise) {
   return Math.round(best * 10) / 10;
 }
 
+// Backend fallback for "last time" lookups once a workout has aged out of
+// local storage (hard-saved to the backend by workout-archiver.js after 4
+// weeks — see collectWorkoutsDueForBackendArchive). Populated in the
+// background; a lookup that finds nothing locally checks this cache so
+// infrequently-trained exercises still get a progressive-overload comparison.
+let _remoteOverloadCache = [];
+let _remoteOverloadCacheUser = null;
+
+function _extractLogEntries(workout) {
+  if (Array.isArray(workout?.log)) return workout.log;
+
+  if (Array.isArray(workout?.exercises)) {
+    return workout.exercises.map(ex => {
+      if (Array.isArray(ex?.repsArray) || Array.isArray(ex?.weightsArray)) {
+        return { exercise: ex?.name, repsArray: ex.repsArray || [], weightsArray: ex.weightsArray || [] };
+      }
+      const sets = Array.isArray(ex?.sets) ? ex.sets : [];
+      return {
+        exercise: ex?.name,
+        repsArray: sets.map(s => Number(s?.reps) || 0),
+        weightsArray: sets.map(s => Number(s?.weight) || 0)
+      };
+    });
+  }
+
+  if (Array.isArray(workout?.sets)) {
+    const byExercise = new Map();
+    workout.sets.forEach(s => {
+      const name = s?.exercise || s?.exerciseName || s?.name || 'Exercise';
+      if (!byExercise.has(name)) byExercise.set(name, { exercise: name, repsArray: [], weightsArray: [] });
+      const e = byExercise.get(name);
+      e.repsArray.push(Number(s?.reps) || 0);
+      e.weightsArray.push(Number(s?.weight) || 0);
+    });
+    return [...byExercise.values()];
+  }
+
+  return [];
+}
+
+async function refreshRemoteOverloadCache(username) {
+  if (!username || typeof window === 'undefined' || !window.SERVER_URL) return;
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(username)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data?.success) return;
+
+    const items = Array.isArray(data.items) ? data.items : [];
+    _remoteOverloadCache = items.map(item => ({
+      date: item?.date || item?.workout?.date || '',
+      title: item?.title || item?.workout?.title || item?.workout?.name || 'Workout',
+      log: _extractLogEntries(item?.workout)
+    }));
+    _remoteOverloadCacheUser = username;
+
+    if (typeof renderWorkouts === 'function') renderWorkouts();
+  } catch (err) {
+    console.warn('[Overload] Failed to refresh remote history cache', err);
+  }
+}
+window.refreshRemoteOverloadCache = refreshRemoteOverloadCache;
+
 /**
  * Find the most recent logged entry of `exerciseName` strictly before
  * `workoutIndex`, so cards rendered for older workouts compare against
@@ -5288,6 +5358,13 @@ function getPreviousExerciseEntry(exerciseName, workoutIndex) {
 
   archived.forEach(w => consider(w, undefined));
   active.forEach((w, idx) => consider(w, idx));
+
+  // Nothing in local storage — workouts older than 4 weeks have been
+  // hard-saved to the backend and purged locally. Fall back to the
+  // background-refreshed remote cache so the comparison still surfaces.
+  if (!best && _remoteOverloadCacheUser === currentUser) {
+    _remoteOverloadCache.forEach(w => consider(w, undefined));
+  }
 
   return best;
 }
@@ -8534,33 +8611,6 @@ function checkMacroReset() {
   const now = Date.now();
 
   if (now - lastReset >= 86400000) { // 24h
-    // Prototype: archive the current resistance log locally until real API sync is ready.
-    try {
-      if (typeof finishAndClearCurrentLog === 'function') {
-        finishAndClearCurrentLog();
-      } else if (typeof saveLogToLocalStorage === 'function' && typeof currentUser !== 'undefined') {
-        const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-        const current = workouts[workouts.length - 1];
-        if (current && Array.isArray(current.log) && current.log.length) {
-          const resistanceLog = {
-            date: current.date ? new Date(current.date).toISOString() : new Date(lastReset).toISOString(),
-            title: current.title || current.name || 'Workout',
-            userId: getActiveUsername(),
-            exercises: current.log.map(entry => ({
-              name: entry.exercise || 'Exercise',
-              repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
-              weightsArray: Array.isArray(entry.weightsArray) ? entry.weightsArray : [],
-            })),
-          };
-          saveLogToLocalStorage(resistanceLog);
-          workouts.pop();
-          localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-        }
-      }
-    } catch (err) {
-      console.warn('Unable to archive resistance log during daily reset', err);
-    }
-
     const previousTotals = JSON.parse(localStorage.getItem("dailyMacroProgress")) || { protein:0, carbs:0, fats:0 };
     const previousMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
     const date = new Date(lastReset).toISOString().split('T')[0];
@@ -11790,37 +11840,6 @@ function getBodyweightPreference() {
   }
 }
 
-function finishAndClearCurrentLog() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const current = workouts[workouts.length - 1];
-  if (!current || !Array.isArray(current.log) || !current.log.length) return;
-
-  const resistanceLog = {
-    date: current.date ? new Date(current.date).toISOString() : new Date().toISOString(),
-    title: current.title || current.name || 'Workout',
-    userId: getActiveUsername(),
-    exercises: current.log.map(entry => ({
-      name: entry.exercise || 'Exercise',
-      repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
-      weightsArray: Array.isArray(entry.weightsArray) ? entry.weightsArray : [],
-    })),
-  };
-
-  if (typeof saveLogToLocalStorage === 'function') {
-    saveLogToLocalStorage(resistanceLog);
-  }
-
-  workouts.pop();
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  renderWorkouts();
-  if (typeof renderWorkoutHistory === 'function') {
-    renderWorkoutHistory();
-  }
-  if (typeof showWorkoutProgress === 'function') {
-    showWorkoutProgress({ workouts: workouts.map(w => ({ date: w.date, log: w.log })) });
-  }
-}
-
 function saveBodyweightPreference(value, unit) {
   const normalizedUnit = unit === 'lb' ? 'lb' : 'kg';
   const normalizedValue = typeof value === 'number' && !Number.isNaN(value)
@@ -15023,9 +15042,7 @@ function showHistoryMiniTab(type) {
         }
         if (typeof exitWorkoutFocusMode === 'function') exitWorkoutFocusMode();
         // Ending a workout should not immediately archive it — it needs to
-        // stay visible in the Log tab until archiveOldWorkouts() ages it out
-        // (finishAndClearCurrentLog() pops it straight to history, which made
-        // just-finished workouts vanish from the Log tab instantly).
+        // stay visible in the Log tab until archiveOldWorkouts() ages it out.
         renderWorkouts();
         if (typeof renderWorkoutHistory === 'function') renderWorkoutHistory();
       });
