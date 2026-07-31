@@ -270,6 +270,16 @@
   color: var(--primary, #5fa87e);
 }
 
+.maxed-out-pill {
+  margin: 8px 0;
+}
+
+.maxed-out-pill:has(input:checked) {
+  background: rgba(230, 168, 23, 0.14);
+  border-color: #e6a817;
+  color: #e6a817;
+}
+
 .set-remove-btn {
   width: 28px;
   height: 28px;

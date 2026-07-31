@@ -450,6 +450,17 @@ header, .dark-bg, .coach-only {
   opacity: 0.6;
 }
 
+.maxed-out-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #e6a817;
+  background: rgba(230, 168, 23, 0.12);
+  border: 1px solid rgba(230, 168, 23, 0.35);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
 .exercise-tag {
   background: var(--highlight);
   color: var(--card-bg);
