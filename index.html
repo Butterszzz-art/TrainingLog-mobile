@@ -5972,6 +5972,101 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 }
 document.addEventListener('scroll', closeContextMenu, true);
 
+/* ── Session rating (End Workout feedback) ───────────────────── */
+
+const SESSION_RATING_QUESTIONS = [
+  { key: 'progressive', label: 'Progressive overload', low: 'No, same or less', high: 'Yes, clearly more' },
+  { key: 'fatigue', label: 'Fatigue', low: 'Fresh', high: 'Extremely fatigued' },
+  { key: 'missedWeightGoal', label: 'Weight goal', low: 'Hit it', high: 'Missed it badly' },
+  { key: 'missedRepGoal', label: 'Rep goal', low: 'Hit it', high: 'Missed it badly' }
+];
+
+let _sessionRatingWorkoutIndex = null;
+let _sessionRatingDraft = {};
+
+function _findWorkoutIndexForRating(workouts) {
+  const today = new Date().toISOString().split('T')[0];
+  const todayIdx = workouts.findIndex(w => w?.date === today && Array.isArray(w.log) && w.log.length);
+  if (todayIdx !== -1) return todayIdx;
+  for (let i = workouts.length - 1; i >= 0; i--) {
+    if (Array.isArray(workouts[i]?.log) && workouts[i].log.length) return i;
+  }
+  return -1;
+}
+
+function closeSessionRatingModal() {
+  document.getElementById('sessionRatingModalOverlay')?.remove();
+  _sessionRatingWorkoutIndex = null;
+  _sessionRatingDraft = {};
+}
+
+function openSessionRatingModal(workoutIndex) {
+  const _logUser = window.coachLoggingClient || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
+  const workout = workouts[workoutIndex];
+  if (!workout) return;
+
+  closeSessionRatingModal();
+  _sessionRatingWorkoutIndex = workoutIndex;
+  _sessionRatingDraft = { ...(workout.sessionRating || {}) };
+
+  const modal = document.createElement('div');
+  modal.className = 'gdpr-modal-overlay';
+  modal.id = 'sessionRatingModalOverlay';
+  modal.innerHTML = `
+    <div class="gdpr-modal">
+      <h3>How did that session go?</h3>
+      <p>Rate each 1–5. Optional — skip if you'd rather not.</p>
+      <div class="session-rating-form">
+        ${SESSION_RATING_QUESTIONS.map(q => `
+          <div class="rating-question">
+            <label>${q.label}</label>
+            <div class="rating-scale" data-question="${q.key}">
+              ${[1, 2, 3, 4, 5].map(v => `<button type="button" class="rating-scale-btn${_sessionRatingDraft[q.key] === v ? ' selected' : ''}" data-question="${q.key}" data-value="${v}">${v}</button>`).join('')}
+            </div>
+            <div class="rating-scale-labels"><span>${q.low}</span><span>${q.high}</span></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="gdpr-modal-actions">
+        <button class="gdpr-export-btn" onclick="closeSessionRatingModal()">Skip</button>
+        <button class="gdpr-save-btn" onclick="submitSessionRating()">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll('.rating-scale-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const { question, value } = btn.dataset;
+      _sessionRatingDraft[question] = Number(value);
+      modal.querySelectorAll(`.rating-scale-btn[data-question="${question}"]`).forEach(b => {
+        b.classList.toggle('selected', b.dataset.value === value);
+      });
+    });
+  });
+}
+
+function submitSessionRating() {
+  const workoutIndex = _sessionRatingWorkoutIndex;
+  const draft = _sessionRatingDraft;
+  closeSessionRatingModal();
+  if (workoutIndex === null) return;
+
+  const _logUser = window.coachLoggingClient || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
+  const workout = workouts[workoutIndex];
+  if (!workout || !Object.keys(draft).length) return;
+
+  workout.sessionRating = { ...draft, ratedAt: new Date().toISOString() };
+  localStorage.setItem(`workouts_${_logUser}`, JSON.stringify(workouts));
+  renderWorkouts();
+  if (typeof showToast === 'function') showToast('Session rating saved.');
+}
+
+window.openSessionRatingModal = openSessionRatingModal;
+window.closeSessionRatingModal = closeSessionRatingModal;
+window.submitSessionRating = submitSessionRating;
+
 function renderWorkouts() {
   const _logUser = window.coachLoggingClient || currentUser;
   archiveOldWorkouts(_logUser);
@@ -6065,6 +6160,26 @@ function renderWorkouts() {
       rest.textContent = `Rest Breaks: ${workout.restBreaks.join(', ')} minutes`;
       meta.appendChild(rest);
     }
+
+    if (workout.sessionRating) {
+      const ratingLabels = { progressive: 'Progressive', fatigue: 'Fatigue', missedWeightGoal: 'Weight goal', missedRepGoal: 'Rep goal' };
+      const parts = Object.keys(ratingLabels)
+        .filter(key => workout.sessionRating[key] != null)
+        .map(key => `${ratingLabels[key]} ${workout.sessionRating[key]}/5`);
+      if (parts.length) {
+        const ratingSummary = document.createElement('p');
+        ratingSummary.className = 'session-rating-summary';
+        ratingSummary.textContent = parts.join(' · ');
+        meta.appendChild(ratingSummary);
+      }
+    }
+
+    const rateSessionButton = document.createElement('button');
+    rateSessionButton.type = 'button';
+    rateSessionButton.className = 'rate-session-btn';
+    rateSessionButton.textContent = workout.sessionRating ? 'Edit Rating' : 'Rate Session';
+    rateSessionButton.addEventListener('click', () => openSessionRatingModal(workoutIndex));
+    meta.appendChild(rateSessionButton);
 
     const shareWorkoutButton = document.createElement('button');
     shareWorkoutButton.type = 'button';
@@ -15045,6 +15160,13 @@ function showHistoryMiniTab(type) {
         // stay visible in the Log tab until archiveOldWorkouts() ages it out.
         renderWorkouts();
         if (typeof renderWorkoutHistory === 'function') renderWorkoutHistory();
+
+        if (typeof openSessionRatingModal === 'function') {
+          const _logUser = window.coachLoggingClient || currentUser;
+          const _workoutsForRating = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
+          const _ratingIdx = _findWorkoutIndexForRating(_workoutsForRating);
+          if (_ratingIdx !== -1) openSessionRatingModal(_ratingIdx);
+        }
       });
     }
 
