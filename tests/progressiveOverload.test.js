@@ -56,4 +56,28 @@ describe('getProgressiveOverloadSuggestion', () => {
     expect(recommendation.averageRate.weightDelta).toBeGreaterThan(2);
     expect(recommendation.sets[0].weight).toBeGreaterThan(55);
   });
+
+  test('suggests more reps instead of more weight when marked maxed out', () => {
+    const workouts = [
+      {
+        log: [
+          {
+            exercise: 'Leg Press',
+            weightsArray: [200, 200],
+            repsArray: [10, 10],
+            unit: 'kg',
+            targetRPE: 8,
+            rpeArray: [7, 7],
+            maxedOut: true
+          }
+        ]
+      }
+    ];
+
+    const recommendation = suggestNextSession('Leg Press', workouts);
+    expect(recommendation.strategy).toBe('maxed-out');
+    expect(recommendation.sets[0].weight).toBe(200);
+    expect(recommendation.sets[0].reps).toBeGreaterThan(10);
+    expect(recommendation.message).toMatch(/maxed out/i);
+  });
 });

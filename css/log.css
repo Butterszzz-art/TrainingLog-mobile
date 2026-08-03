@@ -270,6 +270,16 @@
   color: var(--primary, #5fa87e);
 }
 
+.maxed-out-pill {
+  margin: 8px 0;
+}
+
+.maxed-out-pill:has(input:checked) {
+  background: rgba(230, 168, 23, 0.14);
+  border-color: #e6a817;
+  color: #e6a817;
+}
+
 .set-remove-btn {
   width: 28px;
   height: 28px;
@@ -697,4 +707,69 @@
 
 .hist-subview.active {
   display: block;
+}
+
+/* ── Session rating (End Workout feedback) ───────────────────── */
+
+.session-rating-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.rating-question label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+  margin-bottom: 6px;
+}
+
+.rating-scale {
+  display: flex;
+  gap: 6px;
+}
+
+.rating-scale-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--secondary-text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.rating-scale-btn.selected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.rating-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.session-rating-summary {
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  margin: 4px 0 0;
+}
+
+.rate-session-btn {
+  margin-top: 6px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  cursor: pointer;
 }

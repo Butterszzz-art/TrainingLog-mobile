@@ -143,6 +143,21 @@ function suggestNextSession(exercise, workouts = []) {
   const baselineWeightStep = Math.max(1.25, Math.abs(averageRate.weightDelta) || 2.5);
   const baselineRepStep = Math.max(1, Math.round(Math.abs(averageRate.repDelta) || 1));
 
+  if (lastEntry.maxedOut) {
+    suggestedSets.forEach(set => {
+      set.reps += baselineRepStep;
+    });
+    return {
+      exercise: targetName,
+      unit,
+      strategy: 'maxed-out',
+      averageRate,
+      basedOnSessions: history.length,
+      sets: suggestedSets,
+      message: `Marked as maxed out — this equipment has no more weight to give. Add ${baselineRepStep} rep(s) per set instead, or switch to a harder variation.`
+    };
+  }
+
   if (rpeStatus.failedSets || rpeStatus.anyHighRpe) {
     strategy = 'reduce';
     const dropAmount = roundToIncrement(Math.max(1.25, baselineWeightStep * 0.5), 0.5);

@@ -485,6 +485,7 @@ function normalizeHistoryItem(item) {
     title: item?.title || workout?.title || workout?.name || 'Workout',
     date: item?.date || workout?.date || workout?.createdAt,
     exercises,
+    sessionRating: item?.sessionRating || workout?.sessionRating || null,
     workout
   };
 }
@@ -511,15 +512,32 @@ function renderHistoryList(containerEl) {
   containerEl.appendChild(list);
 }
 
+const SESSION_RATING_LABELS = {
+  progressive: 'Progressive',
+  fatigue: 'Fatigue',
+  missedWeightGoal: 'Weight goal',
+  missedRepGoal: 'Rep goal'
+};
+
+function formatSessionRatingSummary(sessionRating) {
+  if (!sessionRating) return '';
+  return Object.keys(SESSION_RATING_LABELS)
+    .filter(key => sessionRating[key] != null)
+    .map(key => `${SESSION_RATING_LABELS[key]} ${sessionRating[key]}/5`)
+    .join(' · ');
+}
+
 function renderHistoryDetail(containerEl, log) {
   const title = log?.title || 'Resistance Workout';
   const dateLabel = formatWorkoutDate(log?.date);
   const exercises = Array.isArray(log?.exercises) ? log.exercises : [];
+  const ratingSummary = formatSessionRatingSummary(log?.sessionRating);
 
   containerEl.innerHTML = `
     <button class="adv-btn history-back-btn" id="historyBackBtn">← Back</button>
     <h3 style="margin-top:12px;">${title}</h3>
     <div class="meta">${dateLabel}</div>
+    ${ratingSummary ? `<div class="session-rating-summary">${ratingSummary}</div>` : ''}
     <div class="history-detail-list">
       ${exercises.map(ex => {
         const reps = Array.isArray(ex?.repsArray) ? ex.repsArray : [];
