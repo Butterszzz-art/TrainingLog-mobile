@@ -6,7 +6,7 @@ const envServerUrl =
     ? process.env.PUBLIC_SERVER_URL
     : '';
 
-const DEFAULT_SERVER_URL = envServerUrl || 'https://traininglog-backend.onrender.com';
+const DEFAULT_SERVER_URL = envServerUrl || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 
 if (typeof window !== 'undefined') {
   window.TrainingLogConfig = {

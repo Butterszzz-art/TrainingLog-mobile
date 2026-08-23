@@ -8,4 +8,4 @@ const envServerUrl =
 
 // Base URL for the back-end API. Use PUBLIC_SERVER_URL from env if available.
 export const DEFAULT_SERVER_URL =
-  envServerUrl || "https://traininglog-backend.onrender.com";
+  envServerUrl || "https://us-central1-pocketcoach-280c4.cloudfunctions.net/api";

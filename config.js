@@ -1,2 +1,2 @@
 // Local configuration for Pocket Coach mobile
-window.SERVER_URL = 'https://traininglog-backend.onrender.com';
+window.SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';

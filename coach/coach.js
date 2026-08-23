@@ -4,7 +4,7 @@
    macro editor, notes, invites, AI assistant.
    ============================================================= */
 
-const SERVER_URL = 'https://traininglog-backend.onrender.com';
+const SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 
 let _token = localStorage.getItem('coachToken') || null;
 let _username = localStorage.getItem('coachUser') || null;

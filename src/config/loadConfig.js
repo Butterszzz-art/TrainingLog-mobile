@@ -14,7 +14,7 @@ function getDefaultServerUrl() {
     }
   }
 
-  return 'https://traininglog-backend.onrender.com';
+  return 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 }
 
 function resolveServerUrl() {
