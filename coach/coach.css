@@ -137,6 +137,29 @@ body {
   min-height: 1.2em;
 }
 
+.login-error.info { color: var(--text-muted); }
+.login-error.success { color: var(--primary); }
+
+/* .login-card button (below) targets every button in the card, including
+   this one, with higher specificity (class + element vs. just class) — so
+   this needs the same "class scoped to .login-card" shape to actually win. */
+.login-card .login-forgot-btn {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 400;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.login-card .login-forgot-btn:hover { color: var(--text-sec); }
+.login-card .login-forgot-btn:disabled { cursor: default; opacity: 0.6; }
+
 /* ── App shell grid ────────────────────────────────────────── */
 
 .app-shell {
