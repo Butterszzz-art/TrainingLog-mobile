@@ -458,17 +458,34 @@ function buildExerciseSummary(exercises) {
 
 function normalizeHistoryItem(item) {
   const workout = item?.workout || item;
-  const fromDetailedSets = (workout?.exercises || []).map(ex => ({
-    name: ex?.name || 'Exercise',
-    repsArray: Array.isArray(ex?.sets) ? ex.sets.map(set => Number(set?.reps ?? 0)) : [],
-    weightsArray: Array.isArray(ex?.sets) ? ex.sets.map(set => Number(set?.weight ?? 0)) : []
-  }));
+  const rawExercises = Array.isArray(workout?.exercises) ? workout.exercises : [];
+
+  // Exercises arrive in two shapes depending on which store they came from:
+  // nested `{ sets: [{ reps, weight }] }` (finalizeResistanceWorkout / legacy
+  // archive entries) or flat `{ repsArray, weightsArray }` (resistanceLogs.js
+  // logs). Picking only the `sets` shape silently zeroed out the flat one.
+  const exercises = rawExercises.length
+    ? rawExercises.map(ex => (
+        Array.isArray(ex?.sets) && ex.sets.length
+          ? {
+              name: ex?.name || 'Exercise',
+              repsArray: ex.sets.map(set => Number(set?.reps ?? 0)),
+              weightsArray: ex.sets.map(set => Number(set?.weight ?? 0))
+            }
+          : {
+              name: ex?.name || 'Exercise',
+              repsArray: Array.isArray(ex?.repsArray) ? ex.repsArray.map(n => Number(n) || 0) : [],
+              weightsArray: Array.isArray(ex?.weightsArray) ? ex.weightsArray.map(n => Number(n) || 0) : []
+            }
+      ))
+    : mapToResistanceLog(workout).exercises;
 
   return {
     id: item?.id || workout?.id || generateLocalId(),
     title: item?.title || workout?.title || workout?.name || 'Workout',
     date: item?.date || workout?.date || workout?.createdAt,
-    exercises: fromDetailedSets.length ? fromDetailedSets : mapToResistanceLog(workout).exercises,
+    exercises,
+    sessionRating: item?.sessionRating || workout?.sessionRating || null,
     workout
   };
 }
@@ -495,15 +512,32 @@ function renderHistoryList(containerEl) {
   containerEl.appendChild(list);
 }
 
+const SESSION_RATING_LABELS = {
+  progressive: 'Progressive',
+  fatigue: 'Fatigue',
+  missedWeightGoal: 'Weight goal',
+  missedRepGoal: 'Rep goal'
+};
+
+function formatSessionRatingSummary(sessionRating) {
+  if (!sessionRating) return '';
+  return Object.keys(SESSION_RATING_LABELS)
+    .filter(key => sessionRating[key] != null)
+    .map(key => `${SESSION_RATING_LABELS[key]} ${sessionRating[key]}/5`)
+    .join(' · ');
+}
+
 function renderHistoryDetail(containerEl, log) {
   const title = log?.title || 'Resistance Workout';
   const dateLabel = formatWorkoutDate(log?.date);
   const exercises = Array.isArray(log?.exercises) ? log.exercises : [];
+  const ratingSummary = formatSessionRatingSummary(log?.sessionRating);
 
   containerEl.innerHTML = `
     <button class="adv-btn history-back-btn" id="historyBackBtn">← Back</button>
     <h3 style="margin-top:12px;">${title}</h3>
     <div class="meta">${dateLabel}</div>
+    ${ratingSummary ? `<div class="session-rating-summary">${ratingSummary}</div>` : ''}
     <div class="history-detail-list">
       ${exercises.map(ex => {
         const reps = Array.isArray(ex?.repsArray) ? ex.repsArray : [];

@@ -658,6 +658,141 @@ function bindLogoutAction(container = document) {
   });
 }
 
+function getFitbitElements(container = document) {
+  return {
+    statusEl: container.querySelector('#fitbitStatus'),
+    summaryEl: container.querySelector('#fitbitActivitySummary'),
+    connectBtn: container.querySelector('#fitbitConnectButton'),
+    disconnectBtn: container.querySelector('#fitbitDisconnectButton')
+  };
+}
+
+async function loadTodayFitbitActivity(container, authHeaders) {
+  const { summaryEl } = getFitbitElements(container);
+  if (!summaryEl) return;
+  try {
+    const res = await fetchWithTimeout(`${ensureServerUrl()}/api/fitbit/activity`, { headers: authHeaders }, 8000);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      summaryEl.style.display = 'none';
+      return;
+    }
+    const a = data.activity;
+    summaryEl.textContent = `Today: ${Number(a.steps || 0).toLocaleString()} steps · ${Number(a.distanceKm || 0).toFixed(1)} km · ${a.activeMinutes || 0} active min`;
+    summaryEl.style.display = 'block';
+  } catch (error) {
+    console.warn('[Settings:Fitbit] activity fetch failed', error);
+    summaryEl.style.display = 'none';
+  }
+}
+
+async function refreshFitbitStatus(container = document) {
+  const { statusEl, summaryEl, connectBtn, disconnectBtn } = getFitbitElements(container);
+  if (!statusEl) return;
+  if (typeof getAuthHeaders !== 'function' || typeof ensureServerUrl !== 'function' || typeof fetchWithTimeout !== 'function') return;
+
+  const authHeaders = getAuthHeaders();
+  if (!authHeaders.Authorization) {
+    statusEl.textContent = 'Sign in to connect Fitbit.';
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (disconnectBtn) disconnectBtn.style.display = 'none';
+    if (summaryEl) summaryEl.style.display = 'none';
+    return;
+  }
+
+  try {
+    const res = await fetchWithTimeout(`${ensureServerUrl()}/api/fitbit/status`, { headers: authHeaders }, 8000);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      statusEl.textContent = data?.error?.code === 'fitbit.disabled'
+        ? 'Fitbit integration is not available yet.'
+        : 'Could not check Fitbit connection.';
+      if (connectBtn) connectBtn.style.display = 'none';
+      if (disconnectBtn) disconnectBtn.style.display = 'none';
+      return;
+    }
+
+    if (data.connected) {
+      statusEl.textContent = 'Connected';
+      if (connectBtn) connectBtn.style.display = 'none';
+      if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
+      loadTodayFitbitActivity(container, authHeaders);
+    } else {
+      statusEl.textContent = 'Not connected';
+      if (summaryEl) summaryEl.style.display = 'none';
+      if (connectBtn) connectBtn.style.display = 'inline-flex';
+      if (disconnectBtn) disconnectBtn.style.display = 'none';
+    }
+  } catch (error) {
+    console.warn('[Settings:Fitbit] status check failed', error);
+    statusEl.textContent = 'Could not check Fitbit connection.';
+  }
+}
+
+function bindFitbitControls(container = document) {
+  const { connectBtn, disconnectBtn } = getFitbitElements(container);
+
+  if (connectBtn && connectBtn.dataset.bound !== 'true') {
+    connectBtn.dataset.bound = 'true';
+    connectBtn.addEventListener('click', async () => {
+      const authHeaders = getAuthHeaders();
+      if (!authHeaders.Authorization) {
+        if (typeof showToast === 'function') showToast('Please sign in first');
+        return;
+      }
+      connectBtn.disabled = true;
+      try {
+        const res = await fetchWithTimeout(`${ensureServerUrl()}/api/fitbit/connect`, { headers: authHeaders }, 8000);
+        const data = await res.json();
+        if (!res.ok || !data.success || !data.url) throw new Error(data?.error?.message || 'Could not start Fitbit connection');
+        window.location.href = data.url;
+      } catch (error) {
+        console.error('[Settings:Fitbit] connect failed', error);
+        if (typeof showToast === 'function') showToast('Could not connect to Fitbit');
+        connectBtn.disabled = false;
+      }
+    });
+  }
+
+  if (disconnectBtn && disconnectBtn.dataset.bound !== 'true') {
+    disconnectBtn.dataset.bound = 'true';
+    disconnectBtn.addEventListener('click', async () => {
+      const authHeaders = getAuthHeaders();
+      disconnectBtn.disabled = true;
+      try {
+        const res = await fetchWithTimeout(`${ensureServerUrl()}/api/fitbit/disconnect`, { method: 'POST', headers: authHeaders }, 8000);
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error('Disconnect failed');
+        if (typeof showToast === 'function') showToast('Fitbit disconnected');
+        refreshFitbitStatus(container);
+      } catch (error) {
+        console.error('[Settings:Fitbit] disconnect failed', error);
+        if (typeof showToast === 'function') showToast('Could not disconnect Fitbit');
+      } finally {
+        disconnectBtn.disabled = false;
+      }
+    });
+  }
+
+  refreshFitbitStatus(container);
+}
+
+// Fitbit's OAuth callback redirects the browser back with ?fitbit=connected|error.
+function handleFitbitOAuthRedirect() {
+  if (typeof window === 'undefined') return;
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('fitbit');
+  if (!status) return;
+
+  params.delete('fitbit');
+  const query = params.toString();
+  window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
+
+  if (typeof showToast === 'function') {
+    showToast(status === 'connected' ? 'Fitbit connected' : 'Fitbit connection failed — please try again');
+  }
+}
+
 function bindReminderToggle(container = document) {
   const reminderEnabledField = container.querySelector('#streakReminderEnabled');
   const reminderTimeField = container.querySelector('#streakReminderTime');
@@ -826,6 +961,7 @@ function injectSettingsMarkup() {
 
   if (container.dataset.loaded === 'true' || container.dataset.loaded === 'loading') {
     applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
+    if (container.dataset.loaded === 'true') bindFitbitControls(container);
     return;
   }
 
@@ -852,6 +988,7 @@ function injectSettingsMarkup() {
       }
       bindReminderToggle(container);
       bindLogoutAction(container);
+      bindFitbitControls(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
       renderProfileGamificationSummary(container);
@@ -908,6 +1045,7 @@ function initializeSettingsFeature() {
   injectSettingsMarkup();
   applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
   renderProfileTab();
+  handleFitbitOAuthRedirect();
 }
 
 document.addEventListener('DOMContentLoaded', initializeSettingsFeature);

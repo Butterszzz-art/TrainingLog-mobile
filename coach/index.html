@@ -46,77 +46,50 @@
       </div>
     </header>
 
-    <!-- Sidebar: Client Roster / Leads -->
+    <!-- Sidebar: Client Roster -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-view-tabs" id="sidebarViewTabs">
-          <button class="view-tab active" data-view="clients">Clients</button>
-          <button class="view-tab" data-view="leads">Leads<span class="view-tab-badge" id="leadsBadge" style="display:none;"></span></button>
-        </div>
-        <button class="sidebar-invite-btn" id="clientsActionBtn" onclick="showInviteModal()">+ Invite</button>
+        <h3 class="sidebar-title">Clients</h3>
+        <button class="sidebar-invite-btn" id="sidebarInviteBtn" onclick="showInviteModal()">+ Invite</button>
       </div>
 
-      <!-- Clients view -->
-      <div id="clientsView">
-        <!-- Search -->
-        <div class="sidebar-search">
-          <input type="text" id="clientSearch" placeholder="Search clients…" oninput="filterClients()">
-        </div>
-
-        <!-- Filter tabs -->
-        <div class="sidebar-filters" id="statusFilters">
-          <button class="filter-tab active" data-filter="all">All</button>
-          <button class="filter-tab" data-filter="action">Needs Action</button>
-          <button class="filter-tab" data-filter="watch">Watch</button>
-          <button class="filter-tab" data-filter="ok">Stable</button>
-        </div>
-
-        <!-- Client list -->
-        <div class="client-list" id="clientList">
-          <div class="client-list-loading">Loading clients…</div>
-        </div>
-
-        <!-- Bulk actions -->
-        <div class="sidebar-bulk" id="bulkBar" style="display:none;">
-          <span id="bulkCount">0 selected</span>
-          <button class="bulk-action-btn" onclick="bulkMessage()">📤 Message All</button>
-        </div>
+      <!-- Roster / Leads toggle -->
+      <div class="sidebar-mode-toggle" id="sidebarModeToggle">
+        <button class="mode-tab active" data-mode="clients">Clients</button>
+        <button class="mode-tab" data-mode="leads">Leads<span id="leadsBadge" class="mode-tab-badge" hidden>0</span></button>
       </div>
 
-      <!-- Leads view (hidden until selected) -->
-      <div id="leadsView" style="display:none;">
-        <!-- Search -->
-        <div class="sidebar-search">
-          <input type="text" id="leadSearch" placeholder="Search leads…" oninput="filterLeads()">
-        </div>
+      <!-- Search -->
+      <div class="sidebar-search">
+        <input type="text" id="clientSearch" placeholder="Search clients…" oninput="filterClients()">
+      </div>
 
-        <!-- Filter tabs -->
-        <div class="sidebar-filters" id="leadFilters">
-          <button class="filter-tab active" data-leadfilter="all">All</button>
-          <button class="filter-tab" data-leadfilter="new">New</button>
-          <button class="filter-tab" data-leadfilter="converted">Converted</button>
-          <button class="filter-tab" data-leadfilter="dismissed">Dismissed</button>
-        </div>
+      <!-- Filter tabs -->
+      <div class="sidebar-filters" id="statusFilters">
+        <button class="filter-tab active" data-filter="all">All</button>
+        <button class="filter-tab" data-filter="action">Needs Action</button>
+        <button class="filter-tab" data-filter="watch">Watch</button>
+        <button class="filter-tab" data-filter="ok">Stable</button>
+      </div>
 
-        <!-- Lead list -->
-        <div class="client-list" id="leadList">
-          <div class="client-list-loading">Loading leads…</div>
-        </div>
+      <!-- Client list -->
+      <div class="client-list" id="clientList">
+        <div class="client-list-loading">Loading clients…</div>
+      </div>
+
+      <!-- Bulk actions -->
+      <div class="sidebar-bulk" id="bulkBar" style="display:none;">
+        <span id="bulkCount">0 selected</span>
+        <button class="bulk-action-btn" onclick="bulkMessage()">📤 Message All</button>
       </div>
     </aside>
 
-    <!-- Main panel: Client Detail / Lead Detail -->
+    <!-- Main panel: Client Detail -->
     <main class="main-panel" id="mainPanel">
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">👈</div>
         <h2>Select a client</h2>
         <p>Choose a client from the roster to view their details, check-ins, and program.</p>
-      </div>
-
-      <div class="empty-state" id="leadsEmptyState" style="display:none;">
-        <div class="empty-icon">📋</div>
-        <h2>Select a lead</h2>
-        <p>Choose a lead from the list to review their intake, computed macros, and training advice.</p>
       </div>
 
       <!-- Client detail (hidden until selected) -->
@@ -142,26 +115,10 @@
         <div class="detail-panel" id="dtab_notes"></div>
       </div>
 
-      <!-- Lead detail (hidden until selected) -->
+      <!-- Lead detail (pre-signup intake submission) -->
       <div id="leadDetail" style="display:none;">
-
-        <!-- Lead header -->
         <div class="detail-header" id="leadDetailHeader"></div>
-
-        <!-- Lead actions -->
-        <div id="leadActions" style="display:flex;gap:8px;margin-bottom:16px;"></div>
-
-        <!-- Detail tabs -->
-        <div class="detail-tabs" id="leadDetailTabs">
-          <button class="detail-tab active" data-ltab="overview">Overview</button>
-          <button class="detail-tab" data-ltab="meals">Meals</button>
-          <button class="detail-tab" data-ltab="profile">Profile</button>
-        </div>
-
-        <!-- Tab panels -->
-        <div class="detail-panel active" id="ltab_overview"></div>
-        <div class="detail-panel" id="ltab_meals"></div>
-        <div class="detail-panel" id="ltab_profile"></div>
+        <div id="leadDetailBody"></div>
       </div>
     </main>
 

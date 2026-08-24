@@ -681,6 +681,12 @@
             </select>
           </div>
 
+          <!-- Machine at its weight ceiling — can't add more load next time -->
+          <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
+            <input type="checkbox" id="maxedOutToggle" />
+            <span>🔒 Maxed Out</span>
+          </label>
+
           <!-- Dynamically generated set inputs -->
           <div id="setInputsContainer"></div>
 
@@ -2672,144 +2678,6 @@
 
   <div id="progressTab" class="tab-content">
     <h2>Progress Overview</h2>
-    <div class="progress-layout">
-      <div id="progressTogglePanel" class="panel active">
-      <nav class="progress-nav">
-        <button id="workoutProgressBtn" onclick="showWorkoutProgress()">Workout</button>
-        <button id="cardioProgressBtn" onclick="showCardioProgress()">Cardio</button>
-        <button id="bodyweightProgressBtn" onclick="showBodyweightProgress()">Bodyweight</button>
-        <button id="recoveryProgressBtn" onclick="showRecoveryProgress()">Recovery</button>
-        <button id="exerciseProgressBtn" onclick="showExerciseProgress()">Exercise</button>
-        <input type="date" id="startRange" onchange="refreshProgress()">
-        <input type="date" id="endRange" onchange="refreshProgress()">
-      </nav>
-      </div>
-      <div id="progressChartsPanel" class="panel">
-      <section class="progress-chart">
-        <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
-        <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
-        <canvas id="progressCanvas" height="220"></canvas>
-        <div id="exerciseProgress" style="display:none;"></div>
-        <div id="trainingLoadPanel" style="margin-top:14px;">
-          <h3 style="margin-bottom:6px;">Training Stress
-            <span title="Monotony = mean daily load / standard deviation of daily load. Strain = monotony × weekly load." style="cursor:help;">ⓘ</span>
-          </h3>
-          <p style="margin:0 0 8px; font-size:.9rem;">
-            <strong title="Higher values indicate less day-to-day variation in training load.">Monotony</strong> and
-            <strong title="Strain combines weekly work and monotony to estimate total stress.">Strain</strong> are calculated from weekly volume and intensity load.
-          </p>
-          <canvas id="monotonyCanvas" height="180" style="max-height:180px; margin-bottom:10px;"></canvas>
-          <canvas id="strainCanvas" height="180" style="max-height:180px;"></canvas>
-          <div id="loadAlerts" style="margin-top:8px;"></div>
-        <div id="recoveryPanel" class="recovery-panel" style="display:none;">
-          <h3 style="margin-bottom:6px;">Recovery Map</h3>
-          <p class="recovery-sub">Trailing 7-day set volume and estimated fatigue per muscle group.</p>
-          <div class="recovery-figures">
-            <div class="recovery-figure-col">
-              <svg viewBox="0 0 220 440" xmlns="http://www.w3.org/2000/svg">
-                <circle class="recovery-neutral" cx="110" cy="30" r="20"></circle>
-                <rect class="recovery-neutral" x="100" y="48" width="20" height="12" rx="4"></rect>
-
-                <circle class="recovery-zone" data-muscle="shoulders" cx="58" cy="72" r="17"></circle>
-                <circle class="recovery-zone" data-muscle="shoulders" cx="162" cy="72" r="17"></circle>
-
-                <rect class="recovery-zone" data-muscle="biceps" x="30" y="76" width="24" height="64" rx="12"></rect>
-                <rect class="recovery-zone" data-muscle="biceps" x="166" y="76" width="24" height="64" rx="12"></rect>
-
-                <rect class="recovery-zone" data-muscle="chest" x="72" y="66" width="76" height="56" rx="18"></rect>
-                <rect class="recovery-zone" data-muscle="abs" x="84" y="126" width="52" height="56" rx="14"></rect>
-
-                <rect class="recovery-zone" data-muscle="forearms" x="24" y="144" width="22" height="64" rx="11"></rect>
-                <rect class="recovery-zone" data-muscle="forearms" x="174" y="144" width="22" height="64" rx="11"></rect>
-                <circle class="recovery-neutral" cx="35" cy="216" r="11"></circle>
-                <circle class="recovery-neutral" cx="185" cy="216" r="11"></circle>
-
-                <rect class="recovery-neutral" x="78" y="182" width="64" height="22" rx="10"></rect>
-
-                <rect class="recovery-zone" data-muscle="quads" x="62" y="204" width="34" height="110" rx="16"></rect>
-                <rect class="recovery-zone" data-muscle="quads" x="124" y="204" width="34" height="110" rx="16"></rect>
-                <rect class="recovery-zone" data-muscle="adductors" x="96" y="214" width="28" height="70" rx="12"></rect>
-
-                <circle class="recovery-neutral" cx="79" cy="320" r="12"></circle>
-                <circle class="recovery-neutral" cx="141" cy="320" r="12"></circle>
-                <rect class="recovery-neutral" x="68" y="326" width="24" height="86" rx="10"></rect>
-                <rect class="recovery-neutral" x="128" y="326" width="24" height="86" rx="10"></rect>
-                <rect class="recovery-neutral" x="64" y="412" width="32" height="14" rx="6"></rect>
-                <rect class="recovery-neutral" x="124" y="412" width="32" height="14" rx="6"></rect>
-              </svg>
-              <p class="recovery-figure-label">FRONT</p>
-            </div>
-            <div class="recovery-figure-col">
-              <svg viewBox="0 0 220 440" xmlns="http://www.w3.org/2000/svg">
-                <circle class="recovery-neutral" cx="110" cy="30" r="20"></circle>
-                <rect class="recovery-neutral" x="100" y="48" width="20" height="12" rx="4"></rect>
-
-                <rect class="recovery-zone" data-muscle="traps" x="88" y="64" width="44" height="30" rx="8"></rect>
-                <circle class="recovery-zone" data-muscle="shoulders" cx="58" cy="72" r="17"></circle>
-                <circle class="recovery-zone" data-muscle="shoulders" cx="162" cy="72" r="17"></circle>
-
-                <rect class="recovery-zone" data-muscle="triceps" x="30" y="76" width="24" height="64" rx="12"></rect>
-                <rect class="recovery-zone" data-muscle="triceps" x="166" y="76" width="24" height="64" rx="12"></rect>
-
-                <rect class="recovery-zone" data-muscle="back" x="72" y="92" width="76" height="90" rx="20"></rect>
-
-                <rect class="recovery-zone" data-muscle="forearms" x="24" y="144" width="22" height="64" rx="11"></rect>
-                <rect class="recovery-zone" data-muscle="forearms" x="174" y="144" width="22" height="64" rx="11"></rect>
-                <circle class="recovery-neutral" cx="35" cy="216" r="11"></circle>
-                <circle class="recovery-neutral" cx="185" cy="216" r="11"></circle>
-
-                <rect class="recovery-zone" data-muscle="glutes" x="74" y="184" width="72" height="44" rx="20"></rect>
-
-                <rect class="recovery-zone" data-muscle="hamstrings" x="66" y="214" width="34" height="100" rx="16"></rect>
-                <rect class="recovery-zone" data-muscle="hamstrings" x="120" y="214" width="34" height="100" rx="16"></rect>
-                <rect class="recovery-zone" data-muscle="abductors" x="58" y="214" width="16" height="90" rx="8"></rect>
-                <rect class="recovery-zone" data-muscle="abductors" x="146" y="214" width="16" height="90" rx="8"></rect>
-
-                <circle class="recovery-neutral" cx="79" cy="320" r="12"></circle>
-                <circle class="recovery-neutral" cx="141" cy="320" r="12"></circle>
-                <rect class="recovery-zone" data-muscle="calves" x="68" y="326" width="24" height="86" rx="10"></rect>
-                <rect class="recovery-zone" data-muscle="calves" x="128" y="326" width="24" height="86" rx="10"></rect>
-                <rect class="recovery-neutral" x="64" y="412" width="32" height="14" rx="6"></rect>
-                <rect class="recovery-neutral" x="124" y="412" width="32" height="14" rx="6"></rect>
-              </svg>
-              <p class="recovery-figure-label">BACK</p>
-            </div>
-          </div>
-          <div class="recovery-legend">
-            <div class="recovery-legend-bar"></div>
-            <div class="recovery-legend-labels">
-              <span>Fresh</span><span>Moderate</span><span>Fatigued</span><span>Overreached</span>
-            </div>
-          </div>
-          <p class="recovery-hint">Tap a muscle to isolate it in the table below</p>
-          <div class="recovery-table-wrap">
-            <table class="recovery-table">
-              <thead>
-                <tr><th>Muscle</th><th class="num">Sets</th><th>Volume</th><th>Last trained</th><th>Status</th></tr>
-              </thead>
-              <tbody id="recoveryTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-        </div>
-        <div id="bodybuildingProgressPanel"></div>
-        <div id="goalBar" style="margin-top:10px;"></div>
-        <div id="goalProgressList" style="margin-top:10px;"></div>
-        <div id="coachCorner" style="margin-top:10px;"></div>
-      </section>
-      <aside class="progress-calendar">
-        <div id="progressCalendar"></div>
-        <label for="prTimeframe" style="display:block;margin-top:10px;">PR Timeframe</label>
-        <select id="prTimeframe" onchange="renderPRs()" style="width:100%;margin-bottom:8px;">
-          <option value="all">All time</option>
-          <option value="year">Last year</option>
-        </select>
-        <div id="prPanel"></div>
-        <div id="milestoneBadges"></div>
-        <div id="gamificationBadgeSection" class="gamification-panel" style="margin-top:12px;">
-          <h3 style="margin:0 0 8px;">Badge Gallery</h3>
-          <div id="gamificationBadgeGallery" class="gamification-badge-grid"></div>
-
     <!-- Progress mini-tab nav -->
     <nav class="log-subtabs" id="progressSubNav">
       <button class="log-subtab active" data-psub="charts"><span class="ui-icon" data-icon="barChart"></span> Charts</button>
@@ -3038,7 +2906,6 @@
       </div>
       <div id="dashboardPRSummary" class="panel"></div>
     </div>
-  </div>
 </div><!-- /#progressTab -->
 
 <div id="logHistoryTab" class="tab-content">
@@ -4128,6 +3995,20 @@ async function startLogin() {
       persistLoginIdentity(username, result.token);
     }
 
+    if (result && result.error?.code === 'auth.legacy_migration_required') {
+      // Hard cutover: this account still only exists in the old system.
+      // Route into the same Firebase reclaim flow signup already uses instead
+      // of dead-ending on a login error.
+      _switchLoginTab('signup');
+      const legacyField = document.getElementById('legacySignupPasswordField');
+      if (legacyField) legacyField.style.display = '';
+      document.getElementById('legacySignupPassword')?.focus();
+      if (errorEl) {
+        errorEl.textContent = 'This account needs to be migrated. Enter an email above and this account\'s existing password below, then tap Sign Up.';
+      }
+      return;
+    }
+
     if (result && result.success === false) {
       const message = result.error?.message || result.message || "Invalid username or password.";
       if (errorEl) {
@@ -4180,7 +4061,8 @@ async function startLogin() {
       Promise.resolve().then(async () => {
         try {
           if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
-          if (typeof window.archiveWorkoutsToAirtable === 'function') window.archiveWorkoutsToAirtable();
+          if (typeof window.archiveWorkoutsToBackend === 'function') window.archiveWorkoutsToBackend();
+          if (typeof window.refreshRemoteOverloadCache === 'function') window.refreshRemoteOverloadCache(username);
           // Fetch fresh macro targets and re-render if they differ from cache
           const fetchedTargets = await fetchUserMacroTargets(username);
           if (fetchedTargets) renderMacroTargets({ useFallback: false });
@@ -4915,6 +4797,7 @@ function addLogEntry() {
   const repGoal = +document.getElementById("repGoal").value;
   const targetRPE = parseFloat(document.getElementById("targetRPE")?.value) || null;
   const targetRIR = document.getElementById("targetRIR")?.value !== '' ? parseInt(document.getElementById("targetRIR")?.value, 10) : null;
+  const maxedOut = document.getElementById("maxedOutToggle")?.checked || false;
   const unit = document.getElementById("weightUnit").value || 'kg';
   const dateInput = document.getElementById("entryDate");
   const date = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().split('T')[0];
@@ -5002,6 +4885,7 @@ function addLogEntry() {
     repGoal,
     targetRPE: Number.isFinite(targetRPE) ? targetRPE : null,
     targetRIR: Number.isFinite(targetRIR) ? targetRIR : null,
+    maxedOut,
   };
   const activeWorkoutIndex = workouts.findIndex(w => w.date === date);
   workouts[activeWorkoutIndex].log.push(newEntry);
@@ -5015,6 +4899,7 @@ function addLogEntry() {
   }
 
   const activeWorkout = workouts[activeWorkoutIndex];
+  if (typeof window.applySessionContext === 'function') window.applySessionContext(activeWorkout);
   const computedMetrics = typeof calculateWorkoutMetrics === 'function'
     ? calculateWorkoutMetrics(activeWorkout)
     : {
@@ -5066,6 +4951,8 @@ function addLogEntry() {
   document.getElementById("goal").value = '';
   document.getElementById("repGoal").value = '';
   document.getElementById("setInputsContainer").innerHTML = '';
+  const maxedOutToggleEl = document.getElementById("maxedOutToggle");
+  if (maxedOutToggleEl) maxedOutToggleEl.checked = false;
   if (dateInput) {
     dateInput.value = new Date().toISOString().split('T')[0];
   }
@@ -5364,95 +5251,147 @@ function formatLastTimeSets(exercise) {
   return summary.length ? summary.join(', ') : 'No sets recorded last time';
 }
 
-function getLastExerciseLogEntry(exerciseName) {
-  if (typeof loadLogsFromLocalStorage !== 'function') return null;
-  const targetName = (exerciseName || '').trim().toLowerCase();
+function _bestSetE1RM(exercise) {
+  const reps = Array.isArray(exercise?.repsArray) ? exercise.repsArray : [];
+  const weights = Array.isArray(exercise?.weightsArray) ? exercise.weightsArray : [];
+  let best = 0;
+  reps.forEach((r, i) => {
+    const rep = Number(r) || 0;
+    const weight = Number(weights[i]) || 0;
+    if (rep <= 0) return;
+    const e1rm = rep === 1 ? weight : weight * (1 + rep / 30);
+    if (e1rm > best) best = e1rm;
+  });
+  return Math.round(best * 10) / 10;
+}
+
+// Backend fallback for "last time" lookups once a workout has aged out of
+// local storage (hard-saved to the backend by workout-archiver.js after 4
+// weeks — see collectWorkoutsDueForBackendArchive). Populated in the
+// background; a lookup that finds nothing locally checks this cache so
+// infrequently-trained exercises still get a progressive-overload comparison.
+let _remoteOverloadCache = [];
+let _remoteOverloadCacheUser = null;
+
+function _extractLogEntries(workout) {
+  if (Array.isArray(workout?.log)) return workout.log;
+
+  if (Array.isArray(workout?.exercises)) {
+    return workout.exercises.map(ex => {
+      if (Array.isArray(ex?.repsArray) || Array.isArray(ex?.weightsArray)) {
+        return { exercise: ex?.name, repsArray: ex.repsArray || [], weightsArray: ex.weightsArray || [] };
+      }
+      const sets = Array.isArray(ex?.sets) ? ex.sets : [];
+      return {
+        exercise: ex?.name,
+        repsArray: sets.map(s => Number(s?.reps) || 0),
+        weightsArray: sets.map(s => Number(s?.weight) || 0)
+      };
+    });
+  }
+
+  if (Array.isArray(workout?.sets)) {
+    const byExercise = new Map();
+    workout.sets.forEach(s => {
+      const name = s?.exercise || s?.exerciseName || s?.name || 'Exercise';
+      if (!byExercise.has(name)) byExercise.set(name, { exercise: name, repsArray: [], weightsArray: [] });
+      const e = byExercise.get(name);
+      e.repsArray.push(Number(s?.reps) || 0);
+      e.weightsArray.push(Number(s?.weight) || 0);
+    });
+    return [...byExercise.values()];
+  }
+
+  return [];
+}
+
+async function refreshRemoteOverloadCache(username) {
+  if (!username || typeof window === 'undefined' || !window.SERVER_URL) return;
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(username)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data?.success) return;
+
+    const items = Array.isArray(data.items) ? data.items : [];
+    _remoteOverloadCache = items.map(item => ({
+      date: item?.date || item?.workout?.date || '',
+      title: item?.title || item?.workout?.title || item?.workout?.name || 'Workout',
+      log: _extractLogEntries(item?.workout)
+    }));
+    _remoteOverloadCacheUser = username;
+
+    if (typeof renderWorkouts === 'function') renderWorkouts();
+  } catch (err) {
+    console.warn('[Overload] Failed to refresh remote history cache', err);
+  }
+}
+window.refreshRemoteOverloadCache = refreshRemoteOverloadCache;
+
+/**
+ * Find the most recent logged entry of `exerciseName` strictly before
+ * `workoutIndex`, so cards rendered for older workouts compare against
+ * what was actually logged before them (not just the globally latest).
+ */
+function getPreviousExerciseEntry(exerciseName, workoutIndex) {
+  const targetName = String(exerciseName || '').trim().toLowerCase();
   if (!targetName) return null;
 
-  const currentUserId = typeof currentUser !== 'undefined' ? currentUser : null;
-  const logs = loadLogsFromLocalStorage()
-    .slice()
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  // Workouts older than 7 days are moved out of `workouts_${user}` into
+  // `workoutHistory_${user}` by archiveOldWorkouts() — both must be
+  // searched or anything logged more than a week ago is invisible here.
+  const active = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const archived = JSON.parse(localStorage.getItem(`workoutHistory_${currentUser}`)) || [];
+  const currentDate = active[workoutIndex]?.date || '';
 
-  for (const log of logs) {
-    if (currentUserId && log?.userId && log.userId !== currentUserId) continue;
-    const exercises = Array.isArray(log?.exercises) ? log.exercises : [];
-    const match = exercises.find(ex => (ex?.name || '').trim().toLowerCase() === targetName);
-    if (match) {
-      return { log, exercise: match };
+  let best = null;
+  const consider = (w, activeIdx) => {
+    if (activeIdx === workoutIndex || !Array.isArray(w?.log)) return;
+    const wDate = w.date || '';
+    const isEarlier = currentDate
+      ? (wDate < currentDate || (wDate === currentDate && activeIdx !== undefined && activeIdx < workoutIndex))
+      : (activeIdx === undefined || activeIdx < workoutIndex);
+    if (!isEarlier) return;
+
+    const match = w.log.find(e => String(e?.exercise || '').trim().toLowerCase() === targetName);
+    if (!match) return;
+
+    if (!best || wDate > best.date) {
+      best = { date: wDate, title: w.title || w.name || 'Workout', exercise: match };
     }
+  };
+
+  archived.forEach(w => consider(w, undefined));
+  active.forEach((w, idx) => consider(w, idx));
+
+  // Nothing in local storage — workouts older than 4 weeks have been
+  // hard-saved to the backend and purged locally. Fall back to the
+  // background-refreshed remote cache so the comparison still surfaces.
+  if (!best && _remoteOverloadCacheUser === currentUser) {
+    _remoteOverloadCache.forEach(w => consider(w, undefined));
   }
 
-  return null;
+  return best;
 }
 
-function getCurrentHistoryUserId() {
-  return getActiveUsername();
-}
+/** Compare current entry's best-set e1RM against the previous session's. */
+function getExerciseTrend(entry, previousExercise) {
+  if (!previousExercise) return null;
 
-function loadResistanceHistoryForUser(userId) {
-  if (typeof loadLogsFromLocalStorage !== 'function') return [];
-  const logs = loadLogsFromLocalStorage();
-  return logs.filter(log => !log?.userId || !userId || log.userId === userId);
-}
+  const currentE1RM = _bestSetE1RM(entry);
+  const previousE1RM = _bestSetE1RM(previousExercise);
+  if (!currentE1RM || !previousE1RM) return null;
 
-function getLastExerciseHistory(exerciseName, userId) {
-  if (!exerciseName) return null;
-  const userHistory = loadResistanceHistoryForUser(userId)
-    .slice()
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
-  const normalizedName = exerciseName.toLowerCase();
-  for (const log of userHistory) {
-    const exercise = (log.exercises || []).find(ex => (ex.name || '').toLowerCase() === normalizedName);
-    if (exercise) {
-      return { log, exercise };
-    }
-  }
-  return null;
-}
-
-function createLastTimeCard(exerciseName) {
-  const userId = getCurrentHistoryUserId();
-  const last = getLastExerciseHistory(exerciseName, userId);
-  if (!last) return null;
-
-  const card = document.createElement('div');
-  card.className = 'last-time-card';
-
-  const title = document.createElement('div');
-  title.className = 'last-time-title';
-  title.textContent = 'Last time';
-  card.appendChild(title);
-
-  const meta = document.createElement('div');
-  meta.className = 'last-time-meta';
-  const dateLabel = last.log?.date ? new Date(last.log.date).toLocaleDateString() : 'Unknown date';
-  const workoutTitle = last.log?.title || last.log?.name || 'Workout';
-  meta.textContent = `${dateLabel} • ${workoutTitle}`;
-  card.appendChild(meta);
-
-  const setsRow = document.createElement('div');
-  setsRow.className = 'last-time-sets';
-  const reps = Array.isArray(last.exercise?.repsArray) ? last.exercise.repsArray : [];
-  const weights = Array.isArray(last.exercise?.weightsArray) ? last.exercise.weightsArray : [];
-  const setCount = Math.max(reps.length, weights.length);
-  if (!setCount) {
-    const empty = document.createElement('span');
-    empty.textContent = 'No sets recorded.';
-    setsRow.appendChild(empty);
-  } else {
-    for (let i = 0; i < setCount; i += 1) {
-      const chip = document.createElement('span');
-      chip.className = 'last-time-chip';
-      const rep = reps[i] ?? '-';
-      const weight = weights[i] ?? '-';
-      chip.textContent = `${weight} × ${rep}`;
-      setsRow.appendChild(chip);
-    }
-  }
-
-  card.appendChild(setsRow);
-  return card;
+  const change = (currentE1RM - previousE1RM) / previousE1RM;
+  if (change > 0.02)  return { icon: '📈', label: 'Trending up vs last time', cls: 'trend-up' };
+  if (change < -0.02) return { icon: '📉', label: 'Trending down vs last time', cls: 'trend-down' };
+  return { icon: '➡️', label: 'Holding steady vs last time', cls: 'trend-flat' };
 }
 
 function createExerciseCard(workoutIndex, entryIndex, entry) {
@@ -5467,9 +5406,33 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   tag.textContent = entry.muscleGroup || entry.primaryMuscle || 'Exercise';
   header.appendChild(tag);
 
+  const titleRow = document.createElement('div');
+  titleRow.className = 'exercise-title-row';
+
   const title = document.createElement('h3');
   title.textContent = entry.exercise || 'Exercise';
-  header.appendChild(title);
+  titleRow.appendChild(title);
+
+  if (entry.maxedOut) {
+    const maxedBadge = document.createElement('span');
+    maxedBadge.className = 'maxed-out-badge';
+    maxedBadge.title = "At this machine's weight limit — try more reps next time instead of more weight.";
+    maxedBadge.textContent = '🔒 Maxed Out';
+    titleRow.appendChild(maxedBadge);
+  }
+
+  const previous = getPreviousExerciseEntry(entry.exercise, workoutIndex);
+  const trend = getExerciseTrend(entry, previous?.exercise);
+  if (trend) {
+    const trendBadge = document.createElement('span');
+    trendBadge.className = `exercise-trend-badge ${trend.cls}`;
+    trendBadge.title = trend.label;
+    trendBadge.setAttribute('aria-label', trend.label);
+    trendBadge.textContent = trend.icon;
+    titleRow.appendChild(trendBadge);
+  }
+
+  header.appendChild(titleRow);
 
   const headerMenuButton = document.createElement('button');
   headerMenuButton.type = 'button';
@@ -5481,8 +5444,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
 
   card.appendChild(header);
 
-  const lastEntry = getLastExerciseLogEntry(entry.exercise || 'Exercise');
-  if (lastEntry) {
+  if (previous) {
     const lastPanel = document.createElement('div');
     lastPanel.className = 'last-time-card';
 
@@ -5493,22 +5455,16 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
 
     const lastMeta = document.createElement('div');
     lastMeta.className = 'last-time-meta';
-    const lastDate = lastEntry.log?.date ? new Date(lastEntry.log.date).toLocaleDateString() : 'Unknown date';
-    const lastWorkoutTitle = lastEntry.log?.title || 'Workout';
-    lastMeta.textContent = `${lastDate} • ${lastWorkoutTitle}`;
+    const lastDate = previous.date ? new Date(previous.date).toLocaleDateString() : 'Unknown date';
+    lastMeta.textContent = `${lastDate} • ${previous.title}`;
     lastPanel.appendChild(lastMeta);
 
     const lastSets = document.createElement('div');
     lastSets.className = 'last-time-sets';
-    lastSets.textContent = formatLastTimeSets(lastEntry.exercise);
+    lastSets.textContent = formatLastTimeSets(previous.exercise);
     lastPanel.appendChild(lastSets);
 
     card.appendChild(lastPanel);
-  }
-
-  const lastTimeCard = createLastTimeCard(entry.exercise || 'Exercise');
-  if (lastTimeCard) {
-    card.appendChild(lastTimeCard);
   }
 
   const goalData = [];
@@ -5988,7 +5944,12 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
     addButton('Backoff', () => changeSetType(workoutIndex, entryIndex, setIndex, 'backoff'));
     addButton('Top Set', () => changeSetType(workoutIndex, entryIndex, setIndex, 'top-set'));
   } else {
+    const _logUserForMenu = window.coachLoggingClient || currentUser;
+    const _workoutsForMenu = JSON.parse(localStorage.getItem(`workouts_${_logUserForMenu}`)) || [];
+    const _entryForMenu = _workoutsForMenu[workoutIndex]?.log?.[entryIndex];
+
     addButton('Add Set', () => addSetToLog(workoutIndex, entryIndex));
+    addButton(_entryForMenu?.maxedOut ? 'Un-mark Maxed Out' : 'Mark as Maxed Out', () => toggleMaxedOut(workoutIndex, entryIndex));
     addButton('Delete Exercise', () => removeLogEntry(workoutIndex, entryIndex));
   }
 
@@ -6034,6 +5995,101 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   window.addEventListener('resize', closeContextMenu);
 }
 document.addEventListener('scroll', closeContextMenu, true);
+
+/* ── Session rating (End Workout feedback) ───────────────────── */
+
+const SESSION_RATING_QUESTIONS = [
+  { key: 'progressive', label: 'Progressive overload', low: 'No, same or less', high: 'Yes, clearly more' },
+  { key: 'fatigue', label: 'Fatigue', low: 'Fresh', high: 'Extremely fatigued' },
+  { key: 'missedWeightGoal', label: 'Weight goal', low: 'Hit it', high: 'Missed it badly' },
+  { key: 'missedRepGoal', label: 'Rep goal', low: 'Hit it', high: 'Missed it badly' }
+];
+
+let _sessionRatingWorkoutIndex = null;
+let _sessionRatingDraft = {};
+
+function _findWorkoutIndexForRating(workouts) {
+  const today = new Date().toISOString().split('T')[0];
+  const todayIdx = workouts.findIndex(w => w?.date === today && Array.isArray(w.log) && w.log.length);
+  if (todayIdx !== -1) return todayIdx;
+  for (let i = workouts.length - 1; i >= 0; i--) {
+    if (Array.isArray(workouts[i]?.log) && workouts[i].log.length) return i;
+  }
+  return -1;
+}
+
+function closeSessionRatingModal() {
+  document.getElementById('sessionRatingModalOverlay')?.remove();
+  _sessionRatingWorkoutIndex = null;
+  _sessionRatingDraft = {};
+}
+
+function openSessionRatingModal(workoutIndex) {
+  const _logUser = window.coachLoggingClient || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
+  const workout = workouts[workoutIndex];
+  if (!workout) return;
+
+  closeSessionRatingModal();
+  _sessionRatingWorkoutIndex = workoutIndex;
+  _sessionRatingDraft = { ...(workout.sessionRating || {}) };
+
+  const modal = document.createElement('div');
+  modal.className = 'gdpr-modal-overlay';
+  modal.id = 'sessionRatingModalOverlay';
+  modal.innerHTML = `
+    <div class="gdpr-modal">
+      <h3>How did that session go?</h3>
+      <p>Rate each 1–5. Optional — skip if you'd rather not.</p>
+      <div class="session-rating-form">
+        ${SESSION_RATING_QUESTIONS.map(q => `
+          <div class="rating-question">
+            <label>${q.label}</label>
+            <div class="rating-scale" data-question="${q.key}">
+              ${[1, 2, 3, 4, 5].map(v => `<button type="button" class="rating-scale-btn${_sessionRatingDraft[q.key] === v ? ' selected' : ''}" data-question="${q.key}" data-value="${v}">${v}</button>`).join('')}
+            </div>
+            <div class="rating-scale-labels"><span>${q.low}</span><span>${q.high}</span></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="gdpr-modal-actions">
+        <button class="gdpr-export-btn" onclick="closeSessionRatingModal()">Skip</button>
+        <button class="gdpr-save-btn" onclick="submitSessionRating()">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll('.rating-scale-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const { question, value } = btn.dataset;
+      _sessionRatingDraft[question] = Number(value);
+      modal.querySelectorAll(`.rating-scale-btn[data-question="${question}"]`).forEach(b => {
+        b.classList.toggle('selected', b.dataset.value === value);
+      });
+    });
+  });
+}
+
+function submitSessionRating() {
+  const workoutIndex = _sessionRatingWorkoutIndex;
+  const draft = _sessionRatingDraft;
+  closeSessionRatingModal();
+  if (workoutIndex === null) return;
+
+  const _logUser = window.coachLoggingClient || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
+  const workout = workouts[workoutIndex];
+  if (!workout || !Object.keys(draft).length) return;
+
+  workout.sessionRating = { ...draft, ratedAt: new Date().toISOString() };
+  localStorage.setItem(`workouts_${_logUser}`, JSON.stringify(workouts));
+  renderWorkouts();
+  if (typeof showToast === 'function') showToast('Session rating saved.');
+}
+
+window.openSessionRatingModal = openSessionRatingModal;
+window.closeSessionRatingModal = closeSessionRatingModal;
+window.submitSessionRating = submitSessionRating;
 
 function renderWorkouts() {
   const _logUser = window.coachLoggingClient || currentUser;
@@ -6128,6 +6184,26 @@ function renderWorkouts() {
       rest.textContent = `Rest Breaks: ${workout.restBreaks.join(', ')} minutes`;
       meta.appendChild(rest);
     }
+
+    if (workout.sessionRating) {
+      const ratingLabels = { progressive: 'Progressive', fatigue: 'Fatigue', missedWeightGoal: 'Weight goal', missedRepGoal: 'Rep goal' };
+      const parts = Object.keys(ratingLabels)
+        .filter(key => workout.sessionRating[key] != null)
+        .map(key => `${ratingLabels[key]} ${workout.sessionRating[key]}/5`);
+      if (parts.length) {
+        const ratingSummary = document.createElement('p');
+        ratingSummary.className = 'session-rating-summary';
+        ratingSummary.textContent = parts.join(' · ');
+        meta.appendChild(ratingSummary);
+      }
+    }
+
+    const rateSessionButton = document.createElement('button');
+    rateSessionButton.type = 'button';
+    rateSessionButton.className = 'rate-session-btn';
+    rateSessionButton.textContent = workout.sessionRating ? 'Edit Rating' : 'Rate Session';
+    rateSessionButton.addEventListener('click', () => openSessionRatingModal(workoutIndex));
+    meta.appendChild(rateSessionButton);
 
     const shareWorkoutButton = document.createElement('button');
     shareWorkoutButton.type = 'button';
@@ -6280,6 +6356,18 @@ function changeSetType(workoutIndex, entryIndex, setIndex, type) {
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   renderWorkouts();
 }
+
+function toggleMaxedOut(workoutIndex, entryIndex) {
+  const _logUser = window.coachLoggingClient || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
+  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  if (!entry) return;
+
+  entry.maxedOut = !entry.maxedOut;
+  localStorage.setItem(`workouts_${_logUser}`, JSON.stringify(workouts));
+  renderWorkouts();
+}
+window.toggleMaxedOut = toggleMaxedOut;
 
 let restInterval;
 function _updateRestBanner(remaining, total) {
@@ -8674,33 +8762,6 @@ function checkMacroReset() {
   const now = Date.now();
 
   if (now - lastReset >= 86400000) { // 24h
-    // Prototype: archive the current resistance log locally until real API sync is ready.
-    try {
-      if (typeof finishAndClearCurrentLog === 'function') {
-        finishAndClearCurrentLog();
-      } else if (typeof saveLogToLocalStorage === 'function' && typeof currentUser !== 'undefined') {
-        const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-        const current = workouts[workouts.length - 1];
-        if (current && Array.isArray(current.log) && current.log.length) {
-          const resistanceLog = {
-            date: current.date ? new Date(current.date).toISOString() : new Date(lastReset).toISOString(),
-            title: current.title || current.name || 'Workout',
-            userId: getActiveUsername(),
-            exercises: current.log.map(entry => ({
-              name: entry.exercise || 'Exercise',
-              repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
-              weightsArray: Array.isArray(entry.weightsArray) ? entry.weightsArray : [],
-            })),
-          };
-          saveLogToLocalStorage(resistanceLog);
-          workouts.pop();
-          localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-        }
-      }
-    } catch (err) {
-      console.warn('Unable to archive resistance log during daily reset', err);
-    }
-
     const previousTotals = JSON.parse(localStorage.getItem("dailyMacroProgress")) || { protein:0, carbs:0, fats:0 };
     const previousMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
     const date = new Date(lastReset).toISOString().split('T')[0];
@@ -11930,37 +11991,6 @@ function getBodyweightPreference() {
   }
 }
 
-function finishAndClearCurrentLog() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const current = workouts[workouts.length - 1];
-  if (!current || !Array.isArray(current.log) || !current.log.length) return;
-
-  const resistanceLog = {
-    date: current.date ? new Date(current.date).toISOString() : new Date().toISOString(),
-    title: current.title || current.name || 'Workout',
-    userId: getActiveUsername(),
-    exercises: current.log.map(entry => ({
-      name: entry.exercise || 'Exercise',
-      repsArray: Array.isArray(entry.repsArray) ? entry.repsArray : [],
-      weightsArray: Array.isArray(entry.weightsArray) ? entry.weightsArray : [],
-    })),
-  };
-
-  if (typeof saveLogToLocalStorage === 'function') {
-    saveLogToLocalStorage(resistanceLog);
-  }
-
-  workouts.pop();
-  localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
-  renderWorkouts();
-  if (typeof renderWorkoutHistory === 'function') {
-    renderWorkoutHistory();
-  }
-  if (typeof showWorkoutProgress === 'function') {
-    showWorkoutProgress({ workouts: workouts.map(w => ({ date: w.date, log: w.log })) });
-  }
-}
-
 function saveBodyweightPreference(value, unit) {
   const normalizedUnit = unit === 'lb' ? 'lb' : 'kg';
   const normalizedValue = typeof value === 'number' && !Number.isNaN(value)
@@ -13896,8 +13926,6 @@ function refreshProgress() {
   const id = activeBtn.id;
   if (id === 'exerciseProgressBtn') {
     // Re-run the chart with the updated date range
-  } else if (id === 'recoveryProgressBtn') {
-    showRecoveryProgress();
     const picker = document.querySelector('#exPicker');
     const metric = document.querySelector('.ex-metric-btn.active')?.dataset.metric || 'weight';
     if (picker) renderExerciseChart(picker.value || null, metric);
@@ -15150,6 +15178,12 @@ function showHistoryMiniTab(type) {
     // Fetch technique videos shared by this user's coach
     if (typeof loadExerciseVideosForClient === 'function') loadExerciseVideosForClient();
 
+    // Session context (Alt Machine / Alt Gym chips, Vacation/Sick banners) —
+    // was only ever initialized from the login success handlers, so a
+    // returning user restoring a session from localStorage (the normal
+    // day-to-day flow) never saw it rendered. Init it unconditionally here too.
+    if (typeof window.initSessionContext === 'function') window.initSessionContext();
+
     const endWorkoutBtn = document.getElementById('endWorkoutBtn');
     if (endWorkoutBtn) {
       endWorkoutBtn.addEventListener('click', () => {
@@ -15164,7 +15198,21 @@ function showHistoryMiniTab(type) {
           }
         }
         if (typeof exitWorkoutFocusMode === 'function') exitWorkoutFocusMode();
-        finishAndClearCurrentLog();
+        // Ending a workout should not immediately archive it — it needs to
+        // stay visible in the Log tab until archiveOldWorkouts() ages it out.
+        renderWorkouts();
+        if (typeof renderWorkoutHistory === 'function') renderWorkoutHistory();
+
+        if (typeof openSessionRatingModal === 'function') {
+          const _logUser = window.coachLoggingClient || currentUser;
+          const _workoutsForRating = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
+          const _ratingIdx = _findWorkoutIndexForRating(_workoutsForRating);
+          if (_ratingIdx !== -1) openSessionRatingModal(_ratingIdx);
+        }
+
+        // Alt Machine/Alt Gym flags are single-session — reset them once the
+        // workout they were tagging is actually done.
+        if (typeof window.clearSessionContextAfterSave === 'function') window.clearSessionContextAfterSave();
       });
     }
 

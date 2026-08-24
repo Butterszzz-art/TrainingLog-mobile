@@ -21,7 +21,8 @@ function toResistanceLog(workout, currentUser) {
     title: (workout && (workout.title || workout.name)) || 'Resistance Workout',
     userId: (workout && (workout.userId || workout.username || workout.user)) || currentUser || null,
     exercises,
-    prEvents: Array.isArray(workout && workout.prEvents) ? workout.prEvents.slice() : []
+    prEvents: Array.isArray(workout && workout.prEvents) ? workout.prEvents.slice() : [],
+    sessionRating: (workout && workout.sessionRating) || null
   };
 }
 
@@ -61,12 +62,14 @@ function appendToLegacyHistoryStore(key, workout, log) {
     name: log.title,
     userId: log.userId,
     username: log.userId,
+    sessionRating: log.sessionRating || null,
     workout: {
       id: (workout && workout.id) || log.id || `archived-${log.date}`,
       date: log.date,
       title: log.title,
       name: log.title,
       userId: log.userId,
+      sessionRating: log.sessionRating || null,
       exercises: log.exercises.map(ex => ({
         name: ex.name,
         sets: Array.from(
