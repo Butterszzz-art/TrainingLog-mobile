@@ -238,6 +238,46 @@ body {
   color: var(--text);
 }
 
+/* View toggle (Clients / Leads) */
+.sidebar-view-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.view-tab {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+}
+
+.view-tab:hover { color: var(--text-sec); }
+
+.view-tab.active {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.view-tab-badge {
+  display: inline-block;
+  min-width: 16px;
+  padding: 1px 5px;
+  margin-left: 5px;
+  border-radius: 999px;
+  background: var(--highlight);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .sidebar-invite-btn {
   padding: 6px 14px;
   border-radius: 8px;
@@ -368,6 +408,80 @@ body {
 .client-alert.ok { background: var(--primary); }
 .client-alert.watch { background: var(--highlight); }
 .client-alert.action { background: var(--danger); }
+
+/* Lead status re-uses the same dot, mapped onto lead statuses */
+.client-alert.new { background: var(--highlight); }
+.client-alert.converted { background: var(--primary); }
+.client-alert.dismissed { background: var(--text-muted); }
+
+/* ── Lead detail extras ────────────────────────────────────── */
+
+.red-flag {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(132,157,144,0.1);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.red-flag:last-child { border-bottom: none; }
+
+.red-flag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.red-flag-dot.rood { background: var(--danger); }
+.red-flag-dot.oranje { background: var(--highlight); }
+.red-flag-dot.info { background: var(--text-muted); }
+
+.meal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.meal-table th, .meal-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(132,157,144,0.1);
+  color: var(--text-sec);
+}
+
+.meal-table th {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+
+.profile-field {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(132,157,144,0.1);
+}
+
+.profile-field:last-child { border-bottom: none; }
+
+.profile-field-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 3px;
+}
+
+.profile-field-val {
+  font-size: 0.85rem;
+  color: var(--text-sec);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
 
 .client-checkbox {
   width: 16px;
