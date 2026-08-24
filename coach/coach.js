@@ -5,6 +5,12 @@
    ============================================================= */
 
 const SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
+// Firebase's public Web API key (safe to ship client-side — it just
+// identifies the project, real access control is server-side rules/auth).
+// Used only for the "Forgot password?" flow below, which calls Google's
+// Identity Toolkit REST API directly rather than pulling in the whole
+// Firebase client SDK for one endpoint.
+const FIREBASE_API_KEY = 'AIzaSyCgZTztfMhwQdRfc4no_ZduDEfOv30gMcY';
 
 let _token = localStorage.getItem('coachToken') || null;
 let _username = localStorage.getItem('coachUser') || null;
@@ -73,6 +79,61 @@ async function doCoachLogin() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Sign In';
+  }
+}
+
+// Resolves the typed username to an email via the backend (login here is by
+// username, but Firebase's password-reset flow is email-based), then asks
+// Google's Identity Toolkit directly to send the reset link — no dedicated
+// backend route needed for that second step, it's the same public REST call
+// the Firebase client SDK's sendPasswordResetEmail() makes under the hood.
+async function doForgotPassword() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const errorEl = document.getElementById('loginError');
+  const btn = document.getElementById('forgotPasswordBtn');
+
+  if (!username) {
+    errorEl.className = 'login-error';
+    errorEl.textContent = 'Enter your username above first, then click "Forgot password?".';
+    return;
+  }
+
+  btn.disabled = true;
+  errorEl.className = 'login-error info';
+  errorEl.textContent = 'Sending reset link…';
+
+  try {
+    const resolveRes = await fetch(SERVER_URL + '/auth/email-for-username', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+    const resolveData = await resolveRes.json();
+    if (!resolveRes.ok || !resolveData.success || !resolveData.email) {
+      errorEl.className = 'login-error';
+      errorEl.textContent = resolveData.error?.message || 'No account found for that username.';
+      return;
+    }
+
+    const resetRes = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=' + FIREBASE_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestType: 'PASSWORD_RESET', email: resolveData.email }),
+    });
+    if (!resetRes.ok) {
+      const resetData = await resetRes.json().catch(() => ({}));
+      errorEl.className = 'login-error';
+      errorEl.textContent = resetData.error?.message || 'Could not send reset email.';
+      return;
+    }
+
+    errorEl.className = 'login-error success';
+    errorEl.textContent = 'Reset link sent to ' + resolveData.email + ' — check your inbox.';
+  } catch {
+    errorEl.className = 'login-error';
+    errorEl.textContent = 'Connection error — could not send reset link.';
+  } finally {
+    btn.disabled = false;
   }
 }
 
