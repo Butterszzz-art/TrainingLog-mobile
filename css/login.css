@@ -249,6 +249,36 @@
   display: none !important;
 }
 
+/* ── Forgot password ────────────────────────────────────────── */
+
+.login-forgot-link {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 4px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.78rem;
+  font-family: 'Poppins', sans-serif;
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: center;
+}
+
+.login-forgot-link:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.login-forgot-link:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.login-error--success {
+  color: var(--primary, #5fa87e);
+}
+
 /* ── Pricing link ───────────────────────────────────────────── */
 
 .login-pricing-link {
