@@ -75,7 +75,7 @@ cp config.example.js config.js
 The file exports two constants:
 
 ```javascript
-window.SERVER_URL = 'https://traininglog-backend.onrender.com';
+window.SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 window.airtableConfig = {
   airtableToken: 'yourToken',
   airtableBaseId: 'yourBase'

@@ -4,7 +4,7 @@
    macro editor, notes, invites, AI assistant.
    ============================================================= */
 
-const SERVER_URL = 'https://traininglog-backend.onrender.com';
+const SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 
 let _token = localStorage.getItem('coachToken') || null;
 let _username = localStorage.getItem('coachUser') || null;
@@ -151,7 +151,9 @@ function renderClientList() {
 function updateFilterCounts() {
   const counts = { all: _clients.length, action: 0, watch: 0, ok: 0 };
   _clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
-  document.querySelectorAll('.filter-tab').forEach(tab => {
+  // Scoped to #statusFilters — .filter-tab is a shared class, so this stays
+  // scoped in case any other .filter-tab group (e.g. leads) is ever added.
+  document.querySelectorAll('#statusFilters .filter-tab').forEach(tab => {
     const f = tab.dataset.filter;
     const labels = { all: 'All', action: 'Needs Action', watch: 'Watch', ok: 'Stable' };
     tab.textContent = labels[f] + ' (' + (counts[f] || 0) + ')';
@@ -231,6 +233,7 @@ function switchDetailTab(name) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────
+// (escapeHtml lives further down, alongside the leads section that needs it)
 
 function stat(label, value) {
   return '<div class="d-stat"><div class="d-stat-val">' + value + '</div><div class="d-stat-lbl">' + label + '</div></div>';
@@ -481,7 +484,7 @@ function saveNote() {
 // COACH-6: Client Invite Flow
 // ══════════════════════════════════════════════════════════════
 
-function showInviteModal() {
+function showInviteModal(prefillName = '', prefillEmail = '') {
   let overlay = document.getElementById('inviteOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -501,8 +504,8 @@ function showInviteModal() {
     + '<button onclick="copyInviteCode()" style="padding:12px 18px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Copy</button>'
     + '</div>'
     + '<div style="margin-bottom:16px;">'
-    + '<input type="text" id="inviteClientName" placeholder="Client name (optional)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;margin-bottom:8px;">'
-    + '<input type="email" id="inviteClientEmail" placeholder="Client email (optional)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;">'
+    + '<input type="text" id="inviteClientName" placeholder="Client name (optional)" value="' + escapeHtml(prefillName) + '" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;margin-bottom:8px;">'
+    + '<input type="email" id="inviteClientEmail" placeholder="Client email (optional)" value="' + escapeHtml(prefillEmail) + '" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;">'
     + '</div>'
     + '<button onclick="saveInvite(\'' + code + '\')" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;margin-bottom:16px;">Save Invite</button>'
     + (invites.length ? '<div style="border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">Pending Invites (' + invites.length + ')</div>'
@@ -532,6 +535,7 @@ function saveInvite(code) {
   alert('Invite saved! Share the code: ' + code);
   showInviteModal();
 }
+
 
 // ══════════════════════════════════════════════════════════════
 // COACH-7: AI Coach Assistant

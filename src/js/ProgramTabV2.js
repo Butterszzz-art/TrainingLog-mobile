@@ -1149,7 +1149,7 @@
     } catch {}
 
     const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
-      || 'https://traininglog-backend.onrender.com';
+      || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 
     try {
       const controller = new AbortController();

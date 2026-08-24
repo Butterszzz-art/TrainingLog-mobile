@@ -6,7 +6,7 @@ if (typeof localStorage !== 'undefined') {
 }
 
 const serverUrl = (typeof window !== 'undefined' && window.SERVER_URL) ||
-  'https://traininglog-backend.onrender.com';
+  'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 
 function getAuthHeaders() {
   if (typeof localStorage === 'undefined') {

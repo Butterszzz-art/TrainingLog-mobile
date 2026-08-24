@@ -15,7 +15,7 @@
   }
 
   function serverUrl() {
-    return window.SERVER_URL || 'https://traininglog-backend.onrender.com';
+    return window.SERVER_URL || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
   }
 
   // Keep the stored token fresh: Firebase ID tokens expire hourly, and every

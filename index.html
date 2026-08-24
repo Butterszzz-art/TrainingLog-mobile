@@ -3481,7 +3481,7 @@ function getDefaultServerUrl() {
   if (window.TrainingLogConfig && window.TrainingLogConfig.DEFAULT_SERVER_URL) {
     return window.TrainingLogConfig.DEFAULT_SERVER_URL;
   }
-  return 'https://traininglog-backend.onrender.com';
+  return 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 }
 
 // Wrapper that aborts slow backend calls rather than hanging forever.
@@ -10811,7 +10811,7 @@ async function requestCoachDraftMessage(clientId) {
   draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
 
   const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
-    || 'https://traininglog-backend.onrender.com';
+    || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 
   try {
     const controller = new AbortController();
@@ -11650,7 +11650,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
   try {
     const serverUrl = (typeof window.getServerUrl === 'function' ? window.getServerUrl() : null)
       || window.SERVER_URL
-      || 'https://traininglog-backend.onrender.com';
+      || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
     const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
 
     const controller = new AbortController();
@@ -13605,7 +13605,7 @@ async function runPlateauCheck(username) {
   if (recentLogs.length < 3 && bodyweightHistory.length < 4) return;
 
   const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
-    || 'https://traininglog-backend.onrender.com';
+    || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 
   try {
     const controller = new AbortController();
@@ -18672,7 +18672,7 @@ window.renderMeetPrep = renderMeetPrep;
 
     try {
       const serverUrl = (typeof window.getServerUrl === 'function' ? window.getServerUrl() : null)
-        || window.SERVER_URL || 'https://traininglog-backend.onrender.com';
+        || window.SERVER_URL || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
       const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
 
       const controller = new AbortController();
@@ -18959,7 +18959,7 @@ window.renderMeetPrep = renderMeetPrep;
     if (status) status.textContent = 'Building your program…';
 
     var serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
-      || 'https://traininglog-backend.onrender.com';
+      || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 
     var payload = { goal: goal, daysPerWeek: days, sessionLengthMinutes: length, equipment: equipment, trainingMode: mode, experienceLevel: exp };
     if (focus) payload.focusAreas = focus;

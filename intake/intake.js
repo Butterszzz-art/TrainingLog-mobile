@@ -9,7 +9,7 @@ import { TALEN, vertaal, apparatuurLabel } from './i18n.js?v=1';
 // ever reads this one draft key, so nothing here can expose another client's
 // data. The actual write goes through the Pocket Coach backend (same origin
 // as coach.js talks to) rather than a separate Firebase project.
-const SERVER_URL = 'https://traininglog-backend.onrender.com';
+const SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 const DRAFT_KEY = 'pt-intake:client-draft:v1';
 const TAAL_KEY = 'pt-intake:client-taal:v1';
 
