@@ -135,6 +135,7 @@
     <button id="signupButton" class="login-cta login-cta--hidden loading-btn" onclick="startSignup()">
       <span>Create Account</span><span class="spinner"></span>
     </button>
+    <button type="button" id="forgotPasswordLink" class="login-forgot-link" onclick="startForgotPassword()">Forgot password?</button>
 
     <a href="pricing.html" class="login-pricing-link">See pricing &amp; plans →</a>
   </div>
@@ -4097,7 +4098,46 @@ async function startLogin() {
     setLoading(btn, false);
   }
 }
-  
+
+// Reuses the same username field the login form already has — Firebase's
+// reset flow is email-based, but firebaseAuth.resetPassword() resolves that
+// server-side the same way login() does, so the user never needs to know
+// their email if they signed up before that field existed.
+async function startForgotPassword() {
+  const username = document.getElementById('username').value.trim();
+  const errorEl = document.getElementById('loginError');
+  const link = document.getElementById('forgotPasswordLink');
+
+  if (!username) {
+    if (errorEl) errorEl.textContent = 'Enter your username above first, then tap "Forgot password?".';
+    return;
+  }
+  if (!window.firebaseAuth?.isAvailable()) {
+    if (errorEl) errorEl.textContent = 'Password reset isn\'t available for this account yet — contact support.';
+    return;
+  }
+
+  if (link) link.disabled = true;
+  if (errorEl) { errorEl.textContent = 'Sending reset link…'; errorEl.classList.remove('login-error--success'); }
+
+  try {
+    const { email } = await window.firebaseAuth.resetPassword(username);
+    if (errorEl) {
+      errorEl.textContent = `Reset link sent to ${email} — check your inbox.`;
+      errorEl.classList.add('login-error--success');
+    }
+  } catch (err) {
+    if (errorEl) {
+      errorEl.classList.remove('login-error--success');
+      errorEl.textContent = err.tryLegacy
+        ? 'This account hasn\'t been migrated yet — enter your username and existing password on the Sign Up tab to migrate it first.'
+        : (err.message || 'Could not send reset link.');
+    }
+  } finally {
+    if (link) link.disabled = false;
+  }
+}
+
 function showTab(tabName) {
   // Redirect legacy coachingTab references to the new split tabs
   if (tabName === 'coachingTab') {
@@ -15622,6 +15662,8 @@ function _switchLoginTab(mode) {
   const signupBtn = document.getElementById('signupButton');
   if (loginBtn)  loginBtn.classList.toggle('login-cta--hidden', !isLogin);
   if (signupBtn) signupBtn.classList.toggle('login-cta--hidden', isLogin);
+  const forgotLink = document.getElementById('forgotPasswordLink');
+  if (forgotLink) forgotLink.style.display = isLogin ? '' : 'none';
   // Firebase signups collect email (new field — legacy accounts have none)
   const emailField = document.getElementById('signupEmailField');
   if (emailField) {

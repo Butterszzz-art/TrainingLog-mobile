@@ -204,6 +204,36 @@
     };
   }
 
+  // Sends a password-reset email. Same username→email resolution as login()
+  // since Firebase's reset flow is email-based but this app logs in by
+  // username. Throws err.tryLegacy (matching login()'s convention) when the
+  // username isn't a Firebase account at all, so the caller can point the
+  // user at the migration flow instead of a dead-end "email sent" message.
+  async function resetPassword(usernameOrEmail) {
+    if (!available()) throw new Error('Firebase is not configured.');
+
+    let email = usernameOrEmail;
+    if (!usernameOrEmail.includes('@')) {
+      const resolved = await postJson('/auth/email-for-username', { username: usernameOrEmail });
+      if (!resolved.ok) {
+        if (resolved.status === 404) {
+          const err = new Error('No account found for that username.');
+          err.tryLegacy = true;
+          throw err;
+        }
+        throw new Error(resolved.data?.error?.message || 'Could not look up username.');
+      }
+      email = resolved.data.email;
+    }
+
+    try {
+      await firebase.auth().sendPasswordResetEmail(email);
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
+    return { email };
+  }
+
   async function resendVerification() {
     const user = firebase.auth().currentUser;
     if (!user) throw new Error('Not signed in.');
@@ -234,6 +264,7 @@
     signup,
     completeSignup,
     login,
+    resetPassword,
     resendVerification,
     reloadAndGetToken,
     logout
