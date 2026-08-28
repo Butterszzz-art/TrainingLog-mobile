@@ -57,7 +57,7 @@
   border: 1px solid rgba(74, 132, 102, 0.38);
   border-radius: var(--radius-pill);
   font-size: 0.82rem;
-  color: #8ec2a4;
+  color: var(--green-100);
   font-weight: 500;
 }
 

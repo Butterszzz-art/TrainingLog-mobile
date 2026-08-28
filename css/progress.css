@@ -123,7 +123,7 @@
 }
 
 #bodybuildingProgressPanel .progress-empty {
-  color: #b8c2bc;
+  color: var(--secondary-text);
 }
 
 /* ── Exercise progress chart ────────────────────────────────── */
