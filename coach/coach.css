@@ -236,6 +236,44 @@ body::before {
   letter-spacing: 0.08em;
 }
 
+.header-roster-summary {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding-left: 4px;
+  border-left: 1px solid var(--text-rule);
+  margin-left: 2px;
+}
+
+.header-center { flex: 1; display: flex; justify-content: center; }
+
+.header-search {
+  width: 270px;
+  max-width: 100%;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pod-border);
+  background: var(--pod-bg);
+  color: var(--text-color);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 8px 15px;
+}
+.header-search::placeholder { color: var(--text-faint); }
+.header-search:disabled { cursor: not-allowed; }
+
+.header-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.header-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
 .header-right {
   display: flex;
   align-items: center;
@@ -953,6 +991,16 @@ body::before {
 .ws-list-count { color: var(--text-muted); font-size: 11px; }
 
 /* Breadcrumb back-link on the client-file view */
+.detail-breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--text-rule);
+}
+
 .ws-breadcrumb {
   background: none;
   border: none;
@@ -960,10 +1008,46 @@ body::before {
   font-size: 12px;
   font-family: var(--font-body);
   cursor: pointer;
-  padding: 0 0 10px;
+  padding: 0;
   margin: 0;
 }
 .ws-breadcrumb:hover { color: var(--text); }
+
+.detail-breadcrumb-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Capsule — spec's primary/warn/neutral/alert chip variants */
+.capsule-chip {
+  border-radius: var(--radius-pill);
+  padding: 8px 15px;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.capsule-chip--primary {
+  background: var(--fill-btn-primary-desktop);
+  color: var(--label-on-green);
+}
+.capsule-chip--warn {
+  background: var(--pod-bg-alt);
+  border-color: var(--border-brass);
+  color: var(--warning-gold);
+}
+.capsule-chip--neutral {
+  background: var(--pod-bg-alt);
+  border-color: var(--border-chip);
+  color: var(--text-muted);
+}
+.capsule-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 @media (max-width: 900px) {
   .ws-grid { grid-template-columns: 1fr; }

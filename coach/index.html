@@ -44,8 +44,21 @@
         <span class="header-logo">🏋️</span>
         <span class="header-title">Pocket Coach</span>
         <span class="header-badge">COACH</span>
+        <span class="header-roster-summary" id="headerRosterSummary"></span>
+      </div>
+      <!-- Search/+New program/messages: styled per spec, but none has a
+           backing feature yet (no global search index, no coach-side
+           program-creation flow, no messaging data model — see
+           renderWorkspace()'s side panels for the same caveat) so they're
+           disabled rather than faked. -->
+      <div class="header-center">
+        <input class="header-search" type="text" placeholder="Search clients, programs…" disabled
+               title="Coming soon — global search isn't wired up yet">
       </div>
       <div class="header-right">
+        <button class="capsule-chip capsule-chip--primary" disabled
+                title="Coming soon — program creation happens in the mobile app for now">+ New program</button>
+        <button class="header-icon-btn" disabled title="Coming soon — messaging isn't wired up yet">💬</button>
         <span class="header-user" id="headerUser">—</span>
         <button class="header-logout" onclick="doLogout()">Sign Out</button>
       </div>
@@ -185,8 +198,21 @@
       <!-- Client detail (hidden until selected) -->
       <div id="clientDetail" style="display:none;">
 
-        <!-- Breadcrumb back to the workspace -->
-        <button class="ws-breadcrumb" onclick="backToWorkspace()">&larr; Clients</button>
+        <!-- Breadcrumb bar: back link + template/check-in/publish actions.
+             "Assign template" jumps to the real Program tab (assignProgram()
+             already exists there); "Request check-in" and "Publish changes"
+             have no backing feature anywhere in this app yet (no
+             coach-initiated check-in reminders, no draft/publish state) so
+             they render disabled with a title tooltip rather than pretend
+             to do something. -->
+        <div class="detail-breadcrumb-bar">
+          <button class="ws-breadcrumb" onclick="backToWorkspace()">&larr; Clients</button>
+          <div class="detail-breadcrumb-actions">
+            <button class="capsule-chip capsule-chip--neutral" onclick="switchDetailTab('program')">Assign template</button>
+            <button class="capsule-chip capsule-chip--warn" disabled title="Coming soon &mdash; check-in requests aren't wired up yet">Request check-in</button>
+            <button class="capsule-chip capsule-chip--primary" disabled title="Coming soon &mdash; there's no draft/publish state yet, edits save immediately">Publish changes</button>
+          </div>
+        </div>
 
         <!-- Athlete header -->
         <div class="detail-header" id="detailHeader"></div>

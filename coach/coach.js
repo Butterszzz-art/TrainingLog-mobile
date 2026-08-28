@@ -254,9 +254,14 @@ function renderWorkspace() {
   const counts = { all: _clients.length, action: 0, watch: 0, ok: 0 };
   _clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
 
-  document.getElementById('wsHeaderSub').textContent =
+  const rosterSummaryText =
     _clients.length + ' client' + (_clients.length === 1 ? '' : 's') +
     (counts.action ? ' · ' + counts.action + ' need attention' : '');
+  document.getElementById('wsHeaderSub').textContent = rosterSummaryText;
+  const headerSummaryEl = document.getElementById('headerRosterSummary');
+  if (headerSummaryEl) {
+    headerSummaryEl.textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + rosterSummaryText;
+  }
 
   document.getElementById('wsStatRow').innerHTML = [
     ['Total clients', counts.all, ''],
