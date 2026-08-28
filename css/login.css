@@ -56,7 +56,7 @@
 
 .login-tabs {
   display: flex;
-  background: var(--card-bg, #121b17);
+  background: var(--card-bg);
   border: 1px solid var(--border-color, rgba(132,157,144,0.28));
   border-radius: 12px;
   padding: 4px;
@@ -101,7 +101,7 @@
 .login-card {
   width: 100%;
   max-width: 360px;
-  background: var(--card-bg, #121b17);
+  background: var(--card-bg);
   border: 1px solid var(--border-color, rgba(132,157,144,0.28));
   border-radius: 20px;
   padding: 24px 22px 20px;

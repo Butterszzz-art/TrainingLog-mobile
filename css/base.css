@@ -301,14 +301,14 @@ th {
   max-width: calc(100vw - 32px);
   min-width: 220px;
   background: #1c2e22;
-  border: 1px solid var(--border, #2a3a2e);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 12px 18px;
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 0.88rem;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
   z-index: 9999;
   opacity: 0;
   pointer-events: none;
@@ -343,8 +343,8 @@ th {
 }
 
 .nm-dialog {
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 18px;
   padding: 24px 20px 20px;
   width: 100%;
@@ -354,7 +354,7 @@ th {
 
 .nm-body {
   font-size: 0.95rem;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
   line-height: 1.5;
   margin: 0 0 20px;
   text-align: center;
@@ -364,9 +364,9 @@ th {
   width: 100%;
   padding: 11px 14px;
   border-radius: 10px;
-  border: 1px solid var(--border, #2a3a2e);
-  background: var(--bg, #0b130d);
-  color: var(--text, #e8f5e9);
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-color);
   font-size: 1rem;       /* ≥16px — no iOS auto-zoom */
   margin-bottom: 16px;
   box-sizing: border-box;
@@ -384,7 +384,7 @@ th {
   flex: 1;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid var(--border, #2a3a2e);
+  border: 1px solid var(--border-color);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;

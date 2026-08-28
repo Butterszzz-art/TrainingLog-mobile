@@ -887,7 +887,7 @@
     <!-- ══ Sub-view: Templates ════════════════════════════════════ -->
     <div id="logSub_templates" class="log-subview">
       <div style="padding:10px;">
-        <div id="templateBuilder" style="margin-bottom:12px; border:1px solid var(--border,#2a3a2e); border-radius:8px; padding:12px;">
+        <div id="templateBuilder" style="margin-bottom:12px; border:1px solid var(--border-color); border-radius:8px; padding:12px;">
           <h3 style="margin:0 0 10px 0;"><span class="ui-icon" data-icon="clipboard"></span> Template Builder</h3>
           <input type="text" id="newTemplateName" placeholder="Template name" />
           <input type="text" id="newTemplateDescription" placeholder="Description" style="margin-top:6px;" />
@@ -912,7 +912,7 @@
           </div>
         </div>
 
-        <div id="templateManager" style="border:1px solid var(--border,#2a3a2e); border-radius:8px; padding:12px;">
+        <div id="templateManager" style="border:1px solid var(--border-color); border-radius:8px; padding:12px;">
           <h3 style="margin:0 0 10px 0;"><span class="ui-icon" data-icon="package"></span> Template Manager</h3>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
             <button type="button" onclick="editSelectedTemplate()">Edit</button>
@@ -11084,7 +11084,7 @@ async function requestCoachDraftMessage(clientId) {
     const data = await res.json();
     const draft = data.draft || '';
     draftSection.innerHTML = `
-      <textarea id="coachAiDraftTextarea" rows="6" style="width:100%;box-sizing:border-box;resize:vertical;font-size:0.92rem;line-height:1.5;padding:10px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:var(--card-bg,#fff);color:var(--text-color,#222);">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+      <textarea id="coachAiDraftTextarea" rows="6" style="width:100%;box-sizing:border-box;resize:vertical;font-size:0.92rem;line-height:1.5;padding:10px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:var(--card-bg);color:var(--text-color,#222);">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
       <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
         <button type="button" data-coach-copy-draft style="flex:1;">Copy to clipboard</button>
         <button type="button" data-coach-clear-draft style="flex:0 0 auto;background:transparent;border:1px solid var(--border-color,#ddd);color:var(--secondary-text,#888);">Clear</button>
@@ -18827,7 +18827,7 @@ window.renderMeetPrep = renderMeetPrep;
 <!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
 <div id="macroAiBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);z-index:1050;" onclick="closeMacroAiAdvisor()"></div>
 <div id="macroAiPanel" role="dialog" aria-modal="true" aria-label="AI Macro Advisor"
-  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--card-bg,#0f1510);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
+  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--card-bg);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
     <div style="display:flex;align-items:center;gap:10px;">
       <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
@@ -18914,7 +18914,7 @@ window.renderMeetPrep = renderMeetPrep;
     ];
 
     body.innerHTML =
-      '<div style="background:var(--card-bg,#0f1510);border:1px solid var(--border-color,#2a3a2e);border-left:3px solid var(--primary,#5fa87e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border-color,#2a3a2e);border-left:3px solid var(--primary,#5fa87e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
         '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--primary,#5fa87e);margin-bottom:8px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI Advice</div>' +
         '<p style="font-size:0.88rem;line-height:1.6;color:var(--text-color);margin:0;">' + advice.replace(/</g, '&lt;') + '</p>' +
       '</div>' +
@@ -19019,7 +19019,7 @@ window.renderMeetPrep = renderMeetPrep;
 <!-- ── AI Program Generator panel ──────────────────────────────────────── -->
 <div id="progAiGenBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);z-index:1050;" onclick="closeProgAiGen()"></div>
 <div id="progAiGenPanel" role="dialog" aria-modal="true" aria-label="AI Program Generator"
-  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:88vh;background:var(--card-bg,#0f1510);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
+  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:88vh;background:var(--card-bg);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
     <div style="display:flex;align-items:center;gap:10px;">
       <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>

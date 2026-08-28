@@ -537,7 +537,7 @@
 /* ── AI check-in summary card ───────────────────────────────── */
 
 .ci-ai-card {
-  background: var(--card-bg, #0f1510);
+  background: var(--card-bg);
   border: 1px solid var(--border-color, #2a3a2e);
   border-left: 3px solid var(--primary, #5fa87e);
   border-radius: 14px;

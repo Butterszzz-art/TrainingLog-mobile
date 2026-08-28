@@ -79,7 +79,7 @@
   border: 1px solid var(--border-color, #2a3a2e);
   border-radius: 10px;
   overflow: hidden;
-  background: var(--card-bg, #0f1510);
+  background: var(--card-bg);
 }
 
 .log-adv-toggle {
@@ -266,7 +266,7 @@
 .rest-subview-inner h3 {
   font-size: 1rem;
   margin: 0 0 10px;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
 }
 
 /* ── Macro trends/heatmap accordions ─────────────────────────── */
@@ -274,7 +274,7 @@
 .macro-trends-accordion,
 .macro-heatmap-accordion {
   margin-top: 10px;
-  border: 1px solid var(--border, #2a3a2e);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -290,7 +290,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--card-bg, #0f1510);
+  background: var(--card-bg);
   user-select: none;
 }
 
