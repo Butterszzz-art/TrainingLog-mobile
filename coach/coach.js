@@ -502,6 +502,12 @@ function renderDetailHeader(c) {
 
 function renderOverview(c) {
   const ci = c.latestCheckInData || {};
+  const macros = getClientMacros(c.id);
+  // Spec's Col 1 (weight sparkline / weekly tonnage bars / macro adherence
+  // meters) needs a weight time series, a per-session tonnage history and
+  // logged-intake data — none of which reach the coach console today (see
+  // renderCheckIn's TODO for the same class of gap). Rendered honestly as
+  // empty/target-only states rather than fabricated charts, per decision.
   document.getElementById('dtab_overview').innerHTML =
     '<div class="d-card"><div class="d-card-title">Quick Stats</div><div class="d-stat-grid">'
     + stat('Bodyweight', ci.bodyweight ? ci.bodyweight + ' kg' : '—')
@@ -509,6 +515,20 @@ function renderOverview(c) {
     + stat('Mode', c.trainingMode || '—')
     + stat('Status', c.alertStatus || '—')
     + '</div></div>'
+    + '<div class="d-card"><div class="d-card-title">Weight &middot; 12-week trend</div>'
+    + '<div class="chart-empty-shell"><span>No weight history synced from the client\'s app yet</span></div></div>'
+    + '<div class="d-card"><div class="d-card-title">Weekly tonnage</div>'
+    + '<div class="chart-empty-shell chart-empty-shell--bars">' + Array(8).fill('<span class="chart-empty-bar"></span>').join('') + '</div>'
+    + '<p class="ws-empty-note">No session tonnage history synced yet</p></div>'
+    + '<div class="d-card"><div class="d-card-title">Macro adherence</div>'
+    + ['Calories', 'Protein', 'Carbs', 'Fat'].map(k => {
+        const key = k.toLowerCase();
+        const target = macros[key];
+        return '<div class="checkin-score-row"><span class="checkin-score-label">' + k + '</span>'
+          + '<div class="checkin-score-bar"><div class="checkin-score-fill" style="width:0%"></div></div>'
+          + '<span class="checkin-score-val">' + (target ? 'Target ' + target + (k === 'Calories' ? '' : 'g') : '—') + '</span></div>';
+      }).join('')
+    + '<p class="ws-empty-note">No logged intake synced from the client\'s app yet</p></div>'
     + '<div class="d-card"><div class="d-card-title">Latest Check-In</div>'
     + scoreBar('Sleep', ci.sleep, 10) + scoreBar('Energy', ci.energy, 10)
     + scoreBar('Stress', ci.stress, 10, true) + scoreBar('Hunger', ci.hunger, 10)
@@ -564,6 +584,16 @@ function renderProgram(c) {
     programListHtml += '<option value="' + p.name + '"' + sel + '>' + p.name + '</option>';
   });
 
+  // Spec's Program editor (week selector W1-W5, editable Exercise/Sets/
+  // Load/RPE/Δ grid, session history) needs a structured per-week program
+  // model this app doesn't have yet — getCoachPrograms() only stores
+  // name/days/focus/notes, no exercises. Rendered as an honest empty
+  // shell (real week chips, real "assign/create" actions kept working,
+  // grid/actions/history inert) rather than fabricated program data.
+  const weekChips = ['W1', 'W2', 'W3', 'W4', 'W5'].map((w, i) =>
+    '<button class="week-chip' + (i === 0 ? ' active' : '') + '" disabled>' + w + '</button>'
+  ).join('');
+
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Assign Program</div>'
     + '<select id="coachProgramSelect" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;margin-bottom:10px;">'
     + programListHtml + '</select>'
@@ -574,7 +604,18 @@ function renderProgram(c) {
     + '<div id="programBuilderArea" style="margin-top:12px;"></div>'
     + '</div>'
     + '<div class="d-card"><div class="d-card-title">Current Program Details</div>'
-    + '<p style="color:var(--text-sec);">' + (currentProg || 'No program assigned.') + '</p></div>';
+    + '<p style="color:var(--text-sec);">' + (currentProg || 'No program assigned.') + '</p></div>'
+    + '<div class="d-card pod--hero">'
+    + '<div class="pod-row"><span class="pod-kicker">Program editor</span><div class="week-chip-row">' + weekChips + '</div></div>'
+    + '<div class="program-grid-header"><span>Exercise</span><span>Sets&times;reps</span><span>Load</span><span>RPE</span><span>&Delta; last wk</span></div>'
+    + '<p class="ws-empty-note">No structured per-week program data yet — programs are name/notes only in this app today.</p>'
+    + '<div class="detail-breadcrumb-actions" style="margin-top:8px;">'
+    + '<button class="capsule-chip capsule-chip--neutral" disabled title="Coming soon">+ Exercise</button>'
+    + '<button class="capsule-chip capsule-chip--neutral" disabled title="Coming soon">Swap template</button>'
+    + '<button class="capsule-chip capsule-chip--warn" disabled title="Coming soon">Insert deload</button>'
+    + '</div></div>'
+    + '<div class="d-card"><div class="d-card-title">Session history</div>'
+    + '<p class="ws-empty-note">No session history synced from the client\'s app yet.</p></div>';
 }
 
 function getCoachPrograms() {

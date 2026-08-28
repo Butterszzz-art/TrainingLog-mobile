@@ -839,6 +839,75 @@ body::before {
 .lead-flag--oranje { background: rgba(168,124,56,0.12); border-left-color: var(--highlight); color: var(--text); }
 .lead-flag--info { background: rgba(132,157,144,0.1); border-left-color: var(--text-muted); color: var(--text-sec); }
 
+/* Program editor — week selector chips + DataTable-style grid header
+   (spec: 10px-radius chips, active green; grid 1.4fr .8fr .7fr .7fr .8fr). */
+.week-chip-row { display: flex; gap: 4px; }
+.week-chip {
+  width: 26px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--pod-border);
+  background: var(--pod-bg-alt);
+  color: var(--text-muted);
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: not-allowed;
+}
+.week-chip.active {
+  background: var(--fill-btn-primary-desktop);
+  border-color: transparent;
+  color: var(--label-on-green);
+}
+
+.program-grid-header {
+  display: grid;
+  grid-template-columns: 1.4fr .8fr .7fr .7fr .8fr;
+  gap: 8px;
+  padding: 10px 4px 8px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border-header);
+  border-bottom: 1px solid var(--border-header);
+  font-family: var(--font-label);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+
+/* Chart empty-shells — Weight sparkline / Weekly tonnage per spec, with
+   no time-series data reaching the coach console yet (see renderOverview's
+   comment). Same shape/height the real chart would take, honest "no data"
+   state rather than a fabricated line/bars. */
+.chart-empty-shell {
+  height: 90px;
+  border-radius: var(--radius-tight);
+  background: rgba(116, 138, 126, 0.06);
+  border: 1px dashed var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 20px;
+}
+.chart-empty-shell span {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.chart-empty-shell--bars {
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 12px 10px;
+  gap: 6px;
+}
+.chart-empty-bar {
+  flex: 1;
+  height: 10%;
+  border-radius: var(--radius-bar-desktop);
+  background: rgba(116, 138, 126, 0.14);
+}
+
 /* Check-in photo slots — hatch fill per spec, honest empty state (no
    photoUrl reaches the coach console yet, see renderCheckIn's comment). */
 .checkin-photo-row {
