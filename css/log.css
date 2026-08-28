@@ -11,6 +11,62 @@
   padding-bottom: 20px;
 }
 
+/* ── History list (history.js renderHistoryList — previously unstyled,
+   fell back to bare <ul>/<li>) ────────────────────────────────── */
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
+  padding: 12px 14px;
+}
+
+.history-item .row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13.5px;
+}
+
+.history-item .row span {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.history-item .meta {
+  font-size: 11.5px;
+  color: var(--secondary-text);
+  margin-top: 4px;
+}
+
+.history-open-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 8px 0;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
+  color: var(--text-color);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.history-open-btn:hover { background: var(--elevated-bg); }
+
 /* ── Session queue — today's planned exercises (session-queue.js) ── */
 
 .sq-card {
