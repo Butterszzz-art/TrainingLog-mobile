@@ -79,23 +79,37 @@
            no view distinct from Templates yet so it routes there too;
            Settings has no desktop view at all yet — flagged rather than
            faked. -->
+      <!-- rail-nav-icon spans are this app's existing emoji-glyph icon
+           convention (see header-logo/header-icon-btn etc.) rather than
+           the spec's Lucide stroke set, which isn't wired up anywhere in
+           this codebase yet — flagging that as a gap for a real icon
+           pass rather than hand-drawing SVG paths blind. The collapse
+           mechanic itself (72px, icon-only, active-as-square) is real. -->
       <nav class="rail-nav" id="railNav">
         <button class="rail-nav-item active" data-rail="queue" onclick="railNavGo('queue')">
-          <span>Queue</span><span class="rail-nav-count" id="railCountQueue">0</span>
+          <span class="rail-nav-icon" aria-hidden="true">📥</span><span class="rail-nav-label">Queue</span><span class="rail-nav-count" id="railCountQueue">0</span>
         </button>
         <button class="rail-nav-item" data-rail="clients" onclick="railNavGo('clients')">
-          <span>Clients</span><span class="rail-nav-count" id="railCountClients">0</span>
+          <span class="rail-nav-icon" aria-hidden="true">👥</span><span class="rail-nav-label">Clients</span><span class="rail-nav-count" id="railCountClients">0</span>
         </button>
-        <button class="rail-nav-item" data-rail="programs" onclick="railNavGo('programs')"><span>Programs</span></button>
+        <button class="rail-nav-item" data-rail="programs" onclick="railNavGo('programs')">
+          <span class="rail-nav-icon" aria-hidden="true">📋</span><span class="rail-nav-label">Programs</span>
+        </button>
         <button class="rail-nav-item" data-rail="templates" onclick="railNavGo('templates')">
-          <span>Templates</span><span class="rail-nav-count" id="railCountTemplates">0</span>
+          <span class="rail-nav-icon" aria-hidden="true">📑</span><span class="rail-nav-label">Templates</span><span class="rail-nav-count" id="railCountTemplates">0</span>
         </button>
-        <button class="rail-nav-item" data-rail="messages" onclick="railNavGo('messages')"><span>Messages</span></button>
+        <button class="rail-nav-item rail-nav-item--messages" data-rail="messages" onclick="railNavGo('messages')">
+          <span class="rail-nav-icon" aria-hidden="true">💬<span class="rail-nav-dot" title="Messaging isn't wired up yet"></span></span><span class="rail-nav-label">Messages</span>
+        </button>
         <button class="rail-nav-item" data-rail="checkins" onclick="railNavGo('checkins')">
-          <span>Check-ins</span><span class="rail-nav-count" id="railCountCheckins">0</span>
+          <span class="rail-nav-icon" aria-hidden="true">✅</span><span class="rail-nav-label">Check-ins</span><span class="rail-nav-count" id="railCountCheckins">0</span>
         </button>
-        <button class="rail-nav-item" data-rail="analytics" onclick="railNavGo('analytics')"><span>Analytics</span></button>
-        <button class="rail-nav-item" data-rail="settings" onclick="railNavGo('settings')" title="Not available in the coach console yet"><span>Settings</span></button>
+        <button class="rail-nav-item" data-rail="analytics" onclick="railNavGo('analytics')">
+          <span class="rail-nav-icon" aria-hidden="true">📊</span><span class="rail-nav-label">Analytics</span>
+        </button>
+        <button class="rail-nav-item" data-rail="settings" onclick="railNavGo('settings')" title="Not available in the coach console yet">
+          <span class="rail-nav-icon" aria-hidden="true">⚙️</span><span class="rail-nav-label">Settings</span>
+        </button>
       </nav>
 
       <!-- Roster / Leads toggle -->

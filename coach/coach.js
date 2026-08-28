@@ -430,6 +430,7 @@ function backToWorkspace() {
   document.getElementById('clientDetail').style.display = 'none';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('workspaceView').style.display = '';
+  document.querySelector('.app-shell')?.classList.remove('is-rail-collapsed');
 }
 
 function selectClient(id) {
@@ -441,6 +442,8 @@ function selectClient(id) {
   document.getElementById('workspaceView').style.display = 'none';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('clientDetail').style.display = '';
+  // Rail collapses to icon-only while viewing a client file (spec: 72px).
+  document.querySelector('.app-shell')?.classList.add('is-rail-collapsed');
 
   renderDetailHeader(client);
   renderOverview(client);

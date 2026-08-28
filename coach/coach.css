@@ -368,7 +368,7 @@ body::before {
 .rail-nav-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 9px;
   height: 44px;
   padding: 0 10px;
   border: none;
@@ -381,6 +381,8 @@ body::before {
   cursor: pointer;
   text-align: left;
 }
+.rail-nav-label { flex: 1; }
+.rail-nav-count { margin-left: auto; }
 
 .rail-nav-item:hover { background: var(--card); }
 
@@ -402,6 +404,57 @@ body::before {
 .rail-nav-item.active .rail-nav-count {
   color: var(--nav-label-active-desktop);
   background: rgba(5,12,8,.35);
+}
+
+.rail-nav-icon {
+  position: relative;
+  font-size: 15px;
+  line-height: 1;
+  flex: none;
+}
+
+/* ── Client-file view: rail collapses to 72px icon-only ─────────
+   (spec: "active item green-filled 13px-radius square, message icon
+   carries a brass dot"). Sidebar's roster/search/filter chrome hides
+   entirely since you're already inside one client's file. */
+.app-shell.is-rail-collapsed {
+  grid-template-columns: 72px 1fr;
+}
+.app-shell.is-rail-collapsed .sidebar-header,
+.app-shell.is-rail-collapsed .sidebar-mode-toggle,
+.app-shell.is-rail-collapsed .sidebar-search,
+.app-shell.is-rail-collapsed .sidebar-filters,
+.app-shell.is-rail-collapsed .client-list,
+.app-shell.is-rail-collapsed .sidebar-bulk {
+  display: none;
+}
+.app-shell.is-rail-collapsed .rail-nav {
+  padding-top: 12px;
+}
+.app-shell.is-rail-collapsed .rail-nav-item {
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin: 0 auto;
+}
+.app-shell.is-rail-collapsed .rail-nav-label,
+.app-shell.is-rail-collapsed .rail-nav-count {
+  display: none;
+}
+.app-shell.is-rail-collapsed .rail-nav-item.active {
+  border-radius: 13px;
+}
+
+.rail-nav-dot {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning-gold);
+  border: 1.5px solid var(--surface);
 }
 
 /* Roster / Leads toggle */
