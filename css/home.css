@@ -260,10 +260,10 @@
 }
 
 .coach-client-card {
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  background: var(--card-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
+  background: var(--pod-bg);
   padding: 14px;
   text-align: left;
 }
