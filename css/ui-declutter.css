@@ -30,7 +30,7 @@
   border: 1px solid var(--pill-border);
   border-radius: var(--radius-pill);
   background: var(--pill-bg);
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   font-family: var(--font-label);
   font-size: 13px;
   font-weight: 700;
@@ -92,7 +92,7 @@
   border: none;
   cursor: pointer;
   font-family: 'Poppins', sans-serif;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   font-size: 0.82rem;
   font-weight: 600;
   gap: 8px;
@@ -168,7 +168,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -178,7 +178,7 @@
   font-weight: 400;
   text-transform: none;
   letter-spacing: 0;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   opacity: 0.7;
   font-size: 0.7rem;
 }
@@ -227,7 +227,7 @@
 
 .log-adv-rir-note {
   font-size: 0.68rem;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -285,7 +285,7 @@
   cursor: pointer;
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   list-style: none;
   display: flex;
   align-items: center;
@@ -334,7 +334,7 @@
   flex-direction: column;
   gap: 4px;
   font-size: 0.88rem;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 .hydration-digestion-card input,
@@ -345,5 +345,5 @@
 #hydrationSodiumSummary {
   font-size: 0.85rem;
   margin-top: 6px;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }

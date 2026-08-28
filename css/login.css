@@ -49,7 +49,7 @@
 .login-tagline {
   margin: 0;
   font-size: 0.88rem;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 /* ── Tab switcher ───────────────────────────────────────────── */
@@ -73,7 +73,7 @@
   border: none;
   border-radius: 9px;
   background: transparent;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -136,7 +136,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 .login-input {
@@ -178,7 +178,7 @@
   padding: 0;
   margin: 0;
   box-shadow: none;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
