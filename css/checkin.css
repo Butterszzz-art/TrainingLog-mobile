@@ -14,10 +14,10 @@
 /* ── Sub-tab nav strip ──────────────────────────────────────── */
 .ci-nav {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   padding: 10px 12px 0;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--surface-bg);
+  border-bottom: none;
+  background: transparent;
   position: sticky;
   top: 0;
   z-index: 30;
@@ -29,34 +29,35 @@
 
 .ci-nav-btn {
   flex-shrink: 0;
-  padding: 8px 16px 10px;
-  background: none;
-  border: none;
-  border-bottom: 3px solid transparent;
+  padding: 7px 14px;
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
+  border-radius: var(--radius-pill);
   color: var(--text-muted);
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
-  margin-bottom: -1px; /* overlap the border-bottom of .ci-nav */
 }
 
 .ci-nav-btn.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 /* ── Phase banner ───────────────────────────────────────────── */
 .ci-phase-banner {
   margin: 14px 12px 0;
   padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(45,125,91,0.15), rgba(45,125,91,0.06));
-  border: 1px solid rgba(45,125,91,0.3);
-  border-radius: 12px;
+  background: rgba(38, 92, 68, 0.16);
+  border: 1px solid rgba(74, 132, 102, 0.38);
+  border-radius: var(--radius-pill);
   font-size: 0.82rem;
-  color: var(--primary);
+  color: #8ec2a4;
   font-weight: 500;
 }
 
@@ -67,9 +68,10 @@
 
 /* ── Card container ─────────────────────────────────────────── */
 .ci-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 16px;
   margin-bottom: 12px;
 }
@@ -291,10 +293,13 @@
 .ci-save-btn {
   width: 100%;
   padding: 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-pill);
   border: none;
-  background: var(--primary);
-  color: #fff;
+  background: var(--pill-bg-active);
+  box-shadow: var(--cta-shadow);
+  color: var(--pill-text-active);
+  font-family: var(--font-display);
+  text-transform: uppercase;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
