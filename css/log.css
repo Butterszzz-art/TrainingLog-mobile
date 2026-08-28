@@ -123,7 +123,7 @@
 .train-hero-tonnage-fill {
   height: 8px;
   border-radius: var(--radius-pill);
-  background: linear-gradient(90deg, #236b4e, #6fae8b);
+  background: linear-gradient(90deg, #236b4e, var(--positive-text));
   transition: width 0.4s ease;
 }
 
@@ -227,7 +227,7 @@
 
 .ql-step--plus {
   background: linear-gradient(135deg, #2f8a63, #236b4e);
-  color: #050c08;
+  color: var(--pill-text-active);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
@@ -328,7 +328,7 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
-.vl-count.is-high { color: #c79a54; }
+.vl-count.is-high { color: var(--warning-gold); }
 
 /* ── Session queue — today's planned exercises (session-queue.js) ── */
 
@@ -373,7 +373,7 @@
 .sq-e1rm {
   font-size: 11.5px;
   font-weight: 700;
-  color: #6fae8b;
+  color: var(--positive-text);
   font-variant-numeric: tabular-nums;
   min-width: 56px;
   text-align: right;
@@ -386,8 +386,8 @@
   min-width: 36px;
   text-align: right;
 }
-.sq-delta.is-up { color: #6fae8b; }
-.sq-delta.is-down { color: #e0707f; }
+.sq-delta.is-up { color: var(--positive-text); }
+.sq-delta.is-down { color: var(--danger-text); }
 .sq-delta.is-flat { color: var(--text-muted); }
 
 /* ── Workout session timer banner ───────────────────────────── */

@@ -70,6 +70,7 @@
   margin-bottom: var(--space-3);
 }
 .pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
   border-radius: var(--radius-pill);
@@ -84,6 +85,14 @@
   color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+/* Invisible hit-area expansion — keeps the mockup's visual pill height
+   (~29px) while meeting the 44px touch-target acceptance check. Doesn't
+   change layout since the pseudo-element is absolutely positioned. */
+.pill::before {
+  content: "";
+  position: absolute;
+  inset: -8px -2px;
 }
 .pill.active,
 .pill[aria-selected="true"] {
@@ -177,7 +186,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #050c08;
+  color: var(--pill-text-active);
   cursor: pointer;
   flex: none;
 }
