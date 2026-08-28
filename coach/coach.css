@@ -309,14 +309,14 @@ body {
 .mode-tab {
   flex: 1;
   padding: 7px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: transparent;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
   color: var(--text-muted);
+  font-family: var(--font-label);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -324,9 +324,9 @@ body {
 }
 
 .mode-tab.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 .mode-tab-badge {
@@ -353,21 +353,21 @@ body {
 
 .filter-tab {
   padding: 5px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: transparent;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
   color: var(--text-muted);
+  font-family: var(--font-label);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  font-family: inherit;
 }
 
 .filter-tab.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 /* Client list */
@@ -389,14 +389,14 @@ body {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: background 0.15s;
   margin-bottom: 2px;
 }
 
-.client-row:hover { background: var(--card); }
-.client-row.active { background: var(--primary-glow); border: 1px solid rgba(45,125,91,0.3); }
+.client-row:hover { background: var(--pod-bg); }
+.client-row.active { background: var(--primary-glow); border: 1px solid rgba(74,132,102,0.3); }
 
 .client-avatar {
   width: 36px;
@@ -503,9 +503,10 @@ body {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  background: var(--pod-bg-hero);
+  border: 1px solid rgba(74, 132, 102, 0.3);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-shadow-hero);
   margin-bottom: 16px;
 }
 
@@ -539,7 +540,8 @@ body {
 
 .detail-status {
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-label);
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -555,30 +557,31 @@ body {
 
 .detail-tabs {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   padding-bottom: 0;
 }
 
 .detail-tab {
-  padding: 10px 18px;
-  border: none;
-  background: transparent;
+  padding: 8px 16px;
+  border: 1px solid var(--pill-border);
+  border-radius: var(--radius-pill);
+  background: var(--pill-bg);
   color: var(--text-muted);
+  font-family: var(--font-label);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  font-family: inherit;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 
-.detail-tab:hover { color: var(--text-sec); }
+.detail-tab:hover { color: var(--text-sec); background: var(--elevated-bg); }
 
 .detail-tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 .detail-panel { display: none; }
@@ -587,9 +590,10 @@ body {
 /* ── Detail cards ──────────────────────────────────────────── */
 
 .d-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 16px;
   margin-bottom: 12px;
 }
@@ -721,3 +725,167 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* =============================================================
+   COACH WORKSPACE (Modernist redesign, Phase 12)
+   Triage-first landing view shown until a client is selected.
+   See renderWorkspace() in coach.js.
+   ============================================================= */
+
+.workspace-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.ws-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.ws-header-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ws-stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.ws-stat-tile { padding: 12px 14px; }
+.ws-stat-tile.ws-stat-danger .stat-tile-value { color: var(--danger); }
+.ws-stat-tile.ws-stat-warn .stat-tile-value { color: var(--highlight); }
+
+.ws-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.ws-col-main,
+.ws-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Priority client hero */
+.ws-priority-card { display: flex; flex-direction: column; gap: 12px; }
+
+.ws-priority-tag {
+  border-radius: var(--radius-pill);
+  padding: 4px 11px;
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ws-priority-tag.ok { background: rgba(45,125,91,0.15); color: var(--primary); }
+.ws-priority-tag.watch { background: rgba(198,148,79,0.15); color: var(--highlight); }
+.ws-priority-tag.action { background: rgba(192,80,96,0.15); color: var(--danger); }
+
+.ws-priority-main { display: flex; flex-direction: column; gap: 3px; }
+
+.ws-priority-name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  text-transform: uppercase;
+}
+
+.ws-priority-meta { font-size: 12px; color: var(--text-muted); }
+
+.ws-priority-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.ws-priority-cta { justify-content: center; }
+
+/* Roster table */
+.ws-roster-card { padding: 14px 16px; }
+.ws-roster-count { font-size: 9.5px; color: var(--text-muted); }
+
+.ws-roster-table { display: flex; flex-direction: column; }
+
+.ws-roster-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr 1.2fr 0.6fr 0.9fr;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 4px;
+  border-bottom: 1px solid rgba(116,138,126,0.09);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.ws-roster-row:last-child { border-bottom: none; }
+.ws-roster-row:hover { background: var(--elevated-bg); }
+
+.ws-roster-name { font-weight: 600; }
+.ws-roster-cell { color: var(--text-muted); font-size: 11.5px; }
+.ws-roster-cell--right { text-align: right; }
+
+.ws-roster-alert {
+  justify-self: end;
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  font-family: var(--font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.ws-roster-alert.ok { background: rgba(45,125,91,0.15); color: var(--primary); }
+.ws-roster-alert.watch { background: rgba(198,148,79,0.15); color: var(--highlight); }
+.ws-roster-alert.action { background: rgba(192,80,96,0.15); color: var(--danger); }
+
+/* Side column: review queue / templates / messages */
+.ws-side-card { padding: 12px 15px; }
+.ws-side-note { font-size: 9.5px; color: var(--text-muted); }
+
+.ws-empty-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.ws-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(116,138,126,0.09);
+  font-size: 12.5px;
+}
+.ws-list-row:last-child { border-bottom: none; }
+.ws-list-name { font-weight: 600; }
+.ws-list-count { color: var(--text-muted); font-size: 11px; }
+
+/* Breadcrumb back-link on the client-file view */
+.ws-breadcrumb {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  padding: 0 0 10px;
+  margin: 0;
+}
+.ws-breadcrumb:hover { color: var(--text); }
+
+@media (max-width: 900px) {
+  .ws-grid { grid-template-columns: 1fr; }
+  .ws-stat-row { grid-template-columns: repeat(2, 1fr); }
+}

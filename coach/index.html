@@ -91,7 +91,65 @@
 
     <!-- Main panel: Client Detail -->
     <main class="main-panel" id="mainPanel">
-      <div class="empty-state" id="emptyState">
+      <!-- Workspace: triage-first landing view shown until a client is
+           selected (renderWorkspace() in coach.js). Stat row and priority
+           client/roster table are real data from _clients; review-queue/
+           templates/messages panels are a visual shell only — no backing
+           data model exists yet for those, per the redesign plan. -->
+      <div class="workspace-view" id="workspaceView">
+        <div class="ws-header">
+          <span class="pod-title" style="font-size:22px;">Coaching</span>
+          <span class="ws-header-sub" id="wsHeaderSub"></span>
+        </div>
+
+        <div class="ws-stat-row" id="wsStatRow"></div>
+
+        <div class="ws-grid">
+          <div class="ws-col-main">
+            <div id="wsPriorityCard"></div>
+
+            <div class="pod ws-roster-card">
+              <div class="pod-row">
+                <span class="pod-kicker">Client roster</span>
+                <span class="ws-roster-count" id="wsRosterCount"></span>
+              </div>
+              <div class="ws-roster-table" id="wsRosterTable"></div>
+            </div>
+          </div>
+
+          <div class="ws-col-side">
+            <div class="pod ws-side-card">
+              <div class="pod-row">
+                <span class="pod-kicker">Review queue</span>
+                <span class="ws-side-note">phase · due</span>
+              </div>
+              <!-- TODO(coach-workspace): no meso/review-cycle data model
+                   exists yet — this is a visual shell until that's built. -->
+              <p class="ws-empty-note">No reviews tracked yet.</p>
+            </div>
+
+            <div class="pod ws-side-card">
+              <div class="pod-row">
+                <span class="pod-kicker">Program templates</span>
+                <span class="ws-side-note">assigned to</span>
+              </div>
+              <div id="wsTemplatesList"></div>
+            </div>
+
+            <div class="pod ws-side-card ws-messages-card">
+              <div class="pod-row">
+                <span class="pod-kicker">Messages</span>
+                <span class="ws-side-note">TODO(coach-workspace)</span>
+              </div>
+              <!-- TODO(coach-workspace): no messaging/thread data model
+                   exists yet — this is a visual shell until that's built. -->
+              <p class="ws-empty-note">Messaging isn't wired up yet — use a client's Notes tab for now.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" id="emptyState" style="display:none;">
         <div class="empty-icon">👈</div>
         <h2>Select a client</h2>
         <p>Choose a client from the roster to view their details, check-ins, and program.</p>
@@ -99,6 +157,9 @@
 
       <!-- Client detail (hidden until selected) -->
       <div id="clientDetail" style="display:none;">
+
+        <!-- Breadcrumb back to the workspace -->
+        <button class="ws-breadcrumb" onclick="backToWorkspace()">&larr; Clients</button>
 
         <!-- Athlete header -->
         <div class="detail-header" id="detailHeader"></div>
