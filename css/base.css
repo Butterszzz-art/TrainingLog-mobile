@@ -105,25 +105,25 @@ button {
   padding: 10px 22px;
   margin: 12px 0;
   box-sizing: border-box;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #38a870 0%, var(--primary) 55%, #245f47 100%);
-  color: var(--text-color);
+  border-radius: var(--radius-pill);
+  background: var(--fill-btn-primary-mobile);
+  color: var(--label-on-green);
   border: none;
   cursor: pointer;
   font-size: 15px;
-  box-shadow: var(--shadow);
-  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+  box-shadow: var(--shadow-button);
+  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease, filter 0.15s ease;
 }
 
-button:hover {
-  background: linear-gradient(135deg, #42bf80 0%, #35956b 55%, #2d7d5b 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.28), 0 6px 20px rgba(45, 125, 91, 0.38);
+@media (hover: hover) {
+  button:hover {
+    filter: brightness(1.06);
+  }
 }
 
 button:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow);
+  transform: scale(0.985);
+  box-shadow: none;
 }
 
 /* Add-to-log button disabled state */
