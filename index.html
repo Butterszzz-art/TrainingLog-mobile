@@ -14620,8 +14620,14 @@ function renderDashboardPRSummary() {
   const goals = loadGoals(currentUser);
   cont.innerHTML = '<h3>PR Summary</h3>';
   Object.entries(prs).slice(-5).forEach(([ex, pr]) => {
+    // pr.oneRM was a field from an older PR schema; loadPRs() now returns
+    // heaviestSet/repPRsByWeight/highestVolumeSession/history instead, so
+    // this crashed for every user with real PR data. Use the modern
+    // equivalent (heaviest logged weight) and skip cleanly if absent.
+    const weight = pr.oneRM ?? pr.heaviestSet?.weight;
+    if (weight == null) return;
     const div = document.createElement('div');
-    div.textContent = `${ex}: 1RM ${pr.oneRM.toFixed(1)}`;
+    div.textContent = `${ex}: 1RM ${Number(weight).toFixed(1)}`;
     cont.appendChild(div);
   });
   if (goals.volume) {
