@@ -49,14 +49,14 @@
 .login-tagline {
   margin: 0;
   font-size: 0.88rem;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 /* ── Tab switcher ───────────────────────────────────────────── */
 
 .login-tabs {
   display: flex;
-  background: var(--card-bg, #121b17);
+  background: var(--card-bg);
   border: 1px solid var(--border-color, rgba(132,157,144,0.28));
   border-radius: 12px;
   padding: 4px;
@@ -73,7 +73,7 @@
   border: none;
   border-radius: 9px;
   background: transparent;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -101,7 +101,7 @@
 .login-card {
   width: 100%;
   max-width: 360px;
-  background: var(--card-bg, #121b17);
+  background: var(--card-bg);
   border: 1px solid var(--border-color, rgba(132,157,144,0.28));
   border-radius: 20px;
   padding: 24px 22px 20px;
@@ -136,7 +136,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 .login-input {
@@ -178,7 +178,7 @@
   padding: 0;
   margin: 0;
   box-shadow: none;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;

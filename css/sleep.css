@@ -255,7 +255,7 @@
 }
 
 .sleep-bar.good { opacity: 1; }
-.sleep-bar.poor { background: #c05060; opacity: 0.8; }
+.sleep-bar.poor { background: var(--danger-strong); opacity: 0.8; }
 .sleep-bar.fair { background: var(--highlight); opacity: 0.8; }
 
 .sleep-bar-label {
@@ -353,7 +353,7 @@
 
 .sleep-entry-delete:hover {
   opacity: 1;
-  color: #c05060;
+  color: var(--danger-text);
 }
 
 .sleep-empty {

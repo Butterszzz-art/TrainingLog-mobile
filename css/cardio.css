@@ -248,10 +248,10 @@
 
 .cardio-intensity-btn:active { transform: scale(0.96); }
 
-.cardio-intensity-btn[data-intensity="easy"].active    { background: rgba(82,214,138,0.15);  border-color: #52d68a; color: #52d68a; }
+.cardio-intensity-btn[data-intensity="easy"].active    { background: rgba(111,174,139,0.15); border-color: var(--positive-text); color: var(--positive-text); }
 .cardio-intensity-btn[data-intensity="moderate"].active{ background: rgba(45,125,91,0.15);   border-color: var(--primary); color: var(--primary); }
-.cardio-intensity-btn[data-intensity="hard"].active    { background: rgba(240,160,64,0.15);  border-color: #f0a040; color: #f0a040; }
-.cardio-intensity-btn[data-intensity="max"].active     { background: rgba(224,80,80,0.15);   border-color: #e05050; color: #e05050; }
+.cardio-intensity-btn[data-intensity="hard"].active    { background: var(--warning-bg);      border-color: var(--warning-gold); color: var(--warning-gold); }
+.cardio-intensity-btn[data-intensity="max"].active     { background: var(--danger-bg);       border-color: var(--danger-strong); color: var(--danger-text); }
 
 /* ── "More options" collapsible ─────────────────────────────── */
 .cardio-optional {
@@ -332,8 +332,8 @@
   padding: 14px;
   border-radius: 12px;
   border: none;
-  background: var(--primary);
-  color: #fff;
+  background: var(--fill-btn-primary-mobile);
+  color: var(--label-on-green);
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;

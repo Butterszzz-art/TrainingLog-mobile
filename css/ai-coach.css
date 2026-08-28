@@ -87,7 +87,7 @@
   right: 0;
   height: 72vh;
   max-height: calc(100dvh - 64px); /* never cover the nav */
-  background: var(--card-bg, #0f1510);
+  background: var(--card-bg);
   border-radius: 22px 22px 0 0;
   border-top: 1px solid var(--border-color, #2a3a2e);
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.55);
@@ -350,7 +350,7 @@
   gap: 8px;
   padding: 10px 14px 14px;
   border-top: 1px solid var(--border-color, #2a3a2e);
-  background: var(--card-bg, #0f1510);
+  background: var(--card-bg);
   flex-shrink: 0;
 }
 
@@ -420,7 +420,7 @@
   flex-direction: column;
   height: calc(100dvh - 200px);
   min-height: 400px;
-  background: var(--card-bg, #0f1510);
+  background: var(--card-bg);
   border-radius: 16px;
   border: 1px solid var(--border-color, #2a3a2e);
   overflow: hidden;

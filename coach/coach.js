@@ -254,9 +254,14 @@ function renderWorkspace() {
   const counts = { all: _clients.length, action: 0, watch: 0, ok: 0 };
   _clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
 
-  document.getElementById('wsHeaderSub').textContent =
+  const rosterSummaryText =
     _clients.length + ' client' + (_clients.length === 1 ? '' : 's') +
     (counts.action ? ' · ' + counts.action + ' need attention' : '');
+  document.getElementById('wsHeaderSub').textContent = rosterSummaryText;
+  const headerSummaryEl = document.getElementById('headerRosterSummary');
+  if (headerSummaryEl) {
+    headerSummaryEl.textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + rosterSummaryText;
+  }
 
   document.getElementById('wsStatRow').innerHTML = [
     ['Total clients', counts.all, ''],
@@ -303,16 +308,30 @@ function renderWorkspace() {
     (a.clientName || '').localeCompare(b.clientName || '')
   );
   document.getElementById('wsRosterCount').textContent = _clients.length;
-  document.getElementById('wsRosterTable').innerHTML = sorted.map(c => {
+  // Header + rows, 7 columns per spec: Client · Phase · Weight · Rate/wk ·
+  // Compliance ▾ · Last log · Next action. Weight/Last-log/Phase are real
+  // per-client data; Rate/wk, Compliance and Next action have no computed
+  // source in this app yet (no weight-trend or compliance-scoring engine
+  // for coach clients) so they render as "—" rather than fabricated numbers.
+  const rosterHeader =
+    '<div class="ws-roster-row ws-roster-row--header">' +
+      '<span>Client</span><span>Phase</span><span class="ws-roster-cell--right">Weight</span>' +
+      '<span class="ws-roster-cell--right">Rate/wk</span><span class="ws-roster-cell--right">Compliance</span>' +
+      '<span class="ws-roster-cell--right">Last log</span><span>Next action</span>' +
+    '</div>';
+  document.getElementById('wsRosterTable').innerHTML = rosterHeader + (sorted.map(c => {
     const daysSince = c.lastCheckIn ? Math.floor((Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000) + 'd' : '—';
+    const bw = c.latestCheckInData?.bodyweight;
     return '<div class="ws-roster-row" onclick="selectClient(\'' + c.id + '\')">' +
       '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>' +
       '<span class="ws-roster-cell">' + escapeHtml(c.trainingMode || '—') + '</span>' +
-      '<span class="ws-roster-cell">' + escapeHtml(c.currentProgram || '—') + '</span>' +
-      '<span class="ws-roster-cell ws-roster-cell--right">' + daysSince + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (bw ? bw + ' kg' : '—') + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">—</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">—</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + daysSince + '</span>' +
       '<span class="ws-roster-alert ' + (c.alertStatus || 'ok') + '">' + (c.alertStatus || 'ok') + '</span>' +
       '</div>';
-  }).join('') || '<p class="ws-empty-note">No clients yet.</p>';
+  }).join('') || '<p class="ws-empty-note">No clients yet.</p>');
 
   // Templates — real data via getCoachPrograms(), with a count of clients
   // currently assigned to each (also real, derived from _clients).
@@ -411,6 +430,7 @@ function backToWorkspace() {
   document.getElementById('clientDetail').style.display = 'none';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('workspaceView').style.display = '';
+  document.querySelector('.app-shell')?.classList.remove('is-rail-collapsed');
 }
 
 function selectClient(id) {
@@ -422,6 +442,8 @@ function selectClient(id) {
   document.getElementById('workspaceView').style.display = 'none';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('clientDetail').style.display = '';
+  // Rail collapses to icon-only while viewing a client file (spec: 72px).
+  document.querySelector('.app-shell')?.classList.add('is-rail-collapsed');
 
   renderDetailHeader(client);
   renderOverview(client);
@@ -455,8 +477,8 @@ function scoreBar(label, value, max, inverse) {
   const v = Number(value) || 0;
   const pct = Math.round((v / max) * 100);
   const color = inverse
-    ? (v <= 3 ? 'var(--primary)' : v <= 6 ? 'var(--highlight)' : 'var(--danger)')
-    : (v >= 7 ? 'var(--primary)' : v >= 4 ? 'var(--highlight)' : 'var(--danger)');
+    ? (v <= 3 ? 'var(--fill-meter-a)' : v <= 6 ? 'var(--fill-meter-brass)' : 'var(--danger-grad)')
+    : (v >= 7 ? 'var(--fill-meter-a)' : v >= 4 ? 'var(--fill-meter-brass)' : 'var(--danger-grad)');
   return '<div class="checkin-score-row">'
     + '<span class="checkin-score-label">' + label + '</span>'
     + '<div class="checkin-score-bar"><div class="checkin-score-fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
@@ -480,6 +502,12 @@ function renderDetailHeader(c) {
 
 function renderOverview(c) {
   const ci = c.latestCheckInData || {};
+  const macros = getClientMacros(c.id);
+  // Spec's Col 1 (weight sparkline / weekly tonnage bars / macro adherence
+  // meters) needs a weight time series, a per-session tonnage history and
+  // logged-intake data — none of which reach the coach console today (see
+  // renderCheckIn's TODO for the same class of gap). Rendered honestly as
+  // empty/target-only states rather than fabricated charts, per decision.
   document.getElementById('dtab_overview').innerHTML =
     '<div class="d-card"><div class="d-card-title">Quick Stats</div><div class="d-stat-grid">'
     + stat('Bodyweight', ci.bodyweight ? ci.bodyweight + ' kg' : '—')
@@ -487,6 +515,20 @@ function renderOverview(c) {
     + stat('Mode', c.trainingMode || '—')
     + stat('Status', c.alertStatus || '—')
     + '</div></div>'
+    + '<div class="d-card"><div class="d-card-title">Weight &middot; 12-week trend</div>'
+    + '<div class="chart-empty-shell"><span>No weight history synced from the client\'s app yet</span></div></div>'
+    + '<div class="d-card"><div class="d-card-title">Weekly tonnage</div>'
+    + '<div class="chart-empty-shell chart-empty-shell--bars">' + Array(8).fill('<span class="chart-empty-bar"></span>').join('') + '</div>'
+    + '<p class="ws-empty-note">No session tonnage history synced yet</p></div>'
+    + '<div class="d-card"><div class="d-card-title">Macro adherence</div>'
+    + ['Calories', 'Protein', 'Carbs', 'Fat'].map(k => {
+        const key = k.toLowerCase();
+        const target = macros[key];
+        return '<div class="checkin-score-row"><span class="checkin-score-label">' + k + '</span>'
+          + '<div class="checkin-score-bar"><div class="checkin-score-fill" style="width:0%"></div></div>'
+          + '<span class="checkin-score-val">' + (target ? 'Target ' + target + (k === 'Calories' ? '' : 'g') : '—') + '</span></div>';
+      }).join('')
+    + '<p class="ws-empty-note">No logged intake synced from the client\'s app yet</p></div>'
     + '<div class="d-card"><div class="d-card-title">Latest Check-In</div>'
     + scoreBar('Sleep', ci.sleep, 10) + scoreBar('Energy', ci.energy, 10)
     + scoreBar('Stress', ci.stress, 10, true) + scoreBar('Hunger', ci.hunger, 10)
@@ -507,10 +549,21 @@ function renderCheckIn(c) {
     el.innerHTML = '<div class="d-card"><p style="color:var(--text-muted);text-align:center;padding:24px 0;">No check-in data available.</p></div>';
     return;
   }
-  el.innerHTML = '<div class="d-card"><div class="d-card-title">Full Check-In Review</div>'
+  // Photo slots: the mobile app has a progress-photos feature, but it
+  // isn't wired into the coach console's client data yet (no photoUrl
+  // reaches _clients), so these render as honest empty hatch-fill slots
+  // rather than fabricated images — TODO(coach-workspace): wire real
+  // photo URLs once the backend exposes them to the coach API.
+  const photoSlots = ['Front', 'Side', 'Back'].map(pos =>
+    '<div class="checkin-photo-slot"><span class="checkin-photo-label">' + pos + '</span></div>'
+  ).join('');
+  el.innerHTML = '<div class="d-card"><div class="d-card-title">Check-In Photos</div>'
+    + '<div class="checkin-photo-row">' + photoSlots + '</div></div>'
+    + '<div class="d-card"><div class="d-card-title">Full Check-In Review</div>'
     + scoreBar('Sleep Quality', ci.sleep, 10) + scoreBar('Energy Level', ci.energy, 10)
     + scoreBar('Stress Level', ci.stress, 10, true) + scoreBar('Hunger', ci.hunger, 10)
-    + scoreBar('Training Performance', ci.trainingPerformance, 10) + '</div>'
+    + scoreBar('Training Performance', ci.trainingPerformance, 10)
+    + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '') + '</div>'
     + '<div class="d-card"><div class="d-card-title">Bodyweight</div><div class="d-stat-grid">'
     + stat('Current', ci.bodyweight ? ci.bodyweight + ' kg' : '—')
     + stat('Last Check-In', c.lastCheckIn || '—') + '</div></div>';
@@ -531,6 +584,16 @@ function renderProgram(c) {
     programListHtml += '<option value="' + p.name + '"' + sel + '>' + p.name + '</option>';
   });
 
+  // Spec's Program editor (week selector W1-W5, editable Exercise/Sets/
+  // Load/RPE/Δ grid, session history) needs a structured per-week program
+  // model this app doesn't have yet — getCoachPrograms() only stores
+  // name/days/focus/notes, no exercises. Rendered as an honest empty
+  // shell (real week chips, real "assign/create" actions kept working,
+  // grid/actions/history inert) rather than fabricated program data.
+  const weekChips = ['W1', 'W2', 'W3', 'W4', 'W5'].map((w, i) =>
+    '<button class="week-chip' + (i === 0 ? ' active' : '') + '" disabled>' + w + '</button>'
+  ).join('');
+
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Assign Program</div>'
     + '<select id="coachProgramSelect" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;margin-bottom:10px;">'
     + programListHtml + '</select>'
@@ -541,7 +604,18 @@ function renderProgram(c) {
     + '<div id="programBuilderArea" style="margin-top:12px;"></div>'
     + '</div>'
     + '<div class="d-card"><div class="d-card-title">Current Program Details</div>'
-    + '<p style="color:var(--text-sec);">' + (currentProg || 'No program assigned.') + '</p></div>';
+    + '<p style="color:var(--text-sec);">' + (currentProg || 'No program assigned.') + '</p></div>'
+    + '<div class="d-card pod--hero">'
+    + '<div class="pod-row"><span class="pod-kicker">Program editor</span><div class="week-chip-row">' + weekChips + '</div></div>'
+    + '<div class="program-grid-header"><span>Exercise</span><span>Sets&times;reps</span><span>Load</span><span>RPE</span><span>&Delta; last wk</span></div>'
+    + '<p class="ws-empty-note">No structured per-week program data yet — programs are name/notes only in this app today.</p>'
+    + '<div class="detail-breadcrumb-actions" style="margin-top:8px;">'
+    + '<button class="capsule-chip capsule-chip--neutral" disabled title="Coming soon">+ Exercise</button>'
+    + '<button class="capsule-chip capsule-chip--neutral" disabled title="Coming soon">Swap template</button>'
+    + '<button class="capsule-chip capsule-chip--warn" disabled title="Coming soon">Insert deload</button>'
+    + '</div></div>'
+    + '<div class="d-card"><div class="d-card-title">Session history</div>'
+    + '<p class="ws-empty-note">No session history synced from the client\'s app yet.</p></div>';
 }
 
 function getCoachPrograms() {
@@ -658,9 +732,10 @@ function renderNotes(c) {
 
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Send Note to ' + (c.clientName?.split(' ')[0] || 'Client') + '</div>'
     + '<textarea id="coachNoteInput" style="width:100%;min-height:100px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:0.88rem;resize:vertical;margin-bottom:10px;" placeholder="Write a note — the athlete will see this in their app…"></textarea>'
-    + '<div style="display:flex;gap:8px;">'
+    + '<div style="display:flex;gap:8px;align-items:center;">'
     + '<button class="bulk-action-btn" onclick="saveNote()">💬 Send Note</button>'
     + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="aiDraftIntoNotes()">✍️ AI Draft</button>'
+    + '<span class="checkin-photo-label" style="margin-left:auto;">&#8984;&crarr; to send</span>'
     + '</div></div>'
     + '<div class="d-card"><div class="d-card-title">Note History (' + notes.length + ')</div>'
     + (notes.length ? notes.map(n => {
@@ -670,6 +745,9 @@ function renderNotes(c) {
         + '<div style="font-size:0.85rem;color:var(--text-sec);line-height:1.5;">' + n.text + '</div></div>';
     }).join('') : '<p style="color:var(--text-muted);font-size:0.85rem;">No notes yet.</p>')
     + '</div>';
+  document.getElementById('coachNoteInput')?.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveNote(); }
+  });
 }
 
 function getClientNotes(clientId) {

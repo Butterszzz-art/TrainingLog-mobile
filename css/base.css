@@ -105,25 +105,25 @@ button {
   padding: 10px 22px;
   margin: 12px 0;
   box-sizing: border-box;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #38a870 0%, var(--primary) 55%, #245f47 100%);
-  color: var(--text-color);
+  border-radius: var(--radius-pill);
+  background: var(--fill-btn-primary-mobile);
+  color: var(--label-on-green);
   border: none;
   cursor: pointer;
   font-size: 15px;
-  box-shadow: var(--shadow);
-  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+  box-shadow: var(--shadow-button);
+  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease, filter 0.15s ease;
 }
 
-button:hover {
-  background: linear-gradient(135deg, #42bf80 0%, #35956b 55%, #2d7d5b 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.28), 0 6px 20px rgba(45, 125, 91, 0.38);
+@media (hover: hover) {
+  button:hover {
+    filter: brightness(1.06);
+  }
 }
 
 button:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow);
+  transform: scale(0.985);
+  box-shadow: none;
 }
 
 /* Add-to-log button disabled state */
@@ -301,14 +301,14 @@ th {
   max-width: calc(100vw - 32px);
   min-width: 220px;
   background: #1c2e22;
-  border: 1px solid var(--border, #2a3a2e);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 12px 18px;
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 0.88rem;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
   z-index: 9999;
   opacity: 0;
   pointer-events: none;
@@ -343,8 +343,8 @@ th {
 }
 
 .nm-dialog {
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 18px;
   padding: 24px 20px 20px;
   width: 100%;
@@ -354,7 +354,7 @@ th {
 
 .nm-body {
   font-size: 0.95rem;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
   line-height: 1.5;
   margin: 0 0 20px;
   text-align: center;
@@ -364,9 +364,9 @@ th {
   width: 100%;
   padding: 11px 14px;
   border-radius: 10px;
-  border: 1px solid var(--border, #2a3a2e);
-  background: var(--bg, #0b130d);
-  color: var(--text, #e8f5e9);
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-color);
   font-size: 1rem;       /* ≥16px — no iOS auto-zoom */
   margin-bottom: 16px;
   box-sizing: border-box;
@@ -384,7 +384,7 @@ th {
   flex: 1;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid var(--border, #2a3a2e);
+  border: 1px solid var(--border-color);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -393,7 +393,7 @@ th {
 
 .nm-btn--cancel {
   background: transparent;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 .nm-btn--confirm {

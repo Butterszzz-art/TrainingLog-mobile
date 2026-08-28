@@ -112,18 +112,17 @@
 }
 
 .train-hero-tonnage-track {
-  height: 8px;
+  height: 6px;
   border-radius: var(--radius-pill);
-  background: rgba(0, 0, 0, 0.45);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+  background: rgba(116, 138, 126, 0.16);
   margin-top: 5px;
   overflow: hidden;
 }
 
 .train-hero-tonnage-fill {
-  height: 8px;
+  height: 6px;
   border-radius: var(--radius-pill);
-  background: linear-gradient(90deg, #236b4e, var(--positive-text));
+  background: var(--fill-meter-b);
   transition: width 0.4s ease;
 }
 
@@ -186,7 +185,7 @@
   font-size: 8.5px;
   font-weight: 800;
   letter-spacing: 0.12em;
-  color: var(--text-muted);
+  color: var(--text-label);
   text-transform: uppercase;
   margin-bottom: 5px;
 }
@@ -226,7 +225,7 @@
 }
 
 .ql-step--plus {
-  background: linear-gradient(135deg, #2f8a63, #236b4e);
+  background: linear-gradient(135deg, var(--green-60), var(--green-50));
   color: var(--pill-text-active);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
@@ -297,9 +296,9 @@
 
 .vl-track {
   flex: 1;
-  height: 9px;
+  height: 7px;
   border-radius: var(--radius-pill);
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(116, 138, 126, 0.16);
   position: relative;
   overflow: hidden;
 }
@@ -465,7 +464,7 @@
 
 .exercise-video-note {
   font-size: 0.75rem;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 /* ── Coach "Logging for" client picker ───────────────────────── */
@@ -503,8 +502,8 @@
   padding: 7px 10px;
   border-radius: 8px;
   border: 1px solid rgba(77, 168, 218, 0.35);
-  background: var(--card-bg, #0f1510);
-  color: var(--text, #e8f5e9);
+  background: var(--card-bg);
+  color: var(--text-color);
   font-size: 0.88rem;
   font-family: 'Poppins', sans-serif;
 }
@@ -578,7 +577,7 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -680,9 +679,9 @@
   align-items: center;
   padding: 6px 12px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--border, #2a3a2e);
+  border: 1px solid var(--border-color);
   background: transparent;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
@@ -702,8 +701,8 @@
 }
 
 .set-opt-pill:hover {
-  border-color: var(--text-muted, #7a8f7d);
-  color: var(--text, #e8f5e9);
+  border-color: var(--text-muted);
+  color: var(--text-color);
 }
 
 .set-opt-pill:has(input:checked) {
@@ -927,9 +926,9 @@
   gap: 5px;
   padding: 6px 12px;
   border-radius: 20px;
-  border: 1px solid var(--border, #2a3a2e);
-  background: var(--card-bg, #0f1510);
-  color: var(--text-muted, #7a8f7d);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-muted);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -961,8 +960,8 @@
   padding: 6px 12px;
   border-radius: 20px;
   border: 1px solid var(--primary, #5fa87e);
-  background: var(--card-bg, #0f1510);
-  color: var(--text, #e8f5e9);
+  background: var(--card-bg);
+  color: var(--text-color);
   font-size: 0.78rem;
   outline: none;
 }

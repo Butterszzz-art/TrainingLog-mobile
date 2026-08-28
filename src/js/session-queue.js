@@ -299,8 +299,8 @@
       const mavPct = Math.round((mav / mrv) * 100);
       const overMav = actual >= mav;
       const fillColor = overMav
-        ? 'linear-gradient(90deg,#6d5124,#c79a54)'
-        : 'linear-gradient(90deg,#236b4e,#6fae8b)';
+        ? 'var(--fill-meter-brass)'
+        : 'var(--fill-meter-b)';
       return `
         <div class="vl-row">
           <span class="vl-muscle">${g}</span>

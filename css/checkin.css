@@ -57,7 +57,7 @@
   border: 1px solid rgba(74, 132, 102, 0.38);
   border-radius: var(--radius-pill);
   font-size: 0.82rem;
-  color: #8ec2a4;
+  color: var(--green-100);
   font-weight: 500;
 }
 
@@ -537,7 +537,7 @@
 /* ── AI check-in summary card ───────────────────────────────── */
 
 .ci-ai-card {
-  background: var(--card-bg, #0f1510);
+  background: var(--card-bg);
   border: 1px solid var(--border-color, #2a3a2e);
   border-left: 3px solid var(--primary, #5fa87e);
   border-radius: 14px;

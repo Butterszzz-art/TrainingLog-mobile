@@ -8,26 +8,11 @@
 /* ── Home tab shell ─────────────────────────────────────────── */
 
 #homeTab {
-  position: relative;
-  background: var(--bg-hero-gradient);
+  /* Wash + grain now come from the shared .tab-content rule (tabs.css)
+     so every screen root gets them, not just Home. */
   border: 1px solid rgba(94, 121, 109, 0.38);
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
   padding-bottom: 12px;
-  overflow: hidden;
-}
-
-#homeTab::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.11;
-  mix-blend-mode: overlay;
-  background-image: var(--bg-noise-overlay);
-}
-
-#homeTab > * {
-  position: relative;
 }
 
 /* ── Greeting row ───────────────────────────────────────────── */
@@ -75,7 +60,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(150deg, #3d9d73, #1a5138);
+  background: linear-gradient(150deg, var(--green-70), var(--green-35));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -121,7 +106,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-label);
   margin-bottom: 8px;
   padding-left: 2px;
 }
@@ -196,7 +181,7 @@
 /* ── Dashboard card ─────────────────────────────────────────── */
 
 .home-dashboard-card {
-  --home-accent: #1f7f59;
+  --home-accent: var(--green-60);
   background: var(--pod-bg);
   border: 1px solid var(--pod-border);
   border-radius: var(--radius-pod);
@@ -216,7 +201,7 @@
 
 .home-hero-card {
   background: var(--pod-bg-hero);
-  border-color: rgba(74, 132, 102, 0.3);
+  border-color: var(--border-featured);
   box-shadow: var(--pod-shadow-hero);
 }
 
@@ -224,7 +209,7 @@
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #c2ccc6;
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -236,7 +221,7 @@
 .home-hero-meta {
   margin: 10px 0 0;
   font-size: 0.95rem;
-  color: #b5c0ba;
+  color: var(--text-soft);
 }
 
 /* ── Card typography ────────────────────────────────────────── */
@@ -247,13 +232,13 @@
   font-size: 1.12rem;
   line-height: 1.3;
   letter-spacing: 0.01em;
-  color: #f7faf8;
+  color: var(--text-color);
 }
 
 .home-placeholder-note {
   margin: 0;
   font-size: 0.9rem;
-  color: #b0bbb5;
+  color: var(--text-tertiary);
 }
 
 /* ── Coach dashboard ────────────────────────────────────────── */
@@ -516,7 +501,7 @@
 .home-stat-label {
   margin: 0;
   font-size: 0.75rem;
-  color: #a9b8b0;
+  color: var(--text-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -674,8 +659,8 @@
   font-family: var(--font-label);
   font-size: 8.5px;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  color: var(--text-label);
   text-transform: uppercase;
 }
 
@@ -686,22 +671,29 @@
   margin-top: 1px;
 }
 
+/* Capsule variants — spec-exact: primary/warn/neutral/alert */
 .home-status-pill.is-good {
-  color: #9ae9bf;
-  background: rgba(68, 162, 113, 0.18);
-  border-color: rgba(89, 190, 137, 0.45);
+  color: var(--label-on-green);
+  background: var(--pill-bg-active);
+  border-color: transparent;
 }
 
 .home-status-pill.is-warn {
-  color: #f0c987;
-  background: rgba(144, 95, 25, 0.2);
-  border-color: rgba(214, 159, 66, 0.42);
+  color: var(--warning-gold);
+  background: var(--pod-bg-alt);
+  border-color: var(--border-brass);
 }
 
 .home-status-pill.is-alert {
-  color: #f2a4a4;
-  background: rgba(139, 44, 44, 0.22);
-  border-color: rgba(209, 94, 94, 0.45);
+  color: var(--danger-text-mobile);
+  background: var(--danger-bg);
+  border-color: var(--border-alert);
+}
+
+.home-status-pill.is-neutral {
+  color: var(--text-muted);
+  background: var(--pod-bg-alt);
+  border-color: var(--border-chip);
 }
 
 /* ── Goal progress bars ─────────────────────────────────────── */
@@ -852,7 +844,7 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   background: var(--pill-bg);
   border: 1px solid var(--pill-border);
   border-radius: var(--radius-pill);
@@ -869,17 +861,17 @@
 .tpc-day-name {
   font-size: 1.45rem;
   font-weight: 700;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
   line-height: 1.1;
 }
 
 .tpc-day-name--rest {
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 .tpc-program-name {
   font-size: 0.78rem;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
 }
 
 /* Weekly split strip */
@@ -896,7 +888,7 @@
   gap: 3px;
   padding: 6px 2px 9px;
   border-radius: 10px;
-  background: var(--bg, #0b130d);
+  background: var(--bg-color);
   border: 1px solid transparent;
   position: relative;
   transition: border-color 0.2s;
@@ -918,13 +910,13 @@
 .tpc-split-abbr {
   font-size: 0.6rem;
   font-weight: 600;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .tpc-split-name {
   font-size: 0.58rem;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
   text-align: center;
   line-height: 1.2;
   word-break: break-word;
@@ -972,13 +964,13 @@
   display: block;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
 }
 
 .vm-sub {
   display: block;
   font-size: 0.72rem;
-  color: var(--text-muted, #7a8f7d);
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -986,9 +978,9 @@
   flex-shrink: 0;
   padding: 7px 16px;
   border-radius: 20px;
-  border: 1px solid var(--border, #2a3a2e);
+  border: 1px solid var(--border-color);
   background: transparent;
-  color: var(--text, #e8f5e9);
+  color: var(--text-color);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -1008,8 +1000,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 14px 16px;
   margin: 0 0 10px;
