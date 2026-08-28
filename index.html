@@ -629,6 +629,10 @@
            Start-session CTA (session-queue.js renderTrainHero()) -->
       <div id="trainHeroCard" style="padding:6px 12px 0;"></div>
 
+      <!-- Weekly MEV/MAV/MRV volume landmarks per muscle, real weekly set
+           counts against published reference ranges (session-queue.js) -->
+      <div id="volumeLandmarksCard" style="padding:0 12px;"></div>
+
       <!-- Today's planned exercises, read from the active program (session-queue.js) -->
       <div id="sessionQueueCard" style="padding:0 12px;"></div>
 
@@ -684,6 +688,7 @@
         <div id="resistance-inputs" class="log-form-card">
 
           <div class="log-exercise-title" id="exerciseLiveTitle" hidden></div>
+          <div class="log-exercise-stats-line" id="exerciseStatsLine" hidden></div>
           <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
           <datalist id="exerciseSuggestions"></datalist>
 
@@ -4340,6 +4345,7 @@ function showTab(tabName) {
       break;
     case 'logTab':
       if (typeof window.renderTrainHero === 'function') window.renderTrainHero();
+      if (typeof window.renderVolumeLandmarks === 'function') window.renderVolumeLandmarks();
       if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
       if (typeof window.renderTrainReadinessStrip === 'function') window.renderTrainReadinessStrip();
       if (typeof window.renderSessionSoFar === 'function') window.renderSessionSoFar();

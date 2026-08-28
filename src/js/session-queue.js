@@ -233,6 +233,96 @@
       </div>`;
   }
 
+  // ── Weekly volume landmarks (MEV/MAV/MRV) ───────────────────────
+  // MEV/MAV/MRV are commonly-published weekly-set training guidelines
+  // (Renaissance-Periodization-style ballparks), not a per-user
+  // prescription this app computes — they're reference thresholds.
+  // What IS real: the actual weekly set count per muscle, tallied from
+  // the same workout history libraries.js already reads.
+  const VOLUME_LANDMARKS = {
+    Chest: { mev: 8, mav: 18, mrv: 22 },
+    Back: { mev: 10, mav: 20, mrv: 25 },
+    Delts: { mev: 8, mav: 20, mrv: 26 },
+    Arms: { mev: 8, mav: 18, mrv: 24 },
+    Legs: { mev: 10, mav: 20, mrv: 28 },
+    Core: { mev: 6, mav: 16, mrv: 20 },
+  };
+
+  /** Real weekly (last 7 days) set count per coarse muscle group, from
+   * the live + archived workout history. */
+  function _weeklySetsByMuscle() {
+    const u = _user();
+    const counts = {};
+    if (!u || typeof localStorage === 'undefined' || typeof global.getCoarseMuscleGroup !== 'function') return counts;
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+    const tally = (name, dateStr, setCount) => {
+      if (!dateStr || dateStr < cutoffStr) return;
+      const group = global.getCoarseMuscleGroup(name);
+      counts[group] = (counts[group] || 0) + setCount;
+    };
+
+    try {
+      const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
+      workouts.forEach(w => (w.log || []).forEach(entry => {
+        tally(entry.exercise, w.date, Array.isArray(entry.repsArray) ? entry.repsArray.length : 0);
+      }));
+    } catch { /* ignore */ }
+
+    try {
+      const archived = JSON.parse(localStorage.getItem('tl_workout_history_v1')) || [];
+      archived.filter(w => !w.userId || w.userId === u).forEach(w => (w.exercises || []).forEach(ex => {
+        tally(ex.name, (w.date || '').slice(0, 10), Array.isArray(ex.repsArray) ? ex.repsArray.length : 0);
+      }));
+    } catch { /* ignore */ }
+
+    return counts;
+  }
+
+  function renderVolumeLandmarks() {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('volumeLandmarksCard');
+    if (!el) return;
+
+    const weekly = _weeklySetsByMuscle();
+    const groups = Object.keys(VOLUME_LANDMARKS).filter(g => weekly[g] > 0);
+    if (!groups.length) { el.innerHTML = ''; return; }
+
+    const rows = groups.map(g => {
+      const { mev, mav, mrv } = VOLUME_LANDMARKS[g];
+      const actual = weekly[g] || 0;
+      const fillPct = Math.min(100, Math.round((actual / mrv) * 100));
+      const mevPct = Math.round((mev / mrv) * 100);
+      const mavPct = Math.round((mav / mrv) * 100);
+      const overMav = actual >= mav;
+      const fillColor = overMav
+        ? 'linear-gradient(90deg,#6d5124,#c79a54)'
+        : 'linear-gradient(90deg,#236b4e,#6fae8b)';
+      return `
+        <div class="vl-row">
+          <span class="vl-muscle">${g}</span>
+          <div class="vl-track">
+            <div class="vl-fill" style="width:${fillPct}%;background:${fillColor}"></div>
+            <div class="vl-tick" style="left:${mevPct}%"></div>
+            <div class="vl-tick vl-tick--mav" style="left:${mavPct}%"></div>
+          </div>
+          <span class="vl-count${overMav ? ' is-high' : ''}">${actual}/${mrv}</span>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="pod vl-card">
+        <div class="pod-row">
+          <span class="pod-kicker">Weekly volume landmarks</span>
+          <span class="sq-count">sets &middot; MEV/MAV/MRV</span>
+        </div>
+        ${rows}
+      </div>`;
+  }
+
   function renderSessionQueue() {
     if (typeof document === 'undefined') return;
     const el = document.getElementById('sessionQueueCard');
@@ -243,13 +333,22 @@
     if (!day || !exercises.length) { el.innerHTML = ''; return; }
 
     const _esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const hasStats = typeof global.getExerciseStats === 'function';
     const rows = exercises.map((ex, i) => {
       const first = (ex.sets && ex.sets[0]) || {};
+      const stats = hasStats ? global.getExerciseStats(ex.name) : null;
+      const pctHTML = stats && stats.pctOf1rm != null
+        ? `<span class="sq-e1rm">${stats.pctOf1rm}%</span>` : '<span class="sq-e1rm">—</span>';
+      const deltaHTML = stats && stats.deltaWeight != null
+        ? `<span class="sq-delta ${stats.deltaWeight > 0 ? 'is-up' : stats.deltaWeight < 0 ? 'is-down' : 'is-flat'}">${stats.deltaWeight > 0 ? '+' : ''}${stats.deltaWeight}</span>`
+        : '<span class="sq-delta is-flat">=</span>';
       return `
       <div class="sq-row sq-row--tap" data-ex-name="${_esc(ex.name)}" data-ex-weight="${first.weight ?? ''}" data-ex-reps="${first.reps ?? ''}">
         <span class="sq-index">${i + 1}</span>
         <span class="sq-name">${ex.name}</span>
         <span class="sq-summary">${_setSummary(ex)}</span>
+        ${pctHTML}
+        ${deltaHTML}
       </div>`;
     }).join('');
 
@@ -257,7 +356,7 @@
       <div class="pod sq-card">
         <div class="pod-row">
           <span class="pod-kicker">Today's plan · ${day.name}</span>
-          <span class="sq-count">${exercises.length} exercise${exercises.length === 1 ? '' : 's'}</span>
+          <span class="sq-count">load &middot; %1RM &middot; &Delta; last</span>
         </div>
         ${rows}
       </div>`;
@@ -325,6 +424,22 @@
     if (labelEl) labelEl.textContent = 'Log set ' + (_todaysSetCount(name) + 1);
   }
 
+  /** "e1RM 122 kg · 78% of 1RM" meta line under the exercise title —
+   * real numbers from getExerciseStats() (libraries.js), hidden entirely
+   * when there's no logged history for the exercise yet rather than
+   * showing a zero/placeholder. */
+  function _updateExerciseStatsLine(name) {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('exerciseStatsLine');
+    if (!el) return;
+    const stats = typeof global.getExerciseStats === 'function' ? global.getExerciseStats(name) : null;
+    if (!stats || !stats.bestE1rm) { el.hidden = true; return; }
+    const parts = [`e1RM ${stats.bestE1rm} kg`];
+    if (stats.pctOf1rm != null) parts.push(`${stats.pctOf1rm}% of 1RM`);
+    el.hidden = false;
+    el.textContent = parts.join(' · ');
+  }
+
   function syncQuickLogUnit(unit) {
     if (typeof document === 'undefined') return;
     const el = document.getElementById('qlUnitLabel');
@@ -361,6 +476,7 @@
     const unitSel = document.getElementById('weightUnit');
     if (unitSel) syncQuickLogUnit(unitSel.value);
     _updateQuickLogButtonLabel(name);
+    _updateExerciseStatsLine(name);
   }
 
   /** Tapped a session-queue row: jump straight into quick-log for that
@@ -423,11 +539,14 @@
       if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
       _writeQuickLogToForm(); // keep the same weight/reps for the next set
       _updateQuickLogButtonLabel(name);
+      _updateExerciseStatsLine(name);
+      if (typeof global.renderSessionQueue === 'function') global.renderSessionQueue(); // refresh %1RM/Δ vs the set just logged
     }
   }
 
   const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
-    initQuickLog, quickLogStep, quickLogSet, startQuickLogFor, syncQuickLogUnit };
+    initQuickLog, quickLogStep, quickLogSet, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks };
+  global.renderVolumeLandmarks = renderVolumeLandmarks;
   global.initQuickLog = initQuickLog;
   global.quickLogStep = quickLogStep;
   global.quickLogSet = quickLogSet;
