@@ -27,12 +27,12 @@
   background: var(--pod-bg);
   border: 1px solid var(--pod-border);
   box-shadow: var(--pod-bevel);
-  padding: var(--space-4);
+  padding: 13px 17px; /* spec: 12-15px vertical, 15-18px horizontal */
 }
 .pod--alt { background: var(--pod-bg-alt); }
 .pod--hero {
   background: var(--pod-bg-hero);
-  border-color: rgba(74, 132, 102, 0.3);
+  border-color: var(--border-featured);
   box-shadow: var(--pod-shadow-hero);
 }
 .pod--flat {
@@ -40,15 +40,22 @@
   border-color: rgba(116, 138, 126, 0.14);
 }
 .pod--warning { border-color: var(--warning-border); }
-.pod--danger { border-color: rgba(158, 50, 65, 0.4); }
+.pod--danger { border-color: var(--border-alert); }
 
+/* PodHeader — eyebrow flush left, faint meta right, baseline aligned */
 .pod-kicker {
   font-family: var(--font-label);
   font-size: 9.5px;
   font-weight: 800;
   letter-spacing: 0.14em;
-  color: var(--text-muted);
+  color: var(--text-label);
   text-transform: uppercase;
+}
+.pod-meta {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-faint);
 }
 .pod-title {
   font-family: var(--font-display);
@@ -118,8 +125,8 @@
   font-family: var(--font-label);
   font-size: 8.5px;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  color: var(--text-label);
   text-transform: uppercase;
 }
 .stat-tile-value {

@@ -303,16 +303,30 @@ function renderWorkspace() {
     (a.clientName || '').localeCompare(b.clientName || '')
   );
   document.getElementById('wsRosterCount').textContent = _clients.length;
-  document.getElementById('wsRosterTable').innerHTML = sorted.map(c => {
+  // Header + rows, 7 columns per spec: Client · Phase · Weight · Rate/wk ·
+  // Compliance ▾ · Last log · Next action. Weight/Last-log/Phase are real
+  // per-client data; Rate/wk, Compliance and Next action have no computed
+  // source in this app yet (no weight-trend or compliance-scoring engine
+  // for coach clients) so they render as "—" rather than fabricated numbers.
+  const rosterHeader =
+    '<div class="ws-roster-row ws-roster-row--header">' +
+      '<span>Client</span><span>Phase</span><span class="ws-roster-cell--right">Weight</span>' +
+      '<span class="ws-roster-cell--right">Rate/wk</span><span class="ws-roster-cell--right">Compliance</span>' +
+      '<span class="ws-roster-cell--right">Last log</span><span>Next action</span>' +
+    '</div>';
+  document.getElementById('wsRosterTable').innerHTML = rosterHeader + (sorted.map(c => {
     const daysSince = c.lastCheckIn ? Math.floor((Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000) + 'd' : '—';
+    const bw = c.latestCheckInData?.bodyweight;
     return '<div class="ws-roster-row" onclick="selectClient(\'' + c.id + '\')">' +
       '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>' +
       '<span class="ws-roster-cell">' + escapeHtml(c.trainingMode || '—') + '</span>' +
-      '<span class="ws-roster-cell">' + escapeHtml(c.currentProgram || '—') + '</span>' +
-      '<span class="ws-roster-cell ws-roster-cell--right">' + daysSince + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (bw ? bw + ' kg' : '—') + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">—</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">—</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + daysSince + '</span>' +
       '<span class="ws-roster-alert ' + (c.alertStatus || 'ok') + '">' + (c.alertStatus || 'ok') + '</span>' +
       '</div>';
-  }).join('') || '<p class="ws-empty-note">No clients yet.</p>';
+  }).join('') || '<p class="ws-empty-note">No clients yet.</p>');
 
   // Templates — real data via getCoachPrograms(), with a count of clients
   // currently assigned to each (also real, derived from _clients).
