@@ -4,14 +4,17 @@
 
 /* ── Log sub-tab nav ─────────────────────────────────────────── */
 
+/* Pill-style segmented nav (Modernist redesign) — shared by every
+   sub-tab strip built on this markup pattern: logSubtabNav, funcSubNav,
+   progressSubNav, historySubNav. */
 .log-subtabs {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   padding: 10px 10px 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  border-bottom: 1px solid var(--border, #2a3a2e);
+  border-bottom: none;
   margin-bottom: 14px;
   flex-shrink: 0;
 }
@@ -21,18 +24,19 @@
 .log-subtab {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-shrink: 0;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 20px 20px 0 0;
-  background: transparent;
+  padding: 7px 13px;
+  border: 1px solid var(--pill-border);
+  border-radius: var(--radius-pill);
+  background: var(--pill-bg);
   color: var(--text-muted, #7a8f7d);
-  font-size: 0.82rem;
-  font-weight: 600;
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
   white-space: nowrap;
 }
 
@@ -51,15 +55,14 @@
 }
 
 .log-subtab:hover {
-  background: var(--card-bg, #0f1510);
-  color: var(--primary, #5fa87e);
+  background: var(--elevated-bg);
+  color: var(--text-color);
 }
 
 .log-subtab.active {
-  background: var(--card-bg, #0f1510);
-  color: var(--primary, #5fa87e);
-  border: 1px solid var(--border, #2a3a2e);
-  border-bottom: 1px solid var(--card-bg, #0f1510);
+  background: var(--pill-bg-active);
+  color: var(--pill-text-active);
+  border-color: transparent;
 }
 
 /* ── Log sub-views ───────────────────────────────────────────── */

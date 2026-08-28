@@ -621,6 +621,9 @@
     <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
     <div id="logSub_log" class="log-subview active">
 
+      <!-- Today's planned exercises, read from the active program (session-queue.js) -->
+      <div id="sessionQueueCard" style="padding:0 12px;"></div>
+
       <!-- Session context flags: alt-machine / alt-gym -->
       <div id="sessionContextBar" style="padding:0 12px;"></div>
 
@@ -4241,6 +4244,7 @@ function showTab(tabName) {
       }
       break;
     case 'logTab':
+      if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
       if (window.renderWorkouts) renderWorkouts();
       if (typeof window.renderGamificationUI === 'function' && currentUser) {
         window.renderGamificationUI(currentUser);
@@ -4778,14 +4782,14 @@ function addNewSet() {
 
 function getSetInputHTML(i) {
   return `
-    <div style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
-      <label style="min-width: 52px; font-size: 0.85rem;">Set ${i + 1}</label>
-      <div style="display:flex;align-items:center;gap:4px;">
-        <input type="number" id="reps_${i}" placeholder="Reps" style="width: 72px;" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
-        <span id="repsLabel_${i}" style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;"></span>
+    <div class="set-input-row">
+      <label class="set-input-label">Set ${i + 1}</label>
+      <div class="set-input-reps-wrap">
+        <input type="number" id="reps_${i}" placeholder="Reps" class="set-input-reps" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
+        <span id="repsLabel_${i}" class="set-input-reps-note"></span>
       </div>
-      <input type="number" id="weight_${i}" placeholder="Weight" style="width: 90px;" oninput="updateAddButtonState()" />
-      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;"><span class="ui-icon">${ICONS.dumbbell}</span></button>
+      <input type="number" id="weight_${i}" placeholder="Weight" class="set-input-weight" oninput="updateAddButtonState()" />
+      <button type="button" onclick="openPlateCalculator(${i})" class="set-plate-btn" title="Plate calculator"><span class="ui-icon">${ICONS.dumbbell}</span></button>
       <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
       <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
       <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
@@ -18129,6 +18133,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/rehab.js"></script>
   <script src="src/js/reminders.js"></script>
   <script src="src/js/today-program.js"></script>
+  <script src="src/js/session-queue.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
