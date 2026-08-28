@@ -219,8 +219,8 @@ th {
 /*
  * IMPORTANT: do NOT use transform on .section/.section.active.
  * Any transform value (even scale(1)) creates a CSS stacking context
- * which traps position:fixed descendants (like #bottomNav, #moreDrawer)
- * and makes them position relative to the container instead of the viewport.
+ * which traps position:fixed descendants (like #bottomNav) and makes
+ * them position relative to the container instead of the viewport.
  * Fade with opacity only.
  */
 .section {
