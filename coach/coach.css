@@ -23,7 +23,7 @@
   --text-sec: var(--secondary-text);
   --danger: var(--danger-text);
   --sidebar-w: 320px;
-  --header-h: 56px;
+  --header-h: 58px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -218,8 +218,11 @@ body::before {
 .header-logo { font-size: 1.3rem; }
 
 .header-title {
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+  font-size: 1.1rem;
   color: var(--text);
 }
 
@@ -331,7 +334,7 @@ body::before {
   height: 44px;
   padding: 0 10px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-sec);
   font-family: inherit;
