@@ -21,9 +21,10 @@
 }
 
 .cardio-stat-chip {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--pod-bevel);
   padding: 10px 8px;
   text-align: center;
 }
@@ -47,9 +48,10 @@
 
 /* ── Form card ──────────────────────────────────────────────── */
 .cardio-form-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  background: var(--pod-bg-hero);
+  border: 1px solid rgba(74, 132, 102, 0.3);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-shadow-hero);
   padding: 16px;
   margin-bottom: 20px;
 }
@@ -87,12 +89,14 @@
 }
 
 .cardio-type-btn {
-  padding: 6px 13px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border-color);
-  background: var(--elevated-bg);
+  padding: 7px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
   color: var(--secondary-text);
-  font-size: 0.82rem;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
@@ -104,10 +108,10 @@
 }
 
 .cardio-type-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-  font-weight: 600;
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
+  font-weight: 700;
 }
 
 /* ── Custom type input (shown when Other is selected) ───────── */
@@ -229,9 +233,9 @@
   flex: 1;
   min-width: 64px;
   padding: 8px 6px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border-color);
-  background: var(--elevated-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
   color: var(--secondary-text);
   font-size: 0.78rem;
   font-weight: 600;

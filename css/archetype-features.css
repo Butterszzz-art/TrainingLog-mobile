@@ -15,9 +15,10 @@
 }
 
 .macro-card {
-  background: var(--surface-bg, #141e17);
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 14px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 14px 16px 12px;
 }
 
