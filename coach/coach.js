@@ -327,6 +327,59 @@ function renderWorkspace() {
         '<span class="ws-list-count">' + assigned + '</span></div>';
     }).join('');
   }
+
+  railNavUpdateCounts(counts, programs.length);
+}
+
+// ── Rail nav (left sidebar) ──────────────────────────────────────
+// Queue/Clients/Templates/Check-ins all live on the one workspace page
+// (renderWorkspace() above) — "navigating" is a scroll-to, not a route
+// change. Programs has no view distinct from Templates yet, so it
+// targets the same section; Settings has no desktop view at all yet.
+
+function railNavUpdateCounts(counts, templateCount) {
+  const el = (id) => document.getElementById(id);
+  if (el('railCountQueue')) el('railCountQueue').textContent = counts.action;
+  if (el('railCountClients')) el('railCountClients').textContent = counts.all;
+  if (el('railCountTemplates')) el('railCountTemplates').textContent = templateCount;
+  // "Check-ins outstanding" = clients with no check-in, or none in 7+ days —
+  // real, derived from _clients.lastCheckIn, not a separate data model.
+  const staleCheckins = _clients.filter(c => {
+    if (!c.lastCheckIn) return true;
+    const days = (Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000;
+    return days >= 7;
+  }).length;
+  if (el('railCountCheckins')) el('railCountCheckins').textContent = staleCheckins;
+}
+
+function railNavGo(section) {
+  document.querySelectorAll('.rail-nav-item').forEach(b => b.classList.toggle('active', b.dataset.rail === section));
+
+  const targets = {
+    queue: 'wsPriorityCard',
+    clients: 'wsRailTarget-clients',
+    programs: 'wsRailTarget-templates',
+    templates: 'wsRailTarget-templates',
+    messages: 'wsRailTarget-messages',
+    checkins: 'wsRailTarget-checkins',
+    analytics: 'wsStatRow',
+  };
+
+  if (section === 'settings') {
+    // No desktop settings view exists yet — say so rather than silently
+    // doing nothing or faking a page.
+    alert('Settings isn\'t available in the coach console yet — use the mobile app\'s Settings tab for now.');
+    return;
+  }
+
+  // Any rail destination returns to the workspace view first (in case a
+  // client file is currently open), then scrolls to that section.
+  if (typeof backToWorkspace === 'function' && document.getElementById('clientDetail').style.display !== 'none') {
+    backToWorkspace();
+  }
+  const targetId = targets[section];
+  const targetEl = targetId && document.getElementById(targetId);
+  if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function toggleBulk(id) {
