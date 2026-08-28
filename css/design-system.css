@@ -181,8 +181,8 @@
   height: 54px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #3d9d73, #236b4e 60%, #143c2b);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), inset 0 2px 0 rgba(255, 255, 255, 0.18);
+  background: var(--fill-nav-center);
+  box-shadow: var(--shadow-nav-center);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -202,7 +202,7 @@
    disabled treatment instead of one-off per-component rules. */
 
 :focus-visible {
-  outline: 2px solid #3d9d73;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -213,8 +213,8 @@
 
 @media (hover: hover) {
   .pod:hover, .all-hub-tile:hover {
-    background: #141b18;
-    border-color: rgba(116, 138, 126, 0.28);
+    background: var(--pod-bg-hover);
+    border-color: var(--border-hover);
   }
   .pill:not(.active):hover {
     background: var(--elevated-bg);

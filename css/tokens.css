@@ -3,22 +3,45 @@
    Global CSS custom properties shared across all stylesheets.
    Import this file first so every other file can reference the
    variables without defining them again.
+
+   Values below the "Modernist redesign" line are extracted
+   literally from the Ironlog v3A (mobile) / v4A (desktop) mockup
+   handoff spec. Legacy top-of-file tokens are kept as aliases so
+   every pre-redesign call site keeps working unchanged.
    ============================================================= */
 
 :root {
-  --bg-color:       #080b0a;
+  /* ── Ground / wash — platform-specific, do not share one value ── */
+  --ground:              #050807;
+  --ground-mid-mobile:   #0a120e;
+  --ground-mid-desktop:  #080d0a;
+  --wash-mobile: radial-gradient(150% 92% at 50% -6%,
+    rgba(52, 122, 88, 0.55) 0%,
+    rgba(35, 84, 62, 0.42) 26%,
+    rgba(20, 44, 33, 0.5) 52%,
+    var(--ground-mid-mobile) 74%,
+    var(--ground) 100%);
+  --wash-desktop: radial-gradient(120% 80% at 18% -18%,
+    rgba(52, 122, 88, 0.40) 0%,
+    rgba(28, 68, 50, 0.30) 30%,
+    rgba(14, 30, 22, 0.50) 58%,
+    var(--ground-mid-desktop) 80%,
+    var(--ground) 100%);
+
+  /* ── Legacy ground/surface aliases (kept so old call sites work) ── */
+  --bg-color:       var(--ground);
   --surface-bg:     #0e1411;
   --card-bg:        #121b17;
   --elevated-bg:    #18231e;
-  --primary:        #2d7d5b;
-  --primary-dark:   #225f45;
+  --primary:        #2f8a63;
+  --primary-dark:   #236b4e;
   --text-color:     #f4f7f5;
   --secondary-text: #b8c2bc;
   --text-muted:     #8c9891;
   --danger:         #dc3545;
-  --border-color:   rgba(132, 157, 144, 0.28);
+  --border-color:   rgba(116, 138, 126, 0.20);
   --sidebar-bg:     #0b100e;
-  --highlight:      #c6944f;
+  --highlight:      #c79a54;
   --shadow:         0 12px 28px rgba(0, 0, 0, 0.34);
   --shell-shadow:   0 16px 36px rgba(0, 0, 0, 0.42);
 
@@ -39,47 +62,142 @@
   --space-6: 24px;
   --space-8: 32px;
 
-  /* ── Modernist redesign — radius scale ───────────────────────── */
-  --radius-sm:   12px;
-  --radius-md:   16px;
-  --radius-pod:  24px;
-  --radius-pill: 99px;
+  /* ── Modernist redesign — radius scale (never use a value outside this) ── */
+  --radius-hint:      5px;   /* keyboard hints, micro pills */
+  --radius-micro:     8px;
+  --radius-sm:        12px;  /* desktop icon-rail buttons */
+  --radius-tight:     14px;  /* mobile inner card, tight */
+  --radius-md:        16px;  /* mobile inner card */
+  --radius-vital:     18px;  /* desktop vital cards */
+  --radius-kpi:        20px;  /* desktop KPI cards */
+  --radius-pod:        22px;  /* standard pod — dominant radius, mobile + desktop */
+  --radius-featured:   24px;  /* desktop featured pod / main columns */
+  --radius-hero:        26px;  /* mobile hero pod */
+  --radius-pill:      999px; /* capsules, chips, tabs, nav bar, meters, inputs */
+  --radius-round:      50%;
+  --radius-bar-mobile:  8px 8px 4px 4px;
+  --radius-bar-desktop: 6px 6px 3px 3px;
+  --radius-bubble-in:   16px 16px 16px 6px;
+  --radius-bubble-out:  16px 16px 6px 16px;
 
-  /* ── Modernist redesign — background wash ────────────────────── */
-  --bg-hero-gradient: radial-gradient(150% 92% at 50% -6%,
-    rgba(52, 122, 88, 0.55) 0%,
-    rgba(35, 84, 62, 0.42) 26%,
-    rgba(20, 44, 33, 0.5) 52%,
-    #0a120e 74%,
-    #050807 100%);
+  /* ── Modernist redesign — background wash (mobile default) ───── */
+  --bg-hero-gradient: var(--wash-mobile);
   /* Fractal-noise SVG, inlined so no extra asset request is needed. */
   --bg-noise-overlay: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%22.85%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');
 
-  /* ── Modernist redesign — pod surfaces ────────────────────────── */
-  --pod-bg:          #101614;
-  --pod-bg-alt:      #121b17;
-  --pod-bg-hero:     linear-gradient(168deg, rgba(22, 36, 28, 0.94), rgba(12, 18, 15, 0.985));
-  --pod-border:      rgba(116, 138, 126, 0.22);
-  --pod-bevel:       inset 0 1px 0 rgba(255, 255, 255, 0.038);
-  --pod-shadow-hero: 0 16px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  /* ── Modernist redesign — surfaces ────────────────────────────── */
+  --pod-bg:            #101614;  /* pod default */
+  --pod-bg-alt:        #121b17;  /* chip / tab rest */
+  --surface-recessed:  #0b100e;  /* recessed input */
+  --surface-raised:    #161f1a;  /* raised inner / message bubble */
+  --surface-navbar:    rgba(14, 20, 17, 0.95);
+  --surface-well:      #120d05;
+  --surface-hatch: repeating-linear-gradient(135deg, #151c18, #151c18 6px, #121815 6px, #121815 12px);
+  --pod-bg-hero:       linear-gradient(168deg, rgba(22, 36, 28, 0.94), rgba(12, 18, 15, 0.985));
+  --pod-bg-hero-alt:   linear-gradient(168deg, rgba(22, 36, 28, 0.92), rgba(12, 18, 15, 0.985));
+  --pod-bevel:         inset 0 1px 0 rgba(255, 255, 255, 0.038);
 
-  /* ── Modernist redesign — pills ───────────────────────────────── */
-  --pill-bg-active: linear-gradient(135deg, #2f8a63, #236b4e 60%, #17472f);
-  --pill-bg:        #101614;
-  --pill-border:    rgba(116, 138, 126, 0.24);
-  --pill-text-active: #050c08;
+  /* ── Modernist redesign — borders (roles, per mockup frequency) ── */
+  --border-default:        rgba(116, 138, 126, 0.20); /* dominant, ~120 uses */
+  --border-row:             rgba(116, 138, 126, 0.09); /* row rule */
+  --border-header:          rgba(116, 138, 126, 0.16); /* header / section rule */
+  --border-chip:             rgba(116, 138, 126, 0.24); /* chip outline */
+  --border-soft:             rgba(116, 138, 126, 0.18); /* soft inner */
+  --border-nav:              rgba(116, 138, 126, 0.22); /* nav bar */
+  --border-featured:         rgba(74, 132, 102, 0.30);  /* featured pod */
+  --border-featured-strong:  rgba(74, 132, 102, 0.42);
+  --border-brass:            rgba(168, 124, 56, 0.38);
+  --border-alert:            rgba(158, 50, 65, 0.42);
+  --border-hover:            rgba(116, 138, 126, 0.28);
+  --pod-border:              var(--border-default);
+  --pill-border:             var(--border-chip);
+  --pod-bg-hover:            #141b18;
+  --focus-ring:              var(--green-70);
+
+  /* ── Modernist redesign — green ramp (primary) ────────────────── */
+  --green-100: #8ec2a4; /* lightest */
+  --green-90:  #6fae8b; /* positive data/text */
+  --green-80:  #4f9070;
+  --green-70:  #3d9d73; /* bright */
+  --green-65:  #3f7f5f;
+  --green-60:  #2f8a63; /* base */
+  --green-50:  #236b4e; /* mid */
+  --green-40:  #1d5039;
+  --green-35:  #1a5138;
+  --green-30:  #17472f; /* deep */
+  --green-20:  #143c2b; /* deepest */
+  --label-on-green: #050c08;
+  --nav-label-active-desktop: #eafaf1;
+
+  --fill-btn-primary-mobile:  linear-gradient(135deg, #2f8a63, #236b4e 58%, #17472f);
+  --fill-btn-primary-desktop: linear-gradient(135deg, #2f8a63, #236b4e 60%, #17472f);
+  --fill-nav-center:          linear-gradient(135deg, #3d9d73, #236b4e 60%, #143c2b);
+  --fill-avatar:               linear-gradient(150deg, #3d9d73, #17472f);
+  --fill-avatar-alt:           linear-gradient(150deg, #3d9d73, #1a5138);
+  --fill-meter-a:               linear-gradient(90deg, #2f8a63, #6fae8b);
+  --fill-meter-b:               linear-gradient(90deg, #236b4e, #6fae8b);
+  --fill-bar-a:                 linear-gradient(180deg, #3f7f5f, #1d5039);
+  --fill-bar-b:                 linear-gradient(180deg, #6fae8b, #236b4e);
+  --fill-bar-c:                 linear-gradient(180deg, #3d9d73, #1d5039);
+  --glow-live:                  0 0 11px #6fae8b;
+
+  /* ── Modernist redesign — pills (legacy aliases) ──────────────── */
+  --pill-bg-active:    var(--fill-btn-primary-desktop);
+  --pill-bg:           #101614;
+  --pill-text-active:  var(--label-on-green);
 
   /* ── Modernist redesign — CTA capsule ─────────────────────────── */
-  --cta-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --cta-shadow:         0 10px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --shadow-button:      0 10px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --shadow-button-sm:   0 9px 22px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --shadow-nav-bar:     0 14px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --shadow-nav-active:  0 6px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --shadow-nav-center:  0 10px 24px rgba(0, 0, 0, 0.55), inset 0 2px 0 rgba(255, 255, 255, 0.18);
+  --pod-shadow-hero:    0 16px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-featured-lg: 0 18px 38px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --shadow-well:        inset 0 2px 6px rgba(0, 0, 0, 0.5);
 
-  /* ── Modernist redesign — status accents ──────────────────────── */
-  --danger-strong: #9e3241;
+  /* ── Modernist redesign — brass ramp (attention / warn) ───────── */
+  --brass-light:       #e0bd82;
+  --brass-base:        #c79a54;
+  --brass-border-tone: #a87c38;
+  --brass-deep-mobile:  #6d5124;
+  --brass-deep-desktop: #6d5222;
+  --warning-gold:   var(--brass-base);
+  --warning-bg:     rgba(168, 124, 56, 0.16);
+  --warning-border: var(--border-brass);
+  --fill-chip-brass:  linear-gradient(135deg, rgba(168, 124, 56, 0.9), rgba(109, 81, 36, 0.9));
+  --fill-meter-brass: linear-gradient(90deg, #6d5124, #c79a54);
+  --fill-bar-brass:   linear-gradient(180deg, #c79a54, #6d5124);
+
+  /* ── Modernist redesign — red ramp (alert / flag) ─────────────── */
+  --danger-text:         #e0707f; /* desktop */
+  --danger-text-mobile:  #c9707c; /* mobile */
+  --red-mid:             #c25767;
+  --danger-strong:       #9e3241; /* base */
+  --red-deep-1:          #6e2130;
+  --red-deep-2:          #61202c;
+  --red-deep-3:          #4b1a22;
+  --danger-bg:     rgba(158, 50, 65, 0.18);
+  --danger-border: var(--border-alert);
   --danger-grad:   linear-gradient(150deg, #9e3241, #61202c);
-  --danger-text:   #e0707f;
-  --warning-gold:  #c79a54;
-  --warning-bg:    rgba(168, 124, 56, 0.16);
-  --warning-border: rgba(168, 124, 56, 0.4);
-  --positive-text: #6fae8b;
+  --fill-avatar-flag:     linear-gradient(150deg, #9e3241, #61202c);
+  --fill-avatar-flag-alt: linear-gradient(150deg, #9e3241, #6e2130);
+
+  /* ── Modernist redesign — positive status (alias) ─────────────── */
+  --positive-text: var(--green-90);
+
+  /* ── Modernist redesign — text ramp (in order of use frequency) ── */
+  --text-label:     #6d8076; /* eyebrow labels, inactive nav */
+  --text-faint:     #5a675f; /* tertiary meta, placeholders */
+  --text-primary:   var(--text-color);
+  --text-secondary: #c9d2cc; /* body copy on pods */
+  --text-body-alt:  var(--secondary-text); /* mobile body copy */
+  --text-quiet:     #5c6a63; /* mobile disabled / quiet */
+  --text-tertiary:  #a3b0a8; /* desktop nav rest, neutral data */
+  --text-soft:      #a9b8b0; /* mobile soft */
+  --text-disabled:  #465049; /* desktop kbd hints, disabled */
+  --text-rule:      #3d4741; /* breadcrumb separators */
 }
 
 /* ── Alternate themes ───────────────────────────────────────── */

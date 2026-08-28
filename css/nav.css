@@ -15,8 +15,8 @@
   right: 14px;
   bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   height: 64px;
-  background: rgba(14, 20, 17, 0.95);
-  border: 1px solid rgba(116, 138, 126, 0.22);
+  background: var(--surface-navbar);
+  border: 1px solid var(--border-nav);
   border-radius: var(--radius-pill);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -24,7 +24,7 @@
   align-items: center;
   padding: 0 6px;
   z-index: 1000;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-nav-bar);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -66,7 +66,7 @@
   height: 40px;
   flex: 0 0 auto;
   padding: 0 14px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow: var(--shadow-nav-active);
 }
 
 .bn-item .bn-icon {
@@ -167,7 +167,7 @@
 }
 
 .all-hub-logout {
-  color: var(--danger-text, #e0707f);
+  color: var(--danger-text);
 }
 
 /* ── Workout focus bar ──────────────────────────────────────── */
@@ -183,7 +183,7 @@
   right: 0;
   height: 44px;
   background: rgba(10, 15, 12, 0.97);
-  border-top: 2px solid var(--primary, #5fa87e);
+  border-top: 2px solid var(--primary);
   border-bottom: 1px solid rgba(95, 168, 126, 0.2);
   display: flex;
   align-items: center;
@@ -202,7 +202,7 @@
   font-family: 'Courier New', monospace;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary, #5fa87e);
+  color: var(--primary);
 }
 
 .wfb-label {
@@ -213,8 +213,8 @@
 .wfb-end-btn {
   padding: 6px 14px;
   border-radius: 8px;
-  background: #c05060;
-  color: #fff;
+  background: var(--danger-strong);
+  color: var(--text-color);
   border: none;
   font-weight: 700;
   font-size: 0.8rem;
