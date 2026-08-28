@@ -90,6 +90,96 @@
     return weight ? `${sets.length}×${reps} · ${weight}` : `${sets.length}×${reps}`;
   }
 
+  /** Sum of reps*weight across every planned set, in kg. */
+  function _tonnageTarget(exercises) {
+    return exercises.reduce((sum, ex) => {
+      const sets = Array.isArray(ex.sets) ? ex.sets : [];
+      return sum + sets.reduce((s, set) => s + (Number(set.reps) || 0) * (Number(set.weight) || 0), 0);
+    }, 0);
+  }
+
+  function _totalSets(exercises) {
+    return exercises.reduce((n, ex) => n + (Array.isArray(ex.sets) ? ex.sets.length : 0), 0);
+  }
+
+  /** Average of any explicit per-set RPE targets in the plan, or null. */
+  function _avgTargetRpe(exercises) {
+    const rpes = [];
+    exercises.forEach(ex => (ex.sets || []).forEach(s => { if (s.rpe != null) rpes.push(Number(s.rpe)); }));
+    if (!rpes.length) return null;
+    return (rpes.reduce((a, b) => a + b, 0) / rpes.length).toFixed(1);
+  }
+
+  function _muscleSummary(exercises) {
+    if (typeof global.getMuscleGroup !== 'function') return '';
+    const groups = [];
+    exercises.forEach(ex => {
+      const g = global.getMuscleGroup(ex.name);
+      if (g && !groups.includes(g)) groups.push(g);
+    });
+    return groups.slice(0, 3).join(' · ');
+  }
+
+  /** Train tab hero pod: today's session name/muscles/set-target, tonnage-
+   * target progress bar, and a start-session CTA. Real data throughout —
+   * "vs last"/"fatigue"/"PR shots" have no computed source yet, so those
+   * three stat cells are left out rather than fabricated (see the plan's
+   * metrics decision — visual-only stats must be clearly non-real, and an
+   * unlabeled fake number is worse than a shorter, honest stat row).
+   */
+  function renderTrainHero() {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('trainHeroCard');
+    if (!el) return;
+
+    const day = getTodaysPlannedDay();
+    if (!day) {
+      el.innerHTML = `
+        <div class="pod pod--hero train-hero-card">
+          <div class="pod-kicker">No session planned today</div>
+          <p class="ws-empty-note" style="margin-top:8px;">Rest day, or no active program is assigned — log manually below whenever you're ready.</p>
+        </div>`;
+      return;
+    }
+
+    const exercises = Array.isArray(day.exercises) ? day.exercises : [];
+    const tonnageTargetKg = _tonnageTarget(exercises);
+    const totalSets = _totalSets(exercises);
+    const rpeTarget = _avgTargetRpe(exercises);
+    const muscles = _muscleSummary(exercises);
+
+    el.innerHTML = `
+      <div class="pod pod--hero train-hero-card">
+        <div class="train-hero-top">
+          <div>
+            <div class="train-hero-name">${day.name}</div>
+            <div class="train-hero-meta">${muscles ? muscles + ' &middot; ' : ''}${exercises.length} lift${exercises.length === 1 ? '' : 's'} &middot; ${totalSets} set${totalSets === 1 ? '' : 's'}</div>
+          </div>
+          ${rpeTarget ? `<div class="train-hero-rpe"><div class="home-hero-stat-lbl">Target RPE</div><div class="train-hero-rpe-val">${rpeTarget}</div></div>` : ''}
+        </div>
+        <div class="train-hero-tonnage-row">
+          <span>TONNAGE 0.0t / ${(tonnageTargetKg / 1000).toFixed(1)}t</span>
+          <span>0% &middot; 0 of ${totalSets} sets</span>
+        </div>
+        <div class="train-hero-tonnage-track"><div class="train-hero-tonnage-fill" style="width:0%"></div></div>
+        <button class="cta-capsule train-hero-cta" onclick="goToQuickLog()">Start session</button>
+      </div>`;
+  }
+
+  /** Sleep/Energy/Sore/Ready strip — all four values come straight from
+   * the daily readiness check-in (src/js/readiness-checkin.js) when the
+   * lifter has filled it in today; otherwise each cell shows "—". */
+  function renderTrainReadinessStrip() {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('trainReadinessStrip');
+    if (!el) return;
+    const entry = typeof global.getTodayReadinessEntry === 'function' ? global.getTodayReadinessEntry() : null;
+    const cell = (label, val) => `<div class="train-strip-cell"><div class="home-hero-stat-lbl">${label}</div><div class="train-strip-val">${val != null ? val : '—'}</div></div>`;
+    el.innerHTML = entry
+      ? cell('Sleep', entry.sleep + '/5') + cell('Motivation', entry.motivation + '/5') + cell('Soreness', entry.soreness + '/5') + cell('Ready', entry.score)
+      : cell('Sleep', null) + cell('Motivation', null) + cell('Soreness', null) + cell('Ready', null);
+  }
+
   function renderSessionQueue() {
     if (typeof document === 'undefined') return;
     const el = document.getElementById('sessionQueueCard');
@@ -116,9 +206,11 @@
       </div>`;
   }
 
-  const api = { getTodaysPlannedDay, renderSessionQueue };
+  const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip };
   global.getTodaysPlannedDay = getTodaysPlannedDay;
   global.renderSessionQueue = renderSessionQueue;
+  global.renderTrainHero = renderTrainHero;
+  global.renderTrainReadinessStrip = renderTrainReadinessStrip;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   }

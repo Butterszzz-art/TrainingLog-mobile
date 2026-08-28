@@ -30,6 +30,60 @@
   position: relative;
 }
 
+/* ── Greeting row ───────────────────────────────────────────── */
+
+.home-greeting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px 10px;
+}
+
+.home-greeting-name {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.home-greeting-meta {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.home-greeting-icons {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.home-greeting-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.038);
+  border: 1px solid var(--pod-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.home-greeting-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #3d9d73, #1a5138);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #050c08;
+}
+
 /* ── Visual zones ───────────────────────────────────────────── */
 
 .home-zone {
@@ -569,14 +623,67 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid transparent;
-  font-size: 0.75rem;
+  font-family: var(--font-label);
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 4px 10px;
-  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 5px 11px;
+  font-weight: 800;
   white-space: nowrap;
+}
+
+/* ── Hero big-number row + micro stat grid (mockup pattern, reused
+   by renderHeroPhaseHeader for both the show-day and habit heroes) ── */
+
+.home-hero-num-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 8px 0 11px;
+}
+
+.home-hero-num {
+  font-family: var(--font-display);
+  font-size: 56px;
+  line-height: 0.92;
+}
+
+.home-hero-num-label {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.home-hero-num-sub {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.home-hero-statgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(116, 138, 126, 0.14);
+}
+
+.home-hero-stat-lbl {
+  font-family: var(--font-label);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.home-hero-stat-val {
+  font-size: 13.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
 }
 
 .home-status-pill.is-good {

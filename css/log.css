@@ -67,6 +67,109 @@
 
 .history-open-btn:hover { background: var(--elevated-bg); }
 
+/* ── Train hero — today's session summary + tonnage bar + CTA
+   (session-queue.js renderTrainHero()) ────────────────────────── */
+
+.train-hero-card { margin-bottom: 10px; }
+
+.train-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.train-hero-name {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.train-hero-meta {
+  font-size: 11.5px;
+  color: var(--secondary-text);
+  margin-top: 4px;
+}
+
+.train-hero-rpe { text-align: right; flex: none; }
+
+.train-hero-rpe-val {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.train-hero-tonnage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.train-hero-tonnage-track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.train-hero-tonnage-fill {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, #236b4e, #6fae8b);
+  transition: width 0.4s ease;
+}
+
+.train-hero-cta {
+  width: 100%;
+  margin-top: 12px;
+  justify-content: center;
+  font-size: 17px;
+}
+
+/* ── Sleep/motivation/soreness/readiness strip ──────────────────── */
+
+.train-strip {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+  padding: 9px 4px;
+}
+
+.train-strip-cell {
+  flex: 1;
+  text-align: center;
+  position: relative;
+}
+
+.train-strip-cell + .train-strip-cell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 22px;
+  background: rgba(116, 138, 126, 0.18);
+}
+
+.train-strip-val {
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Session queue — today's planned exercises (session-queue.js) ── */
 
 .sq-card {

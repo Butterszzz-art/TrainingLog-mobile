@@ -550,15 +550,16 @@
       <span class="sm-since"></span>
     </div>
 
-    <!-- ── Zone 1: Hero — today's program ───────────────────────── -->
+    <!-- ── Greeting row: "Morning, {name}" + date/streak, search+avatar ── -->
+    <div class="home-greeting-row" id="homeGreetingRow"></div>
+
+    <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered —
+         'hero' renders first, matching the mockup's hero-first layout) ── -->
+    <div id="homeDashboardContent" class="home-dashboard"></div>
+
+    <!-- ── Zone 1: Today's session — program day + split strip ──── -->
     <div class="home-zone home-zone--hero">
       <div id="todayProgramCard"></div>
-    </div>
-
-    <!-- ── Zone 2: Action — readiness + archetype prompt ─────────── -->
-    <div class="home-zone home-zone--action">
-      <div id="readinessHomeCard"></div>
-      <div id="archetypeProfileCard"></div>
     </div>
 
     <!-- ── Zone 3: Weekly glance — summary + steps (2-col) ─────── -->
@@ -592,8 +593,11 @@
       </div>
     </div>
 
-    <!-- ── Zone 4: Dashboard extras (JS-rendered cards) ──────────── -->
-    <div id="homeDashboardContent" class="home-dashboard"></div>
+    <!-- ── Zone 2: Action — readiness + archetype prompt ─────────── -->
+    <div class="home-zone home-zone--action">
+      <div id="readinessHomeCard"></div>
+      <div id="archetypeProfileCard"></div>
+    </div>
 
     <!-- ── Zone 5: Status modes (demoted — utility, not training) ── -->
     <div class="home-zone home-zone--modes">
@@ -621,8 +625,16 @@
     <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
     <div id="logSub_log" class="log-subview active">
 
+      <!-- Today's session hero: name, muscles, tonnage-target progress,
+           Start-session CTA (session-queue.js renderTrainHero()) -->
+      <div id="trainHeroCard" style="padding:6px 12px 0;"></div>
+
       <!-- Today's planned exercises, read from the active program (session-queue.js) -->
       <div id="sessionQueueCard" style="padding:0 12px;"></div>
+
+      <!-- Sleep/motivation/soreness/readiness strip, from today's daily
+           readiness check-in when filled in (session-queue.js) -->
+      <div id="trainReadinessStrip" class="train-strip" style="margin:0 12px 10px;"></div>
 
       <!-- Session context flags: alt-machine / alt-gym -->
       <div id="sessionContextBar" style="padding:0 12px;"></div>
@@ -4222,6 +4234,7 @@ function showTab(tabName) {
 
   switch (tabName) {
     case 'homeTab':
+      if (typeof renderHomeGreeting === 'function') renderHomeGreeting();
       renderHomeDashboard();
       if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
       if (typeof window.initAiCoach === 'function' && currentUser) window.initAiCoach(currentUser);
@@ -4248,7 +4261,9 @@ function showTab(tabName) {
       }
       break;
     case 'logTab':
+      if (typeof window.renderTrainHero === 'function') window.renderTrainHero();
       if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
+      if (typeof window.renderTrainReadinessStrip === 'function') window.renderTrainReadinessStrip();
       if (window.renderWorkouts) renderWorkouts();
       if (typeof window.renderGamificationUI === 'function' && currentUser) {
         window.renderGamificationUI(currentUser);
@@ -9347,54 +9362,58 @@ function renderHeroPhaseHeader(profile, username) {
     const gamification = getHomeGamificationSummary(profile, username);
     const streakCount  = gamification?.habitStreak || gamification?.currentStreak || 0;
     return `
-      <section class="home-dashboard-card home-hero-card">
-        <div class="home-card-header">
-          <p class="home-hero-topline">Habit Command Center</p>
+      <section class="pod pod--hero home-dashboard-card home-hero-card">
+        <div class="pod-row">
+          <span class="pod-kicker">Habit Command Center</span>
           <span class="home-status-pill ${statusPill}">${currentStatus}</span>
         </div>
-        <div class="home-split-grid">
-          <div>
-            <h2 class="home-hero-athlete">${athleteName}</h2>
-            <p class="home-hero-meta"><span class="ui-icon">${ICONS.calendar}</span> ${todayLabel}</p>
-            <p class="home-hero-meta"><span class="ui-icon">${ICONS.flame}</span> Habit Streak: <strong>${streakCount} day${streakCount !== 1 ? 's' : ''}</strong></p>
-            <p class="home-hero-meta"><span class="ui-icon">${ICONS.footprints}</span> Steps today: <strong>${stepsToday.toLocaleString()} / ${stepsGoal.toLocaleString()} (${stepsPct}%)</strong></p>
-          </div>
-          <div class="home-muted-panel">
-            <p class="home-stat-label">Daily Status</p>
-            <p class="home-stat-value" style="margin-bottom:8px;">${currentStatus}</p>
-            <p class="home-stat-label">Next Check-in</p>
-            <p class="home-stat-value">${nextReview}</p>
-          </div>
+        <div class="home-hero-num-row">
+          <span class="home-hero-num">${streakCount}</span>
+          <div><div class="home-hero-num-label">day streak</div><div class="home-hero-num-sub">${todayLabel}</div></div>
+        </div>
+        <div class="home-hero-statgrid">
+          <div><div class="home-hero-stat-lbl">Steps</div><div class="home-hero-stat-val">${stepsToday.toLocaleString()}</div></div>
+          <div><div class="home-hero-stat-lbl">Goal</div><div class="home-hero-stat-val">${stepsPct}%</div></div>
+          <div><div class="home-hero-stat-lbl">Status</div><div class="home-hero-stat-val">${currentStatus}</div></div>
+          <div><div class="home-hero-stat-lbl">Next check-in</div><div class="home-hero-stat-val">${nextReview}</div></div>
         </div>
       </section>
     `;
   }
 
+  const countdownNum = getCountdownDaysNumber(showDateLike);
   return `
-    <section class="home-dashboard-card home-hero-card">
-      <div class="home-card-header">
-        <p class="home-hero-topline">${heroToplineByArchetype[archetype] || 'Command Center'}</p>
+    <section class="pod pod--hero home-dashboard-card home-hero-card">
+      <div class="pod-row">
+        <span class="pod-kicker">${heroToplineByArchetype[archetype] || 'Command Center'}</span>
         <span class="home-status-pill ${statusPill}">${currentStatus}</span>
       </div>
-      <div class="home-split-grid">
-        <div>
-          <h2 class="home-hero-athlete">${athleteName}</h2>
-          <p class="home-hero-meta">Current Phase: ${phase}</p>
-          <p class="home-hero-meta">Phase Label: ${weekLabel}</p>
-          <p class="home-hero-meta">${weeksOut}</p>
-          <p class="home-hero-meta">Show Date: ${showDate}</p>
-          <p class="home-hero-meta">Days Until Show: ${showCountdown}</p>
-          <p class="home-hero-meta">Date: ${todayLabel}</p>
-        </div>
-        <div class="home-muted-panel">
-          <p class="home-stat-label">Current Status</p>
-          <p class="home-stat-value" style="margin-bottom:8px;">${currentStatus}</p>
-          <p class="home-stat-label">Next Review</p>
-          <p class="home-stat-value">${nextReview}</p>
-        </div>
+      ${countdownNum != null ? `
+      <div class="home-hero-num-row">
+        <span class="home-hero-num">${countdownNum}</span>
+        <div><div class="home-hero-num-label">days out</div><div class="home-hero-num-sub">${weeksOut}</div></div>
+      </div>` : `
+      <h2 class="home-hero-athlete">${athleteName}</h2>
+      <p class="home-hero-meta">${phase} &middot; ${weekLabel}</p>`}
+      <div class="home-hero-statgrid">
+        <div><div class="home-hero-stat-lbl">Phase</div><div class="home-hero-stat-val">${phase}</div></div>
+        <div><div class="home-hero-stat-lbl">Show date</div><div class="home-hero-stat-val">${showDate}</div></div>
+        <div><div class="home-hero-stat-lbl">Status</div><div class="home-hero-stat-val">${currentStatus}</div></div>
+        <div><div class="home-hero-stat-lbl">Next review</div><div class="home-hero-stat-val">${nextReview}</div></div>
       </div>
     </section>
   `;
+}
+
+/** Big-digit days-out for the hero card; null when there's no usable show date. */
+function getCountdownDaysNumber(dateLike) {
+  if (!dateLike) return null;
+  const showDate = new Date(dateLike);
+  if (Number.isNaN(showDate.getTime())) return null;
+  const now = new Date();
+  const ms = showDate.setHours(0, 0, 0, 0) - now.setHours(0, 0, 0, 0);
+  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+  return days < 0 ? null : days;
 }
 
 function formatComplianceStatus(statusKey) {
@@ -10015,6 +10034,29 @@ function renderCompactProgressionSummary(profile, username) {
       <p class="home-mission-progress"><strong>Recent:</strong> ${recentProgressText}</p>
     </section>
   `;
+}
+
+function renderHomeGreeting() {
+  const el = document.getElementById('homeGreetingRow');
+  if (!el) return;
+  const { username, profile } = getHomeDashboardSourceData();
+  const displayName = getSafeDisplayValue(profile?.athleteName || username, 'there');
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
+  const dateStr = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const gamification = getHomeGamificationSummary(profile, username);
+  const streakCount = gamification?.habitStreak || gamification?.currentStreak || 0;
+  const initials = (displayName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  el.innerHTML = `
+    <div>
+      <div class="home-greeting-name">${timeOfDay}, ${displayName}</div>
+      <div class="home-greeting-meta">${dateStr}${streakCount ? ` &middot; day ${streakCount} of the streak` : ''}</div>
+    </div>
+    <div class="home-greeting-icons">
+      <button class="home-greeting-icon-btn" onclick="showTab('allTab')" aria-label="Search / everything"><span class="ui-icon" data-icon="search"></span></button>
+      <span class="home-greeting-avatar">${initials}</span>
+    </div>`;
 }
 
 function renderHomeDashboard() {
