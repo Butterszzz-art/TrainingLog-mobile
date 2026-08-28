@@ -58,6 +58,33 @@
         <button class="sidebar-invite-btn" id="sidebarInviteBtn" onclick="showInviteModal()">+ Invite</button>
       </div>
 
+      <!-- Rail nav — jumps to the matching section of the workspace view
+           (renderWorkspace() builds Queue/Clients/Templates/Messages/
+           Check-ins/Analytics as one page, so "navigating" here is a
+           scroll-to, not a route change). Counts are real where the app
+           has the data (railNavUpdateCounts() in coach.js); Programs has
+           no view distinct from Templates yet so it routes there too;
+           Settings has no desktop view at all yet — flagged rather than
+           faked. -->
+      <nav class="rail-nav" id="railNav">
+        <button class="rail-nav-item active" data-rail="queue" onclick="railNavGo('queue')">
+          <span>Queue</span><span class="rail-nav-count" id="railCountQueue">0</span>
+        </button>
+        <button class="rail-nav-item" data-rail="clients" onclick="railNavGo('clients')">
+          <span>Clients</span><span class="rail-nav-count" id="railCountClients">0</span>
+        </button>
+        <button class="rail-nav-item" data-rail="programs" onclick="railNavGo('programs')"><span>Programs</span></button>
+        <button class="rail-nav-item" data-rail="templates" onclick="railNavGo('templates')">
+          <span>Templates</span><span class="rail-nav-count" id="railCountTemplates">0</span>
+        </button>
+        <button class="rail-nav-item" data-rail="messages" onclick="railNavGo('messages')"><span>Messages</span></button>
+        <button class="rail-nav-item" data-rail="checkins" onclick="railNavGo('checkins')">
+          <span>Check-ins</span><span class="rail-nav-count" id="railCountCheckins">0</span>
+        </button>
+        <button class="rail-nav-item" data-rail="analytics" onclick="railNavGo('analytics')"><span>Analytics</span></button>
+        <button class="rail-nav-item" data-rail="settings" onclick="railNavGo('settings')" title="Not available in the coach console yet"><span>Settings</span></button>
+      </nav>
+
       <!-- Roster / Leads toggle -->
       <div class="sidebar-mode-toggle" id="sidebarModeToggle">
         <button class="mode-tab active" data-mode="clients">Clients</button>
@@ -108,7 +135,7 @@
           <div class="ws-col-main">
             <div id="wsPriorityCard"></div>
 
-            <div class="pod ws-roster-card">
+            <div class="pod ws-roster-card" id="wsRailTarget-clients">
               <div class="pod-row">
                 <span class="pod-kicker">Client roster</span>
                 <span class="ws-roster-count" id="wsRosterCount"></span>
@@ -118,7 +145,7 @@
           </div>
 
           <div class="ws-col-side">
-            <div class="pod ws-side-card">
+            <div class="pod ws-side-card" id="wsRailTarget-checkins">
               <div class="pod-row">
                 <span class="pod-kicker">Review queue</span>
                 <span class="ws-side-note">phase · due</span>
@@ -128,7 +155,7 @@
               <p class="ws-empty-note">No reviews tracked yet.</p>
             </div>
 
-            <div class="pod ws-side-card">
+            <div class="pod ws-side-card" id="wsRailTarget-templates">
               <div class="pod-row">
                 <span class="pod-kicker">Program templates</span>
                 <span class="ws-side-note">assigned to</span>
@@ -136,7 +163,7 @@
               <div id="wsTemplatesList"></div>
             </div>
 
-            <div class="pod ws-side-card ws-messages-card">
+            <div class="pod ws-side-card ws-messages-card" id="wsRailTarget-messages">
               <div class="pod-row">
                 <span class="pod-kicker">Messages</span>
                 <span class="ws-side-note">TODO(coach-workspace)</span>

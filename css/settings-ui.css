@@ -5,6 +5,86 @@
    Depends on: tokens.css
    ============================================================= */
 
+/* ── Settings hero summary (settings-hero.js) ────────────────── */
+
+.sh-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 10px;
+}
+
+.sh-profile-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #3d9d73, #1a5138);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--pill-text-active);
+  flex: none;
+}
+
+.sh-profile-name { font-size: 14px; font-weight: 800; }
+.sh-profile-meta { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+
+.sh-group { margin-bottom: 10px; padding: 11px 14px; }
+
+.sh-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(116, 138, 126, 0.09);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.sh-row:last-child { border-bottom: none; }
+.sh-row-label { flex: 1; }
+.sh-row-sub { font-size: 10.5px; color: var(--text-muted); font-weight: 400; }
+.sh-row-val {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sh-toggle {
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--text-muted);
+  font-family: var(--font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 6px 10px;
+}
+
+.sh-toggle.is-on {
+  background: var(--pill-bg-active);
+  color: var(--pill-text-active);
+}
+
+.sh-logout {
+  width: 100%;
+  height: 46px;
+  border-radius: var(--radius-pill);
+  background: rgba(158, 50, 65, 0.14);
+  border: 1px solid rgba(158, 50, 65, 0.4);
+  color: #c9707c;
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
 /* ── Page container ────────────────────────────────────────── */
 
 .settings-page {

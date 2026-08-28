@@ -70,6 +70,7 @@
   margin-bottom: var(--space-3);
 }
 .pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
   border-radius: var(--radius-pill);
@@ -84,6 +85,14 @@
   color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+/* Invisible hit-area expansion — keeps the mockup's visual pill height
+   (~29px) while meeting the 44px touch-target acceptance check. Doesn't
+   change layout since the pseudo-element is absolutely positioned. */
+.pill::before {
+  content: "";
+  position: absolute;
+  inset: -8px -2px;
 }
 .pill.active,
 .pill[aria-selected="true"] {
@@ -177,11 +186,86 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #050c08;
+  color: var(--pill-text-active);
   cursor: pointer;
   flex: none;
 }
 .bn-fab svg { display: block; }
 
+/* ── Libraries screen (libraries.js) ──────────────────────────── */
+#librariesContent { padding: 0 6px; }
+#librariesContent .pod-row { margin-bottom: 8px; }
+
+/* ── Interaction states (global) ──────────────────────────────
+   Applied broadly (pods, pills, capsules, tiles, plain buttons) so
+   every interactive surface gets a consistent hover/active/focus/
+   disabled treatment instead of one-off per-component rules. */
+
+:focus-visible {
+  outline: 2px solid #3d9d73;
+  outline-offset: 2px;
+}
+
+.pod, .pill, .cta-capsule, .stat-tile, .all-hub-tile, .bn-item, .bn-fab {
+  transition: background-color .15s ease, border-color .15s ease,
+              box-shadow .15s ease, transform .1s ease, opacity .15s ease;
+}
+
+@media (hover: hover) {
+  .pod:hover, .all-hub-tile:hover {
+    background: #141b18;
+    border-color: rgba(116, 138, 126, 0.28);
+  }
+  .pill:not(.active):hover {
+    background: var(--elevated-bg);
+    border-color: rgba(116, 138, 126, 0.28);
+  }
+  .cta-capsule:hover, .bn-fab:hover { filter: brightness(1.06); }
+}
+
+.cta-capsule:active,
+.pill:active,
+.all-hub-tile:active,
+.bn-fab:active,
+button:active {
+  transform: scale(0.985);
+  box-shadow: none;
+}
+
+button:disabled,
+.cta-capsule:disabled,
+.pill:disabled,
+[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ── Utility ────────────────────────────────────────────────── */
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* Loading skeleton — same geometry as the content it stands in for,
+   so nothing shifts layout when real content replaces it. */
+.skeleton {
+  background: rgba(116, 138, 126, 0.12);
+  border-radius: inherit;
+  color: transparent !important;
+  pointer-events: none;
+}
+.skeleton * { visibility: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton { animation: skeletonPulse 1.4s ease-in-out infinite; }
+}
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

@@ -550,15 +550,16 @@
       <span class="sm-since"></span>
     </div>
 
-    <!-- ── Zone 1: Hero — today's program ───────────────────────── -->
+    <!-- ── Greeting row: "Morning, {name}" + date/streak, search+avatar ── -->
+    <div class="home-greeting-row" id="homeGreetingRow"></div>
+
+    <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered —
+         'hero' renders first, matching the mockup's hero-first layout) ── -->
+    <div id="homeDashboardContent" class="home-dashboard"></div>
+
+    <!-- ── Zone 1: Today's session — program day + split strip ──── -->
     <div class="home-zone home-zone--hero">
       <div id="todayProgramCard"></div>
-    </div>
-
-    <!-- ── Zone 2: Action — readiness + archetype prompt ─────────── -->
-    <div class="home-zone home-zone--action">
-      <div id="readinessHomeCard"></div>
-      <div id="archetypeProfileCard"></div>
     </div>
 
     <!-- ── Zone 3: Weekly glance — summary + steps (2-col) ─────── -->
@@ -592,8 +593,11 @@
       </div>
     </div>
 
-    <!-- ── Zone 4: Dashboard extras (JS-rendered cards) ──────────── -->
-    <div id="homeDashboardContent" class="home-dashboard"></div>
+    <!-- ── Zone 2: Action — readiness + archetype prompt ─────────── -->
+    <div class="home-zone home-zone--action">
+      <div id="readinessHomeCard"></div>
+      <div id="archetypeProfileCard"></div>
+    </div>
 
     <!-- ── Zone 5: Status modes (demoted — utility, not training) ── -->
     <div class="home-zone home-zone--modes">
@@ -621,8 +625,20 @@
     <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
     <div id="logSub_log" class="log-subview active">
 
+      <!-- Today's session hero: name, muscles, tonnage-target progress,
+           Start-session CTA (session-queue.js renderTrainHero()) -->
+      <div id="trainHeroCard" style="padding:6px 12px 0;"></div>
+
+      <!-- Weekly MEV/MAV/MRV volume landmarks per muscle, real weekly set
+           counts against published reference ranges (session-queue.js) -->
+      <div id="volumeLandmarksCard" style="padding:0 12px;"></div>
+
       <!-- Today's planned exercises, read from the active program (session-queue.js) -->
       <div id="sessionQueueCard" style="padding:0 12px;"></div>
+
+      <!-- Sleep/motivation/soreness/readiness strip, from today's daily
+           readiness check-in when filled in (session-queue.js) -->
+      <div id="trainReadinessStrip" class="train-strip" style="margin:0 12px 10px;"></div>
 
       <!-- Session context flags: alt-machine / alt-gym -->
       <div id="sessionContextBar" style="padding:0 12px;"></div>
@@ -671,7 +687,9 @@
       <div id="resistance-section">
         <div id="resistance-inputs" class="log-form-card">
 
-          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value);" />
+          <div class="log-exercise-title" id="exerciseLiveTitle" hidden></div>
+          <div class="log-exercise-stats-line" id="exerciseStatsLine" hidden></div>
+          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
           <datalist id="exerciseSuggestions"></datalist>
 
           <!-- Progressive overload hint -->
@@ -680,89 +698,133 @@
           <!-- Coach technique video hint -->
           <div id="exerciseVideoHint" class="exercise-video-hint" style="display:none;"></div>
 
-          <!-- Sets + unit on one row -->
-          <div class="sets-unit-row">
-            <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
-            <select id="weightUnit">
-              <option value="kg">kg</option>
-              <option value="lbs">lbs</option>
-            </select>
-          </div>
-
-          <!-- Machine at its weight ceiling — can't add more load next time -->
-          <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
-            <input type="checkbox" id="maxedOutToggle" />
-            <span>🔒 Maxed Out</span>
-          </label>
-
-          <!-- Dynamically generated set inputs -->
-          <div id="setInputsContainer"></div>
-
-          <!-- Template quick-load -->
-          <select id="resistanceTemplateSelect" class="log-template-select" onchange="loadSelectedResistanceTemplate()">
-            <option value="">Load a template…</option>
-          </select>
-          <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
-
-          <!-- Advanced options panel (modern custom toggle) -->
-          <div class="log-advanced" id="logAdvancedPanel">
-            <button class="log-adv-toggle" id="logAdvToggle" aria-expanded="false" type="button" onclick="toggleLogAdvanced()">
-              <span class="log-adv-left">
-                <svg class="log-adv-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-                  <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-                  <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-                  <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
-                  <line x1="17" y1="16" x2="23" y2="16"/>
-                </svg>
-                Advanced
-                <span class="log-adv-dot" id="logAdvDot"></span>
-              </span>
-              <svg class="log-adv-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </button>
-            <div class="log-advanced-body" id="logAdvBody" hidden>
-              <div class="log-adv-grid">
-                <div class="log-adv-field">
-                  <label class="log-adv-label" for="goal">Target weight</label>
-                  <input type="number" id="goal" placeholder="e.g. 100" oninput="_updateLogAdvDot()" />
-                </div>
-                <div class="log-adv-field">
-                  <label class="log-adv-label" for="repGoal">Target reps</label>
-                  <input type="number" id="repGoal" placeholder="e.g. 8" oninput="_updateLogAdvDot()" />
-                </div>
-                <div class="log-adv-field">
-                  <label class="log-adv-label" for="targetRPE">
-                    RPE <span class="log-adv-hint">1–10</span>
-                  </label>
-                  <input type="number" id="targetRPE" placeholder="e.g. 8" min="1" max="10" step="0.5" inputmode="decimal" oninput="_updateLogAdvDot()" />
-                </div>
-                <div class="log-adv-field">
-                  <label class="log-adv-label" for="targetRIR">
-                    RIR <span class="log-adv-hint">0–5</span>
-                  </label>
-                  <input type="number" id="targetRIR" placeholder="e.g. 2" min="0" max="5" step="1" inputmode="numeric" oninput="_updateLogAdvDot()" />
+          <!-- Quick log: one-tap single-set logging. Drives the exact
+               same #sets/#reps_0/#weight_0 fields + addLogEntry() as the
+               manual form below — no separate save path, no new data
+               shape, just a faster front door onto it (session-queue.js). -->
+          <div class="ql-panel" id="quickLogPanel" hidden>
+            <div class="ql-row">
+              <div class="ql-field">
+                <div class="ql-label">Weight <span id="qlUnitLabel">kg</span></div>
+                <div class="ql-stepper">
+                  <button type="button" class="ql-step" onclick="quickLogStep('weight',-1)" aria-label="Decrease weight">−</button>
+                  <span class="ql-val" id="qlWeightVal">—</span>
+                  <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('weight',1)" aria-label="Increase weight">+</button>
                 </div>
               </div>
-              <div class="log-adv-rpe-row">
-                <span class="log-adv-rpe-scale">
-                  <span class="rpe-tick rpe-easy">6 Easy</span>
-                  <span class="rpe-bar"></span>
-                  <span class="rpe-tick rpe-hard">10 Max</span>
-                </span>
-                <span class="log-adv-rir-note">RPE + RIR ≈ 10</span>
-              </div>
-              <div class="log-adv-field log-adv-field--full">
-                <label class="log-adv-label" for="entryDate">Log date</label>
-                <input type="date" id="entryDate" oninput="_updateLogAdvDot()" />
+              <div class="ql-field">
+                <div class="ql-label">Reps</div>
+                <div class="ql-stepper">
+                  <button type="button" class="ql-step" onclick="quickLogStep('reps',-1)" aria-label="Decrease reps">−</button>
+                  <span class="ql-val" id="qlRepsVal">—</span>
+                  <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('reps',1)" aria-label="Increase reps">+</button>
+                </div>
               </div>
             </div>
+            <button type="button" class="cta-capsule ql-log-btn" id="qlLogBtn" onclick="quickLogSet()">
+              <span id="qlLogBtnLabel">Log set</span>
+              <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>
+            </button>
           </div>
 
-          <button id="addLogBtn" onclick="addLogEntry()" disabled class="log-add-btn">+ Add to Log</button>
+          <!-- Manual / multi-set entry — everything the quick-log panel
+               above doesn't cover (custom set counts, per-set drop-sets/
+               rest-pause/unilateral, target RPE/RIR, template loading,
+               back-dating). Nothing here changed; just tucked behind a
+               disclosure so quick-log is the default one-tap path. -->
+          <details class="log-manual-entry" id="logManualEntry">
+            <summary class="log-manual-entry-toggle">Manual / multi-set entry</summary>
+            <div class="log-manual-entry-body">
+
+            <!-- Sets + unit on one row -->
+            <div class="sets-unit-row">
+              <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
+              <select id="weightUnit" onchange="if(typeof syncQuickLogUnit==='function') syncQuickLogUnit(this.value);">
+                <option value="kg">kg</option>
+                <option value="lbs">lbs</option>
+              </select>
+            </div>
+
+            <!-- Machine at its weight ceiling — can't add more load next time -->
+            <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
+              <input type="checkbox" id="maxedOutToggle" />
+              <span>🔒 Maxed Out</span>
+            </label>
+
+            <!-- Dynamically generated set inputs -->
+            <div id="setInputsContainer"></div>
+
+            <!-- Template quick-load -->
+            <select id="resistanceTemplateSelect" class="log-template-select" onchange="loadSelectedResistanceTemplate()">
+              <option value="">Load a template…</option>
+            </select>
+            <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
+
+            <!-- Advanced options panel (modern custom toggle) -->
+            <div class="log-advanced" id="logAdvancedPanel">
+              <button class="log-adv-toggle" id="logAdvToggle" aria-expanded="false" type="button" onclick="toggleLogAdvanced()">
+                <span class="log-adv-left">
+                  <svg class="log-adv-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                    <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                    <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+                    <line x1="17" y1="16" x2="23" y2="16"/>
+                  </svg>
+                  Advanced
+                  <span class="log-adv-dot" id="logAdvDot"></span>
+                </span>
+                <svg class="log-adv-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div class="log-advanced-body" id="logAdvBody" hidden>
+                <div class="log-adv-grid">
+                  <div class="log-adv-field">
+                    <label class="log-adv-label" for="goal">Target weight</label>
+                    <input type="number" id="goal" placeholder="e.g. 100" oninput="_updateLogAdvDot()" />
+                  </div>
+                  <div class="log-adv-field">
+                    <label class="log-adv-label" for="repGoal">Target reps</label>
+                    <input type="number" id="repGoal" placeholder="e.g. 8" oninput="_updateLogAdvDot()" />
+                  </div>
+                  <div class="log-adv-field">
+                    <label class="log-adv-label" for="targetRPE">
+                      RPE <span class="log-adv-hint">1–10</span>
+                    </label>
+                    <input type="number" id="targetRPE" placeholder="e.g. 8" min="1" max="10" step="0.5" inputmode="decimal" oninput="_updateLogAdvDot()" />
+                  </div>
+                  <div class="log-adv-field">
+                    <label class="log-adv-label" for="targetRIR">
+                      RIR <span class="log-adv-hint">0–5</span>
+                    </label>
+                    <input type="number" id="targetRIR" placeholder="e.g. 2" min="0" max="5" step="1" inputmode="numeric" oninput="_updateLogAdvDot()" />
+                  </div>
+                </div>
+                <div class="log-adv-rpe-row">
+                  <span class="log-adv-rpe-scale">
+                    <span class="rpe-tick rpe-easy">6 Easy</span>
+                    <span class="rpe-bar"></span>
+                    <span class="rpe-tick rpe-hard">10 Max</span>
+                  </span>
+                  <span class="log-adv-rir-note">RPE + RIR ≈ 10</span>
+                </div>
+                <div class="log-adv-field log-adv-field--full">
+                  <label class="log-adv-label" for="entryDate">Log date</label>
+                  <input type="date" id="entryDate" oninput="_updateLogAdvDot()" />
+                </div>
+              </div>
+            </div>
+
+            <button id="addLogBtn" onclick="addLogEntry()" disabled class="log-add-btn">+ Add to Log</button>
+
+            </div>
+          </details>
 
         </div><!-- /log-form-card -->
+
+        <!-- Exercises already logged today (session-queue.js renderSessionSoFar()) -->
+        <div id="sessionSoFarCard" style="margin-top:10px;"></div>
 
         <!-- Logs render here -->
         <div id="workoutsContainer" style="margin-top:16px;"></div>
@@ -897,8 +959,19 @@
 
       <!-- ── Header ── -->
       <div class="wt-header">
-        <h2 class="wt-title"><span class="ui-icon" data-icon="scale"></span> Bodyweight Tracker</h2>
+        <h2 class="wt-title pod-title" style="font-size:20px;">Body</h2>
         <div id="wtTrendBadge" class="wt-trend-badge" style="display:none;"></div>
+      </div>
+
+      <!-- ── Hero: big current-weight readout + sparkline (renderWeightHero) ── -->
+      <div class="pod pod--hero wt-hero" id="wtHero" style="display:none;">
+        <div class="pod-kicker">Bodyweight</div>
+        <div class="wt-hero-num-row">
+          <span class="home-hero-num" id="wtHeroValue">—</span>
+          <span class="wt-hero-unit" id="wtHeroUnit">kg</span>
+          <span class="wt-hero-avg" id="wtHeroAvg"></span>
+        </div>
+        <svg class="wt-hero-spark" id="wtHeroSparkline" viewBox="0 0 330 60" preserveAspectRatio="none"></svg>
       </div>
 
       <!-- ── Stat strip (populated by renderWeights) ── -->
@@ -2959,9 +3032,13 @@
 <!-- ── CLIENTS TAB — roster & individual client management ── -->
 <div id="clientsTab" class="tab-content coach-only">
   <div class="coach-page-header">
-    <h2>Clients</h2>
+    <h2 class="pod-title" style="font-size:20px;">Coach</h2>
     <div class="coach-stats-bar" id="coachStatsBar"></div>
   </div>
+
+  <!-- Triage: priority client + review queue + templates, all real
+       data from coachDashboardState.clients (renderCoachQueue()) -->
+  <div id="coachQueueSection"></div>
 
   <!-- Bulk actions toolbar (hidden until clients are selected) -->
   <div class="coach-bulk-toolbar" id="coachBulkToolbar" hidden>
@@ -3028,6 +3105,14 @@
 <div id="coachingTab" class="tab-content coach-only" style="display:none;" aria-hidden="true"></div>
 
 <div id="settingsTab" class="tab-content">
+  <h2 class="pod-title" style="font-size:20px;padding:0 6px;">Settings</h2>
+
+  <!-- Profile hero + real preference summary (renderSettingsHero()).
+       The full settings form below (#settingsFormContainer) is where
+       everything actually gets changed — this is just the mockup's
+       top-of-screen summary, wired to the same real prefs. -->
+  <div id="settingsHero" style="padding:0 6px;"></div>
+
   <div id="settingsFormContainer" class="panel"></div>
 
   <!-- Knowledge Base Admin Section -->
@@ -3171,6 +3256,12 @@
   <div id="mobilityTabContent"></div>
 </div>
 
+<!-- Libraries: real exercise history grouped by muscle (libraries.js),
+     Functional/Flexibility/Posing route to their existing dedicated tabs. -->
+<div id="librariesTab" class="tab-content">
+  <div id="librariesContent"></div>
+</div>
+
   <!-- Body tab: launcher into Weight/Macros/Sleep/Cardio (each of those
        keeps its own id/render function — this is a menu, not a merge). -->
   <div id="bodyTab" class="tab-content">
@@ -3229,6 +3320,10 @@
     <div class="all-hub-section">
       <div class="all-hub-section-label">Libraries</div>
       <div class="all-hub-grid">
+        <button class="pod all-hub-tile" data-tab="librariesTab" onclick="showTab('librariesTab')">
+          <span class="more-drawer-icon" data-icon="dumbbell"></span>
+          <span>Libraries</span>
+        </button>
         <button class="pod all-hub-tile bb-only" data-tab="posingTab" onclick="showTab('posingTab')">
           <span class="more-drawer-icon" data-icon="award"></span>
           <span>Posing</span>
@@ -4222,6 +4317,7 @@ function showTab(tabName) {
 
   switch (tabName) {
     case 'homeTab':
+      if (typeof renderHomeGreeting === 'function') renderHomeGreeting();
       renderHomeDashboard();
       if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
       if (typeof window.initAiCoach === 'function' && currentUser) window.initAiCoach(currentUser);
@@ -4248,7 +4344,11 @@ function showTab(tabName) {
       }
       break;
     case 'logTab':
+      if (typeof window.renderTrainHero === 'function') window.renderTrainHero();
+      if (typeof window.renderVolumeLandmarks === 'function') window.renderVolumeLandmarks();
       if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
+      if (typeof window.renderTrainReadinessStrip === 'function') window.renderTrainReadinessStrip();
+      if (typeof window.renderSessionSoFar === 'function') window.renderSessionSoFar();
       if (window.renderWorkouts) renderWorkouts();
       if (typeof window.renderGamificationUI === 'function' && currentUser) {
         window.renderGamificationUI(currentUser);
@@ -4262,6 +4362,9 @@ function showTab(tabName) {
       break;
     case 'weightTab':
       renderWeights();
+      break;
+    case 'librariesTab':
+      if (typeof renderLibraries === 'function') renderLibraries();
       break;
     case 'checkInTab':
       renderCheckInTab();
@@ -4366,6 +4469,7 @@ function showTab(tabName) {
       loadKnowledgeModules();
       renderSubscriptionPanel();
       loadReferralPanel();
+      if (typeof renderSettingsHero === 'function') renderSettingsHero();
 
       // Wire settings sub-tabs via delegation (idempotent)
       const stc = document.getElementById('settingsFormContainer');
@@ -5041,6 +5145,7 @@ function addLogEntry() {
     syncLocalHistoryFromWorkouts();
   }
   renderWorkouts();
+  if (typeof window.renderSessionSoFar === 'function') window.renderSessionSoFar();
   updateTrainingCalendar();
 
   // ✅ Clear form inputs
@@ -9347,54 +9452,58 @@ function renderHeroPhaseHeader(profile, username) {
     const gamification = getHomeGamificationSummary(profile, username);
     const streakCount  = gamification?.habitStreak || gamification?.currentStreak || 0;
     return `
-      <section class="home-dashboard-card home-hero-card">
-        <div class="home-card-header">
-          <p class="home-hero-topline">Habit Command Center</p>
+      <section class="pod pod--hero home-dashboard-card home-hero-card">
+        <div class="pod-row">
+          <span class="pod-kicker">Habit Command Center</span>
           <span class="home-status-pill ${statusPill}">${currentStatus}</span>
         </div>
-        <div class="home-split-grid">
-          <div>
-            <h2 class="home-hero-athlete">${athleteName}</h2>
-            <p class="home-hero-meta"><span class="ui-icon">${ICONS.calendar}</span> ${todayLabel}</p>
-            <p class="home-hero-meta"><span class="ui-icon">${ICONS.flame}</span> Habit Streak: <strong>${streakCount} day${streakCount !== 1 ? 's' : ''}</strong></p>
-            <p class="home-hero-meta"><span class="ui-icon">${ICONS.footprints}</span> Steps today: <strong>${stepsToday.toLocaleString()} / ${stepsGoal.toLocaleString()} (${stepsPct}%)</strong></p>
-          </div>
-          <div class="home-muted-panel">
-            <p class="home-stat-label">Daily Status</p>
-            <p class="home-stat-value" style="margin-bottom:8px;">${currentStatus}</p>
-            <p class="home-stat-label">Next Check-in</p>
-            <p class="home-stat-value">${nextReview}</p>
-          </div>
+        <div class="home-hero-num-row">
+          <span class="home-hero-num">${streakCount}</span>
+          <div><div class="home-hero-num-label">day streak</div><div class="home-hero-num-sub">${todayLabel}</div></div>
+        </div>
+        <div class="home-hero-statgrid">
+          <div><div class="home-hero-stat-lbl">Steps</div><div class="home-hero-stat-val">${stepsToday.toLocaleString()}</div></div>
+          <div><div class="home-hero-stat-lbl">Goal</div><div class="home-hero-stat-val">${stepsPct}%</div></div>
+          <div><div class="home-hero-stat-lbl">Status</div><div class="home-hero-stat-val">${currentStatus}</div></div>
+          <div><div class="home-hero-stat-lbl">Next check-in</div><div class="home-hero-stat-val">${nextReview}</div></div>
         </div>
       </section>
     `;
   }
 
+  const countdownNum = getCountdownDaysNumber(showDateLike);
   return `
-    <section class="home-dashboard-card home-hero-card">
-      <div class="home-card-header">
-        <p class="home-hero-topline">${heroToplineByArchetype[archetype] || 'Command Center'}</p>
+    <section class="pod pod--hero home-dashboard-card home-hero-card">
+      <div class="pod-row">
+        <span class="pod-kicker">${heroToplineByArchetype[archetype] || 'Command Center'}</span>
         <span class="home-status-pill ${statusPill}">${currentStatus}</span>
       </div>
-      <div class="home-split-grid">
-        <div>
-          <h2 class="home-hero-athlete">${athleteName}</h2>
-          <p class="home-hero-meta">Current Phase: ${phase}</p>
-          <p class="home-hero-meta">Phase Label: ${weekLabel}</p>
-          <p class="home-hero-meta">${weeksOut}</p>
-          <p class="home-hero-meta">Show Date: ${showDate}</p>
-          <p class="home-hero-meta">Days Until Show: ${showCountdown}</p>
-          <p class="home-hero-meta">Date: ${todayLabel}</p>
-        </div>
-        <div class="home-muted-panel">
-          <p class="home-stat-label">Current Status</p>
-          <p class="home-stat-value" style="margin-bottom:8px;">${currentStatus}</p>
-          <p class="home-stat-label">Next Review</p>
-          <p class="home-stat-value">${nextReview}</p>
-        </div>
+      ${countdownNum != null ? `
+      <div class="home-hero-num-row">
+        <span class="home-hero-num">${countdownNum}</span>
+        <div><div class="home-hero-num-label">days out</div><div class="home-hero-num-sub">${weeksOut}</div></div>
+      </div>` : `
+      <h2 class="home-hero-athlete">${athleteName}</h2>
+      <p class="home-hero-meta">${phase} &middot; ${weekLabel}</p>`}
+      <div class="home-hero-statgrid">
+        <div><div class="home-hero-stat-lbl">Phase</div><div class="home-hero-stat-val">${phase}</div></div>
+        <div><div class="home-hero-stat-lbl">Show date</div><div class="home-hero-stat-val">${showDate}</div></div>
+        <div><div class="home-hero-stat-lbl">Status</div><div class="home-hero-stat-val">${currentStatus}</div></div>
+        <div><div class="home-hero-stat-lbl">Next review</div><div class="home-hero-stat-val">${nextReview}</div></div>
       </div>
     </section>
   `;
+}
+
+/** Big-digit days-out for the hero card; null when there's no usable show date. */
+function getCountdownDaysNumber(dateLike) {
+  if (!dateLike) return null;
+  const showDate = new Date(dateLike);
+  if (Number.isNaN(showDate.getTime())) return null;
+  const now = new Date();
+  const ms = showDate.setHours(0, 0, 0, 0) - now.setHours(0, 0, 0, 0);
+  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+  return days < 0 ? null : days;
 }
 
 function formatComplianceStatus(statusKey) {
@@ -10015,6 +10124,29 @@ function renderCompactProgressionSummary(profile, username) {
       <p class="home-mission-progress"><strong>Recent:</strong> ${recentProgressText}</p>
     </section>
   `;
+}
+
+function renderHomeGreeting() {
+  const el = document.getElementById('homeGreetingRow');
+  if (!el) return;
+  const { username, profile } = getHomeDashboardSourceData();
+  const displayName = getSafeDisplayValue(profile?.athleteName || username, 'there');
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
+  const dateStr = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const gamification = getHomeGamificationSummary(profile, username);
+  const streakCount = gamification?.habitStreak || gamification?.currentStreak || 0;
+  const initials = (displayName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  el.innerHTML = `
+    <div>
+      <div class="home-greeting-name">${timeOfDay}, ${displayName}</div>
+      <div class="home-greeting-meta">${dateStr}${streakCount ? ` &middot; day ${streakCount} of the streak` : ''}</div>
+    </div>
+    <div class="home-greeting-icons">
+      <button class="home-greeting-icon-btn" onclick="showTab('allTab')" aria-label="Search / everything"><span class="ui-icon" data-icon="search"></span></button>
+      <span class="home-greeting-avatar">${initials}</span>
+    </div>`;
 }
 
 function renderHomeDashboard() {
@@ -11066,6 +11198,55 @@ async function renderCoachDashboard() {
     coachDashboardState.selectedClientId = null;
   }
   renderCoachDashboardView();
+  if (typeof renderCoachQueue === 'function') renderCoachQueue();
+}
+
+/** Mobile "Coach" triage view: stat row + priority client + review
+ * queue + roster snapshot, matching the mockup's Coach screen. All
+ * from coachDashboardState.clients — the same real roster data
+ * renderCoachDashboard() just loaded, just a different visual cut. */
+function renderCoachQueue() {
+  const el = document.getElementById('coachQueueSection');
+  if (!el) return;
+  const clients = coachDashboardState.clients || [];
+  if (!clients.length) { el.innerHTML = ''; return; }
+
+  const counts = { action: 0, watch: 0, ok: 0 };
+  clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
+  const avgCompliance = Math.round(clients.reduce((s, c) => s + (c.compliancePercent || 0), 0) / clients.length);
+
+  const statRow = [
+    ['Reviews due', counts.action, counts.action ? 'ws-stat-danger' : ''],
+    ['Avg compliance', avgCompliance + '%', ''],
+    ['Flagged', counts.watch + counts.action, (counts.watch + counts.action) ? 'ws-stat-warn' : ''],
+  ].map(([label, val, cls]) =>
+    `<div class="pod ws-stat-tile ${cls}"><div class="stat-tile-label">${label}</div><div class="stat-tile-value">${val}</div></div>`
+  ).join('');
+
+  const priority = clients.find(c => c.alertStatus === 'action') || clients.find(c => c.alertStatus === 'watch');
+  const priorityHTML = priority ? `
+    <div class="pod pod--hero ws-priority-card">
+      <div class="pod-row"><span class="pod-kicker">Needs attention</span><span class="ws-priority-tag ${priority.alertStatus}">${priority.alertStatus}</span></div>
+      <div class="ws-priority-main">
+        <span class="ws-priority-name">${escapeCoachText(priority.name)}</span>
+        <span class="ws-priority-meta">${escapeCoachText(priority.currentPhase)} &middot; ${escapeCoachText(priority.primaryStatusMetric)}</span>
+      </div>
+      <button class="cta-capsule ws-priority-cta" onclick="coachDashboardState.selectedClientId='${priority.id}'; if(typeof renderCoachDashboardView==='function') renderCoachDashboardView(); document.getElementById('coachDashboardContent')?.scrollIntoView({behavior:'smooth'});">Open client</button>
+    </div>` : '';
+
+  const roster = clients.slice().sort((a, b) => (a.compliancePercent || 0) - (b.compliancePercent || 0)).slice(0, 5);
+  const rosterHTML = roster.map(c => `
+    <div class="sq-row"><span class="sq-name">${escapeCoachText(c.name)}</span><span class="sq-summary">${c.compliancePercent}%</span></div>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="ws-stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">${statRow}</div>
+    ${priorityHTML}
+    <div class="pod sq-card">
+      <div class="pod-row"><span class="pod-kicker">Roster snapshot</span><span class="sq-count">compliance</span></div>
+      ${rosterHTML}
+    </div>
+  `;
 }
 
 window.renderCoachDashboard = renderCoachDashboard;
@@ -12250,6 +12431,9 @@ function renderWeights() {
     if (chg) { chg.textContent = changeDisp; chg.className = 'wt-stat-val ' + (changeKg > 0 ? 'wt-up' : changeKg < 0 ? 'wt-down' : ''); }
     if (ent) ent.textContent = log.length;
 
+    // ── Hero readout + sparkline ──
+    renderWeightHero(log, lastKg, displayUnit);
+
     // ── Weekly averages & rate ──
     renderWeeklyBreakdown(log, displayUnit);
   } else {
@@ -12258,6 +12442,8 @@ function renderWeights() {
     if (logCount) logCount.textContent = '';
     const wkCard = document.getElementById('wtWeeklyCard');
     if (wkCard) wkCard.style.display = 'none';
+    const heroEl = document.getElementById('wtHero');
+    if (heroEl) heroEl.style.display = 'none';
   }
 
   log.slice().reverse().forEach((entry, revIdx) => {
@@ -12277,6 +12463,54 @@ function renderWeights() {
       showBodyweightProgress();
     } else {
       showWorkoutProgress();
+    }
+  }
+}
+
+/** Big Anton current-weight readout + a real sparkline over the last
+ * entries — all from the same log array/unit renderWeights() already
+ * computed, just given the mockup's hero visual treatment. */
+function renderWeightHero(log, lastKg, displayUnit) {
+  const heroEl = document.getElementById('wtHero');
+  if (!heroEl) return;
+  heroEl.style.display = '';
+
+  const valueEl = document.getElementById('wtHeroValue');
+  const unitEl = document.getElementById('wtHeroUnit');
+  const avgEl = document.getElementById('wtHeroAvg');
+  const sparkEl = document.getElementById('wtHeroSparkline');
+  const toDispNum = (kg) => kg != null ? convertWeightValue(kg, 'kg', displayUnit, 1) : null;
+
+  if (valueEl) valueEl.textContent = toDispNum(lastKg) ?? '—';
+  if (unitEl) unitEl.textContent = displayUnit;
+
+  const recent = log.slice(-7);
+  const recentVals = recent.map(e => getEntryWeightKg(e)).filter(v => v != null);
+  if (avgEl) {
+    if (recentVals.length) {
+      const avg = recentVals.reduce((a, b) => a + b, 0) / recentVals.length;
+      avgEl.textContent = '7d avg ' + toDispNum(avg).toFixed(1);
+      avgEl.style.display = '';
+    } else {
+      avgEl.style.display = 'none';
+    }
+  }
+
+  if (sparkEl) {
+    const points = log.slice(-14).map(e => getEntryWeightKg(e)).filter(v => v != null);
+    if (points.length >= 2) {
+      const min = Math.min(...points), max = Math.max(...points);
+      const range = max - min || 1;
+      const w = 330, h = 60, pad = 6;
+      const coords = points.map((v, i) => {
+        const x = (i / (points.length - 1)) * w;
+        const y = pad + (1 - (v - min) / range) * (h - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+      sparkEl.innerHTML = `<polyline points="${coords.join(' ')}" fill="none" stroke="#6fae8b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+      sparkEl.style.display = '';
+    } else {
+      sparkEl.style.display = 'none';
     }
   }
 }
@@ -18138,6 +18372,8 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/reminders.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-queue.js"></script>
+  <script src="src/js/settings-hero.js"></script>
+  <script src="src/js/libraries.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active

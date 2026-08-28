@@ -210,5 +210,6 @@
 
   window.renderReadinessHomeCard = renderReadinessHomeCard;
   window.showReadinessIfNeeded = showReadinessIfNeeded;
+  window.getTodayReadinessEntry = getTodayEntry;
 
 })();
