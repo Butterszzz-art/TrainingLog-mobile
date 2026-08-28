@@ -2536,31 +2536,35 @@
   display: flex;
   gap: 6px;
   padding: 4px 0 10px;
-  border-bottom: 1px solid var(--border, #2a3a2e);
+  border-bottom: none;
   margin-bottom: 14px;
 }
 
 .comm-nav-btn {
   flex: 1;
-  padding: 8px 6px;
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
+  padding: 7px 6px;
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
   color: var(--text-muted, #7a8f7d);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   font-size: 0.78rem;
-  font-family: 'Poppins', sans-serif;
-  font-weight: 600;
+  font-family: var(--font-label);
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.18s, color 0.18s, border-color 0.18s;
   text-align: center;
   white-space: nowrap;
 }
 
-.comm-nav-btn.active,
 .comm-nav-btn:hover {
-  background: var(--primary, #5fa87e);
-  border-color: var(--primary, #5fa87e);
-  color: #fff;
+  background: var(--elevated-bg);
+  color: var(--text-color);
+}
+
+.comm-nav-btn.active {
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 /* ── ⑦ Filter pills ─────────────────────────────────────────── */

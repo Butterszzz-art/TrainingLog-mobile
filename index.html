@@ -3255,7 +3255,11 @@
           <span class="more-drawer-icon" data-icon="users"></span>
           <span>Community</span>
         </button>
-        <button class="pod all-hub-tile" data-tab="leaderboardTab" onclick="showTab('leaderboardTab')">
+        <!-- Leaderboard is reached through Community's own nav pill now
+             (#leaderboardTab/#exerciseLeaderboardTab still exist and work
+             if something else deep-links to them, they just lost their
+             separate All-hub tile). -->
+        <button class="pod all-hub-tile" data-tab="communityTab" onclick="showTab('communityTab'); if (window.showCommunitySection) showCommunitySection('competition')">
           <span class="more-drawer-icon" data-icon="award"></span>
           <span>Leaderboard</span>
         </button>
