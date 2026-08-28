@@ -21,6 +21,64 @@
   --highlight:      #c6944f;
   --shadow:         0 12px 28px rgba(0, 0, 0, 0.34);
   --shell-shadow:   0 16px 36px rgba(0, 0, 0, 0.42);
+
+  /* ── Modernist redesign — fonts ──────────────────────────────
+     --font-legacy keeps Poppins reachable for files not yet
+     migrated off it; new component CSS should use the three below. */
+  --font-display: 'Anton', 'Barlow Condensed', sans-serif;
+  --font-label:   'Barlow Condensed', 'Archivo', sans-serif;
+  --font-body:    'Archivo', 'Poppins', system-ui, sans-serif;
+  --font-legacy:  'Poppins', sans-serif;
+
+  /* ── Modernist redesign — spacing scale ──────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* ── Modernist redesign — radius scale ───────────────────────── */
+  --radius-sm:   12px;
+  --radius-md:   16px;
+  --radius-pod:  24px;
+  --radius-pill: 99px;
+
+  /* ── Modernist redesign — background wash ────────────────────── */
+  --bg-hero-gradient: radial-gradient(150% 92% at 50% -6%,
+    rgba(52, 122, 88, 0.55) 0%,
+    rgba(35, 84, 62, 0.42) 26%,
+    rgba(20, 44, 33, 0.5) 52%,
+    #0a120e 74%,
+    #050807 100%);
+  /* Fractal-noise SVG, inlined so no extra asset request is needed. */
+  --bg-noise-overlay: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%22.85%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');
+
+  /* ── Modernist redesign — pod surfaces ────────────────────────── */
+  --pod-bg:          #101614;
+  --pod-bg-alt:      #121b17;
+  --pod-bg-hero:     linear-gradient(168deg, rgba(22, 36, 28, 0.94), rgba(12, 18, 15, 0.985));
+  --pod-border:      rgba(116, 138, 126, 0.22);
+  --pod-bevel:       inset 0 1px 0 rgba(255, 255, 255, 0.038);
+  --pod-shadow-hero: 0 16px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* ── Modernist redesign — pills ───────────────────────────────── */
+  --pill-bg-active: linear-gradient(135deg, #2f8a63, #236b4e 60%, #17472f);
+  --pill-bg:        #101614;
+  --pill-border:    rgba(116, 138, 126, 0.24);
+  --pill-text-active: #050c08;
+
+  /* ── Modernist redesign — CTA capsule ─────────────────────────── */
+  --cta-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+
+  /* ── Modernist redesign — status accents ──────────────────────── */
+  --danger-strong: #9e3241;
+  --danger-grad:   linear-gradient(150deg, #9e3241, #61202c);
+  --danger-text:   #e0707f;
+  --warning-gold:  #c79a54;
+  --warning-bg:    rgba(168, 124, 56, 0.16);
+  --warning-border: rgba(168, 124, 56, 0.4);
 }
 
 /* ── Alternate themes ───────────────────────────────────────── */

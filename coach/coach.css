@@ -5,16 +5,22 @@
    ============================================================= */
 
 :root {
-  --bg: #080b0a;
-  --surface: #0f1510;
-  --card: #121b17;
-  --border: rgba(132,157,144,0.22);
-  --primary: #2d7d5b;
+  /* Aliased to css/tokens.css (loaded before this file) so the coach
+     console shares the same design tokens as the main app instead of
+     hand-duplicating them. Values that were already identical just
+     point at the shared var; --danger/--primary-glow/--sidebar-w/
+     --header-h have no main-app equivalent and stay coach-specific. */
+  --bg: var(--bg-color);
+  --surface: var(--surface-bg);
+  --card: var(--card-bg);
+  --border: var(--border-color);
+  /* --primary, --highlight and --text-muted share the exact same name
+     in tokens.css, so they inherit straight through from the :root
+     there — redeclaring them here as var(--primary) etc. would be a
+     circular self-reference and resolve to nothing. */
   --primary-glow: rgba(45,125,91,0.15);
-  --highlight: #c6944f;
-  --text: #f4f7f5;
-  --text-sec: #b8c2bc;
-  --text-muted: #8c9891;
+  --text: var(--text-color);
+  --text-sec: var(--secondary-text);
   --danger: #c05060;
   --sidebar-w: 320px;
   --header-h: 56px;
