@@ -29,20 +29,21 @@
 .progress-nav button {
   flex: none;
   margin: 0;
-  padding: 8px 14px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border-color);
-  background: var(--elevated-bg);
+  padding: 7px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
   color: var(--secondary-text);
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .progress-nav button.active {
-  background-color: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 .progress-nav input[type="date"] {
@@ -71,11 +72,11 @@
 
 .progress-chart,
 .progress-calendar {
-  background: linear-gradient(180deg, rgba(18, 27, 23, 0.94), rgba(12, 18, 15, 0.97));
+  background: var(--pod-bg);
   padding: 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+  border-radius: var(--radius-pod);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
   color: var(--text-color);
 }
 

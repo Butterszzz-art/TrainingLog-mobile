@@ -1709,12 +1709,14 @@
 }
 
 .wt-trend-badge {
+  font-family: var(--font-label);
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  background: rgba(95,168,126,0.15);
-  color: var(--primary, #5fa87e);
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: rgba(38, 92, 68, 0.22);
+  border: 1px solid rgba(74, 132, 102, 0.42);
+  color: #8ec2a4;
 }
 
 /* ── Stat strip ── */
@@ -1722,9 +1724,10 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
   align-items: center;
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 12px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 12px 10px;
   gap: 0;
 }
@@ -1763,9 +1766,10 @@
 
 /* ── Weekly breakdown card ── */
 .wt-weekly-card {
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 14px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 14px;
   margin-top: 10px;
 }
@@ -1861,10 +1865,11 @@
 
 /* ── Entry card ── */
 .wt-entry-card {
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 14px;
-  padding: 14px 14px 12px;
+  background: var(--pod-bg-hero);
+  border: 1px solid rgba(74, 132, 102, 0.3);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-shadow-hero);
+  padding: 15px 15px 13px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2531,31 +2536,35 @@
   display: flex;
   gap: 6px;
   padding: 4px 0 10px;
-  border-bottom: 1px solid var(--border, #2a3a2e);
+  border-bottom: none;
   margin-bottom: 14px;
 }
 
 .comm-nav-btn {
   flex: 1;
-  padding: 8px 6px;
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
+  padding: 7px 6px;
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
   color: var(--text-muted, #7a8f7d);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   font-size: 0.78rem;
-  font-family: 'Poppins', sans-serif;
-  font-weight: 600;
+  font-family: var(--font-label);
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.18s, color 0.18s, border-color 0.18s;
   text-align: center;
   white-space: nowrap;
 }
 
-.comm-nav-btn.active,
 .comm-nav-btn:hover {
-  background: var(--primary, #5fa87e);
-  border-color: var(--primary, #5fa87e);
-  color: #fff;
+  background: var(--elevated-bg);
+  color: var(--text-color);
+}
+
+.comm-nav-btn.active {
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 /* ── ⑦ Filter pills ─────────────────────────────────────────── */

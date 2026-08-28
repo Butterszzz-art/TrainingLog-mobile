@@ -165,6 +165,7 @@ async function loadClients() {
   }
 
   renderClientList();
+  renderWorkspace();
 }
 
 function getDemoClients() {
@@ -240,6 +241,94 @@ document.getElementById('sidebarModeToggle')?.addEventListener('click', e => {
   if (tab) switchSidebarMode(tab.dataset.mode);
 });
 
+// ── Workspace (triage-first landing view) ───────────────────────
+// Stat row / priority client / roster table are derived from the real
+// _clients array already loaded by loadClients(). Review-queue and
+// messages panels are static shells (see TODO(coach-workspace) markers
+// in coach/index.html) since no backing data model exists for those yet.
+
+function renderWorkspace() {
+  const view = document.getElementById('workspaceView');
+  if (!view) return;
+
+  const counts = { all: _clients.length, action: 0, watch: 0, ok: 0 };
+  _clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
+
+  document.getElementById('wsHeaderSub').textContent =
+    _clients.length + ' client' + (_clients.length === 1 ? '' : 's') +
+    (counts.action ? ' · ' + counts.action + ' need attention' : '');
+
+  document.getElementById('wsStatRow').innerHTML = [
+    ['Total clients', counts.all, ''],
+    ['Needs action', counts.action, counts.action ? 'ws-stat-danger' : ''],
+    ['Watch', counts.watch, counts.watch ? 'ws-stat-warn' : ''],
+    ['Stable', counts.ok, ''],
+  ].map(([label, val, cls]) =>
+    '<div class="pod ws-stat-tile ' + cls + '"><div class="stat-tile-label">' + label + '</div>' +
+    '<div class="stat-tile-value">' + val + '</div></div>'
+  ).join('');
+
+  // Priority client: first "needs action", else first "watch", else none.
+  const priority = _clients.find(c => c.alertStatus === 'action') || _clients.find(c => c.alertStatus === 'watch');
+  const priorityEl = document.getElementById('wsPriorityCard');
+  if (priority) {
+    const ci = priority.latestCheckInData || {};
+    const daysSince = priority.lastCheckIn
+      ? Math.floor((Date.now() - new Date(priority.lastCheckIn).getTime()) / 86400000) + 'd ago'
+      : 'no check-in';
+    priorityEl.innerHTML =
+      '<div class="pod pod--hero ws-priority-card">' +
+      '<div class="pod-row"><span class="pod-kicker">Needs attention</span>' +
+      '<span class="ws-priority-tag ' + (priority.alertStatus || 'ok') + '">' + (priority.alertStatus || 'ok') + '</span></div>' +
+      '<div class="ws-priority-main">' +
+      '<span class="ws-priority-name">' + escapeHtml(priority.clientName || 'Unknown') + '</span>' +
+      '<span class="ws-priority-meta">' + escapeHtml(priority.currentProgram || 'No program') + ' &middot; last check-in ' + daysSince + '</span>' +
+      '</div>' +
+      '<div class="ws-priority-stats">' +
+      stat('Sleep', ci.sleep != null ? ci.sleep + '/10' : '—') +
+      stat('Energy', ci.energy != null ? ci.energy + '/10' : '—') +
+      stat('Stress', ci.stress != null ? ci.stress + '/10' : '—') +
+      stat('Bodyweight', ci.bodyweight ? ci.bodyweight + ' kg' : '—') +
+      '</div>' +
+      '<button class="cta-capsule ws-priority-cta" onclick="selectClient(\'' + priority.id + '\')">Open client file</button>' +
+      '</div>';
+  } else {
+    priorityEl.innerHTML = '<div class="pod pod--hero ws-priority-card"><p class="ws-empty-note">Everyone\'s on track — no flagged clients right now.</p></div>';
+  }
+
+  // Roster table — every client, sorted by alert severity then name.
+  const severity = { action: 0, watch: 1, ok: 2 };
+  const sorted = _clients.slice().sort((a, b) =>
+    (severity[a.alertStatus] ?? 3) - (severity[b.alertStatus] ?? 3) ||
+    (a.clientName || '').localeCompare(b.clientName || '')
+  );
+  document.getElementById('wsRosterCount').textContent = _clients.length;
+  document.getElementById('wsRosterTable').innerHTML = sorted.map(c => {
+    const daysSince = c.lastCheckIn ? Math.floor((Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000) + 'd' : '—';
+    return '<div class="ws-roster-row" onclick="selectClient(\'' + c.id + '\')">' +
+      '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>' +
+      '<span class="ws-roster-cell">' + escapeHtml(c.trainingMode || '—') + '</span>' +
+      '<span class="ws-roster-cell">' + escapeHtml(c.currentProgram || '—') + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right">' + daysSince + '</span>' +
+      '<span class="ws-roster-alert ' + (c.alertStatus || 'ok') + '">' + (c.alertStatus || 'ok') + '</span>' +
+      '</div>';
+  }).join('') || '<p class="ws-empty-note">No clients yet.</p>';
+
+  // Templates — real data via getCoachPrograms(), with a count of clients
+  // currently assigned to each (also real, derived from _clients).
+  const programs = getCoachPrograms();
+  const templatesEl = document.getElementById('wsTemplatesList');
+  if (!programs.length) {
+    templatesEl.innerHTML = '<p class="ws-empty-note">No saved program templates yet.</p>';
+  } else {
+    templatesEl.innerHTML = programs.map(p => {
+      const assigned = _clients.filter(c => c.currentProgram === p.name).length;
+      return '<div class="ws-list-row"><span class="ws-list-name">' + escapeHtml(p.name) + '</span>' +
+        '<span class="ws-list-count">' + assigned + '</span></div>';
+    }).join('');
+  }
+}
+
 function toggleBulk(id) {
   if (_bulkSelected.has(id)) _bulkSelected.delete(id);
   else _bulkSelected.add(id);
@@ -263,12 +352,21 @@ function bulkMessage() {
 
 // ── Select client ─────────────────────────────────────────────
 
+function backToWorkspace() {
+  _selectedClientId = null;
+  renderClientList();
+  document.getElementById('clientDetail').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('workspaceView').style.display = '';
+}
+
 function selectClient(id) {
   _selectedClientId = id;
   renderClientList();
   const client = _clients.find(c => c.id === id);
   if (!client) return;
 
+  document.getElementById('workspaceView').style.display = 'none';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('clientDetail').style.display = '';
 

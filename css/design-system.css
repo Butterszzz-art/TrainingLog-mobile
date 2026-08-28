@@ -1,0 +1,187 @@
+/* =============================================================
+   DESIGN SYSTEM — "Modernist" redesign
+   Depends on: tokens.css
+   Shared structural classes only — no page-specific selectors.
+   Component files (home.css, log.css, ...) consume these classes
+   and layer their own page-specific rules on top.
+   ============================================================= */
+
+/* ── App background wash ───────────────────────────────────── */
+.bg-textured {
+  position: relative;
+  background: var(--bg-hero-gradient);
+}
+.bg-textured::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.11;
+  mix-blend-mode: overlay;
+  background-image: var(--bg-noise-overlay);
+}
+
+/* ── Pods (cards) ───────────────────────────────────────────── */
+.pod {
+  border-radius: var(--radius-pod);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+  padding: var(--space-4);
+}
+.pod--alt { background: var(--pod-bg-alt); }
+.pod--hero {
+  background: var(--pod-bg-hero);
+  border-color: rgba(74, 132, 102, 0.3);
+  box-shadow: var(--pod-shadow-hero);
+}
+.pod--flat {
+  box-shadow: none;
+  border-color: rgba(116, 138, 126, 0.14);
+}
+.pod--warning { border-color: var(--warning-border); }
+.pod--danger { border-color: rgba(158, 50, 65, 0.4); }
+
+.pod-kicker {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.pod-title {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  line-height: 1.05;
+}
+.pod-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+/* ── Pills / segmented sub-nav ──────────────────────────────── */
+.pill-nav {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 7px 13px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.pill.active,
+.pill[aria-selected="true"] {
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
+}
+.pill--warning {
+  border-color: var(--warning-border);
+  color: var(--warning-gold);
+}
+
+/* ── Stat tiles ─────────────────────────────────────────────── */
+.stat-tile {
+  flex: 1;
+  border-radius: var(--radius-md);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+  padding: 9px 11px;
+}
+.stat-tile-label {
+  font-family: var(--font-label);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.stat-tile-value {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+/* ── Primary CTA capsule ────────────────────────────────────── */
+.cta-capsule {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  padding: 0 8px 0 20px;
+  background: var(--pill-bg-active);
+  box-shadow: var(--cta-shadow);
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  color: var(--pill-text-active);
+  font-family: var(--font-display);
+  font-size: 17px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.cta-capsule--warning { background: linear-gradient(135deg, rgba(168, 124, 56, .9), rgba(109, 81, 36, .9)); }
+.cta-capsule--danger { background: var(--danger-grad); }
+.cta-capsule-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(6, 12, 9, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+/* Secondary (outline) capsule used alongside a primary CTA */
+.cta-capsule-outline {
+  flex: 1;
+  text-align: center;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.038);
+  border: 1px solid var(--pod-border);
+  padding: 9px 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--secondary-text);
+  cursor: pointer;
+}
+
+/* ── Bottom-nav FAB ─────────────────────────────────────────── */
+.bn-fab {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #3d9d73, #236b4e 60%, #143c2b);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), inset 0 2px 0 rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #050c08;
+  cursor: pointer;
+  flex: none;
+}
+.bn-fab svg { display: block; }
+
+/* ── Utility ────────────────────────────────────────────────── */
+.tabular-nums { font-variant-numeric: tabular-nums; }

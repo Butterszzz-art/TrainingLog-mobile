@@ -53,26 +53,29 @@
 
 .prog-top-nav {
   display: flex;
-  border-bottom: 1px solid var(--border, #2a3a2e);
+  gap: 6px;
+  padding: 10px 10px 0;
+  border-bottom: none;
 }
 
 .prog-top-btn {
   flex: 1;
-  padding: 14px 10px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: transparent;
+  padding: 9px 10px;
+  border: 1px solid var(--pill-border);
+  border-radius: var(--radius-pill);
+  background: var(--pill-bg);
   color: var(--text-muted, #7a8f7d);
+  font-family: var(--font-label);
   font-size: 0.88rem;
-  font-weight: 600;
-  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
 }
 
 .prog-top-btn.active {
-  color: var(--primary, #5fa87e);
-  border-bottom-color: var(--primary, #5fa87e);
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 /* ── Root wrapper ─────────────────────────────────────────────── */
@@ -197,9 +200,10 @@
 
 .pbv2-goal-card {
   padding: 16px 12px;
-  border: 2px solid var(--border, #2a3a2e);
-  border-radius: 14px;
-  background: var(--card-bg, #0f1510);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  background: var(--pod-bg);
+  box-shadow: var(--pod-bevel);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.18s, background 0.18s;
@@ -887,11 +891,12 @@
 }
 
 .prog-card {
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 12px;
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 14px;
   margin: 10px 14px;
-  background: var(--card-bg, #0f1510);
+  background: var(--pod-bg);
 }
 
 .prog-card-title {

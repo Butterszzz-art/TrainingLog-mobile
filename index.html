@@ -4,12 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Pocket Coach</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="ProgramTab.css">
   <link rel="stylesheet" href="style.css">
   <meta name="theme-color" content="#0b0f0d">
   <!-- ── Modular CSS files (extracted from inline styles) ──────── -->
   <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/design-system.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/onboarding.css">
@@ -499,28 +502,29 @@
 
 <div id="pocketFitContainer" class="section" style="display:none;">
   
-  <!-- Bottom Navigation: Log, Progress, Weight, Macro + More -->
+  <!-- Bottom Navigation: Home / Train / [+ quick-log] / Body / All.
+       "Train"=logTab, "Body"=bodyTab (launcher into Weight/Macros/Sleep/
+       Cardio), "All"=allTab (former More drawer) — ids kept stable so
+       showTab()'s existing dispatcher needs no changes. -->
   <nav id="bottomNav" aria-label="Main navigation">
     <button class="bn-item" data-tab="homeTab" aria-label="Home">
       <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
       <span class="bn-label">Home</span>
     </button>
-    <button class="bn-item active" data-tab="logTab" aria-label="Log">
+    <button class="bn-item active" data-tab="logTab" aria-label="Train">
       <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
-      <span class="bn-label">Log</span>
+      <span class="bn-label">Train</span>
     </button>
-    <button class="bn-item" data-tab="weightTab" aria-label="Weight">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="20" height="12" rx="2"/><path d="M8 9a4 4 0 0 1 8 0"/><line x1="12" y1="14" x2="12" y2="17"/><line x1="10" y1="17" x2="14" y2="17"/></svg></span>
-      <span class="bn-label">Weight</span>
+    <button class="bn-fab" id="bnFab" aria-label="Quick log" onclick="goToQuickLog()">
+      <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
     </button>
-    <button class="bn-item" data-tab="macroTab" aria-label="Macros">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span>
-      <span class="bn-label">Macros</span>
+    <button class="bn-item" data-tab="bodyTab" aria-label="Body">
+      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="20" height="12" rx="2"/><path d="M8 9a4 4 0 0 1 8 0"/></svg></span>
+      <span class="bn-label">Body</span>
     </button>
-    <!-- More button opens the secondary-tabs drawer -->
-    <button class="bn-item bn-more" id="moreNavBtn" onclick="openMoreDrawer()" aria-label="More" aria-expanded="false" aria-controls="moreDrawer">
-      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>
-      <span class="bn-label">More</span>
+    <button class="bn-item" data-tab="allTab" aria-label="All">
+      <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></span>
+      <span class="bn-label">All</span>
     </button>
   </nav>
 
@@ -616,6 +620,9 @@
 
     <!-- ══ Sub-view: Log ══════════════════════════════════════════ -->
     <div id="logSub_log" class="log-subview active">
+
+      <!-- Today's planned exercises, read from the active program (session-queue.js) -->
+      <div id="sessionQueueCard" style="padding:0 12px;"></div>
 
       <!-- Session context flags: alt-machine / alt-gym -->
       <div id="sessionContextBar" style="padding:0 12px;"></div>
@@ -880,6 +887,12 @@
   </div><!-- /logTab -->
 
   <div id="weightTab" class="tab-content">
+    <div class="pill-nav">
+      <button class="pill active" onclick="showTab('weightTab')">Weight</button>
+      <button class="pill" onclick="showTab('macroTab')">Macros</button>
+      <button class="pill" onclick="showTab('sleepTab')">Sleep</button>
+      <button class="pill" onclick="showTab('cardioTab')">Cardio</button>
+    </div>
     <div id="weightLogPanel" class="panel active wt-panel">
 
       <!-- ── Header ── -->
@@ -1794,7 +1807,7 @@
       <button class="prog-top-btn" onclick="showProgramView('list')"><span class="ui-icon" data-icon="clipboard"></span> My Programs</button>
     </nav>
     <div id="progAiGenBtnWrap" style="padding:10px 12px 0;">
-      <button id="progAiGenBtn" onclick="openProgAiGen()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 2px 12px rgba(95,168,126,0.35);">
+      <button id="progAiGenBtn" onclick="openProgAiGen()" class="cta-capsule" style="justify-content:center;gap:8px;">
         <span class="ui-icon" data-icon="sparkles"></span><span>Generate with AI</span>
       </button>
       <div id="progAiGenLocked" style="display:none;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;"><span class="ui-icon" data-icon="lock"></span> AI Program Generator — Pro feature</div>
@@ -2081,6 +2094,12 @@
 </div>
 
   <div id="cardioTab" class="tab-content">
+    <div class="pill-nav">
+      <button class="pill" onclick="showTab('weightTab')">Weight</button>
+      <button class="pill" onclick="showTab('macroTab')">Macros</button>
+      <button class="pill" onclick="showTab('sleepTab')">Sleep</button>
+      <button class="pill active" onclick="showTab('cardioTab')">Cardio</button>
+    </div>
 
     <!-- Weekly summary chips -->
     <div id="cardioWeeklySummary" class="cardio-weekly-strip"></div>
@@ -2242,6 +2261,12 @@
   </div>
 
 <div id="macroTab" class="tab-content" style="position: relative; padding: 20px;">
+    <div class="pill-nav">
+      <button class="pill" onclick="showTab('weightTab')">Weight</button>
+      <button class="pill active" onclick="showTab('macroTab')">Macros</button>
+      <button class="pill" onclick="showTab('sleepTab')">Sleep</button>
+      <button class="pill" onclick="showTab('cardioTab')">Cardio</button>
+    </div>
   <div id="macrosTab">
     <div id="macrosSubTabs" class="macros-subtabs">
       <button type="button" class="macros-subtab active" data-macro-subtab="targets">Targets</button>
@@ -2678,7 +2703,7 @@
 
 
   <div id="progressTab" class="tab-content">
-    <h2>Progress Overview</h2>
+    <h2 class="pod-title" style="font-size:20px;">Insights</h2>
     <!-- Progress mini-tab nav -->
     <nav class="log-subtabs" id="progressSubNav">
       <button class="log-subtab active" data-psub="charts"><span class="ui-icon" data-icon="barChart"></span> Charts</button>
@@ -2910,7 +2935,7 @@
 </div><!-- /#progressTab -->
 
 <div id="logHistoryTab" class="tab-content">
-  <h2>Log History</h2>
+  <h2 class="pod-title" style="font-size:20px;">History</h2>
   <nav class="log-subtabs" id="historySubNav">
     <button class="log-subtab active" data-histsub="workout"><span class="ui-icon" data-icon="dumbbell"></span> Workouts</button>
     <button class="log-subtab" data-histsub="bodyweight"><span class="ui-icon" data-icon="scale"></span> Bodyweight</button>
@@ -3041,6 +3066,12 @@
 
 <!-- ── Sleep Tab ──────────────────────────────────────────────── -->
 <div id="sleepTab" class="tab-content">
+    <div class="pill-nav">
+      <button class="pill" onclick="showTab('weightTab')">Weight</button>
+      <button class="pill" onclick="showTab('macroTab')">Macros</button>
+      <button class="pill active" onclick="showTab('sleepTab')">Sleep</button>
+      <button class="pill" onclick="showTab('cardioTab')">Cardio</button>
+    </div>
   <h2>Sleep</h2>
   <div id="sleepTabContent">
 
@@ -3140,99 +3171,125 @@
   <div id="mobilityTabContent"></div>
 </div>
 
-  </div> <!-- #appContainer -->
-</div> <!-- #pocketFitContainer -->
-
-<!-- More drawer — direct <body> child so position:fixed isn't clipped by
-     the ancestor's transform:scale() stacking context. -->
-<div id="moreDrawer" class="more-drawer" role="dialog" aria-modal="true" aria-label="More options" hidden>
-  <div class="more-drawer-scrim" id="moreDrawerScrim"></div>
-  <div class="more-drawer-panel">
-    <div class="more-drawer-handle"></div>
-    <div class="more-drawer-grid">
-      <button class="more-drawer-item" data-tab="progressTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('progressTab'), 220)">
-        <span class="more-drawer-icon" data-icon="barChart"></span>
-        <span>Progress</span>
-      </button>
-      <button class="more-drawer-item" data-tab="programTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('programTab'), 220)">
-        <span class="more-drawer-icon" data-icon="calendar"></span>
-        <span>Programs</span>
-      </button>
-      <button class="more-drawer-item" data-tab="checkInTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('checkInTab'), 220)">
-        <span class="more-drawer-icon" data-icon="clipboard"></span>
-        <span>Check-In</span>
-      </button>
-      <button class="more-drawer-item" data-tab="sleepTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('sleepTab'), 220)">
-        <span class="more-drawer-icon" data-icon="moon"></span>
-        <span>Sleep</span>
-      </button>
-      <button class="more-drawer-item" data-tab="cardioTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('cardioTab'), 220)">
-        <span class="more-drawer-icon" data-icon="activity"></span>
-        <span>Cardio</span>
-      </button>
-      <button class="more-drawer-item" data-tab="communityTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('communityTab'), 220)">
-        <span class="more-drawer-icon" data-icon="users"></span>
-        <span>Community</span>
-      </button>
-      <button class="more-drawer-item" data-tab="leaderboardTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('leaderboardTab'), 220)">
-        <span class="more-drawer-icon" data-icon="award"></span>
-        <span>Leaderboard</span>
-      </button>
-      <button class="more-drawer-item" data-tab="logHistoryTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('logHistoryTab'), 220)">
-        <span class="more-drawer-icon" data-icon="fileText"></span>
-        <span>History</span>
-      </button>
-      <button class="more-drawer-item bb-only" data-tab="posingTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('posingTab'), 220)">
-        <span class="more-drawer-icon" data-icon="award"></span>
-        <span>Posing</span>
-      </button>
-      <button class="more-drawer-item pl-only" data-tab="powerliftingTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('powerliftingTab'), 220)">
-        <span class="more-drawer-icon" data-icon="dumbbell"></span>
-        <span>Lifting</span>
-      </button>
-      <button class="more-drawer-item athlete-only" data-tab="functionalTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('functionalTab'), 220)">
-        <span class="more-drawer-icon" data-icon="zap"></span>
-        <span>Functional</span>
-      </button>
-      <button class="more-drawer-item coach-only" data-tab="clientsTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('clientsTab'), 220)">
-        <span class="more-drawer-icon" data-icon="users"></span>
-        <span>Clients</span>
-      </button>
-      <button class="more-drawer-item coach-only" data-tab="coachOpsTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('coachOpsTab'), 220)">
-        <span class="more-drawer-icon" data-icon="trophy"></span>
-        <span>Coach</span>
-      </button>
-      <button class="more-drawer-item" data-tab="mobilityTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('mobilityTab'), 220)">
-        <span class="more-drawer-icon" data-icon="flower"></span>
-        <span>Flexibility</span>
-      </button>
-      <button class="more-drawer-item" data-tab="settingsTab"
-              onclick="closeMoreDrawer(); setTimeout(()=>showTab('settingsTab'), 220)">
-        <span class="more-drawer-icon" data-icon="settings"></span>
-        <span>Settings</span>
-      </button>
-      <button class="more-drawer-item more-drawer-logout" id="moreDrawerLogoutBtn"
-              onclick="closeMoreDrawer(); setTimeout(()=>logout(), 220)">
-        <span class="more-drawer-icon" data-icon="arrowLeft"></span>
-        <span>Logout</span>
-      </button>
+  <!-- Body tab: launcher into Weight/Macros/Sleep/Cardio (each of those
+       keeps its own id/render function — this is a menu, not a merge). -->
+  <div id="bodyTab" class="tab-content">
+    <div class="all-hub-header"><span class="pod-title" style="font-size:20px;">Body</span></div>
+    <div class="pill-nav">
+      <button class="pill" onclick="showTab('weightTab')">Weight</button>
+      <button class="pill" onclick="showTab('macroTab')">Macros</button>
+      <button class="pill" onclick="showTab('sleepTab')">Sleep</button>
+      <button class="pill" onclick="showTab('cardioTab')">Cardio</button>
     </div>
   </div>
-</div>
+
+  <!-- All tab: replaces the old More bottom-sheet drawer with a normal
+       tab so it lives in the same nav pattern as every other screen.
+       Every item/onclick/conditional-visibility class below is carried
+       over unchanged from the old #moreDrawer. -->
+  <div id="allTab" class="tab-content all-hub">
+    <div class="all-hub-header"><span class="pod-title" style="font-size:20px;">Everything</span></div>
+
+    <div class="all-hub-section">
+      <div class="all-hub-section-label">Training</div>
+      <div class="all-hub-grid">
+        <button class="pod all-hub-tile" data-tab="programTab" onclick="showTab('programTab')">
+          <span class="more-drawer-icon" data-icon="calendar"></span>
+          <span>Programs</span>
+        </button>
+        <button class="pod all-hub-tile" data-tab="logHistoryTab" onclick="showTab('logHistoryTab')">
+          <span class="more-drawer-icon" data-icon="fileText"></span>
+          <span>History</span>
+        </button>
+        <button class="pod all-hub-tile" data-tab="progressTab" onclick="showTab('progressTab')">
+          <span class="more-drawer-icon" data-icon="barChart"></span>
+          <span>Insights</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="all-hub-section">
+      <div class="all-hub-section-label">Body</div>
+      <div class="all-hub-grid">
+        <button class="pod all-hub-tile" data-tab="checkInTab" onclick="showTab('checkInTab')">
+          <span class="more-drawer-icon" data-icon="clipboard"></span>
+          <span>Check-In</span>
+        </button>
+        <button class="pod all-hub-tile" data-tab="sleepTab" onclick="showTab('sleepTab')">
+          <span class="more-drawer-icon" data-icon="moon"></span>
+          <span>Sleep</span>
+        </button>
+        <button class="pod all-hub-tile" data-tab="cardioTab" onclick="showTab('cardioTab')">
+          <span class="more-drawer-icon" data-icon="activity"></span>
+          <span>Cardio</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="all-hub-section">
+      <div class="all-hub-section-label">Libraries</div>
+      <div class="all-hub-grid">
+        <button class="pod all-hub-tile bb-only" data-tab="posingTab" onclick="showTab('posingTab')">
+          <span class="more-drawer-icon" data-icon="award"></span>
+          <span>Posing</span>
+        </button>
+        <button class="pod all-hub-tile pl-only" data-tab="powerliftingTab" onclick="showTab('powerliftingTab')">
+          <span class="more-drawer-icon" data-icon="dumbbell"></span>
+          <span>Lifting</span>
+        </button>
+        <button class="pod all-hub-tile athlete-only" data-tab="functionalTab" onclick="showTab('functionalTab')">
+          <span class="more-drawer-icon" data-icon="zap"></span>
+          <span>Functional</span>
+        </button>
+        <button class="pod all-hub-tile" data-tab="mobilityTab" onclick="showTab('mobilityTab')">
+          <span class="more-drawer-icon" data-icon="flower"></span>
+          <span>Flexibility</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="all-hub-section">
+      <div class="all-hub-section-label">People &amp; coaching</div>
+      <div class="all-hub-grid">
+        <button class="pod all-hub-tile" data-tab="communityTab" onclick="showTab('communityTab')">
+          <span class="more-drawer-icon" data-icon="users"></span>
+          <span>Community</span>
+        </button>
+        <!-- Leaderboard is reached through Community's own nav pill now
+             (#leaderboardTab/#exerciseLeaderboardTab still exist and work
+             if something else deep-links to them, they just lost their
+             separate All-hub tile). -->
+        <button class="pod all-hub-tile" data-tab="communityTab" onclick="showTab('communityTab'); if (window.showCommunitySection) showCommunitySection('competition')">
+          <span class="more-drawer-icon" data-icon="award"></span>
+          <span>Leaderboard</span>
+        </button>
+        <button class="pod all-hub-tile coach-only" data-tab="clientsTab" onclick="showTab('clientsTab')">
+          <span class="more-drawer-icon" data-icon="users"></span>
+          <span>Clients</span>
+        </button>
+        <button class="pod all-hub-tile coach-only" data-tab="coachOpsTab" onclick="showTab('coachOpsTab')">
+          <span class="more-drawer-icon" data-icon="trophy"></span>
+          <span>Coach</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="all-hub-section">
+      <div class="all-hub-section-label">System</div>
+      <div class="all-hub-grid">
+        <button class="pod all-hub-tile" data-tab="settingsTab" onclick="showTab('settingsTab')">
+          <span class="more-drawer-icon" data-icon="settings"></span>
+          <span>Settings</span>
+        </button>
+        <button class="pod all-hub-tile all-hub-logout" id="moreDrawerLogoutBtn" onclick="logout()">
+          <span class="more-drawer-icon" data-icon="arrowLeft"></span>
+          <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  </div> <!-- #appContainer -->
+</div> <!-- #pocketFitContainer -->
 
 <!-- Workout focus bar removed — timer is already in the Log tab -->
 
@@ -4191,6 +4248,7 @@ function showTab(tabName) {
       }
       break;
     case 'logTab':
+      if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
       if (window.renderWorkouts) renderWorkouts();
       if (typeof window.renderGamificationUI === 'function' && currentUser) {
         window.renderGamificationUI(currentUser);
@@ -4728,14 +4786,14 @@ function addNewSet() {
 
 function getSetInputHTML(i) {
   return `
-    <div style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
-      <label style="min-width: 52px; font-size: 0.85rem;">Set ${i + 1}</label>
-      <div style="display:flex;align-items:center;gap:4px;">
-        <input type="number" id="reps_${i}" placeholder="Reps" style="width: 72px;" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
-        <span id="repsLabel_${i}" style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;"></span>
+    <div class="set-input-row">
+      <label class="set-input-label">Set ${i + 1}</label>
+      <div class="set-input-reps-wrap">
+        <input type="number" id="reps_${i}" placeholder="Reps" class="set-input-reps" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
+        <span id="repsLabel_${i}" class="set-input-reps-note"></span>
       </div>
-      <input type="number" id="weight_${i}" placeholder="Weight" style="width: 90px;" oninput="updateAddButtonState()" />
-      <button type="button" onclick="openPlateCalculator(${i})" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;font-size:0.78rem;"><span class="ui-icon">${ICONS.dumbbell}</span></button>
+      <input type="number" id="weight_${i}" placeholder="Weight" class="set-input-weight" oninput="updateAddButtonState()" />
+      <button type="button" onclick="openPlateCalculator(${i})" class="set-plate-btn" title="Plate calculator"><span class="ui-icon">${ICONS.dumbbell}</span></button>
       <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
       <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
       <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
@@ -16450,69 +16508,26 @@ window.setTrainingMode = setTrainingMode;
 window.getTrainingMode = getTrainingMode;
 
 // ─────────────────────────────────────────────
-// MORE DRAWER
+// QUICK LOG (bottom-nav FAB)
 // ─────────────────────────────────────────────
 
-function openMoreDrawer() {
-  const drawer = document.getElementById('moreDrawer');
-  const btn = document.getElementById('moreNavBtn');
-  if (!drawer) return;
-  drawer.removeAttribute('hidden');
-  // Double-RAF ensures the browser computes the initial style (translateY(100%))
-  // before adding .open, so the CSS transition actually animates.
-  requestAnimationFrame(() => requestAnimationFrame(() => drawer.classList.add('open')));
-  if (btn) btn.setAttribute('aria-expanded', 'true');
-  document.addEventListener('keydown', _onDrawerKeydown);
-}
+// The former More drawer is now the "All" tab (#allTab, see markup) and
+// its items are wired inline via onclick="showTab(...)" same as any other
+// nav destination, so no separate open/close drawer JS is needed anymore.
 
-function closeMoreDrawer() {
-  const drawer = document.getElementById('moreDrawer');
-  const btn = document.getElementById('moreNavBtn');
-  if (!drawer) return;
-  drawer.classList.remove('open');
-  const panel = drawer.querySelector('.more-drawer-panel');
-  if (panel) {
-    panel.addEventListener('transitionend', () => {
-      drawer.setAttribute('hidden', '');
-      if (btn) btn.setAttribute('aria-expanded', 'false');
-    }, { once: true });
-  } else {
-    drawer.setAttribute('hidden', '');
-    if (btn) btn.setAttribute('aria-expanded', 'false');
+function goToQuickLog() {
+  showTab('logTab');
+  if (typeof setActiveNavTab === 'function') setActiveNavTab('logTab');
+  // Land on the Log sub-tab specifically (not Rest/History/Templates/Streaks).
+  const logSubBtn = document.querySelector('#logSubtabNav .log-subtab[data-log-subtab="log"]');
+  if (logSubBtn && !logSubBtn.classList.contains('active')) logSubBtn.click();
+  const exerciseInput = document.getElementById('exercise');
+  if (exerciseInput) {
+    exerciseInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => exerciseInput.focus(), 250);
   }
-  document.removeEventListener('keydown', _onDrawerKeydown);
 }
-
-function _onDrawerKeydown(e) {
-  if (e.key === 'Escape') closeMoreDrawer();
-}
-
-window.openMoreDrawer = openMoreDrawer;
-window.closeMoreDrawer = closeMoreDrawer;
-
-// Wire up More drawer after DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  const moreBtn = document.getElementById('moreNavBtn');
-  if (moreBtn) moreBtn.addEventListener('click', openMoreDrawer);
-
-  const scrim = document.getElementById('moreDrawerScrim');
-  if (scrim) scrim.addEventListener('click', closeMoreDrawer);
-
-  const logoutBtn = document.getElementById('moreDrawerLogoutBtn');
-  if (logoutBtn) logoutBtn.addEventListener('click', () => { closeMoreDrawer(); logout(); });
-
-  document.querySelectorAll('#moreDrawer .more-drawer-item[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabName = btn.dataset.tab;
-      closeMoreDrawer();
-      // Wait for drawer close animation before switching tab
-      setTimeout(() => showTab(tabName), 200);
-    });
-  });
-
-  // Apply coach-only visibility inside the drawer too
-  applyAppModeToNavigation();
-});
+window.goToQuickLog = goToQuickLog;
 
 // ─────────────────────────────────────────────
 // WORKOUT FOCUS MODE
@@ -18122,6 +18137,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/rehab.js"></script>
   <script src="src/js/reminders.js"></script>
   <script src="src/js/today-program.js"></script>
+  <script src="src/js/session-queue.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active

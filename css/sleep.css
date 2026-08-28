@@ -14,9 +14,10 @@
 /* ── Log form card ─────────────────────────────────────────── */
 
 .sleep-log-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  background: var(--pod-bg-hero);
+  border: 1px solid rgba(74, 132, 102, 0.3);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-shadow-hero);
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -106,12 +107,13 @@
 
 .sleep-tag {
   padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border-color);
-  background: var(--surface-bg);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
   color: var(--secondary-text);
+  font-family: var(--font-label);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
   margin: 0;
@@ -139,7 +141,9 @@
 .sleep-save-btn {
   width: 100%;
   padding: 13px;
-  border-radius: 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  text-transform: uppercase;
   font-size: 0.95rem;
   font-weight: 700;
   margin: 0;
@@ -155,9 +159,10 @@
 }
 
 .sleep-stat-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--pod-bevel);
   padding: 12px 10px;
   text-align: center;
 }
@@ -180,9 +185,10 @@
 /* ── Trend chart ───────────────────────────────────────────── */
 
 .sleep-chart-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -201,21 +207,22 @@
 
 .sleep-period-btn {
   padding: 5px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border-color);
-  background: transparent;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
   color: var(--secondary-text);
+  font-family: var(--font-label);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   margin: 0;
   box-shadow: none;
 }
 
 .sleep-period-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+  background: var(--pill-bg-active);
+  border-color: transparent;
+  color: var(--pill-text-active);
 }
 
 /* Bar chart */
