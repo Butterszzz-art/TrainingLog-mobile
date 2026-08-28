@@ -684,7 +684,7 @@
         <div id="resistance-inputs" class="log-form-card">
 
           <div class="log-exercise-title" id="exerciseLiveTitle" hidden></div>
-          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value);" />
+          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
           <datalist id="exerciseSuggestions"></datalist>
 
           <!-- Progressive overload hint -->
@@ -693,87 +693,128 @@
           <!-- Coach technique video hint -->
           <div id="exerciseVideoHint" class="exercise-video-hint" style="display:none;"></div>
 
-          <!-- Sets + unit on one row -->
-          <div class="sets-unit-row">
-            <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
-            <select id="weightUnit">
-              <option value="kg">kg</option>
-              <option value="lbs">lbs</option>
-            </select>
-          </div>
-
-          <!-- Machine at its weight ceiling — can't add more load next time -->
-          <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
-            <input type="checkbox" id="maxedOutToggle" />
-            <span>🔒 Maxed Out</span>
-          </label>
-
-          <!-- Dynamically generated set inputs -->
-          <div id="setInputsContainer"></div>
-
-          <!-- Template quick-load -->
-          <select id="resistanceTemplateSelect" class="log-template-select" onchange="loadSelectedResistanceTemplate()">
-            <option value="">Load a template…</option>
-          </select>
-          <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
-
-          <!-- Advanced options panel (modern custom toggle) -->
-          <div class="log-advanced" id="logAdvancedPanel">
-            <button class="log-adv-toggle" id="logAdvToggle" aria-expanded="false" type="button" onclick="toggleLogAdvanced()">
-              <span class="log-adv-left">
-                <svg class="log-adv-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-                  <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-                  <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-                  <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
-                  <line x1="17" y1="16" x2="23" y2="16"/>
-                </svg>
-                Advanced
-                <span class="log-adv-dot" id="logAdvDot"></span>
-              </span>
-              <svg class="log-adv-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </button>
-            <div class="log-advanced-body" id="logAdvBody" hidden>
-              <div class="log-adv-grid">
-                <div class="log-adv-field">
-                  <label class="log-adv-label" for="goal">Target weight</label>
-                  <input type="number" id="goal" placeholder="e.g. 100" oninput="_updateLogAdvDot()" />
-                </div>
-                <div class="log-adv-field">
-                  <label class="log-adv-label" for="repGoal">Target reps</label>
-                  <input type="number" id="repGoal" placeholder="e.g. 8" oninput="_updateLogAdvDot()" />
-                </div>
-                <div class="log-adv-field">
-                  <label class="log-adv-label" for="targetRPE">
-                    RPE <span class="log-adv-hint">1–10</span>
-                  </label>
-                  <input type="number" id="targetRPE" placeholder="e.g. 8" min="1" max="10" step="0.5" inputmode="decimal" oninput="_updateLogAdvDot()" />
-                </div>
-                <div class="log-adv-field">
-                  <label class="log-adv-label" for="targetRIR">
-                    RIR <span class="log-adv-hint">0–5</span>
-                  </label>
-                  <input type="number" id="targetRIR" placeholder="e.g. 2" min="0" max="5" step="1" inputmode="numeric" oninput="_updateLogAdvDot()" />
+          <!-- Quick log: one-tap single-set logging. Drives the exact
+               same #sets/#reps_0/#weight_0 fields + addLogEntry() as the
+               manual form below — no separate save path, no new data
+               shape, just a faster front door onto it (session-queue.js). -->
+          <div class="ql-panel" id="quickLogPanel" hidden>
+            <div class="ql-row">
+              <div class="ql-field">
+                <div class="ql-label">Weight <span id="qlUnitLabel">kg</span></div>
+                <div class="ql-stepper">
+                  <button type="button" class="ql-step" onclick="quickLogStep('weight',-1)" aria-label="Decrease weight">−</button>
+                  <span class="ql-val" id="qlWeightVal">—</span>
+                  <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('weight',1)" aria-label="Increase weight">+</button>
                 </div>
               </div>
-              <div class="log-adv-rpe-row">
-                <span class="log-adv-rpe-scale">
-                  <span class="rpe-tick rpe-easy">6 Easy</span>
-                  <span class="rpe-bar"></span>
-                  <span class="rpe-tick rpe-hard">10 Max</span>
-                </span>
-                <span class="log-adv-rir-note">RPE + RIR ≈ 10</span>
-              </div>
-              <div class="log-adv-field log-adv-field--full">
-                <label class="log-adv-label" for="entryDate">Log date</label>
-                <input type="date" id="entryDate" oninput="_updateLogAdvDot()" />
+              <div class="ql-field">
+                <div class="ql-label">Reps</div>
+                <div class="ql-stepper">
+                  <button type="button" class="ql-step" onclick="quickLogStep('reps',-1)" aria-label="Decrease reps">−</button>
+                  <span class="ql-val" id="qlRepsVal">—</span>
+                  <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('reps',1)" aria-label="Increase reps">+</button>
+                </div>
               </div>
             </div>
+            <button type="button" class="cta-capsule ql-log-btn" id="qlLogBtn" onclick="quickLogSet()">
+              <span id="qlLogBtnLabel">Log set</span>
+              <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>
+            </button>
           </div>
 
-          <button id="addLogBtn" onclick="addLogEntry()" disabled class="log-add-btn">+ Add to Log</button>
+          <!-- Manual / multi-set entry — everything the quick-log panel
+               above doesn't cover (custom set counts, per-set drop-sets/
+               rest-pause/unilateral, target RPE/RIR, template loading,
+               back-dating). Nothing here changed; just tucked behind a
+               disclosure so quick-log is the default one-tap path. -->
+          <details class="log-manual-entry" id="logManualEntry">
+            <summary class="log-manual-entry-toggle">Manual / multi-set entry</summary>
+            <div class="log-manual-entry-body">
+
+            <!-- Sets + unit on one row -->
+            <div class="sets-unit-row">
+              <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
+              <select id="weightUnit" onchange="if(typeof syncQuickLogUnit==='function') syncQuickLogUnit(this.value);">
+                <option value="kg">kg</option>
+                <option value="lbs">lbs</option>
+              </select>
+            </div>
+
+            <!-- Machine at its weight ceiling — can't add more load next time -->
+            <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
+              <input type="checkbox" id="maxedOutToggle" />
+              <span>🔒 Maxed Out</span>
+            </label>
+
+            <!-- Dynamically generated set inputs -->
+            <div id="setInputsContainer"></div>
+
+            <!-- Template quick-load -->
+            <select id="resistanceTemplateSelect" class="log-template-select" onchange="loadSelectedResistanceTemplate()">
+              <option value="">Load a template…</option>
+            </select>
+            <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
+
+            <!-- Advanced options panel (modern custom toggle) -->
+            <div class="log-advanced" id="logAdvancedPanel">
+              <button class="log-adv-toggle" id="logAdvToggle" aria-expanded="false" type="button" onclick="toggleLogAdvanced()">
+                <span class="log-adv-left">
+                  <svg class="log-adv-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                    <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                    <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+                    <line x1="17" y1="16" x2="23" y2="16"/>
+                  </svg>
+                  Advanced
+                  <span class="log-adv-dot" id="logAdvDot"></span>
+                </span>
+                <svg class="log-adv-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div class="log-advanced-body" id="logAdvBody" hidden>
+                <div class="log-adv-grid">
+                  <div class="log-adv-field">
+                    <label class="log-adv-label" for="goal">Target weight</label>
+                    <input type="number" id="goal" placeholder="e.g. 100" oninput="_updateLogAdvDot()" />
+                  </div>
+                  <div class="log-adv-field">
+                    <label class="log-adv-label" for="repGoal">Target reps</label>
+                    <input type="number" id="repGoal" placeholder="e.g. 8" oninput="_updateLogAdvDot()" />
+                  </div>
+                  <div class="log-adv-field">
+                    <label class="log-adv-label" for="targetRPE">
+                      RPE <span class="log-adv-hint">1–10</span>
+                    </label>
+                    <input type="number" id="targetRPE" placeholder="e.g. 8" min="1" max="10" step="0.5" inputmode="decimal" oninput="_updateLogAdvDot()" />
+                  </div>
+                  <div class="log-adv-field">
+                    <label class="log-adv-label" for="targetRIR">
+                      RIR <span class="log-adv-hint">0–5</span>
+                    </label>
+                    <input type="number" id="targetRIR" placeholder="e.g. 2" min="0" max="5" step="1" inputmode="numeric" oninput="_updateLogAdvDot()" />
+                  </div>
+                </div>
+                <div class="log-adv-rpe-row">
+                  <span class="log-adv-rpe-scale">
+                    <span class="rpe-tick rpe-easy">6 Easy</span>
+                    <span class="rpe-bar"></span>
+                    <span class="rpe-tick rpe-hard">10 Max</span>
+                  </span>
+                  <span class="log-adv-rir-note">RPE + RIR ≈ 10</span>
+                </div>
+                <div class="log-adv-field log-adv-field--full">
+                  <label class="log-adv-label" for="entryDate">Log date</label>
+                  <input type="date" id="entryDate" oninput="_updateLogAdvDot()" />
+                </div>
+              </div>
+            </div>
+
+            <button id="addLogBtn" onclick="addLogEntry()" disabled class="log-add-btn">+ Add to Log</button>
+
+            </div>
+          </details>
 
         </div><!-- /log-form-card -->
 

@@ -205,13 +205,22 @@
       reps.forEach((r, i) => { totalVolumeKg += (Number(r) || 0) * (Number(weights[i]) || 0); });
     });
 
-    const rows = log.map(entry => {
+    // Group by exercise name — quick-log calls addLogEntry() once per
+    // single set, so the same exercise can appear as several separate
+    // log[] entries; show one row per exercise with the combined count.
+    const byExercise = new Map();
+    log.forEach(entry => {
       const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
       const weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
-      const lastReps = reps[reps.length - 1];
-      const lastWeight = weights[weights.length - 1];
-      const summary = reps.length ? `${reps.length}×${lastReps ?? '?'}${lastWeight != null ? ' · ' + lastWeight + ' kg' : ''}` : '';
-      return `<div class="sq-row"><span class="sq-name">${entry.exercise}</span><span class="sq-summary">${summary}</span></div>`;
+      const existing = byExercise.get(entry.exercise) || { setCount: 0, lastReps: null, lastWeight: null };
+      existing.setCount += reps.length;
+      if (reps.length) { existing.lastReps = reps[reps.length - 1]; existing.lastWeight = weights[weights.length - 1]; }
+      byExercise.set(entry.exercise, existing);
+    });
+
+    const rows = Array.from(byExercise.entries()).map(([name, e]) => {
+      const summary = e.setCount ? `${e.setCount}×${e.lastReps ?? '?'}${e.lastWeight != null ? ' · ' + e.lastWeight + ' kg' : ''}` : '';
+      return `<div class="sq-row"><span class="sq-name">${name}</span><span class="sq-summary">${summary}</span></div>`;
     }).join('');
 
     el.innerHTML = `
@@ -233,12 +242,16 @@
     const exercises = day && Array.isArray(day.exercises) ? day.exercises : [];
     if (!day || !exercises.length) { el.innerHTML = ''; return; }
 
-    const rows = exercises.map((ex, i) => `
-      <div class="sq-row">
+    const _esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const rows = exercises.map((ex, i) => {
+      const first = (ex.sets && ex.sets[0]) || {};
+      return `
+      <div class="sq-row sq-row--tap" data-ex-name="${_esc(ex.name)}" data-ex-weight="${first.weight ?? ''}" data-ex-reps="${first.reps ?? ''}">
         <span class="sq-index">${i + 1}</span>
         <span class="sq-name">${ex.name}</span>
         <span class="sq-summary">${_setSummary(ex)}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     el.innerHTML = `
       <div class="pod sq-card">
@@ -248,9 +261,178 @@
         </div>
         ${rows}
       </div>`;
+
+    if (!el._tapWired) {
+      el._tapWired = true;
+      el.addEventListener('click', (e) => {
+        const row = e.target.closest('.sq-row--tap');
+        if (!row || typeof global.startQuickLogFor !== 'function') return;
+        global.startQuickLogFor(row.dataset.exName, {
+          weight: row.dataset.exWeight ? Number(row.dataset.exWeight) : null,
+          reps: row.dataset.exReps ? Number(row.dataset.exReps) : null,
+        });
+      });
+    }
   }
 
-  const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar };
+  // ── Quick log — one-tap single-set logging ──────────────────────
+  // Drives the existing #exercise/#sets/#reps_0/#weight_0 fields and
+  // calls the existing addLogEntry() — no parallel save path, no new
+  // data shape. This is purely a faster front door onto the same
+  // workouts_<user> store the manual form already writes to.
+
+  let _qlExerciseName = null;
+  let _qlWeight = null;
+  let _qlReps = null;
+
+  function _round1(n) { return Math.round(n * 10) / 10; }
+
+  function _syncQuickLogDisplay() {
+    if (typeof document === 'undefined') return;
+    const w = document.getElementById('qlWeightVal');
+    const r = document.getElementById('qlRepsVal');
+    if (w) w.textContent = _qlWeight != null ? _qlWeight : '—';
+    if (r) r.textContent = _qlReps != null ? _qlReps : '—';
+  }
+
+  function _writeQuickLogToForm() {
+    if (typeof document === 'undefined') return;
+    const weightEl = document.getElementById('weight_0');
+    const repsEl = document.getElementById('reps_0');
+    if (weightEl && _qlWeight != null) weightEl.value = _qlWeight;
+    if (repsEl && _qlReps != null) repsEl.value = _qlReps;
+    if (typeof global.updateAddButtonState === 'function') global.updateAddButtonState();
+  }
+
+  /** Sets already logged today for this exact exercise name — real count
+   * from the same store renderSessionSoFar() reads. */
+  function _todaysSetCount(name) {
+    const u = _user();
+    if (!u || typeof localStorage === 'undefined') return 0;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    try {
+      const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
+      const today = workouts.find(w => w.date === todayStr);
+      if (!today) return 0;
+      return (today.log || []).filter(e => e.exercise === name)
+        .reduce((n, e) => n + (Array.isArray(e.repsArray) ? e.repsArray.length : 0), 0);
+    } catch { return 0; }
+  }
+
+  function _updateQuickLogButtonLabel(name) {
+    if (typeof document === 'undefined') return;
+    const labelEl = document.getElementById('qlLogBtnLabel');
+    if (labelEl) labelEl.textContent = 'Log set ' + (_todaysSetCount(name) + 1);
+  }
+
+  function syncQuickLogUnit(unit) {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('qlUnitLabel');
+    if (el) el.textContent = unit || 'kg';
+  }
+
+  /** Called on every #exercise input. Shows the quick-log panel, ensures
+   * #reps_0/#weight_0 exist (via the app's own generateSetInputs(1), so
+   * its suggestion engine seeds sensible defaults), and keeps the last
+   * tapped weight/reps sticky across sets of the SAME exercise. */
+  function initQuickLog(exerciseName) {
+    if (typeof document === 'undefined') return;
+    const panel = document.getElementById('quickLogPanel');
+    if (!panel) return;
+    const name = (exerciseName || '').trim();
+    if (!name) { panel.hidden = true; return; }
+    panel.hidden = false;
+
+    const setsInput = document.getElementById('sets');
+    if (setsInput && setsInput.value !== '1') setsInput.value = '1';
+    if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
+
+    const isNewExercise = name !== _qlExerciseName;
+    if (isNewExercise || _qlWeight == null || _qlReps == null) {
+      const weightEl = document.getElementById('weight_0');
+      const repsEl = document.getElementById('reps_0');
+      _qlWeight = weightEl && weightEl.value !== '' ? Number(weightEl.value) : (_qlWeight ?? 20);
+      _qlReps = repsEl && repsEl.value !== '' ? Number(repsEl.value) : (_qlReps ?? 8);
+      _qlExerciseName = name;
+    }
+    _syncQuickLogDisplay();
+    _writeQuickLogToForm();
+
+    const unitSel = document.getElementById('weightUnit');
+    if (unitSel) syncQuickLogUnit(unitSel.value);
+    _updateQuickLogButtonLabel(name);
+  }
+
+  /** Tapped a session-queue row: jump straight into quick-log for that
+   * exercise, pre-filled from the plan's first set (real planned values,
+   * falling back to the sticky-default logic above when absent). */
+  function startQuickLogFor(name, plannedFirstSet) {
+    if (typeof document === 'undefined' || !name) return;
+    const exerciseEl = document.getElementById('exercise');
+    if (!exerciseEl) return;
+    exerciseEl.value = name;
+    initQuickLog(name);
+    if (plannedFirstSet) {
+      if (plannedFirstSet.weight != null) _qlWeight = plannedFirstSet.weight;
+      if (plannedFirstSet.reps != null) _qlReps = plannedFirstSet.reps;
+      _syncQuickLogDisplay();
+      _writeQuickLogToForm();
+    }
+    document.getElementById('quickLogPanel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function quickLogStep(field, delta) {
+    if (field === 'weight') {
+      const step = (_qlWeight || 0) >= 100 ? 5 : 2.5;
+      _qlWeight = Math.max(0, _round1((_qlWeight ?? 20) + delta * step));
+    } else {
+      _qlReps = Math.max(0, (_qlReps ?? 8) + delta);
+    }
+    _syncQuickLogDisplay();
+    _writeQuickLogToForm();
+  }
+
+  /** The one-tap action: log exactly one set for the current exercise/
+   * weight/reps via the existing addLogEntry() (same validation, same
+   * PR/streak/milestone side effects, same storage shape), then re-arms
+   * for the next set of the same exercise. */
+  function quickLogSet() {
+    if (typeof document === 'undefined') return;
+    const exerciseEl = document.getElementById('exercise');
+    const name = exerciseEl ? exerciseEl.value.trim() : '';
+    if (!name || _qlReps == null || _qlReps <= 0) return;
+
+    const setsInput = document.getElementById('sets');
+    if (setsInput) setsInput.value = '1';
+    if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
+    _writeQuickLogToForm();
+
+    if (typeof global.addLogEntry !== 'function') return;
+    global.addLogEntry();
+
+    // addLogEntry() clears #exercise on success and leaves it untouched
+    // on a validation failure — used here as a success signal rather
+    // than duplicating its validation logic.
+    const succeeded = exerciseEl && exerciseEl.value === '';
+    if (succeeded) {
+      exerciseEl.value = name;
+      const liveTitle = document.getElementById('exerciseLiveTitle');
+      if (liveTitle) { liveTitle.hidden = false; liveTitle.textContent = name; }
+      const setsInput2 = document.getElementById('sets');
+      if (setsInput2) setsInput2.value = '1';
+      if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
+      _writeQuickLogToForm(); // keep the same weight/reps for the next set
+      _updateQuickLogButtonLabel(name);
+    }
+  }
+
+  const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
+    initQuickLog, quickLogStep, quickLogSet, startQuickLogFor, syncQuickLogUnit };
+  global.initQuickLog = initQuickLog;
+  global.quickLogStep = quickLogStep;
+  global.quickLogSet = quickLogSet;
+  global.startQuickLogFor = startQuickLogFor;
+  global.syncQuickLogUnit = syncQuickLogUnit;
   global.getTodaysPlannedDay = getTodaysPlannedDay;
   global.renderSessionQueue = renderSessionQueue;
   global.renderTrainHero = renderTrainHero;

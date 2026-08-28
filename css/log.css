@@ -170,6 +170,112 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Quick log — one-tap single-set logging (session-queue.js) ──── */
+
+.ql-panel { margin: 10px 0 12px; }
+
+.ql-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.ql-field { flex: 1; }
+
+.ql-label {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.ql-stepper {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(74, 132, 102, 0.34);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+  height: 50px;
+}
+
+.ql-step {
+  width: 40px;
+  height: 40px;
+  margin: 0 4px;
+  flex: none;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--secondary-text);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* ≥44px touch target even though the visible circle is 40px */
+  position: relative;
+}
+.ql-step::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+}
+
+.ql-step--plus {
+  background: linear-gradient(135deg, #2f8a63, #236b4e);
+  color: #050c08;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.ql-val {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ql-log-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 10px;
+  font-size: 19px;
+}
+
+/* ── Manual / multi-set entry disclosure (de-emphasized, closed by
+   default now that quick-log is the primary one-tap path) ──────── */
+
+.log-manual-entry {
+  margin-top: 8px;
+  border-top: 1px solid rgba(116, 138, 126, 0.14);
+  padding-top: 4px;
+}
+
+.log-manual-entry-toggle {
+  list-style: none;
+  cursor: pointer;
+  padding: 8px 2px;
+  font-family: var(--font-label);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.log-manual-entry-toggle::-webkit-details-marker { display: none; }
+.log-manual-entry-toggle::before { content: '▸  '; }
+.log-manual-entry[open] .log-manual-entry-toggle::before { content: '▾  '; }
+
+.log-manual-entry-body { padding-top: 6px; }
+
+/* Tappable session-queue row (jumps into quick-log for that exercise) */
+.sq-row--tap { cursor: pointer; }
+.sq-row--tap:hover { background: rgba(255, 255, 255, 0.02); }
+
 /* ── Session queue — today's planned exercises (session-queue.js) ── */
 
 .sq-card {
