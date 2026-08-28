@@ -8,10 +8,26 @@
 /* ── Home tab shell ─────────────────────────────────────────── */
 
 #homeTab {
-  background: radial-gradient(circle at top, rgba(34, 61, 49, 0.28) 0%, #0a0f0d 58%, #070909 100%);
+  position: relative;
+  background: var(--bg-hero-gradient);
   border: 1px solid rgba(94, 121, 109, 0.38);
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
   padding-bottom: 12px;
+  overflow: hidden;
+}
+
+#homeTab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.11;
+  mix-blend-mode: overlay;
+  background-image: var(--bg-noise-overlay);
+}
+
+#homeTab > * {
+  position: relative;
 }
 
 /* ── Visual zones ───────────────────────────────────────────── */
@@ -46,10 +62,11 @@
 /* ── Section labels ─────────────────────────────────────────── */
 
 .home-section-label {
+  font-family: var(--font-label);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   color: var(--text-muted, #7a8f7d);
   margin-bottom: 8px;
   padding-left: 2px;
@@ -66,9 +83,10 @@
 
 /* Step card — replaces the heavy inline styles */
 .home-step-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 14px;
 }
 
@@ -125,27 +143,27 @@
 
 .home-dashboard-card {
   --home-accent: #1f7f59;
-  background: linear-gradient(180deg, rgba(15, 24, 20, 0.96), rgba(10, 16, 13, 0.98));
-  border: 1px solid rgba(96, 126, 113, 0.36);
-  border-radius: 16px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 14px;
   text-align: left;
-  color: #f4f7f5;
+  color: var(--text-color);
   transition: border-color 0.25s ease, transform 0.25s ease;
 }
 
 .home-dashboard-card:hover {
-  border-color: rgba(89, 156, 126, 0.5);
+  border-color: rgba(116, 138, 126, 0.4);
   transform: translateY(-1px);
 }
 
 /* ── Hero card ──────────────────────────────────────────────── */
 
 .home-hero-card {
-  background: radial-gradient(circle at top right, rgba(30, 109, 78, 0.18), transparent 48%),
-              linear-gradient(180deg, rgba(8, 17, 13, 0.98), rgba(7, 13, 10, 0.95));
-  border-color: rgba(63, 145, 108, 0.35);
+  background: var(--pod-bg-hero);
+  border-color: rgba(74, 132, 102, 0.3);
+  box-shadow: var(--pod-shadow-hero);
 }
 
 .home-hero-topline {
@@ -699,10 +717,11 @@
 /* ── Today's Program Card (today-program.js) ──────────────────── */
 
 .tpc-card {
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 16px;
-  padding: 14px 16px 12px;
+  background: var(--pod-bg-hero);
+  border: 1px solid rgba(74, 132, 102, 0.3);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-shadow-hero);
+  padding: 15px 16px 13px;
   margin: 0 0 10px;
 }
 
@@ -722,12 +741,15 @@
 }
 
 .tpc-week-badge {
+  font-family: var(--font-label);
   font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: var(--text-muted, #7a8f7d);
-  background: var(--bg, #0b130d);
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 20px;
-  padding: 2px 10px;
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
+  border-radius: var(--radius-pill);
+  padding: 3px 11px;
 }
 
 .tpc-main {
@@ -817,9 +839,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: var(--card-bg, #0f1510);
-  border: 1px solid var(--border, #2a3a2e);
-  border-radius: 16px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   padding: 14px 16px;
   margin: 0 0 10px;
   transition: border-color 0.2s;
