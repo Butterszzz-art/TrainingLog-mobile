@@ -183,5 +183,9 @@
 }
 .bn-fab svg { display: block; }
 
+/* ── Libraries screen (libraries.js) ──────────────────────────── */
+#librariesContent { padding: 0 6px; }
+#librariesContent .pod-row { margin-bottom: 8px; }
+
 /* ── Utility ────────────────────────────────────────────────── */
 .tabular-nums { font-variant-numeric: tabular-nums; }

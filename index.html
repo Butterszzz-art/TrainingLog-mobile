@@ -2986,9 +2986,13 @@
 <!-- ── CLIENTS TAB — roster & individual client management ── -->
 <div id="clientsTab" class="tab-content coach-only">
   <div class="coach-page-header">
-    <h2>Clients</h2>
+    <h2 class="pod-title" style="font-size:20px;">Coach</h2>
     <div class="coach-stats-bar" id="coachStatsBar"></div>
   </div>
+
+  <!-- Triage: priority client + review queue + templates, all real
+       data from coachDashboardState.clients (renderCoachQueue()) -->
+  <div id="coachQueueSection"></div>
 
   <!-- Bulk actions toolbar (hidden until clients are selected) -->
   <div class="coach-bulk-toolbar" id="coachBulkToolbar" hidden>
@@ -3055,6 +3059,14 @@
 <div id="coachingTab" class="tab-content coach-only" style="display:none;" aria-hidden="true"></div>
 
 <div id="settingsTab" class="tab-content">
+  <h2 class="pod-title" style="font-size:20px;padding:0 6px;">Settings</h2>
+
+  <!-- Profile hero + real preference summary (renderSettingsHero()).
+       The full settings form below (#settingsFormContainer) is where
+       everything actually gets changed — this is just the mockup's
+       top-of-screen summary, wired to the same real prefs. -->
+  <div id="settingsHero" style="padding:0 6px;"></div>
+
   <div id="settingsFormContainer" class="panel"></div>
 
   <!-- Knowledge Base Admin Section -->
@@ -3198,6 +3210,12 @@
   <div id="mobilityTabContent"></div>
 </div>
 
+<!-- Libraries: real exercise history grouped by muscle (libraries.js),
+     Functional/Flexibility/Posing route to their existing dedicated tabs. -->
+<div id="librariesTab" class="tab-content">
+  <div id="librariesContent"></div>
+</div>
+
   <!-- Body tab: launcher into Weight/Macros/Sleep/Cardio (each of those
        keeps its own id/render function — this is a menu, not a merge). -->
   <div id="bodyTab" class="tab-content">
@@ -3256,6 +3274,10 @@
     <div class="all-hub-section">
       <div class="all-hub-section-label">Libraries</div>
       <div class="all-hub-grid">
+        <button class="pod all-hub-tile" data-tab="librariesTab" onclick="showTab('librariesTab')">
+          <span class="more-drawer-icon" data-icon="dumbbell"></span>
+          <span>Libraries</span>
+        </button>
         <button class="pod all-hub-tile bb-only" data-tab="posingTab" onclick="showTab('posingTab')">
           <span class="more-drawer-icon" data-icon="award"></span>
           <span>Posing</span>
@@ -4294,6 +4316,9 @@ function showTab(tabName) {
     case 'weightTab':
       renderWeights();
       break;
+    case 'librariesTab':
+      if (typeof renderLibraries === 'function') renderLibraries();
+      break;
     case 'checkInTab':
       renderCheckInTab();
       break;
@@ -4397,6 +4422,7 @@ function showTab(tabName) {
       loadKnowledgeModules();
       renderSubscriptionPanel();
       loadReferralPanel();
+      if (typeof renderSettingsHero === 'function') renderSettingsHero();
 
       // Wire settings sub-tabs via delegation (idempotent)
       const stc = document.getElementById('settingsFormContainer');
@@ -11125,6 +11151,55 @@ async function renderCoachDashboard() {
     coachDashboardState.selectedClientId = null;
   }
   renderCoachDashboardView();
+  if (typeof renderCoachQueue === 'function') renderCoachQueue();
+}
+
+/** Mobile "Coach" triage view: stat row + priority client + review
+ * queue + roster snapshot, matching the mockup's Coach screen. All
+ * from coachDashboardState.clients — the same real roster data
+ * renderCoachDashboard() just loaded, just a different visual cut. */
+function renderCoachQueue() {
+  const el = document.getElementById('coachQueueSection');
+  if (!el) return;
+  const clients = coachDashboardState.clients || [];
+  if (!clients.length) { el.innerHTML = ''; return; }
+
+  const counts = { action: 0, watch: 0, ok: 0 };
+  clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
+  const avgCompliance = Math.round(clients.reduce((s, c) => s + (c.compliancePercent || 0), 0) / clients.length);
+
+  const statRow = [
+    ['Reviews due', counts.action, counts.action ? 'ws-stat-danger' : ''],
+    ['Avg compliance', avgCompliance + '%', ''],
+    ['Flagged', counts.watch + counts.action, (counts.watch + counts.action) ? 'ws-stat-warn' : ''],
+  ].map(([label, val, cls]) =>
+    `<div class="pod ws-stat-tile ${cls}"><div class="stat-tile-label">${label}</div><div class="stat-tile-value">${val}</div></div>`
+  ).join('');
+
+  const priority = clients.find(c => c.alertStatus === 'action') || clients.find(c => c.alertStatus === 'watch');
+  const priorityHTML = priority ? `
+    <div class="pod pod--hero ws-priority-card">
+      <div class="pod-row"><span class="pod-kicker">Needs attention</span><span class="ws-priority-tag ${priority.alertStatus}">${priority.alertStatus}</span></div>
+      <div class="ws-priority-main">
+        <span class="ws-priority-name">${escapeCoachText(priority.name)}</span>
+        <span class="ws-priority-meta">${escapeCoachText(priority.currentPhase)} &middot; ${escapeCoachText(priority.primaryStatusMetric)}</span>
+      </div>
+      <button class="cta-capsule ws-priority-cta" onclick="coachDashboardState.selectedClientId='${priority.id}'; if(typeof renderCoachDashboardView==='function') renderCoachDashboardView(); document.getElementById('coachDashboardContent')?.scrollIntoView({behavior:'smooth'});">Open client</button>
+    </div>` : '';
+
+  const roster = clients.slice().sort((a, b) => (a.compliancePercent || 0) - (b.compliancePercent || 0)).slice(0, 5);
+  const rosterHTML = roster.map(c => `
+    <div class="sq-row"><span class="sq-name">${escapeCoachText(c.name)}</span><span class="sq-summary">${c.compliancePercent}%</span></div>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="ws-stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">${statRow}</div>
+    ${priorityHTML}
+    <div class="pod sq-card">
+      <div class="pod-row"><span class="pod-kicker">Roster snapshot</span><span class="sq-count">compliance</span></div>
+      ${rosterHTML}
+    </div>
+  `;
 }
 
 window.renderCoachDashboard = renderCoachDashboard;
@@ -18250,6 +18325,8 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/reminders.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-queue.js"></script>
+  <script src="src/js/settings-hero.js"></script>
+  <script src="src/js/libraries.js"></script>
   <script src="src/js/session-context.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
