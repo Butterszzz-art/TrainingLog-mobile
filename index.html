@@ -913,8 +913,19 @@
 
       <!-- ── Header ── -->
       <div class="wt-header">
-        <h2 class="wt-title"><span class="ui-icon" data-icon="scale"></span> Bodyweight Tracker</h2>
+        <h2 class="wt-title pod-title" style="font-size:20px;">Body</h2>
         <div id="wtTrendBadge" class="wt-trend-badge" style="display:none;"></div>
+      </div>
+
+      <!-- ── Hero: big current-weight readout + sparkline (renderWeightHero) ── -->
+      <div class="pod pod--hero wt-hero" id="wtHero" style="display:none;">
+        <div class="pod-kicker">Bodyweight</div>
+        <div class="wt-hero-num-row">
+          <span class="home-hero-num" id="wtHeroValue">—</span>
+          <span class="wt-hero-unit" id="wtHeroUnit">kg</span>
+          <span class="wt-hero-avg" id="wtHeroAvg"></span>
+        </div>
+        <svg class="wt-hero-spark" id="wtHeroSparkline" viewBox="0 0 330 60" preserveAspectRatio="none"></svg>
       </div>
 
       <!-- ── Stat strip (populated by renderWeights) ── -->
@@ -12298,6 +12309,9 @@ function renderWeights() {
     if (chg) { chg.textContent = changeDisp; chg.className = 'wt-stat-val ' + (changeKg > 0 ? 'wt-up' : changeKg < 0 ? 'wt-down' : ''); }
     if (ent) ent.textContent = log.length;
 
+    // ── Hero readout + sparkline ──
+    renderWeightHero(log, lastKg, displayUnit);
+
     // ── Weekly averages & rate ──
     renderWeeklyBreakdown(log, displayUnit);
   } else {
@@ -12306,6 +12320,8 @@ function renderWeights() {
     if (logCount) logCount.textContent = '';
     const wkCard = document.getElementById('wtWeeklyCard');
     if (wkCard) wkCard.style.display = 'none';
+    const heroEl = document.getElementById('wtHero');
+    if (heroEl) heroEl.style.display = 'none';
   }
 
   log.slice().reverse().forEach((entry, revIdx) => {
@@ -12325,6 +12341,54 @@ function renderWeights() {
       showBodyweightProgress();
     } else {
       showWorkoutProgress();
+    }
+  }
+}
+
+/** Big Anton current-weight readout + a real sparkline over the last
+ * entries — all from the same log array/unit renderWeights() already
+ * computed, just given the mockup's hero visual treatment. */
+function renderWeightHero(log, lastKg, displayUnit) {
+  const heroEl = document.getElementById('wtHero');
+  if (!heroEl) return;
+  heroEl.style.display = '';
+
+  const valueEl = document.getElementById('wtHeroValue');
+  const unitEl = document.getElementById('wtHeroUnit');
+  const avgEl = document.getElementById('wtHeroAvg');
+  const sparkEl = document.getElementById('wtHeroSparkline');
+  const toDispNum = (kg) => kg != null ? convertWeightValue(kg, 'kg', displayUnit, 1) : null;
+
+  if (valueEl) valueEl.textContent = toDispNum(lastKg) ?? '—';
+  if (unitEl) unitEl.textContent = displayUnit;
+
+  const recent = log.slice(-7);
+  const recentVals = recent.map(e => getEntryWeightKg(e)).filter(v => v != null);
+  if (avgEl) {
+    if (recentVals.length) {
+      const avg = recentVals.reduce((a, b) => a + b, 0) / recentVals.length;
+      avgEl.textContent = '7d avg ' + toDispNum(avg).toFixed(1);
+      avgEl.style.display = '';
+    } else {
+      avgEl.style.display = 'none';
+    }
+  }
+
+  if (sparkEl) {
+    const points = log.slice(-14).map(e => getEntryWeightKg(e)).filter(v => v != null);
+    if (points.length >= 2) {
+      const min = Math.min(...points), max = Math.max(...points);
+      const range = max - min || 1;
+      const w = 330, h = 60, pad = 6;
+      const coords = points.map((v, i) => {
+        const x = (i / (points.length - 1)) * w;
+        const y = pad + (1 - (v - min) / range) * (h - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+      sparkEl.innerHTML = `<polyline points="${coords.join(' ')}" fill="none" stroke="#6fae8b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+      sparkEl.style.display = '';
+    } else {
+      sparkEl.style.display = 'none';
     }
   }
 }
