@@ -477,8 +477,8 @@ function scoreBar(label, value, max, inverse) {
   const v = Number(value) || 0;
   const pct = Math.round((v / max) * 100);
   const color = inverse
-    ? (v <= 3 ? 'var(--primary)' : v <= 6 ? 'var(--highlight)' : 'var(--danger)')
-    : (v >= 7 ? 'var(--primary)' : v >= 4 ? 'var(--highlight)' : 'var(--danger)');
+    ? (v <= 3 ? 'var(--fill-meter-a)' : v <= 6 ? 'var(--fill-meter-brass)' : 'var(--danger-grad)')
+    : (v >= 7 ? 'var(--fill-meter-a)' : v >= 4 ? 'var(--fill-meter-brass)' : 'var(--danger-grad)');
   return '<div class="checkin-score-row">'
     + '<span class="checkin-score-label">' + label + '</span>'
     + '<div class="checkin-score-bar"><div class="checkin-score-fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
@@ -529,10 +529,21 @@ function renderCheckIn(c) {
     el.innerHTML = '<div class="d-card"><p style="color:var(--text-muted);text-align:center;padding:24px 0;">No check-in data available.</p></div>';
     return;
   }
-  el.innerHTML = '<div class="d-card"><div class="d-card-title">Full Check-In Review</div>'
+  // Photo slots: the mobile app has a progress-photos feature, but it
+  // isn't wired into the coach console's client data yet (no photoUrl
+  // reaches _clients), so these render as honest empty hatch-fill slots
+  // rather than fabricated images — TODO(coach-workspace): wire real
+  // photo URLs once the backend exposes them to the coach API.
+  const photoSlots = ['Front', 'Side', 'Back'].map(pos =>
+    '<div class="checkin-photo-slot"><span class="checkin-photo-label">' + pos + '</span></div>'
+  ).join('');
+  el.innerHTML = '<div class="d-card"><div class="d-card-title">Check-In Photos</div>'
+    + '<div class="checkin-photo-row">' + photoSlots + '</div></div>'
+    + '<div class="d-card"><div class="d-card-title">Full Check-In Review</div>'
     + scoreBar('Sleep Quality', ci.sleep, 10) + scoreBar('Energy Level', ci.energy, 10)
     + scoreBar('Stress Level', ci.stress, 10, true) + scoreBar('Hunger', ci.hunger, 10)
-    + scoreBar('Training Performance', ci.trainingPerformance, 10) + '</div>'
+    + scoreBar('Training Performance', ci.trainingPerformance, 10)
+    + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '') + '</div>'
     + '<div class="d-card"><div class="d-card-title">Bodyweight</div><div class="d-stat-grid">'
     + stat('Current', ci.bodyweight ? ci.bodyweight + ' kg' : '—')
     + stat('Last Check-In', c.lastCheckIn || '—') + '</div></div>';
@@ -680,9 +691,10 @@ function renderNotes(c) {
 
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Send Note to ' + (c.clientName?.split(' ')[0] || 'Client') + '</div>'
     + '<textarea id="coachNoteInput" style="width:100%;min-height:100px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:0.88rem;resize:vertical;margin-bottom:10px;" placeholder="Write a note — the athlete will see this in their app…"></textarea>'
-    + '<div style="display:flex;gap:8px;">'
+    + '<div style="display:flex;gap:8px;align-items:center;">'
     + '<button class="bulk-action-btn" onclick="saveNote()">💬 Send Note</button>'
     + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="aiDraftIntoNotes()">✍️ AI Draft</button>'
+    + '<span class="checkin-photo-label" style="margin-left:auto;">&#8984;&crarr; to send</span>'
     + '</div></div>'
     + '<div class="d-card"><div class="d-card-title">Note History (' + notes.length + ')</div>'
     + (notes.length ? notes.map(n => {
@@ -692,6 +704,9 @@ function renderNotes(c) {
         + '<div style="font-size:0.85rem;color:var(--text-sec);line-height:1.5;">' + n.text + '</div></div>';
     }).join('') : '<p style="color:var(--text-muted);font-size:0.85rem;">No notes yet.</p>')
     + '</div>';
+  document.getElementById('coachNoteInput')?.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveNote(); }
+  });
 }
 
 function getClientNotes(clientId) {

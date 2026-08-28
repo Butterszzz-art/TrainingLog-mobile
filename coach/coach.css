@@ -397,7 +397,7 @@ body::before {
   font-weight: 800;
   color: var(--text-muted);
   background: rgba(5,12,8,.35);
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   padding: 1px 7px;
 }
 
@@ -839,6 +839,41 @@ body::before {
 .lead-flag--oranje { background: rgba(168,124,56,0.12); border-left-color: var(--highlight); color: var(--text); }
 .lead-flag--info { background: rgba(132,157,144,0.1); border-left-color: var(--text-muted); color: var(--text-sec); }
 
+/* Check-in photo slots — hatch fill per spec, honest empty state (no
+   photoUrl reaches the coach console yet, see renderCheckIn's comment). */
+.checkin-photo-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.checkin-photo-slot {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-tight);
+  background: var(--surface-hatch);
+  border: 1px solid var(--border-soft);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+}
+.checkin-photo-label {
+  font-family: var(--font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.checkin-client-quote {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-row);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
 /* Checkin scores bar */
 .checkin-score-row {
   display: flex;
@@ -857,15 +892,15 @@ body::before {
 
 .checkin-score-bar {
   flex: 1;
-  height: 8px;
-  background: var(--surface);
-  border-radius: 4px;
+  height: 6px;
+  background: rgba(116, 138, 126, 0.16);
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
 .checkin-score-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   transition: width 0.3s ease;
 }
 
