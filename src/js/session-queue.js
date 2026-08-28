@@ -180,6 +180,50 @@
       : cell('Sleep', null) + cell('Motivation', null) + cell('Soreness', null) + cell('Ready', null);
   }
 
+  /** "Session so far" pod: exercises already logged today, from the same
+   * workouts_<user> store renderWorkouts() reads (real data — every
+   * exercise/set count shown here is something the user actually logged). */
+  function renderSessionSoFar() {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('sessionSoFarCard');
+    if (!el) return;
+
+    const u = global.currentUser || (typeof localStorage !== 'undefined' && localStorage.getItem('fitnessAppUser'));
+    const todayStr = new Date().toISOString().slice(0, 10);
+    let workouts = [];
+    try { workouts = u ? JSON.parse(localStorage.getItem('workouts_' + u)) || [] : []; } catch { workouts = []; }
+    const today = workouts.find(w => w.date === todayStr);
+    const log = today && Array.isArray(today.log) ? today.log : [];
+
+    if (!log.length) { el.innerHTML = ''; return; }
+
+    let totalSets = 0, totalVolumeKg = 0;
+    log.forEach(entry => {
+      const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+      const weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+      totalSets += entry.sets || reps.length;
+      reps.forEach((r, i) => { totalVolumeKg += (Number(r) || 0) * (Number(weights[i]) || 0); });
+    });
+
+    const rows = log.map(entry => {
+      const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+      const weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+      const lastReps = reps[reps.length - 1];
+      const lastWeight = weights[weights.length - 1];
+      const summary = reps.length ? `${reps.length}×${lastReps ?? '?'}${lastWeight != null ? ' · ' + lastWeight + ' kg' : ''}` : '';
+      return `<div class="sq-row"><span class="sq-name">${entry.exercise}</span><span class="sq-summary">${summary}</span></div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="pod sq-card">
+        <div class="pod-row">
+          <span class="pod-kicker">Session so far</span>
+          <span class="sq-count">${totalSets} set${totalSets === 1 ? '' : 's'} &middot; ${(totalVolumeKg).toLocaleString()} kg</span>
+        </div>
+        ${rows}
+      </div>`;
+  }
+
   function renderSessionQueue() {
     if (typeof document === 'undefined') return;
     const el = document.getElementById('sessionQueueCard');
@@ -206,11 +250,12 @@
       </div>`;
   }
 
-  const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip };
+  const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar };
   global.getTodaysPlannedDay = getTodaysPlannedDay;
   global.renderSessionQueue = renderSessionQueue;
   global.renderTrainHero = renderTrainHero;
   global.renderTrainReadinessStrip = renderTrainReadinessStrip;
+  global.renderSessionSoFar = renderSessionSoFar;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   }
