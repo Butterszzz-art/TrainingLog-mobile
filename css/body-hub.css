@@ -1,0 +1,75 @@
+/* =============================================================
+   BODY TAB — SUMMARY HUB
+   2x2 "at a glance" grid rendered inside #bodyTab by body-hub.js.
+   Reuses the pod language (design-system.css) — kicker/value/sub
+   stacked the way .stat-tile does, just sized up for a headline
+   number per mini-tab.
+   Depends on: tokens.css, design-system.css
+   ============================================================= */
+
+.body-hub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.body-hub-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+  border-radius: var(--radius-pod);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+  padding: 13px 15px;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.body-hub-kicker {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--text-label);
+  text-transform: uppercase;
+}
+
+.body-hub-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.1;
+  color: var(--text-color);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.body-hub-unit {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: none;
+}
+
+.body-hub-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.body-hub-empty .body-hub-sub { color: var(--text-faint); }
+
+.body-hub-trend--up { color: var(--danger-text); }
+.body-hub-trend--down { color: var(--primary); }
+
+.body-hub-stars { letter-spacing: 1px; color: var(--warning-gold, var(--text-muted)); }
+
+@media (hover: hover) {
+  .body-hub-card:hover {
+    background: var(--pod-bg-hover);
+    border-color: var(--border-hover);
+  }
+}

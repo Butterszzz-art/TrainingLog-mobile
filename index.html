@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
+  <link rel="stylesheet" href="css/body-hub.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3291,7 +3292,9 @@
 </div>
 
   <!-- Body tab: launcher into Weight/Macros/Sleep/Cardio (each of those
-       keeps its own id/render function — this is a menu, not a merge). -->
+       keeps its own id/render function — this is a menu, not a merge).
+       #bodyHubSummary mirrors each mini-tab's headline stat so the tab
+       isn't an empty shell before drilling in (src/js/body-hub.js). -->
   <div id="bodyTab" class="tab-content">
     <div class="all-hub-header"><span class="pod-title" style="font-size:20px;">Body</span></div>
     <div class="pill-nav">
@@ -3300,6 +3303,7 @@
       <button class="pill" onclick="showTab('sleepTab')">Sleep</button>
       <button class="pill" onclick="showTab('cardioTab')">Cardio</button>
     </div>
+    <div id="bodyHubSummary" class="body-hub-grid"></div>
   </div>
 
   <!-- All tab: replaces the old More bottom-sheet drawer with a normal
@@ -4470,6 +4474,9 @@ function showTab(tabName) {
       break;
     case 'weightTab':
       renderWeights();
+      break;
+    case 'bodyTab':
+      if (typeof window.renderBodyHub === 'function') window.renderBodyHub();
       break;
     case 'librariesTab':
       if (typeof renderLibraries === 'function') renderLibraries();
@@ -18477,6 +18484,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/data-export.js"></script>
   <script src="src/js/food-database.js"></script>
   <script src="src/js/weekly-summary.js"></script>
+  <script src="src/js/body-hub.js"></script>
   <script src="src/js/challenges.js"></script>
   <script src="src/js/client-checkins.js"></script>
   <script src="src/js/progress-report.js"></script>
