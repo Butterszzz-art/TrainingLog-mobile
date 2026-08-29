@@ -189,5 +189,16 @@
       </div>`;
   }
 
+  /** Today's program day name (e.g. "Push Day"), or null on a rest day / no active program. */
+  function getTodayWorkoutName() {
+    try {
+      const info = _buildInfo();
+      return info && info.isTodayTraining ? info.todayDayName : null;
+    } catch {
+      return null;
+    }
+  }
+
   window.renderTodayProgramCard = renderTodayProgramCard;
+  window.getTodayWorkoutName = getTodayWorkoutName;
 })();

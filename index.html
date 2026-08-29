@@ -160,6 +160,33 @@
     </button>
   </div>
 </div>
+
+<!-- ── Post-login loading screen (rotating plate, cycling status, progress bar) ── -->
+<div id="loadingContainer" class="login-loading-screen" style="display:none;">
+  <div class="pc-spinner">
+    <div class="pc-spinner-halo"></div>
+    <div class="pc-spinner-breathe">
+      <div class="pc-spinner-spin">
+        <img src="public/icons/plate.jpg" alt="" class="pc-spinner-plate">
+      </div>
+    </div>
+  </div>
+  <div class="pc-loading-name">
+    <div class="pc-loading-appname">Pocket Coach</div>
+    <div class="pc-loading-status" id="loadingStatusLabel">Signing you in</div>
+  </div>
+  <div class="pc-progress-track">
+    <div class="pc-progress-fill" id="loadingProgressFill"></div>
+  </div>
+  <div class="pc-progress-pct" id="loadingProgressPct">0%</div>
+</div>
+
+<!-- ── Session-ready screen (brief confirmation before entering the app) ── -->
+<div id="sessionReadyContainer" class="login-ready-screen" style="display:none;" onclick="window._finishPostLoginSequence && window._finishPostLoginSequence()">
+  <div class="pc-ready-kicker">Session ready</div>
+  <div class="pc-ready-headline" id="sessionReadyHeadline">Let's move.</div>
+</div>
+
 <!-- ── Onboarding Wizard (shown after first signup) ─────────────────── -->
 <div id="onboardingOverlay" class="onboarding-overlay" hidden>
   <div class="onboarding-card">
@@ -3844,19 +3871,19 @@ async function _checkLocalCredentials(username, password) {
 function _doLocalLogin(username) {
   setCurrentUser(username);
   localStorage.setItem('fitnessAppUser', username);
-  const el = document.getElementById('loginContainer');
-  if (el) el.style.display = 'none';
-  openSection('pocketFit');
-  if (typeof window.renderWorkouts === 'function') window.renderWorkouts();
-  if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
-  renderWeights?.();
-  renderCardio?.();
-  loadTemplateDropdown?.();
-  renderDailyMacroProgress?.();
-  if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
-  if (typeof window.initSessionContext === 'function') window.initSessionContext();
-  loadUserPlan();
-  setTimeout(() => { if (typeof showReadinessIfNeeded === 'function') showReadinessIfNeeded(); }, 1500);
+  _runPostLoginSequence(() => {
+    openSection('pocketFit');
+    if (typeof window.renderWorkouts === 'function') window.renderWorkouts();
+    if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
+    renderWeights?.();
+    renderCardio?.();
+    loadTemplateDropdown?.();
+    renderDailyMacroProgress?.();
+    if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+    if (typeof window.initSessionContext === 'function') window.initSessionContext();
+    loadUserPlan();
+    setTimeout(() => { if (typeof showReadinessIfNeeded === 'function') showReadinessIfNeeded(); }, 1500);
+  });
 }
 
 // ── Plan helpers ──────────────────────────────────────────────
@@ -4076,6 +4103,86 @@ window.currentSubStatus = 'none';
 
 // ────────────────────────────────────────────────────────────────────────────
 
+// ── Post-login sequence: loading screen → session-ready screen → home tab ──
+// Runs after credentials are verified. The real render/init work happens
+// immediately (hidden behind the loading overlay) so the animation is purely
+// cosmetic and never delays the app being ready underneath it.
+const LOGIN_LOADING_STEPS = [
+  "Signing you in",
+  "Syncing your log",
+  "Loading today's program",
+  "Crunching your PRs",
+  "Almost there"
+];
+const LOGIN_LOADING_DURATION_MS = 2200;
+
+function _escapeLoginHtml(value) {
+  const div = document.createElement('div');
+  div.textContent = String(value);
+  return div.innerHTML;
+}
+
+function _runPostLoginSequence(renderFn) {
+  const loginEl = document.getElementById('loginContainer');
+  const loadingEl = document.getElementById('loadingContainer');
+  if (loginEl) loginEl.style.display = 'none';
+
+  try {
+    if (typeof renderFn === 'function') renderFn();
+  } catch (err) {
+    console.error('[Login] post-login render error:', err);
+  }
+
+  if (!loadingEl) return; // markup missing — app is already visible, nothing more to do
+
+  loadingEl.style.display = '';
+  const fillEl = document.getElementById('loadingProgressFill');
+  const pctEl = document.getElementById('loadingProgressPct');
+  const statusEl = document.getElementById('loadingStatusLabel');
+  const t0 = Date.now();
+
+  // setInterval, not requestAnimationFrame — this has to keep advancing even if
+  // the webview loses foreground/compositing focus mid-login (e.g. an OS
+  // permission prompt steals focus right after sign-in).
+  const timer = setInterval(() => {
+    const pct = Math.min(100, ((Date.now() - t0) / LOGIN_LOADING_DURATION_MS) * 100);
+    if (fillEl) fillEl.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+    if (statusEl) {
+      const idx = Math.min(LOGIN_LOADING_STEPS.length - 1, Math.floor((pct / 100) * LOGIN_LOADING_STEPS.length));
+      statusEl.textContent = LOGIN_LOADING_STEPS[idx];
+    }
+    if (pct >= 100) {
+      clearInterval(timer);
+      setTimeout(_showSessionReady, 450);
+    }
+  }, 60);
+}
+
+function _showSessionReady() {
+  const loadingEl = document.getElementById('loadingContainer');
+  const readyEl = document.getElementById('sessionReadyContainer');
+  if (loadingEl) loadingEl.style.display = 'none';
+
+  if (!readyEl) return;
+
+  const headlineEl = document.getElementById('sessionReadyHeadline');
+  if (headlineEl) {
+    const workoutName = (typeof window.getTodayWorkoutName === 'function') ? window.getTodayWorkoutName() : null;
+    headlineEl.innerHTML = workoutName
+      ? `${_escapeLoginHtml(workoutName)}.<br>Let's move.`
+      : `Let's move.`;
+  }
+  readyEl.style.display = '';
+  setTimeout(window._finishPostLoginSequence, 600);
+}
+
+function _finishPostLoginSequence() {
+  const readyEl = document.getElementById('sessionReadyContainer');
+  if (readyEl) readyEl.style.display = 'none';
+}
+window._finishPostLoginSequence = _finishPostLoginSequence;
+
 async function startLogin() {
   const btn = document.getElementById('loginButton');
   setLoading(btn, true);
@@ -4187,28 +4294,28 @@ async function startLogin() {
 
       const userDisplayEl = document.getElementById("userDisplay");
       if (userDisplayEl) userDisplayEl.textContent = username;
-      const loginContainerEl = document.getElementById("loginContainer");
-      if (loginContainerEl) loginContainerEl.style.display = "none";
 
-      // ── Render immediately from local data so the UI appears without waiting ──
-      openSection('pocketFit');
-      window.renderWorkouts();
-      renderMacroTargets({ useFallback: true }); // show cached targets instantly
-      renderWeights();
-      renderCardio();
-      initCardioDateChip?.();
-      renderPosingTab();
-      renderCrossfitWorkouts();
-      loadTemplateDropdown();
-      loadProgramTemplates();
-      renderDailyMacroProgress();
-      if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
-      if (typeof window.initSessionContext === 'function') window.initSessionContext();
-      if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
-        loadProgramDropdown();
-        checkActiveProgram();
-      }
-      loadUserExercises();
+      // ── Render immediately from local data (hidden behind the loading screen) ──
+      _runPostLoginSequence(() => {
+        openSection('pocketFit');
+        window.renderWorkouts();
+        renderMacroTargets({ useFallback: true }); // show cached targets instantly
+        renderWeights();
+        renderCardio();
+        initCardioDateChip?.();
+        renderPosingTab();
+        renderCrossfitWorkouts();
+        loadTemplateDropdown();
+        loadProgramTemplates();
+        renderDailyMacroProgress();
+        if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+        if (typeof window.initSessionContext === 'function') window.initSessionContext();
+        if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
+          loadProgramDropdown();
+          checkActiveProgram();
+        }
+        loadUserExercises();
+      });
 
       // ── Background syncs — fire-and-forget so they don't delay the UI ────────
       Promise.resolve().then(async () => {

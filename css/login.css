@@ -295,3 +295,168 @@
 .login-pricing-link:hover {
   opacity: 1;
 }
+
+/* =============================================================
+   LOADING & SESSION-READY SCREENS
+   Shown between a successful sign-in and the home tab. Full-screen
+   overlays (not normal document flow) since they appear on top of
+   the app view, which is already rendering underneath by then.
+   ============================================================= */
+
+.login-loading-screen,
+.login-ready-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  box-sizing: border-box;
+  /* Solid base color first: unlike .login-screen (nothing renders before it),
+     these overlays sit on top of the already-rendered app, so the gradient's
+     translucent top stop must not let it bleed through. */
+  background-color: #080b0a;
+  background-image: radial-gradient(ellipse at top, rgba(30, 75, 55, 0.35) 0%, #080b0a 55%);
+  animation: pc-fadein 0.5s ease both;
+}
+
+.login-ready-screen {
+  gap: 14px;
+  animation-duration: 0.45s;
+  cursor: pointer;
+}
+
+/* ── Plate spinner ──────────────────────────────────────────── */
+
+.pc-spinner {
+  position: relative;
+  width: 236px;
+  height: 236px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pc-spinner-halo {
+  position: absolute;
+  width: 236px;
+  height: 236px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(95, 168, 126, 0.28) 0%, rgba(95, 168, 126, 0) 68%);
+  animation: pc-halo 3.2s ease-in-out infinite;
+}
+
+.pc-spinner-breathe {
+  width: 216px;
+  height: 216px;
+  animation: pc-breathe 3.2s ease-in-out infinite;
+}
+
+.pc-spinner-spin {
+  width: 100%;
+  height: 100%;
+  animation: pc-spin 4s linear infinite;
+}
+
+.pc-spinner-plate {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0 45.5%, transparent 46.5%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 0 45.5%, transparent 46.5%);
+  filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.55));
+}
+
+/* ── App name + cycling status ─────────────────────────────── */
+
+.pc-loading-name {
+  margin-top: 38px;
+  text-align: center;
+}
+
+.pc-loading-appname {
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-color, #e8f5e9);
+}
+
+.pc-loading-status {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--primary, #5fa87e);
+}
+
+/* ── Progress bar ───────────────────────────────────────────── */
+
+.pc-progress-track {
+  margin-top: 26px;
+  width: 220px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border-color, rgba(116, 138, 126, 0.20));
+  overflow: hidden;
+}
+
+.pc-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f8a63, #6fae8b);
+  transition: width 0.28s ease;
+  width: 0%;
+}
+
+.pc-progress-pct {
+  margin-top: 12px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--text-faint, #5a675f);
+}
+
+/* ── Session-ready view ────────────────────────────────────── */
+
+.pc-ready-kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--primary, #5fa87e);
+}
+
+.pc-ready-headline {
+  margin-top: 18px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-color, #e8f5e9);
+  text-align: center;
+  line-height: 1.15;
+}
+
+/* ── Shared keyframes ──────────────────────────────────────── */
+
+@keyframes pc-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pc-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+
+@keyframes pc-halo {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.06); }
+}
+
+@keyframes pc-fadein {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
