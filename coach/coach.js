@@ -12,7 +12,12 @@ const SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api
 // Firebase client SDK for one endpoint.
 const FIREBASE_API_KEY = 'AIzaSyCgZTztfMhwQdRfc4no_ZduDEfOv30gMcY';
 
-let _token = localStorage.getItem('coachToken') || null;
+// Session token lives under the same 'token' key firebase-auth.js's
+// hourly auto-refresh (watchTokenRefresh) writes to — this page shares one
+// Firebase session per browser/origin with the main app, same as every
+// other fetch in the codebase already does. '_username' stays coach-scoped
+// under its own key since it's just for display.
+let _token = localStorage.getItem('token') || null;
 let _username = localStorage.getItem('coachUser') || null;
 let _clients = [];
 let _activeFilter = 'all';
@@ -24,7 +29,12 @@ let _sidebarMode = 'clients';
 let _selectedLeadId = null;
 
 function authHeaders() {
-  return { Authorization: 'Bearer ' + _token, 'Content-Type': 'application/json' };
+  // Read localStorage fresh each call rather than the in-memory `_token`
+  // captured at login: firebase-auth.js's watchTokenRefresh silently
+  // rewrites this key roughly hourly (Firebase ID tokens expire that
+  // often) without notifying this module, so `_token` alone would go
+  // stale mid-session.
+  return { Authorization: 'Bearer ' + (localStorage.getItem('token') || _token), 'Content-Type': 'application/json' };
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -47,26 +57,25 @@ async function doCoachLogin() {
 
   if (!username || !password) { errorEl.textContent = 'Enter username and password.'; return; }
 
+  if (!window.firebaseAuth?.isAvailable()) {
+    errorEl.textContent = 'Sign-in is not available right now (Firebase not configured in this build).';
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Connecting…';
   errorEl.textContent = '';
 
   try {
-    const res = await fetch(SERVER_URL + '/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
+    const fb = await window.firebaseAuth.login({ usernameOrEmail: username, password });
 
-    if (!res.ok || !data.success) {
-      errorEl.textContent = data.error?.message || 'Invalid credentials.';
+    if (fb.needsVerification) {
+      errorEl.textContent = 'This account’s email isn’t verified yet — check your inbox for the verification link.';
       return;
     }
 
-    _token = data.token;
-    _username = data.username || username;
-    localStorage.setItem('coachToken', _token);
+    _token = fb.token;
+    _username = fb.username || username;
     localStorage.setItem('coachUser', _username);
 
     document.getElementById('loginGate').style.display = 'none';
@@ -74,8 +83,14 @@ async function doCoachLogin() {
     document.getElementById('headerUser').textContent = _username;
     loadClients();
     loadLeads();
-  } catch {
-    errorEl.textContent = 'Connection error — server may be starting up. Try again in 30s.';
+  } catch (err) {
+    // firebaseAuth.login() throws err.tryLegacy when no Firebase account
+    // exists for this username — that means it hasn't been migrated off
+    // Airtable yet. There's no reclaim UI on this page (see coach.js scope
+    // notes); point the person at the main app's sign-up flow instead.
+    errorEl.textContent = err?.tryLegacy
+      ? 'No migrated account found for that username. Use the main app’s Sign Up flow (with your existing password) to migrate this account first.'
+      : (err?.message || 'Invalid credentials.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Sign In';
@@ -139,7 +154,9 @@ async function doForgotPassword() {
 
 function doLogout() {
   _token = null; _username = null;
-  localStorage.removeItem('coachToken');
+  window.firebaseAuth?.logout?.();
+  localStorage.removeItem('token');
+  localStorage.removeItem('authToken');
   localStorage.removeItem('coachUser');
   location.reload();
 }
