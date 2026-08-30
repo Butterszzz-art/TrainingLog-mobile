@@ -143,17 +143,47 @@ function bulkAssignProgram() {
   document.body.appendChild(modal);
 }
 
-window._confirmBulkAssignProgram = function() {
+// PATCHes the real currentProgram/nutritionSummary fields on the client's
+// Firestore doc (server mirrors onto users/{uid}/coachAssignment for the
+// client's own view) — the actual delivery mechanism. Returns true/false.
+async function _patchCoachClient(clientId, fields) {
+  try {
+    const base = (window.SERVER_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${base}/api/coach/clients/${encodeURIComponent(clientId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(fields)
+    });
+    const data = await res.json();
+    return res.ok && data.success;
+  } catch {
+    return false;
+  }
+}
+
+window._confirmBulkAssignProgram = async function() {
   const idx = parseInt(document.getElementById('_bulkProgSel')?.value);
   const programs = _coachStore('coachPrograms_v1') || [];
   const prog = programs[idx];
   if (!prog) return;
 
+  // The richer local program object (exercises/days/notes) stays in the
+  // coach's own program library — the client's app only has a string field
+  // for their assigned program name, same schema coach/coach.js's Assign
+  // Program already writes to.
+  const ids = [..._bulkSelected];
+  const results = await Promise.all(ids.map(id => _patchCoachClient(id, { currentProgram: prog.name })));
+  const succeeded = results.filter(Boolean).length;
+
   const assignments = _coachStore('coachProgramAssignments_v1') || {};
-  _bulkSelected.forEach(id => { assignments[id] = { programId: prog.id, assignedAt: new Date().toISOString() }; });
+  ids.forEach((id, i) => { if (results[i]) assignments[id] = { programId: prog.id, assignedAt: new Date().toISOString() }; });
   _coachStore('coachProgramAssignments_v1', assignments);
+
   document.querySelector('.gdpr-modal-overlay')?.remove();
-  _showExportToast(`Program "${prog.name}" assigned to ${_bulkSelected.size} client(s)`);
+  _showExportToast(succeeded === ids.length
+    ? `Program "${prog.name}" assigned to ${succeeded} client(s)`
+    : `Assigned to ${succeeded} of ${ids.length} — some failed, try those individually`);
+  if (typeof renderCoachDashboard === 'function') renderCoachDashboard();
 };
 
 function bulkUpdateMacros() {
@@ -183,13 +213,29 @@ function bulkUpdateMacros() {
   document.body.appendChild(modal);
 }
 
-window._confirmBulkMacros = function() {
+window._confirmBulkMacros = async function() {
   const protein = document.getElementById('_bmProtein')?.value;
   const carbs   = document.getElementById('_bmCarbs')?.value;
   const fat     = document.getElementById('_bmFat')?.value;
-  const store   = _coachStore('coachNutritionAssignments_v1') || {};
+  if (!protein && !carbs && !fat) { document.querySelector('.gdpr-modal-overlay')?.remove(); return; }
 
-  _bulkSelected.forEach(id => {
+  // Per-training/rest-day breakdown stays local (no server field for that
+  // granular a plan — see coach/coach.js's saveClientMacros for the same
+  // tradeoff); the summary string that reaches the client via
+  // nutritionSummary is what's real here.
+  const parts = [];
+  if (protein) parts.push(`${protein}g P`);
+  if (carbs) parts.push(`${carbs}g C`);
+  if (fat) parts.push(`${fat}g F`);
+  const summary = parts.join(' / ');
+
+  const store = _coachStore('coachNutritionAssignments_v1') || {};
+  const ids = [..._bulkSelected];
+  const results = await Promise.all(ids.map(id => _patchCoachClient(id, { nutritionSummary: summary })));
+  const succeeded = results.filter(Boolean).length;
+
+  ids.forEach((id, i) => {
+    if (!results[i]) return;
     const existing = store[id] || {};
     const days = existing.days || { training: {}, rest: {} };
     if (protein) { days.training.protein = +protein; days.rest.protein = Math.round(+protein * 0.85); }
@@ -198,8 +244,12 @@ window._confirmBulkMacros = function() {
     store[id] = { ...existing, days, updatedAt: new Date().toISOString() };
   });
   _coachStore('coachNutritionAssignments_v1', store);
+
   document.querySelector('.gdpr-modal-overlay')?.remove();
-  _showExportToast(`Macros updated for ${_bulkSelected.size} client(s)`);
+  _showExportToast(succeeded === ids.length
+    ? `Macros updated for ${succeeded} client(s)`
+    : `Updated ${succeeded} of ${ids.length} — some failed, try those individually`);
+  if (typeof renderCoachDashboard === 'function') renderCoachDashboard();
 };
 
 function bulkExportCSV() {
@@ -721,38 +771,31 @@ window._deleteProgIdx = function(i) {
    4. MESSAGING & FEEDBACK
    ══════════════════════════════════════════════════════════════ */
 
+// Notes are real now: POST/GET /api/coach/clients/:id/notes (server mirrors
+// each one onto the client's own users/{uid}/coachNotes so their app can
+// read it — see traininglog-backend-sync). This used to be pure
+// coachMessages_v1 localStorage on the coach's own browser, including a
+// fake "athlete" sender/read-receipt model — there was never an athlete-side
+// UI that could actually send a reply, so that two-way illusion is gone
+// along with the local-only storage. What's here is a real, one-way
+// coach → client note thread.
 let _activeThreadClientId = null;
+let _serverThreads = {}; // clientId -> notes[] | null (null = load error)
 
-function _getMsgStore() {
-  return _coachStore('coachMessages_v1') || {};
-}
-function _saveMsgStore(store) {
-  _coachStore('coachMessages_v1', store);
-}
 function _getThread(clientId) {
-  return _getMsgStore()[clientId] || [];
+  return _serverThreads[clientId] || [];
 }
-function _addMessage(clientId, text, type, fromCoach) {
-  const store  = _getMsgStore();
-  const thread = store[clientId] || [];
-  thread.push({
-    id: Date.now(),
-    text,
-    type: type || 'note',
-    from: fromCoach ? 'coach' : 'athlete',
-    ts:   new Date().toISOString(),
-    read: fromCoach,
-  });
-  store[clientId] = thread;
-  _saveMsgStore(store);
-}
-function _markThreadRead(clientId) {
-  const store = _getMsgStore();
-  (store[clientId] || []).forEach(m => { m.read = true; });
-  _saveMsgStore(store);
-}
-function _unreadCount(clientId) {
-  return _getThread(clientId).filter(m => !m.read && m.from === 'athlete').length;
+
+async function _loadThreadFromServer(clientId) {
+  try {
+    const base = (window.SERVER_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${base}/api/coach/clients/${encodeURIComponent(clientId)}/notes`, { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+    _serverThreads[clientId] = Array.isArray(data.notes) ? data.notes.slice().reverse() : [];
+  } catch {
+    _serverThreads[clientId] = null;
+  }
 }
 
 function renderCoachMessaging() {
@@ -763,14 +806,12 @@ function renderCoachMessaging() {
 
   const clientListHTML = clients.length
     ? clients.map(c => {
-        const unread = _unreadCount(c.id);
         const initials = c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
         return `
           <div class="coach-client-list-item${_activeThreadClientId === c.id ? ' active' : ''}"
                onclick="openMessageThread('${c.id}')" data-client-id="${c.id}">
             <div class="coach-client-list-avatar">${initials}</div>
             <span>${_escH(c.name)}</span>
-            ${unread ? `<span class="coach-client-unread">${unread}</span>` : ''}
           </div>`;
       }).join('')
     : '<div style="padding:12px;font-size:0.82rem;color:var(--secondary-text);">No clients yet.</div>';
@@ -812,17 +853,23 @@ function renderCoachMessaging() {
 function _buildThreadHTML(clientId) {
   const clients = (window.coachDashboardState?.clients) || [];
   const client  = clients.find(c => c.id === clientId);
-  const thread  = _getThread(clientId);
-  _markThreadRead(clientId);
+  const thread  = _serverThreads[clientId];
 
-  const msgs = thread.length
-    ? thread.map(m => `
-        <div class="coach-message from-${m.from}">
-          ${m.type !== 'note' ? `<div class="coach-msg-tag ${m.type}">${m.type}</div>` : ''}
+  let msgs;
+  if (thread === null) {
+    msgs = '<div style="text-align:center;color:var(--danger,#c0392b);font-size:0.82rem;padding:20px 0;">Couldn\'t load messages — check your connection.</div>';
+  } else if (!thread.length) {
+    msgs = '<div style="text-align:center;color:var(--secondary-text);font-size:0.82rem;padding:20px 0;">No messages yet. Send the first note!</div>';
+  } else {
+    msgs = thread.map(m => {
+      const ms = m.createdAt?._seconds ? m.createdAt._seconds * 1000 : m.createdAt;
+      return `
+        <div class="coach-message from-coach">
           <div>${_escH(m.text)}</div>
-          <div class="coach-message-meta">${new Date(m.ts).toLocaleString()}</div>
-        </div>`).join('')
-    : '<div style="text-align:center;color:var(--secondary-text);font-size:0.82rem;padding:20px 0;">No messages yet. Send the first note!</div>';
+          <div class="coach-message-meta">${ms ? new Date(ms).toLocaleString() : ''}</div>
+        </div>`;
+    }).join('');
+  }
 
   return `
     <div class="coach-thread">
@@ -840,31 +887,54 @@ function _buildThreadHTML(clientId) {
     </div>`;
 }
 
-window.openMessageThread = function(clientId) {
+window.openMessageThread = async function(clientId) {
   _activeThreadClientId = clientId;
   const threadContainer = document.getElementById('coachThreadContainer');
-  if (threadContainer) threadContainer.innerHTML = _buildThreadHTML(clientId);
-  // Update active state in list
+  if (threadContainer) threadContainer.innerHTML = '<div class="coach-thread"><p style="padding:20px;text-align:center;color:var(--secondary-text);font-size:0.85rem;">Loading…</p></div>';
   document.querySelectorAll('.coach-client-list-item').forEach(el =>
     el.classList.toggle('active', el.dataset.clientId === clientId)
   );
-  // Clear unread badge
-  const item = document.querySelector(`.coach-client-list-item[data-client-id="${clientId}"] .coach-client-unread`);
-  if (item) item.remove();
+
+  await _loadThreadFromServer(clientId);
+  if (_activeThreadClientId === clientId && threadContainer) {
+    threadContainer.innerHTML = _buildThreadHTML(clientId);
+  }
 };
 
-window.sendCoachMessage = function() {
-  const text = document.getElementById('msgText')?.value.trim();
+window.sendCoachMessage = async function() {
+  const textEl = document.getElementById('msgText');
+  const text = textEl?.value.trim();
   const type = document.getElementById('msgType')?.value || 'note';
   if (!text || !_activeThreadClientId) return;
-  _addMessage(_activeThreadClientId, text, type, true);
-  const msgTextEl = document.getElementById('msgText');
-  if (msgTextEl) msgTextEl.value = '';
-  const threadContainer = document.getElementById('coachThreadContainer');
-  if (threadContainer) threadContainer.innerHTML = _buildThreadHTML(_activeThreadClientId);
-  // Scroll to bottom
-  const msgs = document.getElementById('threadMessages');
-  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  const finalText = type !== 'note' ? `[${type.toUpperCase()}] ${text}` : text;
+  const clientId = _activeThreadClientId;
+
+  const sendBtn = document.querySelector('.coach-send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+
+  try {
+    const base = (window.SERVER_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${base}/api/coach/clients/${encodeURIComponent(clientId)}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ text: finalText })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      if (window.showToast) window.showToast(data?.error?.message || 'Could not send message.');
+      return;
+    }
+    if (textEl) textEl.value = '';
+    await _loadThreadFromServer(clientId);
+    const threadContainer = document.getElementById('coachThreadContainer');
+    if (threadContainer) threadContainer.innerHTML = _buildThreadHTML(clientId);
+    const msgs = document.getElementById('threadMessages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  } catch {
+    if (window.showToast) window.showToast('Connection error — try again.');
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+  }
 };
 
 window._saveNotif = function(key, val) {
@@ -1179,7 +1249,7 @@ window.deleteClientData = function(clientId) {
   const client  = clients.find(c => c.id === clientId);
   window.showConfirm(`Permanently delete all data for ${client?.name || clientId}? This cannot be undone.`, { danger: true }).then(ok => {
     if (!ok) return;
-    const msgStore = _getMsgStore();         delete msgStore[clientId];         _saveMsgStore(msgStore);
+    delete _serverThreads[clientId]; // local cache only — notes now live server-side, not covered by this local-data wipe
     const asnStore = _coachStore('coachProgramAssignments_v1') || {}; delete asnStore[clientId]; _coachStore('coachProgramAssignments_v1', asnStore);
     const nutStore = _coachStore('coachNutritionAssignments_v1') || {}; delete nutStore[clientId]; _coachStore('coachNutritionAssignments_v1', nutStore);
     const gdprStore = _getGdprStore(); delete gdprStore[clientId]; _saveGdprStore(gdprStore);
@@ -1192,7 +1262,8 @@ window.exportAllCoachData = function() {
   const data = {
     exportedAt:      new Date().toISOString(),
     programs:        _coachStore('coachPrograms_v1'),
-    messages:        _getMsgStore(),
+    // Messages/notes live server-side now (see /api/coach/clients/:id/notes)
+    // — not local data, so not part of this local-export snapshot.
     programAssign:   _coachStore('coachProgramAssignments_v1'),
     nutritionAssign: _coachStore('coachNutritionAssignments_v1'),
     gdprConsents:    _getGdprStore(),

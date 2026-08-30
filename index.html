@@ -3166,6 +3166,13 @@
 
   <div id="settingsFormContainer" class="panel"></div>
 
+  <!-- Your Coach: pending invite (Accept), linked coach + whatever they've
+       assigned (program/macro summary), and their notes to you. Populated
+       by renderYourCoachSection() — real backend data, hidden entirely if
+       there's nothing to show (no invite, no coach, no notes) rather than
+       rendering an empty shell. -->
+  <div id="yourCoachSection" class="export-section" style="margin-top:16px;display:none;"></div>
+
   <!-- Knowledge Base Admin Section -->
   <div id="knowledgeBaseSection" class="export-section" style="margin-top:16px;">
     <p class="export-section-title"><span class="ui-icon" data-icon="bookOpen"></span> PT Knowledge Base</p>
@@ -10344,75 +10351,13 @@ function formatCoachDate(dateLike) {
 
 const coachDashboardState = {
   clients: [],
-  source: 'demo',
+  source: 'unloaded', // real values are 'backend' or 'error', set once loadCoachClients() resolves
   selectedClientId: null,
   isBound: false
 };
 // Expose on window so coaching-enhanced.js (external script) can read it.
 // `const` at the top level of an inline <script> is NOT a property of window.
 window.coachDashboardState = coachDashboardState;
-
-function getCoachDemoClients() {
-  return [
-    {
-      id: 'demo-a1',
-      name: 'Maya Thompson',
-      archetype: 'Bodybuilder',
-      currentPhase: 'Contest Prep · Week 9',
-      lastCheckInDate: '2026-03-25',
-      compliancePercent: 91,
-      primaryStatusMetric: 'Bodyweight trend stable',
-      alertStatus: 'ok',
-      athleteInfo: { height: `5'5"`, divisionClass: 'Bikini' },
-      currentBodyweight: 131.8,
-      workoutsLoggedThisWeek: 5,
-      cardioMissedSessions: 0,
-      weeklyWeightChangePercent: -0.45,
-      latestCheckInSummary: 'Great energy and stable waist. Coach held macros steady.',
-      recentProgressSummary: 'Down 0.6 lb over 7 days with improved conditioning photos.',
-      currentProgramSummary: '5-day body-part split with daily posing and 4 cardio sessions.',
-      currentNutritionSummary: '1,980 kcal · 155P / 210C / 58F'
-    },
-    {
-      id: 'demo-a2',
-      name: 'Eric Ramirez',
-      archetype: 'Powerlifter',
-      currentPhase: 'Strength Peak · Week 3',
-      lastCheckInDate: '2026-03-23',
-      compliancePercent: 76,
-      primaryStatusMetric: 'Bench fatigue elevated',
-      alertStatus: 'watch',
-      athleteInfo: { height: `5'10"`, divisionClass: '83kg Class' },
-      currentBodyweight: 82.3,
-      workoutsLoggedThisWeek: 3,
-      cardioMissedSessions: 1,
-      weeklyWeightChangePercent: 0.85,
-      latestCheckInSummary: 'Sleep dipped to 5/10; plan adjusted with lower accessory volume.',
-      recentProgressSummary: 'Squat e1RM trending up; bench flat over 2 weeks.',
-      currentProgramSummary: '4-day SBD peak with top singles + backoff triples.',
-      currentNutritionSummary: '3,120 kcal · 210P / 365C / 88F'
-    },
-    {
-      id: 'demo-a3',
-      name: 'Jules Parker',
-      archetype: 'Hybrid',
-      currentPhase: 'Base Build · Week 5',
-      lastCheckInDate: '2026-03-20',
-      compliancePercent: 58,
-      primaryStatusMetric: 'Missed 2 cardio targets',
-      alertStatus: 'alert',
-      athleteInfo: { height: `6'0"`, divisionClass: 'General Fitness' },
-      currentBodyweight: 188.4,
-      workoutsLoggedThisWeek: 0,
-      cardioMissedSessions: 3,
-      weeklyWeightChangePercent: -1.42,
-      latestCheckInSummary: 'Reported work stress spike and reduced training consistency.',
-      recentProgressSummary: 'Bodyweight stable, but conditioning pace has regressed.',
-      currentProgramSummary: '3 lifting + 3 conditioning sessions weekly.',
-      currentNutritionSummary: '2,640 kcal target with flexible carb cycling'
-    }
-  ];
-}
 
 function normalizeCoachClientRecord(client = {}) {
   const pct = Number(client.compliancePercent);
@@ -10432,22 +10377,17 @@ function normalizeCoachClientRecord(client = {}) {
     recentProgressSummary: client.recentProgressSummary || client.progressSummary || '',
     currentProgramSummary: client.currentProgramSummary || client.programSummary || '',
     currentNutritionSummary: client.currentNutritionSummary || client.nutritionSummary || '',
-    latestCheckIn: client.latestCheckInEntry || client.latestCheckInData || null
+    latestCheckIn: client.latestCheckInEntry || client.latestCheckInData || null,
+    status: client.status || 'active'
   };
 }
 
-function getManualCoachClients() {
-  try { return JSON.parse(localStorage.getItem('coachManualClients_v1')) || []; } catch { return []; }
-}
-
-function saveManualCoachClients(list) {
-  localStorage.setItem('coachManualClients_v1', JSON.stringify(list));
-}
-
+// Real roster load only — no demo/fabricated fallback and no local-only
+// "manual" client list (both used to make it look like real clients existed
+// when they didn't; see openAddClientModal/submitAddClient below, which now
+// calls the real invite endpoint instead of writing a fake local record).
 async function loadCoachClients() {
   const coachId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'coach';
-  const fallback = getCoachDemoClients().map(normalizeCoachClientRecord);
-  const manual = getManualCoachClients().map(normalizeCoachClientRecord);
   const base = (window.SERVER_URL || '').replace(/\/$/, '');
   const endpoint = `${base}/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
 
@@ -10455,23 +10395,12 @@ async function loadCoachClients() {
     const response = await fetch(endpoint, { headers: getAuthHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
-    const list = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.clients)
-        ? payload.clients
-        : [];
-
-    if (!list.length) {
-      return { clients: [...manual, ...fallback], source: 'demo' };
-    }
-
-    return {
-      clients: [...manual, ...list.map(normalizeCoachClientRecord)],
-      source: 'backend'
-    };
+    if (!payload.success) throw new Error(payload?.error?.message || 'Request failed');
+    const list = Array.isArray(payload.clients) ? payload.clients : [];
+    return { clients: list.map(normalizeCoachClientRecord), source: 'backend' };
   } catch (error) {
-    console.info('[CoachDashboard] falling back to demo roster data.', error);
-    return { clients: [...manual, ...fallback], source: 'demo' };
+    console.error('[CoachDashboard] Failed to load clients:', error);
+    return { clients: [], source: 'error' };
   }
 }
 
@@ -11185,7 +11114,7 @@ async function requestCoachDraftMessage(clientId) {
     const timer = setTimeout(() => controller.abort(), 30000);
     const res = await fetch(`${serverUrl}/api/ai/coach-draft-message`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
         clientName: safeClient.name,
         archetype: safeClient.archetype,
@@ -11306,7 +11235,9 @@ function renderCoachDashboardView() {
     : 0;
   const flaggedCount = clients.filter((client) => getCoachAlertMeta(deriveCoachAlertStatus(client)).className === 'is-alert').length;
   const watchCount = clients.filter((client) => getCoachAlertMeta(deriveCoachAlertStatus(client)).className === 'is-watch').length;
-  const dataSourceLabel = coachDashboardState.source === 'backend' ? 'Backend relationship data' : 'Local demo fallback';
+  const dataSourceLabel = coachDashboardState.source === 'backend'
+    ? (clients.length ? 'Backend relationship data' : 'No clients yet — use + Add Client to invite one')
+    : 'Couldn\'t load your roster — check your connection and try again';
 
   container.innerHTML = selectedClient
     ? renderCoachClientDetail(selectedClient)
@@ -11397,6 +11328,13 @@ window.closeAddClientModal = function() {
   document.getElementById('addClientModalOverlay')?.remove();
 };
 
+// "Add Client" sends a real invite (POST /api/coach/clients/invite) to an
+// existing Pocket Coach account by username — it used to fabricate a local,
+// unlinked record instead (name/email/archetype typed by the coach, saved
+// only to this browser's localStorage, never reaching the client at all).
+// The real invite endpoint only takes a username: archetype/phase/etc. are
+// the client's own real data once they accept, not something the coach can
+// set sight-unseen before that.
 window.openAddClientModal = function() {
   closeAddClientModal();
   const modal = document.createElement('div');
@@ -11404,64 +11342,151 @@ window.openAddClientModal = function() {
   modal.id = 'addClientModalOverlay';
   modal.innerHTML = `
     <div class="gdpr-modal">
-      <h3>Add New Client</h3>
-      <p>Add someone to your roster to start tracking their check-ins and assigning programs.</p>
+      <h3>Invite a Client</h3>
+      <p>They must already have a Pocket Coach account. This sends a real invite — they'll appear in your roster once they accept it in their own app.</p>
       <div class="add-client-form">
-        <label for="addClientName">Name *</label>
-        <input type="text" id="addClientName" placeholder="Client name" maxlength="80">
-        <label for="addClientEmail">Email or username</label>
-        <input type="text" id="addClientEmail" placeholder="client@example.com">
-        <label for="addClientArchetype">Archetype</label>
-        <select id="addClientArchetype">
-          <option value="Bodybuilder">Bodybuilder</option>
-          <option value="Powerlifter">Powerlifter</option>
-          <option value="Hybrid">Hybrid</option>
-          <option value="General" selected>General Fitness</option>
-        </select>
-        <label for="addClientPhase">Current phase</label>
-        <input type="text" id="addClientPhase" placeholder="e.g. Base Build · Week 1">
+        <label for="addClientUsername">Pocket Coach username *</label>
+        <input type="text" id="addClientUsername" placeholder="their-username" maxlength="64">
       </div>
       <div class="gdpr-modal-actions">
         <button class="gdpr-export-btn" onclick="closeAddClientModal()">Cancel</button>
-        <button class="gdpr-save-btn" onclick="submitAddClient()">Add Client</button>
+        <button class="gdpr-save-btn" onclick="submitAddClient()">Send Invite</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
-  document.getElementById('addClientName')?.focus();
+  document.getElementById('addClientUsername')?.focus();
 };
 
-window.submitAddClient = function() {
-  const nameInput = document.getElementById('addClientName');
-  const name = nameInput?.value.trim() || '';
-  if (!name) {
-    if (window.showToast) window.showToast('Client name is required.');
-    nameInput?.focus();
+window.submitAddClient = async function() {
+  const usernameInput = document.getElementById('addClientUsername');
+  const username = usernameInput?.value.trim() || '';
+  if (!username) {
+    if (window.showToast) window.showToast('Enter the client\'s Pocket Coach username.');
+    usernameInput?.focus();
     return;
   }
-  const email = document.getElementById('addClientEmail')?.value.trim() || '';
-  const archetype = document.getElementById('addClientArchetype')?.value || 'General';
-  const currentPhase = document.getElementById('addClientPhase')?.value.trim() || 'Phase not set';
 
-  const record = normalizeCoachClientRecord({
-    id: `manual-${Date.now().toString(36)}`,
-    name,
-    email,
-    archetype,
-    currentPhase,
-    alertStatus: 'ok',
-    compliancePercent: 0,
-    primaryStatusMetric: 'No check-ins yet'
-  });
+  const btn = document.querySelector('#addClientModalOverlay .gdpr-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
-  const manual = getManualCoachClients();
-  manual.unshift(record);
-  saveManualCoachClients(manual);
-
-  coachDashboardState.clients = [record, ...coachDashboardState.clients.filter((c) => c.id !== record.id)];
-  closeAddClientModal();
-  renderCoachDashboardView();
-  if (window.showToast) window.showToast(`${name} added to your roster.`);
+  try {
+    const base = (window.SERVER_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${base}/api/coach/clients/invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ clientUsername: username })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      if (window.showToast) window.showToast(data?.error?.message || 'Could not send invite.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Send Invite'; }
+      return;
+    }
+    closeAddClientModal();
+    if (window.showToast) window.showToast(`Invite sent to ${username} — they\'ll appear here once they accept.`);
+    if (typeof renderCoachDashboard === 'function') renderCoachDashboard();
+  } catch {
+    if (window.showToast) window.showToast('Connection error — try again.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Send Invite'; }
+  }
 };
+
+/* ── "Your Coach" — the athlete-side half of the invite/assignment/notes
+   flow above. This never existed before: coach.js/coaching-enhanced.js
+   could send invites, assign programs, and write notes, but there was no
+   UI anywhere for the recipient to see or act on any of it. Lives in
+   Settings; hidden entirely if there's nothing to show. ────────────────── */
+
+async function renderYourCoachSection() {
+  const section = document.getElementById('yourCoachSection');
+  if (!section || !localStorage.getItem('token')) return;
+
+  const base = (window.SERVER_URL || '').replace(/\/$/, '');
+  const headers = getAuthHeaders();
+
+  const fetchJson = async (path) => {
+    try {
+      const res = await fetch(`${base}${path}`, { headers });
+      const data = await res.json();
+      return (res.ok && data.success) ? data : null;
+    } catch { return null; }
+  };
+
+  const [invitesRes, assignmentRes, notesRes] = await Promise.all([
+    fetchJson('/api/client/coach-invites'),
+    fetchJson('/api/client/coach-assignment'),
+    fetchJson('/api/client/coach-notes')
+  ]);
+
+  // All three failed outright (not just empty) — likely not a migrated
+  // Firebase account yet, or logged out mid-request. Say nothing rather
+  // than show three separate error banners for one underlying cause.
+  if (!invitesRes && !assignmentRes && !notesRes) { section.style.display = 'none'; return; }
+
+  const invites = invitesRes?.invites || [];
+  const pending = invites.filter(i => i.status === 'pending');
+  const active = invites.filter(i => i.status === 'active');
+  const assignments = assignmentRes?.assignments || [];
+  const notes = notesRes?.notes || [];
+
+  if (!pending.length && !active.length && !notes.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const pendingHtml = pending.map(inv => `
+    <div class="coach-invite-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-color, rgba(0,0,0,0.08));">
+      <span>Coach <strong>${escapeHtml(inv.coachUsername)}</strong> invited you</span>
+      <button type="button" onclick="acceptCoachInvite('${escapeHtml(inv.coachUsername)}')" style="width:auto;margin:0;padding:8px 16px;">Accept</button>
+    </div>`).join('');
+
+  const activeHtml = active.map(inv => {
+    const asn = assignments.find(a => a.coachUsername === inv.coachUsername);
+    return `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border-color, rgba(0,0,0,0.08));">
+      <div>Coached by <strong>${escapeHtml(inv.coachUsername)}</strong></div>
+      ${asn?.currentProgram ? `<div style="font-size:0.85rem;color:var(--secondary-text);margin-top:4px;">Program: ${escapeHtml(asn.currentProgram)}</div>` : ''}
+      ${asn?.nutritionSummary ? `<div style="font-size:0.85rem;color:var(--secondary-text);margin-top:2px;">Macros: ${escapeHtml(asn.nutritionSummary)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  const notesHtml = notes.length ? notes.slice(0, 10).map(n => {
+    const ms = n.createdAt?._seconds ? n.createdAt._seconds * 1000 : n.createdAt;
+    const d = ms ? new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+    <div style="padding:8px 0;border-bottom:1px solid var(--border-color, rgba(0,0,0,0.08));">
+      <div style="font-size:0.72rem;color:var(--secondary-text);">${escapeHtml(d)}${n.coachUsername ? ` · ${escapeHtml(n.coachUsername)}` : ''}</div>
+      <div style="font-size:0.88rem;margin-top:2px;">${escapeHtml(n.text)}</div>
+    </div>`;
+  }).join('') : '';
+
+  section.innerHTML = `
+    <p class="export-section-title"><span class="ui-icon" data-icon="user"></span> Your Coach</p>
+    ${pendingHtml}
+    ${activeHtml}
+    ${notesHtml ? `<p style="font-size:0.75rem;font-weight:600;color:var(--secondary-text);margin:12px 0 4px;">Notes from your coach</p>${notesHtml}` : ''}
+  `;
+}
+
+window.acceptCoachInvite = async function(coachUsername) {
+  try {
+    const base = (window.SERVER_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${base}/api/coach/clients/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ coachUsername })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      if (window.showToast) window.showToast(data?.error?.message || 'Could not accept invite.');
+      return;
+    }
+    if (window.showToast) window.showToast(`You're now linked with ${coachUsername}.`);
+    renderYourCoachSection();
+  } catch {
+    if (window.showToast) window.showToast('Connection error — try again.');
+  }
+};
+
+document.addEventListener('DOMContentLoaded', renderYourCoachSection);
 
 /* ── Check-in sub-tab switcher ──────────────────────────────── */
 function switchCheckInTab(panel) {
@@ -14081,7 +14106,7 @@ async function runPlateauCheck(username) {
     const timer = setTimeout(() => controller.abort(), 20000);
     const res = await fetch(`${serverUrl}/api/ai/plateau-check`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ recentLogs, bodyweightHistory, trainingMode, recentPerformanceScores }),
       signal: controller.signal,
     });
@@ -17430,7 +17455,7 @@ async function generateAiProfileSummary() {
   try {
     const resp = await fetch((window.SERVER_URL || '') + '/api/ai/profile-summary', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload),
     });
 
@@ -17917,7 +17942,7 @@ window.renderSessionHistory = renderSessionHistory;
     try {
       const resp = await fetch(serverUrl + '/api/ai/sleep-insight', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ sleepLog: log, archetype }),
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -19397,7 +19422,7 @@ window.renderMeetPrep = renderMeetPrep;
 
     fetch(serverUrl + '/api/ai/generate-program', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload),
       signal: controller.signal,
     }).then(function (res) {
