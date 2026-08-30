@@ -27,6 +27,7 @@ let _bulkSelected = new Set();
 let _leads = [];
 let _sidebarMode = 'clients';
 let _selectedLeadId = null;
+let _clientsLoadError = false;
 
 function authHeaders() {
   // Read localStorage fresh each call rather than the in-memory `_token`
@@ -166,33 +167,25 @@ function doLogout() {
 async function loadClients() {
   const listEl = document.getElementById('clientList');
   listEl.innerHTML = '<div class="client-list-loading">Loading clients…</div>';
+  _clientsLoadError = false;
 
   try {
     const res = await fetch(SERVER_URL + '/api/coach/clients?coachId=' + encodeURIComponent(_username), {
       headers: authHeaders(),
     });
     const data = await res.json();
-    if (data.success && Array.isArray(data.clients) && data.clients.length) {
-      _clients = data.clients;
-    } else {
-      _clients = getDemoClients();
-    }
+    if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+    // A genuinely empty roster is a real, honest state — render it as such
+    // (see renderClientList/renderWorkspace) rather than papering over it
+    // with fabricated demo clients, which is what this used to do.
+    _clients = Array.isArray(data.clients) ? data.clients : [];
   } catch {
-    _clients = getDemoClients();
+    _clients = [];
+    _clientsLoadError = true;
   }
 
   renderClientList();
   renderWorkspace();
-}
-
-function getDemoClients() {
-  return [
-    { id: 'demo1', clientName: 'Sarah Mitchell', email: 'sarah@test.com', status: 'active', trainingMode: 'bodybuilding', currentProgram: 'PPL Hypertrophy', lastCheckIn: '2026-06-23', alertStatus: 'ok', currentNutritionSummary: '2200 kcal · 160g P · 220g C · 65g F', latestCheckInData: { sleep: 8, energy: 7, stress: 3, hunger: 5, trainingPerformance: 8, bodyweight: 62.5 } },
-    { id: 'demo2', clientName: 'James Cooper', email: 'james@test.com', status: 'active', trainingMode: 'powerlifting', currentProgram: 'Peaking Block', lastCheckIn: '2026-06-22', alertStatus: 'action', currentNutritionSummary: '3200 kcal · 200g P · 350g C · 90g F', latestCheckInData: { sleep: 5, energy: 4, stress: 8, hunger: 7, trainingPerformance: 4, bodyweight: 95.2 } },
-    { id: 'demo3', clientName: 'Mia Johnson', email: 'mia@test.com', status: 'active', trainingMode: 'hybrid', currentProgram: 'General Fitness', lastCheckIn: '2026-06-21', alertStatus: 'watch', currentNutritionSummary: '1800 kcal · 130g P · 180g C · 55g F', latestCheckInData: { sleep: 6, energy: 6, stress: 5, hunger: 4, trainingPerformance: 6, bodyweight: 58.0 } },
-    { id: 'demo4', clientName: 'Liam Brown', email: 'liam@test.com', status: 'active', trainingMode: 'bodybuilding', currentProgram: 'Arm Specialisation', lastCheckIn: '2026-06-24', alertStatus: 'ok', currentNutritionSummary: '2800 kcal · 180g P · 300g C · 75g F', latestCheckInData: { sleep: 9, energy: 8, stress: 2, hunger: 6, trainingPerformance: 9, bodyweight: 84.3 } },
-    { id: 'demo5', clientName: 'Emma Davis', email: 'emma@test.com', status: 'active', trainingMode: 'recreational', currentProgram: 'Full Body 3x', lastCheckIn: '2026-06-20', alertStatus: 'watch', currentNutritionSummary: '2000 kcal · 140g P · 200g C · 60g F', latestCheckInData: { sleep: 7, energy: 5, stress: 6, hunger: 8, trainingPerformance: 5, bodyweight: 70.1 } },
-  ];
 }
 
 // ── Render client list ────────────────────────────────────────
@@ -207,7 +200,11 @@ function renderClientList() {
   }
 
   if (!filtered.length) {
-    listEl.innerHTML = '<div class="client-list-loading">No clients match.</div>';
+    listEl.innerHTML = '<div class="client-list-loading">'
+      + (_clientsLoadError ? 'Couldn\'t load your clients — check your connection and try again.'
+        : _clients.length ? 'No clients match.'
+        : 'No clients yet — invite one from a lead, or share your invite flow, to get started.')
+      + '</div>';
     return;
   }
 
@@ -315,7 +312,11 @@ function renderWorkspace() {
       '<button class="cta-capsule ws-priority-cta" onclick="selectClient(\'' + priority.id + '\')">Open client file</button>' +
       '</div>';
   } else {
-    priorityEl.innerHTML = '<div class="pod pod--hero ws-priority-card"><p class="ws-empty-note">Everyone\'s on track — no flagged clients right now.</p></div>';
+    priorityEl.innerHTML = '<div class="pod pod--hero ws-priority-card"><p class="ws-empty-note">'
+      + (_clientsLoadError ? 'Couldn\'t load your clients — check your connection and try again.'
+        : _clients.length ? 'Everyone\'s on track — no flagged clients right now.'
+        : 'No clients yet.')
+      + '</p></div>';
   }
 
   // Roster table — every client, sorted by alert severity then name.
@@ -427,13 +428,23 @@ function toggleBulk(id) {
   renderClientList();
 }
 
-function bulkMessage() {
+async function bulkMessage() {
   const clients = _clients.filter(c => _bulkSelected.has(c.id));
   const names = clients.map(c => c.clientName).join(', ');
   const msg = prompt('Message to send to ' + clients.length + ' clients:\n(' + names + ')');
   if (!msg) return;
-  clients.forEach(c => saveCoachNote(c.id, msg));
-  alert('Message sent to ' + clients.length + ' clients.');
+
+  const results = await Promise.all(clients.map(c =>
+    fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(c.id) + '/notes', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ text: msg })
+    }).then(r => r.json()).then(d => d.success).catch(() => false)
+  ));
+  const sent = results.filter(Boolean).length;
+  alert(sent === clients.length
+    ? 'Message sent to ' + sent + ' client' + (sent === 1 ? '' : 's') + '.'
+    : sent + ' of ' + clients.length + ' sent — some failed, try those individually.');
   _bulkSelected.clear();
   document.getElementById('bulkBar').style.display = 'none';
   renderClientList();
@@ -639,11 +650,35 @@ function getCoachPrograms() {
   try { return JSON.parse(localStorage.getItem('coachPrograms_' + _username) || '[]'); } catch { return []; }
 }
 
-function assignProgram() {
+// Writes real fields on the client's Firestore doc (PATCH /api/coach/clients/:id)
+// — mirrored server-side onto the client's own coachAssignment view, so this
+// is the actual delivery mechanism, not a local-only stand-in. Returns
+// whether it succeeded so callers can decide what to do next.
+async function patchClient(clientId, fields) {
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId), {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify(fields)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert(data?.error?.message || 'Could not save — try again.');
+      return false;
+    }
+    return true;
+  } catch {
+    alert('Connection error — try again.');
+    return false;
+  }
+}
+
+async function assignProgram() {
   const sel = document.getElementById('coachProgramSelect');
   if (!sel) return;
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
+  if (!(await patchClient(client.id, { currentProgram: sel.value }))) return;
   client.currentProgram = sel.value;
   alert('Program "' + sel.value + '" assigned to ' + client.clientName);
   renderProgram(client);
@@ -717,7 +752,12 @@ function getClientMacros(clientId) {
   try { return JSON.parse(localStorage.getItem('coachMacros_' + clientId) || '{}'); } catch { return {}; }
 }
 
-function saveClientMacros() {
+// The detailed breakdown (training/rest-day cals, high/low-carb days, free
+// notes) stays local — there's no server field for that granular a plan.
+// What's real: the summary string this composes into is PATCHed as the
+// client doc's `nutritionSummary`, the same field GET /api/coach/clients
+// already reads back, so this is what actually reaches the client's app.
+async function saveClientMacros() {
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
   const macros = {
@@ -733,7 +773,9 @@ function saveClientMacros() {
     updatedAt: new Date().toISOString(),
   };
   localStorage.setItem('coachMacros_' + client.id, JSON.stringify(macros));
-  client.currentNutritionSummary = macros.calories + ' kcal · ' + macros.protein + 'g P · ' + macros.carbs + 'g C · ' + macros.fat + 'g F';
+  const summary = macros.calories + ' kcal · ' + macros.protein + 'g P · ' + macros.carbs + 'g C · ' + macros.fat + 'g F';
+  if (!(await patchClient(client.id, { nutritionSummary: summary }))) return;
+  client.currentNutritionSummary = summary;
   alert('Macro plan saved for ' + client.clientName);
   renderNutrition(client);
   renderOverview(client);
@@ -743,10 +785,15 @@ function saveClientMacros() {
 // COACH-5: Notes to Client
 // ══════════════════════════════════════════════════════════════
 
+// Notes now actually reach the client: POST/GET /api/coach/clients/:id/notes
+// (server mirrors each note onto the client's own users/{uid}/coachNotes so
+// their app can read it — see traininglog-backend-sync). This used to be
+// pure localStorage on the coach's own browser with UI copy claiming
+// otherwise; that's gone.
+let _clientNotesCache = {}; // clientId -> notes[] | null (null = load error)
+
 function renderNotes(c) {
   const el = document.getElementById('dtab_notes');
-  const notes = getClientNotes(c.id);
-
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Send Note to ' + (c.clientName?.split(' ')[0] || 'Client') + '</div>'
     + '<textarea id="coachNoteInput" style="width:100%;min-height:100px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:0.88rem;resize:vertical;margin-bottom:10px;" placeholder="Write a note — the athlete will see this in their app…"></textarea>'
     + '<div style="display:flex;gap:8px;align-items:center;">'
@@ -754,37 +801,67 @@ function renderNotes(c) {
     + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="aiDraftIntoNotes()">✍️ AI Draft</button>'
     + '<span class="checkin-photo-label" style="margin-left:auto;">&#8984;&crarr; to send</span>'
     + '</div></div>'
-    + '<div class="d-card"><div class="d-card-title">Note History (' + notes.length + ')</div>'
-    + (notes.length ? notes.map(n => {
-      const d = new Date(n.ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      return '<div style="padding:10px 0;border-bottom:1px solid rgba(132,157,144,0.1);">'
-        + '<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">' + d + '</div>'
-        + '<div style="font-size:0.85rem;color:var(--text-sec);line-height:1.5;">' + n.text + '</div></div>';
-    }).join('') : '<p style="color:var(--text-muted);font-size:0.85rem;">No notes yet.</p>')
-    + '</div>';
+    + '<div class="d-card"><div class="d-card-title">Note History</div><div id="noteHistoryBody">'
+    + '<p style="color:var(--text-muted);font-size:0.85rem;">Loading…</p></div></div>';
   document.getElementById('coachNoteInput')?.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveNote(); }
   });
+  loadClientNotes(c.id);
 }
 
-function getClientNotes(clientId) {
-  try { return JSON.parse(localStorage.getItem('coachNotes_' + clientId) || '[]'); } catch { return []; }
+async function loadClientNotes(clientId) {
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/notes', { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+    _clientNotesCache[clientId] = Array.isArray(data.notes) ? data.notes : [];
+  } catch {
+    _clientNotesCache[clientId] = null;
+  }
+  if (_selectedClientId === clientId) renderNoteHistory(clientId);
 }
 
-function saveCoachNote(clientId, text) {
-  const notes = getClientNotes(clientId);
-  notes.unshift({ text, from: _username, ts: Date.now() });
-  localStorage.setItem('coachNotes_' + clientId, JSON.stringify(notes));
+function renderNoteHistory(clientId) {
+  const el = document.getElementById('noteHistoryBody');
+  if (!el) return;
+  const notes = _clientNotesCache[clientId];
+  if (notes === null) {
+    el.innerHTML = '<p style="color:var(--danger);font-size:0.85rem;">Couldn\'t load note history — check your connection.</p>';
+    return;
+  }
+  el.innerHTML = notes.length ? notes.map(n => {
+    const ms = n.createdAt?._seconds ? n.createdAt._seconds * 1000 : n.createdAt;
+    const d = ms ? new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+    return '<div style="padding:10px 0;border-bottom:1px solid rgba(132,157,144,0.1);">'
+      + '<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">' + escapeHtml(d) + '</div>'
+      + '<div style="font-size:0.85rem;color:var(--text-sec);line-height:1.5;">' + escapeHtml(n.text) + '</div></div>';
+  }).join('') : '<p style="color:var(--text-muted);font-size:0.85rem;">No notes yet.</p>';
 }
 
-function saveNote() {
-  const text = document.getElementById('coachNoteInput')?.value?.trim();
+async function saveNote() {
+  const textarea = document.getElementById('coachNoteInput');
+  const text = textarea?.value?.trim();
   if (!text) { alert('Write a note first.'); return; }
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
-  saveCoachNote(client.id, text);
-  alert('Note sent to ' + client.clientName);
-  renderNotes(client);
+
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(client.id) + '/notes', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert(data?.error?.message || 'Could not send note — try again.');
+      return;
+    }
+    if (textarea) textarea.value = '';
+    alert('Note sent to ' + client.clientName);
+    loadClientNotes(client.id);
+  } catch {
+    alert('Connection error — try again.');
+  }
 }
 
 // ══════════════════════════════════════════════════════════════

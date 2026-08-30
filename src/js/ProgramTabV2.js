@@ -1157,7 +1157,7 @@
 
       const res = await fetch(`${serverUrl}/api/ai/program-analysis`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(typeof getAuthHeaders === 'function' ? getAuthHeaders() : {}) },
         body: JSON.stringify({
           program: normaliseProgramForApi(prog),
           trainingMode,

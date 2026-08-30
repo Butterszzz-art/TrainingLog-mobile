@@ -327,7 +327,7 @@
     try {
       const resp = await fetch(serverUrl + '/api/ai/rehab-plan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(typeof getAuthHeaders === 'function' ? getAuthHeaders() : {}) },
         body: JSON.stringify({
           bodyPart: inj.bodyPart,
           injuryType: inj.type,
