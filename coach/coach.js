@@ -27,6 +27,7 @@ let _bulkSelected = new Set();
 let _leads = [];
 let _sidebarMode = 'clients';
 let _selectedLeadId = null;
+let _clientsLoadError = false;
 
 function authHeaders() {
   // Read localStorage fresh each call rather than the in-memory `_token`
@@ -166,33 +167,25 @@ function doLogout() {
 async function loadClients() {
   const listEl = document.getElementById('clientList');
   listEl.innerHTML = '<div class="client-list-loading">Loading clients…</div>';
+  _clientsLoadError = false;
 
   try {
     const res = await fetch(SERVER_URL + '/api/coach/clients?coachId=' + encodeURIComponent(_username), {
       headers: authHeaders(),
     });
     const data = await res.json();
-    if (data.success && Array.isArray(data.clients) && data.clients.length) {
-      _clients = data.clients;
-    } else {
-      _clients = getDemoClients();
-    }
+    if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+    // A genuinely empty roster is a real, honest state — render it as such
+    // (see renderClientList/renderWorkspace) rather than papering over it
+    // with fabricated demo clients, which is what this used to do.
+    _clients = Array.isArray(data.clients) ? data.clients : [];
   } catch {
-    _clients = getDemoClients();
+    _clients = [];
+    _clientsLoadError = true;
   }
 
   renderClientList();
   renderWorkspace();
-}
-
-function getDemoClients() {
-  return [
-    { id: 'demo1', clientName: 'Sarah Mitchell', email: 'sarah@test.com', status: 'active', trainingMode: 'bodybuilding', currentProgram: 'PPL Hypertrophy', lastCheckIn: '2026-06-23', alertStatus: 'ok', currentNutritionSummary: '2200 kcal · 160g P · 220g C · 65g F', latestCheckInData: { sleep: 8, energy: 7, stress: 3, hunger: 5, trainingPerformance: 8, bodyweight: 62.5 } },
-    { id: 'demo2', clientName: 'James Cooper', email: 'james@test.com', status: 'active', trainingMode: 'powerlifting', currentProgram: 'Peaking Block', lastCheckIn: '2026-06-22', alertStatus: 'action', currentNutritionSummary: '3200 kcal · 200g P · 350g C · 90g F', latestCheckInData: { sleep: 5, energy: 4, stress: 8, hunger: 7, trainingPerformance: 4, bodyweight: 95.2 } },
-    { id: 'demo3', clientName: 'Mia Johnson', email: 'mia@test.com', status: 'active', trainingMode: 'hybrid', currentProgram: 'General Fitness', lastCheckIn: '2026-06-21', alertStatus: 'watch', currentNutritionSummary: '1800 kcal · 130g P · 180g C · 55g F', latestCheckInData: { sleep: 6, energy: 6, stress: 5, hunger: 4, trainingPerformance: 6, bodyweight: 58.0 } },
-    { id: 'demo4', clientName: 'Liam Brown', email: 'liam@test.com', status: 'active', trainingMode: 'bodybuilding', currentProgram: 'Arm Specialisation', lastCheckIn: '2026-06-24', alertStatus: 'ok', currentNutritionSummary: '2800 kcal · 180g P · 300g C · 75g F', latestCheckInData: { sleep: 9, energy: 8, stress: 2, hunger: 6, trainingPerformance: 9, bodyweight: 84.3 } },
-    { id: 'demo5', clientName: 'Emma Davis', email: 'emma@test.com', status: 'active', trainingMode: 'recreational', currentProgram: 'Full Body 3x', lastCheckIn: '2026-06-20', alertStatus: 'watch', currentNutritionSummary: '2000 kcal · 140g P · 200g C · 60g F', latestCheckInData: { sleep: 7, energy: 5, stress: 6, hunger: 8, trainingPerformance: 5, bodyweight: 70.1 } },
-  ];
 }
 
 // ── Render client list ────────────────────────────────────────
@@ -207,7 +200,11 @@ function renderClientList() {
   }
 
   if (!filtered.length) {
-    listEl.innerHTML = '<div class="client-list-loading">No clients match.</div>';
+    listEl.innerHTML = '<div class="client-list-loading">'
+      + (_clientsLoadError ? 'Couldn\'t load your clients — check your connection and try again.'
+        : _clients.length ? 'No clients match.'
+        : 'No clients yet — invite one from a lead, or share your invite flow, to get started.')
+      + '</div>';
     return;
   }
 
@@ -315,7 +312,11 @@ function renderWorkspace() {
       '<button class="cta-capsule ws-priority-cta" onclick="selectClient(\'' + priority.id + '\')">Open client file</button>' +
       '</div>';
   } else {
-    priorityEl.innerHTML = '<div class="pod pod--hero ws-priority-card"><p class="ws-empty-note">Everyone\'s on track — no flagged clients right now.</p></div>';
+    priorityEl.innerHTML = '<div class="pod pod--hero ws-priority-card"><p class="ws-empty-note">'
+      + (_clientsLoadError ? 'Couldn\'t load your clients — check your connection and try again.'
+        : _clients.length ? 'Everyone\'s on track — no flagged clients right now.'
+        : 'No clients yet.')
+      + '</p></div>';
   }
 
   // Roster table — every client, sorted by alert severity then name.
