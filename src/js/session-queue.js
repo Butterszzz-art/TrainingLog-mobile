@@ -444,6 +444,107 @@
     if (typeof document === 'undefined') return;
     const el = document.getElementById('qlUnitLabel');
     if (el) el.textContent = unit || 'kg';
+    const sheetLabel = document.getElementById('qlSheetUnitLabel');
+    if (sheetLabel) sheetLabel.textContent = unit || 'kg';
+  }
+
+  function _currentQuickLogUnit() {
+    if (typeof document === 'undefined') return 'kg';
+    const sel = document.getElementById('weightUnit');
+    return sel && sel.value === 'lbs' ? 'lbs' : 'kg';
+  }
+
+  /** Flips the shared #weightUnit select (same field the manual-entry form
+   * and addLogEntry() already read) between kg/lbs, converts the sticky
+   * quick-log weight to match, and re-renders — the unit toggle used to
+   * only be reachable by expanding manual entry. */
+  function toggleQuickLogUnit() {
+    if (typeof document === 'undefined') return;
+    const unitSel = document.getElementById('weightUnit');
+    const currentUnit = _currentQuickLogUnit();
+    const currentNorm = currentUnit === 'lbs' ? 'lb' : 'kg';
+    const nextNorm = currentNorm === 'kg' ? 'lb' : 'kg';
+    const nextUnit = nextNorm === 'lb' ? 'lbs' : 'kg';
+
+    if (_qlWeight != null && typeof global.convertWeightValue === 'function') {
+      _qlWeight = global.convertWeightValue(_qlWeight, currentNorm, nextNorm, 2);
+    }
+
+    if (unitSel) {
+      unitSel.value = nextUnit;
+      unitSel.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      syncQuickLogUnit(nextUnit);
+    }
+    _syncQuickLogDisplay();
+    _writeQuickLogToForm();
+  }
+
+  // ── Quick-log weight sheet — plate quick-add chips + direct numeric
+  // entry, opened by tapping the weight value. Standard plate sets per
+  // unit (kg set matches plateCalculator.js's defaults). ─────────────
+  const QL_PLATES_LB = [45, 35, 25, 10, 5, 2.5, 1.25];
+  const QL_PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
+
+  function _renderQuickLogPlateGrid() {
+    if (typeof document === 'undefined') return;
+    const grid = document.getElementById('qlPlateGrid');
+    if (!grid) return;
+    const unit = _currentQuickLogUnit();
+    const plates = unit === 'lbs' ? QL_PLATES_LB : QL_PLATES_KG;
+    grid.innerHTML = plates
+      .map((p) => `<button type="button" class="ql-plate-chip" onclick="if(typeof qlPlateAdd==='function') qlPlateAdd(${p});">+${p}</button>`)
+      .join('');
+  }
+
+  function openQuickLogWeightSheet() {
+    if (typeof document === 'undefined') return;
+    const sheet = document.getElementById('qlWeightSheet');
+    const input = document.getElementById('qlWeightSheetInput');
+    if (!sheet) return;
+    syncQuickLogUnit(_currentQuickLogUnit());
+    if (input) input.value = _qlWeight != null ? _qlWeight : '';
+    _renderQuickLogPlateGrid();
+    sheet.hidden = false;
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+
+  function closeQuickLogWeightSheet() {
+    if (typeof document === 'undefined') return;
+    const sheet = document.getElementById('qlWeightSheet');
+    if (sheet) sheet.hidden = true;
+  }
+
+  /** Tapping a plate chip adds its face value to whatever is currently in
+   * the sheet's number field, so a heavy weight can be built up in a few
+   * taps (e.g. +45, +45, +10) instead of dozens of +2.5 steps. */
+  function qlPlateAdd(amount) {
+    if (typeof document === 'undefined') return;
+    const input = document.getElementById('qlWeightSheetInput');
+    if (!input) return;
+    const current = parseFloat(input.value) || 0;
+    input.value = _round1(current + amount);
+  }
+
+  function qlWeightSheetClear() {
+    if (typeof document === 'undefined') return;
+    const input = document.getElementById('qlWeightSheetInput');
+    if (input) input.value = '0';
+  }
+
+  function confirmQuickLogWeightSheet() {
+    if (typeof document === 'undefined') return;
+    const input = document.getElementById('qlWeightSheetInput');
+    const value = input ? parseFloat(input.value) : NaN;
+    if (Number.isFinite(value) && value >= 0) {
+      _qlWeight = _round1(value);
+      _syncQuickLogDisplay();
+      _writeQuickLogToForm();
+    }
+    closeQuickLogWeightSheet();
   }
 
   /** Called on every #exercise input. Shows the quick-log panel, ensures
@@ -545,13 +646,21 @@
   }
 
   const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
-    initQuickLog, quickLogStep, quickLogSet, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks };
+    initQuickLog, quickLogStep, quickLogSet, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
+    toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
+    confirmQuickLogWeightSheet };
   global.renderVolumeLandmarks = renderVolumeLandmarks;
   global.initQuickLog = initQuickLog;
   global.quickLogStep = quickLogStep;
   global.quickLogSet = quickLogSet;
   global.startQuickLogFor = startQuickLogFor;
   global.syncQuickLogUnit = syncQuickLogUnit;
+  global.toggleQuickLogUnit = toggleQuickLogUnit;
+  global.openQuickLogWeightSheet = openQuickLogWeightSheet;
+  global.closeQuickLogWeightSheet = closeQuickLogWeightSheet;
+  global.qlPlateAdd = qlPlateAdd;
+  global.qlWeightSheetClear = qlWeightSheetClear;
+  global.confirmQuickLogWeightSheet = confirmQuickLogWeightSheet;
   global.getTodaysPlannedDay = getTodaysPlannedDay;
   global.renderSessionQueue = renderSessionQueue;
   global.renderTrainHero = renderTrainHero;
