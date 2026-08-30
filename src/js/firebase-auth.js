@@ -64,11 +64,11 @@
   // Returns { needsVerification: true } — the server rejects all protected
   // routes until the email is verified, so the UI must show the verify screen.
   //
-  // Phase 2: a username matching an existing (pre-Firebase) Airtable account
-  // is "reclaimable", not simply taken — the UI should prompt for that
-  // account's old password and pass it as legacyPassword. If correct, the
-  // server migrates that account's data onto the new uid.
-  async function signup({ username, email, password, referredBy, legacyPassword }) {
+  // The old Airtable legacy-account "reclaim" path (matching a username
+  // against a pre-Firebase account and verifying its old password) was
+  // retired once migration completed — every account now lives in Firebase
+  // from the start, so there's nothing left to reclaim.
+  async function signup({ username, email, password, referredBy }) {
     if (!available()) throw new Error('Firebase is not configured.');
 
     const availRes = await fetch(
@@ -76,16 +76,7 @@
     );
     const avail = await availRes.json().catch(() => ({}));
     if (availRes.ok && avail.available === false) {
-      if (avail.reclaimable && !legacyPassword) {
-        const err = new Error('This username belongs to an existing account. Enter its password to reclaim it.');
-        err.needsLegacyPassword = true;
-        throw err;
-      }
-      if (!avail.reclaimable) {
-        throw new Error('That username is already taken.');
-      }
-      // reclaimable && legacyPassword provided — fall through, let
-      // signup-complete verify it (it owns the real check against the hash).
+      throw new Error('That username is already taken.');
     }
 
     let cred;
@@ -102,23 +93,10 @@
     }
 
     const idToken = await cred.user.getIdToken();
-    const complete = await postJson('/auth/signup-complete', { username, referredBy, legacyPassword }, idToken);
+    const complete = await postJson('/auth/signup-complete', { username, referredBy }, idToken);
     if (!complete.ok) {
       const code = complete.data?.error?.code;
       const message = complete.data?.error?.message || 'Could not complete signup.';
-      if (code === 'auth.legacy_verification_required') {
-        // Someone else claimed the username between the availability check and
-        // now, or the caller skipped it — prompt for the old password and retry
-        // via completeSignup (the Firebase account itself was already created).
-        const err = new Error(message);
-        err.needsLegacyPassword = true;
-        throw err;
-      }
-      if (code === 'auth.legacy_password_invalid') {
-        const err = new Error(message);
-        err.legacyPasswordInvalid = true;
-        throw err;
-      }
       if (code === 'auth.username_taken') {
         // Auth account exists but the username was taken in a race — the UI
         // should prompt for a different username and call completeSignup again.
@@ -132,27 +110,15 @@
     return { username, email, needsVerification: !cred.user.emailVerified };
   }
 
-  // Retry only the username-claim step (after a 409 race in signup, or after
-  // the user supplies a legacyPassword following a needsLegacyPassword error).
-  async function completeSignup({ username, referredBy, legacyPassword }) {
+  // Retry only the username-claim step, after a 409 race in signup (someone
+  // else claimed the username between the availability check and now).
+  async function completeSignup({ username, referredBy }) {
     const user = firebase.auth().currentUser;
     if (!user) throw new Error('Not signed in.');
     const idToken = await user.getIdToken();
-    const complete = await postJson('/auth/signup-complete', { username, referredBy, legacyPassword }, idToken);
+    const complete = await postJson('/auth/signup-complete', { username, referredBy }, idToken);
     if (!complete.ok) {
-      const code = complete.data?.error?.code;
-      const message = complete.data?.error?.message || 'Could not complete signup.';
-      if (code === 'auth.legacy_verification_required') {
-        const err = new Error(message);
-        err.needsLegacyPassword = true;
-        throw err;
-      }
-      if (code === 'auth.legacy_password_invalid') {
-        const err = new Error(message);
-        err.legacyPasswordInvalid = true;
-        throw err;
-      }
-      throw new Error(message);
+      throw new Error(complete.data?.error?.message || 'Could not complete signup.');
     }
     return { username };
   }
@@ -169,10 +135,7 @@
       const resolved = await postJson('/auth/email-for-username', { username: usernameOrEmail });
       if (!resolved.ok) {
         if (resolved.status === 404) {
-          // No Firebase account for this username — may be a legacy account.
-          const err = new Error('No account found for that username.');
-          err.tryLegacy = true;
-          throw err;
+          throw new Error('No account found for that username.');
         }
         throw new Error(resolved.data?.error?.message || 'Could not look up username.');
       }
@@ -205,10 +168,7 @@
   }
 
   // Sends a password-reset email. Same username→email resolution as login()
-  // since Firebase's reset flow is email-based but this app logs in by
-  // username. Throws err.tryLegacy (matching login()'s convention) when the
-  // username isn't a Firebase account at all, so the caller can point the
-  // user at the migration flow instead of a dead-end "email sent" message.
+  // since Firebase's reset flow is email-based but this app logs in by username.
   async function resetPassword(usernameOrEmail) {
     if (!available()) throw new Error('Firebase is not configured.');
 
@@ -217,9 +177,7 @@
       const resolved = await postJson('/auth/email-for-username', { username: usernameOrEmail });
       if (!resolved.ok) {
         if (resolved.status === 404) {
-          const err = new Error('No account found for that username.');
-          err.tryLegacy = true;
-          throw err;
+          throw new Error('No account found for that username.');
         }
         throw new Error(resolved.data?.error?.message || 'Could not look up username.');
       }

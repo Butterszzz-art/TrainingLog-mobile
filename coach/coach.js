@@ -85,13 +85,7 @@ async function doCoachLogin() {
     loadClients();
     loadLeads();
   } catch (err) {
-    // firebaseAuth.login() throws err.tryLegacy when no Firebase account
-    // exists for this username — that means it hasn't been migrated off
-    // Airtable yet. There's no reclaim UI on this page (see coach.js scope
-    // notes); point the person at the main app's sign-up flow instead.
-    errorEl.textContent = err?.tryLegacy
-      ? 'No migrated account found for that username. Use the main app’s Sign Up flow (with your existing password) to migrate this account first.'
-      : (err?.message || 'Invalid credentials.');
+    errorEl.textContent = err?.message || 'Invalid credentials.';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Sign In';
