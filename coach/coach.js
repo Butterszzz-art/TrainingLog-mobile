@@ -366,42 +366,57 @@ function renderWorkspace() {
   }
 
   railNavUpdateCounts(counts, programs.length);
+  // Keep the check-ins list in sync if it's the panel currently on screen
+  // (railNavGo() only renders it on click, not on every data refresh).
+  if (_activeWorkspaceSection === 'checkins') renderCheckinsList();
 }
 
 // ── Rail nav (left sidebar) ──────────────────────────────────────
-// Queue/Clients/Templates/Check-ins all live on the one workspace page
-// (renderWorkspace() above) — "navigating" is a scroll-to, not a route
-// change. Programs has no view distinct from Templates yet, so it
-// targets the same section; Settings has no desktop view at all yet.
+// Real tab switching — one .ws-panel visible at a time. Used to be
+// scrollIntoView() to a section on one long always-rendered page; every
+// destination below now has real, distinct content (Programs and
+// Analytics were dropped as separate destinations — see index.html's
+// rail-nav comment for why). Settings still has no desktop view.
+
+let _activeWorkspaceSection = 'queue';
 
 function railNavUpdateCounts(counts, templateCount) {
   const el = (id) => document.getElementById(id);
   if (el('railCountQueue')) el('railCountQueue').textContent = counts.action;
   if (el('railCountClients')) el('railCountClients').textContent = counts.all;
   if (el('railCountTemplates')) el('railCountTemplates').textContent = templateCount;
-  // "Check-ins outstanding" = clients with no check-in, or none in 7+ days —
-  // real, derived from _clients.lastCheckIn, not a separate data model.
-  const staleCheckins = _clients.filter(c => {
-    if (!c.lastCheckIn) return true;
-    const days = (Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000;
-    return days >= 7;
-  }).length;
-  if (el('railCountCheckins')) el('railCountCheckins').textContent = staleCheckins;
+  if (el('railCountCheckins')) el('railCountCheckins').textContent = getStaleCheckinClients().length;
+}
+
+// Clients with no check-in at all, or none in 7+ days — most overdue
+// first. Same definition railNavUpdateCounts() already used for the rail
+// badge count; this is the first place it's actually rendered as a list.
+function getStaleCheckinClients() {
+  return _clients
+    .map(c => ({
+      client: c,
+      days: c.lastCheckIn ? (Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000 : Infinity
+    }))
+    .filter(x => x.days >= 7)
+    .sort((a, b) => b.days - a.days);
+}
+
+function renderCheckinsList() {
+  const el = document.getElementById('wsCheckinsList');
+  if (!el) return;
+  const stale = getStaleCheckinClients();
+  el.innerHTML = stale.length
+    ? stale.map(({ client: c, days }) => {
+        const label = Number.isFinite(days) ? Math.floor(days) + 'd since last check-in' : 'No check-in yet';
+        return '<div class="ws-roster-row" onclick="selectClient(\'' + c.id + '\')">'
+          + '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>'
+          + '<span class="ws-roster-cell">' + escapeHtml(label) + '</span>'
+          + '</div>';
+      }).join('')
+    : '<p class="ws-empty-note">Everyone\'s checked in within the last week.</p>';
 }
 
 function railNavGo(section) {
-  document.querySelectorAll('.rail-nav-item').forEach(b => b.classList.toggle('active', b.dataset.rail === section));
-
-  const targets = {
-    queue: 'wsPriorityCard',
-    clients: 'wsRailTarget-clients',
-    programs: 'wsRailTarget-templates',
-    templates: 'wsRailTarget-templates',
-    messages: 'wsRailTarget-messages',
-    checkins: 'wsRailTarget-checkins',
-    analytics: 'wsStatRow',
-  };
-
   if (section === 'settings') {
     // No desktop settings view exists yet — say so rather than silently
     // doing nothing or faking a page.
@@ -409,14 +424,16 @@ function railNavGo(section) {
     return;
   }
 
-  // Any rail destination returns to the workspace view first (in case a
-  // client file is currently open), then scrolls to that section.
+  document.querySelectorAll('.rail-nav-item').forEach(b => b.classList.toggle('active', b.dataset.rail === section));
+  document.querySelectorAll('.ws-panel').forEach(p => p.classList.toggle('active', p.id === 'wsPanel-' + section));
+  _activeWorkspaceSection = section;
+
+  // Any rail destination returns to the workspace view first, in case a
+  // client file is currently open.
   if (typeof backToWorkspace === 'function' && document.getElementById('clientDetail').style.display !== 'none') {
     backToWorkspace();
   }
-  const targetId = targets[section];
-  const targetEl = targetId && document.getElementById(targetId);
-  if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (section === 'checkins') renderCheckinsList();
 }
 
 function toggleBulk(id) {

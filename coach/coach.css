@@ -1029,20 +1029,11 @@ body::before {
 .ws-stat-tile.ws-stat-danger .stat-tile-value { color: var(--danger); }
 .ws-stat-tile.ws-stat-warn .stat-tile-value { color: var(--highlight); }
 
-.ws-grid {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 16px;
-  align-items: start;
-}
-
-.ws-col-main,
-.ws-col-side {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
-}
+/* Real tab switching (railNavGo() in coach.js) — one panel visible at a
+   time, replacing what used to be a single scrolling page with every
+   section always in the DOM. */
+.ws-panel { display: none; flex-direction: column; gap: 14px; }
+.ws-panel.active { display: flex; }
 
 /* Priority client hero */
 .ws-priority-card { display: flex; flex-direction: column; gap: 12px; }
@@ -1213,6 +1204,5 @@ body::before {
 }
 
 @media (max-width: 900px) {
-  .ws-grid { grid-template-columns: 1fr; }
   .ws-stat-row { grid-template-columns: repeat(2, 1fr); }
 }
