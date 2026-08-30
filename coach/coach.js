@@ -867,8 +867,17 @@ async function saveNote() {
 // ══════════════════════════════════════════════════════════════
 // COACH-6: Client Invite Flow
 // ══════════════════════════════════════════════════════════════
+// Used to generate a fake local "PC-XXXX-XXXX" code (localStorage only,
+// under coachInvites_{username}) that told the athlete to enter it under
+// a "Settings → Connect to Coach" screen that never existed anywhere in
+// the app — nothing was ever real here. Replaced with the same real
+// invite endpoint convertLead() already uses: the coach enters the
+// client's existing Pocket Coach username, a real invite is sent, and it
+// shows up for the client to accept in their own app's Settings → Your
+// Coach (this is now the desktop-side entry point for what used to also
+// be available, just as fake, from the mobile app's Add Client button).
 
-function showInviteModal(prefillName = '', prefillEmail = '') {
+function showInviteModal() {
   let overlay = document.getElementById('inviteOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -877,47 +886,46 @@ function showInviteModal(prefillName = '', prefillEmail = '') {
     document.body.appendChild(overlay);
   }
 
-  const code = 'PC-' + _username.toUpperCase().slice(0, 4) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
-  const invites = getInvites();
-
   overlay.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:420px;width:100%;">'
     + '<h3 style="margin:0 0 16px;color:var(--text);">Invite a Client</h3>'
-    + '<p style="font-size:0.85rem;color:var(--text-sec);margin-bottom:16px;">Share this invite code with your athlete. They enter it in their Pocket Coach app under Settings → Connect to Coach.</p>'
-    + '<div style="display:flex;gap:8px;margin-bottom:16px;">'
-    + '<input type="text" id="inviteCode" value="' + code + '" readonly style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--primary);font-family:monospace;font-size:1.1rem;font-weight:700;text-align:center;">'
-    + '<button onclick="copyInviteCode()" style="padding:12px 18px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Copy</button>'
-    + '</div>'
-    + '<div style="margin-bottom:16px;">'
-    + '<input type="text" id="inviteClientName" placeholder="Client name (optional)" value="' + escapeHtml(prefillName) + '" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;margin-bottom:8px;">'
-    + '<input type="email" id="inviteClientEmail" placeholder="Client email (optional)" value="' + escapeHtml(prefillEmail) + '" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;">'
-    + '</div>'
-    + '<button onclick="saveInvite(\'' + code + '\')" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;margin-bottom:16px;">Save Invite</button>'
-    + (invites.length ? '<div style="border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">Pending Invites (' + invites.length + ')</div>'
-    + invites.map(inv => '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(132,157,144,0.1);font-size:0.82rem;">'
-      + '<span style="color:var(--text-sec);">' + (inv.name || inv.code) + '</span>'
-      + '<span style="color:var(--text-muted);">' + inv.code + '</span></div>').join('') + '</div>' : '')
-    + '<button onclick="document.getElementById(\'inviteOverlay\').remove()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;margin-top:8px;">Close</button>'
+    + '<p style="font-size:0.85rem;color:var(--text-sec);margin-bottom:16px;">They must already have a Pocket Coach account. This sends a real invite — they\'ll see it under Settings → Your Coach in their own app.</p>'
+    + '<input type="text" id="inviteClientUsername" placeholder="Their Pocket Coach username" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.95rem;margin-bottom:16px;">'
+    + '<div id="inviteModalError" style="color:var(--danger);font-size:0.82rem;margin-bottom:10px;min-height:1.1em;"></div>'
+    + '<button id="inviteModalSendBtn" onclick="sendCoachInvite()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;margin-bottom:8px;">Send Invite</button>'
+    + '<button onclick="document.getElementById(\'inviteOverlay\').remove()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;">Cancel</button>'
     + '</div>';
+  document.getElementById('inviteClientUsername')?.focus();
 }
 
-function copyInviteCode() {
-  const input = document.getElementById('inviteCode');
-  if (!input) return;
-  navigator.clipboard?.writeText(input.value).then(() => alert('Invite code copied!')).catch(() => { input.select(); document.execCommand('copy'); });
-}
+async function sendCoachInvite() {
+  const input = document.getElementById('inviteClientUsername');
+  const errorEl = document.getElementById('inviteModalError');
+  const btn = document.getElementById('inviteModalSendBtn');
+  const username = input?.value?.trim();
+  if (!username) { if (errorEl) errorEl.textContent = 'Enter a username.'; return; }
 
-function getInvites() {
-  try { return JSON.parse(localStorage.getItem('coachInvites_' + _username) || '[]'); } catch { return []; }
-}
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  if (errorEl) errorEl.textContent = '';
 
-function saveInvite(code) {
-  const name = document.getElementById('inviteClientName')?.value?.trim() || '';
-  const email = document.getElementById('inviteClientEmail')?.value?.trim() || '';
-  const invites = getInvites();
-  invites.unshift({ code, name, email, createdAt: new Date().toISOString(), status: 'pending' });
-  localStorage.setItem('coachInvites_' + _username, JSON.stringify(invites));
-  alert('Invite saved! Share the code: ' + code);
-  showInviteModal();
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/clients/invite', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ clientUsername: username })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      if (errorEl) errorEl.textContent = data?.error?.message || 'Could not send invite.';
+      if (btn) { btn.disabled = false; btn.textContent = 'Send Invite'; }
+      return;
+    }
+    document.getElementById('inviteOverlay')?.remove();
+    alert('Invite sent to ' + username + ' — they\'ll appear in your roster once they accept.');
+    loadClients();
+  } catch {
+    if (errorEl) errorEl.textContent = 'Connection error — try again.';
+    if (btn) { btn.disabled = false; btn.textContent = 'Send Invite'; }
+  }
 }
 
 
