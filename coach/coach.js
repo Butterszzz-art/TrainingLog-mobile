@@ -1085,9 +1085,16 @@ function renderLeadDetail(lead) {
   const convertCard = lead.status === 'converted'
     ? '<div class="d-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
       + '<div style="font-size:0.85rem;color:var(--text-sec);">This lead has been linked to a Pocket Coach account and now appears in your Clients list.</div></div>'
+    : lead.status === 'dismissed'
+    ? '<div class="d-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+      + '<div style="font-size:0.85rem;color:var(--text-sec);">Dismissed — hidden from your active queue, but kept here for reference.</div>'
+      + '<button class="sidebar-invite-btn sidebar-invite-btn--ghost" onclick="dismissLead(\'' + lead.id + '\', false)">Restore</button></div>'
     : '<div class="d-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
       + '<div style="font-size:0.85rem;color:var(--text-sec);">Once they\'ve created a Pocket Coach account, link them here as a real client.</div>'
-      + '<button class="sidebar-invite-btn" onclick="convertLead(\'' + lead.id + '\')">Convert to Client</button></div>';
+      + '<div style="display:flex;gap:8px;">'
+      + '<button class="sidebar-invite-btn sidebar-invite-btn--ghost" onclick="dismissLead(\'' + lead.id + '\', true)">Dismiss</button>'
+      + '<button class="sidebar-invite-btn" onclick="convertLead(\'' + lead.id + '\')">Convert to Client</button>'
+      + '</div></div>';
 
   document.getElementById('leadDetailBody').innerHTML =
     convertCard
@@ -1162,6 +1169,35 @@ async function convertLead(leadId) {
     lead.status = 'converted';
     alert('Invite sent to ' + username.trim() + '. They\'ll appear in your Clients list once they accept it.');
     loadClients();
+    renderLeadList();
+    renderLeadDetail(lead);
+  } catch {
+    alert('Connection error — try again.');
+  }
+}
+
+// Dismiss (or restore) a lead — for spam/test/not-interested submissions
+// that don't warrant converting to a client but shouldn't clutter the
+// active queue either. Soft state only (PATCH status), same as convertLead
+// above: the underlying Firestore document is never deleted, so nothing
+// here is a one-way action — a dismissed lead can always be restored.
+async function dismissLead(leadId, dismiss) {
+  const lead = _leads.find(l => l.id === leadId);
+  if (!lead) return;
+
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/leads/' + encodeURIComponent(leadId), {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ status: dismiss ? 'dismissed' : 'new' })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert(data?.error?.message || 'Could not update this lead.');
+      return;
+    }
+
+    lead.status = dismiss ? 'dismissed' : 'new';
     renderLeadList();
     renderLeadDetail(lead);
   } catch {
