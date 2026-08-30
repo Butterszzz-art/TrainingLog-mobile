@@ -735,10 +735,13 @@
           <div class="ql-panel" id="quickLogPanel" hidden>
             <div class="ql-row">
               <div class="ql-field">
-                <div class="ql-label">Weight <span id="qlUnitLabel">kg</span></div>
+                <div class="ql-label">
+                  Weight
+                  <button type="button" class="ql-unit-toggle" id="qlUnitLabel" onclick="if(typeof toggleQuickLogUnit==='function') toggleQuickLogUnit();" aria-label="Switch weight unit between kg and lbs">kg</button>
+                </div>
                 <div class="ql-stepper">
                   <button type="button" class="ql-step" onclick="quickLogStep('weight',-1)" aria-label="Decrease weight">−</button>
-                  <span class="ql-val" id="qlWeightVal">—</span>
+                  <span class="ql-val ql-val--tap" id="qlWeightVal" role="button" tabindex="0" title="Tap to enter weight or add plates" onclick="if(typeof openQuickLogWeightSheet==='function') openQuickLogWeightSheet();" onkeydown="if((event.key==='Enter'||event.key===' ')&&typeof openQuickLogWeightSheet==='function'){event.preventDefault();openQuickLogWeightSheet();}">—</span>
                   <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('weight',1)" aria-label="Increase weight">+</button>
                 </div>
               </div>
@@ -755,6 +758,24 @@
               <span id="qlLogBtnLabel">Log set</span>
               <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>
             </button>
+          </div>
+
+          <!-- Quick-log weight entry sheet: tapping the weight value above
+               opens this so high weights don't need dozens of +/- taps —
+               plate quick-add chips (unit-aware) plus a direct numeric
+               keypad entry (session-queue.js). -->
+          <div class="ql-weight-sheet" id="qlWeightSheet" hidden>
+            <div class="ql-weight-sheet-backdrop" onclick="if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();"></div>
+            <div class="ql-weight-sheet-card" role="dialog" aria-modal="true" aria-label="Set weight">
+              <div class="ql-weight-sheet-title">Set weight <span id="qlSheetUnitLabel">kg</span></div>
+              <input type="number" inputmode="decimal" step="0.5" class="ql-weight-sheet-input" id="qlWeightSheetInput" aria-label="Weight" onkeydown="if(event.key==='Enter'){event.preventDefault(); if(typeof confirmQuickLogWeightSheet==='function') confirmQuickLogWeightSheet();} else if(event.key==='Escape'){if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();}" />
+              <div class="ql-plate-grid" id="qlPlateGrid"></div>
+              <div class="ql-weight-sheet-actions">
+                <button type="button" class="ql-weight-sheet-clear" onclick="if(typeof qlWeightSheetClear==='function') qlWeightSheetClear();">Clear</button>
+                <button type="button" class="ql-weight-sheet-cancel" onclick="if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();">Cancel</button>
+                <button type="button" class="cta-capsule ql-weight-sheet-save" onclick="if(typeof confirmQuickLogWeightSheet==='function') confirmQuickLogWeightSheet();">Use weight</button>
+              </div>
+            </div>
           </div>
 
           <!-- Manual / multi-set entry — everything the quick-log panel

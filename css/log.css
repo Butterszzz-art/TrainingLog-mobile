@@ -238,11 +238,144 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Weight value is tappable — opens the plate/keypad entry sheet */
+.ql-val--tap {
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+.ql-val--tap:hover,
+.ql-val--tap:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  outline: none;
+}
+
+/* kg/lbs toggle button next to the "Weight" label */
+.ql-unit-toggle {
+  border: 1px solid rgba(74, 132, 102, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-label);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  margin-left: 4px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.ql-unit-toggle:active { background: rgba(255, 255, 255, 0.12); }
+
 .ql-log-btn {
   width: 100%;
   justify-content: center;
   gap: 10px;
   font-size: 19px;
+}
+
+/* ── Quick-log weight sheet — plate quick-add chips + numeric keypad
+   entry, opened by tapping the weight value above ──────────────── */
+
+.ql-weight-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.ql-weight-sheet[hidden] {
+  display: none;
+}
+
+.ql-weight-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.ql-weight-sheet-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-radius: 18px 18px 0 0;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+}
+@media (min-width: 480px) {
+  .ql-weight-sheet { align-items: center; }
+  .ql-weight-sheet-card { border-radius: 18px; }
+}
+
+.ql-weight-sheet-title {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-label);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.ql-weight-sheet-input {
+  width: 100%;
+  height: 54px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(74, 132, 102, 0.34);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+  color: var(--text-color);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 12px;
+}
+
+.ql-plate-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ql-plate-chip {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(74, 132, 102, 0.34);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-color);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ql-plate-chip:active {
+  background: linear-gradient(135deg, var(--green-60), var(--green-50));
+  color: var(--pill-text-active);
+}
+
+.ql-weight-sheet-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ql-weight-sheet-clear,
+.ql-weight-sheet-cancel {
+  flex: 1;
+  height: 46px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(74, 132, 102, 0.34);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--secondary-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ql-weight-sheet-save {
+  flex: 2;
+  justify-content: center;
 }
 
 /* ── Manual / multi-set entry disclosure (de-emphasized, closed by
