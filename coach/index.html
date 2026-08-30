@@ -71,14 +71,15 @@
         <button class="sidebar-invite-btn" id="sidebarInviteBtn" onclick="showInviteModal()">+ Invite</button>
       </div>
 
-      <!-- Rail nav — jumps to the matching section of the workspace view
-           (renderWorkspace() builds Queue/Clients/Templates/Messages/
-           Check-ins/Analytics as one page, so "navigating" here is a
-           scroll-to, not a route change). Counts are real where the app
-           has the data (railNavUpdateCounts() in coach.js); Programs has
-           no view distinct from Templates yet so it routes there too;
-           Settings has no desktop view at all yet — flagged rather than
-           faked. -->
+      <!-- Rail nav — real tab switching now (railNavGo() in coach.js
+           toggles which .ws-panel is .active). Counts are real where the
+           app has the data (railNavUpdateCounts()). "Programs" and
+           "Analytics" were dropped as destinations: Programs never had
+           content distinct from Templates, and Analytics' only content
+           (wsStatRow) is already a persistent strip shown above every
+           panel — a dedicated tab with identical always-visible content
+           would be redundant, not a real page. Settings has no desktop
+           view at all yet — flagged rather than faked. -->
       <!-- rail-nav-icon spans are this app's existing emoji-glyph icon
            convention (see header-logo/header-icon-btn etc.) rather than
            the spec's Lucide stroke set, which isn't wired up anywhere in
@@ -92,20 +93,14 @@
         <button class="rail-nav-item" data-rail="clients" onclick="railNavGo('clients')">
           <span class="rail-nav-icon" aria-hidden="true">👥</span><span class="rail-nav-label">Clients</span><span class="rail-nav-count" id="railCountClients">0</span>
         </button>
-        <button class="rail-nav-item" data-rail="programs" onclick="railNavGo('programs')">
-          <span class="rail-nav-icon" aria-hidden="true">📋</span><span class="rail-nav-label">Programs</span>
-        </button>
         <button class="rail-nav-item" data-rail="templates" onclick="railNavGo('templates')">
           <span class="rail-nav-icon" aria-hidden="true">📑</span><span class="rail-nav-label">Templates</span><span class="rail-nav-count" id="railCountTemplates">0</span>
         </button>
         <button class="rail-nav-item rail-nav-item--messages" data-rail="messages" onclick="railNavGo('messages')">
-          <span class="rail-nav-icon" aria-hidden="true">💬<span class="rail-nav-dot" title="Messaging isn't wired up yet"></span></span><span class="rail-nav-label">Messages</span>
+          <span class="rail-nav-icon" aria-hidden="true">💬</span><span class="rail-nav-label">Messages</span>
         </button>
         <button class="rail-nav-item" data-rail="checkins" onclick="railNavGo('checkins')">
           <span class="rail-nav-icon" aria-hidden="true">✅</span><span class="rail-nav-label">Check-ins</span><span class="rail-nav-count" id="railCountCheckins">0</span>
-        </button>
-        <button class="rail-nav-item" data-rail="analytics" onclick="railNavGo('analytics')">
-          <span class="rail-nav-icon" aria-hidden="true">📊</span><span class="rail-nav-label">Analytics</span>
         </button>
         <button class="rail-nav-item" data-rail="settings" onclick="railNavGo('settings')" title="Not available in the coach console yet">
           <span class="rail-nav-icon" aria-hidden="true">⚙️</span><span class="rail-nav-label">Settings</span>
@@ -146,10 +141,15 @@
     <!-- Main panel: Client Detail -->
     <main class="main-panel" id="mainPanel">
       <!-- Workspace: triage-first landing view shown until a client is
-           selected (renderWorkspace() in coach.js). Stat row and priority
-           client/roster table are real data from _clients; review-queue/
-           templates/messages panels are a visual shell only — no backing
-           data model exists yet for those, per the redesign plan. -->
+           selected (renderWorkspace() in coach.js). The rail nav switches
+           which .ws-panel below is .active (real tab switching — used to
+           be scrollIntoView() to a section on one long page, see git
+           history). wsStatRow is a persistent summary strip shown above
+           every panel regardless of which is active, not a panel itself
+           (a dedicated "Analytics" tab with identical always-visible
+           content would just be redundant — dropped that nav destination
+           along with "Programs", which never had content distinct from
+           Templates). -->
       <div class="workspace-view" id="workspaceView">
         <div class="ws-header">
           <span class="pod-title" style="font-size:22px;">Coaching</span>
@@ -158,47 +158,53 @@
 
         <div class="ws-stat-row" id="wsStatRow"></div>
 
-        <div class="ws-grid">
-          <div class="ws-col-main">
-            <div id="wsPriorityCard"></div>
+        <div class="ws-panel active" id="wsPanel-queue">
+          <div id="wsPriorityCard"></div>
+        </div>
 
-            <div class="pod ws-roster-card" id="wsRailTarget-clients">
-              <div class="pod-row">
-                <span class="pod-kicker">Client roster</span>
-                <span class="ws-roster-count" id="wsRosterCount"></span>
-              </div>
-              <div class="ws-roster-table" id="wsRosterTable"></div>
+        <div class="ws-panel" id="wsPanel-clients">
+          <div class="pod ws-roster-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Client roster</span>
+              <span class="ws-roster-count" id="wsRosterCount"></span>
             </div>
+            <div class="ws-roster-table" id="wsRosterTable"></div>
           </div>
+        </div>
 
-          <div class="ws-col-side">
-            <div class="pod ws-side-card" id="wsRailTarget-checkins">
-              <div class="pod-row">
-                <span class="pod-kicker">Review queue</span>
-                <span class="ws-side-note">phase · due</span>
-              </div>
-              <!-- TODO(coach-workspace): no meso/review-cycle data model
-                   exists yet — this is a visual shell until that's built. -->
-              <p class="ws-empty-note">No reviews tracked yet.</p>
+        <div class="ws-panel" id="wsPanel-templates">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Program templates</span>
+              <span class="ws-side-note">assigned to</span>
             </div>
+            <div id="wsTemplatesList"></div>
+          </div>
+        </div>
 
-            <div class="pod ws-side-card" id="wsRailTarget-templates">
-              <div class="pod-row">
-                <span class="pod-kicker">Program templates</span>
-                <span class="ws-side-note">assigned to</span>
-              </div>
-              <div id="wsTemplatesList"></div>
+        <!-- Real now: clients with no check-in or 7+ days stale, most
+             overdue first — same staleness data railNavUpdateCounts()
+             already computed for the rail badge, just not rendered
+             anywhere until now. -->
+        <div class="ws-panel" id="wsPanel-checkins">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Check-ins due</span>
+              <span class="ws-side-note">most overdue first</span>
             </div>
+            <div id="wsCheckinsList"></div>
+          </div>
+        </div>
 
-            <div class="pod ws-side-card ws-messages-card" id="wsRailTarget-messages">
-              <div class="pod-row">
-                <span class="pod-kicker">Messages</span>
-                <span class="ws-side-note">TODO(coach-workspace)</span>
-              </div>
-              <!-- TODO(coach-workspace): no messaging/thread data model
-                   exists yet — this is a visual shell until that's built. -->
-              <p class="ws-empty-note">Messaging isn't wired up yet — use a client's Notes tab for now.</p>
+        <div class="ws-panel" id="wsPanel-messages">
+          <div class="pod ws-side-card ws-messages-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Messages</span>
             </div>
+            <!-- Notes are real (see a client's Notes tab / saveNote()) —
+                 what's not built is a cross-client inbox aggregating them
+                 all in one place, which needs a new backend endpoint. -->
+            <p class="ws-empty-note">Send a note from an individual client's Notes tab — a unified inbox across all clients isn't built yet.</p>
           </div>
         </div>
       </div>
