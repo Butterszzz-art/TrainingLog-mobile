@@ -337,6 +337,12 @@ body::before {
   font-family: inherit;
 }
 
+.sidebar-invite-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+}
+
 .sidebar-search {
   padding: 12px 16px 0;
 }
