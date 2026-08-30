@@ -3091,12 +3091,14 @@
        data from coachDashboardState.clients (renderCoachQueue()) -->
   <div id="coachQueueSection"></div>
 
-  <!-- Bulk actions toolbar (hidden until clients are selected) -->
+  <!-- Bulk actions toolbar (hidden until clients are selected). Program
+       assignment and macro updates are desktop-only (coach/coach.js) —
+       per-client there, no bulk equivalent exists on either surface, so
+       there's nothing honest to redirect a bulk action to. CSV/PDF export
+       stays: it's non-destructive reporting, not coaching work. -->
   <div class="coach-bulk-toolbar" id="coachBulkToolbar" hidden>
     <span class="coach-bulk-count">0 selected</span>
     <div class="coach-bulk-actions">
-      <button class="coach-bulk-btn" id="coachBulkAssign"><span class="ui-icon" data-icon="clipboard"></span> Assign Program</button>
-      <button class="coach-bulk-btn" id="coachBulkMacros"><span class="ui-icon" data-icon="package"></span> Update Macros</button>
       <button class="coach-bulk-btn" id="coachBulkCSV"><span class="ui-icon" data-icon="fileText"></span> Export CSV</button>
       <button class="coach-bulk-btn" id="coachBulkPDF"><span class="ui-icon" data-icon="printer"></span> Export PDF</button>
       <button class="coach-bulk-btn danger" onclick="clearBulkSelection()"><span class="ui-icon" data-icon="x"></span> Clear</button>
@@ -10384,8 +10386,8 @@ function normalizeCoachClientRecord(client = {}) {
 
 // Real roster load only — no demo/fabricated fallback and no local-only
 // "manual" client list (both used to make it look like real clients existed
-// when they didn't; see openAddClientModal/submitAddClient below, which now
-// calls the real invite endpoint instead of writing a fake local record).
+// when they didn't). Adding a client is now desktop-only — see
+// openAddClientModal below and coach/coach.js's "+ Invite" button.
 async function loadCoachClients() {
   const coachId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'coach';
   const base = (window.SERVER_URL || '').replace(/\/$/, '');
@@ -11322,73 +11324,15 @@ window.renderCoachClientRoster = renderCoachClientRoster;
 window.renderCoachClientCard = renderCoachClientCard;
 window.renderCoachClientDetail = renderCoachClientDetail;
 
-/* ── Add Client modal ──────────────────────────────────────── */
-
-window.closeAddClientModal = function() {
-  document.getElementById('addClientModalOverlay')?.remove();
-};
-
-// "Add Client" sends a real invite (POST /api/coach/clients/invite) to an
-// existing Pocket Coach account by username — it used to fabricate a local,
-// unlinked record instead (name/email/archetype typed by the coach, saved
-// only to this browser's localStorage, never reaching the client at all).
-// The real invite endpoint only takes a username: archetype/phase/etc. are
-// the client's own real data once they accept, not something the coach can
-// set sight-unseen before that.
+/* ── Add Client ─────────────────────────────────────────────── */
+// Inviting a client is coaching work (establishes a real relationship,
+// same bucket as program/macro assignment) — moved to the desktop coach
+// dashboard (coach/coach.js's "+ Invite" button, which sends this exact
+// same POST /api/coach/clients/invite) per the mobile-overview/
+// desktop-work split. This briefly had a real inline modal here; kept the
+// backend wiring on the desktop side instead of duplicating it.
 window.openAddClientModal = function() {
-  closeAddClientModal();
-  const modal = document.createElement('div');
-  modal.className = 'gdpr-modal-overlay';
-  modal.id = 'addClientModalOverlay';
-  modal.innerHTML = `
-    <div class="gdpr-modal">
-      <h3>Invite a Client</h3>
-      <p>They must already have a Pocket Coach account. This sends a real invite — they'll appear in your roster once they accept it in their own app.</p>
-      <div class="add-client-form">
-        <label for="addClientUsername">Pocket Coach username *</label>
-        <input type="text" id="addClientUsername" placeholder="their-username" maxlength="64">
-      </div>
-      <div class="gdpr-modal-actions">
-        <button class="gdpr-export-btn" onclick="closeAddClientModal()">Cancel</button>
-        <button class="gdpr-save-btn" onclick="submitAddClient()">Send Invite</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-  document.getElementById('addClientUsername')?.focus();
-};
-
-window.submitAddClient = async function() {
-  const usernameInput = document.getElementById('addClientUsername');
-  const username = usernameInput?.value.trim() || '';
-  if (!username) {
-    if (window.showToast) window.showToast('Enter the client\'s Pocket Coach username.');
-    usernameInput?.focus();
-    return;
-  }
-
-  const btn = document.querySelector('#addClientModalOverlay .gdpr-save-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
-
-  try {
-    const base = (window.SERVER_URL || '').replace(/\/$/, '');
-    const res = await fetch(`${base}/api/coach/clients/invite`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ clientUsername: username })
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      if (window.showToast) window.showToast(data?.error?.message || 'Could not send invite.');
-      if (btn) { btn.disabled = false; btn.textContent = 'Send Invite'; }
-      return;
-    }
-    closeAddClientModal();
-    if (window.showToast) window.showToast(`Invite sent to ${username} — they\'ll appear here once they accept.`);
-    if (typeof renderCoachDashboard === 'function') renderCoachDashboard();
-  } catch {
-    if (window.showToast) window.showToast('Connection error — try again.');
-    if (btn) { btn.disabled = false; btn.textContent = 'Send Invite'; }
-  }
+  if (window.showToast) window.showToast('Invite clients from the desktop coach dashboard.');
 };
 
 /* ── "Your Coach" — the athlete-side half of the invite/assignment/notes

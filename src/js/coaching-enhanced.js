@@ -122,135 +122,15 @@ function _updateBulkToolbar() {
   if (countEl) countEl.textContent = `${count} client${count > 1 ? 's' : ''} selected`;
 }
 
-function bulkAssignProgram() {
-  if (!_bulkSelected.size) return;
-  const programs = _coachStore('coachPrograms_v1') || [];
-  if (!programs.length) { window.showToast('No saved programs. Create one in the Programs tab first.', 'warn'); return; }
-
-  const opts = programs.map((p,i) => `<option value="${i}">${p.name}</option>`).join('');
-  const modal = document.createElement('div');
-  modal.className = 'gdpr-modal-overlay';
-  modal.innerHTML = `
-    <div class="gdpr-modal">
-      <h3>Assign Program</h3>
-      <p>Assign a program to ${_bulkSelected.size} selected client(s).</p>
-      <select id="_bulkProgSel" style="width:100%;margin:0 0 12px;">${opts}</select>
-      <div class="gdpr-modal-actions">
-        <button class="gdpr-export-btn" onclick="this.closest('.gdpr-modal-overlay').remove()">Cancel</button>
-        <button class="gdpr-save-btn" onclick="_confirmBulkAssignProgram()">Assign</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-}
-
-// PATCHes the real currentProgram/nutritionSummary fields on the client's
-// Firestore doc (server mirrors onto users/{uid}/coachAssignment for the
-// client's own view) — the actual delivery mechanism. Returns true/false.
-async function _patchCoachClient(clientId, fields) {
-  try {
-    const base = (window.SERVER_URL || '').replace(/\/$/, '');
-    const res = await fetch(`${base}/api/coach/clients/${encodeURIComponent(clientId)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify(fields)
-    });
-    const data = await res.json();
-    return res.ok && data.success;
-  } catch {
-    return false;
-  }
-}
-
-window._confirmBulkAssignProgram = async function() {
-  const idx = parseInt(document.getElementById('_bulkProgSel')?.value);
-  const programs = _coachStore('coachPrograms_v1') || [];
-  const prog = programs[idx];
-  if (!prog) return;
-
-  // The richer local program object (exercises/days/notes) stays in the
-  // coach's own program library — the client's app only has a string field
-  // for their assigned program name, same schema coach/coach.js's Assign
-  // Program already writes to.
-  const ids = [..._bulkSelected];
-  const results = await Promise.all(ids.map(id => _patchCoachClient(id, { currentProgram: prog.name })));
-  const succeeded = results.filter(Boolean).length;
-
-  const assignments = _coachStore('coachProgramAssignments_v1') || {};
-  ids.forEach((id, i) => { if (results[i]) assignments[id] = { programId: prog.id, assignedAt: new Date().toISOString() }; });
-  _coachStore('coachProgramAssignments_v1', assignments);
-
-  document.querySelector('.gdpr-modal-overlay')?.remove();
-  _showExportToast(succeeded === ids.length
-    ? `Program "${prog.name}" assigned to ${succeeded} client(s)`
-    : `Assigned to ${succeeded} of ${ids.length} — some failed, try those individually`);
-  if (typeof renderCoachDashboard === 'function') renderCoachDashboard();
-};
-
-function bulkUpdateMacros() {
-  if (!_bulkSelected.size) return;
-  const modal = document.createElement('div');
-  modal.className = 'gdpr-modal-overlay';
-  modal.innerHTML = `
-    <div class="gdpr-modal">
-      <h3>Bulk Update Macros</h3>
-      <p>Override macro targets for ${_bulkSelected.size} selected client(s). Leave blank to skip that macro.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:0.8rem;color:var(--secondary-text);">
-          Protein (g)<input type="number" id="_bmProtein" placeholder="—" style="margin:0;text-align:center;">
-        </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:0.8rem;color:var(--secondary-text);">
-          Carbs (g)<input type="number" id="_bmCarbs" placeholder="—" style="margin:0;text-align:center;">
-        </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:0.8rem;color:var(--secondary-text);">
-          Fat (g)<input type="number" id="_bmFat" placeholder="—" style="margin:0;text-align:center;">
-        </label>
-      </div>
-      <div class="gdpr-modal-actions">
-        <button class="gdpr-export-btn" onclick="this.closest('.gdpr-modal-overlay').remove()">Cancel</button>
-        <button class="gdpr-save-btn" onclick="_confirmBulkMacros()">Update</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-}
-
-window._confirmBulkMacros = async function() {
-  const protein = document.getElementById('_bmProtein')?.value;
-  const carbs   = document.getElementById('_bmCarbs')?.value;
-  const fat     = document.getElementById('_bmFat')?.value;
-  if (!protein && !carbs && !fat) { document.querySelector('.gdpr-modal-overlay')?.remove(); return; }
-
-  // Per-training/rest-day breakdown stays local (no server field for that
-  // granular a plan — see coach/coach.js's saveClientMacros for the same
-  // tradeoff); the summary string that reaches the client via
-  // nutritionSummary is what's real here.
-  const parts = [];
-  if (protein) parts.push(`${protein}g P`);
-  if (carbs) parts.push(`${carbs}g C`);
-  if (fat) parts.push(`${fat}g F`);
-  const summary = parts.join(' / ');
-
-  const store = _coachStore('coachNutritionAssignments_v1') || {};
-  const ids = [..._bulkSelected];
-  const results = await Promise.all(ids.map(id => _patchCoachClient(id, { nutritionSummary: summary })));
-  const succeeded = results.filter(Boolean).length;
-
-  ids.forEach((id, i) => {
-    if (!results[i]) return;
-    const existing = store[id] || {};
-    const days = existing.days || { training: {}, rest: {} };
-    if (protein) { days.training.protein = +protein; days.rest.protein = Math.round(+protein * 0.85); }
-    if (carbs)   { days.training.carbs   = +carbs;   days.rest.carbs   = Math.round(+carbs   * 0.7);  }
-    if (fat)     { days.training.fat     = +fat;     days.rest.fat     = +fat; }
-    store[id] = { ...existing, days, updatedAt: new Date().toISOString() };
-  });
-  _coachStore('coachNutritionAssignments_v1', store);
-
-  document.querySelector('.gdpr-modal-overlay')?.remove();
-  _showExportToast(succeeded === ids.length
-    ? `Macros updated for ${succeeded} client(s)`
-    : `Updated ${succeeded} of ${ids.length} — some failed, try those individually`);
-  if (typeof renderCoachDashboard === 'function') renderCoachDashboard();
-};
+// Bulk program-assign/macro-update were removed here (moved to
+// desktop-only per product decision: mobile Coach Mode is now overview +
+// quick note/reply, actual coaching work lives in coach/coach.js). Neither
+// had a bulk equivalent on desktop either — only per-client — so there was
+// nothing honest to redirect these buttons to; they're just gone, along
+// with their local coachProgramAssignments_v1/coachNutritionAssignments_v1
+// stores (nothing else reads them — see the DATA INSIGHTS section's
+// GDPR export/delete, which still lists those keys defensively but they'll
+// just be empty going forward).
 
 function bulkExportCSV() {
   const clients = (window.coachDashboardState?.clients) || [];
@@ -317,8 +197,6 @@ function bulkExportPDF() {
   _showExportToast('PDF report opened for printing');
 }
 
-window.bulkAssignProgram  = bulkAssignProgram;
-window.bulkUpdateMacros   = bulkUpdateMacros;
 window.bulkExportCSV      = bulkExportCSV;
 window.bulkExportPDF      = bulkExportPDF;
 
@@ -468,14 +346,13 @@ function renderCoachProgramBuilder() {
           ${DAYS.map(day => _buildDayColHTML(day)).join('')}
         </div>
 
-        <!-- Assign to client -->
+        <!-- Building/saving a program template is fine here — it's your own
+             library, nothing reaches a client. Assigning one to a specific
+             client is coaching work; that action lives on the desktop
+             dashboard now (coach/coach.js Program tab), same as program
+             assignment does everywhere else in this app post-redesign. -->
         <div class="prog-assign-bar">
-          <span style="font-size:0.82rem;color:var(--secondary-text);font-weight:600;">Assign to:</span>
-          <select id="progAssignClient">
-            <option value="">— select client —</option>
-            ${_buildClientOptions()}
-          </select>
-          <button class="prog-assign-btn" onclick="assignProgramToClient()">Assign Program</button>
+          <span style="font-size:0.82rem;color:var(--secondary-text);">Save this program, then assign it to a client from the desktop coach dashboard.</span>
         </div>
 
         <!-- Saved programs list -->
@@ -592,11 +469,6 @@ function _buildDayColHTML(day) {
     </div>`;
 }
 
-function _buildClientOptions() {
-  const clients = (window.coachDashboardState?.clients) || [];
-  return clients.map(c => `<option value="${_escH(c.id)}">${_escH(c.name)}</option>`).join('');
-}
-
 function _bindExerciseItemDrag() {
   // Library items → drag start. Items are recreated on every library refresh
   // (search, add/remove custom exercise), so they're safe to rebind each time.
@@ -710,20 +582,6 @@ window._confirmLoadProgram = function() {
   if (nameInput) nameInput.value = _progState.name;
   DAYS.forEach(d => _refreshDayCol(d));
   document.querySelector('.gdpr-modal-overlay')?.remove();
-};
-
-window.assignProgramToClient = function() {
-  const clientId = document.getElementById('progAssignClient')?.value;
-  if (!clientId) { window.showToast('Select a client first.', 'warn'); return; }
-  const programs = _coachStore('coachPrograms_v1') || [];
-  const prog = programs.find(p => p.id === _progState.id);
-  if (!prog) { window.showToast('Save the program before assigning.', 'warn'); return; }
-  const assignments = _coachStore('coachProgramAssignments_v1') || {};
-  assignments[clientId] = { programId: prog.id, programName: prog.name, assignedAt: new Date().toISOString() };
-  _coachStore('coachProgramAssignments_v1', assignments);
-  const clients = (window.coachDashboardState?.clients) || [];
-  const client  = clients.find(c => c.id === clientId);
-  _showExportToast(`Assigned to ${client?.name || clientId}`);
 };
 
 function renderSavedProgramsList() {
