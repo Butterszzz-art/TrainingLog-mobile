@@ -107,11 +107,6 @@
         <input type="email" id="signupEmail" class="login-input" placeholder="Enter your email"
                autocomplete="email" autocorrect="off" autocapitalize="none" spellcheck="false" />
       </div>
-      <div class="login-field" id="legacySignupPasswordField" style="display:none;">
-        <label class="login-field-label" for="legacySignupPassword">Existing account password</label>
-        <input type="password" id="legacySignupPassword" class="login-input"
-               placeholder="Password for this username's existing account" autocomplete="off" />
-      </div>
       <div class="login-field">
         <label class="login-field-label" for="password">Password</label>
         <div class="login-pw-wrap">
@@ -4243,10 +4238,9 @@ async function startLogin() {
   try {
     let result;
 
-    // ── Firebase Auth path (Phase 1 migration) ──────────────────────────────
+    // ── Firebase Auth ────────────────────────────────────────────────────────
     // Resolves username → email server-side, signs in via Firebase, and hands
-    // the ID token to the same post-login flow the legacy JWT used. Unknown
-    // usernames fall through to legacy /login for pre-migration accounts.
+    // the ID token to the same post-login flow below.
     if (window.firebaseAuth?.isAvailable()) {
       try {
         const fb = await window.firebaseAuth.login({ usernameOrEmail: username, password });
@@ -4257,52 +4251,19 @@ async function startLogin() {
         if (fb.username) username = fb.username;
         result = { success: true, token: fb.token, username };
       } catch (fbErr) {
-        if (!fbErr.tryLegacy) {
-          if (errorEl) errorEl.textContent = fbErr.message || 'Login failed.';
-          return;
-        }
-        // No Firebase account for this username — try the legacy server login below
+        if (errorEl) errorEl.textContent = fbErr.message || 'Login failed.';
+        return;
       }
-    }
-
-    if (result) {
-      // handled by Firebase — skip legacy fetch
     } else if (typeof window.login === 'function') {
       result = await window.login(username, password);
     } else {
-      if (errorEl) errorEl.textContent = 'Connecting to server…';
-      const response = await fetchWithTimeout(`${window.SERVER_URL}/login`, {
-        method: 'POST',
-        credentials: "include",
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      }, 35000);
-
-      try {
-        result = await response.json();
-      } catch (e) {
-        console.error('Non-JSON response from server', e);
-        throw new Error('Server error: not available or invalid response.');
-      }
+      if (errorEl) errorEl.textContent = 'Firebase is not configured.';
+      return;
     }
 
     if (result && result.token) {
       window.authToken = result.token;
       persistLoginIdentity(username, result.token);
-    }
-
-    if (result && result.error?.code === 'auth.legacy_migration_required') {
-      // Hard cutover: this account still only exists in the old system.
-      // Route into the same Firebase reclaim flow signup already uses instead
-      // of dead-ending on a login error.
-      _switchLoginTab('signup');
-      const legacyField = document.getElementById('legacySignupPasswordField');
-      if (legacyField) legacyField.style.display = '';
-      document.getElementById('legacySignupPassword')?.focus();
-      if (errorEl) {
-        errorEl.textContent = 'This account needs to be migrated. Enter an email above and this account\'s existing password below, then tap Sign Up.';
-      }
-      return;
     }
 
     if (result && result.success === false) {
@@ -4424,9 +4385,7 @@ async function startForgotPassword() {
   } catch (err) {
     if (errorEl) {
       errorEl.classList.remove('login-error--success');
-      errorEl.textContent = err.tryLegacy
-        ? 'This account hasn\'t been migrated yet — enter your username and existing password on the Sign Up tab to migrate it first.'
-        : (err.message || 'Could not send reset link.');
+      errorEl.textContent = err.message || 'Could not send reset link.';
     }
   } finally {
     if (link) link.disabled = false;
@@ -4795,7 +4754,7 @@ async function startSignup() {
     return;
   }
 
-  // ── Firebase Auth path (Phase 1 migration) ────────────────────────────────
+  // ── Firebase Auth ────────────────────────────────────────────────────────
   // Signup collects all three: username (login identifier), email (new —
   // Firebase identity + verification), password (owned by Firebase). The
   // email field is shown by _switchLoginTab when this path is active.
@@ -4806,35 +4765,22 @@ async function startSignup() {
       setLoading(btn, false);
       return;
     }
-    // Phase 2: this username may belong to a pre-Firebase Airtable account —
-    // if so the field below is visible and the server verifies it against
-    // that account's password, then migrates its data onto the new uid.
-    const legacyField = document.getElementById('legacySignupPasswordField');
-    const legacyPassword = document.getElementById('legacySignupPassword')?.value || '';
     try {
       if (errorEl) errorEl.textContent = 'Creating your account…';
-      // If a prior attempt already created the Firebase account (we're
-      // retrying after a needsLegacyPassword prompt), don't call
-      // createUserWithEmailAndPassword again — it would fail as
-      // "already in use". completeSignup reuses the signed-in session instead.
+      // If a prior attempt already created the Firebase account (e.g. a retry
+      // after a username-taken race), don't call createUserWithEmailAndPassword
+      // again — it would fail as "already in use". completeSignup reuses the
+      // signed-in session instead.
       const alreadyCreated = typeof firebase !== 'undefined' && firebase.auth?.().currentUser;
       const result = alreadyCreated
-        ? await window.firebaseAuth.completeSignup({ username, legacyPassword })
-        : await window.firebaseAuth.signup({ username, email, password, legacyPassword });
+        ? await window.firebaseAuth.completeSignup({ username })
+        : await window.firebaseAuth.signup({ username, email, password });
       // Identity is stored, but the app stays locked until email verification —
       // the server rejects every protected route for unverified accounts.
       persistLoginIdentity(username, null);
       showVerifyEmailScreen(email, 'signup');
     } catch (fbErr) {
-      if (fbErr.needsLegacyPassword) {
-        if (legacyField) legacyField.style.display = '';
-        document.getElementById('legacySignupPassword')?.focus();
-        if (errorEl) errorEl.textContent = fbErr.message || 'Enter the existing account\'s password, then tap Sign Up again.';
-      } else if (fbErr.legacyPasswordInvalid) {
-        if (errorEl) errorEl.textContent = fbErr.message || 'That password doesn\'t match the existing account.';
-      } else {
-        if (errorEl) errorEl.textContent = fbErr.message || 'Signup failed. Please try again.';
-      }
+      if (errorEl) errorEl.textContent = fbErr.message || 'Signup failed. Please try again.';
     } finally {
       setLoading(btn, false);
     }
@@ -16073,9 +16019,6 @@ function _switchLoginTab(mode) {
   if (emailField) {
     emailField.style.display = (!isLogin && window.firebaseAuth?.isAvailable()) ? '' : 'none';
   }
-  // Only shown reactively after a needsLegacyPassword error — reset on tab switch
-  const legacyField = document.getElementById('legacySignupPasswordField');
-  if (legacyField) legacyField.style.display = 'none';
   const pw = document.getElementById('password');
   if (pw) pw.autocomplete = isLogin ? 'current-password' : 'new-password';
   const err = document.getElementById('loginError');
