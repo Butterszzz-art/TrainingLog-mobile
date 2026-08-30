@@ -38,6 +38,7 @@
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
   <link rel="stylesheet" href="css/body-hub.css">
+  <link rel="stylesheet" href="css/animations.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5211,7 +5212,7 @@ function addLogEntry() {
     const recommendation = suggestNextSession(newEntry, workouts);
     if (recommendation) {
       newEntry.nextSessionRecommendation = recommendation;
-      showToast(`Next session suggestion for ${exercise}: ${recommendation.message}`);
+      window.showToast(`Next session suggestion for ${exercise}: ${recommendation.message}`);
     }
   }
 
@@ -5245,7 +5246,7 @@ function addLogEntry() {
   const prog = analyzeProgress ? analyzeProgress(currentUser) : [];
   const deload = prog.find(p => p.type === 'deload');
   if (deload) {
-    showToast(`Deload recommended for ${deload.exercise}`);
+    window.showToast(`Deload recommended for ${deload.exercise}`);
   }
   renderMilestones();
   renderGoalBar();
@@ -6402,7 +6403,7 @@ function submitSessionRating() {
   workout.sessionRating = { ...draft, ratedAt: new Date().toISOString() };
   localStorage.setItem(`workouts_${_logUser}`, JSON.stringify(workouts));
   renderWorkouts();
-  if (typeof showToast === 'function') showToast('Session rating saved.');
+  if (typeof window.showToast === 'function') window.showToast('Session rating saved.');
 }
 
 window.openSessionRatingModal = openSessionRatingModal;
@@ -8739,7 +8740,7 @@ function saveSliderMacros() {
       const target = { calories: calTotal, protein: p, fat: f, carbs: c };
       // persist to Airtable and update local display
       saveToAirtable(currentUser, target).then(() => {
-        showToast("Macro targets saved!");
+        window.showToast("Macro targets saved!");
         saveMacroTargetsToTop(target);
       });
   }
@@ -8974,7 +8975,7 @@ function maybeApplyDailyMacroAdjustment() {
 
   if (result.reasons?.length) {
     const msg = `Macro targets updated: ${result.reasons.join(' ')}`;
-    if (typeof showToast === 'function') showToast(msg);
+    if (typeof window.showToast === 'function') window.showToast(msg);
     else console.log(msg);
   }
 }
@@ -9364,7 +9365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
     autoIncrementToggle.addEventListener('change', (event) => {
       localStorage.setItem('autoIncrementEnabled', String(Boolean(event.target.checked)));
-      showToast(`Auto-increment suggestions ${event.target.checked ? 'enabled' : 'disabled'}`);
+      window.showToast(`Auto-increment suggestions ${event.target.checked ? 'enabled' : 'disabled'}`);
     });
   }
 });
@@ -10465,9 +10466,9 @@ function setCoachLoggingClient(clientUsername) {
   const bar = document.getElementById('coachLogForBar');
   if (bar) bar.classList.toggle('is-client', !!clientUsername);
   if (clientUsername) {
-    showToast(`Logging for ${clientUsername} — entries go to their logbook`);
+    window.showToast(`Logging for ${clientUsername} — entries go to their logbook`);
   } else {
-    showToast('Back to your own logbook');
+    window.showToast('Back to your own logbook');
   }
   if (typeof renderWorkouts === 'function') renderWorkouts();
 }
@@ -10518,11 +10519,11 @@ async function saveClientWorkoutToBackend(workout, clientUsername) {
     if (!res.ok || !data?.success) {
       throw new Error(data?.error?.message || `HTTP ${res.status}`);
     }
-    showToast(`Synced to ${clientUsername}'s logbook ✓`);
+    window.showToast(`Synced to ${clientUsername}'s logbook ✓`);
     return true;
   } catch (err) {
     console.warn('[CoachLogFor] client sync failed', err);
-    showToast(`Saved locally — could not sync to ${clientUsername}'s account`, 'error');
+    window.showToast(`Saved locally — could not sync to ${clientUsername}'s account`, 'error');
     return false;
   }
 }
@@ -10562,7 +10563,7 @@ async function saveCoachExerciseVideo() {
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) throw new Error(data?.error?.message || `HTTP ${res.status}`);
     if (status) status.textContent = '';
-    showToast(`Video saved for ${exerciseName} ✓`);
+    window.showToast(`Video saved for ${exerciseName} ✓`);
     document.getElementById('coachVideoExercise').value = '';
     document.getElementById('coachVideoUrl').value = '';
     document.getElementById('coachVideoNotes').value = '';
@@ -10615,11 +10616,11 @@ async function deleteCoachExerciseVideo(id) {
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) throw new Error(data?.error?.message || `HTTP ${res.status}`);
-    showToast('Video removed');
+    window.showToast('Video removed');
     loadCoachExerciseVideos();
   } catch (err) {
     console.warn('[Videos] delete failed', err);
-    showToast('Could not remove video', 'error');
+    window.showToast('Could not remove video', 'error');
   }
 }
 window.deleteCoachExerciseVideo = deleteCoachExerciseVideo;
@@ -14573,7 +14574,7 @@ function saveMuscleWeeklyTargets() {
       ? 'Weekly targets saved (some values were adjusted to stay within a sane range).'
       : 'Weekly targets saved.';
   }
-  if (typeof showToast === 'function') showToast('Weekly muscle targets saved');
+  if (typeof window.showToast === 'function') window.showToast('Weekly muscle targets saved');
 
   // Keep the Recovery Map in sync if it's the tab currently on screen
   const recoveryPanel = document.getElementById('recoveryPanel');
@@ -16776,23 +16777,11 @@ window.renderTodaysMission = renderTodaysMission;
 window.renderUpcomingPrepEvents = renderUpcomingPrepEvents;
 window.renderRewardSummary = typeof renderRewardSummary === 'function' ? renderRewardSummary : function() {};
 
-  function showToast(msg) {
-    const toast = document.createElement('div');
-    toast.textContent = msg;
-    toast.style.position = 'fixed';
-    toast.style.bottom = '20px';
-    toast.style.left = '50%';
-    toast.style.transform = 'translateX(-50%)';
-    toast.style.background = 'var(--highlight)';
-    toast.style.color = 'var(--text-color)';
-    toast.style.padding = '8px 16px';
-    toast.style.borderRadius = '4px';
-    toast.style.zIndex = '1000';
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }
-
-  window.showToast = showToast;
+  // NOTE: a local `function showToast(msg)` used to live here and build its
+  // own throwaway div. A top-level function declaration in a classic script
+  // auto-assigns to window.showToast, which silently shadowed the real
+  // icon/color-aware implementation in native-ui.js. It was removed; call
+  // sites below now call window.showToast(...) directly.
 
 
 
@@ -18218,7 +18207,7 @@ function saveOneRMEntry() {
   document.getElementById('oneRMRPE').value = '';
   renderOneRMChart();
   renderOneRMStats();
-  if (typeof showToast === 'function') showToast('Entry logged!');
+  if (typeof window.showToast === 'function') window.showToast('Entry logged!');
 }
 
 let oneRMChartInstance = null;
@@ -18390,7 +18379,7 @@ function saveMeetDetails() {
   if (!date) { window.showToast?.('Please enter a meet date.', 'warn'); return; }
   localStorage.setItem('plMeetDetails', JSON.stringify({ date, name, fed, weightClass }));
   renderMeetPrep();
-  if (typeof showToast === 'function') showToast('Meet saved!');
+  if (typeof window.showToast === 'function') window.showToast('Meet saved!');
 }
 
 function renderMeetPrep() {
@@ -19444,5 +19433,7 @@ window.renderMeetPrep = renderMeetPrep;
   50%       { opacity: 0.65; }
 }
 </style>
+
+<script src="animations-patch.js"></script>
 </body>
 </html>
