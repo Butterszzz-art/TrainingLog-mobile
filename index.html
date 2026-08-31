@@ -716,6 +716,12 @@
           <div class="log-exercise-stats-line" id="exerciseStatsLine" hidden></div>
           <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
           <datalist id="exerciseSuggestions"></datalist>
+          <!-- Constrains entry to the known catalog (built-in + custom
+               exercises) — populated/validated by updateAddButtonState().
+               Unrecognized names disable "+ Add to Log" and point here at
+               Settings → Advanced instead of silently logging an exercise
+               that can't be grouped by muscle. -->
+          <div id="exerciseNameHint" class="form-error" style="display:none;"></div>
 
           <!-- Progressive overload hint -->
           <div id="overloadHint" class="overload-hint"></div>
@@ -3512,6 +3518,7 @@
 <script src="progressiveOverload.js"></script>
 <script src="community.js"></script>
 <script src="exerciseMuscleMap.js"></script>
+<script src="src/js/customExercises.js"></script>
 <script src="leaderboard.js"></script>
 <script src="recoveryMap.js"></script>
 <script src="exerciseLeaderboard.js"></script>
@@ -3803,16 +3810,30 @@ let exerciseLibraryNames = [];
 const EXERCISE_LIBRARY_CACHE_KEY = 'exerciseLibraryCache_v1';
 const EXERCISE_LIBRARY_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+// Every name the exercise-entry field will accept — see isKnownExerciseName()
+// below, which updateAddButtonState() uses to constrain entry to this set.
+let knownExerciseNameSet = new Set();
+
 function updateExerciseSuggestions() {
   const list = document.getElementById('exerciseSuggestions');
   if (!list) return;
   list.innerHTML = '';
-  const all = Array.from(new Set([...defaultExercises, ...exerciseLibraryNames, ...userExercises]));
+  const canonicalNames = typeof getAllExerciseNames === 'function' ? getAllExerciseNames() : [];
+  const customNames = (currentUser && typeof loadCustomExercises === 'function')
+    ? loadCustomExercises(currentUser).map(e => e.name)
+    : [];
+  const all = Array.from(new Set([...defaultExercises, ...canonicalNames, ...exerciseLibraryNames, ...customNames, ...userExercises]));
+  knownExerciseNameSet = new Set(all.map(n => n.toLowerCase()));
   all.forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
     list.appendChild(opt);
   });
+}
+
+function isKnownExerciseName(name) {
+  const trimmed = String(name || '').trim().toLowerCase();
+  return Boolean(trimmed) && knownExerciseNameSet.has(trimmed);
 }
 
 async function loadExerciseLibrary() {
@@ -3844,6 +3865,9 @@ function loadUserExercises() {
   if (!currentUser) return;
   const data = JSON.parse(localStorage.getItem(`exercises_${currentUser}`)) || [];
   userExercises = Array.isArray(data) ? data : [];
+  if (typeof getCustomMuscleMapObject === 'function' && typeof setCustomExerciseMuscleMap === 'function') {
+    setCustomExerciseMuscleMap(getCustomMuscleMapObject(currentUser));
+  }
   updateExerciseSuggestions();
   loadExerciseLibrary(); // fire-and-forget — renders with defaults/cache immediately, upgrades when it resolves
 }
@@ -5047,8 +5071,20 @@ function updateAddButtonState() {
   const exercise = document.getElementById('exercise').value.trim();
   const sets = parseInt(document.getElementById('sets').value, 10);
   const addBtn = document.getElementById('addLogBtn');
+  const hint = document.getElementById('exerciseNameHint');
   if (!addBtn) return;
-  if (!exercise || !sets || isNaN(sets) || sets < 1) {
+
+  const knownExercise = typeof isKnownExerciseName === 'function' ? isKnownExerciseName(exercise) : true;
+  if (hint) {
+    if (exercise && !knownExercise) {
+      hint.textContent = 'Pick an exercise from the suggestions, or add a custom one in Settings → Advanced.';
+      hint.style.display = 'block';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
+  if (!exercise || !knownExercise || !sets || isNaN(sets) || sets < 1) {
     addBtn.disabled = true;
     return;
   }

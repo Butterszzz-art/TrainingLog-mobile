@@ -7,6 +7,7 @@
     <button type="button" class="settings-subtab" data-settings-subtab="goals">🎯 Goals</button>
     <button type="button" class="settings-subtab" data-settings-subtab="nutrition">🥗 Nutrition</button>
     <button type="button" class="settings-subtab" data-settings-subtab="app">⚙️ App</button>
+    <button type="button" class="settings-subtab" data-settings-subtab="advanced">🛠️ Advanced</button>
   </div>
 
   <!-- ── PROFILE + APP share one form so saveSettings() can read all fields ── -->
@@ -366,5 +367,39 @@
     </section>
 
   </div><!-- end #settingsSubNutrition -->
+
+  <!-- ── ADVANCED (no nested form — uses onclick buttons). Exercise entry
+       in the log form is constrained to a known catalog (~1,000 built-in
+       names) so it always resolves to a muscle group for the volume block.
+       This is the escape hatch: create a custom exercise, or reassign an
+       existing one, by hand. Deliberately tucked away here rather than on
+       the main log screen. ── -->
+  <div id="settingsSubAdvanced" class="settings-subview hidden">
+
+    <section class="panel profile-section" aria-labelledby="sCustomExerciseHeading">
+      <h3 id="sCustomExerciseHeading">Custom Exercise Muscle Groups</h3>
+      <p style="font-size:0.83rem;color:var(--secondary-text);margin:0 0 10px;">
+        For advanced lifters. Exercise entry only accepts names the app can group by muscle.
+        Add a new exercise here, or type one you already log to change which muscle group it counts toward —
+        your assignment always overrides the app's default.
+      </p>
+
+      <label for="customExerciseName">Exercise name</label>
+      <input type="text" id="customExerciseName" list="customExerciseNameSuggestions" placeholder="e.g. Zercher Squat">
+      <datalist id="customExerciseNameSuggestions"></datalist>
+
+      <label for="customExerciseMuscleGroup">Muscle group</label>
+      <select id="customExerciseMuscleGroup"></select>
+
+      <button type="button" id="customExerciseSaveBtn" style="width:100%;margin-top:8px;">Save Assignment</button>
+      <p id="customExerciseFeedback" style="font-size:0.85rem;margin:8px 0 0;min-height:1.2em;"></p>
+    </section>
+
+    <section class="panel profile-section" aria-labelledby="sCustomExerciseListHeading">
+      <h3 id="sCustomExerciseListHeading">Your Custom Assignments</h3>
+      <div id="customExerciseList"></div>
+    </section>
+
+  </div><!-- end #settingsSubAdvanced -->
 
 </div><!-- end #settingsPage -->
