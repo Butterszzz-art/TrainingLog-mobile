@@ -74,6 +74,8 @@ function mapExerciseToBodybuildingGroup(exerciseName, explicitGroup) {
   if (primary === 'shoulders') return 'delts';
   if (primary === 'biceps' || primary === 'triceps' || primary === 'forearms') return 'arms';
   if (primary === 'back' || primary === 'traps') return 'back thickness';
+  if (primary === 'abductors') return 'glutes';
+  if (primary === 'adductors' || primary === 'legs') return 'quads';
 
   return 'other';
 }
