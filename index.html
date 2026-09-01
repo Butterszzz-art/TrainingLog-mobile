@@ -730,9 +730,12 @@
           <div id="exerciseVideoHint" class="exercise-video-hint" style="display:none;"></div>
 
           <!-- Quick log: one-tap single-set logging. Drives the exact
-               same #sets/#reps_0/#weight_0 fields + addLogEntry() as the
-               manual form below — no separate save path, no new data
-               shape, just a faster front door onto it (session-queue.js). -->
+               same #sets/#reps_0/#weight_0 fields, the same dropset_0/
+               restPause_0/unilateral_0 flags (via the pills below) and the
+               same shared Advanced panel (target weight/reps, RPE/RIR,
+               back-dating) + addLogEntry() as the manual form below — no
+               separate save path, no new data shape, just a faster front
+               door onto it (session-queue.js). -->
           <div class="ql-panel" id="quickLogPanel" hidden>
             <div class="ql-row">
               <div class="ql-field">
@@ -755,64 +758,23 @@
                 </div>
               </div>
             </div>
-            <button type="button" class="cta-capsule ql-log-btn" id="qlLogBtn" onclick="quickLogSet()">
-              <span id="qlLogBtnLabel">Log set</span>
-              <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>
-            </button>
-          </div>
 
-          <!-- Quick-log weight entry sheet: tapping the weight value above
-               opens this so high weights don't need dozens of +/- taps —
-               plate quick-add chips (unit-aware) plus a direct numeric
-               keypad entry (session-queue.js). -->
-          <div class="ql-weight-sheet" id="qlWeightSheet" hidden>
-            <div class="ql-weight-sheet-backdrop" onclick="if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();"></div>
-            <div class="ql-weight-sheet-card" role="dialog" aria-modal="true" aria-label="Set weight">
-              <div class="ql-weight-sheet-title">Set weight <span id="qlSheetUnitLabel">kg</span></div>
-              <input type="number" inputmode="decimal" step="0.5" class="ql-weight-sheet-input" id="qlWeightSheetInput" aria-label="Weight" onkeydown="if(event.key==='Enter'){event.preventDefault(); if(typeof confirmQuickLogWeightSheet==='function') confirmQuickLogWeightSheet();} else if(event.key==='Escape'){if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();}" />
-              <div class="ql-plate-grid" id="qlPlateGrid"></div>
-              <div class="ql-weight-sheet-actions">
-                <button type="button" class="ql-weight-sheet-clear" onclick="if(typeof qlWeightSheetClear==='function') qlWeightSheetClear();">Clear</button>
-                <button type="button" class="ql-weight-sheet-cancel" onclick="if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();">Cancel</button>
-                <button type="button" class="cta-capsule ql-weight-sheet-save" onclick="if(typeof confirmQuickLogWeightSheet==='function') confirmQuickLogWeightSheet();">Use weight</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Manual / multi-set entry — everything the quick-log panel
-               above doesn't cover (custom set counts, per-set drop-sets/
-               rest-pause/unilateral, target RPE/RIR, template loading,
-               back-dating). Nothing here changed; just tucked behind a
-               disclosure so quick-log is the default one-tap path. -->
-          <details class="log-manual-entry" id="logManualEntry">
-            <summary class="log-manual-entry-toggle">Manual / multi-set entry</summary>
-            <div class="log-manual-entry-body">
-
-            <!-- Sets + unit on one row -->
-            <div class="sets-unit-row">
-              <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
-              <select id="weightUnit" onchange="if(typeof syncQuickLogUnit==='function') syncQuickLogUnit(this.value);">
-                <option value="kg">kg</option>
-                <option value="lbs">lbs</option>
-              </select>
+            <!-- Per-set flags for the one quick-logged set. Not sticky
+                 across sets (reset after each log) — session-queue.js
+                 copies these onto the real dropset_0/restPause_0/
+                 unilateral_0 checkboxes (regenerated on every keystroke by
+                 generateSetInputs(1)) right before addLogEntry() reads them. -->
+            <div class="ql-setopts-row">
+              <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="qlDropset" /><span>Drop</span></label>
+              <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="qlRestPause" /><span>RP</span></label>
+              <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="qlUnilateral" /><span>L/R</span></label>
             </div>
 
-            <!-- Machine at its weight ceiling — can't add more load next time -->
-            <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
-              <input type="checkbox" id="maxedOutToggle" />
-              <span>🔒 Maxed Out</span>
-            </label>
-
-            <!-- Dynamically generated set inputs -->
-            <div id="setInputsContainer"></div>
-
-            <!-- Template quick-load -->
-            <select id="resistanceTemplateSelect" class="log-template-select" onchange="loadSelectedResistanceTemplate()">
-              <option value="">Load a template…</option>
-            </select>
-            <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
-
-            <!-- Advanced options panel (modern custom toggle) -->
+            <!-- Advanced options panel (modern custom toggle). Shared with
+                 the manual form below — same #goal/#repGoal/#targetRPE/
+                 #targetRIR/#entryDate fields addLogEntry() already reads,
+                 just surfaced here so quick-log doesn't need the manual
+                 disclosure open to set a target, RPE/RIR, or back-date. -->
             <div class="log-advanced" id="logAdvancedPanel">
               <button class="log-adv-toggle" id="logAdvToggle" aria-expanded="false" type="button" onclick="toggleLogAdvanced()">
                 <span class="log-adv-left">
@@ -867,6 +829,63 @@
                 </div>
               </div>
             </div>
+
+            <button type="button" class="cta-capsule ql-log-btn" id="qlLogBtn" onclick="quickLogSet()">
+              <span id="qlLogBtnLabel">Log set</span>
+              <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>
+            </button>
+          </div>
+
+          <!-- Quick-log weight entry sheet: tapping the weight value above
+               opens this so high weights don't need dozens of +/- taps —
+               plate quick-add chips (unit-aware) plus a direct numeric
+               keypad entry (session-queue.js). -->
+          <div class="ql-weight-sheet" id="qlWeightSheet" hidden>
+            <div class="ql-weight-sheet-backdrop" onclick="if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();"></div>
+            <div class="ql-weight-sheet-card" role="dialog" aria-modal="true" aria-label="Set weight">
+              <div class="ql-weight-sheet-title">Set weight <span id="qlSheetUnitLabel">kg</span></div>
+              <input type="number" inputmode="decimal" step="0.5" class="ql-weight-sheet-input" id="qlWeightSheetInput" aria-label="Weight" onkeydown="if(event.key==='Enter'){event.preventDefault(); if(typeof confirmQuickLogWeightSheet==='function') confirmQuickLogWeightSheet();} else if(event.key==='Escape'){if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();}" />
+              <div class="ql-plate-grid" id="qlPlateGrid"></div>
+              <div class="ql-weight-sheet-actions">
+                <button type="button" class="ql-weight-sheet-clear" onclick="if(typeof qlWeightSheetClear==='function') qlWeightSheetClear();">Clear</button>
+                <button type="button" class="ql-weight-sheet-cancel" onclick="if(typeof closeQuickLogWeightSheet==='function') closeQuickLogWeightSheet();">Cancel</button>
+                <button type="button" class="cta-capsule ql-weight-sheet-save" onclick="if(typeof confirmQuickLogWeightSheet==='function') confirmQuickLogWeightSheet();">Use weight</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual / multi-set entry — for logging several sets at once
+               (with per-set drop-set/rest-pause/unilateral flags) or
+               loading a template. The Advanced panel (target RPE/RIR,
+               back-dating) now lives in the quick-log panel above, shared
+               by both flows — nothing duplicated here. -->
+          <details class="log-manual-entry" id="logManualEntry">
+            <summary class="log-manual-entry-toggle">Manual / multi-set entry</summary>
+            <div class="log-manual-entry-body">
+
+            <!-- Sets + unit on one row -->
+            <div class="sets-unit-row">
+              <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
+              <select id="weightUnit" onchange="if(typeof syncQuickLogUnit==='function') syncQuickLogUnit(this.value);">
+                <option value="kg">kg</option>
+                <option value="lbs">lbs</option>
+              </select>
+            </div>
+
+            <!-- Machine at its weight ceiling — can't add more load next time -->
+            <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
+              <input type="checkbox" id="maxedOutToggle" />
+              <span>🔒 Maxed Out</span>
+            </label>
+
+            <!-- Dynamically generated set inputs -->
+            <div id="setInputsContainer"></div>
+
+            <!-- Template quick-load -->
+            <select id="resistanceTemplateSelect" class="log-template-select" onchange="loadSelectedResistanceTemplate()">
+              <option value="">Load a template…</option>
+            </select>
+            <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
 
             <button id="addLogBtn" onclick="addLogEntry()" disabled class="log-add-btn">+ Add to Log</button>
 

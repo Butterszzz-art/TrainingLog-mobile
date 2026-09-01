@@ -274,6 +274,17 @@
   font-size: 19px;
 }
 
+/* Drop/RP/L-R flags for the one quick-logged set, and the Advanced panel
+   (target weight/reps, RPE/RIR, back-dating) — both shared with the
+   manual form below via the same underlying fields. */
+.ql-setopts-row {
+  display: flex;
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+
+.log-advanced { margin-bottom: 10px; }
+
 /* ── Quick-log weight sheet — plate quick-add chips + numeric keypad
    entry, opened by tapping the weight value above ──────────────── */
 

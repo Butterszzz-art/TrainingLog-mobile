@@ -400,7 +400,34 @@
     const repsEl = document.getElementById('reps_0');
     if (weightEl && _qlWeight != null) weightEl.value = _qlWeight;
     if (repsEl && _qlReps != null) repsEl.value = _qlReps;
+
+    // Copy the quick-log-native Drop/RP/L-R pills onto the real set-0
+    // checkboxes addLogEntry() reads. Those checkboxes live inside
+    // #setInputsContainer and get wiped back to unchecked every time
+    // generateSetInputs(1) reruns (every #exercise keystroke, and again
+    // inside quickLogSet() right before this runs) — so this has to
+    // happen after every regeneration, not just once.
+    const dsPill = document.getElementById('qlDropset');
+    const rpPill = document.getElementById('qlRestPause');
+    const uniPill = document.getElementById('qlUnilateral');
+    const dsEl = document.getElementById('dropset_0');
+    const rpEl = document.getElementById('restPause_0');
+    const uniEl = document.getElementById('unilateral_0');
+    if (dsEl) dsEl.checked = !!(dsPill && dsPill.checked);
+    if (rpEl) rpEl.checked = !!(rpPill && rpPill.checked);
+    if (uniEl) uniEl.checked = !!(uniPill && uniPill.checked);
+
     if (typeof global.updateAddButtonState === 'function') global.updateAddButtonState();
+  }
+
+  /** Drop/RP/L-R are per-set flags, not sticky like weight/reps — clear
+   * them back to unchecked (new exercise, or after a set was just logged). */
+  function _resetQuickLogSetOpts() {
+    if (typeof document === 'undefined') return;
+    ['qlDropset', 'qlRestPause', 'qlUnilateral'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = false;
+    });
   }
 
   /** Sets already logged today for this exact exercise name — real count
@@ -571,6 +598,7 @@
       _qlReps = repsEl && repsEl.value !== '' ? Number(repsEl.value) : (_qlReps ?? 8);
       _qlExerciseName = name;
     }
+    if (isNewExercise) _resetQuickLogSetOpts();
     _syncQuickLogDisplay();
     _writeQuickLogToForm();
 
@@ -638,6 +666,7 @@
       const setsInput2 = document.getElementById('sets');
       if (setsInput2) setsInput2.value = '1';
       if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
+      _resetQuickLogSetOpts(); // Drop/RP/L-R applied to the set just logged, not the next one
       _writeQuickLogToForm(); // keep the same weight/reps for the next set
       _updateQuickLogButtonLabel(name);
       _updateExerciseStatsLine(name);
