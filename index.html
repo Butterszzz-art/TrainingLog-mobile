@@ -56,6 +56,55 @@
   <script src="src/js/native-ui.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    /* ── Chart.js theme — matches the app's dark pod design system so
+       charts don't look like a foreign, unstyled widget dropped onto
+       the page. Palette pulled from css/tokens.css green ramp. ── */
+    window.CHART_PALETTE = {
+      primary: '#3d9d73',
+      primaryDeep: '#2f8a63',
+      primaryLight: '#6fae8b',
+      primaryPale: '#8ec2a4',
+      gold: '#c79a54',
+      danger: '#dc3545',
+      text: '#f4f7f5',
+      textMuted: '#8c9891',
+      textFaint: '#5a675f',
+      grid: 'rgba(116, 138, 126, 0.12)',
+      gridStrong: 'rgba(116, 138, 126, 0.2)'
+    };
+    function chartAreaGradient(ctx, chart, colorTop, colorBottom) {
+      const { chartArea } = chart;
+      if (!chartArea) return colorTop;
+      const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+      gradient.addColorStop(0, colorTop);
+      gradient.addColorStop(1, colorBottom);
+      return gradient;
+    }
+    if (typeof Chart !== 'undefined') {
+      const P = window.CHART_PALETTE;
+      Chart.defaults.color = P.textMuted;
+      Chart.defaults.borderColor = P.grid;
+      Chart.defaults.font.family = "'Archivo', 'Poppins', system-ui, sans-serif";
+      Chart.defaults.font.size = 11;
+      Chart.defaults.plugins.legend.labels.color = P.textMuted;
+      Chart.defaults.plugins.legend.labels.boxWidth = 10;
+      Chart.defaults.plugins.legend.labels.usePointStyle = true;
+      Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(16, 22, 20, 0.95)';
+      Chart.defaults.plugins.tooltip.titleColor = P.text;
+      Chart.defaults.plugins.tooltip.bodyColor = P.textMuted;
+      Chart.defaults.plugins.tooltip.borderColor = P.gridStrong;
+      Chart.defaults.plugins.tooltip.borderWidth = 1;
+      Chart.defaults.plugins.tooltip.padding = 10;
+      Chart.defaults.plugins.tooltip.cornerRadius = 8;
+      Chart.defaults.plugins.tooltip.displayColors = true;
+      Chart.defaults.elements.point.radius = 0;
+      Chart.defaults.elements.point.hoverRadius = 5;
+      Chart.defaults.elements.line.borderWidth = 2.5;
+      Chart.defaults.scale.grid.color = P.grid;
+      Chart.defaults.scale.ticks.color = P.textFaint;
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <!-- Firebase Auth (Phase 1 migration) — compat SDK for this script-tag codebase -->
@@ -2968,15 +3017,8 @@
                 <span>Fresh</span><span>Moderate</span><span>Fatigued</span><span>Overreached</span>
               </div>
             </div>
-            <p class="recovery-hint">Tap a muscle to isolate it in the table below</p>
-            <div class="recovery-table-wrap">
-              <table class="recovery-table">
-                <thead>
-                  <tr><th>Muscle</th><th class="num">Sets</th><th>Volume</th><th>Last trained</th><th>Status</th></tr>
-                </thead>
-                <tbody id="recoveryTableBody"></tbody>
-              </table>
-            </div>
+            <p class="recovery-hint">Tap a muscle to isolate it below</p>
+            <div class="recovery-list" id="recoveryTableBody"></div>
           </div>
           <div id="bodybuildingProgressPanel"></div>
           <div id="goalBar" style="margin-top:10px;"></div>
@@ -2995,9 +3037,9 @@
         <option value="all">All time</option>
         <option value="year">Last year</option>
       </select>
-      <div id="prPanel"></div>
+      <div id="prPanel" class="pod"></div>
       <div id="milestoneBadges" style="margin-top:12px;"></div>
-      <div id="dashboardPRSummary" class="panel" style="margin-top:12px;"></div>
+      <div id="dashboardPRSummary" class="pod" style="margin-top:12px;"></div>
     </div>
 
     <!-- ══ Sub: Gamification ═════════════════════════════════════ -->
@@ -3074,7 +3116,6 @@
           </button>
         </div>
       </div>
-      <div id="dashboardPRSummary" class="panel"></div>
     </div>
 </div><!-- /#progressTab -->
 
@@ -10193,14 +10234,12 @@ function renderProgressComplianceSummary() {
     .join(' · ');
 
   target.innerHTML = `
-    <div style="padding:10px;border-left:4px solid var(--primary);background:rgba(47,128,237,.08);margin-bottom:10px;">
+    <div class="insight-box">
       <strong>Compliance Summary:</strong>
       Daily ${snapshot.dailyPercent}% (${formatComplianceStatus(snapshot.dailyStatus)}) ·
       Weekly ${snapshot.weekly.averagePercent}% (${formatComplianceStatus(snapshot.weekly.status)}) ·
       Rolling 7-day ${snapshot.rolling7.percent}% (${formatComplianceStatus(snapshot.rolling7.status)})
-      <br />
       <small><strong>Insights:</strong> ${snapshot.insightsPayload.insights.join(' · ') || 'No insight yet'}</small>
-      <br />
       <small><strong>Missed task analysis:</strong> ${missedList || 'No missed tasks in the current 7-day window.'}</small>
     </div>
   `;
@@ -13152,19 +13191,31 @@ const SAFE_MONOTONY_THRESHOLD = 2;
 const SAFE_STRAIN_THRESHOLD = 6000;
 
 function renderLineChart(labels, label, data, trend, forecast) {
-  const ctx = document.getElementById('progressCanvas').getContext('2d');
+  const canvas = document.getElementById('progressCanvas');
+  const ctx = canvas.getContext('2d');
   if (progressChart) progressChart.destroy();
+  const P = window.CHART_PALETTE || {};
   progressChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
       datasets: [
-        { label, data, tension: .4 },
-        trend ? { label: 'Trend', data: trend, borderDash: [5,5], borderColor: '#888', tension:.4, fill:false } : null,
-        forecast ? { label: 'Forecast', data: forecast, borderColor: '#f00', borderDash: [2,2], tension:.4, fill:false } : null
+        {
+          label,
+          data,
+          tension: .4,
+          borderColor: P.primary,
+          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, 'rgba(61,157,115,0.22)', 'rgba(61,157,115,0)'),
+          fill: true
+        },
+        trend ? { label: 'Trend', data: trend, borderDash: [5,5], borderColor: P.textMuted, tension:.4, fill:false } : null,
+        forecast ? { label: 'Forecast', data: forecast, borderColor: P.gold, borderDash: [2,2], tension:.4, fill:false } : null
       ].filter(Boolean)
     },
-    options: { scales: { y: { beginAtZero: true } } }
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      scales: { y: { beginAtZero: true } }
+    }
   });
 }
 
@@ -13256,6 +13307,7 @@ function renderTrainingLoadCharts(workouts) {
 
   const monotonyCtx = document.getElementById('monotonyCanvas').getContext('2d');
   const strainCtx = document.getElementById('strainCanvas').getContext('2d');
+  const P = window.CHART_PALETTE || {};
 
   if (monotonyChart) monotonyChart.destroy();
   monotonyChart = new Chart(monotonyCtx, {
@@ -13265,7 +13317,10 @@ function renderTrainingLoadCharts(workouts) {
       datasets: [{
         label: 'Weekly Monotony',
         data: monotonyValues,
-        backgroundColor: monotonyValues.map(v => v > SAFE_MONOTONY_THRESHOLD ? '#e74c3c' : '#4e79a7')
+        backgroundColor: monotonyValues.map(v => v > SAFE_MONOTONY_THRESHOLD ? P.danger : P.primary),
+        borderRadius: 6,
+        borderSkipped: false,
+        maxBarThickness: 34
       }]
     },
     options: {
@@ -13288,7 +13343,10 @@ function renderTrainingLoadCharts(workouts) {
       datasets: [{
         label: 'Weekly Strain',
         data: strainValues,
-        backgroundColor: strainValues.map(v => v > SAFE_STRAIN_THRESHOLD ? '#e74c3c' : '#59a14f')
+        backgroundColor: strainValues.map(v => v > SAFE_STRAIN_THRESHOLD ? P.danger : P.gold),
+        borderRadius: 6,
+        borderSkipped: false,
+        maxBarThickness: 34
       }]
     },
     options: {
@@ -13310,8 +13368,10 @@ function renderTrainingLoadCharts(workouts) {
 }
 
 function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) {
-  const ctx = document.getElementById('progressCanvas').getContext('2d');
+  const canvas = document.getElementById('progressCanvas');
+  const ctx = canvas.getContext('2d');
   if (progressChart) progressChart.destroy();
+  const P = window.CHART_PALETTE || {};
   progressChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -13321,23 +13381,32 @@ function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) 
           label: 'Session Volume',
           data: volumes,
           tension: .35,
+          borderColor: P.primary,
+          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, 'rgba(61,157,115,0.22)', 'rgba(61,157,115,0)'),
+          fill: true,
           yAxisID: 'yVolume'
         },
         {
           label: 'Avg Intensity (%)',
           data: intensities,
           tension: .35,
+          borderColor: P.gold,
+          borderDash: [4, 3],
+          fill: false,
           yAxisID: 'yIntensity'
         },
         {
           label: 'Estimated 1RM',
           data: estimated1RMs,
           tension: .35,
+          borderColor: P.primaryPale,
+          fill: false,
           yAxisID: 'yVolume'
         }
       ]
     },
     options: {
+      interaction: { mode: 'index', intersect: false },
       scales: {
         yVolume: {
           beginAtZero: true,
@@ -13656,16 +13725,32 @@ function renderBodybuildingProgressPanel(workouts) {
   const volumeRows = (summary.muscleGroupVolume || [])
     .map(group => {
       const plannedLabel = group.planned > 0 ? group.planned.toFixed(0) : '—';
-      const status = group.planned > 0
-        ? `${(group.ratio * 100).toFixed(0)}%`
-        : 'Unplanned';
-      return `<tr><td>${group.muscleGroup}</td><td>${group.actual.toFixed(0)}</td><td>${plannedLabel}</td><td>${status}</td></tr>`;
+      const hasPlan = group.planned > 0;
+      const pct = hasPlan ? Math.round(Math.min(1, group.ratio) * 100) : 0;
+      const over = hasPlan && group.actual > group.planned;
+      const status = hasPlan ? `${(group.ratio * 100).toFixed(0)}%` : 'Unplanned';
+      return `<div class="bb-row">
+        <div class="bb-row-top">
+          <span class="bb-row-name">${group.muscleGroup}</span>
+          <span class="chip">${status}</span>
+        </div>
+        <div class="bb-row-mid">
+          <div class="ratio-track${over ? ' is-over' : ''}"><div class="ratio-fill" style="width:${pct}%"></div></div>
+          <span class="bb-row-nums">${group.actual.toFixed(0)} / ${plannedLabel}</span>
+        </div>
+      </div>`;
     })
     .join('');
 
   const consistencyRows = (summary.exerciseConsistency || [])
     .slice(0, 8)
-    .map(item => `<tr><td>${item.exercise}</td><td>${item.sessions}</td><td>${item.avgDaysBetween ? item.avgDaysBetween.toFixed(1) : '—'}</td></tr>`)
+    .map(item => `<div class="bb-row bb-row--consistency">
+        <span class="bb-row-name">${item.exercise}</span>
+        <div class="bb-row-stats">
+          <span class="chip">${item.sessions} sessions</span>
+          <span class="chip">${item.avgDaysBetween ? item.avgDaysBetween.toFixed(1) + 'd apart' : '—'}</span>
+        </div>
+      </div>`)
     .join('');
 
   const topSetItems = (summary.prSummaries?.topSetPRs || [])
@@ -13688,15 +13773,13 @@ function renderBodybuildingProgressPanel(workouts) {
   panel.innerHTML = `
     <h3>Bodybuilding Progress</h3>
     <h4>Muscle Group Weekly Volume (actual vs planned)</h4>
-    <table>
-      <tr><th align="left">Muscle Group</th><th align="left">Actual</th><th align="left">Planned</th><th align="left">Status</th></tr>
-      ${volumeRows || '<tr><td colspan="4" class="progress-empty">No resistance log data in selected range.</td></tr>'}
-    </table>
+    <div class="bb-list">
+      ${volumeRows || '<p class="progress-empty">No resistance log data in selected range.</p>'}
+    </div>
     <h4>Exercise Consistency</h4>
-    <table>
-      <tr><th align="left">Exercise</th><th align="left">Sessions</th><th align="left">Avg days between</th></tr>
-      ${consistencyRows || '<tr><td colspan="3" class="progress-empty">No consistency data yet.</td></tr>'}
-    </table>
+    <div class="bb-list">
+      ${consistencyRows || '<p class="progress-empty">No consistency data yet.</p>'}
+    </div>
     <h4>PR Snapshot</h4>
     <div class="bb-pr-grid">
       <div class="bb-pr-card"><strong>Top Set</strong><ul>${topSetItems || '<li class="progress-empty">No data</li>'}</ul></div>
@@ -14209,17 +14292,27 @@ async function showBodyweightProgress() {
   const alignedIntake = dates.map((d) => Number(intakeByDate[d] || 0));
   const weightTrend = trendPoints(weights);
 
-  const ctx = document.getElementById('progressCanvas').getContext('2d');
+  const canvas = document.getElementById('progressCanvas');
+  const ctx = canvas.getContext('2d');
   if (progressChart) progressChart.destroy();
+  const P = window.CHART_PALETTE || {};
   progressChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: dates,
       datasets: [
-        { label: 'Bodyweight', data: weights, borderColor: '#2F80ED', yAxisID: 'yWeight', tension: 0.35 },
-        { label: 'Weight Trend', data: weightTrend, borderColor: '#2F80ED99', borderDash: [5, 5], yAxisID: 'yWeight', tension: 0.35, fill: false },
-        { label: 'Training Volume', data: alignedVolume, borderColor: '#27AE60', yAxisID: 'yVolume', tension: 0.35 },
-        { label: 'Caloric Intake', data: alignedIntake, borderColor: '#F2994A', yAxisID: 'yIntake', tension: 0.35 },
+        {
+          label: 'Bodyweight',
+          data: weights,
+          borderColor: P.primary,
+          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, 'rgba(61,157,115,0.22)', 'rgba(61,157,115,0)'),
+          fill: true,
+          yAxisID: 'yWeight',
+          tension: 0.35
+        },
+        { label: 'Weight Trend', data: weightTrend, borderColor: P.textMuted, borderDash: [5, 5], yAxisID: 'yWeight', tension: 0.35, fill: false },
+        { label: 'Training Volume', data: alignedVolume, borderColor: P.primaryPale, yAxisID: 'yVolume', tension: 0.35, fill: false },
+        { label: 'Caloric Intake', data: alignedIntake, borderColor: P.gold, yAxisID: 'yIntake', tension: 0.35, fill: false },
       ]
     },
     options: {
@@ -14245,7 +14338,7 @@ async function showBodyweightProgress() {
 
     const wtData = JSON.parse(localStorage.getItem(`weightTrend_${currentUser}`) || 'null');
     const trendText = wtData ? `Weekly change: ${Number(wtData.kgPerWeek || 0).toFixed(2)} kg/week. ${wtData.reason || ''}` : '';
-    coachCorner.innerHTML = `<div style="padding:8px;border-left:4px solid var(--primary);background:rgba(47,128,237,.08);"><strong>Interpretation:</strong> ${insight}<br/><small>${trendText}</small></div>`;
+    coachCorner.innerHTML = `<div class="insight-box"><strong>Interpretation:</strong> ${insight}<small>${trendText}</small></div>`;
   }
   renderBodybuildingProgressPanel([]);
   renderProgressComplianceSummary();
@@ -14300,16 +14393,16 @@ function initRecoveryPanelInteractions() {
       el.classList.toggle('is-dim', !!focused && m !== focused);
       el.classList.toggle('is-active', !!focused && m === focused);
     });
-    panel.querySelectorAll('#recoveryTableBody tr').forEach((tr) => {
-      const m = tr.dataset.muscle;
-      tr.classList.toggle('is-dim', !!focused && m !== focused);
-      tr.classList.toggle('is-active', !!focused && m === focused);
+    panel.querySelectorAll('#recoveryTableBody .recovery-row').forEach((rowEl) => {
+      const m = rowEl.dataset.muscle;
+      rowEl.classList.toggle('is-dim', !!focused && m !== focused);
+      rowEl.classList.toggle('is-active', !!focused && m === focused);
     });
   }
 
   panel.addEventListener('click', (e) => {
     const zone = e.target.closest('.recovery-zone');
-    const row = e.target.closest('#recoveryTableBody tr');
+    const row = e.target.closest('#recoveryTableBody .recovery-row');
     const muscle = zone?.dataset.muscle || row?.dataset.muscle;
     if (muscle) setFocus(muscle);
   });
@@ -14348,13 +14441,17 @@ function renderRecoveryProgress(workouts) {
       const daysLabel = row.daysSinceTrained === null
         ? 'Not trained'
         : (row.daysSinceTrained === 0 ? 'Today' : `${row.daysSinceTrained}d ago`);
-      return `<tr data-muscle="${row.muscle}">
-        <td class="muscle">${label}</td>
-        <td class="num mono">${row.sets.toFixed(1)} / ${row.target}</td>
-        <td><div class="ratio-track${over ? ' is-over' : ''}"><div class="ratio-fill" style="width:${pct}%"></div></div></td>
-        <td class="recovery-days">${daysLabel}</td>
-        <td><span class="chip"><span class="dot" style="background:${row.color}"></span>${row.status}</span></td>
-      </tr>`;
+      return `<div class="recovery-row" data-muscle="${row.muscle}">
+        <div class="recovery-row-top">
+          <span class="recovery-row-name">${label}</span>
+          <span class="chip"><span class="dot" style="background:${row.color}"></span>${row.status}</span>
+        </div>
+        <div class="recovery-row-mid">
+          <div class="ratio-track${over ? ' is-over' : ''}"><div class="ratio-fill" style="width:${pct}%"></div></div>
+          <span class="recovery-row-sets">${row.sets.toFixed(1)} / ${row.target} sets</span>
+        </div>
+        <div class="recovery-row-days">${daysLabel}</div>
+      </div>`;
     }).join('');
   }
 
@@ -14415,6 +14512,8 @@ function renderPRs() {
   };
 
   panel.innerHTML = '<h3>Exercise PR Summary</h3>';
+  const list = document.createElement('div');
+  list.className = 'bb-list';
   let visibleCount = 0;
 
   Object.entries(prs).sort(([a], [b]) => a.localeCompare(b)).forEach(([ex, pr]) => {
@@ -14431,20 +14530,21 @@ function renderPRs() {
     if (!heaviestSet && !highestVolumeSession && repEntries.length === 0) return;
 
     const div = document.createElement('div');
-    div.style.marginBottom = '10px';
+    div.className = 'bb-row';
     const topRep = repEntries[0];
     const topRepText = topRep
       ? `${topRep[0]} × ${topRep[1].reps} (${formatDate(topRep[1].date)})`
       : '—';
     div.innerHTML = `
-      <strong>${ex}</strong><br>
-      Heaviest: ${heaviestSet ? `${heaviestSet.weight} × ${heaviestSet.reps} (${formatDate(heaviestSet.date)})` : '—'}<br>
-      Most reps @ weight: ${topRepText}<br>
-      Session volume: ${highestVolumeSession ? `${Number(highestVolumeSession.volume || 0).toFixed(1)} (${formatDate(highestVolumeSession.date)})` : '—'}
+      <div class="bb-row-top"><span class="bb-row-name">${ex}</span></div>
+      <small class="goal-card-meta">Heaviest: ${heaviestSet ? `${heaviestSet.weight} × ${heaviestSet.reps} (${formatDate(heaviestSet.date)})` : '—'}</small>
+      <small class="goal-card-meta">Most reps @ weight: ${topRepText}</small>
+      <small class="goal-card-meta">Session volume: ${highestVolumeSession ? `${Number(highestVolumeSession.volume || 0).toFixed(1)} (${formatDate(highestVolumeSession.date)})` : '—'}</small>
     `;
-    panel.appendChild(div);
+    list.appendChild(div);
     visibleCount += 1;
   });
+  panel.appendChild(list);
 
   if (!visibleCount) {
     const empty = document.createElement('div');
@@ -14459,20 +14559,24 @@ function renderMilestones() {
   const cont = document.getElementById('milestoneBadges');
   if (!cont) return;
   cont.innerHTML = '';
+  if (!milestones.length) return;
+  const row = document.createElement('div');
+  row.className = 'milestone-chip-row';
   milestones.forEach(m => {
     const span = document.createElement('span');
+    span.className = 'milestone-chip';
     span.textContent = m;
-    span.style.marginRight = '5px';
-    cont.appendChild(span);
+    row.appendChild(span);
   });
+  cont.appendChild(row);
 }
 
 function getGoalStatusMeta(status) {
   const palette = {
-    ahead: { color: '#2e7d32', label: 'Ahead' },
-    on_track: { color: '#2e7d32', label: 'On track' },
-    behind: { color: '#f9a825', label: 'Behind schedule' },
-    at_risk: { color: '#c62828', label: 'At risk' }
+    ahead: { color: 'var(--primary)', label: 'Ahead' },
+    on_track: { color: 'var(--primary)', label: 'On track' },
+    behind: { color: 'var(--highlight)', label: 'Behind schedule' },
+    at_risk: { color: 'var(--danger)', label: 'At risk' }
   };
   return palette[status] || palette.on_track;
 }
@@ -14482,14 +14586,14 @@ function renderGoalBar() {
   const bar = document.getElementById('goalBar');
   if (!bar) return;
   if (!Array.isArray(goals) || goals.length === 0) {
-    bar.innerHTML = '<small>No SMART goals yet. Add one in Settings → SMART Goals.</small>';
+    bar.innerHTML = '<small style="color:var(--text-muted);">No SMART goals yet. Add one in Settings → SMART Goals.</small>';
     return;
   }
   const topGoal = goals[0];
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const progress = calculateGoalProgress(topGoal, workouts);
   const statusMeta = getGoalStatusMeta(progress.status);
-  bar.innerHTML = `<div style="background:#eee;width:100%;height:12px;position:relative;border-radius:6px;overflow:hidden;"><div style="background:${statusMeta.color};width:${progress.progressPercent}%;height:12px;"></div></div><small>${topGoal.title}: ${progress.currentValue.toFixed(1)}/${Number(topGoal.targetValue || 0).toFixed(1)} ${topGoal.unit || ''} • ${statusMeta.label}</small>`;
+  bar.innerHTML = `<div class="goal-card-track"><div class="goal-card-fill" style="background:${statusMeta.color};width:${progress.progressPercent}%;"></div></div><small class="goal-card-foot">${topGoal.title}: ${progress.currentValue.toFixed(1)}/${Number(topGoal.targetValue || 0).toFixed(1)} ${topGoal.unit || ''} • ${statusMeta.label}</small>`;
 }
 
 async function submitSmartGoalForm(event) {
@@ -14640,27 +14744,27 @@ function renderGoalProgressList() {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
 
   if (!Array.isArray(goals) || goals.length === 0) {
-    list.innerHTML = '<h3>Goal Progress</h3><p>No SMART goals yet. Add one in Settings.</p>';
+    list.innerHTML = '<h3>Goal Progress</h3><p style="color:var(--text-muted);">No SMART goals yet. Add one in Settings.</p>';
     return;
   }
 
   const cards = goals.map(goal => {
     const progress = calculateGoalProgress(goal, workouts);
     const statusMeta = getGoalStatusMeta(progress.status);
-    return `<article style="border:1px solid var(--border-color);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--card-bg);">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
-        <strong>${goal.title}</strong>
-        <button onclick="removeGoal('${goal.id}')" style="margin:0;background:#666;">Remove</button>
+    return `<div class="goal-card">
+      <div class="goal-card-top">
+        <span class="goal-card-title">${goal.title}</span>
+        <button class="goal-card-remove" onclick="removeGoal('${goal.id}')">Remove</button>
       </div>
-      <small>${goal.exercise || 'All exercises'} • Due ${goal.dueDate || 'No deadline'}</small>
-      <div style="margin-top:8px;background:#eee;border-radius:6px;overflow:hidden;height:14px;">
-        <div style="height:14px;width:${progress.progressPercent}%;background:${statusMeta.color};"></div>
+      <small class="goal-card-meta">${goal.exercise || 'All exercises'} • Due ${goal.dueDate || 'No deadline'}</small>
+      <div class="goal-card-track">
+        <div class="goal-card-fill" style="width:${progress.progressPercent}%;background:${statusMeta.color};"></div>
       </div>
-      <small>${progress.currentValue.toFixed(1)} / ${Number(goal.targetValue || 0).toFixed(1)} ${goal.unit || ''} • ${statusMeta.label}</small>
-    </article>`;
+      <small class="goal-card-foot">${progress.currentValue.toFixed(1)} / ${Number(goal.targetValue || 0).toFixed(1)} ${goal.unit || ''} • ${statusMeta.label}</small>
+    </div>`;
   }).join('');
 
-  list.innerHTML = `<h3>Goal Progress</h3>${cards}`;
+  list.innerHTML = `<h3>Goal Progress</h3><div class="goal-card-list">${cards}</div>`;
 }
 
 function promptGoal() {
@@ -14674,14 +14778,16 @@ function showCoachInsights() {
   const insights = simpleInsights(Object.fromEntries(Object.entries(prs).map(([k,v])=>[k,[v]])));
   const corner = document.getElementById('coachCorner');
   if (!corner) return;
-  corner.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'insight-chip-list';
   insights.forEach(t => {
     const div = document.createElement('div');
+    div.className = 'insight-chip';
     div.textContent = t;
-    div.style.border = '1px solid #ccc';
-    div.style.padding = '5px';
-    corner.appendChild(div);
+    list.appendChild(div);
   });
+  corner.innerHTML = '';
+  corner.appendChild(list);
 }
 
 function exportCSV() {
@@ -14745,7 +14851,8 @@ function renderDashboardPRSummary() {
   if (!cont) return;
   const prs = loadPRs(currentUser);
   const goals = loadGoals(currentUser);
-  cont.innerHTML = '<h3>PR Summary</h3>';
+  const list = document.createElement('div');
+  list.className = 'pr-summary-list';
   Object.entries(prs).slice(-5).forEach(([ex, pr]) => {
     // pr.oneRM was a field from an older PR schema; loadPRs() now returns
     // heaviestSet/repPRsByWeight/highestVolumeSession/history instead, so
@@ -14753,22 +14860,28 @@ function renderDashboardPRSummary() {
     // equivalent (heaviest logged weight) and skip cleanly if absent.
     const weight = pr.oneRM ?? pr.heaviestSet?.weight;
     if (weight == null) return;
-    const div = document.createElement('div');
-    div.textContent = `${ex}: 1RM ${Number(weight).toFixed(1)}`;
-    cont.appendChild(div);
+    const row = document.createElement('div');
+    row.className = 'pr-summary-row';
+    row.innerHTML = `<span>${ex}</span><span class="pr-summary-val">${Number(weight).toFixed(1)}</span>`;
+    list.appendChild(row);
   });
   if (goals.volume) {
     const pct = Math.min(100, (goals.volume.progress / goals.volume.target) * 100);
-    const msg = document.createElement('div');
-    msg.textContent = `Next volume goal: ${goals.volume.target} (${pct.toFixed(0)}% complete)`;
-    cont.appendChild(msg);
+    const row = document.createElement('div');
+    row.className = 'pr-summary-row';
+    row.innerHTML = `<span>Next volume goal</span><span class="pr-summary-val">${goals.volume.target} (${pct.toFixed(0)}%)</span>`;
+    list.appendChild(row);
   }
-  const mot = document.createElement('div');
+  cont.innerHTML = '<h3>PR Summary</h3>';
+  cont.appendChild(list);
+  const mot = document.createElement('p');
   mot.textContent = 'Keep pushing for new personal bests!';
-  mot.style.marginTop = '8px';
+  mot.style.cssText = 'margin:10px 0 0;font-size:0.82rem;color:var(--text-muted);';
   cont.appendChild(mot);
   const btn = document.createElement('button');
   btn.textContent = 'Back to Training';
+  btn.className = 'export-btn primary';
+  btn.style.cssText = 'margin-top:10px;width:100%;';
   btn.onclick = () => showTab('logTab');
   cont.appendChild(btn);
 }

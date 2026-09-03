@@ -5,6 +5,24 @@
    Depends on: tokens.css
    ============================================================= */
 
+/* ── Shared section heading — every h3 inside the Insights subviews
+   (PR summary, goal progress, bodybuilding panel) uses this instead
+   of the browser-default bold serif-ish h3. ── */
+
+#pSub_prs h3,
+#pSub_tools h3,
+#goalProgressList h3,
+#dashboardPRSummary h3,
+#prPanel h3 {
+  margin: 0 0 10px;
+  font-family: var(--font-label);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+
 /* ── Layout: horizontal mini-tab nav on top, chart panel below ── */
 
 .progress-layout {
@@ -89,41 +107,98 @@
 
 #bodybuildingProgressPanel h3 {
   margin: 0 0 10px;
-  color: #f6faf8;
-  letter-spacing: 0.01em;
+  font-family: var(--font-label);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-label, var(--text-muted));
 }
 
 #bodybuildingProgressPanel h4 {
-  margin: 10px 0 6px;
-  color: #dce7e1;
-  font-size: 1rem;
-}
-
-#bodybuildingProgressPanel table {
-  width: 100%;
-  margin-top: 6px;
-  font-size: 0.9rem;
-  border-collapse: collapse;
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(14, 21, 18, 0.92);
-  box-shadow: none;
-}
-
-#bodybuildingProgressPanel th {
-  background: rgba(35, 57, 47, 0.9);
-  color: #f3f8f5;
-  font-weight: 600;
-  border-color: rgba(121, 150, 137, 0.4);
-}
-
-#bodybuildingProgressPanel td {
-  color: #e5ece8;
-  border-color: rgba(115, 143, 131, 0.28);
+  margin: 16px 0 8px;
+  color: var(--text-color);
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 #bodybuildingProgressPanel .progress-empty {
   color: var(--secondary-text);
+  font-size: 0.82rem;
+}
+
+/* ── Bodybuilding rows — card lists replacing the old <table>s ── */
+
+.bb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bb-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-md);
+  padding: 10px 13px;
+}
+
+.bb-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bb-row-name {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--text-color);
+  text-transform: capitalize;
+}
+
+.bb-row-mid {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bb-row-mid .ratio-track {
+  flex: 1;
+  width: auto;
+}
+
+.bb-row-nums {
+  flex: none;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* Exercise consistency rows — no bar, just name + two stat chips */
+.bb-row--consistency {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bb-row--consistency .bb-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bb-row-stats {
+  display: flex;
+  gap: 6px;
+  flex: none;
 }
 
 /* ── Exercise progress chart ────────────────────────────────── */
@@ -288,16 +363,26 @@
 }
 
 #bodybuildingProgressPanel .bb-pr-card {
-  background: rgba(15, 24, 20, 0.86);
-  border: 1px solid rgba(113, 141, 129, 0.35);
-  border-radius: 8px;
-  padding: 8px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+
+#bodybuildingProgressPanel .bb-pr-card strong {
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-label);
 }
 
 #bodybuildingProgressPanel ul {
   margin: 6px 0 0 18px;
   padding: 0;
-  color: #d7e2dc;
+  color: var(--secondary-text);
+  font-size: 0.84rem;
 }
 
 #bodybuildingProgressPanel li {
@@ -305,12 +390,15 @@
 }
 
 #bodybuildingProgressPanel details {
-  margin-top: 8px;
-  color: #c2cdc7;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 #bodybuildingProgressPanel summary {
-  color: #dce7e1;
+  color: var(--secondary-text);
+  cursor: pointer;
+  font-weight: 600;
 }
 
 /* ── Recovery Map panel ──────────────────────────────────────── */
@@ -405,67 +493,77 @@
   color: var(--text-muted);
 }
 
-.recovery-table-wrap {
-  overflow-x: auto;
+/* ── Recovery list — card rows replacing the old <table> ────────
+   Same data (muscle, sets/target, ratio, last trained, status) in
+   a pod-consistent card list instead of a raw HTML table. */
+
+.recovery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.recovery-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.86rem;
-  background: rgba(14, 21, 18, 0.92);
-}
-
-.recovery-table th {
-  text-align: left;
-  padding: 6px 10px;
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.recovery-table th.num {
-  text-align: right;
-}
-
-.recovery-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(132, 157, 144, 0.12);
-  color: #e5ece8;
-  vertical-align: middle;
-}
-
-.recovery-table td.muscle {
-  font-weight: 600;
-}
-
-.recovery-table td.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.recovery-table td.recovery-days {
-  font-size: 0.76rem;
-  color: var(--text-muted);
-}
-
-.recovery-table tbody tr {
+.recovery-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-md);
+  padding: 10px 13px;
   cursor: pointer;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
-.recovery-table tbody tr:hover {
-  background: rgba(244, 247, 245, 0.03);
+.recovery-row:hover {
+  border-color: var(--border-hover);
 }
 
-.recovery-table tbody tr.is-dim {
+.recovery-row.is-dim {
   opacity: 0.35;
 }
 
-.recovery-table tbody tr.is-active {
-  background: rgba(198, 148, 79, 0.08);
+.recovery-row.is-active {
+  background: var(--pod-bg-hover);
+  border-color: var(--border-brass);
+}
+
+.recovery-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recovery-row-name {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--text-color);
+  text-transform: capitalize;
+}
+
+.recovery-row-mid {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recovery-row-mid .ratio-track {
+  flex: 1;
+  width: auto;
+}
+
+.recovery-row-sets {
+  flex: none;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.recovery-row-days {
+  font-size: 0.68rem;
+  color: var(--text-faint, var(--text-muted));
 }
 
 .ratio-track {
@@ -483,38 +581,200 @@
   width: 0;
   background: var(--primary);
   border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .ratio-track.is-over .ratio-fill {
   background: var(--highlight);
 }
 
-.recovery-table .chip {
+.chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--pill-bg);
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
-.recovery-table .chip .dot {
-  width: 8px;
-  height: 8px;
+.chip .dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex: none;
 }
 
-@media (max-width: 460px) {
-  .recovery-table th:nth-child(4),
-  .recovery-table td:nth-child(4) {
-    display: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .recovery-zone,
-  .recovery-table tbody tr,
+  .recovery-row,
   .ratio-fill {
     transition: none;
   }
+}
+
+/* ── Insight box — replaces the old ad-hoc blue-tinted inline div
+   used for coach-corner interpretation text (compliance summary,
+   weight/volume/intake read-out). ── */
+
+.insight-box {
+  padding: 11px 14px;
+  border-left: 3px solid var(--primary);
+  background: var(--pod-bg-alt);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  margin-bottom: 10px;
+  font-size: 0.86rem;
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+.insight-box strong {
+  color: var(--text-color);
+}
+
+.insight-box small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+/* ── Goal progress cards (renderGoalProgressList) ────────────── */
+
+.goal-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.goal-card {
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.goal-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.goal-card-title {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-color);
+}
+
+.goal-card-remove {
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pod-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.goal-card-remove:hover {
+  border-color: var(--border-alert);
+  color: var(--danger);
+}
+
+.goal-card-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.goal-card-track {
+  margin-top: 10px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--elevated-bg);
+  overflow: hidden;
+}
+
+.goal-card-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease;
+}
+
+.goal-card-foot {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── PR summary rows (renderDashboardPRSummary / showCoachInsights) ── */
+
+.pr-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.pr-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-md);
+  font-size: 0.84rem;
+  color: var(--text-color);
+}
+
+.pr-summary-row .pr-summary-val {
+  font-weight: 700;
+  color: var(--primary-light, var(--primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.insight-chip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.insight-chip {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--pod-border);
+  font-size: 0.82rem;
+  color: var(--secondary-text);
+}
+
+/* ── Milestone badges ─────────────────────────────────────────── */
+
+.milestone-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.milestone-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--pill-bg-active, var(--primary));
+  color: var(--pill-text-active, #fff);
+  font-size: 0.74rem;
+  font-weight: 700;
 }
