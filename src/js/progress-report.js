@@ -46,16 +46,34 @@
     // Workouts in range
     const recentWorkouts = workouts.filter(w => _inRange(w.date || '', range));
     let totalVolume = 0, totalSets = 0;
+    let reportUnit = 'kg';
+    const exerciseMap = new Map(); // name -> { name, unit, totalSets, totalReps, maxWeight, volume }
     for (const w of recentWorkouts) {
       for (const e of (w.log || [])) {
         const weights = e.weightsArray || [];
         const reps    = e.repsArray    || [];
+        const name    = e.exercise || 'Exercise';
+        const unit    = e.unit || reportUnit;
+        if (e.unit) reportUnit = e.unit;
+        let entry = exerciseMap.get(name);
+        if (!entry) {
+          entry = { name, unit, totalSets: 0, totalReps: 0, maxWeight: 0, volume: 0 };
+          exerciseMap.set(name, entry);
+        }
         for (let i = 0; i < reps.length; i++) {
-          const vol = (+weights[i] || 0) * (+reps[i] || 0);
-          if (vol > 0) { totalVolume += vol; totalSets++; }
+          const wt  = +weights[i] || 0;
+          const rp  = +reps[i] || 0;
+          const vol = wt * rp;
+          if (vol > 0) { totalVolume += vol; totalSets++; entry.volume += vol; entry.totalSets++; entry.totalReps += rp; }
+          if (wt > entry.maxWeight) entry.maxWeight = wt;
         }
       }
     }
+
+    // All exercises trained in range, heaviest-volume first
+    const exerciseBreakdown = Array.from(exerciseMap.values())
+      .filter(e => e.volume > 0)
+      .sort((a, b) => b.volume - a.volume);
 
     // Top 5 PRs by e1RM
     const topPRs = Object.entries(prBoard)
@@ -95,6 +113,8 @@
       workoutCount:    recentWorkouts.length,
       totalVolume:     Math.round(totalVolume),
       totalSets,
+      unit:            reportUnit,
+      exerciseBreakdown,
       avgFrequency:    +(recentWorkouts.length / 4.3).toFixed(1),
       topPRs,
       avgReadiness,
@@ -273,6 +293,14 @@
     const html = _buildReportHTML(data);
     // openReportWindow handles native (Web Share API) vs web (new window) automatically
     window.openReportWindow(html, { title: 'Progress Report', filename: 'progress-report.html' });
+  };
+
+  // Exposed so the Instagram-story renderer (progress-story.js) can reuse
+  // the same 30-day data gathering without duplicating it.
+  window.__gatherProgressReportData = function () {
+    const username = _user();
+    if (!username) return null;
+    return _gatherData(username);
   };
 
 })();
