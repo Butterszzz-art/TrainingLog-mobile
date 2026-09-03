@@ -3529,6 +3529,7 @@
 
 <script type="module" src="progressUtils.js"></script>
 <script src="src/js/settings.js"></script>
+<script src="src/js/payments.js"></script>
 <script type="module" src="history.js"></script>
 <!-- Optional runtime configuration -->
 <script src="config.js"></script>
@@ -4002,13 +4003,23 @@ function renderLockedCard(featureName, requiredPlan) {
 
 function openCheckout(plan) {
   var billing = localStorage.getItem('billingCycle') || 'annual';
+  // Apple Guideline 3.1.1: the iOS build must not offer Stripe as the
+  // purchase path for a digital subscription unlocked in-app — see
+  // src/js/payments.js. purchaseViaIAP() is a stub until that's wired up, so
+  // this button is honest about "coming soon" rather than silently opening
+  // Stripe checkout inside an iOS build (or pretending IAP already works).
+  var isIOS = typeof window.pocketCoachPayments !== 'undefined' && window.pocketCoachPayments.usesAppleIAP();
+  var payButtonHtml = isIOS
+    ? '<button class="pay-btn pay-stripe" onclick="pocketCoachPayments.purchase(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Continue</button>'
+      + '<p class="payment-note">In-app purchase — powered by the App Store</p>'
+    : '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Pay with Card</button>'
+      + '<p class="payment-note">Secure checkout powered by Stripe</p>';
   var modal = document.createElement('div');
   modal.className = 'payment-method-modal';
   modal.innerHTML = '<div class="payment-method-inner">'
     + '<h3>Choose payment method</h3>'
     + '<p class="payment-sub">Both options include a 7-day free trial</p>'
-    + '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Pay with Card</button>'
-    + '<p class="payment-note">Secure checkout powered by Stripe</p>'
+    + payButtonHtml
     + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
     + '</div>';
   document.body.appendChild(modal);
@@ -4094,8 +4105,17 @@ function toggleModalBilling() {
 async function openManageBilling() {
   var username = window.currentUser || localStorage.getItem('fitnessAppUser');
   if (!isPro() && !isCoach()) { openUpgradeModal(); return; }
+  // Already subscribed: Apple doesn't allow linking out to Stripe's billing
+  // portal for an App-Store-purchased subscription — send iOS users to
+  // Apple's own subscription management screen instead. See payments.js.
+  if (typeof window.pocketCoachPayments !== 'undefined' && window.pocketCoachPayments.usesAppleIAP()) {
+    window.pocketCoachPayments.manage();
+    return;
+  }
   try {
-    var res = await fetch(window.SERVER_URL + '/api/stripe/portal?username=' + encodeURIComponent(username));
+    var res = await fetch(window.SERVER_URL + '/api/stripe/portal?username=' + encodeURIComponent(username), {
+      headers: getAuthHeaders()
+    });
     var data = await res.json();
     if (data.url) window.location.href = data.url;
     else if (typeof nativeToast === 'function') nativeToast('Could not open billing portal', 'error');

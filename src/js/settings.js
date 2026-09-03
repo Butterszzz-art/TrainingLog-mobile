@@ -658,6 +658,67 @@ function bindLogoutAction(container = document) {
   });
 }
 
+// Apple App Store Guideline 5.1.1(v): account deletion must be in-app and
+// self-service, not "email us to delete your account". Two confirmation
+// steps (a plain warning, then typing DELETE) match this app's existing
+// destructive-action convention (native confirm()/prompt(), see the
+// "Delete template"/"Delete this entire workout" flows) rather than
+// introducing new modal UI for a single button.
+async function deleteAccountFlow(button) {
+  const warned = confirm(
+    'Delete your account? This permanently removes your workouts, programs, macros, logs, and any coach/client links. This cannot be undone.'
+  );
+  if (!warned) return;
+
+  const typed = prompt('Type DELETE to confirm.');
+  if (typed === null) return; // cancelled
+  if (typed.trim().toUpperCase() !== 'DELETE') {
+    if (typeof showToast === 'function') showToast('Account not deleted — confirmation text did not match.');
+    return;
+  }
+
+  const authHeaders = getAuthHeaders();
+  if (!authHeaders.Authorization) {
+    if (typeof showToast === 'function') showToast('Sign in again before deleting your account.');
+    return;
+  }
+
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Deleting…';
+
+  try {
+    const res = await fetchWithTimeout(`${ensureServerUrl()}/account`, {
+      method: 'DELETE',
+      headers: authHeaders
+    }, 15000);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    }
+    if (typeof showToast === 'function') showToast('Account deleted.');
+    // logout() clears local storage and Firebase's session, then reloads —
+    // the account is already gone server-side at this point.
+    if (typeof window.logout === 'function') {
+      window.logout();
+    } else {
+      location.reload();
+    }
+  } catch (error) {
+    console.error('[Settings:DeleteAccount] failed', error);
+    if (typeof showToast === 'function') showToast('Could not delete account. Please try again.');
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
+}
+
+function bindDeleteAccountAction(container = document) {
+  const deleteBtn = container.querySelector('#deleteAccountBtn');
+  if (!deleteBtn || deleteBtn.dataset.bound === 'true') return;
+  deleteBtn.dataset.bound = 'true';
+  deleteBtn.addEventListener('click', () => deleteAccountFlow(deleteBtn));
+}
+
 function getFitbitElements(container = document) {
   return {
     statusEl: container.querySelector('#fitbitStatus'),
@@ -961,7 +1022,10 @@ function injectSettingsMarkup() {
 
   if (container.dataset.loaded === 'true' || container.dataset.loaded === 'loading') {
     applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
-    if (container.dataset.loaded === 'true') bindFitbitControls(container);
+    if (container.dataset.loaded === 'true') {
+      bindFitbitControls(container);
+      bindDeleteAccountAction(container);
+    }
     return;
   }
 
@@ -988,6 +1052,7 @@ function injectSettingsMarkup() {
       }
       bindReminderToggle(container);
       bindLogoutAction(container);
+      bindDeleteAccountAction(container);
       bindFitbitControls(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
