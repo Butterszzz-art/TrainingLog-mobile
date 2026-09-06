@@ -131,6 +131,11 @@ function suggestNextSession(exercise, workouts = []) {
     weight: Number(lastWeights[index]) || 0
   }));
 
+  // Snapshot before any strategy mutates suggestedSets in place, so callers
+  // (e.g. the overload hint UI) can diff "what we suggested" against
+  // "what was actually logged last time" without re-deriving it themselves.
+  const previousSets = suggestedSets.map(set => ({ ...set }));
+
   let strategy = 'maintain';
   let message = 'Maintain current load and reps next session.';
 
@@ -154,6 +159,7 @@ function suggestNextSession(exercise, workouts = []) {
       averageRate,
       basedOnSessions: history.length,
       sets: suggestedSets,
+      previousSets,
       message: `Marked as maxed out — this equipment has no more weight to give. Add ${baselineRepStep} rep(s) per set instead, or switch to a harder variation.`
     };
   }
@@ -166,14 +172,15 @@ function suggestNextSession(exercise, workouts = []) {
     });
     message = `RPE/fatigue was high or sets were missed. Reduce load by ~${dropAmount} ${unit} or keep weight steady.`;
   } else if (rpeStatus.allSetsAtOrBelow) {
-    strategy = 'increase';
     if (achievedRepGoal) {
+      strategy = 'increase';
       const increaseAmount = roundToIncrement(baselineWeightStep, 0.5);
       suggestedSets.forEach(set => {
         set.weight = Number((set.weight + increaseAmount).toFixed(2));
       });
       message = `All sets were at/under target RPE. Increase load by ~${increaseAmount} ${unit} (linear progression).`;
     } else {
+      strategy = 'increase-reps';
       suggestedSets.forEach(set => {
         set.reps += baselineRepStep;
       });
@@ -202,6 +209,7 @@ function suggestNextSession(exercise, workouts = []) {
     averageRate,
     basedOnSessions: history.length,
     sets: suggestedSets,
+    previousSets,
     message
   };
 }
