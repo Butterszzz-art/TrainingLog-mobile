@@ -8666,7 +8666,9 @@ function updateMacroUI() {
     console.warn("Macro settings UI not available: missing #macroTotalCals.");
     return;
   }
-  macroTotalCalsEl.textContent = `${totalCals} / ${adaptiveTargets.calories} kcal`;
+  macroTotalCalsEl.textContent = totalCals;
+  const calTargetEl = document.getElementById("calTarget");
+  if (calTargetEl) calTargetEl.textContent = adaptiveTargets.calories;
   updateMacroSummary(
     {
       cal: { value: totalCals, target: adaptiveTargets.calories, unit: "kcal" },
@@ -8887,10 +8889,12 @@ function _updateSliderDisplay() {
   const fEl = document.getElementById("fatVal");
   const cEl = document.getElementById("carbVal");
   const tEl = document.getElementById("macroTotalCals");
+  const calTargetEl = document.getElementById("calTarget");
   if (pEl) pEl.textContent = p;
   if (fEl) fEl.textContent = f;
   if (cEl) cEl.textContent = c;
-  if (tEl) tEl.textContent = `${totalCals} / ${limit} kcal`;
+  if (tEl) tEl.textContent = totalCals;
+  if (calTargetEl) calTargetEl.textContent = limit;
 }
   
 function saveSliderMacros() {
