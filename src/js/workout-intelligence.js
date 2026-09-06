@@ -86,6 +86,24 @@
     return null;
   }
 
+  // Strategy → visual treatment. Colour carries meaning here: green shades
+  // for "add more", brass for "ease off / pay attention", neutral for "hold".
+  const OVERLOAD_STRATEGY_META = {
+    'increase':      { cls: 'is-increase', metric: 'weight', arrow: 'up' },
+    'increase-reps': { cls: 'is-reps',     metric: 'reps',   arrow: 'up' },
+    'maxed-out':     { cls: 'is-deload',   metric: 'reps',   arrow: 'up' },
+    'reduce':        { cls: 'is-deload',   metric: 'weight', arrow: 'down' },
+    'maintain':      { cls: 'is-maintain', metric: 'weight', arrow: 'flat' }
+  };
+
+  const ARROW_UP_SVG   = '<svg viewBox="0 0 12 12" fill="none"><path d="M6 10V2M6 2L2.5 5.5M6 2l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ARROW_DOWN_SVG = '<svg viewBox="0 0 12 12" fill="none"><path d="M6 2V10M6 10L2.5 6.5M6 10l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function _fmtNum(v) {
+    const n = Math.round((Number(v) || 0) * 100) / 100;
+    return String(n);
+  }
+
   /**
    * Render (or clear) the overload hint below the exercise input.
    */
@@ -103,22 +121,65 @@
     const session = getLastExerciseSession(exerciseName, username);
     if (!session || !session.bestSet) { hintEl.innerHTML = ''; return; }
 
-    const { bestSet, setCount, date, unit } = session;
+    const workouts = _loadWorkouts(username);
+    const recommendation = typeof window.suggestNextSession === 'function'
+      ? window.suggestNextSession(exerciseName, workouts)
+      : null;
 
-    // Suggest a small increment
-    const increment = unit === 'lbs' ? 5 : 2.5;
-    const suggested = Math.round((bestSet.weight + increment) * 4) / 4;
+    if (!recommendation || !Array.isArray(recommendation.sets) || !recommendation.sets.length) {
+      hintEl.innerHTML = '';
+      return;
+    }
 
-    // Format relative date
+    hintEl.innerHTML = renderOverloadPod(recommendation, session);
+  }
+
+  function renderOverloadPod(recommendation, session) {
+    const { bestSet, setCount, date, unit: sessionUnit } = session;
+    const meta = OVERLOAD_STRATEGY_META[recommendation.strategy] || OVERLOAD_STRATEGY_META.maintain;
+
+    const suggestedSet = recommendation.sets[0] || {};
+    const previousSet   = (recommendation.previousSets && recommendation.previousSets[0]) || {};
+    const unit = recommendation.unit || sessionUnit || 'kg';
+
+    const isReps = meta.metric === 'reps';
+    const number  = isReps ? suggestedSet.reps : suggestedSet.weight;
+    const before  = isReps ? previousSet.reps  : previousSet.weight;
+    const delta   = (Number(number) || 0) - (Number(before) || 0);
+    const numberUnit = isReps ? 'reps' : unit;
+
+    let deltaHtml = '';
+    if (meta.arrow === 'up' && delta > 0) {
+      deltaHtml = `<span class="ov-delta">${ARROW_UP_SVG}+${_fmtNum(delta)}${isReps ? ' / set' : ''}</span>`;
+    } else if (meta.arrow === 'down' && delta < 0) {
+      deltaHtml = `<span class="ov-delta">${ARROW_DOWN_SVG}−${_fmtNum(Math.abs(delta))}</span>`;
+    }
+
+    const sessions = Math.max(0, Number(recommendation.basedOnSessions) || 0);
+    const meterPct = Math.min(96, 20 + sessions * 6);
     const relDate = _relativeDate(date);
 
-    hintEl.innerHTML = `
-      <div class="overload-hint-chip">
-        <span class="overload-hint-icon">📈</span>
-        <span>
-          ${relDate}: ${setCount}×${bestSet.reps} @ ${bestSet.weight} ${unit}
-          <span class="overload-hint-suggest">Try ${suggested} ${unit} today for progressive overload</span>
-        </span>
+    return `
+      <div class="ov-pod ${meta.cls}">
+        <div class="ov-accent"></div>
+        <div class="ov-top">
+          <span class="ov-live"></span>
+          <span class="ov-eyebrow">Progressive overload</span>
+          <span class="ov-sessions">${sessions} session${sessions === 1 ? '' : 's'}</span>
+        </div>
+        <div class="ov-body">
+          <p class="ov-last">${relDate} you logged <b>${setCount}×${_esc(bestSet.reps)} @ ${_esc(bestSet.weight)} ${_esc(unit)}</b></p>
+          <div class="ov-main">
+            <span class="ov-number">${_fmtNum(number)}</span><span class="ov-unit">${_esc(numberUnit)}</span>
+            ${deltaHtml}
+          </div>
+          <p class="ov-msg">${_esc(recommendation.message)}</p>
+          <div class="ov-meter" style="--ov-fill:${meterPct}%"><i></i></div>
+          <div class="ov-foot">
+            <span class="ov-basis">Based on ${sessions} logged session${sessions === 1 ? '' : 's'}</span>
+            <button class="ov-cta" type="button" onclick="if(typeof applySuggestedSetValuesForExercise==='function') applySuggestedSetValuesForExercise(true);">Use ${_fmtNum(number)}${isReps ? ' reps' : ''}</button>
+          </div>
+        </div>
       </div>
     `;
   }
