@@ -2529,10 +2529,15 @@
               </div>
             </div>
 
-            <!-- Macro tracker cards -->
+            <!-- Macro tracker rows: one pod, four rows, instead of four
+                 separate bordered cards each carrying their own
+                 border/shadow/padding. Quick-add is a row of preset
+                 chips (common amounts, one tap); "Custom" reveals the
+                 exact input+±buttons this used to show inline, still
+                 driving the same addMacro()/subtractMacro(). -->
             <div class="macro-cards">
 
-              <div class="macro-card">
+              <div class="macro-track-row">
                 <div class="macro-card-header">
                   <div class="macro-card-label">
                     <span class="macro-card-dot macro-dot-cal"></span>
@@ -2549,7 +2554,14 @@
                   <div class="macro-card-bar-fill macro-bar-cal" id="calsVisBar"></div>
                 </div>
                 <div class="macro-card-net"><span id="macroCalsNet">0</span> kcal net</div>
-                <div class="macro-card-qa">
+                <div class="macro-chip-row">
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('cal', -100)">−100</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 100)">+100</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 250)">+250</button>
+                  <button type="button" class="macro-chip macro-chip--edit" data-icon="pencil" aria-label="Custom amount"
+                    onclick="this.closest('.macro-track-row').querySelector('.macro-card-qa').classList.toggle('is-hidden')"></button>
+                </div>
+                <div class="macro-card-qa is-hidden">
                   <input id="qaCals" type="number" value="100" class="macro-qa-input">
                   <button class="macro-qa-btn" onclick="subtractMacro('cal')">–</button>
                   <button class="macro-qa-btn" onclick="addMacro('cal')">+</button>
@@ -2557,7 +2569,7 @@
                 <progress id="calsBar" value="0" max="100"></progress>
               </div>
 
-              <div class="macro-card">
+              <div class="macro-track-row">
                 <div class="macro-card-header">
                   <div class="macro-card-label">
                     <span class="macro-card-dot macro-dot-protein"></span>
@@ -2573,7 +2585,14 @@
                 <div class="macro-card-bar-track">
                   <div class="macro-card-bar-fill macro-bar-protein" id="proteinVisBar"></div>
                 </div>
-                <div class="macro-card-qa">
+                <div class="macro-chip-row">
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('protein', -10)">−10</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 10)">+10</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 25)">+25</button>
+                  <button type="button" class="macro-chip macro-chip--edit" data-icon="pencil" aria-label="Custom amount"
+                    onclick="this.closest('.macro-track-row').querySelector('.macro-card-qa').classList.toggle('is-hidden')"></button>
+                </div>
+                <div class="macro-card-qa is-hidden">
                   <input id="qaProtein" type="number" value="10" class="macro-qa-input">
                   <button class="macro-qa-btn" onclick="subtractMacro('protein')">–</button>
                   <button class="macro-qa-btn" onclick="addMacro('protein')">+</button>
@@ -2581,7 +2600,7 @@
                 <progress id="proteinBar" value="0" max="100"></progress>
               </div>
 
-              <div class="macro-card">
+              <div class="macro-track-row">
                 <div class="macro-card-header">
                   <div class="macro-card-label">
                     <span class="macro-card-dot macro-dot-carbs"></span>
@@ -2597,7 +2616,14 @@
                 <div class="macro-card-bar-track">
                   <div class="macro-card-bar-fill macro-bar-carbs" id="carbsVisBar"></div>
                 </div>
-                <div class="macro-card-qa">
+                <div class="macro-chip-row">
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', -10)">−10</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 10)">+10</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 25)">+25</button>
+                  <button type="button" class="macro-chip macro-chip--edit" data-icon="pencil" aria-label="Custom amount"
+                    onclick="this.closest('.macro-track-row').querySelector('.macro-card-qa').classList.toggle('is-hidden')"></button>
+                </div>
+                <div class="macro-card-qa is-hidden">
                   <input id="qaCarbs" type="number" value="10" class="macro-qa-input">
                   <button class="macro-qa-btn" onclick="subtractMacro('carbs')">–</button>
                   <button class="macro-qa-btn" onclick="addMacro('carbs')">+</button>
@@ -2605,7 +2631,7 @@
                 <progress id="carbBar" value="0" max="100"></progress>
               </div>
 
-              <div class="macro-card">
+              <div class="macro-track-row">
                 <div class="macro-card-header">
                   <div class="macro-card-label">
                     <span class="macro-card-dot macro-dot-fat"></span>
@@ -2621,7 +2647,14 @@
                 <div class="macro-card-bar-track">
                   <div class="macro-card-bar-fill macro-bar-fat" id="fatVisBar"></div>
                 </div>
-                <div class="macro-card-qa">
+                <div class="macro-chip-row">
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('fat', -5)">−5</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 5)">+5</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 15)">+15</button>
+                  <button type="button" class="macro-chip macro-chip--edit" data-icon="pencil" aria-label="Custom amount"
+                    onclick="this.closest('.macro-track-row').querySelector('.macro-card-qa').classList.toggle('is-hidden')"></button>
+                </div>
+                <div class="macro-card-qa is-hidden">
                   <input id="qaFat" type="number" value="5" class="macro-qa-input">
                   <button class="macro-qa-btn" onclick="subtractMacro('fat')">–</button>
                   <button class="macro-qa-btn" onclick="addMacro('fat')">+</button>
@@ -2695,36 +2728,33 @@
                   <span class="macro-toggle-label">Refeed Day</span>
                 </label>
               </div>
-              <div style="display:grid;grid-template-columns:1fr;gap:8px;">
-                <label style="font-size:0.75rem;font-weight:600;color:var(--secondary-text);text-transform:uppercase;letter-spacing:0.04em;">
-                  Carb Day
-                  <select id="carbCycleSelect" style="margin-top:4px;">
-                    <option value="normal">Normal</option>
-                    <option value="high">High Day</option>
-                    <option value="low">Low Day</option>
-                  </select>
-                </label>
+              <div style="margin-top:4px;">
+                <p class="macro-seg-label" style="margin-top:0;">Carb Day</p>
+                <div class="macro-seg-row" data-macro-seg-for="carbCycleSelect">
+                  <button type="button" class="macro-seg-btn" data-val="low" onclick="setSegValue('carbCycleSelect', this)">Low</button>
+                  <button type="button" class="macro-seg-btn active" data-val="normal" onclick="setSegValue('carbCycleSelect', this)">Normal</button>
+                  <button type="button" class="macro-seg-btn" data-val="high" onclick="setSegValue('carbCycleSelect', this)">High</button>
+                </div>
+                <select id="carbCycleSelect" class="macro-seg-hidden" aria-hidden="true" tabindex="-1">
+                  <option value="normal">Normal</option>
+                  <option value="high">High Day</option>
+                  <option value="low">Low Day</option>
+                </select>
+              </div>
+              <!-- Daily Summary removed: it just repeated the same value/target
+                   numbers already shown on each row above. The over/under-target
+                   colour it used to show is now applied straight to that row's
+                   bar (see updateMacroSummary() in index.html). macroSummaryCals/
+                   Protein/Carbs/Fat spans below are kept off-screen only because
+                   updateMacroSummary() still writes descriptive text into them
+                   for anything (e.g. future a11y work) that wants it. -->
+              <div id="macroDailySummary" class="macro-seg-hidden">
+                <span id="macroSummaryCals"></span>
+                <span id="macroSummaryProtein"></span>
+                <span id="macroSummaryCarbs"></span>
+                <span id="macroSummaryFat"></span>
               </div>
               <p id="macroDayProfileSummary" style="font-size:0.9rem;margin-top:8px;color:var(--text-muted,#777);"></p>
-              <div id="macroDailySummary" style="margin-top:12px;">
-                <h3 style="font-size:1.1rem;margin-bottom:6px;">Daily Summary</h3>
-                <div class="macro-summary-row" data-macro="cal" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:var(--surface-bg,#141e17);border-left:3px solid var(--primary);">
-                  <span>Calories</span>
-                  <span id="macroSummaryCals">0 / 0 kcal</span>
-                </div>
-                <div class="macro-summary-row" data-macro="protein" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:var(--surface-bg,#141e17);border-left:3px solid var(--primary);">
-                  <span>Protein</span>
-                  <span id="macroSummaryProtein">0 / 0 g</span>
-                </div>
-                <div class="macro-summary-row" data-macro="carbs" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:var(--surface-bg,#141e17);border-left:3px solid var(--primary);">
-                  <span>Carbs</span>
-                  <span id="macroSummaryCarbs">0 / 0 g</span>
-                </div>
-                <div class="macro-summary-row" data-macro="fat" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:var(--surface-bg,#141e17);border-left:3px solid var(--primary);">
-                  <span>Fat</span>
-                  <span id="macroSummaryFat">0 / 0 g</span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -2735,8 +2765,7 @@
 
           <!-- AI Macro Advisor -->
           <div style="padding:12px 0 4px;">
-            <button id="macroAiAdvisorBtn" onclick="openMacroAiAdvisor()"
-              style="width:100%;background:var(--primary);color:#0b130d;border:none;border-radius:14px;padding:13px 20px;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 12px rgba(95,168,126,0.3);">
+            <button id="macroAiAdvisorBtn" class="macro-save-btn macro-ai-btn" onclick="openMacroAiAdvisor()">
               <span class="ui-icon" data-icon="sparkles"></span><span>AI Macro Advisor</span>
             </button>
             <div id="macroAiAdvisorLocked" style="display:none;text-align:center;margin-top:8px;font-size:0.8rem;color:var(--secondary-text);">
@@ -2777,11 +2806,14 @@
           <div class="macro-card">
             <h3>Daily Tracking</h3>
             <label>Protein: <span id="proteinVal">0</span> g</label>
-            <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" title="Default: 2 g/kg when cutting, 1.8 g/kg when maintaining/bulking"><br>
+            <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" title="Default: 2 g/kg when cutting, 1.8 g/kg when maintaining/bulking">
+            <p class="macro-slider-caption">Defaults to 2 g/kg while cutting, 1.8 g/kg while maintaining or bulking — drag to override.</p>
             <label>Fat: <span id="fatVal">0</span> g</label>
-            <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" title="Default: 25 % of calories when cutting, 30 % when maintaining/bulking; min 0.6 g/kg"><br>
+            <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" title="Default: 25 % of calories when cutting, 30 % when maintaining/bulking; min 0.6 g/kg">
+            <p class="macro-slider-caption">Defaults to 25% of calories while cutting, 30% while maintaining or bulking (0.6 g/kg floor).</p>
             <label>Carbs: <span id="carbVal">0</span> g</label>
-            <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" title="Carbs get the remaining calories after protein and fat"><br>
+            <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" title="Carbs get the remaining calories after protein and fat">
+            <p class="macro-slider-caption">Fills whatever calories are left after protein and fat.</p>
             <textarea id="coachNotes" rows="3" placeholder="Trainer notes (optional)"></textarea>
             <details id="advancedOptions" class="macro-advanced">
               <summary>Advanced</summary>
@@ -2798,15 +2830,20 @@
 
         <div class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card">
-            <label for="customCalories">Custom Calorie Intake (optional):</label><br>
-            <input id="customCalories" type="number" placeholder="Enter custom calorie target" style="width: 100%; padding: 8px; margin-top: 6px;"/>
-            <button onclick="applyCustomCalories()" style="width: 100%; margin-top: 10px; font-size: 1.1rem; padding: 12px;">Insert Calories</button>
-          </div>
-
-          <div class="macro-card">
             <h3>Macro Preset</h3>
-            <label for="macroPreset">Preset</label>
-            <select id="macroPreset" title="Choose your goal and rate (e.g. Cut, Bulk).">
+            <p class="macro-seg-label" style="margin-top:0;">Goal</p>
+            <div class="macro-seg-row" id="macroGoalSegRow">
+              <button type="button" class="macro-seg-btn" data-val="cut" onclick="selectMacroGoal(this)">Cut</button>
+              <button type="button" class="macro-seg-btn" data-val="maintain" onclick="selectMacroGoal(this)">Maintain</button>
+              <button type="button" class="macro-seg-btn" data-val="bulk" onclick="selectMacroGoal(this)">Bulk</button>
+            </div>
+            <p class="macro-seg-label" id="macroRateLabel">Rate</p>
+            <div class="macro-seg-row" id="macroRateSegRow">
+              <button type="button" class="macro-seg-btn" data-val="slow" onclick="selectMacroRate(this)">Slow</button>
+              <button type="button" class="macro-seg-btn" data-val="moderate" onclick="selectMacroRate(this)">Moderate</button>
+              <button type="button" class="macro-seg-btn" data-val="aggressive" onclick="selectMacroRate(this)">Aggressive</button>
+            </div>
+            <select id="macroPreset" class="macro-seg-hidden" aria-hidden="true" tabindex="-1" title="Choose your goal and rate (e.g. Cut, Bulk).">
               <option value="">-- Choose a preset --</option>
               <option value="cut-slow">Cut – Slow</option>
               <option value="cut-moderate">Cut – Moderate</option>
@@ -2816,7 +2853,12 @@
               <option value="bulk-moderate">Bulk – Moderate</option>
               <option value="bulk-aggressive">Bulk – Aggressive</option>
             </select>
-            <p class="macro-helper">Choose a preset to auto-calculate targets. We'll prompt for your details if needed.</p>
+            <p class="macro-helper">Pick a goal (and rate) to auto-calculate targets. We'll prompt for your details if needed.</p>
+            <label for="customCalories" style="margin-top:16px;">Or set exact calories</label>
+            <div style="display:flex;gap:8px;">
+              <input id="customCalories" type="number" placeholder="Custom calorie target" style="width: 100%;"/>
+              <button onclick="applyCustomCalories()" class="macro-save-btn" style="width:auto;margin-top:0;white-space:nowrap;">Set</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2831,27 +2873,46 @@
         <div class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card">
             <h3>Personal Details</h3>
-            <p class="macro-helper">Used for calorie and macro calculations.</p>
-            <label>Weight (kg)</label>
-            <input id="weight" type="number" step="0.1" min="20" max="400" />
+            <p class="macro-helper" style="margin-top:0;">Used for calorie and macro calculations.</p>
 
-            <label>Height (cm)</label>
-            <input id="height" type="number" step="0.1" min="100" max="250" />
+            <div class="macro-tile-grid">
+              <div class="macro-tile">
+                <span class="macro-tile-label">Weight</span>
+                <div class="macro-tile-input"><input id="weight" type="number" step="0.1" min="20" max="400" /><span class="macro-tile-unit">kg</span></div>
+              </div>
+              <div class="macro-tile">
+                <span class="macro-tile-label">Height</span>
+                <div class="macro-tile-input"><input id="height" type="number" step="0.1" min="100" max="250" /><span class="macro-tile-unit">cm</span></div>
+              </div>
+              <div class="macro-tile">
+                <span class="macro-tile-label">Age</span>
+                <div class="macro-tile-input"><input id="age" type="number" step="1" min="10" max="120" /><span class="macro-tile-unit">yrs</span></div>
+              </div>
+              <div class="macro-tile">
+                <span class="macro-tile-label">Body Fat (optional)</span>
+                <div class="macro-tile-input"><input id="bodyFat" type="number" step="0.1" min="3" max="70" /><span class="macro-tile-unit">%</span></div>
+              </div>
+            </div>
 
-            <label>Age</label>
-            <input id="age" type="number" step="1" min="10" max="120" />
-
-            <label>Sex</label>
-            <select id="sex">
+            <p class="macro-seg-label">Sex</p>
+            <div class="macro-seg-row" data-macro-seg-for="sex">
+              <button type="button" class="macro-seg-btn" data-val="male" onclick="setSegValue('sex', this)">Male</button>
+              <button type="button" class="macro-seg-btn" data-val="female" onclick="setSegValue('sex', this)">Female</button>
+            </div>
+            <select id="sex" class="macro-seg-hidden" aria-hidden="true" tabindex="-1">
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
 
-            <label>Body-Fat % (optional)</label>
-            <input id="bodyFat" type="number" step="0.1" min="3" max="70" />
-
-            <label>Activity Level</label>
-            <select id="activity">
+            <p class="macro-seg-label">Activity Level</p>
+            <div class="macro-seg-row" data-macro-seg-for="activity">
+              <button type="button" class="macro-seg-btn" data-val="1.2" onclick="setSegValue('activity', this)">Sed.</button>
+              <button type="button" class="macro-seg-btn" data-val="1.375" onclick="setSegValue('activity', this)">Light</button>
+              <button type="button" class="macro-seg-btn" data-val="1.55" onclick="setSegValue('activity', this)">Mod.</button>
+              <button type="button" class="macro-seg-btn" data-val="1.725" onclick="setSegValue('activity', this)">Very</button>
+              <button type="button" class="macro-seg-btn" data-val="1.9" onclick="setSegValue('activity', this)">Athlete</button>
+            </div>
+            <select id="activity" class="macro-seg-hidden" aria-hidden="true" tabindex="-1">
               <option value="1.2">Sedentary</option>
               <option value="1.375">Lightly Active</option>
               <option value="1.55">Moderately Active</option>
@@ -2859,9 +2920,15 @@
               <option value="1.9">Athlete</option>
             </select>
 
-            <button id="savePersonalDetailsBtn" type="button">Save Details</button>
-            <div id="personalDetailsSavedMsg" style="display:none;margin-top:8px;"><span class="ui-icon" data-icon="check"></span> Saved</div>
-            <p class="macro-stats">FFM: <span id="ffmDisplay">–</span> | FFMI: <span id="ffmiDisplay">–</span></p>
+            <div class="macro-result-strip">
+              <div class="macro-result"><b id="ffmDisplay">–</b><span>FFM</span></div>
+              <div class="macro-result"><b id="ffmiDisplay">–</b><span>FFMI</span></div>
+            </div>
+
+            <div class="macro-savebar">
+              <button id="savePersonalDetailsBtn" type="button" class="macro-save-btn">Save Details</button>
+              <div id="personalDetailsSavedMsg" class="macro-saved-chip" style="display:none;"><span class="ui-icon" data-icon="check"></span> Saved</div>
+            </div>
           </div>
         </div>
 
@@ -2869,16 +2936,16 @@
         <div class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card hydration-digestion-card">
             <h3><span class="ui-icon" data-icon="droplet"></span> Hydration &amp; Digestion</h3>
-            <p class="macro-helper">Track your fluid intake and gut health notes.</p>
-            <div class="hd-grid">
-              <label>
-                Hydration (ml)
-                <input type="number" id="hydrationMlInput" min="0" step="50" placeholder="Optional target">
-              </label>
-              <label>
-                Sodium (mg)
-                <input type="number" id="sodiumMgInput" min="0" step="50" placeholder="Optional target">
-              </label>
+            <p class="macro-helper" style="margin-top:0;">Track your fluid intake and gut health notes.</p>
+            <div class="macro-tile-grid">
+              <div class="macro-tile">
+                <span class="macro-tile-label">Hydration Target</span>
+                <div class="macro-tile-input"><input type="number" id="hydrationMlInput" min="0" step="50" placeholder="—"><span class="macro-tile-unit">ml</span></div>
+              </div>
+              <div class="macro-tile">
+                <span class="macro-tile-label">Sodium Target</span>
+                <div class="macro-tile-input"><input type="number" id="sodiumMgInput" min="0" step="50" placeholder="—"><span class="macro-tile-unit">mg</span></div>
+              </div>
             </div>
             <p id="hydrationSodiumSummary"></p>
             <label style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
@@ -8588,6 +8655,17 @@ function updateMacroSummary(data, options = {}) {
     carbs: "carbBar",
     fat: "fatBar",
   };
+  // The visible bar in each Targets row — since the old "Daily Summary"
+  // list (which used to be the only thing this over/under-target colour
+  // touched) is gone, apply it directly to the row people actually look
+  // at instead. Left alone (falls back to its macro colour) while under
+  // 75% of target so cal/protein/carbs/fat stay visually distinct.
+  const visBarMap = {
+    cal: "calsVisBar",
+    protein: "proteinVisBar",
+    carbs: "carbsVisBar",
+    fat: "fatVisBar",
+  };
   Object.entries(summaryMap).forEach(([type, summaryId]) => {
     const entry = data[type];
     if (!entry) return;
@@ -8603,14 +8681,13 @@ function updateMacroSummary(data, options = {}) {
         summaryEl.textContent = `${value} / ${Math.round(target)} ${entry.unit}`;
       }
     }
-    const row = document.querySelector(`.macro-summary-row[data-macro="${type}"]`);
-    if (row) {
-      row.style.borderLeft = `6px solid ${color}`;
-      row.style.backgroundColor = `${color}1A`;
-    }
     const bar = document.getElementById(barMap[type]);
     if (bar) {
       bar.style.accentColor = color;
+    }
+    const visBar = document.getElementById(visBarMap[type]);
+    if (visBar) {
+      visBar.style.background = percent >= 100 ? "#f44336" : percent >= 75 ? "#ffc107" : "";
     }
   });
 }
@@ -8666,6 +8743,13 @@ function updateMacroUI() {
     console.warn("Macro settings UI not available: missing #macroTotalCals.");
     return;
   }
+  // #calTarget is a plain number in every other writer (the static markup
+  // is "Total Calories: <macroTotalCals> / <calTarget> kcal") — writing a
+  // compound "X / Y kcal" string into just macroTotalCals, as this used to,
+  // produced "Total Calories: 1450 / 2400 kcal / 2400 kcal".
+  macroTotalCalsEl.textContent = totalCals;
+  const calTargetElForTotal = document.getElementById("calTarget");
+  if (calTargetElForTotal) calTargetElForTotal.textContent = adaptiveTargets.calories;
   macroTotalCalsEl.textContent = totalCals;
   const calTargetEl = document.getElementById("calTarget");
   if (calTargetEl) calTargetEl.textContent = adaptiveTargets.calories;
@@ -8778,6 +8862,16 @@ function adjustMacros(changedId) {
   for (const id of allIds) {
     els[id] = document.getElementById(id);
     if (!els[id]) return;
+  }
+
+  // Called with no specific slider — e.g. right after calculateMacroTargets()
+  // has just set all three sliders' min/max/value programmatically (a preset
+  // was picked). There's nothing to redistribute from, so just refresh the
+  // on-screen numbers instead of falling through to code that assumes
+  // `changedId` names one of the three sliders above.
+  if (!KCS[changedId]) {
+    _updateSliderDisplay();
+    return;
   }
 
   const limit = macroRanges?.tdee || 0;
@@ -8912,6 +9006,10 @@ function _updateSliderDisplay() {
   if (pEl) pEl.textContent = p;
   if (fEl) fEl.textContent = f;
   if (cEl) cEl.textContent = c;
+  // #calTarget is a plain number everywhere else — the static markup already
+  // supplies "Total Calories: <macroTotalCals> / <calTarget> kcal" around
+  // these two spans, so writing a combined "X / Y kcal" string into just
+  // macroTotalCals doubled up the unit ("... / 2400 kcal / 2400 kcal").
   if (tEl) tEl.textContent = totalCals;
   if (calTargetEl) calTargetEl.textContent = limit;
 }
@@ -8966,6 +9064,19 @@ function saveMacroTargetsToTop(target) {
     document.getElementById("macroProteinTarget").textContent = target.protein;
     document.getElementById("macroFatTarget").textContent     = target.fat;
     document.getElementById("macroCarbsTarget").textContent   = target.carbs;
+    // Also update the progress bars' .max — the calorie/macro rings on the
+    // Targets tab (archetype-features.js's syncMacroRings, polling every
+    // 300ms) read straight off calsBar/proteinBar/fatBar/carbBar's max/value
+    // and otherwise stay at their pre-preset fill until something unrelated
+    // (e.g. a quick-add) happens to call updateMacroUI() and update these.
+    const calsBarEl = document.getElementById("calsBar");
+    if (calsBarEl) calsBarEl.max = target.calories;
+    const proteinBarEl = document.getElementById("proteinBar");
+    if (proteinBarEl) proteinBarEl.max = target.protein;
+    const fatBarEl = document.getElementById("fatBar");
+    if (fatBarEl) fatBarEl.max = target.fat;
+    const carbBarEl = document.getElementById("carbBar");
+    if (carbBarEl) carbBarEl.max = target.carbs;
     // also reflect in the adjust section
     const calTargetEl = document.getElementById("calTarget");
     if (calTargetEl) calTargetEl.textContent = target.calories;
@@ -18676,6 +18787,7 @@ window.renderMeetPrep = renderMeetPrep;
 
   <script src="src/js/archetype-config.js"></script>
   <script src="src/js/archetype-features.js"></script>
+  <script src="src/js/macro-pill-controls.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/workout-archiver.js"></script>
   <script src="src/js/ui-declutter.js"></script>

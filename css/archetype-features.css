@@ -5,28 +5,36 @@
    Depends on: tokens.css
    ============================================================= */
 
-/* ── Macro tracker cards ────────────────────────────────────── */
+/* ── Macro tracker rows ─────────────────────────────────────────
+   One pod holding four rows (Energy/Protein/Carbs/Fat) instead of
+   four separate bordered cards — same data, one border instead of
+   four. Colours pulled from tokens.css (green ramp + brass) rather
+   than the pre-redesign #f0a040/#4da8da/#6fcf97/#eb5757 palette,
+   which doesn't exist anywhere in tokens.css. */
 
 .macro-cards {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 10px 0 4px;
-}
-
-.macro-card {
   background: var(--pod-bg);
   border: 1px solid var(--pod-border);
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-bevel);
-  padding: 14px 16px 12px;
+  padding: 2px 16px;
+  margin: 10px 0 4px;
 }
+
+.macro-track-row {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-row);
+}
+
+.macro-track-row:first-child { border-top: none; }
 
 .macro-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 9px;
 }
 
 .macro-card-label {
@@ -36,22 +44,22 @@
 }
 
 .macro-card-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.macro-dot-cal     { background: #f0a040; box-shadow: 0 0 6px #f0a04066; }
-.macro-dot-protein { background: #4da8da; box-shadow: 0 0 6px #4da8da66; }
-.macro-dot-carbs   { background: #6fcf97; box-shadow: 0 0 6px #6fcf9766; }
-.macro-dot-fat     { background: #eb5757; box-shadow: 0 0 6px #eb575766; }
+.macro-dot-cal     { background: var(--green-70);  box-shadow: 0 0 6px rgba(61, 157, 115, 0.5); }
+.macro-dot-protein { background: var(--green-100); box-shadow: 0 0 6px rgba(142, 194, 164, 0.5); }
+.macro-dot-carbs   { background: var(--green-90);  box-shadow: 0 0 6px rgba(111, 174, 139, 0.5); }
+.macro-dot-fat     { background: var(--brass-base); box-shadow: 0 0 6px rgba(199, 154, 84, 0.5); }
 
 .macro-card-name {
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-color);
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-body);
   letter-spacing: 0.01em;
 }
 
@@ -59,11 +67,12 @@
   display: flex;
   align-items: baseline;
   gap: 3px;
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
 }
 
 .macro-card-consumed {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 700;
   color: var(--text-color);
   font-variant-numeric: tabular-nums;
@@ -76,7 +85,7 @@
 }
 
 .macro-card-target {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 500;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
@@ -89,58 +98,91 @@
 }
 
 .macro-card-bar-track {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 2px;
+  height: 5px;
+  background: rgba(116, 138, 126, 0.14);
+  border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
 }
 
 .macro-card-bar-fill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 3px;
   width: 0%;
-  transition: width 0.4s ease;
+  transition: width 0.4s ease, background-color 0.3s ease;
 }
 
-.macro-bar-cal     { background: #f0a040; }
-.macro-bar-protein { background: #4da8da; }
-.macro-bar-carbs   { background: #6fcf97; }
-.macro-bar-fat     { background: #eb5757; }
+.macro-bar-cal     { background: var(--green-70); }
+.macro-bar-protein { background: var(--green-100); }
+.macro-bar-carbs   { background: var(--green-90); }
+.macro-bar-fat     { background: var(--brass-base); }
 
 .macro-card-net {
   font-size: 0.72rem;
   color: var(--text-muted);
-  margin-bottom: 10px;
-  margin-top: -4px;
+  margin: 0 0 9px;
 }
+
+/* Quick-add chips — replaces a bare number input + two ±buttons per
+   row. Common amounts are one tap; "Custom" reveals the exact same
+   input+±buttons as before (still driven by addMacro()/subtractMacro()),
+   just tucked behind a toggle instead of always taking up a full row. */
+.macro-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.macro-chip {
+  font-family: var(--font-label);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.macro-chip:hover,
+.macro-chip:focus-visible {
+  background: var(--pod-bg-hover, #141b18);
+  border-color: var(--border-hover, var(--border-chip));
+}
+
+.macro-chip--edit { padding: 5px 9px; opacity: 0.85; }
 
 .macro-card-qa {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 8px;
 }
 
 .macro-qa-input {
   width: 72px;
   padding: 7px 10px;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--card-bg);
+  border: 1px solid var(--pod-border);
+  background: var(--surface-recessed, #0b100e);
   color: var(--text-color);
   font-size: 0.9rem;
   text-align: center;
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-body);
   margin: 0;
 }
 
 .macro-qa-btn {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: none;
-  background: var(--primary, #5fa87e);
-  color: #0b130d;
+  background: var(--green-70);
+  color: var(--label-on-green);
   font-size: 1.2rem;
   font-weight: 700;
   cursor: pointer;
@@ -155,7 +197,7 @@
 .macro-qa-btn:active { transform: scale(0.88); }
 
 /* Override global .macro-card input[type="number"] { width:100% } for quick-add inputs */
-.macro-card .macro-card-qa .macro-qa-input {
+.macro-track-row .macro-card-qa .macro-qa-input {
   width: 72px !important;
   flex-shrink: 0;
 }
@@ -203,11 +245,11 @@
   transition: stroke-dashoffset 0.5s ease;
 }
 
-/* Colour per macro */
-.macro-ring-cals    .macro-ring-fill { stroke: #f0a040; }
-.macro-ring-protein .macro-ring-fill { stroke: #4da8da; }
-.macro-ring-carbs   .macro-ring-fill { stroke: #6fcf97; }
-.macro-ring-fat     .macro-ring-fill { stroke: #eb5757; }
+/* Colour per macro — matches .macro-dot-*/.macro-bar-* above */
+.macro-ring-cals    .macro-ring-fill { stroke: var(--green-70); }
+.macro-ring-protein .macro-ring-fill { stroke: var(--green-100); }
+.macro-ring-carbs   .macro-ring-fill { stroke: var(--green-90); }
+.macro-ring-fat     .macro-ring-fill { stroke: var(--brass-base); }
 
 .macro-ring-inner {
   position: absolute;
