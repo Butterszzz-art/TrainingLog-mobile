@@ -107,6 +107,25 @@
 
 /* ── "All" hub screen (replaces the old More drawer) ──────────── */
 
+/* The shared .tab-content wash (tabs.css) is a single radial glow tuned
+   for a screen-height card — it fully fades to flat --ground well
+   before the bottom of this one, since five sections of icon tiles run
+   much taller. Give #allTab its own multi-stop version: the same top
+   glow, a second soft glow low down so the tail of the scroll isn't
+   dead black, and a lighter green-black floor in between instead of
+   bottoming out to pure --ground. */
+#allTab.tab-content {
+  background:
+    radial-gradient(140% 60% at 50% -8%,
+      rgba(61, 157, 115, 0.42) 0%,
+      rgba(35, 84, 62, 0.30) 28%,
+      transparent 62%),
+    radial-gradient(130% 55% at 20% 108%,
+      rgba(61, 157, 115, 0.26) 0%,
+      transparent 60%),
+    linear-gradient(180deg, var(--ground-mid-mobile) 0%, #081210 55%, var(--ground-mid-mobile) 100%);
+}
+
 .all-hub-header {
   padding: 6px 6px 14px;
 }
@@ -121,53 +140,130 @@
 
 .all-hub-section-label {
   font-family: var(--font-label);
-  font-size: 9.5px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 900;
   letter-spacing: 0.14em;
-  color: var(--text-muted);
+  color: var(--highlight);
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
+/* App-icon grid: 4 across like a phone home screen — a glyph tile up
+   top, the label centered underneath. Replaces the old cramped
+   icon-and-label list row. */
 .all-hub-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px 4px;
 }
 
 .all-hub-tile {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 7px;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
   color: var(--text-color);
-  font-size: 12.5px;
+  font-size: 11px;
   font-family: var(--font-body);
   font-weight: 600;
+  line-height: 1.15;
   cursor: pointer;
-  text-align: left;
-  transition: background 0.15s;
+  text-align: center;
+  transition: transform 0.15s ease;
+  /* Tiles drop/scale in on entry, staggered per row like the home
+     dashboard's card stagger (home.css homeCardEnter). */
+  animation: hubTileEnter 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.all-hub-grid > .all-hub-tile:nth-child(1) { animation-delay: 0.02s; }
+.all-hub-grid > .all-hub-tile:nth-child(2) { animation-delay: 0.07s; }
+.all-hub-grid > .all-hub-tile:nth-child(3) { animation-delay: 0.12s; }
+.all-hub-grid > .all-hub-tile:nth-child(4) { animation-delay: 0.17s; }
+.all-hub-grid > .all-hub-tile:nth-child(5) { animation-delay: 0.22s; }
+
+.all-hub-tile > span:last-child {
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+@media (hover: hover) {
+  .all-hub-tile:hover {
+    background: none;
+    border-color: transparent;
+    transform: translateY(-2px);
+  }
+  .all-hub-tile:hover .more-drawer-icon {
+    box-shadow: var(--pod-bevel), 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 22px rgba(61, 157, 115, 0.45);
+  }
 }
 
 .all-hub-tile:active {
-  background: var(--elevated-bg);
+  background: none;
+  transform: scale(0.91);
+}
+
+.all-hub-tile:active .more-drawer-icon {
+  filter: brightness(1.25) saturate(1.15);
+  box-shadow: var(--pod-bevel), 0 4px 10px rgba(0, 0, 0, 0.4), 0 0 26px rgba(61, 157, 115, 0.6);
 }
 
 .all-hub-tile .more-drawer-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  font-size: 18px;
+  width: 58px;
+  height: 58px;
+  font-size: 27px;
   line-height: 1;
   overflow: hidden;
   flex: none;
-  font-family: 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', var(--font-body);
+  border-radius: var(--radius-sm);
+  /* Green wash instead of a flat dark chip — echoes the hero pod /
+     active-nav-pill treatment so the grid reads as energetic, not inert. */
+  background: linear-gradient(165deg, rgba(61, 157, 115, 0.24), var(--pod-bg) 65%);
+  border: 1px solid var(--border-featured);
+  box-shadow: var(--pod-bevel), 0 6px 14px rgba(0, 0, 0, 0.32), 0 0 14px rgba(61, 157, 115, 0.28);
+  color: var(--green-70);
+  filter: drop-shadow(0 0 5px rgba(61, 157, 115, 0.45));
+  transition: box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .all-hub-logout {
   color: var(--danger-text);
+}
+
+.all-hub-logout .more-drawer-icon {
+  color: var(--danger-text);
+  background: linear-gradient(165deg, rgba(158, 50, 65, 0.24), var(--pod-bg) 65%);
+  border-color: var(--danger-border);
+  box-shadow: var(--pod-bevel), 0 6px 14px rgba(0, 0, 0, 0.32), 0 0 14px rgba(158, 50, 65, 0.3);
+  filter: drop-shadow(0 0 5px rgba(158, 50, 65, 0.45));
+}
+
+.all-hub-logout:active .more-drawer-icon {
+  box-shadow: var(--pod-bevel), 0 4px 10px rgba(0, 0, 0, 0.4), 0 0 26px rgba(158, 50, 65, 0.6);
+}
+
+@media (hover: hover) {
+  .all-hub-logout:hover .more-drawer-icon {
+    box-shadow: var(--pod-bevel), 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 22px rgba(158, 50, 65, 0.45);
+  }
+}
+
+@keyframes hubTileEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ── Workout focus bar ──────────────────────────────────────── */
