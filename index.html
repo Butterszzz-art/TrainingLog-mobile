@@ -8781,6 +8781,25 @@ function adjustMacros(changedId) {
   }
 
   const limit = macroRanges?.tdee || 0;
+
+  // No specific slider changed (e.g. called after a preset pick or a custom-calorie
+  // apply) — nothing to clamp/scale against, just resync each slider's max/value
+  // against the current macroRanges/targets and refresh the display.
+  if (!allIds.includes(changedId)) {
+    allIds.forEach(id => {
+      const el = els[id];
+      const kc = KCS[id];
+      const othersCals = allIds
+        .filter(otherId => otherId !== id)
+        .reduce((sum, otherId) => sum + Number(els[otherId].value) * KCS[otherId], 0);
+      const maxGrams = Math.floor(Math.max(0, limit - othersCals) / kc);
+      el.max = maxGrams;
+      if (Number(el.value) > maxGrams) el.value = maxGrams;
+    });
+    _updateSliderDisplay();
+    return;
+  }
+
   const changedEl = els[changedId];
   const changedKc = KCS[changedId];
 
