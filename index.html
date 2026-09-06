@@ -8253,7 +8253,6 @@ function calculateMacroTargets(goalOverride, rateOverride) {
 
   const msBtn = document.getElementById("macroSettingsBtn");
   if (msBtn) msBtn.textContent = "Macro Settings";
-  adjustMacros();
 
   // Auto-save calculated targets so Macro tab picks them up immediately
   const autoTargets = {
@@ -8266,6 +8265,14 @@ function calculateMacroTargets(goalOverride, rateOverride) {
     localStorage.setItem('macroTargets_' + currentUser, JSON.stringify(autoTargets));
     saveMacroTargetsToTop(autoTargets);
   }
+
+  // Refresh the Targets tab (rings, bars, per-macro rows) so a freshly-picked
+  // preset shows up immediately instead of waiting on an unrelated action
+  // (e.g. logging a quick-add macro) to trigger updateMacroUI() later. This
+  // must run before adjustMacros() below, which reads/writes slider DOM
+  // state rather than the Targets-tab elements updateMacroUI() refreshes.
+  updateMacroUI();
+  adjustMacros();
 }
 
 function getMacroTargetValues() {
