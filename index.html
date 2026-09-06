@@ -8743,7 +8743,13 @@ function updateMacroUI() {
     console.warn("Macro settings UI not available: missing #macroTotalCals.");
     return;
   }
-  macroTotalCalsEl.textContent = `${totalCals} / ${adaptiveTargets.calories} kcal`;
+  // #calTarget is a plain number in every other writer (the static markup
+  // is "Total Calories: <macroTotalCals> / <calTarget> kcal") — writing a
+  // compound "X / Y kcal" string into just macroTotalCals, as this used to,
+  // produced "Total Calories: 1450 / 2400 kcal / 2400 kcal".
+  macroTotalCalsEl.textContent = totalCals;
+  const calTargetElForTotal = document.getElementById("calTarget");
+  if (calTargetElForTotal) calTargetElForTotal.textContent = adaptiveTargets.calories;
   updateMacroSummary(
     {
       cal: { value: totalCals, target: adaptiveTargets.calories, unit: "kcal" },
@@ -8974,10 +8980,16 @@ function _updateSliderDisplay() {
   const fEl = document.getElementById("fatVal");
   const cEl = document.getElementById("carbVal");
   const tEl = document.getElementById("macroTotalCals");
+  const calTargetEl = document.getElementById("calTarget");
   if (pEl) pEl.textContent = p;
   if (fEl) fEl.textContent = f;
   if (cEl) cEl.textContent = c;
-  if (tEl) tEl.textContent = `${totalCals} / ${limit} kcal`;
+  // #calTarget is a plain number everywhere else — the static markup already
+  // supplies "Total Calories: <macroTotalCals> / <calTarget> kcal" around
+  // these two spans, so writing a combined "X / Y kcal" string into just
+  // macroTotalCals doubled up the unit ("... / 2400 kcal / 2400 kcal").
+  if (tEl) tEl.textContent = totalCals;
+  if (calTargetEl) calTargetEl.textContent = limit;
 }
   
 function saveSliderMacros() {
@@ -9030,6 +9042,19 @@ function saveMacroTargetsToTop(target) {
     document.getElementById("macroProteinTarget").textContent = target.protein;
     document.getElementById("macroFatTarget").textContent     = target.fat;
     document.getElementById("macroCarbsTarget").textContent   = target.carbs;
+    // Also update the progress bars' .max — the calorie/macro rings on the
+    // Targets tab (archetype-features.js's syncMacroRings, polling every
+    // 300ms) read straight off calsBar/proteinBar/fatBar/carbBar's max/value
+    // and otherwise stay at their pre-preset fill until something unrelated
+    // (e.g. a quick-add) happens to call updateMacroUI() and update these.
+    const calsBarEl = document.getElementById("calsBar");
+    if (calsBarEl) calsBarEl.max = target.calories;
+    const proteinBarEl = document.getElementById("proteinBar");
+    if (proteinBarEl) proteinBarEl.max = target.protein;
+    const fatBarEl = document.getElementById("fatBar");
+    if (fatBarEl) fatBarEl.max = target.fat;
+    const carbBarEl = document.getElementById("carbBar");
+    if (carbBarEl) carbBarEl.max = target.carbs;
     // also reflect in the adjust section
     const calTargetEl = document.getElementById("calTarget");
     if (calTargetEl) calTargetEl.textContent = target.calories;
