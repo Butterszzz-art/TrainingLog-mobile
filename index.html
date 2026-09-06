@@ -6465,6 +6465,7 @@ function openSessionRatingModal(workoutIndex) {
       </div>
       <div class="gdpr-modal-actions">
         <button class="gdpr-export-btn" onclick="closeSessionRatingModal()">Skip</button>
+        <button class="gdpr-export-btn" onclick="saveEndedWorkoutAsTemplateFromRating()">💾 Save as Template</button>
         <button class="gdpr-save-btn" onclick="submitSessionRating()">Save</button>
       </div>
     </div>`;
@@ -6498,9 +6499,18 @@ function submitSessionRating() {
   if (typeof window.showToast === 'function') window.showToast('Session rating saved.');
 }
 
+// Lets the End Workout flow itself offer "Save as Template" right when the
+// session is fresh, instead of requiring a separate trip to Log ▸ Templates.
+function saveEndedWorkoutAsTemplateFromRating() {
+  const workoutIndex = _sessionRatingWorkoutIndex;
+  closeSessionRatingModal();
+  if (typeof openSaveTemplateModal === 'function') openSaveTemplateModal(workoutIndex);
+}
+
 window.openSessionRatingModal = openSessionRatingModal;
 window.closeSessionRatingModal = closeSessionRatingModal;
 window.submitSessionRating = submitSessionRating;
+window.saveEndedWorkoutAsTemplateFromRating = saveEndedWorkoutAsTemplateFromRating;
 
 function renderWorkouts() {
   const _logUser = window.coachLoggingClient || currentUser;
@@ -6889,24 +6899,23 @@ function logRestBreak(mins) {
 
 // Save a workout template to Airtable
 async function saveTemplate(username, templateName, templateData) {
-  try {
-    const response = await fetch(`${window.SERVER_URL}/templates`, {
-      method: 'POST',
-      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, templateName, templateData })
-    });
+  // NOTE: errors are re-thrown (not swallowed) so callers — persistTemplateRecord
+  // in particular — can tell the user whether the save reached the server or is
+  // only queued locally, instead of always reporting success.
+  const response = await fetch(`${window.SERVER_URL}/templates`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, templateName, templateData })
+  });
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `Server error: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log('Template saved:', result);
-  } catch (error) {
-    console.error('Error saving template:', error);
-    window.showToast('Failed to save template. Please try again.', 'error');
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Server error: ${response.status}`);
   }
+
+  const result = await response.json();
+  console.log('Template saved:', result);
+  return result;
 }
   
 function setTemplateLoadMessage(message) {
@@ -7050,6 +7059,10 @@ async function loadTemplateDropdown(username = currentUser) {
       .map(normalizeTemplateRecord)
       .filter(Boolean);
     resistanceTemplatesCache = merged;
+    // ProgramTabV2._getAvailableTemplates() reads window.resistanceTemplatesCache —
+    // this is a `let` in this script's scope, so it never reaches `window` on its
+    // own; mirror it explicitly so the Program tab's template picker actually sees it.
+    window.resistanceTemplatesCache = resistanceTemplatesCache;
     console.log('Loaded templates:', merged);
     // Populate the resistance template dropdown; CrossFit templates use a separate select
     populateTemplateSelect('resistanceTemplateSelect', merged);
@@ -7057,6 +7070,7 @@ async function loadTemplateDropdown(username = currentUser) {
   } catch (err) {
     console.warn('Template loading failed:', err);
     resistanceTemplatesCache = [];
+    window.resistanceTemplatesCache = resistanceTemplatesCache;
     populateTemplateSelect('resistanceTemplateSelect', []);
     renderTemplateLibraryList();
   }
@@ -7099,41 +7113,123 @@ function buildTemplateFromWorkout(workout, metadata = {}) {
   };
 }
 
-// Save last workout as template
-function saveWorkoutAsTemplate() {
-  window.showPrompt('Template name:').then(name => {
-    if (!name || !name.trim()) return;
-    window.showPrompt('Description (optional):').then(description => {
-      window.showPrompt('Tags (comma separated, optional):').then(tagsInput => {
-        const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+// Persist a template record: writes it to the local managed-templates store,
+// updates the in-memory cache (and any visible pickers) immediately, then
+// syncs it to the server in the background. Shared by every "save as
+// template" entry point so they behave consistently instead of each
+// reimplementing the local-save/server-sync/cache-refresh dance.
+function persistTemplateRecord(name, templateData, { existingLocalId = null } = {}) {
+  const localTemplates = getLocalManagedTemplates();
+  const existingIndex = existingLocalId
+    ? localTemplates.findIndex(tpl => tpl.localId === existingLocalId)
+    : -1;
+  const localId = existingLocalId || `local_${Date.now()}`;
 
-        const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-        if (!workouts.length) { window.showToast('No workout to save.', 'warn'); return; }
-        const template = buildTemplateFromWorkout(workouts[workouts.length - 1], {
-          name: name.trim(), description: description || '', tags
-        });
-        const localTemplates = getLocalManagedTemplates();
-        localTemplates.push({
-          localId: `local_${Date.now()}`,
-          name: name.trim(),
-          data: template,
-          source: 'local'
-        });
-        saveLocalManagedTemplates(localTemplates);
+  if (existingIndex >= 0) {
+    localTemplates[existingIndex] = { ...localTemplates[existingIndex], name, data: templateData, source: 'local' };
+  } else {
+    localTemplates.push({ localId, name, data: templateData, source: 'local' });
+  }
+  saveLocalManagedTemplates(localTemplates);
 
-        saveTemplate(currentUser, name.trim(), template)
-          .then(() => {
-            window.showToast('Template saved!', 'success');
-            loadTemplateDropdown();
-          })
-          .catch(err => {
-            console.error(err);
-            window.showToast('Failed to save template to server — saved locally.', 'warn');
-            loadTemplateDropdown();
-          });
-      });
+  // Update the cache/pickers straight from the record we just built instead of
+  // re-fetching everything from the server (loadTemplateDropdown) — we already
+  // know exactly what changed, so there's nothing a round trip would add.
+  const normalized = normalizeTemplateRecord({ localId, name, data: templateData, source: 'local' });
+  if (normalized) {
+    const cacheIndex = resistanceTemplatesCache.findIndex(tpl => tpl.id === localId);
+    if (cacheIndex >= 0) resistanceTemplatesCache[cacheIndex] = normalized;
+    else resistanceTemplatesCache.push(normalized);
+    window.resistanceTemplatesCache = resistanceTemplatesCache; // keep ProgramTabV2's picker in sync
+    populateTemplateSelect('resistanceTemplateSelect', resistanceTemplatesCache);
+    renderTemplateLibraryList();
+  }
+
+  return saveTemplate(currentUser, name, templateData)
+    .then(() => {
+      window.showToast('Template saved!', 'success');
+    })
+    .catch(err => {
+      console.error(err);
+      window.showToast('Failed to save template to server — saved locally.', 'warn');
     });
-  });
+}
+
+let _saveTemplateModalWorkoutIndex = null;
+
+// Save-as-template mini-form: one modal with name/description/tags instead of
+// three chained window.showPrompt() calls. Defaults to whichever workout was
+// actually just ended (same lookup the End Workout rating modal uses) rather
+// than assuming the last array entry is the right one.
+function openSaveTemplateModal(workoutIndex) {
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const idx = typeof workoutIndex === 'number' ? workoutIndex : _findWorkoutIndexForRating(workouts);
+  const workout = idx !== -1 ? workouts[idx] : null;
+  if (!workout || !Array.isArray(workout.log) || !workout.log.length) {
+    window.showToast('No ended workout with exercises to save as a template.', 'warn');
+    return;
+  }
+
+  closeSaveTemplateModal();
+  _saveTemplateModalWorkoutIndex = idx;
+
+  const fallbackTitle = `Workout on ${workout.date}`;
+  const defaultName = (workout.title && workout.title !== fallbackTitle)
+    ? workout.title
+    : `Template ${workout.date || new Date().toISOString().split('T')[0]}`;
+
+  const modal = document.createElement('div');
+  modal.className = 'gdpr-modal-overlay';
+  modal.id = 'saveTemplateModalOverlay';
+  modal.innerHTML = `
+    <div class="gdpr-modal">
+      <h3>Save workout as template</h3>
+      <p>Reusable later from the Program tab.</p>
+      <div class="session-rating-form">
+        <input type="text" id="saveTemplateModalName" placeholder="Template name" value="${String(defaultName).replace(/"/g, '&quot;')}" style="width:100%; margin-bottom:8px;" />
+        <input type="text" id="saveTemplateModalDescription" placeholder="Description (optional)" style="width:100%; margin-bottom:8px;" />
+        <input type="text" id="saveTemplateModalTags" placeholder="Tags, comma separated (optional)" style="width:100%;" />
+      </div>
+      <div class="gdpr-modal-actions">
+        <button class="gdpr-export-btn" onclick="closeSaveTemplateModal()">Cancel</button>
+        <button class="gdpr-save-btn" onclick="confirmSaveTemplateModal()">Save Template</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('saveTemplateModalName')?.focus();
+}
+
+function closeSaveTemplateModal() {
+  document.getElementById('saveTemplateModalOverlay')?.remove();
+  _saveTemplateModalWorkoutIndex = null;
+}
+
+function confirmSaveTemplateModal() {
+  const idx = _saveTemplateModalWorkoutIndex;
+  const name = document.getElementById('saveTemplateModalName')?.value.trim();
+  const description = document.getElementById('saveTemplateModalDescription')?.value.trim() || '';
+  const tagsRaw = document.getElementById('saveTemplateModalTags')?.value || '';
+  const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+
+  if (!name) { window.showToast('Give the template a name.', 'warn'); return; }
+
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workout = idx !== null ? workouts[idx] : null;
+  closeSaveTemplateModal();
+  if (!workout) { window.showToast('That workout is no longer available.', 'warn'); return; }
+
+  const template = buildTemplateFromWorkout(workout, { name, description, tags });
+  persistTemplateRecord(name, template);
+}
+
+window.openSaveTemplateModal = openSaveTemplateModal;
+window.closeSaveTemplateModal = closeSaveTemplateModal;
+window.confirmSaveTemplateModal = confirmSaveTemplateModal;
+
+// Save last-ended workout as template — entry point used by the standalone
+// "Save Current Workout as Template" button in Log ▸ Templates.
+function saveWorkoutAsTemplate(workoutIndex) {
+  openSaveTemplateModal(workoutIndex);
 }
 
 
@@ -7368,40 +7464,13 @@ function saveSimpleTemplate() {
     }))
   };
 
-  const localTemplates = getLocalManagedTemplates();
-  if (templateDraftEditId) {
-    const existingIndex = localTemplates.findIndex(tpl => tpl.localId === templateDraftEditId);
-    if (existingIndex >= 0) {
-      localTemplates[existingIndex] = {
-        ...localTemplates[existingIndex],
-        name,
-        data: templateData,
-        source: 'local'
-      };
-    } else {
-      localTemplates.push({ localId: templateDraftEditId, name, data: templateData, source: 'local' });
-    }
-  } else {
-    localTemplates.push({
-      localId: `local_${Date.now()}`,
-      name,
-      data: templateData,
-      source: 'local'
-    });
-  }
-  saveLocalManagedTemplates(localTemplates);
-
-  saveTemplate(currentUser, name, templateData)
-    .then(() => {
-      templateDraftEditId = null;
-      resetTemplateBuilder();
-      loadTemplateDropdown();
-      alert('Template saved');
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Failed to save template');
-    });
+  persistTemplateRecord(name, templateData, { existingLocalId: templateDraftEditId }).then(() => {
+    // Data is already safe in local storage regardless of server outcome
+    // (persistTemplateRecord reports success/failure via toast), so the
+    // builder can always reset here.
+    templateDraftEditId = null;
+    resetTemplateBuilder();
+  });
 }
 
 function getSelectedTemplateRecord() {
