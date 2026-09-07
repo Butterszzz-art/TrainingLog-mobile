@@ -615,6 +615,18 @@
   margin-bottom: 6px;
 }
 
+.step-widget-sync-info {
+  font-size: 0.72rem;
+  color: var(--secondary-text);
+  margin-bottom: 6px;
+}
+
+.step-synced-label {
+  font-size: 0.72rem;
+  color: var(--secondary-text);
+  font-style: italic;
+}
+
 .step-input-row {
   display: flex;
   gap: 6px;

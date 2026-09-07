@@ -728,17 +728,20 @@ function getActivitySyncElements(container = document) {
   };
 }
 
-async function loadTodayActivitySyncActivity(container, authHeaders) {
+async function loadTodayActivitySyncActivity(container) {
   const { summaryEl } = getActivitySyncElements(container);
   if (!summaryEl) return;
   try {
-    const res = await fetchWithTimeout(`${ensureServerUrl()}/api/activity-sync/activity`, { headers: authHeaders }, 8000);
-    const data = await res.json();
-    if (!res.ok || !data.success) {
+    // Routed through the shared bridge (src/js/activity-sync-bridge.js) so this
+    // reuses the one fetch that also feeds the Home step ring/mission state,
+    // instead of hitting the API a second time with its own request.
+    const a = typeof window.activitySyncBridge?.fetchAndApplyTodayActivity === 'function'
+      ? await window.activitySyncBridge.fetchAndApplyTodayActivity({ force: true })
+      : null;
+    if (!a) {
       summaryEl.style.display = 'none';
       return;
     }
-    const a = data.activity;
     summaryEl.textContent = `Today: ${Number(a.steps || 0).toLocaleString()} steps · ${Number(a.distanceKm || 0).toFixed(1)} km · ${a.activeMinutes || 0} active min`;
     summaryEl.style.display = 'block';
   } catch (error) {
@@ -777,7 +780,7 @@ async function refreshActivitySyncStatus(container = document) {
       statusEl.textContent = 'Connected';
       if (connectBtn) connectBtn.style.display = 'none';
       if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
-      loadTodayActivitySyncActivity(container, authHeaders);
+      loadTodayActivitySyncActivity(container);
     } else {
       statusEl.textContent = 'Not connected';
       if (summaryEl) summaryEl.style.display = 'none';
@@ -825,6 +828,7 @@ function bindActivitySyncControls(container = document) {
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error('Disconnect failed');
         if (typeof showToast === 'function') showToast('Activity Sync disconnected');
+        window.activitySyncBridge?.resetConnectionState?.();
         refreshActivitySyncStatus(container);
       } catch (error) {
         console.error('[Settings:ActivitySync] disconnect failed', error);
@@ -851,6 +855,13 @@ function handleActivitySyncOAuthRedirect() {
 
   if (typeof showToast === 'function') {
     showToast(status === 'connected' ? 'Activity Sync connected' : 'Activity Sync connection failed — please try again');
+  }
+
+  // Bypass the bridge's throttle so a fresh connection shows real data
+  // immediately, instead of waiting up to 2 minutes for the next auto-sync.
+  if (status === 'connected') {
+    window.activitySyncBridge?.fetchAndApplyTodayActivity?.({ force: true });
+    window.activitySyncBridge?.fetchAndApplyTodaySleep?.({ force: true });
   }
 }
 

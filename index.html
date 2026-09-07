@@ -656,11 +656,13 @@
             </div>
             <div class="step-widget-info">
               <div id="stepGoalLabel" class="step-widget-goal">Goal: 10,000 steps</div>
+              <div id="stepWidgetSyncInfo" class="step-widget-sync-info" style="display:none;"></div>
               <div class="step-input-row">
                 <input id="stepCountInput" type="number" class="step-count-input"
                        placeholder="Steps today" min="0" inputmode="numeric"/>
                 <button id="stepSaveBtn" class="step-save-btn">Save</button>
               </div>
+              <div id="stepSyncedLabel" class="step-synced-label" style="display:none;">Synced from your device</div>
             </div>
           </div>
         </div>
@@ -3357,6 +3359,16 @@
       <button class="sleep-ai-btn" id="sleepAiBtn" onclick="requestSleepInsight()">Analyse My Sleep</button>
     </div>
 
+    <!-- Sleep score (Activity Sync only — hidden entirely for manual-only users) -->
+    <div id="sleepScoreCard" class="sleep-score-card" style="display:none;">
+      <div class="sleep-score-badge">
+        <span id="sleepScoreValue" class="sleep-score-value">—</span>
+        <span id="sleepScoreLabel" class="sleep-score-label">—</span>
+      </div>
+      <div id="sleepStageBreakdown" class="sleep-stage-breakdown"></div>
+      <div class="sleep-score-disclaimer">Estimated from your synced sleep stages — not an official score.</div>
+    </div>
+
     <!-- Stats summary -->
     <div class="sleep-stats" id="sleepStats">
       <div class="sleep-stat-card">
@@ -3383,7 +3395,7 @@
         </label>
         <label>&nbsp;</label>
       </div>
-      <div class="sleep-form-row">
+      <div class="sleep-form-row" id="sleepTimesEditableRow">
         <label>
           Bedtime
           <input type="time" id="sleepBedtime" value="22:30">
@@ -3392,6 +3404,10 @@
           Wake time
           <input type="time" id="sleepWakeTime" value="06:30">
         </label>
+      </div>
+      <div id="sleepTimesSyncedRow" class="sleep-synced-times" style="display:none;">
+        <span id="sleepSyncedTimesText"></span>
+        <span class="sleep-synced-badge">Synced from your device</span>
       </div>
 
       <div class="sleep-quality-row">
@@ -18064,13 +18080,33 @@ window.renderSessionHistory = renderSessionHistory;
     }
   }
 
+  // Bedtime/wake-time become read-only once Activity Sync has supplied a
+  // value for the selected date — those fields are then wearable-authoritative,
+  // same convention as the Home step ring hiding its manual input once synced.
+  function updateSyncedTimesDisplay() {
+    const date = document.getElementById('sleepDate')?.value;
+    const editableRow = document.getElementById('sleepTimesEditableRow');
+    const syncedRow = document.getElementById('sleepTimesSyncedRow');
+    const syncedText = document.getElementById('sleepSyncedTimesText');
+    if (!editableRow || !syncedRow) return;
+
+    const entry = getSleepLog().find(e => e.date === date);
+    if (entry?.synced) {
+      editableRow.style.display = 'none';
+      syncedRow.style.display = '';
+      if (syncedText) syncedText.textContent = `${entry.bedtime} → ${entry.wakeTime} · ${fmtDuration(entry.duration)}`;
+    } else {
+      editableRow.style.display = '';
+      syncedRow.style.display = 'none';
+    }
+  }
+  document.getElementById('sleepDate')?.addEventListener('change', updateSyncedTimesDisplay);
+
   // Save entry
   window.saveSleepEntry = function () {
     const date = document.getElementById('sleepDate')?.value;
-    const bedtime = document.getElementById('sleepBedtime')?.value;
-    const wakeTime = document.getElementById('sleepWakeTime')?.value;
-    if (!date || !bedtime || !wakeTime) {
-      if (typeof nativeToast === 'function') nativeToast('Please fill in date and times', 'warn');
+    if (!date) {
+      if (typeof nativeToast === 'function') nativeToast('Please choose a date', 'warn');
       return;
     }
 
@@ -18078,13 +18114,28 @@ window.renderSessionHistory = renderSessionHistory;
     const quality = activeStars.length;
     const tags = [...document.querySelectorAll('#sleepTags .sleep-tag.active')].map(t => t.dataset.tag);
     const notes = document.getElementById('sleepNotes')?.value?.trim() || '';
-    const duration = calcDurationHours(bedtime, wakeTime);
-
-    const entry = { date, bedtime, wakeTime, duration: Math.round(duration * 100) / 100, quality, tags, notes, ts: Date.now() };
 
     const log = getSleepLog();
-    // Replace if same date exists
     const idx = log.findIndex(e => e.date === date);
+    const existing = idx >= 0 ? log[idx] : null;
+
+    let entry;
+    if (existing?.synced) {
+      // Objective fields are wearable-authoritative — only the subjective
+      // ones change here (see updateSyncedTimesDisplay: the time inputs are
+      // hidden/read-only in this state, so there's nothing to read from them).
+      entry = { ...existing, quality, tags, notes, ts: Date.now() };
+    } else {
+      const bedtime = document.getElementById('sleepBedtime')?.value;
+      const wakeTime = document.getElementById('sleepWakeTime')?.value;
+      if (!bedtime || !wakeTime) {
+        if (typeof nativeToast === 'function') nativeToast('Please fill in date and times', 'warn');
+        return;
+      }
+      const duration = calcDurationHours(bedtime, wakeTime);
+      entry = { date, bedtime, wakeTime, duration: Math.round(duration * 100) / 100, quality, tags, notes, ts: Date.now() };
+    }
+
     if (idx >= 0) log[idx] = entry;
     else log.push(entry);
     log.sort((a, b) => b.date.localeCompare(a.date));
@@ -18184,9 +18235,11 @@ window.renderSessionHistory = renderSessionHistory;
     container.innerHTML = log.map(e => {
       const tagHtml = (e.tags || []).map(t => '<span class="sleep-entry-tag">' + t + '</span>').join('');
       const stars = '★'.repeat(e.quality || 0) + '☆'.repeat(5 - (e.quality || 0));
+      const synced = getSyncedSleepDetail(e.date);
+      const scoreChip = e.synced && synced ? '<span class="sleep-entry-score-chip" title="Estimated sleep score">⌚ ' + synced.score + '</span>' : '';
       return '<div class="sleep-entry">'
         + '<div class="sleep-entry-left">'
-        + '<span class="sleep-entry-date">' + fmtDateShort(e.date) + '</span>'
+        + '<span class="sleep-entry-date">' + fmtDateShort(e.date) + scoreChip + '</span>'
         + '<span class="sleep-entry-times">' + e.bedtime + ' → ' + e.wakeTime + '</span>'
         + (tagHtml ? '<div class="sleep-entry-tags">' + tagHtml + '</div>' : '')
         + '</div>'
@@ -18199,6 +18252,56 @@ window.renderSessionHistory = renderSessionHistory;
         + '</div>'
         + '</div>';
     }).join('');
+  }
+
+  // Sleep score + stage breakdown, from the cache activity-sync-bridge.js
+  // writes to localStorage['activitySyncSleep_' + user]. Hidden entirely
+  // when there's no synced data for the selected date — manual-only users
+  // never see this card.
+  function getSyncedSleepDetail(date) {
+    try {
+      const store = JSON.parse(localStorage.getItem(`activitySyncSleep_${_u()}`) || '{}');
+      return store[date] || null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function renderSleepScoreCard() {
+    const card = document.getElementById('sleepScoreCard');
+    if (!card) return;
+    const date = document.getElementById('sleepDate')?.value || new Date().toISOString().slice(0, 10);
+    const detail = getSyncedSleepDetail(date);
+    if (!detail) {
+      card.style.display = 'none';
+      return;
+    }
+
+    const valueEl = document.getElementById('sleepScoreValue');
+    const labelEl = document.getElementById('sleepScoreLabel');
+    if (valueEl) valueEl.textContent = detail.score ?? '—';
+    if (labelEl) labelEl.textContent = detail.label || '';
+
+    const total = (detail.lightMinutes || 0) + (detail.deepMinutes || 0) + (detail.remMinutes || 0) + (detail.awakeMinutes || 0);
+    const stageRow = (label, mins, cls) => {
+      const pct = total > 0 ? Math.round((mins / total) * 100) : 0;
+      return '<div class="sleep-stage-row">'
+        + '<span class="sleep-stage-name">' + label + '</span>'
+        + '<div class="sleep-stage-bar-track"><div class="sleep-stage-bar-fill ' + cls + '" style="width:' + pct + '%"></div></div>'
+        + '<span class="sleep-stage-mins">' + Math.round(mins) + 'm</span>'
+        + '</div>';
+    };
+    const breakdown = document.getElementById('sleepStageBreakdown');
+    if (breakdown) {
+      breakdown.innerHTML = total > 0
+        ? stageRow('Deep', detail.deepMinutes, 'deep')
+          + stageRow('REM', detail.remMinutes, 'rem')
+          + stageRow('Light', detail.lightMinutes, 'light')
+          + stageRow('Awake', detail.awakeMinutes, 'awake')
+        : '';
+    }
+
+    card.style.display = '';
   }
 
   // Show/hide AI card
@@ -18241,6 +18344,8 @@ window.renderSessionHistory = renderSessionHistory;
 
   function renderSleepTab() {
     initDateField();
+    updateSyncedTimesDisplay();
+    renderSleepScoreCard();
     renderSleepStats();
     renderSleepChart(7);
     renderSleepHistory();
@@ -18795,6 +18900,7 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/archetype-config.js"></script>
   <script src="src/js/archetype-features.js"></script>
   <script src="src/js/macro-pill-controls.js"></script>
+  <script src="src/js/activity-sync-bridge.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/workout-archiver.js"></script>
   <script src="src/js/ui-declutter.js"></script>
