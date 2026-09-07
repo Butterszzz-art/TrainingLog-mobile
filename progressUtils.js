@@ -135,9 +135,13 @@ function updatePRs(user, workout, volumeCalc) {
     entries.forEach(entry => {
       const repsArray = Array.isArray(entry?.repsArray) ? entry.repsArray : [];
       const weightsArray = Array.isArray(entry?.weightsArray) ? entry.weightsArray : [];
+      const setTypeArray = Array.isArray(entry?.setTypeArray) ? entry.setTypeArray : [];
       const size = Math.max(repsArray.length, weightsArray.length);
 
       for (let i = 0; i < size; i++) {
+        // Back-off sets are deliberately submaximal follow-ups to the top
+        // set, so they shouldn't be able to register a PR.
+        if (setTypeArray[i] === 'backoff') continue;
         const reps = Number(repsArray[i]);
         const weight = Number(weightsArray[i]);
         if (!Number.isFinite(reps) || !Number.isFinite(weight) || reps <= 0 || weight <= 0) continue;

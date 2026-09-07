@@ -74,12 +74,16 @@
 
       const repsArr    = Array.isArray(entry.repsArray)    ? entry.repsArray    : [];
       const weightsArr = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+      const setTypeArr = Array.isArray(entry.setTypeArray)  ? entry.setTypeArray : [];
 
       const existing = prs[name] || { weight: 0, e1rm: 0, volume: 0 };
       let updated = false;
       const setDetails = [];
 
       for (let i = 0; i < repsArr.length; i++) {
+        // Skip back-off sets — they're intentionally lighter than the top
+        // set and shouldn't trigger a PR celebration.
+        if (setTypeArr[i] === 'backoff') continue;
         const reps   = Number(repsArr[i])    || 0;
         const weight = Number(weightsArr[i]) || 0;
         if (!reps || !weight) continue;

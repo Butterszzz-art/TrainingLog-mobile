@@ -855,6 +855,20 @@
   color: var(--primary, #5fa87e);
 }
 
+/* Top Set / Back-off flag the set's role for progress tracking, so they get
+   their own colors instead of the generic technique-pill green. */
+.set-opt-pill.top-set-pill:has(input:checked) {
+  background: rgba(230, 168, 23, 0.14);
+  border-color: #e6a817;
+  color: #e6a817;
+}
+
+.set-opt-pill.backoff-pill:has(input:checked) {
+  background: rgba(90, 140, 200, 0.14);
+  border-color: #5a8cc8;
+  color: #5a8cc8;
+}
+
 .maxed-out-pill {
   margin: 8px 0;
 }

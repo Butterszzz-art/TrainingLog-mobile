@@ -5177,6 +5177,8 @@ function getSetInputHTML(i) {
       </div>
       <input type="number" id="weight_${i}" placeholder="Weight" class="set-input-weight" oninput="updateAddButtonState()" />
       <button type="button" onclick="openPlateCalculator(${i})" class="set-plate-btn" title="Plate calculator"><span class="ui-icon">${ICONS.dumbbell}</span></button>
+      <label class="set-opt-pill top-set-pill" title="Top Set — your main set for this exercise, used for PR/progress tracking"><input type="checkbox" id="topSet_${i}" onchange="toggleSetRole(${i}, 'top')" /><span>Top</span></label>
+      <label class="set-opt-pill backoff-pill" title="Back-off Set — reduced-load set after the top set, excluded from PRs"><input type="checkbox" id="backoff_${i}" onchange="toggleSetRole(${i}, 'backoff')" /><span>BO</span></label>
       <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
       <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
       <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
@@ -5198,6 +5200,19 @@ function updateRepsLabel(i) {
   }
 }
 
+// A set can be the Top Set OR a Back-off Set, never both — checking one
+// clears the other on that same row.
+function toggleSetRole(i, role) {
+  const topEl = document.getElementById(`topSet_${i}`);
+  const boEl = document.getElementById(`backoff_${i}`);
+  if (!topEl || !boEl) return;
+  if (role === 'top' && topEl.checked) {
+    boEl.checked = false;
+  } else if (role === 'backoff' && boEl.checked) {
+    topEl.checked = false;
+  }
+}
+
 function removeSet(indexToRemove) {
   currentSetCount--;
   const reps = [];
@@ -5205,6 +5220,8 @@ function removeSet(indexToRemove) {
   const drops = [];
   const rests = [];
   const unis = [];
+  const tops = [];
+  const backoffs = [];
 
   for (let i = 0; i < currentSetCount + 1; i++) {
     if (i !== indexToRemove) {
@@ -5213,6 +5230,8 @@ function removeSet(indexToRemove) {
       drops.push(document.getElementById(`dropset_${i}`).checked);
       rests.push(document.getElementById(`restPause_${i}`).checked);
       unis.push(document.getElementById(`unilateral_${i}`)?.checked || false);
+      tops.push(document.getElementById(`topSet_${i}`)?.checked || false);
+      backoffs.push(document.getElementById(`backoff_${i}`)?.checked || false);
     }
   }
 
@@ -5224,6 +5243,10 @@ function removeSet(indexToRemove) {
     document.getElementById(`restPause_${i}`).checked = rests[i];
     const uniEl = document.getElementById(`unilateral_${i}`);
     if (uniEl) uniEl.checked = unis[i];
+    const topEl = document.getElementById(`topSet_${i}`);
+    if (topEl) topEl.checked = tops[i];
+    const boEl = document.getElementById(`backoff_${i}`);
+    if (boEl) boEl.checked = backoffs[i];
     updateRepsLabel(i);
   }
   document.getElementById("sets").value = currentSetCount;
@@ -5320,6 +5343,8 @@ function addLogEntry() {
     const ds = document.getElementById(`dropset_${i}`).checked;
     const rp = document.getElementById(`restPause_${i}`).checked;
     const uni = document.getElementById(`unilateral_${i}`)?.checked || false;
+    const isTopSet = document.getElementById(`topSet_${i}`)?.checked || false;
+    const isBackoffSet = document.getElementById(`backoff_${i}`)?.checked || false;
     if (isNaN(reps) || isNaN(weight)) {
       alert("Please enter valid reps and weight for all sets.");
       return;
@@ -5332,7 +5357,14 @@ function addLogEntry() {
     unilateralArray.push(uni);
     skippedArray.push(false);
     completedArray.push(false);
-    if (ds) {
+    // Top Set / Back-off are how the lifter tags which set is their main
+    // effort for progress tracking vs. a deliberately lighter follow-up —
+    // they take priority over the drop/rest-pause technique tags.
+    if (isTopSet) {
+      setTypeArray.push('top-set');
+    } else if (isBackoffSet) {
+      setTypeArray.push('backoff');
+    } else if (ds) {
       setTypeArray.push('dropset');
     } else if (rp) {
       setTypeArray.push('rest-pause');

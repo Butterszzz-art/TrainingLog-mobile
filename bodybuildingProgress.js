@@ -92,11 +92,25 @@ function getSetPairsFromEntry(entry, planned) {
 
   const repsArray = Array.isArray(entry.repsArray) ? entry.repsArray : [];
   const weightsArray = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+  const setTypeArray = Array.isArray(entry.setTypeArray) ? entry.setTypeArray : [];
   const setCount = Math.max(repsArray.length, weightsArray.length, toNumber(entry.sets));
   return Array.from({ length: setCount }, (_, i) => ({
     weight: toNumber(weightsArray[i]),
-    reps: toNumber(repsArray[i])
+    reps: toNumber(repsArray[i]),
+    setType: setTypeArray[i] || null
   }));
+}
+
+// Picks which logged sets should count toward an exercise's "top set" PR:
+// an explicitly tagged Top Set wins if one exists; otherwise fall back to
+// every set except explicitly tagged Back-off sets (which are deliberately
+// submaximal); if literally everything is tagged back-off, fall back to
+// all sets so a PR can still be computed.
+function selectTopSetCandidates(pairs) {
+  const taggedTop = pairs.filter((pair) => pair.setType === 'top-set');
+  if (taggedTop.length) return taggedTop;
+  const nonBackoff = pairs.filter((pair) => pair.setType !== 'backoff');
+  return nonBackoff.length ? nonBackoff : pairs;
 }
 
 function getVolumeFromPairs(pairs) {
@@ -144,7 +158,7 @@ function computeBodybuildingProgressSummary(workouts, options = {}) {
       ex.dates.add(date);
       ex.sessions += 1;
       ex.topSessionVolume = Math.max(ex.topSessionVolume, actualVolume);
-      actualPairs.forEach((pair) => {
+      selectTopSetCandidates(actualPairs).forEach((pair) => {
         ex.topSetWeight = Math.max(ex.topSetWeight, pair.weight);
         ex.topSetReps = Math.max(ex.topSetReps, pair.reps);
       });
