@@ -332,6 +332,19 @@
     }
   }
 
+  function syncMissionFromActivitySync(entry, userId) {
+    try {
+      const resolvedUser = resolveUserId(userId || entry?.userId || entry?.username || entry?.user);
+      const date = getDateKey(entry?.date);
+      const steps = Number(entry?.steps);
+      const goal = Number(entry?.stepsGoal) > 0 ? Number(entry.stepsGoal) : 10000;
+      const complete = Number.isFinite(steps) && steps >= goal;
+      return updateMissionItem(resolvedUser, date, 'stepsComplete', complete);
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function calculateDailyCompliance(state) {
     const normalized = normalizeMissionState(state?.date, state);
     const requiredItems = inferRequiredItems(normalized);
@@ -361,6 +374,7 @@
     syncMissionFromMacroProgress,
     syncMissionFromRecoveryEntry,
     syncMissionFromPosingEntry,
+    syncMissionFromActivitySync,
     calculateDailyCompliance,
     getStorageKey
   };

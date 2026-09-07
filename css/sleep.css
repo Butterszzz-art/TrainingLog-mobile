@@ -402,3 +402,112 @@
   border-radius: 10px;
   width: 100%;
 }
+
+/* ── Synced times (Activity Sync — read-only once wearable-authoritative) ── */
+
+.sleep-synced-times {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--text-color);
+}
+
+.sleep-synced-badge {
+  font-size: 0.68rem;
+  font-style: italic;
+  color: var(--secondary-text);
+  white-space: nowrap;
+}
+
+/* ── Sleep score card (Activity Sync — hidden for manual-only users) ──── */
+
+.sleep-score-card {
+  background: var(--pod-bg-hero);
+  border: 1px solid rgba(74, 132, 102, 0.3);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-shadow-hero);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sleep-score-badge {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sleep-score-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.sleep-score-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+}
+
+.sleep-stage-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sleep-stage-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+}
+
+.sleep-stage-name {
+  font-size: 0.72rem;
+  color: var(--secondary-text);
+}
+
+.sleep-stage-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-bg);
+  overflow: hidden;
+}
+
+.sleep-stage-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.sleep-stage-bar-fill.deep  { background: var(--primary); }
+.sleep-stage-bar-fill.rem   { background: var(--highlight); }
+.sleep-stage-bar-fill.light { background: rgba(45, 125, 91, 0.4); }
+.sleep-stage-bar-fill.awake { background: var(--danger-strong); }
+
+.sleep-stage-mins {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.sleep-score-disclaimer {
+  margin-top: 10px;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.sleep-entry-score-chip {
+  margin-left: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--primary);
+}

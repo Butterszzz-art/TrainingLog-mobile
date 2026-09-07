@@ -491,6 +491,14 @@ function _fmt(totalSeconds) {
     localStorage.setItem('dailySteps', JSON.stringify(data));
   }
 
+  // Once a wearable is connected via Activity Sync, its step count is
+  // authoritative — the manual input is hidden rather than left editable
+  // alongside a synced number, avoiding two competing "steps today" values.
+  // Flag is written by activity-sync-bridge.js after each successful sync.
+  function _isSynced() {
+    return localStorage.getItem('activitySyncConnected') === '1';
+  }
+
   function _syncRing(count, goal) {
     const fill = document.getElementById('stepRingFill');
     if (!fill) return;
@@ -506,8 +514,14 @@ function _fmt(totalSeconds) {
     const goalEl = document.getElementById('stepGoalLabel');
     if (goalEl) goalEl.textContent = `Goal: ${goal.toLocaleString()} steps`;
 
+    const synced = _isSynced();
+    const inputRow = document.querySelector('.step-input-row');
+    if (inputRow) inputRow.style.display = synced ? 'none' : '';
+    const syncedLabel = document.getElementById('stepSyncedLabel');
+    if (syncedLabel) syncedLabel.style.display = synced ? '' : 'none';
+
     const input = document.getElementById('stepCountInput');
-    if (input && !input.matches(':focus')) input.value = count || '';
+    if (input && !synced && !input.matches(':focus')) input.value = count || '';
   }
 
   function refreshStepWidget() {
