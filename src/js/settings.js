@@ -719,20 +719,20 @@ function bindDeleteAccountAction(container = document) {
   deleteBtn.addEventListener('click', () => deleteAccountFlow(deleteBtn));
 }
 
-function getFitbitElements(container = document) {
+function getActivitySyncElements(container = document) {
   return {
-    statusEl: container.querySelector('#fitbitStatus'),
-    summaryEl: container.querySelector('#fitbitActivitySummary'),
-    connectBtn: container.querySelector('#fitbitConnectButton'),
-    disconnectBtn: container.querySelector('#fitbitDisconnectButton')
+    statusEl: container.querySelector('#activitySyncStatus'),
+    summaryEl: container.querySelector('#activitySyncActivitySummary'),
+    connectBtn: container.querySelector('#activitySyncConnectButton'),
+    disconnectBtn: container.querySelector('#activitySyncDisconnectButton')
   };
 }
 
-async function loadTodayFitbitActivity(container, authHeaders) {
-  const { summaryEl } = getFitbitElements(container);
+async function loadTodayActivitySyncActivity(container, authHeaders) {
+  const { summaryEl } = getActivitySyncElements(container);
   if (!summaryEl) return;
   try {
-    const res = await fetchWithTimeout(`${ensureServerUrl()}/api/fitbit/activity`, { headers: authHeaders }, 8000);
+    const res = await fetchWithTimeout(`${ensureServerUrl()}/api/activity-sync/activity`, { headers: authHeaders }, 8000);
     const data = await res.json();
     if (!res.ok || !data.success) {
       summaryEl.style.display = 'none';
@@ -742,19 +742,19 @@ async function loadTodayFitbitActivity(container, authHeaders) {
     summaryEl.textContent = `Today: ${Number(a.steps || 0).toLocaleString()} steps · ${Number(a.distanceKm || 0).toFixed(1)} km · ${a.activeMinutes || 0} active min`;
     summaryEl.style.display = 'block';
   } catch (error) {
-    console.warn('[Settings:Fitbit] activity fetch failed', error);
+    console.warn('[Settings:ActivitySync] activity fetch failed', error);
     summaryEl.style.display = 'none';
   }
 }
 
-async function refreshFitbitStatus(container = document) {
-  const { statusEl, summaryEl, connectBtn, disconnectBtn } = getFitbitElements(container);
+async function refreshActivitySyncStatus(container = document) {
+  const { statusEl, summaryEl, connectBtn, disconnectBtn } = getActivitySyncElements(container);
   if (!statusEl) return;
   if (typeof getAuthHeaders !== 'function' || typeof ensureServerUrl !== 'function' || typeof fetchWithTimeout !== 'function') return;
 
   const authHeaders = getAuthHeaders();
   if (!authHeaders.Authorization) {
-    statusEl.textContent = 'Sign in to connect Fitbit.';
+    statusEl.textContent = 'Sign in to connect a device.';
     if (connectBtn) connectBtn.style.display = 'none';
     if (disconnectBtn) disconnectBtn.style.display = 'none';
     if (summaryEl) summaryEl.style.display = 'none';
@@ -762,12 +762,12 @@ async function refreshFitbitStatus(container = document) {
   }
 
   try {
-    const res = await fetchWithTimeout(`${ensureServerUrl()}/api/fitbit/status`, { headers: authHeaders }, 8000);
+    const res = await fetchWithTimeout(`${ensureServerUrl()}/api/activity-sync/status`, { headers: authHeaders }, 8000);
     const data = await res.json();
     if (!res.ok || !data.success) {
-      statusEl.textContent = data?.error?.code === 'fitbit.disabled'
-        ? 'Fitbit integration is not available yet.'
-        : 'Could not check Fitbit connection.';
+      statusEl.textContent = data?.error?.code === 'activity_sync.disabled'
+        ? 'Activity Sync is not available yet.'
+        : 'Could not check Activity Sync connection.';
       if (connectBtn) connectBtn.style.display = 'none';
       if (disconnectBtn) disconnectBtn.style.display = 'none';
       return;
@@ -777,7 +777,7 @@ async function refreshFitbitStatus(container = document) {
       statusEl.textContent = 'Connected';
       if (connectBtn) connectBtn.style.display = 'none';
       if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
-      loadTodayFitbitActivity(container, authHeaders);
+      loadTodayActivitySyncActivity(container, authHeaders);
     } else {
       statusEl.textContent = 'Not connected';
       if (summaryEl) summaryEl.style.display = 'none';
@@ -785,13 +785,13 @@ async function refreshFitbitStatus(container = document) {
       if (disconnectBtn) disconnectBtn.style.display = 'none';
     }
   } catch (error) {
-    console.warn('[Settings:Fitbit] status check failed', error);
-    statusEl.textContent = 'Could not check Fitbit connection.';
+    console.warn('[Settings:ActivitySync] status check failed', error);
+    statusEl.textContent = 'Could not check Activity Sync connection.';
   }
 }
 
-function bindFitbitControls(container = document) {
-  const { connectBtn, disconnectBtn } = getFitbitElements(container);
+function bindActivitySyncControls(container = document) {
+  const { connectBtn, disconnectBtn } = getActivitySyncElements(container);
 
   if (connectBtn && connectBtn.dataset.bound !== 'true') {
     connectBtn.dataset.bound = 'true';
@@ -803,13 +803,13 @@ function bindFitbitControls(container = document) {
       }
       connectBtn.disabled = true;
       try {
-        const res = await fetchWithTimeout(`${ensureServerUrl()}/api/fitbit/connect`, { headers: authHeaders }, 8000);
+        const res = await fetchWithTimeout(`${ensureServerUrl()}/api/activity-sync/connect`, { headers: authHeaders }, 8000);
         const data = await res.json();
-        if (!res.ok || !data.success || !data.url) throw new Error(data?.error?.message || 'Could not start Fitbit connection');
+        if (!res.ok || !data.success || !data.url) throw new Error(data?.error?.message || 'Could not start Activity Sync connection');
         window.location.href = data.url;
       } catch (error) {
-        console.error('[Settings:Fitbit] connect failed', error);
-        if (typeof showToast === 'function') showToast('Could not connect to Fitbit');
+        console.error('[Settings:ActivitySync] connect failed', error);
+        if (typeof showToast === 'function') showToast('Could not connect device');
         connectBtn.disabled = false;
       }
     });
@@ -821,36 +821,36 @@ function bindFitbitControls(container = document) {
       const authHeaders = getAuthHeaders();
       disconnectBtn.disabled = true;
       try {
-        const res = await fetchWithTimeout(`${ensureServerUrl()}/api/fitbit/disconnect`, { method: 'POST', headers: authHeaders }, 8000);
+        const res = await fetchWithTimeout(`${ensureServerUrl()}/api/activity-sync/disconnect`, { method: 'POST', headers: authHeaders }, 8000);
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error('Disconnect failed');
-        if (typeof showToast === 'function') showToast('Fitbit disconnected');
-        refreshFitbitStatus(container);
+        if (typeof showToast === 'function') showToast('Activity Sync disconnected');
+        refreshActivitySyncStatus(container);
       } catch (error) {
-        console.error('[Settings:Fitbit] disconnect failed', error);
-        if (typeof showToast === 'function') showToast('Could not disconnect Fitbit');
+        console.error('[Settings:ActivitySync] disconnect failed', error);
+        if (typeof showToast === 'function') showToast('Could not disconnect Activity Sync');
       } finally {
         disconnectBtn.disabled = false;
       }
     });
   }
 
-  refreshFitbitStatus(container);
+  refreshActivitySyncStatus(container);
 }
 
-// Fitbit's OAuth callback redirects the browser back with ?fitbit=connected|error.
-function handleFitbitOAuthRedirect() {
+// The Activity Sync OAuth callback redirects the browser back with ?activitySync=connected|error.
+function handleActivitySyncOAuthRedirect() {
   if (typeof window === 'undefined') return;
   const params = new URLSearchParams(window.location.search);
-  const status = params.get('fitbit');
+  const status = params.get('activitySync');
   if (!status) return;
 
-  params.delete('fitbit');
+  params.delete('activitySync');
   const query = params.toString();
   window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
 
   if (typeof showToast === 'function') {
-    showToast(status === 'connected' ? 'Fitbit connected' : 'Fitbit connection failed — please try again');
+    showToast(status === 'connected' ? 'Activity Sync connected' : 'Activity Sync connection failed — please try again');
   }
 }
 
@@ -1023,7 +1023,7 @@ function injectSettingsMarkup() {
   if (container.dataset.loaded === 'true' || container.dataset.loaded === 'loading') {
     applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
     if (container.dataset.loaded === 'true') {
-      bindFitbitControls(container);
+      bindActivitySyncControls(container);
       bindDeleteAccountAction(container);
     }
     return;
@@ -1053,7 +1053,7 @@ function injectSettingsMarkup() {
       bindReminderToggle(container);
       bindLogoutAction(container);
       bindDeleteAccountAction(container);
-      bindFitbitControls(container);
+      bindActivitySyncControls(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
       renderProfileGamificationSummary(container);
@@ -1111,7 +1111,7 @@ function initializeSettingsFeature() {
   injectSettingsMarkup();
   applySettingsToUI(hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() }));
   renderProfileTab();
-  handleFitbitOAuthRedirect();
+  handleActivitySyncOAuthRedirect();
 }
 
 document.addEventListener('DOMContentLoaded', initializeSettingsFeature);
