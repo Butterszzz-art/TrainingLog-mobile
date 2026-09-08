@@ -22,6 +22,19 @@
     { size: 1.25, count: 2 }
   ];
 
+  // Standard Eleiko / IPF competition-disc colors (kg). Shared with the
+  // Powerlifting tab's plate visualizer (index.html) so both calculators
+  // render the exact same color for a given plate size.
+  const PLATE_COLORS_KG = {
+    25:   { bg: '#d32f2f', fg: '#fff' },     // red
+    20:   { bg: '#1565c0', fg: '#fff' },     // blue
+    15:   { bg: '#fbc02d', fg: '#2b2200' },  // yellow
+    10:   { bg: '#2e7d32', fg: '#fff' },     // green
+    5:    { bg: '#f5f5f5', fg: '#333' },     // white
+    2.5:  { bg: '#1a1a1a', fg: '#fff' },     // black
+    1.25: { bg: '#c7ccd1', fg: '#2a2a2a' }   // chrome/silver
+  };
+
   let activeSetIndex = null;
   let lastResult = null;
 
@@ -154,21 +167,28 @@
 
     modal = global.document.createElement('dialog');
     modal.id = 'plateCalcModal';
+    modal.className = 'plate-calc-modal';
     modal.innerHTML = `
-      <form method="dialog" id="plateCalcForm" style="min-width:320px;max-width:460px;">
-        <h3 style="margin-top:0;">Plate Calculator</h3>
-        <label style="display:block;margin-bottom:8px;">Target weight
-          <input type="number" step="0.25" id="plateCalcTarget" style="width:100%;" />
-        </label>
-        <label style="display:block;margin-bottom:12px;">Barbell weight
-          <input type="number" step="0.25" id="plateCalcBarWeight" style="width:100%;" />
-        </label>
-        <div id="plateCalcPlates" style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:12px;"></div>
-        <div id="plateCalcResult" style="font-size:14px;margin-bottom:12px;"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button type="button" id="plateCalcRun">Calculate</button>
+      <form method="dialog" id="plateCalcForm">
+        <div class="plate-calc-header">
+          <span class="pod-kicker">Plate Calculator</span>
+        </div>
+        <div class="plate-calc-inputs">
+          <label class="plate-calc-field">
+            <span>Target weight</span>
+            <input type="number" step="0.25" id="plateCalcTarget" />
+          </label>
+          <label class="plate-calc-field">
+            <span>Barbell weight</span>
+            <input type="number" step="0.25" id="plateCalcBarWeight" />
+          </label>
+        </div>
+        <div id="plateCalcPlates" class="plate-calc-plates"></div>
+        <div id="plateCalcResult" class="plate-calc-result"></div>
+        <div class="plate-calc-actions">
+          <button type="button" id="plateCalcClose" class="plate-calc-btn-secondary">Close</button>
+          <button type="button" id="plateCalcRun" class="plate-calc-btn-secondary">Calculate</button>
           <button type="button" id="plateCalcApply">Apply</button>
-          <button type="button" id="plateCalcClose">Close</button>
         </div>
       </form>
     `;
@@ -197,17 +217,34 @@
     container.innerHTML = '';
 
     plates.forEach((plate) => {
-      const label = global.document.createElement('label');
-      label.textContent = `${plate.size} kg plates`;
+      const row = global.document.createElement('div');
+      row.className = 'plate-calc-row';
+
+      const swatch = global.document.createElement('span');
+      swatch.className = 'plate-calc-swatch';
+      const colorDef = PLATE_COLORS_KG[plate.size];
+      if (colorDef) {
+        swatch.style.background = colorDef.bg;
+        swatch.style.color = colorDef.fg;
+      }
+      swatch.textContent = String(plate.size);
+
+      const label = global.document.createElement('span');
+      label.className = 'plate-calc-row-label';
+      label.textContent = `${plate.size} kg × pairs owned`;
+
       const input = global.document.createElement('input');
       input.type = 'number';
       input.min = '0';
       input.step = '1';
       input.value = String(plate.count);
       input.setAttribute('data-plate-size', String(plate.size));
-      input.style.width = '80px';
-      container.appendChild(label);
-      container.appendChild(input);
+      input.className = 'plate-calc-count-input';
+
+      row.appendChild(swatch);
+      row.appendChild(label);
+      row.appendChild(input);
+      container.appendChild(row);
     });
   }
 
@@ -248,8 +285,8 @@
     const lines = result.combination.map((entry) => `${entry.size} kg × ${entry.pairs} pair${entry.pairs > 1 ? 's' : ''}`);
     resultEl.innerHTML = `
       <div>${result.message}</div>
-      <div style="margin-top:6px;"><strong>Per side:</strong> ${lines.join(', ')}</div>
-      <div style="margin-top:6px;"><strong>Total loaded:</strong> ${result.achievedWeight.toFixed(2)} kg</div>
+      <div class="plate-calc-result-line"><strong>Per side:</strong> ${lines.join(', ')}</div>
+      <div class="plate-calc-result-line"><strong>Total loaded:</strong> ${result.achievedWeight.toFixed(2)} kg</div>
     `;
     return result;
   }
@@ -299,6 +336,7 @@
     calculatePlateCombination,
     openPlateCalculator,
     loadPrefs,
-    savePrefs
+    savePrefs,
+    PLATE_COLORS_KG
   };
 });

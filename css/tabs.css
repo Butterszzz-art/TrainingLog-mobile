@@ -98,7 +98,7 @@
 
 .pl-subtabs {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 16px;
   overflow-x: auto;
   padding-bottom: 2px;
@@ -106,23 +106,26 @@
 
 .pl-subtab {
   flex-shrink: 0;
-  padding: 9px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: var(--surface-bg);
-  color: var(--secondary-text);
-  font-size: 0.85rem;
-  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
+  color: var(--text-muted);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   box-shadow: none;
   margin: 0;
 }
 
 .pl-subtab.active {
-  background: var(--primary);
-  color: var(--text-color);
-  border-color: var(--primary);
+  background: var(--pill-bg-active);
+  color: var(--pill-text-active);
+  border-color: transparent;
 }
 
 .pl-subview {
