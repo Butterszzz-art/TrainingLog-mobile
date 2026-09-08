@@ -401,18 +401,24 @@
     if (weightEl && _qlWeight != null) weightEl.value = _qlWeight;
     if (repsEl && _qlReps != null) repsEl.value = _qlReps;
 
-    // Copy the quick-log-native Drop/RP/L-R pills onto the real set-0
-    // checkboxes addLogEntry() reads. Those checkboxes live inside
+    // Copy the quick-log-native Top/BO/Drop/RP/L-R pills onto the real
+    // set-0 checkboxes addLogEntry() reads. Those checkboxes live inside
     // #setInputsContainer and get wiped back to unchecked every time
-    // generateSetInputs(1) reruns (every #exercise keystroke, and again
-    // inside quickLogSet() right before this runs) — so this has to
-    // happen after every regeneration, not just once.
+    // generateSetInputs(1) reruns (every #exercise keystroke while only
+    // one row exists, and again inside quickLogSet() right before this
+    // runs) — so this has to happen after every regeneration, not just once.
+    const topPill = document.getElementById('qlTopSet');
+    const boPill = document.getElementById('qlBackoff');
     const dsPill = document.getElementById('qlDropset');
     const rpPill = document.getElementById('qlRestPause');
     const uniPill = document.getElementById('qlUnilateral');
+    const topEl = document.getElementById('topSet_0');
+    const boEl = document.getElementById('backoff_0');
     const dsEl = document.getElementById('dropset_0');
     const rpEl = document.getElementById('restPause_0');
     const uniEl = document.getElementById('unilateral_0');
+    if (topEl) topEl.checked = !!(topPill && topPill.checked);
+    if (boEl) boEl.checked = !!(boPill && boPill.checked);
     if (dsEl) dsEl.checked = !!(dsPill && dsPill.checked);
     if (rpEl) rpEl.checked = !!(rpPill && rpPill.checked);
     if (uniEl) uniEl.checked = !!(uniPill && uniPill.checked);
@@ -420,11 +426,28 @@
     if (typeof global.updateAddButtonState === 'function') global.updateAddButtonState();
   }
 
-  /** Drop/RP/L-R are per-set flags, not sticky like weight/reps — clear
-   * them back to unchecked (new exercise, or after a set was just logged). */
+  /** A set can be the Top Set OR a Back-off Set, never both — checking one
+   * clears the other, mirroring the per-row toggleSetRole() behavior for
+   * rows added via "+ Add another set". */
+  function toggleQuickLogSetRole(role) {
+    if (typeof document === 'undefined') return;
+    const topEl = document.getElementById('qlTopSet');
+    const boEl = document.getElementById('qlBackoff');
+    if (!topEl || !boEl) return;
+    if (role === 'top' && topEl.checked) {
+      boEl.checked = false;
+    } else if (role === 'backoff' && boEl.checked) {
+      topEl.checked = false;
+    }
+    _writeQuickLogToForm();
+  }
+
+  /** Top/BO/Drop/RP/L-R are per-set flags, not sticky like weight/reps —
+   * clear them back to unchecked (new exercise, or after a set was just
+   * logged). */
   function _resetQuickLogSetOpts() {
     if (typeof document === 'undefined') return;
-    ['qlDropset', 'qlRestPause', 'qlUnilateral'].forEach((id) => {
+    ['qlTopSet', 'qlBackoff', 'qlDropset', 'qlRestPause', 'qlUnilateral'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.checked = false;
     });
@@ -445,10 +468,28 @@
     } catch { return 0; }
   }
 
+  /** "Log set N" for the common single-row case; "Log N sets" once more
+   * than one row exists (via "+ Add another set", or a multi-set
+   * suggestion applied on exercise blur) — same button, label reflects
+   * what it's actually about to submit. Also flips #quickLogPanel into
+   * "multi" mode: the weight/reps steppers only ever represent row 0, so
+   * once other rows exist they're swapped for row 0 itself (shown like
+   * every other row) rather than leaving a stepper on screen that doesn't
+   * reflect what row 0 will actually submit. */
   function _updateQuickLogButtonLabel(name) {
     if (typeof document === 'undefined') return;
+    const panel = document.getElementById('quickLogPanel');
     const labelEl = document.getElementById('qlLogBtnLabel');
-    if (labelEl) labelEl.textContent = 'Log set ' + (_todaysSetCount(name) + 1);
+    const container = document.getElementById('setInputsContainer');
+    const rowCount = container ? container.querySelectorAll('.set-input-row').length : 1;
+    if (panel) panel.classList.toggle('ql-multi-mode', rowCount > 1);
+    if (!labelEl) return;
+    if (rowCount > 1) {
+      labelEl.textContent = 'Log ' + rowCount + ' sets';
+      return;
+    }
+    const exerciseName = name != null ? name : (document.getElementById('exercise')?.value.trim() || '');
+    labelEl.textContent = 'Log set ' + (_todaysSetCount(exerciseName) + 1);
   }
 
   /** "e1RM 122 kg · 78% of 1RM" meta line under the exercise title —
@@ -586,21 +627,37 @@
     if (!name) { panel.hidden = true; return; }
     panel.hidden = false;
 
-    const setsInput = document.getElementById('sets');
-    if (setsInput && setsInput.value !== '1') setsInput.value = '1';
-    if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
+    // Only (re)seed a single fresh row here while no extra rows exist yet.
+    // Once "+ Add another set" has added rows beyond the first, further
+    // #exercise edits (e.g. fixing a typo) must not silently wipe them —
+    // generateSetInputs(1) tears the whole container down.
+    const container = document.getElementById('setInputsContainer');
+    const existingRows = container ? container.querySelectorAll('.set-input-row').length : 0;
+    if (existingRows <= 1) {
+      const setsInput = document.getElementById('sets');
+      if (setsInput && setsInput.value !== '1') setsInput.value = '1';
+      if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
+    }
 
     const isNewExercise = name !== _qlExerciseName;
-    if (isNewExercise || _qlWeight == null || _qlReps == null) {
-      const weightEl = document.getElementById('weight_0');
-      const repsEl = document.getElementById('reps_0');
-      _qlWeight = weightEl && weightEl.value !== '' ? Number(weightEl.value) : (_qlWeight ?? 20);
-      _qlReps = repsEl && repsEl.value !== '' ? Number(repsEl.value) : (_qlReps ?? 8);
-      _qlExerciseName = name;
+    if (isNewExercise) _qlExerciseName = name;
+
+    // The steppers/pills above only ever represent row 0 — while more than
+    // one row exists (multi mode, CSS-driven off the row count same as
+    // _updateQuickLogButtonLabel below), row 0 shows its own real fields
+    // instead, so writing the sticky stepper state back over them here
+    // would clobber a suggested/typed value with a stale default.
+    if (existingRows <= 1) {
+      if (isNewExercise || _qlWeight == null || _qlReps == null) {
+        const weightEl = document.getElementById('weight_0');
+        const repsEl = document.getElementById('reps_0');
+        _qlWeight = weightEl && weightEl.value !== '' ? Number(weightEl.value) : (_qlWeight ?? 20);
+        _qlReps = repsEl && repsEl.value !== '' ? Number(repsEl.value) : (_qlReps ?? 8);
+      }
+      if (isNewExercise) _resetQuickLogSetOpts();
+      _syncQuickLogDisplay();
+      _writeQuickLogToForm();
     }
-    if (isNewExercise) _resetQuickLogSetOpts();
-    _syncQuickLogDisplay();
-    _writeQuickLogToForm();
 
     const unitSel = document.getElementById('weightUnit');
     if (unitSel) syncQuickLogUnit(unitSel.value);
@@ -677,7 +734,7 @@
   const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
     initQuickLog, quickLogStep, quickLogSet, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
-    confirmQuickLogWeightSheet };
+    confirmQuickLogWeightSheet, toggleQuickLogSetRole, refreshLogButtonLabel: _updateQuickLogButtonLabel };
   global.renderVolumeLandmarks = renderVolumeLandmarks;
   global.initQuickLog = initQuickLog;
   global.quickLogStep = quickLogStep;
@@ -690,6 +747,10 @@
   global.qlPlateAdd = qlPlateAdd;
   global.qlWeightSheetClear = qlWeightSheetClear;
   global.confirmQuickLogWeightSheet = confirmQuickLogWeightSheet;
+  global.toggleQuickLogSetRole = toggleQuickLogSetRole;
+  // addNewSet()/removeSet() (index.html) call this after changing row
+  // count so the button label ("Log set N" vs "Log N sets") stays current.
+  global.refreshLogButtonLabel = _updateQuickLogButtonLabel;
   global.getTodaysPlannedDay = getTodaysPlannedDay;
   global.renderSessionQueue = renderSessionQueue;
   global.renderTrainHero = renderTrainHero;

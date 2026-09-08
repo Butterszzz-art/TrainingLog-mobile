@@ -389,31 +389,58 @@
   justify-content: center;
 }
 
-/* ── Manual / multi-set entry disclosure (de-emphasized, closed by
-   default now that quick-log is the primary one-tap path) ──────── */
+/* ── "+ Add another set" — appends another styled row to
+   #setInputsContainer (getSetInputHTML), replacing the old manual
+   multi-set disclosure with an inline expansion of the same card. ── */
 
-.log-manual-entry {
-  margin-top: 8px;
-  border-top: 1px solid rgba(116, 138, 126, 0.14);
-  padding-top: 4px;
-}
-
-.log-manual-entry-toggle {
-  list-style: none;
-  cursor: pointer;
-  padding: 8px 2px;
-  font-family: var(--font-label);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+.log-add-set-btn {
+  width: 100%;
+  margin: 2px 0 10px;
+  padding: 10px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-pod);
+  background: transparent;
   color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.log-manual-entry-toggle::-webkit-details-marker { display: none; }
-.log-manual-entry-toggle::before { content: '▸  '; }
-.log-manual-entry[open] .log-manual-entry-toggle::before { content: '▾  '; }
+.log-add-set-btn:hover {
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+  background: rgba(95, 168, 126, 0.08);
+}
 
-.log-manual-entry-body { padding-top: 6px; }
+/* Row 0 is generated the same as every other row (getSetInputHTML) so its
+   Top/BO/Drop/RP/L-R checkboxes exist for addLogEntry() to read. While
+   it's the only row, it stays visually hidden — the steppers + pills above
+   the "+ Add another set" button are its UI instead. Once a second row
+   exists (another tapped-in set, or a multi-set suggestion applied on
+   exercise blur), the steppers no longer represent what row 0 will
+   actually submit, so #quickLogPanel switches to "multi" mode: row 0
+   reappears as a normal row and the steppers/its pills hide instead
+   (session-queue.js _updateQuickLogButtonLabel). */
+#setInputsContainer .set-input-row:first-child { display: none; }
+#quickLogPanel.ql-multi-mode #setInputsContainer .set-input-row:first-child { display: flex; }
+#quickLogPanel.ql-multi-mode > .ql-row,
+#quickLogPanel.ql-multi-mode > .ql-setopts-row { display: none; }
+
+/* The kg/lb toggle button lives inside .ql-row (hidden above in multi
+   mode) — surface the plain unit select in its place so units are still
+   switchable with 2+ rows on screen. */
+#quickLogPanel.ql-multi-mode #weightUnit {
+  display: block;
+  width: auto;
+  min-width: 90px;
+  margin: 0 0 10px;
+}
+
+/* Template quick-load, promoted out of the old manual disclosure to sit
+   above the exercise field as an always-visible secondary starting point. */
+.log-template-quickload { margin-bottom: 8px; }
 
 /* Tappable session-queue row (jumps into quick-log for that exercise) */
 .sq-row--tap { cursor: pointer; }
@@ -930,18 +957,6 @@
   margin: 0 0 8px;
 }
 
-/* Sets + unit side-by-side */
-.sets-unit-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 8px;
-}
-
-.sets-unit-row input,
-.sets-unit-row select {
-  margin: 0 0 8px;
-}
-
 /* Template select — secondary visual weight */
 .log-template-select {
   color: var(--secondary-text);
@@ -949,24 +964,22 @@
   margin-bottom: 8px !important;
 }
 
-/* Full-width Add to Log button */
-.log-add-btn {
-  width: 100%;
-  margin: 6px 0 0;
-  padding: 13px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  border-radius: 12px;
-  letter-spacing: 0.02em;
-}
-
 /* Inputs inside resistance inputs don't need the 60% centring */
 #exercise,
-#sets,
 #goal,
 #repGoal,
-#weightUnit,
 #entryDate {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  display: block;
+}
+
+/* #weightUnit gets the same treatment, but only while actually shown —
+   an unconditional `display: block` here would outrank the `hidden`
+   attribute (an author rule beats the UA default regardless of the
+   attribute) and force it on screen outside multi-mode. */
+#weightUnit:not([hidden]) {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
