@@ -1008,43 +1008,71 @@
 
     <!-- ══ Sub-view: Templates ════════════════════════════════════ -->
     <div id="logSub_templates" class="log-subview">
-      <div style="padding:10px;">
-        <div id="templateBuilder" style="margin-bottom:12px; border:1px solid var(--border-color); border-radius:8px; padding:12px;">
-          <h3 style="margin:0 0 10px 0;"><span class="ui-icon" data-icon="clipboard"></span> Template Builder</h3>
-          <input type="text" id="newTemplateName" placeholder="Template name" />
-          <input type="text" id="newTemplateDescription" placeholder="Description" style="margin-top:6px;" />
-          <input type="text" id="newTemplateTags" placeholder="Tags (comma separated)" style="margin-top:6px;" />
-          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-            <input type="text" id="newTemplateExercise" placeholder="Exercise name" style="flex:1 1 170px;" />
-            <input type="number" id="newTemplateSets" placeholder="Sets" min="1" style="width:90px;" />
-            <input type="text" id="newTemplateReps" placeholder="Target reps" style="width:100px;" />
-            <select id="newTemplateSetType" style="width:120px;">
-              <option value="straight">Straight</option>
-              <option value="superset">Superset</option>
-              <option value="circuit">Circuit</option>
-            </select>
-            <input type="text" id="newTemplateGroupId" placeholder="Group (e.g. A)" style="width:130px;" />
-            <button type="button" onclick="addExerciseToTemplate()">Add Exercise</button>
+      <div class="tpl-view">
+        <div id="templateBuilder" class="tpl-pod">
+          <h3 class="tpl-pod-title"><span class="ui-icon" data-icon="clipboard"></span> Template Builder</h3>
+
+          <div class="tpl-field">
+            <label class="tpl-label" for="newTemplateName">Template name</label>
+            <input type="text" id="newTemplateName" class="tpl-input" placeholder="e.g. Push Day A" />
           </div>
-          <small>Drag rows to reorder. Use matching group labels to link superset/circuit exercises.</small>
-          <ul id="newTemplateList" style="margin-top:8px; padding-left:18px;"></ul>
-          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-            <button type="button" onclick="saveSimpleTemplate()">Save Built Template</button>
-            <button type="button" onclick="resetTemplateBuilder()">Clear Builder</button>
+          <div class="tpl-field">
+            <label class="tpl-label" for="newTemplateDescription">Description</label>
+            <input type="text" id="newTemplateDescription" class="tpl-input" placeholder="Optional" />
+          </div>
+          <div class="tpl-field">
+            <label class="tpl-label" for="newTemplateTags">Tags</label>
+            <input type="text" id="newTemplateTags" class="tpl-input" placeholder="Comma separated" />
+          </div>
+
+          <div class="tpl-exercise-row">
+            <div class="tpl-field tpl-field--grow">
+              <label class="tpl-label" for="newTemplateExercise">Exercise</label>
+              <input type="text" id="newTemplateExercise" class="tpl-input" placeholder="Exercise name" />
+            </div>
+            <div class="tpl-field tpl-field--sets">
+              <label class="tpl-label" for="newTemplateSets">Sets</label>
+              <input type="number" id="newTemplateSets" class="tpl-input" placeholder="3" min="1" />
+            </div>
+            <div class="tpl-field tpl-field--reps">
+              <label class="tpl-label" for="newTemplateReps">Reps</label>
+              <input type="text" id="newTemplateReps" class="tpl-input" placeholder="8-12" />
+            </div>
+            <div class="tpl-field tpl-field--type">
+              <label class="tpl-label" for="newTemplateSetType">Type</label>
+              <select id="newTemplateSetType" class="tpl-input tpl-select">
+                <option value="straight">Straight</option>
+                <option value="superset">Superset</option>
+                <option value="circuit">Circuit</option>
+              </select>
+            </div>
+            <div class="tpl-field tpl-field--group">
+              <label class="tpl-label" for="newTemplateGroupId">Group</label>
+              <input type="text" id="newTemplateGroupId" class="tpl-input" placeholder="A" />
+            </div>
+          </div>
+          <button type="button" class="tpl-add-exercise-btn" onclick="addExerciseToTemplate()">+ Add Exercise</button>
+
+          <p class="tpl-hint">Drag rows to reorder. Use matching group labels to link superset/circuit exercises.</p>
+          <ul id="newTemplateList" class="tpl-exercise-list"></ul>
+
+          <div class="tpl-actions-row">
+            <button type="button" class="tpl-btn tpl-btn--primary" onclick="saveSimpleTemplate()">Save Built Template</button>
+            <button type="button" class="tpl-btn tpl-btn--ghost" onclick="resetTemplateBuilder()">Clear Builder</button>
           </div>
         </div>
 
-        <div id="templateManager" style="border:1px solid var(--border-color); border-radius:8px; padding:12px;">
-          <h3 style="margin:0 0 10px 0;"><span class="ui-icon" data-icon="package"></span> Template Manager</h3>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-            <button type="button" onclick="editSelectedTemplate()">Edit</button>
-            <button type="button" onclick="duplicateSelectedTemplate()">Duplicate</button>
-            <button type="button" onclick="deleteSelectedTemplate()">Delete</button>
+        <div id="templateManager" class="tpl-pod">
+          <h3 class="tpl-pod-title"><span class="ui-icon" data-icon="package"></span> Template Manager</h3>
+          <div class="tpl-manager-actions">
+            <button type="button" class="tpl-btn tpl-btn--ghost" onclick="editSelectedTemplate()">Edit</button>
+            <button type="button" class="tpl-btn tpl-btn--ghost" onclick="duplicateSelectedTemplate()">Duplicate</button>
+            <button type="button" class="tpl-btn tpl-btn--danger" onclick="deleteSelectedTemplate()">Delete</button>
           </div>
-          <div id="templateLibraryList" style="font-size:0.92rem;"></div>
+          <div id="templateLibraryList" class="tpl-library-list"></div>
         </div>
 
-        <button id="saveTemplateBtn" onclick="saveWorkoutAsTemplate()" style="margin-top:12px;">Save Current Workout as Template</button>
+        <button id="saveTemplateBtn" class="tpl-save-workout-btn" onclick="saveWorkoutAsTemplate()">Save Current Workout as Template</button>
       </div>
     </div><!-- /logSub_templates -->
 
@@ -7197,14 +7225,18 @@ function renderTemplateLibraryList() {
   const container = document.getElementById('templateLibraryList');
   if (!container) return;
   if (!resistanceTemplatesCache.length) {
-    container.textContent = 'No templates loaded.';
+    container.innerHTML = '<div class="tpl-library-empty">No templates loaded.</div>';
     return;
   }
   container.innerHTML = resistanceTemplatesCache
     .map(tpl => {
       const description = tpl.data?.metadata?.description || '';
       const tags = Array.isArray(tpl.data?.metadata?.tags) ? tpl.data.metadata.tags.join(', ') : '';
-      return `<div style="padding:4px 0;"><strong>${tpl.name}</strong>${description ? ` — ${description}` : ''}${tags ? ` <em>[${tags}]</em>` : ''}</div>`;
+      return `<div class="tpl-library-item">
+        <div class="tpl-library-item-name">${tpl.name}</div>
+        ${description ? `<div class="tpl-library-item-desc">${description}</div>` : ''}
+        ${tags ? `<div class="tpl-library-item-tags">${tags}</div>` : ''}
+      </div>`;
     })
     .join('');
 }
@@ -7521,9 +7553,9 @@ function renderTemplateBuilderList() {
   list.innerHTML = '';
   newTemplateExercises.forEach((exercise, index) => {
     const li = document.createElement('li');
+    li.className = 'tpl-exercise-item';
     li.draggable = true;
     li.dataset.index = String(index);
-    li.style.cursor = 'move';
     li.textContent = `${exercise.name} — ${exercise.sets} sets @ ${exercise.repRange || 'n/a'} [${exercise.groupType}${exercise.groupId ? ` ${exercise.groupId}` : ''}]`;
 
     li.addEventListener('dragstart', event => {

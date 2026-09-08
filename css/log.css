@@ -1373,3 +1373,242 @@
   color: var(--secondary-text);
   cursor: pointer;
 }
+
+/* ── Templates sub-tab — Template Builder + Template Manager
+   (previously raw inline-styled inputs/buttons; brought onto the
+   pod/pill system used everywhere else in the Log tab) ─────────── */
+
+.tpl-view {
+  padding: 10px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tpl-pod {
+  background: var(--pod-bg-hero);
+  border: 1px solid rgba(74, 132, 102, 0.3);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
+  padding: 15px;
+}
+
+.tpl-pod-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-color);
+}
+
+.tpl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.tpl-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.tpl-input,
+.tpl-select {
+  width: 100%;
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 0.9rem;
+  border-radius: var(--radius-micro);
+  border: 1px solid var(--pod-border);
+  background: var(--surface-bg);
+  color: var(--text-color);
+  font-family: 'Poppins', sans-serif;
+  box-shadow: none;
+}
+
+.tpl-exercise-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.tpl-field--grow { flex: 1 1 170px; }
+.tpl-field--sets { flex: 0 1 80px; }
+.tpl-field--reps { flex: 0 1 90px; }
+.tpl-field--type { flex: 0 1 112px; }
+.tpl-field--group { flex: 0 1 90px; }
+
+.tpl-add-exercise-btn {
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 10px;
+  border-radius: var(--radius-pill);
+  border: 1px dashed rgba(74, 132, 102, 0.4);
+  background: transparent;
+  color: var(--primary);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tpl-add-exercise-btn:hover {
+  background: rgba(47, 138, 99, 0.1);
+  border-color: var(--primary);
+  filter: none;
+}
+
+.tpl-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 10px 0 6px;
+}
+
+.tpl-exercise-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tpl-exercise-item {
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pod-border);
+  background: var(--pod-bg);
+  color: var(--text-color);
+  font-size: 0.82rem;
+  cursor: grab;
+}
+
+.tpl-exercise-item:active {
+  cursor: grabbing;
+}
+
+.tpl-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.tpl-manager-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.tpl-btn {
+  flex: 1;
+  min-width: 100px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, filter 0.15s;
+}
+
+.tpl-btn--primary {
+  background: var(--fill-btn-primary-mobile);
+  color: var(--pill-text-active);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.tpl-btn--ghost {
+  background: var(--pill-bg);
+  border-color: var(--pill-border);
+  color: var(--text-muted);
+}
+
+.tpl-btn--ghost:hover {
+  background: var(--elevated-bg);
+  color: var(--text-color);
+  filter: none;
+}
+
+.tpl-btn--danger {
+  background: transparent;
+  border-color: rgba(158, 50, 65, 0.4);
+  color: var(--danger-text);
+}
+
+.tpl-btn--danger:hover {
+  background: var(--danger-bg);
+  filter: none;
+}
+
+.tpl-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tpl-library-empty {
+  text-align: center;
+  padding: 14px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.tpl-library-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-tight);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+}
+
+.tpl-library-item-name {
+  font-weight: 700;
+  color: var(--text-color);
+  font-size: 0.88rem;
+}
+
+.tpl-library-item-desc {
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  margin-top: 2px;
+}
+
+.tpl-library-item-tags {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.tpl-save-workout-btn {
+  width: 100%;
+  margin: 0;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--fill-btn-primary-mobile);
+  color: var(--pill-text-active);
+  border: none;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
