@@ -17,11 +17,12 @@
   overflow-x: auto;
 }
 
-/* Bar sleeves (the ends of the barbell) */
+/* Bar sleeves (the ends of the barbell) — steel tones tuned to sit on
+   the dark pod background rather than the old flat mid-grey. */
 .bar-sleeve {
   height: 14px;
   width: 40px;
-  background: #9e9e9e;
+  background: linear-gradient(180deg, #6b7278, #4a4f54);
   border-radius: 4px 0 0 4px;
   flex-shrink: 0;
 }
@@ -34,7 +35,7 @@
 .bar-collar {
   height: 28px;
   width: 10px;
-  background: #757575;
+  background: #383c40;
   flex-shrink: 0;
 }
 
@@ -44,7 +45,7 @@
   flex: 1;
   min-width: 60px;
   max-width: 120px;
-  background: #bdbdbd;
+  background: linear-gradient(180deg, #8a9096, #5c6167);
 }
 
 /* Individual weight plates (on the bar) */
@@ -70,6 +71,15 @@
 
 .plate:active {
   opacity: 0.65;
+}
+
+.pl-bar-plates {
+  display: flex;
+  gap: 2px;
+}
+
+.pl-bar-plates--left {
+  flex-direction: row-reverse;
 }
 
 /* ── Plate grid selector ────────────────────────────────────── */
@@ -153,29 +163,34 @@
 
 .pl-stat-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   margin-bottom: 16px;
 }
 
 .pl-stat-card {
   flex: 1 1 130px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 14px 16px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
   text-align: center;
 }
 
 .pl-stat-card .stat-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-label);
   margin-bottom: 4px;
 }
 
 .pl-stat-card .stat-value {
+  font-family: var(--font-display);
   font-size: 1.4rem;
-  font-weight: 700;
   color: var(--text-color);
 }
 
@@ -183,10 +198,263 @@
 .meet-week-chip {
   display: inline-block;
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--highlight);
   color: #fff;
   font-weight: 700;
   font-size: 1rem;
   margin-bottom: 10px;
+}
+
+/* ── Shared subview scaffolding ─────────────────────────────── */
+/* Pod-card layout utilities so the tab's markup doesn't need
+   one-off inline styles — mirrors the pod/pill vocabulary the
+   rest of the app (Macros, Check-In, ...) already consumes. */
+
+.pl-subview h3 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 1.1rem;
+  margin: 0 0 12px;
+}
+
+.pl-subview .pod {
+  margin-bottom: 14px;
+}
+
+.pl-subview .pod:last-child {
+  margin-bottom: 0;
+}
+
+.pl-hint {
+  margin: -4px 0 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.pl-form-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.pl-form-row + .pl-form-row {
+  margin-top: 4px;
+}
+
+.pl-field {
+  flex: 1;
+  min-width: 100px;
+}
+
+.pl-field label {
+  display: block;
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-label);
+  margin-bottom: 2px;
+}
+
+.pl-field input,
+.pl-field select {
+  margin: 0;
+}
+
+.pl-grid-2,
+.pl-grid-3 {
+  display: grid;
+  gap: 10px;
+}
+
+.pl-grid-2 { grid-template-columns: 1fr 1fr; }
+.pl-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.pl-full-btn {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Result readout (plate-calc total, etc.) */
+.pl-result-pod {
+  min-height: 50px;
+  font-size: 0.95rem;
+}
+
+.pl-result-headline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pl-result-total {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--primary);
+}
+
+.pl-result-total-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.pl-result-meta {
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+}
+
+.pl-result-breakdown {
+  margin-top: 8px;
+  font-size: 0.83rem;
+  color: var(--secondary-text);
+  border-top: 1px solid var(--pod-border);
+  padding-top: 8px;
+}
+
+/* Score result tiles (Wilks / DOTS / IPF GL) */
+.pl-score-tile {
+  text-align: center;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-md);
+  padding: 10px 6px;
+}
+
+.pl-score-tile .pl-score-value {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.pl-score-tile .pl-score-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* ── Quick plate calculator dialog (opened from a Log-tab set) ─
+   Shares the Eleiko color map (plateCalculator.js) with the tab's
+   own barbell visualizer above, so both surfaces agree on color. */
+
+.plate-calc-modal {
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  background: var(--pod-bg);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
+  color: var(--text-color);
+  padding: 0;
+  width: min(92vw, 420px);
+  max-width: 92vw;
+}
+
+.plate-calc-modal::backdrop {
+  background: rgba(4, 8, 6, 0.68);
+}
+
+.plate-calc-modal form {
+  padding: 18px 20px 16px;
+}
+
+.plate-calc-header {
+  margin-bottom: 12px;
+}
+
+.plate-calc-inputs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.plate-calc-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.plate-calc-field input {
+  margin: 0;
+}
+
+.plate-calc-plates {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.plate-calc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plate-calc-swatch {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 800;
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.plate-calc-row-label {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+}
+
+.plate-calc-count-input {
+  width: 64px;
+  margin: 0;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.plate-calc-result {
+  font-size: 0.85rem;
+  color: var(--text-color);
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  min-height: 20px;
+}
+
+.plate-calc-result-line {
+  margin-top: 6px;
+}
+
+.plate-calc-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.plate-calc-actions button {
+  margin: 0;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+}
+
+.plate-calc-btn-secondary {
+  background: var(--surface-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
 }

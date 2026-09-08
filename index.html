@@ -1748,81 +1748,85 @@
 
     <!-- ── PLATE CALCULATOR ── -->
     <div id="plSubPlates" class="pl-subview active">
-      <h3 style="margin-top:0;">Plate Calculator</h3>
+      <h3>Plate Calculator</h3>
 
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
-        <div style="flex:1;min-width:120px;">
-          <label for="plTargetWeight">Target weight</label>
-          <input type="number" id="plTargetWeight" step="0.5" placeholder="e.g. 140" oninput="plCalcUpdate()">
-        </div>
-        <div style="flex:1;min-width:100px;">
-          <label for="plBarWeight">Bar weight</label>
-          <input type="number" id="plBarWeight" step="0.5" value="20" oninput="plCalcUpdate()">
-        </div>
-        <div style="flex:1;min-width:100px;">
-          <label for="plUnit">Unit</label>
-          <select id="plUnit" onchange="plUnitChange()">
-            <option value="kg">kg</option>
-            <option value="lbs">lbs</option>
-          </select>
+      <div class="pod">
+        <div class="pl-form-row">
+          <div class="pl-field">
+            <label for="plTargetWeight">Target weight</label>
+            <input type="number" id="plTargetWeight" step="0.5" placeholder="e.g. 140" oninput="plCalcUpdate()">
+          </div>
+          <div class="pl-field">
+            <label for="plBarWeight">Bar weight</label>
+            <input type="number" id="plBarWeight" step="0.5" value="20" oninput="plCalcUpdate()">
+          </div>
+          <div class="pl-field">
+            <label for="plUnit">Unit</label>
+            <select id="plUnit" onchange="plUnitChange()">
+              <option value="kg">kg</option>
+              <option value="lbs">lbs</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <!-- Plate selector buttons -->
-      <p style="margin:0 0 6px;font-size:0.8rem;color:var(--text-muted);">Tap to add a plate pair</p>
+      <p class="pl-hint">Tap to add a plate pair · right-click (long-press) to remove one</p>
       <div class="plate-selector" id="plPlateSelector"></div>
 
       <!-- Visual bar -->
       <div class="plate-bar-wrap" id="plBarViz">
         <div class="bar-sleeve"></div>
         <div class="bar-collar"></div>
-        <div id="plLeftPlates" style="display:flex;flex-direction:row-reverse;gap:2px;"></div>
+        <div id="plLeftPlates" class="pl-bar-plates pl-bar-plates--left"></div>
         <div class="bar-shaft"></div>
-        <div id="plRightPlates" style="display:flex;gap:2px;"></div>
+        <div id="plRightPlates" class="pl-bar-plates"></div>
         <div class="bar-collar"></div>
         <div class="bar-sleeve right"></div>
       </div>
 
       <!-- Result -->
-      <div id="plCalcResult" style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:14px 16px;font-size:0.95rem;min-height:50px;"></div>
+      <div id="plCalcResult" class="pod pl-result-pod"></div>
 
-      <button style="margin-top:12px;width:100%;" onclick="plCalcClear()">Clear plates</button>
+      <button class="pl-full-btn" onclick="plCalcClear()">Clear plates</button>
     </div>
 
     <!-- ── 1RM TRACKER ── -->
     <div id="plSubOneRM" class="pl-subview">
-      <h3 style="margin-top:0;">1RM Tracker</h3>
+      <h3>1RM Tracker</h3>
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
-        <div style="flex:2;min-width:130px;">
-          <label for="oneRMExercise">Lift</label>
-          <select id="oneRMExercise" onchange="renderOneRMChart()">
-            <option value="Squat">Squat</option>
-            <option value="Bench Press">Bench Press</option>
-            <option value="Deadlift">Deadlift</option>
-            <option value="Overhead Press">Overhead Press</option>
-          </select>
+      <div class="pod">
+        <div class="pl-form-row">
+          <div class="pl-field" style="flex:2;">
+            <label for="oneRMExercise">Lift</label>
+            <select id="oneRMExercise" onchange="renderOneRMChart()">
+              <option value="Squat">Squat</option>
+              <option value="Bench Press">Bench Press</option>
+              <option value="Deadlift">Deadlift</option>
+              <option value="Overhead Press">Overhead Press</option>
+            </select>
+          </div>
+          <div class="pl-field">
+            <label for="oneRMWeight">Weight</label>
+            <input type="number" id="oneRMWeight" step="0.5" placeholder="e.g. 180">
+          </div>
+          <div class="pl-field">
+            <label for="oneRMReps">Reps</label>
+            <input type="number" id="oneRMReps" value="1" min="1" max="12" placeholder="1">
+          </div>
         </div>
-        <div style="flex:1;min-width:100px;">
-          <label for="oneRMWeight">Weight</label>
-          <input type="number" id="oneRMWeight" step="0.5" placeholder="e.g. 180">
+        <div class="pl-form-row">
+          <div class="pl-field">
+            <label for="oneRMDate">Date</label>
+            <input type="date" id="oneRMDate">
+          </div>
+          <div class="pl-field">
+            <label for="oneRMRPE">RPE</label>
+            <input type="number" id="oneRMRPE" step="0.5" min="6" max="10" placeholder="e.g. 9">
+          </div>
         </div>
-        <div style="flex:1;min-width:80px;">
-          <label for="oneRMReps">Reps</label>
-          <input type="number" id="oneRMReps" value="1" min="1" max="12" placeholder="1">
-        </div>
+        <button class="pl-full-btn" onclick="saveOneRMEntry()">Log Entry</button>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:130px;">
-          <label for="oneRMDate">Date</label>
-          <input type="date" id="oneRMDate">
-        </div>
-        <div style="flex:1;min-width:80px;">
-          <label for="oneRMRPE">RPE</label>
-          <input type="number" id="oneRMRPE" step="0.5" min="6" max="10" placeholder="e.g. 9">
-        </div>
-      </div>
-      <button style="width:100%;margin-top:4px;" onclick="saveOneRMEntry()">Log Entry</button>
 
       <div class="pl-stat-row" id="oneRMStats" style="margin-top:16px;"></div>
 
@@ -1832,7 +1836,7 @@
 
     <!-- ── MEET DAY ── -->
     <div id="plSubMeetday" class="pl-subview">
-      <h3 style="margin-top:0;">Meet Day — Attempt Selection</h3>
+      <h3>Meet Day — Attempt Selection</h3>
 
       <div class="weighin-alert" id="weighInAlert">
         <span class="weighin-alert-icon" data-icon="scale"></span>
@@ -1890,103 +1894,108 @@
     <!-- ── MEET PREP ── -->
     <!-- ── STRENGTH SCORES (Wilks / DOTS / IPF GL) ── -->
     <div id="plSubScores" class="pl-subview">
-      <h3 style="margin-top:0;">Strength Scores</h3>
-      <p style="font-size:0.82rem;color:var(--text-muted);margin:-4px 0 14px;">Compare your total across weight classes &amp; formulas.</p>
+      <h3>Strength Scores</h3>
+      <p class="pl-hint">Compare your total across weight classes &amp; formulas.</p>
 
-      <!-- Inputs -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div>
-          <label for="scoreBodyweight">Bodyweight</label>
-          <input type="number" id="scoreBodyweight" step="0.1" placeholder="e.g. 83" oninput="calcStrengthScores()">
+      <div class="pod">
+        <!-- Inputs -->
+        <div class="pl-grid-2" style="margin-bottom:12px;">
+          <div>
+            <label for="scoreBodyweight">Bodyweight</label>
+            <input type="number" id="scoreBodyweight" step="0.1" placeholder="e.g. 83" oninput="calcStrengthScores()">
+          </div>
+          <div>
+            <label for="scoreUnit">Unit</label>
+            <select id="scoreUnit" onchange="calcStrengthScores()">
+              <option value="kg">kg</option>
+              <option value="lbs">lbs</option>
+            </select>
+          </div>
+          <div>
+            <label for="scoreSex">Sex</label>
+            <select id="scoreSex" onchange="calcStrengthScores()">
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+          <div>
+            <label for="scoreEquipment">Equipment</label>
+            <select id="scoreEquipment" onchange="calcStrengthScores()">
+              <option value="raw">Raw</option>
+              <option value="equipped">Equipped</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label for="scoreUnit">Unit</label>
-          <select id="scoreUnit" onchange="calcStrengthScores()">
-            <option value="kg">kg</option>
-            <option value="lbs">lbs</option>
-          </select>
-        </div>
-        <div>
-          <label for="scoreSex">Sex</label>
-          <select id="scoreSex" onchange="calcStrengthScores()">
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-          </select>
-        </div>
-        <div>
-          <label for="scoreEquipment">Equipment</label>
-          <select id="scoreEquipment" onchange="calcStrengthScores()">
-            <option value="raw">Raw</option>
-            <option value="equipped">Equipped</option>
-          </select>
-        </div>
-      </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-        <div>
-          <label for="scoreSquat">Squat</label>
-          <input type="number" id="scoreSquat" step="0.5" placeholder="0" oninput="calcStrengthScores()">
-        </div>
-        <div>
-          <label for="scoreBench">Bench</label>
-          <input type="number" id="scoreBench" step="0.5" placeholder="0" oninput="calcStrengthScores()">
-        </div>
-        <div>
-          <label for="scoreDeadlift">Deadlift</label>
-          <input type="number" id="scoreDeadlift" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+        <div class="pl-grid-3">
+          <div>
+            <label for="scoreSquat">Squat</label>
+            <input type="number" id="scoreSquat" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+          </div>
+          <div>
+            <label for="scoreBench">Bench</label>
+            <input type="number" id="scoreBench" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+          </div>
+          <div>
+            <label for="scoreDeadlift">Deadlift</label>
+            <input type="number" id="scoreDeadlift" step="0.5" placeholder="0" oninput="calcStrengthScores()">
+          </div>
         </div>
       </div>
 
       <!-- Results -->
       <div id="scoreResults" style="display:none;">
-        <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
-          <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:10px;">
-            Total: <span id="scoreTotal" style="color:var(--text-color);font-size:1rem;"></span>
+        <div class="pod">
+          <div class="pod-row" style="margin-bottom:10px;">
+            <span class="pod-kicker">Total</span>
+            <span id="scoreTotal" style="color:var(--text-color);font-size:1rem;"></span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
-              <div id="scoreWilks" style="font-size:1.4rem;font-weight:800;color:var(--primary);line-height:1;">—</div>
-              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">Wilks</div>
+          <div class="pl-grid-3">
+            <div class="pl-score-tile">
+              <div id="scoreWilks" class="pl-score-value" style="color:var(--primary);">—</div>
+              <div class="pl-score-label">Wilks</div>
             </div>
-            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
-              <div id="scoreDots" style="font-size:1.4rem;font-weight:800;color:#7c6ef0;line-height:1;">—</div>
-              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">DOTS</div>
+            <div class="pl-score-tile">
+              <div id="scoreDots" class="pl-score-value" style="color:#7c6ef0;">—</div>
+              <div class="pl-score-label">DOTS</div>
             </div>
-            <div style="text-align:center;background:var(--elevated-bg);border-radius:10px;padding:10px 6px;">
-              <div id="scoreIpfgl" style="font-size:1.4rem;font-weight:800;color:#e07c30;line-height:1;">—</div>
-              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">IPF GL</div>
+            <div class="pl-score-tile">
+              <div id="scoreIpfgl" class="pl-score-value" style="color:#e07c30;">—</div>
+              <div class="pl-score-label">IPF GL</div>
             </div>
           </div>
         </div>
         <!-- Performance tier badge -->
-        <div id="scoreTier" style="text-align:center;padding:10px;border-radius:10px;font-size:0.88rem;font-weight:700;"></div>
+        <div id="scoreTier" class="meet-week-chip" style="display:block;text-align:center;margin-top:10px;"></div>
       </div>
     </div>
 
     <div id="plSubMeet" class="pl-subview">
-      <h3 style="margin-top:0;">Meet Prep Timeline</h3>
+      <h3>Meet Prep Timeline</h3>
 
-      <label for="meetDate">Meet date</label>
-      <input type="date" id="meetDate" oninput="renderMeetPrep()">
+      <div class="pod">
+        <label for="meetDate">Meet date</label>
+        <input type="date" id="meetDate" oninput="renderMeetPrep()">
 
-      <label for="meetName">Meet name (optional)</label>
-      <input type="text" id="meetName" placeholder="e.g. Regional Powerlifting Open">
+        <label for="meetName">Meet name (optional)</label>
+        <input type="text" id="meetName" placeholder="e.g. Regional Powerlifting Open">
 
-      <label for="meetFed">Federation</label>
-      <select id="meetFed">
-        <option value="">-- Select --</option>
-        <option>USAPL</option>
-        <option>IPF</option>
-        <option>USPA</option>
-        <option>RPS</option>
-        <option>SPF</option>
-        <option>Other</option>
-      </select>
+        <label for="meetFed">Federation</label>
+        <select id="meetFed">
+          <option value="">-- Select --</option>
+          <option>USAPL</option>
+          <option>IPF</option>
+          <option>USPA</option>
+          <option>RPS</option>
+          <option>SPF</option>
+          <option>Other</option>
+        </select>
 
-      <label for="meetWeightClass">Weight class</label>
-      <input type="text" id="meetWeightClass" placeholder="e.g. 83kg">
+        <label for="meetWeightClass">Weight class</label>
+        <input type="text" id="meetWeightClass" placeholder="e.g. 83kg">
 
-      <button style="width:100%;" onclick="saveMeetDetails()">Save Meet Details</button>
+        <button class="pl-full-btn" onclick="saveMeetDetails()">Save Meet Details</button>
+      </div>
 
       <div id="meetPrepDisplay" style="margin-top:20px;"></div>
     </div>
@@ -18404,14 +18413,28 @@ window.renderSessionHistory = renderSessionHistory;
 // ─────────────────────────────────────────────
 
 // Plate definitions: { size, color, textColor, heightPx, widthPx, label }
+// Colors come from PlateCalculator.PLATE_COLORS_KG (plateCalculator.js) —
+// the standard Eleiko/IPF competition-disc scheme — so this visualizer and
+// the quick per-set plate calculator (dumbbell icon on the Log tab) always
+// agree on what color a given plate is. Falls back to the same values
+// inline in case plateCalculator.js hasn't loaded yet.
+const PL_COLORS_KG = (window.PlateCalculator && window.PlateCalculator.PLATE_COLORS_KG) || {
+  25:   { bg: '#d32f2f', fg: '#fff' },
+  20:   { bg: '#1565c0', fg: '#fff' },
+  15:   { bg: '#fbc02d', fg: '#2b2200' },
+  10:   { bg: '#2e7d32', fg: '#fff' },
+  5:    { bg: '#f5f5f5', fg: '#333' },
+  2.5:  { bg: '#1a1a1a', fg: '#fff' },
+  1.25: { bg: '#c7ccd1', fg: '#2a2a2a' }
+};
 const PL_PLATES_KG = [
-  { size: 25,   color: '#d32f2f', textColor: '#fff', h: 82, w: 22, label: '25' },
-  { size: 20,   color: '#1565c0', textColor: '#fff', h: 70, w: 20, label: '20' },
-  { size: 15,   color: '#f57f17', textColor: '#fff', h: 60, w: 18, label: '15' },
-  { size: 10,   color: '#2e7d32', textColor: '#fff', h: 50, w: 16, label: '10' },
-  { size: 5,    color: '#e0e0e0', textColor: '#333', h: 40, w: 14, label: '5'  },
-  { size: 2.5,  color: '#e57373', textColor: '#fff', h: 32, w: 12, label: '2.5'},
-  { size: 1.25, color: '#90a4ae', textColor: '#fff', h: 26, w: 10, label: '1.25'},
+  { size: 25,   color: PL_COLORS_KG[25].bg,   textColor: PL_COLORS_KG[25].fg,   h: 82, w: 22, label: '25' },
+  { size: 20,   color: PL_COLORS_KG[20].bg,   textColor: PL_COLORS_KG[20].fg,   h: 70, w: 20, label: '20' },
+  { size: 15,   color: PL_COLORS_KG[15].bg,   textColor: PL_COLORS_KG[15].fg,   h: 60, w: 18, label: '15' },
+  { size: 10,   color: PL_COLORS_KG[10].bg,   textColor: PL_COLORS_KG[10].fg,   h: 50, w: 16, label: '10' },
+  { size: 5,    color: PL_COLORS_KG[5].bg,    textColor: PL_COLORS_KG[5].fg,    h: 40, w: 14, label: '5'  },
+  { size: 2.5,  color: PL_COLORS_KG[2.5].bg,  textColor: PL_COLORS_KG[2.5].fg,  h: 32, w: 12, label: '2.5'},
+  { size: 1.25, color: PL_COLORS_KG[1.25].bg, textColor: PL_COLORS_KG[1.25].fg, h: 26, w: 10, label: '1.25'},
 ];
 const PL_PLATES_LBS = [
   { size: 45,  color: '#d32f2f', textColor: '#fff', h: 82, w: 22, label: '45' },
@@ -18523,20 +18546,22 @@ function plCalcUpdate() {
   const targetEl = document.getElementById('plTargetWeight');
   const plates = getCurrentPlates();
 
-  // If target is provided, auto-compute plates
+  // If target is provided, auto-compute plates. Reuses the same
+  // (tested) DP-based solver as the quick per-set calculator in
+  // plateCalculator.js instead of a separate greedy loop, so both
+  // surfaces always land on the same combination for the same input.
   if (targetEl && targetEl.value && plLoadedPlates.length === 0) {
     const target = parseFloat(targetEl.value);
-    if (Number.isFinite(target) && target > barWeight) {
-      const perSide = (target - barWeight) / 2;
-      let remaining = perSide;
+    if (Number.isFinite(target) && target > barWeight && window.PlateCalculator) {
+      const result = window.PlateCalculator.calculatePlateCombination(
+        target,
+        barWeight,
+        plates.map(p => ({ size: p.size, count: 9999 })) // unlimited supply assumed
+      );
       plLoadedPlates = [];
-      for (const p of plates) {
-        while (remaining >= p.size - 0.001) {
-          plLoadedPlates.push(p.size);
-          remaining -= p.size;
-          if (remaining < 0.001) break;
-        }
-      }
+      result.combination.forEach(entry => {
+        for (let i = 0; i < entry.pairs; i++) plLoadedPlates.push(entry.size);
+      });
     }
   }
 
@@ -18565,17 +18590,17 @@ function plCalcUpdate() {
     .join(' &nbsp;+&nbsp; ');
 
   resultEl.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <div class="pl-result-headline">
       <div>
-        <div style="font-size:1.6rem;font-weight:700;color:var(--primary)">${total.toFixed(total % 1 ? 2 : 0)} ${unit}</div>
-        <div style="font-size:0.8rem;color:var(--text-muted)">total loaded</div>
+        <div class="pl-result-total">${total.toFixed(total % 1 ? 2 : 0)} ${unit}</div>
+        <div class="pl-result-total-label">total loaded</div>
       </div>
-      <div style="text-align:right;font-size:0.85rem;color:var(--secondary-text)">
+      <div class="pl-result-meta">
         <div>Bar: ${barWeight}${unit}</div>
         <div>Per side: ${perSideWeight}${unit}</div>
       </div>
     </div>
-    <div style="margin-top:8px;font-size:0.83rem;color:var(--secondary-text);border-top:1px solid var(--border-color);padding-top:8px;">
+    <div class="pl-result-breakdown">
       Per side: ${breakdown}
     </div>`;
 }

@@ -526,9 +526,10 @@
   align-items: center;
   margin-top: 14px;
   padding: 10px 12px;
-  background: var(--surface-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+  border-radius: var(--radius-md);
 }
 
 .attempt-total-label {
@@ -552,11 +553,11 @@
   gap: 10px;
   padding: 12px 14px;
   margin-bottom: 16px;
-  background: rgba(240, 160, 64, 0.12);
-  border: 1px solid rgba(240, 160, 64, 0.4);
-  border-radius: 10px;
+  background: rgba(199, 154, 84, 0.12);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
-  color: #f0c060;
+  color: var(--warning-gold);
 }
 
 .weighin-alert-icon { font-size: 1.2rem; flex-shrink: 0; }
