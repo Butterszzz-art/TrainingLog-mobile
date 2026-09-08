@@ -763,13 +763,23 @@
       <div id="resistance-section">
         <div id="resistance-inputs" class="log-form-card">
 
+          <!-- Template quick-load — bulk-loads a saved template straight
+               into today's log (bypasses the form below entirely), so it's
+               offered up front as an alternative starting point rather than
+               buried under a disclosure. Full template build/manage lives
+               in the separate Templates sub-tab; this is just the shortcut. -->
+          <select id="resistanceTemplateSelect" class="log-template-select log-template-quickload" onchange="loadSelectedResistanceTemplate()">
+            <option value="">Load a saved template…</option>
+          </select>
+          <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
+
           <div class="log-exercise-title" id="exerciseLiveTitle" hidden></div>
           <div class="log-exercise-stats-line" id="exerciseStatsLine" hidden></div>
           <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
           <datalist id="exerciseSuggestions"></datalist>
           <!-- Constrains entry to the known catalog (built-in + custom
                exercises) — populated/validated by updateAddButtonState().
-               Unrecognized names disable "+ Add to Log" and point here at
+               Unrecognized names disable the Log button and point here at
                Settings → Advanced instead of silently logging an exercise
                that can't be grouped by muscle. -->
           <div id="exerciseNameHint" class="form-error" style="display:none;"></div>
@@ -780,13 +790,13 @@
           <!-- Coach technique video hint -->
           <div id="exerciseVideoHint" class="exercise-video-hint" style="display:none;"></div>
 
-          <!-- Quick log: one-tap single-set logging. Drives the exact
-               same #sets/#reps_0/#weight_0 fields, the same dropset_0/
-               restPause_0/unilateral_0 flags (via the pills below) and the
+          <!-- Log form: single set (steppers below) or several at once via
+               "+ Add another set". Both paths drive the exact same
+               #sets/#reps_N/#weight_N fields, the same dropset_N/
+               restPause_N/unilateral_N/topSet_N/backoff_N flags and the
                same shared Advanced panel (target weight/reps, RPE/RIR,
-               back-dating) + addLogEntry() as the manual form below — no
-               separate save path, no new data shape, just a faster front
-               door onto it (session-queue.js). -->
+               back-dating) + addLogEntry() — one save path, one data shape
+               (session-queue.js). -->
           <div class="ql-panel" id="quickLogPanel" hidden>
             <div class="ql-row">
               <div class="ql-field">
@@ -810,22 +820,50 @@
               </div>
             </div>
 
-            <!-- Per-set flags for the one quick-logged set. Not sticky
-                 across sets (reset after each log) — session-queue.js
-                 copies these onto the real dropset_0/restPause_0/
-                 unilateral_0 checkboxes (regenerated on every keystroke by
-                 generateSetInputs(1)) right before addLogEntry() reads them. -->
+            <!-- Per-set flags for the first set. Not sticky across sets
+                 (reset after each log) — session-queue.js copies these onto
+                 the real dropset_0/restPause_0/unilateral_0/topSet_0/
+                 backoff_0 checkboxes (regenerated on every keystroke by
+                 generateSetInputs(1) while only one row exists) right
+                 before addLogEntry() reads them. -->
             <div class="ql-setopts-row">
+              <label class="set-opt-pill top-set-pill" title="Top Set — your main set for this exercise, used for PR/progress tracking"><input type="checkbox" id="qlTopSet" onchange="if(typeof toggleQuickLogSetRole==='function') toggleQuickLogSetRole('top');" /><span>Top</span></label>
+              <label class="set-opt-pill backoff-pill" title="Back-off Set — reduced-load set after the top set, excluded from PRs"><input type="checkbox" id="qlBackoff" onchange="if(typeof toggleQuickLogSetRole==='function') toggleQuickLogSetRole('backoff');" /><span>BO</span></label>
               <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="qlDropset" /><span>Drop</span></label>
               <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="qlRestPause" /><span>RP</span></label>
               <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="qlUnilateral" /><span>L/R</span></label>
             </div>
 
-            <!-- Advanced options panel (modern custom toggle). Shared with
-                 the manual form below — same #goal/#repGoal/#targetRPE/
-                 #targetRIR/#entryDate fields addLogEntry() already reads,
-                 just surfaced here so quick-log doesn't need the manual
-                 disclosure open to set a target, RPE/RIR, or back-date. -->
+            <!-- Unit select: hidden while the kg/lb toggle button above
+                 (part of the steppers, itself hidden once multi-mode
+                 kicks in) covers it; log.css reveals this instead once
+                 #quickLogPanel.ql-multi-mode is active, so switching units
+                 stays possible with 2+ rows on screen. -->
+            <select id="weightUnit" hidden onchange="if(typeof syncQuickLogUnit==='function') syncQuickLogUnit(this.value);">
+              <option value="kg">kg</option>
+              <option value="lbs">lbs</option>
+            </select>
+
+            <!-- Extra sets beyond the first, added via "+ Add another set"
+                 below — same styled rows (reps/weight/plate-calc/Top-BO-
+                 Drop-RP-L-R pills/remove) the old manual entry used, just
+                 no longer hidden behind a disclosure. Row 0 also renders
+                 here (see .log-form-card CSS) but stays hidden while it's
+                 the only row — it's the steppers above driving
+                 #reps_0/#weight_0 instead; once a second row exists both
+                 swap (log.css .ql-multi-mode). -->
+            <div id="setInputsContainer"></div>
+            <button type="button" class="log-add-set-btn" onclick="if(typeof addNewSet==='function') addNewSet();">+ Add another set</button>
+
+            <!-- Machine at its weight ceiling — can't add more load next time -->
+            <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
+              <input type="checkbox" id="maxedOutToggle" />
+              <span>🔒 Maxed Out</span>
+            </label>
+
+            <!-- Advanced options panel (modern custom toggle) — shared by
+                 every row: #goal/#repGoal/#targetRPE/#targetRIR/#entryDate
+                 apply to the whole entry, addLogEntry() already reads them. -->
             <div class="log-advanced" id="logAdvancedPanel">
               <button class="log-adv-toggle" id="logAdvToggle" aria-expanded="false" type="button" onclick="toggleLogAdvanced()">
                 <span class="log-adv-left">
@@ -881,7 +919,12 @@
               </div>
             </div>
 
-            <button type="button" class="cta-capsule ql-log-btn" id="qlLogBtn" onclick="quickLogSet()">
+            <!-- Sets count is still a real field addLogEntry() reads — just
+                 no longer hand-typed. generateSetInputs()/addNewSet()/
+                 removeSet() keep it in sync. -->
+            <input type="hidden" id="sets" />
+
+            <button type="button" class="cta-capsule ql-log-btn" id="addLogBtn" onclick="submitLogEntry()">
               <span id="qlLogBtnLabel">Log set</span>
               <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>
             </button>
@@ -904,44 +947,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Manual / multi-set entry — for logging several sets at once
-               (with per-set drop-set/rest-pause/unilateral flags) or
-               loading a template. The Advanced panel (target RPE/RIR,
-               back-dating) now lives in the quick-log panel above, shared
-               by both flows — nothing duplicated here. -->
-          <details class="log-manual-entry" id="logManualEntry">
-            <summary class="log-manual-entry-toggle">Manual / multi-set entry</summary>
-            <div class="log-manual-entry-body">
-
-            <!-- Sets + unit on one row -->
-            <div class="sets-unit-row">
-              <input type="number" id="sets" placeholder="Sets" oninput="generateSetInputs(this.value); updateAddButtonState();" />
-              <select id="weightUnit" onchange="if(typeof syncQuickLogUnit==='function') syncQuickLogUnit(this.value);">
-                <option value="kg">kg</option>
-                <option value="lbs">lbs</option>
-              </select>
-            </div>
-
-            <!-- Machine at its weight ceiling — can't add more load next time -->
-            <label class="set-opt-pill maxed-out-pill" title="This machine/exercise is at its weight limit — progression suggestions will focus on reps instead of weight.">
-              <input type="checkbox" id="maxedOutToggle" />
-              <span>🔒 Maxed Out</span>
-            </label>
-
-            <!-- Dynamically generated set inputs -->
-            <div id="setInputsContainer"></div>
-
-            <!-- Template quick-load -->
-            <select id="resistanceTemplateSelect" class="log-template-select" onchange="loadSelectedResistanceTemplate()">
-              <option value="">Load a template…</option>
-            </select>
-            <div id="templateLoadMessage" style="margin-top:4px; color:#b00020; display:none;"></div>
-
-            <button id="addLogBtn" onclick="addLogEntry()" disabled class="log-add-btn">+ Add to Log</button>
-
-            </div>
-          </details>
 
         </div><!-- /log-form-card -->
 
@@ -5166,14 +5171,20 @@ function generateSetInputs(setCount) {
 
   applySuggestedSetValuesForExercise();
   updateAddButtonState();
+  if (typeof refreshLogButtonLabel === 'function') refreshLogButtonLabel();
 }
 
 function addNewSet() {
   const container = document.getElementById("setInputsContainer");
-  container.innerHTML += getSetInputHTML(currentSetCount);
+  // insertAdjacentHTML (not `innerHTML +=`) so existing rows — including
+  // row 0, whose reps_0/weight_0/dropset_0/etc. are live-written by the
+  // Quick Log steppers/pills above, not present in their serialized HTML —
+  // keep their current values instead of being torn down and reparsed blank.
+  container.insertAdjacentHTML('beforeend', getSetInputHTML(currentSetCount));
   currentSetCount++;
   document.getElementById("sets").value = currentSetCount;
   updateAddButtonState();
+  if (typeof refreshLogButtonLabel === 'function') refreshLogButtonLabel();
 }
 
 function getSetInputHTML(i) {
@@ -5260,6 +5271,7 @@ function removeSet(indexToRemove) {
   }
   document.getElementById("sets").value = currentSetCount;
   updateAddButtonState();
+  if (typeof refreshLogButtonLabel === 'function') refreshLogButtonLabel();
 }
 
 function updateAddButtonState() {
@@ -5313,6 +5325,30 @@ function _updateLogAdvDot() {
     return el && el.value !== '' && el.value !== null;
   });
   dot.style.display = hasValue ? 'inline-block' : 'none';
+}
+
+/** Single entry point for the merged Log button. The common case — just
+ * the first row filled in — behaves like the original one-tap Quick Log:
+ * logs immediately via quickLogSet() and stays armed for the next set of
+ * the same exercise. Once "+ Add another set" has been used, it behaves
+ * like the old manual "+ Add to Log" button instead: submits every row as
+ * one addLogEntry() call, then resets to a single fresh row. */
+function submitLogEntry() {
+  const container = document.getElementById("setInputsContainer");
+  const rowCount = container ? container.querySelectorAll('.set-input-row').length : 1;
+  if (rowCount > 1) {
+    if (typeof addLogEntry !== 'function') return;
+    addLogEntry();
+    // addLogEntry() clears #exercise on success and leaves it untouched on
+    // a validation failure — reuse that as the success signal, same as
+    // quickLogSet() does, rather than duplicating its validation logic.
+    const exerciseEl = document.getElementById('exercise');
+    if (exerciseEl && exerciseEl.value === '' && typeof initQuickLog === 'function') {
+      initQuickLog(''); // hide the panel now that the exercise field is empty
+    }
+  } else if (typeof quickLogSet === 'function') {
+    quickLogSet();
+  }
 }
 
 function addLogEntry() {
