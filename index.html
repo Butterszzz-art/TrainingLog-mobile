@@ -1843,6 +1843,15 @@
         <span id="weighInAlertText">Loading weigh-in info…</span>
       </div>
 
+      <div class="pod">
+        <div class="pod-row" style="margin-bottom:6px;">
+          <span class="pod-kicker">Suggested attempts</span>
+          <span class="pod-meta">from your 1RM Tracker</span>
+        </div>
+        <p class="pl-hint" style="margin:0 0 10px;">Opener ≈90% of your tested 1RM · 2nd = your real 1RM · 3rd is a reserve PR try — only take it live if the 2nd goes well.</p>
+        <button class="pl-full-btn" onclick="fillSuggestedAttempts()">Fill from 1RM Tracker</button>
+      </div>
+
       <div class="attempt-sheet">
         <table class="attempt-table" id="attemptSheetTable">
           <thead>
@@ -1889,6 +1898,10 @@
         <span class="attempt-total-label">Total</span>
         <span class="attempt-total-value" id="attemptTotal">— kg</span>
       </div>
+
+      <button class="pl-full-btn" onclick="clearAttemptSheet()">Clear attempts</button>
+
+      <div class="pod" id="caffeinePod" style="margin-top:14px;"></div>
     </div>
 
     <!-- ── MEET PREP ── -->
@@ -1998,6 +2011,28 @@
       </div>
 
       <div id="meetPrepDisplay" style="margin-top:20px;"></div>
+
+      <h3 style="margin-top:20px;">Weight Class &amp; Cut Plan</h3>
+      <div class="pod">
+        <div class="pl-form-row">
+          <div class="pl-field">
+            <label for="cutCurrentWeight">Current weight</label>
+            <input type="number" id="cutCurrentWeight" step="0.1" placeholder="e.g. 86" oninput="renderCutPlan()">
+          </div>
+          <div class="pl-field">
+            <label for="cutTargetWeight">Target (weigh-in) weight</label>
+            <input type="number" id="cutTargetWeight" step="0.1" placeholder="e.g. 83" oninput="renderCutPlan()">
+          </div>
+          <div class="pl-field">
+            <label for="cutUnit">Unit</label>
+            <select id="cutUnit" onchange="renderCutPlan()">
+              <option value="kg">kg</option>
+              <option value="lbs">lbs</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="cutPlanDisplay" style="margin-top:12px;"></div>
     </div>
   </div>
 </div>
@@ -3700,6 +3735,7 @@
 <script src="complianceEngine.js"></script>
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
+<script src="src/js/powerlifting-peak-week.js"></script>
 <!-- Feature flags FIRST -->
 <script>
   window.FEATURES = {
@@ -18489,6 +18525,9 @@ function renderPowerliftingTab() {
   plCalcUpdate();
   renderOneRMChart();
   renderOneRMStats();
+
+  loadCutPlanInputs();
+  renderCutPlan(); // also renders the caffeine-dose card
 }
 
 function plBuildSelector() {
@@ -18862,7 +18901,10 @@ function calcStrengthScores() {
   }
 }
 
-// MEET PREP TIMELINE
+// MEET PREP TIMELINE — taper plan, weight-cut plan, attempt selection
+// Sourced from PowerliftingPTC2025's tapering/weight-class/attempt-
+// selection lectures via src/js/powerlifting-peak-week.js (pure, tested
+// logic — this file only wires it into the DOM).
 // ─────────────────────────────────────────────
 function saveMeetDetails() {
   const date = document.getElementById('meetDate')?.value;
@@ -18872,7 +18914,15 @@ function saveMeetDetails() {
   if (!date) { window.showToast?.('Please enter a meet date.', 'warn'); return; }
   localStorage.setItem('plMeetDetails', JSON.stringify({ date, name, fed, weightClass }));
   renderMeetPrep();
+  // Lets src/js/archetype-features.js's weigh-in alert (Meet Day tab) refresh —
+  // it already listens for this event, nothing was dispatching it before.
+  window.dispatchEvent(new Event('traininglog:meet-saved'));
   if (typeof window.showToast === 'function') window.showToast('Meet saved!');
+}
+
+function getSavedMeetDetails() {
+  try { return JSON.parse(localStorage.getItem('plMeetDetails') || '{}'); }
+  catch { return {}; }
 }
 
 function renderMeetPrep() {
@@ -18881,55 +18931,131 @@ function renderMeetPrep() {
   const dateVal = document.getElementById('meetDate')?.value;
   if (!dateVal) { display.innerHTML = ''; return; }
 
-  const meetDate = new Date(dateVal + 'T00:00:00');
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const diffMs = meetDate - today;
-  const diffDays = Math.round(diffMs / 86400000);
-  const weeksOut = Math.floor(diffDays / 7);
-  const daysRem = diffDays % 7;
-
-  if (diffDays < 0) {
-    display.innerHTML = `<div style="color:var(--text-muted);text-align:center;padding:16px;">Meet has passed. Great lifting!</div>`;
-    return;
-  }
-
-  const savedMeet = JSON.parse(localStorage.getItem('plMeetDetails') || '{}');
+  const meetDateObj = new Date(dateVal + 'T00:00:00');
+  const savedMeet = getSavedMeetDetails();
   const meetName = savedMeet.name ? `<div style="font-size:1rem;color:var(--secondary-text);margin-bottom:4px;">${savedMeet.name}</div>` : '';
   const fedChip = savedMeet.fed ? `<span style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:0.78rem;color:var(--secondary-text);margin-right:6px;">${savedMeet.fed}</span>` : '';
   const wcChip = savedMeet.weightClass ? `<span style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:0.78rem;color:var(--secondary-text);">${savedMeet.weightClass}</span>` : '';
 
-  // Build phase timeline
-  const phases = [
-    { label: 'Peaking Block', weeks: '4–6 wks out', start: 6, end: 4 },
-    { label: 'Competition Prep', weeks: '3–4 wks out', start: 4, end: 2 },
-    { label: 'Taper / Deload', weeks: '1–2 wks out', start: 2, end: 0 },
-    { label: 'Meet Week', weeks: '0 wks out', start: 0, end: -1 },
-  ];
+  const plan = window.PowerliftingPeakWeek?.buildTaperPlan(dateVal, new Date().toISOString().slice(0, 10)) || [];
+  if (!plan.length) { display.innerHTML = ''; return; }
 
-  const phaseRows = phases.map(p => {
-    const active = weeksOut <= p.start && weeksOut > p.end;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:${active ? 'rgba(45,125,91,0.18)' : 'var(--surface-bg)'};border:1px solid ${active ? 'var(--primary)' : 'var(--border-color)'};margin-bottom:6px;">
-      <span style="font-size:1.1rem;">${active ? '▶' : '○'}</span>
-      <div>
-        <div style="font-weight:600;color:${active ? 'var(--text-color)' : 'var(--secondary-text)'};">${p.label}</div>
-        <div style="font-size:0.78rem;color:var(--text-muted);">${p.weeks}</div>
-      </div>
-    </div>`;
+  const daysOutToday = plan[0].daysOut;
+  const headerChip = daysOutToday > 0
+    ? `${Math.floor(daysOutToday / 7)}w ${daysOutToday % 7}d out`
+    : (daysOutToday === 0 ? 'Meet Day!' : 'Meet complete');
+
+  const dayCards = plan.map(day => {
+    const guidance = (day.guidance || []).map(g => `<li>${g}</li>`).join('');
+    const liftNoteEntries = day.liftNotes ? Object.entries(day.liftNotes) : [];
+    const liftNotes = liftNoteEntries.map(([lift, note]) =>
+      `<li><strong>${lift[0].toUpperCase()}${lift.slice(1)}:</strong> ${note}</li>`).join('');
+    const dateLabel = day.date ? new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+    const isTaperDay = day.isTaper;
+    return `
+      <div class="pod ${isTaperDay ? 'pod--flat' : ''}" style="margin-bottom:10px;">
+        <div class="pod-row" style="margin-bottom:6px;">
+          <span class="pod-kicker">${day.title}</span>
+          ${dateLabel ? `<span class="pod-meta">${dateLabel}</span>` : ''}
+        </div>
+        <ul style="margin:0;padding-left:18px;font-size:0.85rem;color:var(--secondary-text);">
+          ${guidance}${liftNotes}
+        </ul>
+      </div>`;
   }).join('');
 
   display.innerHTML = `
     <div style="text-align:center;margin-bottom:16px;">
       ${meetName}
       <div style="margin-bottom:8px;">${fedChip}${wcChip}</div>
-      <div class="meet-week-chip">${weeksOut > 0 ? `${weeksOut}w ${daysRem}d out` : 'Meet Week!'}</div>
-      <div style="font-size:0.85rem;color:var(--text-muted);">${meetDate.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}</div>
+      <div class="meet-week-chip">${headerChip}</div>
+      <div style="font-size:0.85rem;color:var(--text-muted);">${meetDateObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}</div>
     </div>
-    <h4 style="margin:0 0 8px;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Prep Phases</h4>
-    ${phaseRows}`;
+    ${dayCards}`;
+}
+
+// ── Weight Class & Cut Plan ──────────────────────────────────────────
+function renderCutPlan() {
+  const display = document.getElementById('cutPlanDisplay');
+  if (!display) return;
+
+  const currentWeight = parseFloat(document.getElementById('cutCurrentWeight')?.value);
+  const targetWeight = parseFloat(document.getElementById('cutTargetWeight')?.value);
+  const unit = document.getElementById('cutUnit')?.value || 'kg';
+
+  localStorage.setItem('plCutPlanInputs', JSON.stringify({ currentWeight, targetWeight, unit }));
+
+  if (!Number.isFinite(currentWeight) || !Number.isFinite(targetWeight)) {
+    display.innerHTML = '';
+    renderCaffeinePod();
+    return;
+  }
+
+  const plan = window.PowerliftingPeakWeek?.planWeightCut({ currentWeight, targetWeight, unit });
+  if (!plan) { display.innerHTML = ''; renderCaffeinePod(); return; }
+
+  const scheduleRows = (plan.schedule || []).map(day => `
+    <div class="pod pod--flat" style="margin-bottom:8px;">
+      <div class="pod-kicker" style="margin-bottom:4px;">${day.label}</div>
+      <ul style="margin:0;padding-left:18px;font-size:0.85rem;color:var(--secondary-text);">
+        ${day.notes.map(n => `<li>${n}</li>`).join('')}
+      </ul>
+    </div>`).join('');
+
+  display.innerHTML = `
+    <div class="pod">
+      <div class="pod-kicker" style="margin-bottom:6px;">${plan.cutPercent.toFixed(1)}% of bodyweight</div>
+      <p style="margin:0;font-size:0.88rem;color:var(--secondary-text);">${plan.message}</p>
+    </div>
+    ${scheduleRows}`;
+
+  renderCaffeinePod();
+}
+
+function loadCutPlanInputs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('plCutPlanInputs') || 'null');
+    if (!saved) return;
+    if (Number.isFinite(saved.currentWeight)) document.getElementById('cutCurrentWeight').value = saved.currentWeight;
+    if (Number.isFinite(saved.targetWeight)) document.getElementById('cutTargetWeight').value = saved.targetWeight;
+    if (saved.unit) document.getElementById('cutUnit').value = saved.unit;
+  } catch { /* ignore */ }
 }
 
 window.saveMeetDetails = saveMeetDetails;
 window.renderMeetPrep = renderMeetPrep;
+window.renderCutPlan = renderCutPlan;
+
+// ── Meet Day: race-day caffeine estimate ─────────────────────────────
+// The attempt-selection sheet itself (fill/status-cycling/total/weigh-in
+// alert) is already implemented in src/js/archetype-features.js — this
+// only adds the caffeine-dose card, driven by the weight-cut plan above.
+function renderCaffeinePod() {
+  const pod = document.getElementById('caffeinePod');
+  if (!pod) return;
+  let bodyweight = null;
+  try {
+    const cutInputs = JSON.parse(localStorage.getItem('plCutPlanInputs') || 'null');
+    if (cutInputs) {
+      const unit = cutInputs.unit || 'kg';
+      const w = cutInputs.targetWeight || cutInputs.currentWeight;
+      if (Number.isFinite(w)) bodyweight = unit === 'lbs' ? w * 0.453592 : w;
+    }
+  } catch { /* ignore */ }
+
+  if (!bodyweight) {
+    pod.innerHTML = `<p class="pl-hint" style="margin:0;">Set your weight on the Meet Prep tab's cut plan to see a caffeine dosing estimate here.</p>`;
+    return;
+  }
+
+  const dose = window.PowerliftingPeakWeek?.getCaffeineDose(bodyweight);
+  if (!dose) { pod.innerHTML = ''; return; }
+  pod.innerHTML = `
+    <div class="pod-kicker" style="margin-bottom:6px;">Race-day caffeine (optional)</div>
+    <p style="margin:0;font-size:0.88rem;color:var(--secondary-text);">${dose.minMg}–${dose.maxMg} mg, ${dose.timingNote} Individual response varies a lot — go with a dose you've already tested in training.</p>`;
+}
+
+window.renderCaffeinePod = renderCaffeinePod;
 
 </script>
 

@@ -376,23 +376,76 @@ function _fmt(totalSeconds) {
     _updateTotal();
   }
 
-  function _autofillOpeners() {
-    // Pull from the 1RM history (pl1RMHistory stored by the existing PL tab)
-    try {
-      const history = JSON.parse(localStorage.getItem('pl1RMHistory') || '[]');
-      LIFTS.forEach(lift => {
-        const liftHistory = history.filter(e =>
-          e.exercise && e.exercise.toLowerCase().replace(/\s+/g, '').includes(lift.slice(0, 5))
-        );
-        if (!liftHistory.length) return;
-        const max1RM = Math.max(...liftHistory.map(e => parseFloat(e.estimated1RM) || 0));
-        if (!max1RM) return;
-        const opener = Math.floor(max1RM * 0.90 / 2.5) * 2.5; // 90% rounded to nearest 2.5
-        const input = document.getElementById(`attempt_${lift}_opener`);
-        if (input && !input.value) input.value = opener;
+  // Best tested 1RM per lift, read from the 1RM Tracker sub-tab's real
+  // storage (plOneRM_<user>, written by saveOneRMEntry() in index.html —
+  // this used to point at a "pl1RMHistory" key that tab never wrote to).
+  function _bestOneRMByLift() {
+    const user = window.currentUser || localStorage.getItem('fitnessAppUser') || 'guest';
+    let entries = [];
+    try { entries = JSON.parse(localStorage.getItem(`plOneRM_${user}`) || '[]'); } catch (_) { entries = []; }
+    const liftKeyMap = { Squat: 'squat', 'Bench Press': 'bench', Deadlift: 'deadlift' };
+    const best = {};
+    entries.forEach(e => {
+      const key = liftKeyMap[e.lift];
+      if (!key || !Number.isFinite(e.estimated)) return;
+      if (!best[key] || e.estimated > best[key]) best[key] = e.estimated;
+    });
+    return best;
+  }
+
+  // Fills opener/2nd/3rd for every lift with a tested 1RM, using the
+  // opener-≈90% / 2nd-is-your-real-1RM / 3rd-held-in-reserve algorithm
+  // (src/js/powerlifting-peak-week.js). Only overwrites blank inputs
+  // (or inputs already marked good/no-lift keeps its opener status) so
+  // it's safe to re-run — used both on first load and from the explicit
+  // "Fill from 1RM Tracker" button on the Meet Day tab.
+  function _autofillOpeners(force) {
+    const bestByLift = _bestOneRMByLift();
+    let filledAny = false;
+    LIFTS.forEach(lift => {
+      const oneRM = bestByLift[lift];
+      if (!oneRM) return;
+      const suggestion = window.PowerliftingPeakWeek
+        ? window.PowerliftingPeakWeek.suggestAttempts(oneRM, 2.5)
+        : { opener: Math.floor(oneRM * 0.90 / 2.5) * 2.5, second: null, third: null };
+      if (!suggestion) return;
+
+      ATTEMPTS.forEach((attempt, idx) => {
+        const value = idx === 0 ? suggestion.opener : idx === 1 ? suggestion.second : suggestion.third;
+        if (value == null) return;
+        const input = document.getElementById(`attempt_${lift}_${attempt}`);
+        if (input && (force || !input.value)) {
+          input.value = value;
+          filledAny = true;
+        }
       });
-    } catch (_) {}
+    });
     _updateTotal();
+    return filledAny;
+  }
+
+  function fillSuggestedAttempts() {
+    const filled = _autofillOpeners(true);
+    _save();
+    if (!filled && typeof window.showToast === 'function') {
+      window.showToast('Log a 1RM for at least one lift on the 1RM Tracker tab first.', 'warn');
+    } else if (typeof window.showToast === 'function') {
+      window.showToast('Filled openers/2nd/3rd from your best tested 1RMs.');
+    }
+  }
+
+  function clearAttemptSheet() {
+    LIFTS.forEach(lift => {
+      ATTEMPTS.forEach(attempt => {
+        const input = document.getElementById(`attempt_${lift}_${attempt}`);
+        if (input) input.value = '';
+        _statuses[_statusKey(lift, attempt)] = 'pending';
+        _applyStatusBtn(lift, attempt, 'pending');
+      });
+    });
+    localStorage.removeItem(_getStorageKey());
+    _updateTotal();
+    if (typeof window.showToast === 'function') window.showToast('Attempt sheet cleared.');
   }
 
   function _cycleStatus(lift, attempt) {
@@ -412,9 +465,30 @@ function _fmt(totalSeconds) {
   }
 
   function _updateTotal() {
+    const el = document.getElementById('attemptTotal');
+    if (!el) return;
+    const unit = localStorage.getItem('defaultWeightUnit') || 'kg';
+
+    if (window.PowerliftingPeakWeek) {
+      // Real IPF scoring: a 0/3 lift (all 3 attempts missed) zeroes the
+      // whole meet total, not just that lift — the naive per-lift-best
+      // sum below doesn't know that.
+      const attempts = {};
+      LIFTS.forEach(lift => {
+        attempts[lift] = ATTEMPTS.map(attempt => ({
+          weight: parseFloat(document.getElementById(`attempt_${lift}_${attempt}`)?.value) || 0,
+          status: _statuses[_statusKey(lift, attempt)] || 'pending'
+        }));
+      });
+      const result = window.PowerliftingPeakWeek.computeMeetResult(attempts);
+      if (result.bombedOut) { el.textContent = 'Bombed out'; return; }
+      el.textContent = result.total != null ? `${result.total} ${unit}` : `— ${unit}`;
+      return;
+    }
+
+    // Fallback if powerlifting-peak-week.js hasn't loaded for some reason.
     let total = 0;
     LIFTS.forEach(lift => {
-      // Best successful attempt per lift
       let best = 0;
       ATTEMPTS.forEach(attempt => {
         const status = _statuses[_statusKey(lift, attempt)] || 'pending';
@@ -424,8 +498,7 @@ function _fmt(totalSeconds) {
       });
       total += best;
     });
-    const el = document.getElementById('attemptTotal');
-    if (el) el.textContent = total > 0 ? `${total} kg` : '—';
+    el.textContent = total > 0 ? `${total} ${unit}` : `— ${unit}`;
   }
 
   function _renderWeighInAlert() {
@@ -467,6 +540,8 @@ function _fmt(totalSeconds) {
   // Re-render weigh-in alert whenever meet prep is saved
   window.addEventListener('traininglog:meet-saved', _renderWeighInAlert);
   window.renderWeighInAlert = _renderWeighInAlert;
+  window.fillSuggestedAttempts = fillSuggestedAttempts;
+  window.clearAttemptSheet = clearAttemptSheet;
 })();
 
 // ── Step tracking widget ──────────────────────────────────────
