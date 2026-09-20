@@ -11,44 +11,44 @@
   const STEPS = ['goal', 'split', 'exercises', 'schedule', 'save'];
 
   const STEP_META = {
-    goal:      { icon: '🎯', label: 'Goal' },
-    split:     { icon: '📅', label: 'Split' },
-    exercises: { icon: '💪', label: 'Exercises' },
-    schedule:  { icon: '🗓️', label: 'Schedule' },
-    save:      { icon: '✅', label: 'Save' },
+    goal:      { icon: 'target', label: 'Goal' },
+    split:     { icon: 'calendar', label: 'Split' },
+    exercises: { icon: 'dumbbell', label: 'Exercises' },
+    schedule:  { icon: 'clock', label: 'Schedule' },
+    save:      { icon: 'save', label: 'Save' },
   };
 
   const GOALS = [
-    { value: 'strength',    icon: '🏋️', label: 'Strength',       desc: 'Build your 1-rep max on the big lifts' },
-    { value: 'hypertrophy', icon: '💪', label: 'Muscle Growth',   desc: 'Maximize size with higher-volume training' },
-    { value: 'fat-loss',    icon: '🔥', label: 'Fat Loss',        desc: 'Preserve muscle while burning body fat' },
-    { value: 'general',     icon: '⚡', label: 'General Fitness', desc: 'Balanced strength, health, and endurance' },
+    { value: 'strength',    icon: 'trophy', label: 'Strength',       desc: 'Build your 1-rep max on the big lifts' },
+    { value: 'hypertrophy', icon: 'dumbbell', label: 'Muscle Growth',   desc: 'Maximize size with higher-volume training' },
+    { value: 'fat-loss',    icon: 'flame', label: 'Fat Loss',        desc: 'Preserve muscle while burning body fat' },
+    { value: 'general',     icon: 'zap', label: 'General Fitness', desc: 'Balanced strength, health, and endurance' },
   ];
 
   const SPLITS = [
     {
-      type: 'fullbody', days: 3, icon: '🔄',
+      type: 'fullbody', days: 3, icon: 'refresh',
       label: 'Full Body',
       badge: '3 days / week',
       desc: 'Train every muscle group each session. Maximum frequency, great for beginners.',
       rec: 'Best for: Beginners, 3 days/week',
     },
     {
-      type: 'upperlower', days: 4, icon: '↕️',
+      type: 'upperlower', days: 4, icon: 'activity',
       label: 'Upper / Lower',
       badge: '4 days / week',
       desc: 'Alternate upper-body and lower-body days. Popular intermediate structure.',
       rec: 'Best for: Intermediate, 4 days/week',
     },
     {
-      type: 'ppl', days: 6, icon: '📐',
+      type: 'ppl', days: 6, icon: 'gauge',
       label: 'Push / Pull / Legs',
       badge: '5–6 days / week',
       desc: 'Push muscles (chest/shoulders/triceps), Pull (back/biceps), Legs — each twice a week.',
       rec: 'Best for: Advanced, 5–6 days/week',
     },
     {
-      type: 'custom', days: 4, icon: '✏️',
+      type: 'custom', days: 4, icon: 'pencil',
       label: 'Custom',
       badge: 'You choose',
       desc: 'Start from scratch and design your own split with any number of days.',
@@ -84,6 +84,12 @@
       const r = (Math.random() * 16) | 0;
       return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
     });
+  }
+
+  // Inline SVG from the shared ICONS map (defined in index.html); empty if unavailable
+  function ico(key) {
+    const svg = (typeof ICONS !== 'undefined' && ICONS[key]) || '';
+    return '<span class="ui-icon" aria-hidden="true">' + svg + '</span>';
   }
 
   function esc(v) {
@@ -206,7 +212,7 @@
 <body>
   <button class="no-print" onclick="window.print()"
     style="float:right;padding:8px 20px;background:#2e7d55;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;">
-    🖨️ Print / Save PDF
+    Print / Save PDF
   </button>
   <h1>${esc(title)}</h1>
   <p class="meta">
@@ -424,13 +430,13 @@
       draft.coachId = draft.coachId || userId;
       core.upsertProgram(window, core.normalizeDraft(draft));
       persistDraft();
-      showToast('✅ Program saved!');
+      showToast('Program saved');
     }
 
     function saveTemplate() {
       if (!(draft.title || '').trim()) { showToast('Add a title first.', true); return; }
       core.saveProgramTemplate(window, draft);
-      showToast('📋 Template saved!');
+      showToast('Template saved');
     }
 
     function assignToClient() {
@@ -443,7 +449,7 @@
         notes: advancedForm.assignmentNotes || '',
         program: draft,
       });
-      showToast(`✅ Assigned to ${clientName}`);
+      showToast(`Assigned to ${clientName}`);
     }
 
     function startFresh() {
@@ -519,7 +525,7 @@
           (s === step ? ' active' : '') +
           (i < currentIdx ? ' done' : '');
         btn.innerHTML = `
-          <span class="pbv2-step-icon">${i < currentIdx ? '✓' : meta.icon}</span>
+          <span class="pbv2-step-icon">${ico(i < currentIdx ? 'check' : meta.icon)}</span>
           <span class="pbv2-step-label">${meta.label}</span>
         `;
         // Allow clicking back to completed steps
@@ -539,7 +545,7 @@
       const backBtn = document.createElement('button');
       backBtn.className = 'pbv2-nav-back';
       backBtn.type = 'button';
-      backBtn.textContent = stepIndex(step) === 0 ? 'New' : '← Back';
+      backBtn.innerHTML = stepIndex(step) === 0 ? '<span>New</span>' : ico('arrowLeft') + '<span>Back</span>';
       backBtn.addEventListener('click', () => {
         if (stepIndex(step) === 0) startFresh();
         else prevStep();
@@ -548,7 +554,7 @@
       const nextBtn = document.createElement('button');
       nextBtn.className = 'pbv2-nav-next';
       nextBtn.type = 'button';
-      nextBtn.textContent = step === 'save' ? 'Save Program ✅' : 'Continue →';
+      nextBtn.innerHTML = step === 'save' ? '<span>Save Program</span>' + ico('check') : '<span>Continue</span>' + ico('chevronRight');
       nextBtn.addEventListener('click', () => {
         if (step === 'save') saveFinal();
         else nextStep();
@@ -575,7 +581,7 @@
         card.type = 'button';
         card.className = 'pbv2-goal-card' + (draft.archetype === g.value ? ' selected' : '');
         card.innerHTML = `
-          <span class="pbv2-goal-icon">${g.icon}</span>
+          <span class="pbv2-goal-icon">${ico(g.icon)}</span>
           <div class="pbv2-goal-label">${esc(g.label)}</div>
           <div class="pbv2-goal-desc">${esc(g.desc)}</div>
         `;
@@ -601,7 +607,7 @@
         card.type = 'button';
         card.className = 'pbv2-split-card' + (draft.split?.type === sp.type ? ' selected' : '');
         card.innerHTML = `
-          <span class="pbv2-split-icon">${sp.icon}</span>
+          <span class="pbv2-split-icon">${ico(sp.icon)}</span>
           <div class="pbv2-split-info">
             <div class="pbv2-split-label">${esc(sp.label)}</div>
             <span class="pbv2-split-days-badge">${esc(sp.badge)}</span>
@@ -620,7 +626,7 @@
       const wrap = document.createElement('div');
       wrap.id = 'pbv2ExWrap';
       wrap.innerHTML = `
-        <div class="pbv2-step-heading" style="padding-bottom:0;">
+        <div class="pbv2-step-heading pbv2-step-heading--tight">
           <h2>Build your days</h2>
           <p>Pick a day, search for exercises, tap to add.</p>
         </div>
@@ -655,8 +661,8 @@
           <span class="pbv2-day-tab-name">${esc(day.name)}</span>
           ${exCount ? `<span class="pbv2-day-tab-count">${exCount}</span>` : ''}
           <span class="pbv2-day-tab-actions">
-            <span data-act="rename" data-id="${day.dayId}" title="Rename">✏️</span>
-            <span data-act="delete" data-id="${day.dayId}" title="Delete">🗑</span>
+            <span data-act="rename" data-id="${day.dayId}" title="Rename" role="button" aria-label="Rename day">${ico('pencil')}</span>
+            <span data-act="delete" data-id="${day.dayId}" title="Delete" role="button" aria-label="Delete day">${ico('x')}</span>
           </span>
         `;
         btn.addEventListener('click', e => {
@@ -675,7 +681,7 @@
       const addBtn = document.createElement('button');
       addBtn.type = 'button';
       addBtn.className = 'pbv2-day-tab pbv2-day-tab-add';
-      addBtn.textContent = '+ Day';
+      addBtn.innerHTML = ico('plus') + '<span>Day</span>';
       addBtn.addEventListener('click', addDay);
       host.appendChild(addBtn);
     }
@@ -740,7 +746,7 @@
       persistDraft();
       renderExercisesPane();
       window.showToast(
-        `✅ "${tpl.name}" loaded — ${mapped.length} exercise${mapped.length !== 1 ? 's' : ''} added`,
+        `"${tpl.name}" loaded — ${mapped.length} exercise${mapped.length !== 1 ? 's' : ''} added`,
         'success', 4000
       );
     }
@@ -781,7 +787,7 @@
         strip.className = 'pbv2-template-strip';
         const sel = document.createElement('select');
         sel.className = 'pbv2-template-select';
-        sel.innerHTML = '<option value="">📋 Load from template…</option>' +
+        sel.innerHTML = '<option value="">Load from template…</option>' +
           availableTpls.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('');
         const loadBtn = document.createElement('button');
         loadBtn.type = 'button';
@@ -804,7 +810,7 @@
       const searchInput = document.createElement('input');
       searchInput.type = 'text';
       searchInput.className = 'pbv2-picker-search';
-      searchInput.placeholder = '🔍 Search or type any exercise…';
+      searchInput.placeholder = 'Search or type any exercise…';
       searchInput.value = pickerQuery;
       searchInput.addEventListener('input', e => { pickerQuery = e.target.value; _updatePickerList(pickerList); });
 
@@ -844,7 +850,7 @@
       items.slice(0, 40).forEach(name => {
         const row = document.createElement('div');
         row.className = 'pbv2-picker-row';
-        row.innerHTML = `<span class="pbv2-picker-row-name">${esc(name)}</span><span class="pbv2-picker-row-add">+</span>`;
+        row.innerHTML = `<span class="pbv2-picker-row-name">${esc(name)}</span><span class="pbv2-picker-row-add">${ico('plus')}</span>`;
         row.addEventListener('click', () => {
           addExercise(name);
           // Clear search after adding
@@ -865,7 +871,7 @@
       header.className = 'pbv2-ex-card-header';
       header.innerHTML = `
         <span class="pbv2-ex-card-name">${esc(ex.name)}</span>
-        <button type="button" class="pbv2-ex-card-remove" title="Remove exercise">✕</button>
+        <button type="button" class="pbv2-ex-card-remove" title="Remove exercise" aria-label="Remove exercise">${ico('x')}</button>
       `;
       header.querySelector('button').addEventListener('click', () => removeExercise(dayId, ex.exerciseId));
       card.appendChild(header);
@@ -883,11 +889,11 @@
       (ex.sets || []).forEach((s, idx) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="color:var(--text-muted,#7a8f7d);font-size:0.78rem;">${idx + 1}</td>
+          <td class="pbv2-set-n">${idx + 1}</td>
           <td><input type="number" min="1" max="100" step="1" value="${s.reps ?? ''}" placeholder="—"></td>
           <td><input type="number" min="0" step="0.5" value="${s.weight ?? ''}" placeholder="—"></td>
           <td><input type="number" min="1" max="10" step="0.5" value="${s.rpe ?? ''}" placeholder="—"></td>
-          <td><button type="button" class="pbv2-del-set-btn" title="Remove set">✕</button></td>
+          <td><button type="button" class="pbv2-del-set-btn" title="Remove set" aria-label="Remove set">${ico('x')}</button></td>
         `;
         const [repsInp, weightInp, rpeInp] = tr.querySelectorAll('input');
         repsInp.addEventListener('change', e => updateSetField(dayId, ex.exerciseId, idx, 'reps', e.target.value));
@@ -901,7 +907,7 @@
       const addSetBtn = document.createElement('button');
       addSetBtn.type = 'button';
       addSetBtn.className = 'pbv2-add-set-btn';
-      addSetBtn.textContent = '+ Add Set';
+      addSetBtn.innerHTML = ico('plus') + '<span>Add Set</span>';
       addSetBtn.addEventListener('click', () => addSet(dayId, ex.exerciseId));
       card.appendChild(addSetBtn);
 
@@ -1002,8 +1008,8 @@
             </div>
           </div>
 
-          <button type="button" class="pbv2-save-btn" id="pbv2SaveFinalBtn">Save Program ✅</button>
-          <button type="button" class="pbv2-advanced-btn" id="pbv2ExportPdfBtn" style="width:100%;margin-top:8px;">📄 Export as PDF</button>
+          <button type="button" class="pbv2-save-btn" id="pbv2SaveFinalBtn"><span>Save Program</span>${ico('check')}</button>
+          <button type="button" class="pbv2-advanced-btn pbv2-advanced-btn--block" id="pbv2ExportPdfBtn">${ico('fileText')}<span>Export as PDF</span></button>
 
           <details class="pbv2-save-advanced">
             <summary>Advanced — Templates &amp; Client Assignment</summary>
@@ -1012,7 +1018,7 @@
                 <textarea id="pbv2ProgNotes" rows="2" placeholder="e.g., Add 2.5 kg each week...">${esc(draft.progressionNotes || '')}</textarea>
               </label>
               <div class="pbv2-advanced-btn-row">
-                <button type="button" class="pbv2-advanced-btn" id="pbv2SaveTplBtn">💾 Save as Template</button>
+                <button type="button" class="pbv2-advanced-btn" id="pbv2SaveTplBtn">${ico('save')}<span>Save as Template</span></button>
               </div>
               <label>Client name
                 <input type="text" id="pbv2ClientName" placeholder="e.g., Alex Smith" value="${esc(advancedForm.clientName)}">
@@ -1021,7 +1027,7 @@
                 <textarea id="pbv2AssignNotes" rows="2" placeholder="optional">${esc(advancedForm.assignmentNotes)}</textarea>
               </label>
               <div class="pbv2-advanced-btn-row">
-                <button type="button" class="pbv2-advanced-btn" id="pbv2AssignBtn">👤 Assign to Client</button>
+                <button type="button" class="pbv2-advanced-btn" id="pbv2AssignBtn">${ico('users')}<span>Assign to Client</span></button>
               </div>
             </div>
           </details>
@@ -1087,11 +1093,11 @@
 
     function renderResult(data, fromCache) {
       const issuesHtml = (data.issues || []).map(s =>
-        `<li class="prog-ai-item"><span class="prog-ai-item-icon">⚠️</span>${s}</li>`
+        `<li class="prog-ai-item"><span class="prog-ai-item-icon prog-ai-item-icon--warn">${ico('alertTriangle')}</span>${s}</li>`
       ).join('') || '<li class="prog-ai-item">None identified.</li>';
 
       const suggestionsHtml = (data.suggestions || []).map(s =>
-        `<li class="prog-ai-item"><span class="prog-ai-item-icon">💡</span>${s}</li>`
+        `<li class="prog-ai-item"><span class="prog-ai-item-icon">${ico('lightbulb')}</span>${s}</li>`
       ).join('') || '<li class="prog-ai-item">No suggestions.</li>';
 
       panelEl.innerHTML = `
@@ -1101,15 +1107,15 @@
         </div>
         <div class="prog-ai-section">
           <div class="prog-ai-section-title">Issues</div>
-          <ul style="margin:0;padding:0;list-style:none">${issuesHtml}</ul>
+          <ul class="prog-ai-list">${issuesHtml}</ul>
         </div>
         <div class="prog-ai-section">
           <div class="prog-ai-section-title">Suggestions</div>
-          <ul style="margin:0;padding:0;list-style:none">${suggestionsHtml}</ul>
+          <ul class="prog-ai-list">${suggestionsHtml}</ul>
         </div>
         <div class="prog-ai-footer">
-          ${fromCache ? '<span style="font-size:11px;color:var(--secondary-text)">Cached result</span>' : ''}
-          <button type="button" class="prog-ai-reanalyse">Re-analyse</button>
+          ${fromCache ? '<span class="prog-ai-cached">Cached result</span>' : ''}
+          <button type="button" class="prog-ai-reanalyse">${ico('refresh')}<span>Re-analyse</span></button>
         </div>
       `;
 
@@ -1172,9 +1178,9 @@
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         if (err.error === 'AI_NOT_CONFIGURED') {
-          panelEl.innerHTML = '<div class="prog-ai-loading" style="color:var(--secondary-text)">AI analysis is not enabled on this server.</div>';
+          panelEl.innerHTML = '<div class="prog-ai-loading">AI analysis is not enabled on this server.</div>';
         } else {
-          panelEl.innerHTML = '<div class="prog-ai-loading" style="color:#eb5757">Analysis failed. Please try again.</div>';
+          panelEl.innerHTML = '<div class="prog-ai-loading prog-ai-loading--err">Analysis failed. Please try again.</div>';
         }
         return;
       }
@@ -1184,11 +1190,11 @@
       renderResult(data, false);
     } catch (err) {
       if (err.name === 'AbortError') {
-        panelEl.innerHTML = '<div class="prog-ai-loading" style="color:#eb5757">Request timed out. Please try again.</div>';
+        panelEl.innerHTML = '<div class="prog-ai-loading prog-ai-loading--err">Request timed out. Please try again.</div>';
       } else if (!navigator.onLine) {
-        panelEl.innerHTML = '<div class="prog-ai-loading" style="color:var(--secondary-text)">You are offline. Connect to the internet to analyse programs.</div>';
+        panelEl.innerHTML = '<div class="prog-ai-loading">You are offline. Connect to the internet to analyse programs.</div>';
       } else {
-        panelEl.innerHTML = '<div class="prog-ai-loading" style="color:#eb5757">Analysis failed. Please try again.</div>';
+        panelEl.innerHTML = '<div class="prog-ai-loading prog-ai-loading--err">Analysis failed. Please try again.</div>';
       }
     }
   }
@@ -1202,7 +1208,7 @@
     if (!container) return;
 
     const core = window.programBuilderV2Core;
-    if (!core) { container.innerHTML = '<div style="padding:16px;color:#eb5757">Core not loaded.</div>'; return; }
+    if (!core) { container.innerHTML = '<div class="mx-empty">Core not loaded.</div>'; return; }
 
     const programs = core.loadPrograms(window);
 
@@ -1210,7 +1216,7 @@
     header.className = 'prog-list-header';
     header.innerHTML = `
       <h2>My Programs</h2>
-      <button type="button" class="prog-list-new-btn" onclick="showProgramView('build')">+ New Program</button>
+      <button type="button" class="prog-list-new-btn" onclick="showProgramView('build')">${ico('plus')}<span>New Program</span></button>
     `;
 
     container.innerHTML = '';
@@ -1220,7 +1226,7 @@
       const empty = document.createElement('div');
       empty.className = 'prog-list-empty';
       empty.innerHTML = `
-        <span class="prog-list-empty-icon">🏋️</span>
+        <span class="prog-list-empty-icon">${ico('dumbbell')}</span>
         <p>No programs saved yet.</p>
         <button type="button" class="prog-list-empty-btn" onclick="showProgramView('build')">Build Your First Program</button>
       `;
@@ -1251,10 +1257,10 @@
         </div>
         <div class="prog-card-actions">
           <button type="button" class="prog-card-load" data-idx="${origIdx}">Load into Builder</button>
-          <button type="button" class="prog-card-export" data-idx="${origIdx}" title="Export as PDF">📄 PDF</button>
+          <button type="button" class="prog-card-export" data-idx="${origIdx}" title="Export as PDF">${ico('fileText')}<span>PDF</span></button>
           <button type="button" class="prog-card-del" data-idx="${origIdx}">Delete</button>
         </div>
-        <button type="button" class="prog-card-analyse">✨ Analyse with AI</button>
+        <button type="button" class="prog-card-analyse">${ico('sparkles')}<span>Analyse with AI</span></button>
       `;
 
       card.querySelector('.prog-card-export').addEventListener('click', () => exportProgramPDF(prog));

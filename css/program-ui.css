@@ -1,0 +1,337 @@
+/* =============================================================
+   PROGRAM TAB — Modernist skin
+   Overrides ProgramTab.css for the builder wizard, My Programs
+   list and the AI analysis panel. Markup, ids and handlers are
+   unchanged (src/js/ProgramTabV2.js); only presentation lives here.
+   Scoped to #programTab so nothing else is affected.
+   ============================================================= */
+
+#programTab .ui-icon { display: inline-flex; align-items: center; justify-content: center; width: 1.1em; height: 1.1em; flex: none; }
+#programTab .ui-icon svg { width: 100%; height: 100%; }
+
+/* ── Top nav (Build / My Programs) ─────────────────────────── */
+#programTab .prog-top-nav { display: flex; gap: 8px; padding: 12px 12px 0; border: 0; }
+#programTab .prog-top-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 14px;
+  border-radius: var(--radius-pill); border: 1px solid var(--pill-border); background: var(--pill-bg); box-shadow: none;
+  color: var(--text-tertiary); font-family: var(--font-label); font-size: 13px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase;
+}
+#programTab .prog-top-btn.active { background: var(--pill-bg-active); border-color: transparent; color: var(--pill-text-active); }
+
+#programTab #progAiGenBtnWrap { padding: 12px 12px 0 !important; }
+#programTab #progAiGenBtn { width: 100%; }
+
+/* ── Wizard shell ──────────────────────────────────────────── */
+#programTab .pbv2-root { display: flex; flex-direction: column; gap: 14px; padding: 12px; background: none; border: 0; }
+#programTab .pbv2-content { display: flex; flex-direction: column; gap: 14px; padding: 0; background: none; border: 0; }
+
+/* stepper */
+#programTab .pbv2-stepper { display: flex; gap: 6px; padding: 0; margin: 0; background: none; border: 0; overflow-x: auto; scrollbar-width: none; }
+#programTab .pbv2-stepper::-webkit-scrollbar { display: none; }
+#programTab .pbv2-stepper::before,
+#programTab .pbv2-stepper::after,
+#programTab .pbv2-step::before,
+#programTab .pbv2-step::after { display: none; }
+#programTab .pbv2-step {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0; padding: 10px 2px;
+  border-radius: 16px; border: 1px solid var(--border-chip); background: var(--pod-bg); box-shadow: none; cursor: default;
+}
+#programTab .pbv2-step-icon {
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; margin: 0;
+  background: var(--surface-recessed); border: 1px solid var(--border-chip); color: var(--text-tertiary); font-size: 15px;
+}
+#programTab .pbv2-step-label { font-family: var(--font-label); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mx-faint); }
+#programTab .pbv2-step.active { border-color: var(--green-70); background: var(--pod-bg-alt); }
+#programTab .pbv2-step.active .pbv2-step-icon { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
+#programTab .pbv2-step.active .pbv2-step-label { color: var(--green-90); }
+#programTab .pbv2-step.done { cursor: pointer; }
+#programTab .pbv2-step.done .pbv2-step-icon { background: rgba(47, 138, 99, 0.18); border-color: var(--green-70); color: var(--green-90); }
+#programTab .pbv2-step.done .pbv2-step-label { color: var(--text-tertiary); }
+
+/* headings */
+#programTab .pbv2-step-heading { padding: 4px 2px 0; text-align: left; }
+#programTab .pbv2-step-heading--tight { padding-bottom: 0; }
+#programTab .pbv2-step-heading h2 {
+  margin: 0 0 4px; font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.05; text-transform: uppercase; letter-spacing: 0; color: var(--text-primary); text-align: left;
+}
+#programTab .pbv2-step-heading p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-tertiary); text-align: left; }
+
+/* ── Goal + split cards ────────────────────────────────────── */
+#programTab .pbv2-goal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0; }
+#programTab .pbv2-goal-card,
+#programTab .pbv2-split-card {
+  position: relative; margin: 0; text-align: left; border-radius: var(--radius-pod); border: 1px solid var(--border-soft);
+  background: var(--pod-bg); box-shadow: var(--pod-bevel); color: var(--text-primary); transition: border-color 0.15s, background 0.15s;
+}
+#programTab .pbv2-goal-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; }
+#programTab .pbv2-goal-card:hover, #programTab .pbv2-split-card:hover { border-color: var(--green-70); transform: none; }
+#programTab .pbv2-goal-card.selected, #programTab .pbv2-split-card.selected {
+  border-color: var(--green-70); background: var(--pod-bg-alt); box-shadow: 0 0 0 1px var(--green-70), var(--pod-bevel);
+}
+#programTab .pbv2-goal-icon,
+#programTab .pbv2-split-icon {
+  width: 42px; height: 42px; flex: none; display: inline-flex; align-items: center; justify-content: center; margin: 0 0 8px; font-size: 20px;
+  border-radius: 14px; background: var(--surface-recessed); border: 1px solid var(--border-chip); color: var(--green-90);
+}
+#programTab .pbv2-goal-card.selected .pbv2-goal-icon,
+#programTab .pbv2-split-card.selected .pbv2-split-icon { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
+#programTab .pbv2-goal-label,
+#programTab .pbv2-split-label { font-family: var(--font-display); font-size: 19px; font-weight: 400; line-height: 1.1; text-transform: uppercase; color: var(--text-primary); }
+#programTab .pbv2-goal-desc { font-size: 13px; line-height: 1.4; color: var(--text-tertiary); }
+
+#programTab .pbv2-split-list { display: flex; flex-direction: column; gap: 10px; padding: 0; }
+#programTab .pbv2-split-card { display: flex; align-items: flex-start; gap: 14px; padding: 16px; width: 100%; }
+#programTab .pbv2-split-icon { margin: 0; }
+#programTab .pbv2-split-info { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
+#programTab .pbv2-split-days-badge {
+  display: inline-flex; align-items: center; margin: 0; padding: 3px 10px; border-radius: var(--radius-pill);
+  background: rgba(47, 138, 99, 0.16); border: 1px solid rgba(47, 138, 99, 0.4); color: var(--green-90);
+  font-family: var(--font-label); font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+}
+#programTab .pbv2-split-desc { font-size: 13.5px; line-height: 1.45; color: var(--text-secondary); }
+#programTab .pbv2-split-rec { font-size: 12px; color: var(--mx-faint); }
+
+/* ── Exercises step ────────────────────────────────────────── */
+#programTab .pbv2-day-tabs-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 6px; margin: 0; border: 0; background: none; scrollbar-width: none; }
+#programTab .pbv2-day-tabs-row::-webkit-scrollbar { display: none; }
+#programTab .pbv2-day-tab {
+  flex: none; position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 8px 0 14px;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-chip); background: var(--pod-bg-alt); box-shadow: none;
+  font-size: 14px; font-weight: 600; color: var(--text-secondary);
+}
+#programTab .pbv2-day-tab.active { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
+#programTab .pbv2-day-tab-count {
+  min-width: 20px; padding: 1px 7px; border-radius: var(--radius-pill); text-align: center; background: rgba(0, 0, 0, 0.28); font-size: 12px; font-weight: 700; color: inherit;
+}
+#programTab .pbv2-day-tab-actions { display: inline-flex; gap: 0; margin: 0; padding: 0; opacity: 0.8; }
+#programTab .pbv2-day-tab-actions span {
+  display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin: 0; padding: 0; border-radius: 50%; font-size: 13px; cursor: pointer;
+}
+#programTab .pbv2-day-tab-actions .ui-icon { width: 15px; height: 15px; }
+#programTab .pbv2-day-tab-add { padding: 0 14px; border-style: dashed; color: var(--green-90); gap: 6px; }
+
+#programTab .pbv2-ex-stack { display: flex; flex-direction: column; gap: 12px; padding: 0; margin: 0; }
+#programTab .pbv2-added-section { display: flex; flex-direction: column; gap: 10px; padding: 0; background: none; border: 0; }
+#programTab .pbv2-added-header { font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-label); padding: 2px 2px 0; }
+#programTab .pbv2-added-empty,
+#programTab .pbv2-no-exercises,
+#programTab .pbv2-picker-empty {
+  padding: 22px 16px; border-radius: var(--radius-md); border: 1px dashed var(--border-default); background: transparent;
+  text-align: center; font-size: 14px; color: var(--text-tertiary);
+}
+
+/* exercise cards + sets table */
+#programTab .pbv2-ex-card { margin: 0; padding: 14px; border-radius: var(--radius-pod); border: 1px solid var(--border-soft); background: var(--pod-bg); box-shadow: var(--pod-bevel); }
+#programTab .pbv2-ex-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; padding: 0; border: 0; }
+#programTab .pbv2-ex-card-name { font-family: var(--font-display); font-size: 19px; font-weight: 400; line-height: 1.1; text-transform: uppercase; color: var(--text-primary); }
+#programTab .pbv2-ex-card-remove,
+#programTab .pbv2-del-set-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin: 0; padding: 0; flex: none;
+  border-radius: 50%; border: 0; background: none; box-shadow: none; color: var(--mx-faint); font-size: 15px;
+}
+#programTab .pbv2-ex-card-remove:hover, #programTab .pbv2-del-set-btn:hover { color: var(--danger-text-mobile); background: rgba(201, 112, 124, 0.1); }
+
+#programTab .pbv2-sets-table, #programTab .pbv2-sets-table thead, #programTab .pbv2-sets-table tbody, #programTab .pbv2-sets-table tr { background: none; border: 0; box-shadow: none; }
+#programTab .pbv2-sets-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; margin: 0; table-layout: fixed; }
+#programTab .pbv2-sets-table th {
+  padding: 0 4px 2px; border: 0; background: none; text-align: center;
+  font-family: var(--font-label); font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-label);
+}
+#programTab .pbv2-sets-table th:first-child, #programTab .pbv2-sets-table td:first-child { width: 28px; }
+#programTab .pbv2-sets-table th:last-child, #programTab .pbv2-sets-table td:last-child { width: 44px; }
+#programTab .pbv2-sets-table td { padding: 0 3px; border: 0; background: none; text-align: center; vertical-align: middle; }
+#programTab .pbv2-set-n { font-family: var(--font-display); font-size: 15px; color: var(--mx-faint); }
+#programTab .pbv2-sets-table input[type="number"] {
+  width: 100%; height: 44px; margin: 0; padding: 0 6px; text-align: center; border-radius: 12px; box-shadow: none;
+  background: var(--surface-recessed); border: 1px solid var(--border-soft); color: var(--text-primary); font-size: 16px; font-weight: 600;
+  -moz-appearance: textfield; appearance: textfield;
+}
+#programTab .pbv2-sets-table input[type="number"]::-webkit-outer-spin-button,
+#programTab .pbv2-sets-table input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#programTab .pbv2-sets-table input[type="number"]:focus { outline: none; border-color: var(--green-70); box-shadow: 0 0 0 1px var(--green-70); }
+#programTab .pbv2-add-set-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin: 6px 0 0; padding: 0;
+  border-radius: var(--radius-pill); border: 1px dashed var(--border-default); background: transparent; box-shadow: none; color: var(--green-90);
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+
+/* template loader + picker */
+#programTab .pbv2-template-strip { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px; border-radius: var(--radius-md); border: 1px dashed var(--border-default); background: transparent; }
+#programTab .pbv2-template-select {
+  flex: 1; min-width: 0; height: 44px; margin: 0; padding: 0 12px; border-radius: 12px; background: var(--surface-recessed);
+  border: 1px solid var(--border-soft); color: var(--text-primary); font-family: var(--font-body, inherit); font-size: 16px; width: auto;
+}
+#programTab .pbv2-template-load-btn {
+  flex: none; min-height: 44px; margin: 0; padding: 0 18px; border-radius: var(--radius-pill); border: 0; box-shadow: none;
+  background: var(--fill-btn-primary-mobile); color: var(--label-on-green); font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+#programTab .pbv2-picker { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 14px; border-radius: var(--radius-pod); border: 1px solid var(--border-soft); background: var(--pod-bg); box-shadow: var(--pod-bevel); }
+#programTab .pbv2-picker-search {
+  width: 100%; height: 48px; margin: 0; padding: 0 14px; border-radius: 14px; box-shadow: none;
+  background: var(--surface-recessed); border: 1px solid var(--border-soft); color: var(--text-primary); font-size: 16px;
+}
+#programTab .pbv2-picker-search:focus { outline: none; border-color: var(--green-70); box-shadow: 0 0 0 1px var(--green-70); }
+#programTab .pbv2-picker-cats { display: flex; gap: 8px; overflow-x: auto; padding: 0 0 2px; scrollbar-width: none; }
+#programTab .pbv2-picker-cats::-webkit-scrollbar { display: none; }
+#programTab .pbv2-cat-pill {
+  flex: none; min-height: 36px; margin: 0; padding: 0 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-chip); background: var(--pod-bg-alt); box-shadow: none;
+  color: var(--text-tertiary); font-family: var(--font-label); font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+}
+#programTab .pbv2-cat-pill.active { background: var(--pill-bg-active); border-color: transparent; color: var(--pill-text-active); }
+#programTab .pbv2-picker-list { display: flex; flex-direction: column; gap: 0; max-height: 340px; overflow-y: auto; margin: 0; padding: 0; }
+#programTab .pbv2-picker-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; margin: 0; padding: 4px 2px;
+  border: 0; border-top: 1px solid var(--border-row); border-radius: 0; background: none; cursor: pointer;
+}
+#programTab .pbv2-picker-row:first-child { border-top: 0; }
+#programTab .pbv2-picker-row-name { font-size: 15px; color: var(--text-primary); }
+#programTab .pbv2-picker-row-add {
+  width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 50%;
+  background: rgba(47, 138, 99, 0.16); border: 1px solid rgba(47, 138, 99, 0.4); color: var(--green-90); font-size: 15px;
+}
+
+/* ── Schedule step ─────────────────────────────────────────── */
+#programTab .pbv2-schedule-body { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius-pod); border: 1px solid var(--border-soft); background: var(--pod-bg); box-shadow: var(--pod-bevel); }
+#programTab .pbv2-schedule-label { margin: 6px 0 0; font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-label); }
+#programTab .pbv2-schedule-label:first-child { margin-top: 0; }
+#programTab .pbv2-date-input {
+  width: 100%; height: 48px; margin: 0; padding: 0 14px; border-radius: 14px; box-shadow: none;
+  background: var(--surface-recessed); border: 1px solid var(--border-soft); color: var(--text-primary); font-size: 16px; color-scheme: dark;
+}
+#programTab .pbv2-weekday-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; overflow: visible; padding: 0; }
+#programTab .pbv2-wd-btn {
+  width: 100%; min-width: 0; height: 48px; min-height: 48px; margin: 0; padding: 0; border-radius: 14px; border: 1px solid var(--border-chip); background: var(--pod-bg-alt); box-shadow: none;
+  color: var(--text-tertiary); font-family: var(--font-label); font-size: 11.5px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase;
+}
+#programTab .pbv2-wd-btn.active { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
+#programTab .pbv2-wd-hint { margin: 0; font-size: 13px; color: var(--text-tertiary); }
+
+/* ── Save step ─────────────────────────────────────────────── */
+#programTab .pbv2-save-body { display: flex; flex-direction: column; gap: 12px; padding: 0; background: none; border: 0; }
+#programTab .pbv2-title-input {
+  width: 100%; height: 56px; margin: 0; padding: 0 16px; border-radius: 16px; box-shadow: none;
+  background: var(--surface-recessed); border: 1px solid var(--border-soft); color: var(--text-primary); font-size: 17px; font-weight: 600;
+}
+#programTab .pbv2-title-input:focus { outline: none; border-color: var(--green-70); box-shadow: 0 0 0 1px var(--green-70); }
+#programTab .pbv2-summary-card { margin: 0; padding: 4px 16px; border-radius: var(--radius-pod); border: 1px solid var(--border-soft); background: var(--pod-bg); box-shadow: var(--pod-bevel); }
+#programTab .pbv2-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; margin: 0; padding: 0; border: 0; border-top: 1px solid var(--border-row); }
+#programTab .pbv2-summary-row:first-child { border-top: 0; }
+#programTab .pbv2-summary-label { font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-label); }
+#programTab .pbv2-summary-value { font-size: 15px; font-weight: 600; color: var(--text-primary); text-align: right; }
+
+#programTab .pbv2-save-btn {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 56px; margin: 4px 0 0; padding: 0 12px 0 24px;
+  border: 0; border-radius: var(--radius-pill); background: var(--fill-btn-primary-mobile); color: var(--label-on-green); box-shadow: var(--cta-shadow);
+  font-family: var(--font-display); font-size: 18px; font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase;
+}
+#programTab .pbv2-save-btn .ui-icon {
+  width: 36px; height: 36px; padding: 9px; border-radius: 50%; background: rgba(0, 0, 0, 0.28); color: #eafaf1;
+}
+#programTab .pbv2-advanced-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin: 0; padding: 0 18px;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-default); background: rgba(255, 255, 255, 0.038); box-shadow: none; color: var(--text-secondary);
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+#programTab .pbv2-advanced-btn--block { width: 100%; }
+
+#programTab .pbv2-save-advanced { margin: 0; border-radius: var(--radius-pod); border: 1px solid var(--border-soft); background: var(--pod-bg); overflow: hidden; }
+#programTab .pbv2-save-advanced > summary {
+  display: flex; align-items: center; justify-content: space-between; min-height: 56px; padding: 0 16px; cursor: pointer; list-style: none;
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-secondary); background: none; border: 0;
+}
+#programTab .pbv2-save-advanced > summary::-webkit-details-marker,
+#programTab .pbv2-save-advanced > summary::before { display: none; content: none; }
+#programTab .pbv2-save-advanced > summary::after {
+  content: ""; width: 9px; height: 9px; border-right: 2px solid var(--text-tertiary); border-bottom: 2px solid var(--text-tertiary); transform: rotate(45deg); transition: transform 0.15s; margin-right: 4px;
+}
+#programTab .pbv2-save-advanced[open] > summary::after { transform: rotate(-135deg); }
+#programTab .pbv2-save-advanced-body { display: flex; flex-direction: column; gap: 12px; padding: 4px 16px 16px; border-top: 1px solid var(--border-row); background: none; }
+#programTab .pbv2-save-advanced-body label {
+  display: flex; flex-direction: column; gap: 6px; margin: 0; font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-label);
+}
+#programTab .pbv2-save-advanced-body input,
+#programTab .pbv2-save-advanced-body textarea {
+  width: 100%; margin: 0; padding: 12px 14px; border-radius: 14px; box-shadow: none; background: var(--surface-recessed); border: 1px solid var(--border-soft);
+  color: var(--text-primary); font-family: var(--font-body, inherit); font-size: 16px; font-weight: 400; letter-spacing: 0; text-transform: none;
+}
+#programTab .pbv2-advanced-btn-row { display: flex; gap: 8px; }
+#programTab .pbv2-advanced-btn-row .pbv2-advanced-btn { flex: 1; }
+
+/* ── Wizard nav ────────────────────────────────────────────── */
+#programTab .pbv2-nav { display: flex; gap: 10px; margin: 4px 0 0; padding: 0; background: none; border: 0; position: static; }
+#programTab .pbv2-nav-back,
+#programTab .pbv2-nav-next {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; margin: 0; padding: 0 20px; border-radius: var(--radius-pill); box-shadow: none;
+  font-family: var(--font-label); font-size: 14px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+#programTab .pbv2-nav-back { flex: 1; background: rgba(255, 255, 255, 0.038); border: 1px solid var(--border-default); color: var(--text-secondary); }
+#programTab .pbv2-nav-next { flex: 2; border: 0; background: var(--fill-btn-primary-mobile); color: var(--label-on-green); box-shadow: var(--cta-shadow); }
+#programTab .pbv2-nav-next[disabled] { opacity: 0.45; }
+
+/* ── My Programs ───────────────────────────────────────────── */
+#programTab #progListContainer { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+#programTab .prog-list-header { border: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 2px; margin: 0; }
+#programTab .prog-list-header h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.05; text-transform: uppercase; color: var(--text-primary); }
+#programTab .prog-list-new-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin: 0; padding: 0 16px; border-radius: var(--radius-pill); border: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.038); box-shadow: none; color: var(--green-90);
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+#programTab .prog-list-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 20px; border-radius: var(--radius-pod); border: 1px dashed var(--border-default); text-align: center; }
+#programTab .prog-list-empty-icon {
+  width: 56px; height: 56px; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin: 0;
+  border-radius: 18px; background: var(--surface-recessed); border: 1px solid var(--border-chip); color: var(--green-90);
+}
+#programTab .prog-list-empty p { margin: 0; font-size: 14.5px; color: var(--text-tertiary); }
+#programTab .prog-list-empty-btn {
+  min-height: 48px; margin: 0; padding: 0 22px; border: 0; border-radius: var(--radius-pill); background: var(--fill-btn-primary-mobile); color: var(--label-on-green); box-shadow: var(--cta-shadow);
+  font-family: var(--font-label); font-size: 14px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+
+#programTab .prog-card { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 16px; border-radius: var(--radius-pod); border: 1px solid var(--border-soft); background: var(--pod-bg); box-shadow: var(--pod-bevel); }
+#programTab .prog-card-title { font-family: var(--font-display); font-size: 22px; font-weight: 400; line-height: 1.05; text-transform: uppercase; color: var(--text-primary); }
+#programTab .prog-card-meta { margin: 0; font-size: 13px; color: var(--text-tertiary); }
+#programTab .prog-card-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+#programTab .prog-badge {
+  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--radius-pill); background: rgba(47, 138, 99, 0.16); border: 1px solid rgba(47, 138, 99, 0.4); color: var(--green-90);
+  font-family: var(--font-label); font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+}
+#programTab .prog-card-actions { display: flex; gap: 8px; margin: 2px 0 0; }
+#programTab .prog-card-load,
+#programTab .prog-card-export,
+#programTab .prog-card-del,
+#programTab .prog-card-analyse {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; margin: 0; padding: 0 12px; border-radius: var(--radius-pill); box-shadow: none;
+  font-family: var(--font-label); font-size: 12.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+}
+#programTab .prog-card-load { flex: 2.4; white-space: nowrap; letter-spacing: 0.06em; border: 0; background: var(--fill-btn-primary-mobile); color: var(--label-on-green); }
+#programTab .prog-card-export { flex: 1; border: 1px solid var(--border-default); background: rgba(255, 255, 255, 0.038); color: var(--text-secondary); }
+#programTab .prog-card-del { flex: 1; border: 1px solid var(--border-alert); background: transparent; color: var(--danger-text-mobile); }
+#programTab .prog-card-analyse { width: 100%; border: 1px solid var(--border-default); background: transparent; color: var(--green-90); }
+#programTab .prog-card-analyse--locked { opacity: 0.6; }
+
+/* ── AI analysis panel ─────────────────────────────────────── */
+#programTab .prog-ai-panel { margin: -4px 0 0; padding: 16px; border-radius: var(--radius-pod); border: 1px solid var(--border-soft); background: var(--pod-bg-alt); }
+#programTab .prog-ai-loading { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; color: var(--text-tertiary); }
+#programTab .prog-ai-loading--err { color: var(--danger-text-mobile); }
+#programTab .prog-ai-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border-default); border-top-color: var(--green-70); animation: spin 0.8s linear infinite; }
+#programTab .prog-ai-verdict { margin: 0 0 12px; padding: 12px 14px; border-radius: var(--radius-md); background: var(--surface-recessed); border: 1px solid var(--border-soft); font-size: 14.5px; line-height: 1.5; color: var(--text-primary); }
+#programTab .prog-ai-verdict-label,
+#programTab .prog-ai-section-title { margin: 0 0 6px; font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-label); }
+#programTab .prog-ai-section { margin: 0 0 12px; padding: 0; background: none; border: 0; }
+#programTab .prog-ai-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+#programTab .prog-ai-item { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 8px 0; background: none; border: 0; border-radius: 0; box-shadow: none; border-top: 1px solid var(--border-row); font-size: 14px; line-height: 1.45; color: var(--text-secondary); }
+#programTab .prog-ai-list .prog-ai-item:first-child { border-top: 0; }
+#programTab .prog-ai-item-icon { display: inline-flex; flex: none; margin-top: 1px; font-size: 16px; color: var(--green-90); }
+#programTab .prog-ai-item-icon--warn { color: var(--brass-base); }
+#programTab .prog-ai-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#programTab .prog-ai-cached { font-size: 12px; color: var(--mx-faint); }
+#programTab .prog-ai-reanalyse {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin: 0 0 0 auto; padding: 0 16px; border-radius: var(--radius-pill); border: 1px solid var(--border-default); background: transparent; box-shadow: none;
+  color: var(--text-secondary); font-family: var(--font-label); font-size: 12.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+@media (max-width: 360px) {
+  #programTab .pbv2-goal-grid { grid-template-columns: 1fr; }
+  #programTab .pbv2-step-label { font-size: 10px; letter-spacing: 0.06em; }
+}
