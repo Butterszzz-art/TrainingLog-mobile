@@ -38,6 +38,7 @@
   <link rel="stylesheet" href="css/posing.css">
   <link rel="stylesheet" href="css/mobility.css">
   <link rel="stylesheet" href="css/history.css">
+  <link rel="stylesheet" href="css/paywall.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
@@ -4358,6 +4359,52 @@ async function checkoutWithStripe(plan, billing) {
   }
 }
 
+var UPGRADE_PLANS = {
+  pro: {
+    name: 'Pro', badge: 'Most popular', chip: 'mx-chip--green', cardCls: 'pod--hero',
+    monthly: 9, annual: 7, annualNote: 'Billed £84/year · save £24',
+    sub: '7-day free trial',
+    features: [
+      ['sparkles', 'AI check-in summaries'],
+      ['sparkles', 'AI macro advisor'],
+      ['sparkles', 'AI program generator'],
+      ['sparkles', 'AI plateau detector'],
+      ['sparkles', 'Priority support']
+    ]
+  },
+  coach: {
+    name: 'Coach', badge: 'For coaches', chip: 'mx-chip--brass', cardCls: 'pod--warn',
+    monthly: 16, annual: 13, annualNote: 'Billed £156/year · save £36',
+    sub: 'Everything in Pro, plus:',
+    features: [
+      ['users', 'Full coaching dashboard'],
+      ['clipboard', 'Client roster'],
+      ['pencil', 'AI draft messages'],
+      ['barChart', 'Compliance tracking'],
+      ['creditCard', 'Flat fee — no per-client']
+    ]
+  }
+};
+
+function upgradePlanCard(key, isAnnual) {
+  var p = UPGRADE_PLANS[key];
+  var idBase = key === 'pro' ? 'modalPro' : 'modalCoach';
+  return '<section class="pod ' + p.cardCls + ' mx-pod upg-plan upg-plan--' + key + '" aria-label="' + p.name + ' plan">'
+    + '<div class="pod-row"><h4 class="pod-title mx-h3">' + p.name + '</h4><span class="mx-chip mx-chip--sm ' + p.chip + '">' + p.badge + '</span></div>'
+    + '<div class="upg-price-block">'
+    +   '<div class="upg-price" id="' + idBase + 'Price">£' + (isAnnual ? p.annual : p.monthly) + '<span class="upg-per">/mo</span></div>'
+    +   '<div class="upg-note" id="' + idBase + 'Note">' + (isAnnual ? p.annualNote : '') + '</div>'
+    + '</div>'
+    + '<div class="mx-meta">' + p.sub + '</div>'
+    + '<ul class="upg-features">'
+    + p.features.map(function (f) { return '<li><span class="ui-icon">' + ICONS[f[0]] + '</span>' + f[1] + '</li>'; }).join('')
+    + '</ul>'
+    + '<button type="button" class="mx-cta upg-cta upg-cta--' + key + '" onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'' + key + '\')">'
+    +   '<span>Start Free Trial</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.sparkles + '</span></span>'
+    + '</button>'
+    + '</section>';
+}
+
 function openUpgradeModal(defaultPlan) {
   defaultPlan = defaultPlan || 'pro';
   var billing = localStorage.getItem('billingCycle') || 'annual';
@@ -4365,57 +4412,38 @@ function openUpgradeModal(defaultPlan) {
 
   var overlay = document.createElement('div');
   overlay.className = 'payment-method-modal';
-  overlay.innerHTML = '<div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:20px;padding:24px;max-width:500px;width:95%;max-height:85vh;overflow-y:auto;position:relative;">'
-    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
-    + '<h3 style="text-align:center;margin:0 0 4px;">Upgrade Pocket Coach</h3>'
-    + '<p style="text-align:center;color:var(--secondary-text);font-size:0.82rem;margin:0 0 16px;">Unlock AI features and coaching tools</p>'
-    + '<div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px;align-items:center;">'
-    + '<span style="font-size:0.82rem;color:' + (!isAnnual ? 'var(--text-color)' : 'var(--text-muted)') + ';">Monthly</span>'
-    + '<label class="reminder-toggle" style="width:44px;height:24px;"><input type="checkbox" id="modalBillingToggle" ' + (isAnnual ? 'checked' : '') + ' onchange="toggleModalBilling()"><span class="reminder-toggle-track"></span></label>'
-    + '<span style="font-size:0.82rem;color:' + (isAnnual ? 'var(--text-color)' : 'var(--text-muted)') + ';">Annual</span>'
-    + '<span style="background:var(--primary);color:#fff;font-size:0.68rem;padding:3px 8px;border-radius:4px;font-weight:700;">SAVE 20%</span>'
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+  overlay.innerHTML = '<div class="upg-sheet" role="dialog" aria-modal="true" aria-label="Upgrade Pocket Coach">'
+    + '<button type="button" class="close-payment-modal" aria-label="Close" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
+    + '<div class="upg-head">'
+    +   '<span class="mx-kicker">Pocket Coach</span>'
+    +   '<h3 class="upg-title">Upgrade</h3>'
+    +   '<p class="mx-sub">Unlock AI features and coaching tools</p>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
-    // Pro card
-    + '<div style="border:2px solid var(--primary);border-radius:16px;padding:20px;position:relative;">'
-    + '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;font-size:0.65rem;padding:3px 10px;border-radius:10px;font-weight:700;">MOST POPULAR</div>'
-    + '<div style="font-size:1rem;font-weight:700;margin-bottom:4px;">Pro</div>'
-    + '<div id="modalProPrice" style="font-size:1.4rem;font-weight:700;color:var(--primary);">' + (isAnnual ? '£7' : '£9') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span></div>'
-    + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £84/year · save £24</div>' : '')
-    + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">7-day free trial</div>'
-    + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI check-in summaries</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI macro advisor</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI program generator</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI plateau detector</li>'
-    + '<li><span class="ui-icon">' + ICONS.sparkles + '</span> Priority support</li></ul>'
-    + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'pro\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
+    + '<div class="upg-billing">'
+    +   '<span id="modalBillMonthly" class="' + (!isAnnual ? 'is-on' : '') + '">Monthly</span>'
+    +   '<label class="upg-switch"><input type="checkbox" id="modalBillingToggle" ' + (isAnnual ? 'checked' : '') + ' onchange="toggleModalBilling()" aria-label="Bill annually"><span></span></label>'
+    +   '<span id="modalBillAnnual" class="' + (isAnnual ? 'is-on' : '') + '">Annual</span>'
+    +   '<span class="mx-chip mx-chip--green mx-chip--sm">Save 20%</span>'
     + '</div>'
-    // Coach card
-    + '<div style="border:2px solid #c6944f;border-radius:16px;padding:20px;position:relative;">'
-    + '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#c6944f;color:#fff;font-size:0.65rem;padding:3px 10px;border-radius:10px;font-weight:700;">FOR COACHES</div>'
-    + '<div style="font-size:1rem;font-weight:700;margin-bottom:4px;">Coach</div>'
-    + '<div id="modalCoachPrice" style="font-size:1.4rem;font-weight:700;color:#c6944f;">' + (isAnnual ? '£13' : '£16') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span></div>'
-    + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £156/year · save £36</div>' : '')
-    + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">Everything in Pro, plus:</div>'
-    + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.users + '</span> Full coaching dashboard</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.clipboard + '</span> Client roster</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.pencil + '</span> AI draft messages</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.barChart + '</span> Compliance tracking</li>'
-    + '<li><span class="ui-icon">' + ICONS.creditCard + '</span> Flat fee — no per-client</li></ul>'
-    + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'coach\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:#c6944f;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
-    + '</div></div></div>';
+    + upgradePlanCard('pro', isAnnual)
+    + upgradePlanCard('coach', isAnnual)
+    + '</div>';
   document.body.appendChild(overlay);
 }
 
 function toggleModalBilling() {
   var isAnnual = document.getElementById('modalBillingToggle')?.checked;
   localStorage.setItem('billingCycle', isAnnual ? 'annual' : 'monthly');
-  var proPrice = document.getElementById('modalProPrice');
-  var coachPrice = document.getElementById('modalCoachPrice');
-  if (proPrice) proPrice.innerHTML = (isAnnual ? '£7' : '£9') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span>';
-  if (coachPrice) coachPrice.innerHTML = (isAnnual ? '£13' : '£16') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span>';
+  [['modalPro', 'pro'], ['modalCoach', 'coach']].forEach(function (pair) {
+    var p = UPGRADE_PLANS[pair[1]];
+    var price = document.getElementById(pair[0] + 'Price');
+    var note = document.getElementById(pair[0] + 'Note');
+    if (price) price.innerHTML = '£' + (isAnnual ? p.annual : p.monthly) + '<span class="upg-per">/mo</span>';
+    if (note) note.textContent = isAnnual ? p.annualNote : '';
+  });
+  document.getElementById('modalBillMonthly')?.classList.toggle('is-on', !isAnnual);
+  document.getElementById('modalBillAnnual')?.classList.toggle('is-on', !!isAnnual);
 }
 
 async function openManageBilling() {
