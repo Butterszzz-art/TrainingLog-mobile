@@ -638,3 +638,32 @@
 }
 .mx-tin input::placeholder { color: var(--mx-faint); font-family: var(--font-label); font-size: 14px; font-weight: 700; letter-spacing: 0.06em; }
 .mx-tin input:focus { border: 0; box-shadow: none; outline: 0; }
+
+/* ── Bottom sheet (builders, pickers) ───────────────────────── */
+.mx-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.mx-sheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px 36px;
+  background: var(--pod-bg);
+  border: 1px solid var(--border-default);
+  border-bottom: 0;
+  border-radius: var(--radius-featured, 24px) var(--radius-featured, 24px) 0 0;
+  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.5), var(--pod-bevel);
+}
+.mx-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

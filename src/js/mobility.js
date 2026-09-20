@@ -108,14 +108,19 @@
 
   // ─── Type badge ───────────────────────────────────────────────
   const TYPE = {
-    stretching: { bg: 'rgba(55,138,221,0.15)',  color: '#378ADD', label: 'Stretching' },
-    mobility:   { bg: 'rgba(99,153,34,0.15)',   color: '#639922', label: 'Mobility'   },
-    prehab:     { bg: 'rgba(186,117,23,0.15)',  color: '#BA7517', label: 'Prehab'     }
+    stretching: { cls: '',               label: 'Stretching' },
+    mobility:   { cls: 'mx-chip--green', label: 'Mobility'   },
+    prehab:     { cls: 'mx-chip--brass', label: 'Prehab'     }
   };
 
   function badge(type) {
     const s = TYPE[type] || TYPE.mobility;
-    return `<span style="background:${s.bg};color:${s.color};padding:2px 9px;border-radius:20px;font-size:0.73rem;font-weight:600;">${s.label}</span>`;
+    return `<span class="mx-chip mx-chip--sm ${s.cls}">${s.label}</span>`;
+  }
+
+  // Shared SVG icon set (ICONS is defined in index.html)
+  function icon(name) {
+    return (typeof ICONS !== 'undefined' && ICONS[name]) || '';
   }
 
   // ─── Week / date helpers ──────────────────────────────────────
@@ -216,18 +221,18 @@
 
     const activeInjuries = typeof window.getActiveInjuries === 'function' ? window.getActiveInjuries().length : 0;
     const rehabLabel = activeInjuries > 0 ? `Rehab (${activeInjuries})` : 'Rehab';
+    const pill = (id, label) =>
+      `<button type="button" class="pill${_tab === id ? ' active' : ''}" data-mob="${id}"${_tab === id ? ' aria-current="page"' : ''}>${label}</button>`;
 
     wrap.innerHTML = `
-      <div style="padding:0 0 16px;">
-        <h2 style="margin:0 0 12px;font-size:1.25rem;font-weight:700;color:var(--text-color);">🧘 Flexibility & Mobility</h2>
-        <div class="settings-subtabs" style="margin-bottom:14px;">
-          <button type="button" class="settings-subtab${_tab==='myRoutines'?' active':''}" data-mob="myRoutines">My Routines</button>
-          <button type="button" class="settings-subtab${_tab==='logSession'?' active':''}" data-mob="logSession">Log Session</button>
-          <button type="button" class="settings-subtab${_tab==='library'?' active':''}" data-mob="library">Browse Library</button>
-          <button type="button" class="settings-subtab${_tab==='rehab'?' active':''}" data-mob="rehab">${rehabLabel}</button>
-        </div>
-        <div id="mobSub"></div>
-      </div>
+      <div class="mx-head"><h2 class="pod-title">Flexibility &amp; Mobility</h2></div>
+      <nav class="pill-nav" aria-label="Mobility sections">
+        ${pill('myRoutines', 'My Routines')}
+        ${pill('logSession', 'Log Session')}
+        ${pill('library', 'Browse Library')}
+        ${pill('rehab', rehabLabel)}
+      </nav>
+      <div id="mobSub"></div>
     `;
 
     wrap.querySelectorAll('[data-mob]').forEach(btn => {
@@ -244,11 +249,25 @@
   // ─── My Routines ──────────────────────────────────────────────
   function renderMyRoutines(sub) {
     const routines = getRoutines();
+    const weekTotal = routines.reduce((s, r) => s + sessionsThisWeek(r.id).length, 0);
+    const weekGoal = routines.reduce((s, r) => s + (Number(r.frequencyPerWeek) || 0), 0);
+    const routinesDone = routines.filter(r => sessionsThisWeek(r.id).length >= (Number(r.frequencyPerWeek) || 1)).length;
+    const pct = weekGoal ? Math.min(100, Math.round((weekTotal / weekGoal) * 100)) : 0;
+
     sub.innerHTML = `
-      <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-        <button id="mobAddBtn" style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-weight:600;font-size:0.85rem;cursor:pointer;font-family:Poppins,sans-serif;">+ Add Routine</button>
+      <div class="mob-toolbar">
+        <span class="mx-meta">${routines.length} routine${routines.length === 1 ? '' : 's'}</span>
+        <button type="button" id="mobAddBtn" class="mx-outline"><span class="ui-icon">${icon('plus')}</span> Add Routine</button>
       </div>
-      ${!routines.length ? `<div class="panel" style="text-align:center;padding:32px 16px;color:var(--secondary-text);font-size:0.9rem;">No routines yet.<br>Add one above or copy from the library.</div>` : ''}
+      ${routines.length ? `
+        <section class="pod pod--hero mx-pod" aria-label="Mobility this week">
+          <div class="pod-row">
+            <span class="mx-kicker">This week</span>
+            <span class="mx-chip mx-chip--green">${routinesDone} of ${routines.length} routine${routines.length === 1 ? '' : 's'}</span>
+          </div>
+          <div class="mob-hero-big"><span class="mx-num">${weekTotal}</span><span class="mob-hero-of">/ ${weekGoal} sessions</span></div>
+          <div class="mx-meter" role="img" aria-label="${weekTotal} of ${weekGoal} sessions"><i style="width:${pct}%"></i></div>
+        </section>` : `<div class="mx-empty">No routines yet.<br>Add one above or copy from the library.</div>`}
       <div id="mobCards"></div>
     `;
     sub.querySelector('#mobAddBtn').addEventListener('click', () => openBuilder(null));
@@ -258,30 +277,36 @@
       const wk = sessionsThisWeek(r.id).length;
       const last = lastSessionDate(r.id);
       const done = loggedToday(r.id);
-      const el = document.createElement('div');
-      el.className = 'panel';
-      el.style.cssText = 'margin-bottom:10px;padding:14px 14px 10px;';
+      const freq = Number(r.frequencyPerWeek) || 0;
+      const dots = Array.from({ length: Math.max(freq, 1) }, (_, i) => `<i class="${i < wk ? 'on' : ''}"></i>`).join('');
+      const name = esc(r.name);
+      const el = document.createElement('article');
+      el.className = 'pod mx-pod mob-card';
+      el.setAttribute('aria-label', r.name || 'Routine');
       el.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
-              <strong style="font-size:0.95rem;color:var(--text-color);">${esc(r.name)}</strong>
+        <div class="mob-card-top">
+          <div class="mob-card-title">
+            <div class="mob-card-name">
+              <span class="mx-row-title mob-name">${name}</span>
               ${badge(r.type)}
-              ${r.assignedByCoach ? '<span title="Coach assigned" style="font-size:1rem;">🧭</span>' : ''}
-              ${(r.streakCount || 0) >= 2 ? `<span style="background:rgba(255,140,0,0.15);color:#e07800;padding:2px 7px;border-radius:20px;font-size:0.73rem;font-weight:700;">🔥 ${r.streakCount}</span>` : ''}
             </div>
-            <div style="font-size:0.78rem;color:var(--secondary-text);">
-              📍 ${esc(r.targetArea)} &nbsp;·&nbsp; ${wk} / ${r.frequencyPerWeek} this week &nbsp;·&nbsp; Last: ${last ? new Date(last).toLocaleDateString() : 'Never'}${(r.longestStreak||0) >= 2 ? ` &nbsp;·&nbsp; Best: ${r.longestStreak}` : ''}
-            </div>
+            <span class="mx-row-sub">${esc(r.targetArea)}${r.targetArea ? ' · ' : ''}Last ${last ? new Date(last).toLocaleDateString() : 'never'}${(r.longestStreak || 0) >= 2 ? ` · Best ${r.longestStreak}` : ''}</span>
           </div>
-          <div style="display:flex;gap:5px;flex-shrink:0;">
-            <button class="mob-edit" data-id="${r.id}" style="background:none;border:1px solid var(--border-color);border-radius:7px;padding:4px 9px;color:var(--secondary-text);font-size:0.76rem;cursor:pointer;">Edit</button>
-            <button class="mob-del"  data-id="${r.id}" style="background:none;border:1px solid rgba(200,50,50,0.3);border-radius:7px;padding:4px 9px;color:#c05060;font-size:0.76rem;cursor:pointer;">✕</button>
+          <div class="mob-card-actions">
+            <button type="button" class="mob-edit mx-iconbtn" data-id="${r.id}" aria-label="Edit ${name}"><span class="ui-icon">${icon('pencil')}</span></button>
+            <button type="button" class="mob-del mx-iconbtn mx-iconbtn--ghost" data-id="${r.id}" aria-label="Delete ${name}"><span class="ui-icon">${icon('x')}</span></button>
           </div>
         </div>
-        ${r.assignedByCoach && r.coachNotes ? `<div style="background:rgba(95,168,126,0.1);border-left:3px solid var(--primary);border-radius:0 6px 6px 0;padding:5px 10px;font-size:0.8rem;color:var(--secondary-text);margin-bottom:7px;">🧭 <em>${esc(r.coachNotes)}</em></div>` : ''}
-        <button class="mob-log" data-id="${r.id}" style="width:100%;background:${done?'rgba(95,168,126,0.15)':'var(--primary)'};color:${done?'var(--primary)':'#fff'};border:${done?'1px solid var(--primary)':'none'};border-radius:8px;padding:7px;font-weight:600;font-size:0.83rem;cursor:pointer;font-family:Poppins,sans-serif;">
-          ${done ? '✅ Logged today' : '▶ Log session'}
+        <div class="mob-card-week">
+          <div class="mob-dots" role="img" aria-label="${wk} of ${freq} sessions this week">${dots}</div>
+          <div class="mx-tags">
+            ${(r.streakCount || 0) >= 2 ? `<span class="mx-chip mx-chip--brass mx-chip--sm"><span class="ui-icon">${icon('flame')}</span> ${r.streakCount}</span>` : ''}
+            ${r.assignedByCoach ? '<span class="mx-chip mx-chip--sm">Coach</span>' : ''}
+          </div>
+        </div>
+        ${r.assignedByCoach && r.coachNotes ? `<p class="mx-quote"><b>From your coach</b>${esc(r.coachNotes)}</p>` : ''}
+        <button type="button" class="mob-log mx-outline mx-outline--block${done ? ' is-done' : ''}" data-id="${r.id}" aria-pressed="${done ? 'true' : 'false'}">
+          <span class="ui-icon">${icon(done ? 'check' : 'zap')}</span> ${done ? 'Logged today' : 'Log session'}
         </button>
       `;
       el.querySelector('.mob-log').addEventListener('click',  () => quickLog(r.id));
@@ -304,32 +329,36 @@
       const exId = ex.id;
       if (hasDur) {
         return `
-          <div class="mob-ex-row" data-ex-id="${exId}" style="background:var(--elevated-bg);border:1px solid var(--border-color);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
-              <div style="flex:1;">
-                <strong style="font-size:0.88rem;color:var(--text-color);">${esc(ex.name)}</strong>
-                <div style="font-size:0.76rem;color:var(--secondary-text);margin-top:2px;">${esc(ex.detail)}</div>
+          <div class="mob-ex-row mob-ex-row--timed" data-ex-id="${exId}">
+            <div class="mob-ex-top">
+              <div class="mob-ex-main">
+                <strong class="mob-ex-name">${esc(ex.name)}</strong>
+                <span class="mob-ex-detail">${esc(ex.detail)}</span>
               </div>
-              <span class="mob-done-label" style="display:none;color:var(--primary);font-weight:700;font-size:0.82rem;margin-left:8px;white-space:nowrap;">Done ✅</span>
+              <span class="mob-done-label mx-chip mx-chip--green mx-chip--sm" style="display:none;">Done</span>
             </div>
-            <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-              <span class="mob-timer-display" style="font-family:'Courier New',monospace;font-size:1.2rem;font-weight:700;color:var(--primary);min-width:52px;">${fmtMmSs(ex.durationSeconds)}</span>
-              <button class="mob-timer-start" data-ex-id="${exId}" data-dur="${ex.durationSeconds}" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:Poppins,sans-serif;">Start</button>
-              <button class="mob-timer-reset" data-ex-id="${exId}" data-dur="${ex.durationSeconds}" style="background:none;border:1px solid var(--border-color);border-radius:7px;padding:5px 10px;font-size:0.8rem;color:var(--secondary-text);cursor:pointer;font-family:Poppins,sans-serif;">Reset</button>
+            <div class="mob-ex-timer">
+              <span class="mob-timer-display mx-num">${fmtMmSs(ex.durationSeconds)}</span>
+              <button type="button" class="mob-timer-start mx-outline" data-ex-id="${exId}" data-dur="${ex.durationSeconds}">Start</button>
+              <button type="button" class="mob-timer-reset mx-outline" data-ex-id="${exId}" data-dur="${ex.durationSeconds}">Reset</button>
             </div>
           </div>`;
       } else {
         const repStr = (ex.reps && ex.sets) ? `${ex.sets} × ${ex.reps} reps` : (ex.reps ? `${ex.reps} reps` : '');
         return `
-          <div style="background:var(--elevated-bg);border:1px solid var(--border-color);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
-            <strong style="font-size:0.88rem;color:var(--text-color);">${esc(ex.name)}</strong>
-            ${repStr ? `<span style="margin-left:8px;font-size:0.78rem;color:var(--primary);font-weight:600;">${repStr}</span>` : ''}
-            <div style="font-size:0.76rem;color:var(--secondary-text);margin-top:2px;">${esc(ex.detail)}</div>
+          <div class="mob-ex-row">
+            <div class="mob-ex-top">
+              <div class="mob-ex-main">
+                <strong class="mob-ex-name">${esc(ex.name)}</strong>
+                <span class="mob-ex-detail">${esc(ex.detail)}</span>
+              </div>
+              ${repStr ? `<span class="mx-tag mx-tag--hi">${repStr}</span>` : ''}
+            </div>
           </div>`;
       }
     }).join('');
 
-    // Wire up timer buttons
+    // Wire up timer buttons (state is expressed as classes: is-running / is-paused / is-done)
     container.querySelectorAll('.mob-timer-start').forEach(btn => {
       btn.addEventListener('click', () => {
         const exId = btn.dataset.exId;
@@ -341,22 +370,25 @@
           // Pause
           clearInterval(t.interval); t.interval = null;
           btn.textContent = 'Resume';
-          btn.style.background = 'var(--secondary-text)';
+          btn.classList.remove('is-running');
+          btn.classList.add('is-paused');
         } else {
           // Start / Resume
           if (!_timers[exId]) _timers[exId] = { remaining: +btn.dataset.dur, total: +btn.dataset.dur, interval: null, done: false };
           if (_timers[exId].done) return;
           btn.textContent = 'Pause';
-          btn.style.background = '#e07800';
+          btn.classList.remove('is-paused');
+          btn.classList.add('is-running');
           _timers[exId].interval = setInterval(() => {
             _timers[exId].remaining -= 1;
             if (display) display.textContent = fmtMmSs(Math.max(0, _timers[exId].remaining));
             if (_timers[exId].remaining <= 0) {
               clearInterval(_timers[exId].interval); _timers[exId].interval = null; _timers[exId].done = true;
-              if (display) { display.textContent = '00:00'; display.style.color = 'var(--primary)'; }
-              btn.textContent = 'Done'; btn.disabled = true; btn.style.background = 'rgba(95,168,126,0.3)';
+              if (display) { display.textContent = '00:00'; display.classList.add('is-done'); }
+              btn.textContent = 'Done'; btn.disabled = true;
+              btn.classList.remove('is-running', 'is-paused');
               const doneLabel = row?.querySelector('.mob-done-label');
-              if (doneLabel) doneLabel.style.display = 'inline';
+              if (doneLabel) doneLabel.style.display = 'inline-flex';
               navigator.vibrate?.(400);
             }
           }, 1000);
@@ -373,8 +405,8 @@
         const doneLabel = row?.querySelector('.mob-done-label');
         if (_timers[exId]?.interval) clearInterval(_timers[exId].interval);
         _timers[exId] = { remaining: +btn.dataset.dur, total: +btn.dataset.dur, interval: null, done: false };
-        if (display) { display.textContent = fmtMmSs(+btn.dataset.dur); display.style.color = 'var(--secondary-text)'; }
-        if (startBtn) { startBtn.textContent = 'Start'; startBtn.disabled = false; startBtn.style.background = 'var(--primary)'; }
+        if (display) { display.textContent = fmtMmSs(+btn.dataset.dur); display.classList.remove('is-done'); }
+        if (startBtn) { startBtn.textContent = 'Start'; startBtn.disabled = false; startBtn.classList.remove('is-running', 'is-paused'); }
         if (doneLabel) doneLabel.style.display = 'none';
       });
     });
@@ -385,22 +417,31 @@
     const today = new Date().toISOString().slice(0,10);
 
     if (!routines.length) {
-      sub.innerHTML = `<div class="panel" style="padding:16px;margin-top:4px;"><p style="color:var(--secondary-text);font-size:0.88rem;">Add a routine first from <strong>My Routines</strong>.</p></div>`;
+      sub.innerHTML = `<div class="mx-empty">Add a routine first from <strong>My Routines</strong>.</div>`;
       return;
     }
 
     sub.innerHTML = `
-      <div class="panel" style="padding:16px;margin-top:4px;">
-        <h3 style="margin:0 0 14px;font-size:1rem;font-weight:700;color:var(--text-color);">Log a Session</h3>
-        <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Routine</label>
-        <select id="mobLogR" style="width:100%;margin-bottom:12px;">${routines.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
-        <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Date</label>
-        <input type="date" id="mobLogD" value="${today}" style="width:100%;margin-bottom:12px;">
-        <label style="display:block;margin-bottom:4px;font-size:0.82rem;color:var(--secondary-text);">Notes (optional)</label>
-        <textarea id="mobLogN" rows="2" placeholder="How did it feel?" style="width:100%;border-radius:8px;border:1px solid var(--border-color);background:var(--elevated-bg);color:var(--text-color);padding:8px;font-family:Poppins,sans-serif;font-size:0.83rem;box-sizing:border-box;margin-bottom:14px;resize:vertical;"></textarea>
-        <button id="mobLogSubmit" style="width:100%;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:Poppins,sans-serif;">Mark Complete ✅</button>
-      </div>
-      <div id="mobExTimers" style="margin-top:12px;"></div>
+      <section class="pod mx-pod" aria-label="Log a session">
+        <div class="pod-row"><h3 class="pod-title mx-h3">Log a Session</h3></div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="mobLogR">Routine</label>
+          <div class="mx-well mx-well--text mx-well--sel"><select id="mobLogR">${routines.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="mobLogD">Date</label>
+          <div class="mx-well mx-well--text"><input type="date" id="mobLogD" value="${today}"></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="mobLogN">Notes <em>optional</em></label>
+          <div class="mx-well mx-well--area"><textarea id="mobLogN" rows="2" placeholder="How did it feel?"></textarea></div>
+        </div>
+        <button type="button" id="mobLogSubmit" class="mx-cta">
+          <span>Mark Complete</span>
+          <span class="mx-cta-icon"><span class="ui-icon">${icon('check')}</span></span>
+        </button>
+      </section>
+      <div id="mobExTimers" class="mob-ex-list"></div>
     `;
 
     const timerContainer = sub.querySelector('#mobExTimers');
@@ -431,8 +472,8 @@
     const list = _libFilter === 'all' ? LIBRARY : LIBRARY.filter(r => r.type === _libFilter);
 
     sub.innerHTML = `
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;">
-        ${filters.map(f=>`<button class="mob-flt" data-f="${f}" style="background:${_libFilter===f?'var(--primary)':'var(--elevated-bg)'};color:${_libFilter===f?'#fff':'var(--secondary-text)'};border:1px solid var(--border-color);border-radius:20px;padding:5px 13px;font-size:0.78rem;cursor:pointer;font-family:Poppins,sans-serif;">${f==='all'?'All':TYPE[f].label}</button>`).join('')}
+      <div class="mx-presets mob-filters" role="group" aria-label="Filter library">
+        ${filters.map(f=>`<button type="button" class="mob-flt mx-preset${_libFilter===f?' active':''}" data-f="${f}" aria-pressed="${_libFilter===f}">${f==='all'?'All':TYPE[f].label}</button>`).join('')}
       </div>
       <div id="mobLibCards"></div>
     `;
@@ -444,22 +485,22 @@
     const cards = sub.querySelector('#mobLibCards');
     list.forEach(lib => {
       const has = getRoutines().some(r => r._libId === lib.id);
-      const el = document.createElement('div');
-      el.className = 'panel';
-      el.style.cssText = 'margin-bottom:10px;padding:14px;';
+      const el = document.createElement('article');
+      el.className = 'pod mx-pod mob-card';
+      el.setAttribute('aria-label', lib.name);
       el.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:3px;">
-              <strong style="color:var(--text-color);">${esc(lib.name)}</strong>${badge(lib.type)}
-            </div>
-            <div style="font-size:0.78rem;color:var(--secondary-text);">📍 ${esc(lib.targetArea)} · ${lib.exercises.length} exercises</div>
+        <div class="mob-card-top">
+          <div class="mob-card-title">
+            <div class="mob-card-name"><span class="mx-row-title mob-name">${esc(lib.name)}</span>${badge(lib.type)}</div>
+            <span class="mx-row-sub">${esc(lib.targetArea)} · ${lib.exercises.length} exercises</span>
           </div>
-          <button class="mob-copy" data-lid="${lib.id}" style="background:${has?'rgba(95,168,126,0.15)':'var(--primary)'};color:${has?'var(--primary)':'#fff'};border:${has?'1px solid var(--primary)':'none'};border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:8px;">${has?'✓ Added':'+ Add'}</button>
+          <button type="button" class="mob-copy mx-outline${has ? ' is-done' : ''}" data-lid="${lib.id}"${has ? ' disabled' : ''}>
+            <span class="ui-icon">${icon(has ? 'check' : 'plus')}</span> ${has ? 'Added' : 'Add'}
+          </button>
         </div>
-        <div style="font-size:0.78rem;color:var(--secondary-text);">
-          ${lib.exercises.map(e=>`<div style="padding:3px 0;border-bottom:1px solid var(--border-color);">• <strong>${esc(e.name)}</strong> — ${esc(e.detail)}</div>`).join('')}
-        </div>
+        <ul class="mob-lib-list">
+          ${lib.exercises.map(e=>`<li><strong>${esc(e.name)}</strong><span>${esc(e.detail)}</span></li>`).join('')}
+        </ul>
       `;
       if (!has) {
         el.querySelector('.mob-copy').addEventListener('click', () => copyFromLibrary(lib));
@@ -477,53 +518,62 @@
     const coachActive = typeof isCoachModeEnabled === 'function' && isCoachModeEnabled();
     const overlay = document.createElement('div');
     overlay.id = 'mobBuilderOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:3000;display:flex;align-items:flex-end;justify-content:center;';
+    overlay.className = 'mx-sheet-backdrop';
     overlay.innerHTML = `
-      <div style="background:var(--card-bg);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:18px 16px 36px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <h3 style="margin:0;font-size:1.05rem;font-weight:700;color:var(--text-color);">${routine?'Edit':'New'} Routine</h3>
-          <button id="mobBClose" style="background:none;border:none;color:var(--secondary-text);font-size:1.4rem;cursor:pointer;line-height:1;">✕</button>
+      <div class="mx-sheet" role="dialog" aria-modal="true" aria-label="${routine?'Edit':'New'} routine">
+        <div class="mx-sheet-head">
+          <h3 class="pod-title mx-h3">${routine?'Edit':'New'} Routine</h3>
+          <button type="button" id="mobBClose" class="mx-iconbtn mx-iconbtn--ghost" aria-label="Close"><span class="ui-icon">${icon('x')}</span></button>
         </div>
 
-        <label style="display:block;margin-bottom:3px;font-size:0.82rem;color:var(--secondary-text);">Name *</label>
-        <input id="mobBName" value="${esc(_editing.name)}" placeholder="e.g. Morning Hip Mobility" style="width:100%;margin-bottom:12px;box-sizing:border-box;">
+        <div class="mx-field">
+          <label class="mx-lbl" for="mobBName">Name <em>required</em></label>
+          <div class="mx-well mx-well--text"><input id="mobBName" value="${esc(_editing.name)}" placeholder="e.g. Morning Hip Mobility"></div>
+        </div>
 
-        <div style="display:flex;gap:10px;margin-bottom:12px;">
-          <div style="flex:1;">
-            <label style="display:block;margin-bottom:3px;font-size:0.82rem;color:var(--secondary-text);">Type</label>
-            <select id="mobBType" style="width:100%;">
-              <option value="stretching" ${_editing.type==='stretching'?'selected':''}>Stretching</option>
-              <option value="mobility"   ${_editing.type==='mobility'  ?'selected':''}>Mobility</option>
-              <option value="prehab"     ${_editing.type==='prehab'    ?'selected':''}>Prehab</option>
-            </select>
+        <div class="mx-grid2 mob-b-row">
+          <div class="mx-field">
+            <label class="mx-lbl" for="mobBType">Type</label>
+            <div class="mx-well mx-well--text mx-well--sel">
+              <select id="mobBType">
+                <option value="stretching" ${_editing.type==='stretching'?'selected':''}>Stretching</option>
+                <option value="mobility"   ${_editing.type==='mobility'  ?'selected':''}>Mobility</option>
+                <option value="prehab"     ${_editing.type==='prehab'    ?'selected':''}>Prehab</option>
+              </select>
+            </div>
           </div>
-          <div style="flex:0 0 80px;">
-            <label style="display:block;margin-bottom:3px;font-size:0.82rem;color:var(--secondary-text);">Days/week</label>
-            <input type="number" id="mobBFreq" min="1" max="7" value="${_editing.frequencyPerWeek}" style="width:100%;box-sizing:border-box;">
+          <div class="mx-field">
+            <label class="mx-lbl" for="mobBFreq">Days / week</label>
+            <div class="mx-well mx-well--num"><input type="number" id="mobBFreq" min="1" max="7" value="${_editing.frequencyPerWeek}" inputmode="numeric"></div>
           </div>
         </div>
 
-        <label style="display:block;margin-bottom:3px;font-size:0.82rem;color:var(--secondary-text);">Target Area</label>
-        <input id="mobBArea" value="${esc(_editing.targetArea)}" placeholder="e.g. Hips, Shoulders, Lower back" style="width:100%;margin-bottom:${coachActive?'12px':'16px'};box-sizing:border-box;">
+        <div class="mx-field">
+          <label class="mx-lbl" for="mobBArea">Target area</label>
+          <div class="mx-well mx-well--text"><input id="mobBArea" value="${esc(_editing.targetArea)}" placeholder="e.g. Hips, Shoulders, Lower back"></div>
+        </div>
 
         ${coachActive ? `
-        <div style="background:rgba(95,168,126,0.08);border:1px solid rgba(95,168,126,0.25);border-radius:10px;padding:12px;margin-bottom:14px;">
-          <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;">
+        <div class="mx-quote mob-coach-box">
+          <label class="mob-check">
             <input type="checkbox" id="mobBCoachAssign" ${_editing.assignedByCoach?'checked':''}>
-            <span style="font-size:0.85rem;color:var(--text-color);font-weight:600;">🧭 Assign to client</span>
+            <span>Assign to client</span>
           </label>
           <div id="mobBCoachExtra" style="display:${_editing.assignedByCoach?'block':'none'};">
-            <label style="display:block;margin-bottom:3px;font-size:0.8rem;color:var(--secondary-text);">Coach notes for client</label>
-            <textarea id="mobBCoachNotes" rows="2" placeholder="Instructions or context for the client…" style="width:100%;border-radius:8px;border:1px solid var(--border-color);background:var(--elevated-bg);color:var(--text-color);padding:8px;font-family:Poppins,sans-serif;font-size:0.82rem;box-sizing:border-box;resize:vertical;">${esc(_editing.coachNotes)}</textarea>
+            <label class="mx-lbl" for="mobBCoachNotes">Coach notes for client</label>
+            <div class="mx-well mx-well--area"><textarea id="mobBCoachNotes" rows="2" placeholder="Instructions or context for the client…">${esc(_editing.coachNotes)}</textarea></div>
           </div>
         </div>` : ''}
 
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <strong style="font-size:0.88rem;color:var(--text-color);">Exercises</strong>
-          <button id="mobBAddEx" style="background:none;border:1px solid var(--primary);color:var(--primary);border-radius:8px;padding:4px 12px;font-size:0.78rem;cursor:pointer;font-family:Poppins,sans-serif;">+ Add</button>
+        <div class="pod-row">
+          <span class="mx-lbl">Exercises</span>
+          <button type="button" id="mobBAddEx" class="mx-outline"><span class="ui-icon">${icon('plus')}</span> Add</button>
         </div>
-        <div id="mobBExList"></div>
-        <button id="mobBSave" style="width:100%;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:11px;font-weight:700;font-size:0.9rem;cursor:pointer;margin-top:14px;font-family:Poppins,sans-serif;">Save Routine</button>
+        <div id="mobBExList" class="mob-b-list"></div>
+        <button type="button" id="mobBSave" class="mx-cta">
+          <span>Save Routine</span>
+          <span class="mx-cta-icon"><span class="ui-icon">${icon('check')}</span></span>
+        </button>
       </div>
     `;
 
@@ -548,18 +598,18 @@
     list.innerHTML = '';
     _editing.exercises.forEach((ex, i) => {
       const el = document.createElement('div');
-      el.style.cssText = 'background:var(--elevated-bg);border:1px solid var(--border-color);border-radius:10px;padding:10px;margin-bottom:8px;';
+      el.className = 'mob-bex';
       el.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-          <strong style="font-size:0.78rem;color:var(--secondary-text);">Exercise ${i+1}</strong>
-          <button class="mob-ex-del" data-i="${i}" style="background:none;border:none;color:#c05060;cursor:pointer;font-size:0.85rem;padding:0;">✕ Remove</button>
+        <div class="pod-row">
+          <span class="mx-lbl">Exercise ${i+1}</span>
+          <button type="button" class="mob-ex-del mx-link mob-danger" data-i="${i}">Remove</button>
         </div>
-        <input class="mob-ex-nm"  data-i="${i}" value="${esc(ex.name)}"   placeholder="Exercise name" style="width:100%;margin-bottom:5px;box-sizing:border-box;font-size:0.83rem;">
-        <input class="mob-ex-det" data-i="${i}" value="${esc(ex.detail)}" placeholder="Key cue or form note (one sentence)" style="width:100%;margin-bottom:8px;box-sizing:border-box;font-size:0.8rem;">
-        <div style="display:flex;gap:8px;">
-          <div style="flex:1;"><label style="font-size:0.72rem;color:var(--secondary-text);">Duration (sec)</label><input type="number" class="mob-ex-dur"  data-i="${i}" value="${ex.durationSeconds??''}" placeholder="—" min="0" style="width:100%;box-sizing:border-box;font-size:0.8rem;"></div>
-          <div style="flex:1;"><label style="font-size:0.72rem;color:var(--secondary-text);">Reps</label>          <input type="number" class="mob-ex-reps" data-i="${i}" value="${ex.reps??''}"          placeholder="—" min="0" style="width:100%;box-sizing:border-box;font-size:0.8rem;"></div>
-          <div style="flex:1;"><label style="font-size:0.72rem;color:var(--secondary-text);">Sets</label>          <input type="number" class="mob-ex-sets" data-i="${i}" value="${ex.sets??''}"          placeholder="—" min="0" style="width:100%;box-sizing:border-box;font-size:0.8rem;"></div>
+        <div class="mx-well mx-well--text"><input class="mob-ex-nm"  data-i="${i}" value="${esc(ex.name)}"   placeholder="Exercise name" aria-label="Exercise ${i+1} name"></div>
+        <div class="mx-well mx-well--text"><input class="mob-ex-det" data-i="${i}" value="${esc(ex.detail)}" placeholder="Key cue or form note (one sentence)" aria-label="Exercise ${i+1} cue"></div>
+        <div class="mx-grid3">
+          <div class="mx-field"><label class="mx-lbl">Secs</label><div class="mx-well mx-well--num"><input type="number" class="mob-ex-dur"  data-i="${i}" value="${ex.durationSeconds??''}" placeholder="—" min="0" inputmode="numeric" aria-label="Exercise ${i+1} duration in seconds"></div></div>
+          <div class="mx-field"><label class="mx-lbl">Reps</label><div class="mx-well mx-well--num"><input type="number" class="mob-ex-reps" data-i="${i}" value="${ex.reps??''}"            placeholder="—" min="0" inputmode="numeric" aria-label="Exercise ${i+1} reps"></div></div>
+          <div class="mx-field"><label class="mx-lbl">Sets</label><div class="mx-well mx-well--num"><input type="number" class="mob-ex-sets" data-i="${i}" value="${ex.sets??''}"            placeholder="—" min="0" inputmode="numeric" aria-label="Exercise ${i+1} sets"></div></div>
         </div>
       `;
       el.querySelector('.mob-ex-del').addEventListener('click',  () => { _editing.exercises.splice(i,1); renderExList(overlay); });
@@ -590,7 +640,7 @@
     if (idx !== -1) list[idx] = _editing; else list.push(_editing);
     saveRoutines(list);
     atSyncRoutine(_editing);
-    toast('Routine saved ✅');
+    toast('Routine saved');
     overlay.remove();
     render();
   }
@@ -606,7 +656,7 @@
     const copy = { ...JSON.parse(JSON.stringify(lib)), id: genId(), username: getUser(), _libId: lib.id, assignedByCoach: false, coachNotes: '', createdAt: new Date().toISOString() };
     const list = getRoutines(); list.push(copy); saveRoutines(list);
     atSyncRoutine(copy);
-    toast(`"${lib.name}" added to your routines ✅`);
+    toast(`"${lib.name}" added to your routines`);
     _tab = 'myRoutines'; render();
   }
 
@@ -649,7 +699,7 @@
       }
     }
 
-    toast('Session logged ✅');
+    toast('Session logged');
     window.renderHomeDashboard?.();
   }
 
