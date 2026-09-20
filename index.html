@@ -19619,20 +19619,12 @@ window.renderMeetPrep = renderMeetPrep;
         <canvas id="workoutStoryCanvas" style="display:block;width:100%;height:auto;"></canvas>
       </div>
       <!-- Actions -->
-      <div style="display:flex;gap:10px;">
-        <button id="storyDownloadBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:#2d7d5b;color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <span class="ui-icon" data-icon="download"></span> Save Image
-        </button>
-        <button id="storyShareBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.12);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;gap:8px;">
-          <span class="ui-icon" data-icon="share"></span> Share
-        </button>
-        <button onclick="closeWorkoutStoryModal()" style="padding:14px 18px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:0.9rem;cursor:pointer;">
-          <span class="ui-icon" data-icon="x"></span>
-        </button>
+      <div class="story-actions">
+        <button type="button" id="storyDownloadBtn" class="mx-cta story-save"><span>Save Image</span><span class="mx-cta-icon"><span class="ui-icon" data-icon="download"></span></span></button>
+        <button type="button" id="storyShareBtn" class="mx-outline story-share"><span class="ui-icon" data-icon="share"></span> Share</button>
+        <button type="button" class="mx-iconbtn" aria-label="Close" onclick="closeWorkoutStoryModal()"><span class="ui-icon" data-icon="x"></span></button>
       </div>
-      <p style="text-align:center;color:rgba(255,255,255,0.35);font-size:0.75rem;margin-top:12px;">
-        Save to camera roll · Post to your story <span class="ui-icon" data-icon="camera"></span>
-      </p>
+      <p class="story-caption">Save to camera roll · Post to your story</p>
     </div>
   </div>
 

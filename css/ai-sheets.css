@@ -142,3 +142,9 @@
 }
 .ai-day { align-items: center; }
 .ai-note-flat { border-top: 0; padding-top: 0; }
+
+/* ── Workout story modal actions ─────────────────────────────── */
+.story-actions { display: flex; align-items: center; gap: 10px; }
+.story-save { flex: 1.4; width: auto; padding: 0 9px 0 20px; font-size: 16px; }
+.story-share { flex: 1; }
+.story-caption { text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 12.5px; margin: 14px 0 0; }
