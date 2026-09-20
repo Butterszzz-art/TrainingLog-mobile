@@ -13,6 +13,7 @@
   <!-- ── Modular CSS files (extracted from inline styles) ──────── -->
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/modernist-kit.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/onboarding.css">
@@ -2305,76 +2306,77 @@
       <button class="pill active" onclick="showTab('cardioTab')">Cardio</button>
     </div>
 
-    <!-- Weekly summary chips -->
+    <!-- Last-7-days hero (populated by renderCardio) -->
     <div id="cardioWeeklySummary" class="cardio-weekly-strip"></div>
 
     <!-- Log form -->
-    <div class="cardio-form-card">
-      <div class="cardio-form-header">
-        <h3 class="cardio-form-title">Log Cardio</h3>
-        <span class="cardio-form-date-chip" id="cardioDateChip"></span>
+    <div class="pod mx-pod cardio-form-card">
+      <div class="pod-row">
+        <h3 class="pod-title cardio-form-title">Log Session</h3>
+        <span class="mx-meta cardio-form-date-chip" id="cardioDateChip"></span>
       </div>
 
-      <!-- Activity type pills -->
-      <div class="cardio-type-picker" id="cardioTypePicker">
-        <button class="cardio-type-btn active" data-type="run"        onclick="selectCardioType('run')"><span class="ui-icon" data-icon="activity"></span> Run</button>
-        <button class="cardio-type-btn"        data-type="walk"       onclick="selectCardioType('walk')"><span class="ui-icon" data-icon="footprints"></span> Walk</button>
-        <button class="cardio-type-btn"        data-type="cycle"      onclick="selectCardioType('cycle')"><span class="ui-icon" data-icon="bike"></span> Cycle</button>
-        <button class="cardio-type-btn"        data-type="swim"       onclick="selectCardioType('swim')"><span class="ui-icon" data-icon="waves"></span> Swim</button>
-        <button class="cardio-type-btn"        data-type="row"        onclick="selectCardioType('row')"><span class="ui-icon" data-icon="waves"></span> Row</button>
-        <button class="cardio-type-btn"        data-type="hiit"       onclick="selectCardioType('hiit')"><span class="ui-icon" data-icon="zap"></span> HIIT</button>
-        <button class="cardio-type-btn"        data-type="hike"       onclick="selectCardioType('hike')"><span class="ui-icon" data-icon="mountain"></span> Hike</button>
-        <button class="cardio-type-btn"        data-type="yoga"       onclick="selectCardioType('yoga')"><span class="ui-icon" data-icon="flower"></span> Yoga</button>
-        <button class="cardio-type-btn"        data-type="other"      onclick="selectCardioType('other')"><span class="ui-icon" data-icon="plus"></span> Other</button>
+      <!-- Activity type tiles -->
+      <div class="mx-field">
+        <span class="mx-lbl" id="cardioTypeLbl">Activity</span>
+        <div class="cardio-type-picker mx-grid3" id="cardioTypePicker" role="group" aria-labelledby="cardioTypeLbl">
+          <button class="cardio-type-btn mx-choice active" data-type="run"   aria-pressed="true"  onclick="selectCardioType('run')"><span class="ui-icon" data-icon="activity"></span><span>Run</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="walk"  aria-pressed="false" onclick="selectCardioType('walk')"><span class="ui-icon" data-icon="footprints"></span><span>Walk</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="cycle" aria-pressed="false" onclick="selectCardioType('cycle')"><span class="ui-icon" data-icon="bike"></span><span>Cycle</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="swim"  aria-pressed="false" onclick="selectCardioType('swim')"><span class="ui-icon" data-icon="waves"></span><span>Swim</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="row"   aria-pressed="false" onclick="selectCardioType('row')"><span class="ui-icon" data-icon="waves"></span><span>Row</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="hiit"  aria-pressed="false" onclick="selectCardioType('hiit')"><span class="ui-icon" data-icon="zap"></span><span>HIIT</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="hike"  aria-pressed="false" onclick="selectCardioType('hike')"><span class="ui-icon" data-icon="mountain"></span><span>Hike</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="yoga"  aria-pressed="false" onclick="selectCardioType('yoga')"><span class="ui-icon" data-icon="flower"></span><span>Yoga</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="other" aria-pressed="false" onclick="selectCardioType('other')"><span class="ui-icon" data-icon="plus"></span><span>Other</span></button>
+        </div>
       </div>
       <!-- Hidden canonical type value -->
       <input type="hidden" id="cardioType" value="run">
       <!-- Custom type text input, shown only when "Other" is active -->
       <div class="cardio-custom-type-wrap" id="cardioCustomTypeWrap" style="display:none">
-        <div class="cardio-input-wrap">
+        <div class="mx-well mx-well--text cardio-input-wrap">
           <span class="cardio-input-icon" data-icon="pencil"></span>
-          <input type="text" id="cardioCustomType" placeholder="Describe activity…"
+          <input type="text" id="cardioCustomType" placeholder="Describe activity…" aria-label="Custom activity"
                  oninput="document.getElementById('cardioType').value = this.value.trim() || 'other'">
         </div>
       </div>
 
       <!-- Core metrics: Duration + Distance -->
-      <div class="cardio-section-label">Core Metrics</div>
-      <div class="cardio-row-2">
-        <div class="cardio-field">
-          <label class="cardio-field-label" for="cardioDuration">Duration</label>
-          <div class="cardio-input-wrap">
-            <span class="cardio-input-icon" data-icon="timer"></span>
+      <div class="mx-grid2">
+        <div class="mx-field">
+          <label class="mx-lbl" for="cardioDuration">Duration</label>
+          <div class="mx-well mx-well--num cardio-input-wrap">
             <input type="number" id="cardioDuration" placeholder="30" min="1" inputmode="decimal"
                    oninput="updateCardioPacePreview()">
-            <span class="cardio-input-unit">min</span>
+            <span class="mx-unit">min</span>
           </div>
         </div>
-        <div class="cardio-field">
-          <label class="cardio-field-label" for="cardioDistance">Distance <span class="cardio-opt">optional</span></label>
-          <div class="cardio-input-wrap">
-            <span class="cardio-input-icon" data-icon="mapPin"></span>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cardioDistance">Distance <em>optional</em></label>
+          <div class="mx-well mx-well--num cardio-input-wrap">
             <input type="number" id="cardioDistance" placeholder="—" step="0.1" min="0" inputmode="decimal"
                    oninput="updateCardioPacePreview()">
-            <span class="cardio-input-unit">km</span>
+            <span class="mx-unit">km</span>
           </div>
         </div>
       </div>
 
       <!-- Live pace / speed preview -->
-      <div id="cardioPacePreview" class="cardio-pace-preview" style="display:none">
+      <div id="cardioPacePreview" class="cardio-pace-preview" style="display:none" aria-live="polite">
         <span class="pace-icon" id="cardioPaceIcon" data-icon="zap"></span>
-        <span class="pace-value" id="cardioPaceValue"></span>
+        <span class="pace-meta"><span class="mx-lbl" id="cardioPaceLabel">Live pace</span></span>
+        <span class="pace-value mx-num" id="cardioPaceValue"></span>
       </div>
 
       <!-- Effort level -->
-      <div class="cardio-field" style="margin-bottom:14px;">
-        <label class="cardio-field-label">Effort level</label>
-        <div class="cardio-intensity-row" id="cardioIntensityPicker">
-          <button class="cardio-intensity-btn" data-intensity="easy"     onclick="selectCardioIntensity('easy')"><span class="ui-icon" data-icon="leaf"></span> Easy</button>
-          <button class="cardio-intensity-btn active" data-intensity="moderate" onclick="selectCardioIntensity('moderate')"><span class="ui-icon" data-icon="dumbbell"></span> Moderate</button>
-          <button class="cardio-intensity-btn" data-intensity="hard"     onclick="selectCardioIntensity('hard')"><span class="ui-icon" data-icon="flame"></span> Hard</button>
-          <button class="cardio-intensity-btn" data-intensity="max"      onclick="selectCardioIntensity('max')"><span class="ui-icon" data-icon="zap"></span> Max</button>
+      <div class="mx-field">
+        <span class="mx-lbl" id="cardioEffortLbl">Effort level</span>
+        <div class="cardio-intensity-row" id="cardioIntensityPicker" role="group" aria-labelledby="cardioEffortLbl">
+          <button class="cardio-intensity-btn" data-intensity="easy"     aria-pressed="false" onclick="selectCardioIntensity('easy')"><span class="cardio-effort-title"><i></i>Easy</span><span class="cardio-effort-hint">Talk freely</span></button>
+          <button class="cardio-intensity-btn active" data-intensity="moderate" aria-pressed="true" onclick="selectCardioIntensity('moderate')"><span class="cardio-effort-title"><i></i>Moderate</span><span class="cardio-effort-hint">Steady, short sentences</span></button>
+          <button class="cardio-intensity-btn" data-intensity="hard"     aria-pressed="false" onclick="selectCardioIntensity('hard')"><span class="cardio-effort-title"><i></i>Hard</span><span class="cardio-effort-hint">Hard to talk</span></button>
+          <button class="cardio-intensity-btn" data-intensity="max"      aria-pressed="false" onclick="selectCardioIntensity('max')"><span class="cardio-effort-title"><i></i>Max</span><span class="cardio-effort-hint">All out</span></button>
         </div>
         <input type="hidden" id="cardioIntensity" value="moderate">
       </div>
@@ -2387,37 +2389,36 @@
         </summary>
         <div class="cardio-optional-body">
 
-          <div class="cardio-section-label" style="margin-top:4px;">Performance</div>
-          <div class="cardio-row-2">
-            <div class="cardio-field">
-              <label class="cardio-field-label" for="cardioCalories">Calories <span class="cardio-opt">override</span></label>
-              <div class="cardio-input-wrap">
+          <div class="mx-grid2">
+            <div class="mx-field">
+              <label class="mx-lbl" for="cardioCalories">Calories <em>override</em></label>
+              <div class="mx-well mx-well--text cardio-input-wrap">
                 <span class="cardio-input-icon" data-icon="flame"></span>
                 <input type="number" id="cardioCalories" placeholder="auto" min="0" inputmode="decimal">
-                <span class="cardio-input-unit">kcal</span>
+                <span class="mx-unit">kcal</span>
               </div>
             </div>
-            <div class="cardio-field">
-              <label class="cardio-field-label" for="cardioHeartRate">Avg heart rate <span class="cardio-opt">optional</span></label>
-              <div class="cardio-input-wrap">
+            <div class="mx-field">
+              <label class="mx-lbl" for="cardioHeartRate">Avg heart rate <em>optional</em></label>
+              <div class="mx-well mx-well--text cardio-input-wrap">
                 <span class="cardio-input-icon" data-icon="heart"></span>
                 <input type="number" id="cardioHeartRate" placeholder="—" min="40" max="230" inputmode="numeric">
-                <span class="cardio-input-unit">bpm</span>
+                <span class="mx-unit">bpm</span>
               </div>
             </div>
           </div>
 
-          <div class="cardio-row-2">
-            <div class="cardio-field">
-              <label class="cardio-field-label" for="cardioDate">Date</label>
-              <div class="cardio-input-wrap">
+          <div class="mx-grid2">
+            <div class="mx-field">
+              <label class="mx-lbl" for="cardioDate">Date</label>
+              <div class="mx-well mx-well--text cardio-input-wrap">
                 <span class="cardio-input-icon" data-icon="calendar"></span>
                 <input type="date" id="cardioDate">
               </div>
             </div>
-            <div class="cardio-field">
-              <label class="cardio-field-label" for="cardioNotes">Notes</label>
-              <div class="cardio-input-wrap">
+            <div class="mx-field">
+              <label class="mx-lbl" for="cardioNotes">Notes</label>
+              <div class="mx-well mx-well--text cardio-input-wrap">
                 <span class="cardio-input-icon" data-icon="pencil"></span>
                 <input type="text" id="cardioNotes" placeholder="e.g. felt great">
               </div>
@@ -2427,8 +2428,9 @@
         </div>
       </details>
 
-      <button class="cardio-submit-btn" onclick="addCardioEntry()">
-        <span id="cardioSubmitIcon" class="ui-icon" data-icon="activity"></span> Log Session
+      <button class="mx-cta cardio-submit-btn" onclick="addCardioEntry()">
+        <span>Log Session</span>
+        <span class="mx-cta-icon"><span id="cardioSubmitIcon" class="ui-icon" data-icon="activity"></span></span>
       </button>
     </div>
 
@@ -13179,7 +13181,9 @@ function calculateCaloriesEquation() {
 function selectCardioType(type) {
   document.getElementById('cardioType').value = type;
   document.querySelectorAll('#cardioTypePicker .cardio-type-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.type === type);
+    const on = btn.dataset.type === type;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
   const customWrap = document.getElementById('cardioCustomTypeWrap');
   if (customWrap) {
@@ -13192,14 +13196,17 @@ function selectCardioType(type) {
   // Update submit button icon to match selected activity
   const cfg = window.cardioTab?.getActivityConfig?.(type);
   const iconEl = document.getElementById('cardioSubmitIcon');
-  if (iconEl && cfg?.icon) iconEl.textContent = cfg.icon;
+  const iconSvg = cfg && ICONS[cfg.iconName];
+  if (iconEl && iconSvg) iconEl.innerHTML = iconSvg;
   updateCardioPacePreview();
 }
 
 function selectCardioIntensity(level) {
   document.getElementById('cardioIntensity').value = level;
   document.querySelectorAll('#cardioIntensityPicker .cardio-intensity-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.intensity === level);
+    const on = btn.dataset.intensity === level;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 }
 
@@ -13228,10 +13235,10 @@ function updateCardioPacePreview() {
 
   if (result) {
     previewEl.style.display = 'flex';
-    const iconEl  = document.getElementById('cardioPaceIcon');
+    const labelEl = document.getElementById('cardioPaceLabel');
     const valueEl = document.getElementById('cardioPaceValue');
-    if (iconEl)  iconEl.textContent  = result.icon;
-    if (valueEl) valueEl.textContent = `${result.label}: ${result.value}`;
+    if (labelEl) labelEl.textContent = `Live ${result.label.toLowerCase()}`;
+    if (valueEl) valueEl.textContent = result.value;
   } else {
     previewEl.style.display = 'none';
   }
@@ -13298,7 +13305,7 @@ function addCardioEntry() {
   const cfg = window.cardioTab?.getActivityConfig?.(type) || { icon: '🏃', label: type };
   const calText = calories > 0 ? ` · ${calories} kcal` : '';
   const paceText = paceOrSpeed ? ` · ${paceOrSpeed.value}` : '';
-  window.showToast?.(`${cfg.icon} ${Math.round(duration)} min ${cfg.label}${paceText}${calText} logged!`, 'success', 3000);
+  window.showToast?.(`${Math.round(duration)} min ${cfg.label}${paceText}${calText} logged!`, 'success', 3000);
 
   renderCardio();
   updateMacroUI();
@@ -13334,18 +13341,53 @@ function renderCardio() {
   const weekKm       = weekEntries.reduce((s, e) => s + (parseFloat(e.distance) || 0), 0);
   const weekKcal     = weekEntries.reduce((s, e) => s + (parseFloat(e.calories) || 0), 0);
 
+  const _esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
   const summaryEl = document.getElementById('cardioWeeklySummary');
   if (summaryEl) {
-    summaryEl.innerHTML = [
-      { val: weekSessions,                        lbl: 'Sessions (7d)' },
-      { val: Math.round(weekMins) + ' min',       lbl: 'Active time'   },
-      { val: weekKm > 0 ? weekKm.toFixed(1)+' km' : '—', lbl: 'Distance' },
-      { val: weekKcal > 0 ? Math.round(weekKcal)+' kcal' : '—', lbl: 'Calories' },
-    ].map(c => `
-      <div class="cardio-stat-chip">
-        <span class="chip-val">${c.val}</span>
-        <span class="chip-lbl">${c.lbl}</span>
-      </div>`).join('');
+    // Minutes per day across the rolling 7 days, oldest → today.
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const mins = weekEntries.filter(e => e.date === key).reduce((s, e) => s + (parseFloat(e.duration) || 0), 0);
+      days.push({
+        mins,
+        today: i === 0,
+        narrow: d.toLocaleDateString(undefined, { weekday: 'narrow' }),
+        short: d.toLocaleDateString(undefined, { weekday: 'short' })
+      });
+    }
+    const maxMins = Math.max(...days.map(d => d.mins), 1);
+    const bars = days.map(d => {
+      const cls = d.mins > 0
+        ? (d.mins === maxMins ? 'cardio-bar cardio-bar--hi' : 'cardio-bar')
+        : (d.today ? 'cardio-bar cardio-bar--today' : 'cardio-bar cardio-bar--none');
+      const style = d.mins > 0
+        ? ` style="height:${Math.max(8, Math.round((d.mins / maxMins) * 64))}px"`
+        : (d.today ? ' style="height:30px"' : '');
+      return `<div class="cardio-bcol"><div class="cardio-bval">${d.mins > 0 ? Math.round(d.mins) : ''}</div><div class="${cls}"${style}></div><div class="cardio-blab${d.today ? ' cardio-blab--today' : ''}">${d.narrow}</div></div>`;
+    }).join('');
+    const barsAria = days.filter(d => d.mins > 0).map(d => `${d.short} ${Math.round(d.mins)}`).join(', ') || 'no sessions';
+    const fmtDay = (dt) => dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    summaryEl.innerHTML = `
+      <section class="pod pod--hero mx-pod" aria-label="Cardio, last 7 days">
+        <div class="pod-row">
+          <span class="mx-kicker">Last 7 days</span>
+          <span class="mx-meta">${fmtDay(weekAgo)} – ${fmtDay(today)}</span>
+        </div>
+        <div class="cardio-hero-big">
+          <span class="mx-num">${Math.round(weekMins)}</span>
+          <span class="cardio-hero-of">min active</span>
+        </div>
+        <div class="cardio-bars" role="img" aria-label="Minutes per day: ${barsAria}">${bars}</div>
+        <div class="mx-tiles">
+          <div class="mx-stat"><span class="mx-stat-l">Sessions</span><span class="mx-stat-v">${weekSessions}</span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Distance</span><span class="mx-stat-v">${weekKm > 0 ? weekKm.toFixed(1) + '<small>km</small>' : '—'}</span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Calories</span><span class="mx-stat-v">${weekKcal > 0 ? Math.round(weekKcal) + '<small>kcal</small>' : '—'}</span></div>
+        </div>
+      </section>`;
   }
 
   /* ── History cards grouped by date ──────────────────────── */
@@ -13382,51 +13424,53 @@ function renderCardio() {
     } catch { return d; }
   }
 
+  const _intensityTag = {
+    easy: `<span class="mx-tag mx-tag--hi"><span class="ui-icon">${ICONS.leaf}</span> Easy</span>`,
+    hard: `<span class="mx-tag mx-tag--brass"><span class="ui-icon">${ICONS.flame}</span> Hard</span>`,
+    max:  `<span class="mx-tag mx-tag--red"><span class="ui-icon">${ICONS.zap}</span> Max</span>`
+  };
+
   historyEl.innerHTML = sortedDates.map(date => {
     const entries = grouped[date];
+    const dayMins = entries.reduce((s, { entry }) => s + (parseFloat(entry.duration) || 0), 0);
     const cards   = entries.map(({ entry, idx }) => {
-      const cfg   = window.cardioTab?.getActivityConfig?.(entry.type) || { icon: '🏅', label: entry.type || 'Other', color: '#8c9891' };
-      const dur   = entry.duration > 0 ? `<span class="ui-icon">${ICONS.timer}</span> ${Math.round(entry.duration)} min` : null;
-      const dist  = parseFloat(entry.distance) > 0 ? `<span class="ui-icon">${ICONS.mapPin}</span> ${parseFloat(entry.distance).toFixed(1)} km` : null;
+      const cfg   = window.cardioTab?.getActivityConfig?.(entry.type) || { label: entry.type || 'Other', iconName: 'activity' };
+      const iconSvg = ICONS[cfg.iconName] || ICONS.activity;
+      const dist  = parseFloat(entry.distance) > 0 ? parseFloat(entry.distance).toFixed(1) : null;
       const pace  = entry.paceOrSpeed
-        ? `${entry.paceOrSpeed.icon} ${entry.paceOrSpeed.value}`
-        : (dist && dur
-            ? (() => {
-                const r = window.cardioTab?.computePaceOrSpeed?.({ type: entry.type, durationMinutes: entry.duration, distanceKm: entry.distance });
-                return r ? `${r.icon} ${r.value}` : null;
-              })()
+        ? entry.paceOrSpeed.value
+        : (dist && entry.duration > 0
+            ? (window.cardioTab?.computePaceOrSpeed?.({ type: entry.type, durationMinutes: entry.duration, distanceKm: entry.distance })?.value || null)
             : null);
-      const kcal  = parseFloat(entry.calories) > 0 ? `<span class="ui-icon">${ICONS.flame}</span> ${Math.round(entry.calories)} kcal` : null;
-      const hr    = parseFloat(entry.heartRate) > 0 ? `<span class="ui-icon">${ICONS.heart}</span> ${Math.round(entry.heartRate)} bpm` : null;
-      const intBadge = entry.intensity && entry.intensity !== 'moderate'
-        ? {
-            easy: `<span class="ui-icon">${ICONS.leaf}</span> Easy`,
-            hard: `<span class="ui-icon">${ICONS.flame}</span> Hard`,
-            max: `<span class="ui-icon">${ICONS.zap}</span> Max`
-          }[entry.intensity] || null
-        : null;
-
-      const tags  = [dur, dist, pace, kcal, hr, intBadge].filter(Boolean).map((t, i) =>
-        `<span class="cardio-stat-tag${t === pace && pace ? ' highlight' : ''}">${t}</span>`
-      ).join('');
+      const tags  = [
+        dist ? `<span class="mx-tag"><span class="ui-icon">${ICONS.mapPin}</span> ${dist} km</span>` : '',
+        parseFloat(entry.calories) > 0 ? `<span class="mx-tag"><span class="ui-icon">${ICONS.flame}</span> ${Math.round(entry.calories)} kcal</span>` : '',
+        parseFloat(entry.heartRate) > 0 ? `<span class="mx-tag"><span class="ui-icon">${ICONS.heart}</span> ${Math.round(entry.heartRate)} bpm</span>` : '',
+        entry.intensity && entry.intensity !== 'moderate' ? (_intensityTag[entry.intensity] || '') : ''
+      ].filter(Boolean).join('');
+      const label = _esc(cfg.label);
 
       return `
-        <div class="cardio-entry-card" style="--c-accent:${cfg.color}">
-          <div class="cardio-entry-icon">${cfg.icon}</div>
-          <div class="cardio-entry-info">
-            <div class="cardio-entry-title">${cfg.label}</div>
-            <div class="cardio-entry-stats">${tags}</div>
-            ${entry.notes ? `<div class="cardio-entry-notes">${entry.notes}</div>` : ''}
+        <div class="cardio-entry-card mx-row">
+          <div class="cardio-entry-icon mx-row-ico"><span class="ui-icon">${iconSvg}</span></div>
+          <div class="cardio-entry-info mx-row-main">
+            <div class="cardio-entry-title mx-row-title">${label}</div>
+            ${tags ? `<div class="cardio-entry-stats mx-tags">${tags}</div>` : ''}
+            ${entry.notes ? `<div class="cardio-entry-notes">${_esc(entry.notes)}</div>` : ''}
           </div>
-          <button class="cardio-remove-btn" onclick="removeCardioEntry(${idx})" title="Remove"><span class="ui-icon">${ICONS.x}</span></button>
+          <div class="mx-row-right">
+            ${entry.duration > 0 ? `<span class="mx-row-big">${Math.round(entry.duration)}<span class="mx-unit"> min</span></span>` : ''}
+            ${pace ? `<span class="mx-row-sm">${_esc(pace)}</span>` : ''}
+          </div>
+          <button class="cardio-remove-btn mx-iconbtn mx-iconbtn--ghost" onclick="removeCardioEntry(${idx})" title="Remove" aria-label="Remove ${label} session"><span class="ui-icon">${ICONS.x}</span></button>
         </div>`;
     }).join('');
 
     return `
-      <div class="cardio-day-group">
-        <div class="cardio-day-header">${_dateLabel(date)} &nbsp;·&nbsp; ${date}</div>
-        ${cards}
-      </div>`;
+      <section class="cardio-day-group pod mx-pod" aria-label="${_dateLabel(date)}">
+        <div class="cardio-day-header"><span>${_dateLabel(date)} &nbsp;·&nbsp; ${date}</span><span class="cardio-day-total">${Math.round(dayMins)} min</span></div>
+        <div>${cards}</div>
+      </section>`;
   }).join('');
 
   // Keep legacy cardioBody in sync for anything that still reads it

@@ -20,16 +20,16 @@
 
   /* Activity display config — icon, colour accent, metric type */
   const ACTIVITY_CONFIG = {
-    run:        { label: 'Run',        icon: '🏃', metric: 'pace',  color: '#e05252' },
-    walk:       { label: 'Walk',       icon: '🚶', metric: 'pace',  color: '#52c078' },
-    cycle:      { label: 'Cycle',      icon: '🚴', metric: 'speed', color: '#5295e0' },
-    swim:       { label: 'Swim',       icon: '🏊', metric: 'pace',  color: '#52c0d8' },
-    row:        { label: 'Row',        icon: '🚣', metric: 'speed', color: '#9070d8' },
-    hiit:       { label: 'HIIT',       icon: '💪', metric: null,    color: '#e0943a' },
-    hike:       { label: 'Hike',       icon: '🥾', metric: 'pace',  color: '#7ab848' },
-    yoga:       { label: 'Yoga',       icon: '🧘', metric: null,    color: '#a07dc0' },
-    elliptical: { label: 'Elliptical', icon: '⚙️', metric: 'speed', color: '#7f9891' },
-    other:      { label: 'Other',      icon: '🏅', metric: null,    color: '#8c9891' },
+    run:        { label: 'Run',        icon: '🏃', iconName: 'activity', metric: 'pace',  color: '#e05252' },
+    walk:       { label: 'Walk',       icon: '🚶', iconName: 'footprints', metric: 'pace',  color: '#52c078' },
+    cycle:      { label: 'Cycle',      icon: '🚴', iconName: 'bike', metric: 'speed', color: '#5295e0' },
+    swim:       { label: 'Swim',       icon: '🏊', iconName: 'waves', metric: 'pace',  color: '#52c0d8' },
+    row:        { label: 'Row',        icon: '🚣', iconName: 'waves', metric: 'speed', color: '#9070d8' },
+    hiit:       { label: 'HIIT',       icon: '💪', iconName: 'zap', metric: null,    color: '#e0943a' },
+    hike:       { label: 'Hike',       icon: '🥾', iconName: 'mountain', metric: 'pace',  color: '#7ab848' },
+    yoga:       { label: 'Yoga',       icon: '🧘', iconName: 'flower', metric: null,    color: '#a07dc0' },
+    elliptical: { label: 'Elliptical', icon: '⚙️', iconName: 'activity', metric: 'speed', color: '#7f9891' },
+    other:      { label: 'Other',      icon: '🏅', iconName: 'activity', metric: null,    color: '#8c9891' },
   };
 
   function normalizeType(type) {
@@ -68,7 +68,7 @@
 
   /** Return the ACTIVITY_CONFIG entry for a type, falling back gracefully */
   function getActivityConfig(type) {
-    return ACTIVITY_CONFIG[normalizeType(type)] || { label: type || 'Other', icon: '🏅', metric: null, color: '#8c9891' };
+    return ACTIVITY_CONFIG[normalizeType(type)] || { label: type || 'Other', icon: '🏅', iconName: 'activity', metric: null, color: '#8c9891' };
   }
 
   function estimateCardioCalories({ type, durationMinutes, weightKg }) {
