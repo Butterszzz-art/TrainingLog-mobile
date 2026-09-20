@@ -490,26 +490,98 @@ function normalizeHistoryItem(item) {
   };
 }
 
-function renderHistoryList(containerEl) {
-  containerEl.innerHTML = '';
-  const list = document.createElement('ul');
-  list.className = 'history-list';
+const HIST_ICON = (name) => (typeof ICONS !== 'undefined' && ICONS[name]) || '';
 
+function histEsc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/** Total lifted volume (sum of weight × reps) for a list of exercises. */
+function historyVolume(exercises) {
+  return (Array.isArray(exercises) ? exercises : []).reduce((sum, ex) => {
+    const reps = Array.isArray(ex?.repsArray) ? ex.repsArray : [];
+    const weights = Array.isArray(ex?.weightsArray) ? ex.weightsArray : [];
+    const n = Math.max(reps.length, weights.length);
+    let v = 0;
+    for (let i = 0; i < n; i++) v += (Number(weights[i]) || 0) * (Number(reps[i]) || 0);
+    return sum + v;
+  }, 0);
+}
+
+function historyVolumeHtml(volume) {
+  return volume >= 1000
+    ? `${(volume / 1000).toFixed(1)}<small>t</small>`
+    : `${Math.round(volume).toLocaleString()}<small>kg</small>`;
+}
+
+/** Bucket a workout date into "This week" / "Last week" / "Month YYYY" (weeks start Monday). */
+function historyGroupLabel(dateValue, now = new Date()) {
+  const d = new Date(dateValue);
+  if (Number.isNaN(d.getTime())) return 'Earlier';
+  const startOfWeek = (x) => {
+    const s = new Date(x);
+    s.setHours(0, 0, 0, 0);
+    s.setDate(s.getDate() - ((s.getDay() + 6) % 7));
+    return s;
+  };
+  const weeks = Math.round((startOfWeek(now) - startOfWeek(d)) / (7 * 86400000));
+  if (weeks <= 0) return 'This week';
+  if (weeks === 1) return 'Last week';
+  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+function renderHistoryList(containerEl) {
+  const now = new Date();
+  const inMonth = cachedWorkoutHistory.filter(log => {
+    const d = new Date(log?.date);
+    return !Number.isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+  const monthVolume = inMonth.reduce((sum, log) => sum + historyVolume(log.exercises), 0);
+  const monthName = now.toLocaleDateString(undefined, { month: 'long' });
+
+  const groups = [];
   cachedWorkoutHistory.forEach((log, index) => {
-    const li = document.createElement('li');
-    li.className = 'history-item';
-    li.innerHTML = `
-      <div class="row">
-        <strong>${log?.title || 'Workout'}</strong>
-        <span>${formatWorkoutDate(log?.date)}</span>
-      </div>
-      <div class="meta">${buildExerciseSummary(log?.exercises)}</div>
-      <button class="adv-btn primary history-open-btn" data-history-index="${index}">Open</button>
-    `;
-    list.appendChild(li);
+    const label = historyGroupLabel(log?.date, now);
+    let group = groups[groups.length - 1];
+    if (!group || group.label !== label) { group = { label, items: [] }; groups.push(group); }
+    group.items.push({ log, index });
   });
 
-  containerEl.appendChild(list);
+  const row = ({ log, index }) => {
+    const d = new Date(log?.date);
+    const valid = !Number.isNaN(d.getTime());
+    const title = log?.title || 'Workout';
+    const when = valid
+      ? `${d.toLocaleDateString(undefined, { weekday: 'short' })} · ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+      : formatWorkoutDate(log?.date);
+    return `
+      <li class="hist-item">
+        <button type="button" class="hist-open" data-history-index="${index}" aria-label="Open ${histEsc(title)}, ${histEsc(when)}">
+          <span class="mx-date"><b>${valid ? d.getDate() : ''}</b><span>${valid ? d.toLocaleDateString(undefined, { month: 'short' }) : ''}</span></span>
+          <span class="hist-main">
+            <span class="mx-row-title">${histEsc(title)}</span>
+            <span class="mx-row-sub">${histEsc(buildExerciseSummary(log?.exercises))}</span>
+            <span class="mx-meta">${histEsc(when)}</span>
+          </span>
+          <span class="ui-icon hist-go">${HIST_ICON('chevronRight')}</span>
+        </button>
+      </li>`;
+  };
+
+  containerEl.innerHTML = `
+    <section class="pod pod--hero mx-pod hist-hero" aria-label="${histEsc(monthName)} summary">
+      <div class="pod-row"><span class="mx-kicker">${histEsc(monthName)}</span></div>
+      <div class="mx-tiles mx-tiles--2">
+        <div class="mx-stat"><span class="mx-stat-l">Sessions</span><span class="mx-stat-v">${inMonth.length}</span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Volume</span><span class="mx-stat-v">${monthVolume > 0 ? historyVolumeHtml(monthVolume) : '—'}</span></div>
+      </div>
+    </section>
+    ${groups.map(g => `
+      <div class="hist-group">
+        <div class="hist-group-label">${histEsc(g.label)}</div>
+        <ul class="hist-list">${g.items.map(row).join('')}</ul>
+      </div>`).join('')}
+  `;
 }
 
 const SESSION_RATING_LABELS = {
@@ -519,6 +591,7 @@ const SESSION_RATING_LABELS = {
   missedRepGoal: 'Rep goal'
 };
 
+/** Plain-text rating summary (kept for callers that want a one-line string). */
 function formatSessionRatingSummary(sessionRating) {
   if (!sessionRating) return '';
   return Object.keys(SESSION_RATING_LABELS)
@@ -531,31 +604,54 @@ function renderHistoryDetail(containerEl, log) {
   const title = log?.title || 'Resistance Workout';
   const dateLabel = formatWorkoutDate(log?.date);
   const exercises = Array.isArray(log?.exercises) ? log.exercises : [];
-  const ratingSummary = formatSessionRatingSummary(log?.sessionRating);
+  const totalVolume = historyVolume(exercises);
+  const ratings = log?.sessionRating
+    ? Object.keys(SESSION_RATING_LABELS).filter(key => log.sessionRating[key] != null)
+        .map(key => ({ label: SESSION_RATING_LABELS[key], value: Number(log.sessionRating[key]) || 0 }))
+    : [];
+
+  const exerciseHtml = exercises.map(ex => {
+    const reps = Array.isArray(ex?.repsArray) ? ex.repsArray : [];
+    const weights = Array.isArray(ex?.weightsArray) ? ex.weightsArray : [];
+    const length = Math.max(reps.length, weights.length);
+    const vol = historyVolume([ex]);
+    const sets = Array.from({ length }, (_, idx) => {
+      const repValue = reps[idx] ?? 0;
+      const weightValue = weights[idx] ?? 0;
+      return `<div class="hist-set"><span class="hist-set-n">${idx + 1}</span><b>${histEsc(weightValue)}<small>kg</small><span class="hist-x">×</span>${histEsc(repValue)}</b></div>`;
+    });
+    return `
+      <section class="pod mx-pod history-detail-card" aria-label="${histEsc(ex?.name || 'Exercise')}">
+        <div class="pod-row">
+          <h4 class="pod-title mx-h3 history-detail-title">${histEsc(ex?.name || 'Exercise')}</h4>
+          ${vol > 0 ? `<span class="mx-meta">${Math.round(vol).toLocaleString()} kg</span>` : ''}
+        </div>
+        <div class="history-detail-sets hist-sets">${sets.length ? sets.join('') : '<div class="history-detail-empty mx-meta">No sets recorded.</div>'}</div>
+      </section>`;
+  }).join('');
 
   containerEl.innerHTML = `
-    <button class="adv-btn history-back-btn" id="historyBackBtn">← Back</button>
-    <h3 style="margin-top:12px;">${title}</h3>
-    <div class="meta">${dateLabel}</div>
-    ${ratingSummary ? `<div class="session-rating-summary">${ratingSummary}</div>` : ''}
-    <div class="history-detail-list">
-      ${exercises.map(ex => {
-        const reps = Array.isArray(ex?.repsArray) ? ex.repsArray : [];
-        const weights = Array.isArray(ex?.weightsArray) ? ex.weightsArray : [];
-        const length = Math.max(reps.length, weights.length);
-        const sets = Array.from({ length }, (_, idx) => {
-          const repValue = reps[idx] ?? 0;
-          const weightValue = weights[idx] ?? 0;
-          return `${weightValue} × ${repValue}`;
-        });
-        return `
-          <div class="history-detail-card">
-            <div class="history-detail-title">${ex?.name || 'Exercise'}</div>
-            <div class="history-detail-sets">${sets.length ? sets.join('<br>') : 'No sets recorded.'}</div>
-          </div>
-        `;
-      }).join('')}
-    </div>
+    <button type="button" class="hist-back" id="historyBackBtn"><span class="ui-icon">${HIST_ICON('arrowLeft')}</span> History</button>
+    <header class="hist-detail-head">
+      <div>
+        <div class="mx-kicker">${histEsc(dateLabel)}</div>
+        <h3 class="hist-title">${histEsc(title)}</h3>
+      </div>
+      ${totalVolume > 0 ? `<span class="mx-chip mx-chip--green">${Math.round(totalVolume).toLocaleString()} kg</span>` : ''}
+    </header>
+    ${ratings.length ? `
+      <section class="pod pod--hero mx-pod session-rating-summary" aria-label="Session rating">
+        <div class="pod-row"><span class="mx-kicker">Session rating</span><span class="mx-meta">out of 5</span></div>
+        <div class="mx-tiles mx-tiles--2">
+          ${ratings.map(r => `
+            <div class="mx-stat">
+              <span class="mx-stat-l">${histEsc(r.label)}</span>
+              <span class="mx-stat-v">${r.value}<small>/ 5</small></span>
+              <div class="mx-meter mx-meter--thin"><i style="width:${Math.max(0, Math.min(100, r.value * 20))}%"></i></div>
+            </div>`).join('')}
+        </div>
+      </section>` : ''}
+    <div class="history-detail-list">${exerciseHtml}</div>
   `;
 }
 
@@ -642,7 +738,7 @@ export async function renderWorkoutHistory(containerEl = document.getElementById
       return;
     }
 
-    if (event.target.id === 'historyBackBtn') {
+    if (event.target.closest('#historyBackBtn')) {
       renderHistoryList(containerEl);
     }
   };

@@ -13,6 +13,7 @@
   <!-- ── Modular CSS files (extracted from inline styles) ──────── -->
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/modernist-kit.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/onboarding.css">
@@ -34,6 +35,9 @@
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
   <link rel="stylesheet" href="css/cardio.css">
+  <link rel="stylesheet" href="css/posing.css">
+  <link rel="stylesheet" href="css/mobility.css">
+  <link rel="stylesheet" href="css/history.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
@@ -1301,13 +1305,13 @@
             <label for="checkInDateInput">Date</label>
             <input type="date" id="checkInDateInput">
           </div>
-          <div class="ci-field">
+          <div class="ci-field ci-field--num">
             <label for="checkInBodyweightInput">Bodyweight (kg)</label>
             <input type="number" step="0.1" id="checkInBodyweightInput" placeholder="e.g. 82.5">
           </div>
         </div>
         <div class="ci-row-2">
-          <div class="ci-field">
+          <div class="ci-field ci-field--num">
             <label for="checkInWaistInput">Waist (cm)</label>
             <input type="number" step="0.1" id="checkInWaistInput" placeholder="e.g. 74">
           </div>
@@ -1482,26 +1486,26 @@
       <div class="ci-card">
         <h3 class="ci-card-title"><span class="ui-icon" data-icon="refresh"></span> Side-by-Side Comparison</h3>
         <p class="ci-card-desc">Compare your current photos with a previous check-in.</p>
-        <div style="margin-bottom:10px;">
-          <label for="photoCompareSelect" style="font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;display:block;margin-bottom:5px;">Compare with</label>
-          <select id="photoCompareSelect" onchange="renderPhotoComparison()" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--elevated-bg);color:var(--text-color);font-size:1rem;-webkit-appearance:none;">
+        <div class="ci-cmp-picker">
+          <label class="mx-lbl ci-cmp-label" for="photoCompareSelect">Compare with</label>
+          <select id="photoCompareSelect" class="ci-cmp-select" onchange="renderPhotoComparison()">
             <option value="">-- Select a previous check-in --</option>
           </select>
         </div>
         <div id="photoComparisonGrid" style="display:none;">
-          <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:0 0 8px;">Front view</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-            <div style="text-align:center;">
-              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Then</div>
-              <img id="photoCompare_front_old" style="width:100%;border-radius:10px;aspect-ratio:3/4;object-fit:cover;background:var(--elevated-bg);" alt="Previous front">
+          <p class="mx-lbl ci-cmp-heading">Front view</p>
+          <div class="ci-cmp-row">
+            <div class="ci-cmp-cell">
+              <span class="mx-meta">Then</span>
+              <img id="photoCompare_front_old" class="ci-cmp-img" alt="Previous front">
             </div>
-            <div style="text-align:center;">
-              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Now</div>
-              <img id="photoCompare_front_new" style="width:100%;border-radius:10px;aspect-ratio:3/4;object-fit:cover;background:var(--elevated-bg);" alt="Current front">
+            <div class="ci-cmp-cell">
+              <span class="mx-meta">Now</span>
+              <img id="photoCompare_front_new" class="ci-cmp-img" alt="Current front">
             </div>
           </div>
         </div>
-        <div id="photoComparisonEmpty" style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:16px 0;">
+        <div id="photoComparisonEmpty" class="ci-cmp-empty">
           Add photos and save a check-in to unlock comparisons.
         </div>
       </div>
@@ -1541,10 +1545,12 @@
 
   </div><!-- /checkInTab -->
   
-<div id="functionalTab" class="tab-content">
+<div id="functionalTab" class="tab-content mx-tab">
 
   <!-- Functional Fitness sub-nav -->
-  <h2>Functional Fitness</h2>
+  <div class="mx-head">
+    <h2 class="pod-title">Functional Fitness</h2>
+  </div>
   <nav class="log-subtabs" id="funcSubNav">
     <button class="log-subtab active" data-fsub="crossfit"><span class="ui-icon" data-icon="dumbbell"></span> CrossFit</button>
     <button class="log-subtab" data-fsub="hyrox"><span class="ui-icon" data-icon="activity"></span> HYROX</button>
@@ -1553,216 +1559,291 @@
 
   <!-- ══ Sub: CrossFit WODs ══════════════════════════════════ -->
   <div id="fSub_crossfit" class="func-subview active">
-    <div id="cfEntryPanel" class="panel active">
-      <input type="text" id="cfWorkoutName" placeholder="Workout Name (e.g., Murph)">
-      <input type="number" id="cfMinutes" placeholder="Time (Minutes)">
-      <input type="number" id="cfSeconds" placeholder="Time (Seconds)">
-      <input type="number" id="cfRounds" placeholder="Rounds Completed (optional)">
-      <textarea id="cfNotes" placeholder="Notes (optional)" style="width:100%;height:80px;margin-top:10px;"></textarea>
 
-      <h3 style="margin-top:20px;">Exercises</h3>
-      <div id="cfExercisesContainer"></div>
-      <button onclick="addCrossfitExercise()"><span class="ui-icon" data-icon="plus"></span> Add Exercise</button>
-
-      <div class="wod-timer-card">
-        <h3>Interval Timer</h3>
-        <div class="wod-format-tabs">
-          <button class="wod-format-btn active" data-wod-format="amrap">AMRAP</button>
-          <button class="wod-format-btn" data-wod-format="emom">EMOM</button>
-          <button class="wod-format-btn" data-wod-format="tabata">TABATA</button>
-          <button class="wod-format-btn" data-wod-format="fortime">For Time</button>
-        </div>
-        <div class="wod-timer-config">
-          <label id="wodConfigDuration">Duration (min)<input type="number" id="wodDuration" value="20" min="1" max="60"></label>
-          <label id="wodConfigRounds" style="display:none">Rounds<input type="number" id="wodRounds" value="10" min="1" max="60"></label>
-          <label id="wodConfigWork" style="display:none">Work (sec)<input type="number" id="wodWork" value="20" min="5" max="300"></label>
-          <label id="wodConfigRest" style="display:none">Rest (sec)<input type="number" id="wodRest" value="10" min="5" max="300"></label>
-        </div>
-        <div class="wod-timer-display">
-          <div class="wod-timer-clock" id="wodClock">00:00</div>
-          <div class="wod-timer-phase" id="wodPhase">Ready</div>
-        </div>
-        <div class="wod-timer-controls">
-          <button class="wod-start-btn" id="wodStartBtn">Start</button>
-          <button class="wod-pause-btn" id="wodPauseBtn" style="display:none">Pause</button>
-          <button class="wod-reset-btn" id="wodResetBtn">Reset</button>
-        </div>
+    <!-- Interval timer (driven by src/js/archetype-features.js) -->
+    <section class="pod pod--hero mx-pod wod-timer-card" aria-label="Interval timer">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Interval Timer</h3>
       </div>
-
-      <button style="margin-top:20px;" onclick="saveCrossfitWorkout()">Save Workout</button>
-
-      <div class="cf-template-controls" style="margin-top:20px;">
-        <label for="crossfitTemplateSelect">Load Saved Template</label>
-        <select id="crossfitTemplateSelect" onchange="loadCrossfitTemplate()" style="margin-top:10px;">
-          <option value="">-- Load Saved Template --</option>
-        </select>
+      <div class="mx-tabs wod-format-tabs" role="group" aria-label="Timer format">
+        <button class="wod-format-btn active" data-wod-format="amrap">AMRAP</button>
+        <button class="wod-format-btn" data-wod-format="emom">EMOM</button>
+        <button class="wod-format-btn" data-wod-format="tabata">TABATA</button>
+        <button class="wod-format-btn" data-wod-format="fortime">For Time</button>
       </div>
+      <div class="wod-timer-display">
+        <div class="wod-timer-clock" id="wodClock" role="timer" aria-live="off">00:00</div>
+        <div class="wod-timer-phase" id="wodPhase" aria-live="polite">Ready</div>
+      </div>
+      <div class="wod-timer-config">
+        <label id="wodConfigDuration">Duration (min)<input type="number" id="wodDuration" value="20" min="1" max="60" inputmode="numeric"></label>
+        <label id="wodConfigRounds" style="display:none">Rounds<input type="number" id="wodRounds" value="10" min="1" max="60" inputmode="numeric"></label>
+        <label id="wodConfigWork" style="display:none">Work (sec)<input type="number" id="wodWork" value="20" min="5" max="300" inputmode="numeric"></label>
+        <label id="wodConfigRest" style="display:none">Rest (sec)<input type="number" id="wodRest" value="10" min="5" max="300" inputmode="numeric"></label>
+      </div>
+      <div class="wod-timer-controls">
+        <button class="mx-cta wod-start-btn" id="wodStartBtn">Start</button>
+        <button class="mx-outline wod-pause-btn" id="wodPauseBtn" style="display:none">Pause</button>
+        <button class="mx-outline wod-reset-btn" id="wodResetBtn">Reset</button>
+      </div>
+    </section>
+
+    <div id="cfEntryPanel">
+      <section class="pod mx-pod" aria-label="Log a workout">
+        <div class="pod-row">
+          <h3 class="pod-title mx-h3">Log Workout</h3>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfWorkoutName">Workout name</label>
+          <div class="mx-well mx-well--text"><input type="text" id="cfWorkoutName" placeholder="e.g. Murph"></div>
+        </div>
+        <div class="mx-grid3">
+          <div class="mx-field">
+            <label class="mx-lbl" for="cfMinutes">Minutes</label>
+            <div class="mx-well mx-well--num cf-num"><input type="number" id="cfMinutes" placeholder="0" inputmode="numeric"></div>
+          </div>
+          <div class="mx-field">
+            <label class="mx-lbl" for="cfSeconds">Seconds</label>
+            <div class="mx-well mx-well--num cf-num"><input type="number" id="cfSeconds" placeholder="0" inputmode="numeric"></div>
+          </div>
+          <div class="mx-field">
+            <label class="mx-lbl" for="cfRounds">Rounds <em>opt.</em></label>
+            <div class="mx-well mx-well--num cf-num"><input type="number" id="cfRounds" placeholder="—" inputmode="numeric"></div>
+          </div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfNotes">Notes <em>optional</em></label>
+          <div class="mx-well mx-well--area"><textarea id="cfNotes" placeholder="Vest, scaling, how it felt…"></textarea></div>
+        </div>
+      </section>
+
+      <section class="pod mx-pod" aria-label="Exercises">
+        <div class="pod-row">
+          <h3 class="pod-title mx-h3">Exercises</h3>
+        </div>
+        <div id="cfExercisesContainer" class="cf-exercises"></div>
+        <button type="button" class="mx-outline mx-outline--block" onclick="addCrossfitExercise()"><span class="ui-icon" data-icon="plus"></span> Add Exercise</button>
+      </section>
+
+      <section class="pod mx-pod" aria-label="Save workout">
+        <div class="cf-template-controls mx-field">
+          <label class="mx-lbl" for="crossfitTemplateSelect">Load Saved Template</label>
+          <div class="mx-well mx-well--text mx-well--sel">
+            <select id="crossfitTemplateSelect" onchange="loadCrossfitTemplate()">
+              <option value="">-- Load Saved Template --</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="mx-cta" onclick="saveCrossfitWorkout()">
+          <span>Save Workout</span>
+          <span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span>
+        </button>
+      </section>
     </div>
-    <div id="cfHistoryPanel" class="panel">
-      <h3>Saved Workouts</h3>
+
+    <section id="cfHistoryPanel" class="pod mx-pod" aria-label="Saved workouts">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Saved Workouts</h3>
+      </div>
       <div id="cfWorkoutsContainer"></div>
-    </div>
+    </section>
   </div>
 
   <!-- ══ Sub: HYROX ══════════════════════════════════════════ -->
   <div id="fSub_hyrox" class="func-subview">
-    <div class="rehab-card">
-      <h3>HYROX Race Simulation</h3>
-      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px;">Log times for each station. Track your progress across simulations.</p>
 
-      <div class="hyrox-date-row">
-        <label style="font-size:0.78rem;color:var(--secondary-text);font-weight:600;">
-          Date <input type="date" id="hyroxDate" style="margin:0;">
-        </label>
+    <section class="pod pod--hero mx-pod" aria-label="Race simulation summary">
+      <div class="pod-row">
+        <span class="mx-kicker">Race simulation</span>
+        <span class="mx-chip mx-chip--green" id="hyroxDone">0 of 16</span>
+      </div>
+      <div class="hyrox-hero-big">
+        <span class="mx-num" id="hyroxTotal">—</span>
+        <span class="hyrox-hero-of">total time</span>
+      </div>
+      <div class="mx-meter" role="img" aria-label="Stations logged"><i id="hyroxMeterFill" style="width:0%"></i></div>
+      <div class="mx-tiles">
+        <div class="mx-stat"><span class="mx-stat-l">Avg run</span><span class="mx-stat-v" id="hyroxAvgRun">—</span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Run time</span><span class="mx-stat-v" id="hyroxRunTotal">—</span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Stations</span><span class="mx-stat-v" id="hyroxStnTotal">—</span></div>
+      </div>
+    </section>
+
+    <section class="pod mx-pod" aria-label="Station times">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">HYROX Stations</h3>
+      </div>
+      <p class="mx-sub" style="margin:-6px 0 0;">Log times for each station. Track your progress across simulations.</p>
+      <div class="mx-field hyrox-date-row">
+        <label class="mx-lbl" for="hyroxDate">Date</label>
+        <div class="mx-well mx-well--text"><input type="date" id="hyroxDate"></div>
       </div>
 
       <div class="hyrox-stations" id="hyroxStations">
-        <div class="hyrox-station" data-station="1">
+        <div class="hyrox-station" data-station="1" data-kind="run">
           <span class="hyrox-station-num">1</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run1">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 1, 1km Run" data-field="run1"></div>
         </div>
-        <div class="hyrox-station" data-station="2">
+        <div class="hyrox-station" data-station="2" data-kind="station">
           <span class="hyrox-station-num">2</span>
-          <span class="hyrox-station-name">SkiErg (1km)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="skierg">
+          <span class="hyrox-station-name">SkiErg (1km)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 2, SkiErg" data-field="skierg"></div>
         </div>
-        <div class="hyrox-station" data-station="3">
+        <div class="hyrox-station" data-station="3" data-kind="run">
           <span class="hyrox-station-num">3</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run2">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 3, 1km Run" data-field="run2"></div>
         </div>
-        <div class="hyrox-station" data-station="4">
+        <div class="hyrox-station" data-station="4" data-kind="station">
           <span class="hyrox-station-num">4</span>
-          <span class="hyrox-station-name">Sled Push (50m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="sledpush">
+          <span class="hyrox-station-name">Sled Push (50m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 4, Sled Push" data-field="sledpush"></div>
         </div>
-        <div class="hyrox-station" data-station="5">
+        <div class="hyrox-station" data-station="5" data-kind="run">
           <span class="hyrox-station-num">5</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run3">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 5, 1km Run" data-field="run3"></div>
         </div>
-        <div class="hyrox-station" data-station="6">
+        <div class="hyrox-station" data-station="6" data-kind="station">
           <span class="hyrox-station-num">6</span>
-          <span class="hyrox-station-name">Sled Pull (50m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="sledpull">
+          <span class="hyrox-station-name">Sled Pull (50m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 6, Sled Pull" data-field="sledpull"></div>
         </div>
-        <div class="hyrox-station" data-station="7">
+        <div class="hyrox-station" data-station="7" data-kind="run">
           <span class="hyrox-station-num">7</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run4">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 7, 1km Run" data-field="run4"></div>
         </div>
-        <div class="hyrox-station" data-station="8">
+        <div class="hyrox-station" data-station="8" data-kind="station">
           <span class="hyrox-station-num">8</span>
-          <span class="hyrox-station-name">Burpee Broad Jump (80m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="burpees">
+          <span class="hyrox-station-name">Burpee Broad Jump (80m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 8, Burpee Broad Jump" data-field="burpees"></div>
         </div>
-        <div class="hyrox-station" data-station="9">
+        <div class="hyrox-station" data-station="9" data-kind="run">
           <span class="hyrox-station-num">9</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run5">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 9, 1km Run" data-field="run5"></div>
         </div>
-        <div class="hyrox-station" data-station="10">
+        <div class="hyrox-station" data-station="10" data-kind="station">
           <span class="hyrox-station-num">10</span>
-          <span class="hyrox-station-name">Rowing (1km)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="row">
+          <span class="hyrox-station-name">Rowing (1km)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 10, Rowing" data-field="row"></div>
         </div>
-        <div class="hyrox-station" data-station="11">
+        <div class="hyrox-station" data-station="11" data-kind="run">
           <span class="hyrox-station-num">11</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run6">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 11, 1km Run" data-field="run6"></div>
         </div>
-        <div class="hyrox-station" data-station="12">
+        <div class="hyrox-station" data-station="12" data-kind="station">
           <span class="hyrox-station-num">12</span>
-          <span class="hyrox-station-name">Farmers Carry (200m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="farmers">
+          <span class="hyrox-station-name">Farmers Carry (200m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 12, Farmers Carry" data-field="farmers"></div>
         </div>
-        <div class="hyrox-station" data-station="13">
+        <div class="hyrox-station" data-station="13" data-kind="run">
           <span class="hyrox-station-num">13</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run7">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 13, 1km Run" data-field="run7"></div>
         </div>
-        <div class="hyrox-station" data-station="14">
+        <div class="hyrox-station" data-station="14" data-kind="station">
           <span class="hyrox-station-num">14</span>
-          <span class="hyrox-station-name">Sandbag Lunges (200m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="lunges">
+          <span class="hyrox-station-name">Sandbag Lunges (200m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 14, Sandbag Lunges" data-field="lunges"></div>
         </div>
-        <div class="hyrox-station" data-station="15">
+        <div class="hyrox-station" data-station="15" data-kind="run">
           <span class="hyrox-station-num">15</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run8">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 15, 1km Run" data-field="run8"></div>
         </div>
-        <div class="hyrox-station" data-station="16">
+        <div class="hyrox-station" data-station="16" data-kind="station">
           <span class="hyrox-station-num">16</span>
-          <span class="hyrox-station-name">Wall Balls (100 reps)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="wallballs">
+          <span class="hyrox-station-name">Wall Balls (100 reps)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 16, Wall Balls" data-field="wallballs"></div>
         </div>
       </div>
 
-      <div class="hyrox-total" id="hyroxTotal">Total: —</div>
-      <button onclick="saveHyroxSimulation()" style="width:100%;margin-top:10px;">Save Simulation</button>
-    </div>
+      <button type="button" class="mx-cta" onclick="saveHyroxSimulation()">
+        <span>Save Simulation</span>
+        <span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span>
+      </button>
+    </section>
 
     <!-- HYROX History -->
-    <div class="rehab-card" style="margin-top:12px;">
-      <h3>Past Simulations</h3>
-      <div id="hyroxHistory">
-        <div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No simulations logged yet.</div>
+    <section class="pod mx-pod" aria-label="Past simulations">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Past Simulations</h3>
       </div>
-    </div>
+      <div id="hyroxHistory">
+        <div class="mx-empty">No simulations logged yet.</div>
+      </div>
+    </section>
   </div>
 
   <!-- ══ Sub: Functional Circuits ════════════════════════════ -->
   <div id="fSub_circuits" class="func-subview">
-    <div class="rehab-card">
-      <h3>Quick Circuit Builder</h3>
-      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px;">Build a timed functional circuit. Set exercises, work/rest intervals, and rounds.</p>
+    <section class="pod mx-pod" aria-label="Quick circuit builder">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Quick Circuit Builder</h3>
+      </div>
+      <p class="mx-sub" style="margin:-6px 0 0;">Build a timed functional circuit. Set exercises, work/rest intervals, and rounds.</p>
 
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <input type="text" id="circuitName" placeholder="Circuit name (e.g. Full Body Blitz)">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
-            Rounds <input type="number" id="circuitRounds" value="3" min="1" max="20" style="margin:0;">
-          </label>
-          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
-            Work (s) <input type="number" id="circuitWork" value="40" min="10" max="120" style="margin:0;">
-          </label>
-          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
-            Rest (s) <input type="number" id="circuitRest" value="20" min="5" max="60" style="margin:0;">
-          </label>
+      <div class="mx-field">
+        <label class="mx-lbl" for="circuitName">Circuit name</label>
+        <div class="mx-well mx-well--text"><input type="text" id="circuitName" placeholder="e.g. Full Body Blitz"></div>
+      </div>
+      <div class="mx-grid3">
+        <div class="mx-field">
+          <label class="mx-lbl" for="circuitRounds">Rounds</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" id="circuitRounds" value="3" min="1" max="20" inputmode="numeric"></div>
         </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="circuitWork">Work (s)</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" id="circuitWork" value="40" min="10" max="120" inputmode="numeric"></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="circuitRest">Rest (s)</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" id="circuitRest" value="20" min="5" max="60" inputmode="numeric"></div>
+        </div>
+      </div>
 
+      <div class="mx-field">
+        <span class="mx-lbl">Exercises</span>
         <div id="circuitExercises">
           <div class="circuit-ex-row">
-            <input type="text" placeholder="Exercise 1" class="circuit-ex-input">
+            <div class="mx-well mx-well--text"><input type="text" placeholder="Exercise 1" class="circuit-ex-input" aria-label="Exercise 1"></div>
           </div>
         </div>
-        <button onclick="addCircuitExercise()" style="align-self:flex-start;padding:6px 14px;font-size:0.82rem;">+ Add Exercise</button>
-        <button onclick="startCircuitTimer()" style="width:100%;margin-top:8px;">▶ Start Circuit</button>
       </div>
-    </div>
+      <button type="button" class="mx-outline mx-outline--block" onclick="addCircuitExercise()"><span class="ui-icon" data-icon="plus"></span> Add Exercise</button>
+      <button type="button" class="mx-cta" onclick="startCircuitTimer()">
+        <span>Start Circuit</span>
+        <span class="mx-cta-icon"><span class="ui-icon" data-icon="zap"></span></span>
+      </button>
+    </section>
 
     <!-- Circuit timer display -->
-    <div class="rehab-card" id="circuitTimerCard" style="margin-top:12px;display:none;">
-      <div style="text-align:center;">
-        <div id="circuitTimerPhase" style="font-size:0.8rem;color:var(--primary);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Ready</div>
-        <div id="circuitTimerClock" style="font-family:'Courier New',monospace;font-size:2.5rem;font-weight:700;color:var(--text-color);margin:8px 0;">00:00</div>
-        <div id="circuitTimerExercise" style="font-size:1rem;font-weight:600;color:var(--secondary-text);"></div>
-        <div id="circuitTimerRound" style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;"></div>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
-          <button id="circuitPauseBtn" onclick="toggleCircuitPause()" style="padding:10px 24px;">⏸ Pause</button>
-          <button onclick="stopCircuitTimer()" style="padding:10px 24px;background:#c05060;">⏹ Stop</button>
-        </div>
+    <section class="pod pod--hero mx-pod circuit-timer" id="circuitTimerCard" style="display:none;" aria-label="Circuit timer">
+      <div class="circuit-timer-body">
+        <div class="mx-kicker" id="circuitTimerPhase">Ready</div>
+        <div class="wod-timer-clock" id="circuitTimerClock">00:00</div>
+        <div class="circuit-timer-ex" id="circuitTimerExercise"></div>
+        <div class="mx-meta" id="circuitTimerRound"></div>
       </div>
-    </div>
+      <div class="circuit-timer-controls">
+        <button type="button" class="mx-outline" id="circuitPauseBtn" onclick="toggleCircuitPause()">Pause</button>
+        <button type="button" class="mx-outline mx-outline--danger" onclick="stopCircuitTimer()">Stop</button>
+      </div>
+    </section>
 
     <!-- Saved circuits -->
-    <div class="rehab-card" style="margin-top:12px;">
-      <h3>Saved Circuits</h3>
-      <div id="circuitHistory">
-        <div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No circuits saved yet.</div>
+    <section class="pod mx-pod" aria-label="Saved circuits">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Saved Circuits</h3>
       </div>
-    </div>
+      <div id="circuitHistory">
+        <div class="mx-empty">No circuits saved yet.</div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -2373,76 +2454,77 @@
       <button class="pill active" onclick="showTab('cardioTab')">Cardio</button>
     </div>
 
-    <!-- Weekly summary chips -->
+    <!-- Last-7-days hero (populated by renderCardio) -->
     <div id="cardioWeeklySummary" class="cardio-weekly-strip"></div>
 
     <!-- Log form -->
-    <div class="cardio-form-card">
-      <div class="cardio-form-header">
-        <h3 class="cardio-form-title">Log Cardio</h3>
-        <span class="cardio-form-date-chip" id="cardioDateChip"></span>
+    <div class="pod mx-pod cardio-form-card">
+      <div class="pod-row">
+        <h3 class="pod-title cardio-form-title">Log Session</h3>
+        <span class="mx-meta cardio-form-date-chip" id="cardioDateChip"></span>
       </div>
 
-      <!-- Activity type pills -->
-      <div class="cardio-type-picker" id="cardioTypePicker">
-        <button class="cardio-type-btn active" data-type="run"        onclick="selectCardioType('run')"><span class="ui-icon" data-icon="activity"></span> Run</button>
-        <button class="cardio-type-btn"        data-type="walk"       onclick="selectCardioType('walk')"><span class="ui-icon" data-icon="footprints"></span> Walk</button>
-        <button class="cardio-type-btn"        data-type="cycle"      onclick="selectCardioType('cycle')"><span class="ui-icon" data-icon="bike"></span> Cycle</button>
-        <button class="cardio-type-btn"        data-type="swim"       onclick="selectCardioType('swim')"><span class="ui-icon" data-icon="waves"></span> Swim</button>
-        <button class="cardio-type-btn"        data-type="row"        onclick="selectCardioType('row')"><span class="ui-icon" data-icon="waves"></span> Row</button>
-        <button class="cardio-type-btn"        data-type="hiit"       onclick="selectCardioType('hiit')"><span class="ui-icon" data-icon="zap"></span> HIIT</button>
-        <button class="cardio-type-btn"        data-type="hike"       onclick="selectCardioType('hike')"><span class="ui-icon" data-icon="mountain"></span> Hike</button>
-        <button class="cardio-type-btn"        data-type="yoga"       onclick="selectCardioType('yoga')"><span class="ui-icon" data-icon="flower"></span> Yoga</button>
-        <button class="cardio-type-btn"        data-type="other"      onclick="selectCardioType('other')"><span class="ui-icon" data-icon="plus"></span> Other</button>
+      <!-- Activity type tiles -->
+      <div class="mx-field">
+        <span class="mx-lbl" id="cardioTypeLbl">Activity</span>
+        <div class="cardio-type-picker mx-grid3" id="cardioTypePicker" role="group" aria-labelledby="cardioTypeLbl">
+          <button class="cardio-type-btn mx-choice active" data-type="run"   aria-pressed="true"  onclick="selectCardioType('run')"><span class="ui-icon" data-icon="activity"></span><span>Run</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="walk"  aria-pressed="false" onclick="selectCardioType('walk')"><span class="ui-icon" data-icon="footprints"></span><span>Walk</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="cycle" aria-pressed="false" onclick="selectCardioType('cycle')"><span class="ui-icon" data-icon="bike"></span><span>Cycle</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="swim"  aria-pressed="false" onclick="selectCardioType('swim')"><span class="ui-icon" data-icon="waves"></span><span>Swim</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="row"   aria-pressed="false" onclick="selectCardioType('row')"><span class="ui-icon" data-icon="waves"></span><span>Row</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="hiit"  aria-pressed="false" onclick="selectCardioType('hiit')"><span class="ui-icon" data-icon="zap"></span><span>HIIT</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="hike"  aria-pressed="false" onclick="selectCardioType('hike')"><span class="ui-icon" data-icon="mountain"></span><span>Hike</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="yoga"  aria-pressed="false" onclick="selectCardioType('yoga')"><span class="ui-icon" data-icon="flower"></span><span>Yoga</span></button>
+          <button class="cardio-type-btn mx-choice"        data-type="other" aria-pressed="false" onclick="selectCardioType('other')"><span class="ui-icon" data-icon="plus"></span><span>Other</span></button>
+        </div>
       </div>
       <!-- Hidden canonical type value -->
       <input type="hidden" id="cardioType" value="run">
       <!-- Custom type text input, shown only when "Other" is active -->
       <div class="cardio-custom-type-wrap" id="cardioCustomTypeWrap" style="display:none">
-        <div class="cardio-input-wrap">
+        <div class="mx-well mx-well--text cardio-input-wrap">
           <span class="cardio-input-icon" data-icon="pencil"></span>
-          <input type="text" id="cardioCustomType" placeholder="Describe activity…"
+          <input type="text" id="cardioCustomType" placeholder="Describe activity…" aria-label="Custom activity"
                  oninput="document.getElementById('cardioType').value = this.value.trim() || 'other'">
         </div>
       </div>
 
       <!-- Core metrics: Duration + Distance -->
-      <div class="cardio-section-label">Core Metrics</div>
-      <div class="cardio-row-2">
-        <div class="cardio-field">
-          <label class="cardio-field-label" for="cardioDuration">Duration</label>
-          <div class="cardio-input-wrap">
-            <span class="cardio-input-icon" data-icon="timer"></span>
+      <div class="mx-grid2">
+        <div class="mx-field">
+          <label class="mx-lbl" for="cardioDuration">Duration</label>
+          <div class="mx-well mx-well--num cardio-input-wrap">
             <input type="number" id="cardioDuration" placeholder="30" min="1" inputmode="decimal"
                    oninput="updateCardioPacePreview()">
-            <span class="cardio-input-unit">min</span>
+            <span class="mx-unit">min</span>
           </div>
         </div>
-        <div class="cardio-field">
-          <label class="cardio-field-label" for="cardioDistance">Distance <span class="cardio-opt">optional</span></label>
-          <div class="cardio-input-wrap">
-            <span class="cardio-input-icon" data-icon="mapPin"></span>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cardioDistance">Distance <em>optional</em></label>
+          <div class="mx-well mx-well--num cardio-input-wrap">
             <input type="number" id="cardioDistance" placeholder="—" step="0.1" min="0" inputmode="decimal"
                    oninput="updateCardioPacePreview()">
-            <span class="cardio-input-unit">km</span>
+            <span class="mx-unit">km</span>
           </div>
         </div>
       </div>
 
       <!-- Live pace / speed preview -->
-      <div id="cardioPacePreview" class="cardio-pace-preview" style="display:none">
+      <div id="cardioPacePreview" class="cardio-pace-preview" style="display:none" aria-live="polite">
         <span class="pace-icon" id="cardioPaceIcon" data-icon="zap"></span>
-        <span class="pace-value" id="cardioPaceValue"></span>
+        <span class="pace-meta"><span class="mx-lbl" id="cardioPaceLabel">Live pace</span></span>
+        <span class="pace-value mx-num" id="cardioPaceValue"></span>
       </div>
 
       <!-- Effort level -->
-      <div class="cardio-field" style="margin-bottom:14px;">
-        <label class="cardio-field-label">Effort level</label>
-        <div class="cardio-intensity-row" id="cardioIntensityPicker">
-          <button class="cardio-intensity-btn" data-intensity="easy"     onclick="selectCardioIntensity('easy')"><span class="ui-icon" data-icon="leaf"></span> Easy</button>
-          <button class="cardio-intensity-btn active" data-intensity="moderate" onclick="selectCardioIntensity('moderate')"><span class="ui-icon" data-icon="dumbbell"></span> Moderate</button>
-          <button class="cardio-intensity-btn" data-intensity="hard"     onclick="selectCardioIntensity('hard')"><span class="ui-icon" data-icon="flame"></span> Hard</button>
-          <button class="cardio-intensity-btn" data-intensity="max"      onclick="selectCardioIntensity('max')"><span class="ui-icon" data-icon="zap"></span> Max</button>
+      <div class="mx-field">
+        <span class="mx-lbl" id="cardioEffortLbl">Effort level</span>
+        <div class="cardio-intensity-row" id="cardioIntensityPicker" role="group" aria-labelledby="cardioEffortLbl">
+          <button class="cardio-intensity-btn" data-intensity="easy"     aria-pressed="false" onclick="selectCardioIntensity('easy')"><span class="cardio-effort-title"><i></i>Easy</span><span class="cardio-effort-hint">Talk freely</span></button>
+          <button class="cardio-intensity-btn active" data-intensity="moderate" aria-pressed="true" onclick="selectCardioIntensity('moderate')"><span class="cardio-effort-title"><i></i>Moderate</span><span class="cardio-effort-hint">Steady, short sentences</span></button>
+          <button class="cardio-intensity-btn" data-intensity="hard"     aria-pressed="false" onclick="selectCardioIntensity('hard')"><span class="cardio-effort-title"><i></i>Hard</span><span class="cardio-effort-hint">Hard to talk</span></button>
+          <button class="cardio-intensity-btn" data-intensity="max"      aria-pressed="false" onclick="selectCardioIntensity('max')"><span class="cardio-effort-title"><i></i>Max</span><span class="cardio-effort-hint">All out</span></button>
         </div>
         <input type="hidden" id="cardioIntensity" value="moderate">
       </div>
@@ -2455,37 +2537,36 @@
         </summary>
         <div class="cardio-optional-body">
 
-          <div class="cardio-section-label" style="margin-top:4px;">Performance</div>
-          <div class="cardio-row-2">
-            <div class="cardio-field">
-              <label class="cardio-field-label" for="cardioCalories">Calories <span class="cardio-opt">override</span></label>
-              <div class="cardio-input-wrap">
+          <div class="mx-grid2">
+            <div class="mx-field">
+              <label class="mx-lbl" for="cardioCalories">Calories <em>override</em></label>
+              <div class="mx-well mx-well--text cardio-input-wrap">
                 <span class="cardio-input-icon" data-icon="flame"></span>
                 <input type="number" id="cardioCalories" placeholder="auto" min="0" inputmode="decimal">
-                <span class="cardio-input-unit">kcal</span>
+                <span class="mx-unit">kcal</span>
               </div>
             </div>
-            <div class="cardio-field">
-              <label class="cardio-field-label" for="cardioHeartRate">Avg heart rate <span class="cardio-opt">optional</span></label>
-              <div class="cardio-input-wrap">
+            <div class="mx-field">
+              <label class="mx-lbl" for="cardioHeartRate">Avg heart rate <em>optional</em></label>
+              <div class="mx-well mx-well--text cardio-input-wrap">
                 <span class="cardio-input-icon" data-icon="heart"></span>
                 <input type="number" id="cardioHeartRate" placeholder="—" min="40" max="230" inputmode="numeric">
-                <span class="cardio-input-unit">bpm</span>
+                <span class="mx-unit">bpm</span>
               </div>
             </div>
           </div>
 
-          <div class="cardio-row-2">
-            <div class="cardio-field">
-              <label class="cardio-field-label" for="cardioDate">Date</label>
-              <div class="cardio-input-wrap">
+          <div class="mx-grid2">
+            <div class="mx-field">
+              <label class="mx-lbl" for="cardioDate">Date</label>
+              <div class="mx-well mx-well--text cardio-input-wrap">
                 <span class="cardio-input-icon" data-icon="calendar"></span>
                 <input type="date" id="cardioDate">
               </div>
             </div>
-            <div class="cardio-field">
-              <label class="cardio-field-label" for="cardioNotes">Notes</label>
-              <div class="cardio-input-wrap">
+            <div class="mx-field">
+              <label class="mx-lbl" for="cardioNotes">Notes</label>
+              <div class="mx-well mx-well--text cardio-input-wrap">
                 <span class="cardio-input-icon" data-icon="pencil"></span>
                 <input type="text" id="cardioNotes" placeholder="e.g. felt great">
               </div>
@@ -2495,8 +2576,9 @@
         </div>
       </details>
 
-      <button class="cardio-submit-btn" onclick="addCardioEntry()">
-        <span id="cardioSubmitIcon" class="ui-icon" data-icon="activity"></span> Log Session
+      <button class="mx-cta cardio-submit-btn" onclick="addCardioEntry()">
+        <span>Log Session</span>
+        <span class="mx-cta-icon"><span id="cardioSubmitIcon" class="ui-icon" data-icon="activity"></span></span>
       </button>
     </div>
 
@@ -2507,29 +2589,88 @@
     <table style="display:none"><tbody id="cardioBody"></tbody></table>
   </div>
 
-  <div id="posingTab" class="tab-content">
-    <div class="panel active">
-      <h2>Posing Log</h2>
-      <p style="margin-top:-4px;">Track posing minutes, weekly target, streaks, and prep readiness.</p>
-      <div class="inputs-grid" style="margin-bottom:12px;">
-        <input type="date" id="posingDateInput">
-        <input type="number" id="posingMinutesInput" min="1" step="1" placeholder="Minutes">
-        <input type="number" id="posingTargetSessionsInput" min="1" step="1" placeholder="Target sessions / week">
-        <input type="number" id="posingTargetMinutesInput" min="10" step="5" placeholder="Target minutes / week">
-        <input type="text" id="posingNotesInput" placeholder="Notes (mandatories, transitions, stage flow)">
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-        <button onclick="savePosingTargets()">Save Weekly Target</button>
-        <button onclick="addPosingSession()">Log Posing Session</button>
-      </div>
-      <div id="posingSummaryCard" class="home-mission-progress" style="margin-bottom:10px;"></div>
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Minutes</th><th>Notes</th><th>Remove</th></tr>
-        </thead>
-        <tbody id="posingBody"></tbody>
-      </table>
+  <div id="posingTab" class="tab-content mx-tab">
+    <div class="mx-head">
+      <h2 class="pod-title">Posing Log</h2>
+      <p class="mx-sub">Track posing minutes, weekly target, streaks, and prep readiness.</p>
     </div>
+
+    <!-- Week hero: ring, sessions/streak tiles, 7-day strip (populated by renderPosingTab) -->
+    <div id="posingSummaryCard" class="posing-summary"></div>
+
+    <section class="pod mx-pod" aria-label="Log a posing session">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Log Session</h3>
+      </div>
+
+      <div class="mx-field">
+        <label class="mx-lbl" for="posingMinutesInput">Minutes</label>
+        <div class="mx-stepper">
+          <button type="button" class="mx-iconbtn" aria-label="Minus 5 minutes" onclick="stepPosingMinutes(-5)"><span class="ui-icon" data-icon="minus"></span></button>
+          <div class="mx-stepper-val">
+            <input type="number" id="posingMinutesInput" min="1" step="1" placeholder="0" inputmode="numeric" oninput="syncPosingPresets()">
+            <span class="mx-unit">min</span>
+          </div>
+          <button type="button" class="mx-iconbtn" aria-label="Plus 5 minutes" onclick="stepPosingMinutes(5)"><span class="ui-icon" data-icon="plus"></span></button>
+        </div>
+        <div class="mx-presets" id="posingPresets" role="group" aria-label="Quick minutes">
+          <button type="button" class="mx-preset" data-min="10" aria-pressed="false" onclick="setPosingMinutes(10)">10</button>
+          <button type="button" class="mx-preset" data-min="15" aria-pressed="false" onclick="setPosingMinutes(15)">15</button>
+          <button type="button" class="mx-preset" data-min="20" aria-pressed="false" onclick="setPosingMinutes(20)">20</button>
+          <button type="button" class="mx-preset" data-min="30" aria-pressed="false" onclick="setPosingMinutes(30)">30</button>
+          <button type="button" class="mx-preset" data-min="45" aria-pressed="false" onclick="setPosingMinutes(45)">45</button>
+        </div>
+      </div>
+
+      <div class="mx-field">
+        <label class="mx-lbl" for="posingDateInput">Date</label>
+        <div class="mx-well mx-well--text"><input type="date" id="posingDateInput"></div>
+      </div>
+
+      <div class="mx-field">
+        <label class="mx-lbl" for="posingNotesInput">Notes <em>mandatories, transitions, stage flow</em></label>
+        <div class="mx-well mx-well--text"><input type="text" id="posingNotesInput" placeholder="e.g. Quarter turns, front relaxed"></div>
+      </div>
+
+      <button type="button" class="mx-cta" onclick="addPosingSession()">
+        <span>Log posing session</span>
+        <span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span>
+      </button>
+    </section>
+
+    <section class="pod mx-pod" aria-label="Weekly target">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Weekly Target</h3>
+        <span class="mx-meta">Week starts Sunday</span>
+      </div>
+      <div class="mx-grid2">
+        <div class="mx-field">
+          <label class="mx-lbl" for="posingTargetSessionsInput">Sessions / week</label>
+          <div class="mx-stepper mx-stepper--sm">
+            <button type="button" class="mx-iconbtn" aria-label="Fewer sessions per week" onclick="stepPosingTarget('sessions', -1)"><span class="ui-icon" data-icon="minus"></span></button>
+            <input type="number" id="posingTargetSessionsInput" min="1" step="1" placeholder="4" inputmode="numeric">
+            <button type="button" class="mx-iconbtn" aria-label="More sessions per week" onclick="stepPosingTarget('sessions', 1)"><span class="ui-icon" data-icon="plus"></span></button>
+          </div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="posingTargetMinutesInput">Minutes / week</label>
+          <div class="mx-stepper mx-stepper--sm">
+            <button type="button" class="mx-iconbtn" aria-label="Fewer minutes per week" onclick="stepPosingTarget('minutes', -10)"><span class="ui-icon" data-icon="minus"></span></button>
+            <input type="number" id="posingTargetMinutesInput" min="10" step="5" placeholder="150" inputmode="numeric">
+            <button type="button" class="mx-iconbtn" aria-label="More minutes per week" onclick="stepPosingTarget('minutes', 10)"><span class="ui-icon" data-icon="plus"></span></button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="mx-outline mx-outline--block" onclick="savePosingTargets()">Save weekly target</button>
+    </section>
+
+    <section class="pod mx-pod" aria-label="Posing history">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">History</h3>
+        <span class="mx-meta" id="posingHistoryCount"></span>
+      </div>
+      <div id="posingBody" class="posing-history"></div>
+    </section>
   </div>
 
 <div id="macroTab" class="tab-content" style="position: relative; padding: 20px;">
@@ -3265,7 +3406,7 @@
     </div>
 </div><!-- /#progressTab -->
 
-<div id="logHistoryTab" class="tab-content">
+<div id="logHistoryTab" class="tab-content mx-tab">
   <h2 class="pod-title" style="font-size:20px;">History</h2>
   <nav class="log-subtabs" id="historySubNav">
     <button class="log-subtab active" data-histsub="workout"><span class="ui-icon" data-icon="dumbbell"></span> Workouts</button>
@@ -3533,7 +3674,7 @@
   </div>
 </div>
 
-<div id="mobilityTab" class="tab-content">
+<div id="mobilityTab" class="tab-content mx-tab">
   <div id="mobilityTabContent"></div>
 </div>
 
@@ -3848,7 +3989,9 @@
     zap: ICON_SVG_OPEN + '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
     chevronDown: ICON_SVG_OPEN + '<polyline points="6 9 12 15 18 9"/></svg>',
     lightbulb: ICON_SVG_OPEN + '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A5.5 5.5 0 1 0 6 8.5c0 1.61.71 2.9 1.5 3.99C8.27 13.26 8.74 14 8.91 14z"/></svg>',
-    alertTriangle: ICON_SVG_OPEN + '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    alertTriangle: ICON_SVG_OPEN + '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    minus: ICON_SVG_OPEN + '<line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    chevronRight: ICON_SVG_OPEN + '<polyline points="9 6 15 12 9 18"/></svg>'
   };
   // Static markup uses <span data-icon="name"></span> (name → ICONS key)
   // instead of repeating raw SVG at every call site. Deferred to
@@ -10548,6 +10691,7 @@ function addPosingSession() {
 
   document.getElementById('posingMinutesInput').value = '';
   document.getElementById('posingNotesInput').value = '';
+  syncPosingPresets();
   renderPosingTab();
   renderHomeDashboard();
 }
@@ -10560,9 +10704,45 @@ function removePosingSession(sessionId) {
   renderHomeDashboard();
 }
 
+/** Highlight the quick-minute preset that matches the minutes field. */
+function syncPosingPresets() {
+  const v = Number(document.getElementById('posingMinutesInput')?.value) || 0;
+  document.querySelectorAll('#posingPresets .mx-preset').forEach(btn => {
+    const on = Number(btn.dataset.min) === v;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
+function setPosingMinutes(n) {
+  const input = document.getElementById('posingMinutesInput');
+  if (!input) return;
+  input.value = n;
+  syncPosingPresets();
+}
+
+function stepPosingMinutes(delta) {
+  const input = document.getElementById('posingMinutesInput');
+  if (!input) return;
+  const next = Math.max(0, (Number(input.value) || 0) + delta);
+  input.value = next > 0 ? next : '';
+  syncPosingPresets();
+}
+
+function stepPosingTarget(kind, delta) {
+  const input = document.getElementById(kind === 'minutes' ? 'posingTargetMinutesInput' : 'posingTargetSessionsInput');
+  if (!input) return;
+  const min = kind === 'minutes' ? 10 : 1;
+  input.value = Math.max(min, (Number(input.value) || 0) + delta);
+}
+
 window.savePosingTargets = savePosingTargets;
 window.addPosingSession = addPosingSession;
 window.removePosingSession = removePosingSession;
+window.syncPosingPresets = syncPosingPresets;
+window.setPosingMinutes = setPosingMinutes;
+window.stepPosingMinutes = stepPosingMinutes;
+window.stepPosingTarget = stepPosingTarget;
 
 function renderPosingTab() {
   if (!window.posingEngine) return;
@@ -10585,12 +10765,93 @@ function renderPosingTab() {
   const targetMinutesInput = document.getElementById('posingTargetMinutesInput');
   if (targetMinutesInput && !targetMinutesInput.value) targetMinutesInput.value = target.minutes;
 
-  summaryEl.textContent = `Week ${weekly.rangeStart} → ${weekly.rangeEnd}: ${weekly.sessions}/${weekly.targetSessions} sessions · ${weekly.totalMinutes}/${weekly.targetMinutes} min · streak ${streak} day${streak === 1 ? '' : 's'} · ${overdue.message}`;
-
+  const _esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const rows = window.posingEngine.getPosingHistory(userId, { limit: 30 });
+
+  // Minutes per day across the engine's (Sunday-start) week.
+  const weekStart = new Date(weekly.rangeStart + 'T00:00:00Z');
+  const allEntries = window.posingEngine.getPosingHistory(userId, { limit: 500 });
+  const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const days = dayLetters.map((letter, i) => {
+    const key = new Date(weekStart.getTime() + i * 86400000).toISOString().slice(0, 10);
+    const mins = allEntries.filter(e => String(e.date).slice(0, 10) === key).reduce((s, e) => s + (Number(e.minutes) || 0), 0);
+    return { key, letter, mins, today: key === today };
+  });
+  const dayFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const stripAria = days.filter(d => d.mins > 0).map(d => `${dayFull[days.indexOf(d)]} ${d.mins} minutes`).join(', ') || 'no sessions yet';
+  const strip = days.map(d => {
+    const cls = d.mins > 0 ? 'posing-dot posing-dot--on' : (d.today ? 'posing-dot posing-dot--today' : 'posing-dot posing-dot--off');
+    return `<div class="posing-day"><div class="${cls}">${d.mins > 0 ? d.mins : (d.today ? '—' : '')}</div><span class="posing-dlab${d.today ? ' posing-dlab--today' : ''}">${d.letter}</span></div>`;
+  }).join('');
+
+  const _fmtWk = (k) => new Date(k + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const circ = 2 * Math.PI * 55;
+  const dash = ((Math.min(100, weekly.minutesPercent) / 100) * circ).toFixed(1);
+
+  summaryEl.innerHTML = `
+    <section class="pod pod--hero mx-pod" aria-label="Posing this week">
+      <div class="pod-row">
+        <span class="mx-kicker">This week · ${_fmtWk(weekly.rangeStart)} – ${_fmtWk(weekly.rangeEnd)}</span>
+        <span class="mx-chip ${overdue.overdue ? 'mx-chip--brass' : 'mx-chip--green'}">${overdue.overdue ? 'Overdue' : 'On track'}</span>
+      </div>
+      <div class="posing-hero-main">
+        <div class="posing-ring" role="img" aria-label="${weekly.totalMinutes} of ${weekly.targetMinutes} minutes this week">
+          <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
+            <defs>
+              <linearGradient id="posingRingGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#6fae8b"></stop>
+                <stop offset="1" stop-color="#2f8a63"></stop>
+              </linearGradient>
+            </defs>
+            <circle cx="66" cy="66" r="55" fill="none" stroke="#0b100e" stroke-width="12"></circle>
+            <circle cx="66" cy="66" r="55" fill="none" stroke="rgba(116,138,126,0.18)" stroke-width="1"></circle>
+            <circle cx="66" cy="66" r="55" fill="none" stroke="url(#posingRingGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${dash} ${circ.toFixed(1)}" transform="rotate(-90 66 66)"></circle>
+          </svg>
+          <div class="posing-ring-center">
+            <span class="mx-num">${weekly.totalMinutes}</span>
+            <span class="mx-unit">/ ${weekly.targetMinutes} min</span>
+          </div>
+        </div>
+        <div class="posing-hero-tiles">
+          <div class="mx-stat"><span class="mx-stat-l">Sessions</span><span class="mx-stat-v">${weekly.sessions}<small>/ ${weekly.targetSessions}</small></span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Streak</span><span class="mx-stat-v">${streak}<small>day${streak === 1 ? '' : 's'}</small></span></div>
+        </div>
+      </div>
+      <div class="posing-strip" role="img" aria-label="Posing per day: ${stripAria}">${strip}</div>
+      <p class="mx-para">${_esc(overdue.message)}</p>
+    </section>`;
+
+  const countEl = document.getElementById('posingHistoryCount');
+  if (countEl) countEl.textContent = `${rows.length} session${rows.length === 1 ? '' : 's'}`;
+
+  const maxMin = Math.max(...rows.map(r => Number(r.minutes) || 0), 1);
   body.innerHTML = rows.length
-    ? rows.map(entry => `<tr><td>${entry.date}</td><td>${entry.minutes}</td><td>${entry.notes || '—'}</td><td><button class="remove-btn" onclick="removePosingSession('${entry.id}')"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`).join('')
-    : '<tr><td colspan="4" style="opacity:.75;">No posing sessions yet.</td></tr>';
+    ? rows.map(entry => {
+        const d = new Date(String(entry.date).slice(0, 10) + 'T00:00:00');
+        const valid = !isNaN(d.getTime());
+        const day = valid ? d.getDate() : '';
+        const mon = valid ? d.toLocaleDateString(undefined, { month: 'short' }) : '';
+        const dow = valid ? d.toLocaleDateString(undefined, { weekday: 'long' }) : _esc(entry.date);
+        const pct = Math.round(((Number(entry.minutes) || 0) / maxMin) * 100);
+        const tags = String(entry.notes || '').split(/[,;|·]+/).map(s => s.trim()).filter(Boolean)
+          .map(t => `<span class="mx-tag">${_esc(t)}</span>`).join('');
+        return `
+          <div class="mx-row posing-row">
+            <div class="mx-date"><b>${day}</b><span>${mon}</span></div>
+            <div class="mx-row-main">
+              <div class="posing-row-top">
+                <span class="mx-row-title">${dow}</span>
+                <span class="mx-row-big">${_esc(entry.minutes)}<span class="mx-unit"> min</span></span>
+              </div>
+              <div class="mx-meter mx-meter--thin" role="img" aria-label="${_esc(entry.minutes)} minutes"><i style="width:${pct}%"></i></div>
+              ${tags ? `<div class="mx-tags">${tags}</div>` : ''}
+            </div>
+            <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="removePosingSession('${_esc(entry.id)}')" title="Remove" aria-label="Remove ${dow} ${day} ${mon} session"><span class="ui-icon">${ICONS.x}</span></button>
+          </div>`;
+      }).join('')
+    : '<div class="mx-empty">No posing sessions yet.</div>';
+
+  syncPosingPresets();
 }
 
 function renderProgressComplianceSummary() {
@@ -12064,6 +12325,63 @@ function autoFillCardioAdherenceSlider(userId) {
   }
 }
 
+function mxEsc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/**
+ * Layer a tappable 1-10 scale over each check-in slider. The native
+ * <input type="range"> stays in the DOM (visually hidden) as the single
+ * source of truth: saveWeeklyCheckIn, hydration and the cardio auto-fill
+ * all keep reading/writing slider.value. Taps write the value and fire the
+ * slider's own input handler so the numeric readout stays correct.
+ */
+function enhanceCheckInScales() {
+  document.querySelectorAll('#checkInTab .checkin-slider-field').forEach(field => {
+    const slider = field.querySelector('input[type="range"]');
+    if (!slider || field.querySelector('.ci-scale')) return;
+    const title = (field.querySelector('.checkin-slider-title')?.textContent || 'Rating').trim();
+    const min = Number(slider.min || 1);
+    const max = Number(slider.max || 10);
+    const scale = document.createElement('div');
+    scale.className = 'ci-scale';
+    scale.setAttribute('role', 'group');
+    scale.setAttribute('aria-label', title);
+    for (let n = min; n <= max; n++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ci-step';
+      btn.dataset.n = String(n);
+      btn.textContent = String(n);
+      btn.setAttribute('aria-label', title + ' ' + n + ' of ' + max);
+      btn.addEventListener('click', () => {
+        slider.value = String(n);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        syncCheckInScales();
+      });
+      scale.appendChild(btn);
+    }
+    slider.parentNode.insertBefore(scale, slider);
+    slider.setAttribute('tabindex', '-1');
+    slider.setAttribute('aria-hidden', 'true');
+  });
+  syncCheckInScales();
+}
+
+function syncCheckInScales() {
+  document.querySelectorAll('#checkInTab .checkin-slider-field').forEach(field => {
+    const slider = field.querySelector('input[type="range"]');
+    if (!slider) return;
+    const v = Number(slider.value) || 0;
+    field.querySelectorAll('.ci-step').forEach(btn => {
+      const n = Number(btn.dataset.n);
+      btn.classList.toggle('on', n <= v);
+      btn.setAttribute('aria-pressed', n === v ? 'true' : 'false');
+    });
+  });
+}
+window.syncCheckInScales = syncCheckInScales;
+
 function renderCheckInTab() {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
@@ -12074,7 +12392,19 @@ function renderCheckInTab() {
   const nextDate = window.checkinEngine.getNextCheckInDate(phaseState);
   const nextDateEl = document.getElementById('checkInNextDate');
   if (nextDateEl) {
-    nextDateEl.textContent = `Next scheduled check-in: ${nextDate} · ${checkInHeader}`;
+    let dueChip = '';
+    const due = new Date(`${nextDate}T00:00:00`);
+    if (!isNaN(due.getTime())) {
+      const days = Math.round((due - new Date(new Date().toDateString())) / 86400000);
+      const label = days < 0 ? `${-days} day${days === -1 ? '' : 's'} overdue`
+        : days === 0 ? 'Due today'
+        : `Due in ${days} day${days === 1 ? '' : 's'}`;
+      dueChip = `<span class="mx-chip ${days < 0 ? 'mx-chip--red' : 'mx-chip--brass'}">${label}</span>`;
+    }
+    nextDateEl.innerHTML = `
+      <div class="ci-phase-top"><span class="mx-kicker">Next scheduled check-in</span>${dueChip}</div>
+      <div class="ci-phase-title">${mxEsc(checkInHeader)}</div>
+      <div class="mx-meta">${mxEsc(nextDate)}</div>`;
   }
 
   const dateInput = document.getElementById('checkInDateInput');
@@ -12093,6 +12423,7 @@ function renderCheckInTab() {
   hydrateCheckInFormFromLatestEntry(checkIns);
   bindCheckInSliderDisplays();
   autoFillCardioAdherenceSlider(userId);
+  enhanceCheckInScales();
 
   const timeline = document.getElementById('checkInTimeline');
   if (!timeline) return;
@@ -12100,16 +12431,21 @@ function renderCheckInTab() {
   const entriesWithInsights = window.checkinEngine.getCheckInInsightTimeline?.(checkIns) || checkIns;
   const groupedTimeline = window.checkinEngine.groupCheckInsForTimeline?.(entriesWithInsights) || [];
   if (!groupedTimeline.length) {
-    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<br><span class="ui-icon" style="width:1.6rem;height:1.6rem;display:block;margin:8px auto 0">${ICONS.clipboard}</span></div>`;
+    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<span class="ui-icon">${ICONS.clipboard}</span></div>`;
     return;
   }
 
-  function _scoreClass(val, invert) {
-    const n = Number(val);
-    if (!Number.isFinite(n)) return '';
-    if (invert) return n >= 7 ? 'poor' : n >= 4 ? 'mid' : 'good'; // stress: high = bad
-    return n >= 7 ? 'good' : n >= 4 ? 'mid' : 'poor';
-  }
+  // Week-over-week deltas against the previous chronological check-in.
+  const chrono = (Array.isArray(checkIns) ? checkIns : []).filter(c => c && c.date).slice()
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const prevByDate = {};
+  chrono.forEach((c, i) => { if (i > 0) prevByDate[c.date] = chrono[i - 1]; });
+  const _delta = (cur, prev, unit) => {
+    const c = Number(cur), p = Number(prev);
+    if (!Number.isFinite(c) || !Number.isFinite(p) || c === p) return '';
+    const d = c - p;
+    return `<span class="mx-delta mx-delta--flat">${d < 0 ? '▼' : '▲'} ${Math.abs(d).toFixed(1)} ${unit}</span>`;
+  };
 
   function _statusLabel(status) {
     return {
@@ -12118,6 +12454,12 @@ function renderCheckInTab() {
       needs_changes: `<span class="ui-icon">${ICONS.pencil}</span> Needs changes`,
       pending: `<span class="ui-icon">${ICONS.clock}</span> Pending`
     }[status] || `<span class="ui-icon">${ICONS.clock}</span> Pending`;
+  }
+
+  function _mini(label, val, brass) {
+    const n = Number(val);
+    const has = val !== '' && Number.isFinite(n);
+    return `<div class="ci-tc-mini-i"><span class="mx-lbl">${label} <b>${has ? n : '—'}</b></span><div class="mx-meter mx-meter--thin${brass ? ' mx-meter--brass' : ''}"><i style="width:${has ? Math.max(0, Math.min(100, n * 10)) : 0}%"></i></div></div>`;
   }
 
   timeline.innerHTML = groupedTimeline.map((weeksOutGroup) => {
@@ -12131,41 +12473,45 @@ function renderCheckInTab() {
         const insight = entry.insights?.summaryShort || '';
         const insightFull = (entry.insights?.summaryFull || []).join(' · ');
         const archetypeMetrics = formatCheckInArchetypeMetricSummary(entry);
+        const prev = prevByDate[entry.date];
         const dateLabel = (() => {
           try { return new Date(entry.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); } catch { return entry.date; }
         })();
+        const tags = [entry.phase, phaseWeekGroup.phaseWeekLabel].filter(Boolean)
+          .map(t => `<span class="ci-tc-badge">${mxEsc(t)}</span>`).join('');
+        const tiles = [
+          entry.bodyweight ? `<div class="mx-stat"><span class="mx-stat-l">Weight</span><span class="mx-stat-v">${mxEsc(entry.bodyweight)}<small>kg</small></span>${_delta(entry.bodyweight, prev?.bodyweight, 'kg')}</div>` : '',
+          entry.waist ? `<div class="mx-stat"><span class="mx-stat-l">Waist</span><span class="mx-stat-v">${mxEsc(entry.waist)}<small>cm</small></span>${_delta(entry.waist, prev?.waist, 'cm')}</div>` : ''
+        ].filter(Boolean).join('');
+        const hasRecovery = [energy, sleep, stress].some(v => v !== '');
 
         return `
-          <div class="ci-tc" data-status="${status}">
+          <article class="ci-tc" data-status="${mxEsc(status)}">
             <div class="ci-tc-header">
-              <span class="ci-tc-date">${dateLabel}</span>
-              ${entry.phase ? `<span class="ci-tc-badge">${entry.phase}</span>` : ''}
-              ${phaseWeekGroup.phaseWeekLabel ? `<span class="ci-tc-badge">${phaseWeekGroup.phaseWeekLabel}</span>` : ''}
-              <span class="ci-tc-status-badge ${status}">${_statusLabel(status)}</span>
+              <div class="ci-tc-head-l">
+                <span class="ci-tc-date">${dateLabel}</span>
+                ${tags ? `<div class="ci-tc-tags">${tags}</div>` : ''}
+              </div>
+              <span class="ci-tc-status-badge ${mxEsc(status)}">${_statusLabel(status)}</span>
             </div>
-            <div class="ci-tc-stats">
-              ${entry.bodyweight ? `<span class="ci-tc-stat"><span class="ui-icon">${ICONS.scale}</span> ${entry.bodyweight} kg</span>` : ''}
-              ${entry.waist      ? `<span class="ci-tc-stat"><span class="ui-icon">${ICONS.scale}</span> ${entry.waist} cm</span>`  : ''}
-              ${energy !== ''    ? `<span class="ci-tc-stat ${_scoreClass(energy, false)}"><span class="ui-icon">${ICONS.zap}</span> E:${energy}</span>` : ''}
-              ${sleep  !== ''    ? `<span class="ci-tc-stat ${_scoreClass(sleep, false)}"><span class="ui-icon">${ICONS.moon}</span> S:${sleep}</span>`  : ''}
-              ${stress !== ''    ? `<span class="ci-tc-stat ${_scoreClass(stress, true)}"><span class="ui-icon">${ICONS.brain}</span> St:${stress}</span>` : ''}
-            </div>
-            ${archetypeMetrics ? `<div class="ci-tc-archetype">${archetypeMetrics}</div>` : ''}
-            ${(insight || insightFull) ? `<div class="ci-tc-insight"><span class="ui-icon">${ICONS.lightbulb}</span> ${insight}${insightFull ? '<br><span style="opacity:0.8">'+insightFull+'</span>' : ''}</div>` : ''}
-            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust"><span class="ui-icon">${ICONS.settings}</span> ${adjText}</div>` : ''}
-            ${entry.notes     ? `<div class="ci-tc-notes">"${entry.notes}"</div>` : ''}
+            ${tiles ? `<div class="mx-tiles mx-tiles--2">${tiles}</div>` : ''}
+            ${hasRecovery ? `<div class="ci-tc-mini" role="img" aria-label="Energy ${energy || 'n/a'}, sleep ${sleep || 'n/a'}, stress ${stress || 'n/a'} out of 10">${_mini('Energy', energy)}${_mini('Sleep', sleep)}${_mini('Stress', stress, true)}</div>` : ''}
+            ${archetypeMetrics ? `<div class="ci-tc-archetype">${mxEsc(archetypeMetrics)}</div>` : ''}
+            ${(insight || insightFull) ? `<div class="ci-tc-insight"><span class="ui-icon">${ICONS.lightbulb}</span><span>${mxEsc(insight)}${insightFull ? `<br><span class="ci-tc-insight-full">${mxEsc(insightFull)}</span>` : ''}</span></div>` : ''}
+            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust"><span class="ui-icon">${ICONS.settings}</span><span>${mxEsc(adjText)}</span></div>` : ''}
+            ${entry.notes ? `<div class="ci-tc-notes">"${mxEsc(entry.notes)}"</div>` : ''}
             ${(entry.coachNotes || entry.review?.coachActionItems) ? `
               <div class="ci-tc-coach">
-                ${entry.coachNotes ? `<div><span class="ui-icon">${ICONS.pencil}</span> ${entry.coachNotes}</div>` : ''}
-                ${entry.review?.coachActionItems ? `<div>→ ${entry.review.coachActionItems}</div>` : ''}
+                ${entry.coachNotes ? `<div><span class="mx-lbl">Coach</span> ${mxEsc(entry.coachNotes)}</div>` : ''}
+                ${entry.review?.coachActionItems ? `<div><span class="mx-lbl">Action</span> ${mxEsc(entry.review.coachActionItems)}</div>` : ''}
               </div>` : ''}
-          </div>`;
+          </article>`;
       })
     ).join('');
 
     return `
       <div class="ci-timeline-group">
-        <div class="ci-timeline-group-label">${weeksOutGroup.weeksOutLabel}</div>
+        <div class="ci-timeline-group-label">${mxEsc(weeksOutGroup.weeksOutLabel)}</div>
         ${cards}
       </div>`;
   }).join('');
@@ -12318,13 +12664,47 @@ function generateCheckInSummary() {
     return null;
   }
   const payload = buildCheckInSummaryPayload(selected);
+  const pts = timeline.filter(e => Number(e.bodyweight) > 0).slice()
+    .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-6);
+  let spark = '';
+  if (pts.length >= 2) {
+    const vals = pts.map(p => Number(p.bodyweight));
+    const lo = Math.min(...vals), hi = Math.max(...vals), span = (hi - lo) || 1;
+    const xs = vals.map((_, i) => 12 + (i * 276) / (vals.length - 1));
+    const ys = vals.map(v => 10 + ((hi - v) / span) * 48);
+    const line = xs.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(' ');
+    const area = `${line} L${xs[xs.length - 1].toFixed(1)} 76 L${xs[0].toFixed(1)} 76 Z`;
+    const dots = xs.map((x, i) => i === xs.length - 1
+      ? `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="5" fill="#6fae8b" stroke="#101614" stroke-width="2"/>`
+      : `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3.5" fill="#101614" stroke="#3d9d73" stroke-width="2"/>`).join('');
+    const change = vals[vals.length - 1] - vals[0];
+    spark = `
+      <div>
+        <div class="ci-spark-cap"><span class="mx-lbl">Bodyweight · last ${pts.length}</span><span class="mx-delta mx-delta--flat">${change === 0 ? 'no change' : (change < 0 ? '▼ ' : '▲ ') + Math.abs(change).toFixed(1) + ' kg'}</span></div>
+        <svg class="ci-spark" viewBox="0 0 300 76" role="img" aria-label="Bodyweight from ${vals[0]} to ${vals[vals.length - 1]} kg over ${pts.length} check-ins">
+          <defs><linearGradient id="ciSparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d9d73" stop-opacity="0.35"/><stop offset="1" stop-color="#3d9d73" stop-opacity="0"/></linearGradient></defs>
+          <path d="${area}" fill="url(#ciSparkFill)"/>
+          <path d="${line}" fill="none" stroke="#6fae8b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          ${dots}
+        </svg>
+      </div>`;
+  }
+  const chips = [payload.phase, payload.weekLabel, payload.archetype].filter(Boolean)
+    .map(t => `<span class="mx-chip mx-chip--sm">${mxEsc(t)}</span>`).join('');
   output.innerHTML = `
-    <strong>${payload.date}</strong> · ${payload.phase} · ${payload.weekLabel} · ${payload.archetype}<br />
-    BW ${payload.metrics.bodyweight || '—'} · Waist ${payload.metrics.waist || '—'} · Perf ${payload.metrics.trainingPerformance || '—'}<br />
-    <strong>Archetype focus:</strong> ${payload.metrics.archetypeSummary}<br />
-    <strong>Adjustments:</strong> ${payload.adjustmentsSummary}<br />
-    <strong>Review:</strong> ${payload.reviewStatus}${payload.coachActionItems ? ` · Action items: ${payload.coachActionItems}` : ''}<br />
-    <strong>Trend:</strong> ${payload.trendSummary}
+    <div class="ci-sum-head"><strong>${mxEsc(payload.date)}</strong>${chips}</div>
+    <div class="mx-tiles">
+      <div class="mx-stat"><span class="mx-stat-l">Weight</span><span class="mx-stat-v">${mxEsc(payload.metrics.bodyweight || '—')}</span></div>
+      <div class="mx-stat"><span class="mx-stat-l">Waist</span><span class="mx-stat-v">${mxEsc(payload.metrics.waist || '—')}</span></div>
+      <div class="mx-stat"><span class="mx-stat-l">Perf</span><span class="mx-stat-v">${mxEsc(payload.metrics.trainingPerformance || '—')}</span></div>
+    </div>
+    ${spark}
+    <dl class="ci-sum-list">
+      <div><dt>Archetype focus</dt><dd>${mxEsc(payload.metrics.archetypeSummary)}</dd></div>
+      <div><dt>Adjustments</dt><dd>${mxEsc(payload.adjustmentsSummary)}</dd></div>
+      <div><dt>Review</dt><dd>${mxEsc(payload.reviewStatus)}${payload.coachActionItems ? ` · Action items: ${mxEsc(payload.coachActionItems)}` : ''}</dd></div>
+      <div><dt>Trend</dt><dd>${mxEsc(payload.trendSummary)}</dd></div>
+    </dl>
   `;
   return payload;
 }
@@ -13283,7 +13663,9 @@ function calculateCaloriesEquation() {
 function selectCardioType(type) {
   document.getElementById('cardioType').value = type;
   document.querySelectorAll('#cardioTypePicker .cardio-type-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.type === type);
+    const on = btn.dataset.type === type;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
   const customWrap = document.getElementById('cardioCustomTypeWrap');
   if (customWrap) {
@@ -13296,14 +13678,17 @@ function selectCardioType(type) {
   // Update submit button icon to match selected activity
   const cfg = window.cardioTab?.getActivityConfig?.(type);
   const iconEl = document.getElementById('cardioSubmitIcon');
-  if (iconEl && cfg?.icon) iconEl.textContent = cfg.icon;
+  const iconSvg = cfg && ICONS[cfg.iconName];
+  if (iconEl && iconSvg) iconEl.innerHTML = iconSvg;
   updateCardioPacePreview();
 }
 
 function selectCardioIntensity(level) {
   document.getElementById('cardioIntensity').value = level;
   document.querySelectorAll('#cardioIntensityPicker .cardio-intensity-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.intensity === level);
+    const on = btn.dataset.intensity === level;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 }
 
@@ -13332,10 +13717,10 @@ function updateCardioPacePreview() {
 
   if (result) {
     previewEl.style.display = 'flex';
-    const iconEl  = document.getElementById('cardioPaceIcon');
+    const labelEl = document.getElementById('cardioPaceLabel');
     const valueEl = document.getElementById('cardioPaceValue');
-    if (iconEl)  iconEl.textContent  = result.icon;
-    if (valueEl) valueEl.textContent = `${result.label}: ${result.value}`;
+    if (labelEl) labelEl.textContent = `Live ${result.label.toLowerCase()}`;
+    if (valueEl) valueEl.textContent = result.value;
   } else {
     previewEl.style.display = 'none';
   }
@@ -13402,7 +13787,7 @@ function addCardioEntry() {
   const cfg = window.cardioTab?.getActivityConfig?.(type) || { icon: '🏃', label: type };
   const calText = calories > 0 ? ` · ${calories} kcal` : '';
   const paceText = paceOrSpeed ? ` · ${paceOrSpeed.value}` : '';
-  window.showToast?.(`${cfg.icon} ${Math.round(duration)} min ${cfg.label}${paceText}${calText} logged!`, 'success', 3000);
+  window.showToast?.(`${Math.round(duration)} min ${cfg.label}${paceText}${calText} logged!`, 'success', 3000);
 
   renderCardio();
   updateMacroUI();
@@ -13438,18 +13823,53 @@ function renderCardio() {
   const weekKm       = weekEntries.reduce((s, e) => s + (parseFloat(e.distance) || 0), 0);
   const weekKcal     = weekEntries.reduce((s, e) => s + (parseFloat(e.calories) || 0), 0);
 
+  const _esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
   const summaryEl = document.getElementById('cardioWeeklySummary');
   if (summaryEl) {
-    summaryEl.innerHTML = [
-      { val: weekSessions,                        lbl: 'Sessions (7d)' },
-      { val: Math.round(weekMins) + ' min',       lbl: 'Active time'   },
-      { val: weekKm > 0 ? weekKm.toFixed(1)+' km' : '—', lbl: 'Distance' },
-      { val: weekKcal > 0 ? Math.round(weekKcal)+' kcal' : '—', lbl: 'Calories' },
-    ].map(c => `
-      <div class="cardio-stat-chip">
-        <span class="chip-val">${c.val}</span>
-        <span class="chip-lbl">${c.lbl}</span>
-      </div>`).join('');
+    // Minutes per day across the rolling 7 days, oldest → today.
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const mins = weekEntries.filter(e => e.date === key).reduce((s, e) => s + (parseFloat(e.duration) || 0), 0);
+      days.push({
+        mins,
+        today: i === 0,
+        narrow: d.toLocaleDateString(undefined, { weekday: 'narrow' }),
+        short: d.toLocaleDateString(undefined, { weekday: 'short' })
+      });
+    }
+    const maxMins = Math.max(...days.map(d => d.mins), 1);
+    const bars = days.map(d => {
+      const cls = d.mins > 0
+        ? (d.mins === maxMins ? 'cardio-bar cardio-bar--hi' : 'cardio-bar')
+        : (d.today ? 'cardio-bar cardio-bar--today' : 'cardio-bar cardio-bar--none');
+      const style = d.mins > 0
+        ? ` style="height:${Math.max(8, Math.round((d.mins / maxMins) * 64))}px"`
+        : (d.today ? ' style="height:30px"' : '');
+      return `<div class="cardio-bcol"><div class="cardio-bval">${d.mins > 0 ? Math.round(d.mins) : ''}</div><div class="${cls}"${style}></div><div class="cardio-blab${d.today ? ' cardio-blab--today' : ''}">${d.narrow}</div></div>`;
+    }).join('');
+    const barsAria = days.filter(d => d.mins > 0).map(d => `${d.short} ${Math.round(d.mins)}`).join(', ') || 'no sessions';
+    const fmtDay = (dt) => dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    summaryEl.innerHTML = `
+      <section class="pod pod--hero mx-pod" aria-label="Cardio, last 7 days">
+        <div class="pod-row">
+          <span class="mx-kicker">Last 7 days</span>
+          <span class="mx-meta">${fmtDay(weekAgo)} – ${fmtDay(today)}</span>
+        </div>
+        <div class="cardio-hero-big">
+          <span class="mx-num">${Math.round(weekMins)}</span>
+          <span class="cardio-hero-of">min active</span>
+        </div>
+        <div class="cardio-bars" role="img" aria-label="Minutes per day: ${barsAria}">${bars}</div>
+        <div class="mx-tiles">
+          <div class="mx-stat"><span class="mx-stat-l">Sessions</span><span class="mx-stat-v">${weekSessions}</span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Distance</span><span class="mx-stat-v">${weekKm > 0 ? weekKm.toFixed(1) + '<small>km</small>' : '—'}</span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Calories</span><span class="mx-stat-v">${weekKcal > 0 ? Math.round(weekKcal) + '<small>kcal</small>' : '—'}</span></div>
+        </div>
+      </section>`;
   }
 
   /* ── History cards grouped by date ──────────────────────── */
@@ -13486,51 +13906,53 @@ function renderCardio() {
     } catch { return d; }
   }
 
+  const _intensityTag = {
+    easy: `<span class="mx-tag mx-tag--hi"><span class="ui-icon">${ICONS.leaf}</span> Easy</span>`,
+    hard: `<span class="mx-tag mx-tag--brass"><span class="ui-icon">${ICONS.flame}</span> Hard</span>`,
+    max:  `<span class="mx-tag mx-tag--red"><span class="ui-icon">${ICONS.zap}</span> Max</span>`
+  };
+
   historyEl.innerHTML = sortedDates.map(date => {
     const entries = grouped[date];
+    const dayMins = entries.reduce((s, { entry }) => s + (parseFloat(entry.duration) || 0), 0);
     const cards   = entries.map(({ entry, idx }) => {
-      const cfg   = window.cardioTab?.getActivityConfig?.(entry.type) || { icon: '🏅', label: entry.type || 'Other', color: '#8c9891' };
-      const dur   = entry.duration > 0 ? `<span class="ui-icon">${ICONS.timer}</span> ${Math.round(entry.duration)} min` : null;
-      const dist  = parseFloat(entry.distance) > 0 ? `<span class="ui-icon">${ICONS.mapPin}</span> ${parseFloat(entry.distance).toFixed(1)} km` : null;
+      const cfg   = window.cardioTab?.getActivityConfig?.(entry.type) || { label: entry.type || 'Other', iconName: 'activity' };
+      const iconSvg = ICONS[cfg.iconName] || ICONS.activity;
+      const dist  = parseFloat(entry.distance) > 0 ? parseFloat(entry.distance).toFixed(1) : null;
       const pace  = entry.paceOrSpeed
-        ? `${entry.paceOrSpeed.icon} ${entry.paceOrSpeed.value}`
-        : (dist && dur
-            ? (() => {
-                const r = window.cardioTab?.computePaceOrSpeed?.({ type: entry.type, durationMinutes: entry.duration, distanceKm: entry.distance });
-                return r ? `${r.icon} ${r.value}` : null;
-              })()
+        ? entry.paceOrSpeed.value
+        : (dist && entry.duration > 0
+            ? (window.cardioTab?.computePaceOrSpeed?.({ type: entry.type, durationMinutes: entry.duration, distanceKm: entry.distance })?.value || null)
             : null);
-      const kcal  = parseFloat(entry.calories) > 0 ? `<span class="ui-icon">${ICONS.flame}</span> ${Math.round(entry.calories)} kcal` : null;
-      const hr    = parseFloat(entry.heartRate) > 0 ? `<span class="ui-icon">${ICONS.heart}</span> ${Math.round(entry.heartRate)} bpm` : null;
-      const intBadge = entry.intensity && entry.intensity !== 'moderate'
-        ? {
-            easy: `<span class="ui-icon">${ICONS.leaf}</span> Easy`,
-            hard: `<span class="ui-icon">${ICONS.flame}</span> Hard`,
-            max: `<span class="ui-icon">${ICONS.zap}</span> Max`
-          }[entry.intensity] || null
-        : null;
-
-      const tags  = [dur, dist, pace, kcal, hr, intBadge].filter(Boolean).map((t, i) =>
-        `<span class="cardio-stat-tag${t === pace && pace ? ' highlight' : ''}">${t}</span>`
-      ).join('');
+      const tags  = [
+        dist ? `<span class="mx-tag"><span class="ui-icon">${ICONS.mapPin}</span> ${dist} km</span>` : '',
+        parseFloat(entry.calories) > 0 ? `<span class="mx-tag"><span class="ui-icon">${ICONS.flame}</span> ${Math.round(entry.calories)} kcal</span>` : '',
+        parseFloat(entry.heartRate) > 0 ? `<span class="mx-tag"><span class="ui-icon">${ICONS.heart}</span> ${Math.round(entry.heartRate)} bpm</span>` : '',
+        entry.intensity && entry.intensity !== 'moderate' ? (_intensityTag[entry.intensity] || '') : ''
+      ].filter(Boolean).join('');
+      const label = _esc(cfg.label);
 
       return `
-        <div class="cardio-entry-card" style="--c-accent:${cfg.color}">
-          <div class="cardio-entry-icon">${cfg.icon}</div>
-          <div class="cardio-entry-info">
-            <div class="cardio-entry-title">${cfg.label}</div>
-            <div class="cardio-entry-stats">${tags}</div>
-            ${entry.notes ? `<div class="cardio-entry-notes">${entry.notes}</div>` : ''}
+        <div class="cardio-entry-card mx-row">
+          <div class="cardio-entry-icon mx-row-ico"><span class="ui-icon">${iconSvg}</span></div>
+          <div class="cardio-entry-info mx-row-main">
+            <div class="cardio-entry-title mx-row-title">${label}</div>
+            ${tags ? `<div class="cardio-entry-stats mx-tags">${tags}</div>` : ''}
+            ${entry.notes ? `<div class="cardio-entry-notes">${_esc(entry.notes)}</div>` : ''}
           </div>
-          <button class="cardio-remove-btn" onclick="removeCardioEntry(${idx})" title="Remove"><span class="ui-icon">${ICONS.x}</span></button>
+          <div class="mx-row-right">
+            ${entry.duration > 0 ? `<span class="mx-row-big">${Math.round(entry.duration)}<span class="mx-unit"> min</span></span>` : ''}
+            ${pace ? `<span class="mx-row-sm">${_esc(pace)}</span>` : ''}
+          </div>
+          <button class="cardio-remove-btn mx-iconbtn mx-iconbtn--ghost" onclick="removeCardioEntry(${idx})" title="Remove" aria-label="Remove ${label} session"><span class="ui-icon">${ICONS.x}</span></button>
         </div>`;
     }).join('');
 
     return `
-      <div class="cardio-day-group">
-        <div class="cardio-day-header">${_dateLabel(date)} &nbsp;·&nbsp; ${date}</div>
-        ${cards}
-      </div>`;
+      <section class="cardio-day-group pod mx-pod" aria-label="${_dateLabel(date)}">
+        <div class="cardio-day-header"><span>${_dateLabel(date)} &nbsp;·&nbsp; ${date}</span><span class="cardio-day-total">${Math.round(dayMins)} min</span></div>
+        <div>${cards}</div>
+      </section>`;
   }).join('');
 
   // Keep legacy cardioBody in sync for anything that still reads it
@@ -15545,26 +15967,43 @@ let crossfitExercises = [];
 let crossfitEntries = [];
 let crossfitTemplates = JSON.parse(localStorage.getItem('crossfitTemplates')) || [];
 
+let crossfitExerciseSeq = 0; // monotonic, so ids never repeat after a removal
+
 function addCrossfitExercise() {
   const container = document.getElementById('cfExercisesContainer');
-  const index = crossfitExercises.length;
+  const index = crossfitExerciseSeq++;
 
-  container.innerHTML += `
-    <div style="border:1px solid var(--border-color); padding:10px; margin-top:10px;">
-      <input type="text" placeholder="Exercise Name" id="cfExerciseName${index}">
-      <input type="number" placeholder="Sets" id="cfExerciseSets${index}">
-      <input type="number" placeholder="Reps per Set" id="cfExerciseReps${index}">
-      <input type="number" placeholder="Weight per Set (optional)" id="cfExerciseWeight${index}">
-      <button onclick="removeCrossfitExercise(${index})" class="remove-btn" style="margin-top:5px;"><span class="ui-icon">${ICONS.x}</span> Remove</button>
+  // insertAdjacentHTML keeps whatever was already typed into earlier rows
+  // (innerHTML += re-parses the container and wipes their values).
+  container.insertAdjacentHTML('beforeend', `
+    <div class="cf-ex">
+      <div class="mx-field">
+        <label class="mx-lbl" for="cfExerciseName${index}">Exercise</label>
+        <div class="mx-well mx-well--text"><input type="text" placeholder="Exercise Name" id="cfExerciseName${index}"></div>
+      </div>
+      <div class="mx-grid3">
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfExerciseSets${index}">Sets</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" placeholder="—" id="cfExerciseSets${index}" inputmode="numeric"></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfExerciseReps${index}">Reps</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" placeholder="—" id="cfExerciseReps${index}" inputmode="numeric"></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfExerciseWeight${index}">Kg <em>opt.</em></label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" placeholder="—" id="cfExerciseWeight${index}" inputmode="decimal"></div>
+        </div>
+      </div>
+      <button type="button" onclick="removeCrossfitExercise(${index})" class="mx-outline mx-outline--danger"><span class="ui-icon">${ICONS.x}</span> Remove</button>
     </div>
-  `;
-  
+  `);
+
   crossfitExercises.push(index);
 }
 
 function removeCrossfitExercise(index) {
-  const exerciseDiv = document.getElementById(`cfExerciseName${index}`).parentNode;
-  exerciseDiv.remove();
+  document.getElementById(`cfExerciseName${index}`)?.closest('.cf-ex')?.remove();
   crossfitExercises = crossfitExercises.filter(i => i !== index);
 }
 
@@ -15613,24 +16052,36 @@ function saveCrossfitWorkout() {
 function renderCrossfitWorkouts() {
   const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
   const container = document.getElementById('cfWorkoutsContainer');
-  container.innerHTML = '';
+  if (!container) return;
 
-  cfLog.forEach((wod, index) => {
-    let exercisesList = wod.exercises.map(e => `
-      <li>${e.exerciseName} - ${e.sets} sets x ${e.reps} reps ${e.weight ? `@ ${e.weight}kg` : ''}</li>
-    `).join('');
+  if (!cfLog.length) {
+    container.innerHTML = '<div class="mx-empty">No workouts saved yet.</div>';
+    return;
+  }
 
-    container.innerHTML += `
-      <div style="border:1px solid var(--border-color); padding:10px; margin-top:10px;">
-        <strong>${wod.date} - ${wod.name}</strong><br>
-        Time: ${wod.minutes}m ${wod.seconds}s<br>
-        Rounds: ${wod.rounds || '-'}<br>
-        Notes: ${wod.notes || '-'}<br>
-        <ul>${exercisesList}</ul>
-        <button onclick="removeCrossfitWorkout(${index})" class="remove-btn"><span class="ui-icon">${ICONS.x}</span> Delete</button>
-      </div>
-    `;
-  });
+  const pad = (n) => String(Number(n) || 0).padStart(2, '0');
+  // Newest first; keep each entry's original index for deletion.
+  container.innerHTML = cfLog.map((wod, index) => ({ wod, index })).reverse().map(({ wod, index }) => {
+    const d = new Date(String(wod.date) + 'T00:00:00');
+    const valid = !isNaN(d.getTime());
+    const tags = (wod.exercises || []).map(e =>
+      `<span class="mx-tag">${mxEsc(e.exerciseName)} · ${mxEsc(e.sets)}×${mxEsc(e.reps)}${e.weight ? ` @ ${mxEsc(e.weight)}kg` : ''}</span>`
+    ).join('');
+    return `
+      <article class="mx-row cf-wod">
+        <div class="mx-date"><b>${valid ? d.getDate() : ''}</b><span>${valid ? d.toLocaleDateString(undefined, { month: 'short' }) : ''}</span></div>
+        <div class="mx-row-main">
+          <div class="cf-wod-top">
+            <span class="mx-row-title">${mxEsc(wod.name)}</span>
+            <span class="mx-row-big">${pad(wod.minutes)}:${pad(wod.seconds)}</span>
+          </div>
+          ${wod.rounds ? `<div class="mx-row-sub">Rounds: ${mxEsc(wod.rounds)}</div>` : ''}
+          ${tags ? `<div class="mx-tags">${tags}</div>` : ''}
+          ${wod.notes ? `<div class="cf-wod-notes">${mxEsc(wod.notes)}</div>` : ''}
+        </div>
+        <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="removeCrossfitWorkout(${index})" title="Delete" aria-label="Delete ${mxEsc(wod.name)} workout"><span class="ui-icon">${ICONS.x}</span></button>
+      </article>`;
+  }).join('');
 }
 
 function removeCrossfitWorkout(index) {
@@ -15772,11 +16223,27 @@ function fmtMMSS(totalSec) {
 }
 
 function calcHyroxTotal() {
-  const inputs = document.querySelectorAll('.hyrox-time-input');
-  let total = 0;
-  inputs.forEach(inp => { total += parseMMSS(inp.value); });
-  const el = document.getElementById('hyroxTotal');
-  if (el) el.textContent = total > 0 ? 'Total: ' + fmtMMSS(total) : 'Total: —';
+  const rows = document.querySelectorAll('.hyrox-station');
+  let total = 0, done = 0, runSecs = 0, runCount = 0, stnSecs = 0;
+  rows.forEach(row => {
+    const inp = row.querySelector('.hyrox-time-input');
+    const secs = parseMMSS(inp ? inp.value : '');
+    const filled = secs > 0;
+    row.classList.toggle('is-done', filled);
+    if (!filled) return;
+    total += secs;
+    done++;
+    if (row.dataset.kind === 'run') { runSecs += secs; runCount++; } else { stnSecs += secs; }
+  });
+
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  set('hyroxTotal', total > 0 ? fmtMMSS(total) : '—');
+  set('hyroxDone', done + ' of ' + rows.length);
+  set('hyroxRunTotal', runCount ? fmtMMSS(runSecs) : '—');
+  set('hyroxStnTotal', stnSecs ? fmtMMSS(stnSecs) : '—');
+  set('hyroxAvgRun', runCount ? fmtMMSS(Math.round(runSecs / runCount)) : '—');
+  const fill = document.getElementById('hyroxMeterFill');
+  if (fill) fill.style.width = (rows.length ? Math.round((done / rows.length) * 100) : 0) + '%';
 }
 
 function saveHyroxSimulation() {
@@ -15812,18 +16279,34 @@ function renderHyroxHistory() {
   const log = JSON.parse(localStorage.getItem('hyroxLog_' + user) || '[]');
 
   if (!log.length) {
-    container.innerHTML = '<div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No simulations logged yet.</div>';
+    container.innerHTML = '<div class="mx-empty">No simulations logged yet.</div>';
     return;
   }
 
+  const totals = log.map(e => Number(e.total) || 0).filter(t => t > 0);
+  const best = totals.length ? Math.min(...totals) : 0;
+
   container.innerHTML = log.slice(0, 10).map((entry, i) => {
     const d = new Date(entry.date + 'T00:00:00');
-    const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    return '<div class="hyrox-hist-item">'
-      + '<span class="hyrox-hist-date">' + label + '</span>'
-      + '<span class="hyrox-hist-total">' + fmtMMSS(entry.total) + '</span>'
-      + '<button class="hyrox-hist-delete" onclick="deleteHyrox(' + i + ')"><span class="ui-icon">' + ICONS.x + '</span></button>'
-      + '</div>';
+    const valid = !isNaN(d.getTime());
+    const stations = entry.stations || {};
+    const done = Object.values(stations).filter(v => Number(v) > 0).length;
+    const runs = Object.keys(stations).filter(k => /^run\d+$/.test(k) && Number(stations[k]) > 0).map(k => Number(stations[k]));
+    const avgRun = runs.length ? fmtMMSS(Math.round(runs.reduce((a, b) => a + b, 0) / runs.length)) : null;
+    const gap = best && entry.total > best ? '+' + fmtMMSS(entry.total - best) : '';
+    const badge = best && entry.total === best
+      ? '<span class="mx-chip mx-chip--green mx-chip--sm">Best</span>'
+      : (gap ? `<span class="mx-row-sm">${gap}</span>` : '');
+    return `
+      <div class="mx-row hyrox-hist-row">
+        <div class="mx-date"><b>${valid ? d.getDate() : ''}</b><span>${valid ? d.toLocaleDateString('en-GB', { month: 'short' }) : ''}</span></div>
+        <div class="mx-row-main">
+          <span class="mx-row-title">${valid ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : mxEsc(entry.date)}</span>
+          <span class="mx-row-sub">${done} station${done === 1 ? '' : 's'}${avgRun ? ' · avg run ' + avgRun + ' /km' : ''}</span>
+        </div>
+        <div class="mx-row-right"><span class="mx-row-big">${fmtMMSS(entry.total)}</span>${badge}</div>
+        <button type="button" class="mx-iconbtn mx-iconbtn--ghost hyrox-hist-delete" onclick="deleteHyrox(${i})" title="Delete" aria-label="Delete simulation from ${mxEsc(entry.date)}"><span class="ui-icon">${ICONS.x}</span></button>
+      </div>`;
   }).join('');
 }
 
@@ -15848,8 +16331,8 @@ function addCircuitExercise() {
   const count = container.children.length + 1;
   const row = document.createElement('div');
   row.className = 'circuit-ex-row';
-  row.innerHTML = '<input type="text" placeholder="Exercise ' + count + '" class="circuit-ex-input">'
-    + '<button class="circuit-ex-remove" onclick="this.parentElement.remove()"><span class="ui-icon">' + ICONS.x + '</span></button>';
+  row.innerHTML = '<div class="mx-well mx-well--text"><input type="text" placeholder="Exercise ' + count + '" class="circuit-ex-input" aria-label="Exercise ' + count + '"></div>'
+    + '<button type="button" class="mx-iconbtn mx-iconbtn--ghost circuit-ex-remove" onclick="this.parentElement.remove()" aria-label="Remove exercise ' + count + '"><span class="ui-icon">' + ICONS.x + '</span></button>';
   container.appendChild(row);
 }
 
@@ -15905,7 +16388,7 @@ function startCircuitTimer() {
 function toggleCircuitPause() {
   _circuitPaused = !_circuitPaused;
   const btn = document.getElementById('circuitPauseBtn');
-  if (btn) btn.textContent = _circuitPaused ? '▶ Resume' : '⏸ Pause';
+  if (btn) btn.textContent = _circuitPaused ? 'Resume' : 'Pause';
 }
 
 function stopCircuitTimer() {

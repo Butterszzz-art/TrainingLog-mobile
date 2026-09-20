@@ -1,483 +1,215 @@
 /* =============================================================
-   CARDIO TAB
-   Card-based cardio tracker with activity-type pills,
-   live pace/speed preview, weekly summary strip, and
-   grouped history cards.
+   CARDIO TAB  (Modernist)
+   Cardio-specific pieces only. Shared building blocks (pods, wells,
+   chips, capsule CTA, tiles) live in modernist-kit.css.
    ============================================================= */
 
-/* ── Tab wrapper ────────────────────────────────────────────── */
 #cardioTab {
   padding: 14px 12px 80px;
   max-width: 600px;
   margin: 0 auto;
 }
 
-/* ── Weekly summary strip ───────────────────────────────────── */
-.cardio-weekly-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
-}
+/* ── Last-7-days hero ───────────────────────────────────────── */
+.cardio-weekly-strip { margin-bottom: 12px; }
 
-.cardio-stat-chip {
-  background: var(--pod-bg);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--pod-bevel);
-  padding: 10px 8px;
-  text-align: center;
-}
-
-.cardio-stat-chip .chip-val {
-  display: block;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--primary);
-  line-height: 1.1;
-}
-
-.cardio-stat-chip .chip-lbl {
-  display: block;
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  margin-top: 3px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-/* ── Form card ──────────────────────────────────────────────── */
-.cardio-form-card {
-  background: var(--pod-bg-hero);
-  border: 1px solid rgba(74, 132, 102, 0.3);
-  border-radius: var(--radius-pod);
-  box-shadow: var(--pod-shadow-hero);
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
-.cardio-form-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.cardio-form-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-color);
-  margin: 0;
-}
-
-.cardio-form-date-chip {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: var(--elevated-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 3px 10px;
-}
-
-/* ── Activity type pill picker ──────────────────────────────── */
-.cardio-type-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-bottom: 14px;
-}
-
-.cardio-type-btn {
-  padding: 7px 13px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--pill-border);
-  background: var(--pill-bg);
-  color: var(--secondary-text);
+.cardio-hero-big { display: flex; align-items: baseline; gap: 8px; }
+.cardio-hero-big .mx-num { font-size: 60px; line-height: 0.95; }
+.cardio-hero-of {
   font-family: var(--font-label);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.cardio-type-btn:active {
-  transform: scale(0.95);
-}
-
-.cardio-type-btn.active {
-  background: var(--pill-bg-active);
-  border-color: transparent;
-  color: var(--pill-text-active);
-  font-weight: 700;
-}
-
-/* ── Custom type input (shown when Other is selected) ───────── */
-.cardio-custom-type-wrap {
-  margin-bottom: 12px;
-}
-
-/* ── Section divider label ──────────────────────────────────── */
-.cardio-section-label {
-  font-size: 0.7rem;
-  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin: 0 0 8px;
+  color: var(--text-tertiary);
 }
 
-/* ── Two-column rows ────────────────────────────────────────── */
-.cardio-row-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 12px;
+.cardio-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+  height: 104px;
 }
-
-/* ── Field (label + input-wrap) ─────────────────────────────── */
-.cardio-field {
+.cardio-bcol {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
   gap: 5px;
 }
-
-.cardio-field-label {
-  display: block;
-  font-size: 0.72rem;
+.cardio-bval {
+  height: 14px;
+  font-family: var(--font-label);
+  font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
-
-.cardio-opt {
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 0.68rem;
-  opacity: 0.75;
+.cardio-bar {
+  width: 24px;
+  border-radius: var(--radius-bar-mobile);
+  background: var(--fill-bar-a);
 }
-
-/* ── Icon-wrapped input ─────────────────────────────────────── */
-.cardio-input-wrap {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--elevated-bg);
-  overflow: hidden;
-  transition: border-color 0.15s, box-shadow 0.15s;
+.cardio-bar--hi   { background: var(--fill-bar-b); }
+.cardio-bar--none { height: 5px; border-radius: 3px; background: var(--surface-hatch); }
+.cardio-bar--today { background: transparent; border: 1.5px dashed var(--border-featured-strong); }
+.cardio-blab {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--mx-label);
 }
+.cardio-blab--today { color: var(--green-90); }
 
-.cardio-input-wrap:focus-within {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(45, 125, 91, 0.18);
+/* ── Form pod ───────────────────────────────────────────────── */
+.cardio-form-card {
+  background: var(--pod-bg);
 }
+.cardio-form-title { font-size: 20px; letter-spacing: 0.02em; margin: 0; }
 
+/* Activity tiles: 3 × 3 (grid comes from .mx-grid3) */
+
+/* Icon inside a well (optional fields) */
 .cardio-input-icon {
   flex-shrink: 0;
-  width: 36px;
-  text-align: center;
-  font-size: 0.95rem;
-  line-height: 1;
-  color: var(--text-muted);
+  width: 18px;
+  height: 18px;
+  align-self: center;
+  color: var(--text-tertiary);
   pointer-events: none;
-  user-select: none;
 }
+.cardio-input-icon svg { width: 18px; height: 18px; display: block; }
+.cardio-input-wrap input[type="date"] { color-scheme: dark; }
 
-.cardio-input-wrap input {
-  flex: 1;
-  min-width: 0;
-  padding: 10px 6px;
-  border: none;
-  background: transparent;
-  color: var(--text-color);
-  font-size: 1rem;          /* ≥ 16px — prevents iOS auto-zoom */
-  font-family: inherit;
-  -webkit-appearance: none;
-}
-
-.cardio-input-wrap input:focus { outline: none; }
-
-.cardio-input-wrap input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.6;
-}
-
-.cardio-input-unit {
-  flex-shrink: 0;
-  padding: 0 10px 0 2px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  pointer-events: none;
-  user-select: none;
-}
-
-/* date inputs need right padding */
-.cardio-input-wrap input[type="date"] {
-  padding-right: 10px;
-}
-
-/* ── Intensity / effort pill row ────────────────────────────── */
-.cardio-intensity-row {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.cardio-intensity-btn {
-  flex: 1;
-  min-width: 64px;
-  padding: 8px 6px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--pill-border);
-  background: var(--pill-bg);
-  color: var(--secondary-text);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.15s;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.cardio-intensity-btn:active { transform: scale(0.96); }
-
-.cardio-intensity-btn[data-intensity="easy"].active    { background: rgba(111,174,139,0.15); border-color: var(--positive-text); color: var(--positive-text); }
-.cardio-intensity-btn[data-intensity="moderate"].active{ background: rgba(45,125,91,0.15);   border-color: var(--primary); color: var(--primary); }
-.cardio-intensity-btn[data-intensity="hard"].active    { background: var(--warning-bg);      border-color: var(--warning-gold); color: var(--warning-gold); }
-.cardio-intensity-btn[data-intensity="max"].active     { background: var(--danger-bg);       border-color: var(--danger-strong); color: var(--danger-text); }
-
-/* ── "More options" collapsible ─────────────────────────────── */
-.cardio-optional {
-  margin-bottom: 14px;
-}
-
-.cardio-optional-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--elevated-bg);
-  cursor: pointer;
-  list-style: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s;
-}
-
-.cardio-optional-toggle::-webkit-details-marker { display: none; }
-.cardio-optional[open] .cardio-optional-toggle  { border-radius: 10px 10px 0 0; border-bottom-color: transparent; }
-.cardio-optional-toggle:active { background: rgba(45,125,91,0.08); }
-
-.cardio-optional-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--secondary-text);
-}
-
-.cardio-optional-arrow {
-  font-size: 1.1rem;
-  color: var(--text-muted);
-  transition: transform 0.2s;
-  line-height: 1;
-}
-
-.cardio-optional[open] .cardio-optional-arrow { transform: rotate(90deg); }
-
-.cardio-optional-body {
-  border: 1px solid var(--border-color);
-  border-top: none;
-  border-radius: 0 0 10px 10px;
-  padding: 12px 12px 4px;
-  background: var(--elevated-bg);
-}
-
-/* ── Live pace / speed preview ──────────────────────────────── */
+/* Live pace / speed preview */
 .cardio-pace-preview {
-  background: rgba(45,125,91,0.07);
-  border: 1px solid rgba(45,125,91,0.3);
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.88rem;
-  color: var(--primary);
+  gap: 12px;
+  border-radius: var(--radius-md);
+  background: rgba(47, 138, 99, 0.10);
+  border: 1px solid var(--border-featured);
+  padding: 11px 14px;
   animation: cardio-fadein 0.2s ease;
 }
+.cardio-pace-preview .pace-icon { color: var(--green-90); display: flex; }
+.cardio-pace-preview .pace-icon svg { width: 20px; height: 20px; }
+.cardio-pace-preview .pace-meta { flex: 1; min-width: 0; }
+.cardio-pace-preview .pace-value { font-size: 26px; color: var(--green-100); }
 
 @keyframes cardio-fadein {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.cardio-pace-preview .pace-icon { font-size: 1.05rem; }
-
-.cardio-pace-preview .pace-value {
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-/* ── Submit button ──────────────────────────────────────────── */
-.cardio-submit-btn {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-  background: var(--fill-btn-primary-mobile);
-  color: var(--label-on-green);
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Effort level: 2 × 2 cards */
+.cardio-intensity-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  letter-spacing: 0.02em;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-  box-shadow: 0 2px 8px rgba(45,125,91,0.25);
+}
+.cardio-intensity-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 64px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-tight);
+  border: 1px solid var(--border-chip);
+  background: var(--pod-bg-alt);
+  box-shadow: none;
+  color: var(--text-tertiary);
+  text-align: left;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-
-.cardio-submit-btn:active {
-  background: var(--primary-dark);
-  transform: scale(0.98);
-  box-shadow: none;
-}
-
-/* ── History section ────────────────────────────────────────── */
-.cardio-history-section-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--secondary-text);
-  margin: 0 0 10px;
+.cardio-intensity-btn:active { transform: scale(0.97); }
+.cardio-effort-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  font-family: var(--font-label);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.cardio-effort-title i { display: block; width: 9px; height: 9px; border-radius: 50%; background: var(--dot, var(--green-70)); }
+.cardio-effort-hint { font-size: 12px; font-weight: 500; color: var(--text-tertiary); }
+.cardio-intensity-btn[data-intensity="easy"]     { --dot: var(--green-90); }
+.cardio-intensity-btn[data-intensity="moderate"] { --dot: var(--green-70); }
+.cardio-intensity-btn[data-intensity="hard"]     { --dot: var(--brass-base); }
+.cardio-intensity-btn[data-intensity="max"]      { --dot: var(--danger-text-mobile); }
+.cardio-intensity-btn.active {
+  background: var(--surface-raised);
+  border-color: var(--dot);
+  color: var(--text-primary);
 }
 
+/* "More options" disclosure */
+.cardio-optional-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px dashed var(--border-chip);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cardio-optional-toggle::-webkit-details-marker { display: none; }
+.cardio-optional-label {
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.cardio-optional-arrow { font-size: 1.2rem; color: var(--text-tertiary); transition: transform 0.2s; line-height: 1; }
+.cardio-optional[open] .cardio-optional-arrow { transform: rotate(90deg); }
+.cardio-optional-body { display: flex; flex-direction: column; gap: 14px; padding-top: 14px; }
+
+/* Submit: capsule from the kit; the icon tracks the chosen activity */
+.cardio-submit-btn { margin-top: 2px; }
+
+/* ── History ────────────────────────────────────────────────── */
 .cardio-history-empty {
   text-align: center;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
   font-size: 0.9rem;
   padding: 32px 16px;
-  background: var(--card-bg);
-  border: 1px dashed var(--border-color);
-  border-radius: 14px;
-}
-
-/* ── Day group ──────────────────────────────────────────────── */
-.cardio-day-group {
-  margin-bottom: 18px;
+  background: var(--pod-bg);
+  border: 1px dashed var(--border-chip);
+  border-radius: var(--radius-pod);
 }
 
 .cardio-day-header {
-  font-size: 0.78rem;
-  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  padding: 4px 4px 8px;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 10px;
+  color: var(--mx-label);
 }
+.cardio-day-total { color: var(--mx-faint); font-weight: 700; }
 
-/* ── Individual entry card ──────────────────────────────────── */
-.cardio-entry-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-left: 4px solid var(--c-accent, var(--primary));
-  border-radius: 12px;
-  padding: 12px 12px 12px 14px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 8px;
-  position: relative;
-}
+.cardio-entry-card { position: relative; }
+.cardio-entry-notes { font-size: 0.8rem; color: var(--text-tertiary); margin-top: 4px; font-style: italic; }
+.cardio-remove-btn { margin-right: -8px; }
 
-.cardio-entry-icon {
-  font-size: 1.6rem;
-  line-height: 1;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.cardio-entry-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.cardio-entry-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-color);
-  margin-bottom: 6px;
-  text-transform: capitalize;
-}
-
-.cardio-entry-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.cardio-stat-tag {
-  background: var(--elevated-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 3px 8px;
-  font-size: 0.78rem;
-  color: var(--secondary-text);
-  white-space: nowrap;
-}
-
-.cardio-stat-tag.highlight {
-  color: var(--primary);
-  border-color: rgba(45, 125, 91, 0.4);
-  background: rgba(45, 125, 91, 0.08);
-}
-
-.cardio-entry-notes {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-top: 6px;
-  font-style: italic;
-}
-
-.cardio-remove-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  opacity: 0.45;
-  padding: 4px;
-  border-radius: 6px;
-  color: var(--danger);
-  transition: opacity 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.cardio-remove-btn:hover,
-.cardio-remove-btn:active {
-  opacity: 1;
-}
-
-/* ── Responsive: narrow screens ────────────────────────────── */
 @media (max-width: 360px) {
-  .cardio-weekly-strip { grid-template-columns: repeat(2, 1fr); }
-  .cardio-row-2        { grid-template-columns: 1fr; }
-  .cardio-intensity-btn { font-size: 0.72rem; padding: 7px 4px; }
+  .cardio-hero-big .mx-num { font-size: 48px; }
 }

@@ -1,0 +1,106 @@
+/* =============================================================
+   MOBILITY TAB  (Modernist)
+   Routine cards, week hero, exercise timers, library and the routine
+   builder sheet. Shared blocks live in modernist-kit.css.
+   ============================================================= */
+
+#mobilityTab { padding-bottom: 80px; }
+
+.mob-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+
+/* ── Week hero ──────────────────────────────────────────────── */
+.mob-hero-big { display: flex; align-items: baseline; gap: 8px; }
+.mob-hero-big .mx-num { font-size: 52px; line-height: 0.95; }
+.mob-hero-of {
+  font-family: var(--font-label);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* ── Routine / library cards ────────────────────────────────── */
+.mob-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mob-card-title { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mob-card-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mob-name { font-size: 18px; }
+.mob-card-actions { display: flex; gap: 6px; flex: none; }
+.mob-card-week { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+.mob-dots { display: flex; gap: 5px; }
+.mob-dots i {
+  display: block;
+  width: 22px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-soft);
+}
+.mob-dots i.on { background: var(--fill-meter-a); border-color: transparent; }
+
+.mob-log.is-done,
+.mob-copy.is-done {
+  background: rgba(47, 138, 99, 0.14);
+  border-color: var(--border-featured-strong);
+  color: var(--green-100);
+}
+.mob-copy { flex: none; }
+.mob-copy:disabled { opacity: 1; cursor: default; }
+
+.mob-filters { margin: 2px 0 12px; }
+.mob-lib-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.mob-lib-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-row);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+.mob-lib-list li:first-child { border-top: 0; padding-top: 0; }
+.mob-lib-list strong { color: var(--text-primary); font-size: 14px; font-weight: 600; }
+
+/* ── Log session: exercise rows + timers ────────────────────── */
+.mob-ex-list { display: flex; flex-direction: column; gap: 10px; }
+.mob-ex-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-pod);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+}
+.mob-ex-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mob-ex-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mob-ex-name { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.mob-ex-detail { font-size: 12.5px; line-height: 1.4; color: var(--text-tertiary); }
+.mob-ex-timer { display: flex; align-items: center; gap: 8px; }
+.mob-timer-display { font-size: 34px; min-width: 88px; line-height: 1; color: var(--text-primary); }
+.mob-timer-display.is-done { color: var(--green-90); }
+.mob-timer-start { flex: 1; }
+.mob-timer-start.is-running { border-color: var(--border-brass); background: var(--warning-bg); color: var(--brass-light); }
+.mob-timer-start.is-paused { border-color: var(--border-chip); color: var(--text-tertiary); }
+.mob-timer-start:disabled { opacity: 0.6; cursor: default; }
+
+/* ── Routine builder sheet ──────────────────────────────────── */
+.mob-b-row { align-items: end; }
+.mob-coach-box { display: flex; flex-direction: column; gap: 10px; }
+.mob-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; font-weight: 500; color: var(--text-primary); cursor: pointer; }
+.mob-check input { width: 22px; height: 22px; margin: 0; accent-color: var(--green-60); }
+.mob-b-list { display: flex; flex-direction: column; gap: 10px; }
+.mob-b-list:empty { display: none; }
+.mob-bex {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-soft);
+}
+.mob-danger { color: var(--danger-text-mobile); }

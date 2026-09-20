@@ -1,0 +1,124 @@
+/* =============================================================
+   HISTORY TAB  (Modernist)
+   Workout list + detail rendered by history.js into
+   #logHistoryContainer. Scoped to that container so older
+   .history-* rules (style.css / log.css) never leak in.
+   ============================================================= */
+
+#logHistoryTab { padding-bottom: 80px; }
+#logHistoryTab > h2.pod-title { text-align: left; padding: 0 4px; margin: 2px 0 12px; }
+#logHistoryTab .log-subtabs { margin-bottom: 12px; }
+
+#logHistoryContainer .hist-hero { margin-bottom: 4px; }
+#logHistoryContainer .hist-hero .mx-stat-v small { text-transform: none; }
+
+/* ── List ───────────────────────────────────────────────────── */
+#logHistoryContainer .hist-group { margin-top: 6px; }
+#logHistoryContainer .hist-group-label {
+  font-family: var(--font-label);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mx-label);
+  padding: 6px 4px 8px;
+}
+#logHistoryContainer .hist-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+#logHistoryContainer .hist-item { margin: 0; padding: 0; }
+#logHistoryContainer .hist-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  text-align: left;
+  color: var(--text-primary);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#logHistoryContainer .hist-open:active { background: var(--pod-bg-hover); transform: scale(0.995); }
+#logHistoryContainer .hist-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+#logHistoryContainer .hist-main .mx-row-title { font-size: 17px; }
+#logHistoryContainer .hist-main .mx-row-sub {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#logHistoryContainer .hist-go { flex: none; width: 18px; height: 18px; color: var(--mx-faint); }
+
+/* ── Detail ─────────────────────────────────────────────────── */
+#logHistoryContainer .hist-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0 0 4px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-90);
+  cursor: pointer;
+}
+#logHistoryContainer .hist-back .ui-icon { width: 16px; height: 16px; }
+#logHistoryContainer .hist-detail-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin: 0 4px 12px; }
+#logHistoryContainer .hist-title {
+  margin: 3px 0 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+}
+#logHistoryContainer .history-detail-list { display: flex; flex-direction: column; }
+#logHistoryContainer .history-detail-card { margin-bottom: 12px; }
+#logHistoryContainer .history-detail-title { margin: 0; }
+#logHistoryContainer .hist-sets { display: flex; flex-direction: column; gap: 6px; }
+#logHistoryContainer .hist-set {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
+}
+#logHistoryContainer .hist-set-n {
+  width: 22px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--mx-label);
+}
+#logHistoryContainer .hist-set b {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+#logHistoryContainer .hist-set b small {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin: 0 2px;
+  text-transform: uppercase;
+}
+#logHistoryContainer .hist-x { color: var(--mx-faint); font-family: var(--font-label); font-weight: 800; margin: 0 2px; }

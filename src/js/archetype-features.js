@@ -261,7 +261,7 @@ function _fmt(totalSeconds) {
       if (_round >= cfg.rounds) { _stop(); _beep(880, 0.5); return; }
 
       const remaining = phaseLen - secondsIntoPhase;
-      const phaseLabel = _tabataPhase === 'work' ? '🔥 WORK' : '😮‍💨 REST';
+      const phaseLabel = _tabataPhase === 'work' ? 'WORK' : 'REST';
       _updateDisplay(_fmt(remaining), `${phaseLabel} — Round ${_round + 1} / ${cfg.rounds}`);
     }
   }

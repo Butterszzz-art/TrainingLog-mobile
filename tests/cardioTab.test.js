@@ -3,6 +3,8 @@ const {
   estimateCardioCalories,
   computeDailyCardioExpenditure,
   applyCardioMacroAdjustment,
+  ACTIVITY_CONFIG,
+  getActivityConfig,
 } = require('../cardioTab.js');
 
 describe('cardioTab', () => {
@@ -26,5 +28,16 @@ describe('cardioTab', () => {
     const adjusted = applyCardioMacroAdjustment({ calories: 2200, protein: 150, carbs: 250, fat: 70 }, 300);
     expect(adjusted.calories).toBe(2500);
     expect(adjusted.carbs).toBeGreaterThan(250);
+  });
+
+  test('every activity maps to an icon-set key so the UI never falls back to emoji', () => {
+    Object.entries(ACTIVITY_CONFIG).forEach(([key, cfg]) => {
+      expect(typeof cfg.iconName).toBe('string');
+      expect(cfg.iconName.length).toBeGreaterThan(0);
+      expect(getActivityConfig(key).iconName).toBe(cfg.iconName);
+    });
+    // unknown / custom activity types still resolve to something drawable
+    expect(getActivityConfig('parkour').iconName).toBe('activity');
+    expect(getActivityConfig('parkour').label).toBe('parkour');
   });
 });
