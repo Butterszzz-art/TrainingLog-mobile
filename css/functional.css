@@ -1,138 +1,175 @@
 /* =============================================================
-   FUNCTIONAL FITNESS TAB
-   Sub-views for CrossFit, HYROX, and Circuits.
-   Depends on: tokens.css
+   FUNCTIONAL FITNESS TAB  (Modernist)
+   Sub-views for CrossFit, HYROX and Circuits, plus the WOD interval
+   timer (driven by src/js/archetype-features.js). Shared blocks live
+   in modernist-kit.css. Timer selectors are scoped under
+   #functionalTab so they win over any legacy rule.
    ============================================================= */
 
 .func-subview { display: none; }
 .func-subview.active { display: block; }
 
-/* ── HYROX stations ────────────────────────────────────────── */
+#functionalTab .log-subtabs { margin-bottom: 12px; }
 
-.hyrox-date-row {
-  margin-bottom: 12px;
+/* ── WOD interval timer ─────────────────────────────────────── */
+#functionalTab .wod-timer-card { margin-top: 0; }
+#functionalTab .wod-format-tabs { margin: 0; }
+#functionalTab .wod-format-btn { min-width: 0; padding: 0 4px; }
+
+#functionalTab .wod-timer-display { text-align: center; padding: 4px 0 0; }
+#functionalTab .wod-timer-clock {
+  font-family: var(--font-display);
+  font-size: 92px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-align: center;
+}
+#functionalTab .wod-timer-phase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 5px 14px;
+  min-height: 30px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip);
+  background: var(--pod-bg-alt);
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  text-align: center;
 }
 
-.hyrox-stations {
+/* Config fields: label text above a recessed number well */
+#functionalTab .wod-timer-config {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+#functionalTab .wod-timer-config label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mx-label);
 }
+#functionalTab .wod-timer-config input {
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-recessed);
+  box-shadow: var(--shadow-well);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  -webkit-appearance: none;
+  appearance: none;
+}
+#functionalTab .wod-timer-config input:focus { outline: 2px solid var(--green-70); outline-offset: 2px; box-shadow: var(--shadow-well); }
+
+#functionalTab .wod-timer-controls { display: flex; gap: 8px; margin: 0; justify-content: stretch; }
+#functionalTab .wod-timer-controls .mx-cta { flex: 1; width: auto; justify-content: center; padding: 0 22px; }
+#functionalTab .wod-timer-controls .mx-outline { min-height: 56px; }
+
+/* ── CrossFit log ───────────────────────────────────────────── */
+.cf-num input { font-size: 26px; }
+.cf-exercises { display: flex; flex-direction: column; gap: 12px; }
+.cf-exercises:empty { display: none; }
+.cf-ex {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-soft);
+}
+.cf-ex .mx-well { background: var(--surface-recessed); }
+.cf-wod-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cf-wod-notes { font-size: 13px; line-height: 1.45; color: var(--text-tertiary); font-style: italic; }
+.cf-wod .mx-row-main { gap: 8px; }
+.cf-wod { align-items: flex-start; }
+.cf-wod > .mx-iconbtn { margin: -4px -8px 0 0; }
+
+/* ── HYROX ──────────────────────────────────────────────────── */
+.hyrox-hero-big { display: flex; align-items: baseline; gap: 8px; }
+.hyrox-hero-big .mx-num { font-size: 64px; line-height: 0.95; }
+.hyrox-hero-of {
+  font-family: var(--font-label);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.hyrox-date-row { margin: 0; }
+.hyrox-stations { display: flex; flex-direction: column; }
 
 .hyrox-station {
-  display: grid;
-  grid-template-columns: 28px 1fr 80px;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--surface-bg, #141e17);
-  border-radius: 8px;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 0;
+  background: none;
+  border-radius: 0;
+  border-top: 1px solid var(--border-row);
 }
-
+.hyrox-station:first-child { border-top: 0; }
 .hyrox-station-num {
-  width: 24px;
-  height: 24px;
+  width: 34px;
+  height: 34px;
+  flex: none;
   border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.68rem;
-  font-weight: 700;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-chip);
+  color: var(--mx-faint);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+.hyrox-station-name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 500; color: var(--text-primary); line-height: 1.25; }
+.hyrox-station-name small { display: block; margin-top: 1px; font-size: 12px; font-weight: 400; color: var(--text-tertiary); }
+/* logged rows: runs green, stations brass */
+.hyrox-station.is-done .hyrox-station-num { background: rgba(47, 138, 99, 0.16); border-color: var(--border-featured-strong); color: var(--green-100); }
+.hyrox-station.is-done[data-kind="station"] .hyrox-station-num { background: rgba(168, 124, 56, 0.18); border-color: var(--border-brass); color: var(--brass-light); }
 
-.hyrox-station:nth-child(odd) .hyrox-station-num {
-  background: rgba(45,125,91,0.3);
-  color: var(--primary);
-}
-
-.hyrox-station-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-.hyrox-time-input {
-  margin: 0 !important;
-  padding: 6px 8px !important;
-  font-size: 0.85rem !important;
-  text-align: center;
-  font-family: 'Courier New', monospace;
-}
-
-.hyrox-total {
-  text-align: center;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin-top: 14px;
-  padding: 10px;
-  background: rgba(45,125,91,0.08);
-  border-radius: 10px;
-}
+.hyrox-time-input { text-align: center; }
 
 /* HYROX history */
-.hyrox-hist-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-color);
-}
+.hyrox-hist-row { align-items: center; }
+.hyrox-hist-delete { margin-right: -8px; }
 
-.hyrox-hist-item:last-child { border-bottom: none; }
+/* ── Circuits ───────────────────────────────────────────────── */
+.circuit-ex-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.circuit-ex-row:last-child { margin-bottom: 0; }
+.circuit-ex-row .mx-well { flex: 1; min-width: 0; }
+.circuit-timer-body { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.circuit-timer-ex { font-size: 18px; font-weight: 600; color: var(--text-secondary); min-height: 1.4em; }
+.circuit-timer-controls { display: flex; gap: 8px; }
+.circuit-timer-controls .mx-outline { flex: 1; }
 
-.hyrox-hist-date {
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--text-color);
-}
-
-.hyrox-hist-total {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--primary);
-}
-
-.hyrox-hist-delete {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: 4px;
-  margin: 0;
-  box-shadow: none;
-  opacity: 0.5;
-}
-
-.hyrox-hist-delete:hover { opacity: 1; color: #c05060; }
-
-/* ── Circuit builder ───────────────────────────────────────── */
-
-.circuit-ex-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.circuit-ex-input {
-  flex: 1;
-  margin: 0 !important;
-  padding: 8px 12px;
-  font-size: 0.88rem;
-}
-
-.circuit-ex-remove {
-  padding: 6px 10px;
-  margin: 0;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.75rem;
-  box-shadow: none;
+@media (max-width: 360px) {
+  #functionalTab .wod-timer-clock { font-size: 76px; }
 }

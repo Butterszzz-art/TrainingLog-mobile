@@ -1510,10 +1510,12 @@
 
   </div><!-- /checkInTab -->
   
-<div id="functionalTab" class="tab-content">
+<div id="functionalTab" class="tab-content mx-tab">
 
   <!-- Functional Fitness sub-nav -->
-  <h2>Functional Fitness</h2>
+  <div class="mx-head">
+    <h2 class="pod-title">Functional Fitness</h2>
+  </div>
   <nav class="log-subtabs" id="funcSubNav">
     <button class="log-subtab active" data-fsub="crossfit"><span class="ui-icon" data-icon="dumbbell"></span> CrossFit</button>
     <button class="log-subtab" data-fsub="hyrox"><span class="ui-icon" data-icon="activity"></span> HYROX</button>
@@ -1522,216 +1524,291 @@
 
   <!-- ══ Sub: CrossFit WODs ══════════════════════════════════ -->
   <div id="fSub_crossfit" class="func-subview active">
-    <div id="cfEntryPanel" class="panel active">
-      <input type="text" id="cfWorkoutName" placeholder="Workout Name (e.g., Murph)">
-      <input type="number" id="cfMinutes" placeholder="Time (Minutes)">
-      <input type="number" id="cfSeconds" placeholder="Time (Seconds)">
-      <input type="number" id="cfRounds" placeholder="Rounds Completed (optional)">
-      <textarea id="cfNotes" placeholder="Notes (optional)" style="width:100%;height:80px;margin-top:10px;"></textarea>
 
-      <h3 style="margin-top:20px;">Exercises</h3>
-      <div id="cfExercisesContainer"></div>
-      <button onclick="addCrossfitExercise()"><span class="ui-icon" data-icon="plus"></span> Add Exercise</button>
-
-      <div class="wod-timer-card">
-        <h3>Interval Timer</h3>
-        <div class="wod-format-tabs">
-          <button class="wod-format-btn active" data-wod-format="amrap">AMRAP</button>
-          <button class="wod-format-btn" data-wod-format="emom">EMOM</button>
-          <button class="wod-format-btn" data-wod-format="tabata">TABATA</button>
-          <button class="wod-format-btn" data-wod-format="fortime">For Time</button>
-        </div>
-        <div class="wod-timer-config">
-          <label id="wodConfigDuration">Duration (min)<input type="number" id="wodDuration" value="20" min="1" max="60"></label>
-          <label id="wodConfigRounds" style="display:none">Rounds<input type="number" id="wodRounds" value="10" min="1" max="60"></label>
-          <label id="wodConfigWork" style="display:none">Work (sec)<input type="number" id="wodWork" value="20" min="5" max="300"></label>
-          <label id="wodConfigRest" style="display:none">Rest (sec)<input type="number" id="wodRest" value="10" min="5" max="300"></label>
-        </div>
-        <div class="wod-timer-display">
-          <div class="wod-timer-clock" id="wodClock">00:00</div>
-          <div class="wod-timer-phase" id="wodPhase">Ready</div>
-        </div>
-        <div class="wod-timer-controls">
-          <button class="wod-start-btn" id="wodStartBtn">Start</button>
-          <button class="wod-pause-btn" id="wodPauseBtn" style="display:none">Pause</button>
-          <button class="wod-reset-btn" id="wodResetBtn">Reset</button>
-        </div>
+    <!-- Interval timer (driven by src/js/archetype-features.js) -->
+    <section class="pod pod--hero mx-pod wod-timer-card" aria-label="Interval timer">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Interval Timer</h3>
       </div>
-
-      <button style="margin-top:20px;" onclick="saveCrossfitWorkout()">Save Workout</button>
-
-      <div class="cf-template-controls" style="margin-top:20px;">
-        <label for="crossfitTemplateSelect">Load Saved Template</label>
-        <select id="crossfitTemplateSelect" onchange="loadCrossfitTemplate()" style="margin-top:10px;">
-          <option value="">-- Load Saved Template --</option>
-        </select>
+      <div class="mx-tabs wod-format-tabs" role="group" aria-label="Timer format">
+        <button class="wod-format-btn active" data-wod-format="amrap">AMRAP</button>
+        <button class="wod-format-btn" data-wod-format="emom">EMOM</button>
+        <button class="wod-format-btn" data-wod-format="tabata">TABATA</button>
+        <button class="wod-format-btn" data-wod-format="fortime">For Time</button>
       </div>
+      <div class="wod-timer-display">
+        <div class="wod-timer-clock" id="wodClock" role="timer" aria-live="off">00:00</div>
+        <div class="wod-timer-phase" id="wodPhase" aria-live="polite">Ready</div>
+      </div>
+      <div class="wod-timer-config">
+        <label id="wodConfigDuration">Duration (min)<input type="number" id="wodDuration" value="20" min="1" max="60" inputmode="numeric"></label>
+        <label id="wodConfigRounds" style="display:none">Rounds<input type="number" id="wodRounds" value="10" min="1" max="60" inputmode="numeric"></label>
+        <label id="wodConfigWork" style="display:none">Work (sec)<input type="number" id="wodWork" value="20" min="5" max="300" inputmode="numeric"></label>
+        <label id="wodConfigRest" style="display:none">Rest (sec)<input type="number" id="wodRest" value="10" min="5" max="300" inputmode="numeric"></label>
+      </div>
+      <div class="wod-timer-controls">
+        <button class="mx-cta wod-start-btn" id="wodStartBtn">Start</button>
+        <button class="mx-outline wod-pause-btn" id="wodPauseBtn" style="display:none">Pause</button>
+        <button class="mx-outline wod-reset-btn" id="wodResetBtn">Reset</button>
+      </div>
+    </section>
+
+    <div id="cfEntryPanel">
+      <section class="pod mx-pod" aria-label="Log a workout">
+        <div class="pod-row">
+          <h3 class="pod-title mx-h3">Log Workout</h3>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfWorkoutName">Workout name</label>
+          <div class="mx-well mx-well--text"><input type="text" id="cfWorkoutName" placeholder="e.g. Murph"></div>
+        </div>
+        <div class="mx-grid3">
+          <div class="mx-field">
+            <label class="mx-lbl" for="cfMinutes">Minutes</label>
+            <div class="mx-well mx-well--num cf-num"><input type="number" id="cfMinutes" placeholder="0" inputmode="numeric"></div>
+          </div>
+          <div class="mx-field">
+            <label class="mx-lbl" for="cfSeconds">Seconds</label>
+            <div class="mx-well mx-well--num cf-num"><input type="number" id="cfSeconds" placeholder="0" inputmode="numeric"></div>
+          </div>
+          <div class="mx-field">
+            <label class="mx-lbl" for="cfRounds">Rounds <em>opt.</em></label>
+            <div class="mx-well mx-well--num cf-num"><input type="number" id="cfRounds" placeholder="—" inputmode="numeric"></div>
+          </div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfNotes">Notes <em>optional</em></label>
+          <div class="mx-well mx-well--area"><textarea id="cfNotes" placeholder="Vest, scaling, how it felt…"></textarea></div>
+        </div>
+      </section>
+
+      <section class="pod mx-pod" aria-label="Exercises">
+        <div class="pod-row">
+          <h3 class="pod-title mx-h3">Exercises</h3>
+        </div>
+        <div id="cfExercisesContainer" class="cf-exercises"></div>
+        <button type="button" class="mx-outline mx-outline--block" onclick="addCrossfitExercise()"><span class="ui-icon" data-icon="plus"></span> Add Exercise</button>
+      </section>
+
+      <section class="pod mx-pod" aria-label="Save workout">
+        <div class="cf-template-controls mx-field">
+          <label class="mx-lbl" for="crossfitTemplateSelect">Load Saved Template</label>
+          <div class="mx-well mx-well--text mx-well--sel">
+            <select id="crossfitTemplateSelect" onchange="loadCrossfitTemplate()">
+              <option value="">-- Load Saved Template --</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="mx-cta" onclick="saveCrossfitWorkout()">
+          <span>Save Workout</span>
+          <span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span>
+        </button>
+      </section>
     </div>
-    <div id="cfHistoryPanel" class="panel">
-      <h3>Saved Workouts</h3>
+
+    <section id="cfHistoryPanel" class="pod mx-pod" aria-label="Saved workouts">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Saved Workouts</h3>
+      </div>
       <div id="cfWorkoutsContainer"></div>
-    </div>
+    </section>
   </div>
 
   <!-- ══ Sub: HYROX ══════════════════════════════════════════ -->
   <div id="fSub_hyrox" class="func-subview">
-    <div class="rehab-card">
-      <h3>HYROX Race Simulation</h3>
-      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px;">Log times for each station. Track your progress across simulations.</p>
 
-      <div class="hyrox-date-row">
-        <label style="font-size:0.78rem;color:var(--secondary-text);font-weight:600;">
-          Date <input type="date" id="hyroxDate" style="margin:0;">
-        </label>
+    <section class="pod pod--hero mx-pod" aria-label="Race simulation summary">
+      <div class="pod-row">
+        <span class="mx-kicker">Race simulation</span>
+        <span class="mx-chip mx-chip--green" id="hyroxDone">0 of 16</span>
+      </div>
+      <div class="hyrox-hero-big">
+        <span class="mx-num" id="hyroxTotal">—</span>
+        <span class="hyrox-hero-of">total time</span>
+      </div>
+      <div class="mx-meter" role="img" aria-label="Stations logged"><i id="hyroxMeterFill" style="width:0%"></i></div>
+      <div class="mx-tiles">
+        <div class="mx-stat"><span class="mx-stat-l">Avg run</span><span class="mx-stat-v" id="hyroxAvgRun">—</span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Run time</span><span class="mx-stat-v" id="hyroxRunTotal">—</span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Stations</span><span class="mx-stat-v" id="hyroxStnTotal">—</span></div>
+      </div>
+    </section>
+
+    <section class="pod mx-pod" aria-label="Station times">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">HYROX Stations</h3>
+      </div>
+      <p class="mx-sub" style="margin:-6px 0 0;">Log times for each station. Track your progress across simulations.</p>
+      <div class="mx-field hyrox-date-row">
+        <label class="mx-lbl" for="hyroxDate">Date</label>
+        <div class="mx-well mx-well--text"><input type="date" id="hyroxDate"></div>
       </div>
 
       <div class="hyrox-stations" id="hyroxStations">
-        <div class="hyrox-station" data-station="1">
+        <div class="hyrox-station" data-station="1" data-kind="run">
           <span class="hyrox-station-num">1</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run1">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 1, 1km Run" data-field="run1"></div>
         </div>
-        <div class="hyrox-station" data-station="2">
+        <div class="hyrox-station" data-station="2" data-kind="station">
           <span class="hyrox-station-num">2</span>
-          <span class="hyrox-station-name">SkiErg (1km)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="skierg">
+          <span class="hyrox-station-name">SkiErg (1km)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 2, SkiErg" data-field="skierg"></div>
         </div>
-        <div class="hyrox-station" data-station="3">
+        <div class="hyrox-station" data-station="3" data-kind="run">
           <span class="hyrox-station-num">3</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run2">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 3, 1km Run" data-field="run2"></div>
         </div>
-        <div class="hyrox-station" data-station="4">
+        <div class="hyrox-station" data-station="4" data-kind="station">
           <span class="hyrox-station-num">4</span>
-          <span class="hyrox-station-name">Sled Push (50m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="sledpush">
+          <span class="hyrox-station-name">Sled Push (50m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 4, Sled Push" data-field="sledpush"></div>
         </div>
-        <div class="hyrox-station" data-station="5">
+        <div class="hyrox-station" data-station="5" data-kind="run">
           <span class="hyrox-station-num">5</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run3">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 5, 1km Run" data-field="run3"></div>
         </div>
-        <div class="hyrox-station" data-station="6">
+        <div class="hyrox-station" data-station="6" data-kind="station">
           <span class="hyrox-station-num">6</span>
-          <span class="hyrox-station-name">Sled Pull (50m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="sledpull">
+          <span class="hyrox-station-name">Sled Pull (50m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 6, Sled Pull" data-field="sledpull"></div>
         </div>
-        <div class="hyrox-station" data-station="7">
+        <div class="hyrox-station" data-station="7" data-kind="run">
           <span class="hyrox-station-num">7</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run4">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 7, 1km Run" data-field="run4"></div>
         </div>
-        <div class="hyrox-station" data-station="8">
+        <div class="hyrox-station" data-station="8" data-kind="station">
           <span class="hyrox-station-num">8</span>
-          <span class="hyrox-station-name">Burpee Broad Jump (80m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="burpees">
+          <span class="hyrox-station-name">Burpee Broad Jump (80m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 8, Burpee Broad Jump" data-field="burpees"></div>
         </div>
-        <div class="hyrox-station" data-station="9">
+        <div class="hyrox-station" data-station="9" data-kind="run">
           <span class="hyrox-station-num">9</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run5">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 9, 1km Run" data-field="run5"></div>
         </div>
-        <div class="hyrox-station" data-station="10">
+        <div class="hyrox-station" data-station="10" data-kind="station">
           <span class="hyrox-station-num">10</span>
-          <span class="hyrox-station-name">Rowing (1km)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="row">
+          <span class="hyrox-station-name">Rowing (1km)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 10, Rowing" data-field="row"></div>
         </div>
-        <div class="hyrox-station" data-station="11">
+        <div class="hyrox-station" data-station="11" data-kind="run">
           <span class="hyrox-station-num">11</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run6">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 11, 1km Run" data-field="run6"></div>
         </div>
-        <div class="hyrox-station" data-station="12">
+        <div class="hyrox-station" data-station="12" data-kind="station">
           <span class="hyrox-station-num">12</span>
-          <span class="hyrox-station-name">Farmers Carry (200m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="farmers">
+          <span class="hyrox-station-name">Farmers Carry (200m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 12, Farmers Carry" data-field="farmers"></div>
         </div>
-        <div class="hyrox-station" data-station="13">
+        <div class="hyrox-station" data-station="13" data-kind="run">
           <span class="hyrox-station-num">13</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run7">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 13, 1km Run" data-field="run7"></div>
         </div>
-        <div class="hyrox-station" data-station="14">
+        <div class="hyrox-station" data-station="14" data-kind="station">
           <span class="hyrox-station-num">14</span>
-          <span class="hyrox-station-name">Sandbag Lunges (200m)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="lunges">
+          <span class="hyrox-station-name">Sandbag Lunges (200m)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 14, Sandbag Lunges" data-field="lunges"></div>
         </div>
-        <div class="hyrox-station" data-station="15">
+        <div class="hyrox-station" data-station="15" data-kind="run">
           <span class="hyrox-station-num">15</span>
-          <span class="hyrox-station-name">1km Run</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="run8">
+          <span class="hyrox-station-name">1km Run<small>Run</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 15, 1km Run" data-field="run8"></div>
         </div>
-        <div class="hyrox-station" data-station="16">
+        <div class="hyrox-station" data-station="16" data-kind="station">
           <span class="hyrox-station-num">16</span>
-          <span class="hyrox-station-name">Wall Balls (100 reps)</span>
-          <input type="text" class="hyrox-time-input" placeholder="mm:ss" data-field="wallballs">
+          <span class="hyrox-station-name">Wall Balls (100 reps)<small>Station</small></span>
+          <div class="mx-tin"><input type="text" class="hyrox-time-input" placeholder="mm:ss" inputmode="numeric" aria-label="Time for station 16, Wall Balls" data-field="wallballs"></div>
         </div>
       </div>
 
-      <div class="hyrox-total" id="hyroxTotal">Total: —</div>
-      <button onclick="saveHyroxSimulation()" style="width:100%;margin-top:10px;">Save Simulation</button>
-    </div>
+      <button type="button" class="mx-cta" onclick="saveHyroxSimulation()">
+        <span>Save Simulation</span>
+        <span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span>
+      </button>
+    </section>
 
     <!-- HYROX History -->
-    <div class="rehab-card" style="margin-top:12px;">
-      <h3>Past Simulations</h3>
-      <div id="hyroxHistory">
-        <div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No simulations logged yet.</div>
+    <section class="pod mx-pod" aria-label="Past simulations">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Past Simulations</h3>
       </div>
-    </div>
+      <div id="hyroxHistory">
+        <div class="mx-empty">No simulations logged yet.</div>
+      </div>
+    </section>
   </div>
 
   <!-- ══ Sub: Functional Circuits ════════════════════════════ -->
   <div id="fSub_circuits" class="func-subview">
-    <div class="rehab-card">
-      <h3>Quick Circuit Builder</h3>
-      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:14px;">Build a timed functional circuit. Set exercises, work/rest intervals, and rounds.</p>
+    <section class="pod mx-pod" aria-label="Quick circuit builder">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Quick Circuit Builder</h3>
+      </div>
+      <p class="mx-sub" style="margin:-6px 0 0;">Build a timed functional circuit. Set exercises, work/rest intervals, and rounds.</p>
 
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <input type="text" id="circuitName" placeholder="Circuit name (e.g. Full Body Blitz)">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
-            Rounds <input type="number" id="circuitRounds" value="3" min="1" max="20" style="margin:0;">
-          </label>
-          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
-            Work (s) <input type="number" id="circuitWork" value="40" min="10" max="120" style="margin:0;">
-          </label>
-          <label style="font-size:0.75rem;color:var(--secondary-text);font-weight:600;">
-            Rest (s) <input type="number" id="circuitRest" value="20" min="5" max="60" style="margin:0;">
-          </label>
+      <div class="mx-field">
+        <label class="mx-lbl" for="circuitName">Circuit name</label>
+        <div class="mx-well mx-well--text"><input type="text" id="circuitName" placeholder="e.g. Full Body Blitz"></div>
+      </div>
+      <div class="mx-grid3">
+        <div class="mx-field">
+          <label class="mx-lbl" for="circuitRounds">Rounds</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" id="circuitRounds" value="3" min="1" max="20" inputmode="numeric"></div>
         </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="circuitWork">Work (s)</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" id="circuitWork" value="40" min="10" max="120" inputmode="numeric"></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="circuitRest">Rest (s)</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" id="circuitRest" value="20" min="5" max="60" inputmode="numeric"></div>
+        </div>
+      </div>
 
+      <div class="mx-field">
+        <span class="mx-lbl">Exercises</span>
         <div id="circuitExercises">
           <div class="circuit-ex-row">
-            <input type="text" placeholder="Exercise 1" class="circuit-ex-input">
+            <div class="mx-well mx-well--text"><input type="text" placeholder="Exercise 1" class="circuit-ex-input" aria-label="Exercise 1"></div>
           </div>
         </div>
-        <button onclick="addCircuitExercise()" style="align-self:flex-start;padding:6px 14px;font-size:0.82rem;">+ Add Exercise</button>
-        <button onclick="startCircuitTimer()" style="width:100%;margin-top:8px;">▶ Start Circuit</button>
       </div>
-    </div>
+      <button type="button" class="mx-outline mx-outline--block" onclick="addCircuitExercise()"><span class="ui-icon" data-icon="plus"></span> Add Exercise</button>
+      <button type="button" class="mx-cta" onclick="startCircuitTimer()">
+        <span>Start Circuit</span>
+        <span class="mx-cta-icon"><span class="ui-icon" data-icon="zap"></span></span>
+      </button>
+    </section>
 
     <!-- Circuit timer display -->
-    <div class="rehab-card" id="circuitTimerCard" style="margin-top:12px;display:none;">
-      <div style="text-align:center;">
-        <div id="circuitTimerPhase" style="font-size:0.8rem;color:var(--primary);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Ready</div>
-        <div id="circuitTimerClock" style="font-family:'Courier New',monospace;font-size:2.5rem;font-weight:700;color:var(--text-color);margin:8px 0;">00:00</div>
-        <div id="circuitTimerExercise" style="font-size:1rem;font-weight:600;color:var(--secondary-text);"></div>
-        <div id="circuitTimerRound" style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;"></div>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
-          <button id="circuitPauseBtn" onclick="toggleCircuitPause()" style="padding:10px 24px;">⏸ Pause</button>
-          <button onclick="stopCircuitTimer()" style="padding:10px 24px;background:#c05060;">⏹ Stop</button>
-        </div>
+    <section class="pod pod--hero mx-pod circuit-timer" id="circuitTimerCard" style="display:none;" aria-label="Circuit timer">
+      <div class="circuit-timer-body">
+        <div class="mx-kicker" id="circuitTimerPhase">Ready</div>
+        <div class="wod-timer-clock" id="circuitTimerClock">00:00</div>
+        <div class="circuit-timer-ex" id="circuitTimerExercise"></div>
+        <div class="mx-meta" id="circuitTimerRound"></div>
       </div>
-    </div>
+      <div class="circuit-timer-controls">
+        <button type="button" class="mx-outline" id="circuitPauseBtn" onclick="toggleCircuitPause()">Pause</button>
+        <button type="button" class="mx-outline mx-outline--danger" onclick="stopCircuitTimer()">Stop</button>
+      </div>
+    </section>
 
     <!-- Saved circuits -->
-    <div class="rehab-card" style="margin-top:12px;">
-      <h3>Saved Circuits</h3>
-      <div id="circuitHistory">
-        <div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No circuits saved yet.</div>
+    <section class="pod mx-pod" aria-label="Saved circuits">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Saved Circuits</h3>
       </div>
-    </div>
+      <div id="circuitHistory">
+        <div class="mx-empty">No circuits saved yet.</div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -12142,7 +12219,7 @@ function autoFillCardioAdherenceSlider(userId) {
   }
 }
 
-function ciEsc(v) {
+function mxEsc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
@@ -12220,8 +12297,8 @@ function renderCheckInTab() {
     }
     nextDateEl.innerHTML = `
       <div class="ci-phase-top"><span class="mx-kicker">Next scheduled check-in</span>${dueChip}</div>
-      <div class="ci-phase-title">${ciEsc(checkInHeader)}</div>
-      <div class="mx-meta">${ciEsc(nextDate)}</div>`;
+      <div class="ci-phase-title">${mxEsc(checkInHeader)}</div>
+      <div class="mx-meta">${mxEsc(nextDate)}</div>`;
   }
 
   const dateInput = document.getElementById('checkInDateInput');
@@ -12295,32 +12372,32 @@ function renderCheckInTab() {
           try { return new Date(entry.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); } catch { return entry.date; }
         })();
         const tags = [entry.phase, phaseWeekGroup.phaseWeekLabel].filter(Boolean)
-          .map(t => `<span class="ci-tc-badge">${ciEsc(t)}</span>`).join('');
+          .map(t => `<span class="ci-tc-badge">${mxEsc(t)}</span>`).join('');
         const tiles = [
-          entry.bodyweight ? `<div class="mx-stat"><span class="mx-stat-l">Weight</span><span class="mx-stat-v">${ciEsc(entry.bodyweight)}<small>kg</small></span>${_delta(entry.bodyweight, prev?.bodyweight, 'kg')}</div>` : '',
-          entry.waist ? `<div class="mx-stat"><span class="mx-stat-l">Waist</span><span class="mx-stat-v">${ciEsc(entry.waist)}<small>cm</small></span>${_delta(entry.waist, prev?.waist, 'cm')}</div>` : ''
+          entry.bodyweight ? `<div class="mx-stat"><span class="mx-stat-l">Weight</span><span class="mx-stat-v">${mxEsc(entry.bodyweight)}<small>kg</small></span>${_delta(entry.bodyweight, prev?.bodyweight, 'kg')}</div>` : '',
+          entry.waist ? `<div class="mx-stat"><span class="mx-stat-l">Waist</span><span class="mx-stat-v">${mxEsc(entry.waist)}<small>cm</small></span>${_delta(entry.waist, prev?.waist, 'cm')}</div>` : ''
         ].filter(Boolean).join('');
         const hasRecovery = [energy, sleep, stress].some(v => v !== '');
 
         return `
-          <article class="ci-tc" data-status="${ciEsc(status)}">
+          <article class="ci-tc" data-status="${mxEsc(status)}">
             <div class="ci-tc-header">
               <div class="ci-tc-head-l">
                 <span class="ci-tc-date">${dateLabel}</span>
                 ${tags ? `<div class="ci-tc-tags">${tags}</div>` : ''}
               </div>
-              <span class="ci-tc-status-badge ${ciEsc(status)}">${_statusLabel(status)}</span>
+              <span class="ci-tc-status-badge ${mxEsc(status)}">${_statusLabel(status)}</span>
             </div>
             ${tiles ? `<div class="mx-tiles mx-tiles--2">${tiles}</div>` : ''}
             ${hasRecovery ? `<div class="ci-tc-mini" role="img" aria-label="Energy ${energy || 'n/a'}, sleep ${sleep || 'n/a'}, stress ${stress || 'n/a'} out of 10">${_mini('Energy', energy)}${_mini('Sleep', sleep)}${_mini('Stress', stress, true)}</div>` : ''}
-            ${archetypeMetrics ? `<div class="ci-tc-archetype">${ciEsc(archetypeMetrics)}</div>` : ''}
-            ${(insight || insightFull) ? `<div class="ci-tc-insight"><span class="ui-icon">${ICONS.lightbulb}</span><span>${ciEsc(insight)}${insightFull ? `<br><span class="ci-tc-insight-full">${ciEsc(insightFull)}</span>` : ''}</span></div>` : ''}
-            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust"><span class="ui-icon">${ICONS.settings}</span><span>${ciEsc(adjText)}</span></div>` : ''}
-            ${entry.notes ? `<div class="ci-tc-notes">"${ciEsc(entry.notes)}"</div>` : ''}
+            ${archetypeMetrics ? `<div class="ci-tc-archetype">${mxEsc(archetypeMetrics)}</div>` : ''}
+            ${(insight || insightFull) ? `<div class="ci-tc-insight"><span class="ui-icon">${ICONS.lightbulb}</span><span>${mxEsc(insight)}${insightFull ? `<br><span class="ci-tc-insight-full">${mxEsc(insightFull)}</span>` : ''}</span></div>` : ''}
+            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust"><span class="ui-icon">${ICONS.settings}</span><span>${mxEsc(adjText)}</span></div>` : ''}
+            ${entry.notes ? `<div class="ci-tc-notes">"${mxEsc(entry.notes)}"</div>` : ''}
             ${(entry.coachNotes || entry.review?.coachActionItems) ? `
               <div class="ci-tc-coach">
-                ${entry.coachNotes ? `<div><span class="mx-lbl">Coach</span> ${ciEsc(entry.coachNotes)}</div>` : ''}
-                ${entry.review?.coachActionItems ? `<div><span class="mx-lbl">Action</span> ${ciEsc(entry.review.coachActionItems)}</div>` : ''}
+                ${entry.coachNotes ? `<div><span class="mx-lbl">Coach</span> ${mxEsc(entry.coachNotes)}</div>` : ''}
+                ${entry.review?.coachActionItems ? `<div><span class="mx-lbl">Action</span> ${mxEsc(entry.review.coachActionItems)}</div>` : ''}
               </div>` : ''}
           </article>`;
       })
@@ -12328,7 +12405,7 @@ function renderCheckInTab() {
 
     return `
       <div class="ci-timeline-group">
-        <div class="ci-timeline-group-label">${ciEsc(weeksOutGroup.weeksOutLabel)}</div>
+        <div class="ci-timeline-group-label">${mxEsc(weeksOutGroup.weeksOutLabel)}</div>
         ${cards}
       </div>`;
   }).join('');
@@ -12507,20 +12584,20 @@ function generateCheckInSummary() {
       </div>`;
   }
   const chips = [payload.phase, payload.weekLabel, payload.archetype].filter(Boolean)
-    .map(t => `<span class="mx-chip mx-chip--sm">${ciEsc(t)}</span>`).join('');
+    .map(t => `<span class="mx-chip mx-chip--sm">${mxEsc(t)}</span>`).join('');
   output.innerHTML = `
-    <div class="ci-sum-head"><strong>${ciEsc(payload.date)}</strong>${chips}</div>
+    <div class="ci-sum-head"><strong>${mxEsc(payload.date)}</strong>${chips}</div>
     <div class="mx-tiles">
-      <div class="mx-stat"><span class="mx-stat-l">Weight</span><span class="mx-stat-v">${ciEsc(payload.metrics.bodyweight || '—')}</span></div>
-      <div class="mx-stat"><span class="mx-stat-l">Waist</span><span class="mx-stat-v">${ciEsc(payload.metrics.waist || '—')}</span></div>
-      <div class="mx-stat"><span class="mx-stat-l">Perf</span><span class="mx-stat-v">${ciEsc(payload.metrics.trainingPerformance || '—')}</span></div>
+      <div class="mx-stat"><span class="mx-stat-l">Weight</span><span class="mx-stat-v">${mxEsc(payload.metrics.bodyweight || '—')}</span></div>
+      <div class="mx-stat"><span class="mx-stat-l">Waist</span><span class="mx-stat-v">${mxEsc(payload.metrics.waist || '—')}</span></div>
+      <div class="mx-stat"><span class="mx-stat-l">Perf</span><span class="mx-stat-v">${mxEsc(payload.metrics.trainingPerformance || '—')}</span></div>
     </div>
     ${spark}
     <dl class="ci-sum-list">
-      <div><dt>Archetype focus</dt><dd>${ciEsc(payload.metrics.archetypeSummary)}</dd></div>
-      <div><dt>Adjustments</dt><dd>${ciEsc(payload.adjustmentsSummary)}</dd></div>
-      <div><dt>Review</dt><dd>${ciEsc(payload.reviewStatus)}${payload.coachActionItems ? ` · Action items: ${ciEsc(payload.coachActionItems)}` : ''}</dd></div>
-      <div><dt>Trend</dt><dd>${ciEsc(payload.trendSummary)}</dd></div>
+      <div><dt>Archetype focus</dt><dd>${mxEsc(payload.metrics.archetypeSummary)}</dd></div>
+      <div><dt>Adjustments</dt><dd>${mxEsc(payload.adjustmentsSummary)}</dd></div>
+      <div><dt>Review</dt><dd>${mxEsc(payload.reviewStatus)}${payload.coachActionItems ? ` · Action items: ${mxEsc(payload.coachActionItems)}` : ''}</dd></div>
+      <div><dt>Trend</dt><dd>${mxEsc(payload.trendSummary)}</dd></div>
     </dl>
   `;
   return payload;
@@ -15784,26 +15861,43 @@ let crossfitExercises = [];
 let crossfitEntries = [];
 let crossfitTemplates = JSON.parse(localStorage.getItem('crossfitTemplates')) || [];
 
+let crossfitExerciseSeq = 0; // monotonic, so ids never repeat after a removal
+
 function addCrossfitExercise() {
   const container = document.getElementById('cfExercisesContainer');
-  const index = crossfitExercises.length;
+  const index = crossfitExerciseSeq++;
 
-  container.innerHTML += `
-    <div style="border:1px solid var(--border-color); padding:10px; margin-top:10px;">
-      <input type="text" placeholder="Exercise Name" id="cfExerciseName${index}">
-      <input type="number" placeholder="Sets" id="cfExerciseSets${index}">
-      <input type="number" placeholder="Reps per Set" id="cfExerciseReps${index}">
-      <input type="number" placeholder="Weight per Set (optional)" id="cfExerciseWeight${index}">
-      <button onclick="removeCrossfitExercise(${index})" class="remove-btn" style="margin-top:5px;"><span class="ui-icon">${ICONS.x}</span> Remove</button>
+  // insertAdjacentHTML keeps whatever was already typed into earlier rows
+  // (innerHTML += re-parses the container and wipes their values).
+  container.insertAdjacentHTML('beforeend', `
+    <div class="cf-ex">
+      <div class="mx-field">
+        <label class="mx-lbl" for="cfExerciseName${index}">Exercise</label>
+        <div class="mx-well mx-well--text"><input type="text" placeholder="Exercise Name" id="cfExerciseName${index}"></div>
+      </div>
+      <div class="mx-grid3">
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfExerciseSets${index}">Sets</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" placeholder="—" id="cfExerciseSets${index}" inputmode="numeric"></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfExerciseReps${index}">Reps</label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" placeholder="—" id="cfExerciseReps${index}" inputmode="numeric"></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="cfExerciseWeight${index}">Kg <em>opt.</em></label>
+          <div class="mx-well mx-well--num cf-num"><input type="number" placeholder="—" id="cfExerciseWeight${index}" inputmode="decimal"></div>
+        </div>
+      </div>
+      <button type="button" onclick="removeCrossfitExercise(${index})" class="mx-outline mx-outline--danger"><span class="ui-icon">${ICONS.x}</span> Remove</button>
     </div>
-  `;
-  
+  `);
+
   crossfitExercises.push(index);
 }
 
 function removeCrossfitExercise(index) {
-  const exerciseDiv = document.getElementById(`cfExerciseName${index}`).parentNode;
-  exerciseDiv.remove();
+  document.getElementById(`cfExerciseName${index}`)?.closest('.cf-ex')?.remove();
   crossfitExercises = crossfitExercises.filter(i => i !== index);
 }
 
@@ -15852,24 +15946,36 @@ function saveCrossfitWorkout() {
 function renderCrossfitWorkouts() {
   const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
   const container = document.getElementById('cfWorkoutsContainer');
-  container.innerHTML = '';
+  if (!container) return;
 
-  cfLog.forEach((wod, index) => {
-    let exercisesList = wod.exercises.map(e => `
-      <li>${e.exerciseName} - ${e.sets} sets x ${e.reps} reps ${e.weight ? `@ ${e.weight}kg` : ''}</li>
-    `).join('');
+  if (!cfLog.length) {
+    container.innerHTML = '<div class="mx-empty">No workouts saved yet.</div>';
+    return;
+  }
 
-    container.innerHTML += `
-      <div style="border:1px solid var(--border-color); padding:10px; margin-top:10px;">
-        <strong>${wod.date} - ${wod.name}</strong><br>
-        Time: ${wod.minutes}m ${wod.seconds}s<br>
-        Rounds: ${wod.rounds || '-'}<br>
-        Notes: ${wod.notes || '-'}<br>
-        <ul>${exercisesList}</ul>
-        <button onclick="removeCrossfitWorkout(${index})" class="remove-btn"><span class="ui-icon">${ICONS.x}</span> Delete</button>
-      </div>
-    `;
-  });
+  const pad = (n) => String(Number(n) || 0).padStart(2, '0');
+  // Newest first; keep each entry's original index for deletion.
+  container.innerHTML = cfLog.map((wod, index) => ({ wod, index })).reverse().map(({ wod, index }) => {
+    const d = new Date(String(wod.date) + 'T00:00:00');
+    const valid = !isNaN(d.getTime());
+    const tags = (wod.exercises || []).map(e =>
+      `<span class="mx-tag">${mxEsc(e.exerciseName)} · ${mxEsc(e.sets)}×${mxEsc(e.reps)}${e.weight ? ` @ ${mxEsc(e.weight)}kg` : ''}</span>`
+    ).join('');
+    return `
+      <article class="mx-row cf-wod">
+        <div class="mx-date"><b>${valid ? d.getDate() : ''}</b><span>${valid ? d.toLocaleDateString(undefined, { month: 'short' }) : ''}</span></div>
+        <div class="mx-row-main">
+          <div class="cf-wod-top">
+            <span class="mx-row-title">${mxEsc(wod.name)}</span>
+            <span class="mx-row-big">${pad(wod.minutes)}:${pad(wod.seconds)}</span>
+          </div>
+          ${wod.rounds ? `<div class="mx-row-sub">Rounds: ${mxEsc(wod.rounds)}</div>` : ''}
+          ${tags ? `<div class="mx-tags">${tags}</div>` : ''}
+          ${wod.notes ? `<div class="cf-wod-notes">${mxEsc(wod.notes)}</div>` : ''}
+        </div>
+        <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="removeCrossfitWorkout(${index})" title="Delete" aria-label="Delete ${mxEsc(wod.name)} workout"><span class="ui-icon">${ICONS.x}</span></button>
+      </article>`;
+  }).join('');
 }
 
 function removeCrossfitWorkout(index) {
@@ -16011,11 +16117,27 @@ function fmtMMSS(totalSec) {
 }
 
 function calcHyroxTotal() {
-  const inputs = document.querySelectorAll('.hyrox-time-input');
-  let total = 0;
-  inputs.forEach(inp => { total += parseMMSS(inp.value); });
-  const el = document.getElementById('hyroxTotal');
-  if (el) el.textContent = total > 0 ? 'Total: ' + fmtMMSS(total) : 'Total: —';
+  const rows = document.querySelectorAll('.hyrox-station');
+  let total = 0, done = 0, runSecs = 0, runCount = 0, stnSecs = 0;
+  rows.forEach(row => {
+    const inp = row.querySelector('.hyrox-time-input');
+    const secs = parseMMSS(inp ? inp.value : '');
+    const filled = secs > 0;
+    row.classList.toggle('is-done', filled);
+    if (!filled) return;
+    total += secs;
+    done++;
+    if (row.dataset.kind === 'run') { runSecs += secs; runCount++; } else { stnSecs += secs; }
+  });
+
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  set('hyroxTotal', total > 0 ? fmtMMSS(total) : '—');
+  set('hyroxDone', done + ' of ' + rows.length);
+  set('hyroxRunTotal', runCount ? fmtMMSS(runSecs) : '—');
+  set('hyroxStnTotal', stnSecs ? fmtMMSS(stnSecs) : '—');
+  set('hyroxAvgRun', runCount ? fmtMMSS(Math.round(runSecs / runCount)) : '—');
+  const fill = document.getElementById('hyroxMeterFill');
+  if (fill) fill.style.width = (rows.length ? Math.round((done / rows.length) * 100) : 0) + '%';
 }
 
 function saveHyroxSimulation() {
@@ -16051,18 +16173,34 @@ function renderHyroxHistory() {
   const log = JSON.parse(localStorage.getItem('hyroxLog_' + user) || '[]');
 
   if (!log.length) {
-    container.innerHTML = '<div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.85rem;">No simulations logged yet.</div>';
+    container.innerHTML = '<div class="mx-empty">No simulations logged yet.</div>';
     return;
   }
 
+  const totals = log.map(e => Number(e.total) || 0).filter(t => t > 0);
+  const best = totals.length ? Math.min(...totals) : 0;
+
   container.innerHTML = log.slice(0, 10).map((entry, i) => {
     const d = new Date(entry.date + 'T00:00:00');
-    const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    return '<div class="hyrox-hist-item">'
-      + '<span class="hyrox-hist-date">' + label + '</span>'
-      + '<span class="hyrox-hist-total">' + fmtMMSS(entry.total) + '</span>'
-      + '<button class="hyrox-hist-delete" onclick="deleteHyrox(' + i + ')"><span class="ui-icon">' + ICONS.x + '</span></button>'
-      + '</div>';
+    const valid = !isNaN(d.getTime());
+    const stations = entry.stations || {};
+    const done = Object.values(stations).filter(v => Number(v) > 0).length;
+    const runs = Object.keys(stations).filter(k => /^run\d+$/.test(k) && Number(stations[k]) > 0).map(k => Number(stations[k]));
+    const avgRun = runs.length ? fmtMMSS(Math.round(runs.reduce((a, b) => a + b, 0) / runs.length)) : null;
+    const gap = best && entry.total > best ? '+' + fmtMMSS(entry.total - best) : '';
+    const badge = best && entry.total === best
+      ? '<span class="mx-chip mx-chip--green mx-chip--sm">Best</span>'
+      : (gap ? `<span class="mx-row-sm">${gap}</span>` : '');
+    return `
+      <div class="mx-row hyrox-hist-row">
+        <div class="mx-date"><b>${valid ? d.getDate() : ''}</b><span>${valid ? d.toLocaleDateString('en-GB', { month: 'short' }) : ''}</span></div>
+        <div class="mx-row-main">
+          <span class="mx-row-title">${valid ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : mxEsc(entry.date)}</span>
+          <span class="mx-row-sub">${done} station${done === 1 ? '' : 's'}${avgRun ? ' · avg run ' + avgRun + ' /km' : ''}</span>
+        </div>
+        <div class="mx-row-right"><span class="mx-row-big">${fmtMMSS(entry.total)}</span>${badge}</div>
+        <button type="button" class="mx-iconbtn mx-iconbtn--ghost hyrox-hist-delete" onclick="deleteHyrox(${i})" title="Delete" aria-label="Delete simulation from ${mxEsc(entry.date)}"><span class="ui-icon">${ICONS.x}</span></button>
+      </div>`;
   }).join('');
 }
 
@@ -16087,8 +16225,8 @@ function addCircuitExercise() {
   const count = container.children.length + 1;
   const row = document.createElement('div');
   row.className = 'circuit-ex-row';
-  row.innerHTML = '<input type="text" placeholder="Exercise ' + count + '" class="circuit-ex-input">'
-    + '<button class="circuit-ex-remove" onclick="this.parentElement.remove()"><span class="ui-icon">' + ICONS.x + '</span></button>';
+  row.innerHTML = '<div class="mx-well mx-well--text"><input type="text" placeholder="Exercise ' + count + '" class="circuit-ex-input" aria-label="Exercise ' + count + '"></div>'
+    + '<button type="button" class="mx-iconbtn mx-iconbtn--ghost circuit-ex-remove" onclick="this.parentElement.remove()" aria-label="Remove exercise ' + count + '"><span class="ui-icon">' + ICONS.x + '</span></button>';
   container.appendChild(row);
 }
 
@@ -16144,7 +16282,7 @@ function startCircuitTimer() {
 function toggleCircuitPause() {
   _circuitPaused = !_circuitPaused;
   const btn = document.getElementById('circuitPauseBtn');
-  if (btn) btn.textContent = _circuitPaused ? '▶ Resume' : '⏸ Pause';
+  if (btn) btn.textContent = _circuitPaused ? 'Resume' : 'Pause';
 }
 
 function stopCircuitTimer() {

@@ -604,3 +604,37 @@
 .mx-stepper--sm { padding: 4px; gap: 4px; }
 .mx-stepper--sm .mx-iconbtn { width: 40px; height: 40px; }
 .mx-stepper--sm input { flex: 1; width: 100%; text-align: center; font-size: 26px; }
+
+/* Compact time pill (mm:ss inputs in dense lists) */
+.mx-tin {
+  width: 92px;
+  flex: none;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-well);
+}
+.mx-tin:focus-within { outline: 2px solid var(--green-70); outline-offset: 2px; }
+.mx-tin input {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  outline: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0 !important;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.mx-tin input::placeholder { color: var(--mx-faint); font-family: var(--font-label); font-size: 14px; font-weight: 700; letter-spacing: 0.06em; }
+.mx-tin input:focus { border: 0; box-shadow: none; outline: 0; }
