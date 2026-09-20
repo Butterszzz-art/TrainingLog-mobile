@@ -1,13 +1,11 @@
 <div id="settingsPage" class="settings-page profile-hub-page">
-  <h2>Settings</h2>
-
   <!-- 4 compact scrollable mini-tabs -->
   <div class="settings-subtabs">
-    <button type="button" class="settings-subtab active" data-settings-subtab="profile">👤 Profile</button>
-    <button type="button" class="settings-subtab" data-settings-subtab="goals">🎯 Goals</button>
-    <button type="button" class="settings-subtab" data-settings-subtab="nutrition">🥗 Nutrition</button>
-    <button type="button" class="settings-subtab" data-settings-subtab="app">⚙️ App</button>
-    <button type="button" class="settings-subtab" data-settings-subtab="advanced">🛠️ Advanced</button>
+    <button type="button" class="settings-subtab active" data-settings-subtab="profile">Profile</button>
+    <button type="button" class="settings-subtab" data-settings-subtab="goals">Goals</button>
+    <button type="button" class="settings-subtab" data-settings-subtab="nutrition">Nutrition</button>
+    <button type="button" class="settings-subtab" data-settings-subtab="app">App</button>
+    <button type="button" class="settings-subtab" data-settings-subtab="advanced">Advanced</button>
   </div>
 
   <!-- ── PROFILE + APP share one form so saveSettings() can read all fields ── -->
@@ -112,13 +110,13 @@
 
       <section class="panel profile-section" aria-labelledby="sTrainingModeHeading">
         <h3 id="sTrainingModeHeading">Training Mode</h3>
-        <p style="font-size:0.83rem;color:var(--secondary-text);margin:0 0 10px;">Switching modes never deletes data — it only changes which features are visible.</p>
+        <p class="settings-note">Switching modes never deletes data — it only changes which features are visible.</p>
         <div class="mode-switcher">
-          <button type="button" class="mode-btn" data-mode="bodybuilding" onclick="setTrainingMode('bodybuilding')">🏆 Bodybuilding</button>
-          <button type="button" class="mode-btn" data-mode="powerlifting" onclick="setTrainingMode('powerlifting')">🏋️ Powerlifting</button>
-          <button type="button" class="mode-btn" data-mode="athlete" onclick="setTrainingMode('athlete')">⚡ Athlete</button>
+          <button type="button" class="mode-btn" data-mode="bodybuilding" onclick="setTrainingMode('bodybuilding')">Bodybuilding</button>
+          <button type="button" class="mode-btn" data-mode="powerlifting" onclick="setTrainingMode('powerlifting')">Powerlifting</button>
+          <button type="button" class="mode-btn" data-mode="athlete" onclick="setTrainingMode('athlete')">Athlete</button>
         </div>
-        <p id="modeDescription" style="font-size:0.82rem;color:var(--text-muted);margin:8px 0 0;min-height:32px;"></p>
+        <p id="modeDescription" class="settings-note" style="margin:10px 0 0;min-height:32px;"></p>
       </section>
 
       <section class="panel profile-section" aria-labelledby="sAppSettingsHeading">
@@ -178,12 +176,12 @@
         <button type="button" id="logoutBtn" class="secondary" style="margin-top:16px;">Logout</button>
       </section>
 
-      <section class="panel profile-section" aria-labelledby="sDangerZoneHeading" style="border-color:var(--danger-color,#d64545);">
-        <h3 id="sDangerZoneHeading" style="color:var(--danger-color,#d64545);">Danger Zone</h3>
-        <p style="margin:0 0 10px;font-size:0.83rem;color:var(--secondary-text);">
+      <section class="panel profile-section profile-section--danger" aria-labelledby="sDangerZoneHeading">
+        <h3 id="sDangerZoneHeading">Danger Zone</h3>
+        <p class="settings-note">
           Permanently deletes your account and all associated data — workouts, programs, macros, logs, and any coach/client links. This cannot be undone. Export a backup first from Progress → Tools if you want to keep a copy.
         </p>
-        <button type="button" id="deleteAccountBtn" style="background:var(--danger-color,#d64545);border-color:var(--danger-color,#d64545);">Delete Account</button>
+        <button type="button" id="deleteAccountBtn" class="btn-danger">Delete Account</button>
       </section>
 
       <button type="submit" id="saveAppSettingsButton">Save App Settings</button>
