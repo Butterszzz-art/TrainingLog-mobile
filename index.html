@@ -13437,11 +13437,11 @@ function renderBwMonthlyHistory() {
   const container = document.getElementById('bwMonthlyHistory');
   if (!container) return;
   const user = window.currentUser || localStorage.getItem('fitnessAppUser');
-  if (!user) { container.innerHTML = '<div class="hist-empty">Log in to see history.</div>'; return; }
+  if (!user) { container.innerHTML = '<div class="mx-empty">Log in to see history.</div>'; return; }
 
   const log = JSON.parse(localStorage.getItem('bodyweightLog_' + user) || '[]');
   if (!log.length) {
-    container.innerHTML = '<div class="hist-empty">No bodyweight entries yet.</div>';
+    container.innerHTML = '<div class="mx-empty">No bodyweight entries yet.</div>';
     return;
   }
 
@@ -13450,63 +13450,57 @@ function renderBwMonthlyHistory() {
   const sorted = log.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
 
   // Group by month
-  var months = {};
+  const months = {};
   sorted.forEach(function (entry) {
-    var d = entry.date || '';
-    var key = d.slice(0, 7); // YYYY-MM
+    const key = (entry.date || '').slice(0, 7); // YYYY-MM
     if (!months[key]) months[key] = [];
     months[key].push(entry);
   });
 
-  var html = '';
-  Object.keys(months).sort().reverse().forEach(function (monthKey) {
-    var entries = months[monthKey];
-    var d = new Date(monthKey + '-01T00:00:00');
-    var monthLabel = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const cvt = (kg) => convertWeightValue(kg, 'kg', unit, 1);
+  const html = Object.keys(months).sort().reverse().map(function (monthKey, idx) {
+    const entries = months[monthKey];
+    const d = new Date(monthKey + '-01T00:00:00');
+    const monthLabel = isNaN(d.getTime()) ? mxEsc(monthKey || 'Unknown') : d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-    // Calculate month stats
-    var weights = entries.map(function (e) { return getEntryWeightKg(e); }).filter(function (w) { return w != null; });
-    var avg = weights.length ? weights.reduce(function (s, v) { return s + v; }, 0) / weights.length : 0;
-    var min = weights.length ? Math.min.apply(null, weights) : 0;
-    var max = weights.length ? Math.max.apply(null, weights) : 0;
-    var change = weights.length >= 2 ? weights[0] - weights[weights.length - 1] : 0;
-    var avgDisp = convertWeightValue(avg, 'kg', unit, 1);
-    var minDisp = convertWeightValue(min, 'kg', unit, 1);
-    var maxDisp = convertWeightValue(max, 'kg', unit, 1);
-    var changeDisp = convertWeightValue(Math.abs(change), 'kg', unit, 1);
-    var changeCls = Math.abs(change) < 0.05 ? '' : change > 0 ? 'wt-up' : 'wt-down';
-    var changeSign = change > 0 ? '+' : change < 0 ? '−' : '';
+    // Month stats (entries are newest-first, so weights[0] is the latest)
+    const weights = entries.map(function (e) { return getEntryWeightKg(e); }).filter(function (w) { return w != null; });
+    const avg = weights.length ? weights.reduce(function (s, v) { return s + v; }, 0) / weights.length : 0;
+    const min = weights.length ? Math.min.apply(null, weights) : 0;
+    const max = weights.length ? Math.max.apply(null, weights) : 0;
+    const change = weights.length >= 2 ? weights[0] - weights[weights.length - 1] : 0;
+    const flat = Math.abs(change) < 0.05;
+    const changeText = flat ? 'No change' : (change > 0 ? '▲ ' : '▼ ') + cvt(Math.abs(change)) + ' ' + unit;
 
-    html += '<div class="session-card" onclick="this.classList.toggle(\'open\')">'
-      + '<div class="session-card-header">'
-      + '<div class="session-card-left">'
-      + '<span class="session-card-date">' + monthLabel + '</span>'
-      + '<span class="session-card-meta">Avg: ' + avgDisp + ' ' + unit + ' · ' + entries.length + ' entries</span>'
-      + '</div>'
-      + '<div class="session-card-right">'
-      + '<span class="session-card-count ' + changeCls + '">' + changeSign + changeDisp + ' ' + unit + '</span>'
-      + '<span class="session-card-chevron">▸</span>'
-      + '</div></div>'
-      + '<div class="session-card-body">'
-      + '<div class="session-summary-row" style="margin-bottom:10px;">'
-      + '<div class="session-summary-item"><span>Min:</span><span class="session-summary-val">' + minDisp + '</span></div>'
-      + '<div class="session-summary-item"><span>Max:</span><span class="session-summary-val">' + maxDisp + '</span></div>'
-      + '<div class="session-summary-item"><span>Avg:</span><span class="session-summary-val">' + avgDisp + '</span></div>'
-      + '<div class="session-summary-item"><span>Entries:</span><span class="session-summary-val">' + entries.length + '</span></div>'
-      + '</div>';
-
-    entries.forEach(function (e) {
-      var baseKg = getEntryWeightKg(e);
-      var wDisp = baseKg != null ? convertWeightValue(baseKg, 'kg', unit, 1) + ' ' + unit : '—';
-      var dateLabel = new Date(e.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-      html += '<div class="session-exercise">'
-        + '<span class="session-ex-name">' + dateLabel + '</span>'
-        + '<span class="session-ex-detail">' + wDisp + (e.calories ? ' · ' + e.calories + ' kcal' : '') + '</span>'
+    const rows = entries.map(function (e) {
+      const baseKg = getEntryWeightKg(e);
+      const wDisp = baseKg != null ? cvt(baseKg) : '—';
+      const dt = new Date(e.date + 'T00:00:00');
+      const valid = !isNaN(dt.getTime());
+      return '<div class="mx-row bw-row">'
+        + '<div class="mx-date"><b>' + (valid ? dt.getDate() : '') + '</b><span>' + (valid ? dt.toLocaleDateString('en-GB', { month: 'short' }) : '') + '</span></div>'
+        + '<div class="mx-row-main"><span class="mx-row-title">' + (valid ? dt.toLocaleDateString('en-GB', { weekday: 'long' }) : mxEsc(e.date)) + '</span>'
+        + (e.calories ? '<span class="mx-row-sub">' + mxEsc(e.calories) + ' kcal</span>' : '') + '</div>'
+        + '<div class="mx-row-right"><span class="mx-row-big">' + wDisp + '</span><span class="mx-row-sm">' + (baseKg != null ? unit : '') + '</span></div>'
         + '</div>';
-    });
+    }).join('');
 
-    html += '</div></div>';
-  });
+    return '<details class="pod mx-pod bw-month"' + (idx === 0 ? ' open' : '') + '>'
+      + '<summary class="bw-month-head">'
+      +   '<span class="bw-month-title"><span class="mx-row-title">' + monthLabel + '</span>'
+      +   '<span class="mx-row-sub">Avg ' + cvt(avg) + ' ' + unit + ' · ' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') + '</span></span>'
+      +   '<span class="mx-chip mx-chip--sm bw-change">' + changeText + '</span>'
+      +   '<span class="bw-chevron ui-icon">' + ICONS.chevronDown + '</span>'
+      + '</summary>'
+      + '<div class="mx-tiles mx-tiles--4 bw-tiles">'
+      +   '<div class="mx-stat"><span class="mx-stat-l">Min</span><span class="mx-stat-v">' + cvt(min) + '</span></div>'
+      +   '<div class="mx-stat"><span class="mx-stat-l">Max</span><span class="mx-stat-v">' + cvt(max) + '</span></div>'
+      +   '<div class="mx-stat"><span class="mx-stat-l">Avg</span><span class="mx-stat-v">' + cvt(avg) + '</span></div>'
+      +   '<div class="mx-stat"><span class="mx-stat-l">Entries</span><span class="mx-stat-v">' + entries.length + '</span></div>'
+      + '</div>'
+      + '<div class="bw-rows">' + rows + '</div>'
+      + '</details>';
+  }).join('');
 
   container.innerHTML = html;
 }
@@ -16330,22 +16324,41 @@ function renderMacroHistory() {
   }
 
   if (!macroHistory.length) {
-    container.innerHTML = '<p style="opacity:.7;">No macro history saved yet.</p>';
+    container.innerHTML = '<div class="mx-empty">No macro history saved yet.</div>';
     return;
   }
 
-  container.innerHTML = "";
-  macroHistory.slice().reverse().forEach(entry => {
-    const div = document.createElement("div");
+  container.innerHTML = macroHistory.slice().reverse().map(entry => {
     const meals = Array.isArray(entry?.meals) ? entry.meals : [];
+    const totals = entry?.totals || { protein: 0, carbs: 0, fats: 0 };
+    const p = Number(totals.protein) || 0, c = Number(totals.carbs) || 0, f = Number(totals.fats) || 0;
+    const cals = p * 4 + c * 4 + f * 9;
+    const d = new Date(String(entry?.date || '') + 'T00:00:00');
+    const valid = !isNaN(d.getTime());
     const mealsHtml = meals.length
-      ? meals.map((m, i) => `Meal ${i + 1}: P${m?.protein || 0}, C${m?.carbs || 0}, F${m?.fats || 0}`).join("<br>")
-      : 'No meal details saved.';
-    const totals = entry.totals || { protein:0, carbs:0, fats:0 };
-    const cals = totals.protein * 4 + totals.carbs * 4 + totals.fats * 9;
-    div.innerHTML = `<strong>${entry?.date || 'Unknown date'}</strong><br>${mealsHtml}<br>Total: ${cals} kcal`;
-    container.appendChild(div);
-  });
+      ? meals.map((m, i) => `
+          <div class="mx-row macro-meal">
+            <div class="mx-row-main"><span class="mx-row-title">Meal ${i + 1}</span></div>
+            <div class="macro-meal-vals"><span class="mx-tag">P ${mxEsc(m?.protein || 0)}</span><span class="mx-tag">C ${mxEsc(m?.carbs || 0)}</span><span class="mx-tag">F ${mxEsc(m?.fats || 0)}</span></div>
+          </div>`).join('')
+      : '<div class="mx-row-sub">No meal details saved.</div>';
+    return `
+      <section class="pod mx-pod macro-day" aria-label="${mxEsc(entry?.date || 'Unknown date')}">
+        <div class="pod-row">
+          <div class="macro-day-title">
+            <span class="mx-kicker">${valid ? d.toLocaleDateString(undefined, { weekday: 'long' }) : 'Macros'}</span>
+            <span class="mx-row-title">${valid ? d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : mxEsc(entry?.date || 'Unknown date')}</span>
+          </div>
+          <span class="mx-row-big">${cals}<span class="mx-unit"> kcal</span></span>
+        </div>
+        <div class="mx-tiles">
+          <div class="mx-stat"><span class="mx-stat-l">Protein</span><span class="mx-stat-v">${p}<small>g</small></span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Carbs</span><span class="mx-stat-v">${c}<small>g</small></span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Fat</span><span class="mx-stat-v">${f}<small>g</small></span></div>
+        </div>
+        <div class="macro-meals">${mealsHtml}</div>
+      </section>`;
+  }).join('');
 }
 
 function renderWorkoutHistoryFallback(container) {
@@ -16358,7 +16371,7 @@ function renderWorkoutHistoryFallback(container) {
   ).filter(entry => !userKey || !entry?.userId || entry.userId === userKey);
 
   if (!logs.length) {
-    container.innerHTML = '<div style="text-align:center;padding:40px 20px;opacity:0.85;"><svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:16px;opacity:0.6;"><rect x="8" y="36" width="64" height="8" rx="4" fill="var(--primary)"/><rect x="4" y="26" width="10" height="28" rx="5" fill="var(--primary-dark,#245f47)"/><rect x="66" y="26" width="10" height="28" rx="5" fill="var(--primary-dark,#245f47)"/><rect x="14" y="32" width="6" height="16" rx="2" fill="var(--primary)"/><rect x="60" y="32" width="6" height="16" rx="2" fill="var(--primary)"/></svg><p style="font-size:1rem;font-weight:600;color:var(--text-color);margin:0 0 6px;">No workouts logged yet</p><p style="font-size:0.875rem;color:var(--secondary-text,#888);margin:0;">Head to the Log tab to record your first session.</p></div>';
+    container.innerHTML = '<div class="mx-empty">No workouts logged yet.<br>Head to the Log tab to record your first session.</div>';
     return;
   }
 
@@ -16369,11 +16382,11 @@ function renderWorkoutHistoryFallback(container) {
       const title = entry?.title || 'Workout';
       const date = entry?.date || 'Unknown date';
       const exercises = Array.isArray(entry?.exercises) ? entry.exercises.length : 0;
-      return `<li><strong>${title}</strong> <span style="opacity:.7;">(${date})</span><br><small>${exercises} exercise${exercises === 1 ? '' : 's'}</small></li>`;
+      return `<li class="mx-row"><div class="mx-row-main"><span class="mx-row-title">${mxEsc(title)}</span><span class="mx-row-sub">${mxEsc(date)} · ${exercises} exercise${exercises === 1 ? '' : 's'}</span></div></li>`;
     })
     .join('');
 
-  container.innerHTML = `<ul style="display:grid; gap:10px; padding-left:20px;">${rows}</ul>`;
+  container.innerHTML = `<ul class="pod mx-pod hist-fallback">${rows}</ul>`;
 }
 
 // History sub-tab switching

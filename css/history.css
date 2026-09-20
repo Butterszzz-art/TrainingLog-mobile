@@ -122,3 +122,32 @@
   text-transform: uppercase;
 }
 #logHistoryContainer .hist-x { color: var(--mx-faint); font-family: var(--font-label); font-weight: 800; margin: 0 2px; }
+
+/* ── Bodyweight months ──────────────────────────────────────── */
+#logHistoryTab .bw-month { padding: 0; gap: 0; overflow: hidden; }
+#logHistoryTab .bw-month-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+#logHistoryTab .bw-month-head::-webkit-details-marker { display: none; }
+#logHistoryTab .bw-month-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+#logHistoryTab .bw-chevron { width: 18px; height: 18px; color: var(--mx-faint); transition: transform 0.2s; flex: none; }
+#logHistoryTab .bw-month[open] .bw-chevron { transform: rotate(180deg); }
+#logHistoryTab .bw-tiles { padding: 0 16px 12px; }
+#logHistoryTab .bw-rows { padding: 8px 16px 6px; border-top: 1px solid var(--border-row); }
+#logHistoryTab .bw-row .mx-row-title { font-size: 15px; }
+#logHistoryTab .bw-row .mx-row-big { font-size: 20px; }
+
+/* ── Macro days ─────────────────────────────────────────────── */
+#logHistoryTab .macro-day-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#logHistoryTab .macro-day .mx-row-big { font-size: 26px; }
+#logHistoryTab .macro-meals { display: flex; flex-direction: column; }
+#logHistoryTab .macro-meal { padding: 8px 0; }
+#logHistoryTab .macro-meal .mx-row-title { font-size: 14px; }
+#logHistoryTab .macro-meal-vals { display: flex; gap: 6px; flex: none; }
+#logHistoryTab .hist-fallback { list-style: none; margin: 0; }
