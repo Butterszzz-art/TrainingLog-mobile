@@ -40,6 +40,7 @@
   <link rel="stylesheet" href="css/history.css">
   <link rel="stylesheet" href="css/paywall.css">
   <link rel="stylesheet" href="css/ai-sheets.css">
+  <link rel="stylesheet" href="css/coach-ui.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
@@ -11277,7 +11278,7 @@ function getCoachAlertMeta(status = 'watch') {
   if (normalized === 'ok' || normalized === 'stable') {
     return { label: 'Stable', className: 'is-ok' };
   }
-  if (normalized === 'alert' || normalized === 'at_risk' || normalized === 'risk') {
+  if (normalized === 'alert' || normalized === 'action' || normalized === 'at_risk' || normalized === 'risk') {
     return { label: 'Needs Action', className: 'is-alert' };
   }
   return { label: 'Watch', className: 'is-watch' };
@@ -11403,7 +11404,7 @@ function deriveCoachAlertStatus(client = {}) {
   const alerts = deriveCoachClientAlerts(client);
   if (alerts.some((alert) => alert.severity === 'alert')) return 'alert';
   if (alerts.length) return 'watch';
-  return String(client.alertStatus || 'ok').toLowerCase() === 'alert' ? 'watch' : 'ok';
+  return ['alert', 'action'].includes(String(client.alertStatus || 'ok').toLowerCase()) ? 'watch' : 'ok';
 }
 
 function renderCoachAlertList(alerts = []) {
@@ -11419,38 +11420,42 @@ function renderCoachClientCard(client) {
   const safeClient = normalizeCoachClientRecord(client);
   const derivedAlerts = deriveCoachClientAlerts(safeClient);
   const alertMeta = getCoachAlertMeta(deriveCoachAlertStatus(safeClient));
-  const alertLine = derivedAlerts.length
-    ? derivedAlerts.map((entry) => entry.label).join(' · ')
-    : 'No urgent flags this week';
+  const chipCls = { 'is-ok': 'mx-chip--green', 'is-watch': 'mx-chip--brass', 'is-alert': 'mx-chip--red' }[alertMeta.className] || '';
+  const initials = String(safeClient.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const alertTags = derivedAlerts.length
+    ? derivedAlerts.map((entry) => `<span class="mx-tag ${entry.severity === 'alert' ? 'mx-tag--red' : 'mx-tag--brass'}">${escapeCoachText(entry.label)}</span>`).join('')
+    : '<span class="mx-tag mx-tag--hi">No urgent flags this week</span>';
   return `
-    <article class="coach-client-card" data-client-id="${escapeCoachText(safeClient.id)}">
+    <article class="coach-client-card pod mx-pod" data-client-id="${escapeCoachText(safeClient.id)}">
       <header class="coach-client-card-header">
-        <div>
+        <div class="coach-client-avatar" aria-hidden="true">${escapeCoachText(initials)}</div>
+        <div class="coach-client-id">
           <h3 class="coach-client-name">${escapeCoachText(safeClient.name)}</h3>
           <p class="coach-client-meta">${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
         </div>
-        <span class="coach-alert-pill ${alertMeta.className}">${alertMeta.label}</span>
+        <span class="coach-alert-pill mx-chip mx-chip--sm ${chipCls} ${alertMeta.className}">${alertMeta.label}</span>
       </header>
-      <ul class="coach-client-kpis">
-        <li class="coach-client-kpi">
-          <p class="coach-client-kpi-label">Last Check-In</p>
-          <p class="coach-client-kpi-value">${escapeCoachText(formatCoachDate(safeClient.lastCheckInDate))}</p>
+      <ul class="coach-client-kpis mx-tiles mx-tiles--2">
+        <li class="coach-client-kpi mx-stat">
+          <p class="coach-client-kpi-label mx-stat-l">Last Check-In</p>
+          <p class="coach-client-kpi-value mx-stat-v">${escapeCoachText(formatCoachDate(safeClient.lastCheckInDate))}</p>
         </li>
-        <li class="coach-client-kpi">
-          <p class="coach-client-kpi-label">Compliance</p>
-          <p class="coach-client-kpi-value">${escapeCoachText(`${safeClient.compliancePercent}%`)}</p>
-        </li>
-        <li class="coach-client-kpi" style="grid-column: 1 / -1;">
-          <p class="coach-client-kpi-label">Primary Status Metric</p>
-          <p class="coach-client-kpi-value">${escapeCoachText(safeClient.primaryStatusMetric)}</p>
-        </li>
-        <li class="coach-client-kpi" style="grid-column: 1 / -1;">
-          <p class="coach-client-kpi-label">Coach Alerts</p>
-          <p class="coach-client-kpi-value">${escapeCoachText(alertLine)}</p>
+        <li class="coach-client-kpi mx-stat">
+          <p class="coach-client-kpi-label mx-stat-l">Compliance</p>
+          <p class="coach-client-kpi-value mx-stat-v">${escapeCoachText(`${safeClient.compliancePercent}`)}<small>%</small></p>
+          <div class="mx-meter mx-meter--thin${safeClient.compliancePercent < 60 ? ' mx-meter--brass' : ''}" role="img" aria-label="Compliance ${safeClient.compliancePercent} percent"><i style="width:${safeClient.compliancePercent}%"></i></div>
         </li>
       </ul>
+      <div class="coach-client-line">
+        <span class="mx-lbl">Primary status</span>
+        <span class="coach-client-line-val">${escapeCoachText(safeClient.primaryStatusMetric)}</span>
+      </div>
+      <div class="coach-client-line">
+        <span class="mx-lbl">Coach alerts</span>
+        <div class="mx-tags">${alertTags}</div>
+      </div>
       <div class="coach-client-actions">
-        <button type="button" data-coach-open-detail="${escapeCoachText(safeClient.id)}">Open Client</button>
+        <button type="button" class="mx-outline mx-outline--block" data-coach-open-detail="${escapeCoachText(safeClient.id)}">Open Client <span class="ui-icon">${ICONS.chevronRight}</span></button>
       </div>
     </article>
   `;
@@ -11623,23 +11628,24 @@ function renderCoachClientDetail(client) {
     ?? phaseState?.athleteInfo?.currentWeight
     ?? profile?.athleteInfo?.currentWeight;
 
+  const nf = (label, id, value, extra = '') => `<label class="coach-nf"><span class="mx-lbl">${label}</span><input id="${id}" type="number" min="0" step="1" value="${value}"${extra}></label>`;
   return `
     <section class="coach-client-detail">
-      <section class="coach-dashboard-header">
+      <section class="coach-dashboard-header pod mx-pod">
         <div class="coach-client-detail-header">
           <div>
+            <div class="mx-kicker">Client detail · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</div>
             <h3 class="coach-dashboard-title">${escapeCoachText(safeClient.name)}</h3>
-            <p class="coach-dashboard-subtitle">Client detail overview · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn" data-coach-draft-msg="${escapeCoachText(safeClient.id)}">Draft message <span class="ui-icon">${ICONS.sparkles}</span></button>` : ''}
-            <button type="button" data-coach-back>← Back to roster</button>
+          <div class="coach-detail-actions">
+            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn mx-outline" data-coach-draft-msg="${escapeCoachText(safeClient.id)}"><span class="ui-icon">${ICONS.sparkles}</span> Draft message</button>` : ''}
+            <button type="button" class="mx-outline" data-coach-back><span class="ui-icon">${ICONS.arrowLeft}</span> Back to roster</button>
           </div>
         </div>
       </section>
       <section class="coach-client-detail-grid">
-        <article class="coach-client-detail-card">
-          <h4>Athlete Info</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Athlete Info</h4>
           <ul class="coach-client-detail-list">
             ${renderCoachClientDetailRow('Athlete', safeClient.name)}
             ${renderCoachClientDetailRow('Archetype', safeClient.archetype)}
@@ -11649,23 +11655,23 @@ function renderCoachClientDetail(client) {
             ${renderCoachClientDetailRow('Height', safeClient.athleteInfo?.height || profile?.athleteInfo?.height)}
           </ul>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Compliance Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Compliance Summary</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(complianceSummary, 'Compliance data not available yet')}</p>
           <ul class="coach-client-detail-list">
             ${renderCoachClientDetailRow('Primary Status', safeClient.primaryStatusMetric)}
             ${renderCoachClientDetailRow('Last Check-In', formatCoachDate(safeClient.lastCheckInDate))}
           </ul>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Coach Alerts (V1 Rules)</h4>
-          <p class="coach-dashboard-subtitle">Simple explainable checks: check-in cadence, compliance, trend stalls, rapid weight change, logging gaps, and repeated missed cardio.</p>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Coach Alerts</h4>
+          <p class="coach-dashboard-subtitle">Simple explainable checks (V1 rules): check-in cadence, compliance, trend stalls, rapid weight change, logging gaps, and repeated missed cardio.</p>
           <ul class="coach-client-detail-list">
             ${renderCoachAlertList(derivedAlerts)}
           </ul>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Latest Check-In Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Latest Check-In</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.latestCheckInSummary || latestCheckIn?.insights?.summaryShort, 'No check-in summary yet')}</p>
           <ul class="coach-client-detail-list">
             ${renderCoachClientDetailRow('Date', latestCheckIn?.date || safeClient.lastCheckInDate, 'No check-in logged')}
@@ -11673,59 +11679,59 @@ function renderCoachClientDetail(client) {
             ${renderCoachClientDetailRow('Coach Review', latestCheckIn?.review?.status || '', 'Pending coach review')}
           </ul>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Recent Progress Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Recent Progress</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.recentProgressSummary, 'No recent progress data yet')}</p>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Current Program Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Current Program</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentProgramSummary || localData.activeProgramName, 'No active program assigned yet')}</p>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Current Nutrition Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Current Nutrition</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentNutritionSummary || nutritionTargets, 'No nutrition targets set yet')}</p>
-          <div style="margin-top:10px;padding:10px;border:1px solid #ebeff7;border-radius:10px;">
-            <h5 style="margin:0 0 8px 0;">Assign Nutrition Setup (V1 macro-based)</h5>
-            <p style="font-size:0.85rem;margin:0 0 8px 0;color:#4d5f73;">Uses training/rest macro anchors, auto-generates high/low days, and supports optional refeed targets.</p>
-            ${assignedSummary ? `<p style=\"font-size:0.82rem;margin:0 0 10px 0;color:#2f3f56;\"><strong>Assigned plan:</strong> ${escapeCoachText(assignedSummary)}</p>` : ''}
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
-              <label>Training P<input id="coachNutritionTrainingProtein" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.protein)}"></label>
-              <label>Training C<input id="coachNutritionTrainingCarbs" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.carbs)}"></label>
-              <label>Training F<input id="coachNutritionTrainingFat" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.fat)}"></label>
-              <label>Rest P<input id="coachNutritionRestProtein" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.protein)}"></label>
-              <label>Rest C<input id="coachNutritionRestCarbs" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.carbs)}"></label>
-              <label>Rest F<input id="coachNutritionRestFat" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.fat)}"></label>
+          <div class="coach-nutrition-box">
+            <h5 class="mx-lbl">Assign nutrition setup (V1 macro-based)</h5>
+            <p class="coach-dashboard-subtitle">Uses training/rest macro anchors, auto-generates high/low days, and supports optional refeed targets.</p>
+            ${assignedSummary ? `<p class="coach-assigned-plan"><strong>Assigned plan:</strong> ${escapeCoachText(assignedSummary)}</p>` : ''}
+            <div class="coach-nutrition-grid">
+              ${nf('Training P', 'coachNutritionTrainingProtein', roundMacroNumber(trainingDefaults.protein))}
+              ${nf('Training C', 'coachNutritionTrainingCarbs', roundMacroNumber(trainingDefaults.carbs))}
+              ${nf('Training F', 'coachNutritionTrainingFat', roundMacroNumber(trainingDefaults.fat))}
+              ${nf('Rest P', 'coachNutritionRestProtein', roundMacroNumber(restDefaults.protein))}
+              ${nf('Rest C', 'coachNutritionRestCarbs', roundMacroNumber(restDefaults.carbs))}
+              ${nf('Rest F', 'coachNutritionRestFat', roundMacroNumber(restDefaults.fat))}
             </div>
-            <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+            <label class="coach-nutrition-toggle">
               <input id="coachNutritionEnableRefeed" type="checkbox" ${assignedNutrition?.days?.refeed ? 'checked' : ''}>
-              Include optional refeed target
+              <span>Include optional refeed target</span>
             </label>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px;">
-              <label>Refeed P<input id="coachNutritionRefeedProtein" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.protein)}" placeholder="optional"></label>
-              <label>Refeed C<input id="coachNutritionRefeedCarbs" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.carbs)}" placeholder="optional"></label>
-              <label>Refeed F<input id="coachNutritionRefeedFat" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.fat)}" placeholder="optional"></label>
+            <div class="coach-nutrition-grid">
+              ${nf('Refeed P', 'coachNutritionRefeedProtein', roundMacroNumber(refeedDefaults.protein), ' placeholder="optional"')}
+              ${nf('Refeed C', 'coachNutritionRefeedCarbs', roundMacroNumber(refeedDefaults.carbs), ' placeholder="optional"')}
+              ${nf('Refeed F', 'coachNutritionRefeedFat', roundMacroNumber(refeedDefaults.fat), ' placeholder="optional"')}
             </div>
-            <label style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
-              Coach nutrition notes
+            <label class="coach-nf coach-nf--full">
+              <span class="mx-lbl">Coach nutrition notes</span>
               <textarea id="coachNutritionNotes" rows="2" placeholder="Execution notes, substitutions, check-in expectations...">${escapeCoachText(assignedNutrition?.structure?.notes || '')}</textarea>
             </label>
-            <button type="button" style="margin-top:10px;" data-coach-assign-nutrition="${escapeCoachText(safeClient.id)}" data-client-name="${escapeCoachText(safeClient.name)}">Assign Nutrition Plan</button>
+            <button type="button" class="mx-cta coach-assign-btn" data-coach-assign-nutrition="${escapeCoachText(safeClient.id)}" data-client-name="${escapeCoachText(safeClient.name)}"><span>Assign Nutrition Plan</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
           </div>
         </article>
       </section>
-      <section style="margin-top:16px;">
+      <section class="coach-detail-message">
         ${isProUser() ? `
-          <article class="coach-client-detail-card">
-            <h4>Coach Message</h4>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:0.85rem;color:var(--secondary-text,#666);">
-              Coach notes (optional — incorporated into draft)
-              <textarea id="coachAiDraftNotes" rows="2" placeholder="e.g. great push week, tighten up cardio next block..." style="resize:vertical;margin-top:4px;"></textarea>
+          <article class="coach-client-detail-card pod mx-pod">
+            <h4 class="pod-title mx-h3">Coach Message</h4>
+            <label class="coach-nf coach-nf--full">
+              <span class="mx-lbl">Coach notes <em>optional, used in the draft</em></span>
+              <textarea id="coachAiDraftNotes" rows="2" placeholder="e.g. great push week, tighten up cardio next block..."></textarea>
             </label>
-            <div id="coachAiDraftSection" style="margin-top:12px;"></div>
+            <div id="coachAiDraftSection"></div>
           </article>
         ` : `
-          <article class="coach-client-detail-card" style="opacity:0.7;">
-            <p style="margin:0;font-size:0.9rem;"><span class="ui-icon">${ICONS.lock}</span> AI Draft Message is a Pro feature.</p>
+          <article class="coach-client-detail-card pod mx-pod coach-locked">
+            <p><span class="ui-icon">${ICONS.lock}</span> AI Draft Message is a Pro feature.</p>
           </article>
         `}
       </section>
@@ -11735,7 +11741,7 @@ function renderCoachClientDetail(client) {
 
 function renderCoachClientRoster(clients = []) {
   if (!Array.isArray(clients) || !clients.length) {
-    return '<div style="text-align:center;padding:40px 20px;border:1px dashed var(--border-color);border-radius:12px;background:rgba(45,125,91,0.03);"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:14px;opacity:0.5;"><circle cx="32" cy="20" r="10" fill="var(--primary)"/><path d="M12 52 Q12 36 32 36 Q52 36 52 52" fill="var(--primary)" opacity="0.7"/></svg><p style="font-size:0.95rem;font-weight:600;color:var(--text-color);margin:0 0 6px;">No clients yet</p><p style="font-size:0.85rem;color:var(--secondary-text,#888);margin:0 0 14px;">Invite your first athlete to get started.</p></div>';
+    return '<div class="mx-empty coach-empty"><span class="ui-icon">' + ICONS.users + '</span><strong>No clients yet</strong><span>Invite your first athlete to get started.</span></div>';
   }
   const cards = clients.map((client) => renderCoachClientCard(client)).join('');
   return `<section class="coach-roster-grid" aria-label="Coach client roster">${cards}</section>`;
@@ -11750,7 +11756,7 @@ async function requestCoachDraftMessage(clientId) {
   // Find client from state
   const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
   const client = clients.find(c => normalizeCoachClientRecord(c).id === clientId);
-  if (!client) { draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Client data not found.</p>'; return; }
+  if (!client) { draftSection.innerHTML = '<p class="coach-draft-err">Client data not found.</p>'; return; }
 
   const safeClient = normalizeCoachClientRecord(client);
   const localData = getLocalCoachClientData(safeClient);
@@ -11763,7 +11769,7 @@ async function requestCoachDraftMessage(clientId) {
     : '';
   const bodyweightChange = latestCheckIn?.bodyweightChange ?? latestCheckIn?.weeklyWeightChange ?? latestCheckIn?.weightChange ?? null;
 
-  draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
+  draftSection.innerHTML = `<p class="coach-draft-note"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
 
   const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
     || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
@@ -11799,9 +11805,9 @@ async function requestCoachDraftMessage(clientId) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       if (err.error === 'AI_NOT_CONFIGURED') {
-        draftSection.innerHTML = '<p style="color:var(--secondary-text,#888);font-size:0.9rem;">AI drafting is not enabled on this server.</p>';
+        draftSection.innerHTML = '<p class="coach-draft-note">AI drafting is not enabled on this server.</p>';
       } else {
-        draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Draft failed. Please try again.</p>';
+        draftSection.innerHTML = '<p class="coach-draft-err">Draft failed. Please try again.</p>';
       }
       return;
     }
@@ -11809,10 +11815,10 @@ async function requestCoachDraftMessage(clientId) {
     const data = await res.json();
     const draft = data.draft || '';
     draftSection.innerHTML = `
-      <textarea id="coachAiDraftTextarea" rows="6" style="width:100%;box-sizing:border-box;resize:vertical;font-size:0.92rem;line-height:1.5;padding:10px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:var(--card-bg);color:var(--text-color,#222);">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-        <button type="button" data-coach-copy-draft style="flex:1;">Copy to clipboard</button>
-        <button type="button" data-coach-clear-draft style="flex:0 0 auto;background:transparent;border:1px solid var(--border-color,#ddd);color:var(--secondary-text,#888);">Clear</button>
+      <div class="coach-nf coach-nf--full"><textarea id="coachAiDraftTextarea" rows="6" aria-label="Draft message">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></div>
+      <div class="coach-draft-actions">
+        <button type="button" class="mx-cta" data-coach-copy-draft><span>Copy to clipboard</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+        <button type="button" class="mx-outline" data-coach-clear-draft>Clear</button>
       </div>
     `;
     // Auto-resize textarea to content
@@ -11820,11 +11826,11 @@ async function requestCoachDraftMessage(clientId) {
     if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
   } catch (err) {
     if (err.name === 'AbortError') {
-      draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Request timed out. Please try again.</p>';
+      draftSection.innerHTML = '<p class="coach-draft-err">Request timed out. Please try again.</p>';
     } else if (!navigator.onLine) {
-      draftSection.innerHTML = '<p style="color:var(--secondary-text,#888);font-size:0.9rem;">You are offline.</p>';
+      draftSection.innerHTML = '<p class="coach-draft-note">You are offline.</p>';
     } else {
-      draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Draft failed. Please try again.</p>';
+      draftSection.innerHTML = '<p class="coach-draft-err">Draft failed. Please try again.</p>';
     }
   }
 }
@@ -11901,10 +11907,10 @@ function renderCoachDashboardView() {
   container.innerHTML = selectedClient
     ? renderCoachClientDetail(selectedClient)
     : `
-      <section class="coach-dashboard-header">
+      <section class="coach-dashboard-header pod mx-pod">
         <div class="coach-dashboard-header-row">
-          <h3 class="coach-dashboard-title">Client Roster Overview</h3>
-          <button type="button" class="coach-add-client-btn" onclick="openAddClientModal()">+ Add Client</button>
+          <h3 class="coach-dashboard-title">Client Roster</h3>
+          <button type="button" class="coach-add-client-btn mx-outline" onclick="openAddClientModal()"><span class="ui-icon">${ICONS.plus}</span> Add Client</button>
         </div>
         <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action · ${watchCount} on watch</p>
       </section>
@@ -11938,40 +11944,33 @@ function renderCoachQueue() {
   const clients = coachDashboardState.clients || [];
   if (!clients.length) { el.innerHTML = ''; return; }
 
-  const counts = { action: 0, watch: 0, ok: 0 };
-  clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
-  const avgCompliance = Math.round(clients.reduce((s, c) => s + (c.compliancePercent || 0), 0) / clients.length);
-
-  const statRow = [
-    ['Reviews due', counts.action, counts.action ? 'ws-stat-danger' : ''],
-    ['Avg compliance', avgCompliance + '%', ''],
-    ['Flagged', counts.watch + counts.action, (counts.watch + counts.action) ? 'ws-stat-warn' : ''],
-  ].map(([label, val, cls]) =>
-    `<div class="pod ws-stat-tile ${cls}"><div class="stat-tile-label">${label}</div><div class="stat-tile-value">${val}</div></div>`
-  ).join('');
-
-  const priority = clients.find(c => c.alertStatus === 'action') || clients.find(c => c.alertStatus === 'watch');
+  // The roster header stats bar (coaching-enhanced.js) already shows clients,
+  // alerts, watch, avg adherence and active-this-week, so the queue starts at
+  // "who needs attention" instead of repeating those numbers.
+  const priority = clients.find(c => c.alertStatus === 'action' || c.alertStatus === 'alert') || clients.find(c => c.alertStatus === 'watch');
+  const urgent = priority && (priority.alertStatus === 'action' || priority.alertStatus === 'alert');
   const priorityHTML = priority ? `
-    <div class="pod pod--hero ws-priority-card">
-      <div class="pod-row"><span class="pod-kicker">Needs attention</span><span class="ws-priority-tag ${priority.alertStatus}">${priority.alertStatus}</span></div>
+    <div class="pod pod--hero mx-pod ws-priority-card">
+      <div class="pod-row"><span class="pod-kicker mx-kicker">Needs attention</span><span class="mx-chip mx-chip--sm ${urgent ? 'mx-chip--red' : 'mx-chip--brass'} ws-priority-tag ${priority.alertStatus}">${urgent ? 'Needs action' : 'Watch'}</span></div>
       <div class="ws-priority-main">
         <span class="ws-priority-name">${escapeCoachText(priority.name)}</span>
         <span class="ws-priority-meta">${escapeCoachText(priority.currentPhase)} &middot; ${escapeCoachText(priority.primaryStatusMetric)}</span>
       </div>
-      <button class="cta-capsule ws-priority-cta" onclick="coachDashboardState.selectedClientId='${priority.id}'; if(typeof renderCoachDashboardView==='function') renderCoachDashboardView(); document.getElementById('coachDashboardContent')?.scrollIntoView({behavior:'smooth'});">Open client</button>
+      <button class="mx-cta ws-priority-cta" onclick="coachDashboardState.selectedClientId='${priority.id}'; if(typeof renderCoachDashboardView==='function') renderCoachDashboardView(); document.getElementById('coachDashboardContent')?.scrollIntoView({behavior:'smooth'});"><span>Open client</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.chevronRight}</span></span></button>
     </div>` : '';
 
   const roster = clients.slice().sort((a, b) => (a.compliancePercent || 0) - (b.compliancePercent || 0)).slice(0, 5);
   const rosterHTML = roster.map(c => `
-    <div class="sq-row"><span class="sq-name">${escapeCoachText(c.name)}</span><span class="sq-summary">${c.compliancePercent}%</span></div>
+    <div class="sq-row mx-row"><div class="mx-row-main"><span class="sq-name mx-row-title">${escapeCoachText(c.name)}</span>
+      <div class="mx-meter mx-meter--thin${(c.compliancePercent || 0) < 60 ? ' mx-meter--brass' : ''}"><i style="width:${c.compliancePercent || 0}%"></i></div></div>
+      <span class="sq-summary mx-row-big">${c.compliancePercent}<span class="mx-unit">%</span></span></div>
   `).join('');
 
   el.innerHTML = `
-    <div class="ws-stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">${statRow}</div>
     ${priorityHTML}
-    <div class="pod sq-card">
-      <div class="pod-row"><span class="pod-kicker">Roster snapshot</span><span class="sq-count">compliance</span></div>
-      ${rosterHTML}
+    <div class="pod mx-pod sq-card">
+      <div class="pod-row"><span class="pod-kicker mx-kicker">Roster snapshot</span><span class="sq-count mx-meta">lowest compliance first</span></div>
+      <div>${rosterHTML}</div>
     </div>
   `;
 }

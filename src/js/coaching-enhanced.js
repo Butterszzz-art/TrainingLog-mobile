@@ -47,6 +47,12 @@ function initCoachSubtabs() {
    1. AGGREGATE STATS BAR
    ══════════════════════════════════════════════════════════════ */
 
+// The roster uses ok / watch / action; older code also called the urgent state "alert".
+function _isUrgentStatus(status) {
+  const s = String(status || '').toLowerCase();
+  return s === 'action' || s === 'alert';
+}
+
 function renderCoachStatsBar() {
   const container = document.getElementById('coachStatsBar');
   if (!container) return;
@@ -54,31 +60,18 @@ function renderCoachStatsBar() {
   if (!clients.length) { container.innerHTML = ''; return; }
 
   const total      = clients.length;
-  const alertCount = clients.filter(c => c.alertStatus === 'alert').length;
+  const alertCount = clients.filter(c => _isUrgentStatus(c.alertStatus)).length;
   const watchCount = clients.filter(c => c.alertStatus === 'watch').length;
   const avgAdh     = clients.reduce((s,c) => s + (c.compliancePercent || 0), 0) / total;
   const activeWeek = clients.filter(c => (c.workoutsLoggedThisWeek || 0) > 0).length;
 
   container.innerHTML = `
-    <div class="coach-stat-chip">
-      <div class="chip-value">${total}</div>
-      <div class="chip-label">Clients</div>
-    </div>
-    <div class="coach-stat-chip">
-      <div class="chip-value" style="color:#e05060">${alertCount}</div>
-      <div class="chip-label">Alerts</div>
-    </div>
-    <div class="coach-stat-chip">
-      <div class="chip-value" style="color:#f0a040">${watchCount}</div>
-      <div class="chip-label">Watch</div>
-    </div>
-    <div class="coach-stat-chip">
-      <div class="chip-value">${Math.round(avgAdh)}%</div>
-      <div class="chip-label">Avg Adherence</div>
-    </div>
-    <div class="coach-stat-chip">
-      <div class="chip-value">${activeWeek}</div>
-      <div class="chip-label">Active This Week</div>
+    <div class="mx-tiles coach-stats-tiles">
+      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Clients</span><span class="mx-stat-v chip-value">${total}</span></div>
+      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Active this week</span><span class="mx-stat-v chip-value">${activeWeek}</span></div>
+      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Avg adherence</span><span class="mx-stat-v chip-value">${Math.round(avgAdh)}<small>%</small></span></div>
+      <div class="mx-stat coach-stat-chip coach-stat--alert${alertCount ? ' is-on' : ''}"><span class="mx-stat-l chip-label">Needs action</span><span class="mx-stat-v chip-value">${alertCount}</span></div>
+      <div class="mx-stat coach-stat-chip coach-stat--watch${watchCount ? ' is-on' : ''}"><span class="mx-stat-l chip-label">Watch</span><span class="mx-stat-v chip-value">${watchCount}</span></div>
     </div>`;
 }
 
@@ -169,7 +162,7 @@ function bulkExportPDF() {
       <td>${c.compliancePercent ?? '—'}%</td>
       <td>${c.lastCheckInDate || '—'}</td>
       <td>${c.workoutsLoggedThisWeek ?? '—'}</td>
-      <td style="color:${c.alertStatus === 'alert' ? '#c0392b' : c.alertStatus === 'watch' ? '#e67e22' : '#27ae60'}">${c.alertStatus}</td>
+      <td style="color:${_isUrgentStatus(c.alertStatus) ? '#c0392b' : c.alertStatus === 'watch' ? '#e67e22' : '#27ae60'}">${c.alertStatus}</td>
     </tr>`).join('');
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -870,7 +863,7 @@ function _buildInsightRow(c) {
   const trend = adh >= 80 && wk >= 3 ? 'up' : adh < 60 || wk <= 1 ? 'down' : 'flat';
   const trendIcon = { up: '↑', down: '↓', flat: '→' }[trend];
   const flags = [];
-  if (c.alertStatus === 'alert') flags.push(`<span class="injury-flag">🚨 Alert</span>`);
+  if (_isUrgentStatus(c.alertStatus)) flags.push(`<span class="injury-flag">🚨 Alert</span>`);
   if (trend === 'down')          flags.push(`<span class="stagnation-badge">📉 Stagnating</span>`);
   if ((c.cardioMissedSessions || 0) >= 2) flags.push(`<span class="stagnation-badge">🏃 Cardio missed</span>`);
 
@@ -928,7 +921,7 @@ function _renderAlertPieChart(clients) {
   if (_analyticsCharts.pie) { _analyticsCharts.pie.destroy(); }
   const ok    = clients.filter(c => c.alertStatus === 'ok').length;
   const watch = clients.filter(c => c.alertStatus === 'watch').length;
-  const alert = clients.filter(c => c.alertStatus === 'alert').length;
+  const alert = clients.filter(c => _isUrgentStatus(c.alertStatus)).length;
   _analyticsCharts.pie = new Chart(canvas, {
     type: 'doughnut',
     data: {
