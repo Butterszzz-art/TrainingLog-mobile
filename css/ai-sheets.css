@@ -1,0 +1,144 @@
+/* =============================================================
+   AI SHEETS  (Modernist)
+   Bottom sheets for the AI Macro Advisor and AI Program Generator.
+   JS toggles inline display/transform on the panel + backdrop, so the
+   initial `display:none; transform:translateY(100%)` stay inline in the
+   markup; everything else lives here.
+   ============================================================= */
+
+.ai-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: block;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.ai-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1060;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--pod-bg);
+  border: 1px solid var(--border-default);
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.5), var(--pod-bevel);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.ai-sheet-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 14px 12px 16px;
+  border-bottom: 1px solid var(--border-header);
+}
+.ai-sheet-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ai-sheet-badge {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fill-avatar);
+  color: #eafaf1;
+}
+.ai-sheet-badge .ui-icon { width: 18px; height: 18px; }
+.ai-sheet-name { font-family: var(--font-display); font-size: 20px; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.02em; color: var(--text-primary); }
+.ai-sheet-status { font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mx-faint); margin-top: 2px; }
+
+.ai-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 28px;
+}
+.ai-sheet-body .pod { margin-bottom: 0; }
+
+/* ── States ─────────────────────────────────────────────────── */
+.ai-loading { display: flex; align-items: center; gap: 12px; padding: 24px 0; font-size: 14px; color: var(--text-tertiary); }
+.ai-spinner {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 2px solid var(--border-chip);
+  border-top-color: var(--green-70);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+.ai-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-pod);
+  border: 1px solid var(--border-alert);
+  background: var(--danger-bg);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--danger-text-mobile);
+}
+.ai-error .ui-icon { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+
+/* ── Macro advisor ──────────────────────────────────────────── */
+.ai-advice .mx-kicker { display: flex; align-items: center; gap: 6px; color: var(--green-90); }
+.ai-advice .mx-kicker .ui-icon { width: 15px; height: 15px; }
+.ai-row { align-items: center; padding: 10px 0; }
+.ai-row-vals { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 18px; font-variant-numeric: tabular-nums; }
+.ai-cur { color: var(--text-tertiary); }
+.ai-arrow { color: var(--mx-faint); font-family: var(--font-label); }
+.ai-up { color: var(--green-90); }
+.ai-down { color: var(--danger-text-mobile); }
+.ai-same { color: var(--text-primary); }
+
+/* ── Program generator ──────────────────────────────────────── */
+.ai-form { display: flex; flex-direction: column; gap: 14px; }
+.ai-eq { display: flex; flex-wrap: wrap; gap: 8px; }
+.pag-eq-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip);
+  background: var(--pod-bg-alt);
+  box-shadow: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.pag-eq-pill .ui-icon { width: 16px; height: 16px; }
+.pag-eq-pill.active { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
+.ai-submit.is-busy { animation: pag-pulse 1.2s ease-in-out infinite; }
+@keyframes pag-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+@media (prefers-reduced-motion: reduce) {
+  .ai-submit.is-busy { animation: none; opacity: 0.7; }
+  .ai-sheet { transition: none; }
+}
+.ai-day { align-items: center; }
+.ai-note-flat { border-top: 0; padding-top: 0; }

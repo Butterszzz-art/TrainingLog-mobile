@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="css/mobility.css">
   <link rel="stylesheet" href="css/history.css">
   <link rel="stylesheet" href="css/paywall.css">
+  <link rel="stylesheet" href="css/ai-sheets.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
@@ -20002,20 +20003,19 @@ window.renderMeetPrep = renderMeetPrep;
   <script src="src/js/ai-coach.js"></script>
 
 <!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
-<div id="macroAiBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);z-index:1050;" onclick="closeMacroAiAdvisor()"></div>
-<div id="macroAiPanel" role="dialog" aria-modal="true" aria-label="AI Macro Advisor"
-  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--card-bg);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
+<div id="macroAiBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeMacroAiAdvisor()"></div>
+<div id="macroAiPanel" class="ai-sheet" role="dialog" aria-modal="true" aria-label="AI Macro Advisor" style="display:none;transform:translateY(100%);">
+  <div class="ai-sheet-head">
+    <div class="ai-sheet-title">
+      <div class="ai-sheet-badge"><span class="ui-icon" data-icon="sparkles"></span></div>
       <div>
-        <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Macro Advisor</div>
-        <div id="macroAiStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
+        <div class="ai-sheet-name">AI Macro Advisor</div>
+        <div id="macroAiStatus" class="ai-sheet-status">Powered by Claude</div>
       </div>
     </div>
-    <button onclick="closeMacroAiAdvisor()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;margin:0;box-shadow:none;display:flex;align-items:center;justify-content:center;"><span class="ui-icon">${ICONS.x}</span></button>
+    <button type="button" class="mx-iconbtn" aria-label="Close" onclick="closeMacroAiAdvisor()"><span class="ui-icon" data-icon="x"></span></button>
   </div>
-  <div id="macroAiBody" style="flex:1;overflow-y:auto;padding:14px 16px 24px;-webkit-overflow-scrolling:touch;"></div>
+  <div id="macroAiBody" class="ai-sheet-body"></div>
 </div>
 
 <script>
@@ -20068,19 +20068,18 @@ window.renderMeetPrep = renderMeetPrep;
 
   function renderMacroAiLoading(body, status) {
     status.textContent = 'Analysing your trends…';
-    body.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:24px 0;color:var(--secondary-text);font-size:0.88rem;"><div style="width:18px;height:18px;border:2px solid var(--border-color);border-top-color:var(--primary,#5fa87e);border-radius:50%;animation:spin 0.9s linear infinite;flex-shrink:0;"></div>Analysing your trends…</div>';
+    body.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div>Analysing your trends…</div>';
   }
 
   function renderMacroAiResult(body, status, data) {
     status.textContent = 'Powered by Claude';
     const { advice, suggestedTargets, currentTargets } = data;
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    function arrow(cur, sug, unit) {
+    function change(cur, sug, unit) {
       const diff = sug - cur;
-      if (Math.abs(diff) < 1) return '<span style="color:var(--secondary-text)">→</span> ' + sug + unit;
-      const col = diff > 0 ? '#4caf82' : '#e05060';
-      const sym = diff > 0 ? '↑' : '↓';
-      return '<span style="color:' + col + ';font-weight:700;">' + sym + ' ' + sug + unit + '</span>';
+      if (Math.abs(diff) < 1) return '<span class="ai-same">' + sug + unit + '</span>';
+      return '<span class="' + (diff > 0 ? 'ai-up' : 'ai-down') + '">' + (diff > 0 ? '▲ ' : '▼ ') + sug + unit + '</span>';
     }
 
     const rows = [
@@ -20090,33 +20089,34 @@ window.renderMeetPrep = renderMeetPrep;
       { label: 'Calories',cur: currentTargets.calories, sug: suggestedTargets.calories, unit: ' kcal' },
     ];
 
+    // JSON contains double quotes, so it must be entity-escaped inside the attribute.
+    const payloadAttr = JSON.stringify(suggestedTargets).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+
     body.innerHTML =
-      '<div style="background:var(--card-bg);border:1px solid var(--border-color,#2a3a2e);border-left:3px solid var(--primary,#5fa87e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
-        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--primary,#5fa87e);margin-bottom:8px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI Advice</div>' +
-        '<p style="font-size:0.88rem;line-height:1.6;color:var(--text-color);margin:0;">' + advice.replace(/</g, '&lt;') + '</p>' +
-      '</div>' +
-      '<div style="background:var(--surface-bg,#141e17);border:1px solid var(--border-color,#2a3a2e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
-        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--secondary-text);margin-bottom:12px;">Suggested vs Current</div>' +
+      '<section class="pod pod--hero mx-pod ai-advice">' +
+        '<div class="mx-kicker"><span class="ui-icon">' + ICONS.sparkles + '</span> AI Advice</div>' +
+        '<p class="mx-para">' + esc(advice) + '</p>' +
+      '</section>' +
+      '<section class="pod mx-pod">' +
+        '<div class="mx-kicker">Suggested vs current</div>' +
+        '<div>' +
         rows.map(r =>
-          '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">' +
-            '<span style="font-size:0.85rem;color:var(--secondary-text);">' + r.label + '</span>' +
-            '<div style="font-size:0.85rem;display:flex;gap:12px;align-items:center;">' +
-              '<span style="color:var(--text-muted,#6a7f6d);">' + r.cur + r.unit + '</span>' +
-              '<span>→</span>' +
-              arrow(r.cur, r.sug, r.unit) +
-            '</div>' +
+          '<div class="mx-row ai-row">' +
+            '<div class="mx-row-main"><span class="mx-row-title">' + r.label + '</span></div>' +
+            '<div class="ai-row-vals"><span class="ai-cur">' + r.cur + r.unit + '</span><span class="ai-arrow" aria-hidden="true">→</span>' + change(r.cur, r.sug, r.unit) + '</div>' +
           '</div>'
         ).join('') +
-      '</div>' +
-      '<button onclick="applyMacroAiTargets(' + JSON.stringify(suggestedTargets) + ')" ' +
-        'style="width:100%;background:var(--primary,#5fa87e);color:#0b130d;border:none;border-radius:14px;padding:13px;font-size:0.95rem;font-weight:700;cursor:pointer;margin:0;box-shadow:none;">' +
-        'Apply suggested targets' +
+        '</div>' +
+      '</section>' +
+      '<button type="button" class="mx-cta" onclick="applyMacroAiTargets(' + payloadAttr + ')">' +
+        '<span>Apply suggested targets</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.check + '</span></span>' +
       '</button>';
   }
 
   function renderMacroAiError(body, status, msg) {
     status.textContent = 'Powered by Claude';
-    body.innerHTML = '<div style="background:rgba(224,80,96,0.1);border:1px solid rgba(224,80,96,0.3);border-radius:14px;padding:14px 16px;color:#e05060;font-size:0.88rem;"><span class="ui-icon">' + ICONS.alertTriangle + '</span> ' + msg + '</div>';
+    const safe = String(msg == null ? '' : msg).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    body.innerHTML = '<div class="ai-error"><span class="ui-icon">' + ICONS.alertTriangle + '</span><span>' + safe + '</span></div>';
   }
 
   window.openMacroAiAdvisor = async function () {
@@ -20194,20 +20194,19 @@ window.renderMeetPrep = renderMeetPrep;
 </script>
 
 <!-- ── AI Program Generator panel ──────────────────────────────────────── -->
-<div id="progAiGenBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);z-index:1050;" onclick="closeProgAiGen()"></div>
-<div id="progAiGenPanel" role="dialog" aria-modal="true" aria-label="AI Program Generator"
-  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:88vh;background:var(--card-bg);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
+<div id="progAiGenBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeProgAiGen()"></div>
+<div id="progAiGenPanel" class="ai-sheet" role="dialog" aria-modal="true" aria-label="AI Program Generator" style="display:none;transform:translateY(100%);">
+  <div class="ai-sheet-head">
+    <div class="ai-sheet-title">
+      <div class="ai-sheet-badge"><span class="ui-icon" data-icon="sparkles"></span></div>
       <div>
-        <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Program Generator</div>
-        <div id="progAiGenStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
+        <div class="ai-sheet-name">AI Program Generator</div>
+        <div id="progAiGenStatus" class="ai-sheet-status">Powered by Claude</div>
       </div>
     </div>
-    <button onclick="closeProgAiGen()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;display:flex;align-items:center;justify-content:center;"><span class="ui-icon">${ICONS.x}</span></button>
+    <button type="button" class="mx-iconbtn" aria-label="Close" onclick="closeProgAiGen()"><span class="ui-icon" data-icon="x"></span></button>
   </div>
-  <div id="progAiGenBody" style="flex:1;overflow-y:auto;padding:14px 16px 32px;-webkit-overflow-scrolling:touch;"></div>
+  <div id="progAiGenBody" class="ai-sheet-body"></div>
 </div>
 
 <script>
@@ -20303,51 +20302,49 @@ window.renderMeetPrep = renderMeetPrep;
       return '<option value="' + e + '"' + (e === expLevel ? ' selected' : '') + '>' + (e.charAt(0).toUpperCase() + e.slice(1)) + '</option>';
     }).join('');
 
-    return '<div style="display:grid;gap:14px;">'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Goal<input id="pagGoal" type="text" placeholder="e.g. build muscle and improve my bench" style="margin-top:2px;" value="' + (cached ? '' : '') + '"></label>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Days / week<select id="pagDays"><option value="3">3 days</option><option value="4" selected>4 days</option><option value="5">5 days</option><option value="6">6 days</option></select></label>'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Session length<select id="pagLength"><option value="45">45 min</option><option value="60" selected>60 min</option><option value="75">75 min</option><option value="90">90 min</option></select></label>'
+    return '<div class="ai-form">'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagGoal">Goal</label><div class="mx-well mx-well--text"><input id="pagGoal" type="text" placeholder="e.g. build muscle and improve my bench"></div></div>'
+      + '<div class="mx-grid2">'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagDays">Days / week</label><div class="mx-well mx-well--text mx-well--sel"><select id="pagDays"><option value="3">3 days</option><option value="4" selected>4 days</option><option value="5">5 days</option><option value="6">6 days</option></select></div></div>'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagLength">Session length</label><div class="mx-well mx-well--text mx-well--sel"><select id="pagLength"><option value="45">45 min</option><option value="60" selected>60 min</option><option value="75">75 min</option><option value="90">90 min</option></select></div></div>'
       + '</div>'
-      + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted,#7a8f7d);">Equipment available</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.dumbbell + '</span> Barbell</button>'
-      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.dumbbell + '</span> Dumbbells</button>'
-      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.link + '</span> Cables / Machine</button>'
-      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.activity + '</span> Bodyweight</button>'
+      + '<div class="mx-field"><span class="mx-lbl">Equipment available</span>'
+      + '<div class="ai-eq" role="group" aria-label="Equipment available">'
+      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" aria-pressed="true" onclick="this.classList.toggle(\'active\');this.setAttribute(\'aria-pressed\',this.classList.contains(\'active\'))"><span class="ui-icon">' + ICONS.dumbbell + '</span> Barbell</button>'
+      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" aria-pressed="true" onclick="this.classList.toggle(\'active\');this.setAttribute(\'aria-pressed\',this.classList.contains(\'active\'))"><span class="ui-icon">' + ICONS.dumbbell + '</span> Dumbbells</button>'
+      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" aria-pressed="true" onclick="this.classList.toggle(\'active\');this.setAttribute(\'aria-pressed\',this.classList.contains(\'active\'))"><span class="ui-icon">' + ICONS.link + '</span> Cables / Machine</button>'
+      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" aria-pressed="false" onclick="this.classList.toggle(\'active\');this.setAttribute(\'aria-pressed\',this.classList.contains(\'active\'))"><span class="ui-icon">' + ICONS.activity + '</span> Bodyweight</button>'
+      + '</div></div>'
+      + '<div class="mx-grid2">'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagMode">Training mode</label><div class="mx-well mx-well--text mx-well--sel"><select id="pagMode">' + modeOptions + '</select></div></div>'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagExp">Experience</label><div class="mx-well mx-well--text mx-well--sel"><select id="pagExp">' + expOptions + '</select></div></div>'
       + '</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Training mode<select id="pagMode">' + modeOptions + '</select></label>'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Experience<select id="pagExp">' + expOptions + '</select></label>'
-      + '</div>'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Focus areas <span style="font-weight:400;">(optional)</span><input id="pagFocus" type="text" placeholder="e.g. need more back volume, lagging quads"></label>'
-      + '<button id="pagSubmitBtn" onclick="submitProgAiGen()" style="padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;">Generate Program</button>'
-      + (cached ? '<button onclick="showProgAiPreview()" style="margin-top:-6px;padding:10px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.85rem;cursor:pointer;width:100%;">↩ View last generated program</button>' : '')
+      + '<div class="mx-field"><label class="mx-lbl" for="pagFocus">Focus areas <em>optional</em></label><div class="mx-well mx-well--text"><input id="pagFocus" type="text" placeholder="e.g. need more back volume, lagging quads"></div></div>'
+      + '<button type="button" id="pagSubmitBtn" class="mx-cta ai-submit" onclick="submitProgAiGen()"><span>Generate Program</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.sparkles + '</span></span></button>'
+      + (cached ? '<button type="button" class="mx-outline mx-outline--block" onclick="showProgAiPreview()">View last generated program</button>' : '')
       + '</div>';
   }
 
   function _renderPreview(prog) {
     var rows = (prog.days || []).map(function (day, i) {
       var exCount = (day.exercises || []).length;
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color,#2a3a2e);">'
-        + '<div><div style="font-size:0.9rem;font-weight:600;">' + escapeCoachText(day.name) + '</div>'
-        + (day.focus ? '<div style="font-size:0.78rem;color:var(--secondary-text);">' + escapeCoachText(day.focus) + '</div>' : '')
+      return '<div class="mx-row ai-day">'
+        + '<div class="mx-row-main"><span class="mx-row-title">' + escapeCoachText(day.name) + '</span>'
+        + (day.focus ? '<span class="mx-row-sub">' + escapeCoachText(day.focus) + '</span>' : '')
         + '</div>'
-        + '<div style="font-size:0.82rem;color:var(--secondary-text);">' + exCount + ' exercise' + (exCount !== 1 ? 's' : '') + '</div>'
+        + '<span class="mx-tag">' + exCount + ' exercise' + (exCount !== 1 ? 's' : '') + '</span>'
         + '</div>';
     }).join('');
 
-    return '<div style="background:rgba(95,168,126,0.08);border:1px solid var(--primary,#5fa87e);border-radius:12px;padding:12px 14px;margin-bottom:14px;">'
-      + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--primary,#5fa87e);margin-bottom:6px;">Generated Program</div>'
-      + '<div style="font-size:1rem;font-weight:700;margin-bottom:10px;">' + escapeCoachText(prog.name) + '</div>'
-      + rows
-      + (prog.progressionNotes ? '<div style="margin-top:10px;font-size:0.82rem;color:var(--secondary-text);"><strong>Progression:</strong> ' + escapeCoachText(prog.progressionNotes) + '</div>' : '')
-      + (prog.deloadRecommendation ? '<div style="margin-top:4px;font-size:0.82rem;color:var(--secondary-text);"><strong>Deload:</strong> ' + escapeCoachText(prog.deloadRecommendation) + '</div>' : '')
-      + '</div>'
-      + '<div style="display:flex;gap:8px;">'
-      + '<button onclick="saveGeneratedProgram()" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.92rem;font-weight:700;cursor:pointer;">Save to Programs</button>'
-      + '<button onclick="progAiGenShowForm()" style="padding:13px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.88rem;cursor:pointer;">Regenerate</button>'
-      + '</div>';
+    return '<section class="pod pod--hero mx-pod">'
+      + '<div class="mx-kicker">Generated program</div>'
+      + '<h4 class="pod-title mx-h3">' + escapeCoachText(prog.name) + '</h4>'
+      + '<div>' + rows + '</div>'
+      + (prog.progressionNotes ? '<p class="mx-note"><strong>Progression:</strong> ' + escapeCoachText(prog.progressionNotes) + '</p>' : '')
+      + (prog.deloadRecommendation ? '<p class="mx-note ai-note-flat"><strong>Deload:</strong> ' + escapeCoachText(prog.deloadRecommendation) + '</p>' : '')
+      + '</section>'
+      + '<button type="button" class="mx-cta" onclick="saveGeneratedProgram()"><span>Save to Programs</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.check + '</span></span></button>'
+      + '<button type="button" class="mx-outline mx-outline--block" onclick="progAiGenShowForm()">Regenerate</button>';
   }
 
   window.openProgAiGen = function () {
@@ -20407,7 +20404,7 @@ window.renderMeetPrep = renderMeetPrep;
 
     if (!goal) {
       var goalEl = document.getElementById('pagGoal');
-      if (goalEl) { goalEl.focus(); goalEl.style.borderColor = '#eb5757'; setTimeout(function () { goalEl.style.borderColor = ''; }, 2000); }
+      if (goalEl) { goalEl.focus(); var well = goalEl.closest('.mx-well'); if (well) { well.classList.add('is-invalid'); setTimeout(function () { well.classList.remove('is-invalid'); }, 2000); } }
       return;
     }
 
@@ -20425,7 +20422,7 @@ window.renderMeetPrep = renderMeetPrep;
     if (btn) {
       btn.disabled = true;
       btn.textContent = 'Building your program…';
-      btn.style.animation = 'pag-pulse 1.2s ease-in-out infinite';
+      btn.classList.add('is-busy');
     }
     if (status) status.textContent = 'Building your program…';
 
@@ -20458,8 +20455,8 @@ window.renderMeetPrep = renderMeetPrep;
       var msg = err.name === 'AbortError'
         ? 'Request timed out — please try again.'
         : (!navigator.onLine ? 'You are offline.' : "Couldn't generate a program — please try again.");
-      if (body) body.innerHTML = '<div style="color:#eb5757;font-size:0.9rem;padding:16px 0;">' + msg + '</div>'
-        + '<button onclick="progAiGenShowForm()" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.88rem;cursor:pointer;">← Back to form</button>';
+      if (body) body.innerHTML = '<div class="ai-error"><span class="ui-icon">' + ICONS.alertTriangle + '</span><span>' + msg + '</span></div>'
+        + '<button type="button" class="mx-outline mx-outline--block" onclick="progAiGenShowForm()">Back to form</button>';
     });
   };
 
