@@ -3453,26 +3453,31 @@
   <div id="coachSub_analytics" class="coach-subview"></div>
   <div id="coachSub_ai" class="coach-subview"></div>
   <div id="coachSub_videos" class="coach-subview">
-    <div style="padding:12px;">
-      <div class="rehab-card">
-        <h3 style="margin:0 0 4px;"><span class="ui-icon" data-icon="video"></span> Exercise Technique Videos</h3>
-        <p style="font-size:0.82rem;color:var(--secondary-text);margin:0 0 12px;">Attach a video link per exercise. Your clients see a ▶ Watch button when they log that exercise.</p>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <input type="text" id="coachVideoExercise" placeholder="Exercise name (e.g. Barbell Squat)" list="exerciseSuggestions" />
-          <input type="url" id="coachVideoUrl" placeholder="Video link (YouTube, Loom, Drive…)" />
-          <input type="text" id="coachVideoNotes" placeholder="Coaching cue (optional)" />
-          <button onclick="saveCoachExerciseVideo()">Save Video</button>
-          <div id="coachVideoStatus" style="font-size:0.82rem;min-height:1.1rem;color:var(--secondary-text);"></div>
-        </div>
+    <section class="pod mx-pod">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Technique Videos</h4></div>
+      <p class="mx-sub">Attach a video link per exercise. Your clients see a Watch button when they log that exercise.</p>
+      <div class="mx-field">
+        <label class="mx-lbl" for="coachVideoExercise">Exercise</label>
+        <div class="mx-well mx-well--text"><input type="text" id="coachVideoExercise" placeholder="Exercise name (e.g. Barbell Squat)" list="exerciseSuggestions" /></div>
       </div>
-      <div class="rehab-card" style="margin-top:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <h3 style="margin:0;">Your Videos</h3>
-          <button onclick="loadCoachExerciseVideos()" style="font-size:0.75rem;padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);cursor:pointer;box-shadow:none;margin:0;">Refresh</button>
-        </div>
-        <div id="coachVideoList" style="font-size:0.85rem;color:var(--text-muted);">No videos yet.</div>
+      <div class="mx-field">
+        <label class="mx-lbl" for="coachVideoUrl">Video link</label>
+        <div class="mx-well mx-well--text"><input type="url" id="coachVideoUrl" placeholder="YouTube, Loom, Drive…" /></div>
       </div>
-    </div>
+      <div class="mx-field">
+        <label class="mx-lbl" for="coachVideoNotes">Coaching cue <em>optional</em></label>
+        <div class="mx-well mx-well--text"><input type="text" id="coachVideoNotes" placeholder="e.g. Brace before you descend" /></div>
+      </div>
+      <button type="button" class="mx-cta" onclick="saveCoachExerciseVideo()"><span>Save Video</span><span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span></button>
+      <div id="coachVideoStatus" class="mx-sub coach-video-status" aria-live="polite"></div>
+    </section>
+    <section class="pod mx-pod">
+      <div class="pod-row">
+        <h4 class="pod-title mx-h3">Your Videos</h4>
+        <button type="button" class="mx-outline" onclick="loadCoachExerciseVideos()"><span class="ui-icon" data-icon="refresh"></span> Refresh</button>
+      </div>
+      <div id="coachVideoList" class="coach-video-list"><div class="mx-empty">No videos yet.</div></div>
+    </section>
   </div>
   <div id="coachSub_gdpr" class="coach-subview"></div>
 </div>
@@ -11173,7 +11178,7 @@ async function saveCoachExerciseVideo() {
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) throw new Error(data?.error?.message || `HTTP ${res.status}`);
     if (status) status.textContent = '';
-    window.showToast(`Video saved for ${exerciseName} ✓`);
+    window.showToast(`Video saved for ${exerciseName}`);
     document.getElementById('coachVideoExercise').value = '';
     document.getElementById('coachVideoUrl').value = '';
     document.getElementById('coachVideoNotes').value = '';
@@ -11188,7 +11193,7 @@ window.saveCoachExerciseVideo = saveCoachExerciseVideo;
 async function loadCoachExerciseVideos() {
   const list = document.getElementById('coachVideoList');
   if (!list) return;
-  list.textContent = 'Loading…';
+  list.innerHTML = '<div class="mx-empty">Loading…</div>';
   try {
     const res = await fetch(`${window.SERVER_URL}/coach/exercise-videos`, {
       headers: getAuthHeaders(),
@@ -11197,22 +11202,22 @@ async function loadCoachExerciseVideos() {
     const data = await res.json().catch(() => null);
     const items = data?.items || [];
     if (!items.length) {
-      list.textContent = 'No videos yet — add your first one above.';
+      list.innerHTML = '<div class="mx-empty">No videos yet — add your first one above.</div>';
       return;
     }
     list.innerHTML = items.map(v => `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color,#2a3a2e);">
-        <div style="min-width:0;">
-          <div style="font-weight:600;color:var(--text-color);">${_escVideoHtml(v.exerciseName)}</div>
-          ${v.notes ? `<div style="font-size:0.78rem;color:var(--secondary-text);">${_escVideoHtml(v.notes)}</div>` : ''}
-          <a href="${_escVideoHtml(v.videoUrl)}" target="_blank" rel="noopener" style="font-size:0.78rem;color:#4da8da;word-break:break-all;">${_escVideoHtml(v.videoUrl)}</a>
+      <div class="mx-row coach-video-row">
+        <div class="mx-row-main">
+          <span class="mx-row-title">${_escVideoHtml(v.exerciseName)}</span>
+          ${v.notes ? `<span class="mx-row-sub">${_escVideoHtml(v.notes)}</span>` : ''}
+          <a class="coach-video-link" href="${_escVideoHtml(v.videoUrl)}" target="_blank" rel="noopener">${_escVideoHtml(v.videoUrl)}</a>
         </div>
-        <button onclick="deleteCoachExerciseVideo('${_escVideoHtml(v.id)}')" style="flex-shrink:0;background:transparent;border:1px solid rgba(192,80,96,0.4);color:#c05060;border-radius:8px;padding:4px 10px;font-size:0.75rem;cursor:pointer;box-shadow:none;margin:0;">Remove</button>
+        <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="deleteCoachExerciseVideo('${_escVideoHtml(v.id)}')" aria-label="Delete video for ${_escVideoHtml(v.exerciseName)}"><span class="ui-icon">${ICONS.x}</span></button>
       </div>
     `).join('');
   } catch (err) {
     console.warn('[Videos] list failed', err);
-    list.textContent = 'Could not load videos.';
+    list.innerHTML = '<div class="mx-empty">Could not load videos.</div>';
   }
 }
 window.loadCoachExerciseVideos = loadCoachExerciseVideos;
