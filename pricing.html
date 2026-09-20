@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pocket Coach — Pricing</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
   <style>
     :root {
       --bg:        #080b0a;
@@ -395,6 +396,32 @@
       .compare-table { font-size: 0.78rem; }
       .compare-table thead th, .compare-table tbody td { padding: 9px 8px; }
     }
+  
+    /* ── Modernist overrides (tokens.css) ───────────────────── */
+    :root {
+      --bg: var(--ground); --surface: var(--pod-bg); --card: var(--pod-bg); --elevated: var(--pod-bg-alt);
+      --border: var(--border-default); --primary: var(--green-60); --primary-h: var(--green-90);
+      --gold: var(--brass-base); --gold-h: var(--brass-light);
+      --text: var(--text-primary); --muted: #86998e; --sub: var(--text-secondary);
+    }
+    body { font-family: var(--font-body); background: var(--wash-mobile); background-color: var(--ground); background-attachment: fixed; }
+    .logo { font-family: var(--font-label); font-weight: 800; letter-spacing: 0.16em; }
+    header h1 { font-family: var(--font-display); font-weight: 400; text-transform: uppercase; line-height: 1.02; letter-spacing: 0.01em; }
+    .tier-name, .amount, .compare-section h2, .faq-section h2 { font-family: var(--font-display); font-weight: 400; text-transform: uppercase; letter-spacing: 0.02em; }
+    .tier-label, .features-label, .popular-badge, .save-badge, .compare-table thead th, .section-row td, .faq-q { font-family: var(--font-label); letter-spacing: 0.1em; }
+    .card { border-radius: var(--radius-hero); background: var(--pod-bg); border: 1px solid var(--pod-border); box-shadow: var(--pod-bevel); }
+    .card.pro { background: var(--pod-bg-hero); border-color: var(--border-featured); box-shadow: var(--pod-shadow-hero); }
+    .card.coach { border-color: var(--border-brass); }
+    .cta-btn {
+      display: flex; align-items: center; justify-content: center; min-height: 56px; border-radius: var(--radius-pill);
+      font-family: var(--font-display); font-weight: 400; font-size: 17px; letter-spacing: 0.03em; text-transform: uppercase;
+      box-shadow: var(--cta-shadow);
+    }
+    .btn-free { background: rgba(255, 255, 255, 0.038); border: 1px solid var(--border-default); color: var(--text-secondary); box-shadow: none; }
+    .btn-pro { background: var(--fill-btn-primary-mobile); color: var(--label-on-green); }
+    .btn-coach { background: linear-gradient(135deg, rgba(199, 154, 84, 0.95), rgba(109, 81, 36, 0.95)); color: #1a1206; }
+    .lock-ico { display: block; }
+    a:focus-visible, button:focus-visible, input:focus-visible + .slider { outline: 2px solid var(--green-70); outline-offset: 3px; }
   </style>
 </head>
 <body>
@@ -442,8 +469,8 @@
       <li><span class="icon icon-free">✓</span> SMART goals</li>
       <li><span class="icon icon-free">✓</span> Community & leaderboard</li>
       <li><span class="icon icon-free">✓</span> Workout history archive</li>
-      <li class="locked"><span class="icon icon-locked">🔒</span> Coaching dashboard</li>
-      <li class="locked"><span class="icon icon-locked">🔒</span> AI insights & analysis</li>
+      <li class="locked"><span class="icon icon-locked"><svg class="lock-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Locked"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Coaching dashboard</li>
+      <li class="locked"><span class="icon icon-locked"><svg class="lock-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Locked"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> AI insights & analysis</li>
     </ul>
   </div>
 
