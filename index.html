@@ -1270,13 +1270,13 @@
             <label for="checkInDateInput">Date</label>
             <input type="date" id="checkInDateInput">
           </div>
-          <div class="ci-field">
+          <div class="ci-field ci-field--num">
             <label for="checkInBodyweightInput">Bodyweight (kg)</label>
             <input type="number" step="0.1" id="checkInBodyweightInput" placeholder="e.g. 82.5">
           </div>
         </div>
         <div class="ci-row-2">
-          <div class="ci-field">
+          <div class="ci-field ci-field--num">
             <label for="checkInWaistInput">Waist (cm)</label>
             <input type="number" step="0.1" id="checkInWaistInput" placeholder="e.g. 74">
           </div>
@@ -1451,26 +1451,26 @@
       <div class="ci-card">
         <h3 class="ci-card-title"><span class="ui-icon" data-icon="refresh"></span> Side-by-Side Comparison</h3>
         <p class="ci-card-desc">Compare your current photos with a previous check-in.</p>
-        <div style="margin-bottom:10px;">
-          <label for="photoCompareSelect" style="font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;display:block;margin-bottom:5px;">Compare with</label>
-          <select id="photoCompareSelect" onchange="renderPhotoComparison()" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--elevated-bg);color:var(--text-color);font-size:1rem;-webkit-appearance:none;">
+        <div class="ci-cmp-picker">
+          <label class="mx-lbl ci-cmp-label" for="photoCompareSelect">Compare with</label>
+          <select id="photoCompareSelect" class="ci-cmp-select" onchange="renderPhotoComparison()">
             <option value="">-- Select a previous check-in --</option>
           </select>
         </div>
         <div id="photoComparisonGrid" style="display:none;">
-          <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:0 0 8px;">Front view</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-            <div style="text-align:center;">
-              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Then</div>
-              <img id="photoCompare_front_old" style="width:100%;border-radius:10px;aspect-ratio:3/4;object-fit:cover;background:var(--elevated-bg);" alt="Previous front">
+          <p class="mx-lbl ci-cmp-heading">Front view</p>
+          <div class="ci-cmp-row">
+            <div class="ci-cmp-cell">
+              <span class="mx-meta">Then</span>
+              <img id="photoCompare_front_old" class="ci-cmp-img" alt="Previous front">
             </div>
-            <div style="text-align:center;">
-              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Now</div>
-              <img id="photoCompare_front_new" style="width:100%;border-radius:10px;aspect-ratio:3/4;object-fit:cover;background:var(--elevated-bg);" alt="Current front">
+            <div class="ci-cmp-cell">
+              <span class="mx-meta">Now</span>
+              <img id="photoCompare_front_new" class="ci-cmp-img" alt="Current front">
             </div>
           </div>
         </div>
-        <div id="photoComparisonEmpty" style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:16px 0;">
+        <div id="photoComparisonEmpty" class="ci-cmp-empty">
           Add photos and save a check-in to unlock comparisons.
         </div>
       </div>
@@ -12142,6 +12142,63 @@ function autoFillCardioAdherenceSlider(userId) {
   }
 }
 
+function ciEsc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/**
+ * Layer a tappable 1-10 scale over each check-in slider. The native
+ * <input type="range"> stays in the DOM (visually hidden) as the single
+ * source of truth: saveWeeklyCheckIn, hydration and the cardio auto-fill
+ * all keep reading/writing slider.value. Taps write the value and fire the
+ * slider's own input handler so the numeric readout stays correct.
+ */
+function enhanceCheckInScales() {
+  document.querySelectorAll('#checkInTab .checkin-slider-field').forEach(field => {
+    const slider = field.querySelector('input[type="range"]');
+    if (!slider || field.querySelector('.ci-scale')) return;
+    const title = (field.querySelector('.checkin-slider-title')?.textContent || 'Rating').trim();
+    const min = Number(slider.min || 1);
+    const max = Number(slider.max || 10);
+    const scale = document.createElement('div');
+    scale.className = 'ci-scale';
+    scale.setAttribute('role', 'group');
+    scale.setAttribute('aria-label', title);
+    for (let n = min; n <= max; n++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ci-step';
+      btn.dataset.n = String(n);
+      btn.textContent = String(n);
+      btn.setAttribute('aria-label', title + ' ' + n + ' of ' + max);
+      btn.addEventListener('click', () => {
+        slider.value = String(n);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        syncCheckInScales();
+      });
+      scale.appendChild(btn);
+    }
+    slider.parentNode.insertBefore(scale, slider);
+    slider.setAttribute('tabindex', '-1');
+    slider.setAttribute('aria-hidden', 'true');
+  });
+  syncCheckInScales();
+}
+
+function syncCheckInScales() {
+  document.querySelectorAll('#checkInTab .checkin-slider-field').forEach(field => {
+    const slider = field.querySelector('input[type="range"]');
+    if (!slider) return;
+    const v = Number(slider.value) || 0;
+    field.querySelectorAll('.ci-step').forEach(btn => {
+      const n = Number(btn.dataset.n);
+      btn.classList.toggle('on', n <= v);
+      btn.setAttribute('aria-pressed', n === v ? 'true' : 'false');
+    });
+  });
+}
+window.syncCheckInScales = syncCheckInScales;
+
 function renderCheckInTab() {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
@@ -12152,7 +12209,19 @@ function renderCheckInTab() {
   const nextDate = window.checkinEngine.getNextCheckInDate(phaseState);
   const nextDateEl = document.getElementById('checkInNextDate');
   if (nextDateEl) {
-    nextDateEl.textContent = `Next scheduled check-in: ${nextDate} · ${checkInHeader}`;
+    let dueChip = '';
+    const due = new Date(`${nextDate}T00:00:00`);
+    if (!isNaN(due.getTime())) {
+      const days = Math.round((due - new Date(new Date().toDateString())) / 86400000);
+      const label = days < 0 ? `${-days} day${days === -1 ? '' : 's'} overdue`
+        : days === 0 ? 'Due today'
+        : `Due in ${days} day${days === 1 ? '' : 's'}`;
+      dueChip = `<span class="mx-chip ${days < 0 ? 'mx-chip--red' : 'mx-chip--brass'}">${label}</span>`;
+    }
+    nextDateEl.innerHTML = `
+      <div class="ci-phase-top"><span class="mx-kicker">Next scheduled check-in</span>${dueChip}</div>
+      <div class="ci-phase-title">${ciEsc(checkInHeader)}</div>
+      <div class="mx-meta">${ciEsc(nextDate)}</div>`;
   }
 
   const dateInput = document.getElementById('checkInDateInput');
@@ -12171,6 +12240,7 @@ function renderCheckInTab() {
   hydrateCheckInFormFromLatestEntry(checkIns);
   bindCheckInSliderDisplays();
   autoFillCardioAdherenceSlider(userId);
+  enhanceCheckInScales();
 
   const timeline = document.getElementById('checkInTimeline');
   if (!timeline) return;
@@ -12178,16 +12248,21 @@ function renderCheckInTab() {
   const entriesWithInsights = window.checkinEngine.getCheckInInsightTimeline?.(checkIns) || checkIns;
   const groupedTimeline = window.checkinEngine.groupCheckInsForTimeline?.(entriesWithInsights) || [];
   if (!groupedTimeline.length) {
-    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<br><span class="ui-icon" style="width:1.6rem;height:1.6rem;display:block;margin:8px auto 0">${ICONS.clipboard}</span></div>`;
+    timeline.innerHTML = `<div class="ci-timeline-empty">No check-ins logged yet.<span class="ui-icon">${ICONS.clipboard}</span></div>`;
     return;
   }
 
-  function _scoreClass(val, invert) {
-    const n = Number(val);
-    if (!Number.isFinite(n)) return '';
-    if (invert) return n >= 7 ? 'poor' : n >= 4 ? 'mid' : 'good'; // stress: high = bad
-    return n >= 7 ? 'good' : n >= 4 ? 'mid' : 'poor';
-  }
+  // Week-over-week deltas against the previous chronological check-in.
+  const chrono = (Array.isArray(checkIns) ? checkIns : []).filter(c => c && c.date).slice()
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const prevByDate = {};
+  chrono.forEach((c, i) => { if (i > 0) prevByDate[c.date] = chrono[i - 1]; });
+  const _delta = (cur, prev, unit) => {
+    const c = Number(cur), p = Number(prev);
+    if (!Number.isFinite(c) || !Number.isFinite(p) || c === p) return '';
+    const d = c - p;
+    return `<span class="mx-delta mx-delta--flat">${d < 0 ? '▼' : '▲'} ${Math.abs(d).toFixed(1)} ${unit}</span>`;
+  };
 
   function _statusLabel(status) {
     return {
@@ -12196,6 +12271,12 @@ function renderCheckInTab() {
       needs_changes: `<span class="ui-icon">${ICONS.pencil}</span> Needs changes`,
       pending: `<span class="ui-icon">${ICONS.clock}</span> Pending`
     }[status] || `<span class="ui-icon">${ICONS.clock}</span> Pending`;
+  }
+
+  function _mini(label, val, brass) {
+    const n = Number(val);
+    const has = val !== '' && Number.isFinite(n);
+    return `<div class="ci-tc-mini-i"><span class="mx-lbl">${label} <b>${has ? n : '—'}</b></span><div class="mx-meter mx-meter--thin${brass ? ' mx-meter--brass' : ''}"><i style="width:${has ? Math.max(0, Math.min(100, n * 10)) : 0}%"></i></div></div>`;
   }
 
   timeline.innerHTML = groupedTimeline.map((weeksOutGroup) => {
@@ -12209,41 +12290,45 @@ function renderCheckInTab() {
         const insight = entry.insights?.summaryShort || '';
         const insightFull = (entry.insights?.summaryFull || []).join(' · ');
         const archetypeMetrics = formatCheckInArchetypeMetricSummary(entry);
+        const prev = prevByDate[entry.date];
         const dateLabel = (() => {
           try { return new Date(entry.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); } catch { return entry.date; }
         })();
+        const tags = [entry.phase, phaseWeekGroup.phaseWeekLabel].filter(Boolean)
+          .map(t => `<span class="ci-tc-badge">${ciEsc(t)}</span>`).join('');
+        const tiles = [
+          entry.bodyweight ? `<div class="mx-stat"><span class="mx-stat-l">Weight</span><span class="mx-stat-v">${ciEsc(entry.bodyweight)}<small>kg</small></span>${_delta(entry.bodyweight, prev?.bodyweight, 'kg')}</div>` : '',
+          entry.waist ? `<div class="mx-stat"><span class="mx-stat-l">Waist</span><span class="mx-stat-v">${ciEsc(entry.waist)}<small>cm</small></span>${_delta(entry.waist, prev?.waist, 'cm')}</div>` : ''
+        ].filter(Boolean).join('');
+        const hasRecovery = [energy, sleep, stress].some(v => v !== '');
 
         return `
-          <div class="ci-tc" data-status="${status}">
+          <article class="ci-tc" data-status="${ciEsc(status)}">
             <div class="ci-tc-header">
-              <span class="ci-tc-date">${dateLabel}</span>
-              ${entry.phase ? `<span class="ci-tc-badge">${entry.phase}</span>` : ''}
-              ${phaseWeekGroup.phaseWeekLabel ? `<span class="ci-tc-badge">${phaseWeekGroup.phaseWeekLabel}</span>` : ''}
-              <span class="ci-tc-status-badge ${status}">${_statusLabel(status)}</span>
+              <div class="ci-tc-head-l">
+                <span class="ci-tc-date">${dateLabel}</span>
+                ${tags ? `<div class="ci-tc-tags">${tags}</div>` : ''}
+              </div>
+              <span class="ci-tc-status-badge ${ciEsc(status)}">${_statusLabel(status)}</span>
             </div>
-            <div class="ci-tc-stats">
-              ${entry.bodyweight ? `<span class="ci-tc-stat"><span class="ui-icon">${ICONS.scale}</span> ${entry.bodyweight} kg</span>` : ''}
-              ${entry.waist      ? `<span class="ci-tc-stat"><span class="ui-icon">${ICONS.scale}</span> ${entry.waist} cm</span>`  : ''}
-              ${energy !== ''    ? `<span class="ci-tc-stat ${_scoreClass(energy, false)}"><span class="ui-icon">${ICONS.zap}</span> E:${energy}</span>` : ''}
-              ${sleep  !== ''    ? `<span class="ci-tc-stat ${_scoreClass(sleep, false)}"><span class="ui-icon">${ICONS.moon}</span> S:${sleep}</span>`  : ''}
-              ${stress !== ''    ? `<span class="ci-tc-stat ${_scoreClass(stress, true)}"><span class="ui-icon">${ICONS.brain}</span> St:${stress}</span>` : ''}
-            </div>
-            ${archetypeMetrics ? `<div class="ci-tc-archetype">${archetypeMetrics}</div>` : ''}
-            ${(insight || insightFull) ? `<div class="ci-tc-insight"><span class="ui-icon">${ICONS.lightbulb}</span> ${insight}${insightFull ? '<br><span style="opacity:0.8">'+insightFull+'</span>' : ''}</div>` : ''}
-            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust"><span class="ui-icon">${ICONS.settings}</span> ${adjText}</div>` : ''}
-            ${entry.notes     ? `<div class="ci-tc-notes">"${entry.notes}"</div>` : ''}
+            ${tiles ? `<div class="mx-tiles mx-tiles--2">${tiles}</div>` : ''}
+            ${hasRecovery ? `<div class="ci-tc-mini" role="img" aria-label="Energy ${energy || 'n/a'}, sleep ${sleep || 'n/a'}, stress ${stress || 'n/a'} out of 10">${_mini('Energy', energy)}${_mini('Sleep', sleep)}${_mini('Stress', stress, true)}</div>` : ''}
+            ${archetypeMetrics ? `<div class="ci-tc-archetype">${ciEsc(archetypeMetrics)}</div>` : ''}
+            ${(insight || insightFull) ? `<div class="ci-tc-insight"><span class="ui-icon">${ICONS.lightbulb}</span><span>${ciEsc(insight)}${insightFull ? `<br><span class="ci-tc-insight-full">${ciEsc(insightFull)}</span>` : ''}</span></div>` : ''}
+            ${adjText && adjText !== 'No weekly adjustments logged.' ? `<div class="ci-tc-adjust"><span class="ui-icon">${ICONS.settings}</span><span>${ciEsc(adjText)}</span></div>` : ''}
+            ${entry.notes ? `<div class="ci-tc-notes">"${ciEsc(entry.notes)}"</div>` : ''}
             ${(entry.coachNotes || entry.review?.coachActionItems) ? `
               <div class="ci-tc-coach">
-                ${entry.coachNotes ? `<div><span class="ui-icon">${ICONS.pencil}</span> ${entry.coachNotes}</div>` : ''}
-                ${entry.review?.coachActionItems ? `<div>→ ${entry.review.coachActionItems}</div>` : ''}
+                ${entry.coachNotes ? `<div><span class="mx-lbl">Coach</span> ${ciEsc(entry.coachNotes)}</div>` : ''}
+                ${entry.review?.coachActionItems ? `<div><span class="mx-lbl">Action</span> ${ciEsc(entry.review.coachActionItems)}</div>` : ''}
               </div>` : ''}
-          </div>`;
+          </article>`;
       })
     ).join('');
 
     return `
       <div class="ci-timeline-group">
-        <div class="ci-timeline-group-label">${weeksOutGroup.weeksOutLabel}</div>
+        <div class="ci-timeline-group-label">${ciEsc(weeksOutGroup.weeksOutLabel)}</div>
         ${cards}
       </div>`;
   }).join('');
@@ -12396,13 +12481,47 @@ function generateCheckInSummary() {
     return null;
   }
   const payload = buildCheckInSummaryPayload(selected);
+  const pts = timeline.filter(e => Number(e.bodyweight) > 0).slice()
+    .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-6);
+  let spark = '';
+  if (pts.length >= 2) {
+    const vals = pts.map(p => Number(p.bodyweight));
+    const lo = Math.min(...vals), hi = Math.max(...vals), span = (hi - lo) || 1;
+    const xs = vals.map((_, i) => 12 + (i * 276) / (vals.length - 1));
+    const ys = vals.map(v => 10 + ((hi - v) / span) * 48);
+    const line = xs.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(' ');
+    const area = `${line} L${xs[xs.length - 1].toFixed(1)} 76 L${xs[0].toFixed(1)} 76 Z`;
+    const dots = xs.map((x, i) => i === xs.length - 1
+      ? `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="5" fill="#6fae8b" stroke="#101614" stroke-width="2"/>`
+      : `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3.5" fill="#101614" stroke="#3d9d73" stroke-width="2"/>`).join('');
+    const change = vals[vals.length - 1] - vals[0];
+    spark = `
+      <div>
+        <div class="ci-spark-cap"><span class="mx-lbl">Bodyweight · last ${pts.length}</span><span class="mx-delta mx-delta--flat">${change === 0 ? 'no change' : (change < 0 ? '▼ ' : '▲ ') + Math.abs(change).toFixed(1) + ' kg'}</span></div>
+        <svg class="ci-spark" viewBox="0 0 300 76" role="img" aria-label="Bodyweight from ${vals[0]} to ${vals[vals.length - 1]} kg over ${pts.length} check-ins">
+          <defs><linearGradient id="ciSparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d9d73" stop-opacity="0.35"/><stop offset="1" stop-color="#3d9d73" stop-opacity="0"/></linearGradient></defs>
+          <path d="${area}" fill="url(#ciSparkFill)"/>
+          <path d="${line}" fill="none" stroke="#6fae8b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          ${dots}
+        </svg>
+      </div>`;
+  }
+  const chips = [payload.phase, payload.weekLabel, payload.archetype].filter(Boolean)
+    .map(t => `<span class="mx-chip mx-chip--sm">${ciEsc(t)}</span>`).join('');
   output.innerHTML = `
-    <strong>${payload.date}</strong> · ${payload.phase} · ${payload.weekLabel} · ${payload.archetype}<br />
-    BW ${payload.metrics.bodyweight || '—'} · Waist ${payload.metrics.waist || '—'} · Perf ${payload.metrics.trainingPerformance || '—'}<br />
-    <strong>Archetype focus:</strong> ${payload.metrics.archetypeSummary}<br />
-    <strong>Adjustments:</strong> ${payload.adjustmentsSummary}<br />
-    <strong>Review:</strong> ${payload.reviewStatus}${payload.coachActionItems ? ` · Action items: ${payload.coachActionItems}` : ''}<br />
-    <strong>Trend:</strong> ${payload.trendSummary}
+    <div class="ci-sum-head"><strong>${ciEsc(payload.date)}</strong>${chips}</div>
+    <div class="mx-tiles">
+      <div class="mx-stat"><span class="mx-stat-l">Weight</span><span class="mx-stat-v">${ciEsc(payload.metrics.bodyweight || '—')}</span></div>
+      <div class="mx-stat"><span class="mx-stat-l">Waist</span><span class="mx-stat-v">${ciEsc(payload.metrics.waist || '—')}</span></div>
+      <div class="mx-stat"><span class="mx-stat-l">Perf</span><span class="mx-stat-v">${ciEsc(payload.metrics.trainingPerformance || '—')}</span></div>
+    </div>
+    ${spark}
+    <dl class="ci-sum-list">
+      <div><dt>Archetype focus</dt><dd>${ciEsc(payload.metrics.archetypeSummary)}</dd></div>
+      <div><dt>Adjustments</dt><dd>${ciEsc(payload.adjustmentsSummary)}</dd></div>
+      <div><dt>Review</dt><dd>${ciEsc(payload.reviewStatus)}${payload.coachActionItems ? ` · Action items: ${ciEsc(payload.coachActionItems)}` : ''}</dd></div>
+      <div><dt>Trend</dt><dd>${ciEsc(payload.trendSummary)}</dd></div>
+    </dl>
   `;
   return payload;
 }

@@ -180,6 +180,7 @@
 }
 .mx-delta { font-family: var(--font-label); font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em; color: var(--green-90); }
 .mx-delta--up { color: var(--brass-light); }
+.mx-delta--flat { color: var(--text-tertiary); }
 
 /* ── Recessed input "well" ──────────────────────────────────── */
 .mx-well {
