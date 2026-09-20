@@ -1924,50 +1924,76 @@
         <span id="weighInAlertText">Loading weigh-in info…</span>
       </div>
 
-      <div class="attempt-sheet">
-        <table class="attempt-table" id="attemptSheetTable">
-          <thead>
-            <tr>
-              <th>Lift</th>
-              <th>Opener</th>
-              <th>2nd</th>
-              <th>3rd</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Squat</td>
-              <td><input class="attempt-weight-input" id="attempt_squat_opener" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_squat_opener">— Pending</button></td>
-              <td><input class="attempt-weight-input" id="attempt_squat_second" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_squat_second">— Pending</button></td>
-              <td><input class="attempt-weight-input" id="attempt_squat_third" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_squat_third">— Pending</button></td>
-            </tr>
-            <tr>
-              <td>Bench</td>
-              <td><input class="attempt-weight-input" id="attempt_bench_opener" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_bench_opener">— Pending</button></td>
-              <td><input class="attempt-weight-input" id="attempt_bench_second" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_bench_second">— Pending</button></td>
-              <td><input class="attempt-weight-input" id="attempt_bench_third" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_bench_third">— Pending</button></td>
-            </tr>
-            <tr>
-              <td>Deadlift</td>
-              <td><input class="attempt-weight-input" id="attempt_deadlift_opener" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_deadlift_opener">— Pending</button></td>
-              <td><input class="attempt-weight-input" id="attempt_deadlift_second" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_deadlift_second">— Pending</button></td>
-              <td><input class="attempt-weight-input" id="attempt_deadlift_third" type="number" step="2.5" placeholder="—">
-                  <button class="attempt-status-btn pending" id="status_deadlift_third">— Pending</button></td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="attempt-sheet" id="attemptSheetTable">
+        <section class="pod mx-pod attempt-lift" aria-label="Squat attempts">
+          <div class="pod-row">
+            <h4 class="pod-title mx-h3">Squat</h4>
+            <span class="mx-meta">Best <b class="attempt-best" id="attemptBest_squat">—</b></span>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">Opener</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_squat_opener" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Squat Opener weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_squat_opener" aria-label="Squat Opener result: pending">Pending</button>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">2nd</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_squat_second" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Squat 2nd weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_squat_second" aria-label="Squat 2nd result: pending">Pending</button>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">3rd</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_squat_third" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Squat 3rd weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_squat_third" aria-label="Squat 3rd result: pending">Pending</button>
+          </div>
+        </section>
+
+        <section class="pod mx-pod attempt-lift" aria-label="Bench attempts">
+          <div class="pod-row">
+            <h4 class="pod-title mx-h3">Bench</h4>
+            <span class="mx-meta">Best <b class="attempt-best" id="attemptBest_bench">—</b></span>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">Opener</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_bench_opener" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Bench Opener weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_bench_opener" aria-label="Bench Opener result: pending">Pending</button>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">2nd</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_bench_second" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Bench 2nd weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_bench_second" aria-label="Bench 2nd result: pending">Pending</button>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">3rd</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_bench_third" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Bench 3rd weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_bench_third" aria-label="Bench 3rd result: pending">Pending</button>
+          </div>
+        </section>
+
+        <section class="pod mx-pod attempt-lift" aria-label="Deadlift attempts">
+          <div class="pod-row">
+            <h4 class="pod-title mx-h3">Deadlift</h4>
+            <span class="mx-meta">Best <b class="attempt-best" id="attemptBest_deadlift">—</b></span>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">Opener</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_deadlift_opener" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Deadlift Opener weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_deadlift_opener" aria-label="Deadlift Opener result: pending">Pending</button>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">2nd</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_deadlift_second" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Deadlift 2nd weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_deadlift_second" aria-label="Deadlift 2nd result: pending">Pending</button>
+          </div>
+          <div class="attempt-row">
+            <span class="mx-lbl attempt-label">3rd</span>
+            <div class="mx-tin attempt-weight"><input class="attempt-weight-input" id="attempt_deadlift_third" type="number" step="2.5" placeholder="—" inputmode="decimal" aria-label="Deadlift 3rd weight in kg"></div>
+            <button type="button" class="attempt-status-btn pending" id="status_deadlift_third" aria-label="Deadlift 3rd result: pending">Pending</button>
+          </div>
+        </section>
       </div>
 
-      <div class="attempt-total-row">
-        <span class="attempt-total-label">Total</span>
+      <div class="pod pod--hero attempt-total-row">
+        <span class="attempt-total-label mx-kicker">Total</span>
         <span class="attempt-total-value" id="attemptTotal">— kg</span>
       </div>
     </div>
@@ -2054,31 +2080,45 @@
     <div id="plSubMeet" class="pl-subview">
       <h3>Meet Prep Timeline</h3>
 
-      <div class="pod">
-        <label for="meetDate">Meet date</label>
-        <input type="date" id="meetDate" oninput="renderMeetPrep()">
+      <div class="pod mx-pod">
+        <div class="mx-field">
+          <label class="mx-lbl" for="meetDate">Meet date</label>
+          <div class="mx-well mx-well--text"><input type="date" id="meetDate" oninput="renderMeetPrep()"></div>
+        </div>
 
-        <label for="meetName">Meet name (optional)</label>
-        <input type="text" id="meetName" placeholder="e.g. Regional Powerlifting Open">
+        <div class="mx-field">
+          <label class="mx-lbl" for="meetName">Meet name <em>optional</em></label>
+          <div class="mx-well mx-well--text"><input type="text" id="meetName" placeholder="e.g. Regional Powerlifting Open"></div>
+        </div>
 
-        <label for="meetFed">Federation</label>
-        <select id="meetFed">
-          <option value="">-- Select --</option>
-          <option>USAPL</option>
-          <option>IPF</option>
-          <option>USPA</option>
-          <option>RPS</option>
-          <option>SPF</option>
-          <option>Other</option>
-        </select>
+        <div class="mx-grid2">
+          <div class="mx-field">
+            <label class="mx-lbl" for="meetFed">Federation</label>
+            <div class="mx-well mx-well--text mx-well--sel">
+              <select id="meetFed">
+                <option value="">-- Select --</option>
+                <option>USAPL</option>
+                <option>IPF</option>
+                <option>USPA</option>
+                <option>RPS</option>
+                <option>SPF</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="mx-field">
+            <label class="mx-lbl" for="meetWeightClass">Weight class</label>
+            <div class="mx-well mx-well--text"><input type="text" id="meetWeightClass" placeholder="e.g. 83kg"></div>
+          </div>
+        </div>
 
-        <label for="meetWeightClass">Weight class</label>
-        <input type="text" id="meetWeightClass" placeholder="e.g. 83kg">
-
-        <button class="pl-full-btn" onclick="saveMeetDetails()">Save Meet Details</button>
+        <button type="button" class="pl-full-btn mx-cta" onclick="saveMeetDetails()">
+          <span>Save Meet Details</span>
+          <span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span>
+        </button>
       </div>
 
-      <div id="meetPrepDisplay" style="margin-top:20px;"></div>
+      <div id="meetPrepDisplay" class="meet-display"></div>
     </div>
   </div>
 </div>
@@ -19385,14 +19425,13 @@ function renderMeetPrep() {
   const daysRem = diffDays % 7;
 
   if (diffDays < 0) {
-    display.innerHTML = `<div style="color:var(--text-muted);text-align:center;padding:16px;">Meet has passed. Great lifting!</div>`;
+    display.innerHTML = '<div class="mx-empty">Meet has passed. Great lifting!</div>';
     return;
   }
 
   const savedMeet = JSON.parse(localStorage.getItem('plMeetDetails') || '{}');
-  const meetName = savedMeet.name ? `<div style="font-size:1rem;color:var(--secondary-text);margin-bottom:4px;">${savedMeet.name}</div>` : '';
-  const fedChip = savedMeet.fed ? `<span style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:0.78rem;color:var(--secondary-text);margin-right:6px;">${savedMeet.fed}</span>` : '';
-  const wcChip = savedMeet.weightClass ? `<span style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:0.78rem;color:var(--secondary-text);">${savedMeet.weightClass}</span>` : '';
+  const chips = [savedMeet.fed, savedMeet.weightClass].filter(Boolean)
+    .map(t => `<span class="mx-chip mx-chip--sm">${mxEsc(t)}</span>`).join('');
 
   // Build phase timeline
   const phases = [
@@ -19404,24 +19443,31 @@ function renderMeetPrep() {
 
   const phaseRows = phases.map(p => {
     const active = weeksOut <= p.start && weeksOut > p.end;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:${active ? 'rgba(45,125,91,0.18)' : 'var(--surface-bg)'};border:1px solid ${active ? 'var(--primary)' : 'var(--border-color)'};margin-bottom:6px;">
-      <span style="font-size:1.1rem;">${active ? '▶' : '○'}</span>
-      <div>
-        <div style="font-weight:600;color:${active ? 'var(--text-color)' : 'var(--secondary-text)'};">${p.label}</div>
-        <div style="font-size:0.78rem;color:var(--text-muted);">${p.weeks}</div>
-      </div>
-    </div>`;
+    return `
+      <div class="mx-row meet-phase${active ? ' is-active' : ''}"${active ? ' aria-current="step"' : ''}>
+        <span class="meet-phase-dot" aria-hidden="true"></span>
+        <div class="mx-row-main"><span class="mx-row-title">${p.label}</span><span class="mx-row-sub">${p.weeks}</span></div>
+        ${active ? '<span class="mx-chip mx-chip--green mx-chip--sm">Now</span>' : ''}
+      </div>`;
   }).join('');
 
   display.innerHTML = `
-    <div style="text-align:center;margin-bottom:16px;">
-      ${meetName}
-      <div style="margin-bottom:8px;">${fedChip}${wcChip}</div>
-      <div class="meet-week-chip">${weeksOut > 0 ? `${weeksOut}w ${daysRem}d out` : 'Meet Week!'}</div>
-      <div style="font-size:0.85rem;color:var(--text-muted);">${meetDate.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}</div>
-    </div>
-    <h4 style="margin:0 0 8px;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Prep Phases</h4>
-    ${phaseRows}`;
+    <section class="pod pod--hero mx-pod meet-hero" aria-label="Meet countdown">
+      <div class="pod-row">
+        <span class="mx-kicker">${savedMeet.name ? mxEsc(savedMeet.name) : 'Meet countdown'}</span>
+        <span class="mx-tags">${chips}</span>
+      </div>
+      <div class="meet-count">
+        ${weeksOut > 0
+          ? `<span class="mx-num">${weeksOut}<small>w</small> ${daysRem}<small>d</small></span><span class="meet-count-of">out</span>`
+          : '<span class="mx-num">Meet Week</span>'}
+      </div>
+      <div class="mx-meta">${meetDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
+    </section>
+    <section class="pod mx-pod" aria-label="Prep phases">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Prep Phases</h4></div>
+      <div>${phaseRows}</div>
+    </section>`;
 }
 
 window.saveMeetDetails = saveMeetDetails;
