@@ -1,0 +1,62 @@
+/* =============================================================
+   POSING TAB  (Modernist)
+   Ring, week strip and history rows. Shared blocks (pods, steppers,
+   presets, capsule CTA, chips, tags, meters) live in modernist-kit.css.
+   ============================================================= */
+
+/* ── Week hero ──────────────────────────────────────────────── */
+.posing-summary { margin-bottom: 12px; }
+
+.posing-hero-main { display: flex; align-items: center; gap: 18px; }
+.posing-ring { position: relative; width: 132px; height: 132px; flex: none; }
+.posing-ring svg { display: block; }
+.posing-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.posing-ring-center .mx-num { font-size: 38px; line-height: 1; }
+.posing-hero-tiles { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; }
+
+.posing-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.posing-day { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.posing-dot {
+  width: 100%;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.posing-dot--on    { background: var(--fill-btn-primary-mobile); color: var(--label-on-green); }
+.posing-dot--off   { background: var(--surface-hatch); border: 1px solid var(--border-row); }
+.posing-dot--today { border: 1.5px dashed var(--border-featured-strong); color: var(--green-90); }
+.posing-dlab {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--mx-label);
+}
+.posing-dlab--today { color: var(--green-90); }
+
+/* ── Target steppers (compact variant is defined in the kit) ── */
+
+/* ── History ────────────────────────────────────────────────── */
+.posing-row { align-items: flex-start; }
+.posing-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.posing-row .mx-row-main { gap: 8px; }
+.posing-row .mx-iconbtn { margin: -4px -8px 0 0; }
+
+@media (max-width: 360px) {
+  .posing-hero-main { flex-direction: column; align-items: stretch; }
+  .posing-ring { align-self: center; }
+}

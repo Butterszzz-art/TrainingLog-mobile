@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
   <link rel="stylesheet" href="css/cardio.css">
+  <link rel="stylesheet" href="css/posing.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
@@ -2441,29 +2442,88 @@
     <table style="display:none"><tbody id="cardioBody"></tbody></table>
   </div>
 
-  <div id="posingTab" class="tab-content">
-    <div class="panel active">
-      <h2>Posing Log</h2>
-      <p style="margin-top:-4px;">Track posing minutes, weekly target, streaks, and prep readiness.</p>
-      <div class="inputs-grid" style="margin-bottom:12px;">
-        <input type="date" id="posingDateInput">
-        <input type="number" id="posingMinutesInput" min="1" step="1" placeholder="Minutes">
-        <input type="number" id="posingTargetSessionsInput" min="1" step="1" placeholder="Target sessions / week">
-        <input type="number" id="posingTargetMinutesInput" min="10" step="5" placeholder="Target minutes / week">
-        <input type="text" id="posingNotesInput" placeholder="Notes (mandatories, transitions, stage flow)">
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-        <button onclick="savePosingTargets()">Save Weekly Target</button>
-        <button onclick="addPosingSession()">Log Posing Session</button>
-      </div>
-      <div id="posingSummaryCard" class="home-mission-progress" style="margin-bottom:10px;"></div>
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Minutes</th><th>Notes</th><th>Remove</th></tr>
-        </thead>
-        <tbody id="posingBody"></tbody>
-      </table>
+  <div id="posingTab" class="tab-content mx-tab">
+    <div class="mx-head">
+      <h2 class="pod-title">Posing Log</h2>
+      <p class="mx-sub">Track posing minutes, weekly target, streaks, and prep readiness.</p>
     </div>
+
+    <!-- Week hero: ring, sessions/streak tiles, 7-day strip (populated by renderPosingTab) -->
+    <div id="posingSummaryCard" class="posing-summary"></div>
+
+    <section class="pod mx-pod" aria-label="Log a posing session">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Log Session</h3>
+      </div>
+
+      <div class="mx-field">
+        <label class="mx-lbl" for="posingMinutesInput">Minutes</label>
+        <div class="mx-stepper">
+          <button type="button" class="mx-iconbtn" aria-label="Minus 5 minutes" onclick="stepPosingMinutes(-5)"><span class="ui-icon" data-icon="minus"></span></button>
+          <div class="mx-stepper-val">
+            <input type="number" id="posingMinutesInput" min="1" step="1" placeholder="0" inputmode="numeric" oninput="syncPosingPresets()">
+            <span class="mx-unit">min</span>
+          </div>
+          <button type="button" class="mx-iconbtn" aria-label="Plus 5 minutes" onclick="stepPosingMinutes(5)"><span class="ui-icon" data-icon="plus"></span></button>
+        </div>
+        <div class="mx-presets" id="posingPresets" role="group" aria-label="Quick minutes">
+          <button type="button" class="mx-preset" data-min="10" aria-pressed="false" onclick="setPosingMinutes(10)">10</button>
+          <button type="button" class="mx-preset" data-min="15" aria-pressed="false" onclick="setPosingMinutes(15)">15</button>
+          <button type="button" class="mx-preset" data-min="20" aria-pressed="false" onclick="setPosingMinutes(20)">20</button>
+          <button type="button" class="mx-preset" data-min="30" aria-pressed="false" onclick="setPosingMinutes(30)">30</button>
+          <button type="button" class="mx-preset" data-min="45" aria-pressed="false" onclick="setPosingMinutes(45)">45</button>
+        </div>
+      </div>
+
+      <div class="mx-field">
+        <label class="mx-lbl" for="posingDateInput">Date</label>
+        <div class="mx-well mx-well--text"><input type="date" id="posingDateInput"></div>
+      </div>
+
+      <div class="mx-field">
+        <label class="mx-lbl" for="posingNotesInput">Notes <em>mandatories, transitions, stage flow</em></label>
+        <div class="mx-well mx-well--text"><input type="text" id="posingNotesInput" placeholder="e.g. Quarter turns, front relaxed"></div>
+      </div>
+
+      <button type="button" class="mx-cta" onclick="addPosingSession()">
+        <span>Log posing session</span>
+        <span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span>
+      </button>
+    </section>
+
+    <section class="pod mx-pod" aria-label="Weekly target">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Weekly Target</h3>
+        <span class="mx-meta">Week starts Sunday</span>
+      </div>
+      <div class="mx-grid2">
+        <div class="mx-field">
+          <label class="mx-lbl" for="posingTargetSessionsInput">Sessions / week</label>
+          <div class="mx-stepper mx-stepper--sm">
+            <button type="button" class="mx-iconbtn" aria-label="Fewer sessions per week" onclick="stepPosingTarget('sessions', -1)"><span class="ui-icon" data-icon="minus"></span></button>
+            <input type="number" id="posingTargetSessionsInput" min="1" step="1" placeholder="4" inputmode="numeric">
+            <button type="button" class="mx-iconbtn" aria-label="More sessions per week" onclick="stepPosingTarget('sessions', 1)"><span class="ui-icon" data-icon="plus"></span></button>
+          </div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="posingTargetMinutesInput">Minutes / week</label>
+          <div class="mx-stepper mx-stepper--sm">
+            <button type="button" class="mx-iconbtn" aria-label="Fewer minutes per week" onclick="stepPosingTarget('minutes', -10)"><span class="ui-icon" data-icon="minus"></span></button>
+            <input type="number" id="posingTargetMinutesInput" min="10" step="5" placeholder="150" inputmode="numeric">
+            <button type="button" class="mx-iconbtn" aria-label="More minutes per week" onclick="stepPosingTarget('minutes', 10)"><span class="ui-icon" data-icon="plus"></span></button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="mx-outline mx-outline--block" onclick="savePosingTargets()">Save weekly target</button>
+    </section>
+
+    <section class="pod mx-pod" aria-label="Posing history">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">History</h3>
+        <span class="mx-meta" id="posingHistoryCount"></span>
+      </div>
+      <div id="posingBody" class="posing-history"></div>
+    </section>
   </div>
 
 <div id="macroTab" class="tab-content" style="position: relative; padding: 20px;">
@@ -3781,7 +3841,9 @@
     zap: ICON_SVG_OPEN + '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
     chevronDown: ICON_SVG_OPEN + '<polyline points="6 9 12 15 18 9"/></svg>',
     lightbulb: ICON_SVG_OPEN + '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A5.5 5.5 0 1 0 6 8.5c0 1.61.71 2.9 1.5 3.99C8.27 13.26 8.74 14 8.91 14z"/></svg>',
-    alertTriangle: ICON_SVG_OPEN + '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    alertTriangle: ICON_SVG_OPEN + '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    minus: ICON_SVG_OPEN + '<line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    chevronRight: ICON_SVG_OPEN + '<polyline points="9 6 15 12 9 18"/></svg>'
   };
   // Static markup uses <span data-icon="name"></span> (name → ICONS key)
   // instead of repeating raw SVG at every call site. Deferred to
@@ -10446,6 +10508,7 @@ function addPosingSession() {
 
   document.getElementById('posingMinutesInput').value = '';
   document.getElementById('posingNotesInput').value = '';
+  syncPosingPresets();
   renderPosingTab();
   renderHomeDashboard();
 }
@@ -10458,9 +10521,45 @@ function removePosingSession(sessionId) {
   renderHomeDashboard();
 }
 
+/** Highlight the quick-minute preset that matches the minutes field. */
+function syncPosingPresets() {
+  const v = Number(document.getElementById('posingMinutesInput')?.value) || 0;
+  document.querySelectorAll('#posingPresets .mx-preset').forEach(btn => {
+    const on = Number(btn.dataset.min) === v;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
+function setPosingMinutes(n) {
+  const input = document.getElementById('posingMinutesInput');
+  if (!input) return;
+  input.value = n;
+  syncPosingPresets();
+}
+
+function stepPosingMinutes(delta) {
+  const input = document.getElementById('posingMinutesInput');
+  if (!input) return;
+  const next = Math.max(0, (Number(input.value) || 0) + delta);
+  input.value = next > 0 ? next : '';
+  syncPosingPresets();
+}
+
+function stepPosingTarget(kind, delta) {
+  const input = document.getElementById(kind === 'minutes' ? 'posingTargetMinutesInput' : 'posingTargetSessionsInput');
+  if (!input) return;
+  const min = kind === 'minutes' ? 10 : 1;
+  input.value = Math.max(min, (Number(input.value) || 0) + delta);
+}
+
 window.savePosingTargets = savePosingTargets;
 window.addPosingSession = addPosingSession;
 window.removePosingSession = removePosingSession;
+window.syncPosingPresets = syncPosingPresets;
+window.setPosingMinutes = setPosingMinutes;
+window.stepPosingMinutes = stepPosingMinutes;
+window.stepPosingTarget = stepPosingTarget;
 
 function renderPosingTab() {
   if (!window.posingEngine) return;
@@ -10483,12 +10582,93 @@ function renderPosingTab() {
   const targetMinutesInput = document.getElementById('posingTargetMinutesInput');
   if (targetMinutesInput && !targetMinutesInput.value) targetMinutesInput.value = target.minutes;
 
-  summaryEl.textContent = `Week ${weekly.rangeStart} → ${weekly.rangeEnd}: ${weekly.sessions}/${weekly.targetSessions} sessions · ${weekly.totalMinutes}/${weekly.targetMinutes} min · streak ${streak} day${streak === 1 ? '' : 's'} · ${overdue.message}`;
-
+  const _esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const rows = window.posingEngine.getPosingHistory(userId, { limit: 30 });
+
+  // Minutes per day across the engine's (Sunday-start) week.
+  const weekStart = new Date(weekly.rangeStart + 'T00:00:00Z');
+  const allEntries = window.posingEngine.getPosingHistory(userId, { limit: 500 });
+  const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const days = dayLetters.map((letter, i) => {
+    const key = new Date(weekStart.getTime() + i * 86400000).toISOString().slice(0, 10);
+    const mins = allEntries.filter(e => String(e.date).slice(0, 10) === key).reduce((s, e) => s + (Number(e.minutes) || 0), 0);
+    return { key, letter, mins, today: key === today };
+  });
+  const dayFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const stripAria = days.filter(d => d.mins > 0).map(d => `${dayFull[days.indexOf(d)]} ${d.mins} minutes`).join(', ') || 'no sessions yet';
+  const strip = days.map(d => {
+    const cls = d.mins > 0 ? 'posing-dot posing-dot--on' : (d.today ? 'posing-dot posing-dot--today' : 'posing-dot posing-dot--off');
+    return `<div class="posing-day"><div class="${cls}">${d.mins > 0 ? d.mins : (d.today ? '—' : '')}</div><span class="posing-dlab${d.today ? ' posing-dlab--today' : ''}">${d.letter}</span></div>`;
+  }).join('');
+
+  const _fmtWk = (k) => new Date(k + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const circ = 2 * Math.PI * 55;
+  const dash = ((Math.min(100, weekly.minutesPercent) / 100) * circ).toFixed(1);
+
+  summaryEl.innerHTML = `
+    <section class="pod pod--hero mx-pod" aria-label="Posing this week">
+      <div class="pod-row">
+        <span class="mx-kicker">This week · ${_fmtWk(weekly.rangeStart)} – ${_fmtWk(weekly.rangeEnd)}</span>
+        <span class="mx-chip ${overdue.overdue ? 'mx-chip--brass' : 'mx-chip--green'}">${overdue.overdue ? 'Overdue' : 'On track'}</span>
+      </div>
+      <div class="posing-hero-main">
+        <div class="posing-ring" role="img" aria-label="${weekly.totalMinutes} of ${weekly.targetMinutes} minutes this week">
+          <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
+            <defs>
+              <linearGradient id="posingRingGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#6fae8b"></stop>
+                <stop offset="1" stop-color="#2f8a63"></stop>
+              </linearGradient>
+            </defs>
+            <circle cx="66" cy="66" r="55" fill="none" stroke="#0b100e" stroke-width="12"></circle>
+            <circle cx="66" cy="66" r="55" fill="none" stroke="rgba(116,138,126,0.18)" stroke-width="1"></circle>
+            <circle cx="66" cy="66" r="55" fill="none" stroke="url(#posingRingGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${dash} ${circ.toFixed(1)}" transform="rotate(-90 66 66)"></circle>
+          </svg>
+          <div class="posing-ring-center">
+            <span class="mx-num">${weekly.totalMinutes}</span>
+            <span class="mx-unit">/ ${weekly.targetMinutes} min</span>
+          </div>
+        </div>
+        <div class="posing-hero-tiles">
+          <div class="mx-stat"><span class="mx-stat-l">Sessions</span><span class="mx-stat-v">${weekly.sessions}<small>/ ${weekly.targetSessions}</small></span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Streak</span><span class="mx-stat-v">${streak}<small>day${streak === 1 ? '' : 's'}</small></span></div>
+        </div>
+      </div>
+      <div class="posing-strip" role="img" aria-label="Posing per day: ${stripAria}">${strip}</div>
+      <p class="mx-para">${_esc(overdue.message)}</p>
+    </section>`;
+
+  const countEl = document.getElementById('posingHistoryCount');
+  if (countEl) countEl.textContent = `${rows.length} session${rows.length === 1 ? '' : 's'}`;
+
+  const maxMin = Math.max(...rows.map(r => Number(r.minutes) || 0), 1);
   body.innerHTML = rows.length
-    ? rows.map(entry => `<tr><td>${entry.date}</td><td>${entry.minutes}</td><td>${entry.notes || '—'}</td><td><button class="remove-btn" onclick="removePosingSession('${entry.id}')"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`).join('')
-    : '<tr><td colspan="4" style="opacity:.75;">No posing sessions yet.</td></tr>';
+    ? rows.map(entry => {
+        const d = new Date(String(entry.date).slice(0, 10) + 'T00:00:00');
+        const valid = !isNaN(d.getTime());
+        const day = valid ? d.getDate() : '';
+        const mon = valid ? d.toLocaleDateString(undefined, { month: 'short' }) : '';
+        const dow = valid ? d.toLocaleDateString(undefined, { weekday: 'long' }) : _esc(entry.date);
+        const pct = Math.round(((Number(entry.minutes) || 0) / maxMin) * 100);
+        const tags = String(entry.notes || '').split(/[,;|·]+/).map(s => s.trim()).filter(Boolean)
+          .map(t => `<span class="mx-tag">${_esc(t)}</span>`).join('');
+        return `
+          <div class="mx-row posing-row">
+            <div class="mx-date"><b>${day}</b><span>${mon}</span></div>
+            <div class="mx-row-main">
+              <div class="posing-row-top">
+                <span class="mx-row-title">${dow}</span>
+                <span class="mx-row-big">${_esc(entry.minutes)}<span class="mx-unit"> min</span></span>
+              </div>
+              <div class="mx-meter mx-meter--thin" role="img" aria-label="${_esc(entry.minutes)} minutes"><i style="width:${pct}%"></i></div>
+              ${tags ? `<div class="mx-tags">${tags}</div>` : ''}
+            </div>
+            <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="removePosingSession('${_esc(entry.id)}')" title="Remove" aria-label="Remove ${dow} ${day} ${mon} session"><span class="ui-icon">${ICONS.x}</span></button>
+          </div>`;
+      }).join('')
+    : '<div class="mx-empty">No posing sessions yet.</div>';
+
+  syncPosingPresets();
 }
 
 function renderProgressComplianceSummary() {

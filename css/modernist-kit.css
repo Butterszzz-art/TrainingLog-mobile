@@ -224,6 +224,8 @@
 }
 .mx-well input::-webkit-inner-spin-button,
 .mx-well input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.mx-well input[type="date"],
+.mx-well input[type="time"] { color-scheme: dark; }
 .mx-well input::placeholder,
 .mx-well textarea::placeholder { color: var(--mx-faint); }
 .mx-well--num input { font-family: var(--font-display); font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -588,3 +590,16 @@
   color: var(--green-90);
   margin-bottom: 3px;
 }
+
+/* ── Tab shell + page header ────────────────────────────────── */
+.mx-tab { padding: 14px 12px 80px; max-width: 600px; margin: 0 auto; }
+.mx-head { padding: 2px 4px 12px; text-align: left; }
+.mx-head .pod-title { font-size: 20px; margin: 0; text-align: left; }
+.mx-sub { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-tertiary); }
+/* base.css gives h3 1.4rem; pod titles inside pods are 20px */
+.mx-h3 { font-size: 20px; line-height: 1.1; letter-spacing: 0.02em; margin: 0; }
+
+/* Compact stepper (two side by side) */
+.mx-stepper--sm { padding: 4px; gap: 4px; }
+.mx-stepper--sm .mx-iconbtn { width: 40px; height: 40px; }
+.mx-stepper--sm input { flex: 1; width: 100%; text-align: center; font-size: 26px; }
