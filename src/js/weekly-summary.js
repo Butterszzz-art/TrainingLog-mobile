@@ -39,7 +39,12 @@
   /* ── Data gathering ──────────────────────────────────────── */
 
   function _gatherWeekData(username) {
-    const workouts = _parse(`workouts_${username}`) || [];
+    // workouts_{user} alone only covers a rolling ~7 days (older entries
+    // move to workoutHistory_{user} — see archiveOldWorkouts.js). That
+    // window is normally enough to cover the current calendar week, but
+    // using the merged store keeps this correct at timezone/DST edges
+    // and consistent with the other consumers of workout history.
+    const workouts = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
     const thisWeek = workouts.filter(w => _isThisWeek(w.date));
 
     // Volume & sets
@@ -146,7 +151,7 @@
     const d = _gatherWeekData(username);
     const mon = _isoWeekStart();
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const workouts = _parse(`workouts_${username}`) || [];
+    const workouts = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
     const workedDays = new Set(workouts.filter(w => _isThisWeek(w.date)).map(w => w.date));
 
     // Mini calendar dots

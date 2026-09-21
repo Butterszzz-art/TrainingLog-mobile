@@ -108,8 +108,16 @@
 
   /* ── Stats computation ───────────────────────────────────── */
 
-  function _computeStats(username) {
-    const workouts     = _parse(`workouts_${username}`) || [];
+  async function _computeStats(username) {
+    // Milestones like "Century Club" (100 workouts) or a 30-day streak
+    // need real lifetime history, not just the trailing ~7 days that
+    // workouts_{user} retains locally (older entries are archived to
+    // workoutHistory_{user} and, after 4 weeks, hard-saved to the backend
+    // and dropped from localStorage entirely) — so these badges were
+    // effectively unearnable no matter how long someone trained.
+    const workouts     = window.getAllWorkoutsForUserIncludingBackend
+      ? await window.getAllWorkoutsForUserIncludingBackend(username)
+      : (_parse(`workouts_${username}`) || []);
     const prBoard      = _parse(`prBoard_${username}`)  || {};
     const readiness    = _parse('dailyReadiness_v1')     || {};
     const measurements = _parse(`bodyMeasurements_${username}`) || [];
@@ -181,12 +189,12 @@
 
   /* ── Render ──────────────────────────────────────────────── */
 
-  function renderChallenges() {
+  async function renderChallenges() {
     const host = document.getElementById('milestoneBadges');
     if (!host) return;
 
     const username = _user();
-    const stats = _computeStats(username);
+    const stats = await _computeStats(username);
     const month = _thisMonth();
 
     // Load earned milestones from storage

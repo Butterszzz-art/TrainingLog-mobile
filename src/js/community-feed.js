@@ -45,7 +45,11 @@
   /* ── ⑥ Activity feed ─────────────────────────────────────── */
 
   function _buildActivityItems(username) {
-    const workouts = _parse(`workouts_${username}`) || [];
+    // workouts_{user} alone only covers a rolling ~7 days (older entries
+    // move to workoutHistory_{user} — see archiveOldWorkouts.js). Merge
+    // both so the "last 15 workouts" feed still has something to show for
+    // users who train less than 15 times a week.
+    const workouts = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
     const posts    = _parse('communityPosts_v1') || [];
     const items    = [];
 
@@ -201,7 +205,9 @@
   function _weeklyProgress(username) {
     const weekStart = _thisWeekStart();
     const today     = new Date().toISOString().slice(0, 10);
-    const workouts  = (_parse(`workouts_${username}`) || [])
+    // Merge workouts_{user} with workoutHistory_{user} for the same reason
+    // as _buildActivityItems above — see archiveOldWorkouts.js.
+    const workouts  = ((window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [])
       .filter(w => w.date >= weekStart && w.date <= today);
 
     // Pick the "challenge of the week" based on ISO week number

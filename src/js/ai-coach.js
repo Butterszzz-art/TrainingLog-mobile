@@ -40,8 +40,13 @@
     } catch {}
 
     try {
-      const raw = JSON.parse(localStorage.getItem(`workouts_${username}`) || '[]');
+      // workouts_{username} alone only covers the trailing ~7 days
+      // (archiveOldWorkouts.js moves older entries into
+      // workoutHistory_{username}), so a user who trained recently but not
+      // in the last week would otherwise look like they have no history.
+      const raw = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
       ctx.recentWorkouts = raw
+        .slice()
         .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
         .slice(0, 5)
         .map(w => ({ date: w.date, name: w.name || w.templateName, sets: w.sets?.length }));

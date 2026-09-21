@@ -36,7 +36,10 @@
 
   function _gatherData(username) {
     const range       = _last30Days();
-    const workouts    = _parse(`workouts_${username}`) || [];
+    // workouts_{user} only holds the trailing ~7 days — anything older is
+    // moved into workoutHistory_{user} by archiveOldWorkouts(). A 30-day
+    // report needs both or everything past day 7 silently disappears.
+    const workouts    = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
     const prBoard     = _parse(`prBoard_${username}`)  || {};
     const readiness   = _parse('dailyReadiness_v1')     || {};
     const measurements= _parse(`bodyMeasurements_${username}`) || [];

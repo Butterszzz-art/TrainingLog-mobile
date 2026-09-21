@@ -44,11 +44,16 @@
 
   /* ── Export: Workouts ────────────────────────────────────── */
 
-  window.exportWorkoutsCSV = function () {
+  window.exportWorkoutsCSV = async function () {
     const username = _user();
     if (!username) { alert('Log in first.'); return; }
 
-    const workouts = _parse('workouts_' + username) || [];
+    // workouts_{user} alone only holds the trailing ~7 days — everything
+    // older is archived locally then hard-saved to the backend, so a plain
+    // read of that key silently drops most of a long-time user's history.
+    const workouts = window.getAllWorkoutsForUserIncludingBackend
+      ? await window.getAllWorkoutsForUserIncludingBackend(username)
+      : (_parse('workouts_' + username) || []);
     if (!workouts.length) { alert('No workouts to export.'); return; }
 
     const rows = [['Date', 'Exercise', 'Set', 'Reps', 'Weight', 'Unit', 'RPE']];
@@ -123,14 +128,18 @@
 
   /* ── Export: Full JSON dump ─────────────────────────────── */
 
-  window.exportAllJSON = function () {
+  window.exportAllJSON = async function () {
     const username = _user();
     if (!username) { alert('Log in first.'); return; }
+
+    const workouts = window.getAllWorkoutsForUserIncludingBackend
+      ? await window.getAllWorkoutsForUserIncludingBackend(username)
+      : (_parse('workouts_' + username) || []);
 
     const dump = {
       exportedAt: new Date().toISOString(),
       username,
-      workouts:     _parse('workouts_' + username)           || [],
+      workouts,
       weightLog:    _parse('weightLog_' + username)          ||
                     _parse('weightEntries')                   || [],
       measurements: _parse('bodyMeasurements_' + username)   || [],
