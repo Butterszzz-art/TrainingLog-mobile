@@ -55,6 +55,33 @@
     return count;
   }
 
+  // ── Multi-week programs ────────────────────────────────────────────────────
+  // Library programs run for several weeks with different sets each week. Day
+  // and week come from how many training days have passed, so a missed week
+  // doesn't skip ahead; single-week programs behave exactly as before.
+
+  function _core() { return window.programBuilderV2Core || null; }
+
+  function _weekCount(program) {
+    const core = _core();
+    return core ? core.getWeekCount(program) : 1;
+  }
+
+  /** The program day for the nth training day since the start (0-based). */
+  function _dayAt(program, trainingIndex, nDays) {
+    const core = _core();
+    const week = Math.floor(trainingIndex / nDays) + 1;
+    const list = core ? core.getWeekDays(program, week) : program.days;
+    return (list && list[trainingIndex % nDays]) || program.days[trainingIndex % nDays];
+  }
+
+  /** The phase label of a 1-based program week, e.g. "12 working sets". */
+  function _phaseFor(program, week) {
+    if (!Array.isArray(program.weeks) || !program.weeks.length) return '';
+    const w = program.weeks[(week - 1) % program.weeks.length];
+    return (w && w.phase) || '';
+  }
+
   // ── Core logic ─────────────────────────────────────────────────────────────
 
   function _buildInfo() {
@@ -85,8 +112,12 @@
     const todayIdx  = tdBefore % nDays;
     const isTrain   = trainingNums.includes(today.getDay()) && today >= startDate;
 
-    // Week number (1-based)
-    const weekNum = Math.floor((today - startDate) / (7 * 86400000)) + 1;
+    // Week number (1-based). Multi-week programs follow training days done.
+    const weekCount = _weekCount(program);
+    const weekNum = weekCount > 1
+      ? (Math.floor(tdBefore / nDays) % weekCount) + 1
+      : Math.floor((today - startDate) / (7 * 86400000)) + 1;
+    const todayDay = _dayAt(program, tdBefore, nDays);
 
     // Monday of the current week
     const dow       = today.getDay();
@@ -109,7 +140,7 @@
       let dayName = null;
       if (active_day) {
         const idx = (tdBeforeWeek + weekTrainCount) % nDays;
-        dayName = program.days[idx]?.name || `Day ${idx + 1}`;
+        dayName = _dayAt(program, tdBeforeWeek + weekTrainCount, nDays)?.name || `Day ${idx + 1}`;
         weekTrainCount++;
       }
 
@@ -126,8 +157,10 @@
     return {
       program,
       isTodayTraining: isTrain,
-      todayDayName:    program.days[todayIdx]?.name || `Day ${todayIdx + 1}`,
+      todayDayName:    todayDay?.name || `Day ${todayIdx + 1}`,
       weekNum:         Math.max(1, weekNum),
+      weekCount,
+      phase:           weekCount > 1 ? _phaseFor(program, weekNum) : '',
       weekDays,
       totalCompleted:  tdBefore,
     };
@@ -140,6 +173,7 @@
     if (!name) return '';
     // "Upper Body A" → "Upper A"  |  "Push Day 1" → "Push 1"  |  short names untouched
     return name
+      .replace(/\s*\([^)]*\)/g, '')
       .replace(/\b(body|day)\b/gi, '')
       .replace(/\s{2,}/g, ' ')
       .trim()
@@ -153,7 +187,7 @@
     const info = _buildInfo();
     if (!info) { el.innerHTML = ''; return; }
 
-    const { program, isTodayTraining, todayDayName, weekNum, weekDays } = info;
+    const { program, isTodayTraining, todayDayName, weekNum, weekCount, phase, weekDays } = info;
 
     // Weekly split strip
     const strip = weekDays.map(d => {
@@ -174,7 +208,7 @@
       <div class="tpc-card">
         <div class="tpc-header">
           <span class="tpc-eyebrow">📅 Today's Session</span>
-          <span class="tpc-week-badge">Week ${weekNum}</span>
+          <span class="tpc-week-badge">${weekCount > 1 ? `Week ${weekNum} of ${weekCount}` : `Week ${weekNum}`}</span>
         </div>
 
         <div class="tpc-main">
@@ -182,7 +216,7 @@
             ? `<span class="tpc-day-name">${todayDayName}</span>`
             : `<span class="tpc-day-name tpc-day-name--rest">Rest Day 💤</span>`
           }
-          <span class="tpc-program-name">${program.name}</span>
+          <span class="tpc-program-name">${program.name}${phase ? ` · ${phase}` : ''}</span>
         </div>
 
         <div class="tpc-strip">${strip}</div>

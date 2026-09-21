@@ -1,0 +1,187 @@
+/* =============================================================
+   LIBRARY — programs and guides view in the Program tab.
+   Scoped to #progLibraryView. Built on the shared tokens plus the
+   .pill-nav / .cta-capsule / .mx-tag / .mx-kicker building blocks.
+   ============================================================= */
+
+#progLibraryView { padding: 12px 12px 96px; }
+#progLibraryView .plib { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* ── Header + notices ─────────────────────────────────────── */
+#progLibraryView .plib-head { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 0; }
+#progLibraryView .plib-lede { margin: 0; font-size: 14px; line-height: 1.5; color: var(--secondary-text); }
+
+#progLibraryView .plib-note {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-brass);
+  background: var(--warning-bg);
+  color: var(--brass-light);
+  font-size: 13px;
+  line-height: 1.45;
+}
+#progLibraryView .plib-link {
+  background: none; border: none; padding: 0; margin: 0; box-shadow: none;
+  color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer;
+}
+
+#progLibraryView .plib-upsell {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-featured);
+  background: rgba(47, 138, 99, 0.10);
+}
+#progLibraryView .plib-upsell > .ui-icon { width: 20px; height: 20px; flex: none; color: var(--green-90); }
+#progLibraryView .plib-upsell > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#progLibraryView .plib-upsell strong { font-size: 14px; color: var(--text-color); }
+#progLibraryView .plib-upsell span { font-size: 12.5px; color: var(--secondary-text); }
+#progLibraryView .plib-upsell-btn {
+  flex: none; margin: 0; box-shadow: none;
+  padding: 8px 16px; border-radius: var(--radius-pill); border: none;
+  background: var(--pill-bg-active); color: var(--pill-text-active);
+  font-family: var(--font-label); font-weight: 800; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer;
+}
+
+#progLibraryView .plib-state {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 36px 16px; text-align: center; color: var(--secondary-text); font-size: 14px;
+}
+#progLibraryView .plib-retry { flex: none; width: auto; padding: 9px 22px; cursor: pointer; }
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+#progLibraryView .plib-tabs { padding: 0; }
+#progLibraryView .plib-tabs .pill { flex: 1; }
+
+/* ── Cards ────────────────────────────────────────────────── */
+#progLibraryView .plib-list { display: flex; flex-direction: column; gap: 10px; }
+#progLibraryView .plib-card {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; margin: 0;
+  padding: 14px; text-align: left; cursor: pointer; box-shadow: var(--pod-bevel);
+  border-radius: var(--radius-pod); border: 1px solid var(--pod-border);
+  background: var(--pod-bg); color: var(--text-color);
+}
+#progLibraryView .plib-card:hover,
+#progLibraryView .plib-card:focus-visible { background: var(--pod-bg-hover); border-color: var(--border-hover); }
+#progLibraryView .plib-card-ico {
+  flex: none; width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(47, 138, 99, 0.13); border: 1px solid var(--border-featured); color: var(--green-90);
+}
+#progLibraryView .plib-card-ico .ui-icon { width: 20px; height: 20px; }
+#progLibraryView .plib-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+#progLibraryView .plib-card-title { font-family: var(--font-display); font-size: 19px; line-height: 1.15; letter-spacing: 0.01em; }
+#progLibraryView .plib-card-sub { font-size: 13px; line-height: 1.4; color: var(--secondary-text); }
+#progLibraryView .plib-card-end { flex: none; align-self: center; color: var(--text-muted); }
+#progLibraryView .plib-card-end .ui-icon { width: 18px; height: 18px; }
+
+/* ── Detail ───────────────────────────────────────────────── */
+#progLibraryView .plib-back {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+  margin: 0; padding: 6px 10px 6px 4px; border: none; background: none; box-shadow: none; cursor: pointer;
+  color: var(--secondary-text); font-family: var(--font-label); font-size: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}
+#progLibraryView .plib-back .ui-icon { width: 18px; height: 18px; }
+
+#progLibraryView .plib-detail-head { display: flex; flex-direction: column; gap: 8px; }
+#progLibraryView .plib-title { margin: 0; font-family: var(--font-display); font-size: 28px; line-height: 1.1; font-weight: 400; color: var(--text-color); }
+#progLibraryView .plib-sub { margin: 0; font-size: 14px; color: var(--secondary-text); }
+#progLibraryView .plib-para { margin: 4px 0 0; font-size: 14px; line-height: 1.55; color: var(--secondary-text); }
+
+#progLibraryView .plib-actions { display: flex; flex-direction: column; gap: 10px; }
+#progLibraryView .plib-add { flex: none; width: 100%; padding: 13px 0; cursor: pointer; font-size: 13px; }
+
+#progLibraryView .plib-section { display: flex; flex-direction: column; gap: 10px; }
+
+#progLibraryView .plib-days-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+#progLibraryView .plib-days-list li {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-radius: var(--radius-tight); border: 1px solid var(--border-row); background: var(--pod-bg); color: var(--text-color); font-size: 14px;
+}
+#progLibraryView .plib-days-list .ui-icon { width: 14px; height: 14px; color: var(--text-muted); flex: none; }
+
+/* guide accordion */
+#progLibraryView .plib-guide { border-radius: var(--radius-tight); border: 1px solid var(--border-row); background: var(--pod-bg); }
+#progLibraryView .plib-guide summary {
+  cursor: pointer; padding: 12px 14px; font-size: 14px; font-weight: 700; color: var(--text-color); list-style: none;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+#progLibraryView .plib-guide summary::-webkit-details-marker { display: none; }
+#progLibraryView .plib-guide summary::after { content: "+"; font-size: 18px; color: var(--text-muted); }
+#progLibraryView .plib-guide[open] summary::after { content: "\2212"; }
+#progLibraryView .plib-guide p { margin: 0; padding: 0 14px 12px; font-size: 13.5px; line-height: 1.55; color: var(--secondary-text); }
+
+/* phases + week picker */
+#progLibraryView .plib-phases { display: flex; flex-direction: column; gap: 6px; }
+#progLibraryView .plib-phase {
+  display: flex; justify-content: space-between; gap: 10px; padding: 9px 14px;
+  border-radius: var(--radius-tight); border: 1px solid var(--border-row); background: var(--pod-bg); font-size: 13.5px;
+}
+#progLibraryView .plib-phase strong { color: var(--text-color); }
+#progLibraryView .plib-phase span { color: var(--secondary-text); text-align: right; }
+#progLibraryView .plib-weekpick { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+#progLibraryView .plib-weekpick::-webkit-scrollbar { display: none; }
+#progLibraryView .plib-weekbtn {
+  flex: none; min-width: 40px; height: 36px; margin: 0; padding: 0 10px; box-shadow: none; cursor: pointer;
+  border-radius: var(--radius-pill); border: 1px solid var(--pill-border); background: var(--pill-bg); color: var(--text-muted);
+  font-family: var(--font-label); font-size: 14px; font-weight: 800;
+}
+#progLibraryView .plib-weekbtn.active { background: var(--pill-bg-active); border-color: transparent; color: var(--pill-text-active); }
+
+/* a day of exercises */
+#progLibraryView .plib-day {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px;
+  border-radius: var(--radius-pod); border: 1px solid var(--pod-border); background: var(--pod-bg); box-shadow: var(--pod-bevel);
+}
+#progLibraryView .plib-day-name { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 400; color: var(--text-color); }
+#progLibraryView .plib-ex-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+#progLibraryView .plib-ex { display: flex; flex-direction: column; gap: 5px; padding: 9px 0; border-top: 1px solid var(--border-row); }
+#progLibraryView .plib-ex:first-child { border-top: none; }
+#progLibraryView .plib-ex-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+#progLibraryView .plib-ex-name { font-size: 14.5px; font-weight: 600; color: var(--text-color); }
+#progLibraryView .plib-ex-sets { flex: none; font-variant-numeric: tabular-nums; font-size: 13.5px; color: var(--green-90); font-weight: 700; }
+#progLibraryView .plib-ex-note { font-size: 12.5px; line-height: 1.45; color: var(--text-muted); }
+
+/* ── Guide reader ─────────────────────────────────────────── */
+#progLibraryView .plib-search {
+  display: flex; align-items: center; gap: 10px; padding: 0 14px; min-height: 46px;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-chip); background: var(--pod-bg-alt); color: var(--text-muted);
+}
+#progLibraryView .plib-search:focus-within { outline: 2px solid var(--green-70); outline-offset: 2px; }
+#progLibraryView .plib-search .ui-icon { width: 18px; height: 18px; flex: none; }
+#progLibraryView .plib-search input {
+  flex: 1; min-width: 0; margin: 0; padding: 12px 0; border: none; background: none; box-shadow: none; outline: none;
+  color: var(--text-color); font-family: var(--font-body); font-size: 16px;
+}
+#progLibraryView .plib-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+#progLibraryView .plib-chapters { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+#progLibraryView .plib-chapters::-webkit-scrollbar { display: none; }
+#progLibraryView .plib-chapter {
+  flex: none; margin: 0; padding: 9px 16px; box-shadow: none; cursor: pointer;
+  border-radius: var(--radius-pill); border: 1px solid var(--pill-border); background: var(--pill-bg); color: var(--text-muted);
+  font-family: var(--font-label); font-size: 14px; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;
+}
+#progLibraryView .plib-chapter.active { background: var(--pill-bg-active); border-color: transparent; color: var(--pill-text-active); }
+
+#progLibraryView .plib-reader { display: flex; flex-direction: column; gap: 14px; }
+#progLibraryView .plib-chapter-title { margin: 6px 0 0; font-family: var(--font-display); font-size: 22px; font-weight: 400; color: var(--text-color); }
+#progLibraryView .plib-hit-chapter { margin-top: 4px; }
+#progLibraryView .plib-hit-chapter { font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+#progLibraryView .plib-sec {
+  padding: 16px; border-radius: var(--radius-pod); border: 1px solid var(--pod-border); background: var(--pod-bg); box-shadow: var(--pod-bevel);
+}
+#progLibraryView .plib-sec h3 { margin: 0 0 8px; font-size: 16px; line-height: 1.35; font-weight: 700; color: var(--text-color); }
+#progLibraryView .plib-sec p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.65; color: var(--secondary-text); }
+#progLibraryView .plib-sec p:last-child { margin-bottom: 0; }
+#progLibraryView .plib-sec--fade { -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+
+#progLibraryView .plib-table { width: 100%; margin: 10px 0 0; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+#progLibraryView .plib-table caption { text-align: left; padding: 6px 0; font-weight: 700; color: var(--text-color); }
+#progLibraryView .plib-table th,
+#progLibraryView .plib-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border-row); color: var(--secondary-text); }
+#progLibraryView .plib-table th { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+
+#progLibraryView .plib-pager { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+#progLibraryView .plib-pager .cta-capsule-outline { flex: none; width: 100%; padding: 13px 12px; cursor: pointer; font-size: 13px; }

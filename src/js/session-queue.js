@@ -77,15 +77,21 @@
     if (!trainingNums.includes(today.getDay()) || today < startDate) return null; // rest day
 
     const tdBefore = _countTrainingDaysBetween(startDate, today, trainingNums);
-    const idx = tdBefore % program.days.length;
-    return { ...program.days[idx], programName: program.name };
+    const nDays = program.days.length;
+    const idx = tdBefore % nDays;
+    // Multi-week programs (library) have different days each week.
+    const core = global.programBuilderV2Core;
+    const weekDays = core ? core.getWeekDays(program, Math.floor(tdBefore / nDays) + 1) : program.days;
+    return { ...((weekDays && weekDays[idx]) || program.days[idx]), programName: program.name };
   }
 
   function _setSummary(ex) {
     const sets = Array.isArray(ex.sets) ? ex.sets : [];
     if (!sets.length) return '';
     const first = sets[0];
-    const reps = first.reps != null ? first.reps : '?';
+    const reps = first.reps != null
+      ? (first.repsMax > first.reps ? `${first.reps}-${first.repsMax}` : first.reps)
+      : '?';
     const weight = first.weight != null ? `${first.weight}` : null;
     return weight ? `${sets.length}×${reps} · ${weight}` : `${sets.length}×${reps}`;
   }

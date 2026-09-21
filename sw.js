@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v6';
+const CACHE_VERSION = 'pocket-coach-v7';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -52,6 +52,8 @@ const APP_SHELL = [
   '/src/js/progress-report.js',
   '/src/js/ProgramTabV2.js',
   '/src/js/programBuilderV2Core.js',
+  '/src/js/premium-library.js',
+  '/css/library.css',
   '/src/js/crossfit.js',
   '/src/js/community-feed.js',
   '/src/js/today-program.js',
@@ -105,6 +107,11 @@ self.addEventListener('fetch', (event) => {
 
   // Skip non-GET requests (POST/PUT handled by offline queue in main thread)
   if (request.method !== 'GET') return;
+
+  // Paid ebooks/programs are never put in the shared cache: it is keyed by URL
+  // only, so a cached copy could be served to another (or a downgraded) account.
+  // The app keeps its own per-account offline copy and wipes it on logout.
+  if (url.pathname.includes('/api/premium/')) return;
 
   // API GET requests: network-first, fall back to cached response
   if (url.pathname.startsWith('/api/') || url.origin !== location.origin) {
