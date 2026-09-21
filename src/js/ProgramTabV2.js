@@ -1318,16 +1318,25 @@
   window.showProgramView = function showProgramView(view) {
     const builderContainer = document.getElementById('programBuilderContainer');
     const listView         = document.getElementById('progListView');
+    const libraryView      = document.getElementById('progLibraryView');
     const btns             = document.querySelectorAll('#progTopNav .prog-top-btn');
+    const setActive = (n) => btns.forEach((b, i) => b.classList.toggle('active', i === n));
 
-    if (view === 'list') {
+    if (libraryView) libraryView.style.display = view === 'library' ? '' : 'none';
+
+    if (view === 'library') {
+      if (builderContainer) builderContainer.style.display = 'none';
+      if (listView) listView.style.display = 'none';
+      setActive(2);
+      if (window.PremiumLibrary) window.PremiumLibrary.show();
+    } else if (view === 'list') {
       if (builderContainer) builderContainer.style.display = 'none';
       if (listView) { listView.style.display = ''; renderProgramList(); }
-      btns.forEach((b, i) => b.classList.toggle('active', i === 1));
+      setActive(1);
     } else {
       if (builderContainer) builderContainer.style.display = '';
       if (listView) listView.style.display = 'none';
-      btns.forEach((b, i) => b.classList.toggle('active', i === 0));
+      setActive(0);
       // Init if not already mounted
       if (typeof window.initProgramBuilder === 'function') window.initProgramBuilder();
     }

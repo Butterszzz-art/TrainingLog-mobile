@@ -204,60 +204,140 @@
     global.localStorage.removeItem(draftStorageKey(userId));
   }
 
+  function optionalNumber(value) {
+    if (value === null || value === undefined || value === "") return null;
+    return Number.isFinite(Number(value)) ? Number(value) : null;
+  }
+
+  function normalizeDays(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(function (day, dayIndex) {
+      const fallbackName = "Day " + (dayIndex + 1);
+      const safeDay = day && typeof day === "object" ? day : {};
+      const safeExercises = Array.isArray(safeDay.exercises) ? safeDay.exercises : [];
+      return {
+        dayId:
+          typeof safeDay.dayId === "string" && safeDay.dayId.trim()
+            ? safeDay.dayId
+            : "day-" + dayIndex + "-" + Date.now(),
+        name: typeof safeDay.name === "string" && safeDay.name.trim() ? safeDay.name.trim() : fallbackName,
+        notes: typeof safeDay.notes === "string" ? safeDay.notes : "",
+        exercises: safeExercises.map(function (exercise, exerciseIndex) {
+          const safeExercise = exercise && typeof exercise === "object" ? exercise : {};
+          const safeSets = Array.isArray(safeExercise.sets) ? safeExercise.sets : [];
+          const normalizedExercise = {
+            exerciseId:
+              typeof safeExercise.exerciseId === "string" && safeExercise.exerciseId.trim()
+                ? safeExercise.exerciseId
+                : "ex-" + dayIndex + "-" + exerciseIndex + "-" + Date.now(),
+            name:
+              typeof safeExercise.name === "string" && safeExercise.name.trim()
+                ? safeExercise.name.trim()
+                : "Exercise " + (exerciseIndex + 1),
+            notes: typeof safeExercise.notes === "string" ? safeExercise.notes : "",
+            rirNote: typeof safeExercise.rirNote === "string" ? safeExercise.rirNote : "",
+            rpeNote: typeof safeExercise.rpeNote === "string" ? safeExercise.rpeNote : "",
+            progressionNotes:
+              typeof safeExercise.progressionNotes === "string" ? safeExercise.progressionNotes : "",
+            archetypeTags: Array.isArray(safeExercise.archetypeTags)
+              ? safeExercise.archetypeTags.filter(function (tag) {
+                  return typeof tag === "string" && tag.trim();
+                })
+              : [],
+            sets: safeSets.map(function (set) {
+              const safeSet = set && typeof set === "object" ? set : {};
+              const normalizedSet = {
+                setType: typeof safeSet.setType === "string" && safeSet.setType ? safeSet.setType : "straight",
+                reps: optionalNumber(safeSet.reps),
+                weight: optionalNumber(safeSet.weight),
+                rpe: optionalNumber(safeSet.rpe),
+                rir: optionalNumber(safeSet.rir),
+                restSec: Number.isFinite(Number(safeSet.restSec)) ? Number(safeSet.restSec) : 120,
+              };
+              // upper end of a rep range, e.g. reps 8 / repsMax 10 for "8-10"
+              const repsMax = optionalNumber(safeSet.repsMax);
+              if (repsMax !== null) normalizedSet.repsMax = repsMax;
+              return normalizedSet;
+            }),
+          };
+          // training techniques (rest-pause, partials...) and superset pairing
+          const techniques = Array.isArray(safeExercise.techniques)
+            ? safeExercise.techniques.filter(function (tag) {
+                return typeof tag === "string" && tag.trim();
+              })
+            : [];
+          if (techniques.length) normalizedExercise.techniques = techniques;
+          if (typeof safeExercise.supersetGroup === "string" && safeExercise.supersetGroup.trim()) {
+            normalizedExercise.supersetGroup = safeExercise.supersetGroup.trim();
+          }
+          return normalizedExercise;
+        }),
+      };
+    });
+  }
+
+  // Multi-week programs: an optional weeks list beside the single-week `days`.
+  // A week either carries its own days or points at an identical earlier week
+  // with sameAs (keeps 12-week programs small in localStorage). `days` always
+  // mirrors the first real week, so a builder edit to `days` flows into it.
+  function normalizeWeeks(list, firstRealIndex, firstRealDays) {
+    return list.map(function (week, index) {
+      const safeWeek = week && typeof week === "object" ? week : {};
+      const number = Number.isInteger(safeWeek.week) && safeWeek.week > 0 ? safeWeek.week : index + 1;
+      const normalized = {
+        week: number,
+        label: typeof safeWeek.label === "string" && safeWeek.label.trim() ? safeWeek.label : "Week " + number,
+        phase: typeof safeWeek.phase === "string" ? safeWeek.phase : "",
+      };
+      if (Number.isInteger(safeWeek.sameAs) && safeWeek.sameAs > 0 && safeWeek.sameAs !== number) {
+        normalized.sameAs = safeWeek.sameAs;
+      } else {
+        normalized.days = index === firstRealIndex ? firstRealDays : normalizeDays(safeWeek.days);
+      }
+      return normalized;
+    });
+  }
+
+  // The days for a given 1-based program week. Programs without weeks (the
+  // normal case) just return their single `days`; past the last week the
+  // program starts over.
+  function getWeekDays(program, weekNumber) {
+    const weeks = program && Array.isArray(program.weeks) ? program.weeks : [];
+    if (!weeks.length) return (program && Array.isArray(program.days)) ? program.days : [];
+    const wanted = ((Math.max(1, Math.floor(Number(weekNumber) || 1)) - 1) % weeks.length) + 1;
+    let week = weeks.find(function (w) { return w && w.week === wanted; }) || weeks[wanted - 1];
+    if (week && week.sameAs !== undefined) {
+      const target = weeks.find(function (w) { return w && w.week === week.sameAs && Array.isArray(w.days); });
+      if (target) week = target;
+    }
+    return week && Array.isArray(week.days) ? week.days : (Array.isArray(program.days) ? program.days : []);
+  }
+
+  function getWeekCount(program) {
+    return program && Array.isArray(program.weeks) && program.weeks.length ? program.weeks.length : 1;
+  }
+
+  // "8-10" for a ranged set, "8" otherwise.
+  function formatReps(set) {
+    if (!set || set.reps === null || set.reps === undefined) return "?";
+    return set.repsMax && set.repsMax > set.reps ? set.reps + "-" + set.repsMax : String(set.reps);
+  }
+
   function normalizeDraft(draft) {
     const base = createEmptyDraft(draft && draft.userId);
     const source = draft && typeof draft === "object" ? draft : {};
 
-    const normalizedDays = Array.isArray(source.days)
-      ? source.days.map(function (day, dayIndex) {
-          const fallbackName = "Day " + (dayIndex + 1);
-          const safeDay = day && typeof day === "object" ? day : {};
-          const safeExercises = Array.isArray(safeDay.exercises) ? safeDay.exercises : [];
-          return {
-            dayId:
-              typeof safeDay.dayId === "string" && safeDay.dayId.trim()
-                ? safeDay.dayId
-                : "day-" + dayIndex + "-" + Date.now(),
-            name: typeof safeDay.name === "string" && safeDay.name.trim() ? safeDay.name.trim() : fallbackName,
-            notes: typeof safeDay.notes === "string" ? safeDay.notes : "",
-            exercises: safeExercises.map(function (exercise, exerciseIndex) {
-              const safeExercise = exercise && typeof exercise === "object" ? exercise : {};
-              const safeSets = Array.isArray(safeExercise.sets) ? safeExercise.sets : [];
-              return {
-                exerciseId:
-                  typeof safeExercise.exerciseId === "string" && safeExercise.exerciseId.trim()
-                    ? safeExercise.exerciseId
-                    : "ex-" + dayIndex + "-" + exerciseIndex + "-" + Date.now(),
-                name:
-                  typeof safeExercise.name === "string" && safeExercise.name.trim()
-                    ? safeExercise.name.trim()
-                    : "Exercise " + (exerciseIndex + 1),
-                notes: typeof safeExercise.notes === "string" ? safeExercise.notes : "",
-                rirNote: typeof safeExercise.rirNote === "string" ? safeExercise.rirNote : "",
-                rpeNote: typeof safeExercise.rpeNote === "string" ? safeExercise.rpeNote : "",
-                progressionNotes:
-                  typeof safeExercise.progressionNotes === "string" ? safeExercise.progressionNotes : "",
-                archetypeTags: Array.isArray(safeExercise.archetypeTags)
-                  ? safeExercise.archetypeTags.filter(function (tag) {
-                      return typeof tag === "string" && tag.trim();
-                    })
-                  : [],
-                sets: safeSets.map(function (set) {
-                  const safeSet = set && typeof set === "object" ? set : {};
-                  return {
-                    setType: typeof safeSet.setType === "string" && safeSet.setType ? safeSet.setType : "straight",
-                    reps: safeSet.reps === null || safeSet.reps === undefined || safeSet.reps === "" ? null : (Number.isFinite(Number(safeSet.reps)) ? Number(safeSet.reps) : null),
-                    weight: safeSet.weight === null || safeSet.weight === undefined || safeSet.weight === "" ? null : (Number.isFinite(Number(safeSet.weight)) ? Number(safeSet.weight) : null),
-                    rpe: safeSet.rpe === null || safeSet.rpe === undefined || safeSet.rpe === "" ? null : (Number.isFinite(Number(safeSet.rpe)) ? Number(safeSet.rpe) : null),
-                    rir: safeSet.rir === null || safeSet.rir === undefined || safeSet.rir === "" ? null : (Number.isFinite(Number(safeSet.rir)) ? Number(safeSet.rir) : null),
-                    restSec: Number.isFinite(Number(safeSet.restSec)) ? Number(safeSet.restSec) : 120,
-                  };
-                }),
-              };
-            }),
-          };
-        })
-      : [];
+    const sourceWeeks = Array.isArray(source.weeks) ? source.weeks : [];
+    const firstRealWeek = sourceWeeks.findIndex(function (week) {
+      return week && Array.isArray(week.days);
+    });
+    let normalizedDays = normalizeDays(source.days);
+    // A program that only carries weeks (e.g. straight from the library) takes
+    // its single-week view from the first real week.
+    if (!normalizedDays.length && firstRealWeek !== -1) {
+      normalizedDays = normalizeDays(sourceWeeks[firstRealWeek].days);
+    }
+    const normalizedWeeks = normalizeWeeks(sourceWeeks, firstRealWeek, normalizedDays);
 
     return {
       ...base,
@@ -291,6 +371,7 @@
             : base.split.daysPerWeek,
       },
       days: normalizedDays,
+      ...(normalizedWeeks.length ? { weeks: normalizedWeeks, durationWeeks: normalizedWeeks.length } : {}),
       progressionNotes: typeof source.progressionNotes === "string" ? source.progressionNotes : "",
       schedule: {
         ...base.schedule,
@@ -524,6 +605,88 @@
     return record;
   }
 
+  const WEEKDAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  function currentUserName(globalObj, explicit) {
+    if (explicit) return explicit;
+    if (globalObj && globalObj.currentUser) return globalObj.currentUser;
+    return globalObj && globalObj.localStorage ? globalObj.localStorage.getItem("fitnessAppUser") : null;
+  }
+
+  // Copy a library program (from /api/premium/programs/:id) into the user's own
+  // programs so it shows up in My Programs and can be edited. Sets stay in the
+  // library's compact form; the builder expands them when the program is opened.
+  function importLibraryProgram(globalObj, libraryProgram, options) {
+    if (!libraryProgram || typeof libraryProgram !== "object") return null;
+    const opts = options || {};
+    const id = "lib-" + libraryProgram.id + "-" + Date.now();
+    const copy = JSON.parse(JSON.stringify(libraryProgram));
+    delete copy.kind;
+    delete copy.rev;
+    const weekdays = copy.schedule && Array.isArray(copy.schedule.weekdays) ? copy.schedule.weekdays : [];
+    const program = {
+      ...copy,
+      id: id,
+      programId: id,
+      name: copy.title || copy.name || "Program",
+      title: copy.title || copy.name || "Program",
+      startDate: "",
+      frequency: Array.isArray(copy.frequency) && copy.frequency.length
+        ? copy.frequency.slice()
+        : weekdays.map(function (day) { return WEEKDAY_ABBR[day - 1]; }).filter(Boolean),
+      source: { type: "library", id: libraryProgram.id, rev: libraryProgram.rev || null },
+      importedAt: new Date().toISOString(),
+      coachId: opts.userId || null,
+      userId: opts.userId || null,
+    };
+    if (!Array.isArray(program.days) || !program.days.length) {
+      program.days = getWeekDays(program, 1);
+    }
+    upsertProgram(globalObj, program);
+    return program;
+  }
+
+  // Make a saved program the one Today's Session and the Log tab follow. Those
+  // screens read the per-user legacy keys (programs_<user>, activeProgram_<user>),
+  // so the program is mirrored there as well as in the builder's own list.
+  function startProgram(globalObj, programId, options) {
+    if (!globalObj || !globalObj.localStorage) return null;
+    const opts = options || {};
+    const program = loadPrograms(globalObj).find(function (entry) {
+      return entry.id === programId || entry.programId === programId;
+    });
+    if (!program) return null;
+
+    const user = currentUserName(globalObj, opts.userId);
+    const now = new Date();
+    const startDate = opts.startDate || [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+    const started = { ...program, id: program.id || program.programId, startDate: startDate };
+
+    if (user) {
+      const key = "programs_" + user;
+      let legacy = [];
+      try {
+        legacy = JSON.parse(globalObj.localStorage.getItem(key) || "[]");
+      } catch (_error) {
+        legacy = [];
+      }
+      legacy = (Array.isArray(legacy) ? legacy : []).filter(function (entry) {
+        return entry && entry.id !== started.id;
+      });
+      legacy.push(started);
+      globalObj.localStorage.setItem(key, JSON.stringify(legacy));
+    }
+
+    const active = { programId: started.id, programName: started.name || started.title || "", startDate: startDate };
+    if (user) globalObj.localStorage.setItem("activeProgram_" + user, JSON.stringify(active));
+    globalObj.localStorage.setItem("activeProgram", JSON.stringify(active));
+    return started;
+  }
+
   const api = {
     PROGRAM_STORAGE_KEY,
     PROGRAM_DRAFT_STORAGE_KEY,
@@ -553,6 +716,12 @@
     duplicateProgramTemplate,
     loadProgramAssignments,
     assignProgramToClient,
+    normalizeDays,
+    getWeekDays,
+    getWeekCount,
+    formatReps,
+    importLibraryProgram,
+    startProgram,
   };
 
   global.programBuilderV2Core = api;
