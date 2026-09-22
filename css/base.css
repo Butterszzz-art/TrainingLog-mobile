@@ -323,7 +323,7 @@ th {
 }
 
 .native-toast--success { border-color: var(--primary, #5fa87e); }
-.native-toast--error   { border-color: #e05060; }
+.native-toast--error   { border-color: var(--danger-strong); }
 .native-toast--warn    { border-color: #e6a817; }
 
 .nt-icon { font-size: 1rem; flex-shrink: 0; }
@@ -403,7 +403,7 @@ th {
 }
 
 .nm-btn--danger {
-  background: #e05060;
-  border-color: #e05060;
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
   color: #fff;
 }

@@ -5372,8 +5372,10 @@ function getSetInputHTML(i) {
       </div>
       <input type="number" id="weight_${i}" placeholder="Weight" class="set-input-weight" oninput="updateAddButtonState()" />
       <button type="button" onclick="openPlateCalculator(${i})" class="set-plate-btn" title="Plate calculator"><span class="ui-icon">${ICONS.dumbbell}</span></button>
-      <label class="set-opt-pill top-set-pill" title="Top Set — your main set for this exercise, used for PR/progress tracking"><input type="checkbox" id="topSet_${i}" onchange="toggleSetRole(${i}, 'top')" /><span>Top</span></label>
-      <label class="set-opt-pill backoff-pill" title="Back-off Set — reduced-load set after the top set, excluded from PRs"><input type="checkbox" id="backoff_${i}" onchange="toggleSetRole(${i}, 'backoff')" /><span>BO</span></label>
+      <div class="role-segment" role="group" aria-label="Set role">
+        <label class="role-segment-opt" title="Top Set — your main set for this exercise, used for PR/progress tracking"><input type="checkbox" id="topSet_${i}" onchange="toggleSetRole(${i}, 'top')" /><span>Top</span></label>
+        <label class="role-segment-opt" title="Back-off Set — reduced-load set after the top set, excluded from PRs"><input type="checkbox" id="backoff_${i}" onchange="toggleSetRole(${i}, 'backoff')" /><span>BO</span></label>
+      </div>
       <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
       <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
       <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>

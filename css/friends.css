@@ -121,8 +121,8 @@
 }
 
 .friend-remove-btn:hover {
-  border-color: #c05060;
-  color: #c05060;
+  border-color: var(--danger-strong);
+  color: var(--danger-text);
 }
 
 .friends-empty {
