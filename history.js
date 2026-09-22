@@ -663,7 +663,7 @@ export async function renderWorkoutHistory(containerEl = document.getElementById
 
   const username = getCurrentUserId();
 
-  containerEl.innerHTML = '<p style="opacity:.7;">Loading workout history…</p>';
+  containerEl.innerHTML = '<div class="mx-empty">Loading workout history…</div>';
 
   const currentUserId = username || null;
 
@@ -721,7 +721,7 @@ export async function renderWorkoutHistory(containerEl = document.getElementById
     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
   if (!cachedWorkoutHistory.length) {
-    containerEl.innerHTML = '<p style="opacity:.7;">No workouts saved yet.</p>';
+    containerEl.innerHTML = '<div class="mx-empty">No workouts saved yet.</div>';
     return;
   }
 

@@ -39,6 +39,10 @@
   <link rel="stylesheet" href="css/posing.css">
   <link rel="stylesheet" href="css/mobility.css">
   <link rel="stylesheet" href="css/history.css">
+  <link rel="stylesheet" href="css/paywall.css">
+  <link rel="stylesheet" href="css/ai-sheets.css">
+  <link rel="stylesheet" href="css/coach-ui.css">
+  <link rel="stylesheet" href="css/program-ui.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
@@ -2003,8 +2007,8 @@
         </table>
       </div>
 
-      <div class="attempt-total-row">
-        <span class="attempt-total-label">Total</span>
+      <div class="pod pod--hero attempt-total-row">
+        <span class="attempt-total-label mx-kicker">Total</span>
         <span class="attempt-total-value" id="attemptTotal">— kg</span>
       </div>
 
@@ -2095,28 +2099,42 @@
     <div id="plSubMeet" class="pl-subview">
       <h3>Meet Prep Timeline</h3>
 
-      <div class="pod">
-        <label for="meetDate">Meet date</label>
-        <input type="date" id="meetDate" oninput="renderMeetPrep()">
+      <div class="pod mx-pod">
+        <div class="mx-field">
+          <label class="mx-lbl" for="meetDate">Meet date</label>
+          <div class="mx-well mx-well--text"><input type="date" id="meetDate" oninput="renderMeetPrep()"></div>
+        </div>
 
-        <label for="meetName">Meet name (optional)</label>
-        <input type="text" id="meetName" placeholder="e.g. Regional Powerlifting Open">
+        <div class="mx-field">
+          <label class="mx-lbl" for="meetName">Meet name <em>optional</em></label>
+          <div class="mx-well mx-well--text"><input type="text" id="meetName" placeholder="e.g. Regional Powerlifting Open"></div>
+        </div>
 
-        <label for="meetFed">Federation</label>
-        <select id="meetFed">
-          <option value="">-- Select --</option>
-          <option>USAPL</option>
-          <option>IPF</option>
-          <option>USPA</option>
-          <option>RPS</option>
-          <option>SPF</option>
-          <option>Other</option>
-        </select>
+        <div class="mx-grid2">
+          <div class="mx-field">
+            <label class="mx-lbl" for="meetFed">Federation</label>
+            <div class="mx-well mx-well--text mx-well--sel">
+              <select id="meetFed">
+                <option value="">-- Select --</option>
+                <option>USAPL</option>
+                <option>IPF</option>
+                <option>USPA</option>
+                <option>RPS</option>
+                <option>SPF</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="mx-field">
+            <label class="mx-lbl" for="meetWeightClass">Weight class</label>
+            <div class="mx-well mx-well--text"><input type="text" id="meetWeightClass" placeholder="e.g. 83kg"></div>
+          </div>
+        </div>
 
-        <label for="meetWeightClass">Weight class</label>
-        <input type="text" id="meetWeightClass" placeholder="e.g. 83kg">
-
-        <button class="pl-full-btn" onclick="saveMeetDetails()">Save Meet Details</button>
+        <button type="button" class="pl-full-btn mx-cta" onclick="saveMeetDetails()">
+          <span>Save Meet Details</span>
+          <span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span>
+        </button>
       </div>
 
       <div id="meetPrepDisplay" style="margin-top:20px;"></div>
@@ -3477,26 +3495,31 @@
   <div id="coachSub_analytics" class="coach-subview"></div>
   <div id="coachSub_ai" class="coach-subview"></div>
   <div id="coachSub_videos" class="coach-subview">
-    <div style="padding:12px;">
-      <div class="rehab-card">
-        <h3 style="margin:0 0 4px;"><span class="ui-icon" data-icon="video"></span> Exercise Technique Videos</h3>
-        <p style="font-size:0.82rem;color:var(--secondary-text);margin:0 0 12px;">Attach a video link per exercise. Your clients see a ▶ Watch button when they log that exercise.</p>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <input type="text" id="coachVideoExercise" placeholder="Exercise name (e.g. Barbell Squat)" list="exerciseSuggestions" />
-          <input type="url" id="coachVideoUrl" placeholder="Video link (YouTube, Loom, Drive…)" />
-          <input type="text" id="coachVideoNotes" placeholder="Coaching cue (optional)" />
-          <button onclick="saveCoachExerciseVideo()">Save Video</button>
-          <div id="coachVideoStatus" style="font-size:0.82rem;min-height:1.1rem;color:var(--secondary-text);"></div>
-        </div>
+    <section class="pod mx-pod">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Technique Videos</h4></div>
+      <p class="mx-sub">Attach a video link per exercise. Your clients see a Watch button when they log that exercise.</p>
+      <div class="mx-field">
+        <label class="mx-lbl" for="coachVideoExercise">Exercise</label>
+        <div class="mx-well mx-well--text"><input type="text" id="coachVideoExercise" placeholder="Exercise name (e.g. Barbell Squat)" list="exerciseSuggestions" /></div>
       </div>
-      <div class="rehab-card" style="margin-top:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <h3 style="margin:0;">Your Videos</h3>
-          <button onclick="loadCoachExerciseVideos()" style="font-size:0.75rem;padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);cursor:pointer;box-shadow:none;margin:0;">Refresh</button>
-        </div>
-        <div id="coachVideoList" style="font-size:0.85rem;color:var(--text-muted);">No videos yet.</div>
+      <div class="mx-field">
+        <label class="mx-lbl" for="coachVideoUrl">Video link</label>
+        <div class="mx-well mx-well--text"><input type="url" id="coachVideoUrl" placeholder="YouTube, Loom, Drive…" /></div>
       </div>
-    </div>
+      <div class="mx-field">
+        <label class="mx-lbl" for="coachVideoNotes">Coaching cue <em>optional</em></label>
+        <div class="mx-well mx-well--text"><input type="text" id="coachVideoNotes" placeholder="e.g. Brace before you descend" /></div>
+      </div>
+      <button type="button" class="mx-cta" onclick="saveCoachExerciseVideo()"><span>Save Video</span><span class="mx-cta-icon"><span class="ui-icon" data-icon="check"></span></span></button>
+      <div id="coachVideoStatus" class="mx-sub coach-video-status" aria-live="polite"></div>
+    </section>
+    <section class="pod mx-pod">
+      <div class="pod-row">
+        <h4 class="pod-title mx-h3">Your Videos</h4>
+        <button type="button" class="mx-outline" onclick="loadCoachExerciseVideos()"><span class="ui-icon" data-icon="refresh"></span> Refresh</button>
+      </div>
+      <div id="coachVideoList" class="coach-video-list"><div class="mx-empty">No videos yet.</div></div>
+    </section>
   </div>
   <div id="coachSub_gdpr" class="coach-subview"></div>
 </div>
@@ -4356,6 +4379,52 @@ async function checkoutWithStripe(plan, billing) {
   }
 }
 
+var UPGRADE_PLANS = {
+  pro: {
+    name: 'Pro', badge: 'Most popular', chip: 'mx-chip--green', cardCls: 'pod--hero',
+    monthly: 9, annual: 7, annualNote: 'Billed £84/year · save £24',
+    sub: '7-day free trial',
+    features: [
+      ['sparkles', 'AI check-in summaries'],
+      ['sparkles', 'AI macro advisor'],
+      ['sparkles', 'AI program generator'],
+      ['sparkles', 'AI plateau detector'],
+      ['sparkles', 'Priority support']
+    ]
+  },
+  coach: {
+    name: 'Coach', badge: 'For coaches', chip: 'mx-chip--brass', cardCls: 'pod--warn',
+    monthly: 16, annual: 13, annualNote: 'Billed £156/year · save £36',
+    sub: 'Everything in Pro, plus:',
+    features: [
+      ['users', 'Full coaching dashboard'],
+      ['clipboard', 'Client roster'],
+      ['pencil', 'AI draft messages'],
+      ['barChart', 'Compliance tracking'],
+      ['creditCard', 'Flat fee — no per-client']
+    ]
+  }
+};
+
+function upgradePlanCard(key, isAnnual) {
+  var p = UPGRADE_PLANS[key];
+  var idBase = key === 'pro' ? 'modalPro' : 'modalCoach';
+  return '<section class="pod ' + p.cardCls + ' mx-pod upg-plan upg-plan--' + key + '" aria-label="' + p.name + ' plan">'
+    + '<div class="pod-row"><h4 class="pod-title mx-h3">' + p.name + '</h4><span class="mx-chip mx-chip--sm ' + p.chip + '">' + p.badge + '</span></div>'
+    + '<div class="upg-price-block">'
+    +   '<div class="upg-price" id="' + idBase + 'Price">£' + (isAnnual ? p.annual : p.monthly) + '<span class="upg-per">/mo</span></div>'
+    +   '<div class="upg-note" id="' + idBase + 'Note">' + (isAnnual ? p.annualNote : '') + '</div>'
+    + '</div>'
+    + '<div class="mx-meta">' + p.sub + '</div>'
+    + '<ul class="upg-features">'
+    + p.features.map(function (f) { return '<li><span class="ui-icon">' + ICONS[f[0]] + '</span>' + f[1] + '</li>'; }).join('')
+    + '</ul>'
+    + '<button type="button" class="mx-cta upg-cta upg-cta--' + key + '" onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'' + key + '\')">'
+    +   '<span>Start Free Trial</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.sparkles + '</span></span>'
+    + '</button>'
+    + '</section>';
+}
+
 function openUpgradeModal(defaultPlan) {
   defaultPlan = defaultPlan || 'pro';
   var billing = localStorage.getItem('billingCycle') || 'annual';
@@ -4363,57 +4432,38 @@ function openUpgradeModal(defaultPlan) {
 
   var overlay = document.createElement('div');
   overlay.className = 'payment-method-modal';
-  overlay.innerHTML = '<div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:20px;padding:24px;max-width:500px;width:95%;max-height:85vh;overflow-y:auto;position:relative;">'
-    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
-    + '<h3 style="text-align:center;margin:0 0 4px;">Upgrade Pocket Coach</h3>'
-    + '<p style="text-align:center;color:var(--secondary-text);font-size:0.82rem;margin:0 0 16px;">Unlock AI features and coaching tools</p>'
-    + '<div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px;align-items:center;">'
-    + '<span style="font-size:0.82rem;color:' + (!isAnnual ? 'var(--text-color)' : 'var(--text-muted)') + ';">Monthly</span>'
-    + '<label class="reminder-toggle" style="width:44px;height:24px;"><input type="checkbox" id="modalBillingToggle" ' + (isAnnual ? 'checked' : '') + ' onchange="toggleModalBilling()"><span class="reminder-toggle-track"></span></label>'
-    + '<span style="font-size:0.82rem;color:' + (isAnnual ? 'var(--text-color)' : 'var(--text-muted)') + ';">Annual</span>'
-    + '<span style="background:var(--primary);color:#fff;font-size:0.68rem;padding:3px 8px;border-radius:4px;font-weight:700;">SAVE 20%</span>'
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+  overlay.innerHTML = '<div class="upg-sheet" role="dialog" aria-modal="true" aria-label="Upgrade Pocket Coach">'
+    + '<button type="button" class="close-payment-modal" aria-label="Close" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
+    + '<div class="upg-head">'
+    +   '<span class="mx-kicker">Pocket Coach</span>'
+    +   '<h3 class="upg-title">Upgrade</h3>'
+    +   '<p class="mx-sub">Unlock AI features and coaching tools</p>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
-    // Pro card
-    + '<div style="border:2px solid var(--primary);border-radius:16px;padding:20px;position:relative;">'
-    + '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;font-size:0.65rem;padding:3px 10px;border-radius:10px;font-weight:700;">MOST POPULAR</div>'
-    + '<div style="font-size:1rem;font-weight:700;margin-bottom:4px;">Pro</div>'
-    + '<div id="modalProPrice" style="font-size:1.4rem;font-weight:700;color:var(--primary);">' + (isAnnual ? '£7' : '£9') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span></div>'
-    + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £84/year · save £24</div>' : '')
-    + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">7-day free trial</div>'
-    + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI check-in summaries</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI macro advisor</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI program generator</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI plateau detector</li>'
-    + '<li><span class="ui-icon">' + ICONS.sparkles + '</span> Priority support</li></ul>'
-    + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'pro\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
+    + '<div class="upg-billing">'
+    +   '<span id="modalBillMonthly" class="' + (!isAnnual ? 'is-on' : '') + '">Monthly</span>'
+    +   '<label class="upg-switch"><input type="checkbox" id="modalBillingToggle" ' + (isAnnual ? 'checked' : '') + ' onchange="toggleModalBilling()" aria-label="Bill annually"><span></span></label>'
+    +   '<span id="modalBillAnnual" class="' + (isAnnual ? 'is-on' : '') + '">Annual</span>'
+    +   '<span class="mx-chip mx-chip--green mx-chip--sm">Save 20%</span>'
     + '</div>'
-    // Coach card
-    + '<div style="border:2px solid #c6944f;border-radius:16px;padding:20px;position:relative;">'
-    + '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#c6944f;color:#fff;font-size:0.65rem;padding:3px 10px;border-radius:10px;font-weight:700;">FOR COACHES</div>'
-    + '<div style="font-size:1rem;font-weight:700;margin-bottom:4px;">Coach</div>'
-    + '<div id="modalCoachPrice" style="font-size:1.4rem;font-weight:700;color:#c6944f;">' + (isAnnual ? '£13' : '£16') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span></div>'
-    + (isAnnual ? '<div style="font-size:0.7rem;color:var(--text-muted);">Billed £156/year · save £36</div>' : '')
-    + '<div style="font-size:0.72rem;color:var(--secondary-text);margin:8px 0 12px;">Everything in Pro, plus:</div>'
-    + '<ul style="list-style:none;padding:0;font-size:0.78rem;color:var(--secondary-text);margin:0 0 14px;">'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.users + '</span> Full coaching dashboard</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.clipboard + '</span> Client roster</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.pencil + '</span> AI draft messages</li>'
-    + '<li style="margin-bottom:4px;"><span class="ui-icon">' + ICONS.barChart + '</span> Compliance tracking</li>'
-    + '<li><span class="ui-icon">' + ICONS.creditCard + '</span> Flat fee — no per-client</li></ul>'
-    + '<button onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'coach\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:#c6944f;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Start Free Trial</button>'
-    + '</div></div></div>';
+    + upgradePlanCard('pro', isAnnual)
+    + upgradePlanCard('coach', isAnnual)
+    + '</div>';
   document.body.appendChild(overlay);
 }
 
 function toggleModalBilling() {
   var isAnnual = document.getElementById('modalBillingToggle')?.checked;
   localStorage.setItem('billingCycle', isAnnual ? 'annual' : 'monthly');
-  var proPrice = document.getElementById('modalProPrice');
-  var coachPrice = document.getElementById('modalCoachPrice');
-  if (proPrice) proPrice.innerHTML = (isAnnual ? '£7' : '£9') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span>';
-  if (coachPrice) coachPrice.innerHTML = (isAnnual ? '£13' : '£16') + '<span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">/mo</span>';
+  [['modalPro', 'pro'], ['modalCoach', 'coach']].forEach(function (pair) {
+    var p = UPGRADE_PLANS[pair[1]];
+    var price = document.getElementById(pair[0] + 'Price');
+    var note = document.getElementById(pair[0] + 'Note');
+    if (price) price.innerHTML = '£' + (isAnnual ? p.annual : p.monthly) + '<span class="upg-per">/mo</span>';
+    if (note) note.textContent = isAnnual ? p.annualNote : '';
+  });
+  document.getElementById('modalBillMonthly')?.classList.toggle('is-on', !isAnnual);
+  document.getElementById('modalBillAnnual')?.classList.toggle('is-on', !!isAnnual);
 }
 
 async function openManageBilling() {
@@ -11179,7 +11229,7 @@ async function saveCoachExerciseVideo() {
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) throw new Error(data?.error?.message || `HTTP ${res.status}`);
     if (status) status.textContent = '';
-    window.showToast(`Video saved for ${exerciseName} ✓`);
+    window.showToast(`Video saved for ${exerciseName}`);
     document.getElementById('coachVideoExercise').value = '';
     document.getElementById('coachVideoUrl').value = '';
     document.getElementById('coachVideoNotes').value = '';
@@ -11194,7 +11244,7 @@ window.saveCoachExerciseVideo = saveCoachExerciseVideo;
 async function loadCoachExerciseVideos() {
   const list = document.getElementById('coachVideoList');
   if (!list) return;
-  list.textContent = 'Loading…';
+  list.innerHTML = '<div class="mx-empty">Loading…</div>';
   try {
     const res = await fetch(`${window.SERVER_URL}/coach/exercise-videos`, {
       headers: getAuthHeaders(),
@@ -11203,22 +11253,22 @@ async function loadCoachExerciseVideos() {
     const data = await res.json().catch(() => null);
     const items = data?.items || [];
     if (!items.length) {
-      list.textContent = 'No videos yet — add your first one above.';
+      list.innerHTML = '<div class="mx-empty">No videos yet — add your first one above.</div>';
       return;
     }
     list.innerHTML = items.map(v => `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color,#2a3a2e);">
-        <div style="min-width:0;">
-          <div style="font-weight:600;color:var(--text-color);">${_escVideoHtml(v.exerciseName)}</div>
-          ${v.notes ? `<div style="font-size:0.78rem;color:var(--secondary-text);">${_escVideoHtml(v.notes)}</div>` : ''}
-          <a href="${_escVideoHtml(v.videoUrl)}" target="_blank" rel="noopener" style="font-size:0.78rem;color:#4da8da;word-break:break-all;">${_escVideoHtml(v.videoUrl)}</a>
+      <div class="mx-row coach-video-row">
+        <div class="mx-row-main">
+          <span class="mx-row-title">${_escVideoHtml(v.exerciseName)}</span>
+          ${v.notes ? `<span class="mx-row-sub">${_escVideoHtml(v.notes)}</span>` : ''}
+          <a class="coach-video-link" href="${_escVideoHtml(v.videoUrl)}" target="_blank" rel="noopener">${_escVideoHtml(v.videoUrl)}</a>
         </div>
-        <button onclick="deleteCoachExerciseVideo('${_escVideoHtml(v.id)}')" style="flex-shrink:0;background:transparent;border:1px solid rgba(192,80,96,0.4);color:#c05060;border-radius:8px;padding:4px 10px;font-size:0.75rem;cursor:pointer;box-shadow:none;margin:0;">Remove</button>
+        <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="deleteCoachExerciseVideo('${_escVideoHtml(v.id)}')" aria-label="Delete video for ${_escVideoHtml(v.exerciseName)}"><span class="ui-icon">${ICONS.x}</span></button>
       </div>
     `).join('');
   } catch (err) {
     console.warn('[Videos] list failed', err);
-    list.textContent = 'Could not load videos.';
+    list.innerHTML = '<div class="mx-empty">Could not load videos.</div>';
   }
 }
 window.loadCoachExerciseVideos = loadCoachExerciseVideos;
@@ -11284,7 +11334,7 @@ function getCoachAlertMeta(status = 'watch') {
   if (normalized === 'ok' || normalized === 'stable') {
     return { label: 'Stable', className: 'is-ok' };
   }
-  if (normalized === 'alert' || normalized === 'at_risk' || normalized === 'risk') {
+  if (normalized === 'alert' || normalized === 'action' || normalized === 'at_risk' || normalized === 'risk') {
     return { label: 'Needs Action', className: 'is-alert' };
   }
   return { label: 'Watch', className: 'is-watch' };
@@ -11410,7 +11460,7 @@ function deriveCoachAlertStatus(client = {}) {
   const alerts = deriveCoachClientAlerts(client);
   if (alerts.some((alert) => alert.severity === 'alert')) return 'alert';
   if (alerts.length) return 'watch';
-  return String(client.alertStatus || 'ok').toLowerCase() === 'alert' ? 'watch' : 'ok';
+  return ['alert', 'action'].includes(String(client.alertStatus || 'ok').toLowerCase()) ? 'watch' : 'ok';
 }
 
 function renderCoachAlertList(alerts = []) {
@@ -11426,38 +11476,42 @@ function renderCoachClientCard(client) {
   const safeClient = normalizeCoachClientRecord(client);
   const derivedAlerts = deriveCoachClientAlerts(safeClient);
   const alertMeta = getCoachAlertMeta(deriveCoachAlertStatus(safeClient));
-  const alertLine = derivedAlerts.length
-    ? derivedAlerts.map((entry) => entry.label).join(' · ')
-    : 'No urgent flags this week';
+  const chipCls = { 'is-ok': 'mx-chip--green', 'is-watch': 'mx-chip--brass', 'is-alert': 'mx-chip--red' }[alertMeta.className] || '';
+  const initials = String(safeClient.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const alertTags = derivedAlerts.length
+    ? derivedAlerts.map((entry) => `<span class="mx-tag ${entry.severity === 'alert' ? 'mx-tag--red' : 'mx-tag--brass'}">${escapeCoachText(entry.label)}</span>`).join('')
+    : '<span class="mx-tag mx-tag--hi">No urgent flags this week</span>';
   return `
-    <article class="coach-client-card" data-client-id="${escapeCoachText(safeClient.id)}">
+    <article class="coach-client-card pod mx-pod" data-client-id="${escapeCoachText(safeClient.id)}">
       <header class="coach-client-card-header">
-        <div>
+        <div class="coach-client-avatar" aria-hidden="true">${escapeCoachText(initials)}</div>
+        <div class="coach-client-id">
           <h3 class="coach-client-name">${escapeCoachText(safeClient.name)}</h3>
           <p class="coach-client-meta">${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
         </div>
-        <span class="coach-alert-pill ${alertMeta.className}">${alertMeta.label}</span>
+        <span class="coach-alert-pill mx-chip mx-chip--sm ${chipCls} ${alertMeta.className}">${alertMeta.label}</span>
       </header>
-      <ul class="coach-client-kpis">
-        <li class="coach-client-kpi">
-          <p class="coach-client-kpi-label">Last Check-In</p>
-          <p class="coach-client-kpi-value">${escapeCoachText(formatCoachDate(safeClient.lastCheckInDate))}</p>
+      <ul class="coach-client-kpis mx-tiles mx-tiles--2">
+        <li class="coach-client-kpi mx-stat">
+          <p class="coach-client-kpi-label mx-stat-l">Last Check-In</p>
+          <p class="coach-client-kpi-value mx-stat-v">${escapeCoachText(formatCoachDate(safeClient.lastCheckInDate))}</p>
         </li>
-        <li class="coach-client-kpi">
-          <p class="coach-client-kpi-label">Compliance</p>
-          <p class="coach-client-kpi-value">${escapeCoachText(`${safeClient.compliancePercent}%`)}</p>
-        </li>
-        <li class="coach-client-kpi" style="grid-column: 1 / -1;">
-          <p class="coach-client-kpi-label">Primary Status Metric</p>
-          <p class="coach-client-kpi-value">${escapeCoachText(safeClient.primaryStatusMetric)}</p>
-        </li>
-        <li class="coach-client-kpi" style="grid-column: 1 / -1;">
-          <p class="coach-client-kpi-label">Coach Alerts</p>
-          <p class="coach-client-kpi-value">${escapeCoachText(alertLine)}</p>
+        <li class="coach-client-kpi mx-stat">
+          <p class="coach-client-kpi-label mx-stat-l">Compliance</p>
+          <p class="coach-client-kpi-value mx-stat-v">${escapeCoachText(`${safeClient.compliancePercent}`)}<small>%</small></p>
+          <div class="mx-meter mx-meter--thin${safeClient.compliancePercent < 60 ? ' mx-meter--brass' : ''}" role="img" aria-label="Compliance ${safeClient.compliancePercent} percent"><i style="width:${safeClient.compliancePercent}%"></i></div>
         </li>
       </ul>
+      <div class="coach-client-line">
+        <span class="mx-lbl">Primary status</span>
+        <span class="coach-client-line-val">${escapeCoachText(safeClient.primaryStatusMetric)}</span>
+      </div>
+      <div class="coach-client-line">
+        <span class="mx-lbl">Coach alerts</span>
+        <div class="mx-tags">${alertTags}</div>
+      </div>
       <div class="coach-client-actions">
-        <button type="button" data-coach-open-detail="${escapeCoachText(safeClient.id)}">Open Client</button>
+        <button type="button" class="mx-outline mx-outline--block" data-coach-open-detail="${escapeCoachText(safeClient.id)}">Open Client <span class="ui-icon">${ICONS.chevronRight}</span></button>
       </div>
     </article>
   `;
@@ -11630,23 +11684,24 @@ function renderCoachClientDetail(client) {
     ?? phaseState?.athleteInfo?.currentWeight
     ?? profile?.athleteInfo?.currentWeight;
 
+  const nf = (label, id, value, extra = '') => `<label class="coach-nf"><span class="mx-lbl">${label}</span><input id="${id}" type="number" min="0" step="1" value="${value}"${extra}></label>`;
   return `
     <section class="coach-client-detail">
-      <section class="coach-dashboard-header">
+      <section class="coach-dashboard-header pod mx-pod">
         <div class="coach-client-detail-header">
           <div>
+            <div class="mx-kicker">Client detail · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</div>
             <h3 class="coach-dashboard-title">${escapeCoachText(safeClient.name)}</h3>
-            <p class="coach-dashboard-subtitle">Client detail overview · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn" data-coach-draft-msg="${escapeCoachText(safeClient.id)}">Draft message <span class="ui-icon">${ICONS.sparkles}</span></button>` : ''}
-            <button type="button" data-coach-back>← Back to roster</button>
+          <div class="coach-detail-actions">
+            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn mx-outline" data-coach-draft-msg="${escapeCoachText(safeClient.id)}"><span class="ui-icon">${ICONS.sparkles}</span> Draft message</button>` : ''}
+            <button type="button" class="mx-outline" data-coach-back><span class="ui-icon">${ICONS.arrowLeft}</span> Back to roster</button>
           </div>
         </div>
       </section>
       <section class="coach-client-detail-grid">
-        <article class="coach-client-detail-card">
-          <h4>Athlete Info</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Athlete Info</h4>
           <ul class="coach-client-detail-list">
             ${renderCoachClientDetailRow('Athlete', safeClient.name)}
             ${renderCoachClientDetailRow('Archetype', safeClient.archetype)}
@@ -11656,23 +11711,23 @@ function renderCoachClientDetail(client) {
             ${renderCoachClientDetailRow('Height', safeClient.athleteInfo?.height || profile?.athleteInfo?.height)}
           </ul>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Compliance Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Compliance Summary</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(complianceSummary, 'Compliance data not available yet')}</p>
           <ul class="coach-client-detail-list">
             ${renderCoachClientDetailRow('Primary Status', safeClient.primaryStatusMetric)}
             ${renderCoachClientDetailRow('Last Check-In', formatCoachDate(safeClient.lastCheckInDate))}
           </ul>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Coach Alerts (V1 Rules)</h4>
-          <p class="coach-dashboard-subtitle">Simple explainable checks: check-in cadence, compliance, trend stalls, rapid weight change, logging gaps, and repeated missed cardio.</p>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Coach Alerts</h4>
+          <p class="coach-dashboard-subtitle">Simple explainable checks (V1 rules): check-in cadence, compliance, trend stalls, rapid weight change, logging gaps, and repeated missed cardio.</p>
           <ul class="coach-client-detail-list">
             ${renderCoachAlertList(derivedAlerts)}
           </ul>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Latest Check-In Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Latest Check-In</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.latestCheckInSummary || latestCheckIn?.insights?.summaryShort, 'No check-in summary yet')}</p>
           <ul class="coach-client-detail-list">
             ${renderCoachClientDetailRow('Date', latestCheckIn?.date || safeClient.lastCheckInDate, 'No check-in logged')}
@@ -11680,59 +11735,59 @@ function renderCoachClientDetail(client) {
             ${renderCoachClientDetailRow('Coach Review', latestCheckIn?.review?.status || '', 'Pending coach review')}
           </ul>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Recent Progress Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Recent Progress</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.recentProgressSummary, 'No recent progress data yet')}</p>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Current Program Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Current Program</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentProgramSummary || localData.activeProgramName, 'No active program assigned yet')}</p>
         </article>
-        <article class="coach-client-detail-card">
-          <h4>Current Nutrition Summary</h4>
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Current Nutrition</h4>
           <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentNutritionSummary || nutritionTargets, 'No nutrition targets set yet')}</p>
-          <div style="margin-top:10px;padding:10px;border:1px solid #ebeff7;border-radius:10px;">
-            <h5 style="margin:0 0 8px 0;">Assign Nutrition Setup (V1 macro-based)</h5>
-            <p style="font-size:0.85rem;margin:0 0 8px 0;color:#4d5f73;">Uses training/rest macro anchors, auto-generates high/low days, and supports optional refeed targets.</p>
-            ${assignedSummary ? `<p style=\"font-size:0.82rem;margin:0 0 10px 0;color:#2f3f56;\"><strong>Assigned plan:</strong> ${escapeCoachText(assignedSummary)}</p>` : ''}
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
-              <label>Training P<input id="coachNutritionTrainingProtein" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.protein)}"></label>
-              <label>Training C<input id="coachNutritionTrainingCarbs" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.carbs)}"></label>
-              <label>Training F<input id="coachNutritionTrainingFat" type="number" min="0" step="1" value="${roundMacroNumber(trainingDefaults.fat)}"></label>
-              <label>Rest P<input id="coachNutritionRestProtein" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.protein)}"></label>
-              <label>Rest C<input id="coachNutritionRestCarbs" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.carbs)}"></label>
-              <label>Rest F<input id="coachNutritionRestFat" type="number" min="0" step="1" value="${roundMacroNumber(restDefaults.fat)}"></label>
+          <div class="coach-nutrition-box">
+            <h5 class="mx-lbl">Assign nutrition setup (V1 macro-based)</h5>
+            <p class="coach-dashboard-subtitle">Uses training/rest macro anchors, auto-generates high/low days, and supports optional refeed targets.</p>
+            ${assignedSummary ? `<p class="coach-assigned-plan"><strong>Assigned plan:</strong> ${escapeCoachText(assignedSummary)}</p>` : ''}
+            <div class="coach-nutrition-grid">
+              ${nf('Training P', 'coachNutritionTrainingProtein', roundMacroNumber(trainingDefaults.protein))}
+              ${nf('Training C', 'coachNutritionTrainingCarbs', roundMacroNumber(trainingDefaults.carbs))}
+              ${nf('Training F', 'coachNutritionTrainingFat', roundMacroNumber(trainingDefaults.fat))}
+              ${nf('Rest P', 'coachNutritionRestProtein', roundMacroNumber(restDefaults.protein))}
+              ${nf('Rest C', 'coachNutritionRestCarbs', roundMacroNumber(restDefaults.carbs))}
+              ${nf('Rest F', 'coachNutritionRestFat', roundMacroNumber(restDefaults.fat))}
             </div>
-            <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+            <label class="coach-nutrition-toggle">
               <input id="coachNutritionEnableRefeed" type="checkbox" ${assignedNutrition?.days?.refeed ? 'checked' : ''}>
-              Include optional refeed target
+              <span>Include optional refeed target</span>
             </label>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px;">
-              <label>Refeed P<input id="coachNutritionRefeedProtein" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.protein)}" placeholder="optional"></label>
-              <label>Refeed C<input id="coachNutritionRefeedCarbs" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.carbs)}" placeholder="optional"></label>
-              <label>Refeed F<input id="coachNutritionRefeedFat" type="number" min="0" step="1" value="${roundMacroNumber(refeedDefaults.fat)}" placeholder="optional"></label>
+            <div class="coach-nutrition-grid">
+              ${nf('Refeed P', 'coachNutritionRefeedProtein', roundMacroNumber(refeedDefaults.protein), ' placeholder="optional"')}
+              ${nf('Refeed C', 'coachNutritionRefeedCarbs', roundMacroNumber(refeedDefaults.carbs), ' placeholder="optional"')}
+              ${nf('Refeed F', 'coachNutritionRefeedFat', roundMacroNumber(refeedDefaults.fat), ' placeholder="optional"')}
             </div>
-            <label style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
-              Coach nutrition notes
+            <label class="coach-nf coach-nf--full">
+              <span class="mx-lbl">Coach nutrition notes</span>
               <textarea id="coachNutritionNotes" rows="2" placeholder="Execution notes, substitutions, check-in expectations...">${escapeCoachText(assignedNutrition?.structure?.notes || '')}</textarea>
             </label>
-            <button type="button" style="margin-top:10px;" data-coach-assign-nutrition="${escapeCoachText(safeClient.id)}" data-client-name="${escapeCoachText(safeClient.name)}">Assign Nutrition Plan</button>
+            <button type="button" class="mx-cta coach-assign-btn" data-coach-assign-nutrition="${escapeCoachText(safeClient.id)}" data-client-name="${escapeCoachText(safeClient.name)}"><span>Assign Nutrition Plan</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
           </div>
         </article>
       </section>
-      <section style="margin-top:16px;">
+      <section class="coach-detail-message">
         ${isProUser() ? `
-          <article class="coach-client-detail-card">
-            <h4>Coach Message</h4>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:0.85rem;color:var(--secondary-text,#666);">
-              Coach notes (optional — incorporated into draft)
-              <textarea id="coachAiDraftNotes" rows="2" placeholder="e.g. great push week, tighten up cardio next block..." style="resize:vertical;margin-top:4px;"></textarea>
+          <article class="coach-client-detail-card pod mx-pod">
+            <h4 class="pod-title mx-h3">Coach Message</h4>
+            <label class="coach-nf coach-nf--full">
+              <span class="mx-lbl">Coach notes <em>optional, used in the draft</em></span>
+              <textarea id="coachAiDraftNotes" rows="2" placeholder="e.g. great push week, tighten up cardio next block..."></textarea>
             </label>
-            <div id="coachAiDraftSection" style="margin-top:12px;"></div>
+            <div id="coachAiDraftSection"></div>
           </article>
         ` : `
-          <article class="coach-client-detail-card" style="opacity:0.7;">
-            <p style="margin:0;font-size:0.9rem;"><span class="ui-icon">${ICONS.lock}</span> AI Draft Message is a Pro feature.</p>
+          <article class="coach-client-detail-card pod mx-pod coach-locked">
+            <p><span class="ui-icon">${ICONS.lock}</span> AI Draft Message is a Pro feature.</p>
           </article>
         `}
       </section>
@@ -11742,7 +11797,7 @@ function renderCoachClientDetail(client) {
 
 function renderCoachClientRoster(clients = []) {
   if (!Array.isArray(clients) || !clients.length) {
-    return '<div style="text-align:center;padding:40px 20px;border:1px dashed var(--border-color);border-radius:12px;background:rgba(45,125,91,0.03);"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:14px;opacity:0.5;"><circle cx="32" cy="20" r="10" fill="var(--primary)"/><path d="M12 52 Q12 36 32 36 Q52 36 52 52" fill="var(--primary)" opacity="0.7"/></svg><p style="font-size:0.95rem;font-weight:600;color:var(--text-color);margin:0 0 6px;">No clients yet</p><p style="font-size:0.85rem;color:var(--secondary-text,#888);margin:0 0 14px;">Invite your first athlete to get started.</p></div>';
+    return '<div class="mx-empty coach-empty"><span class="ui-icon">' + ICONS.users + '</span><strong>No clients yet</strong><span>Invite your first athlete to get started.</span></div>';
   }
   const cards = clients.map((client) => renderCoachClientCard(client)).join('');
   return `<section class="coach-roster-grid" aria-label="Coach client roster">${cards}</section>`;
@@ -11757,7 +11812,7 @@ async function requestCoachDraftMessage(clientId) {
   // Find client from state
   const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
   const client = clients.find(c => normalizeCoachClientRecord(c).id === clientId);
-  if (!client) { draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Client data not found.</p>'; return; }
+  if (!client) { draftSection.innerHTML = '<p class="coach-draft-err">Client data not found.</p>'; return; }
 
   const safeClient = normalizeCoachClientRecord(client);
   const localData = getLocalCoachClientData(safeClient);
@@ -11770,7 +11825,7 @@ async function requestCoachDraftMessage(clientId) {
     : '';
   const bodyweightChange = latestCheckIn?.bodyweightChange ?? latestCheckIn?.weeklyWeightChange ?? latestCheckIn?.weightChange ?? null;
 
-  draftSection.innerHTML = `<p style="color:var(--secondary-text,#888);font-size:0.9rem;"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
+  draftSection.innerHTML = `<p class="coach-draft-note"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
 
   const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
     || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
@@ -11806,9 +11861,9 @@ async function requestCoachDraftMessage(clientId) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       if (err.error === 'AI_NOT_CONFIGURED') {
-        draftSection.innerHTML = '<p style="color:var(--secondary-text,#888);font-size:0.9rem;">AI drafting is not enabled on this server.</p>';
+        draftSection.innerHTML = '<p class="coach-draft-note">AI drafting is not enabled on this server.</p>';
       } else {
-        draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Draft failed. Please try again.</p>';
+        draftSection.innerHTML = '<p class="coach-draft-err">Draft failed. Please try again.</p>';
       }
       return;
     }
@@ -11816,10 +11871,10 @@ async function requestCoachDraftMessage(clientId) {
     const data = await res.json();
     const draft = data.draft || '';
     draftSection.innerHTML = `
-      <textarea id="coachAiDraftTextarea" rows="6" style="width:100%;box-sizing:border-box;resize:vertical;font-size:0.92rem;line-height:1.5;padding:10px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:var(--card-bg);color:var(--text-color,#222);">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-        <button type="button" data-coach-copy-draft style="flex:1;">Copy to clipboard</button>
-        <button type="button" data-coach-clear-draft style="flex:0 0 auto;background:transparent;border:1px solid var(--border-color,#ddd);color:var(--secondary-text,#888);">Clear</button>
+      <div class="coach-nf coach-nf--full"><textarea id="coachAiDraftTextarea" rows="6" aria-label="Draft message">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></div>
+      <div class="coach-draft-actions">
+        <button type="button" class="mx-cta" data-coach-copy-draft><span>Copy to clipboard</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+        <button type="button" class="mx-outline" data-coach-clear-draft>Clear</button>
       </div>
     `;
     // Auto-resize textarea to content
@@ -11827,11 +11882,11 @@ async function requestCoachDraftMessage(clientId) {
     if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
   } catch (err) {
     if (err.name === 'AbortError') {
-      draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Request timed out. Please try again.</p>';
+      draftSection.innerHTML = '<p class="coach-draft-err">Request timed out. Please try again.</p>';
     } else if (!navigator.onLine) {
-      draftSection.innerHTML = '<p style="color:var(--secondary-text,#888);font-size:0.9rem;">You are offline.</p>';
+      draftSection.innerHTML = '<p class="coach-draft-note">You are offline.</p>';
     } else {
-      draftSection.innerHTML = '<p style="color:#eb5757;font-size:0.9rem;">Draft failed. Please try again.</p>';
+      draftSection.innerHTML = '<p class="coach-draft-err">Draft failed. Please try again.</p>';
     }
   }
 }
@@ -11908,10 +11963,10 @@ function renderCoachDashboardView() {
   container.innerHTML = selectedClient
     ? renderCoachClientDetail(selectedClient)
     : `
-      <section class="coach-dashboard-header">
+      <section class="coach-dashboard-header pod mx-pod">
         <div class="coach-dashboard-header-row">
-          <h3 class="coach-dashboard-title">Client Roster Overview</h3>
-          <button type="button" class="coach-add-client-btn" onclick="openAddClientModal()">+ Add Client</button>
+          <h3 class="coach-dashboard-title">Client Roster</h3>
+          <button type="button" class="coach-add-client-btn mx-outline" onclick="openAddClientModal()"><span class="ui-icon">${ICONS.plus}</span> Add Client</button>
         </div>
         <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action · ${watchCount} on watch</p>
       </section>
@@ -11945,40 +12000,33 @@ function renderCoachQueue() {
   const clients = coachDashboardState.clients || [];
   if (!clients.length) { el.innerHTML = ''; return; }
 
-  const counts = { action: 0, watch: 0, ok: 0 };
-  clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
-  const avgCompliance = Math.round(clients.reduce((s, c) => s + (c.compliancePercent || 0), 0) / clients.length);
-
-  const statRow = [
-    ['Reviews due', counts.action, counts.action ? 'ws-stat-danger' : ''],
-    ['Avg compliance', avgCompliance + '%', ''],
-    ['Flagged', counts.watch + counts.action, (counts.watch + counts.action) ? 'ws-stat-warn' : ''],
-  ].map(([label, val, cls]) =>
-    `<div class="pod ws-stat-tile ${cls}"><div class="stat-tile-label">${label}</div><div class="stat-tile-value">${val}</div></div>`
-  ).join('');
-
-  const priority = clients.find(c => c.alertStatus === 'action') || clients.find(c => c.alertStatus === 'watch');
+  // The roster header stats bar (coaching-enhanced.js) already shows clients,
+  // alerts, watch, avg adherence and active-this-week, so the queue starts at
+  // "who needs attention" instead of repeating those numbers.
+  const priority = clients.find(c => c.alertStatus === 'action' || c.alertStatus === 'alert') || clients.find(c => c.alertStatus === 'watch');
+  const urgent = priority && (priority.alertStatus === 'action' || priority.alertStatus === 'alert');
   const priorityHTML = priority ? `
-    <div class="pod pod--hero ws-priority-card">
-      <div class="pod-row"><span class="pod-kicker">Needs attention</span><span class="ws-priority-tag ${priority.alertStatus}">${priority.alertStatus}</span></div>
+    <div class="pod pod--hero mx-pod ws-priority-card">
+      <div class="pod-row"><span class="pod-kicker mx-kicker">Needs attention</span><span class="mx-chip mx-chip--sm ${urgent ? 'mx-chip--red' : 'mx-chip--brass'} ws-priority-tag ${priority.alertStatus}">${urgent ? 'Needs action' : 'Watch'}</span></div>
       <div class="ws-priority-main">
         <span class="ws-priority-name">${escapeCoachText(priority.name)}</span>
         <span class="ws-priority-meta">${escapeCoachText(priority.currentPhase)} &middot; ${escapeCoachText(priority.primaryStatusMetric)}</span>
       </div>
-      <button class="cta-capsule ws-priority-cta" onclick="coachDashboardState.selectedClientId='${priority.id}'; if(typeof renderCoachDashboardView==='function') renderCoachDashboardView(); document.getElementById('coachDashboardContent')?.scrollIntoView({behavior:'smooth'});">Open client</button>
+      <button class="mx-cta ws-priority-cta" onclick="coachDashboardState.selectedClientId='${priority.id}'; if(typeof renderCoachDashboardView==='function') renderCoachDashboardView(); document.getElementById('coachDashboardContent')?.scrollIntoView({behavior:'smooth'});"><span>Open client</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.chevronRight}</span></span></button>
     </div>` : '';
 
   const roster = clients.slice().sort((a, b) => (a.compliancePercent || 0) - (b.compliancePercent || 0)).slice(0, 5);
   const rosterHTML = roster.map(c => `
-    <div class="sq-row"><span class="sq-name">${escapeCoachText(c.name)}</span><span class="sq-summary">${c.compliancePercent}%</span></div>
+    <div class="sq-row mx-row"><div class="mx-row-main"><span class="sq-name mx-row-title">${escapeCoachText(c.name)}</span>
+      <div class="mx-meter mx-meter--thin${(c.compliancePercent || 0) < 60 ? ' mx-meter--brass' : ''}"><i style="width:${c.compliancePercent || 0}%"></i></div></div>
+      <span class="sq-summary mx-row-big">${c.compliancePercent}<span class="mx-unit">%</span></span></div>
   `).join('');
 
   el.innerHTML = `
-    <div class="ws-stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">${statRow}</div>
     ${priorityHTML}
-    <div class="pod sq-card">
-      <div class="pod-row"><span class="pod-kicker">Roster snapshot</span><span class="sq-count">compliance</span></div>
-      ${rosterHTML}
+    <div class="pod mx-pod sq-card">
+      <div class="pod-row"><span class="pod-kicker mx-kicker">Roster snapshot</span><span class="sq-count mx-meta">lowest compliance first</span></div>
+      <div>${rosterHTML}</div>
     </div>
   `;
 }
@@ -13513,11 +13561,11 @@ function renderBwMonthlyHistory() {
   const container = document.getElementById('bwMonthlyHistory');
   if (!container) return;
   const user = window.currentUser || localStorage.getItem('fitnessAppUser');
-  if (!user) { container.innerHTML = '<div class="hist-empty">Log in to see history.</div>'; return; }
+  if (!user) { container.innerHTML = '<div class="mx-empty">Log in to see history.</div>'; return; }
 
   const log = JSON.parse(localStorage.getItem('bodyweightLog_' + user) || '[]');
   if (!log.length) {
-    container.innerHTML = '<div class="hist-empty">No bodyweight entries yet.</div>';
+    container.innerHTML = '<div class="mx-empty">No bodyweight entries yet.</div>';
     return;
   }
 
@@ -13526,63 +13574,57 @@ function renderBwMonthlyHistory() {
   const sorted = log.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
 
   // Group by month
-  var months = {};
+  const months = {};
   sorted.forEach(function (entry) {
-    var d = entry.date || '';
-    var key = d.slice(0, 7); // YYYY-MM
+    const key = (entry.date || '').slice(0, 7); // YYYY-MM
     if (!months[key]) months[key] = [];
     months[key].push(entry);
   });
 
-  var html = '';
-  Object.keys(months).sort().reverse().forEach(function (monthKey) {
-    var entries = months[monthKey];
-    var d = new Date(monthKey + '-01T00:00:00');
-    var monthLabel = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const cvt = (kg) => convertWeightValue(kg, 'kg', unit, 1);
+  const html = Object.keys(months).sort().reverse().map(function (monthKey, idx) {
+    const entries = months[monthKey];
+    const d = new Date(monthKey + '-01T00:00:00');
+    const monthLabel = isNaN(d.getTime()) ? mxEsc(monthKey || 'Unknown') : d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-    // Calculate month stats
-    var weights = entries.map(function (e) { return getEntryWeightKg(e); }).filter(function (w) { return w != null; });
-    var avg = weights.length ? weights.reduce(function (s, v) { return s + v; }, 0) / weights.length : 0;
-    var min = weights.length ? Math.min.apply(null, weights) : 0;
-    var max = weights.length ? Math.max.apply(null, weights) : 0;
-    var change = weights.length >= 2 ? weights[0] - weights[weights.length - 1] : 0;
-    var avgDisp = convertWeightValue(avg, 'kg', unit, 1);
-    var minDisp = convertWeightValue(min, 'kg', unit, 1);
-    var maxDisp = convertWeightValue(max, 'kg', unit, 1);
-    var changeDisp = convertWeightValue(Math.abs(change), 'kg', unit, 1);
-    var changeCls = Math.abs(change) < 0.05 ? '' : change > 0 ? 'wt-up' : 'wt-down';
-    var changeSign = change > 0 ? '+' : change < 0 ? '−' : '';
+    // Month stats (entries are newest-first, so weights[0] is the latest)
+    const weights = entries.map(function (e) { return getEntryWeightKg(e); }).filter(function (w) { return w != null; });
+    const avg = weights.length ? weights.reduce(function (s, v) { return s + v; }, 0) / weights.length : 0;
+    const min = weights.length ? Math.min.apply(null, weights) : 0;
+    const max = weights.length ? Math.max.apply(null, weights) : 0;
+    const change = weights.length >= 2 ? weights[0] - weights[weights.length - 1] : 0;
+    const flat = Math.abs(change) < 0.05;
+    const changeText = flat ? 'No change' : (change > 0 ? '▲ ' : '▼ ') + cvt(Math.abs(change)) + ' ' + unit;
 
-    html += '<div class="session-card" onclick="this.classList.toggle(\'open\')">'
-      + '<div class="session-card-header">'
-      + '<div class="session-card-left">'
-      + '<span class="session-card-date">' + monthLabel + '</span>'
-      + '<span class="session-card-meta">Avg: ' + avgDisp + ' ' + unit + ' · ' + entries.length + ' entries</span>'
-      + '</div>'
-      + '<div class="session-card-right">'
-      + '<span class="session-card-count ' + changeCls + '">' + changeSign + changeDisp + ' ' + unit + '</span>'
-      + '<span class="session-card-chevron">▸</span>'
-      + '</div></div>'
-      + '<div class="session-card-body">'
-      + '<div class="session-summary-row" style="margin-bottom:10px;">'
-      + '<div class="session-summary-item"><span>Min:</span><span class="session-summary-val">' + minDisp + '</span></div>'
-      + '<div class="session-summary-item"><span>Max:</span><span class="session-summary-val">' + maxDisp + '</span></div>'
-      + '<div class="session-summary-item"><span>Avg:</span><span class="session-summary-val">' + avgDisp + '</span></div>'
-      + '<div class="session-summary-item"><span>Entries:</span><span class="session-summary-val">' + entries.length + '</span></div>'
-      + '</div>';
-
-    entries.forEach(function (e) {
-      var baseKg = getEntryWeightKg(e);
-      var wDisp = baseKg != null ? convertWeightValue(baseKg, 'kg', unit, 1) + ' ' + unit : '—';
-      var dateLabel = new Date(e.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-      html += '<div class="session-exercise">'
-        + '<span class="session-ex-name">' + dateLabel + '</span>'
-        + '<span class="session-ex-detail">' + wDisp + (e.calories ? ' · ' + e.calories + ' kcal' : '') + '</span>'
+    const rows = entries.map(function (e) {
+      const baseKg = getEntryWeightKg(e);
+      const wDisp = baseKg != null ? cvt(baseKg) : '—';
+      const dt = new Date(e.date + 'T00:00:00');
+      const valid = !isNaN(dt.getTime());
+      return '<div class="mx-row bw-row">'
+        + '<div class="mx-date"><b>' + (valid ? dt.getDate() : '') + '</b><span>' + (valid ? dt.toLocaleDateString('en-GB', { month: 'short' }) : '') + '</span></div>'
+        + '<div class="mx-row-main"><span class="mx-row-title">' + (valid ? dt.toLocaleDateString('en-GB', { weekday: 'long' }) : mxEsc(e.date)) + '</span>'
+        + (e.calories ? '<span class="mx-row-sub">' + mxEsc(e.calories) + ' kcal</span>' : '') + '</div>'
+        + '<div class="mx-row-right"><span class="mx-row-big">' + wDisp + '</span><span class="mx-row-sm">' + (baseKg != null ? unit : '') + '</span></div>'
         + '</div>';
-    });
+    }).join('');
 
-    html += '</div></div>';
-  });
+    return '<details class="pod mx-pod bw-month"' + (idx === 0 ? ' open' : '') + '>'
+      + '<summary class="bw-month-head">'
+      +   '<span class="bw-month-title"><span class="mx-row-title">' + monthLabel + '</span>'
+      +   '<span class="mx-row-sub">Avg ' + cvt(avg) + ' ' + unit + ' · ' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') + '</span></span>'
+      +   '<span class="mx-chip mx-chip--sm bw-change">' + changeText + '</span>'
+      +   '<span class="bw-chevron ui-icon">' + ICONS.chevronDown + '</span>'
+      + '</summary>'
+      + '<div class="mx-tiles mx-tiles--4 bw-tiles">'
+      +   '<div class="mx-stat"><span class="mx-stat-l">Min</span><span class="mx-stat-v">' + cvt(min) + '</span></div>'
+      +   '<div class="mx-stat"><span class="mx-stat-l">Max</span><span class="mx-stat-v">' + cvt(max) + '</span></div>'
+      +   '<div class="mx-stat"><span class="mx-stat-l">Avg</span><span class="mx-stat-v">' + cvt(avg) + '</span></div>'
+      +   '<div class="mx-stat"><span class="mx-stat-l">Entries</span><span class="mx-stat-v">' + entries.length + '</span></div>'
+      + '</div>'
+      + '<div class="bw-rows">' + rows + '</div>'
+      + '</details>';
+  }).join('');
 
   container.innerHTML = html;
 }
@@ -16406,22 +16448,41 @@ function renderMacroHistory() {
   }
 
   if (!macroHistory.length) {
-    container.innerHTML = '<p style="opacity:.7;">No macro history saved yet.</p>';
+    container.innerHTML = '<div class="mx-empty">No macro history saved yet.</div>';
     return;
   }
 
-  container.innerHTML = "";
-  macroHistory.slice().reverse().forEach(entry => {
-    const div = document.createElement("div");
+  container.innerHTML = macroHistory.slice().reverse().map(entry => {
     const meals = Array.isArray(entry?.meals) ? entry.meals : [];
+    const totals = entry?.totals || { protein: 0, carbs: 0, fats: 0 };
+    const p = Number(totals.protein) || 0, c = Number(totals.carbs) || 0, f = Number(totals.fats) || 0;
+    const cals = p * 4 + c * 4 + f * 9;
+    const d = new Date(String(entry?.date || '') + 'T00:00:00');
+    const valid = !isNaN(d.getTime());
     const mealsHtml = meals.length
-      ? meals.map((m, i) => `Meal ${i + 1}: P${m?.protein || 0}, C${m?.carbs || 0}, F${m?.fats || 0}`).join("<br>")
-      : 'No meal details saved.';
-    const totals = entry.totals || { protein:0, carbs:0, fats:0 };
-    const cals = totals.protein * 4 + totals.carbs * 4 + totals.fats * 9;
-    div.innerHTML = `<strong>${entry?.date || 'Unknown date'}</strong><br>${mealsHtml}<br>Total: ${cals} kcal`;
-    container.appendChild(div);
-  });
+      ? meals.map((m, i) => `
+          <div class="mx-row macro-meal">
+            <div class="mx-row-main"><span class="mx-row-title">Meal ${i + 1}</span></div>
+            <div class="macro-meal-vals"><span class="mx-tag">P ${mxEsc(m?.protein || 0)}</span><span class="mx-tag">C ${mxEsc(m?.carbs || 0)}</span><span class="mx-tag">F ${mxEsc(m?.fats || 0)}</span></div>
+          </div>`).join('')
+      : '<div class="mx-row-sub">No meal details saved.</div>';
+    return `
+      <section class="pod mx-pod macro-day" aria-label="${mxEsc(entry?.date || 'Unknown date')}">
+        <div class="pod-row">
+          <div class="macro-day-title">
+            <span class="mx-kicker">${valid ? d.toLocaleDateString(undefined, { weekday: 'long' }) : 'Macros'}</span>
+            <span class="mx-row-title">${valid ? d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : mxEsc(entry?.date || 'Unknown date')}</span>
+          </div>
+          <span class="mx-row-big">${cals}<span class="mx-unit"> kcal</span></span>
+        </div>
+        <div class="mx-tiles">
+          <div class="mx-stat"><span class="mx-stat-l">Protein</span><span class="mx-stat-v">${p}<small>g</small></span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Carbs</span><span class="mx-stat-v">${c}<small>g</small></span></div>
+          <div class="mx-stat"><span class="mx-stat-l">Fat</span><span class="mx-stat-v">${f}<small>g</small></span></div>
+        </div>
+        <div class="macro-meals">${mealsHtml}</div>
+      </section>`;
+  }).join('');
 }
 
 function renderWorkoutHistoryFallback(container) {
@@ -16434,7 +16495,7 @@ function renderWorkoutHistoryFallback(container) {
   ).filter(entry => !userKey || !entry?.userId || entry.userId === userKey);
 
   if (!logs.length) {
-    container.innerHTML = '<div style="text-align:center;padding:40px 20px;opacity:0.85;"><svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:16px;opacity:0.6;"><rect x="8" y="36" width="64" height="8" rx="4" fill="var(--primary)"/><rect x="4" y="26" width="10" height="28" rx="5" fill="var(--primary-dark,#245f47)"/><rect x="66" y="26" width="10" height="28" rx="5" fill="var(--primary-dark,#245f47)"/><rect x="14" y="32" width="6" height="16" rx="2" fill="var(--primary)"/><rect x="60" y="32" width="6" height="16" rx="2" fill="var(--primary)"/></svg><p style="font-size:1rem;font-weight:600;color:var(--text-color);margin:0 0 6px;">No workouts logged yet</p><p style="font-size:0.875rem;color:var(--secondary-text,#888);margin:0;">Head to the Log tab to record your first session.</p></div>';
+    container.innerHTML = '<div class="mx-empty">No workouts logged yet.<br>Head to the Log tab to record your first session.</div>';
     return;
   }
 
@@ -16445,11 +16506,11 @@ function renderWorkoutHistoryFallback(container) {
       const title = entry?.title || 'Workout';
       const date = entry?.date || 'Unknown date';
       const exercises = Array.isArray(entry?.exercises) ? entry.exercises.length : 0;
-      return `<li><strong>${title}</strong> <span style="opacity:.7;">(${date})</span><br><small>${exercises} exercise${exercises === 1 ? '' : 's'}</small></li>`;
+      return `<li class="mx-row"><div class="mx-row-main"><span class="mx-row-title">${mxEsc(title)}</span><span class="mx-row-sub">${mxEsc(date)} · ${exercises} exercise${exercises === 1 ? '' : 's'}</span></div></li>`;
     })
     .join('');
 
-  container.innerHTML = `<ul style="display:grid; gap:10px; padding-left:20px;">${rows}</ul>`;
+  container.innerHTML = `<ul class="pod mx-pod hist-fallback">${rows}</ul>`;
 }
 
 // History sub-tab switching
@@ -19612,20 +19673,12 @@ window.renderCaffeinePod = renderCaffeinePod;
         <canvas id="workoutStoryCanvas" style="display:block;width:100%;height:auto;"></canvas>
       </div>
       <!-- Actions -->
-      <div style="display:flex;gap:10px;">
-        <button id="storyDownloadBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:#2d7d5b;color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <span class="ui-icon" data-icon="download"></span> Save Image
-        </button>
-        <button id="storyShareBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.12);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;gap:8px;">
-          <span class="ui-icon" data-icon="share"></span> Share
-        </button>
-        <button onclick="closeWorkoutStoryModal()" style="padding:14px 18px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:0.9rem;cursor:pointer;">
-          <span class="ui-icon" data-icon="x"></span>
-        </button>
+      <div class="story-actions">
+        <button type="button" id="storyDownloadBtn" class="mx-cta story-save"><span>Save Image</span><span class="mx-cta-icon"><span class="ui-icon" data-icon="download"></span></span></button>
+        <button type="button" id="storyShareBtn" class="mx-outline story-share"><span class="ui-icon" data-icon="share"></span> Share</button>
+        <button type="button" class="mx-iconbtn" aria-label="Close" onclick="closeWorkoutStoryModal()"><span class="ui-icon" data-icon="x"></span></button>
       </div>
-      <p style="text-align:center;color:rgba(255,255,255,0.35);font-size:0.75rem;margin-top:12px;">
-        Save to camera roll · Post to your story <span class="ui-icon" data-icon="camera"></span>
-      </p>
+      <p class="story-caption">Save to camera roll · Post to your story</p>
     </div>
   </div>
 
@@ -19996,20 +20049,19 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/ai-coach.js"></script>
 
 <!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
-<div id="macroAiBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);z-index:1050;" onclick="closeMacroAiAdvisor()"></div>
-<div id="macroAiPanel" role="dialog" aria-modal="true" aria-label="AI Macro Advisor"
-  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--card-bg);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
+<div id="macroAiBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeMacroAiAdvisor()"></div>
+<div id="macroAiPanel" class="ai-sheet" role="dialog" aria-modal="true" aria-label="AI Macro Advisor" style="display:none;transform:translateY(100%);">
+  <div class="ai-sheet-head">
+    <div class="ai-sheet-title">
+      <div class="ai-sheet-badge"><span class="ui-icon" data-icon="sparkles"></span></div>
       <div>
-        <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Macro Advisor</div>
-        <div id="macroAiStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
+        <div class="ai-sheet-name">AI Macro Advisor</div>
+        <div id="macroAiStatus" class="ai-sheet-status">Powered by Claude</div>
       </div>
     </div>
-    <button onclick="closeMacroAiAdvisor()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;margin:0;box-shadow:none;display:flex;align-items:center;justify-content:center;"><span class="ui-icon">${ICONS.x}</span></button>
+    <button type="button" class="mx-iconbtn" aria-label="Close" onclick="closeMacroAiAdvisor()"><span class="ui-icon" data-icon="x"></span></button>
   </div>
-  <div id="macroAiBody" style="flex:1;overflow-y:auto;padding:14px 16px 24px;-webkit-overflow-scrolling:touch;"></div>
+  <div id="macroAiBody" class="ai-sheet-body"></div>
 </div>
 
 <script>
@@ -20062,19 +20114,18 @@ window.renderCaffeinePod = renderCaffeinePod;
 
   function renderMacroAiLoading(body, status) {
     status.textContent = 'Analysing your trends…';
-    body.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:24px 0;color:var(--secondary-text);font-size:0.88rem;"><div style="width:18px;height:18px;border:2px solid var(--border-color);border-top-color:var(--primary,#5fa87e);border-radius:50%;animation:spin 0.9s linear infinite;flex-shrink:0;"></div>Analysing your trends…</div>';
+    body.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div>Analysing your trends…</div>';
   }
 
   function renderMacroAiResult(body, status, data) {
     status.textContent = 'Powered by Claude';
     const { advice, suggestedTargets, currentTargets } = data;
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    function arrow(cur, sug, unit) {
+    function change(cur, sug, unit) {
       const diff = sug - cur;
-      if (Math.abs(diff) < 1) return '<span style="color:var(--secondary-text)">→</span> ' + sug + unit;
-      const col = diff > 0 ? '#4caf82' : '#e05060';
-      const sym = diff > 0 ? '↑' : '↓';
-      return '<span style="color:' + col + ';font-weight:700;">' + sym + ' ' + sug + unit + '</span>';
+      if (Math.abs(diff) < 1) return '<span class="ai-same">' + sug + unit + '</span>';
+      return '<span class="' + (diff > 0 ? 'ai-up' : 'ai-down') + '">' + (diff > 0 ? '▲ ' : '▼ ') + sug + unit + '</span>';
     }
 
     const rows = [
@@ -20084,33 +20135,34 @@ window.renderCaffeinePod = renderCaffeinePod;
       { label: 'Calories',cur: currentTargets.calories, sug: suggestedTargets.calories, unit: ' kcal' },
     ];
 
+    // JSON contains double quotes, so it must be entity-escaped inside the attribute.
+    const payloadAttr = JSON.stringify(suggestedTargets).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+
     body.innerHTML =
-      '<div style="background:var(--card-bg);border:1px solid var(--border-color,#2a3a2e);border-left:3px solid var(--primary,#5fa87e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
-        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--primary,#5fa87e);margin-bottom:8px;"><span class="ui-icon">' + ICONS.sparkles + '</span> AI Advice</div>' +
-        '<p style="font-size:0.88rem;line-height:1.6;color:var(--text-color);margin:0;">' + advice.replace(/</g, '&lt;') + '</p>' +
-      '</div>' +
-      '<div style="background:var(--surface-bg,#141e17);border:1px solid var(--border-color,#2a3a2e);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
-        '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--secondary-text);margin-bottom:12px;">Suggested vs Current</div>' +
+      '<section class="pod pod--hero mx-pod ai-advice">' +
+        '<div class="mx-kicker"><span class="ui-icon">' + ICONS.sparkles + '</span> AI Advice</div>' +
+        '<p class="mx-para">' + esc(advice) + '</p>' +
+      '</section>' +
+      '<section class="pod mx-pod">' +
+        '<div class="mx-kicker">Suggested vs current</div>' +
+        '<div>' +
         rows.map(r =>
-          '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">' +
-            '<span style="font-size:0.85rem;color:var(--secondary-text);">' + r.label + '</span>' +
-            '<div style="font-size:0.85rem;display:flex;gap:12px;align-items:center;">' +
-              '<span style="color:var(--text-muted,#6a7f6d);">' + r.cur + r.unit + '</span>' +
-              '<span>→</span>' +
-              arrow(r.cur, r.sug, r.unit) +
-            '</div>' +
+          '<div class="mx-row ai-row">' +
+            '<div class="mx-row-main"><span class="mx-row-title">' + r.label + '</span></div>' +
+            '<div class="ai-row-vals"><span class="ai-cur">' + r.cur + r.unit + '</span><span class="ai-arrow" aria-hidden="true">→</span>' + change(r.cur, r.sug, r.unit) + '</div>' +
           '</div>'
         ).join('') +
-      '</div>' +
-      '<button onclick="applyMacroAiTargets(' + JSON.stringify(suggestedTargets) + ')" ' +
-        'style="width:100%;background:var(--primary,#5fa87e);color:#0b130d;border:none;border-radius:14px;padding:13px;font-size:0.95rem;font-weight:700;cursor:pointer;margin:0;box-shadow:none;">' +
-        'Apply suggested targets' +
+        '</div>' +
+      '</section>' +
+      '<button type="button" class="mx-cta" onclick="applyMacroAiTargets(' + payloadAttr + ')">' +
+        '<span>Apply suggested targets</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.check + '</span></span>' +
       '</button>';
   }
 
   function renderMacroAiError(body, status, msg) {
     status.textContent = 'Powered by Claude';
-    body.innerHTML = '<div style="background:rgba(224,80,96,0.1);border:1px solid rgba(224,80,96,0.3);border-radius:14px;padding:14px 16px;color:#e05060;font-size:0.88rem;"><span class="ui-icon">' + ICONS.alertTriangle + '</span> ' + msg + '</div>';
+    const safe = String(msg == null ? '' : msg).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    body.innerHTML = '<div class="ai-error"><span class="ui-icon">' + ICONS.alertTriangle + '</span><span>' + safe + '</span></div>';
   }
 
   window.openMacroAiAdvisor = async function () {
@@ -20188,20 +20240,19 @@ window.renderCaffeinePod = renderCaffeinePod;
 </script>
 
 <!-- ── AI Program Generator panel ──────────────────────────────────────── -->
-<div id="progAiGenBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);z-index:1050;" onclick="closeProgAiGen()"></div>
-<div id="progAiGenPanel" role="dialog" aria-modal="true" aria-label="AI Program Generator"
-  style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:88vh;background:var(--card-bg);border-radius:22px 22px 0 0;border-top:1px solid var(--border-color,#2a3a2e);box-shadow:0 -8px 32px rgba(0,0,0,0.55);z-index:1060;flex-direction:column;transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);overflow:hidden;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-color,#2a3a2e);flex-shrink:0;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1e3a28,#2d5c40);border:2px solid var(--primary,#5fa87e);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="ui-icon" style="width:17px;height:17px;">${ICONS.sparkles}</span></div>
+<div id="progAiGenBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeProgAiGen()"></div>
+<div id="progAiGenPanel" class="ai-sheet" role="dialog" aria-modal="true" aria-label="AI Program Generator" style="display:none;transform:translateY(100%);">
+  <div class="ai-sheet-head">
+    <div class="ai-sheet-title">
+      <div class="ai-sheet-badge"><span class="ui-icon" data-icon="sparkles"></span></div>
       <div>
-        <div style="font-size:0.95rem;font-weight:700;color:var(--text-color);">AI Program Generator</div>
-        <div id="progAiGenStatus" style="font-size:0.72rem;color:var(--secondary-text);">Powered by Claude</div>
+        <div class="ai-sheet-name">AI Program Generator</div>
+        <div id="progAiGenStatus" class="ai-sheet-status">Powered by Claude</div>
       </div>
     </div>
-    <button onclick="closeProgAiGen()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--surface-bg,#141e17);color:var(--secondary-text);cursor:pointer;font-size:18px;padding:0;display:flex;align-items:center;justify-content:center;"><span class="ui-icon">${ICONS.x}</span></button>
+    <button type="button" class="mx-iconbtn" aria-label="Close" onclick="closeProgAiGen()"><span class="ui-icon" data-icon="x"></span></button>
   </div>
-  <div id="progAiGenBody" style="flex:1;overflow-y:auto;padding:14px 16px 32px;-webkit-overflow-scrolling:touch;"></div>
+  <div id="progAiGenBody" class="ai-sheet-body"></div>
 </div>
 
 <script>
@@ -20297,51 +20348,49 @@ window.renderCaffeinePod = renderCaffeinePod;
       return '<option value="' + e + '"' + (e === expLevel ? ' selected' : '') + '>' + (e.charAt(0).toUpperCase() + e.slice(1)) + '</option>';
     }).join('');
 
-    return '<div style="display:grid;gap:14px;">'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Goal<input id="pagGoal" type="text" placeholder="e.g. build muscle and improve my bench" style="margin-top:2px;" value="' + (cached ? '' : '') + '"></label>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Days / week<select id="pagDays"><option value="3">3 days</option><option value="4" selected>4 days</option><option value="5">5 days</option><option value="6">6 days</option></select></label>'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Session length<select id="pagLength"><option value="45">45 min</option><option value="60" selected>60 min</option><option value="75">75 min</option><option value="90">90 min</option></select></label>'
+    return '<div class="ai-form">'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagGoal">Goal</label><div class="mx-well mx-well--text"><input id="pagGoal" type="text" placeholder="e.g. build muscle and improve my bench"></div></div>'
+      + '<div class="mx-grid2">'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagDays">Days / week</label><div class="mx-well mx-well--text mx-well--sel"><select id="pagDays"><option value="3">3 days</option><option value="4" selected>4 days</option><option value="5">5 days</option><option value="6">6 days</option></select></div></div>'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagLength">Session length</label><div class="mx-well mx-well--text mx-well--sel"><select id="pagLength"><option value="45">45 min</option><option value="60" selected>60 min</option><option value="75">75 min</option><option value="90">90 min</option></select></div></div>'
       + '</div>'
-      + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted,#7a8f7d);">Equipment available</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.dumbbell + '</span> Barbell</button>'
-      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.dumbbell + '</span> Dumbbells</button>'
-      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.link + '</span> Cables / Machine</button>'
-      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" onclick="this.classList.toggle(\'active\')"><span class="ui-icon">' + ICONS.activity + '</span> Bodyweight</button>'
+      + '<div class="mx-field"><span class="mx-lbl">Equipment available</span>'
+      + '<div class="ai-eq" role="group" aria-label="Equipment available">'
+      + '<button type="button" id="pagEqBarbell" class="pag-eq-pill active" aria-pressed="true" onclick="this.classList.toggle(\'active\');this.setAttribute(\'aria-pressed\',this.classList.contains(\'active\'))"><span class="ui-icon">' + ICONS.dumbbell + '</span> Barbell</button>'
+      + '<button type="button" id="pagEqDumbbells" class="pag-eq-pill active" aria-pressed="true" onclick="this.classList.toggle(\'active\');this.setAttribute(\'aria-pressed\',this.classList.contains(\'active\'))"><span class="ui-icon">' + ICONS.dumbbell + '</span> Dumbbells</button>'
+      + '<button type="button" id="pagEqCables" class="pag-eq-pill active" aria-pressed="true" onclick="this.classList.toggle(\'active\');this.setAttribute(\'aria-pressed\',this.classList.contains(\'active\'))"><span class="ui-icon">' + ICONS.link + '</span> Cables / Machine</button>'
+      + '<button type="button" id="pagEqBodyweight" class="pag-eq-pill" aria-pressed="false" onclick="this.classList.toggle(\'active\');this.setAttribute(\'aria-pressed\',this.classList.contains(\'active\'))"><span class="ui-icon">' + ICONS.activity + '</span> Bodyweight</button>'
+      + '</div></div>'
+      + '<div class="mx-grid2">'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagMode">Training mode</label><div class="mx-well mx-well--text mx-well--sel"><select id="pagMode">' + modeOptions + '</select></div></div>'
+      + '<div class="mx-field"><label class="mx-lbl" for="pagExp">Experience</label><div class="mx-well mx-well--text mx-well--sel"><select id="pagExp">' + expOptions + '</select></div></div>'
       + '</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Training mode<select id="pagMode">' + modeOptions + '</select></label>'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Experience<select id="pagExp">' + expOptions + '</select></label>'
-      + '</div>'
-      + '<label style="display:flex;flex-direction:column;gap:5px;font-size:0.88rem;color:var(--secondary-text);">Focus areas <span style="font-weight:400;">(optional)</span><input id="pagFocus" type="text" placeholder="e.g. need more back volume, lagging quads"></label>'
-      + '<button id="pagSubmitBtn" onclick="submitProgAiGen()" style="padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;">Generate Program</button>'
-      + (cached ? '<button onclick="showProgAiPreview()" style="margin-top:-6px;padding:10px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.85rem;cursor:pointer;width:100%;">↩ View last generated program</button>' : '')
+      + '<div class="mx-field"><label class="mx-lbl" for="pagFocus">Focus areas <em>optional</em></label><div class="mx-well mx-well--text"><input id="pagFocus" type="text" placeholder="e.g. need more back volume, lagging quads"></div></div>'
+      + '<button type="button" id="pagSubmitBtn" class="mx-cta ai-submit" onclick="submitProgAiGen()"><span>Generate Program</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.sparkles + '</span></span></button>'
+      + (cached ? '<button type="button" class="mx-outline mx-outline--block" onclick="showProgAiPreview()">View last generated program</button>' : '')
       + '</div>';
   }
 
   function _renderPreview(prog) {
     var rows = (prog.days || []).map(function (day, i) {
       var exCount = (day.exercises || []).length;
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color,#2a3a2e);">'
-        + '<div><div style="font-size:0.9rem;font-weight:600;">' + escapeCoachText(day.name) + '</div>'
-        + (day.focus ? '<div style="font-size:0.78rem;color:var(--secondary-text);">' + escapeCoachText(day.focus) + '</div>' : '')
+      return '<div class="mx-row ai-day">'
+        + '<div class="mx-row-main"><span class="mx-row-title">' + escapeCoachText(day.name) + '</span>'
+        + (day.focus ? '<span class="mx-row-sub">' + escapeCoachText(day.focus) + '</span>' : '')
         + '</div>'
-        + '<div style="font-size:0.82rem;color:var(--secondary-text);">' + exCount + ' exercise' + (exCount !== 1 ? 's' : '') + '</div>'
+        + '<span class="mx-tag">' + exCount + ' exercise' + (exCount !== 1 ? 's' : '') + '</span>'
         + '</div>';
     }).join('');
 
-    return '<div style="background:rgba(95,168,126,0.08);border:1px solid var(--primary,#5fa87e);border-radius:12px;padding:12px 14px;margin-bottom:14px;">'
-      + '<div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--primary,#5fa87e);margin-bottom:6px;">Generated Program</div>'
-      + '<div style="font-size:1rem;font-weight:700;margin-bottom:10px;">' + escapeCoachText(prog.name) + '</div>'
-      + rows
-      + (prog.progressionNotes ? '<div style="margin-top:10px;font-size:0.82rem;color:var(--secondary-text);"><strong>Progression:</strong> ' + escapeCoachText(prog.progressionNotes) + '</div>' : '')
-      + (prog.deloadRecommendation ? '<div style="margin-top:4px;font-size:0.82rem;color:var(--secondary-text);"><strong>Deload:</strong> ' + escapeCoachText(prog.deloadRecommendation) + '</div>' : '')
-      + '</div>'
-      + '<div style="display:flex;gap:8px;">'
-      + '<button onclick="saveGeneratedProgram()" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary,#5fa87e),#3a8c62);color:#fff;font-size:0.92rem;font-weight:700;cursor:pointer;">Save to Programs</button>'
-      + '<button onclick="progAiGenShowForm()" style="padding:13px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.88rem;cursor:pointer;">Regenerate</button>'
-      + '</div>';
+    return '<section class="pod pod--hero mx-pod">'
+      + '<div class="mx-kicker">Generated program</div>'
+      + '<h4 class="pod-title mx-h3">' + escapeCoachText(prog.name) + '</h4>'
+      + '<div>' + rows + '</div>'
+      + (prog.progressionNotes ? '<p class="mx-note"><strong>Progression:</strong> ' + escapeCoachText(prog.progressionNotes) + '</p>' : '')
+      + (prog.deloadRecommendation ? '<p class="mx-note ai-note-flat"><strong>Deload:</strong> ' + escapeCoachText(prog.deloadRecommendation) + '</p>' : '')
+      + '</section>'
+      + '<button type="button" class="mx-cta" onclick="saveGeneratedProgram()"><span>Save to Programs</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.check + '</span></span></button>'
+      + '<button type="button" class="mx-outline mx-outline--block" onclick="progAiGenShowForm()">Regenerate</button>';
   }
 
   window.openProgAiGen = function () {
@@ -20401,7 +20450,7 @@ window.renderCaffeinePod = renderCaffeinePod;
 
     if (!goal) {
       var goalEl = document.getElementById('pagGoal');
-      if (goalEl) { goalEl.focus(); goalEl.style.borderColor = '#eb5757'; setTimeout(function () { goalEl.style.borderColor = ''; }, 2000); }
+      if (goalEl) { goalEl.focus(); var well = goalEl.closest('.mx-well'); if (well) { well.classList.add('is-invalid'); setTimeout(function () { well.classList.remove('is-invalid'); }, 2000); } }
       return;
     }
 
@@ -20419,7 +20468,7 @@ window.renderCaffeinePod = renderCaffeinePod;
     if (btn) {
       btn.disabled = true;
       btn.textContent = 'Building your program…';
-      btn.style.animation = 'pag-pulse 1.2s ease-in-out infinite';
+      btn.classList.add('is-busy');
     }
     if (status) status.textContent = 'Building your program…';
 
@@ -20452,8 +20501,8 @@ window.renderCaffeinePod = renderCaffeinePod;
       var msg = err.name === 'AbortError'
         ? 'Request timed out — please try again.'
         : (!navigator.onLine ? 'You are offline.' : "Couldn't generate a program — please try again.");
-      if (body) body.innerHTML = '<div style="color:#eb5757;font-size:0.9rem;padding:16px 0;">' + msg + '</div>'
-        + '<button onclick="progAiGenShowForm()" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border-color);background:transparent;color:var(--secondary-text);font-size:0.88rem;cursor:pointer;">← Back to form</button>';
+      if (body) body.innerHTML = '<div class="ai-error"><span class="ui-icon">' + ICONS.alertTriangle + '</span><span>' + msg + '</span></div>'
+        + '<button type="button" class="mx-outline mx-outline--block" onclick="progAiGenShowForm()">Back to form</button>';
     });
   };
 

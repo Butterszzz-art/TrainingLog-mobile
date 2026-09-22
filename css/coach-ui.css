@@ -1,0 +1,415 @@
+/* =============================================================
+   COACH UI  (Modernist)
+   Mobile Coach page (roster, client detail, queue) and the Coach
+   Ops sub-tabs. Loaded after coaching.css / home.css and scoped to the
+   two coach tabs so it wins over those files without editing them.
+   Shared blocks live in modernist-kit.css.
+   ============================================================= */
+
+#clientsTab,
+#coachOpsTab { padding: 14px 12px 80px; max-width: 620px; margin: 0 auto; }
+
+#clientsTab .coach-page-header,
+#coachOpsTab .coach-page-header { padding: 2px 4px 12px; }
+#clientsTab .coach-page-header h2,
+#coachOpsTab .coach-page-header h2 { text-align: left; margin: 0; font-size: 20px; }
+
+/* ── Aggregate stats (renderCoachStatsBar) ──────────────────── */
+#clientsTab .coach-stats-bar { display: block; padding: 0; margin: 10px 0 0; background: none; border: 0; }
+#clientsTab .coach-stats-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+#clientsTab .coach-stats-tiles .coach-stat-chip {
+  grid-column: span 2;
+  text-align: left;
+  align-items: flex-start;
+  padding: 10px 12px;
+}
+#clientsTab .coach-stats-tiles .coach-stat--alert,
+#clientsTab .coach-stats-tiles .coach-stat--watch { grid-column: span 3; }
+#clientsTab .coach-stat-chip .chip-value { color: var(--text-primary); font-size: 26px; }
+#clientsTab .coach-stat--alert.is-on { border-color: var(--border-alert); background: var(--danger-bg); }
+#clientsTab .coach-stat--alert.is-on .chip-value { color: var(--danger-text-mobile); }
+#clientsTab .coach-stat--watch.is-on { border-color: var(--border-brass); background: var(--warning-bg); }
+#clientsTab .coach-stat--watch.is-on .chip-value { color: var(--brass-light); }
+
+/* ── Queue: priority client + roster snapshot ───────────────── */
+#clientsTab #coachQueueSection { margin-top: 12px; }
+#clientsTab .ws-priority-card { gap: 12px; margin-bottom: 12px; }
+#clientsTab .ws-priority-main { display: flex; flex-direction: column; gap: 4px; }
+#clientsTab .ws-priority-name { font-family: var(--font-display); font-size: 30px; line-height: 1.05; text-transform: uppercase; color: var(--text-primary); }
+#clientsTab .ws-priority-meta { font-size: 13.5px; color: var(--text-tertiary); }
+#clientsTab .sq-card { gap: 6px; }
+#clientsTab .sq-row { align-items: center; padding: 10px 0; border-bottom: 0; }
+#clientsTab .sq-row .mx-row-main { gap: 8px; }
+#clientsTab .sq-row .sq-name { font-size: 15px; }
+#clientsTab .sq-row .mx-row-big { font-size: 22px; }
+
+/* ── Roster header + bulk toolbar ───────────────────────────── */
+#clientsTab .coach-dashboard-header { margin: 12px 0; padding: 16px 17px; }
+#clientsTab .coach-dashboard-header-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#clientsTab .coach-dashboard-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  text-align: left;
+}
+#clientsTab .coach-dashboard-subtitle { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-tertiary); text-align: left; }
+#clientsTab .coach-add-client-btn {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 16px;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-default); background: rgba(255, 255, 255, 0.038);
+  box-shadow: none; color: var(--text-secondary);
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+#clientsTab .coach-add-client-btn .ui-icon { width: 16px; height: 16px; }
+
+#clientsTab .coach-bulk-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-pod);
+  background: var(--pod-bg);
+  border: 1px solid var(--border-featured);
+  box-shadow: var(--pod-bevel);
+}
+#clientsTab .coach-bulk-toolbar[hidden] { display: none; }
+#clientsTab .coach-bulk-count { font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--green-90); }
+#clientsTab .coach-bulk-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#clientsTab .coach-bulk-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex: 1; justify-content: center;
+  min-height: 44px; margin: 0; padding: 0 12px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default); background: rgba(255, 255, 255, 0.038); box-shadow: none;
+  font-family: var(--font-label); font-size: 12.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary);
+}
+#clientsTab .coach-bulk-btn.danger { color: var(--danger-text-mobile); border-color: var(--border-alert); }
+#clientsTab .coach-bulk-btn .ui-icon { width: 15px; height: 15px; }
+
+/* ── Roster cards ───────────────────────────────────────────── */
+#clientsTab .coach-roster-grid { display: flex; flex-direction: column; gap: 12px; }
+#clientsTab .coach-client-card { position: relative; margin: 0; }
+#clientsTab .coach-client-card-header { display: flex; align-items: center; gap: 12px; padding-right: 34px; }
+#clientsTab .coach-client-avatar {
+  width: 44px; height: 44px; flex: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--fill-avatar); color: #eafaf1; font-family: var(--font-display); font-size: 17px;
+}
+#clientsTab .coach-client-id { flex: 1; min-width: 0; }
+#clientsTab .coach-client-name { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 1.1; text-transform: uppercase; color: var(--text-primary); }
+#clientsTab .coach-client-meta { margin: 2px 0 0; font-size: 12.5px; color: var(--text-tertiary); }
+#clientsTab .coach-alert-pill { flex: none; }
+#clientsTab .coach-client-kpis { list-style: none; margin: 0; padding: 0; }
+#clientsTab .coach-client-kpi p { margin: 0; }
+#clientsTab .coach-client-kpi .mx-stat-v { font-size: 22px; }
+#clientsTab .coach-client-line { display: flex; flex-direction: column; gap: 6px; }
+#clientsTab .coach-client-line-val { font-size: 14px; color: var(--text-secondary); }
+#clientsTab .coach-client-actions { margin-top: 2px; }
+#clientsTab .coach-client-actions .mx-outline .ui-icon { width: 14px; height: 14px; }
+
+/* bulk-select checkbox (injected by coaching-enhanced.js) */
+#clientsTab .coach-client-select {
+  position: absolute; top: 14px; right: 14px; left: auto; z-index: 1; box-sizing: border-box;
+  -webkit-appearance: none; appearance: none;
+  width: 24px; height: 24px; margin: 0; border-radius: 50%;
+  border: 1.5px solid var(--border-chip); background: var(--surface-recessed); cursor: pointer;
+}
+#clientsTab .coach-client-select::before { content: ""; position: absolute; inset: -10px; }
+#clientsTab .coach-client-select:checked { background: var(--fill-btn-primary-mobile) center / 14px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23050c08' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E"); border-color: transparent; }
+
+#clientsTab .coach-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#clientsTab .coach-empty .ui-icon { width: 40px; height: 40px; color: var(--mx-faint); }
+#clientsTab .coach-empty strong { color: var(--text-primary); font-size: 16px; }
+
+/* ── Client detail ──────────────────────────────────────────── */
+#clientsTab .coach-client-detail { display: flex; flex-direction: column; gap: 12px; }
+#clientsTab .coach-client-detail .coach-dashboard-header { margin: 0; }
+#clientsTab .coach-client-detail-header { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 14px; padding: 0; text-align: left; }
+#clientsTab .coach-client-detail-header > div:first-child { text-align: left; padding: 0; margin: 0; }
+#clientsTab .coach-client-detail-header .coach-dashboard-title { margin-top: 4px; }
+#clientsTab .coach-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#clientsTab .coach-detail-actions .mx-outline,
+#clientsTab .coach-draft-msg-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 14px;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-default); background: rgba(255, 255, 255, 0.038); box-shadow: none; color: var(--text-secondary);
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+}
+#clientsTab .coach-detail-actions .ui-icon { width: 15px; height: 15px; }
+#clientsTab .coach-client-detail-grid { display: flex; flex-direction: column; gap: 12px; }
+#clientsTab .coach-client-detail-card { margin: 0; }
+#clientsTab .coach-client-detail-card h4 { margin: 0; }
+#clientsTab .coach-client-detail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+#clientsTab .coach-client-detail-list li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+  padding: 10px 0; border-top: 1px solid var(--border-row); font-size: 14px;
+}
+#clientsTab .coach-client-detail-list li:first-child { border-top: 0; padding-top: 2px; }
+#clientsTab .coach-client-detail-list li span { color: var(--text-tertiary); flex: none; }
+#clientsTab .coach-client-detail-list li strong { color: var(--text-primary); font-weight: 600; text-align: right; }
+#clientsTab .coach-locked p { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-tertiary); }
+#clientsTab .coach-locked .ui-icon { width: 16px; height: 16px; }
+
+/* nutrition assignment */
+#clientsTab .coach-nutrition-box { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: 1px solid var(--border-row); }
+#clientsTab .coach-nutrition-box h5 { margin: 0; }
+#clientsTab .coach-assigned-plan { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+#clientsTab .coach-nutrition-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+#clientsTab .coach-nf { display: flex; flex-direction: column; gap: 7px; margin: 0; min-width: 0; }
+#clientsTab .coach-nf .mx-lbl em { text-transform: none; letter-spacing: 0; }
+#clientsTab .coach-nf input,
+#clientsTab .coach-nf textarea {
+  width: 100%; min-height: 52px; margin: 0; padding: 10px 12px;
+  border-radius: var(--radius-md); border: 1px solid var(--border-soft); background: var(--surface-recessed);
+  box-shadow: var(--shadow-well); color: var(--text-primary); font-family: var(--font-body); font-size: 16px; font-weight: 500;
+  -webkit-appearance: none; appearance: none;
+}
+#clientsTab .coach-nf input { font-family: var(--font-display); font-size: 22px; font-weight: 400; font-variant-numeric: tabular-nums; }
+#clientsTab .coach-nf textarea { min-height: 84px; resize: none; line-height: 1.45; font-family: var(--font-body); font-size: 16px; }
+#clientsTab .coach-nf input:focus,
+#clientsTab .coach-nf textarea:focus { outline: 2px solid var(--green-70); outline-offset: 2px; }
+#clientsTab .coach-nf input::placeholder,
+#clientsTab .coach-nf textarea::placeholder { color: var(--mx-faint); font-family: var(--font-body); font-size: 14px; }
+#clientsTab .coach-nutrition-toggle {
+  display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 48px; margin: 0; font-size: 15px; color: var(--text-primary); cursor: pointer;
+}
+#clientsTab .coach-nutrition-toggle input {
+  -webkit-appearance: none; appearance: none; position: relative; flex: none;
+  width: 54px; height: 32px; margin: 0; border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip); background: var(--surface-recessed); cursor: pointer; transition: background 0.15s;
+}
+#clientsTab .coach-nutrition-toggle input::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--text-tertiary); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); transition: transform 0.15s ease, background 0.15s ease;
+}
+#clientsTab .coach-nutrition-toggle input:checked { background: var(--fill-btn-primary-mobile); border-color: transparent; }
+#clientsTab .coach-nutrition-toggle input:checked::after { transform: translateX(22px); background: #f4f7f5; }
+
+/* AI draft */
+#clientsTab .coach-detail-message { margin: 0; }
+#clientsTab #coachAiDraftSection { display: flex; flex-direction: column; gap: 10px; }
+#clientsTab .coach-draft-actions { display: flex; gap: 8px; }
+#clientsTab .coach-draft-actions .mx-cta { flex: 1; width: auto; }
+#clientsTab .coach-draft-note,
+#clientsTab .coach-draft-err { margin: 0; font-size: 14px; }
+#clientsTab .coach-draft-note { color: var(--text-tertiary); }
+#clientsTab .coach-draft-err { color: var(--danger-text-mobile); }
+#clientsTab .coach-draft-note .ui-icon { width: 15px; height: 15px; }
+
+@media (max-width: 360px) {
+  #clientsTab .coach-nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* =============================================================
+   COACH OPS  (Programs, Messages, Insights, Videos, Privacy)
+   ============================================================= */
+
+/* Sub-tab pills */
+#coachOpsTab .coach-subtabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+#coachOpsTab .coach-subtab {
+  position: relative; flex: none; min-width: 0; height: auto; min-height: 36px;
+  display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 7px 14px;
+  border-radius: var(--radius-pill); border: 1px solid var(--pill-border); background: var(--pill-bg); box-shadow: none;
+  color: var(--text-tertiary); font-family: var(--font-label); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.11em; text-transform: uppercase; white-space: nowrap; overflow: visible;
+}
+#coachOpsTab .coach-subtab::before { content: ""; position: absolute; inset: -6px -2px; }
+#coachOpsTab .coach-subtab .ui-icon { width: 15px; height: 15px; }
+#coachOpsTab .coach-subtab.active { background: var(--pill-bg-active); border-color: transparent; color: var(--pill-text-active); }
+
+/* ── Program builder ────────────────────────────────────────── */
+#coachOpsTab .prog-builder-layout { display: flex; flex-direction: column; gap: 12px; }
+#coachOpsTab .prog-canvas { display: flex; flex-direction: column; gap: 12px; padding: 0; background: none; border: 0; }
+#coachOpsTab .prog-head,
+#coachOpsTab .prog-week,
+#coachOpsTab .exercise-library { margin: 0; }
+#coachOpsTab .prog-canvas-actions { display: flex; gap: 8px; }
+#coachOpsTab .prog-canvas-actions .mx-cta { flex: 1.4; width: auto; height: 52px; font-size: 16px; }
+#coachOpsTab .prog-canvas-actions .mx-outline { flex: 1; }
+#coachOpsTab .prog-canvas-title input { margin: 0; }
+#coachOpsTab .prog-template-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; background: none; border: 0; }
+#coachOpsTab .prog-template-btn {
+  position: relative; margin: 0; padding: 0 14px; min-height: 40px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip); background: var(--pod-bg-alt); box-shadow: none; color: var(--text-tertiary);
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+}
+#coachOpsTab .prog-template-clear { color: var(--danger-text-mobile); border-color: var(--border-alert); }
+#coachOpsTab .prog-hint { margin: -6px 0 0; }
+
+#coachOpsTab .prog-week-grid { display: flex; flex-direction: column; gap: 8px; }
+#coachOpsTab .prog-day-col {
+  display: flex; flex-direction: column; gap: 8px; padding: 8px; min-height: 0;
+  border-radius: var(--radius-md); background: var(--surface-recessed); border: 1px solid var(--border-soft);
+}
+#coachOpsTab .prog-day-col.is-active { border-color: var(--green-70); box-shadow: 0 0 0 1px var(--green-70); }
+#coachOpsTab .prog-day-col.drag-over { background: rgba(47, 138, 99, 0.12); border-color: var(--green-70); }
+#coachOpsTab .prog-day-label {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 40px; margin: 0; padding: 0 6px;
+  border: 0; background: none; box-shadow: none; text-align: left;
+  font-family: var(--font-label); font-size: 14px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary);
+}
+#coachOpsTab .prog-day-col.is-active .prog-day-label { color: var(--green-90); }
+#coachOpsTab .prog-day-count {
+  min-width: 22px; padding: 1px 7px; border-radius: var(--radius-pill); text-align: center;
+  background: var(--pod-bg-alt); border: 1px solid var(--border-chip); font-size: 12px; color: var(--text-tertiary);
+}
+#coachOpsTab .prog-day-count:empty { display: none; }
+#coachOpsTab .prog-day-slots { display: flex; flex-direction: column; gap: 6px; }
+#coachOpsTab .prog-day-rest { padding: 4px 8px 8px; font-size: 13px; color: var(--mx-faint); }
+#coachOpsTab .prog-exercise-slot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 4px 4px 4px 12px;
+  border-radius: 12px; background: var(--pod-bg-alt); border: 1px solid var(--border-chip);
+}
+#coachOpsTab .prog-exercise-slot-name { font-size: 14.5px; font-weight: 500; color: var(--text-primary); }
+#coachOpsTab .prog-exercise-slot-remove {
+  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin: 0; padding: 0;
+  border: 0; background: none; box-shadow: none; color: var(--mx-faint);
+}
+#coachOpsTab .prog-exercise-slot-remove .ui-icon { width: 16px; height: 16px; }
+
+/* library */
+#coachOpsTab .exercise-custom-add { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; background: none; border: 0; }
+#coachOpsTab .exercise-custom-add .mx-well { flex: 1; }
+#coachOpsTab .exercise-category { display: flex; flex-direction: column; gap: 8px; margin: 0 0 4px; }
+#coachOpsTab .exercise-category-label {
+  font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-label);
+  padding: 8px 2px 0; margin: 0; border: 0;
+}
+#coachOpsTab .exercise-items { display: flex; flex-wrap: wrap; gap: 8px; }
+#coachOpsTab .exercise-item {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; margin: 0;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-chip); background: var(--pod-bg-alt);
+  font-size: 14px; color: var(--text-secondary); cursor: pointer; user-select: none;
+}
+#coachOpsTab .exercise-item:hover,
+#coachOpsTab .exercise-item:focus-visible { border-color: var(--green-70); color: var(--text-primary); }
+#coachOpsTab .exercise-item.dragging { opacity: 0.5; }
+#coachOpsTab .exercise-item-custom { border-style: dashed; }
+#coachOpsTab .exercise-item-remove {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 -8px 0 0; padding: 0;
+  border: 0; background: none; box-shadow: none; color: var(--mx-faint);
+}
+#coachOpsTab .exercise-item-remove .ui-icon { width: 14px; height: 14px; }
+#coachOpsTab .prog-assign-bar { margin: 0; padding: 0 4px; background: none; border: 0; }
+
+/* saved programs */
+#coachOpsTab .saved-prog-row { align-items: center; }
+#coachOpsTab .saved-prog-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+#coachOpsTab .saved-prog-actions .mx-outline { min-height: 40px; padding: 0 14px; }
+
+/* ── Messages ───────────────────────────────────────────────── */
+#coachOpsTab .coach-messaging-layout { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+#coachOpsTab .coach-client-list-panel {
+  display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  padding: 2px 0 4px; margin: 0; background: none; border: 0; border-radius: 0;
+}
+#coachOpsTab .coach-client-list-panel::-webkit-scrollbar { display: none; }
+#coachOpsTab .coach-client-list-item {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 14px 0 6px;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-chip); background: var(--pod-bg-alt); box-shadow: none;
+  font-size: 14px; font-weight: 600; color: var(--text-secondary); cursor: pointer;
+}
+#coachOpsTab .coach-client-list-item.active { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
+#coachOpsTab .coach-client-list-avatar {
+  width: 32px; height: 32px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--fill-avatar); color: #eafaf1; font-family: var(--font-display); font-size: 13px;
+}
+#coachOpsTab .coach-thread { margin: 0; padding: 0; gap: 0; overflow: hidden; min-height: 0; max-height: none; }
+#coachOpsTab .coach-thread-header { display: flex; flex-direction: column; gap: 3px; padding: 14px 17px; border-bottom: 1px solid var(--border-header); background: none; }
+#coachOpsTab .coach-thread-messages { flex: none; display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; padding: 14px 16px; }
+#coachOpsTab .coach-thread-note { text-align: center; font-size: 13.5px; color: var(--text-tertiary); padding: 18px 0; }
+#coachOpsTab .coach-thread-note--err { color: var(--danger-text-mobile); }
+#coachOpsTab .coach-message {
+  max-width: 86%; padding: 10px 14px; font-size: 14.5px; line-height: 1.45; color: var(--text-primary);
+  background: var(--surface-raised); border: 1px solid var(--border-soft); border-radius: var(--radius-bubble-out); align-self: flex-end; margin: 0;
+}
+#coachOpsTab .coach-message-meta { margin-top: 4px; font-size: 11.5px; color: var(--mx-faint); }
+#coachOpsTab .coach-thread-input { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px 16px; border-top: 1px solid var(--border-header); background: none; }
+#coachOpsTab .coach-thread-input .mx-well { margin: 0; }
+#coachOpsTab .coach-thread-input textarea { width: 100%; height: auto; min-height: 72px; }
+#coachOpsTab .coach-thread-input .mx-cta { width: 100%; }
+
+/* toggle rows (notifications, data sharing) */
+#coachOpsTab .coach-notif-row,
+#coachOpsTab .gdpr-consent-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 6px 0;
+  border-top: 1px solid var(--border-row); margin: 0; font-size: 15px; color: var(--text-primary); cursor: pointer;
+}
+#coachOpsTab .coach-notif-row:first-child,
+#coachOpsTab .gdpr-consent-list li:first-child { border-top: 0; }
+#coachOpsTab .gdpr-consent-list { list-style: none; margin: 0; padding: 0; }
+#coachOpsTab .gdpr-consent-list label { flex: 1; font-size: 15px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-primary); }
+#coachOpsTab .coach-notif-row input[type="checkbox"],
+#coachOpsTab .gdpr-consent-list input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 54px; height: 32px; margin: 0;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-chip); background: var(--surface-recessed); cursor: pointer; transition: background 0.15s;
+}
+#coachOpsTab .coach-notif-row input[type="checkbox"]::after,
+#coachOpsTab .gdpr-consent-list input[type="checkbox"]::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--text-tertiary); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); transition: transform 0.15s ease, background 0.15s ease;
+}
+#coachOpsTab .coach-notif-row input[type="checkbox"]:checked,
+#coachOpsTab .gdpr-consent-list input[type="checkbox"]:checked { background: var(--fill-btn-primary-mobile); border-color: transparent; }
+#coachOpsTab .coach-notif-row input[type="checkbox"]:checked::after,
+#coachOpsTab .gdpr-consent-list input[type="checkbox"]:checked::after { transform: translateX(22px); background: #f4f7f5; }
+
+/* ── Insights ───────────────────────────────────────────────── */
+#coachOpsTab .coach-analytics-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+#coachOpsTab .coach-chart-card { margin: 0; }
+#coachOpsTab .coach-chart-card canvas { max-width: 100%; }
+#coachOpsTab .coach-chart-box { position: relative; height: 230px; }
+#coachOpsTab .coach-insight-list { display: flex; flex-direction: column; gap: 12px; }
+#coachOpsTab .coach-insight-row {
+  display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: var(--radius-md);
+  background: var(--pod-bg-alt); border: 1px solid var(--border-soft);
+}
+#coachOpsTab .coach-insight-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#coachOpsTab .coach-insight-row .mx-stat { background: var(--surface-recessed); }
+#coachOpsTab .coach-insight-row .mx-stat-v { font-size: 20px; }
+
+/* ── Privacy / GDPR ─────────────────────────────────────────── */
+#coachOpsTab .gdpr-section { margin: 0 0 12px; padding: 16px 17px; }
+#coachOpsTab .gdpr-section h4 { margin: 0; font-size: 20px; font-weight: 400; }
+#coachOpsTab .gdpr-section p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-tertiary); }
+#coachOpsTab .coach-consent-list { display: flex; flex-direction: column; gap: 10px; }
+#coachOpsTab .coach-consent-row { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: var(--radius-md); background: var(--pod-bg-alt); border: 1px solid var(--border-soft); }
+#coachOpsTab .coach-consent-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#coachOpsTab .coach-consent-actions .mx-outline { flex: 1; padding: 0 10px; min-height: 40px; font-size: 12.5px; }
+#coachOpsTab .gdpr-action-row { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+#coachOpsTab .gdpr-save-btn.mx-cta { margin: 4px 0 0; }
+#coachOpsTab .gdpr-badge { text-transform: capitalize; }
+
+/* ── Videos ─────────────────────────────────────────────────── */
+#coachOpsTab .coach-video-status { min-height: 1.2em; margin: 0; }
+#coachOpsTab .coach-video-row { align-items: center; }
+#coachOpsTab .coach-video-link { font-size: 12.5px; color: var(--green-90); word-break: break-all; }
+
+/* ── Modals (load program, consent request) ─────────────────── */
+.gdpr-modal-overlay {
+  position: fixed; inset: 0; z-index: 2100; display: flex; align-items: flex-end; justify-content: center; padding: 0;
+  background: rgba(0, 0, 0, 0.65); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.gdpr-modal {
+  width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+  padding: 20px 16px 28px; background: var(--pod-bg); border: 1px solid var(--border-default); border-bottom: 0;
+  border-radius: 24px 24px 0 0; box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.5), var(--pod-bevel);
+}
+.gdpr-modal h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.05; text-transform: uppercase; color: var(--text-primary); }
+.gdpr-modal p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-tertiary); }
+.gdpr-modal .gdpr-consent-list { list-style: none; margin: 0; padding: 0; }
+.gdpr-modal .gdpr-consent-list li { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--border-row); }
+.gdpr-modal .gdpr-consent-list li:first-child { border-top: 0; }
+.gdpr-modal .gdpr-consent-list input[type="checkbox"] { width: 22px; height: 22px; margin: 0; accent-color: var(--green-60); flex: none; }
+.gdpr-modal .gdpr-consent-list label { font-size: 14.5px; color: var(--text-primary); }
+.gdpr-modal .mx-well { margin: 0; }
+.gdpr-modal-actions { display: flex; gap: 8px; }
+.gdpr-modal-actions button {
+  flex: 1; min-height: 52px; margin: 0; border-radius: var(--radius-pill); box-shadow: none;
+  font-family: var(--font-label); font-size: 14px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+.gdpr-modal-actions .gdpr-export-btn { background: rgba(255, 255, 255, 0.038); border: 1px solid var(--border-default); color: var(--text-secondary); }
+.gdpr-modal-actions .gdpr-save-btn { background: var(--fill-btn-primary-mobile); border: 0; color: var(--label-on-green); box-shadow: var(--cta-shadow); }

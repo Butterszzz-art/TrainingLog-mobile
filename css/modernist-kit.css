@@ -667,3 +667,5 @@
   box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.5), var(--pod-bevel);
 }
 .mx-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+.mx-well.is-invalid { border-color: var(--danger-strong); box-shadow: 0 0 0 1px var(--danger-strong), var(--shadow-well); }
