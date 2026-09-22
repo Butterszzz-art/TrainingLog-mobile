@@ -43,6 +43,7 @@
   <link rel="stylesheet" href="css/community-share.css">
   <link rel="stylesheet" href="css/ai-coach.css">
   <link rel="stylesheet" href="css/body-hub.css">
+  <link rel="stylesheet" href="css/engagement.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
@@ -626,6 +627,12 @@
     <!-- ── Greeting row: "Morning, {name}" + date/streak, search+avatar ── -->
     <div class="home-greeting-row" id="homeGreetingRow"></div>
 
+    <!-- ── Daily Pulse: one-tap rotating check-in question ───────── -->
+    <div class="home-zone" id="dailyPulseCard"></div>
+
+    <!-- ── Due Now Rail: overdue check-in / today's workout / weigh-in ── -->
+    <div class="home-zone" id="dueNowRail"></div>
+
     <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered —
          'hero' renders first, matching the mockup's hero-first layout) ── -->
     <div id="homeDashboardContent" class="home-dashboard"></div>
@@ -684,6 +691,17 @@
   </div>
 
   <div id="logTab" class="tab-content">
+  <!-- ── Flow Capture shortcuts: repeat last workout / quick check-in ── -->
+  <div class="fc-shortcut-row" id="fcShortcutRow">
+    <div class="fc-shortcut" onclick="repeatLastWorkoutShortcut()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v8h8"/></svg>
+      Repeat last workout
+    </div>
+    <div class="fc-shortcut" onclick="showTab('checkInTab')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+      Quick check-in
+    </div>
+  </div>
   <div id="logPanel" class="panel active">
 
     <!-- ── Log Sub-tab Navigation ──
@@ -2456,6 +2474,9 @@
     <!-- Last-7-days hero (populated by renderCardio) -->
     <div id="cardioWeeklySummary" class="cardio-weekly-strip"></div>
 
+    <!-- Cardio Catch-Up: nudge + two-tap quick log, shown when nothing's logged today -->
+    <div id="cardioCatchUpBanner"></div>
+
     <!-- Log form -->
     <div class="pod mx-pod cardio-form-card">
       <div class="pod-row">
@@ -2747,6 +2768,9 @@
                 </div>
               </div>
             </div>
+
+            <!-- Macro Nudge: pace-aware banner + one-tap favorites -->
+            <div id="macroNudgeContainer"></div>
 
             <!-- Macro tracker rows: one pod, four rows, instead of four
                  separate bordered cards each carrying their own
@@ -3875,6 +3899,7 @@
 <script src="dailyMissionEngine.js"></script>
 <script src="posingEngine.js"></script>
 <script src="complianceEngine.js"></script>
+<script src="engagementFeatures.js"></script>
 <script src="lifestyle.js"></script>
 <script src="plateCalculator.js"></script>
 <script src="src/js/powerlifting-peak-week.js"></script>
@@ -4798,6 +4823,8 @@ function showTab(tabName) {
     case 'homeTab':
       if (typeof renderHomeGreeting === 'function') renderHomeGreeting();
       renderHomeDashboard();
+      if (typeof renderDailyPulseCard === 'function') renderDailyPulseCard();
+      if (typeof renderDueNowRail === 'function') renderDueNowRail();
       if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
       if (typeof window.initAiCoach === 'function' && currentUser) window.initAiCoach(currentUser);
       break;
@@ -5691,6 +5718,10 @@ function addLogEntry() {
   if (typeof window.renderSessionSoFar === 'function') window.renderSessionSoFar();
   updateTrainingCalendar();
 
+  if (typeof window.triggerFlowCapture === 'function') {
+    window.triggerFlowCapture({ exercise, sets, date });
+  }
+
   // ✅ Clear form inputs
   document.getElementById("exercise").value = '';
   document.getElementById("sets").value = '';
@@ -5712,6 +5743,130 @@ function addLogEntry() {
 
 }
 
+// ── Flow Capture: post-log micro check-in (RPE + soreness) ─────────────
+
+function triggerFlowCapture(entry) {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId || !entry?.exercise) return;
+  try {
+    window.dailyMissionEngine?.syncMissionFromWorkoutCompletion?.({ date: entry.date }, userId);
+  } catch (_error) { /* mission engine unavailable */ }
+  showFlowCaptureModal(entry.exercise, entry.sets);
+}
+window.triggerFlowCapture = triggerFlowCapture;
+
+const FLOW_CAPTURE_RPE_OPTIONS = [
+  { key: 'easy', label: 'Easy' },
+  { key: 'moderate', label: 'Moderate' },
+  { key: 'hard', label: 'Hard' },
+  { key: 'max', label: 'Maxed out' },
+];
+const FLOW_CAPTURE_SORE_OPTIONS = [
+  { key: 'none', label: 'Nothing' },
+  { key: 'shoulder', label: 'Shoulder' },
+  { key: 'back', label: 'Low back' },
+  { key: 'knee', label: 'Knee' },
+];
+
+let _flowCaptureState = { rpe: null, sore: null, exercise: '', sets: 0 };
+
+function getFlowCaptureOverlay() {
+  let el = document.getElementById('flowCaptureOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'flowCaptureOverlay';
+    el.className = 'nm-overlay';
+    document.body.appendChild(el);
+    el.addEventListener('click', (e) => { if (e.target === el) closeFlowCaptureModal(); });
+  }
+  return el;
+}
+
+function showFlowCaptureModal(exercise, sets) {
+  _flowCaptureState = { rpe: null, sore: null, exercise: exercise || '', sets: sets || 0 };
+  renderFlowCaptureModal();
+  getFlowCaptureOverlay().style.display = 'flex';
+}
+
+function _fcEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderFlowCaptureModal() {
+  const overlay = getFlowCaptureOverlay();
+  const { rpe, sore, exercise, sets } = _flowCaptureState;
+  const renderChips = (options, selected, groupKey) => options.map((item) => `
+    <div class="mx-preset ${selected === item.key ? 'active' : ''}" onclick="setFlowCaptureAnswer('${groupKey}', '${item.key}')">${_fcEscape(item.label)}</div>
+  `).join('');
+
+  overlay.innerHTML = `
+    <div class="nm-dialog fc-dialog" role="dialog" aria-modal="true">
+      <p class="fc-title">${_fcEscape(exercise)} logged</p>
+      <p class="fc-sub">${sets} set${sets === 1 ? '' : 's'} &middot; while it's fresh</p>
+      <p class="fc-question">How did that feel?</p>
+      <div class="fc-chip-row">${renderChips(FLOW_CAPTURE_RPE_OPTIONS, rpe, 'rpe')}</div>
+      <p class="fc-question">Anything sore going in?</p>
+      <div class="fc-chip-row">${renderChips(FLOW_CAPTURE_SORE_OPTIONS, sore, 'sore')}</div>
+      <div class="fc-skip"><button type="button" onclick="closeFlowCaptureModal()">Skip</button></div>
+    </div>
+  `;
+}
+
+function setFlowCaptureAnswer(group, value) {
+  _flowCaptureState[group] = _flowCaptureState[group] === value ? null : value;
+  renderFlowCaptureModal();
+  if (_flowCaptureState.rpe && _flowCaptureState.sore) {
+    saveFlowCaptureAndClose();
+  }
+}
+window.setFlowCaptureAnswer = setFlowCaptureAnswer;
+
+function saveFlowCaptureAndClose() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (userId && window.engagementFeatures) {
+    window.engagementFeatures.saveFlowCaptureEntry(userId, {
+      exercise: _flowCaptureState.exercise,
+      sets: _flowCaptureState.sets,
+      rpe: _flowCaptureState.rpe,
+      soreness: _flowCaptureState.sore,
+    });
+  }
+  window.showToast?.('Noted, thanks.', 'success', 1800);
+  closeFlowCaptureModal();
+}
+
+function closeFlowCaptureModal() {
+  const overlay = document.getElementById('flowCaptureOverlay');
+  if (overlay) { overlay.style.display = 'none'; overlay.innerHTML = ''; }
+}
+window.closeFlowCaptureModal = closeFlowCaptureModal;
+
+// ── "Repeat last workout" shortcut (Flow Capture FAB) ───────────────────
+
+function repeatLastWorkoutShortcut() {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId) return;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${userId}`)) || [];
+  const withLogs = workouts.filter(w => Array.isArray(w.log) && w.log.length);
+  if (!withLogs.length) {
+    window.showToast?.('No previous workout to repeat yet.', 'info', 2500);
+    return;
+  }
+  const lastWorkout = withLogs.slice().sort((a, b) => (a.date > b.date ? 1 : -1)).pop();
+  const lastEntry = lastWorkout.log[lastWorkout.log.length - 1];
+  if (!lastEntry?.exercise) return;
+
+  const lastIndex = (lastEntry.weightsArray?.length || 1) - 1;
+  const plannedFirstSet = {
+    weight: lastEntry.weightsArray?.[lastIndex] ?? null,
+    reps: lastEntry.repsArray?.[lastIndex] ?? null,
+  };
+
+  if (typeof window.startQuickLogFor === 'function') {
+    window.startQuickLogFor(lastEntry.exercise, plannedFirstSet);
+  }
+}
+window.repeatLastWorkoutShortcut = repeatLastWorkoutShortcut;
 
 const DEFAULT_SET_TYPE = 'standard';
 const SET_TYPE_LABELS = {
@@ -8971,6 +9126,66 @@ function updateMacroSummary(data, options = {}) {
   });
 }
 
+// ── Macro Nudge: pace-aware banner + one-tap favorites ──────────────────
+
+function renderMacroNudge() {
+  const container = document.getElementById('macroNudgeContainer');
+  if (!container || !currentUser || !window.engagementFeatures) return;
+
+  const progress = loadDailyMacroProgress();
+  const targets = getMacroTargetValues();
+  const nudge = window.engagementFeatures.getMacroPaceNudge(progress.protein, targets.protein);
+  const favorites = window.engagementFeatures.loadMacroFavorites(currentUser);
+
+  const bannerHtml = nudge ? `
+    <div class="nudge-pod">
+      <div class="ov-accent"></div>
+      <svg class="nudge-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      <p>${escapeCoachText(nudge.message)}</p>
+    </div>
+  ` : '';
+
+  const favHtml = favorites.length ? `
+    <div class="mx-pod" style="margin-top:10px;">
+      <p class="mx-lbl" style="margin-bottom:6px;">Your favorites</p>
+      <div class="macro-fav-list">
+        ${favorites.map(f => `
+          <div class="macro-fav-item">
+            <div>
+              <p class="macro-fav-name">${escapeCoachText(f.name)}</p>
+              <p class="macro-fav-macros">${f.protein}g protein &middot; ${f.cals} kcal</p>
+            </div>
+            <div class="macro-fav-add" onclick="addMacroFavorite('${f.id}')" role="button" aria-label="Add ${escapeCoachText(f.name)}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  container.innerHTML = bannerHtml + favHtml;
+}
+window.renderMacroNudge = renderMacroNudge;
+
+function addMacroFavorite(favId) {
+  if (!currentUser || !window.engagementFeatures) return;
+  const favorites = window.engagementFeatures.loadMacroFavorites(currentUser);
+  const fav = favorites.find(f => f.id === favId);
+  if (!fav) return;
+
+  // Persists to dailyMacroProgress + paints proteinBar/macroProteinProgress
+  // etc. directly (renderDailyMacroProgress). Also push into the in-memory
+  // macroMeals array so a later updateMacroUI() recomputes from the same
+  // total instead of the stale value it loaded at tab-open.
+  updateDailyMacroProgress(fav.protein || 0, fav.carbs || 0, fav.fat || 0);
+  macroMeals.push({ protein: fav.protein || 0, carbs: fav.carbs || 0, fats: fav.fat || 0 });
+
+  window.showToast?.(`${fav.name} added.`, 'success', 2000);
+  renderMacroNudge();
+}
+window.addMacroFavorite = addMacroFavorite;
+
 function updateMacroUI() {
   renderAssignedNutritionPlanForAthlete();
   // Calculate totals from macroMeals array
@@ -9041,6 +9256,8 @@ function updateMacroUI() {
     },
     { netCals }
   );
+
+  renderMacroNudge();
 
   const hydrationInput = document.getElementById("hydrationMlInput");
   const sodiumInput = document.getElementById("sodiumMgInput");
@@ -10955,6 +11172,132 @@ function renderHomeGreeting() {
       <button class="home-greeting-icon-btn" onclick="showTab('allTab')" aria-label="Search / everything"><span class="ui-icon" data-icon="search"></span></button>
       <span class="home-greeting-avatar">${initials}</span>
     </div>`;
+}
+
+// ── Daily Pulse: one-tap rotating check-in question ────────────────────
+
+function renderDailyPulseCard() {
+  const container = document.getElementById('dailyPulseCard');
+  if (!container || !window.engagementFeatures) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId) { container.innerHTML = ''; return; }
+
+  const engine = window.engagementFeatures;
+  const question = engine.getTodayPulseQuestion();
+  const answeredToday = engine.getTodayPulseEntry(userId);
+  const streak = engine.getPulseStreak(userId);
+
+  const streakChip = streak > 0
+    ? `<span class="pulse-streak-chip"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-2 4-2 7a3 3 0 006 0c1.5 1.5 2 3.5 2 5a6 6 0 11-12 0c0-4 3-6 6-12z"/></svg>${streak}</span>`
+    : '';
+
+  const body = answeredToday
+    ? `<div class="pulse-confirm">
+         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+         <span>Logged for today. New question tomorrow.</span>
+       </div>`
+    : `<p class="pulse-question">${escapeCoachText(question.label)}</p>
+       <div class="pulse-level-row">
+         ${[1, 2, 3, 4, 5].map(v => `<div class="pulse-level-dot" data-v="${v}" onclick="submitDailyPulse('${question.key}', ${v})">${v}</div>`).join('')}
+       </div>`;
+
+  container.innerHTML = `
+    <div class="ov-pod is-maintain">
+      <div class="ov-accent"></div>
+      <div class="ov-top">
+        <span class="ov-live"></span>
+        <span class="ov-eyebrow">Daily Pulse</span>
+        ${streakChip}
+      </div>
+      <div class="ov-body">
+        ${body}
+      </div>
+    </div>
+  `;
+}
+
+function submitDailyPulse(questionKey, value) {
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId || !window.engagementFeatures) return;
+  window.engagementFeatures.savePulseAnswer(userId, questionKey, value);
+  renderDailyPulseCard();
+}
+window.submitDailyPulse = submitDailyPulse;
+
+// ── Due Now Rail: overdue check-in / today's workout / weigh-in ────────
+
+function buildDueNowCard(opts) {
+  const stateClass = opts.state === 'overdue' ? 'is-overdue' : opts.state === 'today' ? 'is-today' : 'is-upcoming';
+  return `
+    <div class="due-now-card ${stateClass}">
+      <div class="due-now-icon">${opts.icon}</div>
+      <p class="due-now-title">${escapeCoachText(opts.title)}</p>
+      <p class="due-now-sub">${escapeCoachText(opts.sub)}</p>
+      <button class="due-now-btn" onclick="${opts.onClick}">${escapeCoachText(opts.btnLabel)}</button>
+    </div>
+  `;
+}
+
+const DUE_NOW_ICONS = {
+  clock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  dumbbell: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4v16M18 4v16M6 8h12M6 16h12"/></svg>',
+  scale: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 12h14"/></svg>',
+};
+
+function renderDueNowRail() {
+  const container = document.getElementById('dueNowRail');
+  if (!container || !window.engagementFeatures) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  if (!userId) { container.innerHTML = ''; return; }
+
+  const { username, profile } = getHomeDashboardSourceData();
+  const cards = [];
+
+  // Weekly check-in
+  try {
+    const nextDate = getNextScheduledCheckIn(profile, username);
+    const due = new Date(`${nextDate}T00:00:00`);
+    if (!Number.isNaN(due.getTime())) {
+      const days = Math.round((due - new Date(new Date().toDateString())) / 86400000);
+      if (days < 0) {
+        cards.push(buildDueNowCard({ state: 'overdue', icon: DUE_NOW_ICONS.clock, title: 'Weekly Check-In', sub: `${-days} day${days === -1 ? '' : 's'} overdue`, btnLabel: 'Start check-in', onClick: "showTab('checkInTab')" }));
+      } else if (days === 0) {
+        cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.clock, title: 'Weekly Check-In', sub: 'Due today', btnLabel: 'Start check-in', onClick: "showTab('checkInTab')" }));
+      } else if (days <= 2) {
+        cards.push(buildDueNowCard({ state: 'upcoming', icon: DUE_NOW_ICONS.clock, title: 'Weekly Check-In', sub: `Due in ${days} day${days === 1 ? '' : 's'}`, btnLabel: 'Start check-in', onClick: "showTab('checkInTab')" }));
+      }
+    }
+  } catch (_error) { /* check-in engine unavailable — skip this card */ }
+
+  // Today's workout
+  try {
+    const missionState = getTodayMissionState(profile, username);
+    if (missionState && !missionState.workoutComplete) {
+      cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.dumbbell, title: "Log Today's Workout", sub: 'Planned for today', btnLabel: 'Go to Train', onClick: "showTab('logTab')" }));
+    }
+  } catch (_error) { /* mission engine unavailable — skip this card */ }
+
+  // Weigh-in cadence
+  try {
+    const weighIn = window.engagementFeatures.getWeighInStatus(userId, 7);
+    if (weighIn.hasEntries) {
+      if (weighIn.overdue) {
+        const daysOver = Math.abs(weighIn.daysUntilDue);
+        cards.push(buildDueNowCard({ state: 'overdue', icon: DUE_NOW_ICONS.scale, title: 'Weigh-In', sub: `${daysOver} day${daysOver === 1 ? '' : 's'} overdue`, btnLabel: 'Log weight', onClick: "showTab('weightTab')" }));
+      } else if (weighIn.daysUntilDue === 0) {
+        cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.scale, title: 'Weigh-In', sub: 'Due today', btnLabel: 'Log weight', onClick: "showTab('weightTab')" }));
+      } else if (weighIn.daysUntilDue === 1) {
+        cards.push(buildDueNowCard({ state: 'upcoming', icon: DUE_NOW_ICONS.scale, title: 'Weigh-In', sub: 'Due tomorrow', btnLabel: 'Log weight', onClick: "showTab('weightTab')" }));
+      }
+    }
+  } catch (_error) { /* skip this card */ }
+
+  if (!cards.length) { container.innerHTML = ''; return; }
+
+  container.innerHTML = `
+    <p class="home-section-label">Due now</p>
+    <div class="due-now-rail">${cards.join('')}</div>
+  `;
 }
 
 function renderHomeDashboard() {
@@ -13778,9 +14121,96 @@ function completeCardioSession() {
   window.showToast?.('Cardio session marked complete!', 'success', 3000);
 }
 
+// ── Cardio Catch-Up: nudge + two-tap quick log ──────────────────────────
+
+const CARDIO_CATCHUP_TYPES = [
+  { key: 'walk', label: 'Walk' },
+  { key: 'run', label: 'Run' },
+  { key: 'cycle', label: 'Bike' },
+  { key: 'row', label: 'Row' },
+];
+const CARDIO_CATCHUP_DURATIONS = [15, 30, 45, 60];
+let _cardioCatchUpState = { type: null, duration: null };
+
+function renderCardioCatchUpBanner(logArg) {
+  const container = document.getElementById('cardioCatchUpBanner');
+  if (!container || !currentUser) return;
+  const log = logArg || JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const loggedToday = log.some(e => e.date === todayKey);
+  const hour = new Date().getHours();
+
+  if (loggedToday || hour < 16) { container.innerHTML = ''; return; }
+
+  const typeChips = CARDIO_CATCHUP_TYPES.map(t => `<div class="mx-preset ${_cardioCatchUpState.type === t.key ? 'active' : ''}" onclick="selectCardioCatchUpType('${t.key}')">${t.label}</div>`).join('');
+  const durChips = CARDIO_CATCHUP_DURATIONS.map(d => `<div class="mx-preset ${_cardioCatchUpState.duration === d ? 'active' : ''}" onclick="selectCardioCatchUpDuration(${d})">${d} min</div>`).join('');
+
+  container.innerHTML = `
+    <div class="nudge-pod">
+      <div class="ov-accent"></div>
+      <svg class="nudge-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <div style="flex:1;min-width:0;">
+        <p><strong>No cardio logged yet today.</strong> Even a walk counts toward your weekly minutes, it takes two taps below.</p>
+        <div class="cardio-quicklog-row" style="margin-top:10px;">${typeChips}</div>
+        <div class="cardio-quicklog-row" style="margin-bottom:10px;">${durChips}</div>
+        <button class="due-now-btn" onclick="quickLogCardioCatchUp()">Log session</button>
+      </div>
+    </div>
+  `;
+}
+
+function selectCardioCatchUpType(type) {
+  _cardioCatchUpState.type = _cardioCatchUpState.type === type ? null : type;
+  renderCardioCatchUpBanner();
+}
+window.selectCardioCatchUpType = selectCardioCatchUpType;
+
+function selectCardioCatchUpDuration(duration) {
+  _cardioCatchUpState.duration = _cardioCatchUpState.duration === duration ? null : duration;
+  renderCardioCatchUpBanner();
+}
+window.selectCardioCatchUpDuration = selectCardioCatchUpDuration;
+
+function quickLogCardioCatchUp() {
+  const { type, duration } = _cardioCatchUpState;
+  if (!type || !duration) {
+    window.showToast?.('Pick an activity and a duration first.', 'warn');
+    return;
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
+  const fallbackWeightKg = Number(JSON.parse(localStorage.getItem('personalDetails') || 'null')?.weightKg) || 70;
+  const latestWeightKg = bodyweightLog.length
+    ? (getEntryWeightKg(bodyweightLog[bodyweightLog.length - 1]) || fallbackWeightKg)
+    : fallbackWeightKg;
+  const calories = window.cardioTab?.estimateCardioCalories
+    ? window.cardioTab.estimateCardioCalories({ type, durationMinutes: duration, weightKg: latestWeightKg })
+    : 0;
+  const met = window.cardioTab?.resolveMET ? window.cardioTab.resolveMET(type) : null;
+
+  const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
+  const entry = { date, type, duration, distance: null, calories, estimatedCalories: calories, met, paceOrSpeed: null, notes: '', intensity: 'moderate', heartRate: null };
+  log.push(entry);
+  localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
+
+  try {
+    window.dailyMissionEngine?.syncMissionFromCardioEntry?.(entry, currentUser);
+  } catch (missionErr) {
+    console.warn('Daily mission cardio sync failed.', missionErr);
+  }
+
+  _cardioCatchUpState = { type: null, duration: null };
+  window.showToast?.(`${duration} min ${type} logged!`, 'success', 3000);
+  renderCardio();
+  updateMacroUI();
+}
+window.quickLogCardioCatchUp = quickLogCardioCatchUp;
+
 function renderCardio() {
   if (!currentUser) return;
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
+
+  renderCardioCatchUpBanner(log);
 
   /* ── Weekly summary (rolling 7 days) ────────────────────── */
   const today = new Date();
