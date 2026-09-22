@@ -460,8 +460,11 @@ function _fmt(totalSeconds) {
     const btn = document.getElementById(`status_${lift}_${attempt}`);
     if (!btn) return;
     btn.className = `attempt-status-btn ${status}`;
-    const labels = { pending: '— Pending', good: '✓ Good lift', 'no-lift': '✗ No lift' };
-    btn.textContent = labels[status] || '— Pending';
+    const labels = { pending: 'Pending', good: 'Good lift', 'no-lift': 'No lift' };
+    btn.textContent = labels[status] || 'Pending';
+    const name = { squat: 'Squat', bench: 'Bench', deadlift: 'Deadlift' }[lift] || lift;
+    const which = { opener: 'opener', second: '2nd', third: '3rd' }[attempt] || attempt;
+    btn.setAttribute('aria-label', `${name} ${which} result: ${(labels[status] || 'Pending').toLowerCase()}. Tap to change.`);
   }
 
   function _updateTotal() {
@@ -497,6 +500,8 @@ function _fmt(totalSeconds) {
         if (status === 'good' && w > best) best = w;
       });
       total += best;
+      const bestEl = document.getElementById(`attemptBest_${lift}`);
+      if (bestEl) bestEl.textContent = best > 0 ? `${best} kg` : '—';
     });
     el.textContent = total > 0 ? `${total} ${unit}` : `— ${unit}`;
   }
@@ -513,7 +518,7 @@ function _fmt(totalSeconds) {
     alertEl.style.display = 'flex';
     const weightClass = meetDetails.weightClass || '—';
     alertEl.innerHTML = `
-      <span class="weighin-alert-icon">⚖️</span>
+      <span class="weighin-alert-icon ui-icon">${typeof ICONS !== 'undefined' ? ICONS.scale : ''}</span>
       <div>
         <strong>${daysOut === 1 ? 'Weigh-in Tomorrow' : `${daysOut} days to meet`}</strong> —
         target weight class <strong>${weightClass}</strong>.

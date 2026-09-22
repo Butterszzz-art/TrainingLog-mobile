@@ -47,6 +47,12 @@ function initCoachSubtabs() {
    1. AGGREGATE STATS BAR
    ══════════════════════════════════════════════════════════════ */
 
+// The roster uses ok / watch / action; older code also called the urgent state "alert".
+function _isUrgentStatus(status) {
+  const s = String(status || '').toLowerCase();
+  return s === 'action' || s === 'alert';
+}
+
 function renderCoachStatsBar() {
   const container = document.getElementById('coachStatsBar');
   if (!container) return;
@@ -54,31 +60,18 @@ function renderCoachStatsBar() {
   if (!clients.length) { container.innerHTML = ''; return; }
 
   const total      = clients.length;
-  const alertCount = clients.filter(c => c.alertStatus === 'alert').length;
+  const alertCount = clients.filter(c => _isUrgentStatus(c.alertStatus)).length;
   const watchCount = clients.filter(c => c.alertStatus === 'watch').length;
   const avgAdh     = clients.reduce((s,c) => s + (c.compliancePercent || 0), 0) / total;
   const activeWeek = clients.filter(c => (c.workoutsLoggedThisWeek || 0) > 0).length;
 
   container.innerHTML = `
-    <div class="coach-stat-chip">
-      <div class="chip-value">${total}</div>
-      <div class="chip-label">Clients</div>
-    </div>
-    <div class="coach-stat-chip">
-      <div class="chip-value" style="color:#e05060">${alertCount}</div>
-      <div class="chip-label">Alerts</div>
-    </div>
-    <div class="coach-stat-chip">
-      <div class="chip-value" style="color:#f0a040">${watchCount}</div>
-      <div class="chip-label">Watch</div>
-    </div>
-    <div class="coach-stat-chip">
-      <div class="chip-value">${Math.round(avgAdh)}%</div>
-      <div class="chip-label">Avg Adherence</div>
-    </div>
-    <div class="coach-stat-chip">
-      <div class="chip-value">${activeWeek}</div>
-      <div class="chip-label">Active This Week</div>
+    <div class="mx-tiles coach-stats-tiles">
+      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Clients</span><span class="mx-stat-v chip-value">${total}</span></div>
+      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Active this week</span><span class="mx-stat-v chip-value">${activeWeek}</span></div>
+      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Avg adherence</span><span class="mx-stat-v chip-value">${Math.round(avgAdh)}<small>%</small></span></div>
+      <div class="mx-stat coach-stat-chip coach-stat--alert${alertCount ? ' is-on' : ''}"><span class="mx-stat-l chip-label">Needs action</span><span class="mx-stat-v chip-value">${alertCount}</span></div>
+      <div class="mx-stat coach-stat-chip coach-stat--watch${watchCount ? ' is-on' : ''}"><span class="mx-stat-l chip-label">Watch</span><span class="mx-stat-v chip-value">${watchCount}</span></div>
     </div>`;
 }
 
@@ -169,7 +162,7 @@ function bulkExportPDF() {
       <td>${c.compliancePercent ?? '—'}%</td>
       <td>${c.lastCheckInDate || '—'}</td>
       <td>${c.workoutsLoggedThisWeek ?? '—'}</td>
-      <td style="color:${c.alertStatus === 'alert' ? '#c0392b' : c.alertStatus === 'watch' ? '#e67e22' : '#27ae60'}">${c.alertStatus}</td>
+      <td style="color:${_isUrgentStatus(c.alertStatus) ? '#c0392b' : c.alertStatus === 'watch' ? '#e67e22' : '#27ae60'}">${c.alertStatus}</td>
     </tr>`).join('');
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -206,52 +199,52 @@ window.bulkExportPDF      = bulkExportPDF;
 
 const EXERCISE_LIBRARY = {
   'Chest': [
-    { name: 'Bench Press',       icon: '🏋️' },
-    { name: 'Incline DB Press',  icon: '🏋️' },
-    { name: 'Cable Fly',         icon: '〰️' },
-    { name: 'Push-Up',           icon: '💪' },
-    { name: 'Dips',              icon: '💪' },
+    { name: 'Bench Press' },
+    { name: 'Incline DB Press' },
+    { name: 'Cable Fly' },
+    { name: 'Push-Up' },
+    { name: 'Dips' },
   ],
   'Back': [
-    { name: 'Deadlift',          icon: '🏋️' },
-    { name: 'Pull-Up',           icon: '💪' },
-    { name: 'Barbell Row',       icon: '🏋️' },
-    { name: 'Lat Pulldown',      icon: '〰️' },
-    { name: 'Seated Cable Row',  icon: '〰️' },
+    { name: 'Deadlift' },
+    { name: 'Pull-Up' },
+    { name: 'Barbell Row' },
+    { name: 'Lat Pulldown' },
+    { name: 'Seated Cable Row' },
   ],
   'Legs': [
-    { name: 'Squat',             icon: '🏋️' },
-    { name: 'Leg Press',         icon: '🦵' },
-    { name: 'Romanian DL',       icon: '🏋️' },
-    { name: 'Leg Curl',          icon: '〰️' },
-    { name: 'Leg Extension',     icon: '〰️' },
-    { name: 'Calf Raise',        icon: '🦵' },
+    { name: 'Squat' },
+    { name: 'Leg Press' },
+    { name: 'Romanian DL' },
+    { name: 'Leg Curl' },
+    { name: 'Leg Extension' },
+    { name: 'Calf Raise' },
   ],
   'Shoulders': [
-    { name: 'Overhead Press',    icon: '🏋️' },
-    { name: 'Lateral Raise',     icon: '💪' },
-    { name: 'Face Pull',         icon: '〰️' },
-    { name: 'Arnold Press',      icon: '🏋️' },
+    { name: 'Overhead Press' },
+    { name: 'Lateral Raise' },
+    { name: 'Face Pull' },
+    { name: 'Arnold Press' },
   ],
   'Arms': [
-    { name: 'Barbell Curl',      icon: '💪' },
-    { name: 'Tricep Pushdown',   icon: '〰️' },
-    { name: 'Hammer Curl',       icon: '💪' },
-    { name: 'Skull Crusher',     icon: '🏋️' },
+    { name: 'Barbell Curl' },
+    { name: 'Tricep Pushdown' },
+    { name: 'Hammer Curl' },
+    { name: 'Skull Crusher' },
   ],
   'Core': [
-    { name: 'Plank',             icon: '🧘' },
-    { name: 'Hanging Leg Raise', icon: '💪' },
-    { name: 'Cable Crunch',      icon: '〰️' },
-    { name: 'Ab Wheel',          icon: '🔄' },
+    { name: 'Plank' },
+    { name: 'Hanging Leg Raise' },
+    { name: 'Cable Crunch' },
+    { name: 'Ab Wheel' },
   ],
   'Cardio / CF': [
-    { name: 'Box Jump',          icon: '📦' },
-    { name: 'Kettlebell Swing',  icon: '🔔' },
-    { name: 'Assault Bike',      icon: '🚴' },
-    { name: 'Row Erg',           icon: '🚣' },
-    { name: 'Double-Under',      icon: '🪂' },
-    { name: 'Thruster',          icon: '🏋️' },
+    { name: 'Box Jump' },
+    { name: 'Kettlebell Swing' },
+    { name: 'Assault Bike' },
+    { name: 'Row Erg' },
+    { name: 'Double-Under' },
+    { name: 'Thruster' },
   ],
 };
 
@@ -303,67 +296,82 @@ let _progState = {
   id:      null,
 };
 
+// Day the "tap an exercise to add it" action targets (drag-and-drop still works on desktop).
+let _progActiveDay = 'Mon';
+
 function renderCoachProgramBuilder() {
   const container = document.getElementById('coachSub_programs');
   if (!container) return;
 
   container.innerHTML = `
     <div class="prog-builder-layout">
-      <!-- Exercise library sidebar -->
-      <div class="exercise-library">
-        <h4>Exercise Library</h4>
-        <input type="text" class="exercise-library-search" id="exLibSearch" placeholder="Search exercises…" oninput="filterExLib(this.value)">
-        <div class="exercise-custom-add">
-          <input type="text" id="exCustomInput" placeholder="Add custom exercise…" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomExercise();}">
-          <button type="button" class="exercise-custom-add-btn" onclick="addCustomExercise()">+ Add</button>
-        </div>
-        <div id="exLibList">${_buildExLibHTML()}</div>
-      </div>
-
-      <!-- Canvas -->
       <div class="prog-canvas">
-        <div class="prog-canvas-header">
-          <div class="prog-canvas-title">
-            <input type="text" id="progNameInput" value="${_escH(_progState.name)}" placeholder="Program name" oninput="_progState.name=this.value">
+        <section class="pod mx-pod prog-head">
+          <div class="mx-field prog-canvas-title">
+            <label class="mx-lbl" for="progNameInput">Program name</label>
+            <div class="mx-well mx-well--text"><input type="text" id="progNameInput" value="${_escH(_progState.name)}" placeholder="Program name" oninput="_progState.name=this.value"></div>
           </div>
           <div class="prog-canvas-actions">
-            <button onclick="saveCoachProgram()" style="background:var(--primary);color:#fff;">💾 Save</button>
-            <button onclick="loadCoachProgramList()" style="background:var(--surface-bg);border:1px solid var(--border-color);color:var(--text-color);">📂 Load</button>
+            <button type="button" class="mx-cta prog-save-btn" onclick="saveCoachProgram()"><span>Save</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+            <button type="button" class="mx-outline" onclick="loadCoachProgramList()">Load</button>
           </div>
-        </div>
+          <div class="mx-field">
+            <span class="mx-lbl">Templates</span>
+            <div class="prog-template-bar">
+              <button type="button" class="prog-template-btn" onclick="applyProgTemplate('bodybuilding')">Bodybuilding</button>
+              <button type="button" class="prog-template-btn" onclick="applyProgTemplate('powerlifting')">Powerlifting</button>
+              <button type="button" class="prog-template-btn" onclick="applyProgTemplate('crossfit')">CrossFit</button>
+              <button type="button" class="prog-template-btn prog-template-clear" onclick="clearProgram()">Clear</button>
+            </div>
+          </div>
+        </section>
 
-        <!-- Template buttons -->
-        <div class="prog-template-bar">
-          <span style="font-size:0.75rem;color:var(--secondary-text);align-self:center;">Templates:</span>
-          <button class="prog-template-btn" onclick="applyProgTemplate('bodybuilding')">🏆 Bodybuilding</button>
-          <button class="prog-template-btn" onclick="applyProgTemplate('powerlifting')">🏋️ Powerlifting</button>
-          <button class="prog-template-btn" onclick="applyProgTemplate('crossfit')">💪 CrossFit</button>
-          <button class="prog-template-btn" onclick="clearProgram()">🗑️ Clear</button>
-        </div>
-
-        <!-- Weekly grid -->
-        <div class="prog-week-grid" id="progWeekGrid">
-          ${DAYS.map(day => _buildDayColHTML(day)).join('')}
-        </div>
-
-        <!-- Building/saving a program template is fine here — it's your own
-             library, nothing reaches a client. Assigning one to a specific
-             client is coaching work; that action lives on the desktop
-             dashboard now (coach/coach.js Program tab), same as program
-             assignment does everywhere else in this app post-redesign. -->
-        <div class="prog-assign-bar">
-          <span style="font-size:0.82rem;color:var(--secondary-text);">Save this program, then assign it to a client from the desktop coach dashboard.</span>
-        </div>
-
-        <!-- Saved programs list -->
-        <div id="savedProgsList" style="margin-top:10px;"></div>
+        <section class="pod mx-pod prog-week" aria-label="Weekly plan">
+          <div class="pod-row">
+            <h4 class="pod-title mx-h3">Week</h4>
+            <span class="mx-chip mx-chip--sm mx-chip--green" id="progActiveDayLbl">Adding to ${_progActiveDay}</span>
+          </div>
+          <p class="mx-sub prog-hint">Tap a day, then tap an exercise below to add it. On desktop you can also drag exercises onto a day.</p>
+          <div class="prog-week-grid" id="progWeekGrid">
+            ${DAYS.map(day => _buildDayColHTML(day)).join('')}
+          </div>
+        </section>
       </div>
+
+      <section class="pod mx-pod exercise-library" aria-label="Exercise library">
+        <div class="pod-row"><h4 class="pod-title mx-h3">Exercise Library</h4></div>
+        <div class="mx-well mx-well--text"><input type="text" class="exercise-library-search" id="exLibSearch" placeholder="Search exercises…" aria-label="Search exercises" oninput="filterExLib(this.value)"></div>
+        <div class="exercise-custom-add">
+          <div class="mx-well mx-well--text"><input type="text" id="exCustomInput" placeholder="Add custom exercise…" aria-label="Custom exercise name" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomExercise();}"></div>
+          <button type="button" class="exercise-custom-add-btn mx-iconbtn" aria-label="Add custom exercise" onclick="addCustomExercise()"><span class="ui-icon">${ICONS.plus}</span></button>
+        </div>
+        <div id="exLibList">${_buildExLibHTML()}</div>
+      </section>
+
+      <!-- Building/saving a program template is fine here — it's your own
+           library, nothing reaches a client. Assigning one to a specific
+           client is coaching work; that action lives on the desktop
+           dashboard now (coach/coach.js Program tab). -->
+      <p class="mx-sub prog-assign-bar">Save this program, then assign it to a client from the desktop coach dashboard.</p>
+
+      <div id="savedProgsList"></div>
     </div>`;
 
   _bindDragAndDrop();
   _bindExLibClicks();
   renderSavedProgramsList();
 }
+
+window.setProgActiveDay = function(day) {
+  _progActiveDay = day;
+  document.querySelectorAll('.prog-day-col').forEach(col => {
+    const on = col.dataset.day === day;
+    col.classList.toggle('is-active', on);
+    col.querySelector('.prog-day-label')?.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const lbl = document.getElementById('progActiveDayLbl');
+  if (lbl) lbl.textContent = 'Adding to ' + day;
+};
 
 /* ── Custom exercises (coach-defined, not in the premade library) ─── */
 
@@ -381,12 +389,13 @@ function _buildCustomExHTML(filter) {
   if (!filtered.length) return '';
   return `<div class="exercise-category exercise-category-custom">
     <div class="exercise-category-label">Custom</div>
+    <div class="exercise-items">
     ${filtered.map(name => `
-      <div class="exercise-item exercise-item-custom" draggable="true" data-exercise="${_escH(name)}">
-        <span class="exercise-item-icon">✏️</span>
+      <div class="exercise-item exercise-item-custom" draggable="true" data-exercise="${_escH(name)}" role="button" tabindex="0" aria-label="Add ${_escH(name)}">
         <span class="exercise-item-name">${_escH(name)}</span>
-        <button type="button" class="exercise-item-remove" title="Remove custom exercise">×</button>
+        <button type="button" class="exercise-item-remove" title="Remove custom exercise" aria-label="Remove ${_escH(name)} from custom list"><span class="ui-icon">${ICONS.x}</span></button>
       </div>`).join('')}
+    </div>
   </div>`;
 }
 
@@ -443,41 +452,59 @@ function _buildExLibHTML(filter) {
     if (!filtered.length) return '';
     return `<div class="exercise-category">
       <div class="exercise-category-label">${cat}</div>
+      <div class="exercise-items">
       ${filtered.map(e => `
-        <div class="exercise-item" draggable="true" data-exercise="${_escH(e.name)}">
-          <span class="exercise-item-icon">${e.icon}</span>
-          ${_escH(e.name)}
+        <div class="exercise-item" draggable="true" data-exercise="${_escH(e.name)}" role="button" tabindex="0" aria-label="Add ${_escH(e.name)}">
+          <span class="exercise-item-name">${_escH(e.name)}</span>
         </div>`).join('')}
+      </div>
     </div>`;
   }).join('');
   return customHTML + builtInHTML;
 }
 
-function _buildDayColHTML(day) {
+function _dayColInner(day) {
   const exercises = _progState.days[day] || [];
-  const slots = exercises.map((ex, i) => `
+  if (!exercises.length) return '<div class="prog-day-rest">Rest</div>';
+  return exercises.map((ex, i) => `
     <div class="prog-exercise-slot" data-day="${day}" data-idx="${i}">
       <span class="prog-exercise-slot-name">${_escH(ex)}</span>
-      <button class="prog-exercise-slot-remove" onclick="removeProgExercise('${day}',${i})" title="Remove">×</button>
+      <button type="button" class="prog-exercise-slot-remove" onclick="event.stopPropagation();removeProgExercise('${day}',${i})" title="Remove" aria-label="Remove ${_escH(ex)} from ${day}"><span class="ui-icon">${ICONS.x}</span></button>
     </div>`).join('');
-  const rest = exercises.length === 0 ? '<div class="prog-day-rest">Rest</div>' : '';
+}
+
+function _buildDayColHTML(day) {
+  const count = (_progState.days[day] || []).length;
+  const active = day === _progActiveDay;
   return `
-    <div class="prog-day-col" id="progDay_${day}" data-day="${day}">
-      <div class="prog-day-label">${day}</div>
-      ${slots}
-      ${rest}
+    <div class="prog-day-col${active ? ' is-active' : ''}" id="progDay_${day}" data-day="${day}">
+      <button type="button" class="prog-day-label" onclick="setProgActiveDay('${day}')" aria-pressed="${active}">
+        <span>${day}</span><span class="prog-day-count">${count || ''}</span>
+      </button>
+      <div class="prog-day-slots">${_dayColInner(day)}</div>
     </div>`;
 }
 
 function _bindExerciseItemDrag() {
-  // Library items → drag start. Items are recreated on every library refresh
-  // (search, add/remove custom exercise), so they're safe to rebind each time.
+  // Library items are recreated on every refresh (search, add/remove custom),
+  // so they're safe to rebind each time. Drag = desktop; tap/Enter = add to the
+  // active day (touch screens have no HTML5 drag-and-drop).
   document.querySelectorAll('.exercise-item').forEach(item => {
     item.addEventListener('dragstart', e => {
       e.dataTransfer.setData('text/exercise', item.dataset.exercise);
       item.classList.add('dragging');
     });
     item.addEventListener('dragend', () => item.classList.remove('dragging'));
+    const add = () => {
+      const ex = item.dataset.exercise;
+      if (!ex) return;
+      _progState.days[_progActiveDay] = [...(_progState.days[_progActiveDay] || []), ex];
+      _refreshDayCol(_progActiveDay);
+    };
+    item.addEventListener('click', e => { if (e.target.closest('.exercise-item-remove')) return; add(); });
+    item.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.exercise-item-remove')) { e.preventDefault(); add(); }
+    });
   });
 }
 
@@ -510,8 +537,11 @@ function _refreshDayCol(day) {
   const col = document.getElementById('progDay_' + day);
   if (!col) return;
   // col itself isn't replaced, so its drop listener (bound once in
-  // _bindDayColDrop) stays attached — no re-binding needed here.
-  col.innerHTML = `<div class="prog-day-label">${day}</div>` + _buildDayColHTML(day).replace(/^[\s\S]*<div class="prog-day-label">[^<]*<\/div>/, '');
+  // _bindDayColDrop) stays attached — only the slots inside change.
+  const slots = col.querySelector('.prog-day-slots');
+  if (slots) slots.innerHTML = _dayColInner(day);
+  const count = col.querySelector('.prog-day-count');
+  if (count) count.textContent = (_progState.days[day] || []).length || '';
 }
 
 window.removeProgExercise = function(day, idx) {
@@ -557,16 +587,16 @@ window.saveCoachProgram = function() {
 window.loadCoachProgramList = function() {
   const programs = _coachStore('coachPrograms_v1') || [];
   if (!programs.length) { window.showToast('No saved programs yet.', 'warn'); return; }
-  const opts = programs.map((p,i) => `<option value="${i}">${p.name} (${p.savedAt?.slice(0,10)})</option>`).join('');
+  const opts = programs.map((p,i) => `<option value="${i}">${_escH(p.name)} (${p.savedAt?.slice(0,10)})</option>`).join('');
   const modal = document.createElement('div');
   modal.className = 'gdpr-modal-overlay';
   modal.innerHTML = `
-    <div class="gdpr-modal">
+    <div class="gdpr-modal" role="dialog" aria-modal="true" aria-label="Load program">
       <h3>Load Program</h3>
-      <select id="_loadProgSel" style="width:100%;margin:0 0 12px;">${opts}</select>
+      <div class="mx-well mx-well--text mx-well--sel"><select id="_loadProgSel" aria-label="Saved program">${opts}</select></div>
       <div class="gdpr-modal-actions">
-        <button class="gdpr-export-btn" onclick="this.closest('.gdpr-modal-overlay').remove()">Cancel</button>
-        <button class="gdpr-save-btn" onclick="_confirmLoadProgram()">Load</button>
+        <button type="button" class="gdpr-export-btn" onclick="this.closest('.gdpr-modal-overlay').remove()">Cancel</button>
+        <button type="button" class="gdpr-save-btn" onclick="_confirmLoadProgram()">Load</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -591,18 +621,22 @@ function renderSavedProgramsList() {
   if (!programs.length) { container.innerHTML = ''; return; }
 
   container.innerHTML = `
-    <h4 style="margin:0 0 8px;font-size:0.8rem;color:var(--secondary-text);text-transform:uppercase;letter-spacing:0.05em;">Saved Programs</h4>
-    ${programs.map((p, i) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;margin-bottom:6px;background:var(--card-bg);">
-        <div>
-          <div style="font-size:0.85rem;font-weight:600;">${_escH(p.name)}</div>
-          <div style="font-size:0.72rem;color:var(--text-muted);">Saved ${p.savedAt?.slice(0,10) || '—'}</div>
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button onclick="_loadProgIdx(${i})" style="padding:4px 10px;font-size:0.75rem;font-weight:700;border-radius:6px;background:var(--surface-bg);border:1px solid var(--border-color);color:var(--text-color);margin:0;box-shadow:none;">Load</button>
-          <button onclick="_deleteProgIdx(${i})" style="padding:4px 10px;font-size:0.75rem;font-weight:700;border-radius:6px;background:transparent;border:1px solid rgba(220,53,69,0.4);color:#e05060;margin:0;box-shadow:none;">Delete</button>
-        </div>
-      </div>`).join('')}`;
+    <section class="pod mx-pod" aria-label="Saved programs">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Saved Programs</h4><span class="mx-meta">${programs.length}</span></div>
+      <div>
+      ${programs.map((p, i) => `
+        <div class="mx-row saved-prog-row">
+          <div class="mx-row-main">
+            <span class="mx-row-title">${_escH(p.name)}</span>
+            <span class="mx-row-sub">Saved ${p.savedAt?.slice(0,10) || '—'}</span>
+          </div>
+          <div class="saved-prog-actions">
+            <button type="button" class="mx-outline" onclick="_loadProgIdx(${i})">Load</button>
+            <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="_deleteProgIdx(${i})" aria-label="Delete ${_escH(p.name)}"><span class="ui-icon">${ICONS.x}</span></button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </section>`;
 }
 
 window._loadProgIdx = function(i) {
@@ -666,45 +700,40 @@ function renderCoachMessaging() {
     ? clients.map(c => {
         const initials = c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
         return `
-          <div class="coach-client-list-item${_activeThreadClientId === c.id ? ' active' : ''}"
-               onclick="openMessageThread('${c.id}')" data-client-id="${c.id}">
-            <div class="coach-client-list-avatar">${initials}</div>
+          <button type="button" class="coach-client-list-item${_activeThreadClientId === c.id ? ' active' : ''}"
+               onclick="openMessageThread('${c.id}')" data-client-id="${c.id}" aria-pressed="${_activeThreadClientId === c.id}">
+            <span class="coach-client-list-avatar">${initials}</span>
             <span>${_escH(c.name)}</span>
-          </div>`;
+          </button>`;
       }).join('')
-    : '<div style="padding:12px;font-size:0.82rem;color:var(--secondary-text);">No clients yet.</div>';
+    : '<div class="mx-empty">No clients yet.</div>';
 
   const notifKey = 'coachNotifSettings_v1';
   const notif    = _coachStore(notifKey) || { missedSession: true, checkIn: true, plateau: false };
+  const notifRow = (key, label) => `
+    <label class="coach-notif-row">
+      <span>${label}</span>
+      <input type="checkbox" ${notif[key]?'checked':''} onchange="_saveNotif('${key}',this.checked)">
+    </label>`;
 
   container.innerHTML = `
     <div class="coach-messaging-layout">
-      <div class="coach-client-list-panel">
+      <div class="coach-client-list-panel" role="group" aria-label="Clients">
         ${clientListHTML}
       </div>
-      <div>
-        <div id="coachThreadContainer">
-          ${_activeThreadClientId
-            ? _buildThreadHTML(_activeThreadClientId)
-            : '<div style="padding:24px;text-align:center;color:var(--secondary-text);font-size:0.85rem;">Select a client to view messages.</div>'}
-        </div>
-        <!-- Notification settings -->
-        <div class="gdpr-section" style="margin-top:14px;">
-          <h4>Notification Settings</h4>
-          <div class="coach-notif-row">
-            <span>Missed session alert</span>
-            <input type="checkbox" ${notif.missedSession?'checked':''} onchange="_saveNotif('missedSession',this.checked)">
-          </div>
-          <div class="coach-notif-row">
-            <span>Check-in reminder</span>
-            <input type="checkbox" ${notif.checkIn?'checked':''} onchange="_saveNotif('checkIn',this.checked)">
-          </div>
-          <div class="coach-notif-row">
-            <span>Plateau / stagnation flag</span>
-            <input type="checkbox" ${notif.plateau?'checked':''} onchange="_saveNotif('plateau',this.checked)">
-          </div>
-        </div>
+      <div id="coachThreadContainer">
+        ${_activeThreadClientId
+          ? _buildThreadHTML(_activeThreadClientId)
+          : '<div class="mx-empty">Select a client to view messages.</div>'}
       </div>
+      <section class="pod mx-pod gdpr-section" aria-label="Notification settings">
+        <div class="pod-row"><h4 class="pod-title mx-h3">Notification Settings</h4></div>
+        <div>
+          ${notifRow('missedSession', 'Missed session alert')}
+          ${notifRow('checkIn', 'Check-in reminder')}
+          ${notifRow('plateau', 'Plateau / stagnation flag')}
+        </div>
+      </section>
     </div>`;
 }
 
@@ -715,9 +744,9 @@ function _buildThreadHTML(clientId) {
 
   let msgs;
   if (thread === null) {
-    msgs = '<div style="text-align:center;color:var(--danger,#c0392b);font-size:0.82rem;padding:20px 0;">Couldn\'t load messages — check your connection.</div>';
+    msgs = '<div class="coach-thread-note coach-thread-note--err">Couldn\'t load messages — check your connection.</div>';
   } else if (!thread.length) {
-    msgs = '<div style="text-align:center;color:var(--secondary-text);font-size:0.82rem;padding:20px 0;">No messages yet. Send the first note!</div>';
+    msgs = '<div class="coach-thread-note">No messages yet. Send the first note!</div>';
   } else {
     msgs = thread.map(m => {
       const ms = m.createdAt?._seconds ? m.createdAt._seconds * 1000 : m.createdAt;
@@ -730,25 +759,27 @@ function _buildThreadHTML(clientId) {
   }
 
   return `
-    <div class="coach-thread">
-      <div class="coach-thread-header">${_escH(client?.name || clientId)}</div>
+    <section class="pod mx-pod coach-thread" aria-label="Messages with ${_escH(client?.name || clientId)}">
+      <div class="coach-thread-header"><span class="mx-kicker">Notes to</span><span class="mx-row-title">${_escH(client?.name || clientId)}</span></div>
       <div class="coach-thread-messages" id="threadMessages">${msgs}</div>
       <div class="coach-thread-input">
-        <select id="msgType" style="width:90px;font-size:0.78rem;margin:0;">
-          <option value="note">📝 Note</option>
-          <option value="alert">🚨 Alert</option>
-          <option value="praise">🎉 Praise</option>
-        </select>
-        <textarea id="msgText" placeholder="Write a message…"></textarea>
-        <button class="coach-send-btn" onclick="sendCoachMessage()">Send</button>
+        <div class="mx-well mx-well--text mx-well--sel coach-msg-type">
+          <select id="msgType" aria-label="Message type">
+            <option value="note">Note</option>
+            <option value="alert">Alert</option>
+            <option value="praise">Praise</option>
+          </select>
+        </div>
+        <div class="mx-well mx-well--area"><textarea id="msgText" placeholder="Write a message…" aria-label="Message"></textarea></div>
+        <button type="button" class="coach-send-btn mx-cta" onclick="sendCoachMessage()"><span>Send</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.chevronRight}</span></span></button>
       </div>
-    </div>`;
+    </section>`;
 }
 
 window.openMessageThread = async function(clientId) {
   _activeThreadClientId = clientId;
   const threadContainer = document.getElementById('coachThreadContainer');
-  if (threadContainer) threadContainer.innerHTML = '<div class="coach-thread"><p style="padding:20px;text-align:center;color:var(--secondary-text);font-size:0.85rem;">Loading…</p></div>';
+  if (threadContainer) threadContainer.innerHTML = '<div class="mx-empty">Loading…</div>';
   document.querySelectorAll('.coach-client-list-item').forEach(el =>
     el.classList.toggle('active', el.dataset.clientId === clientId)
   );
@@ -816,47 +847,31 @@ function renderCoachAnalytics() {
   container.innerHTML = `
     <div class="coach-analytics-grid">
       <!-- Adherence bar chart -->
-      <div class="coach-chart-card" style="grid-column: 1 / -1;">
-        <h4>Client Adherence Rates (%)</h4>
-        <canvas id="adherenceChart" height="120"></canvas>
-      </div>
+      <section class="pod mx-pod coach-chart-card">
+        <div class="pod-row"><h4 class="pod-title mx-h3">Client Adherence (%)</h4></div>
+        <canvas id="adherenceChart" height="140" aria-label="Adherence per client"></canvas>
+      </section>
 
       <!-- Workouts per week -->
-      <div class="coach-chart-card">
-        <h4>Workouts This Week</h4>
-        <canvas id="workoutsChart" height="160"></canvas>
-      </div>
+      <section class="pod mx-pod coach-chart-card">
+        <div class="pod-row"><h4 class="pod-title mx-h3">Workouts This Week</h4></div>
+        <canvas id="workoutsChart" height="160" aria-label="Workouts this week per client"></canvas>
+      </section>
 
       <!-- Alert breakdown -->
-      <div class="coach-chart-card">
-        <h4>Alert Status Breakdown</h4>
-        <canvas id="alertPieChart" height="160"></canvas>
-      </div>
+      <section class="pod mx-pod coach-chart-card">
+        <div class="pod-row"><h4 class="pod-title mx-h3">Alert Status</h4></div>
+        <div class="coach-chart-box"><canvas id="alertPieChart" aria-label="Alert status breakdown"></canvas></div>
+      </section>
     </div>
 
-    <!-- Improvement / stagnation table -->
-    <div class="coach-chart-card" style="margin-bottom:14px;">
-      <h4>Client Performance Flags</h4>
-      <div style="overflow-x:auto;">
-        <table class="coach-insight-table">
-          <thead>
-            <tr>
-              <th>Client</th>
-              <th>Phase</th>
-              <th>Compliance</th>
-              <th>Workouts/Wk</th>
-              <th>Weight Δ/Wk</th>
-              <th>Trend</th>
-              <th>Flags</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${clients.map(c => _buildInsightRow(c)).join('') ||
-              '<tr><td colspan="7" style="text-align:center;color:var(--secondary-text);">No client data.</td></tr>'}
-          </tbody>
-        </table>
+    <!-- Improvement / stagnation flags -->
+    <section class="pod mx-pod coach-chart-card" aria-label="Client performance flags">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Client Performance Flags</h4><span class="mx-meta">${clients.length}</span></div>
+      <div class="coach-insight-list">
+        ${clients.map(c => _buildInsightRow(c)).join('') || '<div class="mx-empty">No client data.</div>'}
       </div>
-    </div>`;
+    </section>`;
 
   _renderAdherenceChart(clients);
   _renderWorkoutsChart(clients);
@@ -866,23 +881,28 @@ function renderCoachAnalytics() {
 function _buildInsightRow(c) {
   const adh = c.compliancePercent ?? 0;
   const wk  = c.workoutsLoggedThisWeek ?? 0;
-  const wΔ  = c.weeklyWeightChangePercent ?? 0;
+  const wΔ  = Number(c.weeklyWeightChangePercent ?? 0) || 0;
   const trend = adh >= 80 && wk >= 3 ? 'up' : adh < 60 || wk <= 1 ? 'down' : 'flat';
-  const trendIcon = { up: '↑', down: '↓', flat: '→' }[trend];
+  const trendLabel = { up: '▲ Up', down: '▼ Down', flat: '● Flat' }[trend];
+  const trendCls = { up: 'mx-chip--green', down: 'mx-chip--red', flat: '' }[trend];
   const flags = [];
-  if (c.alertStatus === 'alert') flags.push(`<span class="injury-flag">🚨 Alert</span>`);
-  if (trend === 'down')          flags.push(`<span class="stagnation-badge">📉 Stagnating</span>`);
-  if ((c.cardioMissedSessions || 0) >= 2) flags.push(`<span class="stagnation-badge">🏃 Cardio missed</span>`);
+  if (_isUrgentStatus(c.alertStatus)) flags.push('<span class="mx-tag mx-tag--red injury-flag">Alert</span>');
+  if (trend === 'down')               flags.push('<span class="mx-tag mx-tag--brass stagnation-badge">Stagnating</span>');
+  if ((c.cardioMissedSessions || 0) >= 2) flags.push('<span class="mx-tag mx-tag--brass stagnation-badge">Cardio missed</span>');
 
-  return `<tr>
-    <td><strong>${_escH(c.name)}</strong></td>
-    <td>${_escH(c.currentPhase || '—')}</td>
-    <td>${adh}%</td>
-    <td>${wk}</td>
-    <td>${wΔ > 0 ? '+' : ''}${wΔ.toFixed ? wΔ.toFixed(2) : wΔ}%</td>
-    <td class="trend-${trend}">${trendIcon} ${trend}</td>
-    <td>${flags.join(' ') || '<span style="color:var(--text-muted)">—</span>'}</td>
-  </tr>`;
+  return `
+    <article class="coach-insight-row">
+      <div class="pod-row">
+        <div class="coach-insight-id"><span class="mx-row-title">${_escH(c.name)}</span><span class="mx-row-sub">${_escH(c.currentPhase || '—')}</span></div>
+        <span class="mx-chip mx-chip--sm trend-${trend} ${trendCls}">${trendLabel}</span>
+      </div>
+      <div class="mx-tiles">
+        <div class="mx-stat"><span class="mx-stat-l">Compliance</span><span class="mx-stat-v">${adh}<small>%</small></span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Workouts/wk</span><span class="mx-stat-v">${wk}</span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Weight Δ/wk</span><span class="mx-stat-v">${wΔ > 0 ? '+' : ''}${wΔ.toFixed(2)}<small>%</small></span></div>
+      </div>
+      <div class="mx-tags">${flags.join('') || '<span class="mx-tag">No flags</span>'}</div>
+    </article>`;
 }
 
 function _renderAdherenceChart(clients) {
@@ -890,7 +910,7 @@ function _renderAdherenceChart(clients) {
   if (!canvas || !window.Chart) return;
   if (_analyticsCharts.adherence) { _analyticsCharts.adherence.destroy(); }
   const colors = clients.map(c =>
-    c.compliancePercent >= 80 ? '#4da87a' : c.compliancePercent >= 60 ? '#f0a040' : '#e05060'
+    c.compliancePercent >= 80 ? '#6fae8b' : c.compliancePercent >= 60 ? '#c79a54' : '#c9707c'
   );
   _analyticsCharts.adherence = new Chart(canvas, {
     type: 'bar',
@@ -900,7 +920,7 @@ function _renderAdherenceChart(clients) {
     },
     options: {
       responsive: true, plugins: { legend: { display: false } },
-      scales: { y: { min: 0, max: 100, ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { ticks: { color: '#888' } } }
+      scales: { y: { min: 0, max: 100, ticks: { color: '#86998e' }, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { ticks: { color: '#86998e' } } }
     }
   });
 }
@@ -913,11 +933,11 @@ function _renderWorkoutsChart(clients) {
     type: 'bar',
     data: {
       labels: clients.map(c => c.name),
-      datasets: [{ label: 'Workouts', data: clients.map(c => c.workoutsLoggedThisWeek ?? 0), backgroundColor: '#4da8da', borderRadius: 6 }]
+      datasets: [{ label: 'Workouts', data: clients.map(c => c.workoutsLoggedThisWeek ?? 0), backgroundColor: '#3d9d73', borderRadius: 6 }]
     },
     options: {
       responsive: true, plugins: { legend: { display: false } },
-      scales: { y: { min: 0, ticks: { stepSize: 1, color: '#888' }, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { ticks: { color: '#888' } } }
+      scales: { y: { min: 0, ticks: { stepSize: 1, color: '#86998e' }, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { ticks: { color: '#86998e' } } }
     }
   });
 }
@@ -928,16 +948,17 @@ function _renderAlertPieChart(clients) {
   if (_analyticsCharts.pie) { _analyticsCharts.pie.destroy(); }
   const ok    = clients.filter(c => c.alertStatus === 'ok').length;
   const watch = clients.filter(c => c.alertStatus === 'watch').length;
-  const alert = clients.filter(c => c.alertStatus === 'alert').length;
+  const alert = clients.filter(c => _isUrgentStatus(c.alertStatus)).length;
   _analyticsCharts.pie = new Chart(canvas, {
     type: 'doughnut',
     data: {
       labels: ['OK', 'Watch', 'Alert'],
-      datasets: [{ data: [ok, watch, alert], backgroundColor: ['#4da87a','#f0a040','#e05060'], borderWidth: 0 }]
+      datasets: [{ data: [ok, watch, alert], backgroundColor: ['#6fae8b','#c79a54','#c9707c'], borderWidth: 0 }]
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#ccc', font: { size: 11 } } } }
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#c9d2cc', font: { size: 11 } } } }
     }
   });
 }
@@ -959,57 +980,49 @@ function renderCoachGdpr() {
 
   const clientRows = clients.map(c => {
     const consent = store[c.id] || { status: 'pending', dataSharing: false, analytics: false };
-    const badge   = `<span class="gdpr-badge ${consent.status}">${consent.status}</span>`;
-    return `<tr>
-      <td><strong>${_escH(c.name)}</strong></td>
-      <td>${badge}</td>
-      <td>${consent.consentDate ? consent.consentDate.slice(0,10) : '—'}</td>
-      <td>
-        <button onclick="sendConsentRequest('${c.id}')" style="padding:4px 10px;font-size:0.75rem;font-weight:700;border-radius:6px;background:var(--surface-bg);border:1px solid var(--border-color);color:var(--text-color);margin:0;box-shadow:none;">
-          ${consent.status === 'consented' ? 'Revoke' : 'Send Request'}
-        </button>
-        <button onclick="exportClientData('${c.id}')" style="padding:4px 10px;font-size:0.75rem;font-weight:700;border-radius:6px;background:transparent;border:1px solid var(--border-color);color:var(--secondary-text);margin:0 0 0 4px;box-shadow:none;">Export</button>
-        <button onclick="deleteClientData('${c.id}')" style="padding:4px 10px;font-size:0.75rem;font-weight:700;border-radius:6px;background:transparent;border:1px solid rgba(220,53,69,0.4);color:#e05060;margin:0 0 0 4px;box-shadow:none;">Delete</button>
-      </td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--secondary-text);">No clients.</td></tr>';
+    const chipCls = { consented: 'mx-chip--green', pending: 'mx-chip--brass', withdrawn: 'mx-chip--red' }[consent.status] || '';
+    const badge   = `<span class="gdpr-badge ${consent.status} mx-chip mx-chip--sm ${chipCls}">${consent.status}</span>`;
+    return `
+      <article class="coach-consent-row">
+        <div class="pod-row">
+          <div class="coach-insight-id"><span class="mx-row-title">${_escH(c.name)}</span><span class="mx-row-sub">Consent date: ${consent.consentDate ? consent.consentDate.slice(0,10) : '—'}</span></div>
+          ${badge}
+        </div>
+        <div class="coach-consent-actions">
+          <button type="button" class="mx-outline" onclick="sendConsentRequest('${c.id}')">${consent.status === 'consented' ? 'Revoke' : 'Send Request'}</button>
+          <button type="button" class="mx-outline" onclick="exportClientData('${c.id}')">Export</button>
+          <button type="button" class="mx-outline mx-outline--danger" onclick="deleteClientData('${c.id}')">Delete</button>
+        </div>
+      </article>`;
+  }).join('') || '<div class="mx-empty">No clients.</div>';
 
   container.innerHTML = `
     <!-- Consent overview -->
-    <div class="gdpr-section">
-      <h4>🔒 Client Data Consents</h4>
-      <p>Track and manage GDPR consent for each client. All data is stored locally; no personal data is shared without explicit consent.</p>
-      <div style="overflow-x:auto;">
-        <table class="coach-insight-table">
-          <thead>
-            <tr><th>Client</th><th>Status</th><th>Consent Date</th><th>Actions</th></tr>
-          </thead>
-          <tbody>${clientRows}</tbody>
-        </table>
-      </div>
-    </div>
+    <section class="pod mx-pod gdpr-section">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Client Data Consents</h4></div>
+      <p class="mx-sub">Track and manage GDPR consent for each client. All data is stored locally; no personal data is shared without explicit consent.</p>
+      <div class="coach-consent-list">${clientRows}</div>
+    </section>
 
     <!-- Coach data-sharing settings -->
-    <div class="gdpr-section">
-      <h4>⚙️ Data Sharing Settings</h4>
-      <p>Configure what data can be shared with clients and third parties.</p>
+    <section class="pod mx-pod gdpr-section">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Data Sharing Settings</h4></div>
+      <p class="mx-sub">Configure what data can be shared with clients and third parties.</p>
       <ul class="gdpr-consent-list" id="coachDataSharingList">
         ${_buildDataSharingCheckboxes()}
       </ul>
-      <div class="gdpr-action-row">
-        <button class="gdpr-save-btn" onclick="saveCoachDataSettings()">Save Preferences</button>
-      </div>
-    </div>
+      <button type="button" class="mx-cta gdpr-save-btn" onclick="saveCoachDataSettings()"><span>Save Preferences</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+    </section>
 
     <!-- Right to erasure / export -->
-    <div class="gdpr-section">
-      <h4>📤 Your Coach Data</h4>
-      <p>You can export all coaching data (programs, messages, assignments) or request deletion at any time.</p>
+    <section class="pod mx-pod gdpr-section">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Your Coach Data</h4></div>
+      <p class="mx-sub">You can export all coaching data (programs, messages, assignments) or request deletion at any time.</p>
       <div class="gdpr-action-row">
-        <button class="gdpr-export-btn" onclick="exportAllCoachData()">Export All Data (JSON)</button>
-        <button class="gdpr-delete-btn" onclick="deleteAllCoachData()">Delete All Coach Data</button>
+        <button type="button" class="mx-outline mx-outline--block gdpr-export-btn" onclick="exportAllCoachData()"><span class="ui-icon">${ICONS.download}</span> Export All Data (JSON)</button>
+        <button type="button" class="mx-outline mx-outline--block mx-outline--danger gdpr-delete-btn" onclick="deleteAllCoachData()">Delete All Coach Data</button>
       </div>
-    </div>`;
+    </section>`;
 }
 
 function _buildDataSharingCheckboxes() {
@@ -1022,8 +1035,8 @@ function _buildDataSharingCheckboxes() {
   ];
   return items.map(([key, label]) => `
     <li>
-      <input type="checkbox" id="ds_${key}" ${settings[key] ? 'checked' : ''}>
       <label for="ds_${key}">${label}</label>
+      <input type="checkbox" id="ds_${key}" ${settings[key] ? 'checked' : ''}>
     </li>`).join('');
 }
 
@@ -1054,7 +1067,7 @@ window.sendConsentRequest = function(clientId) {
   modal.className = 'gdpr-modal-overlay';
   modal.innerHTML = `
     <div class="gdpr-modal">
-      <h3>🔒 Data Consent Request</h3>
+      <h3>Data Consent Request</h3>
       <p>Send this consent agreement to <strong>${_escH(client?.name || clientId)}</strong>. By confirming, you record that the client has agreed to the following:</p>
       <ul class="gdpr-consent-list">
         <li><input type="checkbox" checked disabled><label>Collection and storage of workout logs</label></li>

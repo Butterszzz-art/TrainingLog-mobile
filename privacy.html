@@ -4,19 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacy Policy — Pocket Coach</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
   <style>
-    :root { --bg: #080b0a; --card: #121b17; --text: #f4f7f5; --muted: #8c9891; --primary: #2d7d5b; --border: rgba(132,157,144,0.22); }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); padding: 24px; min-height: 100vh; }
-    .container { max-width: 700px; margin: 0 auto; }
-    h1 { font-size: 1.8rem; margin-bottom: 8px; }
-    .updated { color: var(--muted); font-size: 0.82rem; margin-bottom: 32px; }
-    h2 { font-size: 1.1rem; color: var(--primary); margin: 28px 0 10px; }
-    p, li { font-size: 0.92rem; line-height: 1.7; color: #c8d0cc; margin-bottom: 10px; }
+    body {
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      background: var(--wash-mobile);
+      background-color: var(--ground);
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 24px 20px 12px;
+      border-radius: var(--radius-hero);
+      background: var(--pod-bg);
+      border: 1px solid var(--pod-border);
+      box-shadow: var(--pod-bevel);
+    }
+    h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1; text-transform: uppercase; margin-bottom: 8px; }
+    .updated { font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #86998e; margin-bottom: 28px; }
+    h2 { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--green-90); margin: 28px 0 10px; }
+    p, li { font-size: 15px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 10px; }
+    strong { color: var(--text-primary); }
     ul { padding-left: 20px; margin-bottom: 12px; }
-    a { color: var(--primary); }
-    .back { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; font-weight: 600; font-size: 0.88rem; }
+    a { color: var(--green-90); }
+    a:focus-visible { outline: 2px solid var(--green-70); outline-offset: 2px; }
+    .back {
+      display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 12px;
+      font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--green-90); text-decoration: none;
+    }
   </style>
 </head>
 <body>
