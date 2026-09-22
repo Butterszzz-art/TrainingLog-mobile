@@ -337,9 +337,9 @@
 
 /* Error state */
 .aic-msg--error .aic-bubble {
-  background: rgba(224, 80, 96, 0.12);
-  border-color: rgba(224, 80, 96, 0.35);
-  color: #e05060;
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
 }
 
 /* ── Input area ─────────────────────────────────────────────── */

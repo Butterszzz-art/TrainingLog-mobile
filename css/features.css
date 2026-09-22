@@ -227,7 +227,7 @@
   font-size: 0.8rem;
   padding: 2px 4px;
 }
-.food-diary-del:hover { color: #eb5757; }
+.food-diary-del:hover { color: var(--danger-text); }
 
 /* ── Weekly Summary Card ───────────────────────────────────── */
 
@@ -310,7 +310,7 @@
 
 .ws-high  { color: var(--primary); font-weight: 700; }
 .ws-med   { color: #f0a040; font-weight: 700; }
-.ws-low   { color: #eb5757; font-weight: 700; }
+.ws-low   { color: var(--danger-text); font-weight: 700; }
 .ws-na    { color: var(--text-muted); }
 
 .ws-empty {
@@ -624,7 +624,7 @@
   border-radius: 6px;
 }
 .cc-save-msg.ok    { color: var(--primary); background: rgba(95,168,126,0.1); }
-.cc-save-msg.error { color: #eb5757; background: rgba(235,87,87,0.1); }
+.cc-save-msg.error { color: var(--danger-text); background: var(--danger-bg); }
 
 /* History column */
 .cc-history-header {
@@ -678,7 +678,7 @@
   font-size: 0.8rem;
   padding: 2px 4px;
 }
-.cc-hc-del:hover { color: #eb5757; }
+.cc-hc-del:hover { color: var(--danger-text); }
 
 .cc-hc-meta {
   display: flex;
@@ -988,7 +988,7 @@
 
 .readiness-score-num.high   { color: var(--primary); }
 .readiness-score-num.medium { color: #f0a040; }
-.readiness-score-num.low    { color: #eb5757; }
+.readiness-score-num.low    { color: var(--danger-text); }
 
 .readiness-submit-btn {
   width: 100%;
@@ -1038,7 +1038,7 @@
 
 .readiness-home-score.high   { color: var(--primary); }
 .readiness-home-score.medium { color: #f0a040; }
-.readiness-home-score.low    { color: #eb5757; }
+.readiness-home-score.low    { color: var(--danger-text); }
 
 .readiness-home-info { flex: 1; }
 
@@ -1969,7 +1969,7 @@
   white-space: nowrap;
 }
 
-.wt-stat-val.wt-up   { color: #eb5757; }
+.wt-stat-val.wt-up   { color: var(--danger-text); }
 .wt-stat-val.wt-down { color: var(--primary); }
 
 .wt-stat-lbl {
@@ -2042,7 +2042,7 @@
   min-width: 55px;
 }
 
-.wt-week-change.up { color: #eb5757; }
+.wt-week-change.up { color: var(--danger-text); }
 .wt-week-change.down { color: var(--primary); }
 .wt-week-change.flat { color: var(--text-muted); }
 
@@ -2075,7 +2075,7 @@
   color: var(--text-color);
 }
 
-.wt-rate-val.wt-gaining { color: #eb5757; }
+.wt-rate-val.wt-gaining { color: var(--danger-text); }
 .wt-rate-val.wt-losing  { color: var(--primary); }
 .wt-rate-val.wt-stable   { color: var(--highlight); }
 
@@ -2262,7 +2262,7 @@
   border-radius: 4px;
   transition: color 0.15s, background 0.15s;
 }
-.wt-del-btn:hover { color: #eb5757; background: rgba(235,87,87,0.1); }
+.wt-del-btn:hover { color: var(--danger-text); background: var(--danger-bg); }
 
 /* ── Calorie estimator ── */
 .wt-estimator-section {
