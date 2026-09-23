@@ -4,8 +4,9 @@ const dotenv = require('dotenv');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const helmet = require('helmet');
+const { PDFParse } = require('pdf-parse');
 const { upload, extractKnowledgeWithClaude, saveToAirtable, getActiveModules } = require('./knowledgeBase');
 
 dotenv.config();
@@ -239,21 +240,6 @@ app.get('/health', (req, res) => {
       AIRTABLE_USERS_TABLE: process.env.AIRTABLE_USERS_TABLE || '(default: Users)',
     },
     fix: ok ? null : 'Add the missing variables in Render → your service → Environment, then redeploy.',
-
-// Open endpoint — shows which env vars are set without exposing values.
-app.get('/health', (req, res) => {
-  const checks = {
-    AIRTABLE_TOKEN:   !!process.env.AIRTABLE_TOKEN,
-    AIRTABLE_BASE_ID: !!process.env.AIRTABLE_BASE_ID,
-    JWT_SECRET:       !!process.env.JWT_SECRET,
-    AIRTABLE_USERS_TABLE: process.env.AIRTABLE_USERS_TABLE || '(default: Users)',
-  };
-  const allOk = checks.AIRTABLE_TOKEN && checks.AIRTABLE_BASE_ID;
-  res.status(allOk ? 200 : 503).json({
-    status: allOk ? 'ok' : 'misconfigured',
-    checks,
-    missing: Object.entries(checks).filter(([, v]) => v === false).map(([k]) => k),
-    hint: allOk ? 'All required env vars are set.' : 'Set the missing env vars in your Render dashboard under Environment.',
   });
 });
 
@@ -551,8 +537,19 @@ const leaderboard = [
 app.get('/leaderboard', (req, res) => res.json(leaderboard));
 
 // ── AI routes ────────────────────────────────────────────────────────────────
+// Every AI call spends ANTHROPIC_API_KEY credit, so all of them require a
+// logged-in user and share one per-user limiter.
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.username || ipKeyGenerator(req.ip),
+  message: { error: 'Too many AI requests — please wait a minute before trying again.' }
+});
+
 const aiRoutes = require('./src/routes/ai');
-app.use('/api/ai', aiRoutes);
+app.use('/api/ai', requireAuth, aiLimiter, aiRoutes);
 
 // ── Airtable proxy ───────────────────────────────────────────────────────────
 app.all('/airtable/:baseId/:table', async (req, res) => {
@@ -580,15 +577,7 @@ app.all('/airtable/:baseId/:table', async (req, res) => {
 });
 
 // ── POST /ai/chat ─────────────────────────────────────────────────────────────
-const aiChatLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many AI requests — please wait a minute before trying again.' }
-});
-
-app.post('/ai/chat', requireAuth, aiChatLimiter, async (req, res) => {
+app.post('/ai/chat', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
@@ -646,10 +635,13 @@ app.post('/ai/chat', requireAuth, aiChatLimiter, async (req, res) => {
   } catch (err) {
     console.error('[AI Chat] Error:', err.message);
     return res.status(502).json({ error: 'AI request failed', details: err.message });
+  }
+});
+
 // ── Knowledge Base routes ────────────────────────────────────────────────────
 
 // POST /admin/ingest-pdf — upload and process a PDF module
-app.post('/admin/ingest-pdf', upload.single('pdf'), async (req, res) => {
+app.post('/admin/ingest-pdf', requireAuth, upload.single('pdf'), async (req, res) => {
   try {
     const { moduleName, topic } = req.body;
 
@@ -660,8 +652,8 @@ app.post('/admin/ingest-pdf', upload.single('pdf'), async (req, res) => {
     const airtable = getAirtableEnv();
     if (airtable.error) return res.status(500).json({ error: airtable.error });
 
-    const pdfData = await pdfParse(req.file.buffer);
-    const text = pdfData.text;
+    const parser = new PDFParse({ data: req.file.buffer });
+    const { text } = await parser.getText().finally(() => parser.destroy());
 
     if (!text || text.trim().length < 100) {
       return res.status(422).json({ error: 'PDF appears to be empty or unreadable' });
@@ -696,7 +688,7 @@ app.post('/admin/ingest-pdf', upload.single('pdf'), async (req, res) => {
 });
 
 // GET /admin/knowledge-modules — list all ingested modules
-app.get('/admin/knowledge-modules', async (req, res) => {
+app.get('/admin/knowledge-modules', requireAuth, async (req, res) => {
   try {
     const airtable = getAirtableEnv();
     if (airtable.error) return res.status(500).json({ error: airtable.error });
@@ -710,7 +702,7 @@ app.get('/admin/knowledge-modules', async (req, res) => {
 });
 
 // GET /knowledge-context?topics=training,nutrition — used by AI router
-app.get('/knowledge-context', async (req, res) => {
+app.get('/knowledge-context', requireAuth, async (req, res) => {
   try {
     const airtable = getAirtableEnv();
     if (airtable.error) return res.status(500).json({ error: airtable.error });
