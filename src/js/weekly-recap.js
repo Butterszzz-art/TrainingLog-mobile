@@ -563,7 +563,7 @@
           `<span class="mx-tag${m.target && m.sets >= m.target ? ' mx-tag--hi' : ''}">${_esc(_muscleName(m.muscle))} ${m.sets}<em>·${m.frequency}×</em></span>`
         ).join('')}${r.missedMuscles.length && !r.inProgress
           ? `<span class="mx-tag mx-tag--brass">${r.missedMuscles.length} missed</span>` : ''}</div>` : ''}
-        <button type="button" class="mx-link wr-open" data-wr-open="${r.start}">See full recap ›</button>
+        <button type="button" class="mx-link wr-open" data-wr-open="${r.start}">${typeof window.renderCoachReview === 'function' ? 'Coach review &amp; full recap ›' : 'See full recap ›'}</button>
       </section>`;
   }
 
@@ -681,6 +681,7 @@
       : '<p class="wr-empty">No lifting logged.</p>';
 
     return `
+      <div class="wr-coach-review" data-week="${r.start}"></div>
       <p class="wr-headline">${_esc(_headline(r))}</p>
       ${_dayStrip(r)}
       <div class="wr-legend wr-key"><span class="wr-key-dot is-lift"></span>Lifting <span class="wr-key-dot is-cardio"></span>Cardio</div>
@@ -707,6 +708,9 @@
     overlay.querySelector('[data-wr-nav="-1"]').disabled = _sheetWeek <= oldest;
     overlay.querySelector('[data-wr-nav="1"]').disabled = _sheetWeek >= thisMonday;
     overlay.querySelector('.wr-sheet-body').innerHTML = _sheetBody(r);
+    // Coach review (src/js/coach-review.js) sits on top of the numbers when loaded.
+    const reviewHost = overlay.querySelector('.wr-coach-review');
+    if (reviewHost && typeof window.renderCoachReview === 'function') window.renderCoachReview(reviewHost, r);
   }
 
   function _closeSheet() {

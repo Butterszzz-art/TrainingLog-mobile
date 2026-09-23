@@ -164,3 +164,44 @@ test('last night\'s sleep counts all day, whatever the hour', () => {
   const d = CoachData.buildBriefDigest({ generatedAt: lateEvening, sleep }, {});
   expect(d.signals[0].text).toMatch(/^Sleep 5.9 h/);
 });
+
+describe('buildWeeklyReviewFacts', () => {
+  const { buildWeeklyRecap } = require('../src/js/weekly-recap');
+  const lift = (date, kg, reps = 5) => ({ date, title: 'Legs A', log: [{ exercise: 'Back Squat', repsArray: [reps], weightsArray: [kg] }] });
+  // Week under review: Mon 14 Sep – Sun 20 Sep 2026.
+  const raw = {
+    workouts: [lift('2026-08-24', 120), lift('2026-08-31', 120), lift('2026-09-07', 120), lift('2026-09-10', 120),
+      lift('2026-09-14', 120), lift('2026-09-17', 125)],
+    bodyweightLog: [{ date: '2026-09-12', weightKg: 81.5 }, { date: '2026-09-16', weightKg: 81.2 }, { date: '2026-09-20', weightKg: 80.9 }],
+    macroHistory: ['14', '15', '16', '17', '18'].map(d => ({ date: `2026-09-${d}`, totals: { calories: 2400, protein: 150 } })),
+    macroTargets: { calories: 2400, protein: 180 },
+  };
+  const recap = buildWeeklyRecap(raw, { weekStart: '2026-09-14', today: '2026-09-23', getMuscleGroup: () => 'quads', defaultMuscleTargets: { quads: 10, back: 10 } });
+  const pack = {
+    generatedAt: '2026-09-23T07:00:00.000Z',
+    profile: { phase: 'Cut' },
+    workouts: raw.workouts.map(w => ({ date: w.date, title: w.title, exercises: [{ name: 'Back Squat', sets: [{ w: w.log[0].weightsArray[0], r: w.log[0].repsArray[0] }] }] })),
+    checkIns: [{ date: '2026-09-19', hunger: 8, energy: 6 }],
+    macros: { targets: { calories: 2400, protein: 180, carbs: 250, fat: 75 } },
+    program: { id: 'p1', name: 'PPL', days: [{ name: 'Legs A', exercises: [{ name: 'Back Squat', sets: [{ reps: 5, weight: 120 }] }] }] },
+  };
+
+  test('wins and watch come from the recap numbers and the pack', () => {
+    const { rules, facts, hasData } = CoachData.buildWeeklyReviewFacts(recap, pack);
+    expect(hasData).toBe(true);
+    expect(rules.wins).toEqual(expect.arrayContaining([
+      'New best on Back Squat: 125 kg × 5',
+      'Weight -0.6 kg this week, on pace for your cut',
+      'Calories on target 5 of 5 logged days',
+    ]));
+    expect(rules.watch).toEqual(expect.arrayContaining([
+      'No sets for chest, back, shoulders and more',
+      'Protein averaged 150 g against a 180 g target',
+      'Hunger 8/10 at check-in',
+    ]));
+    expect(rules.summary).toMatch(/^2 sessions and 2 sets this week\. Worth a look: /);
+    expect(facts.program.days[0].exercises).toEqual(['Back Squat: 1×5 @ 120 kg']);
+    expect(facts.macroTargets.protein).toBe(180);
+    expect(facts.week).toEqual({ start: '2026-09-14', end: '2026-09-20', inProgress: false });
+  });
+});

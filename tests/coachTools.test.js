@@ -82,6 +82,12 @@ describe('coach tools', () => {
     expect(good.card.to.carbs).toBe(275);
   });
 
+  test('a macro proposal that matches the current targets is rejected', () => {
+    const same = runTool('propose_macro_targets', { calories: 2400, protein: 180, carbs: 251, fat: 75, rationale: 'x' }, pack);
+    expect(same.isError).toBe(true);
+    expect(same.card).toBeUndefined();
+  });
+
   test('remember trims and returns a memory event', () => {
     expect(runTool('remember', { fact: '  Left shoulder:\n no BTN press ' }, pack).memory).toBe('Left shoulder: no BTN press');
   });

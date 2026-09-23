@@ -111,9 +111,14 @@ function perModelTimeoutMs(openRouterMs) {
  * takes longer than `timeoutMs` is skipped. Throws the last error if every
  * model fails.
  */
-async function createMessage(base, params, { timeoutMs } = {}) {
+async function createMessage(base, params, { timeoutMs, retryPauseMs = 5000 } = {}) {
+  // Free models are often rate-limited for a few seconds ("retry shortly"):
+  // after the whole chain fails, pause and go round once more.
+  const chain = modelChain(base);
+  const attempts = provider() === 'openrouter' && retryPauseMs > 0 ? [...chain, null, ...chain] : chain;
   let lastErr;
-  for (const model of modelChain(base)) {
+  for (const model of attempts) {
+    if (model === null) { await new Promise(r => setTimeout(r, retryPauseMs)); continue; }
     const ctrl = timeoutMs ? new AbortController() : null;
     const timer = ctrl && setTimeout(() => ctrl.abort(), timeoutMs);
     try {

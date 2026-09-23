@@ -442,6 +442,15 @@ function proposeMacroTargets(input, pack) {
   if (Object.values(t).some(v => v === null)) {
     return { result: { error: 'calories, protein, carbs and fat must all be numbers.' }, trace: 'Macro change', isError: true };
   }
+  const current = pack.macros && pack.macros.targets;
+  if (current && Math.abs(t.calories - (current.calories || 0)) <= 25 &&
+      ['protein', 'carbs', 'fat'].every(k => Math.abs(t[k] - (current[k] || 0)) <= 5)) {
+    return {
+      result: { error: 'These are essentially the current targets. If the issue is hitting them rather than the targets themselves, say so in text instead of proposing.' },
+      trace: 'Macro change',
+      isError: true,
+    };
+  }
   const fromMacros = t.protein * 4 + t.carbs * 4 + t.fat * 9;
   if (Math.abs(fromMacros - t.calories) > t.calories * 0.1) {
     return {
