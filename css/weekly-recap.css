@@ -1,0 +1,168 @@
+/* =============================================================
+   WEEKLY RECAP — Home card + full-recap bottom sheet
+   Built on the Modernist kit (modernist-kit.css): pod, mx-tiles,
+   mx-stat, mx-meter, mx-tag, mx-sheet. Only recap-specific layout
+   lives here, all prefixed `wr-`.
+   ============================================================= */
+
+.home-zone--recap { padding-top: 4px; }
+.home-zone--recap:empty,
+#weeklyRecapCard:empty { display: none; }
+
+.wr-card { gap: 12px; margin-bottom: 0; }
+.wr-head { align-items: baseline; }
+
+.wr-headline {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.wr-sub {
+  font-family: var(--font-label);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+/* ── Deltas vs. previous week ─────────────────────────────── */
+.wr-delta {
+  font-family: var(--font-label);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.wr-delta--pos  { color: var(--green-90); }
+.wr-delta--neg  { color: var(--brass-light); }
+.wr-delta--flat { color: var(--text-tertiary); }
+
+/* ── Mon→Sun activity strip ───────────────────────────────── */
+.wr-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.wr-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.wr-day-dot {
+  width: 100%;
+  max-width: 34px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
+}
+.wr-day.is-lift .wr-day-dot   { background: var(--fill-meter-a); border-color: transparent; }
+.wr-day.is-cardio .wr-day-dot { background: var(--fill-meter-brass); border-color: transparent; }
+.wr-day.is-lift.is-cardio .wr-day-dot {
+  background: linear-gradient(90deg, var(--green-90) 0 50%, var(--brass-light) 50% 100%);
+}
+.wr-day.is-future { opacity: 0.4; }
+.wr-day-n {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--mx-faint);
+}
+
+.wr-key { display: flex; align-items: center; gap: 6px; }
+.wr-key-dot {
+  display: inline-block;
+  width: 14px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  margin-left: 6px;
+}
+.wr-key-dot:first-child { margin-left: 0; }
+.wr-key-dot.is-lift   { background: var(--green-90); }
+.wr-key-dot.is-cardio { background: var(--brass-light); }
+
+/* ── Chips row ────────────────────────────────────────────── */
+.wr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wr-chips .mx-tag em {
+  font-style: normal;
+  margin-left: 3px;
+  opacity: 0.75;
+}
+
+.wr-open { align-self: flex-start; }
+
+/* ── Sheet ────────────────────────────────────────────────── */
+.wr-sheet { gap: 12px; }
+.wr-sheet-titles { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.wr-nav { display: flex; justify-content: space-between; gap: 8px; }
+.wr-nav-btn { flex: 1; min-height: 38px; }
+.wr-nav-btn:disabled { opacity: 0.35; cursor: default; }
+.wr-sheet-body { display: flex; flex-direction: column; gap: 14px; }
+
+.wr-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-row);
+}
+.wr-sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+.wr-empty, .wr-legend, .wr-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.wr-note { color: var(--brass-light); }
+
+/* Muscle table: name | meter | sets/target | days */
+.wr-mtable { display: flex; flex-direction: column; gap: 8px; }
+.wr-mrow {
+  display: grid;
+  grid-template-columns: minmax(74px, 0.9fr) minmax(0, 2fr) 52px 28px;
+  align-items: center;
+  gap: 10px;
+}
+.wr-mname { font-size: 14px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-mval {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text-primary);
+}
+.wr-mval small { font-family: var(--font-label); font-size: 11px; color: var(--text-tertiary); margin-left: 1px; }
+.wr-mfreq {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+  color: var(--mx-faint);
+}
+.wr-mrow .mx-meter > i { background: var(--fill-meter-brass); }
+.wr-mrow.is-hit .mx-meter > i { background: var(--fill-meter-a); }
+.wr-mrow.is-low .wr-mname { color: var(--text-secondary); }
+
+/* Top lifts */
+.wr-lifts { display: flex; flex-direction: column; }
+.wr-lift {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-row);
+}
+.wr-lift:last-child { border-bottom: 0; }
+.wr-lift-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wr-lift-name { font-size: 14.5px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-lift .mx-chip { flex: none; }
+
+@media (max-width: 380px) {
+  .wr-sheet .mx-tiles--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wr-mrow { grid-template-columns: minmax(64px, 0.9fr) minmax(0, 1.6fr) 48px 24px; gap: 8px; }
+}
