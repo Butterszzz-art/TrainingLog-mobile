@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="css/login.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
+  <link rel="stylesheet" href="css/weekly-recap.css">
   <link rel="stylesheet" href="css/cardio.css">
   <link rel="stylesheet" href="css/posing.css">
   <link rel="stylesheet" href="css/mobility.css">
@@ -676,6 +677,11 @@
     <!-- ── Zone 1: Today's session — program day + split strip ──── -->
     <div class="home-zone home-zone--hero">
       <div id="todayProgramCard"></div>
+    </div>
+
+    <!-- ── Zone 2b: Last week recap (hidden until there is something to recap) ── -->
+    <div class="home-zone home-zone--recap">
+      <div id="weeklyRecapCard"></div>
     </div>
 
     <!-- ── Zone 3: Weekly glance — summary + steps (2-col) ─────── -->
@@ -4911,6 +4917,7 @@ function showTab(tabName) {
       renderHomeDashboard();
       if (typeof renderDailyPulseCard === 'function') renderDailyPulseCard();
       if (typeof renderDueNowRail === 'function') renderDueNowRail();
+      if (typeof window.renderWeeklyRecapCard === "function") window.renderWeeklyRecapCard();
       if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
       if (typeof window.initAiCoach === 'function' && currentUser) window.initAiCoach(currentUser);
       break;
@@ -20083,6 +20090,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/data-export.js"></script>
   <script src="src/js/food-database.js"></script>
   <script src="src/js/weekly-summary.js"></script>
+  <script src="src/js/weekly-recap.js"></script>
   <script src="src/js/body-hub.js"></script>
   <script src="src/js/challenges.js"></script>
   <script src="src/js/client-checkins.js"></script>
