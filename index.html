@@ -664,6 +664,9 @@
     <!-- ── Greeting row: "Morning, {name}" + date/streak, search+avatar ── -->
     <div class="home-greeting-row" id="homeGreetingRow"></div>
 
+    <!-- ── Coach: Today's brief (src/js/coach-brief.js) ────────── -->
+    <div class="home-zone" id="coachBriefCard"></div>
+
     <!-- ── Daily Pulse: one-tap rotating check-in question ───────── -->
     <div class="home-zone" id="dailyPulseCard"></div>
 
@@ -11405,6 +11408,7 @@ function renderHomeDashboard() {
     .map(cardId => cardRenderers[cardId]?.())
     .filter(Boolean);
   container.innerHTML = `<div class="home-command-grid">${orderedCards.join('')}</div>`;
+  if (typeof window.renderCoachBrief === 'function') window.renderCoachBrief();
 }
 
 function getHomeDashboardCardOrder(archetype) {
@@ -20545,7 +20549,9 @@ window.renderCaffeinePod = renderCaffeinePod;
   window.closeWorkoutStoryModal = closeWorkoutStoryModal;
   </script>
   <script src="src/js/mobility.js"></script>
+  <script src="src/js/coach-data.js"></script>
   <script src="src/js/ai-coach.js"></script>
+  <script src="src/js/coach-brief.js"></script>
 
 <!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
 <div id="macroAiBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeMacroAiAdvisor()"></div>
