@@ -36,6 +36,47 @@
     return d >= monday && d <= sunday;
   }
 
+  function _pad(n) { return String(n).padStart(2, '0'); }
+
+  /** Local-time YYYY-MM-DD key (toISOString() would shift the day outside UTC). */
+  function _toDateKey(d) {
+    return `${d.getFullYear()}-${_pad(d.getMonth() + 1)}-${_pad(d.getDate())}`;
+  }
+
+  /** Normalise any stored date (YYYY-MM-DD, ISO timestamp, toDateString) to a local key. */
+  function _entryKey(value) {
+    if (!value) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const d = new Date(value);
+    return isNaN(d) ? null : _toDateKey(d);
+  }
+
+  /**
+   * Count the days in `dayKeys` whose logged calories land within 0.85–1.15
+   * of `calTarget`. macroHistory is an array of { date, meals, totals } with
+   * one entry per save (see addMacroHistoryEntry in index.html); the older
+   * object-keyed-by-date shape is tolerated too. Last save of a day wins.
+   */
+  function _countCalTargetDays(history, calTarget, dayKeys) {
+    if (!(calTarget > 0) || !history) return 0;
+    const list = Array.isArray(history)
+      ? history
+      : Object.entries(history).map(([date, v]) => ({ date, ...(v || {}) }));
+    const byDay = {};
+    list.forEach(e => {
+      const day = _entryKey(e && e.date);
+      if (!day) return;
+      const kcal = parseFloat((e.totals || e).calories);
+      if (Number.isFinite(kcal) && kcal > 0) byDay[day] = kcal;
+    });
+    return dayKeys.filter(day => {
+      const kcal = byDay[day];
+      if (!kcal) return false;
+      const ratio = kcal / calTarget;
+      return ratio >= 0.85 && ratio <= 1.15;
+    }).length;
+  }
+
   /* ── Data gathering ──────────────────────────────────────── */
 
   function _gatherWeekData(username) {
@@ -101,21 +142,16 @@
       else break;
     }
 
-    // Calorie compliance: days this week where macros were within 10% of target
+    // Calorie compliance: days this week where calories were within ±15% of target
     const targets = _parse(`macroTargets_${username}`) || {};
     const calTarget = targets.calories || 0;
-    let calDaysHit = 0;
-    if (calTarget > 0) {
-      const macroHistory = _parse(`macroHistory_${username}`) || {};
-      weekDates.forEach(ds => {
-        const iso = new Date(ds).toISOString?.().slice(0, 10) || ds;
-        const entry = macroHistory[iso];
-        if (entry?.calories) {
-          const ratio = entry.calories / calTarget;
-          if (ratio >= 0.85 && ratio <= 1.15) calDaysHit++;
-        }
-      });
+    const weekDayKeys = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon);
+      d.setDate(d.getDate() + i);
+      weekDayKeys.push(_toDateKey(d));
     }
+    const calDaysHit = _countCalTargetDays(_parse(`macroHistory_${username}`), calTarget, weekDayKeys);
 
     return {
       workoutCount:  thisWeek.length,
@@ -206,6 +242,12 @@
   }
 
   /* ── Boot ─────────────────────────────────────────────────── */
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { _countCalTargetDays, _toDateKey };
+  }
+
+  if (typeof document === 'undefined') return;
 
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(renderWeeklySummaryCard, 1000);
