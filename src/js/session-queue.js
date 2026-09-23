@@ -657,8 +657,23 @@
       if (isNewExercise || _qlWeight == null || _qlReps == null) {
         const weightEl = document.getElementById('weight_0');
         const repsEl = document.getElementById('reps_0');
-        _qlWeight = weightEl && weightEl.value !== '' ? Number(weightEl.value) : (_qlWeight ?? 20);
-        _qlReps = repsEl && repsEl.value !== '' ? Number(repsEl.value) : (_qlReps ?? 8);
+
+        // Default to this exercise's own last logged top set, not a
+        // hardcoded 20kg/8reps guess — getExerciseStats() already computes
+        // lastTopSet for the stats line below, it just wasn't being used
+        // to seed the stepper too.
+        let fallbackWeight = _qlWeight ?? 20;
+        let fallbackReps = _qlReps ?? 8;
+        if (isNewExercise && typeof global.getExerciseStats === 'function') {
+          const stats = global.getExerciseStats(name);
+          if (stats && stats.lastTopSet) {
+            if (stats.lastTopSet.weight != null) fallbackWeight = stats.lastTopSet.weight;
+            if (stats.lastTopSet.reps != null) fallbackReps = stats.lastTopSet.reps;
+          }
+        }
+
+        _qlWeight = weightEl && weightEl.value !== '' ? Number(weightEl.value) : fallbackWeight;
+        _qlReps = repsEl && repsEl.value !== '' ? Number(repsEl.value) : fallbackReps;
       }
       if (isNewExercise) _resetQuickLogSetOpts();
       _syncQuickLogDisplay();

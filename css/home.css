@@ -1009,8 +1009,8 @@
 }
 
 .sm-card--active {
-  border-color: #c05060;
-  background: rgba(192, 80, 96, 0.06);
+  border-color: var(--danger-strong);
+  background: rgba(158, 50, 65, 0.06);
 }
 
 .sm-toggle--on {
@@ -1024,10 +1024,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(192, 80, 96, 0.08);
-  border-bottom: 1px solid rgba(192, 80, 96, 0.25);
+  background: rgba(158, 50, 65, 0.08);
+  border-bottom: 1px solid rgba(158, 50, 65, 0.25);
   font-size: 0.82rem;
-  color: #c05060;
+  color: var(--danger-text);
   font-weight: 600;
 }
 

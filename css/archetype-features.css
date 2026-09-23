@@ -406,7 +406,7 @@
 
 .attempt-status-btn.pending  { background: rgba(255,255,255,0.08); color: var(--secondary-text); }
 .attempt-status-btn.good     { background: rgba(68,162,113,0.2);   color: #4da87a; border: 1px solid rgba(68,162,113,0.4); }
-.attempt-status-btn.no-lift  { background: rgba(220,53,69,0.18);   color: #e05060; border: 1px solid rgba(220,53,69,0.4); }
+.attempt-status-btn.no-lift  { background: var(--danger-bg);   color: var(--danger-text); border: 1px solid var(--danger-border); }
 
 .attempt-total-row {
   display: flex;

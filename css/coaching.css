@@ -129,7 +129,7 @@
 }
 
 .coach-bulk-btn:hover { background: var(--border-color); }
-.coach-bulk-btn.danger { color: #e05060; border-color: rgba(220,53,69,0.4); }
+.coach-bulk-btn.danger { color: var(--danger-text); border-color: var(--danger-border); }
 
 /* Client card checkbox for bulk selection */
 .coach-client-select {
@@ -272,8 +272,8 @@
 }
 
 .exercise-item-remove:hover {
-  background: rgba(220,53,69,0.15);
-  color: #e05060;
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 /* Program canvas (weekly grid) */
@@ -436,7 +436,7 @@
   box-shadow: none;
 }
 
-.prog-exercise-slot-remove:hover { color: #e05060; background: none; }
+.prog-exercise-slot-remove:hover { color: var(--danger-text); background: none; }
 
 /* Assign to client selector */
 .prog-assign-bar {
@@ -635,7 +635,7 @@
 }
 
 .coach-msg-tag.note     { background: rgba(77,168,218,0.18); color: #4da8da; }
-.coach-msg-tag.alert    { background: rgba(220,53,69,0.15);  color: #e05060; }
+.coach-msg-tag.alert    { background: var(--danger-bg);  color: var(--danger-text); }
 .coach-msg-tag.praise   { background: rgba(68,162,113,0.15); color: #4da87a; }
 
 /* Notification toggle row */
@@ -704,7 +704,7 @@
 
 /* Trend indicators */
 .trend-up   { color: #4da87a; font-weight: 700; }
-.trend-down { color: #e05060; font-weight: 700; }
+.trend-down { color: var(--danger-text); font-weight: 700; }
 .trend-flat { color: var(--secondary-text); }
 
 /* Injury flag pill */
@@ -716,9 +716,9 @@
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 700;
-  background: rgba(220, 53, 69, 0.12);
-  color: #e05060;
-  border: 1px solid rgba(220,53,69,0.3);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-border);
 }
 
 /* Stagnation badge */
@@ -798,7 +798,7 @@
 }
 
 .gdpr-export-btn { background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color); }
-.gdpr-delete-btn { background: transparent; border: 1px solid rgba(220,53,69,0.5); color: #e05060; }
+.gdpr-delete-btn { background: transparent; border: 1px solid var(--danger-border); color: var(--danger-text); }
 .gdpr-save-btn   { background: var(--primary); color: #fff; }
 
 /* Consent badge */
@@ -814,7 +814,7 @@
 
 .gdpr-badge.consented  { background: rgba(68,162,113,0.12); color: #4da87a; border: 1px solid rgba(68,162,113,0.3); }
 .gdpr-badge.pending    { background: rgba(240,160,64,0.12);  color: #f0a040; border: 1px solid rgba(240,160,64,0.35); }
-.gdpr-badge.withdrawn  { background: rgba(220,53,69,0.12);   color: #e05060; border: 1px solid rgba(220,53,69,0.3); }
+.gdpr-badge.withdrawn  { background: var(--danger-bg);   color: var(--danger-text); border: 1px solid var(--danger-border); }
 
 /* GDPR consent modal */
 .gdpr-modal-overlay {

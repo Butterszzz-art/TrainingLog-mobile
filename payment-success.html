@@ -4,29 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Payment Successful — Pocket Coach</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
   <style>
-    :root { --bg: #080b0a; --card: #121b17; --primary: #2d7d5b; --text: #f4f7f5; --muted: #8c9891; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-    .card { text-align: center; max-width: 400px; width: 100%; }
-    .check { width: 80px; height: 80px; margin: 0 auto 24px; border-radius: 50%; background: rgba(45,125,91,0.15); display: flex; align-items: center; justify-content: center; animation: pop 0.4s ease-out; }
-    .check svg { width: 40px; height: 40px; stroke: var(--primary); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    body {
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      background: var(--wash-mobile);
+      background-color: var(--ground);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+      padding: 32px 24px;
+      border-radius: var(--radius-hero);
+      background: var(--pod-bg-hero);
+      border: 1px solid var(--border-featured);
+      box-shadow: var(--pod-shadow-hero);
+    }
+    .check {
+      width: 80px; height: 80px; margin: 0 auto 24px; border-radius: 50%;
+      background: rgba(47, 138, 99, 0.16); border: 1px solid var(--border-featured);
+      display: flex; align-items: center; justify-content: center;
+      animation: pop 0.4s ease-out;
+    }
+    .check svg { width: 40px; height: 40px; stroke: var(--green-90); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .check svg path { stroke-dasharray: 60; stroke-dashoffset: 60; animation: draw 0.6s 0.3s ease forwards; }
     @keyframes pop { 0% { transform: scale(0); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
     @keyframes draw { to { stroke-dashoffset: 0; } }
-    h1 { font-size: 1.6rem; margin-bottom: 12px; }
-    .desc { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 28px; }
-    .btn { display: inline-block; padding: 14px 32px; border-radius: 14px; background: var(--primary); color: #fff; text-decoration: none; font-weight: 700; font-size: 1rem; }
-    .status { font-size: 0.78rem; color: var(--muted); margin-top: 16px; }
+    @media (prefers-reduced-motion: reduce) {
+      .check, .check svg path { animation: none; stroke-dashoffset: 0; }
+    }
+    .kicker { font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #86998e; margin-bottom: 6px; }
+    h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1; text-transform: uppercase; margin-bottom: 14px; }
+    .desc { color: var(--text-secondary); font-size: 15px; line-height: 1.6; margin-bottom: 28px; }
+    .btn {
+      display: flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 22px;
+      border-radius: var(--radius-pill); background: var(--fill-btn-primary-mobile); box-shadow: var(--cta-shadow);
+      color: var(--label-on-green); text-decoration: none;
+      font-family: var(--font-display); font-size: 18px; letter-spacing: 0.03em; text-transform: uppercase;
+    }
+    .btn:focus-visible { outline: 2px solid var(--green-70); outline-offset: 3px; }
+    .status { font-size: 13px; color: #7b8981; margin-top: 16px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="check">
+    <div class="check" aria-hidden="true">
       <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
     </div>
-    <h1>You're all set! 🎉</h1>
+    <div class="kicker">Payment successful</div>
+    <h1>You're all set</h1>
     <p class="desc" id="planDesc">Your subscription is now active.</p>
     <a href="index.html" class="btn">Back to Pocket Coach</a>
     <p class="status" id="syncStatus">Syncing your plan…</p>
@@ -53,7 +88,7 @@
         });
         const data = await res.json();
         localStorage.setItem('userPlan', data.plan || 'free');
-        document.getElementById('syncStatus').textContent = 'Plan updated — ' + (data.plan || 'free') + ' ✓';
+        document.getElementById('syncStatus').textContent = 'Plan updated: ' + (data.plan || 'free');
       } catch {
         document.getElementById('syncStatus').textContent = 'Ready!';
       }

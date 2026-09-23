@@ -206,8 +206,11 @@
   margin: 0 4px;
   flex: none;
   border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.045);
+  /* Visible ring so the decrement button doesn't disappear against the
+     dark stepper track (was `border: none` + a near-invisible 4.5%
+     white fill — indistinguishable from empty space at a glance). */
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.09);
   color: var(--secondary-text);
   font-size: 19px;
   line-height: 1;
@@ -225,6 +228,7 @@
 }
 
 .ql-step--plus {
+  border-color: transparent;
   background: linear-gradient(135deg, var(--green-60), var(--green-50));
   color: var(--pill-text-active);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
@@ -601,7 +605,7 @@
   padding: 8px 18px;
   font-size: 0.82rem;
   font-weight: 700;
-  background: #c05060;
+  background: var(--danger-strong);
   border-radius: 8px;
   color: #fff;
   border: none;
@@ -882,18 +886,53 @@
   color: var(--primary, #5fa87e);
 }
 
-/* Top Set / Back-off flag the set's role for progress tracking, so they get
-   their own colors instead of the generic technique-pill green. */
-.set-opt-pill.top-set-pill:has(input:checked) {
-  background: rgba(230, 168, 23, 0.14);
-  border-color: #e6a817;
-  color: #e6a817;
+/* Top Set / Back-off flag the set's role for progress tracking. Shown as
+   one joined segmented control (Top | BO) rather than two separately-
+   colored pills — the role is a single either/or choice (see
+   toggleSetRole() in index.html), so it reads as one control with the
+   same "selected" green the technique pills above already use, instead
+   of adding a second and third accent color to the row. */
+.role-segment {
+  display: inline-flex;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
 }
 
-.set-opt-pill.backoff-pill:has(input:checked) {
-  background: rgba(90, 140, 200, 0.14);
-  border-color: #5a8cc8;
-  color: #5a8cc8;
+.role-segment-opt {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.role-segment-opt input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.role-segment-opt + .role-segment-opt {
+  border-left: 1px solid var(--border-color);
+}
+
+.role-segment-opt:hover {
+  color: var(--text-color);
+}
+
+.role-segment-opt:has(input:checked) {
+  background: rgba(95, 168, 126, 0.14);
+  color: var(--primary, #5fa87e);
 }
 
 .maxed-out-pill {
@@ -910,9 +949,9 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 1px solid rgba(192, 80, 96, 0.4);
+  border: 1px solid var(--danger-border);
   background: transparent;
-  color: #c05060;
+  color: var(--danger-text);
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
@@ -927,7 +966,7 @@
 }
 
 .set-remove-btn:hover {
-  background: rgba(192, 80, 96, 0.12);
+  background: var(--danger-bg);
 }
 
 /* ── Resistance section ─────────────────────────────────────── */
