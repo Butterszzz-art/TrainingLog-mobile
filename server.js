@@ -29,7 +29,8 @@ const corsOptions = allowedOrigins.length
   : { origin: true, credentials: true };
 app.use(cors(corsOptions));
 
-app.use(express.json());
+// 1mb: the AI coach request carries a few weeks of training data.
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -537,7 +538,7 @@ const leaderboard = [
 app.get('/leaderboard', (req, res) => res.json(leaderboard));
 
 // ── AI routes ────────────────────────────────────────────────────────────────
-// Every AI call spends ANTHROPIC_API_KEY credit, so all of them require a
+// Every AI call spends API credit (ANTHROPIC_API_KEY or OPENROUTER_API_KEY), so all of them require a
 // logged-in user and share one per-user limiter.
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -548,6 +549,7 @@ const aiLimiter = rateLimit({
   message: { error: 'Too many AI requests — please wait a minute before trying again.' }
 });
 
+const { isConfigured, createMessage } = require('./src/coach/client');
 const aiRoutes = require('./src/routes/ai');
 app.use('/api/ai', requireAuth, aiLimiter, aiRoutes);
 
@@ -578,8 +580,7 @@ app.all('/airtable/:baseId/:table', async (req, res) => {
 
 // ── POST /ai/chat ─────────────────────────────────────────────────────────────
 app.post('/ai/chat', requireAuth, aiLimiter, async (req, res) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -622,10 +623,7 @@ app.post('/ai/chat', requireAuth, aiLimiter, async (req, res) => {
   ];
 
   try {
-    const Anthropic = require('@anthropic-ai/sdk');
-    const client = new Anthropic.default({ apiKey });
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const response = await createMessage('claude-haiku-4-5', {
       max_tokens: 1024,
       system: systemPrompt,
       messages

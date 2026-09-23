@@ -1,7 +1,10 @@
 const express = require('express');
-const Anthropic = require('@anthropic-ai/sdk');
+const { isConfigured, createMessage } = require('../coach/client');
 
 const router = express.Router();
+
+// Conversational coach (streaming, tool use) — see src/routes/coach.js
+router.use('/coach', require('./coach'));
 
 const SYSTEM_PROMPT = `You are a knowledgeable fitness coach assistant inside Pocket Coach, a \
 fitness tracking app. You write concise, direct, data-driven check-in summaries for athletes. \
@@ -9,7 +12,7 @@ You are factual, encouraging but honest. Never use filler phrases like 'Great jo
 Reference the specific numbers provided. Write in second person (you/your). Max 3 sentences.`;
 
 router.post('/checkin-summary', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -48,9 +51,7 @@ router.post('/checkin-summary', async (req, res) => {
   const userPrompt = parts.join(' ');
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 256,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
@@ -80,7 +81,7 @@ const TARGET_RATES = {
 };
 
 router.post('/macro-advice', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -123,9 +124,7 @@ router.post('/macro-advice', async (req, res) => {
   const userPrompt = parts.join(' ');
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 400,
       system: MACRO_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
@@ -176,7 +175,7 @@ function parseProgramAnalysis(text) {
 }
 
 router.post('/program-analysis', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -205,9 +204,7 @@ router.post('/program-analysis', async (req, res) => {
   ].join('\n');
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 512,
       system: PROGRAM_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
@@ -247,7 +244,7 @@ Respond ONLY with valid JSON in this exact structure: \
 Use standard exercise names. Rep ranges as strings e.g. '8-12' or '5'. Rest in seconds.`;
 
 router.post('/generate-program', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -282,9 +279,7 @@ router.post('/generate-program', async (req, res) => {
   const userPrompt = parts.join('\n');
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 2048,
       system: GENERATE_PROGRAM_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
@@ -347,7 +342,7 @@ Respond ONLY with valid JSON: \
 { "plateauDetected": boolean, "stall": string|null, "duration": string|null, "suggestion": string|null }`;
 
 router.post('/plateau-check', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -386,9 +381,7 @@ router.post('/plateau-check', async (req, res) => {
   ].join('\n');
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 256,
       system: PLATEAU_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
@@ -429,7 +422,7 @@ alerts or concerns directly. Keep it under 150 words. Do not use bullet points \
 — write in natural prose paragraphs. Start with the athlete's first name.`;
 
 router.post('/coach-draft-message', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -477,9 +470,7 @@ router.post('/coach-draft-message', async (req, res) => {
   const userPrompt = parts.join(' ');
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 300,
       system: COACH_DRAFT_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
@@ -508,7 +499,7 @@ Respond ONLY with valid JSON in this exact structure: \
 }`;
 
 router.post('/profile-summary', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -531,9 +522,7 @@ router.post('/profile-summary', async (req, res) => {
   const userPrompt = parts.join('\n');
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 512,
       system: PROFILE_SUMMARY_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
@@ -573,7 +562,7 @@ Relate sleep to training recovery based on their archetype. \
 Keep response to 2-3 sentences max. Write in second person. Be specific, not generic.`;
 
 router.post('/sleep-insight', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -604,9 +593,7 @@ router.post('/sleep-insight', async (req, res) => {
   ];
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 200,
       system: SLEEP_INSIGHT_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: parts.join('\n') }],
@@ -628,7 +615,7 @@ Include: (1) phase assessment (acute/subacute/remodelling), (2) 3-4 specific exe
 Keep response under 200 words. Write in second person. Be specific, not generic.`;
 
 router.post('/rehab-plan', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isConfigured()) {
     return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
   }
 
@@ -644,9 +631,7 @@ router.post('/rehab-plan', async (req, res) => {
   ].join(' ');
 
   try {
-    const client = new Anthropic();
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await createMessage('claude-haiku-4-5', {
       max_tokens: 350,
       system: REHAB_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: prompt }],
