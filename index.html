@@ -483,92 +483,124 @@
   </div>
 </div>
 
-<!-- ── App Tutorial (feature tour, shown once after onboarding) ────── -->
+<!-- ── App Tutorial (shown once after onboarding) ────────────────────
+     Part 1: five swipeable intro slides with looping CSS demos (how a
+     log works, how the nav works, what's inside). The last slide offers
+     Part 2, the hands-on guided tour over the real app
+     (src/js/app-tour.js → startAppTour()). Demo animations only run on
+     the .is-active slide (css/tutorial.css). ─────────────────────── -->
 <div id="tutorialOverlay" class="tutorial-overlay" hidden>
-  <button class="tutorial-skip" id="tutorialSkip">Skip</button>
+  <div class="tutorial-glow" aria-hidden="true"></div>
+  <div class="tutorial-topbar">
+    <div class="tutorial-progress" aria-hidden="true"><span id="tutorialProgressFill"></span></div>
+    <button class="tutorial-skip" id="tutorialSkip">Skip</button>
+  </div>
 
   <div class="tutorial-track" id="tutorialTrack">
-    <!-- Slide 1: Welcome -->
+    <!-- Slide 1: Welcome — logo with orbiting feature icons -->
     <div class="tutorial-slide">
-      <div class="tutorial-icon tutorial-icon--highlight">
-        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      <div class="tut-orbit" aria-hidden="true">
+        <div class="tut-orbit-core">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="tut-orbit-ring">
+          <span class="tut-orbit-dot" style="--i:0"><svg viewBox="0 0 24 24"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg></span>
+          <span class="tut-orbit-dot" style="--i:1"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+          <span class="tut-orbit-dot" style="--i:2"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
+          <span class="tut-orbit-dot" style="--i:3"><svg viewBox="0 0 24 24"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-3 2-4 2-7 2 1 3 3 3 5"/></svg></span>
+        </div>
       </div>
       <h2 class="tutorial-title">Welcome to Pocket Coach</h2>
-      <p class="tutorial-desc">Your all-in-one training companion. Let's take a quick look at what you can do.</p>
+      <p class="tutorial-desc">Log workouts in seconds, watch your progress build, and keep your body data in one place. Here's how it all works.</p>
+      <div class="tutorial-swipe-hint" aria-hidden="true"><span></span>Swipe or tap Next</div>
     </div>
 
-    <!-- Slide 2: Home tab (icon matches bn-item[data-tab=homeTab]) -->
+    <!-- Slide 2: How a log works — animated mini log form -->
     <div class="tutorial-slide">
-      <div class="tutorial-icon">
-        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <div class="tut-phone" aria-hidden="true">
+        <div class="tut-log-field">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span class="tut-log-typed">Bench Press</span><span class="tut-caret"></span>
+        </div>
+        <div class="tut-log-steppers">
+          <div class="tut-stepper">
+            <small>Weight</small>
+            <div><b class="tut-minus">−</b><span class="tut-val tut-val--w"><i>60</i><i>62.5</i></span><b class="tut-plus tut-plus--w">+</b></div>
+          </div>
+          <div class="tut-stepper">
+            <small>Reps</small>
+            <div><b class="tut-minus">−</b><span class="tut-val tut-val--r"><i>8</i><i>8</i></span><b class="tut-plus">+</b></div>
+          </div>
+        </div>
+        <div class="tut-log-btn">Log set <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+        <div class="tut-log-done"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Set 1 · 62.5 kg × 8</div>
+        <span class="tut-finger"></span>
       </div>
-      <h2 class="tutorial-title">Home — Your Dashboard</h2>
-      <p class="tutorial-desc">The first tab in the bottom bar. See today's plan, quick stats, and your streak the moment you open the app.</p>
-      <div class="tutorial-chips">
-        <span class="tutorial-chip">Today's Plan</span>
-        <span class="tutorial-chip">Streaks</span>
-        <span class="tutorial-chip">Quick Stats</span>
-      </div>
+      <h2 class="tutorial-title">Logging takes three taps</h2>
+      <ol class="tut-steps">
+        <li><span>1</span><div>Pick an exercise from the suggestions</div></li>
+        <li><span>2</span><div>Set weight &amp; reps with <b>+</b> / <b>−</b></div></li>
+        <li><span>3</span><div>Tap <b>Log set</b>. Your next set is ready to go</div></li>
+      </ol>
     </div>
 
-    <!-- Slide 3: Train tab (icon matches bn-item[data-tab=logTab]) -->
+    <!-- Slide 3: Getting around — animated bottom nav -->
     <div class="tutorial-slide">
-      <div class="tutorial-icon">
-        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <div class="tut-nav-demo" aria-hidden="true">
+        <div class="tut-nav-captions">
+          <p style="--n:0"><b>Home</b> What's due today, your plan &amp; streak</p>
+          <p style="--n:1"><b>Train</b> Log sets, rest timer, history &amp; templates</p>
+          <p style="--n:2"><b>＋</b> Jump to logging from any screen</p>
+          <p style="--n:3"><b>Body</b> Weight, macros, sleep &amp; cardio</p>
+          <p style="--n:4"><b>All</b> Programs, insights, community &amp; settings</p>
+        </div>
+        <div class="tut-nav-bar">
+          <span class="tut-nav-pill"></span>
+          <span class="tut-nav-item" style="--n:0"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><em>Home</em></span>
+          <span class="tut-nav-item" style="--n:1"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><em>Train</em></span>
+          <span class="tut-nav-item tut-nav-item--fab" style="--n:2"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+          <span class="tut-nav-item" style="--n:3"><svg viewBox="0 0 24 24"><rect x="2" y="9" width="20" height="12" rx="2"/><path d="M8 9a4 4 0 0 1 8 0"/></svg><em>Body</em></span>
+          <span class="tut-nav-item" style="--n:4"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg><em>All</em></span>
+        </div>
       </div>
-      <h2 class="tutorial-title">Train — Log Your Workouts</h2>
-      <p class="tutorial-desc">Track every set, rep, and weight. The app remembers your history and suggests progressive overload.</p>
-      <div class="tutorial-chips">
-        <span class="tutorial-chip">Resistance</span>
-        <span class="tutorial-chip">Cardio</span>
-        <span class="tutorial-chip">Templates</span>
-        <span class="tutorial-chip">Rest Timer</span>
-      </div>
+      <h2 class="tutorial-title">Getting around</h2>
+      <p class="tutorial-desc">Everything is one or two taps from the bar at the bottom of the screen.</p>
     </div>
 
-    <!-- Slide 4: Quick-log FAB (icon matches #bnFab) -->
+    <!-- Slide 4: What's inside — staggered feature grid -->
     <div class="tutorial-slide">
-      <div class="tutorial-icon tutorial-icon--highlight">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      <div class="tut-grid" aria-hidden="true">
+        <span style="--i:0"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Programs</span>
+        <span style="--i:1"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Insights &amp; PRs</span>
+        <span style="--i:2"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 4"/></svg>Macros</span>
+        <span style="--i:3"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>Sleep</span>
+        <span style="--i:4"><svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="M9 14l2 2 4-4"/></svg>Check-ins</span>
+        <span style="--i:5"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>Rest timer</span>
+        <span style="--i:6"><svg viewBox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="M9 12h6M9 16h6"/></svg>Templates</span>
+        <span style="--i:7"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Community</span>
+        <span style="--i:8"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/></svg>Streaks</span>
       </div>
-      <h2 class="tutorial-title">One-Tap Quick Log</h2>
-      <p class="tutorial-desc">The + button in the middle of the bar logs a set in seconds, right from wherever you are — no need to open the full Train screen.</p>
+      <h2 class="tutorial-title">All of it, in one app</h2>
+      <p class="tutorial-desc">Follow a program, see your PRs and trends, hit your macros, track sleep and check in with your coach or friends.</p>
     </div>
 
-    <!-- Slide 5: Body tab (icon matches bn-item[data-tab=bodyTab]) -->
+    <!-- Slide 5: Hand-off to the hands-on tour -->
     <div class="tutorial-slide">
-      <div class="tutorial-icon">
-        <svg viewBox="0 0 24 24"><rect x="2" y="9" width="20" height="12" rx="2"/><path d="M8 9a4 4 0 0 1 8 0"/></svg>
+      <div class="tut-ready" aria-hidden="true">
+        <span class="tut-ready-ring"></span><span class="tut-ready-ring"></span>
+        <div class="tut-ready-core">
+          <svg viewBox="0 0 24 24"><path d="M22 14a8 8 0 0 1-8 8"/><path d="M18 11v-1a2 2 0 0 0-4 0"/><path d="M14 10V9a2 2 0 0 0-4 0v1"/><path d="M10 9.5V4a2 2 0 0 0-4 0v10"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+        </div>
       </div>
-      <h2 class="tutorial-title">Body — Weight, Macros, Sleep & Cardio</h2>
-      <p class="tutorial-desc">Everything about your body lives behind one tab. Open Body, then pick Weight, Macros, Sleep, or Cardio to log or review.</p>
-      <div class="tutorial-chips">
-        <span class="tutorial-chip">Weight</span>
-        <span class="tutorial-chip">Macros</span>
-        <span class="tutorial-chip">Sleep</span>
-        <span class="tutorial-chip">Cardio</span>
-      </div>
-    </div>
-
-    <!-- Slide 6: All tab (icon matches bn-item[data-tab=allTab]) -->
-    <div class="tutorial-slide">
-      <div class="tutorial-icon tutorial-icon--highlight">
-        <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
-      </div>
-      <h2 class="tutorial-title">All — Everything Else</h2>
-      <p class="tutorial-desc">Programs, workout history, insights & PRs, community, coaching tools, and settings are all grouped in the All tab at the far right.</p>
-      <div class="tutorial-chips">
-        <span class="tutorial-chip">Insights & PRs</span>
-        <span class="tutorial-chip">Programs</span>
-        <span class="tutorial-chip">Community</span>
-        <span class="tutorial-chip">Settings</span>
-      </div>
+      <h2 class="tutorial-title">Try it for real</h2>
+      <p class="tutorial-desc">Take the one-minute tour of the app itself. We'll point to each spot, and you'll log your first set along the way.</p>
     </div>
   </div>
 
   <div class="tutorial-controls">
     <div class="tutorial-dots" id="tutorialDots"></div>
     <button class="tutorial-cta" id="tutorialCta">Next</button>
+    <button class="tutorial-secondary" id="tutorialSecondary" hidden>I'll explore on my own</button>
   </div>
 </div>
 
@@ -3814,6 +3846,10 @@
         <button class="pod all-hub-tile" data-tab="settingsTab" onclick="showTab('settingsTab')">
           <span class="more-drawer-icon" data-icon="settings"></span>
           <span>Settings</span>
+        </button>
+        <button class="pod all-hub-tile" onclick="showTutorial({ force: true })">
+          <span class="more-drawer-icon" data-icon="lightbulb"></span>
+          <span>App tour</span>
         </button>
         <button class="pod all-hub-tile all-hub-logout" id="moreDrawerLogoutBtn" onclick="logout()">
           <span class="more-drawer-icon" data-icon="arrowLeft"></span>
@@ -18685,54 +18721,79 @@ window.showOnboarding = showOnboarding;
 // APP TUTORIAL (feature walkthrough)
 // ─────────────────────────────────────────────
 
-function showTutorial() {
+// Intro slides → optional hands-on tour (src/js/app-tour.js). Shown once
+// per user after onboarding; pass { force: true } to replay it.
+function showTutorial(opts = {}) {
   const user = window.currentUser || localStorage.getItem('fitnessAppUser');
   const key = user ? `tutorial_seen_${user}` : 'tutorial_seen';
-  if (localStorage.getItem(key)) { openSection('pocketFit'); return; }
+  if (localStorage.getItem(key) && !opts.force) { openSection('pocketFit'); return; }
 
   const overlay = document.getElementById('tutorialOverlay');
   if (!overlay) { openSection('pocketFit'); return; }
 
-  const track = document.getElementById('tutorialTrack');
-  const dots  = document.getElementById('tutorialDots');
-  const cta   = document.getElementById('tutorialCta');
-  const slides = track.querySelectorAll('.tutorial-slide');
-  const total  = slides.length;
-  let current  = 0;
+  const track     = document.getElementById('tutorialTrack');
+  const dots      = document.getElementById('tutorialDots');
+  const cta       = document.getElementById('tutorialCta');
+  const secondary = document.getElementById('tutorialSecondary');
+  const fill      = document.getElementById('tutorialProgressFill');
+  const slides    = track.querySelectorAll('.tutorial-slide');
+  const total     = slides.length;
+  let current     = 0;
 
-  // Build dots
   dots.innerHTML = '';
   for (let i = 0; i < total; i++) {
     const d = document.createElement('span');
-    d.className = 'tutorial-dot' + (i === 0 ? ' active' : '');
+    d.className = 'tutorial-dot';
+    d.addEventListener('click', () => goTo(i));
     dots.appendChild(d);
   }
   const allDots = dots.querySelectorAll('.tutorial-dot');
 
   function updateUI() {
+    const last = current === total - 1;
     allDots.forEach((d, i) => d.classList.toggle('active', i === current));
-    cta.textContent = current === total - 1 ? "Get Started" : "Next";
+    // .is-active (re)starts that slide's entrance + demo animations
+    slides.forEach((s, i) => s.classList.toggle('is-active', i === current));
+    cta.textContent = last ? 'Start the tour' : 'Next';
+    secondary.hidden = !last;
+    if (fill) fill.style.width = `${((current + 1) / total) * 100}%`;
+    overlay.style.setProperty('--tut-glow-x', String((current - (total - 1) / 2) * -24));
   }
 
   let programmatic = false;
+  let settleTimer;
 
   function goTo(idx) {
     current = idx;
     programmatic = true;
-    track.scrollTo({ left: idx * track.offsetWidth, behavior: 'smooth' });
+    const left = idx * track.offsetWidth;
+    track.scrollTo({ left, behavior: 'smooth' });
     updateUI();
-    setTimeout(() => { programmatic = false; }, 400);
+    // If the smooth scroll got interrupted (or never ran), land exactly.
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      if (Math.abs(track.scrollLeft - left) > 2) track.scrollTo({ left, behavior: 'instant' });
+      programmatic = false;
+    }, 600);
   }
 
-  function finish() {
+  function finish(startTour) {
     localStorage.setItem(key, '1');
-    overlay.setAttribute('hidden', '');
-    openSection('pocketFit');
+    overlay.classList.add('is-leaving');
+    setTimeout(() => {
+      overlay.setAttribute('hidden', '');
+      overlay.classList.remove('is-leaving');
+      slides.forEach((s) => s.classList.remove('is-active'));
+      if (!opts.force) openSection('pocketFit');
+      if (startTour && typeof window.startAppTour === 'function') {
+        setTimeout(() => window.startAppTour(), 250);
+      }
+    }, 330);
   }
 
   // Scroll-snap tracking (swipe gestures)
   let scrollTimer;
-  track.addEventListener('scroll', () => {
+  track.onscroll = () => {
     if (programmatic) return;
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
@@ -18742,20 +18803,19 @@ function showTutorial() {
         updateUI();
       }
     }, 120);
-  });
+  };
 
-  cta.addEventListener('click', (e) => {
+  // onclick (not addEventListener) so a replay doesn't stack handlers
+  cta.onclick = (e) => {
     e.stopPropagation();
     if (current < total - 1) goTo(current + 1);
-    else finish();
-  });
-
-  document.getElementById('tutorialSkip').addEventListener('click', (e) => {
-    e.stopPropagation();
-    finish();
-  });
+    else finish(true);
+  };
+  secondary.onclick = (e) => { e.stopPropagation(); finish(false); };
+  document.getElementById('tutorialSkip').onclick = (e) => { e.stopPropagation(); finish(false); };
 
   overlay.removeAttribute('hidden');
+  track.scrollLeft = 0;
   updateUI();
 }
 
@@ -20037,6 +20097,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/settings-hero.js"></script>
   <script src="src/js/libraries.js"></script>
   <script src="src/js/session-context.js"></script>
+  <script src="src/js/app-tour.js"></script>
   <script>
     // Render PR board whenever the Streaks sub-tab becomes active
     document.addEventListener('DOMContentLoaded', function() {

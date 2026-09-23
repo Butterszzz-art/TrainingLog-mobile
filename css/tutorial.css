@@ -1,6 +1,9 @@
 /* =============================================================
    APP TUTORIAL
-   Swipeable feature-tour overlay shown once after first signup.
+   Part 1 — swipeable intro overlay (#tutorialOverlay) with looping
+            CSS demos, shown once after first signup.
+   Part 2 — hands-on guided tour over the real app (.tour-*),
+            driven by src/js/app-tour.js.
    Depends on: tokens.css
    ============================================================= */
 
@@ -14,17 +17,68 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: tut-fade-in 0.4s ease both;
 }
 
 .tutorial-overlay[hidden] { display: none; }
 
-/* ── Skip button (top-right) ───────────────────────────────── */
+.tutorial-overlay *,
+.tutorial-overlay *::before,
+.tutorial-overlay *::after,
+.tour-root *,
+.tour-root *::before,
+.tour-root *::after { box-sizing: border-box; }
+
+.tutorial-overlay.is-leaving {
+  animation: tut-fade-out 0.35s ease both;
+  pointer-events: none;
+}
+
+/* Soft glow behind the slide art; drifts with the active slide */
+.tutorial-glow {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  width: 420px;
+  height: 420px;
+  margin-left: -210px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47,138,99,0.22) 0%, rgba(199,154,84,0.08) 45%, transparent 70%);
+  filter: blur(10px);
+  pointer-events: none;
+  transition: transform 0.6s cubic-bezier(.2,.8,.2,1);
+  transform: translateX(calc(var(--tut-glow-x, 0) * 1px));
+}
+
+/* ── Top bar: progress + skip ──────────────────────────────── */
+
+.tutorial-topbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 0;
+}
+
+.tutorial-progress {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+.tutorial-progress span {
+  display: block;
+  height: 100%;
+  width: 20%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--primary, #2f8a63), var(--highlight, #c79a54));
+  transition: width 0.5s cubic-bezier(.2,.8,.2,1);
+}
 
 .tutorial-skip {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2;
   padding: 6px 16px;
   border: 1px solid var(--border-color);
   border-radius: 999px;
@@ -39,6 +93,8 @@
 /* ── Slide track (horizontal scroll-snap) ──────────────────── */
 
 .tutorial-track {
+  position: relative;
+  z-index: 1;
   flex: 1;
   display: flex;
   overflow-x: auto;
@@ -49,58 +105,32 @@
 
 .tutorial-track::-webkit-scrollbar { display: none; }
 
-/* ── Individual slide ──────────────────────────────────────── */
-
 .tutorial-slide {
   flex: 0 0 100%;
+  min-width: 0;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 28px 32px;
+  padding: 24px 24px 12px;
   text-align: center;
   gap: 12px;
+  overflow-y: auto;
 }
 
-/* Icon container */
-.tutorial-icon {
-  width: 96px;
-  height: 96px;
-  border-radius: 28px;
-  background: rgba(45, 125, 91, 0.12);
-  border: 1px solid rgba(45, 125, 91, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12px;
-}
+/* Content rises in when a slide becomes active */
+.tutorial-slide > * { opacity: 0; }
+.tutorial-slide.is-active > * { animation: tut-rise 0.55s cubic-bezier(.2,.8,.2,1) both; }
+.tutorial-slide.is-active > *:nth-child(2) { animation-delay: 0.08s; }
+.tutorial-slide.is-active > *:nth-child(3) { animation-delay: 0.16s; }
+.tutorial-slide.is-active > *:nth-child(4) { animation-delay: 0.24s; }
 
-.tutorial-icon svg {
-  width: 44px;
-  height: 44px;
-  stroke: var(--primary, #2d7d5b);
-  fill: none;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.tutorial-icon--highlight {
-  background: linear-gradient(135deg, rgba(45,125,91,0.18), rgba(198,148,79,0.12));
-  border-color: rgba(198, 148, 79, 0.3);
-}
-
-.tutorial-icon--highlight svg {
-  stroke: var(--highlight, #c6944f);
-}
-
-/* Text */
 .tutorial-title {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-color);
-  margin: 0;
+  margin: 8px 0 0;
   line-height: 1.3;
 }
 
@@ -109,61 +139,472 @@
   color: var(--secondary-text);
   margin: 0;
   line-height: 1.55;
+  max-width: 330px;
+}
+
+.tutorial-swipe-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 0.75rem;
+  color: var(--secondary-text);
+  letter-spacing: 0.02em;
+}
+
+.tutorial-swipe-hint span {
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-color);
+  animation: tut-nudge 2s ease-in-out infinite;
+}
+
+/* ── Slide 1: orbit ────────────────────────────────────────── */
+
+.tut-orbit {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: grid;
+  place-items: center;
+}
+
+.tut-orbit-core {
+  width: 92px;
+  height: 92px;
+  border-radius: 28px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(47,138,99,0.22), rgba(199,154,84,0.14));
+  border: 1px solid rgba(199,154,84,0.35);
+  box-shadow: 0 10px 40px rgba(47,138,99,0.25);
+  animation: tut-breathe 3.2s ease-in-out infinite;
+}
+
+.tut-orbit-core svg { width: 44px; height: 44px; stroke: var(--highlight, #c79a54); }
+
+.tut-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed rgba(47,138,99,0.3);
+  animation: tut-spin 18s linear infinite;
+}
+
+.tut-orbit-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--card-bg, #121b17);
+  border: 1px solid rgba(47,138,99,0.35);
+  transform: rotate(calc(var(--i) * 90deg)) translateY(-100px) rotate(calc(var(--i) * -90deg));
+}
+
+/* Counter-rotate so icons stay upright while the ring spins */
+.tut-orbit-dot svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--primary, #2f8a63);
+  animation: tut-spin 18s linear infinite reverse;
+}
+
+/* Shared line-icon look for every tutorial svg */
+.tutorial-overlay svg,
+.tour-card svg {
+  fill: none;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Slide 2: mini log form demo (6s loop) ─────────────────── */
+
+.tut-phone {
+  position: relative;
+  width: 260px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--card-bg, #121b17);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+  text-align: left;
+  --tut-loop: 6s;
+}
+
+.tut-log-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--surface-recessed, #0b100e);
+  border: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--text-color);
+  white-space: nowrap;
+}
+
+.tut-log-field svg { width: 15px; height: 15px; stroke: var(--secondary-text); flex-shrink: 0; }
+
+.tut-log-typed {
+  display: inline-block;
+  overflow: hidden;
+  width: 0;
+  vertical-align: bottom;
+}
+
+.tut-caret {
+  width: 2px;
+  height: 16px;
+  margin-left: 1px;
+  background: var(--primary, #2f8a63);
+  animation: tut-blink 0.8s steps(1) infinite;
+}
+
+.tut-log-steppers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.tut-stepper small {
+  display: block;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary-text);
+  margin-bottom: 4px;
+}
+
+.tut-stepper > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 38px;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.tut-stepper b {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-size: 0.9rem;
+  color: var(--secondary-text);
+  background: var(--surface-raised, #161f1a);
+}
+
+.tut-stepper b.tut-plus { color: var(--primary, #2f8a63); }
+
+.tut-val {
+  position: relative;
+  flex: 1;
+  height: 20px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.tut-val i {
+  position: absolute;
+  inset: 0;
+  font-style: normal;
+}
+
+.tut-val i:last-child { opacity: 0; }
+
+.tut-log-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  height: 40px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #fff;
+  background: linear-gradient(135deg, #38a870 0%, var(--primary, #2f8a63) 60%, #245f47 100%);
+}
+
+.tut-log-btn svg { width: 15px; height: 15px; stroke: #fff; stroke-width: 3; }
+
+.tut-log-done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-color);
+  background: rgba(47,138,99,0.14);
+  border: 1px solid rgba(47,138,99,0.35);
+  opacity: 0;
+}
+
+.tut-log-done svg { width: 15px; height: 15px; stroke: var(--primary, #2f8a63); stroke-width: 3; }
+
+/* Animated "finger" that taps + and then Log set */
+.tut-finger {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 0 0 6px rgba(255,255,255,0.18);
+  opacity: 0;
+  pointer-events: none;
+  top: 72px;
+  left: 108px;
+}
+
+.tutorial-slide.is-active .tut-log-typed { animation: tut-type var(--tut-loop) steps(11, end) infinite; }
+.tutorial-slide.is-active .tut-caret     { animation: tut-blink 0.8s steps(1) infinite, tut-caret-hide var(--tut-loop) linear infinite; }
+.tutorial-slide.is-active .tut-val--w i:first-child { animation: tut-val-out var(--tut-loop) ease infinite; }
+.tutorial-slide.is-active .tut-val--w i:last-child  { animation: tut-val-in var(--tut-loop) ease infinite; }
+.tutorial-slide.is-active .tut-plus--w  { animation: tut-press-plus var(--tut-loop) ease infinite; }
+.tutorial-slide.is-active .tut-log-btn  { animation: tut-press-btn var(--tut-loop) ease infinite; }
+.tutorial-slide.is-active .tut-log-done { animation: tut-done var(--tut-loop) cubic-bezier(.2,.8,.2,1) infinite; }
+.tutorial-slide.is-active .tut-finger   { animation: tut-finger var(--tut-loop) cubic-bezier(.4,0,.2,1) infinite; }
+
+.tut-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
   max-width: 320px;
 }
 
-/* Feature chips shown on some slides */
-.tutorial-chips {
+.tut-steps li {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 8px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--secondary-text);
 }
 
-.tutorial-chip {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(45,125,91,0.3);
-  background: rgba(45,125,91,0.08);
-  color: var(--secondary-text);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: default;
-  box-shadow: none;
-  margin: 0;
+.tut-steps li b { color: var(--text-color); }
+
+.tut-steps li span {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary, #2f8a63);
+  background: rgba(47,138,99,0.14);
+  border: 1px solid rgba(47,138,99,0.35);
 }
+
+/* ── Slide 3: bottom-nav demo (10s loop, 2s per item) ──────── */
+
+.tut-nav-demo {
+  width: 100%;
+  max-width: 320px;
+  --tut-nav-loop: 10s;
+}
+
+.tut-nav-captions {
+  position: relative;
+  height: 64px;
+  margin-bottom: 16px;
+}
+
+.tut-nav-captions p {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.88rem;
+  color: var(--secondary-text);
+  opacity: 0;
+}
+
+.tut-nav-captions p b {
+  font-size: 1.05rem;
+  color: var(--highlight, #c79a54);
+}
+
+.tut-nav-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  height: 64px;
+  padding: 0 4px;
+  border-radius: 20px;
+  background: var(--surface-navbar, rgba(14,20,17,0.95));
+  border: 1px solid var(--border-color);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+}
+
+.tut-nav-pill {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 4px;
+  width: calc((100% - 8px) / 5);
+  border-radius: 14px;
+  background: rgba(47,138,99,0.16);
+  border: 1px solid rgba(47,138,99,0.4);
+}
+
+.tut-nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--secondary-text);
+}
+
+.tut-nav-item svg { width: 20px; height: 20px; stroke: currentColor; }
+.tut-nav-item em { font-style: normal; font-size: 0.62rem; font-weight: 600; }
+
+.tut-nav-item--fab svg {
+  width: 38px;
+  height: 38px;
+  padding: 9px;
+  border-radius: 50%;
+  stroke: #fff;
+  stroke-width: 3;
+  background: linear-gradient(135deg, #38a870, var(--primary, #2f8a63));
+  box-shadow: 0 6px 16px rgba(47,138,99,0.4);
+}
+
+.tutorial-slide.is-active .tut-nav-pill { animation: tut-nav-pill var(--tut-nav-loop) cubic-bezier(.65,0,.35,1) infinite; }
+.tutorial-slide.is-active .tut-nav-captions p,
+.tutorial-slide.is-active .tut-nav-item {
+  animation: var(--tut-anim) var(--tut-nav-loop) ease infinite;
+  animation-delay: calc(var(--n) * 2s);
+  animation-fill-mode: backwards;
+}
+.tutorial-slide.is-active .tut-nav-captions p { --tut-anim: tut-caption; }
+.tutorial-slide.is-active .tut-nav-item      { --tut-anim: tut-nav-on; }
+
+/* ── Slide 4: feature grid ─────────────────────────────────── */
+
+.tut-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.tut-grid span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px;
+  border-radius: 14px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-color);
+  background: var(--card-bg, #121b17);
+  border: 1px solid var(--border-color);
+  opacity: 0;
+}
+
+.tut-grid svg { width: 22px; height: 22px; stroke: var(--primary, #2f8a63); }
+.tut-grid span:nth-child(odd) svg { stroke: var(--highlight, #c79a54); }
+
+.tutorial-slide.is-active .tut-grid span {
+  animation: tut-pop 0.5s cubic-bezier(.34,1.56,.64,1) both, tut-float 4s ease-in-out infinite;
+  animation-delay: calc(0.2s + var(--i) * 0.07s), calc(0.8s + var(--i) * 0.3s);
+}
+
+/* ── Slide 5: ready ────────────────────────────────────────── */
+
+.tut-ready {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+}
+
+.tut-ready-core {
+  position: relative;
+  z-index: 1;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #38a870, var(--primary, #2f8a63));
+  box-shadow: 0 10px 36px rgba(47,138,99,0.45);
+}
+
+.tut-ready-core svg { width: 44px; height: 44px; stroke: #fff; }
+
+.tut-ready-ring {
+  position: absolute;
+  inset: 27px;
+  border-radius: 50%;
+  border: 2px solid rgba(47,138,99,0.55);
+  animation: tut-ripple 2.4s ease-out infinite;
+}
+
+.tut-ready-ring:nth-child(2) { animation-delay: 1.2s; }
 
 /* ── Bottom controls ───────────────────────────────────────── */
 
 .tutorial-controls {
-  padding: 20px 28px 32px;
+  position: relative;
+  z-index: 2;
+  padding: 12px 28px calc(24px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* Dot indicators */
 .tutorial-dots {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tutorial-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 4px;
   background: var(--border-color);
-  transition: background 0.25s, transform 0.25s;
+  cursor: pointer;
+  transition: width 0.35s cubic-bezier(.2,.8,.2,1), background 0.25s;
 }
 
 .tutorial-dot.active {
-  background: var(--primary, #2d7d5b);
-  transform: scale(1.3);
+  width: 22px;
+  background: var(--primary, #2f8a63);
 }
 
-/* CTA button */
 .tutorial-cta {
   width: 100%;
   max-width: 320px;
@@ -175,25 +616,349 @@
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: transform 0.15s, opacity 0.2s;
   box-shadow: 0 4px 16px rgba(45,125,91,0.35);
   margin: 0;
 }
 
-/* ── Swipe hint animation ──────────────────────────────────── */
+.tutorial-cta:active { transform: scale(0.97); }
 
-@keyframes tutorial-nudge {
-  0%, 100% { transform: translateX(0); }
-  50%      { transform: translateX(-8px); }
+.tutorial-secondary {
+  border: none;
+  background: none;
+  box-shadow: none;
+  margin: 0;
+  padding: 4px 12px;
+  font-size: 0.88rem;
+  color: var(--secondary-text);
+  cursor: pointer;
 }
 
-.tutorial-slide:first-child::after {
+.tutorial-secondary[hidden] { display: none; }
+
+/* =============================================================
+   PART 2 — GUIDED TOUR (src/js/app-tour.js)
+   A spotlight hole (huge box-shadow) over the real UI, four
+   transparent blockers around it so only the highlighted element
+   is tappable, and a coach card that glides between targets.
+   Sits below .nm-overlay modals (10000) and toasts (9999) so
+   anything the app pops up mid-tour stays usable on top.
+   ============================================================= */
+
+.tour-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2300;
+  pointer-events: none;
+}
+
+.tour-root.is-paused { visibility: hidden; }
+
+.tour-block {
+  position: fixed;
+  pointer-events: auto;
+  background: transparent;
+}
+
+.tour-spot {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow: 0 0 0 200vmax rgba(4, 7, 6, 0.74);
+  transition: top 0.45s cubic-bezier(.2,.8,.2,1), left 0.45s cubic-bezier(.2,.8,.2,1),
+              width 0.45s cubic-bezier(.2,.8,.2,1), height 0.45s cubic-bezier(.2,.8,.2,1),
+              border-radius 0.45s, opacity 0.3s;
+  animation: tut-fade-in 0.35s ease both;
+}
+
+.tour-spot::after {
   content: '';
-  display: block;
-  width: 40px;
-  height: 4px;
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid var(--highlight, #c79a54);
+  opacity: 0.9;
+}
+
+/* Tap steps: the ring pulses to say "tap here" */
+.tour-spot.is-tap::after { animation: tour-ring 1.6s ease-out infinite; }
+
+/* Centered steps: no hole, just the dim */
+.tour-spot.is-center {
+  top: 50% !important;
+  left: 50% !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.tour-spot.is-center::after { display: none; }
+
+.tour-card {
+  position: fixed;
+  width: min(340px, calc(100vw - 32px));
+  padding: 16px 16px 14px;
+  border-radius: 18px;
+  background: var(--card-bg, #121b17);
+  border: 1px solid rgba(199,154,84,0.35);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+  color: var(--text-color);
+  pointer-events: auto;
+  transition: top 0.45s cubic-bezier(.2,.8,.2,1), left 0.45s cubic-bezier(.2,.8,.2,1);
+}
+
+.tour-card.is-swapping .tour-card-body { animation: tour-swap 0.4s cubic-bezier(.2,.8,.2,1) both; }
+
+.tour-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tour-card-progress {
+  flex: 1;
+  height: 3px;
   border-radius: 2px;
   background: var(--border-color);
-  margin-top: 20px;
-  animation: tutorial-nudge 2s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.tour-card-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary, #2f8a63), var(--highlight, #c79a54));
+  transition: width 0.45s cubic-bezier(.2,.8,.2,1);
+}
+
+.tour-card-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tour-card-close {
+  border: none;
+  background: none;
+  box-shadow: none;
+  margin: 0;
+  padding: 2px 0 2px 6px;
+  font-size: 0.78rem;
+  color: var(--secondary-text);
+  cursor: pointer;
+}
+
+.tour-card-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.tour-card-text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+.tour-card-text b { color: var(--text-color); }
+
+.tour-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tour-card-hint {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--highlight, #c79a54);
+}
+
+.tour-card-hint::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: tour-dot 1.2s ease-in-out infinite;
+}
+
+.tour-btn {
+  margin: 0;
+  padding: 9px 16px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: none;
+  transition: transform 0.15s;
+}
+
+.tour-btn:active { transform: scale(0.96); }
+
+.tour-btn--primary {
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, #38a870 0%, var(--primary, #2f8a63) 60%, #245f47 100%);
+}
+
+.tour-btn--ghost {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+}
+
+.tour-btn--link {
+  border: none;
+  background: none;
+  padding: 9px 4px;
+  font-weight: 600;
+  color: var(--secondary-text);
+}
+
+/* Finish: a small burst of confetti from the card */
+.tour-confetti {
+  position: fixed;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 2301;
+  animation: tour-confetti 1.3s cubic-bezier(.2,.7,.4,1) forwards;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+
+@keyframes tut-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tut-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+@keyframes tut-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes tut-nudge {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-10px); }
+}
+
+@keyframes tut-spin    { to { transform: rotate(360deg); } }
+@keyframes tut-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes tut-blink   { 50% { opacity: 0; } }
+
+/* Slide 2 timeline (6s): 0–25% type · 30–45% tap + · 55–65% tap Log · 65–92% show row */
+@keyframes tut-type {
+  0%        { width: 0; }
+  25%, 100% { width: 11ch; }
+}
+@keyframes tut-caret-hide {
+  0%, 27%   { visibility: visible; }
+  28%, 100% { visibility: hidden; }
+}
+@keyframes tut-val-out {
+  0%, 40%   { opacity: 1; transform: none; }
+  45%, 100% { opacity: 0; transform: translateY(-8px); }
+}
+@keyframes tut-val-in {
+  0%, 40%   { opacity: 0; transform: translateY(8px); }
+  45%, 100% { opacity: 1; transform: none; }
+}
+@keyframes tut-press-plus {
+  0%, 36%, 44%, 100% { transform: scale(1); }
+  40%                { transform: scale(0.8); background: rgba(47,138,99,0.3); }
+}
+@keyframes tut-press-btn {
+  0%, 56%, 66%, 100% { transform: scale(1); }
+  60%                { transform: scale(0.95); filter: brightness(1.15); }
+}
+@keyframes tut-done {
+  0%, 62%   { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  68%, 92%  { opacity: 1; transform: none; }
+  100%      { opacity: 0; transform: none; }
+}
+@keyframes tut-finger {
+  0%, 28%   { opacity: 0; top: 110px; left: 150px; transform: scale(1); }
+  34%       { opacity: 1; top: 74px;  left: 108px; transform: scale(1); }
+  40%       { opacity: 1; top: 74px;  left: 108px; transform: scale(0.8); }
+  46%       { opacity: 1; top: 74px;  left: 108px; transform: scale(1); }
+  56%       { opacity: 1; top: 132px; left: 118px; transform: scale(1); }
+  60%       { opacity: 1; top: 132px; left: 118px; transform: scale(0.8); }
+  66%       { opacity: 0; top: 132px; left: 118px; transform: scale(1); }
+  100%      { opacity: 0; top: 110px; left: 150px; }
+}
+
+/* Slide 3 timeline (10s): each item owns a 2s window */
+@keyframes tut-nav-pill {
+  0%, 16%   { transform: translateX(0); }
+  20%, 36%  { transform: translateX(100%); }
+  40%, 56%  { transform: translateX(200%); }
+  60%, 76%  { transform: translateX(300%); }
+  80%, 96%  { transform: translateX(400%); }
+  100%      { transform: translateX(0); }
+}
+@keyframes tut-nav-on {
+  0%, 18%   { color: var(--highlight, #c79a54); transform: translateY(-2px); }
+  20%, 100% { color: var(--secondary-text); transform: none; }
+}
+@keyframes tut-caption {
+  0%        { opacity: 0; transform: translateY(8px); }
+  3%, 17%   { opacity: 1; transform: none; }
+  20%, 100% { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes tut-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes tut-float {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -3px; }
+}
+@keyframes tut-ripple {
+  from { transform: scale(1);   opacity: 0.9; }
+  to   { transform: scale(1.9); opacity: 0; }
+}
+
+@keyframes tour-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(199,154,84,0.6); }
+  100% { box-shadow: 0 0 0 14px rgba(199,154,84,0); }
+}
+@keyframes tour-swap {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes tour-dot {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.5); opacity: 0.5; }
+}
+@keyframes tour-confetti {
+  0%   { transform: translate(0, 0) rotate(0); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+}
+
+/* ── Reduced motion: keep the content, drop the movement ─── */
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-overlay *,
+  .tutorial-overlay,
+  .tour-root *,
+  .tour-card,
+  .tour-card * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.001ms !important;
+  }
+  /* Show the demos' end state instead of an empty frame */
+  .tut-log-typed { width: 11ch; }
+  .tut-log-done, .tut-grid span, .tut-nav-captions p:first-child { opacity: 1; }
+  .tut-nav-pill + .tut-nav-item { color: var(--highlight, #c79a54); }
+  .tour-confetti { display: none; }
 }
