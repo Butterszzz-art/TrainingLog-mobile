@@ -667,26 +667,6 @@
     <!-- ── Coach: Today's brief (src/js/coach-brief.js) ────────── -->
     <div class="home-zone" id="coachBriefCard"></div>
 
-    <!-- ── Daily Pulse: one-tap rotating check-in question ───────── -->
-    <div class="home-zone" id="dailyPulseCard"></div>
-
-    <!-- ── Due Now Rail: overdue check-in / today's workout / weigh-in ── -->
-    <div class="home-zone" id="dueNowRail"></div>
-
-    <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered —
-         'hero' renders first, matching the mockup's hero-first layout) ── -->
-    <div id="homeDashboardContent" class="home-dashboard"></div>
-
-    <!-- ── Zone 1: Today's session — program day + split strip ──── -->
-    <div class="home-zone home-zone--hero">
-      <div id="todayProgramCard"></div>
-    </div>
-
-    <!-- ── Zone 2b: Last week recap (hidden until there is something to recap) ── -->
-    <div class="home-zone home-zone--recap">
-      <div id="weeklyRecapCard"></div>
-    </div>
-
     <!-- ── Zone 3: Weekly glance — summary + steps (2-col) ─────── -->
     <div class="home-zone home-zone--weekly">
       <div class="home-section-label">This week</div>
@@ -720,11 +700,35 @@
       </div>
     </div>
 
-    <!-- ── Zone 2: Action — readiness + archetype prompt ─────────── -->
+    <!-- ── Training profile (archetype card) — sits with the weekly calendar ── -->
     <div class="home-zone home-zone--action">
-      <div id="readinessHomeCard"></div>
       <div id="archetypeProfileCard"></div>
     </div>
+
+    <!-- ── Zone 2b: Last week recap (hidden until there is something to recap) ── -->
+    <div class="home-zone home-zone--recap">
+      <div id="weeklyRecapCard"></div>
+    </div>
+
+    <!-- ── Tasks: readiness, due items, pulse, today's session, dashboard ── -->
+    <div class="home-zone home-zone--action">
+      <div id="readinessHomeCard"></div>
+    </div>
+
+    <!-- ── Due Now Rail: overdue check-in / today's workout / weigh-in ── -->
+    <div class="home-zone" id="dueNowRail"></div>
+
+    <!-- ── Daily Pulse: one-tap rotating check-in question ───────── -->
+    <div class="home-zone" id="dailyPulseCard"></div>
+
+    <!-- ── Zone 1: Today's session — program day + split strip ──── -->
+    <div class="home-zone home-zone--hero">
+      <div id="todayProgramCard"></div>
+    </div>
+
+    <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered —
+         'hero' renders first, matching the mockup's hero-first layout) ── -->
+    <div id="homeDashboardContent" class="home-dashboard"></div>
 
     <!-- ── Zone 5: Status modes (demoted — utility, not training) ── -->
     <div class="home-zone home-zone--modes">
