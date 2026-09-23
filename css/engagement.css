@@ -1,0 +1,263 @@
+/* =============================================================
+   ENGAGEMENT FEATURES
+   Daily Pulse (Home), Due Now Rail (Home), Flow Capture (Log),
+   Cardio Catch-Up (Cardio tab), Macro Nudge (Macros tab).
+   Reuses .ov-pod / .mx-chip / .mx-choice / .mx-preset / .mx-cta /
+   .nm-overlay from the existing kit wherever the same look applies;
+   this file only adds the layout pieces those don't already cover.
+   Depends on: tokens.css, modernist-kit.css, features.css, base.css
+   ============================================================= */
+
+/* ── Daily Pulse (Home) ─────────────────────────────────────── */
+
+.pulse-question {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 8px 0 12px;
+}
+
+.pulse-level-row {
+  display: flex;
+  gap: 8px;
+}
+
+.pulse-level-dot {
+  flex: 1;
+  height: 38px;
+  border-radius: var(--radius-tight);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-label);
+  font-weight: 800;
+  font-size: 13px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-chip);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.pulse-level-dot:active { transform: scale(0.94); }
+
+.pulse-level-dot.is-selected {
+  background: var(--fill-btn-primary-mobile);
+  border-color: transparent;
+  color: var(--label-on-green);
+  box-shadow: var(--shadow-button-sm, 0 9px 22px rgba(0,0,0,0.5));
+}
+
+.pulse-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--green-90);
+  margin-top: 12px;
+}
+
+.pulse-streak-chip {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--brass-light);
+  background: var(--warning-bg);
+  border: 1px solid var(--border-brass);
+  padding: 3px 9px 3px 7px;
+  border-radius: var(--radius-pill);
+}
+
+/* ── Due Now Rail (Home) ────────────────────────────────────── */
+
+.due-now-wrap { margin: 10px 0; }
+
+.due-now-rail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.due-now-rail::-webkit-scrollbar { display: none; }
+
+.due-now-card {
+  flex: 0 0 auto;
+  width: 168px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--pod-bg-alt);
+  padding: 12px;
+  box-shadow: var(--pod-bevel);
+}
+
+.due-now-card.is-overdue { background: var(--danger-bg); border-color: var(--border-alert); }
+.due-now-card.is-today   { background: var(--warning-bg); border-color: var(--border-brass); }
+.due-now-card.is-upcoming{ border-color: var(--border-featured); }
+
+.due-now-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--green-90);
+}
+.due-now-card.is-overdue .due-now-icon { color: var(--danger-text-mobile, var(--danger-text)); }
+.due-now-card.is-today .due-now-icon   { color: var(--brass-light); }
+
+.due-now-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 3px;
+  line-height: 1.2;
+}
+
+.due-now-sub {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  color: var(--text-muted);
+}
+.due-now-card.is-overdue .due-now-sub { color: var(--danger-text-mobile, var(--danger-text)); }
+.due-now-card.is-today .due-now-sub   { color: var(--brass-light); }
+.due-now-card.is-upcoming .due-now-sub{ color: var(--green-90); }
+
+.due-now-btn {
+  width: 100%;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 7px 0;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  background: var(--fill-btn-primary-mobile);
+  color: var(--label-on-green);
+}
+.due-now-card.is-overdue .due-now-btn { background: var(--danger-strong); color: #fdeef0; }
+.due-now-card.is-today .due-now-btn   { background: var(--brass-base); color: var(--label-on-green); }
+
+/* ── Flow Capture (Log tab) ─────────────────────────────────── */
+
+.fc-dialog { max-width: 340px; text-align: left; }
+.fc-title { font-size: 15px; font-weight: 800; color: var(--text-primary); margin: 0 0 2px; }
+.fc-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 16px; }
+.fc-question { font-size: 13.5px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
+.fc-chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.fc-chip-row:last-of-type { margin-bottom: 4px; }
+.fc-skip { text-align: center; margin-top: 6px; }
+.fc-skip button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px;
+}
+
+.fc-shortcut-row {
+  position: fixed;
+  right: 16px;
+  bottom: 84px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.fc-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-chip);
+  color: var(--text-secondary);
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 7px 13px 7px 11px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.4);
+  cursor: pointer;
+}
+
+/* ── Cardio Catch-Up / Macro Nudge banners ──────────────────── */
+/* Same accent-bar + gradient-tint treatment as .ov-pod, reused via
+   modifier so both banners read as one family with Daily Pulse. */
+
+.nudge-pod {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--pod-bg-hero);
+  border: 1px solid var(--border-brass);
+  box-shadow: var(--pod-bevel);
+  padding: 12px 14px 12px 15px;
+  margin: 10px 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.nudge-pod .ov-accent { background: var(--brass-light); }
+.nudge-pod .nudge-icon { flex-shrink: 0; margin-top: 1px; color: var(--brass-light); }
+.nudge-pod p { font-size: 12.5px; line-height: 1.45; color: var(--text-secondary); margin: 0; }
+.nudge-pod p strong { color: var(--text-primary); }
+
+/* ── Cardio quick-log chip picker ───────────────────────────── */
+
+.cardio-quicklog-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+
+/* ── Macro favorites (Macro Nudge) ──────────────────────────── */
+
+.macro-fav-list { margin: 10px 0 4px; }
+.macro-fav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-row);
+}
+.macro-fav-item:last-child { border-bottom: none; padding-bottom: 0; }
+.macro-fav-name { font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px; }
+.macro-fav-macros { font-size: 11px; color: var(--text-muted); margin: 0; }
+.macro-fav-add {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-chip);
+  color: var(--green-90);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.macro-fav-add:active { transform: scale(0.9); }
+.macro-fav-add.is-added { background: var(--green-60); border-color: var(--green-60); color: var(--label-on-green); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-level-dot, .macro-fav-add { transition: none; }
+}
