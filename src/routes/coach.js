@@ -322,5 +322,143 @@ router.post('/brief', async (req, res) => {
   }
 });
 
+// ── POST /api/ai/coach/review — weekly review ────────────────────────────────
+// Body: { facts, rules, data, memory, style }. `facts` / `rules` come from
+// CoachData.buildWeeklyReviewFacts on the phone (the recap maths lives there);
+// `data` is the coach data pack, used to validate proposals against the real
+// program and macro targets. One model call per review (free tiers are tight);
+// proposals go through the same validators as the chat's propose_* tools.
+// Returns { summary, wins, watch, cards, source: 'ai' | 'rules' }.
+
+const REVIEW_MODEL = process.env.COACH_REVIEW_MODEL || COACH_MODEL;
+const MAX_REVIEW_CARDS = 3;
+
+const REVIEW_INSTRUCTIONS = `You write the weekly review in Pocket Coach, a training app, looking back at one finished week of the athlete's training, bodyweight, nutrition and check-ins. You get a JSON object of facts computed from their log, plus a rules-based draft of wins and things to watch.
+
+Write:
+- summary: 2-3 sentences. The overall read of the week and the one thing that matters most for next week. Cite specific numbers from the facts.
+- wins: up to 3 short lines (max 80 characters) — what went well.
+- watch: up to 3 short lines (max 80 characters) — what needs attention.
+- proposals: 0-${MAX_REVIEW_CARDS} concrete changes for next week, only where the facts clearly justify one. Each is either
+  • kind "program": a change to ONE day of the program, using the exact day and exercise names from facts.program. ops: set_sets (full new list of sets), add_exercise (with sets), remove_exercise, replace_exercise (newExercise), set_note (note). Loads in kg.
+  • kind "macros": complete new daily targets (calories, protein, carbs, fat as integers) whose macros add up to the calories within 10%. Only if facts.macroTargets exists.
+  Give each a short title and a one-sentence rationale citing the facts. Propose nothing rather than something generic. If the problem is hitting existing targets (e.g. protein below target), say so in watch; don't propose the same targets again.
+
+Only use numbers that are in the facts. Keep coaching safety in mind: no calorie targets below ~1,200 (women) / ~1,500 (men) kcal, no loss faster than ~1% bodyweight per week. No greetings, no emoji.
+
+Reply with only a JSON object, no other text:
+{"summary": string, "wins": [string], "watch": [string], "proposals": [{"kind": "program"|"macros", "title": string, "rationale": string, "day"?: string, "changes"?: [...], "calories"?: int, "protein"?: int, "carbs"?: int, "fat"?: int}]}`;
+
+const CHANGE_SCHEMA = TOOL_DEFS.find(t => t.name === 'propose_program_change').input_schema.properties.changes;
+const REVIEW_SCHEMA = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+    wins: { type: 'array', items: { type: 'string' } },
+    watch: { type: 'array', items: { type: 'string' } },
+    proposals: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['program', 'macros'] },
+          title: { type: 'string' },
+          rationale: { type: 'string' },
+          day: { type: 'string' },
+          changes: CHANGE_SCHEMA,
+          calories: { type: 'integer' },
+          protein: { type: 'integer' },
+          carbs: { type: 'integer' },
+          fat: { type: 'integer' },
+        },
+        required: ['kind', 'title', 'rationale'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['summary', 'wins', 'watch', 'proposals'],
+  additionalProperties: false,
+};
+
+function cleanLines(list, max) {
+  return (Array.isArray(list) ? list : [])
+    .filter(s => typeof s === 'string' && s.trim())
+    .slice(0, max)
+    .map(s => s.replace(/\s+/g, ' ').trim().slice(0, 120));
+}
+
+function parseJsonObject(text) {
+  const raw = String(text || '').replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try { return JSON.parse(raw.slice(start, end + 1)); } catch { return null; }
+}
+
+/** Model proposals → validated cards (invalid ones are dropped, not shown). */
+function proposalsToCards(proposals, pack) {
+  const cards = [];
+  (Array.isArray(proposals) ? proposals : []).forEach(p => {
+    if (!p || typeof p !== 'object' || cards.length >= MAX_REVIEW_CARDS) return;
+    const out = p.kind === 'macros'
+      ? runTool('propose_macro_targets', { calories: p.calories, protein: p.protein, carbs: p.carbs, fat: p.fat, rationale: p.rationale }, pack)
+      : p.kind === 'program'
+        ? runTool('propose_program_change', { title: p.title, day: p.day, changes: p.changes, rationale: p.rationale }, pack)
+        : null;
+    if (out && out.card && !out.isError) {
+      if (typeof p.title === 'string' && p.title.trim()) out.card.title = p.title.trim().slice(0, 80);
+      cards.push(out.card);
+    }
+  });
+  return cards;
+}
+
+router.post('/review', async (req, res) => {
+  if (!isConfigured()) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+  const { facts, rules, data, memory, style } = req.body || {};
+  if (!facts || typeof facts !== 'object' || JSON.stringify(facts).length > 40000) {
+    return res.status(400).json({ error: 'facts are required' });
+  }
+  const pack = data && typeof data === 'object' ? data : {};
+  const fallback = {
+    summary: typeof (rules && rules.summary) === 'string' ? rules.summary : '',
+    wins: cleanLines(rules && rules.wins, 4),
+    watch: cleanLines(rules && rules.watch, 4),
+    cards: [],
+    source: 'rules',
+  };
+
+  try {
+    const reply = await createMessage(REVIEW_MODEL, {
+      max_tokens: 4000,
+      output_config: provider() === 'anthropic'
+        ? { effort: 'medium', format: { type: 'json_schema', schema: REVIEW_SCHEMA } }
+        : { effort: 'medium' },
+      system: [
+        { type: 'text', text: REVIEW_INSTRUCTIONS },
+        { type: 'text', text: athleteContext({ profile: pack.profile || {}, memory, style, today: String(facts.week && facts.week.end || '').slice(0, 10) }) },
+      ],
+      messages: [{ role: 'user', content: JSON.stringify({ facts, draft: { wins: fallback.wins, watch: fallback.watch } }) }],
+    }, { timeoutMs: perModelTimeoutMs(45000) });
+    if (reply.stop_reason === 'refusal') return res.json(fallback);
+    const obj = parseJsonObject(reply.content.filter(b => b.type === 'text').map(b => b.text).join(''));
+    const summary = obj && typeof obj.summary === 'string' ? obj.summary.replace(/\s+/g, ' ').trim().slice(0, 600) : '';
+    if (!summary) return res.json(fallback);
+    return res.json({
+      summary,
+      wins: cleanLines(obj.wins, 3),
+      watch: cleanLines(obj.watch, 3),
+      cards: proposalsToCards(obj.proposals, pack),
+      source: 'ai',
+    });
+  } catch (err) {
+    console.error('[AI review]', err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err.message);
+    return res.json({ ...fallback, aiError: err instanceof Anthropic.APIError ? err.status : 'failed' });
+  }
+});
+
 router.parseBrief = parseBrief;
+router.proposalsToCards = proposalsToCards;
 module.exports = router;

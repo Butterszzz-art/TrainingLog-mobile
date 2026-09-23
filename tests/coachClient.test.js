@@ -66,6 +66,19 @@ test('a 200 reply without content counts as a failed model', async () => {
   expect((await c.createMessage('x', {})).model).toBe('b/2');
 });
 
+test('createMessage goes round the chain once more after everything is rate-limited', async () => {
+  const c = load({ OPENROUTER_API_KEY: 'o', OPENROUTER_MODELS: 'a/1,b/2' });
+  const client = c.getClient();
+  const tried = [];
+  client.messages.create = async ({ model }) => {
+    tried.push(model);
+    if (tried.length <= 2) throw new c.Anthropic.RateLimitError(429, { error: {} }, 'busy', new Headers());
+    return { model, content: [] };
+  };
+  expect((await c.createMessage('x', {}, { retryPauseMs: 1 })).model).toBe('a/1');
+  expect(tried).toEqual(['a/1', 'b/2', 'a/1']);
+});
+
 test('no key → not configured', () => {
   const c = load({});
   expect(c.isConfigured()).toBe(false);

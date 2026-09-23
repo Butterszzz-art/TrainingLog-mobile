@@ -655,3 +655,97 @@
 }
 .cbr-ask-send svg { width: 18px; height: 18px; }
 .cbr-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── Weekly review: coach section in the recap sheet (src/js/coach-review.js) ── */
+
+.wr-coach-review:empty { display: none; }
+.wr-coach-review { margin-bottom: 16px; }
+
+.crv {
+  background: var(--pod-bg-hero, linear-gradient(168deg, rgba(22, 36, 28, 0.94), rgba(12, 18, 15, 0.985)));
+  border: 1px solid var(--border-featured-strong, rgba(74, 132, 102, 0.42));
+  border-radius: var(--radius-pod, 22px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.crv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.crv-kicker, .crv-list-label {
+  margin: 0;
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-100, #8ec2a4);
+}
+.crv-stamp {
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mx-faint, #7b8981);
+}
+.crv-summary { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--text-secondary, #c9d2cc); }
+.crv-summary.is-loading { opacity: 0.6; }
+
+.crv-list { display: flex; flex-direction: column; gap: 6px; }
+.crv-list ul, .crv-props ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.crv-list li { position: relative; padding-left: 16px; font-size: 13.5px; line-height: 1.4; color: var(--text-secondary, #c9d2cc); }
+.crv-list li::before { content: ''; position: absolute; left: 0; top: 7px; width: 6px; height: 6px; border-radius: 99px; }
+.crv-list--win .crv-list-label { color: var(--green-90, #6fae8b); }
+.crv-list--win li::before { background: var(--green-70, #3d9d73); }
+.crv-list--watch .crv-list-label { color: var(--highlight, #c79a54); }
+.crv-list--watch li::before { background: var(--highlight, #c79a54); }
+
+.crv-props { display: flex; flex-direction: column; gap: 8px; }
+.crv-props .crv-list-label { color: var(--mx-label, #86998e); }
+.crv-prop {
+  background: var(--pod-bg, #101614);
+  border: 1px solid var(--border-featured-strong, rgba(74, 132, 102, 0.42));
+  border-radius: var(--radius-md, 16px);
+}
+.crv-prop.is-done { border-color: var(--border-default, rgba(116, 138, 126, 0.2)); opacity: 0.75; }
+.crv-prop-label { display: flex; gap: 12px; align-items: flex-start; padding: 14px; cursor: pointer; margin: 0; }
+.crv-prop-check { width: 22px; height: 22px; margin: 0; flex-shrink: 0; accent-color: var(--green-60, #2f8a63); }
+.crv-prop-done { width: 22px; height: 22px; flex-shrink: 0; color: var(--green-90, #6fae8b); }
+.crv-prop-done svg { width: 22px; height: 22px; }
+.crv-prop-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.crv-prop-where {
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mx-label, #86998e);
+}
+.crv-prop-title { font-size: 14px; font-weight: 600; color: var(--text-color, #f4f7f5); }
+.crv-prop-line { display: flex; flex-wrap: wrap; gap: 0 8px; font-size: 13px; }
+.crv-prop-ex { color: var(--text-secondary, #c9d2cc); font-weight: 600; }
+.crv-prop-line s { color: #d97a88; }
+.crv-prop-to { color: var(--green-100, #8ec2a4); font-weight: 600; }
+.crv-prop-why { font-size: 12.5px; line-height: 1.4; color: var(--text-tertiary, #a3b0a8); }
+
+.crv-actions { display: flex; flex-direction: column; gap: 8px; }
+.crv-actions:empty { display: none; }
+.crv-btn {
+  min-height: 48px;
+  margin: 0;
+  padding: 0 16px;
+  width: 100%;
+  border-radius: var(--radius-pill, 999px);
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: none;
+  cursor: pointer;
+}
+.crv-btn--primary { background: var(--green-60, #2f8a63); border: 0; color: #fff; }
+.crv-btn--primary:disabled { opacity: 0.45; cursor: default; }
+.crv-btn--ghost { background: transparent; border: 1px solid rgba(116, 138, 126, 0.34); color: var(--text-secondary, #c9d2cc); }
+.crv-btn:hover { transform: none; box-shadow: none; }
+.crv-note { margin: 0; font-size: 12.5px; color: var(--mx-faint, #7b8981); }

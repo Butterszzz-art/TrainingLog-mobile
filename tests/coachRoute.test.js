@@ -211,4 +211,45 @@ describe('POST /api/ai/coach', () => {
       if (saved.m === undefined) delete process.env.OPENROUTER_MODELS; else process.env.OPENROUTER_MODELS = saved.m;
     }
   });
+
+  const reviewBody = {
+    facts: { week: { start: '2026-09-14', end: '2026-09-20' }, training: { sessions: 3 } },
+    rules: { summary: 'Rules summary.', wins: ['w1'], watch: ['x1'] },
+    data: {
+      generatedAt: '2026-09-23T07:00:00.000Z',
+      macros: { targets: { calories: 2400, protein: 180, carbs: 250, fat: 75 } },
+      program: { id: 'p1', name: 'PPL', days: [{ name: 'Legs A', exercises: [{ name: 'Back Squat', sets: [{ reps: 5, weight: 120 }] }] }] },
+    },
+  };
+
+  test('review: AI review with invalid proposals dropped, valid ones as cards', async () => {
+    const ai = {
+      summary: 'Solid week.', wins: ['Squat PR'], watch: ['Protein low'],
+      proposals: [
+        { kind: 'program', title: 'Heavier triple', rationale: 'PR at 125.', day: 'Legs A', changes: [{ op: 'set_sets', exercise: 'Back Squat', sets: [{ reps: 3, weight: 127.5 }] }] },
+        { kind: 'program', title: 'Bogus day', rationale: 'x', day: 'Arms', changes: [{ op: 'remove_exercise', exercise: 'Curl' }] },
+        { kind: 'macros', title: 'More protein', rationale: 'Low protein.', calories: 2450, protein: 200, carbs: 230, fat: 75 },
+      ],
+    };
+    // Free models often wrap JSON in a code fence; that must still parse.
+    const fenced = '```json\n' + JSON.stringify(ai) + '\n```';
+    mockScript = [{ message: { stop_reason: 'end_turn', content: [{ type: 'text', text: fenced }] } }];
+    const body = await (await fetch(base + '/review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reviewBody) })).json();
+    expect(body.source).toBe('ai');
+    expect(body.summary).toBe('Solid week.');
+    expect(body.cards.map(c => c.title)).toEqual(['Heavier triple', 'More protein']);
+    expect(body.cards[1]).toMatchObject({ type: 'macro_targets', from: { protein: 180 }, to: { protein: 200 } });
+    expect(JSON.parse(mockCalls[0].messages[0].content).draft.wins).toEqual(['w1']);
+  });
+
+  test('review: unusable AI reply falls back to the rules review', async () => {
+    mockScript = [{ message: { stop_reason: 'end_turn', content: [{ type: 'text', text: 'no json here' }] } }];
+    const body = await (await fetch(base + '/review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reviewBody) })).json();
+    expect(body).toEqual({ summary: 'Rules summary.', wins: ['w1'], watch: ['x1'], cards: [], source: 'rules' });
+  });
+
+  test('review: facts are required', async () => {
+    const res = await fetch(base + '/review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    expect(res.status).toBe(400);
+  });
 });

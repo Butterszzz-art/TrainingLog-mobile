@@ -537,9 +537,112 @@
     };
   }
 
+  // ── weekly review ────────────────────────────────────────────────
+  // Turns a buildWeeklyRecap() result (src/js/weekly-recap.js) plus the
+  // coach data pack into (a) compact facts for the AI review and (b) a
+  // rules-only summary / wins / watch list shown when the AI isn't available.
+
+  const MUSCLE_NAMES = { quads: 'quads', hamstrings: 'hamstrings', glutes: 'glutes', chest: 'chest', back: 'back', lats: 'lats',
+    shoulders: 'shoulders', biceps: 'biceps', triceps: 'triceps', calves: 'calves', abs: 'abs', core: 'core', traps: 'traps' };
+  const r0 = n => Math.round(n);
+  const pct = (a, b) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
+  const listWords = xs => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+
+  function buildWeeklyReviewFacts(recap, pack) {
+    const r = recap || {};
+    const p = pack || {};
+    const t = r.training || {};
+    const prev = r.prevTraining || {};
+    const bw = r.bodyweight;
+    const nut = r.nutrition;
+    const phase = phaseDirection(p.profile && p.profile.phase);
+    const weekEnd = Date.parse(r.end) + DAY;
+    const wins = [];
+    const watch = [];
+
+    // Lifts
+    arr(r.topLifts).filter(l => l.isPR).slice(0, 2).forEach(l => {
+      wins.push(`New best on ${l.exercise}: ${r1(l.kg)} kg × ${l.reps}`);
+    });
+    const stall = findStall(arr(p.workouts).filter(w => Date.parse(w.date) < weekEnd), weekEnd);
+    if (stall) watch.push(`${stall.exercise} flat at ${stall.topWeight} kg for ${stall.weeks} weeks`);
+
+    // Training load
+    const volChange = pct(t.volumeKg || 0, prev.volumeKg || 0);
+    if (t.sessions && prev.sessions && t.sessions > prev.sessions) wins.push(`${t.sessions} sessions, up from ${prev.sessions} the week before`);
+    else if (prev.sessions && t.sessions < prev.sessions) watch.push(`${t.sessions || 0} session${t.sessions === 1 ? '' : 's'}, down from ${prev.sessions} the week before`);
+    if (volChange !== null && volChange >= 5) wins.push(`Volume up ${volChange}% on the week before`);
+    else if (volChange !== null && volChange <= -15) watch.push(`Volume down ${Math.abs(volChange)}% on the week before`);
+    if (!r.inProgress && arr(r.missedMuscles).length) {
+      const names = r.missedMuscles.slice(0, 3).map(m => MUSCLE_NAMES[m] || m);
+      watch.push(`No sets for ${r.missedMuscles.length > 3 ? `${names.join(', ')} and more` : listWords(names)}`);
+    }
+
+    // Bodyweight against the phase
+    if (bw && bw.changeKg != null && phase && phase.dir !== 0) {
+      const ch = Math.round(bw.changeKg * 10) / 10;
+      const right = Math.sign(ch) === phase.dir && Math.abs(ch) >= 0.1;
+      (right ? wins : watch).push(`Weight ${ch > 0 ? '+' : ''}${ch} kg this week${right ? `, on pace for your ${phase.word}` : `, off pace for a ${phase.word}`}`);
+    }
+
+    // Nutrition
+    if (nut) {
+      if (nut.daysOnTarget != null && nut.daysLogged >= 3) {
+        const line = `Calories on target ${nut.daysOnTarget} of ${nut.daysLogged} logged days`;
+        (nut.daysOnTarget >= Math.ceil(nut.daysLogged * 0.7) ? wins : watch).push(line);
+      }
+      if (nut.proteinTarget && nut.avgProtein < nut.proteinTarget * 0.9) {
+        watch.push(`Protein averaged ${r0(nut.avgProtein)} g against a ${r0(nut.proteinTarget)} g target`);
+      }
+    }
+
+    // Check-ins during the week
+    const weekCheckIns = arr(p.checkIns).filter(c => c.date >= r.start && c.date <= r.end);
+    const lastCheckIn = weekCheckIns[weekCheckIns.length - 1];
+    if (lastCheckIn) {
+      if (num(lastCheckIn.hunger) >= 7) watch.push(`Hunger ${lastCheckIn.hunger}/10 at check-in`);
+      if (num(lastCheckIn.energy) !== null && lastCheckIn.energy <= 4) watch.push(`Energy ${lastCheckIn.energy}/10 at check-in`);
+    }
+
+    const bits = [];
+    if (t.sessions) bits.push(`${t.sessions} session${t.sessions === 1 ? '' : 's'} and ${t.sets} sets`);
+    if (r.cardio && r.cardio.sessions) bits.push(`${r0(r.cardio.minutes)} min of cardio`);
+    let summary = bits.length ? `${bits.join(', ')} this week.` : 'A light week in the log.';
+    if (wins.length && !watch.length) summary += ' Everything moved the right way.';
+    else if (watch.length) summary += ` Worth a look: ${watch[0].charAt(0).toLowerCase()}${watch[0].slice(1)}.`;
+
+    const facts = {
+      week: { start: r.start, end: r.end, inProgress: Boolean(r.inProgress) },
+      phase: (p.profile && p.profile.phase) || null,
+      training: { sessions: t.sessions || 0, prevSessions: prev.sessions || 0, sets: t.sets || 0, prevSets: prev.sets || 0,
+        volumeKg: r0(t.volumeKg || 0), prevVolumeKg: r0(prev.volumeKg || 0) },
+      muscles: arr(r.muscles).filter(m => m.muscle !== 'other').slice(0, 8)
+        .map(m => ({ muscle: m.muscle, sets: m.sets, target: m.target || null, days: m.frequency })),
+      missedMuscles: arr(r.missedMuscles),
+      topLifts: arr(r.topLifts).slice(0, 5).map(l => ({ exercise: l.exercise, best: `${r1(l.kg)} kg × ${l.reps}`, isPR: Boolean(l.isPR),
+        changePct: l.changePct == null ? null : r1(l.changePct) })),
+      stall,
+      bodyweight: bw ? { avgKg: r1(bw.avgKg), changeKg: bw.changeKg == null ? null : r1(bw.changeKg), weighIns: bw.entries } : null,
+      cardio: r.cardio ? { sessions: r.cardio.sessions, minutes: r0(r.cardio.minutes) } : null,
+      nutrition: nut ? { daysLogged: nut.daysLogged, avgCalories: r0(nut.avgCalories), calorieTarget: nut.calorieTarget,
+        avgProtein: r0(nut.avgProtein), proteinTarget: nut.proteinTarget, daysOnTarget: nut.daysOnTarget } : null,
+      checkIns: weekCheckIns.map(c => ({ date: c.date, sleep: c.sleep, energy: c.energy, stress: c.stress, hunger: c.hunger, notes: c.notes || '' })),
+      macroTargets: (p.macros && p.macros.targets) || null,
+      program: p.program ? { name: p.program.name, days: p.program.days.map(d => ({ name: d.name,
+        exercises: d.exercises.map(e => `${e.name}: ${describeSets(e.sets)}`) })) } : null,
+    };
+
+    return {
+      facts,
+      rules: { summary, wins: wins.slice(0, 4), watch: watch.slice(0, 4) },
+      hasData: Boolean(r.hasData),
+    };
+  }
+
   const api = {
     ACCESS_KEYS,
     buildBriefDigest,
+    buildWeeklyReviewFacts,
     buildCoachDataPack,
     loadCoachSettings,
     saveCoachSettings,
