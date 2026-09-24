@@ -220,7 +220,9 @@
     if (!inv && !asn && !notes) return false;
     state.invites = (inv && inv.invites) || [];
     state.assignments = (asn && asn.assignments) || [];
-    state.notes = (notes && notes.notes) || [];
+    // Newest first, by timestamp (don't rely on the server's order).
+    const noteMs = (n) => (n && n.createdAt && n.createdAt._seconds ? n.createdAt._seconds * 1000 : Date.parse(n && n.createdAt) || 0);
+    state.notes = ((notes && notes.notes) || []).slice().sort((a, b) => noteMs(b) - noteMs(a));
     state.sharing = (sharing && sharing.sharing) || state.sharing || { checkIns: true, bodyweight: true, workouts: true };
     const linked = state.invites.some(i => i.status === 'active');
     root.localStorage.setItem(linkKey(), linked ? 'true' : 'false');
@@ -237,11 +239,13 @@
   function switchRow(key, title, sub) {
     const on = !!(state.sharing && state.sharing[key]);
     return `
-      <div class="mx-row">
-        <div class="mx-row-main"><span class="mx-row-title">${title}</span><span class="mx-row-sub">${sub}</span></div>
-        <button type="button" class="mx-switch" role="switch" aria-checked="${on}" aria-label="Share ${title.toLowerCase()} with your coach" data-yc-share="${key}"></button>
+      <div class="cn-row" style="min-height:58px">
+        <span class="cn-row-main"><span class="cn-row-title" style="font-weight:500">${title}</span><span class="cn-row-sub">${sub}</span></span>
+        <button type="button" class="cn-switch" role="switch" aria-checked="${on}" aria-label="Share ${title.toLowerCase()} with your coach" data-yc-share="${key}"></button>
       </div>`;
   }
+
+  const initials = (name) => String(name || '?').split(/[\s._-]+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   function render() {
     const section = doc.getElementById('yourCoachSection');
@@ -252,63 +256,86 @@
     section.hidden = false;
 
     const pendingHtml = pending.map(inv => `
-      <div class="mx-row yc-invite">
-        <span class="mx-row-ico"><span class="ui-icon">${icon('users')}</span></span>
-        <div class="mx-row-main">
-          <span class="mx-row-title">${esc(inv.coachUsername)} wants to coach you</span>
-          <span class="mx-row-sub">Accepting shares your check-ins, bodyweight and workout counts with them. You can change this any time.</span>
+      <section class="cn-card">
+        <div style="display:flex;gap:12px;align-items:center">
+          <span class="cn-avatar">${esc(initials(inv.coachUsername))}</span>
+          <span class="cn-row-main"><span class="cn-row-title">${esc(inv.coachUsername)} wants to coach you</span>
+            <span class="cn-row-sub">Accepting shares your check-ins, bodyweight and workout counts. You can change this any time.</span></span>
         </div>
-      </div>
-      <div class="yc-actions">
-        <button type="button" class="mx-cta" data-yc-accept="${esc(inv.coachUsername)}"><span>Accept</span><span class="mx-cta-icon"><span class="ui-icon">${icon('check')}</span></span></button>
-        <button type="button" class="mx-outline" data-yc-leave="${esc(inv.coachUid)}" data-yc-name="${esc(inv.coachUsername)}" data-yc-pending="1">Decline</button>
-      </div>`).join('');
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+          <button type="button" class="cn-btn cn-btn--primary" data-yc-accept="${esc(inv.coachUsername)}">Accept</button>
+          <button type="button" class="cn-btn" data-yc-leave="${esc(inv.coachUid)}" data-yc-name="${esc(inv.coachUsername)}" data-yc-pending="1">Decline</button>
+        </div>
+      </section>`).join('');
 
     const activeHtml = active.map(inv => {
       const asn = state.assignments.find(a => a.coachUid === inv.coachUid || a.coachUsername === inv.coachUsername) || {};
       const m = asn.macroTargets;
       const program = asn.program;
+      const since = fmtDate(inv.acceptedAt);
+      const offers = [];
+      if (asn.currentProgram) {
+        offers.push(`
+          <div class="cn-offer">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span class="cn-offer-kicker">Program</span>
+              <span class="cn-offer-title">${esc(asn.currentProgram)}</span>
+              ${program ? `<span class="cn-offer-kicker">${esc(arr(program.frequency).join(', ') || `${program.days.length} days a week`)}</span>` : ''}
+            </div>
+            ${program ? `<button type="button" class="cn-btn cn-btn--primary" data-yc-import="${esc(inv.coachUid)}">Start</button>` : ''}
+          </div>`);
+      }
+      if (m) {
+        offers.push(`
+          <div class="cn-offer">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span class="cn-offer-kicker">Macro targets</span>
+              <span class="cn-offer-title cn-num">${m.calories} kcal</span>
+              <span class="cn-offer-kicker cn-num">${m.protein}P ${m.carbs}C ${m.fat}F</span>
+            </div>
+            <button type="button" class="cn-btn" data-yc-macros="${esc(inv.coachUid)}">Apply</button>
+          </div>`);
+      } else if (asn.nutritionSummary) {
+        offers.push(`<div class="cn-offer"><span class="cn-offer-kicker">Nutrition</span><span class="cn-offer-title">${esc(asn.nutritionSummary)}</span></div>`);
+      }
       return `
-        <div class="mx-row">
-          <span class="mx-row-ico"><span class="ui-icon">${icon('users')}</span></span>
-          <div class="mx-row-main"><span class="mx-kicker">Coached by</span><span class="mx-row-title">${esc(inv.coachUsername)}</span></div>
-          <button type="button" class="mx-outline mx-outline--danger" data-yc-leave="${esc(inv.coachUid)}" data-yc-name="${esc(inv.coachUsername)}">Leave</button>
+        <div class="cn-coach-card">
+          <span class="cn-avatar cn-avatar--lg" style="width:52px;height:52px;font-size:18px">${esc(initials(inv.coachUsername))}</span>
+          <span class="cn-row-main"><span class="cn-row-title" style="font-size:18px">${esc(inv.coachUsername)}</span>
+            <span class="cn-row-sub">${since ? `Coaching you since ${esc(since)}` : 'Your coach'}</span></span>
         </div>
-        ${asn.currentProgram ? `
-          <div class="mx-row">
-            <div class="mx-row-main"><span class="mx-lbl">Program</span><span class="mx-row-title">${esc(asn.currentProgram)}</span>
-              ${program ? `<span class="mx-row-sub">${program.days.length} day${program.days.length === 1 ? '' : 's'} a week · ${esc(arr(program.frequency).join(', '))}</span>` : ''}</div>
-            ${program ? `<button type="button" class="mx-outline" data-yc-import="${esc(inv.coachUid)}">Start</button>` : ''}
-          </div>` : ''}
-        ${m ? `
-          <div class="mx-row">
-            <div class="mx-row-main"><span class="mx-lbl">Macro targets</span><span class="mx-row-title">${m.calories} kcal · ${m.protein}P / ${m.carbs}C / ${m.fat}F</span></div>
-            <button type="button" class="mx-outline" data-yc-macros="${esc(inv.coachUid)}">Apply</button>
-          </div>` : (asn.nutritionSummary ? `
-          <div class="mx-row"><div class="mx-row-main"><span class="mx-lbl">Nutrition</span><span class="mx-row-title">${esc(asn.nutritionSummary)}</span></div></div>` : '')}`;
+        ${offers.length ? `<div class="cn-offer-grid">${offers.join('')}</div>` : ''}`;
     }).join('');
 
-    const sharingHtml = active.length ? `
-      <div class="pod-row"><h4 class="pod-title mx-h3">What your coach sees</h4></div>
-      ${switchRow('checkIns', 'Check-ins', 'Scores, notes and the date of your latest check-in')}
-      ${switchRow('bodyweight', 'Bodyweight', 'Your weigh-ins from the last 4 months')}
-      ${switchRow('workouts', 'Workouts', 'Sessions per week and how closely you follow your program')}` : '';
+    const latest = state.notes[0];
+    const notesHtml = latest ? `
+      <h2 class="cn-group-label">Latest note</h2>
+      <section class="cn-card" style="margin-top:0">
+        <p class="cn-quote" style="color:var(--cn-text);white-space:pre-wrap">${esc(latest.text)}</p>
+        <span class="cn-caption">${esc(fmtDate(latest.createdAt))}${latest.coachUsername ? ' · ' + esc(latest.coachUsername) : ''}${state.notes.length > 1 ? ` · ${state.notes.length - 1} earlier` : ''}</span>
+      </section>
+      ${state.notes.length > 1 ? `
+        <details class="cn-card" style="margin-top:8px">
+          <summary class="cn-card-title" style="cursor:pointer">Earlier notes</summary>
+          ${state.notes.slice(1, 20).map(n => `<div style="display:flex;flex-direction:column;gap:2px;padding-top:10px">
+            <span class="cn-caption">${esc(fmtDate(n.createdAt))}</span><span class="cn-sub" style="color:var(--cn-text);white-space:pre-wrap">${esc(n.text)}</span></div>`).join('')}
+        </details>` : ''}` : '';
 
-    const notesHtml = state.notes.length ? `
-      <div class="pod-row"><h4 class="pod-title mx-h3">Notes from your coach</h4><span class="mx-meta">${state.notes.length}</span></div>
-      ${state.notes.slice(0, 10).map(n => `
-        <div class="mx-row"><div class="mx-row-main">
-          <span class="mx-row-sub">${esc(fmtDate(n.createdAt))}${n.coachUsername ? ' · ' + esc(n.coachUsername) : ''}</span>
-          <span class="yc-note">${esc(n.text)}</span>
-        </div></div>`).join('')}` : '';
+    const coachName = active[0] ? esc(active[0].coachUsername) : 'your coach';
+    const sharingHtml = active.length ? `
+      <h2 class="cn-group-label">What ${coachName} can see</h2>
+      <div class="cn-group cn-group--plain">
+        ${switchRow('checkIns', 'Check-ins', 'Scores, notes and dates')}
+        ${switchRow('bodyweight', 'Bodyweight', 'Weigh-ins from the last 4 months')}
+        ${switchRow('workouts', 'Workouts', 'Sessions per week and adherence')}
+      </div>` : '';
+
+    const leaveHtml = active.map(inv => `
+      <button type="button" class="cn-leave" data-yc-leave="${esc(inv.coachUid)}" data-yc-name="${esc(inv.coachUsername)}">Stop being coached by ${esc(inv.coachUsername)}</button>`).join('');
 
     section.innerHTML = `
-      <section class="pod mx-pod yc-pod" aria-label="Your coach">
-        <div class="pod-row"><h3 class="pod-title mx-h3">Your Coach</h3></div>
-        ${pendingHtml}${activeHtml}
-      </section>
-      ${sharingHtml ? `<section class="pod mx-pod yc-pod">${sharingHtml}</section>` : ''}
-      ${notesHtml ? `<section class="pod mx-pod yc-pod">${notesHtml}</section>` : ''}`;
+      <h2 class="cn-title">Your Coach</h2>
+      ${pendingHtml}${activeHtml}${notesHtml}${sharingHtml}${leaveHtml}`;
   }
 
   async function renderYourCoachSection() {

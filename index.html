@@ -6,7 +6,7 @@
   <title>Pocket Coach</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="ProgramTab.css">
   <link rel="stylesheet" href="style.css">
   <meta name="theme-color" content="#0b0f0d">
@@ -43,6 +43,7 @@
   <link rel="stylesheet" href="css/paywall.css">
   <link rel="stylesheet" href="css/ai-sheets.css">
   <link rel="stylesheet" href="css/coach-ui.css">
+  <link rel="stylesheet" href="css/coach-native.css">
   <link rel="stylesheet" href="css/program-ui.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
@@ -637,6 +638,16 @@
       <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></span>
       <span class="bn-label">All</span>
     </button>
+  </nav>
+  <!-- Coach mode tab bar (src/js/coach-native.js). Replaces #bottomNav while
+       a coach screen is open: Clients = #clientsTab, the rest are #coachOpsTab
+       sub-views. -->
+  <nav id="coachNav" aria-label="Coach navigation">
+    <button type="button" data-coach-nav="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>Clients</button>
+    <button type="button" data-coach-nav="programs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg>Programs</button>
+    <button type="button" data-coach-nav="inbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>Inbox</button>
+    <button type="button" data-coach-nav="insights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V11M10 19V5M16 19v-6M22 19H2"/></svg>Insights</button>
+    <button type="button" data-coach-nav="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>More</button>
   </nav>
 
 
@@ -3515,10 +3526,13 @@
 </div>
 
 <!-- ── CLIENTS TAB — roster & individual client management ── -->
-<div id="clientsTab" class="tab-content coach-only">
-  <div class="coach-page-header">
-    <h2 class="pod-title" style="font-size:20px;">Coach</h2>
-    <div class="coach-stats-bar" id="coachStatsBar"></div>
+<div id="clientsTab" class="tab-content coach-only cn">
+  <div id="coachClientsHeader">
+    <div class="cn-header">
+      <h1 class="cn-title">Clients</h1>
+      <button type="button" class="cn-iconbtn" onclick="openAddClientModal()" aria-label="Invite client"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <p class="cn-summary coach-stats-bar" id="coachStatsBar"></p>
   </div>
 
   <!-- Triage: priority client + review queue + templates, all real
@@ -3544,7 +3558,7 @@
 </div>
 
 <!-- ── COACH OPS TAB — programs, messages, analytics, privacy ── -->
-<div id="coachOpsTab" class="tab-content coach-only">
+<div id="coachOpsTab" class="tab-content coach-only cn">
   <div class="coach-page-header">
     <h2>Coach</h2>
   </div>
@@ -3564,6 +3578,7 @@
   <div id="coachSub_analytics" class="coach-subview"></div>
   <div id="coachSub_ai" class="coach-subview"></div>
   <div id="coachSub_videos" class="coach-subview">
+    <div class="cn-header"><h1 class="cn-title">Technique videos</h1></div>
     <section class="pod mx-pod">
       <div class="pod-row"><h4 class="pod-title mx-h3">Technique Videos</h4></div>
       <p class="mx-sub">Attach a video link per exercise. Your clients see a Watch button when they log that exercise.</p>
@@ -3612,7 +3627,7 @@
        by renderYourCoachSection() in src/js/client-coaching.js, hidden entirely if
        there's nothing to show (no invite, no coach, no notes) rather than
        rendering an empty shell. -->
-  <div id="yourCoachSection" class="your-coach" hidden></div>
+  <div id="yourCoachSection" class="your-coach cn" hidden></div>
 
   </div> <!-- #settingsTab -->
 
@@ -4917,6 +4932,7 @@ function showTab(tabName) {
     animateTabSwitch(tab);
   }
   activeTab = tab;
+  if (typeof window.syncCoachNav === 'function') window.syncCoachNav(tabName);
 
 
   switch (tabName) {
@@ -10313,12 +10329,16 @@ function animateTabSwitch(newTab) {
   if (previous && previous !== newTab) {
     previous.classList.add('fade-out');
     setTimeout(() => {
+      // Skip if the user came back to this tab within the fade.
+      if (previous === activeTab) { previous.classList.remove('fade-out'); return; }
       previous.style.display = 'none';
       previous.classList.remove('fade-out', 'active');
     }, 300);
   }
   newTab.style.display = 'block';
-  requestAnimationFrame(() => newTab.classList.add('active'));
+  // Only re-mark it active if no other tab was opened in the meantime;
+  // otherwise quick switches left several panels showing at once.
+  requestAnimationFrame(() => { if (activeTab === newTab) newTab.classList.add('active'); });
   activeTab = newTab;
 }
 
@@ -11742,14 +11762,14 @@ window.renderExerciseVideoHint = renderExerciseVideoHint;
 function getCoachAlertMeta(status = 'ok') {
   const normalized = String(status || 'ok').toLowerCase();
   if (normalized === 'alert' || normalized === 'action' || normalized === 'at_risk' || normalized === 'risk') {
-    return { label: 'Needs Action', className: 'is-alert' };
+    return { label: 'Needs Action', className: 'is-alert', tone: 'is-action' };
   }
-  if (normalized === 'watch') return { label: 'Watch', className: 'is-watch' };
-  return { label: 'On track', className: 'is-ok' };
+  if (normalized === 'watch') return { label: 'Watch', className: 'is-watch', tone: 'is-watch' };
+  return { label: 'On track', className: 'is-ok', tone: '' };
 }
 
 // Alerts come from the server (GET /api/coach/clients computes them from what
-// the client shares), so the phone, the desktop console and the stats bar
+// the client shares), so the phone, the desktop console and the stats line
 // all agree. See traininglog-backend src/coachShare.js for the rules.
 function deriveCoachClientAlerts(client = {}) {
   return Array.isArray(client.alerts) ? client.alerts : [];
@@ -11766,78 +11786,82 @@ function coachSharingGaps(client) {
   return Object.keys(COACH_SHARE_LABELS).filter(k => s[k] === false).map(k => COACH_SHARE_LABELS[k]);
 }
 
-function coachPct(value) {
-  return value === null || value === undefined ? '—' : `${value}<small>%</small>`;
+function coachInitials(name) {
+  return String(name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
+function coachDaysAgo(iso) {
+  if (!iso) return null;
+  const t = Date.parse(String(iso).slice(0, 10) + 'T00:00:00');
+  if (Number.isNaN(t)) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((today.getTime() - t) / 86400000));
+}
+
+function coachRing(pct) {
+  const circ = 84.8;
+  const dash = ((circ * pct) / 100).toFixed(1);
+  const color = pct < 65 ? '#F2A098' : pct < 80 ? '#E9C07A' : '#3DBE85';
+  return `<span class="cn-ring" role="img" aria-label="${pct}% adherence"><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="13.5" fill="none" stroke="#243029" stroke-width="3.5"></circle><circle cx="17" cy="17" r="13.5" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="${dash} ${circ}"></circle></svg><span>${pct}</span></span>`;
+}
+
+// One roster row. Attention rows say why in plain words; on-track rows
+// show the program and when they last checked in.
 function renderCoachClientCard(client) {
   const c = normalizeCoachClientRecord(client);
-  const initials = String(c.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const id = escapeCoachText(c.id);
   if (c.isPending) {
     return `
-      <article class="coach-client-card pod mx-pod is-pending" data-client-id="${escapeCoachText(c.id)}">
-        <header class="coach-client-card-header">
-          <div class="coach-client-avatar" aria-hidden="true">${escapeCoachText(initials)}</div>
-          <div class="coach-client-id">
-            <h3 class="coach-client-name">${escapeCoachText(c.name)}</h3>
-            <p class="coach-client-meta">Invite sent, waiting for them to accept in Settings → Your Coach</p>
-          </div>
-          <span class="coach-alert-pill mx-chip mx-chip--sm mx-chip--brass">Pending</span>
-        </header>
-        <div class="coach-client-actions">
-          <button type="button" class="mx-outline mx-outline--block" data-coach-remove="${escapeCoachText(c.id)}" data-client-name="${escapeCoachText(c.name)}" data-pending="1">Cancel invite</button>
-        </div>
-      </article>`;
+      <div class="cn-pending" data-client-id="${id}">
+        <span class="cn-avatar is-pending">${escapeCoachText(coachInitials(c.name))}</span>
+        <span class="cn-row-main"><span class="cn-row-title">${escapeCoachText(c.name)}</span><span class="cn-row-sub">Invite sent, waiting for them to accept</span></span>
+        <button type="button" class="cn-btn cn-btn--sm" data-coach-remove="${id}" data-client-name="${escapeCoachText(c.name)}" data-pending="1">Cancel</button>
+      </div>`;
   }
-  const alerts = deriveCoachClientAlerts(c);
-  const alertMeta = getCoachAlertMeta(deriveCoachAlertStatus(c));
-  const chipCls = { 'is-ok': 'mx-chip--green', 'is-watch': 'mx-chip--brass', 'is-alert': 'mx-chip--red' }[alertMeta.className] || '';
-  const alertTags = alerts.length
-    ? alerts.map((a) => `<span class="mx-tag ${a.severity === 'action' ? 'mx-tag--red' : 'mx-tag--brass'}" title="${escapeCoachText(a.reason)}">${escapeCoachText(a.label)}</span>`).join('')
-    : `<span class="mx-tag mx-tag--hi">${c.lastSharedAt ? 'No flags this week' : 'No data shared yet'}</span>`;
-  const gaps = coachSharingGaps(c);
-  const bw = c.currentBodyweight !== null
-    ? `${c.currentBodyweight}<small>kg</small>`
-    : '—';
+  const meta = getCoachAlertMeta(deriveCoachAlertStatus(c));
+  const top = deriveCoachClientAlerts(c)[0];
+  let sub;
+  if (top) {
+    sub = `<span class="cn-row-sub ${meta.tone}">${escapeCoachText(top.label)}: ${escapeCoachText(top.reason)}</span>`;
+  } else {
+    const days = coachDaysAgo(c.lastCheckInDate);
+    const when = days === null ? (c.lastSharedAt ? 'no check-ins shared yet' : 'nothing shared yet') : days === 0 ? 'checked in today' : `checked in ${days} day${days === 1 ? '' : 's'} ago`;
+    const program = c.currentProgram || c.activeProgramName;
+    sub = `<span class="cn-row-sub">${escapeCoachText(program ? `${program}, ${when}` : when.charAt(0).toUpperCase() + when.slice(1))}</span>`;
+  }
+  const trailing = c.compliancePercent !== null ? coachRing(c.compliancePercent) : `<span class="cn-chev">${CN_ICONS.chevron}</span>`;
   return `
-    <article class="coach-client-card pod mx-pod" data-client-id="${escapeCoachText(c.id)}">
-      <header class="coach-client-card-header">
-        <div class="coach-client-avatar" aria-hidden="true">${escapeCoachText(initials)}</div>
-        <div class="coach-client-id">
-          <h3 class="coach-client-name">${escapeCoachText(c.name)}</h3>
-          <p class="coach-client-meta">${escapeCoachText(c.archetype)} · ${escapeCoachText(c.currentPhase)}</p>
-        </div>
-        <span class="coach-alert-pill mx-chip mx-chip--sm ${chipCls} ${alertMeta.className}">${alertMeta.label}</span>
-      </header>
-      <ul class="coach-client-kpis mx-tiles mx-tiles--2">
-        <li class="coach-client-kpi mx-stat">
-          <p class="coach-client-kpi-label mx-stat-l">Last check-in</p>
-          <p class="coach-client-kpi-value mx-stat-v">${escapeCoachText(c.lastCheckInDate ? formatCoachDate(c.lastCheckInDate) : '', '—')}</p>
-        </li>
-        <li class="coach-client-kpi mx-stat">
-          <p class="coach-client-kpi-label mx-stat-l">Compliance</p>
-          <p class="coach-client-kpi-value mx-stat-v">${coachPct(c.compliancePercent)}</p>
-          ${c.compliancePercent !== null ? `<div class="mx-meter mx-meter--thin${c.compliancePercent < 65 ? ' mx-meter--brass' : ''}" role="img" aria-label="Compliance ${c.compliancePercent} percent"><i style="width:${c.compliancePercent}%"></i></div>` : ''}
-        </li>
-        <li class="coach-client-kpi mx-stat">
-          <p class="coach-client-kpi-label mx-stat-l">Sessions this week</p>
-          <p class="coach-client-kpi-value mx-stat-v">${c.workoutsLoggedThisWeek ?? '—'}</p>
-        </li>
-        <li class="coach-client-kpi mx-stat">
-          <p class="coach-client-kpi-label mx-stat-l">Bodyweight</p>
-          <p class="coach-client-kpi-value mx-stat-v">${bw}</p>
-        </li>
-      </ul>
-      <div class="coach-client-line">
-        <span class="mx-lbl">Coach alerts</span>
-        <div class="mx-tags">${alertTags}</div>
-      </div>
-      ${gaps.length ? `<p class="mx-sub coach-share-gap">Not sharing: ${escapeCoachText(gaps.join(', '))}</p>` : ''}
-      <div class="coach-client-actions">
-        <button type="button" class="mx-outline mx-outline--block" data-coach-open-detail="${escapeCoachText(c.id)}">Open client <span class="ui-icon">${ICONS.chevronRight}</span></button>
-      </div>
-    </article>
-  `;
+    <button type="button" class="cn-row" data-coach-open-detail="${id}" data-client-id="${id}">
+      <span class="cn-avatar ${meta.tone}">${escapeCoachText(coachInitials(c.name))}</span>
+      <span class="cn-row-main"><span class="cn-row-title">${escapeCoachText(c.name)}</span>${sub}</span>
+      ${trailing}
+    </button>`;
+}
+
+function renderCoachClientRoster(clients = []) {
+  if (!Array.isArray(clients) || !clients.length) {
+    return `<div class="cn-empty"><strong>No clients yet</strong>Tap + and enter a client's Pocket Coach username. They accept in their app, then choose what to share with you.</div>`;
+  }
+  const active = clients.filter(c => !c.isPending);
+  const attention = active.filter(c => getCoachAlertMeta(c.alertStatus).className !== 'is-ok');
+  const onTrack = active.filter(c => getCoachAlertMeta(c.alertStatus).className === 'is-ok');
+  const pending = clients.filter(c => c.isPending);
+  const filter = coachDashboardState.filter || 'all';
+  const seg = [['all', `All ${active.length}`], ['attention', `Attention ${attention.length}`], ['pending', `Pending ${pending.length}`]]
+    .map(([k, label]) => `<button type="button" role="tab" aria-selected="${filter === k}" data-coach-filter="${k}">${label}</button>`).join('');
+  const group = (label, list) => list.length
+    ? `<h2 class="cn-group-label">${label}</h2><div class="cn-group">${list.map(renderCoachClientCard).join('')}</div>` : '';
+
+  let body = '';
+  if (filter === 'pending') {
+    body = pending.length ? pending.map(renderCoachClientCard).join('') : '<div class="cn-empty">No pending invites.</div>';
+  } else if (filter === 'attention') {
+    body = group('Needs attention', attention) || '<div class="cn-empty"><strong>All clear</strong>No one needs you right now.</div>';
+  } else {
+    body = group('Needs attention', attention) + group('On track', onTrack)
+      + (pending.length ? `<h2 class="cn-group-label">Pending</h2>${pending.map(renderCoachClientCard).join('')}` : '');
+  }
+  return `<div class="cn-seg" role="tablist" aria-label="Filter clients">${seg}</div>${body}`;
 }
 
 // ── Client detail ─────────────────────────────────────────────
@@ -11859,37 +11883,45 @@ async function loadCoachClientDetail(clientId, force) {
 
 function coachSparkline(points) {
   if (!Array.isArray(points) || points.length < 2) return '';
-  const w = 280, h = 64, pad = 4;
+  const w = 310, h = 96, pad = 6;
   const ys = points.map(p => p.weight);
   const min = Math.min(...ys), max = Math.max(...ys);
   const span = max - min || 1;
   const xy = points.map((p, i) => [
-    pad + (i / (points.length - 1)) * (w - pad * 2),
+    (i / (points.length - 1)) * w,
     pad + (1 - (p.weight - min) / span) * (h - pad * 2)
   ]);
-  const d = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  const line = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
   const [lx, ly] = xy[xy.length - 1];
-  return `<svg class="coach-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Bodyweight from ${min} to ${max} kg">
-    <path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-    <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3" fill="currentColor"/></svg>`;
+  return `<svg class="cn-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Bodyweight from ${points[0].weight} to ${points[points.length - 1].weight} kg">
+    <defs><linearGradient id="cnBwFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity="0.28"></stop><stop offset="1" stop-color="currentColor" stop-opacity="0"></stop></linearGradient></defs>
+    <path d="${line} L${w} ${h} L0 ${h} Z" fill="url(#cnBwFill)"></path>
+    <path d="${line}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+    <circle cx="${Math.min(lx, w - 4).toFixed(1)}" cy="${ly.toFixed(1)}" r="4" fill="currentColor"></circle></svg>`;
 }
 
 function coachWeekBars(weeks) {
   if (!Array.isArray(weeks) || !weeks.length) return '';
   const max = Math.max(1, ...weeks.map(w => w.count));
-  return `<div class="coach-bars" role="img" aria-label="Sessions per week: ${weeks.map(w => w.count).join(', ')}">${weeks.map(w => `
-    <div class="coach-bar"><i style="height:${Math.round((w.count / max) * 100)}%"></i><span>${w.count}</span></div>`).join('')}</div>`;
+  return `<div class="cn-bars" role="img" aria-label="Sessions per week: ${weeks.map(w => w.count).join(', ')}">${weeks.map(w => `
+    <div class="cn-bar"><i style="height:${Math.round((w.count / max) * 100)}%"></i><span>${w.count}</span></div>`).join('')}</div>`;
 }
 
-function coachScoreRow(label, value) {
-  if (value === null || value === undefined) return '';
-  return `<li><span>${escapeCoachText(label)}</span><strong>${escapeCoachText(value)}/10</strong></li>`;
+function coachScoreChips(ci) {
+  const rows = [['Sleep', 'sleep'], ['Energy', 'energy'], ['Stress', 'stress', true], ['Hunger', 'hunger'], ['Training', 'trainingPerformance'], ['Cardio', 'cardioAdherence']];
+  return rows.filter(([, k]) => ci[k] !== null && ci[k] !== undefined).map(([label, k, inverse]) => {
+    const v = Number(ci[k]);
+    const bad = inverse ? v >= 7 : v <= 4;
+    return `<span class="cn-chip ${bad ? 'is-action' : ''}">${label} <span class="cn-num">${escapeCoachText(v)}</span></span>`;
+  }).join('');
 }
 
 function renderCoachClientDetail(client, detail) {
   const c = normalizeCoachClientRecord(client);
   const d = detail || {};
+  const loading = detail === undefined;
   const alerts = deriveCoachClientAlerts(d.alerts ? d : c);
+  const meta = getCoachAlertMeta(deriveCoachAlertStatus(c));
   const checkIns = Array.isArray(d.checkIns) ? d.checkIns : [];
   const latest = checkIns[0] || c.latestCheckIn || null;
   const bodyweight = Array.isArray(d.bodyweight) ? d.bodyweight : [];
@@ -11897,139 +11929,101 @@ function renderCoachClientDetail(client, detail) {
   const gaps = coachSharingGaps(c);
   const m = c.macroTargets || {};
   const programs = (window.CoachProgramLibrary && window.CoachProgramLibrary.cached()) || [];
-  const loading = detail === undefined;
-  const nf = (label, id, value) => `<label class="coach-nf"><span class="mx-lbl">${label}</span><input id="${id}" type="number" inputmode="numeric" min="0" step="1" value="${value ?? ''}"></label>`;
   const change = c.weeklyWeightChangePercent;
+  const id = escapeCoachText(c.id);
+  const waiting = (text) => `<p class="cn-sub">${loading ? 'Loading…' : text}</p>`;
+  const fmtDate = (iso) => { const t = Date.parse(String(iso).slice(0, 10) + 'T00:00:00'); return Number.isNaN(t) ? escapeCoachText(iso) : new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); };
+
+  const alertHtml = alerts.length ? `
+    <section class="cn-alert ${meta.tone === 'is-watch' ? 'is-watch' : ''}" role="status">
+      ${CN_ICONS.alert}
+      <div><div class="cn-alert-title">${escapeCoachText(alerts[0].label)}: ${escapeCoachText(alerts[0].reason)}</div>
+      ${alerts.length > 1 ? `<div class="cn-alert-sub">Also ${escapeCoachText(alerts.slice(1).map(a => a.label.toLowerCase()).join(' and '))}.</div>` : ''}</div>
+    </section>` : '';
 
   return `
-    <section class="coach-client-detail" data-detail-for="${escapeCoachText(c.id)}">
-      <section class="coach-dashboard-header pod mx-pod">
-        <div class="coach-client-detail-header">
-          <div>
-            <div class="mx-kicker">${escapeCoachText(c.archetype)} · ${escapeCoachText(c.currentPhase)}</div>
-            <h3 class="coach-dashboard-title">${escapeCoachText(c.name)}</h3>
-          </div>
-          <div class="coach-detail-actions">
-            <button type="button" class="mx-outline" data-coach-back><span class="ui-icon">${ICONS.arrowLeft}</span> Roster</button>
-          </div>
+    <section class="coach-client-detail" data-detail-for="${id}">
+      <div class="cn-navbar"><button type="button" class="cn-link" data-coach-back>${CN_ICONS.back}Clients</button></div>
+      <div class="cn-person">
+        <span class="cn-avatar cn-avatar--lg ${meta.tone}">${escapeCoachText(coachInitials(c.name))}</span>
+        <div class="cn-row-main"><h1>${escapeCoachText(c.name)}</h1><span class="cn-sub">${escapeCoachText([c.archetype !== 'Mode not set' ? c.archetype : '', c.currentProgram || c.activeProgramName].filter(Boolean).join(' · ') || 'No program yet')}</span></div>
+      </div>
+      <div class="cn-actions3">
+        <button type="button" class="cn-action cn-action--primary" data-coach-message="${id}">${CN_ICONS.message}Message</button>
+        <button type="button" class="cn-action" data-coach-jump="cnProgramCard">${CN_ICONS.dumbbell}Program</button>
+        <button type="button" class="cn-action" data-coach-jump="cnNutritionCard">${CN_ICONS.fork}Macros</button>
+      </div>
+      ${alertHtml}
+      ${gaps.length ? `<p class="cn-note">${escapeCoachText(c.name)} has switched off sharing: ${escapeCoachText(gaps.join(', '))}.</p>` : ''}
+      ${!c.lastSharedAt ? `<p class="cn-note">Nothing shared yet. Data appears after ${escapeCoachText(c.name)} next opens the app.</p>` : ''}
+
+      <div class="cn-tiles">
+        <div class="cn-tile"><span class="cn-tile-label">Compliance</span><span class="cn-tile-value ${c.compliancePercent !== null && c.compliancePercent < 65 ? 'is-action' : ''}">${c.compliancePercent === null ? '—' : `${c.compliancePercent}%`}</span></div>
+        <div class="cn-tile"><span class="cn-tile-label">Sessions this week</span><span class="cn-tile-value">${c.workoutsLoggedThisWeek ?? '—'}</span></div>
+      </div>
+
+      <section class="cn-card">
+        <div class="cn-card-head"><span class="cn-card-title">Bodyweight</span>
+          <span class="cn-num">${c.currentBodyweight !== null ? `${c.currentBodyweight} kg` : ''}${change !== null ? ` <span style="color:${Math.abs(change) >= 0.8 ? 'var(--cn-watch)' : 'var(--cn-text-2)'}">${change > 0 ? '+' : ''}${change.toFixed(2)}%/wk</span>` : ''}</span></div>
+        ${bodyweight.length >= 2
+          ? `${coachSparkline(bodyweight)}<div class="cn-axis"><span>${fmtDate(bodyweight[0].date)}</span><span>${fmtDate(bodyweight[bodyweight.length - 1].date)}</span></div>`
+          : waiting(c.currentBodyweight !== null ? 'Not enough weigh-ins for a trend yet.' : 'No weigh-ins shared yet.')}
+      </section>
+
+      <section class="cn-card">
+        <div class="cn-card-head"><span class="cn-card-title">Last check-in</span>${latest?.date ? `<span class="cn-caption">${fmtDate(latest.date)}</span>` : ''}</div>
+        ${latest?.date ? `
+          <div class="cn-chips">${coachScoreChips(latest)}</div>
+          ${latest.notes ? `<p class="cn-quote">“${escapeCoachText(latest.notes)}”</p>` : ''}
+          ${latest.summary ? `<p class="cn-sub">${escapeCoachText(latest.summary)}</p>` : ''}
+          ${checkIns.length > 1 ? `<span class="cn-caption">${checkIns.length} check-ins shared</span>` : ''}` : waiting('No check-ins shared yet.')}
+      </section>
+
+      <section class="cn-card">
+        <div class="cn-card-head"><span class="cn-card-title">Sessions per week</span>${c.activeProgramName ? `<span class="cn-caption">${escapeCoachText(c.activeProgramName)}</span>` : ''}</div>
+        ${weeks.length ? coachWeekBars(weeks) : waiting('No workouts shared yet.')}
+      </section>
+
+      <section class="cn-card" id="cnProgramCard">
+        <div class="cn-card-head"><span class="cn-card-title">Program</span><span class="cn-caption">${c.currentProgram ? escapeCoachText(c.currentProgram) : 'None assigned'}</span></div>
+        <label class="cn-label" for="coachAssignProgramSel">From your library</label>
+        <select id="coachAssignProgramSel" class="cn-select">
+          <option value="">${programs.length ? 'Choose a program' : 'No programs yet, build one in Programs'}</option>
+          ${programs.map(p => `<option value="${escapeCoachText(p.id)}"${p.id === c.currentProgramId ? ' selected' : ''}>${escapeCoachText(p.name)} (${p.exerciseCount || 0} exercises)</option>`).join('')}
+        </select>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="cn-btn cn-btn--primary" style="flex:1" data-coach-assign-program="${id}">Assign</button>
+          ${c.currentProgramId ? `<button type="button" class="cn-btn" data-coach-unassign-program="${id}">Remove</button>` : ''}
         </div>
-        ${gaps.length ? `<p class="mx-sub coach-share-gap">${escapeCoachText(c.name)} has switched off sharing: ${escapeCoachText(gaps.join(', '))}.</p>` : ''}
-        ${!c.lastSharedAt ? `<p class="mx-sub">Nothing shared yet. Data appears after ${escapeCoachText(c.name)} next opens the app.</p>` : ''}
+        <span class="cn-caption">${escapeCoachText(c.name)} gets a Start button in Settings → Your Coach.</span>
       </section>
 
-      <section class="coach-client-detail-grid">
-        <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Alerts</h4>
-          <ul class="coach-client-detail-list">
-            ${alerts.length ? alerts.map(a => `<li><span>${escapeCoachText(a.label)}</span><strong>${escapeCoachText(a.reason)}</strong></li>`).join('') : '<li><span>On track</span><strong>No alerts</strong></li>'}
-          </ul>
-        </article>
-
-        <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Latest check-in</h4>
-          ${latest ? `
-            <p class="coach-dashboard-subtitle">${escapeCoachText(formatCoachDate(latest.date))}${latest.summary ? ` · ${escapeCoachText(latest.summary)}` : ''}</p>
-            <ul class="coach-client-detail-list">
-              ${coachScoreRow('Sleep', latest.sleep)}${coachScoreRow('Energy', latest.energy)}${coachScoreRow('Stress', latest.stress)}
-              ${coachScoreRow('Hunger', latest.hunger)}${coachScoreRow('Training', latest.trainingPerformance)}${coachScoreRow('Cardio adherence', latest.cardioAdherence)}
-            </ul>
-            ${latest.notes ? `<p class="coach-client-quote">“${escapeCoachText(latest.notes)}”</p>` : ''}
-            ${checkIns.length > 1 ? `<p class="mx-sub">${checkIns.length} check-ins shared · previous ${escapeCoachText(formatCoachDate(checkIns[1].date))}</p>` : ''}
-          ` : `<p class="coach-dashboard-subtitle">${loading ? 'Loading…' : 'No check-ins shared yet'}</p>`}
-        </article>
-
-        <article class="coach-client-detail-card pod mx-pod">
-          <div class="pod-row"><h4 class="pod-title mx-h3">Bodyweight</h4>
-            ${change !== null ? `<span class="mx-chip mx-chip--sm${Math.abs(change) >= 1.25 ? ' mx-chip--red' : Math.abs(change) >= 0.8 ? ' mx-chip--brass' : ''}">${change > 0 ? '+' : ''}${change.toFixed(2)}%/wk</span>` : ''}</div>
-          ${bodyweight.length >= 2 ? `
-            <div class="coach-spark-wrap">${coachSparkline(bodyweight)}</div>
-            <p class="mx-sub">${bodyweight[0].weight} → ${bodyweight[bodyweight.length - 1].weight} kg · ${escapeCoachText(formatCoachDate(bodyweight[0].date))} to ${escapeCoachText(formatCoachDate(bodyweight[bodyweight.length - 1].date))}</p>`
-            : `<p class="coach-dashboard-subtitle">${loading ? 'Loading…' : (c.currentBodyweight !== null ? `${c.currentBodyweight} kg (not enough weigh-ins for a trend)` : 'No weigh-ins shared yet')}</p>`}
-        </article>
-
-        <article class="coach-client-detail-card pod mx-pod">
-          <div class="pod-row"><h4 class="pod-title mx-h3">Sessions per week</h4>${c.compliancePercent !== null ? `<span class="mx-meta">${c.compliancePercent}% compliance</span>` : ''}</div>
-          ${weeks.length ? coachWeekBars(weeks) : `<p class="coach-dashboard-subtitle">${loading ? 'Loading…' : 'No workouts shared yet'}</p>`}
-          ${c.activeProgramName ? `<p class="mx-sub">Following: ${escapeCoachText(c.activeProgramName)}</p>` : ''}
-        </article>
-
-        <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Program</h4>
-          <p class="coach-dashboard-subtitle">${c.currentProgram ? `Assigned: ${escapeCoachText(c.currentProgram)}` : 'No program assigned yet'}</p>
-          <div class="mx-well mx-well--text mx-well--sel"><select id="coachAssignProgramSel" aria-label="Program to assign">
-            <option value="">${programs.length ? 'Choose from your library…' : 'No programs in your library yet'}</option>
-            ${programs.map(p => `<option value="${escapeCoachText(p.id)}"${p.id === c.currentProgramId ? ' selected' : ''}>${escapeCoachText(p.name)} (${p.exerciseCount || 0} exercises)</option>`).join('')}
-          </select></div>
-          <div class="coach-draft-actions">
-            <button type="button" class="mx-cta" data-coach-assign-program="${escapeCoachText(c.id)}"><span>Assign</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
-            ${c.currentProgramId ? `<button type="button" class="mx-outline" data-coach-unassign-program="${escapeCoachText(c.id)}">Remove</button>` : ''}
-          </div>
-          <p class="mx-sub">Build programs in Coach Ops → Programs. ${escapeCoachText(c.name)} gets a Start button in Settings → Your Coach.</p>
-        </article>
-
-        <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Nutrition</h4>
-          <p class="coach-dashboard-subtitle">${escapeCoachText(c.currentNutritionSummary, 'No macro targets set yet')}</p>
-          <div class="coach-nutrition-grid">
-            ${nf('Calories', 'coachMacroCalories', m.calories)}
-            ${nf('Protein g', 'coachMacroProtein', m.protein)}
-            ${nf('Carbs g', 'coachMacroCarbs', m.carbs)}
-            ${nf('Fat g', 'coachMacroFat', m.fat)}
-          </div>
-          <button type="button" class="mx-cta coach-assign-btn" data-coach-assign-nutrition="${escapeCoachText(c.id)}"><span>Send targets</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
-          <p class="mx-sub">${escapeCoachText(c.name)} reviews and applies them from Settings → Your Coach.</p>
-        </article>
+      <section class="cn-card" id="cnNutritionCard">
+        <div class="cn-card-head"><span class="cn-card-title">Macro targets</span></div>
+        <div class="cn-macros">
+          <div class="cn-field"><label for="coachMacroCalories">Calories</label><input id="coachMacroCalories" class="cn-input" type="number" inputmode="numeric" min="0" value="${m.calories ?? ''}"></div>
+          <div class="cn-field"><label for="coachMacroProtein">Protein (g)</label><input id="coachMacroProtein" class="cn-input" type="number" inputmode="numeric" min="0" value="${m.protein ?? ''}"></div>
+          <div class="cn-field"><label for="coachMacroCarbs">Carbs (g)</label><input id="coachMacroCarbs" class="cn-input" type="number" inputmode="numeric" min="0" value="${m.carbs ?? ''}"></div>
+          <div class="cn-field"><label for="coachMacroFat">Fat (g)</label><input id="coachMacroFat" class="cn-input" type="number" inputmode="numeric" min="0" value="${m.fat ?? ''}"></div>
+        </div>
+        <button type="button" class="cn-btn cn-btn--primary cn-btn--block" data-coach-assign-nutrition="${id}">Send targets</button>
+        <span class="cn-caption">${escapeCoachText(c.name)} reviews and applies them in their app.</span>
       </section>
 
-      <section class="coach-detail-message">
-        ${isProUser() ? `
-          <article class="coach-client-detail-card pod mx-pod">
-            <h4 class="pod-title mx-h3">Coach message</h4>
-            <label class="coach-nf coach-nf--full">
-              <span class="mx-lbl">Your notes <em>optional, used in the draft</em></span>
-              <textarea id="coachAiDraftNotes" rows="2" placeholder="e.g. great push week, tighten up cardio next block..."></textarea>
-            </label>
-            <div class="coach-draft-actions">
-              <button type="button" class="coach-draft-msg-btn mx-outline" data-coach-draft-msg="${escapeCoachText(c.id)}"><span class="ui-icon">${ICONS.sparkles}</span> Draft with AI</button>
-            </div>
-            <div id="coachAiDraftSection"></div>
-          </article>` : ''}
-        <article class="coach-client-detail-card pod mx-pod">
-          <button type="button" class="mx-outline mx-outline--block mx-outline--danger" data-coach-remove="${escapeCoachText(c.id)}" data-client-name="${escapeCoachText(c.name)}">Remove client</button>
-          <p class="mx-sub">Removes the link and deletes everything ${escapeCoachText(c.name)} shared with you. Notes you sent stay in their app.</p>
-        </article>
-      </section>
+      <button type="button" class="cn-leave" data-coach-remove="${id}" data-client-name="${escapeCoachText(c.name)}">Remove client</button>
+      <p class="cn-caption" style="margin:8px 4px 0">Ends the link and deletes everything ${escapeCoachText(c.name)} shared with you. Notes you sent stay in their app.</p>
     </section>
   `;
 }
 
-function renderCoachClientRoster(clients = []) {
-  if (!Array.isArray(clients) || !clients.length) {
-    return '<div class="mx-empty coach-empty"><span class="ui-icon">' + ICONS.users + '</span><strong>No clients yet</strong><span>Tap Add Client and enter their Pocket Coach username.</span></div>';
-  }
-  const active = clients.filter(c => !c.isPending);
-  const pending = clients.filter(c => c.isPending);
-  return `
-    ${active.length ? `<section class="coach-roster-grid" aria-label="Clients">${active.map(renderCoachClientCard).join('')}</section>` : ''}
-    ${pending.length ? `<div class="pod-row coach-pending-head"><h4 class="pod-title mx-h3">Pending invites</h4><span class="mx-meta">${pending.length}</span></div>
-      <section class="coach-roster-grid" aria-label="Pending invites">${pending.map(renderCoachClientCard).join('')}</section>` : ''}`;
-}
-
 async function requestCoachDraftMessage(clientId) {
-  const draftSection = document.getElementById('coachAiDraftSection');
-  if (!draftSection) return;
-  const coachNotes = (document.getElementById('coachAiDraftNotes')?.value || '').trim();
-  const client = (coachDashboardState.clients || []).find(c => c.id === clientId);
-  if (!client) { draftSection.innerHTML = '<p class="coach-draft-err">Client data not found.</p>'; return; }
-  const c = normalizeCoachClientRecord(client);
+  const c = normalizeCoachClientRecord((coachDashboardState.clients || []).find(x => x.id === clientId) || {});
   const detail = coachDashboardState.details[clientId] || {};
   const latest = (detail.checkIns || [])[0] || c.latestCheckIn || null;
-
-  draftSection.innerHTML = `<p class="coach-draft-note"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
   const serverUrl = (window.SERVER_URL || '').replace(/\/$/, '');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
     const res = await fetch(`${serverUrl}/api/ai/coach-draft-message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -12039,45 +12033,24 @@ async function requestCoachDraftMessage(clientId) {
         currentPhase: c.currentPhase,
         compliancePercent: c.compliancePercent,
         checkIn: latest ? {
-          sleep: latest.sleep ?? null,
-          energy: latest.energy ?? null,
-          stress: latest.stress ?? null,
-          hunger: latest.hunger ?? null,
-          trainingPerformance: latest.trainingPerformance ?? null,
-          notes: latest.notes || ''
+          sleep: latest.sleep ?? null, energy: latest.energy ?? null, stress: latest.stress ?? null,
+          hunger: latest.hunger ?? null, trainingPerformance: latest.trainingPerformance ?? null, notes: latest.notes || ''
         } : null,
         bodyweightChange: c.weeklyWeightChangePercent,
         alerts: deriveCoachClientAlerts(c).map(a => ({ label: a.label, reason: a.reason })),
         currentProgramSummary: c.currentProgram || c.activeProgramName || '',
-        currentNutritionSummary: c.currentNutritionSummary || '',
-        coachNotes
+        currentNutritionSummary: c.currentNutritionSummary || ''
       }),
       signal: controller.signal
     });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error === 'AI_NOT_CONFIGURED' ? 'AI drafting is not enabled on this server.' : 'Draft failed. Try again.');
+    return data.draft || '';
+  } finally {
     clearTimeout(timer);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      draftSection.innerHTML = err.error === 'AI_NOT_CONFIGURED'
-        ? '<p class="coach-draft-note">AI drafting is not enabled on this server.</p>'
-        : '<p class="coach-draft-err">Draft failed. Please try again.</p>';
-      return;
-    }
-    const data = await res.json();
-    draftSection.innerHTML = `
-      <div class="coach-nf coach-nf--full"><textarea id="coachAiDraftTextarea" rows="6" aria-label="Draft message">${escapeCoachText(data.draft || '', '')}</textarea></div>
-      <div class="coach-draft-actions">
-        <button type="button" class="mx-cta" data-coach-send-draft="${escapeCoachText(clientId)}"><span>Send as note</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
-        <button type="button" class="mx-outline" data-coach-copy-draft>Copy</button>
-      </div>`;
-    const ta = document.getElementById('coachAiDraftTextarea');
-    if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
-  } catch (err) {
-    draftSection.innerHTML = err.name === 'AbortError'
-      ? '<p class="coach-draft-err">Request timed out. Please try again.</p>'
-      : !navigator.onLine ? '<p class="coach-draft-note">You are offline.</p>'
-      : '<p class="coach-draft-err">Draft failed. Please try again.</p>';
   }
 }
+window.requestCoachDraftMessage = requestCoachDraftMessage;
 
 async function coachPatchClient(clientId, fields, okMessage) {
   try {
@@ -12099,6 +12072,11 @@ function ensureCoachDashboardInteractions() {
     const t = (sel) => event.target.closest(sel);
     let el;
 
+    if ((el = t('[data-coach-filter]'))) {
+      coachDashboardState.filter = el.getAttribute('data-coach-filter');
+      renderCoachDashboardView();
+      return;
+    }
     if ((el = t('[data-coach-open-detail]'))) {
       openCoachClientDetail(el.getAttribute('data-coach-open-detail'));
       return;
@@ -12106,6 +12084,15 @@ function ensureCoachDashboardInteractions() {
     if (t('[data-coach-back]')) {
       coachDashboardState.selectedClientId = null;
       renderCoachDashboardView();
+      window.scrollTo({ top: 0 });
+      return;
+    }
+    if ((el = t('[data-coach-message]'))) {
+      if (typeof window.openCoachInbox === 'function') window.openCoachInbox(el.getAttribute('data-coach-message'));
+      return;
+    }
+    if ((el = t('[data-coach-jump]'))) {
+      document.getElementById(el.getAttribute('data-coach-jump'))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     if ((el = t('[data-coach-assign-nutrition]'))) {
@@ -12147,42 +12134,16 @@ function ensureCoachDashboardInteractions() {
       } catch (err) {
         window.showToast(err.message || 'Could not remove. Try again.', 'error');
       }
-      return;
-    }
-    if ((el = t('[data-coach-draft-msg]'))) {
-      requestCoachDraftMessage(el.getAttribute('data-coach-draft-msg'));
-      return;
-    }
-    if ((el = t('[data-coach-send-draft]'))) {
-      const text = (document.getElementById('coachAiDraftTextarea')?.value || '').trim();
-      if (!text) return;
-      el.disabled = true;
-      try {
-        await coachApi('POST', `/api/coach/clients/${encodeURIComponent(el.getAttribute('data-coach-send-draft'))}/notes`, { text });
-        window.showToast('Note sent');
-        document.getElementById('coachAiDraftSection').innerHTML = '';
-      } catch (err) {
-        window.showToast(err.message || 'Could not send. Try again.', 'error');
-        el.disabled = false;
-      }
-      return;
-    }
-    if ((el = t('[data-coach-copy-draft]'))) {
-      const textarea = document.getElementById('coachAiDraftTextarea');
-      if (!textarea) return;
-      navigator.clipboard.writeText(textarea.value).then(
-        () => window.showToast('Copied'),
-        () => { textarea.select(); document.execCommand('copy'); window.showToast('Copied'); }
-      );
     }
   });
   coachDashboardState.isBound = true;
 }
 
 async function openCoachClientDetail(clientId) {
+  if (typeof window.showTab === 'function' && document.querySelector('.tab-content.active')?.id !== 'clientsTab') window.showTab('clientsTab');
   coachDashboardState.selectedClientId = clientId;
   renderCoachDashboardView();
-  document.getElementById('coachDashboardContent')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.scrollTo({ top: 0 });
   await Promise.all([
     loadCoachClientDetail(clientId, true),
     window.CoachProgramLibrary ? window.CoachProgramLibrary.list().catch(() => []) : null
@@ -12196,6 +12157,8 @@ function renderCoachDashboardView() {
   if (!container) return;
   const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
   const selected = clients.find((client) => client.id === coachDashboardState.selectedClientId);
+  const header = document.getElementById('coachClientsHeader');
+  if (header) header.hidden = !!selected;
   if (selected) {
     const detail = Object.prototype.hasOwnProperty.call(coachDashboardState.details, selected.id)
       ? (coachDashboardState.details[selected.id] || {})
@@ -12203,29 +12166,15 @@ function renderCoachDashboardView() {
     container.innerHTML = renderCoachClientDetail(selected, detail);
     return;
   }
-  const active = clients.filter(c => !c.isPending);
-  const pending = clients.length - active.length;
-  const flagged = active.filter(c => getCoachAlertMeta(c.alertStatus).className === 'is-alert').length;
-  const watch = active.filter(c => getCoachAlertMeta(c.alertStatus).className === 'is-watch').length;
-  const sub = coachDashboardState.source === 'backend'
-    ? `${active.length} client${active.length === 1 ? '' : 's'}${pending ? ` · ${pending} pending` : ''} · ${flagged} need action · ${watch} on watch`
-    : 'Couldn\'t load your roster. Check your connection and try again.';
-  container.innerHTML = `
-    <section class="coach-dashboard-header pod mx-pod">
-      <div class="coach-dashboard-header-row">
-        <h3 class="coach-dashboard-title">Client Roster</h3>
-        <button type="button" class="coach-add-client-btn mx-outline" onclick="openAddClientModal()"><span class="ui-icon">${ICONS.plus}</span> Add Client</button>
-      </div>
-      <p class="coach-dashboard-subtitle">${sub}</p>
-    </section>
-    ${renderCoachClientRoster(clients)}
-  `;
+  container.innerHTML = coachDashboardState.source === 'error'
+    ? `<div class="cn-empty"><strong>Couldn't load your clients</strong>Check your connection and try again.</div>`
+    : renderCoachClientRoster(clients);
 }
 
 async function renderCoachDashboard() {
   const container = document.getElementById('coachDashboardContent');
   if (!container) return;
-  if (!coachDashboardState.clients.length) container.innerHTML = '<p class="coach-no-clients">Loading coach roster…</p>';
+  if (!coachDashboardState.clients.length) container.innerHTML = '<div class="cn-empty">Loading clients…</div>';
   ensureCoachDashboardInteractions();
 
   const { clients, source } = await loadCoachClients();
@@ -12239,44 +12188,11 @@ async function renderCoachDashboard() {
   if (typeof renderCoachQueue === 'function') renderCoachQueue();
 }
 
-/** Mobile "Coach" triage view: who needs attention first, then the
- * roster sorted by compliance (clients with no data last). */
+// The old triage cards (priority client + roster snapshot) are covered by
+// the "Needs attention" group now, so the slot stays empty.
 function renderCoachQueue() {
   const el = document.getElementById('coachQueueSection');
-  if (!el) return;
-  const clients = (coachDashboardState.clients || []).filter(c => !c.isPending);
-  if (!clients.length) { el.innerHTML = ''; return; }
-
-  const priority = clients.find(c => c.alertStatus === 'action') || clients.find(c => c.alertStatus === 'watch');
-  const urgent = priority && priority.alertStatus === 'action';
-  const reason = priority && priority.alerts[0] ? `${priority.alerts[0].label}: ${priority.alerts[0].reason}` : '';
-  const priorityHTML = priority ? `
-    <div class="pod pod--hero mx-pod ws-priority-card">
-      <div class="pod-row"><span class="pod-kicker mx-kicker">Needs attention</span><span class="mx-chip mx-chip--sm ${urgent ? 'mx-chip--red' : 'mx-chip--brass'} ws-priority-tag">${urgent ? 'Needs action' : 'Watch'}</span></div>
-      <div class="ws-priority-main">
-        <span class="ws-priority-name">${escapeCoachText(priority.name)}</span>
-        <span class="ws-priority-meta">${escapeCoachText(reason, priority.currentPhase)}</span>
-      </div>
-      <button class="mx-cta ws-priority-cta" data-queue-open="${escapeCoachText(priority.id)}"><span>Open client</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.chevronRight}</span></span></button>
-    </div>` : '';
-
-  const roster = clients.slice()
-    .sort((a, b) => (a.compliancePercent ?? 101) - (b.compliancePercent ?? 101))
-    .slice(0, 5);
-  const rosterHTML = roster.map(c => `
-    <div class="sq-row mx-row"><div class="mx-row-main"><span class="sq-name mx-row-title">${escapeCoachText(c.name)}</span>
-      ${c.compliancePercent !== null ? `<div class="mx-meter mx-meter--thin${c.compliancePercent < 65 ? ' mx-meter--brass' : ''}"><i style="width:${c.compliancePercent}%"></i></div>` : '<span class="mx-row-sub">No compliance data yet</span>'}</div>
-      <span class="sq-summary mx-row-big">${c.compliancePercent !== null ? `${c.compliancePercent}<span class="mx-unit">%</span>` : '—'}</span></div>
-  `).join('');
-
-  el.innerHTML = `
-    ${priorityHTML}
-    <div class="pod mx-pod sq-card">
-      <div class="pod-row"><span class="pod-kicker mx-kicker">Roster snapshot</span><span class="sq-count mx-meta">lowest compliance first</span></div>
-      <div>${rosterHTML}</div>
-    </div>
-  `;
-  el.querySelector('[data-queue-open]')?.addEventListener('click', (e) => openCoachClientDetail(e.currentTarget.getAttribute('data-queue-open')));
+  if (el) el.innerHTML = '';
 }
 
 window.renderCoachDashboard = renderCoachDashboard;
@@ -12288,32 +12204,26 @@ window.renderCoachClientDetail = renderCoachClientDetail;
 // Sends a real invite (POST /api/coach/clients/invite). The athlete sees it
 // in Settings → Your Coach and accepts or declines there.
 window.openAddClientModal = function() {
-  document.querySelector('.coach-invite-sheet')?.remove();
-  const overlay = document.createElement('div');
-  overlay.className = 'gdpr-modal-overlay coach-invite-sheet';
-  overlay.innerHTML = `
-    <div class="gdpr-modal" role="dialog" aria-modal="true" aria-labelledby="coachInviteTitle">
-      <h3 id="coachInviteTitle">Invite a client</h3>
-      <p class="mx-sub">They need a Pocket Coach account. Once they accept, you'll see their check-ins, bodyweight and workouts, whatever they choose to share.</p>
-      <div class="mx-well mx-well--text"><input type="text" id="coachInviteUsername" placeholder="Their username" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Client username"></div>
-      <p class="mx-sub coach-invite-err" id="coachInviteErr" aria-live="polite"></p>
-      <div class="gdpr-modal-actions">
-        <button type="button" class="mx-outline" data-invite-cancel>Cancel</button>
-        <button type="button" class="mx-cta" data-invite-send><span>Send invite</span></button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  const input = overlay.querySelector('#coachInviteUsername');
-  const errEl = overlay.querySelector('#coachInviteErr');
+  const sheet = window.cnSheet(`
+    <h2 class="cn-sheet-title">Invite a client</h2>
+    <div class="cn-field">
+      <label for="coachInviteUsername">Their Pocket Coach username</label>
+      <input id="coachInviteUsername" class="cn-input" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <span class="cn-caption">They accept in their app, then choose what to share with you.</span>
+    </div>
+    <p class="cn-error" id="coachInviteErr" aria-live="polite"></p>
+    <button type="button" class="cn-btn cn-btn--primary cn-btn--block" data-invite-send>Send invite</button>`, { label: 'Invite a client' });
+  const input = sheet.el.querySelector('#coachInviteUsername');
+  const errEl = sheet.el.querySelector('#coachInviteErr');
+  const btn = sheet.el.querySelector('[data-invite-send]');
   const send = async () => {
     const username = input.value.trim();
     if (!username) { errEl.textContent = 'Enter a username.'; return; }
-    const btn = overlay.querySelector('[data-invite-send]');
     btn.disabled = true;
     errEl.textContent = '';
     try {
       await coachApi('POST', '/api/coach/clients/invite', { clientUsername: username });
-      overlay.remove();
+      sheet.close();
       window.showToast(`Invite sent to ${username}`);
       renderCoachDashboard();
     } catch (err) {
@@ -12321,12 +12231,8 @@ window.openAddClientModal = function() {
       btn.disabled = false;
     }
   };
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay || e.target.closest('[data-invite-cancel]')) overlay.remove();
-    else if (e.target.closest('[data-invite-send]')) send();
-  });
+  btn.addEventListener('click', send);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
-  setTimeout(() => input.focus(), 50);
 };
 
 /* ── "Your Coach" (athlete side) lives in src/js/client-coaching.js ── */
@@ -19881,6 +19787,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/archetype-features.js"></script>
   <script src="src/js/macro-pill-controls.js"></script>
   <script src="src/js/activity-sync-bridge.js"></script>
+  <script src="src/js/coach-native.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/client-coaching.js"></script>
   <script src="src/js/workout-archiver.js"></script>
