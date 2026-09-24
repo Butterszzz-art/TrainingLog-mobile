@@ -1,0 +1,348 @@
+/* =============================================================
+   COACH — NATIVE (Direction A of the coach revamp)
+   Edge-to-edge screens, large titles, grouped lists, segmented
+   filters, bottom sheets and a dedicated coach tab bar.
+   Scoped to `.cn` (the coach tabs, Settings → Your Coach, coach
+   sheets) and `#coachNav`, so nothing outside coaching changes.
+   Design reference: the "Pocket Coach · Coach Revamp" canvas, A row.
+   ============================================================= */
+
+.cn,
+#coachNav {
+  --cn-ground: #0B0F0D;
+  --cn-surface: #151A17;
+  --cn-raised: #1C2320;
+  --cn-raised-2: #2A332E;
+  --cn-line: rgba(255, 255, 255, 0.06);
+  --cn-text: #EEF2EF;
+  --cn-text-2: #9AA69F;
+  --cn-text-3: #7D8983;
+  --cn-faint: #5E6A64;
+  --cn-accent: #3DBE85;
+  --cn-accent-ink: #06140D;
+  --cn-accent-soft: #1D3A2C;
+  --cn-accent-text: #6BD6A4;
+  --cn-action-bg: #2A1C1A;
+  --cn-action: #F2A098;
+  --cn-action-strong: #F7C4BE;
+  --cn-watch-bg: #2E2718;
+  --cn-watch: #E9C07A;
+  --cn-font: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --cn-mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
+  font-family: var(--cn-font);
+  color: var(--cn-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Screen shell: no inset card, no grain, edge to edge ─────── */
+
+.tab-content.cn {
+  background: var(--cn-ground);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 8px 16px calc(112px + env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  overflow: visible;
+}
+.tab-content.cn::before { display: none; }
+.cn *, .cn *::before, .cn *::after { box-sizing: border-box; }
+.cn button { font-family: inherit; cursor: pointer; }
+.cn button:focus-visible,
+.cn input:focus-visible,
+.cn textarea:focus-visible,
+.cn select:focus-visible,
+#coachNav button:focus-visible {
+  outline: 2px solid var(--cn-accent);
+  outline-offset: 2px;
+}
+
+/* ── Type ─────────────────────────────────────────────────────── */
+
+/* Global heading styles (style.css) centre and recolour h1-h3; the coach
+   screens are left-aligned throughout. */
+.cn h1, .cn h2, .cn h3 { text-align: left; font-family: var(--cn-font); }
+
+.cn-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 12px 4px 4px; }
+.cn-title { margin: 0; font-family: var(--cn-font); font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; color: var(--cn-text); text-transform: none; }
+.cn-summary { margin: 2px 4px 14px; font-size: 14px; color: var(--cn-text-2); }
+.cn-h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--cn-text); }
+.cn-group-label { margin: 18px 4px 8px; font-size: 13px; font-weight: 500; color: var(--cn-text-2); text-transform: none; letter-spacing: 0; }
+.cn-sub { font-size: 14px; line-height: 1.4; color: var(--cn-text-2); }
+.cn-caption { font-size: 12.5px; color: var(--cn-text-3); }
+.cn-num { font-family: var(--cn-mono); font-variant-numeric: tabular-nums; }
+.cn-empty { padding: 28px 16px; text-align: center; color: var(--cn-text-2); font-size: 15px; line-height: 1.5; }
+.cn-empty strong { display: block; margin-bottom: 4px; color: var(--cn-text); font-size: 17px; }
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+
+.cn-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 50px; padding: 0 22px; margin: 0; width: auto;
+  border: 0; border-radius: 999px;
+  background: var(--cn-raised); color: var(--cn-text);
+  font-size: 16px; font-weight: 600; line-height: 1; box-shadow: none;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.cn-btn:active { transform: scale(0.98); }
+.cn-btn:disabled { opacity: 0.5; }
+.cn-btn--primary { background: var(--cn-accent); color: var(--cn-accent-ink); }
+.cn-btn--danger { background: var(--cn-action-bg); color: var(--cn-action-strong); }
+.cn-btn--sm { height: 36px; padding: 0 14px; font-size: 14px; }
+.cn-btn--block { display: flex; width: 100%; }
+.cn-link { height: 44px; padding: 0 8px; margin: 0; width: auto; border: 0; background: none; box-shadow: none; color: var(--cn-accent); font-size: 17px; font-weight: 500; display: inline-flex; align-items: center; gap: 2px; }
+.cn-iconbtn {
+  width: 44px; height: 44px; margin: 0; padding: 0; flex: none;
+  border: 0; border-radius: 22px; background: var(--cn-raised); color: var(--cn-accent);
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: none;
+}
+.cn-iconbtn svg, .cn-link svg { width: 22px; height: 22px; }
+
+/* ── Grouped lists ────────────────────────────────────────────── */
+
+.cn-group { background: var(--cn-surface); border-radius: 18px; overflow: hidden; }
+.cn-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px;
+  margin: 0; padding: 10px 14px; border: 0; border-radius: 0; background: none; box-shadow: none;
+  color: var(--cn-text); text-align: left; font: inherit;
+}
+.cn-group > .cn-row + .cn-row { position: relative; }
+.cn-group > .cn-row + .cn-row::before { content: ''; position: absolute; top: 0; right: 0; left: 66px; height: 1px; background: var(--cn-line); }
+.cn-group--plain > .cn-row + .cn-row::before { left: 16px; }
+button.cn-row:active { background: rgba(255, 255, 255, 0.03); }
+.cn-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cn-row-title { font-size: 16px; font-weight: 600; color: var(--cn-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cn-row-sub { font-size: 13.5px; line-height: 1.35; color: var(--cn-text-2); }
+.cn-row-sub.is-action { color: var(--cn-action); }
+.cn-row-sub.is-watch { color: var(--cn-watch); }
+.cn-row-value { font-size: 16px; color: var(--cn-text-2); }
+.cn-chev { width: 18px; height: 18px; color: var(--cn-faint); flex: none; }
+
+.cn-avatar {
+  width: 40px; height: 40px; flex: none; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600; background: var(--cn-accent-soft); color: var(--cn-accent-text);
+}
+.cn-avatar.is-action { background: #3A2320; color: var(--cn-action); }
+.cn-avatar.is-watch { background: #3A3120; color: var(--cn-watch); }
+.cn-avatar.is-pending { background: var(--cn-raised); color: var(--cn-text-2); }
+.cn-avatar--lg { width: 60px; height: 60px; font-size: 20px; }
+.cn-avatar--sm { width: 32px; height: 32px; font-size: 12px; }
+
+.cn-ring { position: relative; width: 34px; height: 34px; flex: none; }
+.cn-ring svg { width: 34px; height: 34px; transform: rotate(-90deg); }
+.cn-ring span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--cn-mono); font-size: 10px; font-weight: 600; color: var(--cn-text); }
+
+.cn-pending {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-top: 10px;
+  border-radius: 18px; border: 1px dashed #2E3833;
+}
+
+/* ── Segmented control ───────────────────────────────────────── */
+
+.cn-seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 3px; margin: 0 0 4px; border-radius: 12px; background: var(--cn-surface); }
+.cn-seg button {
+  height: 34px; margin: 0; padding: 0 6px; width: auto; border: 0; border-radius: 9px; box-shadow: none;
+  background: transparent; color: var(--cn-text-2); font-size: 13.5px; font-weight: 600;
+}
+.cn-seg button[aria-selected="true"] { background: var(--cn-raised-2); color: var(--cn-text); }
+
+/* ── Cards, tiles, chips ──────────────────────────────────────── */
+
+.cn-card { background: var(--cn-surface); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.cn-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.cn-card-title { font-size: 16px; font-weight: 600; color: var(--cn-text); }
+.cn-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.cn-tile { background: var(--cn-surface); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.cn-tile-label { font-size: 13px; color: var(--cn-text-2); }
+.cn-tile-value { font-family: var(--cn-mono); font-size: 26px; font-weight: 600; color: var(--cn-text); }
+.cn-tile-value small { font-size: 15px; color: var(--cn-text-3); }
+.cn-tile-value.is-action { color: var(--cn-action); }
+
+.cn-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cn-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 999px; background: var(--cn-raised); color: var(--cn-text); font-size: 13px; }
+.cn-chip.is-action { background: var(--cn-action-bg); color: var(--cn-action-strong); }
+.cn-chip.is-watch { background: var(--cn-watch-bg); color: var(--cn-watch); }
+.cn-chip.is-ok { background: var(--cn-accent-soft); color: var(--cn-accent-text); }
+.cn-chip.is-pending { background: var(--cn-raised); color: var(--cn-text-2); border: 1px dashed #3A443F; }
+
+.cn-alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px; margin-top: 16px; border-radius: 16px; background: var(--cn-action-bg); }
+.cn-alert.is-watch { background: var(--cn-watch-bg); }
+.cn-alert svg { width: 20px; height: 20px; flex: none; margin-top: 1px; color: var(--cn-action); }
+.cn-alert.is-watch svg { color: var(--cn-watch); }
+.cn-alert-title { font-size: 15px; font-weight: 600; color: var(--cn-action-strong); }
+.cn-alert.is-watch .cn-alert-title { color: var(--cn-watch); }
+.cn-alert-sub { font-size: 13.5px; color: #D59B94; }
+.cn-alert.is-watch .cn-alert-sub { color: #CDAE78; }
+.cn-note { margin: 12px 4px 0; font-size: 13.5px; color: var(--cn-watch); }
+
+.cn-quote { margin: 0; font-size: 15px; line-height: 1.45; color: #C7D0CA; }
+.cn-spark { display: block; width: 100%; height: 96px; color: var(--cn-accent); }
+.cn-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--cn-text-3); }
+.cn-bars { display: flex; align-items: flex-end; gap: 6px; height: 84px; }
+.cn-bar { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+.cn-bar i { display: block; width: 100%; min-height: 3px; border-radius: 6px 6px 2px 2px; background: var(--cn-accent); }
+.cn-bar span { font-family: var(--cn-mono); font-size: 11px; color: var(--cn-text-3); }
+
+/* ── Detail header ────────────────────────────────────────────── */
+
+.cn-navbar { display: flex; align-items: center; justify-content: space-between; margin: 0 -8px; min-height: 44px; }
+.cn-person { display: flex; align-items: center; gap: 14px; padding: 4px 4px 0; }
+.cn-person h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--cn-text); text-transform: none; }
+.cn-actions3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.cn-action {
+  height: 58px; margin: 0; width: auto; border: 0; border-radius: 14px; box-shadow: none;
+  background: var(--cn-raised); color: var(--cn-text);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-size: 13px; font-weight: 600;
+}
+.cn-action svg { width: 18px; height: 18px; }
+.cn-action--primary { background: var(--cn-accent); color: var(--cn-accent-ink); }
+
+/* ── Form bits ───────────────────────────────────────────────── */
+
+.cn-field { display: flex; flex-direction: column; gap: 6px; }
+.cn-field label, .cn-label { font-size: 13px; color: var(--cn-text-2); }
+.cn-input, .cn-select, .cn-textarea {
+  width: 100%; height: 48px; margin: 0; padding: 0 14px;
+  border: 0; border-radius: 12px; background: var(--cn-raised); color: var(--cn-text);
+  font-family: var(--cn-font); font-size: 16px; box-shadow: none;
+}
+.cn-select { appearance: none; -webkit-appearance: none; padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239AA69F' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 9l4-4 4 4M8 15l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; }
+.cn-textarea { height: auto; min-height: 44px; padding: 11px 16px; line-height: 1.4; resize: none; border-radius: 22px; }
+.cn-input::placeholder, .cn-textarea::placeholder { color: var(--cn-text-3); }
+.cn-macros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cn-macros .cn-input { font-family: var(--cn-mono); }
+
+.cn-switch { position: relative; width: 51px; height: 31px; flex: none; margin: 0; padding: 0; border: 0; border-radius: 16px; background: var(--cn-raised-2); box-shadow: none; transition: background 0.2s ease; }
+.cn-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #F4F7F5; transition: transform 0.2s ease; }
+.cn-switch[aria-checked="true"] { background: var(--cn-accent); }
+.cn-switch[aria-checked="true"]::after { transform: translateX(20px); }
+
+/* ── Program editor ───────────────────────────────────────────── */
+
+.cn-name-input { width: 100%; height: 44px; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: var(--cn-text); font-family: var(--cn-font); font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+.cn-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
+.cn-day {
+  height: 56px; margin: 0; padding: 0; width: auto; border: 0; border-radius: 14px; box-shadow: none;
+  background: var(--cn-surface); color: var(--cn-text-3);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 13px; font-weight: 600;
+}
+.cn-day.has-work { color: var(--cn-text); }
+.cn-day i { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+.cn-day.has-work i { background: var(--cn-accent); }
+.cn-day[aria-selected="true"] { background: var(--cn-accent); color: var(--cn-accent-ink); }
+.cn-day[aria-selected="true"] i { background: var(--cn-accent-ink); }
+.cn-scheme {
+  width: 80px; height: 36px; margin: 0; padding: 0 6px; flex: none;
+  border: 0; border-radius: 10px; background: var(--cn-raised); color: var(--cn-text); box-shadow: none;
+  font-family: var(--cn-mono); font-size: 14px; font-weight: 600; text-align: center;
+}
+.cn-row-remove { width: 36px; height: 36px; margin: 0; padding: 0; flex: none; border: 0; background: none; box-shadow: none; color: var(--cn-faint); display: inline-flex; align-items: center; justify-content: center; }
+.cn-row-remove svg { width: 16px; height: 16px; }
+.cn-add-row { color: var(--cn-accent); font-weight: 500; min-height: 54px; }
+.cn-add-row svg { width: 18px; height: 18px; }
+.cn-sticky {
+  position: sticky; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 5;
+  display: flex; gap: 10px; margin-top: 16px; padding: 12px 0 4px;
+  background: linear-gradient(rgba(11, 15, 13, 0), var(--cn-ground) 35%);
+}
+.cn-sticky .cn-btn--primary { flex: 1; }
+
+/* ── Inbox thread ────────────────────────────────────────────── */
+
+.cn-thread-head { display: grid; grid-template-columns: 96px 1fr 96px; align-items: center; margin: 0 -8px; padding-bottom: 10px; border-bottom: 1px solid var(--cn-line); }
+.cn-thread-who { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; }
+.cn-context { align-self: center; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--cn-surface); font-size: 13px; color: var(--cn-text-2); }
+.cn-context svg { width: 14px; height: 14px; color: var(--cn-watch); flex: none; }
+/* Fill the screen so the composer sits just above the tab bar even on a
+   short thread (header ~110px, composer ~110px, tab bar ~64px). */
+.cn-thread { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; min-height: calc(100dvh - 300px - env(safe-area-inset-bottom, 0px)); }
+.cn-day-sep { align-self: center; margin-top: 8px; font-size: 12px; color: var(--cn-text-3); }
+.cn-bubble { align-self: flex-end; max-width: 80%; padding: 10px 14px; border-radius: 20px 20px 6px 20px; background: var(--cn-accent-soft); color: var(--cn-text); font-size: 15px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cn-bubble-meta { align-self: flex-end; margin-top: -2px; font-size: 11.5px; color: var(--cn-text-3); }
+.cn-composer {
+  position: sticky; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 5;
+  display: flex; flex-direction: column; gap: 10px; margin: 0 -16px; padding: 10px 12px;
+  background: #0E1311; border-top: 1px solid var(--cn-line);
+}
+.cn-quick { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.cn-quick::-webkit-scrollbar { display: none; }
+.cn-quick button { flex: none; height: 34px; margin: 0; padding: 0 12px; width: auto; border: 0; border-radius: 999px; box-shadow: none; background: var(--cn-raised); color: #C7D0CA; font-size: 13.5px; font-weight: 500; }
+.cn-quick button.is-ai { background: var(--cn-accent-soft); color: var(--cn-accent-text); }
+.cn-compose-row { display: flex; align-items: flex-end; gap: 8px; }
+.cn-compose-row .cn-textarea { flex: 1; }
+.cn-send { width: 44px; height: 44px; margin: 0; padding: 0; flex: none; border: 0; border-radius: 22px; background: var(--cn-accent); color: var(--cn-accent-ink); display: inline-flex; align-items: center; justify-content: center; box-shadow: none; }
+.cn-send svg { width: 20px; height: 20px; }
+
+/* ── Bottom sheet ────────────────────────────────────────────── */
+
+.cn-sheet-backdrop { position: fixed; inset: 0; z-index: 3000; background: rgba(0, 0, 0, 0.55); display: flex; align-items: flex-end; justify-content: center; animation: cn-fade 0.18s ease; }
+.cn-sheet {
+  width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto;
+  background: var(--cn-raised); border-radius: 24px 24px 0 0;
+  padding: 10px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 14px;
+  animation: cn-rise 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cn-sheet-grab { align-self: center; width: 36px; height: 5px; border-radius: 3px; background: #3A443F; }
+.cn-sheet-title { margin: 0; font-size: 18px; font-weight: 600; color: var(--cn-text); }
+.cn-sheet .cn-group { background: var(--cn-surface); }
+.cn-sheet .cn-input, .cn-sheet .cn-textarea { background: var(--cn-surface); }
+.cn-sheet .cn-btn:not(.cn-btn--primary):not(.cn-btn--danger) { background: var(--cn-surface); }
+.cn-error { min-height: 1.2em; margin: 0; font-size: 13px; color: var(--cn-action); }
+.cn-check { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--cn-accent); }
+@keyframes cn-fade { from { opacity: 0; } }
+@keyframes cn-rise { from { transform: translateY(24px); opacity: 0.6; } }
+
+/* ── Coach tab bar ───────────────────────────────────────────── */
+
+#coachNav { display: none; }
+body.coach-shell #bottomNav { display: none; }
+body.coach-shell #coachNav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding: 6px 8px env(safe-area-inset-bottom, 0px);
+  background: rgba(11, 15, 13, 0.88);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--cn-line);
+}
+#coachNav button {
+  margin: 0; padding: 4px 0; width: auto; height: 52px; border: 0; background: none; box-shadow: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  color: var(--cn-text-3); font-family: var(--cn-font); font-size: 10.5px; font-weight: 500;
+}
+#coachNav button svg { width: 24px; height: 24px; }
+#coachNav button[aria-current="page"] { color: var(--cn-accent); font-weight: 600; }
+
+/* Coach Ops used a row of sub-tabs; the tab bar replaces it. The
+   buttons stay in the DOM because the tab bar drives them. */
+body.coach-shell #coachOpsSubtabNav,
+#coachOpsTab.cn > .coach-page-header,
+#clientsTab.cn > .coach-page-header { display: none; }
+body.coach-shell #aiCoachFab,
+body.coach-shell .ai-coach-fab { display: none !important; }
+
+/* Technique videos keep their existing markup; align it with the kit. */
+#coachSub_videos .mx-pod { background: var(--cn-surface); border: 0; border-radius: 20px; box-shadow: none; }
+
+/* ── Settings → Your Coach (athlete side) ────────────────────── */
+
+#yourCoachSection.cn { margin-top: 20px; padding: 0 6px; }
+#yourCoachSection[hidden] { display: none; }
+#yourCoachSection .cn-title { font-size: 28px; }
+.cn-coach-card { display: flex; align-items: center; gap: 14px; padding: 16px; margin-top: 12px; border-radius: 20px; background: var(--cn-surface); }
+.cn-offer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.cn-offer { padding: 14px; border-radius: 18px; background: var(--cn-surface); display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+.cn-offer .cn-btn { height: 40px; font-size: 14px; }
+.cn-offer-kicker { font-size: 12.5px; color: var(--cn-text-2); }
+.cn-offer-title { font-size: 16px; font-weight: 600; line-height: 1.25; color: var(--cn-text); }
+.cn-leave { margin-top: 18px; height: 50px; width: 100%; border: 0; border-radius: 16px; background: var(--cn-surface); color: var(--cn-action); font-size: 16px; font-weight: 500; box-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cn-sheet, .cn-sheet-backdrop { animation: none; }
+  .cn-btn, .cn-switch, .cn-switch::after { transition: none; }
+}
