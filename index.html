@@ -50,6 +50,7 @@
   <link rel="stylesheet" href="css/body-hub.css">
   <link rel="stylesheet" href="css/engagement.css">
   <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/performance-mode.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -793,21 +794,50 @@
         </select>
       </div>
 
-      <!-- Rest timer banner — shown while a rest is active -->
+      <!-- Performance mode header (css/performance-mode.css shows it only
+           while body.performance-mode is set — src/js/performance-mode.js) -->
+      <div id="pmHeader" class="pm-header">
+        <span class="pm-kicker"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span class="pm-kicker-text">Performance mode<span id="pmDayName"></span></span></span>
+        <button type="button" class="cta-capsule-outline pm-exit-btn" onclick="exitPerformanceMode()">Full view</button>
+      </div>
+
+      <!-- Rest timer banner — shown while a rest is active. The .rest-banner-pm*
+           parts (heading, ±15 s, pause, progress bar) only show in
+           performance mode, where the banner becomes a large sticky card. -->
       <div id="restBanner" class="rest-banner" hidden aria-live="polite">
-        <div class="rest-banner-ring-wrap">
+        <div class="rest-banner-pm-head">
+          <span class="rest-banner-pm-title"><span class="rb-state-default">Rest timer</span><span class="rb-state-urgent">Get ready</span><span class="rb-state-paused">Rest timer · paused</span></span>
+          <span class="rest-banner-next">Next · <span id="restBannerNext"></span></span>
+        </div>
+        <button type="button" class="rest-banner-ring-wrap" onclick="if(document.body.classList.contains('performance-mode') &amp;&amp; typeof toggleRestTimerPause==='function') toggleRestTimerPause();" aria-label="Pause or resume rest timer">
           <svg class="rest-banner-ring-svg" viewBox="0 0 56 56">
             <circle class="rest-banner-ring-track" cx="28" cy="28" r="22"/>
             <circle class="rest-banner-ring-fill" id="restBannerRingFill" cx="28" cy="28" r="22"
               stroke-dasharray="138.23" stroke-dashoffset="0"/>
           </svg>
           <span class="rest-banner-ring-pct" id="restBannerPct">100%</span>
-        </div>
+        </button>
         <div class="rest-banner-info">
           <span class="rest-banner-label">Rest timer</span>
           <span class="rest-banner-time" id="restBannerTime">0:00</span>
+          <span class="rest-banner-hint"><span class="rb-state-running">Tap to pause</span><span class="rb-state-paused">Tap to resume</span></span>
         </div>
+        <button class="rest-banner-pm-btn rest-banner-less" type="button" onclick="adjustRestTimer(-15)">−15 s</button>
+        <button class="rest-banner-pm-btn rest-banner-more" type="button" onclick="adjustRestTimer(15)">+15 s</button>
+        <button class="rest-banner-pm-btn rest-banner-pause" type="button" onclick="toggleRestTimerPause()"><span class="rb-state-running">Pause</span><span class="rb-state-paused">Resume</span></button>
         <button class="rest-banner-skip" type="button" onclick="skipRestTimer()">Skip <span class="ui-icon" data-icon="x"></span></button>
+        <div class="rest-banner-bar"><i id="restBannerBarFill"></i></div>
+      </div>
+
+      <!-- "Rest over!" — performance mode only, shown for a few seconds when
+           the auto-started rest timer runs out (performance-mode.js) -->
+      <div id="restOverCard" class="rest-over-card" hidden aria-live="assertive">
+        <span class="rest-over-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg></span>
+        <div class="rest-over-text">
+          <span class="rest-over-title">Rest over!</span>
+          <span class="rest-over-sub">Up next · <span id="restOverNext"></span></span>
+        </div>
+        <button type="button" class="rest-over-dismiss" onclick="hideRestOverCard()">Got it</button>
       </div>
 
       <!-- Workout session timer — styled as a full-width banner -->
@@ -1018,6 +1048,22 @@
 
         <!-- Exercises already logged today (session-queue.js renderSessionSoFar()) -->
         <div id="sessionSoFarCard" style="margin-top:10px;"></div>
+
+        <!-- Performance mode only: rest length for the auto-started rest
+             timer — same presets as the Rest sub-tab (performance-mode.js) -->
+        <div id="pmRestPresets" class="pod pm-rest-card">
+          <div class="pod-row">
+            <span class="pod-kicker">Rest timer</span>
+            <span class="sq-count">starts after each logged set</span>
+          </div>
+          <div class="rest-presets pm-rest-presets">
+            <button type="button" class="rest-preset-btn" data-rest-seconds="60" onclick="setPerformanceRestSeconds(60)">1 min</button>
+            <button type="button" class="rest-preset-btn" data-rest-seconds="90" onclick="setPerformanceRestSeconds(90)">90 s</button>
+            <button type="button" class="rest-preset-btn" data-rest-seconds="120" onclick="setPerformanceRestSeconds(120)">2 min</button>
+            <button type="button" class="rest-preset-btn" data-rest-seconds="180" onclick="setPerformanceRestSeconds(180)">3 min</button>
+            <button type="button" class="rest-preset-btn" data-rest-seconds="300" onclick="setPerformanceRestSeconds(300)">5 min</button>
+          </div>
+        </div>
 
         <!-- Logs render here -->
         <div id="workoutsContainer" style="margin-top:16px;"></div>
@@ -5820,6 +5866,8 @@ function addLogEntry() {
   renderWorkouts();
   if (typeof window.renderSessionSoFar === 'function') window.renderSessionSoFar();
   updateTrainingCalendar();
+  // Lets performance mode auto-start the rest timer (src/js/performance-mode.js)
+  document.dispatchEvent(new CustomEvent('tl:set-logged', { detail: { exercise, sets, date } }));
 
   if (typeof window.triggerFlowCapture === 'function') {
     window.triggerFlowCapture({ exercise, sets, date });
@@ -7395,6 +7443,8 @@ function _updateRestBanner(remaining, total) {
   if (timeEl)   timeEl.textContent   = formatRestTime(remaining);
   if (pctEl)    pctEl.textContent    = Math.ceil(pct * 100) + '%';
   if (ringFill) ringFill.style.strokeDashoffset = C * (1 - pct);
+  const barFill = document.getElementById('restBannerBarFill');
+  if (barFill) barFill.style.width = Math.ceil(pct * 100) + '%';
 }
 
 // Rest timer is wall-clock based and persisted so it survives app
@@ -7414,15 +7464,25 @@ function _tickRestTimer() {
     if (banner) banner.hidden = true;
     return;
   }
-  const remaining = Math.round((state.endTimeMs - Date.now()) / 1000);
+  // pausedRemaining is set by performance mode's pause button
+  // (src/js/performance-mode.js) — a paused timer holds its time.
+  const paused = typeof state.pausedRemaining === 'number';
+  const remaining = paused
+    ? Math.max(1, Math.round(state.pausedRemaining))
+    : Math.round((state.endTimeMs - Date.now()) / 1000);
   if (remaining <= 0) {
     clearInterval(restInterval);
     localStorage.removeItem(REST_TIMER_KEY);
     if (display) display.textContent = 'Rest Over!';
     if (banner) banner.hidden = true;
     logRestBreak(state.totalSeconds / 60);
+    document.dispatchEvent(new CustomEvent('tl:rest-finished'));
   } else {
-    if (banner) banner.hidden = false;
+    if (banner) {
+      banner.hidden = false;
+      banner.classList.toggle('is-paused', paused);
+      banner.classList.toggle('is-urgent', !paused && remaining <= 10);
+    }
     if (display) display.textContent = formatRestTime(remaining);
     _updateRestBanner(remaining, state.totalSeconds);
   }
@@ -16937,6 +16997,7 @@ function showHistoryMiniTab(type) {
           }
         }
         if (typeof exitWorkoutFocusMode === 'function') exitWorkoutFocusMode();
+        if (typeof window.exitPerformanceMode === 'function') window.exitPerformanceMode();
         // Ending a workout should not immediately archive it — it needs to
         // stay visible in the Log tab until archiveOldWorkouts() ages it out.
         renderWorkouts();
@@ -19903,6 +19964,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/reminders.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-queue.js"></script>
+  <script src="src/js/performance-mode.js"></script>
   <script src="src/js/settings-hero.js"></script>
   <script src="src/js/libraries.js"></script>
   <script src="src/js/session-context.js"></script>

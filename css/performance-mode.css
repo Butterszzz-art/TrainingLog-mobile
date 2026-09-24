@@ -1,0 +1,400 @@
+/* =============================================================
+   PERFORMANCE MODE — distraction-free Log view mid-workout
+   body.performance-mode is toggled by src/js/performance-mode.js.
+   It hides everything on the Train tab except the logger itself
+   (rest timer, workout timer, quick-log card, session so far,
+   today's plan) and turns the rest banner into a large sticky card.
+   Depends on: tokens.css, log.css, design-system.css
+   ============================================================= */
+
+/* ── Always-on resets for markup shared with the normal view ─── */
+
+/* The rest ring is a <button> (tap to pause) — strip the global button
+   look so the normal-mode banner renders exactly as before. */
+.rest-banner-ring-wrap {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  cursor: default;
+}
+
+/* Tap-to-pause is a performance mode feature only */
+body.performance-mode .rest-banner-ring-wrap { cursor: pointer; }
+
+/* Performance-mode-only parts stay out of the normal view */
+.pm-header,
+#pmRestPresets,
+.rest-over-card,
+.rest-banner-pm-head,
+.rest-banner-pm-btn,
+.rest-banner-hint,
+.rest-banner-bar {
+  display: none;
+}
+
+/* Train hero entry point */
+.train-hero-pm-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  margin: 8px 0 0;
+  box-shadow: none;
+}
+
+/* ── Hide everything but the logger ─────────────────────────── */
+
+body.performance-mode #bottomNav,
+body.performance-mode #workoutFocusBar,
+body.performance-mode #aiCoachFab,
+body.performance-mode #fcShortcutRow,
+body.performance-mode #logSubtabNav,
+body.performance-mode #trainHeroCard,
+body.performance-mode #volumeLandmarksCard,
+body.performance-mode #trainReadinessStrip,
+body.performance-mode #sessionContextBar,
+body.performance-mode #logSmartTip,
+body.performance-mode #resistanceTemplateSelect,
+body.performance-mode #templateLoadMessage {
+  display: none !important;
+}
+
+/* overflow: hidden on #pocketFitContainer (x) and .tab-content makes them
+   scroll containers, which would pin the sticky rest card to them instead
+   of the viewport; clip crops the same way without that side effect. */
+body.performance-mode #pocketFitContainer { overflow-x: clip; }
+body.performance-mode #logTab { overflow: clip; }
+
+/* No bottom nav to clear any more */
+body.performance-mode #appContainer {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Logger first, plan last */
+body.performance-mode #logSub_log.active {
+  display: flex;
+  flex-direction: column;
+}
+body.performance-mode #pmHeader           { order: 0; }
+body.performance-mode #restBanner         { order: 1; }
+body.performance-mode #restOverCard       { order: 1; }
+body.performance-mode #workoutTimer       { order: 2; }
+body.performance-mode #coachLogForBar     { order: 3; }
+body.performance-mode #injuryWarnBanner   { order: 3; }
+body.performance-mode #resistance-section { order: 4; }
+body.performance-mode #sessionQueueCard   { order: 5; padding-bottom: 12px; }
+
+/* ── Header ─────────────────────────────────────────────────── */
+
+body.performance-mode .pm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  margin: 4px 14px 6px;
+}
+
+.pm-kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green-70);
+}
+
+.pm-kicker svg { flex: none; }
+
+.pm-kicker-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-exit-btn {
+  flex: none;
+  margin: 0;
+  padding: 0 14px;
+  min-height: 36px;
+  box-shadow: none;
+}
+
+/* ── Rest length presets ────────────────────────────────────── */
+
+body.performance-mode #pmRestPresets {
+  display: block;
+  margin-top: 10px;
+}
+
+.pm-rest-presets {
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.pm-rest-presets .rest-preset-btn {
+  flex: 1;
+  margin: 0;
+  padding: 8px 0;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+/* ── Rest timer: large sticky card ──────────────────────────── */
+
+body.performance-mode .rest-banner {
+  position: sticky;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto 64px 64px auto;
+  grid-template-areas:
+    "head head head"
+    "ring less more"
+    "ring pause skip"
+    "bar  bar  bar";
+  column-gap: 8px;
+  row-gap: 8px;
+  align-items: center;
+  margin: 4px 12px 10px;
+  padding: 14px;
+  border-radius: var(--radius-pod);
+  border: 1.5px solid rgba(240, 160, 64, 0.55);
+  background: linear-gradient(168deg, #231a0c, #140f07);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+body.performance-mode .rest-banner[hidden] { display: none !important; }
+
+body.performance-mode .rest-banner-pm-head {
+  grid-area: head;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rest-banner-pm-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #f0a040;
+  white-space: nowrap;
+}
+
+.rest-banner-next {
+  font-size: 11.5px;
+  color: var(--secondary-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.performance-mode .rest-banner-ring-wrap {
+  grid-area: ring;
+  width: 136px;
+  height: 136px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+body.performance-mode .rest-banner-ring-svg {
+  width: 136px;
+  height: 136px;
+}
+
+body.performance-mode .rest-banner-ring-track,
+body.performance-mode .rest-banner-ring-fill { stroke-width: 4; }
+
+body.performance-mode .rest-banner-ring-pct,
+body.performance-mode .rest-banner-label { display: none; }
+
+/* Time + hint sit inside the ring; clicks fall through to the ring button */
+body.performance-mode .rest-banner-info {
+  grid-area: ring;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+body.performance-mode .rest-banner-time {
+  font-size: 36px;
+  letter-spacing: 0.02em;
+}
+
+body.performance-mode .rest-banner-hint {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+}
+
+body.performance-mode .rest-banner-pm-btn,
+body.performance-mode .rest-banner-skip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(240, 160, 64, 0.35);
+  background: transparent;
+  box-shadow: none;
+  color: #f0a040;
+  font-family: var(--font-legacy);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rest-banner-less  { grid-area: less; }
+.rest-banner-more  { grid-area: more; }
+.rest-banner-pause { grid-area: pause; }
+body.performance-mode .rest-banner-skip {
+  grid-area: skip;
+  background: #f0a040;
+  border-color: #f0a040;
+  color: #0b130d;
+}
+
+body.performance-mode .rest-banner-bar {
+  grid-area: bar;
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(240, 160, 64, 0.15);
+  overflow: hidden;
+}
+
+.rest-banner-bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: var(--radius-pill);
+  background: #f0a040;
+  transition: width 0.9s linear;
+}
+
+/* State labels: running / paused / last 10 s */
+.rb-state-urgent,
+.rb-state-paused { display: none; }
+.rest-banner.is-paused .rb-state-default,
+.rest-banner.is-paused .rb-state-running,
+.rest-banner.is-urgent .rb-state-default { display: none; }
+.rest-banner.is-paused .rb-state-paused,
+.rest-banner.is-urgent:not(.is-paused) .rb-state-urgent { display: inline; }
+
+/* Last 10 seconds — the whole card turns green: "Get ready" */
+body.performance-mode .rest-banner.is-urgent {
+  border-color: var(--green-70);
+  background: linear-gradient(168deg, #10261b, #0b1510);
+}
+body.performance-mode .rest-banner.is-urgent .rest-banner-pm-title,
+body.performance-mode .rest-banner.is-urgent .rest-banner-time,
+body.performance-mode .rest-banner.is-urgent .rest-banner-pm-btn { color: var(--green-70); }
+body.performance-mode .rest-banner.is-urgent .rest-banner-ring-fill { stroke: var(--green-70); }
+body.performance-mode .rest-banner.is-urgent .rest-banner-ring-track { stroke: rgba(61, 157, 115, 0.18); }
+body.performance-mode .rest-banner.is-urgent .rest-banner-pm-btn { border-color: rgba(61, 157, 115, 0.45); }
+body.performance-mode .rest-banner.is-urgent .rest-banner-skip {
+  background: var(--green-70);
+  border-color: var(--green-70);
+}
+body.performance-mode .rest-banner.is-urgent .rest-banner-bar { background: rgba(61, 157, 115, 0.18); }
+body.performance-mode .rest-banner.is-urgent .rest-banner-bar i { background: var(--green-70); }
+
+/* ── "Rest over!" card ──────────────────────────────────────── */
+
+body.performance-mode .rest-over-card {
+  position: sticky;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 4px 12px 10px;
+  padding: 16px;
+  border-radius: var(--radius-pod);
+  border: 1.5px solid var(--green-70);
+  background: #0f2419;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55);
+  animation: pm-rest-over-in 0.3s cubic-bezier(.2, .8, .3, 1) both;
+}
+
+body.performance-mode .rest-over-card[hidden] { display: none; }
+
+@keyframes pm-rest-over-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rest-over-icon {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green-60), var(--green-50));
+  color: var(--label-on-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rest-over-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rest-over-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  white-space: nowrap;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.rest-over-sub {
+  font-size: 12.5px;
+  color: var(--secondary-text);
+}
+
+.rest-over-dismiss {
+  flex: none;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  color: var(--text-color);
+  font-family: var(--font-legacy);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.performance-mode .rest-over-card { animation: none; }
+  .rest-banner-bar i { transition: none; }
+}

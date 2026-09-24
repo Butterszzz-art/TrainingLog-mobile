@@ -60,7 +60,10 @@ describe('addLogEntry', () => {
       // sandbox was written, so calling addLogEntry() threw a bare
       // ReferenceError before either was stubbed here.
       getActiveUsername: () => 'u1',
-      createDefaultAdvancedSet: () => ({})
+      createDefaultAdvancedSet: () => ({}),
+      // addLogEntry() announces each saved entry with a tl:set-logged
+      // CustomEvent (performance mode auto-starts the rest timer from it).
+      CustomEvent: dom.window.CustomEvent
     };
     context.window = context; // so `window.coachLoggingClient` resolves (to undefined, falling through to getActiveUsername())
     vm.createContext(context);
@@ -90,5 +93,29 @@ describe('addLogEntry', () => {
     context.addLogEntry();
     workouts = JSON.parse(context.localStorage.getItem('workouts_u1'));
     expect(workouts.length).toBe(2);
+  });
+
+  test('dispatches tl:set-logged after a successful save', () => {
+    const doc = context.document;
+    const events = [];
+    doc.addEventListener('tl:set-logged', (e) => events.push(e.detail));
+    doc.getElementById('exercise').value = 'Bench';
+    doc.getElementById('sets').value = '1';
+    doc.getElementById('weightUnit').value = 'kg';
+    doc.getElementById('reps_0').value = '5';
+    doc.getElementById('weight_0').value = '100';
+    doc.getElementById('entryDate').value = '2024-01-01';
+    context.addLogEntry();
+    expect(events).toEqual([{ exercise: 'Bench', sets: 1, date: '2024-01-01' }]);
+  });
+
+  test('does not dispatch tl:set-logged when validation fails', () => {
+    const doc = context.document;
+    const events = [];
+    doc.addEventListener('tl:set-logged', (e) => events.push(e.detail));
+    doc.getElementById('exercise').value = '';
+    doc.getElementById('sets').value = '1';
+    context.addLogEntry();
+    expect(events).toEqual([]);
   });
 });
