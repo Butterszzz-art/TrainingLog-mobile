@@ -49,6 +49,7 @@
   <link rel="stylesheet" href="css/ai-coach.css">
   <link rel="stylesheet" href="css/body-hub.css">
   <link rel="stylesheet" href="css/engagement.css">
+  <link rel="stylesheet" href="css/macros-today.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/performance-mode.css">
   <link rel="manifest" href="manifest.json">
@@ -2810,245 +2811,137 @@
       <button class="pill" onclick="showTab('cardioTab')">Cardio</button>
     </div>
   <div id="macrosTab">
-    <div id="macrosSubTabs" class="macros-subtabs">
-      <button type="button" class="macros-subtab active" data-macro-subtab="targets">Targets</button>
-      <button type="button" class="macros-subtab" data-macro-subtab="adjust">Adjust Macros</button>
-      <button type="button" class="macros-subtab" data-macro-subtab="personal">Personal Details</button>
+    <div id="macrosSubTabs" class="macros-subtabs" role="tablist">
+      <button type="button" class="macros-subtab active" data-macro-subtab="targets">Today</button>
+      <button type="button" class="macros-subtab" data-macro-subtab="adjust">Adjust</button>
+      <button type="button" class="macros-subtab" data-macro-subtab="personal">Profile</button>
     </div>
 
     <div id="macrosTargetsView" class="macros-subview" data-macro-view="targets">
       <div id="macrosMainContent" style="max-width: 600px; margin: 0 auto;">
         <div id="macroTargetsPanel" class="panel active">
-          <div id="targetsCard" class="card sticky">
-            <h2 style="font-size:1.5rem;">Targets <span id="offlineBadge" style="display:none;font-size:0.8rem;"><span class="ui-icon" data-icon="clock"></span> Offline</span></h2>
-            <div id="assignedNutritionPlanCard" style="display:none;margin:10px 0;padding:10px;border:1px solid #dbe7ff;border-radius:10px;background:#f5f9ff;">
-              <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
-                <strong>Coach Nutrition Plan</strong>
-                <small id="assignedNutritionPlanMeta" style="color:#54657a;"></small>
+          <!-- Today view: one hero pod (same pattern as the Home hero
+               card) instead of a card holding five rings, four bordered
+               rows and a boxed nudge. Every id the macro JS writes to
+               (macro*Progress/Target, *VisBar, macroCalsNet, the hidden
+               <progress> bars, qa* inputs) is unchanged. -->
+          <div id="targetsCard" class="macro-today">
+            <div id="assignedNutritionPlanCard" class="pod macro-coach-plan" style="display:none;">
+              <div class="macro-coach-plan-head">
+                <span class="mx-lbl">Coach nutrition plan</span>
+                <small id="assignedNutritionPlanMeta" class="mx-meta"></small>
               </div>
-              <p id="assignedNutritionPlanSummary" style="margin:6px 0 0 0;font-size:0.9rem;color:#30445d;"></p>
-            </div>
-            <!-- Macro ring visualisations -->
-            <div class="macro-rings-row">
-              <div class="macro-ring-wrap macro-ring-cals">
-                <svg class="macro-ring-svg" viewBox="0 0 100 100">
-                  <circle class="macro-ring-track" cx="50" cy="50" r="44"/>
-                  <circle class="macro-ring-fill" id="calsRingFill" cx="50" cy="50" r="44"
-                    stroke-dasharray="276.46" stroke-dashoffset="276.46"/>
-                </svg>
-                <div class="macro-ring-inner">
-                  <span class="macro-ring-value" id="calsRingValue">0</span>
-                  <span class="macro-ring-unit">kcal</span>
-                </div>
-              </div>
-              <div class="macro-ring-trio">
-                <div class="macro-ring-wrap macro-ring-protein macro-ring-sm">
-                  <svg class="macro-ring-svg" viewBox="0 0 70 70">
-                    <circle class="macro-ring-track" cx="35" cy="35" r="29"/>
-                    <circle class="macro-ring-fill" id="proteinRingFill" cx="35" cy="35" r="29"
-                      stroke-dasharray="182.21" stroke-dashoffset="182.21"/>
-                  </svg>
-                  <div class="macro-ring-inner">
-                    <span class="macro-ring-value" id="proteinRingValue">0</span>
-                    <span class="macro-ring-unit">P</span>
-                  </div>
-                </div>
-                <div class="macro-ring-wrap macro-ring-carbs macro-ring-sm">
-                  <svg class="macro-ring-svg" viewBox="0 0 70 70">
-                    <circle class="macro-ring-track" cx="35" cy="35" r="29"/>
-                    <circle class="macro-ring-fill" id="carbsRingFill" cx="35" cy="35" r="29"
-                      stroke-dasharray="182.21" stroke-dashoffset="182.21"/>
-                  </svg>
-                  <div class="macro-ring-inner">
-                    <span class="macro-ring-value" id="carbsRingValue">0</span>
-                    <span class="macro-ring-unit">C</span>
-                  </div>
-                </div>
-                <div class="macro-ring-wrap macro-ring-fat macro-ring-sm">
-                  <svg class="macro-ring-svg" viewBox="0 0 70 70">
-                    <circle class="macro-ring-track" cx="35" cy="35" r="29"/>
-                    <circle class="macro-ring-fill" id="fatRingFill" cx="35" cy="35" r="29"
-                      stroke-dasharray="182.21" stroke-dashoffset="182.21"/>
-                  </svg>
-                  <div class="macro-ring-inner">
-                    <span class="macro-ring-value" id="fatRingValue">0</span>
-                    <span class="macro-ring-unit">F</span>
-                  </div>
-                </div>
-              </div>
+              <p id="assignedNutritionPlanSummary"></p>
             </div>
 
-            <!-- Macro Nudge: pace-aware banner + one-tap favorites -->
-            <div id="macroNudgeContainer"></div>
+            <section class="pod pod--hero macro-hero" aria-label="Today's macros">
+              <div class="macro-hero-top">
+                <span class="mx-lbl" id="macroHeroDayLabel">Today</span>
+                <span id="offlineBadge" class="mx-chip mx-chip--sm mx-chip--brass" style="display:none;"><span class="ui-icon" data-icon="clock"></span> Offline</span>
+              </div>
+              <div class="macro-hero-num-row">
+                <span class="macro-hero-num mx-num" id="macroCalsProgress">0</span>
+                <span class="mx-unit">/ <span id="macroCalsTarget">0</span> kcal</span>
+              </div>
+              <p class="macro-hero-sub">
+                <b id="macroCalsLeftWrap"><span id="macroCalsLeft">0</span> kcal <span id="macroCalsLeftLabel">left</span></b>
+                <span aria-hidden="true">·</span>
+                <span><span id="macroCalsNet">0</span> net</span>
+              </p>
+              <div class="macro-hero-meter"><div class="macro-card-bar-fill macro-bar-cal" id="calsVisBar"></div></div>
 
-            <!-- Macro tracker rows: one pod, four rows, instead of four
-                 separate bordered cards each carrying their own
-                 border/shadow/padding. Quick-add is a row of preset
-                 chips (common amounts, one tap); "Custom" reveals the
-                 exact input+±buttons this used to show inline, still
-                 driving the same addMacro()/subtractMacro(). -->
-            <div class="macro-cards">
-
-              <div class="macro-track-row">
-                <div class="macro-card-header">
-                  <div class="macro-card-label">
-                    <span class="macro-card-dot macro-dot-cal"></span>
-                    <span class="macro-card-name">Energy</span>
-                  </div>
-                  <div class="macro-card-nums">
-                    <span class="macro-card-consumed" id="macroCalsProgress">0</span>
-                    <span class="macro-card-sep"> / </span>
-                    <span class="macro-card-target" id="macroCalsTarget">0</span>
-                    <span class="macro-card-unit"> kcal</span>
-                  </div>
+              <div class="macro-hero-grid">
+                <div class="macro-hero-stat">
+                  <span class="mx-lbl">Protein</span>
+                  <div class="macro-hero-stat-val"><span id="macroProteinProgress">0</span><small> / <span id="macroProteinTarget">0</span>g</small></div>
+                  <div class="macro-hero-meter macro-hero-meter--sm"><div class="macro-card-bar-fill macro-bar-protein" id="proteinVisBar"></div></div>
                 </div>
-                <div class="macro-card-bar-track">
-                  <div class="macro-card-bar-fill macro-bar-cal" id="calsVisBar"></div>
+                <div class="macro-hero-stat">
+                  <span class="mx-lbl">Carbs</span>
+                  <div class="macro-hero-stat-val"><span id="macroCarbsProgress">0</span><small> / <span id="macroCarbsTarget">0</span>g</small></div>
+                  <div class="macro-hero-meter macro-hero-meter--sm"><div class="macro-card-bar-fill macro-bar-carbs" id="carbsVisBar"></div></div>
                 </div>
-                <div class="macro-card-net"><span id="macroCalsNet">0</span> kcal net</div>
-                <div class="macro-chip-row">
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('cal', -100)">−100</button>
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 100)">+100</button>
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 250)">+250</button>
-                  <button type="button" class="macro-chip macro-chip--edit" data-icon="pencil" aria-label="Custom amount"
-                    onclick="this.closest('.macro-track-row').querySelector('.macro-card-qa').classList.toggle('is-hidden')"></button>
+                <div class="macro-hero-stat">
+                  <span class="mx-lbl">Fat</span>
+                  <div class="macro-hero-stat-val"><span id="macroFatProgress">0</span><small> / <span id="macroFatTarget">0</span>g</small></div>
+                  <div class="macro-hero-meter macro-hero-meter--sm"><div class="macro-card-bar-fill macro-bar-fat" id="fatVisBar"></div></div>
                 </div>
-                <div class="macro-card-qa is-hidden">
-                  <input id="qaCals" type="number" value="100" class="macro-qa-input">
-                  <button class="macro-qa-btn" onclick="subtractMacro('cal')">–</button>
-                  <button class="macro-qa-btn" onclick="addMacro('cal')">+</button>
-                </div>
-                <progress id="calsBar" value="0" max="100"></progress>
               </div>
 
-              <div class="macro-track-row">
-                <div class="macro-card-header">
-                  <div class="macro-card-label">
-                    <span class="macro-card-dot macro-dot-protein"></span>
-                    <span class="macro-card-name">Protein</span>
-                  </div>
-                  <div class="macro-card-nums">
-                    <span class="macro-card-consumed" id="macroProteinProgress">0</span>
-                    <span class="macro-card-sep"> / </span>
-                    <span class="macro-card-target" id="macroProteinTarget">0</span>
-                    <span class="macro-card-unit"> g</span>
-                  </div>
-                </div>
-                <div class="macro-card-bar-track">
-                  <div class="macro-card-bar-fill macro-bar-protein" id="proteinVisBar"></div>
-                </div>
-                <div class="macro-chip-row">
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('protein', -10)">−10</button>
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 10)">+10</button>
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 25)">+25</button>
-                  <button type="button" class="macro-chip macro-chip--edit" data-icon="pencil" aria-label="Custom amount"
-                    onclick="this.closest('.macro-track-row').querySelector('.macro-card-qa').classList.toggle('is-hidden')"></button>
-                </div>
-                <div class="macro-card-qa is-hidden">
-                  <input id="qaProtein" type="number" value="10" class="macro-qa-input">
-                  <button class="macro-qa-btn" onclick="subtractMacro('protein')">–</button>
-                  <button class="macro-qa-btn" onclick="addMacro('protein')">+</button>
-                </div>
-                <progress id="proteinBar" value="0" max="100"></progress>
-              </div>
+              <!-- Macro Nudge: pace-aware line (renderMacroNudge) -->
+              <div id="macroNudgeContainer"></div>
 
-              <div class="macro-track-row">
-                <div class="macro-card-header">
-                  <div class="macro-card-label">
-                    <span class="macro-card-dot macro-dot-carbs"></span>
-                    <span class="macro-card-name">Carbs</span>
-                  </div>
-                  <div class="macro-card-nums">
-                    <span class="macro-card-consumed" id="macroCarbsProgress">0</span>
-                    <span class="macro-card-sep"> / </span>
-                    <span class="macro-card-target" id="macroCarbsTarget">0</span>
-                    <span class="macro-card-unit"> g</span>
-                  </div>
-                </div>
-                <div class="macro-card-bar-track">
-                  <div class="macro-card-bar-fill macro-bar-carbs" id="carbsVisBar"></div>
-                </div>
-                <div class="macro-chip-row">
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', -10)">−10</button>
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 10)">+10</button>
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 25)">+25</button>
-                  <button type="button" class="macro-chip macro-chip--edit" data-icon="pencil" aria-label="Custom amount"
-                    onclick="this.closest('.macro-track-row').querySelector('.macro-card-qa').classList.toggle('is-hidden')"></button>
-                </div>
-                <div class="macro-card-qa is-hidden">
-                  <input id="qaCarbs" type="number" value="10" class="macro-qa-input">
-                  <button class="macro-qa-btn" onclick="subtractMacro('carbs')">–</button>
-                  <button class="macro-qa-btn" onclick="addMacro('carbs')">+</button>
-                </div>
-                <progress id="carbBar" value="0" max="100"></progress>
-              </div>
+              <progress id="calsBar" value="0" max="100"></progress>
+              <progress id="proteinBar" value="0" max="100"></progress>
+              <progress id="carbBar" value="0" max="100"></progress>
+              <progress id="fatBar" value="0" max="100"></progress>
+            </section>
 
-              <div class="macro-track-row">
-                <div class="macro-card-header">
-                  <div class="macro-card-label">
-                    <span class="macro-card-dot macro-dot-fat"></span>
-                    <span class="macro-card-name">Fat</span>
-                  </div>
-                  <div class="macro-card-nums">
-                    <span class="macro-card-consumed" id="macroFatProgress">0</span>
-                    <span class="macro-card-sep"> / </span>
-                    <span class="macro-card-target" id="macroFatTarget">0</span>
-                    <span class="macro-card-unit"> g</span>
-                  </div>
-                </div>
-                <div class="macro-card-bar-track">
-                  <div class="macro-card-bar-fill macro-bar-fat" id="fatVisBar"></div>
-                </div>
-                <div class="macro-chip-row">
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('fat', -5)">−5</button>
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 5)">+5</button>
-                  <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 15)">+15</button>
-                  <button type="button" class="macro-chip macro-chip--edit" data-icon="pencil" aria-label="Custom amount"
-                    onclick="this.closest('.macro-track-row').querySelector('.macro-card-qa').classList.toggle('is-hidden')"></button>
-                </div>
-                <div class="macro-card-qa is-hidden">
-                  <input id="qaFat" type="number" value="5" class="macro-qa-input">
-                  <button class="macro-qa-btn" onclick="subtractMacro('fat')">–</button>
-                  <button class="macro-qa-btn" onclick="addMacro('fat')">+</button>
-                </div>
-                <progress id="fatBar" value="0" max="100"></progress>
+            <!-- Quick add: one tap per common amount. "Custom" opens the
+                 exact qty input + ± buttons addMacro()/subtractMacro() read. -->
+            <div class="macro-section-head">
+              <span class="mx-lbl">Quick add</span>
+              <button type="button" class="mx-link" aria-controls="macroCustomAdd"
+                onclick="document.getElementById('macroCustomAdd').classList.toggle('is-hidden')">Custom</button>
+            </div>
+            <div class="macro-quick-chips">
+              <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 25)"><span class="macro-card-dot macro-dot-protein"></span>+25g P</button>
+              <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 100)"><span class="macro-card-dot macro-dot-cal"></span>+100 kcal</button>
+              <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 25)"><span class="macro-card-dot macro-dot-carbs"></span>+25g C</button>
+              <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 10)"><span class="macro-card-dot macro-dot-fat"></span>+10g F</button>
+              <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 10)"><span class="macro-card-dot macro-dot-protein"></span>+10g P</button>
+              <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 250)"><span class="macro-card-dot macro-dot-cal"></span>+250 kcal</button>
+              <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 10)"><span class="macro-card-dot macro-dot-carbs"></span>+10g C</button>
+              <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 5)"><span class="macro-card-dot macro-dot-fat"></span>+5g F</button>
+            </div>
+            <div id="macroCustomAdd" class="pod macro-custom is-hidden">
+              <div class="macro-custom-row">
+                <span class="macro-custom-name"><span class="macro-card-dot macro-dot-cal"></span>Kcal</span>
+                <input id="qaCals" type="number" value="100" class="macro-qa-input" aria-label="Calories amount">
+                <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('cal')" aria-label="Remove calories">–</button>
+                <button class="macro-qa-btn" onclick="addMacro('cal')" aria-label="Add calories">+</button>
               </div>
-
-            </div><!-- /.macro-cards -->
-
-            <!-- ── Water Tracker ── -->
-            <div class="water-tracker-widget">
-              <div class="water-tracker-header">
-                <h3 class="water-tracker-title"><span class="ui-icon" data-icon="droplet"></span> Water Intake</h3>
-                <button class="water-tracker-target-btn" onclick="toggleWaterTargetEdit()">Set target</button>
+              <div class="macro-custom-row">
+                <span class="macro-custom-name"><span class="macro-card-dot macro-dot-protein"></span>Protein</span>
+                <input id="qaProtein" type="number" value="10" class="macro-qa-input" aria-label="Protein grams">
+                <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('protein')" aria-label="Remove protein">–</button>
+                <button class="macro-qa-btn" onclick="addMacro('protein')" aria-label="Add protein">+</button>
               </div>
-              <div class="water-tracker-body">
-                <div class="water-ring-wrap">
-                  <svg class="water-ring-svg" viewBox="0 0 76 76">
-                    <circle class="water-ring-track" cx="38" cy="38" r="30"/>
-                    <circle class="water-ring-fill" id="waterRingFill" cx="38" cy="38" r="30"
-                      stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
-                  </svg>
-                  <div class="water-ring-inner">
-                    <span class="water-ring-value" id="waterMlVal">0</span>
-                    <span class="water-ring-unit">ml</span>
-                  </div>
-                </div>
-                <div class="water-tracker-right">
-                  <p class="water-tracker-progress-text" id="waterProgressText">0 / 2500 ml · 0%</p>
-                  <div class="water-quick-adds">
-                    <button class="water-add-btn" onclick="addWater(150)">+150</button>
-                    <button class="water-add-btn" onclick="addWater(250)">+250</button>
-                    <button class="water-add-btn" onclick="addWater(500)">+500</button>
-                    <button class="water-add-btn" onclick="addWater(750)">+750</button>
-                  </div>
-                  <div class="water-custom-row">
-                    <input type="number" id="waterCustomInput" class="water-custom-input"
-                      placeholder="Custom ml" min="1" max="2000" />
-                    <button class="water-custom-add-btn" onclick="addWaterCustom()">Add</button>
-                  </div>
-                  <button class="water-reset-link" onclick="resetWater()">Reset today</button>
-                </div>
+              <div class="macro-custom-row">
+                <span class="macro-custom-name"><span class="macro-card-dot macro-dot-carbs"></span>Carbs</span>
+                <input id="qaCarbs" type="number" value="10" class="macro-qa-input" aria-label="Carb grams">
+                <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('carbs')" aria-label="Remove carbs">–</button>
+                <button class="macro-qa-btn" onclick="addMacro('carbs')" aria-label="Add carbs">+</button>
+              </div>
+              <div class="macro-custom-row">
+                <span class="macro-custom-name"><span class="macro-card-dot macro-dot-fat"></span>Fat</span>
+                <input id="qaFat" type="number" value="5" class="macro-qa-input" aria-label="Fat grams">
+                <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('fat')" aria-label="Remove fat">–</button>
+                <button class="macro-qa-btn" onclick="addMacro('fat')" aria-label="Add fat">+</button>
+              </div>
+            </div>
+
+            <!-- Favorites (renderMacroNudge) -->
+            <div id="macroFavoritesContainer"></div>
+
+            <!-- ── Water ── -->
+            <div class="macro-section-head">
+              <span class="mx-lbl">Water</span>
+              <button type="button" class="mx-link" onclick="toggleWaterTargetEdit()">Set target</button>
+            </div>
+            <div class="pod water-tracker-widget">
+              <p class="water-tracker-progress-text" id="waterProgressText">0 / 2500 ml · 0%</p>
+              <div class="macro-hero-meter"><div class="macro-card-bar-fill macro-bar-carbs" id="waterVisBar"></div></div>
+              <div class="water-quick-adds">
+                <button class="macro-chip" onclick="addWater(250)">+250</button>
+                <button class="macro-chip" onclick="addWater(500)">+500</button>
+                <button class="macro-chip" onclick="addWater(750)">+750</button>
+                <button class="water-reset-link" onclick="resetWater()">Reset</button>
+              </div>
+              <div class="water-custom-row">
+                <input type="number" id="waterCustomInput" class="water-custom-input"
+                  placeholder="Custom ml" min="1" max="2000" />
+                <button class="water-custom-add-btn" onclick="addWaterCustom()">Add</button>
               </div>
               <div class="water-target-row" id="waterTargetRow">
                 <input type="number" id="waterTargetInput" class="water-target-input"
@@ -3056,6 +2949,41 @@
                 <button class="water-target-save-btn" onclick="setWaterTarget()">Save</button>
               </div>
             </div>
+
+            <!-- ── Day type ── -->
+            <div class="macro-section-head"><span class="mx-lbl">Day type</span></div>
+            <div class="macro-daytype">
+              <label class="macro-toggle-card" id="trainingDayCard" onclick="document.getElementById('trainingDayToggle').click()">
+                <input type="checkbox" id="trainingDayToggle" style="display:none;">
+                <span class="macro-toggle-icon" data-icon="dumbbell"></span>
+                <span class="macro-toggle-label">Training day</span>
+              </label>
+              <label class="macro-toggle-card" id="refeedDayCard" onclick="document.getElementById('refeedDayToggle').click()">
+                <input type="checkbox" id="refeedDayToggle" style="display:none;">
+                <span class="macro-toggle-icon" data-icon="flame"></span>
+                <span class="macro-toggle-label">Refeed day</span>
+              </label>
+            </div>
+            <p class="macro-seg-label">Carb day</p>
+            <div class="macro-seg-row" data-macro-seg-for="carbCycleSelect">
+              <button type="button" class="macro-seg-btn" data-val="low" onclick="setSegValue('carbCycleSelect', this)">Low</button>
+              <button type="button" class="macro-seg-btn active" data-val="normal" onclick="setSegValue('carbCycleSelect', this)">Normal</button>
+              <button type="button" class="macro-seg-btn" data-val="high" onclick="setSegValue('carbCycleSelect', this)">High</button>
+            </div>
+            <select id="carbCycleSelect" class="macro-seg-hidden" aria-hidden="true" tabindex="-1">
+              <option value="normal">Normal</option>
+              <option value="high">High Day</option>
+              <option value="low">Low Day</option>
+            </select>
+            <!-- Kept off-screen: updateMacroSummary() still writes
+                 descriptive text into these for anything that wants it. -->
+            <div id="macroDailySummary" class="macro-seg-hidden">
+              <span id="macroSummaryCals"></span>
+              <span id="macroSummaryProtein"></span>
+              <span id="macroSummaryCarbs"></span>
+              <span id="macroSummaryFat"></span>
+            </div>
+            <p id="macroDayProfileSummary" class="macro-day-profile"></p>
 
             <details class="macro-trends-accordion">
               <summary><span class="ui-icon" data-icon="barChart"></span> Weekly trends</summary>
@@ -3067,47 +2995,6 @@
                 <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
               </div>
             </details>
-            <div style="margin-top:12px;">
-              <div style="display:flex;gap:10px;margin-bottom:12px;">
-                <label class="macro-toggle-card" id="trainingDayCard" onclick="document.getElementById('trainingDayToggle').click()">
-                  <input type="checkbox" id="trainingDayToggle" style="display:none;">
-                  <span class="macro-toggle-icon" data-icon="dumbbell"></span>
-                  <span class="macro-toggle-label">Training Day</span>
-                </label>
-                <label class="macro-toggle-card" id="refeedDayCard" onclick="document.getElementById('refeedDayToggle').click()">
-                  <input type="checkbox" id="refeedDayToggle" style="display:none;">
-                  <span class="macro-toggle-icon" data-icon="flame"></span>
-                  <span class="macro-toggle-label">Refeed Day</span>
-                </label>
-              </div>
-              <div style="margin-top:4px;">
-                <p class="macro-seg-label" style="margin-top:0;">Carb Day</p>
-                <div class="macro-seg-row" data-macro-seg-for="carbCycleSelect">
-                  <button type="button" class="macro-seg-btn" data-val="low" onclick="setSegValue('carbCycleSelect', this)">Low</button>
-                  <button type="button" class="macro-seg-btn active" data-val="normal" onclick="setSegValue('carbCycleSelect', this)">Normal</button>
-                  <button type="button" class="macro-seg-btn" data-val="high" onclick="setSegValue('carbCycleSelect', this)">High</button>
-                </div>
-                <select id="carbCycleSelect" class="macro-seg-hidden" aria-hidden="true" tabindex="-1">
-                  <option value="normal">Normal</option>
-                  <option value="high">High Day</option>
-                  <option value="low">Low Day</option>
-                </select>
-              </div>
-              <!-- Daily Summary removed: it just repeated the same value/target
-                   numbers already shown on each row above. The over/under-target
-                   colour it used to show is now applied straight to that row's
-                   bar (see updateMacroSummary() in index.html). macroSummaryCals/
-                   Protein/Carbs/Fat spans below are kept off-screen only because
-                   updateMacroSummary() still writes descriptive text into them
-                   for anything (e.g. future a11y work) that wants it. -->
-              <div id="macroDailySummary" class="macro-seg-hidden">
-                <span id="macroSummaryCals"></span>
-                <span id="macroSummaryProtein"></span>
-                <span id="macroSummaryCarbs"></span>
-                <span id="macroSummaryFat"></span>
-              </div>
-              <p id="macroDayProfileSummary" style="font-size:0.9rem;margin-top:8px;color:var(--text-muted,#777);"></p>
-            </div>
           </div>
 
           <details class="macro-heatmap-accordion">
@@ -9284,7 +9171,7 @@ function updateMacroSummary(data, options = {}) {
     }
     const visBar = document.getElementById(visBarMap[type]);
     if (visBar) {
-      visBar.style.background = percent >= 100 ? "#f44336" : percent >= 75 ? "#ffc107" : "";
+      visBar.style.background = percent >= 100 ? "var(--red-mid)" : percent >= 75 ? "var(--brass-light)" : "";
     }
   });
 }
@@ -9301,16 +9188,15 @@ function renderMacroNudge() {
   const favorites = window.engagementFeatures.loadMacroFavorites(currentUser);
 
   const bannerHtml = nudge ? `
-    <div class="nudge-pod">
-      <div class="ov-accent"></div>
+    <div class="macro-hero-nudge">
       <svg class="nudge-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
       <p>${escapeCoachText(nudge.message)}</p>
     </div>
   ` : '';
 
   const favHtml = favorites.length ? `
-    <div class="mx-pod" style="margin-top:10px;">
-      <p class="mx-lbl" style="margin-bottom:6px;">Your favorites</p>
+    <div class="macro-section-head"><span class="mx-lbl">Your favorites</span></div>
+    <div class="pod macro-fav-pod">
       <div class="macro-fav-list">
         ${favorites.map(f => `
           <div class="macro-fav-item">
@@ -9327,7 +9213,9 @@ function renderMacroNudge() {
     </div>
   ` : '';
 
-  container.innerHTML = bannerHtml + favHtml;
+  container.innerHTML = bannerHtml;
+  const favContainer = document.getElementById('macroFavoritesContainer');
+  if (favContainer) favContainer.innerHTML = favHtml;
 }
 window.renderMacroNudge = renderMacroNudge;
 

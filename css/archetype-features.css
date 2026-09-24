@@ -1,6 +1,6 @@
 /* =============================================================
    ARCHETYPE FEATURE STYLES
-   Macro rings, progress photo grid, WOD interval timer,
+   Macro tracker, progress photo grid, WOD interval timer,
    powerlifting attempt sheet, and step-tracking widget.
    Depends on: tokens.css
    ============================================================= */
@@ -202,95 +202,13 @@
   flex-shrink: 0;
 }
 
-/* ── Macro progress rings ───────────────────────────────────── */
-
-.macro-rings-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  padding: 16px 0 8px;
-  flex-wrap: wrap;
-}
-
-/* Hide the raw <progress> elements; rings read their values */
+/* Hidden <progress> elements — the hero meters read their values */
 #calsBar, #proteinBar, #carbBar, #fatBar {
   position: absolute;
   opacity: 0;
   pointer-events: none;
   height: 0;
   overflow: hidden;
-}
-
-.macro-ring-wrap {
-  position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.macro-ring-svg {
-  transform: rotate(-90deg);
-  display: block;
-}
-
-.macro-ring-track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.1);
-}
-
-.macro-ring-fill {
-  fill: none;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.5s ease;
-}
-
-/* Colour per macro — matches .macro-dot-*/.macro-bar-* above */
-.macro-ring-cals    .macro-ring-fill { stroke: var(--green-70); }
-.macro-ring-protein .macro-ring-fill { stroke: var(--green-100); }
-.macro-ring-carbs   .macro-ring-fill { stroke: var(--green-90); }
-.macro-ring-fat     .macro-ring-fill { stroke: var(--brass-base); }
-
-.macro-ring-inner {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.macro-ring-value {
-  font-weight: 700;
-  color: var(--text-color);
-  line-height: 1;
-}
-
-.macro-ring-unit {
-  font-size: 0.62rem;
-  color: var(--secondary-text);
-  letter-spacing: 0.04em;
-  margin-top: 2px;
-}
-
-/* Large calorie ring */
-.macro-ring-cals .macro-ring-svg    { width: 100px; height: 100px; }
-.macro-ring-cals .macro-ring-track  { stroke-width: 9; }
-.macro-ring-cals .macro-ring-fill   { stroke-width: 9; }
-.macro-ring-cals .macro-ring-value  { font-size: 1.1rem; }
-.macro-ring-cals .macro-ring-unit   { font-size: 0.68rem; }
-
-/* Small rings for P / C / F */
-.macro-ring-sm .macro-ring-svg    { width: 70px; height: 70px; }
-.macro-ring-sm .macro-ring-track  { stroke-width: 8; }
-.macro-ring-sm .macro-ring-fill   { stroke-width: 8; }
-.macro-ring-sm .macro-ring-value  { font-size: 0.88rem; }
-
-.macro-ring-trio {
-  display: flex;
-  gap: 12px;
-  align-items: center;
 }
 
 /* ── Progress photo upload grid ─────────────────────────────── */

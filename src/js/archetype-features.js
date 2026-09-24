@@ -1,6 +1,6 @@
 // =============================================================
 // ARCHETYPE FEATURE SCRIPTS
-// Macro rings, progress photo upload, WOD interval timer,
+// Macro hero sync, progress photo upload, WOD interval timer,
 // powerlifting attempt sheet, weigh-in reminder, step widget.
 // =============================================================
 
@@ -33,28 +33,9 @@ function _fmt(totalSeconds) {
   return `${_pad(m)}:${_pad(s)}`;
 }
 
-// ── Macro progress rings ──────────────────────────────────────
+// ── Macro hero (Targets tab) ──────────────────────────────────
 
-(function initMacroRings() {
-  const RING_CONFIGS = [
-    { barId: 'calsBar',    fillId: 'calsRingFill',    valId: 'calsRingValue',    r: 44 },
-    { barId: 'proteinBar', fillId: 'proteinRingFill',  valId: 'proteinRingValue', r: 37 },
-    { barId: 'carbBar',    fillId: 'carbsRingFill',    valId: 'carbsRingValue',   r: 37 },
-    { barId: 'fatBar',     fillId: 'fatRingFill',      valId: 'fatRingValue',     r: 37 },
-  ];
-
-  function syncRing({ barId, fillId, valId, r }) {
-    const bar  = document.getElementById(barId);
-    const fill = document.getElementById(fillId);
-    const val  = document.getElementById(valId);
-    if (!bar || !fill || !val) return;
-    const pct = bar.max > 0 ? Math.min(bar.value / bar.max, 1) : 0;
-    const c = 2 * Math.PI * r;
-    fill.style.strokeDasharray  = c;
-    fill.style.strokeDashoffset = c * (1 - pct);
-    val.textContent = Math.round(bar.value);
-  }
-
+(function initMacroHero() {
   const VIS_BAR_CONFIGS = [
     { barId: 'calsBar',    fillId: 'calsVisBar' },
     { barId: 'proteinBar', fillId: 'proteinVisBar' },
@@ -70,9 +51,39 @@ function _fmt(totalSeconds) {
     fill.style.width = pct + '%';
   }
 
+  // "X kcal left / over" under the hero number. Reads the same
+  // calsBar (net of cardio) the hero meter uses, against the target
+  // updateMacroUI() writes into #macroCalsTarget.
+  function syncCaloriesLeft() {
+    const bar   = document.getElementById('calsBar');
+    const left  = document.getElementById('macroCalsLeft');
+    const label = document.getElementById('macroCalsLeftLabel');
+    const target = Number(document.getElementById('macroCalsTarget')?.textContent) || 0;
+    if (!bar || !left || !label) return;
+    if (target <= 0) {
+      left.textContent = '—';
+      label.textContent = 'left';
+      left.closest('b')?.classList.remove('is-over');
+      return;
+    }
+    const diff = Math.round(target - (Number(bar.value) || 0));
+    left.textContent  = Math.abs(diff).toLocaleString();
+    label.textContent = diff < 0 ? 'over' : 'left';
+    left.closest('b')?.classList.toggle('is-over', diff < 0);
+  }
+
+  function syncDayLabel() {
+    const el = document.getElementById('macroHeroDayLabel');
+    if (!el) return;
+    const refeed   = document.getElementById('refeedDayToggle')?.checked;
+    const training = document.getElementById('trainingDayToggle')?.checked;
+    el.textContent = refeed ? 'Today · Refeed day' : training ? 'Today · Training day' : 'Today';
+  }
+
   function syncAll() {
-    RING_CONFIGS.forEach(syncRing);
     VIS_BAR_CONFIGS.forEach(syncVisBar);
+    syncCaloriesLeft();
+    syncDayLabel();
   }
 
   // Poll at 300 ms so we don't need to touch every JS call that sets bar values.

@@ -1,0 +1,372 @@
+/* =============================================================
+   MACROS — TODAY VIEW
+   Hero pod + flat sections for the Macros "Today" sub-tab. Same
+   pattern as the Home hero card (big Anton number, meter, stat
+   strip) so the tab reads like the rest of the app instead of a
+   card holding rings, bordered rows and a boxed nudge.
+
+   Depends on: tokens.css, design-system.css (.pod, .pod--hero),
+   modernist-kit.css (.mx-lbl, .mx-num, .mx-unit, .mx-link, .mx-chip).
+   Load order: after features.css / engagement.css — it restyles
+   the water widget, toggle cards and accordions for this view only.
+   ============================================================= */
+
+.macro-today {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Coach plan (only shown when a coach assigned one) ───────── */
+.macro-coach-plan { margin-bottom: 12px; }
+.macro-coach-plan-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.macro-coach-plan p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/* ── Hero ───────────────────────────────────────────────────── */
+.macro-hero { padding: 16px 17px; }
+
+.macro-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+}
+.macro-hero-top .mx-chip .ui-icon { width: 12px; height: 12px; }
+
+.macro-hero-num-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+  margin: 8px 0 4px;
+}
+.macro-hero-num {
+  font-size: 56px;
+  line-height: 0.92;
+  color: var(--text-primary);
+}
+
+.macro-hero-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.macro-hero-sub b { color: var(--green-90); font-weight: 600; }
+.macro-hero-sub b.is-over { color: var(--danger-text-mobile); }
+
+/* Meter track; the fill is the existing .macro-card-bar-fill
+   (width driven by archetype-features.js syncVisBar) */
+.macro-hero-meter {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
+  overflow: hidden;
+}
+.macro-hero-meter--sm { height: 6px; }
+.macro-hero-meter .macro-card-bar-fill { border-radius: var(--radius-pill); }
+.macro-hero .macro-bar-cal { background: var(--fill-meter-a); }
+.macro-hero .macro-bar-fat { background: var(--fill-meter-brass); }
+
+.macro-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-header);
+}
+.macro-hero-stat .mx-lbl { font-size: 11px; }
+.macro-hero-stat-val {
+  margin: 3px 0 7px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.macro-hero-stat-val small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mx-faint);
+}
+
+/* Pace nudge: a line inside the hero, not its own bordered box */
+.macro-hero-nudge {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-header);
+}
+.macro-hero-nudge .nudge-icon { flex-shrink: 0; margin-top: 1px; color: var(--brass-base); }
+.macro-hero-nudge p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/* ── Section headers ────────────────────────────────────────── */
+.macro-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 20px 2px 9px;
+}
+
+/* ── Quick add chips ────────────────────────────────────────── */
+.macro-quick-chips {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 0;
+}
+.macro-quick-chips::-webkit-scrollbar { display: none; }
+.macro-quick-chips .macro-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  width: auto;
+  padding: 6px 12px;
+  background: var(--pod-bg-alt);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  box-shadow: none;
+}
+.macro-quick-chips .macro-card-dot { width: 6px; height: 6px; box-shadow: none; }
+.macro-quick-chips .macro-chip:active { transform: scale(0.96); }
+
+/* Custom amounts (qa* inputs + ± buttons) */
+.macro-custom {
+  margin-top: 10px;
+  padding: 4px 16px;
+}
+.macro-custom.is-hidden { display: none !important; }
+.macro-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-row);
+}
+.macro-custom-row:first-child { border-top: 0; }
+.macro-custom-name {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.macro-custom .macro-qa-input {
+  width: 72px !important;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+}
+.macro-qa-btn--minus {
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-chip);
+  color: var(--text-secondary);
+}
+
+/* ── Favorites ──────────────────────────────────────────────── */
+.macro-fav-pod { padding: 2px 16px; }
+.macro-fav-pod .macro-fav-list { margin: 0; }
+.macro-fav-pod .macro-fav-item { padding: 11px 0; }
+.macro-fav-pod .macro-fav-item:last-child { padding-bottom: 11px; }
+.macro-fav-pod .macro-fav-name { font-size: 14px; font-weight: 600; }
+.macro-fav-pod .macro-fav-macros { font-size: 12px; color: var(--mx-faint); }
+.macro-fav-pod .macro-fav-add {
+  background: rgba(47, 138, 99, 0.13);
+  border-color: var(--border-featured);
+}
+
+/* ── Water (restyles features.css's widget for this view) ───── */
+.macro-today .water-tracker-widget {
+  margin: 0;
+  padding: 14px 16px;
+}
+.macro-today .water-tracker-progress-text {
+  margin: 0 0 9px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.macro-today .water-tracker-progress-text strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  margin-right: 4px;
+  color: var(--text-primary);
+}
+.macro-today .water-quick-adds {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 10px;
+}
+.macro-today .water-quick-adds .macro-chip {
+  margin: 0;
+  width: auto;
+  background: var(--pod-bg-alt);
+  box-shadow: none;
+}
+.macro-today .water-reset-link {
+  margin: 0 0 0 auto;
+  padding: 0;
+  width: auto;
+  box-shadow: none;
+  text-decoration: none;
+  font-family: var(--font-label);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mx-faint);
+}
+.macro-today .water-custom-input,
+.macro-today .water-target-input {
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+}
+.macro-today .water-custom-add-btn,
+.macro-today .water-target-save-btn {
+  margin: 0;
+  width: auto;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--fill-btn-primary-mobile);
+  color: var(--label-on-green);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+/* ── Day type: toggle pills + carb-day segmented pill ───────── */
+.macro-daytype {
+  display: flex;
+  gap: 8px;
+}
+.macro-daytype .macro-toggle-card {
+  flex: 1;
+  flex-direction: row;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border-radius: var(--radius-pill);
+  border-color: var(--border-chip);
+}
+.macro-daytype .macro-toggle-icon { font-size: 1rem; width: 16px; height: 16px; }
+.macro-daytype .macro-toggle-label {
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.macro-today .macro-seg-label {
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  color: var(--mx-label);
+  margin: 14px 2px 7px;
+}
+.macro-today .macro-seg-row {
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+}
+.macro-today .macro-seg-btn {
+  margin: 0;
+  min-width: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mx-label);
+  padding: 7px 6px;
+}
+.macro-today .macro-seg-btn.active {
+  background: var(--fill-btn-primary-mobile);
+  color: var(--label-on-green);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.macro-day-profile {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.macro-day-profile:empty { display: none; }
+
+/* ── Trends / heatmap: flat rows instead of bordered boxes ──── */
+#macroTargetsPanel .macro-trends-accordion,
+#macroTargetsPanel .macro-heatmap-accordion {
+  margin-top: 0;
+  border: 0;
+  border-top: 1px solid var(--border-row);
+  border-radius: 0;
+}
+#macroTargetsPanel .macro-trends-accordion { margin-top: 18px; }
+#macroTargetsPanel .macro-heatmap-accordion { border-bottom: 1px solid var(--border-row); }
+#macroTargetsPanel .macro-trends-accordion > summary,
+#macroTargetsPanel .macro-heatmap-accordion > summary {
+  background: transparent;
+  padding: 14px 2px;
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mx-label);
+}
+#macroTargetsPanel .macro-trends-accordion > summary::-webkit-details-marker,
+#macroTargetsPanel .macro-heatmap-accordion > summary::-webkit-details-marker { display: none; }
+#macroTargetsPanel .macro-trends-accordion > summary::before,
+#macroTargetsPanel .macro-heatmap-accordion > summary::before { content: none; }
+#macroTargetsPanel .macro-trends-accordion > summary::after,
+#macroTargetsPanel .macro-heatmap-accordion > summary::after {
+  content: '+';
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--green-90);
+}
+#macroTargetsPanel .macro-trends-accordion[open] > summary::after,
+#macroTargetsPanel .macro-heatmap-accordion[open] > summary::after { content: '−'; }
+#macroTargetsPanel .macro-trends-accordion > summary .ui-icon,
+#macroTargetsPanel .macro-heatmap-accordion > summary .ui-icon { width: 15px; height: 15px; }
+#macroTargetsPanel .macro-trends-accordion > div,
+#macroTargetsPanel .macro-heatmap-accordion > div { padding: 0 2px 14px; }
