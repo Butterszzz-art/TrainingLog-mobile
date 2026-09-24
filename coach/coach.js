@@ -47,6 +47,7 @@ function checkAuth() {
     document.getElementById('headerUser').textContent = _username;
     loadClients();
     loadLeads();
+    loadPrograms().then(renderWorkspace);
   }
 }
 
@@ -84,6 +85,7 @@ async function doCoachLogin() {
     document.getElementById('headerUser').textContent = _username;
     loadClients();
     loadLeads();
+    loadPrograms().then(renderWorkspace);
   } catch (err) {
     errorEl.textContent = err?.message || 'Invalid credentials.';
   } finally {
@@ -187,7 +189,8 @@ async function loadClients() {
 function renderClientList() {
   const listEl = document.getElementById('clientList');
   let filtered = _clients.slice();
-  if (_activeFilter !== 'all') filtered = filtered.filter(c => c.alertStatus === _activeFilter);
+  if (_activeFilter === 'pending') filtered = filtered.filter(c => c.status === 'pending');
+  else if (_activeFilter !== 'all') filtered = filtered.filter(c => c.status !== 'pending' && c.alertStatus === _activeFilter);
   if (_searchQuery) {
     const q = _searchQuery.toLowerCase();
     filtered = filtered.filter(c => (c.clientName || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q));
@@ -197,35 +200,56 @@ function renderClientList() {
     listEl.innerHTML = '<div class="client-list-loading">'
       + (_clientsLoadError ? 'Couldn\'t load your clients — check your connection and try again.'
         : _clients.length ? 'No clients match.'
-        : 'No clients yet — invite one from a lead, or share your invite flow, to get started.')
+        : 'No clients yet. Use + Invite, or convert a lead.')
       + '</div>';
+    updateFilterCounts();
     return;
   }
 
   listEl.innerHTML = filtered.map(c => {
-    const initials = (c.clientName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const initials = escapeHtml((c.clientName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase());
     const isActive = c.id === _selectedClientId;
     const isChecked = _bulkSelected.has(c.id);
-    const daysSince = c.lastCheckIn ? Math.floor((Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000) : '—';
+    const pending = c.status === 'pending';
+    const daysSince = daysSinceIso(c.lastCheckIn);
+    const meta = pending
+      ? 'Invite pending'
+      : escapeHtml(c.trainingMode || '—') + ' · ' + (daysSince === null ? 'No check-in' : daysSince + 'd ago');
+    const id = escapeHtml(c.id);
 
-    return '<div class="client-row' + (isActive ? ' active' : '') + '" data-id="' + c.id + '" onclick="selectClient(\'' + c.id + '\')">'
-      + '<input type="checkbox" class="client-checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleBulk(\'' + c.id + '\')">'
+    return '<div class="client-row' + (isActive ? ' active' : '') + (pending ? ' is-pending' : '') + '" data-id="' + id + '" onclick="selectClient(\'' + id + '\')">'
+      + (pending ? '<span class="client-checkbox"></span>' : '<input type="checkbox" class="client-checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleBulk(\'' + id + '\')" aria-label="Select ' + escapeHtml(c.clientName) + '">')
       + '<div class="client-avatar">' + initials + '</div>'
-      + '<div class="client-info"><div class="client-name">' + (c.clientName || 'Unknown') + '</div>'
-      + '<div class="client-meta">' + (c.trainingMode || '—') + ' · ' + (daysSince === '—' ? 'No check-in' : daysSince + 'd ago') + '</div></div>'
-      + '<div class="client-alert ' + (c.alertStatus || 'ok') + '"></div></div>';
+      + '<div class="client-info"><div class="client-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
+      + '<div class="client-meta">' + meta + '</div></div>'
+      + '<div class="client-alert ' + (pending ? 'pending' : escapeHtml(c.alertStatus || 'ok')) + '"></div></div>';
   }).join('');
   updateFilterCounts();
 }
 
+// Whole days between an ISO date (YYYY-MM-DD) and today; null if missing.
+function daysSinceIso(value) {
+  if (!value) return null;
+  const t = Date.parse(String(value).slice(0, 10) + 'T00:00:00');
+  if (Number.isNaN(t)) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((today.getTime() - t) / 86400000));
+}
+
+function activeClients() {
+  return _clients.filter(c => c.status !== 'pending');
+}
+
 function updateFilterCounts() {
-  const counts = { all: _clients.length, action: 0, watch: 0, ok: 0 };
-  _clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
-  // Scoped to #statusFilters — .filter-tab is a shared class, so this stays
-  // scoped in case any other .filter-tab group (e.g. leads) is ever added.
+  const counts = { all: _clients.length, action: 0, watch: 0, ok: 0, pending: 0 };
+  _clients.forEach(c => {
+    if (c.status === 'pending') counts.pending++;
+    else if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++;
+  });
+  // Scoped to #statusFilters — .filter-tab is a shared class.
   document.querySelectorAll('#statusFilters .filter-tab').forEach(tab => {
     const f = tab.dataset.filter;
-    const labels = { all: 'All', action: 'Needs Action', watch: 'Watch', ok: 'Stable' };
+    const labels = { all: 'All', action: 'Needs Action', watch: 'Watch', ok: 'Stable', pending: 'Pending' };
     tab.textContent = labels[f] + ' (' + (counts[f] || 0) + ')';
   });
 }
@@ -259,11 +283,14 @@ function renderWorkspace() {
   const view = document.getElementById('workspaceView');
   if (!view) return;
 
-  const counts = { all: _clients.length, action: 0, watch: 0, ok: 0 };
-  _clients.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
+  const linked = activeClients();
+  const counts = { all: linked.length, action: 0, watch: 0, ok: 0 };
+  linked.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
+  const pendingCount = _clients.length - linked.length;
 
   const rosterSummaryText =
-    _clients.length + ' client' + (_clients.length === 1 ? '' : 's') +
+    linked.length + ' client' + (linked.length === 1 ? '' : 's') +
+    (pendingCount ? ' · ' + pendingCount + ' pending' : '') +
     (counts.action ? ' · ' + counts.action + ' need attention' : '');
   document.getElementById('wsHeaderSub').textContent = rosterSummaryText;
   const headerSummaryEl = document.getElementById('headerRosterSummary');
@@ -282,86 +309,80 @@ function renderWorkspace() {
   ).join('');
 
   // Priority client: first "needs action", else first "watch", else none.
-  const priority = _clients.find(c => c.alertStatus === 'action') || _clients.find(c => c.alertStatus === 'watch');
+  const priority = linked.find(c => c.alertStatus === 'action') || linked.find(c => c.alertStatus === 'watch');
   const priorityEl = document.getElementById('wsPriorityCard');
   if (priority) {
     const ci = priority.latestCheckInData || {};
-    const daysSince = priority.lastCheckIn
-      ? Math.floor((Date.now() - new Date(priority.lastCheckIn).getTime()) / 86400000) + 'd ago'
-      : 'no check-in';
+    const days = daysSinceIso(priority.lastCheckIn);
+    const reason = (priority.alerts || [])[0];
     priorityEl.innerHTML =
       '<div class="pod pod--hero ws-priority-card">' +
       '<div class="pod-row"><span class="pod-kicker">Needs attention</span>' +
-      '<span class="ws-priority-tag ' + (priority.alertStatus || 'ok') + '">' + (priority.alertStatus || 'ok') + '</span></div>' +
+      '<span class="ws-priority-tag ' + escapeHtml(priority.alertStatus) + '">' + escapeHtml(priority.alertStatus) + '</span></div>' +
       '<div class="ws-priority-main">' +
       '<span class="ws-priority-name">' + escapeHtml(priority.clientName || 'Unknown') + '</span>' +
-      '<span class="ws-priority-meta">' + escapeHtml(priority.currentProgram || 'No program') + ' &middot; last check-in ' + daysSince + '</span>' +
+      '<span class="ws-priority-meta">' + (reason ? escapeHtml(reason.label + ': ' + reason.reason) : escapeHtml(priority.currentProgram || 'No program')) +
+      ' &middot; last check-in ' + (days === null ? 'never' : days + 'd ago') + '</span>' +
       '</div>' +
       '<div class="ws-priority-stats">' +
       stat('Sleep', ci.sleep != null ? ci.sleep + '/10' : '—') +
       stat('Energy', ci.energy != null ? ci.energy + '/10' : '—') +
-      stat('Stress', ci.stress != null ? ci.stress + '/10' : '—') +
-      stat('Bodyweight', ci.bodyweight ? ci.bodyweight + ' kg' : '—') +
+      stat('Compliance', priority.compliancePercent != null ? priority.compliancePercent + '%' : '—') +
+      stat('Bodyweight', priority.currentBodyweight != null ? priority.currentBodyweight + ' kg' : '—') +
       '</div>' +
-      '<button class="cta-capsule ws-priority-cta" onclick="selectClient(\'' + priority.id + '\')">Open client file</button>' +
+      '<button class="cta-capsule ws-priority-cta" onclick="selectClient(\'' + escapeHtml(priority.id) + '\')">Open client file</button>' +
       '</div>';
   } else {
     priorityEl.innerHTML = '<div class="pod pod--hero ws-priority-card"><p class="ws-empty-note">'
       + (_clientsLoadError ? 'Couldn\'t load your clients — check your connection and try again.'
-        : _clients.length ? 'Everyone\'s on track — no flagged clients right now.'
+        : linked.length ? 'Everyone\'s on track — no flagged clients right now.'
         : 'No clients yet.')
       + '</p></div>';
   }
 
-  // Roster table — every client, sorted by alert severity then name.
+  // Roster table — every linked client, sorted by alert severity then name.
   const severity = { action: 0, watch: 1, ok: 2 };
-  const sorted = _clients.slice().sort((a, b) =>
+  const sorted = linked.slice().sort((a, b) =>
     (severity[a.alertStatus] ?? 3) - (severity[b.alertStatus] ?? 3) ||
     (a.clientName || '').localeCompare(b.clientName || '')
   );
-  document.getElementById('wsRosterCount').textContent = _clients.length;
-  // Header + rows, 7 columns per spec: Client · Phase · Weight · Rate/wk ·
-  // Compliance ▾ · Last log · Next action. Weight/Last-log/Phase are real
-  // per-client data; Rate/wk, Compliance and Next action have no computed
-  // source in this app yet (no weight-trend or compliance-scoring engine
-  // for coach clients) so they render as "—" rather than fabricated numbers.
+  document.getElementById('wsRosterCount').textContent = linked.length;
+  // Everything here comes from what each client shares (see the mobile
+  // app's Settings → Your Coach); anything not shared shows "—".
   const rosterHeader =
     '<div class="ws-roster-row ws-roster-row--header">' +
-      '<span>Client</span><span>Phase</span><span class="ws-roster-cell--right">Weight</span>' +
+      '<span>Client</span><span>Program</span><span class="ws-roster-cell--right">Weight</span>' +
       '<span class="ws-roster-cell--right">Rate/wk</span><span class="ws-roster-cell--right">Compliance</span>' +
-      '<span class="ws-roster-cell--right">Last log</span><span>Next action</span>' +
+      '<span class="ws-roster-cell--right">Last check-in</span><span>Next action</span>' +
     '</div>';
   document.getElementById('wsRosterTable').innerHTML = rosterHeader + (sorted.map(c => {
-    const daysSince = c.lastCheckIn ? Math.floor((Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000) + 'd' : '—';
-    const bw = c.latestCheckInData?.bodyweight;
-    return '<div class="ws-roster-row" onclick="selectClient(\'' + c.id + '\')">' +
+    const days = daysSinceIso(c.lastCheckIn);
+    const rate = c.weeklyWeightChangePercent;
+    const next = (c.alerts || [])[0];
+    return '<div class="ws-roster-row" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">' +
       '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>' +
-      '<span class="ws-roster-cell">' + escapeHtml(c.trainingMode || '—') + '</span>' +
-      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (bw ? bw + ' kg' : '—') + '</span>' +
-      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">—</span>' +
-      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">—</span>' +
-      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + daysSince + '</span>' +
-      '<span class="ws-roster-alert ' + (c.alertStatus || 'ok') + '">' + (c.alertStatus || 'ok') + '</span>' +
+      '<span class="ws-roster-cell">' + escapeHtml(c.currentProgram || c.activeProgramName || '—') + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (c.currentBodyweight != null ? c.currentBodyweight + ' kg' : '—') + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (rate != null ? (rate > 0 ? '+' : '') + Number(rate).toFixed(2) + '%' : '—') + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (c.compliancePercent != null ? c.compliancePercent + '%' : '—') + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (days === null ? '—' : days + 'd') + '</span>' +
+      '<span class="ws-roster-alert ' + escapeHtml(c.alertStatus || 'ok') + '">' + escapeHtml(next ? next.label : 'On track') + '</span>' +
       '</div>';
   }).join('') || '<p class="ws-empty-note">No clients yet.</p>');
 
-  // Templates — real data via getCoachPrograms(), with a count of clients
-  // currently assigned to each (also real, derived from _clients).
-  const programs = getCoachPrograms();
+  // Templates: the shared program library, with how many clients have each.
   const templatesEl = document.getElementById('wsTemplatesList');
-  if (!programs.length) {
-    templatesEl.innerHTML = '<p class="ws-empty-note">No saved program templates yet.</p>';
+  if (!_programs.length) {
+    templatesEl.innerHTML = '<p class="ws-empty-note">No programs in your library yet. Build one in a client\'s Program tab or on the phone (Coach Ops → Programs).</p>';
   } else {
-    templatesEl.innerHTML = programs.map(p => {
-      const assigned = _clients.filter(c => c.currentProgram === p.name).length;
+    templatesEl.innerHTML = _programs.map(p => {
+      const assigned = linked.filter(c => c.currentProgramId === p.id).length;
       return '<div class="ws-list-row"><span class="ws-list-name">' + escapeHtml(p.name) + '</span>' +
         '<span class="ws-list-count">' + assigned + '</span></div>';
     }).join('');
   }
 
-  railNavUpdateCounts(counts, programs.length);
-  // Keep the check-ins list in sync if it's the panel currently on screen
-  // (railNavGo() only renders it on click, not on every data refresh).
+  railNavUpdateCounts(counts, _programs.length);
   if (_activeWorkspaceSection === 'checkins') renderCheckinsList();
 }
 
@@ -386,7 +407,7 @@ function railNavUpdateCounts(counts, templateCount) {
 // first. Same definition railNavUpdateCounts() already used for the rail
 // badge count; this is the first place it's actually rendered as a list.
 function getStaleCheckinClients() {
-  return _clients
+  return activeClients()
     .map(c => ({
       client: c,
       days: c.lastCheckIn ? (Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000 : Infinity
@@ -401,8 +422,8 @@ function renderCheckinsList() {
   const stale = getStaleCheckinClients();
   el.innerHTML = stale.length
     ? stale.map(({ client: c, days }) => {
-        const label = Number.isFinite(days) ? Math.floor(days) + 'd since last check-in' : 'No check-in yet';
-        return '<div class="ws-roster-row" onclick="selectClient(\'' + c.id + '\')">'
+        const label = Number.isFinite(days) ? Math.floor(days) + 'd since last check-in' : 'No check-in shared yet';
+        return '<div class="ws-roster-row" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">'
           + '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>'
           + '<span class="ws-roster-cell">' + escapeHtml(label) + '</span>'
           + '</div>';
@@ -440,7 +461,7 @@ function toggleBulk(id) {
 }
 
 async function bulkMessage() {
-  const clients = _clients.filter(c => _bulkSelected.has(c.id));
+  const clients = activeClients().filter(c => _bulkSelected.has(c.id));
   const names = clients.map(c => c.clientName).join(', ');
   const msg = prompt('Message to send to ' + clients.length + ' clients:\n(' + names + ')');
   if (!msg) return;
@@ -472,7 +493,33 @@ function backToWorkspace() {
   document.querySelector('.app-shell')?.classList.remove('is-rail-collapsed');
 }
 
-function selectClient(id) {
+// Full history (check-ins, bodyweight series, weekly sessions) for the
+// open client, from GET /api/coach/clients/:id.
+let _clientDetails = {};
+
+async function loadClientDetail(id) {
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(id), { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+    _clientDetails[id] = data.client;
+  } catch {
+    _clientDetails[id] = null;
+  }
+  return _clientDetails[id];
+}
+
+function renderClientFile(client) {
+  renderDetailHeader(client);
+  renderOverview(client);
+  renderCheckIn(client);
+  renderProgram(client);
+  renderNutrition(client);
+  if (client.status !== 'pending') renderNotes(client);
+  else document.getElementById('dtab_notes').innerHTML = '<div class="d-card"><p class="ws-empty-note">You can send notes once they accept.</p></div>';
+}
+
+async function selectClient(id) {
   _selectedClientId = id;
   renderClientList();
   const client = _clients.find(c => c.id === id);
@@ -484,13 +531,11 @@ function selectClient(id) {
   // Rail collapses to icon-only while viewing a client file (spec: 72px).
   document.querySelector('.app-shell')?.classList.add('is-rail-collapsed');
 
-  renderDetailHeader(client);
-  renderOverview(client);
-  renderCheckIn(client);
-  renderProgram(client);
-  renderNutrition(client);
-  renderNotes(client);
+  renderClientFile(client);
   switchDetailTab('overview');
+  if (client.status === 'pending') return;
+  await Promise.all([loadClientDetail(id), loadPrograms()]);
+  if (_selectedClientId === id) renderClientFile(client);
 }
 
 // ── Detail tabs ───────────────────────────────────────────────
@@ -527,144 +572,216 @@ function scoreBar(label, value, max, inverse) {
 // ── Detail: Header ────────────────────────────────────────────
 
 function renderDetailHeader(c) {
-  const initials = (c.clientName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const daysSince = c.lastCheckIn ? Math.floor((Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000) + ' days ago' : 'Never';
+  const initials = escapeHtml((c.clientName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase());
+  const pending = c.status === 'pending';
+  const days = daysSinceIso(c.lastCheckIn);
+  const sharingOff = c.sharing ? Object.entries({ checkIns: 'check-ins', bodyweight: 'bodyweight', workouts: 'workouts' })
+    .filter(([k]) => c.sharing[k] === false).map(([, label]) => label) : [];
+  const meta = pending
+    ? 'Invite sent — waiting for them to accept in the app (Settings → Your Coach)'
+    : escapeHtml(c.trainingMode || '—') + ' · Last check-in: ' + (days === null ? 'never' : days + ' days ago')
+      + (c.email ? ' · ' + escapeHtml(c.email) : '')
+      + (sharingOff.length ? ' · Not sharing: ' + escapeHtml(sharingOff.join(', ')) : '');
 
   document.getElementById('detailHeader').innerHTML =
     '<div class="detail-avatar">' + initials + '</div>'
-    + '<div class="detail-info"><div class="detail-name">' + (c.clientName || 'Unknown') + '</div>'
-    + '<div class="detail-meta">' + (c.trainingMode || '—') + ' · Last check-in: ' + daysSince + ' · ' + (c.email || '') + '</div></div>'
-    + '<span class="detail-status ' + (c.alertStatus || 'ok') + '">' + (c.alertStatus || 'ok') + '</span>';
+    + '<div class="detail-info"><div class="detail-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
+    + '<div class="detail-meta">' + meta + '</div></div>'
+    + '<span class="detail-status ' + (pending ? 'watch' : escapeHtml(c.alertStatus || 'ok')) + '">' + (pending ? 'pending' : escapeHtml(c.alertStatus || 'ok')) + '</span>'
+    + '<button class="capsule-chip capsule-chip--warn" onclick="removeClient()">' + (pending ? 'Cancel invite' : 'Remove client') + '</button>';
+}
+
+async function removeClient() {
+  const client = _clients.find(c => c.id === _selectedClientId);
+  if (!client) return;
+  const pending = client.status === 'pending';
+  const ok = confirm(pending
+    ? 'Cancel the invite to ' + client.clientName + '?'
+    : 'Remove ' + client.clientName + '? The link ends and everything they shared with you is deleted. This can\'t be undone.');
+  if (!ok) return;
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(client.id), { method: 'DELETE', headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok || !data.success) { alert(data?.error?.message || 'Could not remove.'); return; }
+    delete _clientDetails[client.id];
+    backToWorkspace();
+    loadClients();
+  } catch {
+    alert('Connection error — try again.');
+  }
 }
 
 // ── Detail: Overview ──────────────────────────────────────────
 
+function sparkline(points) {
+  if (!Array.isArray(points) || points.length < 2) return '';
+  const w = 320, h = 80, pad = 4;
+  const ys = points.map(p => p.weight);
+  const min = Math.min(...ys), max = Math.max(...ys), span = max - min || 1;
+  const d = points.map((p, i) => {
+    const x = pad + (i / (points.length - 1)) * (w - pad * 2);
+    const y = pad + (1 - (p.weight - min) / span) * (h - pad * 2);
+    return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+  }).join(' ');
+  return '<svg class="coach-spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" role="img" aria-label="Bodyweight ' + min + ' to ' + max + ' kg">'
+    + '<path d="' + d + '" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+function weekBars(weeks) {
+  if (!Array.isArray(weeks) || !weeks.length) return '';
+  const max = Math.max(1, ...weeks.map(w => w.count));
+  return '<div class="chart-empty-shell chart-empty-shell--bars coach-week-bars">'
+    + weeks.map(w => '<span class="chart-empty-bar is-real" style="height:' + Math.max(4, Math.round((w.count / max) * 100)) + '%" title="Week of ' + escapeHtml(w.weekStart) + ': ' + w.count + ' sessions"></span>').join('')
+    + '</div>';
+}
+
 function renderOverview(c) {
-  const ci = c.latestCheckInData || {};
-  const macros = getClientMacros(c.id);
-  // Spec's Col 1 (weight sparkline / weekly tonnage bars / macro adherence
-  // meters) needs a weight time series, a per-session tonnage history and
-  // logged-intake data — none of which reach the coach console today (see
-  // renderCheckIn's TODO for the same class of gap). Rendered honestly as
-  // empty/target-only states rather than fabricated charts, per decision.
-  document.getElementById('dtab_overview').innerHTML =
+  const el = document.getElementById('dtab_overview');
+  if (c.status === 'pending') {
+    el.innerHTML = '<div class="d-card"><p class="ws-empty-note">Nothing to show until ' + escapeHtml(c.clientName) + ' accepts your invite.</p></div>';
+    return;
+  }
+  const d = _clientDetails[c.id];
+  const loading = d === undefined;
+  const ci = (d?.checkIns || [])[0] || c.latestCheckInData || {};
+  const bw = d?.bodyweight || [];
+  const weeks = d?.weeklyWorkouts || [];
+  const m = c.macroTargets || {};
+  const rate = c.weeklyWeightChangePercent;
+  const empty = (text) => '<p class="ws-empty-note">' + (loading ? 'Loading…' : text) + '</p>';
+
+  el.innerHTML =
     '<div class="d-card"><div class="d-card-title">Quick Stats</div><div class="d-stat-grid">'
-    + stat('Bodyweight', ci.bodyweight ? ci.bodyweight + ' kg' : '—')
-    + stat('Program', c.currentProgram || '—')
-    + stat('Mode', c.trainingMode || '—')
-    + stat('Status', c.alertStatus || '—')
+    + stat('Bodyweight', c.currentBodyweight != null ? c.currentBodyweight + ' kg' : '—')
+    + stat('Rate / wk', rate != null ? (rate > 0 ? '+' : '') + Number(rate).toFixed(2) + '%' : '—')
+    + stat('Compliance', c.compliancePercent != null ? c.compliancePercent + '%' : '—')
+    + stat('Sessions this wk', c.workoutsLoggedThisWeek != null ? c.workoutsLoggedThisWeek : '—')
     + '</div></div>'
-    + '<div class="d-card"><div class="d-card-title">Weight &middot; 12-week trend</div>'
-    + '<div class="chart-empty-shell"><span>No weight history synced from the client\'s app yet</span></div></div>'
-    + '<div class="d-card"><div class="d-card-title">Weekly tonnage</div>'
-    + '<div class="chart-empty-shell chart-empty-shell--bars">' + Array(8).fill('<span class="chart-empty-bar"></span>').join('') + '</div>'
-    + '<p class="ws-empty-note">No session tonnage history synced yet</p></div>'
-    + '<div class="d-card"><div class="d-card-title">Macro adherence</div>'
-    + ['Calories', 'Protein', 'Carbs', 'Fat'].map(k => {
-        const key = k.toLowerCase();
-        const target = macros[key];
-        return '<div class="checkin-score-row"><span class="checkin-score-label">' + k + '</span>'
-          + '<div class="checkin-score-bar"><div class="checkin-score-fill" style="width:0%"></div></div>'
-          + '<span class="checkin-score-val">' + (target ? 'Target ' + target + (k === 'Calories' ? '' : 'g') : '—') + '</span></div>';
-      }).join('')
-    + '<p class="ws-empty-note">No logged intake synced from the client\'s app yet</p></div>'
+    + '<div class="d-card"><div class="d-card-title">Alerts</div>'
+    + ((c.alerts || []).length
+      ? c.alerts.map(a => '<div class="checkin-score-row"><span class="checkin-score-label">' + escapeHtml(a.label) + '</span><span class="checkin-score-val" style="width:auto;flex:1;text-align:right;">' + escapeHtml(a.reason) + '</span></div>').join('')
+      : '<p class="ws-empty-note">' + (c.lastSharedAt ? 'No alerts — on track.' : 'No data shared yet. It appears after the client next opens the app.') + '</p>')
+    + '</div>'
+    + '<div class="d-card"><div class="d-card-title">Weight &middot; trend</div>'
+    + (bw.length >= 2 ? sparkline(bw) + '<p class="ws-empty-note">' + bw[0].weight + ' → ' + bw[bw.length - 1].weight + ' kg · ' + escapeHtml(bw[0].date) + ' to ' + escapeHtml(bw[bw.length - 1].date) + '</p>'
+      : empty('Not enough weigh-ins shared for a trend.'))
+    + '</div>'
+    + '<div class="d-card"><div class="d-card-title">Sessions per week</div>'
+    + (weeks.length ? weekBars(weeks) + '<p class="ws-empty-note">Last ' + weeks.length + ' weeks' + (c.activeProgramName ? ' · following ' + escapeHtml(c.activeProgramName) : '') + '</p>'
+      : empty('No workouts shared yet.'))
+    + '</div>'
+    + '<div class="d-card"><div class="d-card-title">Macro targets</div>'
+    + (m.calories ? '<div class="d-stat-grid">' + stat('Calories', m.calories) + stat('Protein', m.protein + 'g') + stat('Carbs', m.carbs + 'g') + stat('Fat', m.fat + 'g') + '</div>'
+      : '<p class="ws-empty-note">No targets sent yet — see the Nutrition tab.</p>')
+    + '</div>'
     + '<div class="d-card"><div class="d-card-title">Latest Check-In</div>'
-    + scoreBar('Sleep', ci.sleep, 10) + scoreBar('Energy', ci.energy, 10)
-    + scoreBar('Stress', ci.stress, 10, true) + scoreBar('Hunger', ci.hunger, 10)
-    + scoreBar('Training', ci.trainingPerformance, 10) + '</div>'
+    + (ci.date
+      ? '<p class="ws-empty-note">' + escapeHtml(ci.date) + '</p>' + scoreRows(ci)
+      : empty('No check-ins shared yet.'))
+    + '</div>'
     + '<div class="d-card"><div class="d-card-title">AI Coach Actions</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-    + '<button class="bulk-action-btn" onclick="aiAnalyse()">🧠 Analyse Check-In</button>'
+    + '<button class="bulk-action-btn" onclick="aiAnalyse()"' + (ci.date ? '' : ' disabled title="Needs a shared check-in"') + '>🧠 Analyse Check-In</button>'
     + '<button class="bulk-action-btn" onclick="aiDraft()">✍️ Draft Message</button>'
     + '</div><div id="aiResultBox" style="margin-top:10px;"></div></div>';
+}
+
+function scoreRows(ci) {
+  return [['Sleep', 'sleep'], ['Energy', 'energy'], ['Stress', 'stress', true], ['Hunger', 'hunger'], ['Training', 'trainingPerformance'], ['Cardio', 'cardioAdherence']]
+    .filter(([, k]) => ci[k] != null)
+    .map(([label, k, inverse]) => scoreBar(label, ci[k], 10, inverse))
+    .join('');
 }
 
 // ── Detail: Check-In ──────────────────────────────────────────
 
 function renderCheckIn(c) {
-  const ci = c.latestCheckInData || {};
   const el = document.getElementById('dtab_checkin');
-  if (!ci.sleep && !ci.energy) {
-    el.innerHTML = '<div class="d-card"><p style="color:var(--text-muted);text-align:center;padding:24px 0;">No check-in data available.</p></div>';
+  const d = _clientDetails[c.id];
+  const list = d?.checkIns || [];
+  if (c.status === 'pending' || !list.length) {
+    el.innerHTML = '<div class="d-card"><p style="color:var(--text-muted);text-align:center;padding:24px 0;">'
+      + (d === undefined && c.status !== 'pending' ? 'Loading…' : 'No check-ins shared yet.') + '</p></div>';
     return;
   }
-  // Photo slots: the mobile app has a progress-photos feature, but it
-  // isn't wired into the coach console's client data yet (no photoUrl
-  // reaches _clients), so these render as honest empty hatch-fill slots
-  // rather than fabricated images — TODO(coach-workspace): wire real
-  // photo URLs once the backend exposes them to the coach API.
-  const photoSlots = ['Front', 'Side', 'Back'].map(pos =>
-    '<div class="checkin-photo-slot"><span class="checkin-photo-label">' + pos + '</span></div>'
+  // Progress photos stay on the client's phone; they aren't shared with coaches.
+  el.innerHTML = list.map((ci, i) =>
+    '<div class="d-card"><div class="d-card-title">' + (i === 0 ? 'Latest check-in · ' : '') + escapeHtml(ci.date) + '</div>'
+    + scoreRows(ci)
+    + (ci.bodyweight ? '<p class="ws-empty-note">Bodyweight ' + ci.bodyweight + ' kg</p>' : '')
+    + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
+    + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
+    + '</div>'
   ).join('');
-  el.innerHTML = '<div class="d-card"><div class="d-card-title">Check-In Photos</div>'
-    + '<div class="checkin-photo-row">' + photoSlots + '</div></div>'
-    + '<div class="d-card"><div class="d-card-title">Full Check-In Review</div>'
-    + scoreBar('Sleep Quality', ci.sleep, 10) + scoreBar('Energy Level', ci.energy, 10)
-    + scoreBar('Stress Level', ci.stress, 10, true) + scoreBar('Hunger', ci.hunger, 10)
-    + scoreBar('Training Performance', ci.trainingPerformance, 10)
-    + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '') + '</div>'
-    + '<div class="d-card"><div class="d-card-title">Bodyweight</div><div class="d-stat-grid">'
-    + stat('Current', ci.bodyweight ? ci.bodyweight + ' kg' : '—')
-    + stat('Last Check-In', c.lastCheckIn || '—') + '</div></div>';
 }
 
 // ══════════════════════════════════════════════════════════════
-// COACH-4: Program Assignment + Macro Plan Editor
+// COACH-4: Program library + assignment, macro targets
 // ══════════════════════════════════════════════════════════════
+// Programs live on the server (/api/coach/programs), shared with the
+// mobile Coach Ops builder. Assigning one sends its full content to the
+// client, who gets a Start button in Settings → Your Coach.
+
+let _programs = [];
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+async function loadPrograms() {
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/programs', { headers: authHeaders() });
+    const data = await res.json();
+    if (res.ok && data.success) _programs = data.programs || [];
+  } catch { /* keep the last list */ }
+  return _programs;
+}
+
+function formatExercise(ex) {
+  if (typeof ex === 'string') return ex + ' 3x10';
+  return ex.name + ' ' + ex.sets + 'x' + ex.reps + (ex.repsMax ? '-' + ex.repsMax : '');
+}
+
+// One exercise per line: "Squat 4x6-8" (sets×reps optional, defaults 3x10).
+function parseDayLines(text) {
+  return String(text || '').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+    const m = line.match(/^(.*?)\s+(\d{1,2})\s*[x×]\s*(\d{1,3})(?:\s*-\s*(\d{1,3}))?$/i);
+    if (!m) return { name: line.slice(0, 80), sets: 3, reps: 10 };
+    const ex = { name: m[1].trim().slice(0, 80), sets: Number(m[2]), reps: Number(m[3]) };
+    if (m[4] && Number(m[4]) > ex.reps) ex.repsMax = Number(m[4]);
+    return ex;
+  });
+}
 
 function renderProgram(c) {
   const el = document.getElementById('dtab_program');
-  const programs = getCoachPrograms();
-  const currentProg = c.currentProgram || '';
-
-  let programListHtml = '<option value="">— No program —</option>';
-  programs.forEach(p => {
-    const sel = p.name === currentProg ? ' selected' : '';
-    programListHtml += '<option value="' + p.name + '"' + sel + '>' + p.name + '</option>';
-  });
-
-  // Spec's Program editor (week selector W1-W5, editable Exercise/Sets/
-  // Load/RPE/Δ grid, session history) needs a structured per-week program
-  // model this app doesn't have yet — getCoachPrograms() only stores
-  // name/days/focus/notes, no exercises. Rendered as an honest empty
-  // shell (real week chips, real "assign/create" actions kept working,
-  // grid/actions/history inert) rather than fabricated program data.
-  const weekChips = ['W1', 'W2', 'W3', 'W4', 'W5'].map((w, i) =>
-    '<button class="week-chip' + (i === 0 ? ' active' : '') + '" disabled>' + w + '</button>'
+  if (c.status === 'pending') {
+    el.innerHTML = '<div class="d-card"><p class="ws-empty-note">You can assign a program once they accept.</p></div>';
+    return;
+  }
+  const current = _programs.find(p => p.id === c.currentProgramId);
+  const options = '<option value="">— Choose a program —</option>' + _programs.map(p =>
+    '<option value="' + escapeHtml(p.id) + '"' + (p.id === c.currentProgramId ? ' selected' : '') + '>' + escapeHtml(p.name) + ' (' + (p.exerciseCount || 0) + ' exercises)</option>'
   ).join('');
 
-  el.innerHTML = '<div class="d-card"><div class="d-card-title">Assign Program</div>'
-    + '<select id="coachProgramSelect" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;margin-bottom:10px;">'
-    + programListHtml + '</select>'
-    + '<div style="display:flex;gap:8px;">'
-    + '<button class="bulk-action-btn" onclick="assignProgram()">Save Assignment</button>'
-    + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="showProgramBuilder()">+ Create Program</button>'
-    + '</div>'
-    + '<div id="programBuilderArea" style="margin-top:12px;"></div>'
-    + '</div>'
-    + '<div class="d-card"><div class="d-card-title">Current Program Details</div>'
-    + '<p style="color:var(--text-sec);">' + (currentProg || 'No program assigned.') + '</p></div>'
-    + '<div class="d-card pod--hero">'
-    + '<div class="pod-row"><span class="pod-kicker">Program editor</span><div class="week-chip-row">' + weekChips + '</div></div>'
-    + '<div class="program-grid-header"><span>Exercise</span><span>Sets&times;reps</span><span>Load</span><span>RPE</span><span>&Delta; last wk</span></div>'
-    + '<p class="ws-empty-note">No structured per-week program data yet — programs are name/notes only in this app today.</p>'
-    + '<div class="detail-breadcrumb-actions" style="margin-top:8px;">'
-    + '<button class="capsule-chip capsule-chip--neutral" disabled title="Coming soon">+ Exercise</button>'
-    + '<button class="capsule-chip capsule-chip--neutral" disabled title="Coming soon">Swap template</button>'
-    + '<button class="capsule-chip capsule-chip--warn" disabled title="Coming soon">Insert deload</button>'
-    + '</div></div>'
-    + '<div class="d-card"><div class="d-card-title">Session history</div>'
-    + '<p class="ws-empty-note">No session history synced from the client\'s app yet.</p></div>';
-}
+  const preview = current
+    ? WEEKDAYS.filter(d => (current.days?.[d] || []).length).map(d =>
+        '<div class="checkin-score-row"><span class="checkin-score-label">' + d + '</span><span class="checkin-score-val" style="text-align:left;flex:1;">'
+        + escapeHtml((current.days[d] || []).map(formatExercise).join(' · ')) + '</span></div>').join('')
+    : '<p class="ws-empty-note">' + (c.currentProgram ? escapeHtml(c.currentProgram) + ' (no longer in your library)' : 'No program assigned.') + '</p>';
 
-function getCoachPrograms() {
-  try { return JSON.parse(localStorage.getItem('coachPrograms_' + _username) || '[]'); } catch { return []; }
+  el.innerHTML = '<div class="d-card"><div class="d-card-title">Assign Program</div>'
+    + '<select id="coachProgramSelect" class="coach-input">' + options + '</select>'
+    + '<div class="detail-breadcrumb-actions" style="margin-top:10px;">'
+    + '<button class="bulk-action-btn" onclick="assignProgram()">Assign</button>'
+    + (c.currentProgramId ? '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="unassignProgram()">Remove</button>' : '')
+    + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="showProgramBuilder()">+ New program</button>'
+    + '</div>'
+    + '<div id="programBuilderArea" style="margin-top:12px;"></div></div>'
+    + '<div class="d-card"><div class="d-card-title">Assigned: ' + escapeHtml(c.currentProgram || 'none') + '</div>' + preview
+    + (c.activeProgramName && c.activeProgramName !== c.currentProgram ? '<p class="ws-empty-note">Client is currently following: ' + escapeHtml(c.activeProgramName) + '</p>' : '')
+    + '</div>';
 }
 
 // Writes real fields on the client's Firestore doc (PATCH /api/coach/clients/:id)
-// — mirrored server-side onto the client's own coachAssignment view, so this
-// is the actual delivery mechanism, not a local-only stand-in. Returns
-// whether it succeeded so callers can decide what to do next.
+// — mirrored server-side onto the client's own coachAssignment view.
 async function patchClient(clientId, fields) {
   try {
     const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId), {
@@ -686,108 +803,114 @@ async function patchClient(clientId, fields) {
 
 async function assignProgram() {
   const sel = document.getElementById('coachProgramSelect');
-  if (!sel) return;
   const client = _clients.find(c => c.id === _selectedClientId);
-  if (!client) return;
-  if (!(await patchClient(client.id, { currentProgram: sel.value }))) return;
-  client.currentProgram = sel.value;
-  alert('Program "' + sel.value + '" assigned to ' + client.clientName);
+  if (!sel || !client) return;
+  if (!sel.value) { alert('Choose a program first.'); return; }
+  if (!(await patchClient(client.id, { programId: sel.value }))) return;
+  const prog = _programs.find(p => p.id === sel.value);
+  client.currentProgramId = sel.value;
+  client.currentProgram = prog ? prog.name : client.currentProgram;
+  alert('"' + client.currentProgram + '" sent to ' + client.clientName + '. They can start it from Settings → Your Coach.');
   renderProgram(client);
-  renderOverview(client);
+  renderWorkspace();
 }
 
-function showProgramBuilder() {
+async function unassignProgram() {
+  const client = _clients.find(c => c.id === _selectedClientId);
+  if (!client || !(await patchClient(client.id, { programId: '' }))) return;
+  client.currentProgramId = '';
+  client.currentProgram = '';
+  renderProgram(client);
+}
+
+function showProgramBuilder(program) {
   const area = document.getElementById('programBuilderArea');
   if (!area) return;
-  area.innerHTML = '<div style="border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface);">'
-    + '<input type="text" id="newProgName" placeholder="Program name" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:0.9rem;">'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
-    + '<input type="number" id="newProgDays" placeholder="Days/week" min="1" max="7" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);">'
-    + '<select id="newProgFocus" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);"><option value="hypertrophy">Hypertrophy</option><option value="strength">Strength</option><option value="conditioning">Conditioning</option><option value="general">General</option></select>'
+  const p = program || { name: '', days: {} };
+  area.innerHTML = '<div class="coach-builder">'
+    + '<input type="text" id="newProgName" class="coach-input" placeholder="Program name" maxlength="80" value="' + escapeHtml(p.name) + '">'
+    + '<p class="ws-empty-note">One exercise per line, e.g. <code>Squat 4x6-8</code>. Leave a day empty for rest.</p>'
+    + '<div class="coach-builder-days">'
+    + WEEKDAYS.map(d => '<label class="coach-builder-day"><span>' + d + '</span><textarea id="newProgDay_' + d + '" rows="4" class="coach-input">'
+      + escapeHtml((p.days?.[d] || []).map(formatExercise).join('\n')) + '</textarea></label>').join('')
     + '</div>'
-    + '<textarea id="newProgNotes" placeholder="Program notes / split description…" style="width:100%;min-height:60px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:0.85rem;resize:vertical;margin-bottom:8px;"></textarea>'
-    + '<button class="bulk-action-btn" onclick="saveCoachProgram()">Save Program</button>'
+    + '<button class="bulk-action-btn" onclick="saveCoachProgram()">Save to library</button>'
     + '</div>';
+  document.getElementById('newProgName')?.focus();
 }
 
-function saveCoachProgram() {
+async function saveCoachProgram() {
   const name = document.getElementById('newProgName')?.value?.trim();
   if (!name) { alert('Enter a program name.'); return; }
-  const days = Number(document.getElementById('newProgDays')?.value) || 4;
-  const focus = document.getElementById('newProgFocus')?.value || 'general';
-  const notes = document.getElementById('newProgNotes')?.value?.trim() || '';
-
-  const programs = getCoachPrograms();
-  programs.push({ name, days, focus, notes, createdAt: new Date().toISOString() });
-  localStorage.setItem('coachPrograms_' + _username, JSON.stringify(programs));
-
+  const days = {};
+  let total = 0;
+  WEEKDAYS.forEach(d => { days[d] = parseDayLines(document.getElementById('newProgDay_' + d)?.value); total += days[d].length; });
+  if (!total) { alert('Add at least one exercise.'); return; }
+  const id = 'prog_' + Date.now().toString(36);
+  try {
+    const res = await fetch(SERVER_URL + '/api/coach/programs/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ name, days }) });
+    const data = await res.json();
+    if (!res.ok || !data.success) { alert(data?.error?.message || 'Could not save.'); return; }
+  } catch {
+    alert('Connection error — try again.');
+    return;
+  }
+  await loadPrograms();
   const client = _clients.find(c => c.id === _selectedClientId);
   if (client) renderProgram(client);
-  alert('Program "' + name + '" created.');
+  const sel = document.getElementById('coachProgramSelect');
+  if (sel) sel.value = id;
+  renderWorkspace();
 }
 
-// ── Macro Plan Editor ─────────────────────────────────────────
+// ── Macro targets ─────────────────────────────────────────────
 
 function renderNutrition(c) {
   const el = document.getElementById('dtab_nutrition');
-  const saved = getClientMacros(c.id);
-
-  el.innerHTML = '<div class="d-card"><div class="d-card-title">Macro Plan Editor</div>'
+  if (c.status === 'pending') {
+    el.innerHTML = '<div class="d-card"><p class="ws-empty-note">You can send macro targets once they accept.</p></div>';
+    return;
+  }
+  const m = c.macroTargets || {};
+  el.innerHTML = '<div class="d-card"><div class="d-card-title">Macro targets</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
-    + macroField('Calories', 'macroCalories', saved.calories || '')
-    + macroField('Protein (g)', 'macroProtein', saved.protein || '')
-    + macroField('Carbs (g)', 'macroCarbs', saved.carbs || '')
-    + macroField('Fat (g)', 'macroFat', saved.fat || '')
+    + macroField('Calories', 'macroCalories', m.calories)
+    + macroField('Protein (g)', 'macroProtein', m.protein)
+    + macroField('Carbs (g)', 'macroCarbs', m.carbs)
+    + macroField('Fat (g)', 'macroFat', m.fat)
     + '</div>'
-    + '<div class="d-card-title" style="margin-top:8px;">Day Type Adjustments</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
-    + macroField('Training Day Cal', 'macroTrainCal', saved.trainingCal || '')
-    + macroField('Rest Day Cal', 'macroRestCal', saved.restCal || '')
-    + macroField('High Carb Day', 'macroHighCarb', saved.highCarb || '')
-    + macroField('Low Carb Day', 'macroLowCarb', saved.lowCarb || '')
+    + '<textarea id="macroNotes" class="coach-input" placeholder="Short note shown with the targets (optional), e.g. training days +50g carbs">' + escapeHtml(noteFromSummary(c.currentNutritionSummary)) + '</textarea>'
+    + '<button class="bulk-action-btn" style="margin-top:10px;" onclick="saveClientMacros()">Send targets</button>'
+    + '<p class="ws-empty-note">' + escapeHtml(c.clientName) + ' reviews and applies them from Settings → Your Coach.</p>'
     + '</div>'
-    + '<textarea id="macroNotes" placeholder="Nutrition notes for client…" style="width:100%;min-height:60px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.85rem;resize:vertical;margin-bottom:10px;">' + (saved.notes || '') + '</textarea>'
-    + '<button class="bulk-action-btn" onclick="saveClientMacros()">Save Macro Plan</button>'
-    + '</div>'
-    + '<div class="d-card"><div class="d-card-title">Current Summary</div>'
-    + '<p style="color:var(--text-sec);">' + (c.currentNutritionSummary || 'No nutrition plan set.') + '</p></div>';
+    + '<div class="d-card"><div class="d-card-title">Current</div>'
+    + '<p style="color:var(--text-sec);">' + escapeHtml(c.currentNutritionSummary || 'No nutrition plan set.') + '</p></div>';
 }
 
 function macroField(label, id, value) {
   return '<label style="display:flex;flex-direction:column;gap:3px;font-size:0.72rem;color:var(--text-muted);font-weight:600;">'
-    + label + '<input type="number" id="' + id + '" value="' + value + '" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;margin:0;">'
+    + label + '<input type="number" min="0" id="' + id + '" value="' + (value ?? '') + '" class="coach-input" style="margin:0;">'
     + '</label>';
 }
 
-function getClientMacros(clientId) {
-  try { return JSON.parse(localStorage.getItem('coachMacros_' + clientId) || '{}'); } catch { return {}; }
+// The summary is "2400 kcal · 180P / 250C / 70F" plus an optional " — note".
+function noteFromSummary(summary) {
+  const i = String(summary || '').indexOf(' — ');
+  return i >= 0 ? summary.slice(i + 3) : '';
 }
 
-// The detailed breakdown (training/rest-day cals, high/low-carb days, free
-// notes) stays local — there's no server field for that granular a plan.
-// What's real: the summary string this composes into is PATCHed as the
-// client doc's `nutritionSummary`, the same field GET /api/coach/clients
-// already reads back, so this is what actually reaches the client's app.
 async function saveClientMacros() {
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
-  const macros = {
-    calories: document.getElementById('macroCalories')?.value || '',
-    protein: document.getElementById('macroProtein')?.value || '',
-    carbs: document.getElementById('macroCarbs')?.value || '',
-    fat: document.getElementById('macroFat')?.value || '',
-    trainingCal: document.getElementById('macroTrainCal')?.value || '',
-    restCal: document.getElementById('macroRestCal')?.value || '',
-    highCarb: document.getElementById('macroHighCarb')?.value || '',
-    lowCarb: document.getElementById('macroLowCarb')?.value || '',
-    notes: document.getElementById('macroNotes')?.value || '',
-    updatedAt: new Date().toISOString(),
-  };
-  localStorage.setItem('coachMacros_' + client.id, JSON.stringify(macros));
-  const summary = macros.calories + ' kcal · ' + macros.protein + 'g P · ' + macros.carbs + 'g C · ' + macros.fat + 'g F';
-  if (!(await patchClient(client.id, { nutritionSummary: summary }))) return;
+  const read = id => Number(document.getElementById(id)?.value);
+  const targets = { calories: read('macroCalories'), protein: read('macroProtein'), carbs: read('macroCarbs'), fat: read('macroFat') };
+  if (!Object.values(targets).every(v => Number.isFinite(v) && v > 0)) { alert('Fill in calories, protein, carbs and fat.'); return; }
+  const note = document.getElementById('macroNotes')?.value?.trim() || '';
+  const summary = targets.calories + ' kcal · ' + targets.protein + 'P / ' + targets.carbs + 'C / ' + targets.fat + 'F' + (note ? ' — ' + note : '');
+  if (!(await patchClient(client.id, { macroTargets: targets, nutritionSummary: summary }))) return;
+  client.macroTargets = targets;
   client.currentNutritionSummary = summary;
-  alert('Macro plan saved for ' + client.clientName);
+  alert('Targets sent to ' + client.clientName + '.');
   renderNutrition(client);
   renderOverview(client);
 }
@@ -944,11 +1067,37 @@ async function sendCoachInvite() {
 // COACH-7: AI Coach Assistant
 // ══════════════════════════════════════════════════════════════
 
+// Only real, shared data goes to the AI. Anything the client hasn't shared
+// is left out rather than filled with a plausible-looking default.
+function aiClientContext(client) {
+  const d = _clientDetails[client.id] || {};
+  const checkIns = d.checkIns || [];
+  const ci = checkIns[0] || client.latestCheckInData || null;
+  const bw = d.bodyweight || [];
+  return { d, checkIns, ci, bw };
+}
+
+function aiBox(title, body, color) {
+  return '<div style="background:var(--surface);border-left:3px solid ' + color + ';border-radius:0 10px 10px 0;padding:12px;margin-top:8px;">'
+    + '<div style="font-size:0.72rem;font-weight:700;color:' + color + ';text-transform:uppercase;margin-bottom:6px;">' + title + '</div>'
+    + '<div style="font-size:0.85rem;color:var(--text-sec);line-height:1.5;white-space:pre-wrap;">' + escapeHtml(body) + '</div></div>';
+}
+
 async function aiAnalyse() {
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
-  const ci = client.latestCheckInData || {};
+  const { checkIns, ci, bw } = aiClientContext(client);
   const box = document.getElementById('aiResultBox');
+  if (!ci || ci.sleep == null || ci.energy == null || ci.stress == null) {
+    if (box) box.innerHTML = '<p class="ws-empty-note">Needs a shared check-in with sleep, energy and stress scores.</p>';
+    return;
+  }
+  const thisWeek = ci.bodyweight ?? client.currentBodyweight;
+  if (thisWeek == null || client.compliancePercent == null) {
+    if (box) box.innerHTML = '<p class="ws-empty-note">Needs shared bodyweight and compliance (the client has one of these switched off or not logged yet).</p>';
+    return;
+  }
+  const lastWeekEntry = bw.length >= 2 ? bw[bw.length - 2] : null;
   if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">🧠 Analysing check-in…</p>';
 
   try {
@@ -956,51 +1105,52 @@ async function aiAnalyse() {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
-        sleep: ci.sleep || 5, energy: ci.energy || 5, stress: ci.stress || 5,
+        sleep: ci.sleep, energy: ci.energy, stress: ci.stress,
         hunger: ci.hunger, trainingPerformance: ci.trainingPerformance,
-        bodyweightThisWeek: ci.bodyweight || 70,
-        compliancePercent: 80, goal: 'maintain',
-        archetype: client.trainingMode || 'hybrid',
-        adjustmentNotes: ''
+        bodyweightThisWeek: thisWeek,
+        bodyweightLastWeek: lastWeekEntry ? lastWeekEntry.weight : (checkIns[1]?.bodyweight ?? null),
+        compliancePercent: client.compliancePercent,
+        goal: client.currentProgram || 'current phase',
+        archetype: client.trainingMode || 'general',
+        adjustmentNotes: ci.notes || ''
       })
     });
     const data = await res.json();
-    if (box) box.innerHTML = '<div style="background:var(--surface);border-left:3px solid var(--primary);border-radius:0 10px 10px 0;padding:12px;margin-top:8px;">'
-      + '<div style="font-size:0.72rem;font-weight:700;color:var(--primary);text-transform:uppercase;margin-bottom:6px;">AI Analysis</div>'
-      + '<div style="font-size:0.85rem;color:var(--text-sec);line-height:1.5;">' + (data.summary || 'No analysis available.') + '</div></div>';
+    if (box) box.innerHTML = res.ok ? aiBox('AI Analysis', data.summary || 'No analysis available.', 'var(--primary)')
+      : '<p style="color:var(--danger);font-size:0.82rem;">' + escapeHtml(data.error || 'Analysis failed.') + '</p>';
   } catch {
     if (box) box.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Failed to analyse — check connection.</p>';
   }
 }
 
+function draftPayload(client) {
+  const { ci } = aiClientContext(client);
+  return {
+    clientName: client.clientName,
+    archetype: client.trainingMode || 'general',
+    currentPhase: client.currentProgram || client.activeProgramName || '',
+    compliancePercent: client.compliancePercent,
+    checkIn: ci,
+    bodyweightChange: client.weeklyWeightChangePercent,
+    alerts: (client.alerts || []).map(a => ({ label: a.label, reason: a.reason })),
+    currentProgramSummary: client.currentProgram || '',
+    currentNutritionSummary: client.currentNutritionSummary || ''
+  };
+}
+
+let _lastDraft = '';
+
 async function aiDraft() {
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
-  const ci = client.latestCheckInData || {};
   const box = document.getElementById('aiResultBox');
   if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">✍️ Drafting message…</p>';
-
   try {
-    const res = await fetch(SERVER_URL + '/api/ai/coach-draft-message', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({
-        clientName: client.clientName,
-        archetype: client.trainingMode || 'hybrid',
-        currentPhase: 'general',
-        compliancePercent: 80,
-        checkIn: ci,
-        bodyweightChange: 0,
-        alerts: client.alertStatus === 'action' ? [{ label: 'Low recovery', reason: 'Sleep and energy below threshold' }] : [],
-        currentProgramSummary: client.currentProgram || '',
-        currentNutritionSummary: client.currentNutritionSummary || '',
-      })
-    });
+    const res = await fetch(SERVER_URL + '/api/ai/coach-draft-message', { method: 'POST', headers: authHeaders(), body: JSON.stringify(draftPayload(client)) });
     const data = await res.json();
-    if (box) box.innerHTML = '<div style="background:var(--surface);border-left:3px solid var(--highlight);border-radius:0 10px 10px 0;padding:12px;margin-top:8px;">'
-      + '<div style="font-size:0.72rem;font-weight:700;color:var(--highlight);text-transform:uppercase;margin-bottom:6px;">AI Draft Message</div>'
-      + '<div style="font-size:0.85rem;color:var(--text-sec);line-height:1.5;white-space:pre-wrap;">' + (data.draft || 'No draft available.') + '</div>'
-      + '<button class="bulk-action-btn" style="margin-top:10px;" onclick="useAiDraft()">📋 Copy to Notes</button></div>';
+    _lastDraft = data.draft || '';
+    if (box) box.innerHTML = aiBox('AI Draft Message', _lastDraft || 'No draft available.', 'var(--highlight)')
+      + (_lastDraft ? '<button class="bulk-action-btn" style="margin-top:10px;" onclick="useAiDraft()">Use in Notes</button>' : '');
   } catch {
     if (box) box.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Failed to draft — check connection.</p>';
   }
@@ -1009,33 +1159,19 @@ async function aiDraft() {
 function aiDraftIntoNotes() {
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
-  const ci = client.latestCheckInData || {};
   const textarea = document.getElementById('coachNoteInput');
   if (textarea) textarea.value = 'Generating AI draft…';
-
-  fetch(SERVER_URL + '/api/ai/coach-draft-message', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({
-      clientName: client.clientName,
-      archetype: client.trainingMode || 'hybrid',
-      currentPhase: 'general', compliancePercent: 80,
-      checkIn: ci, bodyweightChange: 0, alerts: [],
-      currentProgramSummary: client.currentProgram || '',
-      currentNutritionSummary: client.currentNutritionSummary || '',
-    })
-  }).then(r => r.json()).then(data => {
-    if (textarea) textarea.value = data.draft || 'Could not generate draft.';
-  }).catch(() => {
-    if (textarea) textarea.value = 'Failed to generate — check connection.';
-  });
+  fetch(SERVER_URL + '/api/ai/coach-draft-message', { method: 'POST', headers: authHeaders(), body: JSON.stringify(draftPayload(client)) })
+    .then(r => r.json())
+    .then(data => { if (textarea) textarea.value = data.draft || 'Could not generate draft.'; })
+    .catch(() => { if (textarea) textarea.value = 'Failed to generate — check connection.'; });
 }
 
 function useAiDraft() {
-  const draftEl = document.querySelector('#aiResultBox .bulk-action-btn')?.parentElement?.querySelector('div:nth-child(2)');
-  if (!draftEl) return;
-  const text = draftEl.textContent;
-  navigator.clipboard?.writeText(text).then(() => alert('Draft copied to clipboard!'));
+  if (!_lastDraft) return;
+  switchDetailTab('notes');
+  const textarea = document.getElementById('coachNoteInput');
+  if (textarea) { textarea.value = _lastDraft; textarea.focus(); }
 }
 
 // ══════════════════════════════════════════════════════════════

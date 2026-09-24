@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v12';
+const CACHE_VERSION = 'pocket-coach-v13';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -50,7 +50,6 @@ const APP_SHELL = [
   '/src/js/weekly-summary.js',
   '/src/js/weekly-recap.js',
   '/src/js/challenges.js',
-  '/src/js/client-checkins.js',
   '/src/js/progress-report.js',
   '/src/js/ProgramTabV2.js',
   '/src/js/programBuilderV2Core.js',
@@ -66,6 +65,7 @@ const APP_SHELL = [
   '/src/js/archetype-features.js',
   '/src/js/native-ui.js',
   '/src/js/coaching-enhanced.js',
+  '/src/js/client-coaching.js',
   '/src/js/settings.js',
   '/src/js/mobility.js',
   '/src/js/coach-data.js',
@@ -118,6 +118,9 @@ self.addEventListener('fetch', (event) => {
   // only, so a cached copy could be served to another (or a downgraded) account.
   // The app keeps its own per-account offline copy and wipes it on logout.
   if (url.pathname.includes('/api/premium/')) return;
+  // Same for coaching: client check-ins, bodyweight and notes are personal
+  // data and must never be replayed from a URL-keyed cache to another account.
+  if (/\/api\/(coach|client)\//.test(url.pathname) || url.pathname.includes('/exercise-videos')) return;
 
   // API GET requests: network-first, fall back to cached response
   if (url.pathname.startsWith('/api/') || url.origin !== location.origin) {
