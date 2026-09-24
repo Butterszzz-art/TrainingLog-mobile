@@ -10912,10 +10912,11 @@ function buildWeightSparkline(weights) {
   if (!weights.length) return '<p class="home-placeholder-note">Trend visual unlocks after two or more check-ins.</p>';
   const min = Math.min(...weights);
   const max = Math.max(...weights);
-  const span = Math.max(max - min, 0.1);
+  const span = max - min;
   return `<div class="home-sparkline">${weights.map((value) => {
-    const height = 10 + Math.round(((value - min) / span) * 18);
-    return `<span class="home-sparkline-bar" style="height:${height}px" title="${value}"></span>`;
+    // Flat series sit at mid-height instead of collapsing to stubs.
+    const pct = span > 0 ? 30 + Math.round(((value - min) / span) * 70) : 60;
+    return `<span class="home-sparkline-bar" style="height:${pct}%" title="${value}"></span>`;
   }).join('')}</div>`;
 }
 

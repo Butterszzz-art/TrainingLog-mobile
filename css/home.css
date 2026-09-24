@@ -119,15 +119,24 @@
      3-up .ws-stats) can't blow the track past the viewport. */
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .home-weekly-grid > * {
   min-width: 0;
 }
 
-/* Phones: two ~170px columns can't hold the step widget — stack. */
-@media (max-width: 430px) {
+/* The summary card fills its grid cell — its standalone 10px margin
+   pushed it out of the column and under the step card. */
+.home-weekly-grid .weekly-summary-card {
+  margin: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* Under ~640px a half-width column (≈280px or less) can't fit the
+   7-day strip + 3-up stat tiles or the step input row — stack. */
+@media (max-width: 640px) {
   .home-weekly-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -153,10 +162,9 @@
 }
 
 .home-step-card .step-count-input {
-  flex: 1 1 72px;
+  flex: 1 1 120px;
   width: auto;
-  min-width: 72px;
-  max-width: 110px;
+  min-width: 0;
 }
 
 .home-step-card .step-save-btn {
@@ -170,6 +178,14 @@
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-bevel);
   padding: 14px;
+  /* Grid rows stretch to the taller summary card — keep the widget centred. */
+  display: flex;
+  align-items: center;
+}
+
+.home-step-card > .step-widget {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Shrink the mode cards when they're in the demoted zone */
@@ -571,10 +587,17 @@
 .home-upcoming-item {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
   border-bottom: 1px solid rgba(122, 145, 134, 0.34);
   padding-bottom: 6px;
   font-size: 0.95rem;
+}
+
+.home-upcoming-item > strong {
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .home-mission-item:last-child,
@@ -810,14 +833,15 @@
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  min-height: 28px;
-  margin-top: 8px;
+  height: 36px;
+  margin-top: 12px;
 }
 
 .home-sparkline-bar {
   flex: 1;
   min-width: 5px;
-  border-radius: 8px 8px 2px 2px;
+  max-width: 36px;
+  border-radius: 4px 4px 2px 2px;
   background: linear-gradient(180deg, rgba(111, 202, 156, 0.88), rgba(44, 119, 84, 0.52));
   opacity: 0.9;
 }
