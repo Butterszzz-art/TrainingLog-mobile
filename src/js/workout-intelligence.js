@@ -327,9 +327,11 @@
     const valEl   = document.getElementById('waterMlVal');
     const fillEl  = document.getElementById('waterRingFill');
     const textEl  = document.getElementById('waterProgressText');
+    const barEl   = document.getElementById('waterVisBar');
 
     if (valEl)  valEl.textContent  = data.ml;
     if (fillEl) fillEl.style.strokeDashoffset = offset;
+    if (barEl)  barEl.style.width = `${Math.round(pct * 100)}%`;
     if (textEl) textEl.innerHTML   =
       `<strong>${data.ml}</strong> / ${data.targetMl} ml · ${Math.round(pct * 100)}%`;
   }
