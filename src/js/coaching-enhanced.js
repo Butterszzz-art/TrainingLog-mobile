@@ -1,89 +1,62 @@
 /* =============================================================
-   COACHING MODE — ENHANCED FEATURES
-   Program builder, messaging, bulk actions, data insights,
-   and GDPR / privacy controls.
-   Depends on: index.html's existing coachDashboardState,
-               loadCoachClients(), Chart.js
+   COACHING MODE — COACH OPS
+   Stats bar, bulk export, program library + builder, messaging,
+   insights and client data (privacy).
+   Depends on: index.html's coachDashboardState, coachApi(),
+               renderCoachDashboard(), Chart.js
    ============================================================= */
 
 'use strict';
-
-/* ── Storage helpers ─────────────────────────────────────────── */
-
-function _coachStore(key, val) {
-  if (val === undefined) {
-    try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
-  }
-  localStorage.setItem(key, JSON.stringify(val));
-}
 
 function _coachUser() {
   return window.currentUser || localStorage.getItem('fitnessAppUser') || 'coach';
 }
 
-/* ── Sub-tab navigation ──────────────────────────────────────── */
-
-function initCoachSubtabs() {
-  const nav = document.getElementById('coachSubtabNav');
-  if (!nav) return;
-  nav.addEventListener('click', e => {
-    const btn = e.target.closest('.coach-subtab');
-    if (!btn) return;
-    nav.querySelectorAll('.coach-subtab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const target = btn.dataset.coachSubtab;
-    document.querySelectorAll('.coach-subview').forEach(v =>
-      v.classList.toggle('active', v.id === 'coachSub_' + target)
-    );
-    // Lazy-render each panel on first visit
-    if (target === 'analytics')  renderCoachAnalytics();
-    if (target === 'messaging')  renderCoachMessaging();
-    if (target === 'gdpr')       renderCoachGdpr();
-    if (target === 'programs')   renderCoachProgramBuilder();
-  });
+// Roster rows that are linked (pending invites have no data yet).
+function _activeClients() {
+  return ((window.coachDashboardState && window.coachDashboardState.clients) || []).filter(c => !c.isPending);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   1. AGGREGATE STATS BAR
-   ══════════════════════════════════════════════════════════════ */
-
-// The roster uses ok / watch / action; older code also called the urgent state "alert".
 function _isUrgentStatus(status) {
   const s = String(status || '').toLowerCase();
   return s === 'action' || s === 'alert';
 }
 
+const _dash = v => (v === null || v === undefined || v === '' ? '—' : v);
+
+/* ══════════════════════════════════════════════════════════════
+   1. AGGREGATE STATS BAR
+   ══════════════════════════════════════════════════════════════ */
+
 function renderCoachStatsBar() {
   const container = document.getElementById('coachStatsBar');
   if (!container) return;
-  const clients = (window.coachDashboardState?.clients) || [];
+  const clients = _activeClients();
   if (!clients.length) { container.innerHTML = ''; return; }
 
-  const total      = clients.length;
+  const withAdh    = clients.filter(c => c.compliancePercent !== null && c.compliancePercent !== undefined);
+  const avgAdh     = withAdh.length ? Math.round(withAdh.reduce((s, c) => s + c.compliancePercent, 0) / withAdh.length) : null;
   const alertCount = clients.filter(c => _isUrgentStatus(c.alertStatus)).length;
   const watchCount = clients.filter(c => c.alertStatus === 'watch').length;
-  const avgAdh     = clients.reduce((s,c) => s + (c.compliancePercent || 0), 0) / total;
   const activeWeek = clients.filter(c => (c.workoutsLoggedThisWeek || 0) > 0).length;
 
   container.innerHTML = `
     <div class="mx-tiles coach-stats-tiles">
-      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Clients</span><span class="mx-stat-v chip-value">${total}</span></div>
+      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Clients</span><span class="mx-stat-v chip-value">${clients.length}</span></div>
       <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Active this week</span><span class="mx-stat-v chip-value">${activeWeek}</span></div>
-      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Avg adherence</span><span class="mx-stat-v chip-value">${Math.round(avgAdh)}<small>%</small></span></div>
+      <div class="mx-stat coach-stat-chip"><span class="mx-stat-l chip-label">Avg adherence</span><span class="mx-stat-v chip-value">${avgAdh === null ? '—' : `${avgAdh}<small>%</small>`}</span></div>
       <div class="mx-stat coach-stat-chip coach-stat--alert${alertCount ? ' is-on' : ''}"><span class="mx-stat-l chip-label">Needs action</span><span class="mx-stat-v chip-value">${alertCount}</span></div>
       <div class="mx-stat coach-stat-chip coach-stat--watch${watchCount ? ' is-on' : ''}"><span class="mx-stat-l chip-label">Watch</span><span class="mx-stat-v chip-value">${watchCount}</span></div>
     </div>`;
 }
 
 /* ══════════════════════════════════════════════════════════════
-   2. BULK ACTIONS
+   2. BULK EXPORT (CSV / print)
    ══════════════════════════════════════════════════════════════ */
 
 const _bulkSelected = new Set();
-// Expose on window so inline onclick handlers in index.html can reach it
 window._bulkSelected = _bulkSelected;
 
-// Global helper called by the "Clear" bulk toolbar button
 window.clearBulkSelection = function () {
   _bulkSelected.clear();
   _updateBulkToolbar();
@@ -91,16 +64,14 @@ window.clearBulkSelection = function () {
 };
 
 function initBulkActions() {
-  // Delegate checkbox changes on the roster grid
   const dashboard = document.getElementById('coachDashboardContent');
   if (!dashboard) return;
-
   dashboard.addEventListener('change', e => {
     const cb = e.target.closest('.coach-client-select');
     if (!cb) return;
     const id = cb.dataset.clientId;
     if (cb.checked) _bulkSelected.add(id);
-    else             _bulkSelected.delete(id);
+    else            _bulkSelected.delete(id);
     _updateBulkToolbar();
   });
 }
@@ -115,56 +86,33 @@ function _updateBulkToolbar() {
   if (countEl) countEl.textContent = `${count} client${count > 1 ? 's' : ''} selected`;
 }
 
-// Bulk program-assign/macro-update were removed here (moved to
-// desktop-only per product decision: mobile Coach Mode is now overview +
-// quick note/reply, actual coaching work lives in coach/coach.js). Neither
-// had a bulk equivalent on desktop either — only per-client — so there was
-// nothing honest to redirect these buttons to; they're just gone, along
-// with their local coachProgramAssignments_v1/coachNutritionAssignments_v1
-// stores (nothing else reads them — see the DATA INSIGHTS section's
-// GDPR export/delete, which still lists those keys defensively but they'll
-// just be empty going forward).
+function _exportRows() {
+  return _activeClients().filter(c => _bulkSelected.has(c.id)).map(c => [
+    c.name, c.archetype, c.currentProgram || c.activeProgramName || '',
+    _dash(c.compliancePercent), _dash(c.lastCheckInDate), _dash(c.workoutsLoggedThisWeek),
+    _dash(c.currentBodyweight), c.alertStatus
+  ]);
+}
+const _EXPORT_HEADER = ['Name', 'Mode', 'Program', 'Compliance %', 'Last check-in', 'Sessions this week', 'Bodyweight (kg)', 'Status'];
 
 function bulkExportCSV() {
-  const clients = (window.coachDashboardState?.clients) || [];
-  const selected = clients.filter(c => _bulkSelected.has(c.id));
-  if (!selected.length) return;
-
-  const header = ['Name','Archetype','Phase','Compliance%','Last Check-In','Workouts/Week','Alert Status'];
-  const rows   = selected.map(c => [
-    c.name, c.archetype, c.currentPhase,
-    c.compliancePercent, c.lastCheckInDate,
-    c.workoutsLoggedThisWeek, c.alertStatus
-  ]);
-
-  const csv = [header, ...rows].map(r => r.map(v => `"${(v ?? '').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
+  const rows = _exportRows();
+  if (!rows.length) return;
+  const csv = [_EXPORT_HEADER, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  const a = document.createElement('a');
   a.href = url;
-  a.download = `coach-report-${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `coach-report-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   _showExportToast('CSV exported');
 }
 
 function bulkExportPDF() {
-  const clients = (window.coachDashboardState?.clients) || [];
-  const selected = clients.filter(c => _bulkSelected.has(c.id));
-  if (!selected.length) return;
-
-  // Build a print-ready HTML page and open in new tab
-  const rows = selected.map(c => `
-    <tr>
-      <td>${c.name}</td>
-      <td>${c.archetype || '—'}</td>
-      <td>${c.currentPhase || '—'}</td>
-      <td>${c.compliancePercent ?? '—'}%</td>
-      <td>${c.lastCheckInDate || '—'}</td>
-      <td>${c.workoutsLoggedThisWeek ?? '—'}</td>
-      <td style="color:${_isUrgentStatus(c.alertStatus) ? '#c0392b' : c.alertStatus === 'watch' ? '#e67e22' : '#27ae60'}">${c.alertStatus}</td>
-    </tr>`).join('');
-
+  const rows = _exportRows();
+  if (!rows.length) return;
+  const statusColor = s => (_isUrgentStatus(s) ? '#c0392b' : s === 'watch' ? '#e67e22' : '#27ae60');
+  const body = rows.map(r => `<tr>${r.slice(0, -1).map(v => `<td>${_escH(v)}</td>`).join('')}<td style="color:${statusColor(r[r.length - 1])}">${_escH(r[r.length - 1])}</td></tr>`).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Coach Progress Report — ${new Date().toLocaleDateString()}</title>
     <style>
@@ -178,125 +126,144 @@ function bulkExportPDF() {
       @media print { @page { margin: 1cm; } }
     </style></head><body>
     <h1>Progress Report</h1>
-    <p>Generated by Pocket Coach · ${new Date().toLocaleString()} · ${selected.length} client(s)</p>
-    <table>
-      <thead><tr><th>Name</th><th>Archetype</th><th>Phase</th><th>Compliance</th><th>Last Check-In</th><th>Workouts/Week</th><th>Status</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <p>Generated by Pocket Coach · ${new Date().toLocaleString()} · ${rows.length} client(s)</p>
+    <table><thead><tr>${_EXPORT_HEADER.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
     <script>window.onload=()=>window.print()<\/script>
     </body></html>`;
-
   window.openReportWindow(html, { title: 'Coach Progress Report', filename: 'coach-report.html' });
-  _showExportToast('PDF report opened for printing');
+  _showExportToast('Report opened for printing');
 }
 
-window.bulkExportCSV      = bulkExportCSV;
-window.bulkExportPDF      = bulkExportPDF;
+window.bulkExportCSV = bulkExportCSV;
+window.bulkExportPDF = bulkExportPDF;
 
 /* ══════════════════════════════════════════════════════════════
-   3. PROGRAM BUILDER
+   3. PROGRAM LIBRARY + BUILDER
+   Programs live on the server (GET/PUT/DELETE /api/coach/programs) so
+   the phone and the desktop console share one library, and assigning
+   one sends its full content to the client.
    ══════════════════════════════════════════════════════════════ */
 
+const LEGACY_PROGRAMS_KEY = 'coachPrograms_v1';
+
+window.CoachProgramLibrary = (function () {
+  let cache = null;
+  let migrated = false;
+
+  // One-off: programs saved before the library moved to the server lived
+  // only in this browser. Upload them, then drop the local copy.
+  async function migrateLocal() {
+    if (migrated) return;
+    migrated = true;
+    let local = [];
+    try { local = JSON.parse(localStorage.getItem(LEGACY_PROGRAMS_KEY) || '[]'); } catch { local = []; }
+    if (!Array.isArray(local) || !local.length) return;
+    let failed = 0;
+    for (const p of local) {
+      const id = String(p.id || 'prog_' + Date.now().toString(36)).replace(/[^a-zA-Z0-9_-]/g, '_');
+      try { await window.coachApi('PUT', `/api/coach/programs/${encodeURIComponent(id)}`, { name: p.name, days: p.days }); }
+      catch { failed++; }
+    }
+    if (!failed) localStorage.removeItem(LEGACY_PROGRAMS_KEY);
+  }
+
+  async function list(force) {
+    if (cache && !force) return cache;
+    await migrateLocal();
+    const data = await window.coachApi('GET', '/api/coach/programs');
+    cache = Array.isArray(data.programs) ? data.programs : [];
+    return cache;
+  }
+  async function save(id, program) {
+    const data = await window.coachApi('PUT', `/api/coach/programs/${encodeURIComponent(id)}`, program);
+    cache = null;
+    return data.program;
+  }
+  async function remove(id) {
+    await window.coachApi('DELETE', `/api/coach/programs/${encodeURIComponent(id)}`);
+    cache = null;
+  }
+  return { list, save, remove, cached: () => cache || [] };
+})();
+
 const EXERCISE_LIBRARY = {
-  'Chest': [
-    { name: 'Bench Press' },
-    { name: 'Incline DB Press' },
-    { name: 'Cable Fly' },
-    { name: 'Push-Up' },
-    { name: 'Dips' },
-  ],
-  'Back': [
-    { name: 'Deadlift' },
-    { name: 'Pull-Up' },
-    { name: 'Barbell Row' },
-    { name: 'Lat Pulldown' },
-    { name: 'Seated Cable Row' },
-  ],
-  'Legs': [
-    { name: 'Squat' },
-    { name: 'Leg Press' },
-    { name: 'Romanian DL' },
-    { name: 'Leg Curl' },
-    { name: 'Leg Extension' },
-    { name: 'Calf Raise' },
-  ],
-  'Shoulders': [
-    { name: 'Overhead Press' },
-    { name: 'Lateral Raise' },
-    { name: 'Face Pull' },
-    { name: 'Arnold Press' },
-  ],
-  'Arms': [
-    { name: 'Barbell Curl' },
-    { name: 'Tricep Pushdown' },
-    { name: 'Hammer Curl' },
-    { name: 'Skull Crusher' },
-  ],
-  'Core': [
-    { name: 'Plank' },
-    { name: 'Hanging Leg Raise' },
-    { name: 'Cable Crunch' },
-    { name: 'Ab Wheel' },
-  ],
-  'Cardio / CF': [
-    { name: 'Box Jump' },
-    { name: 'Kettlebell Swing' },
-    { name: 'Assault Bike' },
-    { name: 'Row Erg' },
-    { name: 'Double-Under' },
-    { name: 'Thruster' },
-  ],
+  'Chest': ['Bench Press', 'Incline DB Press', 'Cable Fly', 'Push-Up', 'Dips'],
+  'Back': ['Deadlift', 'Pull-Up', 'Barbell Row', 'Lat Pulldown', 'Seated Cable Row'],
+  'Legs': ['Squat', 'Leg Press', 'Romanian DL', 'Leg Curl', 'Leg Extension', 'Calf Raise'],
+  'Shoulders': ['Overhead Press', 'Lateral Raise', 'Face Pull', 'Arnold Press'],
+  'Arms': ['Barbell Curl', 'Tricep Pushdown', 'Hammer Curl', 'Skull Crusher'],
+  'Core': ['Plank', 'Hanging Leg Raise', 'Cable Crunch', 'Ab Wheel'],
+  'Cardio / CF': ['Box Jump', 'Kettlebell Swing', 'Assault Bike', 'Row Erg', 'Double-Under', 'Thruster'],
 };
 
 const PROGRAM_TEMPLATES = {
   bodybuilding: {
     name: 'BB Push-Pull-Legs',
     days: {
-      Mon: ['Bench Press','Incline DB Press','Cable Fly','Overhead Press','Lateral Raise'],
-      Tue: ['Deadlift','Barbell Row','Lat Pulldown','Hammer Curl','Barbell Curl'],
-      Wed: ['Squat','Leg Press','Romanian DL','Leg Curl','Calf Raise'],
-      Thu: ['Overhead Press','Arnold Press','Lateral Raise','Tricep Pushdown','Skull Crusher'],
-      Fri: ['Pull-Up','Seated Cable Row','Face Pull','Barbell Curl','Hammer Curl'],
-      Sat: ['Squat','Leg Press','Leg Extension','Calf Raise','Plank'],
+      Mon: ['Bench Press', 'Incline DB Press', 'Cable Fly', 'Overhead Press', 'Lateral Raise'],
+      Tue: ['Deadlift', 'Barbell Row', 'Lat Pulldown', 'Hammer Curl', 'Barbell Curl'],
+      Wed: ['Squat', 'Leg Press', 'Romanian DL', 'Leg Curl', 'Calf Raise'],
+      Thu: ['Overhead Press', 'Arnold Press', 'Lateral Raise', 'Tricep Pushdown', 'Skull Crusher'],
+      Fri: ['Pull-Up', 'Seated Cable Row', 'Face Pull', 'Barbell Curl', 'Hammer Curl'],
+      Sat: ['Squat', 'Leg Press', 'Leg Extension', 'Calf Raise', 'Plank'],
       Sun: [],
     }
   },
   powerlifting: {
     name: 'PL Strength Block',
     days: {
-      Mon: ['Squat','Romanian DL','Leg Curl','Plank'],
-      Tue: ['Bench Press','Incline DB Press','Tricep Pushdown','Face Pull'],
+      Mon: [{ name: 'Squat', sets: 5, reps: 5 }, 'Romanian DL', 'Leg Curl', 'Plank'],
+      Tue: [{ name: 'Bench Press', sets: 5, reps: 5 }, 'Incline DB Press', 'Tricep Pushdown', 'Face Pull'],
       Wed: [],
-      Thu: ['Deadlift','Barbell Row','Lat Pulldown','Hanging Leg Raise'],
-      Fri: ['Bench Press','Overhead Press','Lateral Raise','Skull Crusher'],
-      Sat: ['Squat','Romanian DL','Calf Raise'],
+      Thu: [{ name: 'Deadlift', sets: 3, reps: 5 }, 'Barbell Row', 'Lat Pulldown', 'Hanging Leg Raise'],
+      Fri: [{ name: 'Bench Press', sets: 4, reps: 8 }, 'Overhead Press', 'Lateral Raise', 'Skull Crusher'],
+      Sat: [{ name: 'Squat', sets: 4, reps: 8 }, 'Romanian DL', 'Calf Raise'],
       Sun: [],
     }
   },
   crossfit: {
     name: 'CF GPP Week',
     days: {
-      Mon: ['Squat','Box Jump','Assault Bike'],
-      Tue: ['Deadlift','Kettlebell Swing','Row Erg'],
-      Wed: ['Thruster','Double-Under','Plank'],
+      Mon: ['Squat', 'Box Jump', 'Assault Bike'],
+      Tue: ['Deadlift', 'Kettlebell Swing', 'Row Erg'],
+      Wed: ['Thruster', 'Double-Under', 'Plank'],
       Thu: [],
-      Fri: ['Bench Press','Push-Up','Assault Bike'],
-      Sat: ['Squat','Deadlift','Row Erg','Kettlebell Swing'],
+      Fri: ['Bench Press', 'Push-Up', 'Assault Bike'],
+      Sat: ['Squat', 'Deadlift', 'Row Erg', 'Kettlebell Swing'],
       Sun: [],
     }
   },
 };
 
-const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DEFAULT_SETS = 3;
+const DEFAULT_REPS = 10;
 
-// In-memory state for the builder
-let _progState = {
-  name:    'New Program',
-  days:    Object.fromEntries(DAYS.map(d => [d, []])),
-  id:      null,
-};
+// Exercises are { name, sets, reps, repsMax? }; older saves used plain names.
+function _toExercise(ex) {
+  if (typeof ex === 'string') return { name: ex, sets: DEFAULT_SETS, reps: DEFAULT_REPS };
+  return { name: ex.name, sets: ex.sets || DEFAULT_SETS, reps: ex.reps || DEFAULT_REPS, ...(ex.repsMax ? { repsMax: ex.repsMax } : {}) };
+}
+function _formatScheme(ex) {
+  return `${ex.sets}×${ex.reps}${ex.repsMax ? '-' + ex.repsMax : ''}`;
+}
+// "4x8-12", "4×8", "3 x 5" → { sets, reps, repsMax? }; null if unreadable.
+function _parseScheme(text) {
+  const m = String(text || '').trim().match(/^(\d{1,2})\s*[x×*]\s*(\d{1,3})(?:\s*-\s*(\d{1,3}))?$/i);
+  if (!m) return null;
+  const out = { sets: Number(m[1]), reps: Number(m[2]) };
+  if (m[3] && Number(m[3]) > out.reps) out.repsMax = Number(m[3]);
+  return out.sets > 0 && out.reps > 0 ? out : null;
+}
 
-// Day the "tap an exercise to add it" action targets (drag-and-drop still works on desktop).
+function _emptyProgram() {
+  return { id: null, name: 'New Program', days: Object.fromEntries(DAYS.map(d => [d, []])) };
+}
+function _normalizeProgramState(p) {
+  return { id: p.id || null, name: p.name || 'Program', days: Object.fromEntries(DAYS.map(d => [d, ((p.days && p.days[d]) || []).map(_toExercise)])) };
+}
+
+let _progState = _emptyProgram();
 let _progActiveDay = 'Mon';
 
 function renderCoachProgramBuilder() {
@@ -309,14 +276,14 @@ function renderCoachProgramBuilder() {
         <section class="pod mx-pod prog-head">
           <div class="mx-field prog-canvas-title">
             <label class="mx-lbl" for="progNameInput">Program name</label>
-            <div class="mx-well mx-well--text"><input type="text" id="progNameInput" value="${_escH(_progState.name)}" placeholder="Program name" oninput="_progState.name=this.value"></div>
+            <div class="mx-well mx-well--text"><input type="text" id="progNameInput" value="${_escH(_progState.name)}" placeholder="Program name" maxlength="80" oninput="_progState.name=this.value"></div>
           </div>
           <div class="prog-canvas-actions">
-            <button type="button" class="mx-cta prog-save-btn" onclick="saveCoachProgram()"><span>Save</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
-            <button type="button" class="mx-outline" onclick="loadCoachProgramList()">Load</button>
+            <button type="button" class="mx-cta prog-save-btn" onclick="saveCoachProgram()"><span>Save to library</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+            <button type="button" class="mx-outline" onclick="newCoachProgram()">New</button>
           </div>
           <div class="mx-field">
-            <span class="mx-lbl">Templates</span>
+            <span class="mx-lbl">Start from a template</span>
             <div class="prog-template-bar">
               <button type="button" class="prog-template-btn" onclick="applyProgTemplate('bodybuilding')">Bodybuilding</button>
               <button type="button" class="prog-template-btn" onclick="applyProgTemplate('powerlifting')">Powerlifting</button>
@@ -331,7 +298,7 @@ function renderCoachProgramBuilder() {
             <h4 class="pod-title mx-h3">Week</h4>
             <span class="mx-chip mx-chip--sm mx-chip--green" id="progActiveDayLbl">Adding to ${_progActiveDay}</span>
           </div>
-          <p class="mx-sub prog-hint">Tap a day, then tap an exercise below to add it. On desktop you can also drag exercises onto a day.</p>
+          <p class="mx-sub prog-hint">Tap a day, then tap exercises below to add them. Edit sets×reps on each one (e.g. 4x8-12). On desktop you can also drag exercises onto a day.</p>
           <div class="prog-week-grid" id="progWeekGrid">
             ${DAYS.map(day => _buildDayColHTML(day)).join('')}
           </div>
@@ -339,7 +306,7 @@ function renderCoachProgramBuilder() {
       </div>
 
       <section class="pod mx-pod exercise-library" aria-label="Exercise library">
-        <div class="pod-row"><h4 class="pod-title mx-h3">Exercise Library</h4></div>
+        <div class="pod-row"><h4 class="pod-title mx-h3">Exercises</h4></div>
         <div class="mx-well mx-well--text"><input type="text" class="exercise-library-search" id="exLibSearch" placeholder="Search exercises…" aria-label="Search exercises" oninput="filterExLib(this.value)"></div>
         <div class="exercise-custom-add">
           <div class="mx-well mx-well--text"><input type="text" id="exCustomInput" placeholder="Add custom exercise…" aria-label="Custom exercise name" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomExercise();}"></div>
@@ -348,21 +315,18 @@ function renderCoachProgramBuilder() {
         <div id="exLibList">${_buildExLibHTML()}</div>
       </section>
 
-      <!-- Building/saving a program template is fine here — it's your own
-           library, nothing reaches a client. Assigning one to a specific
-           client is coaching work; that action lives on the desktop
-           dashboard now (coach/coach.js Program tab). -->
-      <p class="mx-sub prog-assign-bar">Save this program, then assign it to a client from the desktop coach dashboard.</p>
+      <p class="mx-sub prog-assign-bar">Saved programs can be assigned from a client's page (Clients → Open client → Program). The client gets the full plan and a Start button.</p>
 
-      <div id="savedProgsList"></div>
+      <div id="savedProgsList"><div class="mx-empty">Loading your library…</div></div>
     </div>`;
 
   _bindDragAndDrop();
   _bindExLibClicks();
+  _bindSchemeInputs();
   renderSavedProgramsList();
 }
 
-window.setProgActiveDay = function(day) {
+window.setProgActiveDay = function (day) {
   _progActiveDay = day;
   document.querySelectorAll('.prog-day-col').forEach(col => {
     const on = col.dataset.day === day;
@@ -373,14 +337,13 @@ window.setProgActiveDay = function(day) {
   if (lbl) lbl.textContent = 'Adding to ' + day;
 };
 
-/* ── Custom exercises (coach-defined, not in the premade library) ─── */
+/* ── Custom exercises (coach-defined, kept on this device) ─── */
 
 function _getCustomExercises() {
-  return _coachStore('coachCustomExercises_v1') || [];
+  try { return JSON.parse(localStorage.getItem('coachCustomExercises_v1')) || []; } catch { return []; }
 }
-
 function _saveCustomExercises(list) {
-  _coachStore('coachCustomExercises_v1', list);
+  localStorage.setItem('coachCustomExercises_v1', JSON.stringify(list));
 }
 
 function _buildCustomExHTML(filter) {
@@ -419,7 +382,7 @@ function _bindExLibClicks() {
   list._customBound = true;
 }
 
-window.addCustomExercise = function() {
+window.addCustomExercise = function () {
   const input = document.getElementById('exCustomInput');
   if (!input) return;
   const name = input.value.trim();
@@ -437,30 +400,27 @@ window.addCustomExercise = function() {
   input.focus();
 };
 
-window.removeCustomExercise = function(name) {
+window.removeCustomExercise = function (name) {
   _saveCustomExercises(_getCustomExercises().filter(n => n.toLowerCase() !== String(name).toLowerCase()));
   _refreshExLib(document.getElementById('exLibSearch')?.value || '');
 };
 
 function _buildExLibHTML(filter) {
   filter = (filter || '').toLowerCase();
-  const customHTML = _buildCustomExHTML(filter);
-  const builtInHTML = Object.entries(EXERCISE_LIBRARY).map(([cat, exercises]) => {
-    const filtered = filter
-      ? exercises.filter(e => e.name.toLowerCase().includes(filter))
-      : exercises;
+  const builtIn = Object.entries(EXERCISE_LIBRARY).map(([cat, names]) => {
+    const filtered = filter ? names.filter(n => n.toLowerCase().includes(filter)) : names;
     if (!filtered.length) return '';
     return `<div class="exercise-category">
       <div class="exercise-category-label">${cat}</div>
       <div class="exercise-items">
-      ${filtered.map(e => `
-        <div class="exercise-item" draggable="true" data-exercise="${_escH(e.name)}" role="button" tabindex="0" aria-label="Add ${_escH(e.name)}">
-          <span class="exercise-item-name">${_escH(e.name)}</span>
+      ${filtered.map(n => `
+        <div class="exercise-item" draggable="true" data-exercise="${_escH(n)}" role="button" tabindex="0" aria-label="Add ${_escH(n)}">
+          <span class="exercise-item-name">${_escH(n)}</span>
         </div>`).join('')}
       </div>
     </div>`;
   }).join('');
-  return customHTML + builtInHTML;
+  return _buildCustomExHTML(filter) + builtIn;
 }
 
 function _dayColInner(day) {
@@ -468,8 +428,9 @@ function _dayColInner(day) {
   if (!exercises.length) return '<div class="prog-day-rest">Rest</div>';
   return exercises.map((ex, i) => `
     <div class="prog-exercise-slot" data-day="${day}" data-idx="${i}">
-      <span class="prog-exercise-slot-name">${_escH(ex)}</span>
-      <button type="button" class="prog-exercise-slot-remove" onclick="event.stopPropagation();removeProgExercise('${day}',${i})" title="Remove" aria-label="Remove ${_escH(ex)} from ${day}"><span class="ui-icon">${ICONS.x}</span></button>
+      <span class="prog-exercise-slot-name">${_escH(ex.name)}</span>
+      <input class="prog-scheme" type="text" value="${_formatScheme(ex)}" data-day="${day}" data-idx="${i}" aria-label="Sets and reps for ${_escH(ex.name)}" maxlength="9">
+      <button type="button" class="prog-exercise-slot-remove" onclick="event.stopPropagation();removeProgExercise('${day}',${i})" title="Remove" aria-label="Remove ${_escH(ex.name)} from ${day}"><span class="ui-icon">${ICONS.x}</span></button>
     </div>`).join('');
 }
 
@@ -485,22 +446,42 @@ function _buildDayColHTML(day) {
     </div>`;
 }
 
+function _bindSchemeInputs() {
+  const grid = document.getElementById('progWeekGrid');
+  if (!grid || grid._schemeBound) return;
+  grid.addEventListener('change', e => {
+    const input = e.target.closest('.prog-scheme');
+    if (!input) return;
+    const ex = (_progState.days[input.dataset.day] || [])[Number(input.dataset.idx)];
+    if (!ex) return;
+    const parsed = _parseScheme(input.value);
+    if (!parsed) {
+      input.value = _formatScheme(ex);
+      if (window.showToast) window.showToast('Use sets x reps, e.g. 4x8 or 3x8-12.', 'warn');
+      return;
+    }
+    delete ex.repsMax;
+    Object.assign(ex, parsed);
+    input.value = _formatScheme(ex);
+  });
+  grid._schemeBound = true;
+}
+
+function _addToDay(day, name) {
+  _progState.days[day] = [...(_progState.days[day] || []), { name, sets: DEFAULT_SETS, reps: DEFAULT_REPS }];
+  _refreshDayCol(day);
+}
+
 function _bindExerciseItemDrag() {
-  // Library items are recreated on every refresh (search, add/remove custom),
-  // so they're safe to rebind each time. Drag = desktop; tap/Enter = add to the
-  // active day (touch screens have no HTML5 drag-and-drop).
+  // Drag = desktop; tap/Enter = add to the active day (touch screens have
+  // no HTML5 drag-and-drop).
   document.querySelectorAll('.exercise-item').forEach(item => {
     item.addEventListener('dragstart', e => {
       e.dataTransfer.setData('text/exercise', item.dataset.exercise);
       item.classList.add('dragging');
     });
     item.addEventListener('dragend', () => item.classList.remove('dragging'));
-    const add = () => {
-      const ex = item.dataset.exercise;
-      if (!ex) return;
-      _progState.days[_progActiveDay] = [...(_progState.days[_progActiveDay] || []), ex];
-      _refreshDayCol(_progActiveDay);
-    };
+    const add = () => { if (item.dataset.exercise) _addToDay(_progActiveDay, item.dataset.exercise); };
     item.addEventListener('click', e => { if (e.target.closest('.exercise-item-remove')) return; add(); });
     item.addEventListener('keydown', e => {
       if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.exercise-item-remove')) { e.preventDefault(); add(); }
@@ -509,9 +490,8 @@ function _bindExerciseItemDrag() {
 }
 
 function _bindDayColDrop(col) {
-  // Day columns persist across drops/refreshes (only their innerHTML changes),
-  // so guard against rebinding the same listeners on top of themselves —
-  // that would fire one drop N times after N rebinds.
+  // Day columns persist across refreshes (only their innerHTML changes), so
+  // bind once or a single drop would fire N times.
   if (col._dropBound) return;
   col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
   col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
@@ -519,11 +499,7 @@ function _bindDayColDrop(col) {
     e.preventDefault();
     col.classList.remove('drag-over');
     const exercise = e.dataTransfer.getData('text/exercise');
-    const day = col.dataset.day;
-    if (exercise && day) {
-      _progState.days[day] = [...(_progState.days[day] || []), exercise];
-      _refreshDayCol(day);
-    }
+    if (exercise && col.dataset.day) _addToDay(col.dataset.day, exercise);
   });
   col._dropBound = true;
 }
@@ -536,154 +512,130 @@ function _bindDragAndDrop() {
 function _refreshDayCol(day) {
   const col = document.getElementById('progDay_' + day);
   if (!col) return;
-  // col itself isn't replaced, so its drop listener (bound once in
-  // _bindDayColDrop) stays attached — only the slots inside change.
   const slots = col.querySelector('.prog-day-slots');
   if (slots) slots.innerHTML = _dayColInner(day);
   const count = col.querySelector('.prog-day-count');
   if (count) count.textContent = (_progState.days[day] || []).length || '';
 }
 
-window.removeProgExercise = function(day, idx) {
+function _refreshAllDays() {
+  const nameInput = document.getElementById('progNameInput');
+  if (nameInput) nameInput.value = _progState.name;
+  DAYS.forEach(_refreshDayCol);
+}
+
+window.removeProgExercise = function (day, idx) {
   _progState.days[day].splice(idx, 1);
   _refreshDayCol(day);
 };
 
-window.filterExLib = function(q) {
-  _refreshExLib(q);
-};
+window.filterExLib = function (q) { _refreshExLib(q); };
 
-window.applyProgTemplate = function(key) {
+window.applyProgTemplate = function (key) {
   const tmpl = PROGRAM_TEMPLATES[key];
   if (!tmpl) return;
-  window.showConfirm(`Load "${tmpl.name}" template? This will replace the current week.`).then(ok => {
+  window.showConfirm(`Load "${tmpl.name}"? This replaces the current week.`).then(ok => {
     if (!ok) return;
-    _progState.name = tmpl.name;
-    _progState.days = Object.fromEntries(DAYS.map(d => [d, [...(tmpl.days[d] || [])]]));
-    const nameInput = document.getElementById('progNameInput');
-    if (nameInput) nameInput.value = _progState.name;
-    DAYS.forEach(d => _refreshDayCol(d));
+    _progState = { ..._normalizeProgramState(tmpl), id: null };
+    _refreshAllDays();
   });
 };
 
-window.clearProgram = function() {
+window.clearProgram = function () {
   _progState.days = Object.fromEntries(DAYS.map(d => [d, []]));
-  DAYS.forEach(d => _refreshDayCol(d));
+  _refreshAllDays();
 };
 
-window.saveCoachProgram = function() {
-  const programs = _coachStore('coachPrograms_v1') || [];
-  const now = new Date().toISOString();
-  if (!_progState.id) _progState.id = 'prog_' + Date.now();
-  const idx = programs.findIndex(p => p.id === _progState.id);
-  const record = { id: _progState.id, name: _progState.name, days: _progState.days, savedAt: now };
-  if (idx >= 0) programs[idx] = record;
-  else          programs.push(record);
-  _coachStore('coachPrograms_v1', programs);
-  renderSavedProgramsList();
-  _showExportToast(`"${_progState.name}" saved`);
+window.newCoachProgram = function () {
+  _progState = _emptyProgram();
+  _refreshAllDays();
 };
 
-window.loadCoachProgramList = function() {
-  const programs = _coachStore('coachPrograms_v1') || [];
-  if (!programs.length) { window.showToast('No saved programs yet.', 'warn'); return; }
-  const opts = programs.map((p,i) => `<option value="${i}">${_escH(p.name)} (${p.savedAt?.slice(0,10)})</option>`).join('');
-  const modal = document.createElement('div');
-  modal.className = 'gdpr-modal-overlay';
-  modal.innerHTML = `
-    <div class="gdpr-modal" role="dialog" aria-modal="true" aria-label="Load program">
-      <h3>Load Program</h3>
-      <div class="mx-well mx-well--text mx-well--sel"><select id="_loadProgSel" aria-label="Saved program">${opts}</select></div>
-      <div class="gdpr-modal-actions">
-        <button type="button" class="gdpr-export-btn" onclick="this.closest('.gdpr-modal-overlay').remove()">Cancel</button>
-        <button type="button" class="gdpr-save-btn" onclick="_confirmLoadProgram()">Load</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
+window.saveCoachProgram = async function () {
+  const name = String(_progState.name || '').trim();
+  if (!name) { window.showToast('Give the program a name.', 'warn'); return; }
+  const total = DAYS.reduce((n, d) => n + (_progState.days[d] || []).length, 0);
+  if (!total) { window.showToast('Add at least one exercise.', 'warn'); return; }
+  if (!_progState.id) _progState.id = 'prog_' + Date.now().toString(36);
+  const btn = document.querySelector('.prog-save-btn');
+  if (btn) btn.disabled = true;
+  try {
+    await window.CoachProgramLibrary.save(_progState.id, { name, days: _progState.days });
+    _showExportToast(`"${name}" saved to your library`);
+    renderSavedProgramsList();
+  } catch (err) {
+    window.showToast(err.message || 'Could not save. Check your connection.', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 };
 
-window._confirmLoadProgram = function() {
-  const idx = parseInt(document.getElementById('_loadProgSel')?.value);
-  const programs = _coachStore('coachPrograms_v1') || [];
-  const prog = programs[idx];
-  if (!prog) return;
-  _progState = { ...prog };
-  const nameInput = document.getElementById('progNameInput');
-  if (nameInput) nameInput.value = _progState.name;
-  DAYS.forEach(d => _refreshDayCol(d));
-  document.querySelector('.gdpr-modal-overlay')?.remove();
-};
-
-function renderSavedProgramsList() {
+async function renderSavedProgramsList() {
   const container = document.getElementById('savedProgsList');
   if (!container) return;
-  const programs = _coachStore('coachPrograms_v1') || [];
+  let programs;
+  try {
+    programs = await window.CoachProgramLibrary.list(true);
+  } catch {
+    container.innerHTML = '<div class="mx-empty">Couldn\'t load your library. Check your connection.</div>';
+    return;
+  }
   if (!programs.length) { container.innerHTML = ''; return; }
-
   container.innerHTML = `
-    <section class="pod mx-pod" aria-label="Saved programs">
-      <div class="pod-row"><h4 class="pod-title mx-h3">Saved Programs</h4><span class="mx-meta">${programs.length}</span></div>
+    <section class="pod mx-pod" aria-label="Your program library">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Your Library</h4><span class="mx-meta">${programs.length}</span></div>
       <div>
-      ${programs.map((p, i) => `
+      ${programs.map(p => `
         <div class="mx-row saved-prog-row">
           <div class="mx-row-main">
             <span class="mx-row-title">${_escH(p.name)}</span>
-            <span class="mx-row-sub">Saved ${p.savedAt?.slice(0,10) || '—'}</span>
+            <span class="mx-row-sub">${DAYS.filter(d => (p.days?.[d] || []).length).join(', ') || 'No days'} · ${p.exerciseCount || 0} exercises</span>
           </div>
           <div class="saved-prog-actions">
-            <button type="button" class="mx-outline" onclick="_loadProgIdx(${i})">Load</button>
-            <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="_deleteProgIdx(${i})" aria-label="Delete ${_escH(p.name)}"><span class="ui-icon">${ICONS.x}</span></button>
+            <button type="button" class="mx-outline" data-prog-load="${_escH(p.id)}">Edit</button>
+            <button type="button" class="mx-iconbtn mx-iconbtn--ghost" data-prog-delete="${_escH(p.id)}" aria-label="Delete ${_escH(p.name)}"><span class="ui-icon">${ICONS.x}</span></button>
           </div>
         </div>`).join('')}
       </div>
     </section>`;
+  container.onclick = e => {
+    const load = e.target.closest('[data-prog-load]');
+    const del = e.target.closest('[data-prog-delete]');
+    const id = load ? load.dataset.progLoad : del ? del.dataset.progDelete : null;
+    const prog = programs.find(p => p.id === id);
+    if (!prog) return;
+    if (load) {
+      _progState = _normalizeProgramState(prog);
+      _refreshAllDays();
+      document.getElementById('progNameInput')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    window.showConfirm(`Delete "${prog.name}" from your library? Clients it was assigned to keep their copy.`, { danger: true }).then(async ok => {
+      if (!ok) return;
+      try {
+        await window.CoachProgramLibrary.remove(prog.id);
+        if (_progState.id === prog.id) _progState.id = null;
+        renderSavedProgramsList();
+      } catch (err) {
+        window.showToast(err.message || 'Could not delete.', 'error');
+      }
+    });
+  };
 }
 
-window._loadProgIdx = function(i) {
-  const programs = _coachStore('coachPrograms_v1') || [];
-  const prog = programs[i];
-  if (!prog) return;
-  _progState = { ...prog, days: { ...prog.days } };
-  const nameInput = document.getElementById('progNameInput');
-  if (nameInput) nameInput.value = _progState.name;
-  DAYS.forEach(d => _refreshDayCol(d));
-};
-
-window._deleteProgIdx = function(i) {
-  const programs = _coachStore('coachPrograms_v1') || [];
-  window.showConfirm(`Delete "${programs[i]?.name}"?`, { danger: true }).then(ok => {
-    if (!ok) return;
-    programs.splice(i, 1);
-    _coachStore('coachPrograms_v1', programs);
-    renderSavedProgramsList();
-  });
-};
-
 /* ══════════════════════════════════════════════════════════════
-   4. MESSAGING & FEEDBACK
+   4. MESSAGING (coach → client notes)
+   POST/GET /api/coach/clients/:id/notes; each note is mirrored into the
+   client's app (Settings → Your Coach). One-way: clients can't reply in
+   the app yet.
    ══════════════════════════════════════════════════════════════ */
 
-// Notes are real now: POST/GET /api/coach/clients/:id/notes (server mirrors
-// each one onto the client's own users/{uid}/coachNotes so their app can
-// read it — see traininglog-backend-sync). This used to be pure
-// coachMessages_v1 localStorage on the coach's own browser, including a
-// fake "athlete" sender/read-receipt model — there was never an athlete-side
-// UI that could actually send a reply, so that two-way illusion is gone
-// along with the local-only storage. What's here is a real, one-way
-// coach → client note thread.
 let _activeThreadClientId = null;
 let _serverThreads = {}; // clientId -> notes[] | null (null = load error)
 
-function _getThread(clientId) {
-  return _serverThreads[clientId] || [];
-}
-
 async function _loadThreadFromServer(clientId) {
   try {
-    const base = (window.SERVER_URL || '').replace(/\/$/, '');
-    const res = await fetch(`${base}/api/coach/clients/${encodeURIComponent(clientId)}/notes`, { headers: getAuthHeaders() });
-    const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+    const data = await window.coachApi('GET', `/api/coach/clients/${encodeURIComponent(clientId)}/notes`);
     _serverThreads[clientId] = Array.isArray(data.notes) ? data.notes.slice().reverse() : [];
   } catch {
     _serverThreads[clientId] = null;
@@ -693,61 +645,41 @@ async function _loadThreadFromServer(clientId) {
 function renderCoachMessaging() {
   const container = document.getElementById('coachSub_messaging');
   if (!container) return;
-
-  const clients = (window.coachDashboardState?.clients) || [];
+  const clients = _activeClients();
 
   const clientListHTML = clients.length
     ? clients.map(c => {
-        const initials = c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        const initials = c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
         return `
           <button type="button" class="coach-client-list-item${_activeThreadClientId === c.id ? ' active' : ''}"
-               onclick="openMessageThread('${c.id}')" data-client-id="${c.id}" aria-pressed="${_activeThreadClientId === c.id}">
-            <span class="coach-client-list-avatar">${initials}</span>
+               data-thread-client="${_escH(c.id)}" data-client-id="${_escH(c.id)}" aria-pressed="${_activeThreadClientId === c.id}">
+            <span class="coach-client-list-avatar">${_escH(initials)}</span>
             <span>${_escH(c.name)}</span>
           </button>`;
       }).join('')
-    : '<div class="mx-empty">No clients yet.</div>';
-
-  const notifKey = 'coachNotifSettings_v1';
-  const notif    = _coachStore(notifKey) || { missedSession: true, checkIn: true, plateau: false };
-  const notifRow = (key, label) => `
-    <label class="coach-notif-row">
-      <span>${label}</span>
-      <input type="checkbox" ${notif[key]?'checked':''} onchange="_saveNotif('${key}',this.checked)">
-    </label>`;
+    : '<div class="mx-empty">No linked clients yet.</div>';
 
   container.innerHTML = `
     <div class="coach-messaging-layout">
-      <div class="coach-client-list-panel" role="group" aria-label="Clients">
-        ${clientListHTML}
-      </div>
+      <div class="coach-client-list-panel" role="group" aria-label="Clients">${clientListHTML}</div>
       <div id="coachThreadContainer">
-        ${_activeThreadClientId
-          ? _buildThreadHTML(_activeThreadClientId)
-          : '<div class="mx-empty">Select a client to view messages.</div>'}
+        ${_activeThreadClientId ? _buildThreadHTML(_activeThreadClientId) : '<div class="mx-empty">Select a client to view notes.</div>'}
       </div>
-      <section class="pod mx-pod gdpr-section" aria-label="Notification settings">
-        <div class="pod-row"><h4 class="pod-title mx-h3">Notification Settings</h4></div>
-        <div>
-          ${notifRow('missedSession', 'Missed session alert')}
-          ${notifRow('checkIn', 'Check-in reminder')}
-          ${notifRow('plateau', 'Plateau / stagnation flag')}
-        </div>
-      </section>
     </div>`;
+  container.querySelector('.coach-client-list-panel').onclick = e => {
+    const btn = e.target.closest('[data-thread-client]');
+    if (btn) openMessageThread(btn.dataset.threadClient);
+  };
 }
 
 function _buildThreadHTML(clientId) {
-  const clients = (window.coachDashboardState?.clients) || [];
-  const client  = clients.find(c => c.id === clientId);
-  const thread  = _serverThreads[clientId];
-
+  const client = _activeClients().find(c => c.id === clientId);
+  const thread = _serverThreads[clientId];
   let msgs;
-  if (thread === null) {
-    msgs = '<div class="coach-thread-note coach-thread-note--err">Couldn\'t load messages — check your connection.</div>';
-  } else if (!thread.length) {
-    msgs = '<div class="coach-thread-note">No messages yet. Send the first note!</div>';
-  } else {
+  if (thread === undefined) msgs = '<div class="coach-thread-note">Loading…</div>';
+  else if (thread === null) msgs = '<div class="coach-thread-note coach-thread-note--err">Couldn\'t load notes. Check your connection.</div>';
+  else if (!thread.length) msgs = '<div class="coach-thread-note">No notes yet. Send the first one.</div>';
+  else {
     msgs = thread.map(m => {
       const ms = m.createdAt?._seconds ? m.createdAt._seconds * 1000 : m.createdAt;
       return `
@@ -759,82 +691,63 @@ function _buildThreadHTML(clientId) {
   }
 
   return `
-    <section class="pod mx-pod coach-thread" aria-label="Messages with ${_escH(client?.name || clientId)}">
-      <div class="coach-thread-header"><span class="mx-kicker">Notes to</span><span class="mx-row-title">${_escH(client?.name || clientId)}</span></div>
+    <section class="pod mx-pod coach-thread" aria-label="Notes to ${_escH(client?.name || '')}">
+      <div class="coach-thread-header"><span class="mx-kicker">Notes to</span><span class="mx-row-title">${_escH(client?.name || '')}</span></div>
       <div class="coach-thread-messages" id="threadMessages">${msgs}</div>
       <div class="coach-thread-input">
         <div class="mx-well mx-well--text mx-well--sel coach-msg-type">
-          <select id="msgType" aria-label="Message type">
+          <select id="msgType" aria-label="Note type">
             <option value="note">Note</option>
-            <option value="alert">Alert</option>
+            <option value="alert">Heads-up</option>
             <option value="praise">Praise</option>
           </select>
         </div>
-        <div class="mx-well mx-well--area"><textarea id="msgText" placeholder="Write a message…" aria-label="Message"></textarea></div>
+        <div class="mx-well mx-well--area"><textarea id="msgText" placeholder="Write a note. ${_escH(client?.name || 'Your client')} sees it in Settings → Your Coach." aria-label="Note"></textarea></div>
         <button type="button" class="coach-send-btn mx-cta" onclick="sendCoachMessage()"><span>Send</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.chevronRight}</span></span></button>
       </div>
     </section>`;
 }
 
-window.openMessageThread = async function(clientId) {
+window.openMessageThread = async function (clientId) {
   _activeThreadClientId = clientId;
   const threadContainer = document.getElementById('coachThreadContainer');
-  if (threadContainer) threadContainer.innerHTML = '<div class="mx-empty">Loading…</div>';
-  document.querySelectorAll('.coach-client-list-item').forEach(el =>
-    el.classList.toggle('active', el.dataset.clientId === clientId)
-  );
-
+  delete _serverThreads[clientId];
+  if (threadContainer) threadContainer.innerHTML = _buildThreadHTML(clientId);
+  document.querySelectorAll('.coach-client-list-item').forEach(el => {
+    const on = el.dataset.clientId === clientId;
+    el.classList.toggle('active', on);
+    el.setAttribute('aria-pressed', String(on));
+  });
   await _loadThreadFromServer(clientId);
-  if (_activeThreadClientId === clientId && threadContainer) {
-    threadContainer.innerHTML = _buildThreadHTML(clientId);
-  }
+  if (_activeThreadClientId === clientId && threadContainer) threadContainer.innerHTML = _buildThreadHTML(clientId);
 };
 
-window.sendCoachMessage = async function() {
+window.sendCoachMessage = async function () {
   const textEl = document.getElementById('msgText');
   const text = textEl?.value.trim();
   const type = document.getElementById('msgType')?.value || 'note';
   if (!text || !_activeThreadClientId) return;
-  const finalText = type !== 'note' ? `[${type.toUpperCase()}] ${text}` : text;
+  const prefix = { alert: '[HEADS-UP] ', praise: '[PRAISE] ' }[type] || '';
   const clientId = _activeThreadClientId;
-
   const sendBtn = document.querySelector('.coach-send-btn');
   if (sendBtn) sendBtn.disabled = true;
-
   try {
-    const base = (window.SERVER_URL || '').replace(/\/$/, '');
-    const res = await fetch(`${base}/api/coach/clients/${encodeURIComponent(clientId)}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ text: finalText })
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      if (window.showToast) window.showToast(data?.error?.message || 'Could not send message.');
-      return;
-    }
+    await window.coachApi('POST', `/api/coach/clients/${encodeURIComponent(clientId)}/notes`, { text: prefix + text });
     if (textEl) textEl.value = '';
     await _loadThreadFromServer(clientId);
     const threadContainer = document.getElementById('coachThreadContainer');
     if (threadContainer) threadContainer.innerHTML = _buildThreadHTML(clientId);
     const msgs = document.getElementById('threadMessages');
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
-  } catch {
-    if (window.showToast) window.showToast('Connection error — try again.');
+  } catch (err) {
+    if (window.showToast) window.showToast(err.message || 'Could not send. Try again.', 'error');
   } finally {
     if (sendBtn) sendBtn.disabled = false;
   }
 };
 
-window._saveNotif = function(key, val) {
-  const notifKey = 'coachNotifSettings_v1';
-  const notif    = _coachStore(notifKey) || {};
-  notif[key]     = val;
-  _coachStore(notifKey, notif);
-};
-
 /* ══════════════════════════════════════════════════════════════
-   5. DATA INSIGHTS / ANALYTICS
+   5. INSIGHTS
    ══════════════════════════════════════════════════════════════ */
 
 let _analyticsCharts = {};
@@ -842,35 +755,30 @@ let _analyticsCharts = {};
 function renderCoachAnalytics() {
   const container = document.getElementById('coachSub_analytics');
   if (!container) return;
-  const clients = (window.coachDashboardState?.clients) || [];
+  const clients = _activeClients();
+  if (!clients.length) {
+    container.innerHTML = '<div class="mx-empty">Insights appear once clients have accepted your invite and opened the app.</div>';
+    return;
+  }
 
   container.innerHTML = `
     <div class="coach-analytics-grid">
-      <!-- Adherence bar chart -->
       <section class="pod mx-pod coach-chart-card">
-        <div class="pod-row"><h4 class="pod-title mx-h3">Client Adherence (%)</h4></div>
+        <div class="pod-row"><h4 class="pod-title mx-h3">Adherence (%)</h4></div>
         <canvas id="adherenceChart" height="140" aria-label="Adherence per client"></canvas>
       </section>
-
-      <!-- Workouts per week -->
       <section class="pod mx-pod coach-chart-card">
-        <div class="pod-row"><h4 class="pod-title mx-h3">Workouts This Week</h4></div>
-        <canvas id="workoutsChart" height="160" aria-label="Workouts this week per client"></canvas>
+        <div class="pod-row"><h4 class="pod-title mx-h3">Sessions this week</h4></div>
+        <canvas id="workoutsChart" height="160" aria-label="Sessions this week per client"></canvas>
       </section>
-
-      <!-- Alert breakdown -->
       <section class="pod mx-pod coach-chart-card">
-        <div class="pod-row"><h4 class="pod-title mx-h3">Alert Status</h4></div>
-        <div class="coach-chart-box"><canvas id="alertPieChart" aria-label="Alert status breakdown"></canvas></div>
+        <div class="pod-row"><h4 class="pod-title mx-h3">Status</h4></div>
+        <div class="coach-chart-box"><canvas id="alertPieChart" aria-label="Status breakdown"></canvas></div>
       </section>
     </div>
-
-    <!-- Improvement / stagnation flags -->
-    <section class="pod mx-pod coach-chart-card" aria-label="Client performance flags">
-      <div class="pod-row"><h4 class="pod-title mx-h3">Client Performance Flags</h4><span class="mx-meta">${clients.length}</span></div>
-      <div class="coach-insight-list">
-        ${clients.map(c => _buildInsightRow(c)).join('') || '<div class="mx-empty">No client data.</div>'}
-      </div>
+    <section class="pod mx-pod coach-chart-card" aria-label="Client flags">
+      <div class="pod-row"><h4 class="pod-title mx-h3">Client flags</h4><span class="mx-meta">${clients.length}</span></div>
+      <div class="coach-insight-list">${clients.map(_buildInsightRow).join('')}</div>
     </section>`;
 
   _renderAdherenceChart(clients);
@@ -879,294 +787,187 @@ function renderCoachAnalytics() {
 }
 
 function _buildInsightRow(c) {
-  const adh = c.compliancePercent ?? 0;
-  const wk  = c.workoutsLoggedThisWeek ?? 0;
-  const wΔ  = Number(c.weeklyWeightChangePercent ?? 0) || 0;
-  const trend = adh >= 80 && wk >= 3 ? 'up' : adh < 60 || wk <= 1 ? 'down' : 'flat';
-  const trendLabel = { up: '▲ Up', down: '▼ Down', flat: '● Flat' }[trend];
-  const trendCls = { up: 'mx-chip--green', down: 'mx-chip--red', flat: '' }[trend];
-  const flags = [];
-  if (_isUrgentStatus(c.alertStatus)) flags.push('<span class="mx-tag mx-tag--red injury-flag">Alert</span>');
-  if (trend === 'down')               flags.push('<span class="mx-tag mx-tag--brass stagnation-badge">Stagnating</span>');
-  if ((c.cardioMissedSessions || 0) >= 2) flags.push('<span class="mx-tag mx-tag--brass stagnation-badge">Cardio missed</span>');
-
+  const adh = c.compliancePercent;
+  const wk = c.workoutsLoggedThisWeek;
+  const wΔ = c.weeklyWeightChangePercent;
+  const alerts = Array.isArray(c.alerts) ? c.alerts : [];
+  const tags = alerts.map(a => `<span class="mx-tag ${a.severity === 'action' ? 'mx-tag--red' : 'mx-tag--brass'}" title="${_escH(a.reason)}">${_escH(a.label)}</span>`).join('');
   return `
     <article class="coach-insight-row">
       <div class="pod-row">
         <div class="coach-insight-id"><span class="mx-row-title">${_escH(c.name)}</span><span class="mx-row-sub">${_escH(c.currentPhase || '—')}</span></div>
-        <span class="mx-chip mx-chip--sm trend-${trend} ${trendCls}">${trendLabel}</span>
       </div>
       <div class="mx-tiles">
-        <div class="mx-stat"><span class="mx-stat-l">Compliance</span><span class="mx-stat-v">${adh}<small>%</small></span></div>
-        <div class="mx-stat"><span class="mx-stat-l">Workouts/wk</span><span class="mx-stat-v">${wk}</span></div>
-        <div class="mx-stat"><span class="mx-stat-l">Weight Δ/wk</span><span class="mx-stat-v">${wΔ > 0 ? '+' : ''}${wΔ.toFixed(2)}<small>%</small></span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Compliance</span><span class="mx-stat-v">${adh === null || adh === undefined ? '—' : `${adh}<small>%</small>`}</span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Sessions/wk</span><span class="mx-stat-v">${_dash(wk)}</span></div>
+        <div class="mx-stat"><span class="mx-stat-l">Weight Δ/wk</span><span class="mx-stat-v">${wΔ === null || wΔ === undefined ? '—' : `${wΔ > 0 ? '+' : ''}${Number(wΔ).toFixed(2)}<small>%</small>`}</span></div>
       </div>
-      <div class="mx-tags">${flags.join('') || '<span class="mx-tag">No flags</span>'}</div>
+      <div class="mx-tags">${tags || `<span class="mx-tag">${c.lastSharedAt ? 'No flags' : 'No data shared yet'}</span>`}</div>
     </article>`;
 }
+
+const _chartTick = { color: '#86998e' };
+const _chartGrid = { color: 'rgba(255,255,255,0.06)' };
 
 function _renderAdherenceChart(clients) {
   const canvas = document.getElementById('adherenceChart');
   if (!canvas || !window.Chart) return;
-  if (_analyticsCharts.adherence) { _analyticsCharts.adherence.destroy(); }
-  const colors = clients.map(c =>
-    c.compliancePercent >= 80 ? '#6fae8b' : c.compliancePercent >= 60 ? '#c79a54' : '#c9707c'
-  );
+  if (_analyticsCharts.adherence) _analyticsCharts.adherence.destroy();
+  const withData = clients.filter(c => c.compliancePercent !== null && c.compliancePercent !== undefined);
   _analyticsCharts.adherence = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: clients.map(c => c.name),
-      datasets: [{ label: 'Adherence %', data: clients.map(c => c.compliancePercent ?? 0), backgroundColor: colors, borderRadius: 6 }]
+      labels: withData.map(c => c.name),
+      datasets: [{
+        label: 'Adherence %',
+        data: withData.map(c => c.compliancePercent),
+        backgroundColor: withData.map(c => (c.compliancePercent >= 80 ? '#6fae8b' : c.compliancePercent >= 65 ? '#c79a54' : '#c9707c')),
+        borderRadius: 6
+      }]
     },
-    options: {
-      responsive: true, plugins: { legend: { display: false } },
-      scales: { y: { min: 0, max: 100, ticks: { color: '#86998e' }, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { ticks: { color: '#86998e' } } }
-    }
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: _chartTick, grid: _chartGrid }, x: { ticks: _chartTick } } }
   });
 }
 
 function _renderWorkoutsChart(clients) {
   const canvas = document.getElementById('workoutsChart');
   if (!canvas || !window.Chart) return;
-  if (_analyticsCharts.workouts) { _analyticsCharts.workouts.destroy(); }
+  if (_analyticsCharts.workouts) _analyticsCharts.workouts.destroy();
+  const withData = clients.filter(c => c.workoutsLoggedThisWeek !== null && c.workoutsLoggedThisWeek !== undefined);
   _analyticsCharts.workouts = new Chart(canvas, {
     type: 'bar',
-    data: {
-      labels: clients.map(c => c.name),
-      datasets: [{ label: 'Workouts', data: clients.map(c => c.workoutsLoggedThisWeek ?? 0), backgroundColor: '#3d9d73', borderRadius: 6 }]
-    },
-    options: {
-      responsive: true, plugins: { legend: { display: false } },
-      scales: { y: { min: 0, ticks: { stepSize: 1, color: '#86998e' }, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { ticks: { color: '#86998e' } } }
-    }
+    data: { labels: withData.map(c => c.name), datasets: [{ label: 'Sessions', data: withData.map(c => c.workoutsLoggedThisWeek), backgroundColor: '#3d9d73', borderRadius: 6 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { min: 0, ticks: { ..._chartTick, stepSize: 1 }, grid: _chartGrid }, x: { ticks: _chartTick } } }
   });
 }
 
 function _renderAlertPieChart(clients) {
   const canvas = document.getElementById('alertPieChart');
   if (!canvas || !window.Chart) return;
-  if (_analyticsCharts.pie) { _analyticsCharts.pie.destroy(); }
-  const ok    = clients.filter(c => c.alertStatus === 'ok').length;
+  if (_analyticsCharts.pie) _analyticsCharts.pie.destroy();
   const watch = clients.filter(c => c.alertStatus === 'watch').length;
-  const alert = clients.filter(c => _isUrgentStatus(c.alertStatus)).length;
+  const action = clients.filter(c => _isUrgentStatus(c.alertStatus)).length;
   _analyticsCharts.pie = new Chart(canvas, {
     type: 'doughnut',
-    data: {
-      labels: ['OK', 'Watch', 'Alert'],
-      datasets: [{ data: [ok, watch, alert], backgroundColor: ['#6fae8b','#c79a54','#c9707c'], borderWidth: 0 }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#c9d2cc', font: { size: 11 } } } }
-    }
+    data: { labels: ['On track', 'Watch', 'Needs action'], datasets: [{ data: [clients.length - watch - action, watch, action], backgroundColor: ['#6fae8b', '#c79a54', '#c9707c'], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#c9d2cc', font: { size: 11 } } } } }
   });
 }
 
 /* ══════════════════════════════════════════════════════════════
-   6. GDPR / PRIVACY
+   6. CLIENT DATA (privacy)
+   What each client shares is their choice, set in their own app
+   (Settings → Your Coach). This panel shows it, exports what you hold
+   for a client (subject-access requests) and removes a client, which
+   deletes their shared data from the server.
    ══════════════════════════════════════════════════════════════ */
 
-const GDPR_STORE_KEY = 'coachGdprConsents_v1';
-
-function _getGdprStore()      { return _coachStore(GDPR_STORE_KEY) || {}; }
-function _saveGdprStore(data) { _coachStore(GDPR_STORE_KEY, data); }
+const _SHARE_LABELS = { checkIns: 'Check-ins', bodyweight: 'Bodyweight', workouts: 'Workouts' };
 
 function renderCoachGdpr() {
   const container = document.getElementById('coachSub_gdpr');
   if (!container) return;
-  const clients = (window.coachDashboardState?.clients) || [];
-  const store   = _getGdprStore();
+  const clients = _activeClients();
 
-  const clientRows = clients.map(c => {
-    const consent = store[c.id] || { status: 'pending', dataSharing: false, analytics: false };
-    const chipCls = { consented: 'mx-chip--green', pending: 'mx-chip--brass', withdrawn: 'mx-chip--red' }[consent.status] || '';
-    const badge   = `<span class="gdpr-badge ${consent.status} mx-chip mx-chip--sm ${chipCls}">${consent.status}</span>`;
+  const rows = clients.map(c => {
+    const s = c.sharing || { checkIns: true, bodyweight: true, workouts: true };
+    const chips = Object.keys(_SHARE_LABELS).map(k =>
+      `<span class="mx-chip mx-chip--sm ${s[k] === false ? '' : 'mx-chip--green'}">${_SHARE_LABELS[k]}${s[k] === false ? ' off' : ''}</span>`).join('');
     return `
       <article class="coach-consent-row">
         <div class="pod-row">
-          <div class="coach-insight-id"><span class="mx-row-title">${_escH(c.name)}</span><span class="mx-row-sub">Consent date: ${consent.consentDate ? consent.consentDate.slice(0,10) : '—'}</span></div>
-          ${badge}
+          <div class="coach-insight-id"><span class="mx-row-title">${_escH(c.name)}</span><span class="mx-row-sub">Last shared: ${_escH(c.lastSharedAt || 'never')}</span></div>
         </div>
+        <div class="mx-tags">${chips}</div>
         <div class="coach-consent-actions">
-          <button type="button" class="mx-outline" onclick="sendConsentRequest('${c.id}')">${consent.status === 'consented' ? 'Revoke' : 'Send Request'}</button>
-          <button type="button" class="mx-outline" onclick="exportClientData('${c.id}')">Export</button>
-          <button type="button" class="mx-outline mx-outline--danger" onclick="deleteClientData('${c.id}')">Delete</button>
+          <button type="button" class="mx-outline" data-gdpr-export="${_escH(c.id)}">Export</button>
+          <button type="button" class="mx-outline mx-outline--danger" data-gdpr-remove="${_escH(c.id)}">Remove client</button>
         </div>
       </article>`;
-  }).join('') || '<div class="mx-empty">No clients.</div>';
+  }).join('') || '<div class="mx-empty">No linked clients.</div>';
 
   container.innerHTML = `
-    <!-- Consent overview -->
     <section class="pod mx-pod gdpr-section">
-      <div class="pod-row"><h4 class="pod-title mx-h3">Client Data Consents</h4></div>
-      <p class="mx-sub">Track and manage GDPR consent for each client. All data is stored locally; no personal data is shared without explicit consent.</p>
-      <div class="coach-consent-list">${clientRows}</div>
+      <div class="pod-row"><h4 class="pod-title mx-h3">Client data</h4></div>
+      <p class="mx-sub">Clients choose what you can see when they accept your invite, and can change it or leave at any time from their own app. Removing a client deletes everything they shared with you.</p>
+      <div class="coach-consent-list">${rows}</div>
     </section>
-
-    <!-- Coach data-sharing settings -->
     <section class="pod mx-pod gdpr-section">
-      <div class="pod-row"><h4 class="pod-title mx-h3">Data Sharing Settings</h4></div>
-      <p class="mx-sub">Configure what data can be shared with clients and third parties.</p>
-      <ul class="gdpr-consent-list" id="coachDataSharingList">
-        ${_buildDataSharingCheckboxes()}
-      </ul>
-      <button type="button" class="mx-cta gdpr-save-btn" onclick="saveCoachDataSettings()"><span>Save Preferences</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
-    </section>
-
-    <!-- Right to erasure / export -->
-    <section class="pod mx-pod gdpr-section">
-      <div class="pod-row"><h4 class="pod-title mx-h3">Your Coach Data</h4></div>
-      <p class="mx-sub">You can export all coaching data (programs, messages, assignments) or request deletion at any time.</p>
+      <div class="pod-row"><h4 class="pod-title mx-h3">Your coach data</h4></div>
+      <p class="mx-sub">Download your program library and roster as JSON.</p>
       <div class="gdpr-action-row">
-        <button type="button" class="mx-outline mx-outline--block gdpr-export-btn" onclick="exportAllCoachData()"><span class="ui-icon">${ICONS.download}</span> Export All Data (JSON)</button>
-        <button type="button" class="mx-outline mx-outline--block mx-outline--danger gdpr-delete-btn" onclick="deleteAllCoachData()">Delete All Coach Data</button>
+        <button type="button" class="mx-outline mx-outline--block gdpr-export-btn" data-gdpr-export-all><span class="ui-icon">${ICONS.download}</span> Export all (JSON)</button>
       </div>
     </section>`;
+
+  container.onclick = e => {
+    const exp = e.target.closest('[data-gdpr-export]');
+    const rem = e.target.closest('[data-gdpr-remove]');
+    if (exp) exportClientData(exp.dataset.gdprExport);
+    else if (rem) deleteClientData(rem.dataset.gdprRemove);
+    else if (e.target.closest('[data-gdpr-export-all]')) exportAllCoachData();
+  };
 }
 
-function _buildDataSharingCheckboxes() {
-  const settings = _coachStore('coachDataSettings_v1') || { shareProgress: true, shareNutrition: true, shareAnalytics: false, thirdParty: false };
-  const items = [
-    ['shareProgress',   'Share workout progress with clients'],
-    ['shareNutrition',  'Share assigned nutrition plans with clients'],
-    ['shareAnalytics',  'Allow anonymised analytics for platform improvement'],
-    ['thirdParty',      'Allow data sharing with certified third-party tools'],
-  ];
-  return items.map(([key, label]) => `
-    <li>
-      <label for="ds_${key}">${label}</label>
-      <input type="checkbox" id="ds_${key}" ${settings[key] ? 'checked' : ''}>
-    </li>`).join('');
+function _downloadJSON(data, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
-window.saveCoachDataSettings = function() {
-  const keys    = ['shareProgress','shareNutrition','shareAnalytics','thirdParty'];
-  const settings = {};
-  keys.forEach(k => { settings[k] = !!document.getElementById('ds_' + k)?.checked; });
-  _coachStore('coachDataSettings_v1', settings);
-  _showExportToast('Data preferences saved');
-};
-
-window.sendConsentRequest = function(clientId) {
-  const store   = _getGdprStore();
-  const consent = store[clientId] || {};
-  if (consent.status === 'consented') {
-    window.showConfirm('Revoke consent for this client? This will stop data collection.', { danger: true }).then(ok => {
-      if (!ok) return;
-      store[clientId] = { ...consent, status: 'withdrawn', revokedAt: new Date().toISOString() };
-      _saveGdprStore(store);
-      renderCoachGdpr();
-    });
-    return;
+window.exportClientData = async function (clientId) {
+  try {
+    const [detail, notes] = await Promise.all([
+      window.coachApi('GET', `/api/coach/clients/${encodeURIComponent(clientId)}`),
+      window.coachApi('GET', `/api/coach/clients/${encodeURIComponent(clientId)}/notes`)
+    ]);
+    const name = detail.client?.clientName || clientId;
+    _downloadJSON({ exportedAt: new Date().toISOString(), client: detail.client, notes: notes.notes || [] },
+      `client-data-${String(name).replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`);
+  } catch (err) {
+    window.showToast(err.message || 'Export failed.', 'error');
   }
-  // Show consent request modal
-  const clients = (window.coachDashboardState?.clients) || [];
-  const client  = clients.find(c => c.id === clientId);
-  const modal = document.createElement('div');
-  modal.className = 'gdpr-modal-overlay';
-  modal.innerHTML = `
-    <div class="gdpr-modal">
-      <h3>Data Consent Request</h3>
-      <p>Send this consent agreement to <strong>${_escH(client?.name || clientId)}</strong>. By confirming, you record that the client has agreed to the following:</p>
-      <ul class="gdpr-consent-list">
-        <li><input type="checkbox" checked disabled><label>Collection and storage of workout logs</label></li>
-        <li><input type="checkbox" checked disabled><label>Processing of body composition check-ins</label></li>
-        <li><input type="checkbox" checked disabled><label>Viewing of progress metrics by their assigned coach</label></li>
-        <li><input type="checkbox" id="_gdprNutrition"><label>Sharing nutrition targets with coach</label></li>
-        <li><input type="checkbox" id="_gdprAnalytics"><label>Inclusion in anonymised platform analytics</label></li>
-      </ul>
-      <div class="gdpr-modal-actions">
-        <button class="gdpr-export-btn" onclick="this.closest('.gdpr-modal-overlay').remove()">Cancel</button>
-        <button class="gdpr-save-btn" onclick="_recordConsent('${clientId}')">Record Consent</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
 };
 
-window._recordConsent = function(clientId) {
-  const store = _getGdprStore();
-  store[clientId] = {
-    status:      'consented',
-    consentDate: new Date().toISOString(),
-    nutrition:   !!document.getElementById('_gdprNutrition')?.checked,
-    analytics:   !!document.getElementById('_gdprAnalytics')?.checked,
-  };
-  _saveGdprStore(store);
-  document.querySelector('.gdpr-modal-overlay')?.remove();
-  renderCoachGdpr();
-  _showExportToast('Consent recorded');
-};
-
-window.exportClientData = function(clientId) {
-  const clients  = (window.coachDashboardState?.clients) || [];
-  const client   = clients.find(c => c.id === clientId) || { id: clientId };
-  const messages = _getThread(clientId);
-  const assignments = (_coachStore('coachProgramAssignments_v1') || {})[clientId];
-  const nutrition   = (_coachStore('coachNutritionAssignments_v1') || {})[clientId];
-  const consent     = (_getGdprStore())[clientId];
-
-  const exportData = { exportedAt: new Date().toISOString(), client, messages, programAssignment: assignments, nutritionPlan: nutrition, gdprConsent: consent };
-  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-  const a    = document.createElement('a');
-  a.href     = URL.createObjectURL(blob);
-  a.download = `client-data-${(client.name || clientId).replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
-
-window.deleteClientData = function(clientId) {
-  const clients = (window.coachDashboardState?.clients) || [];
-  const client  = clients.find(c => c.id === clientId);
-  window.showConfirm(`Permanently delete all data for ${client?.name || clientId}? This cannot be undone.`, { danger: true }).then(ok => {
+window.deleteClientData = function (clientId) {
+  const client = _activeClients().find(c => c.id === clientId);
+  const name = client?.name || 'this client';
+  window.showConfirm(`Remove ${name}? The link ends and everything they shared with you is deleted. This can't be undone.`, { danger: true, confirmText: 'Remove' }).then(async ok => {
     if (!ok) return;
-    delete _serverThreads[clientId]; // local cache only — notes now live server-side, not covered by this local-data wipe
-    const asnStore = _coachStore('coachProgramAssignments_v1') || {}; delete asnStore[clientId]; _coachStore('coachProgramAssignments_v1', asnStore);
-    const nutStore = _coachStore('coachNutritionAssignments_v1') || {}; delete nutStore[clientId]; _coachStore('coachNutritionAssignments_v1', nutStore);
-    const gdprStore = _getGdprStore(); delete gdprStore[clientId]; _saveGdprStore(gdprStore);
-    renderCoachGdpr();
-    _showExportToast(`Data for ${client?.name || clientId} deleted`);
+    try {
+      await window.coachApi('DELETE', `/api/coach/clients/${encodeURIComponent(clientId)}`);
+      _showExportToast(`${name} removed`);
+      if (typeof window.renderCoachDashboard === 'function') await window.renderCoachDashboard();
+      renderCoachGdpr();
+    } catch (err) {
+      window.showToast(err.message || 'Could not remove.', 'error');
+    }
   });
 };
 
-window.exportAllCoachData = function() {
-  const data = {
-    exportedAt:      new Date().toISOString(),
-    programs:        _coachStore('coachPrograms_v1'),
-    // Messages/notes live server-side now (see /api/coach/clients/:id/notes)
-    // — not local data, so not part of this local-export snapshot.
-    programAssign:   _coachStore('coachProgramAssignments_v1'),
-    nutritionAssign: _coachStore('coachNutritionAssignments_v1'),
-    gdprConsents:    _getGdprStore(),
-    dataSettings:    _coachStore('coachDataSettings_v1'),
-    notifSettings:   _coachStore('coachNotifSettings_v1'),
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a    = document.createElement('a');
-  a.href     = URL.createObjectURL(blob);
-  a.download = `all-coach-data-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+window.exportAllCoachData = async function () {
+  try {
+    const programs = await window.CoachProgramLibrary.list(true);
+    _downloadJSON({
+      exportedAt: new Date().toISOString(),
+      coach: _coachUser(),
+      programs,
+      clients: _activeClients().map(c => ({ id: c.id, name: c.name, status: c.status, currentProgram: c.currentProgram, nutrition: c.currentNutritionSummary, sharing: c.sharing }))
+    }, `all-coach-data-${new Date().toISOString().slice(0, 10)}.json`);
+  } catch (err) {
+    window.showToast(err.message || 'Export failed.', 'error');
+  }
 };
 
-window.deleteAllCoachData = function() {
-  window.showConfirm('Delete ALL coaching data (programs, messages, assignments)? This cannot be undone.', { danger: true, confirmText: 'Delete All' }).then(ok => {
-    if (!ok) return;
-    ['coachPrograms_v1','coachMessages_v1','coachProgramAssignments_v1',
-     'coachNutritionAssignments_v1','coachGdprConsents_v1',
-     'coachDataSettings_v1','coachNotifSettings_v1'].forEach(k => localStorage.removeItem(k));
-    renderCoachGdpr();
-    _showExportToast('All coach data deleted');
-  });
-};
-
-/* ── Utility: export toast ───────────────────────────────────── */
+/* ── Utilities ───────────────────────────────────────────────── */
 
 function _showExportToast(msg) {
   let toast = document.getElementById('_coachExportToast');
   if (!toast) {
     toast = document.createElement('div');
-    toast.id        = '_coachExportToast';
+    toast.id = '_coachExportToast';
     toast.className = 'export-toast';
     document.body.appendChild(toast);
   }
@@ -1176,54 +977,54 @@ function _showExportToast(msg) {
   toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-/* ── HTML escape util ────────────────────────────────────────── */
-
 function _escH(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /* ══════════════════════════════════════════════════════════════
-   INIT — wire everything up after DOM + coach data ready
+   INIT
    ══════════════════════════════════════════════════════════════ */
 
-document.addEventListener('DOMContentLoaded', () => {
-  initCoachSubtabs();
-  initBulkActions();
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initBulkActions();
 
-  // Re-render stats bar whenever coach dashboard refreshes
-  const origRender = window.renderCoachDashboard;
-  if (typeof origRender === 'function') {
-    window.renderCoachDashboard = async function() {
-      await origRender();
-      renderCoachStatsBar();
-      // Inject checkboxes into existing client cards for bulk selection
-      _injectBulkCheckboxes();
-    };
-  }
+    // Re-render the stats bar whenever the roster refreshes.
+    const origRender = window.renderCoachDashboard;
+    if (typeof origRender === 'function') {
+      window.renderCoachDashboard = async function () {
+        await origRender();
+        renderCoachStatsBar();
+        _injectBulkCheckboxes();
+      };
+    }
 
-  // Bulk toolbar button wiring
-  document.getElementById('coachBulkAssign')?.addEventListener('click', bulkAssignProgram);
-  document.getElementById('coachBulkMacros')?.addEventListener('click', bulkUpdateMacros);
-  document.getElementById('coachBulkCSV')?.addEventListener('click', bulkExportCSV);
-  document.getElementById('coachBulkPDF')?.addEventListener('click', bulkExportPDF);
-});
+    document.getElementById('coachBulkCSV')?.addEventListener('click', bulkExportCSV);
+    document.getElementById('coachBulkPDF')?.addEventListener('click', bulkExportPDF);
+  });
+}
 
 function _injectBulkCheckboxes() {
-  document.querySelectorAll('.coach-client-card').forEach(card => {
+  document.querySelectorAll('.coach-client-card:not(.is-pending)').forEach(card => {
     const clientId = card.dataset.clientId;
     if (!clientId || card.querySelector('.coach-client-select')) return;
-    card.style.position = 'relative';
     const cb = document.createElement('input');
-    cb.type            = 'checkbox';
-    cb.className       = 'coach-client-select';
+    cb.type = 'checkbox';
+    cb.className = 'coach-client-select';
     cb.dataset.clientId = clientId;
+    cb.setAttribute('aria-label', 'Select for export');
     card.prepend(cb);
   });
 }
 
-// Expose for manual calls
-window.renderCoachStatsBar       = renderCoachStatsBar;
-window.renderCoachAnalytics      = renderCoachAnalytics;
-window.renderCoachMessaging      = renderCoachMessaging;
-window.renderCoachGdpr           = renderCoachGdpr;
-window.renderCoachProgramBuilder = renderCoachProgramBuilder;
+if (typeof window !== 'undefined') {
+  window.renderCoachStatsBar       = renderCoachStatsBar;
+  window.renderCoachAnalytics      = renderCoachAnalytics;
+  window.renderCoachMessaging      = renderCoachMessaging;
+  window.renderCoachGdpr           = renderCoachGdpr;
+  window.renderCoachProgramBuilder = renderCoachProgramBuilder;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { _parseScheme, _formatScheme, _toExercise };
+}

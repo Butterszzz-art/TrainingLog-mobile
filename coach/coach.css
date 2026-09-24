@@ -1206,3 +1206,20 @@ body::before {
 @media (max-width: 900px) {
   .ws-stat-row { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Coaching readiness: pending rows, real charts, program editor ── */
+.client-row.is-pending { opacity: 0.75; }
+.client-alert.pending { background: transparent; border: 1.5px dashed var(--highlight); }
+.coach-spark { display: block; width: 100%; height: 80px; margin: 4px 0 6px; }
+.coach-week-bars { height: 96px; }
+.chart-empty-bar.is-real { background: var(--primary); opacity: 0.85; }
+.coach-input {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; font-size: 0.88rem; box-sizing: border-box;
+}
+textarea.coach-input { min-height: 60px; resize: vertical; }
+.coach-builder { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.coach-builder-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.coach-builder-day { display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.coach-builder-day textarea { font-size: 0.8rem; text-transform: none; font-weight: 400; }
+.detail-header .capsule-chip { margin-left: 8px; }

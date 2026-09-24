@@ -3609,10 +3609,10 @@
 
   <!-- Your Coach: pending invite (Accept), linked coach + whatever they've
        assigned (program/macro summary), and their notes to you. Populated
-       by renderYourCoachSection() — real backend data, hidden entirely if
+       by renderYourCoachSection() in src/js/client-coaching.js, hidden entirely if
        there's nothing to show (no invite, no coach, no notes) rather than
        rendering an empty shell. -->
-  <div id="yourCoachSection" class="export-section" style="margin-top:16px;display:none;"></div>
+  <div id="yourCoachSection" class="your-coach" hidden></div>
 
   </div> <!-- #settingsTab -->
 
@@ -4664,6 +4664,7 @@ function _runPostLoginSequence(renderFn) {
   } catch (err) {
     console.error('[Login] post-login render error:', err);
   }
+  if (typeof window.renderYourCoachSection === 'function') window.renderYourCoachSection();
 
   if (!loadingEl) return; // markup missing — app is already visible, nothing more to do
 
@@ -11469,43 +11470,64 @@ const coachDashboardState = {
 // `const` at the top level of an inline <script> is NOT a property of window.
 window.coachDashboardState = coachDashboardState;
 
+const COACH_MODE_LABELS = { bodybuilding: 'Bodybuilding', bodybuilder: 'Bodybuilding', powerlifting: 'Powerlifting', powerlifter: 'Powerlifting', crossfit: 'CrossFit', hybrid: 'Hybrid', general: 'General fitness' };
+
+// One shape for a roster row, whether it comes straight from
+// GET /api/coach/clients or is an already-normalised record (safe to call
+// twice). Anything the client hasn't shared stays null: the roster shows
+// "—" for it rather than a made-up 0.
 function normalizeCoachClientRecord(client = {}) {
-  const pct = Number(client.compliancePercent);
+  const numOrNull = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+  const pct = numOrNull(client.compliancePercent);
+  const status = client.status || 'active';
+  const trainingMode = client.trainingMode || '';
+  const program = client.activeProgramName || client.currentProgram || '';
   return {
-    id: client.id || client.clientId || `client-${Math.random().toString(36).slice(2, 8)}`,
-    clientId: client.clientId || client.clientUsername || client.username || null,
+    id: client.id || client.clientId || '',
+    clientId: client.clientId || client.id || null,
     name: client.name || client.clientName || 'Unnamed client',
-    archetype: client.archetype || client.athleteArchetype || 'Unassigned',
-    currentPhase: client.currentPhase || client.phase || 'Phase not set',
-    lastCheckInDate: client.lastCheckInDate || client.lastCheckIn || client.lastCheckinDate || '',
-    compliancePercent: Number.isFinite(pct) ? Math.max(0, Math.min(100, Math.round(pct))) : 0,
-    primaryStatusMetric: client.primaryStatusMetric || client.statusMetric || client.primaryMetric || 'Awaiting status metric',
-    alertStatus: String(client.alertStatus || client.alert || 'watch').toLowerCase(),
-    athleteInfo: client.athleteInfo || {},
-    currentBodyweight: client.currentBodyweight ?? client.bodyweight ?? client.athleteInfo?.currentWeight ?? null,
-    latestCheckInSummary: client.latestCheckInSummary || client.latestCheckInInsight || '',
-    recentProgressSummary: client.recentProgressSummary || client.progressSummary || '',
-    currentProgramSummary: client.currentProgramSummary || client.programSummary || '',
+    email: client.email || '',
+    status,
+    isPending: status === 'pending',
+    trainingMode,
+    archetype: client.archetype || COACH_MODE_LABELS[String(trainingMode).toLowerCase()] || trainingMode || 'Mode not set',
+    currentPhase: client.currentPhase || program || 'No program yet',
+    currentProgram: client.currentProgram || '',
+    currentProgramId: client.currentProgramId || '',
+    activeProgramName: client.activeProgramName || '',
+    lastCheckInDate: client.lastCheckInDate || client.lastCheckIn || '',
+    compliancePercent: pct === null ? null : Math.max(0, Math.min(100, Math.round(pct))),
+    workoutsLoggedThisWeek: numOrNull(client.workoutsLoggedThisWeek),
+    currentBodyweight: numOrNull(client.currentBodyweight),
+    weeklyWeightChangePercent: numOrNull(client.weeklyWeightChangePercent),
+    alertStatus: String(client.alertStatus || 'ok').toLowerCase(),
+    alerts: Array.isArray(client.alerts) ? client.alerts : [],
     currentNutritionSummary: client.currentNutritionSummary || client.nutritionSummary || '',
-    latestCheckIn: client.latestCheckInEntry || client.latestCheckInData || null,
-    status: client.status || 'active'
+    macroTargets: client.macroTargets || null,
+    latestCheckIn: client.latestCheckIn || client.latestCheckInData || null,
+    sharing: client.sharing || null,
+    lastSharedAt: client.lastSharedAt || null
   };
 }
 
-// Real roster load only — no demo/fabricated fallback and no local-only
-// "manual" client list (both used to make it look like real clients existed
-// when they didn't). Adding a client is now desktop-only — see
-// openAddClientModal below and coach/coach.js's "+ Invite" button.
-async function loadCoachClients() {
-  const coachId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username') || 'coach';
+async function coachApi(method, path, body) {
   const base = (window.SERVER_URL || '').replace(/\/$/, '');
-  const endpoint = `${base}/api/coach/clients?coachId=${encodeURIComponent(coachId)}`;
+  const res = await fetch(`${base}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.success) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+  return data;
+}
+window.coachApi = coachApi;
 
+// Real roster load only — no demo/fabricated fallback and no local-only
+// client list.
+async function loadCoachClients() {
   try {
-    const response = await fetch(endpoint, { headers: getAuthHeaders() });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    if (!payload.success) throw new Error(payload?.error?.message || 'Request failed');
+    const payload = await coachApi('GET', '/api/coach/clients');
     const list = Array.isArray(payload.clients) ? payload.clients : [];
     return { clients: list.map(normalizeCoachClientRecord), source: 'backend' };
   } catch (error) {
@@ -11519,14 +11541,18 @@ async function loadCoachClients() {
 // backend /coach/workouts) instead of the coach's own.
 window.coachLoggingClient = null;
 
-function setCoachLoggingClient(clientUsername) {
-  window.coachLoggingClient = clientUsername || null;
+// window.coachLoggingClient holds the client's uid (the id the backend links
+// on); names are kept alongside for toasts and the picker.
+window.coachLogClientNames = window.coachLogClientNames || {};
+
+function setCoachLoggingClient(clientUid) {
+  window.coachLoggingClient = clientUid || null;
   const sel = document.getElementById('coachLogForSelect');
-  if (sel && sel.value !== (clientUsername || '')) sel.value = clientUsername || '';
+  if (sel && sel.value !== (clientUid || '')) sel.value = clientUid || '';
   const bar = document.getElementById('coachLogForBar');
-  if (bar) bar.classList.toggle('is-client', !!clientUsername);
-  if (clientUsername) {
-    window.showToast(`Logging for ${clientUsername} — entries go to their logbook`);
+  if (bar) bar.classList.toggle('is-client', !!clientUid);
+  if (clientUid) {
+    window.showToast(`Logging for ${window.coachLogClientNames[clientUid] || 'your client'}. Entries go to their logbook.`);
   } else {
     window.showToast('Back to your own logbook');
   }
@@ -11547,14 +11573,12 @@ async function initCoachLogForBar() {
     const { clients } = await loadCoachClients();
     const sel = document.getElementById('coachLogForSelect');
     if (!sel) return;
+    const active = clients.filter(c => !c.isPending);
+    active.forEach(c => { window.coachLogClientNames[c.id] = c.name; });
     const current = window.coachLoggingClient || '';
-    const options = clients.map(c => {
-      const norm = normalizeCoachClientRecord(c);
-      const uname = norm.clientId || norm.name;
-      return `<option value="${uname}">${norm.name}</option>`;
-    }).join('');
-    sel.innerHTML = '<option value="">Myself</option>' + options;
-    sel.value = current;
+    sel.innerHTML = '<option value="">Myself</option>' + active.map(c =>
+      `<option value="${escapeCoachText(c.id)}">${escapeCoachText(c.name)}</option>`).join('');
+    sel.value = active.some(c => c.id === current) ? current : '';
   } catch (err) {
     console.warn('[CoachLogFor] init failed', err);
   }
@@ -11562,28 +11586,20 @@ async function initCoachLogForBar() {
 window.initCoachLogForBar = initCoachLogForBar;
 
 // Send a workout to a linked client's backend logbook
-async function saveClientWorkoutToBackend(workout, clientUsername) {
+async function saveClientWorkoutToBackend(workout, clientUid) {
+  const name = window.coachLogClientNames[clientUid] || 'your client';
   try {
-    const res = await fetch(`${window.SERVER_URL}/coach/workouts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      credentials: 'include',
-      body: JSON.stringify({
-        clientUsername,
-        date: workout?.date,
-        title: workout?.title,
-        workout
-      })
+    await coachApi('POST', '/coach/workouts', {
+      clientUid,
+      date: workout?.date,
+      title: workout?.title,
+      workout
     });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.success) {
-      throw new Error(data?.error?.message || `HTTP ${res.status}`);
-    }
-    window.showToast(`Synced to ${clientUsername}'s logbook ✓`);
+    window.showToast(`Synced to ${name}'s logbook`);
     return true;
   } catch (err) {
     console.warn('[CoachLogFor] client sync failed', err);
-    window.showToast(`Saved locally — could not sync to ${clientUsername}'s account`, 'error');
+    window.showToast(`Saved on this phone only. Couldn't sync to ${name}'s account.`, 'error');
     return false;
   }
 }
@@ -11723,467 +11739,265 @@ function renderExerciseVideoHint(exerciseName) {
 }
 window.renderExerciseVideoHint = renderExerciseVideoHint;
 
-function getCoachAlertMeta(status = 'watch') {
-  const normalized = String(status || 'watch').toLowerCase();
-  if (normalized === 'ok' || normalized === 'stable') {
-    return { label: 'Stable', className: 'is-ok' };
-  }
+function getCoachAlertMeta(status = 'ok') {
+  const normalized = String(status || 'ok').toLowerCase();
   if (normalized === 'alert' || normalized === 'action' || normalized === 'at_risk' || normalized === 'risk') {
     return { label: 'Needs Action', className: 'is-alert' };
   }
-  return { label: 'Watch', className: 'is-watch' };
+  if (normalized === 'watch') return { label: 'Watch', className: 'is-watch' };
+  return { label: 'On track', className: 'is-ok' };
 }
 
-function toCoachDateValue(dateLike) {
-  if (!dateLike) return null;
-  const parsed = new Date(dateLike);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function getDaysSinceCoachDate(dateLike) {
-  const parsed = toCoachDateValue(dateLike);
-  if (!parsed) return null;
-  const now = new Date();
-  const msPerDay = 24 * 60 * 60 * 1000;
-  return Math.floor((now.getTime() - parsed.getTime()) / msPerDay);
-}
-
-function inferCoachTrendSignal(client = {}) {
-  const summary = `${client.recentProgressSummary || ''} ${client.primaryStatusMetric || ''}`.toLowerCase();
-  if (!summary.trim()) return null;
-  if (/(stalled|plateau|regressed|no progress|flat over|not moving)/.test(summary)) return 'stalled';
-  if (/(rapid|too fast|spike|sharp drop|dropped fast)/.test(summary)) return 'rapid';
-  return null;
-}
-
+// Alerts come from the server (GET /api/coach/clients computes them from what
+// the client shares), so the phone, the desktop console and the stats bar
+// all agree. See traininglog-backend src/coachShare.js for the rules.
 function deriveCoachClientAlerts(client = {}) {
-  const alerts = [];
-  const daysSinceCheckIn = getDaysSinceCoachDate(client.lastCheckInDate);
-  if (Number.isFinite(daysSinceCheckIn)) {
-    if (daysSinceCheckIn >= 10) {
-      alerts.push({
-        id: 'missed_checkin',
-        severity: 'alert',
-        label: 'Missed check-in',
-        reason: `${daysSinceCheckIn} days since last check-in`
-      });
-    } else if (daysSinceCheckIn >= 7) {
-      alerts.push({
-        id: 'missed_checkin',
-        severity: 'watch',
-        label: 'Missed check-in',
-        reason: `${daysSinceCheckIn} days since last check-in`
-      });
-    }
-  }
-
-  const compliance = Number(client.compliancePercent);
-  if (Number.isFinite(compliance)) {
-    if (compliance < 65) {
-      alerts.push({ id: 'low_compliance', severity: 'alert', label: 'Low compliance', reason: `${Math.round(compliance)}% adherence` });
-    } else if (compliance < 80) {
-      alerts.push({ id: 'low_compliance', severity: 'watch', label: 'Low compliance', reason: `${Math.round(compliance)}% adherence` });
-    }
-  }
-
-  const trendSignal = inferCoachTrendSignal(client);
-  if (trendSignal === 'stalled') {
-    alerts.push({ id: 'stalled_trend', severity: 'watch', label: 'Stalled trend', reason: 'Progress notes suggest stalled momentum' });
-  }
-
-  const weeklyWeightChangePct = Number(
-    client.weeklyWeightChangePercent
-    ?? client.weeklyWeightChangePct
-    ?? client.latestCheckIn?.weeklyWeightChangePercent
-    ?? client.latestCheckIn?.weeklyWeightChangePct
-  );
-  if (Number.isFinite(weeklyWeightChangePct)) {
-    const absChange = Math.abs(weeklyWeightChangePct);
-    if (absChange >= 1.25) {
-      alerts.push({ id: 'rapid_weight_change', severity: 'alert', label: 'Rapid weight change', reason: `${weeklyWeightChangePct.toFixed(2)}% this week` });
-    } else if (absChange >= 0.8) {
-      alerts.push({ id: 'rapid_weight_change', severity: 'watch', label: 'Rapid weight change', reason: `${weeklyWeightChangePct.toFixed(2)}% this week` });
-    }
-  } else if (trendSignal === 'rapid') {
-    alerts.push({ id: 'rapid_weight_change', severity: 'watch', label: 'Rapid weight change', reason: 'Progress notes suggest unusually fast change' });
-  }
-
-  const workoutsLoggedThisWeek = Number(
-    client.workoutsLoggedThisWeek
-    ?? client.latestCheckIn?.workoutsLoggedThisWeek
-    ?? client.latestCheckIn?.trainingSessionsCompleted
-  );
-  if (Number.isFinite(workoutsLoggedThisWeek) && workoutsLoggedThisWeek <= 0) {
-    alerts.push({ id: 'no_workout_logs', severity: 'alert', label: 'No workout logs this week', reason: '0 sessions logged this week' });
-  }
-
-  const cardioMissed = Number(
-    client.cardioMissedSessions
-    ?? client.latestCheckIn?.cardioMissedSessions
-    ?? client.latestCheckIn?.missedCardioSessions
-  );
-  const cardioAdherence = Number(client.latestCheckIn?.cardioAdherence);
-  if (Number.isFinite(cardioMissed)) {
-    if (cardioMissed >= 2) {
-      alerts.push({ id: 'cardio_missed_repeatedly', severity: 'alert', label: 'Cardio missed repeatedly', reason: `${cardioMissed} cardio sessions missed` });
-    } else if (cardioMissed === 1) {
-      alerts.push({ id: 'cardio_missed_repeatedly', severity: 'watch', label: 'Cardio missed repeatedly', reason: '1 cardio session missed' });
-    }
-  } else if (Number.isFinite(cardioAdherence) && cardioAdherence <= 4) {
-    alerts.push({
-      id: 'cardio_missed_repeatedly',
-      severity: cardioAdherence <= 2 ? 'alert' : 'watch',
-      label: 'Cardio missed repeatedly',
-      reason: `Cardio adherence score ${cardioAdherence}/10`
-    });
-  }
-
-  const deduped = new Map();
-  alerts.forEach((entry) => {
-    const prior = deduped.get(entry.id);
-    if (!prior || (prior.severity === 'watch' && entry.severity === 'alert')) {
-      deduped.set(entry.id, entry);
-    }
-  });
-  return Array.from(deduped.values())
-    .sort((a, b) => (a.severity === b.severity ? a.label.localeCompare(b.label) : a.severity === 'alert' ? -1 : 1))
-    .slice(0, 3);
+  return Array.isArray(client.alerts) ? client.alerts : [];
 }
 
 function deriveCoachAlertStatus(client = {}) {
-  const alerts = deriveCoachClientAlerts(client);
-  if (alerts.some((alert) => alert.severity === 'alert')) return 'alert';
-  if (alerts.length) return 'watch';
-  return ['alert', 'action'].includes(String(client.alertStatus || 'ok').toLowerCase()) ? 'watch' : 'ok';
+  return client.isPending ? 'ok' : (client.alertStatus || 'ok');
 }
 
-function renderCoachAlertList(alerts = []) {
-  if (!alerts.length) {
-    return '<li><span>Stable</span><strong>No active alerts</strong></li>';
-  }
-  return alerts
-    .map((alert) => `<li><span>${escapeCoachText(alert.label)}</span><strong>${escapeCoachText(alert.reason)}</strong></li>`)
-    .join('');
+const COACH_SHARE_LABELS = { checkIns: 'check-ins', bodyweight: 'bodyweight', workouts: 'workouts' };
+function coachSharingGaps(client) {
+  const s = client.sharing;
+  if (!s) return [];
+  return Object.keys(COACH_SHARE_LABELS).filter(k => s[k] === false).map(k => COACH_SHARE_LABELS[k]);
+}
+
+function coachPct(value) {
+  return value === null || value === undefined ? '—' : `${value}<small>%</small>`;
 }
 
 function renderCoachClientCard(client) {
-  const safeClient = normalizeCoachClientRecord(client);
-  const derivedAlerts = deriveCoachClientAlerts(safeClient);
-  const alertMeta = getCoachAlertMeta(deriveCoachAlertStatus(safeClient));
+  const c = normalizeCoachClientRecord(client);
+  const initials = String(c.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  if (c.isPending) {
+    return `
+      <article class="coach-client-card pod mx-pod is-pending" data-client-id="${escapeCoachText(c.id)}">
+        <header class="coach-client-card-header">
+          <div class="coach-client-avatar" aria-hidden="true">${escapeCoachText(initials)}</div>
+          <div class="coach-client-id">
+            <h3 class="coach-client-name">${escapeCoachText(c.name)}</h3>
+            <p class="coach-client-meta">Invite sent, waiting for them to accept in Settings → Your Coach</p>
+          </div>
+          <span class="coach-alert-pill mx-chip mx-chip--sm mx-chip--brass">Pending</span>
+        </header>
+        <div class="coach-client-actions">
+          <button type="button" class="mx-outline mx-outline--block" data-coach-remove="${escapeCoachText(c.id)}" data-client-name="${escapeCoachText(c.name)}" data-pending="1">Cancel invite</button>
+        </div>
+      </article>`;
+  }
+  const alerts = deriveCoachClientAlerts(c);
+  const alertMeta = getCoachAlertMeta(deriveCoachAlertStatus(c));
   const chipCls = { 'is-ok': 'mx-chip--green', 'is-watch': 'mx-chip--brass', 'is-alert': 'mx-chip--red' }[alertMeta.className] || '';
-  const initials = String(safeClient.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-  const alertTags = derivedAlerts.length
-    ? derivedAlerts.map((entry) => `<span class="mx-tag ${entry.severity === 'alert' ? 'mx-tag--red' : 'mx-tag--brass'}">${escapeCoachText(entry.label)}</span>`).join('')
-    : '<span class="mx-tag mx-tag--hi">No urgent flags this week</span>';
+  const alertTags = alerts.length
+    ? alerts.map((a) => `<span class="mx-tag ${a.severity === 'action' ? 'mx-tag--red' : 'mx-tag--brass'}" title="${escapeCoachText(a.reason)}">${escapeCoachText(a.label)}</span>`).join('')
+    : `<span class="mx-tag mx-tag--hi">${c.lastSharedAt ? 'No flags this week' : 'No data shared yet'}</span>`;
+  const gaps = coachSharingGaps(c);
+  const bw = c.currentBodyweight !== null
+    ? `${c.currentBodyweight}<small>kg</small>`
+    : '—';
   return `
-    <article class="coach-client-card pod mx-pod" data-client-id="${escapeCoachText(safeClient.id)}">
+    <article class="coach-client-card pod mx-pod" data-client-id="${escapeCoachText(c.id)}">
       <header class="coach-client-card-header">
         <div class="coach-client-avatar" aria-hidden="true">${escapeCoachText(initials)}</div>
         <div class="coach-client-id">
-          <h3 class="coach-client-name">${escapeCoachText(safeClient.name)}</h3>
-          <p class="coach-client-meta">${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</p>
+          <h3 class="coach-client-name">${escapeCoachText(c.name)}</h3>
+          <p class="coach-client-meta">${escapeCoachText(c.archetype)} · ${escapeCoachText(c.currentPhase)}</p>
         </div>
         <span class="coach-alert-pill mx-chip mx-chip--sm ${chipCls} ${alertMeta.className}">${alertMeta.label}</span>
       </header>
       <ul class="coach-client-kpis mx-tiles mx-tiles--2">
         <li class="coach-client-kpi mx-stat">
-          <p class="coach-client-kpi-label mx-stat-l">Last Check-In</p>
-          <p class="coach-client-kpi-value mx-stat-v">${escapeCoachText(formatCoachDate(safeClient.lastCheckInDate))}</p>
+          <p class="coach-client-kpi-label mx-stat-l">Last check-in</p>
+          <p class="coach-client-kpi-value mx-stat-v">${escapeCoachText(c.lastCheckInDate ? formatCoachDate(c.lastCheckInDate) : '', '—')}</p>
         </li>
         <li class="coach-client-kpi mx-stat">
           <p class="coach-client-kpi-label mx-stat-l">Compliance</p>
-          <p class="coach-client-kpi-value mx-stat-v">${escapeCoachText(`${safeClient.compliancePercent}`)}<small>%</small></p>
-          <div class="mx-meter mx-meter--thin${safeClient.compliancePercent < 60 ? ' mx-meter--brass' : ''}" role="img" aria-label="Compliance ${safeClient.compliancePercent} percent"><i style="width:${safeClient.compliancePercent}%"></i></div>
+          <p class="coach-client-kpi-value mx-stat-v">${coachPct(c.compliancePercent)}</p>
+          ${c.compliancePercent !== null ? `<div class="mx-meter mx-meter--thin${c.compliancePercent < 65 ? ' mx-meter--brass' : ''}" role="img" aria-label="Compliance ${c.compliancePercent} percent"><i style="width:${c.compliancePercent}%"></i></div>` : ''}
+        </li>
+        <li class="coach-client-kpi mx-stat">
+          <p class="coach-client-kpi-label mx-stat-l">Sessions this week</p>
+          <p class="coach-client-kpi-value mx-stat-v">${c.workoutsLoggedThisWeek ?? '—'}</p>
+        </li>
+        <li class="coach-client-kpi mx-stat">
+          <p class="coach-client-kpi-label mx-stat-l">Bodyweight</p>
+          <p class="coach-client-kpi-value mx-stat-v">${bw}</p>
         </li>
       </ul>
-      <div class="coach-client-line">
-        <span class="mx-lbl">Primary status</span>
-        <span class="coach-client-line-val">${escapeCoachText(safeClient.primaryStatusMetric)}</span>
-      </div>
       <div class="coach-client-line">
         <span class="mx-lbl">Coach alerts</span>
         <div class="mx-tags">${alertTags}</div>
       </div>
+      ${gaps.length ? `<p class="mx-sub coach-share-gap">Not sharing: ${escapeCoachText(gaps.join(', '))}</p>` : ''}
       <div class="coach-client-actions">
-        <button type="button" class="mx-outline mx-outline--block" data-coach-open-detail="${escapeCoachText(safeClient.id)}">Open Client <span class="ui-icon">${ICONS.chevronRight}</span></button>
+        <button type="button" class="mx-outline mx-outline--block" data-coach-open-detail="${escapeCoachText(c.id)}">Open client <span class="ui-icon">${ICONS.chevronRight}</span></button>
       </div>
     </article>
   `;
 }
 
-function getLocalCoachClientData(client) {
-  const activeUserId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  if (!activeUserId || activeUserId !== client.id) return {};
-  const profile = getUserProfile(activeUserId) || {};
-  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(activeUserId) || {};
-  const checkIns = window.checkinEngine?.loadCheckIns?.(activeUserId) || [];
-  const latestCheckIn = Array.isArray(checkIns) && checkIns.length ? checkIns[0] : null;
-  const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${activeUserId}`) || '[]');
-  const latestBodyweight = Array.isArray(bodyweightLog) && bodyweightLog.length
-    ? (bodyweightLog[bodyweightLog.length - 1]?.weight ?? bodyweightLog[bodyweightLog.length - 1]?.weightKg ?? null)
-    : null;
-  const macroTargets = JSON.parse(localStorage.getItem(`macroTargets_${activeUserId}`) || 'null');
-  const programs = JSON.parse(localStorage.getItem(`programs_${activeUserId}`) || localStorage.getItem('programs') || '[]');
-  const activeProgram = JSON.parse(localStorage.getItem(`activeProgram_${activeUserId}`) || 'null');
-  const activeProgramName = activeProgram?.programName
-    || programs.find((p) => p?.id && p.id === activeProgram?.programId)?.name;
+// ── Client detail ─────────────────────────────────────────────
+// History for the charts comes from GET /api/coach/clients/:id (whatever
+// the client shares), cached per client for this session.
+coachDashboardState.details = coachDashboardState.details || {};
 
-  return {
-    profile,
-    phaseState,
-    latestCheckIn,
-    latestBodyweight,
-    macroTargets,
-    activeProgramName
-  };
-}
-
-function renderCoachClientDetailRow(label, value, fallback = 'Not available yet') {
-  return `<li><span>${escapeCoachText(label)}</span><strong>${escapeCoachText(value, fallback)}</strong></li>`;
-}
-
-function formatMacroLine(targets = {}) {
-  const safe = normalizeMacroTargets(targets);
-  return `${safe.calories} kcal · ${safe.protein}P / ${safe.carbs}C / ${safe.fat}F`;
-}
-
-function deriveNutritionDayVariants(baseTraining = {}, baseRest = {}, includeRefeed = false, refeed = null) {
-  const training = normalizeMacroTargets(baseTraining);
-  const rest = normalizeMacroTargets(baseRest);
-  const fallbackHigh = {
-    protein: Math.round(training.protein * 1.03),
-    carbs: Math.round(training.carbs * 1.18),
-    fat: Math.round(training.fat * 0.9),
-  };
-  const fallbackLow = {
-    protein: Math.round(rest.protein * 1.03),
-    carbs: Math.round(rest.carbs * 0.78),
-    fat: Math.round(rest.fat * 1.08),
-  };
-  const high = window.macroEngine?.buildBodybuildingDayTargets
-    ? window.macroEngine.buildBodybuildingDayTargets(training, { dayType: 'training', carbCycle: 'high' }).adjusted
-    : normalizeMacroTargets(fallbackHigh);
-  const low = window.macroEngine?.buildBodybuildingDayTargets
-    ? window.macroEngine.buildBodybuildingDayTargets(rest, { dayType: 'rest', carbCycle: 'low' }).adjusted
-    : normalizeMacroTargets(fallbackLow);
-  const days = {
-    training,
-    rest,
-    high: normalizeMacroTargets(high),
-    low: normalizeMacroTargets(low),
-  };
-  if (includeRefeed) {
-    const derived = window.macroEngine?.buildBodybuildingDayTargets
-      ? window.macroEngine.buildBodybuildingDayTargets(training, { dayType: 'training', carbCycle: 'high', isRefeedDay: true }).adjusted
-      : normalizeMacroTargets({
-        protein: training.protein,
-        carbs: Math.round(training.carbs * 1.32),
-        fat: Math.round(training.fat * 0.83),
-      });
-    days.refeed = normalizeMacroTargets(refeed || derived);
-  }
-  return days;
-}
-
-function buildCoachNutritionAssignmentFromForm(clientId, clientName) {
-  const read = (id) => roundMacroNumber(document.getElementById(id)?.value);
-  const training = {
-    protein: read('coachNutritionTrainingProtein'),
-    carbs: read('coachNutritionTrainingCarbs'),
-    fat: read('coachNutritionTrainingFat'),
-  };
-  const rest = {
-    protein: read('coachNutritionRestProtein'),
-    carbs: read('coachNutritionRestCarbs'),
-    fat: read('coachNutritionRestFat'),
-  };
-  if (!training.protein || !training.carbs || !training.fat || !rest.protein || !rest.carbs || !rest.fat) {
-    throw new Error('Training/rest day macros are required.');
-  }
-  const includeRefeed = Boolean(document.getElementById('coachNutritionEnableRefeed')?.checked);
-  const customRefeed = {
-    protein: read('coachNutritionRefeedProtein'),
-    carbs: read('coachNutritionRefeedCarbs'),
-    fat: read('coachNutritionRefeedFat'),
-  };
-  const refeedProvided = customRefeed.protein || customRefeed.carbs || customRefeed.fat;
-  const days = deriveNutritionDayVariants(training, rest, includeRefeed, includeRefeed && refeedProvided ? customRefeed : null);
-  return {
-    version: 1,
-    planType: 'macro',
-    planName: 'Coach Assigned Macro Plan',
-    assignedClientId: clientId,
-    assignedClientName: clientName || clientId,
-    assignedByCoachId: currentUser || 'coach',
-    assignedAt: new Date().toISOString(),
-    structure: {
-      type: 'macro-day-split',
-      supportsHighLowDays: true,
-      supportsRefeed: includeRefeed,
-      notes: document.getElementById('coachNutritionNotes')?.value?.trim() || '',
-    },
-    days,
-  };
-}
-
-function assignCoachNutritionPlan(clientId, clientName) {
-  if (!clientId) return;
-  let assignment;
+async function loadCoachClientDetail(clientId, force) {
+  if (!force && coachDashboardState.details[clientId]) return coachDashboardState.details[clientId];
   try {
-    assignment = buildCoachNutritionAssignmentFromForm(clientId, clientName);
-  } catch (error) {
-    alert(error.message || 'Unable to build nutrition assignment.');
-    return;
+    const data = await coachApi('GET', `/api/coach/clients/${encodeURIComponent(clientId)}`);
+    coachDashboardState.details[clientId] = data.client;
+  } catch (err) {
+    console.warn('[CoachDetail] load failed', err);
+    coachDashboardState.details[clientId] = null;
   }
-
-  const store = getCoachNutritionPlanStore();
-  store[clientId] = assignment;
-  saveCoachNutritionPlanStore(store);
-
-  const athleteDefault = normalizeMacroTargets(assignment.days.training);
-  localStorage.setItem(`macroTargets_${clientId}`, JSON.stringify(athleteDefault));
-  if (clientName) {
-    localStorage.setItem(`clientName_${clientId}`, clientName);
-  }
-  alert(`Nutrition plan assigned to ${clientName || clientId}`);
-  renderCoachDashboardView();
+  return coachDashboardState.details[clientId];
 }
 
-function renderCoachClientDetail(client) {
-  const safeClient = normalizeCoachClientRecord(client);
-  const derivedAlerts = deriveCoachClientAlerts(safeClient);
-  const localData = getLocalCoachClientData(safeClient);
-  const assignedNutrition = getAssignedNutritionPlan(safeClient.id);
-  const phaseState = localData.phaseState || {};
-  const profile = localData.profile || {};
-  const latestCheckIn = safeClient.latestCheckIn || localData.latestCheckIn || null;
-  const snapshot = getComplianceSnapshot(profile, safeClient.id, normalizeArchetype(safeClient.archetype));
-  const complianceSummary = [
-    `Daily ${snapshot.dailyPercent ?? safeClient.compliancePercent}% (${formatComplianceStatus(snapshot.dailyStatus)})`,
-    `Weekly ${snapshot.weekly?.averagePercent ?? safeClient.compliancePercent}% (${formatComplianceStatus(snapshot.weekly?.status)})`,
-    `Rolling ${snapshot.rolling7?.percent ?? safeClient.compliancePercent}% (${formatComplianceStatus(snapshot.rolling7?.status)})`
-  ].join(' · ');
-  const nutritionTargets = localData.macroTargets
-    ? `${localData.macroTargets.calories || 0} kcal · ${localData.macroTargets.protein || 0}P / ${localData.macroTargets.carbs || 0}C / ${localData.macroTargets.fat || 0}F`
-    : '';
-  const trainingDefaults = assignedNutrition?.days?.training || localData.macroTargets || { protein: 160, carbs: 220, fat: 60 };
-  const restDefaults = assignedNutrition?.days?.rest || localData.macroTargets || { protein: 160, carbs: 170, fat: 70 };
-  const refeedDefaults = assignedNutrition?.days?.refeed || {};
-  const assignedSummary = assignedNutrition
-    ? `Training ${formatMacroLine(assignedNutrition.days?.training)} · Rest ${formatMacroLine(assignedNutrition.days?.rest)} · High ${formatMacroLine(assignedNutrition.days?.high)} · Low ${formatMacroLine(assignedNutrition.days?.low)}${assignedNutrition.days?.refeed ? ` · Refeed ${formatMacroLine(assignedNutrition.days.refeed)}` : ''}`
-    : '';
-  const bodyweightValue = safeClient.currentBodyweight
-    ?? latestCheckIn?.bodyweight
-    ?? localData.latestBodyweight
-    ?? phaseState?.athleteInfo?.currentWeight
-    ?? profile?.athleteInfo?.currentWeight;
+function coachSparkline(points) {
+  if (!Array.isArray(points) || points.length < 2) return '';
+  const w = 280, h = 64, pad = 4;
+  const ys = points.map(p => p.weight);
+  const min = Math.min(...ys), max = Math.max(...ys);
+  const span = max - min || 1;
+  const xy = points.map((p, i) => [
+    pad + (i / (points.length - 1)) * (w - pad * 2),
+    pad + (1 - (p.weight - min) / span) * (h - pad * 2)
+  ]);
+  const d = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  const [lx, ly] = xy[xy.length - 1];
+  return `<svg class="coach-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Bodyweight from ${min} to ${max} kg">
+    <path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3" fill="currentColor"/></svg>`;
+}
 
-  const nf = (label, id, value, extra = '') => `<label class="coach-nf"><span class="mx-lbl">${label}</span><input id="${id}" type="number" min="0" step="1" value="${value}"${extra}></label>`;
+function coachWeekBars(weeks) {
+  if (!Array.isArray(weeks) || !weeks.length) return '';
+  const max = Math.max(1, ...weeks.map(w => w.count));
+  return `<div class="coach-bars" role="img" aria-label="Sessions per week: ${weeks.map(w => w.count).join(', ')}">${weeks.map(w => `
+    <div class="coach-bar"><i style="height:${Math.round((w.count / max) * 100)}%"></i><span>${w.count}</span></div>`).join('')}</div>`;
+}
+
+function coachScoreRow(label, value) {
+  if (value === null || value === undefined) return '';
+  return `<li><span>${escapeCoachText(label)}</span><strong>${escapeCoachText(value)}/10</strong></li>`;
+}
+
+function renderCoachClientDetail(client, detail) {
+  const c = normalizeCoachClientRecord(client);
+  const d = detail || {};
+  const alerts = deriveCoachClientAlerts(d.alerts ? d : c);
+  const checkIns = Array.isArray(d.checkIns) ? d.checkIns : [];
+  const latest = checkIns[0] || c.latestCheckIn || null;
+  const bodyweight = Array.isArray(d.bodyweight) ? d.bodyweight : [];
+  const weeks = Array.isArray(d.weeklyWorkouts) ? d.weeklyWorkouts : [];
+  const gaps = coachSharingGaps(c);
+  const m = c.macroTargets || {};
+  const programs = (window.CoachProgramLibrary && window.CoachProgramLibrary.cached()) || [];
+  const loading = detail === undefined;
+  const nf = (label, id, value) => `<label class="coach-nf"><span class="mx-lbl">${label}</span><input id="${id}" type="number" inputmode="numeric" min="0" step="1" value="${value ?? ''}"></label>`;
+  const change = c.weeklyWeightChangePercent;
+
   return `
-    <section class="coach-client-detail">
+    <section class="coach-client-detail" data-detail-for="${escapeCoachText(c.id)}">
       <section class="coach-dashboard-header pod mx-pod">
         <div class="coach-client-detail-header">
           <div>
-            <div class="mx-kicker">Client detail · ${escapeCoachText(safeClient.archetype)} · ${escapeCoachText(safeClient.currentPhase)}</div>
-            <h3 class="coach-dashboard-title">${escapeCoachText(safeClient.name)}</h3>
+            <div class="mx-kicker">${escapeCoachText(c.archetype)} · ${escapeCoachText(c.currentPhase)}</div>
+            <h3 class="coach-dashboard-title">${escapeCoachText(c.name)}</h3>
           </div>
           <div class="coach-detail-actions">
-            ${isProUser() ? `<button type="button" class="coach-draft-msg-btn mx-outline" data-coach-draft-msg="${escapeCoachText(safeClient.id)}"><span class="ui-icon">${ICONS.sparkles}</span> Draft message</button>` : ''}
-            <button type="button" class="mx-outline" data-coach-back><span class="ui-icon">${ICONS.arrowLeft}</span> Back to roster</button>
+            <button type="button" class="mx-outline" data-coach-back><span class="ui-icon">${ICONS.arrowLeft}</span> Roster</button>
           </div>
         </div>
+        ${gaps.length ? `<p class="mx-sub coach-share-gap">${escapeCoachText(c.name)} has switched off sharing: ${escapeCoachText(gaps.join(', '))}.</p>` : ''}
+        ${!c.lastSharedAt ? `<p class="mx-sub">Nothing shared yet. Data appears after ${escapeCoachText(c.name)} next opens the app.</p>` : ''}
       </section>
+
       <section class="coach-client-detail-grid">
         <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Athlete Info</h4>
+          <h4 class="pod-title mx-h3">Alerts</h4>
           <ul class="coach-client-detail-list">
-            ${renderCoachClientDetailRow('Athlete', safeClient.name)}
-            ${renderCoachClientDetailRow('Archetype', safeClient.archetype)}
-            ${renderCoachClientDetailRow('Phase', safeClient.currentPhase)}
-            ${renderCoachClientDetailRow('Current Bodyweight', bodyweightValue ? `${bodyweightValue}` : '')}
-            ${renderCoachClientDetailRow('Division / Class', safeClient.athleteInfo?.divisionClass || profile?.athleteInfo?.divisionClass)}
-            ${renderCoachClientDetailRow('Height', safeClient.athleteInfo?.height || profile?.athleteInfo?.height)}
+            ${alerts.length ? alerts.map(a => `<li><span>${escapeCoachText(a.label)}</span><strong>${escapeCoachText(a.reason)}</strong></li>`).join('') : '<li><span>On track</span><strong>No alerts</strong></li>'}
           </ul>
         </article>
+
         <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Compliance Summary</h4>
-          <p class="coach-dashboard-subtitle">${escapeCoachText(complianceSummary, 'Compliance data not available yet')}</p>
-          <ul class="coach-client-detail-list">
-            ${renderCoachClientDetailRow('Primary Status', safeClient.primaryStatusMetric)}
-            ${renderCoachClientDetailRow('Last Check-In', formatCoachDate(safeClient.lastCheckInDate))}
-          </ul>
+          <h4 class="pod-title mx-h3">Latest check-in</h4>
+          ${latest ? `
+            <p class="coach-dashboard-subtitle">${escapeCoachText(formatCoachDate(latest.date))}${latest.summary ? ` · ${escapeCoachText(latest.summary)}` : ''}</p>
+            <ul class="coach-client-detail-list">
+              ${coachScoreRow('Sleep', latest.sleep)}${coachScoreRow('Energy', latest.energy)}${coachScoreRow('Stress', latest.stress)}
+              ${coachScoreRow('Hunger', latest.hunger)}${coachScoreRow('Training', latest.trainingPerformance)}${coachScoreRow('Cardio adherence', latest.cardioAdherence)}
+            </ul>
+            ${latest.notes ? `<p class="coach-client-quote">“${escapeCoachText(latest.notes)}”</p>` : ''}
+            ${checkIns.length > 1 ? `<p class="mx-sub">${checkIns.length} check-ins shared · previous ${escapeCoachText(formatCoachDate(checkIns[1].date))}</p>` : ''}
+          ` : `<p class="coach-dashboard-subtitle">${loading ? 'Loading…' : 'No check-ins shared yet'}</p>`}
         </article>
+
         <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Coach Alerts</h4>
-          <p class="coach-dashboard-subtitle">Simple explainable checks (V1 rules): check-in cadence, compliance, trend stalls, rapid weight change, logging gaps, and repeated missed cardio.</p>
-          <ul class="coach-client-detail-list">
-            ${renderCoachAlertList(derivedAlerts)}
-          </ul>
+          <div class="pod-row"><h4 class="pod-title mx-h3">Bodyweight</h4>
+            ${change !== null ? `<span class="mx-chip mx-chip--sm${Math.abs(change) >= 1.25 ? ' mx-chip--red' : Math.abs(change) >= 0.8 ? ' mx-chip--brass' : ''}">${change > 0 ? '+' : ''}${change.toFixed(2)}%/wk</span>` : ''}</div>
+          ${bodyweight.length >= 2 ? `
+            <div class="coach-spark-wrap">${coachSparkline(bodyweight)}</div>
+            <p class="mx-sub">${bodyweight[0].weight} → ${bodyweight[bodyweight.length - 1].weight} kg · ${escapeCoachText(formatCoachDate(bodyweight[0].date))} to ${escapeCoachText(formatCoachDate(bodyweight[bodyweight.length - 1].date))}</p>`
+            : `<p class="coach-dashboard-subtitle">${loading ? 'Loading…' : (c.currentBodyweight !== null ? `${c.currentBodyweight} kg (not enough weigh-ins for a trend)` : 'No weigh-ins shared yet')}</p>`}
         </article>
+
         <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Latest Check-In</h4>
-          <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.latestCheckInSummary || latestCheckIn?.insights?.summaryShort, 'No check-in summary yet')}</p>
-          <ul class="coach-client-detail-list">
-            ${renderCoachClientDetailRow('Date', latestCheckIn?.date || safeClient.lastCheckInDate, 'No check-in logged')}
-            ${renderCoachClientDetailRow('Recovery (E/S/St)', latestCheckIn ? `${latestCheckIn.energy || '—'}/${latestCheckIn.sleep || '—'}/${latestCheckIn.stress || '—'}` : '')}
-            ${renderCoachClientDetailRow('Coach Review', latestCheckIn?.review?.status || '', 'Pending coach review')}
-          </ul>
+          <div class="pod-row"><h4 class="pod-title mx-h3">Sessions per week</h4>${c.compliancePercent !== null ? `<span class="mx-meta">${c.compliancePercent}% compliance</span>` : ''}</div>
+          ${weeks.length ? coachWeekBars(weeks) : `<p class="coach-dashboard-subtitle">${loading ? 'Loading…' : 'No workouts shared yet'}</p>`}
+          ${c.activeProgramName ? `<p class="mx-sub">Following: ${escapeCoachText(c.activeProgramName)}</p>` : ''}
         </article>
+
         <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Recent Progress</h4>
-          <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.recentProgressSummary, 'No recent progress data yet')}</p>
-        </article>
-        <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Current Program</h4>
-          <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentProgramSummary || localData.activeProgramName, 'No active program assigned yet')}</p>
-        </article>
-        <article class="coach-client-detail-card pod mx-pod">
-          <h4 class="pod-title mx-h3">Current Nutrition</h4>
-          <p class="coach-dashboard-subtitle">${escapeCoachText(safeClient.currentNutritionSummary || nutritionTargets, 'No nutrition targets set yet')}</p>
-          <div class="coach-nutrition-box">
-            <h5 class="mx-lbl">Assign nutrition setup (V1 macro-based)</h5>
-            <p class="coach-dashboard-subtitle">Uses training/rest macro anchors, auto-generates high/low days, and supports optional refeed targets.</p>
-            ${assignedSummary ? `<p class="coach-assigned-plan"><strong>Assigned plan:</strong> ${escapeCoachText(assignedSummary)}</p>` : ''}
-            <div class="coach-nutrition-grid">
-              ${nf('Training P', 'coachNutritionTrainingProtein', roundMacroNumber(trainingDefaults.protein))}
-              ${nf('Training C', 'coachNutritionTrainingCarbs', roundMacroNumber(trainingDefaults.carbs))}
-              ${nf('Training F', 'coachNutritionTrainingFat', roundMacroNumber(trainingDefaults.fat))}
-              ${nf('Rest P', 'coachNutritionRestProtein', roundMacroNumber(restDefaults.protein))}
-              ${nf('Rest C', 'coachNutritionRestCarbs', roundMacroNumber(restDefaults.carbs))}
-              ${nf('Rest F', 'coachNutritionRestFat', roundMacroNumber(restDefaults.fat))}
-            </div>
-            <label class="coach-nutrition-toggle">
-              <input id="coachNutritionEnableRefeed" type="checkbox" ${assignedNutrition?.days?.refeed ? 'checked' : ''}>
-              <span>Include optional refeed target</span>
-            </label>
-            <div class="coach-nutrition-grid">
-              ${nf('Refeed P', 'coachNutritionRefeedProtein', roundMacroNumber(refeedDefaults.protein), ' placeholder="optional"')}
-              ${nf('Refeed C', 'coachNutritionRefeedCarbs', roundMacroNumber(refeedDefaults.carbs), ' placeholder="optional"')}
-              ${nf('Refeed F', 'coachNutritionRefeedFat', roundMacroNumber(refeedDefaults.fat), ' placeholder="optional"')}
-            </div>
-            <label class="coach-nf coach-nf--full">
-              <span class="mx-lbl">Coach nutrition notes</span>
-              <textarea id="coachNutritionNotes" rows="2" placeholder="Execution notes, substitutions, check-in expectations...">${escapeCoachText(assignedNutrition?.structure?.notes || '')}</textarea>
-            </label>
-            <button type="button" class="mx-cta coach-assign-btn" data-coach-assign-nutrition="${escapeCoachText(safeClient.id)}" data-client-name="${escapeCoachText(safeClient.name)}"><span>Assign Nutrition Plan</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+          <h4 class="pod-title mx-h3">Program</h4>
+          <p class="coach-dashboard-subtitle">${c.currentProgram ? `Assigned: ${escapeCoachText(c.currentProgram)}` : 'No program assigned yet'}</p>
+          <div class="mx-well mx-well--text mx-well--sel"><select id="coachAssignProgramSel" aria-label="Program to assign">
+            <option value="">${programs.length ? 'Choose from your library…' : 'No programs in your library yet'}</option>
+            ${programs.map(p => `<option value="${escapeCoachText(p.id)}"${p.id === c.currentProgramId ? ' selected' : ''}>${escapeCoachText(p.name)} (${p.exerciseCount || 0} exercises)</option>`).join('')}
+          </select></div>
+          <div class="coach-draft-actions">
+            <button type="button" class="mx-cta" data-coach-assign-program="${escapeCoachText(c.id)}"><span>Assign</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+            ${c.currentProgramId ? `<button type="button" class="mx-outline" data-coach-unassign-program="${escapeCoachText(c.id)}">Remove</button>` : ''}
           </div>
+          <p class="mx-sub">Build programs in Coach Ops → Programs. ${escapeCoachText(c.name)} gets a Start button in Settings → Your Coach.</p>
+        </article>
+
+        <article class="coach-client-detail-card pod mx-pod">
+          <h4 class="pod-title mx-h3">Nutrition</h4>
+          <p class="coach-dashboard-subtitle">${escapeCoachText(c.currentNutritionSummary, 'No macro targets set yet')}</p>
+          <div class="coach-nutrition-grid">
+            ${nf('Calories', 'coachMacroCalories', m.calories)}
+            ${nf('Protein g', 'coachMacroProtein', m.protein)}
+            ${nf('Carbs g', 'coachMacroCarbs', m.carbs)}
+            ${nf('Fat g', 'coachMacroFat', m.fat)}
+          </div>
+          <button type="button" class="mx-cta coach-assign-btn" data-coach-assign-nutrition="${escapeCoachText(c.id)}"><span>Send targets</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+          <p class="mx-sub">${escapeCoachText(c.name)} reviews and applies them from Settings → Your Coach.</p>
         </article>
       </section>
+
       <section class="coach-detail-message">
         ${isProUser() ? `
           <article class="coach-client-detail-card pod mx-pod">
-            <h4 class="pod-title mx-h3">Coach Message</h4>
+            <h4 class="pod-title mx-h3">Coach message</h4>
             <label class="coach-nf coach-nf--full">
-              <span class="mx-lbl">Coach notes <em>optional, used in the draft</em></span>
+              <span class="mx-lbl">Your notes <em>optional, used in the draft</em></span>
               <textarea id="coachAiDraftNotes" rows="2" placeholder="e.g. great push week, tighten up cardio next block..."></textarea>
             </label>
+            <div class="coach-draft-actions">
+              <button type="button" class="coach-draft-msg-btn mx-outline" data-coach-draft-msg="${escapeCoachText(c.id)}"><span class="ui-icon">${ICONS.sparkles}</span> Draft with AI</button>
+            </div>
             <div id="coachAiDraftSection"></div>
-          </article>
-        ` : `
-          <article class="coach-client-detail-card pod mx-pod coach-locked">
-            <p><span class="ui-icon">${ICONS.lock}</span> AI Draft Message is a Pro feature.</p>
-          </article>
-        `}
+          </article>` : ''}
+        <article class="coach-client-detail-card pod mx-pod">
+          <button type="button" class="mx-outline mx-outline--block mx-outline--danger" data-coach-remove="${escapeCoachText(c.id)}" data-client-name="${escapeCoachText(c.name)}">Remove client</button>
+          <p class="mx-sub">Removes the link and deletes everything ${escapeCoachText(c.name)} shared with you. Notes you sent stay in their app.</p>
+        </article>
       </section>
     </section>
   `;
@@ -12191,39 +12005,28 @@ function renderCoachClientDetail(client) {
 
 function renderCoachClientRoster(clients = []) {
   if (!Array.isArray(clients) || !clients.length) {
-    return '<div class="mx-empty coach-empty"><span class="ui-icon">' + ICONS.users + '</span><strong>No clients yet</strong><span>Invite your first athlete to get started.</span></div>';
+    return '<div class="mx-empty coach-empty"><span class="ui-icon">' + ICONS.users + '</span><strong>No clients yet</strong><span>Tap Add Client and enter their Pocket Coach username.</span></div>';
   }
-  const cards = clients.map((client) => renderCoachClientCard(client)).join('');
-  return `<section class="coach-roster-grid" aria-label="Coach client roster">${cards}</section>`;
+  const active = clients.filter(c => !c.isPending);
+  const pending = clients.filter(c => c.isPending);
+  return `
+    ${active.length ? `<section class="coach-roster-grid" aria-label="Clients">${active.map(renderCoachClientCard).join('')}</section>` : ''}
+    ${pending.length ? `<div class="pod-row coach-pending-head"><h4 class="pod-title mx-h3">Pending invites</h4><span class="mx-meta">${pending.length}</span></div>
+      <section class="coach-roster-grid" aria-label="Pending invites">${pending.map(renderCoachClientCard).join('')}</section>` : ''}`;
 }
 
 async function requestCoachDraftMessage(clientId) {
   const draftSection = document.getElementById('coachAiDraftSection');
   if (!draftSection) return;
-
   const coachNotes = (document.getElementById('coachAiDraftNotes')?.value || '').trim();
-
-  // Find client from state
-  const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
-  const client = clients.find(c => normalizeCoachClientRecord(c).id === clientId);
+  const client = (coachDashboardState.clients || []).find(c => c.id === clientId);
   if (!client) { draftSection.innerHTML = '<p class="coach-draft-err">Client data not found.</p>'; return; }
-
-  const safeClient = normalizeCoachClientRecord(client);
-  const localData = getLocalCoachClientData(safeClient);
-  const latestCheckIn = safeClient.latestCheckIn || localData.latestCheckIn || null;
-  const derivedAlerts = deriveCoachClientAlerts(safeClient);
-  const snapshot = getComplianceSnapshot(localData.profile || {}, safeClient.id, normalizeArchetype(safeClient.archetype));
-  const compliancePercent = snapshot.weekly?.averagePercent ?? safeClient.compliancePercent ?? 0;
-  const nutritionTargets = localData.macroTargets
-    ? `${localData.macroTargets.calories || 0} kcal · ${localData.macroTargets.protein || 0}P / ${localData.macroTargets.carbs || 0}C / ${localData.macroTargets.fat || 0}F`
-    : '';
-  const bodyweightChange = latestCheckIn?.bodyweightChange ?? latestCheckIn?.weeklyWeightChange ?? latestCheckIn?.weightChange ?? null;
+  const c = normalizeCoachClientRecord(client);
+  const detail = coachDashboardState.details[clientId] || {};
+  const latest = (detail.checkIns || [])[0] || c.latestCheckIn || null;
 
   draftSection.innerHTML = `<p class="coach-draft-note"><span class="ui-icon">${ICONS.sparkles}</span> Drafting message…</p>`;
-
-  const serverUrl = (typeof window.SERVER_URL !== 'undefined' ? window.SERVER_URL : '')
-    || 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
-
+  const serverUrl = (window.SERVER_URL || '').replace(/\/$/, '');
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
@@ -12231,57 +12034,60 @@ async function requestCoachDraftMessage(clientId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
-        clientName: safeClient.name,
-        archetype: safeClient.archetype,
-        currentPhase: safeClient.currentPhase,
-        compliancePercent: Math.round(compliancePercent),
-        checkIn: latestCheckIn ? {
-          sleep: latestCheckIn.sleep ?? null,
-          energy: latestCheckIn.energy ?? null,
-          stress: latestCheckIn.stress ?? null,
-          hunger: latestCheckIn.hunger ?? null,
-          trainingPerformance: latestCheckIn.trainingPerformance ?? null,
+        clientName: c.name,
+        archetype: c.archetype,
+        currentPhase: c.currentPhase,
+        compliancePercent: c.compliancePercent,
+        checkIn: latest ? {
+          sleep: latest.sleep ?? null,
+          energy: latest.energy ?? null,
+          stress: latest.stress ?? null,
+          hunger: latest.hunger ?? null,
+          trainingPerformance: latest.trainingPerformance ?? null,
+          notes: latest.notes || ''
         } : null,
-        bodyweightChange,
-        alerts: derivedAlerts.map(a => ({ label: a.label, reason: a.reason })),
-        currentProgramSummary: safeClient.currentProgramSummary || localData.activeProgramName || '',
-        currentNutritionSummary: safeClient.currentNutritionSummary || nutritionTargets || '',
-        coachNotes,
+        bodyweightChange: c.weeklyWeightChangePercent,
+        alerts: deriveCoachClientAlerts(c).map(a => ({ label: a.label, reason: a.reason })),
+        currentProgramSummary: c.currentProgram || c.activeProgramName || '',
+        currentNutritionSummary: c.currentNutritionSummary || '',
+        coachNotes
       }),
-      signal: controller.signal,
+      signal: controller.signal
     });
     clearTimeout(timer);
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      if (err.error === 'AI_NOT_CONFIGURED') {
-        draftSection.innerHTML = '<p class="coach-draft-note">AI drafting is not enabled on this server.</p>';
-      } else {
-        draftSection.innerHTML = '<p class="coach-draft-err">Draft failed. Please try again.</p>';
-      }
+      draftSection.innerHTML = err.error === 'AI_NOT_CONFIGURED'
+        ? '<p class="coach-draft-note">AI drafting is not enabled on this server.</p>'
+        : '<p class="coach-draft-err">Draft failed. Please try again.</p>';
       return;
     }
-
     const data = await res.json();
-    const draft = data.draft || '';
     draftSection.innerHTML = `
-      <div class="coach-nf coach-nf--full"><textarea id="coachAiDraftTextarea" rows="6" aria-label="Draft message">${draft.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></div>
+      <div class="coach-nf coach-nf--full"><textarea id="coachAiDraftTextarea" rows="6" aria-label="Draft message">${escapeCoachText(data.draft || '', '')}</textarea></div>
       <div class="coach-draft-actions">
-        <button type="button" class="mx-cta" data-coach-copy-draft><span>Copy to clipboard</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
-        <button type="button" class="mx-outline" data-coach-clear-draft>Clear</button>
-      </div>
-    `;
-    // Auto-resize textarea to content
+        <button type="button" class="mx-cta" data-coach-send-draft="${escapeCoachText(clientId)}"><span>Send as note</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+        <button type="button" class="mx-outline" data-coach-copy-draft>Copy</button>
+      </div>`;
     const ta = document.getElementById('coachAiDraftTextarea');
     if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
   } catch (err) {
-    if (err.name === 'AbortError') {
-      draftSection.innerHTML = '<p class="coach-draft-err">Request timed out. Please try again.</p>';
-    } else if (!navigator.onLine) {
-      draftSection.innerHTML = '<p class="coach-draft-note">You are offline.</p>';
-    } else {
-      draftSection.innerHTML = '<p class="coach-draft-err">Draft failed. Please try again.</p>';
-    }
+    draftSection.innerHTML = err.name === 'AbortError'
+      ? '<p class="coach-draft-err">Request timed out. Please try again.</p>'
+      : !navigator.onLine ? '<p class="coach-draft-note">You are offline.</p>'
+      : '<p class="coach-draft-err">Draft failed. Please try again.</p>';
+  }
+}
+
+async function coachPatchClient(clientId, fields, okMessage) {
+  try {
+    await coachApi('PATCH', `/api/coach/clients/${encodeURIComponent(clientId)}`, fields);
+    window.showToast(okMessage);
+    await renderCoachDashboard();
+    return true;
+  } catch (err) {
+    window.showToast(err.message || 'Could not save. Try again.', 'error');
+    return false;
   }
 }
 
@@ -12289,89 +12095,137 @@ function ensureCoachDashboardInteractions() {
   if (coachDashboardState.isBound) return;
   const container = document.getElementById('coachDashboardContent');
   if (!container) return;
-  container.addEventListener('click', (event) => {
-    const assignNutritionBtn = event.target.closest('[data-coach-assign-nutrition]');
-    if (assignNutritionBtn) {
-      const clientId = assignNutritionBtn.getAttribute('data-coach-assign-nutrition');
-      const clientName = assignNutritionBtn.getAttribute('data-client-name') || '';
-      assignCoachNutritionPlan(clientId, clientName);
+  container.addEventListener('click', async (event) => {
+    const t = (sel) => event.target.closest(sel);
+    let el;
+
+    if ((el = t('[data-coach-open-detail]'))) {
+      openCoachClientDetail(el.getAttribute('data-coach-open-detail'));
       return;
     }
-    const openBtn = event.target.closest('[data-coach-open-detail]');
-    if (openBtn) {
-      coachDashboardState.selectedClientId = openBtn.getAttribute('data-coach-open-detail');
-      renderCoachDashboardView();
-      return;
-    }
-    const backBtn = event.target.closest('[data-coach-back]');
-    if (backBtn) {
+    if (t('[data-coach-back]')) {
       coachDashboardState.selectedClientId = null;
       renderCoachDashboardView();
       return;
     }
-    const draftMsgBtn = event.target.closest('[data-coach-draft-msg]');
-    if (draftMsgBtn) {
-      const clientId = draftMsgBtn.getAttribute('data-coach-draft-msg');
-      requestCoachDraftMessage(clientId);
+    if ((el = t('[data-coach-assign-nutrition]'))) {
+      const read = (id) => Number(document.getElementById(id)?.value);
+      const targets = { calories: read('coachMacroCalories'), protein: read('coachMacroProtein'), carbs: read('coachMacroCarbs'), fat: read('coachMacroFat') };
+      if (!Object.values(targets).every(v => Number.isFinite(v) && v > 0)) {
+        window.showToast('Fill in calories, protein, carbs and fat.', 'warn');
+        return;
+      }
+      const summary = `${targets.calories} kcal · ${targets.protein}P / ${targets.carbs}C / ${targets.fat}F`;
+      coachPatchClient(el.getAttribute('data-coach-assign-nutrition'), { macroTargets: targets, nutritionSummary: summary }, 'Macro targets sent');
       return;
     }
-    const copyDraftBtn = event.target.closest('[data-coach-copy-draft]');
-    if (copyDraftBtn) {
-      const textarea = document.getElementById('coachAiDraftTextarea');
-      if (textarea) {
-        navigator.clipboard.writeText(textarea.value).then(() => {
-          copyDraftBtn.textContent = 'Copied!';
-          setTimeout(() => { copyDraftBtn.textContent = 'Copy to clipboard'; }, 2000);
-        }).catch(() => {
-          textarea.select();
-          document.execCommand('copy');
-          copyDraftBtn.textContent = 'Copied!';
-          setTimeout(() => { copyDraftBtn.textContent = 'Copy to clipboard'; }, 2000);
-        });
+    if ((el = t('[data-coach-assign-program]'))) {
+      const programId = document.getElementById('coachAssignProgramSel')?.value || '';
+      if (!programId) { window.showToast('Choose a program first.', 'warn'); return; }
+      coachPatchClient(el.getAttribute('data-coach-assign-program'), { programId }, 'Program assigned');
+      return;
+    }
+    if ((el = t('[data-coach-unassign-program]'))) {
+      coachPatchClient(el.getAttribute('data-coach-unassign-program'), { programId: '' }, 'Program removed');
+      return;
+    }
+    if ((el = t('[data-coach-remove]'))) {
+      const id = el.getAttribute('data-coach-remove');
+      const name = el.getAttribute('data-client-name') || 'this client';
+      const pending = el.getAttribute('data-pending') === '1';
+      const ok = await window.showConfirm(pending
+        ? `Cancel the invite to ${name}?`
+        : `Remove ${name}? Everything they shared with you is deleted and they stop seeing your program and targets.`,
+        { danger: !pending, confirmText: pending ? 'Cancel invite' : 'Remove' });
+      if (!ok) return;
+      try {
+        await coachApi('DELETE', `/api/coach/clients/${encodeURIComponent(id)}`);
+        window.showToast(pending ? 'Invite cancelled' : `${name} removed`);
+        coachDashboardState.selectedClientId = null;
+        delete coachDashboardState.details[id];
+        renderCoachDashboard();
+      } catch (err) {
+        window.showToast(err.message || 'Could not remove. Try again.', 'error');
       }
       return;
     }
-    const clearDraftBtn = event.target.closest('[data-coach-clear-draft]');
-    if (clearDraftBtn) {
+    if ((el = t('[data-coach-draft-msg]'))) {
+      requestCoachDraftMessage(el.getAttribute('data-coach-draft-msg'));
+      return;
+    }
+    if ((el = t('[data-coach-send-draft]'))) {
+      const text = (document.getElementById('coachAiDraftTextarea')?.value || '').trim();
+      if (!text) return;
+      el.disabled = true;
+      try {
+        await coachApi('POST', `/api/coach/clients/${encodeURIComponent(el.getAttribute('data-coach-send-draft'))}/notes`, { text });
+        window.showToast('Note sent');
+        document.getElementById('coachAiDraftSection').innerHTML = '';
+      } catch (err) {
+        window.showToast(err.message || 'Could not send. Try again.', 'error');
+        el.disabled = false;
+      }
+      return;
+    }
+    if ((el = t('[data-coach-copy-draft]'))) {
       const textarea = document.getElementById('coachAiDraftTextarea');
-      if (textarea) { textarea.value = ''; textarea.style.height = 'auto'; }
+      if (!textarea) return;
+      navigator.clipboard.writeText(textarea.value).then(
+        () => window.showToast('Copied'),
+        () => { textarea.select(); document.execCommand('copy'); window.showToast('Copied'); }
+      );
     }
   });
   coachDashboardState.isBound = true;
 }
 
+async function openCoachClientDetail(clientId) {
+  coachDashboardState.selectedClientId = clientId;
+  renderCoachDashboardView();
+  document.getElementById('coachDashboardContent')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await Promise.all([
+    loadCoachClientDetail(clientId, true),
+    window.CoachProgramLibrary ? window.CoachProgramLibrary.list().catch(() => []) : null
+  ]);
+  if (coachDashboardState.selectedClientId === clientId) renderCoachDashboardView();
+}
+window.openCoachClientDetail = openCoachClientDetail;
+
 function renderCoachDashboardView() {
   const container = document.getElementById('coachDashboardContent');
   if (!container) return;
   const clients = Array.isArray(coachDashboardState.clients) ? coachDashboardState.clients : [];
-  const selectedClient = clients.find((client) => normalizeCoachClientRecord(client).id === coachDashboardState.selectedClientId);
-  const avgCompliance = clients.length
-    ? Math.round(clients.reduce((sum, client) => sum + (Number(client.compliancePercent) || 0), 0) / clients.length)
-    : 0;
-  const flaggedCount = clients.filter((client) => getCoachAlertMeta(deriveCoachAlertStatus(client)).className === 'is-alert').length;
-  const watchCount = clients.filter((client) => getCoachAlertMeta(deriveCoachAlertStatus(client)).className === 'is-watch').length;
-  const dataSourceLabel = coachDashboardState.source === 'backend'
-    ? (clients.length ? 'Backend relationship data' : 'No clients yet — use + Add Client to invite one')
-    : 'Couldn\'t load your roster — check your connection and try again';
-
-  container.innerHTML = selectedClient
-    ? renderCoachClientDetail(selectedClient)
-    : `
-      <section class="coach-dashboard-header pod mx-pod">
-        <div class="coach-dashboard-header-row">
-          <h3 class="coach-dashboard-title">Client Roster</h3>
-          <button type="button" class="coach-add-client-btn mx-outline" onclick="openAddClientModal()"><span class="ui-icon">${ICONS.plus}</span> Add Client</button>
-        </div>
-        <p class="coach-dashboard-subtitle">${dataSourceLabel} · ${clients.length} client${clients.length === 1 ? '' : 's'} · ${avgCompliance}% average compliance · ${flaggedCount} requiring action · ${watchCount} on watch</p>
-      </section>
-      ${renderCoachClientRoster(clients)}
-    `;
+  const selected = clients.find((client) => client.id === coachDashboardState.selectedClientId);
+  if (selected) {
+    const detail = Object.prototype.hasOwnProperty.call(coachDashboardState.details, selected.id)
+      ? (coachDashboardState.details[selected.id] || {})
+      : undefined;
+    container.innerHTML = renderCoachClientDetail(selected, detail);
+    return;
+  }
+  const active = clients.filter(c => !c.isPending);
+  const pending = clients.length - active.length;
+  const flagged = active.filter(c => getCoachAlertMeta(c.alertStatus).className === 'is-alert').length;
+  const watch = active.filter(c => getCoachAlertMeta(c.alertStatus).className === 'is-watch').length;
+  const sub = coachDashboardState.source === 'backend'
+    ? `${active.length} client${active.length === 1 ? '' : 's'}${pending ? ` · ${pending} pending` : ''} · ${flagged} need action · ${watch} on watch`
+    : 'Couldn\'t load your roster. Check your connection and try again.';
+  container.innerHTML = `
+    <section class="coach-dashboard-header pod mx-pod">
+      <div class="coach-dashboard-header-row">
+        <h3 class="coach-dashboard-title">Client Roster</h3>
+        <button type="button" class="coach-add-client-btn mx-outline" onclick="openAddClientModal()"><span class="ui-icon">${ICONS.plus}</span> Add Client</button>
+      </div>
+      <p class="coach-dashboard-subtitle">${sub}</p>
+    </section>
+    ${renderCoachClientRoster(clients)}
+  `;
 }
 
 async function renderCoachDashboard() {
   const container = document.getElementById('coachDashboardContent');
   if (!container) return;
-  container.innerHTML = '<p class="coach-no-clients">Loading coach roster…</p>';
+  if (!coachDashboardState.clients.length) container.innerHTML = '<p class="coach-no-clients">Loading coach roster…</p>';
   ensureCoachDashboardInteractions();
 
   const { clients, source } = await loadCoachClients();
@@ -12380,40 +12234,39 @@ async function renderCoachDashboard() {
   if (!coachDashboardState.clients.some((client) => client.id === coachDashboardState.selectedClientId)) {
     coachDashboardState.selectedClientId = null;
   }
+  if (coachDashboardState.selectedClientId) await loadCoachClientDetail(coachDashboardState.selectedClientId, true);
   renderCoachDashboardView();
   if (typeof renderCoachQueue === 'function') renderCoachQueue();
 }
 
-/** Mobile "Coach" triage view: stat row + priority client + review
- * queue + roster snapshot, matching the mockup's Coach screen. All
- * from coachDashboardState.clients — the same real roster data
- * renderCoachDashboard() just loaded, just a different visual cut. */
+/** Mobile "Coach" triage view: who needs attention first, then the
+ * roster sorted by compliance (clients with no data last). */
 function renderCoachQueue() {
   const el = document.getElementById('coachQueueSection');
   if (!el) return;
-  const clients = coachDashboardState.clients || [];
+  const clients = (coachDashboardState.clients || []).filter(c => !c.isPending);
   if (!clients.length) { el.innerHTML = ''; return; }
 
-  // The roster header stats bar (coaching-enhanced.js) already shows clients,
-  // alerts, watch, avg adherence and active-this-week, so the queue starts at
-  // "who needs attention" instead of repeating those numbers.
-  const priority = clients.find(c => c.alertStatus === 'action' || c.alertStatus === 'alert') || clients.find(c => c.alertStatus === 'watch');
-  const urgent = priority && (priority.alertStatus === 'action' || priority.alertStatus === 'alert');
+  const priority = clients.find(c => c.alertStatus === 'action') || clients.find(c => c.alertStatus === 'watch');
+  const urgent = priority && priority.alertStatus === 'action';
+  const reason = priority && priority.alerts[0] ? `${priority.alerts[0].label}: ${priority.alerts[0].reason}` : '';
   const priorityHTML = priority ? `
     <div class="pod pod--hero mx-pod ws-priority-card">
-      <div class="pod-row"><span class="pod-kicker mx-kicker">Needs attention</span><span class="mx-chip mx-chip--sm ${urgent ? 'mx-chip--red' : 'mx-chip--brass'} ws-priority-tag ${priority.alertStatus}">${urgent ? 'Needs action' : 'Watch'}</span></div>
+      <div class="pod-row"><span class="pod-kicker mx-kicker">Needs attention</span><span class="mx-chip mx-chip--sm ${urgent ? 'mx-chip--red' : 'mx-chip--brass'} ws-priority-tag">${urgent ? 'Needs action' : 'Watch'}</span></div>
       <div class="ws-priority-main">
         <span class="ws-priority-name">${escapeCoachText(priority.name)}</span>
-        <span class="ws-priority-meta">${escapeCoachText(priority.currentPhase)} &middot; ${escapeCoachText(priority.primaryStatusMetric)}</span>
+        <span class="ws-priority-meta">${escapeCoachText(reason, priority.currentPhase)}</span>
       </div>
-      <button class="mx-cta ws-priority-cta" onclick="coachDashboardState.selectedClientId='${priority.id}'; if(typeof renderCoachDashboardView==='function') renderCoachDashboardView(); document.getElementById('coachDashboardContent')?.scrollIntoView({behavior:'smooth'});"><span>Open client</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.chevronRight}</span></span></button>
+      <button class="mx-cta ws-priority-cta" data-queue-open="${escapeCoachText(priority.id)}"><span>Open client</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.chevronRight}</span></span></button>
     </div>` : '';
 
-  const roster = clients.slice().sort((a, b) => (a.compliancePercent || 0) - (b.compliancePercent || 0)).slice(0, 5);
+  const roster = clients.slice()
+    .sort((a, b) => (a.compliancePercent ?? 101) - (b.compliancePercent ?? 101))
+    .slice(0, 5);
   const rosterHTML = roster.map(c => `
     <div class="sq-row mx-row"><div class="mx-row-main"><span class="sq-name mx-row-title">${escapeCoachText(c.name)}</span>
-      <div class="mx-meter mx-meter--thin${(c.compliancePercent || 0) < 60 ? ' mx-meter--brass' : ''}"><i style="width:${c.compliancePercent || 0}%"></i></div></div>
-      <span class="sq-summary mx-row-big">${c.compliancePercent}<span class="mx-unit">%</span></span></div>
+      ${c.compliancePercent !== null ? `<div class="mx-meter mx-meter--thin${c.compliancePercent < 65 ? ' mx-meter--brass' : ''}"><i style="width:${c.compliancePercent}%"></i></div>` : '<span class="mx-row-sub">No compliance data yet</span>'}</div>
+      <span class="sq-summary mx-row-big">${c.compliancePercent !== null ? `${c.compliancePercent}<span class="mx-unit">%</span>` : '—'}</span></div>
   `).join('');
 
   el.innerHTML = `
@@ -12423,6 +12276,7 @@ function renderCoachQueue() {
       <div>${rosterHTML}</div>
     </div>
   `;
+  el.querySelector('[data-queue-open]')?.addEventListener('click', (e) => openCoachClientDetail(e.currentTarget.getAttribute('data-queue-open')));
 }
 
 window.renderCoachDashboard = renderCoachDashboard;
@@ -12431,112 +12285,51 @@ window.renderCoachClientCard = renderCoachClientCard;
 window.renderCoachClientDetail = renderCoachClientDetail;
 
 /* ── Add Client ─────────────────────────────────────────────── */
-// Inviting a client is coaching work (establishes a real relationship,
-// same bucket as program/macro assignment) — moved to the desktop coach
-// dashboard (coach/coach.js's "+ Invite" button, which sends this exact
-// same POST /api/coach/clients/invite) per the mobile-overview/
-// desktop-work split. This briefly had a real inline modal here; kept the
-// backend wiring on the desktop side instead of duplicating it.
+// Sends a real invite (POST /api/coach/clients/invite). The athlete sees it
+// in Settings → Your Coach and accepts or declines there.
 window.openAddClientModal = function() {
-  if (window.showToast) window.showToast('Invite clients from the desktop coach dashboard.');
-};
-
-/* ── "Your Coach" — the athlete-side half of the invite/assignment/notes
-   flow above. This never existed before: coach.js/coaching-enhanced.js
-   could send invites, assign programs, and write notes, but there was no
-   UI anywhere for the recipient to see or act on any of it. Lives in
-   Settings; hidden entirely if there's nothing to show. ────────────────── */
-
-async function renderYourCoachSection() {
-  const section = document.getElementById('yourCoachSection');
-  if (!section || !localStorage.getItem('token')) return;
-
-  const base = (window.SERVER_URL || '').replace(/\/$/, '');
-  const headers = getAuthHeaders();
-
-  const fetchJson = async (path) => {
+  document.querySelector('.coach-invite-sheet')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'gdpr-modal-overlay coach-invite-sheet';
+  overlay.innerHTML = `
+    <div class="gdpr-modal" role="dialog" aria-modal="true" aria-labelledby="coachInviteTitle">
+      <h3 id="coachInviteTitle">Invite a client</h3>
+      <p class="mx-sub">They need a Pocket Coach account. Once they accept, you'll see their check-ins, bodyweight and workouts, whatever they choose to share.</p>
+      <div class="mx-well mx-well--text"><input type="text" id="coachInviteUsername" placeholder="Their username" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Client username"></div>
+      <p class="mx-sub coach-invite-err" id="coachInviteErr" aria-live="polite"></p>
+      <div class="gdpr-modal-actions">
+        <button type="button" class="mx-outline" data-invite-cancel>Cancel</button>
+        <button type="button" class="mx-cta" data-invite-send><span>Send invite</span></button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const input = overlay.querySelector('#coachInviteUsername');
+  const errEl = overlay.querySelector('#coachInviteErr');
+  const send = async () => {
+    const username = input.value.trim();
+    if (!username) { errEl.textContent = 'Enter a username.'; return; }
+    const btn = overlay.querySelector('[data-invite-send]');
+    btn.disabled = true;
+    errEl.textContent = '';
     try {
-      const res = await fetch(`${base}${path}`, { headers });
-      const data = await res.json();
-      return (res.ok && data.success) ? data : null;
-    } catch { return null; }
-  };
-
-  const [invitesRes, assignmentRes, notesRes] = await Promise.all([
-    fetchJson('/api/client/coach-invites'),
-    fetchJson('/api/client/coach-assignment'),
-    fetchJson('/api/client/coach-notes')
-  ]);
-
-  // All three failed outright (not just empty) — likely not a migrated
-  // Firebase account yet, or logged out mid-request. Say nothing rather
-  // than show three separate error banners for one underlying cause.
-  if (!invitesRes && !assignmentRes && !notesRes) { section.style.display = 'none'; return; }
-
-  const invites = invitesRes?.invites || [];
-  const pending = invites.filter(i => i.status === 'pending');
-  const active = invites.filter(i => i.status === 'active');
-  const assignments = assignmentRes?.assignments || [];
-  const notes = notesRes?.notes || [];
-
-  if (!pending.length && !active.length && !notes.length) { section.style.display = 'none'; return; }
-  section.style.display = '';
-
-  const pendingHtml = pending.map(inv => `
-    <div class="coach-invite-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-color, rgba(0,0,0,0.08));">
-      <span>Coach <strong>${escapeHtml(inv.coachUsername)}</strong> invited you</span>
-      <button type="button" onclick="acceptCoachInvite('${escapeHtml(inv.coachUsername)}')" style="width:auto;margin:0;padding:8px 16px;">Accept</button>
-    </div>`).join('');
-
-  const activeHtml = active.map(inv => {
-    const asn = assignments.find(a => a.coachUsername === inv.coachUsername);
-    return `
-    <div style="padding:10px 0;border-bottom:1px solid var(--border-color, rgba(0,0,0,0.08));">
-      <div>Coached by <strong>${escapeHtml(inv.coachUsername)}</strong></div>
-      ${asn?.currentProgram ? `<div style="font-size:0.85rem;color:var(--secondary-text);margin-top:4px;">Program: ${escapeHtml(asn.currentProgram)}</div>` : ''}
-      ${asn?.nutritionSummary ? `<div style="font-size:0.85rem;color:var(--secondary-text);margin-top:2px;">Macros: ${escapeHtml(asn.nutritionSummary)}</div>` : ''}
-    </div>`;
-  }).join('');
-
-  const notesHtml = notes.length ? notes.slice(0, 10).map(n => {
-    const ms = n.createdAt?._seconds ? n.createdAt._seconds * 1000 : n.createdAt;
-    const d = ms ? new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-    return `
-    <div style="padding:8px 0;border-bottom:1px solid var(--border-color, rgba(0,0,0,0.08));">
-      <div style="font-size:0.72rem;color:var(--secondary-text);">${escapeHtml(d)}${n.coachUsername ? ` · ${escapeHtml(n.coachUsername)}` : ''}</div>
-      <div style="font-size:0.88rem;margin-top:2px;">${escapeHtml(n.text)}</div>
-    </div>`;
-  }).join('') : '';
-
-  section.innerHTML = `
-    <p class="export-section-title"><span class="ui-icon" data-icon="user"></span> Your Coach</p>
-    ${pendingHtml}
-    ${activeHtml}
-    ${notesHtml ? `<p style="font-size:0.75rem;font-weight:600;color:var(--secondary-text);margin:12px 0 4px;">Notes from your coach</p>${notesHtml}` : ''}
-  `;
-}
-
-window.acceptCoachInvite = async function(coachUsername) {
-  try {
-    const base = (window.SERVER_URL || '').replace(/\/$/, '');
-    const res = await fetch(`${base}/api/coach/clients/accept`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ coachUsername })
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      if (window.showToast) window.showToast(data?.error?.message || 'Could not accept invite.');
-      return;
+      await coachApi('POST', '/api/coach/clients/invite', { clientUsername: username });
+      overlay.remove();
+      window.showToast(`Invite sent to ${username}`);
+      renderCoachDashboard();
+    } catch (err) {
+      errEl.textContent = err.message || 'Could not send the invite.';
+      btn.disabled = false;
     }
-    if (window.showToast) window.showToast(`You're now linked with ${coachUsername}.`);
-    renderYourCoachSection();
-  } catch {
-    if (window.showToast) window.showToast('Connection error — try again.');
-  }
+  };
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('[data-invite-cancel]')) overlay.remove();
+    else if (e.target.closest('[data-invite-send]')) send();
+  });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+  setTimeout(() => input.focus(), 50);
 };
 
-document.addEventListener('DOMContentLoaded', renderYourCoachSection);
+/* ── "Your Coach" (athlete side) lives in src/js/client-coaching.js ── */
 
 /* ── Check-in sub-tab switcher ──────────────────────────────── */
 function switchCheckInTab(panel) {
@@ -20089,6 +19882,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/macro-pill-controls.js"></script>
   <script src="src/js/activity-sync-bridge.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
+  <script src="src/js/client-coaching.js"></script>
   <script src="src/js/workout-archiver.js"></script>
   <script src="src/js/ui-declutter.js"></script>
   <script src="src/js/pr-tracker.js"></script>
@@ -20101,7 +19895,6 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/weekly-recap.js"></script>
   <script src="src/js/body-hub.js"></script>
   <script src="src/js/challenges.js"></script>
-  <script src="src/js/client-checkins.js"></script>
   <script src="src/js/progress-report.js"></script>
   <script src="src/js/progress-story.js"></script>
   <script src="src/js/community-feed.js"></script>
