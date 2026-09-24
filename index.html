@@ -742,14 +742,14 @@
   <div id="logTab" class="tab-content">
   <!-- ── Flow Capture shortcuts: repeat last workout / quick check-in ── -->
   <div class="fc-shortcut-row" id="fcShortcutRow">
-    <div class="fc-shortcut" onclick="repeatLastWorkoutShortcut()">
+    <button type="button" class="fc-shortcut" onclick="repeatLastWorkoutShortcut()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v8h8"/></svg>
       Repeat last workout
-    </div>
-    <div class="fc-shortcut" onclick="showTab('checkInTab')">
+    </button>
+    <button type="button" class="fc-shortcut" onclick="showTab('checkInTab')">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
       Quick check-in
-    </div>
+    </button>
   </div>
   <div id="logPanel" class="panel active">
 

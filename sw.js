@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v13';
+const CACHE_VERSION = 'pocket-coach-v14';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -156,30 +156,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets (JS, CSS, images): cache-first with background update
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const fetchPromise = fetch(request).then((response) => {
-        if (
-          response.ok &&
-          (url.pathname.endsWith('.js') ||
-           url.pathname.endsWith('.css') ||
-           url.pathname.endsWith('.ico') ||
-           url.pathname.endsWith('.json'))
-        ) {
+  // Code (JS, CSS, JSON): network-first, cache as offline fallback. It used
+  // to be cache-first, so after a deploy the fresh index.html and any brand
+  // new script loaded alongside last version's CSS: new components (e.g.
+  // Home's "Today's brief") rendered unstyled until a second launch.
+  const isCode = /\.(js|css|json)$/.test(url.pathname);
+  if (isCode) {
+    event.respondWith(
+      fetch(request, { cache: 'no-cache' }).then((response) => {
+        if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
         }
         return response;
-      }).catch(() => null);
+      }).catch(() => caches.match(request))
+    );
+    return;
+  }
 
-      if (cached) {
-        fetchPromise; // stale-while-revalidate for JS/CSS
-        return cached;
+  // Other static assets (images, icons, fonts): cache-first.
+  event.respondWith(
+    caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+      if (response.ok && url.pathname.endsWith('.ico')) {
+        const clone = response.clone();
+        caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
       }
-
-      return fetchPromise.then((resp) => resp || undefined);
-    })
+      return response;
+    }))
   );
 });
 

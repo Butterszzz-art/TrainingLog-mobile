@@ -1664,3 +1664,9 @@
   cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
+
+/* ── Logged workouts list (renderWorkouts) ─────────────────────── */
+/* The global button margin stacked 12px above and below each header, on top
+   of the entry's own margin, leaving ~48px gaps between cards. */
+#workoutsContainer .workout-entry { margin-bottom: 10px; }
+#workoutsContainer .workout-entry > div > button { margin: 0; }
