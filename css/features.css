@@ -241,8 +241,10 @@
 
 .ws-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
+  gap: 2px 8px;
   margin-bottom: 12px;
 }
 
@@ -251,7 +253,7 @@
 
 .ws-calendar {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
   margin-bottom: 14px;
 }
@@ -267,6 +269,10 @@
   font-size: 0.65rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .ws-day-dot {
@@ -280,11 +286,9 @@
 
 .ws-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
-
-@media (min-width: 400px) { .ws-stats { grid-template-columns: repeat(3, 1fr); } }
 
 .ws-stat {
   display: flex;
@@ -294,18 +298,25 @@
   border-radius: 8px;
   padding: 8px 6px;
   text-align: center;
+  min-width: 0;
 }
 
 .ws-stat-val {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-color);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ws-stat-lbl {
   font-size: 0.62rem;
   color: var(--text-muted);
   margin-top: 2px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .ws-high  { color: var(--primary); font-weight: 700; }
