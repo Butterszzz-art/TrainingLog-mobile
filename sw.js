@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v15';
+const CACHE_VERSION = 'pocket-coach-v16';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -79,6 +79,9 @@ const APP_SHELL = [
   '/src/js/rehab.js',
   '/css/friends.css',
   '/css/rehab.css',
+  '/src/js/profiles.js',
+  '/src/js/settings-hero.js',
+  '/css/profiles.css',
 ];
 
 /* ── Install: pre-cache app shell ─────────────────────────── */
@@ -123,6 +126,9 @@ self.addEventListener('fetch', (event) => {
   // Same for coaching: client check-ins, bodyweight and notes are personal
   // data and must never be replayed from a URL-keyed cache to another account.
   if (/\/api\/(coach|client)\//.test(url.pathname) || url.pathname.includes('/exercise-videos')) return;
+  // Profiles depend on who is asking (visibility settings, your own profile
+  // at /me), so they are never served from the shared cache either.
+  if (url.pathname.includes('/api/profiles/')) return;
 
   // API GET requests: network-first, fall back to cached response
   if (url.pathname.startsWith('/api/') || url.origin !== location.origin) {

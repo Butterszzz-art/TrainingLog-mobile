@@ -1,0 +1,114 @@
+/* =============================================================
+   PROFILES — profile photos + profile card / editor sheets
+   Any avatar element with data-avatar-user gets .has-photo and an
+   <img class="pc-avatar-img"> once src/js/profiles.js finds a photo;
+   until then it keeps its own initials styling untouched.
+   ============================================================= */
+
+[data-avatar-user].has-photo {
+  overflow: hidden;
+  padding: 0;
+  background: var(--card-bg, #121b17);
+}
+.pc-avatar-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+[data-avatar-open] { cursor: pointer; }
+
+/* Settings hero: tappable avatar with an edit hint */
+.sh-profile-avatar[data-avatar-edit] {
+  position: relative;
+  cursor: pointer;
+  overflow: visible;
+}
+.sh-profile-avatar[data-avatar-edit].has-photo .pc-avatar-img { border-radius: 50%; }
+.sh-profile-edit {
+  margin-left: auto;
+  width: auto;
+  flex: none;
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.sh-profile .sh-profile-info { min-width: 0; }
+.sh-profile-bio {
+  font-size: 11.5px;
+  color: var(--text-secondary, #b8c2bc);
+  margin-top: 3px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* Sheets */
+.pc-profile-top,
+.pc-editor-photo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.pc-avatar-lg {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(150deg, var(--green-70, #3d9d73), var(--green-35, #1a5138));
+  color: var(--pill-text-active, #fff);
+  font-family: var(--font-display, sans-serif);
+  font-size: 26px;
+}
+.pc-profile-names { min-width: 0; }
+.pc-profile-display {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary, #f4f7f5);
+  overflow-wrap: anywhere;
+}
+.pc-profile-handle {
+  font-size: 13px;
+  color: var(--text-tertiary, #a3b0a8);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.pc-profile-bio { white-space: pre-line; overflow-wrap: anywhere; }
+.pc-profile-private { color: var(--text-tertiary, #a3b0a8); }
+.pc-profile-actions { display: flex; flex-direction: column; gap: 8px; }
+
+.pc-editor-photo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.pc-editor-photo-btns .mx-outline { width: auto; }
+.pc-counter,
+.pc-hint {
+  font-size: 12px;
+  color: var(--text-tertiary, #a3b0a8);
+}
+.pc-counter { align-self: flex-end; }
+.pc-status {
+  margin: 0;
+  min-height: 1em;
+  font-size: 13px;
+  color: var(--text-secondary, #b8c2bc);
+}
+.pc-status:empty { display: none; }
+
+.pc-report-reasons { display: flex; flex-direction: column; gap: 6px; }
+.pc-report-reason {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default, rgba(116, 138, 126, 0.2));
+  font-size: 14px;
+  color: var(--text-primary, #f4f7f5);
+  cursor: pointer;
+}
+.pc-report-reason input { width: auto; margin: 0; flex: none; }
+.pc-report-reason:has(input:checked) { border-color: var(--green-70, #3d9d73); }

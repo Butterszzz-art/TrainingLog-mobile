@@ -52,6 +52,7 @@
   <link rel="stylesheet" href="css/macros-today.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/performance-mode.css">
+  <link rel="stylesheet" href="css/profiles.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10236,6 +10237,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function logout(options = {}) {
   // downloaded ebooks/programs belong to the account, not the device
   if (window.PremiumLibrary && window.PremiumLibrary.clearCache) window.PremiumLibrary.clearCache();
+  // cached profiles reflect what this account was allowed to see
+  if (window.Profiles && window.Profiles.clearCache) window.Profiles.clearCache();
   localStorage.removeItem("fitnessAppUser");
   localStorage.removeItem('token');
   localStorage.removeItem('authToken');
@@ -11239,7 +11242,7 @@ function renderHomeGreeting() {
     </div>
     <div class="home-greeting-icons">
       <button class="home-greeting-icon-btn" onclick="showTab('allTab')" aria-label="Search / everything"><span class="ui-icon" data-icon="search"></span></button>
-      <span class="home-greeting-avatar">${initials}</span>
+      <span class="home-greeting-avatar"${/^[a-zA-Z0-9_.-]{2,64}$/.test(username || '') ? ` data-avatar-user="${username}"` : ''}>${initials}</span>
     </div>`;
 }
 
@@ -11743,7 +11746,7 @@ function renderCoachClientCard(client) {
     return `
       <article class="coach-client-card pod mx-pod is-pending" data-client-id="${escapeCoachText(c.id)}">
         <header class="coach-client-card-header">
-          <div class="coach-client-avatar" aria-hidden="true">${escapeCoachText(initials)}</div>
+          <div class="coach-client-avatar" aria-hidden="true" data-avatar-user="${escapeCoachText(c.name)}">${escapeCoachText(initials)}</div>
           <div class="coach-client-id">
             <h3 class="coach-client-name">${escapeCoachText(c.name)}</h3>
             <p class="coach-client-meta">Invite sent, waiting for them to accept in Settings → Your Coach</p>
@@ -11768,7 +11771,7 @@ function renderCoachClientCard(client) {
   return `
     <article class="coach-client-card pod mx-pod" data-client-id="${escapeCoachText(c.id)}">
       <header class="coach-client-card-header">
-        <div class="coach-client-avatar" aria-hidden="true">${escapeCoachText(initials)}</div>
+        <div class="coach-client-avatar" aria-hidden="true" data-avatar-user="${escapeCoachText(c.name)}">${escapeCoachText(initials)}</div>
         <div class="coach-client-id">
           <h3 class="coach-client-name">${escapeCoachText(c.name)}</h3>
           <p class="coach-client-meta">${escapeCoachText(c.archetype)} · ${escapeCoachText(c.currentPhase)}</p>
@@ -19875,6 +19878,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-queue.js"></script>
   <script src="src/js/performance-mode.js"></script>
+  <script src="src/js/profiles.js"></script>
   <script src="src/js/settings-hero.js"></script>
   <script src="src/js/libraries.js"></script>
   <script src="src/js/session-context.js"></script>

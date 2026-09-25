@@ -26,6 +26,10 @@
       localStorage.getItem('username') || '';
   }
 
+  function _attr(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   function _initial(name) {
     return (name || '?').slice(0, 1).toUpperCase();
   }
@@ -90,7 +94,10 @@
 
     // Update composer avatar
     const av = document.getElementById('feedComposerAvatar');
-    if (av) av.textContent = _initial(username);
+    if (av) {
+      av.textContent = _initial(username);
+      if (username) av.setAttribute('data-avatar-user', username);
+    }
 
     if (!username) {
       container.innerHTML = `<p class="feed-empty">Log in to see your activity feed.</p>`;
@@ -105,7 +112,7 @@
 
     container.innerHTML = items.map(item => `
       <div class="feed-card">
-        <div class="feed-card-avatar">${_initial(item.user)}</div>
+        <div class="feed-card-avatar" data-avatar-user="${_attr(item.user)}" data-avatar-open>${_initial(item.user)}</div>
         <div class="feed-card-body">
           <div class="feed-card-header">
             <strong class="feed-card-name">${item.user}</strong>
@@ -302,7 +309,7 @@
           <div class="lb-card ${rank <= 3 ? `lb-card--${['gold','silver','bronze'][rank-1]}` : ''} ${isMe ? 'lb-card--me' : ''}">
             <div class="lb-card-left">
               <div class="lb-card-medal">${medal}</div>
-              <div class="lb-card-avatar">${_initial(d.user)}</div>
+              <div class="lb-card-avatar" data-avatar-user="${_attr(d.user)}" data-avatar-open>${_initial(d.user)}</div>
               <div class="lb-card-info">
                 <span class="lb-card-name">${d.user}${isMe ? ' <span class="lb-you-tag">You</span>' : ''}</span>
                 <div class="lb-card-bar-wrap">

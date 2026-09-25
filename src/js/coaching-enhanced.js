@@ -653,7 +653,7 @@ function renderCoachMessaging() {
         return `
           <button type="button" class="coach-client-list-item${_activeThreadClientId === c.id ? ' active' : ''}"
                data-thread-client="${_escH(c.id)}" data-client-id="${_escH(c.id)}" aria-pressed="${_activeThreadClientId === c.id}">
-            <span class="coach-client-list-avatar">${_escH(initials)}</span>
+            <span class="coach-client-list-avatar" data-avatar-user="${_escH(c.name)}">${_escH(initials)}</span>
             <span>${_escH(c.name)}</span>
           </button>`;
       }).join('')

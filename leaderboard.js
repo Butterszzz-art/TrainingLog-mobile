@@ -152,7 +152,7 @@ function renderPersonalStats() {
 
   el.innerHTML = `
     <div class="lb-ps-header">
-      <div class="lb-ps-avatar">${s.username.slice(0, 1).toUpperCase()}</div>
+      <div class="lb-ps-avatar" data-avatar-user="${_escapeHtml(s.username)}">${s.username.slice(0, 1).toUpperCase()}</div>
       <div class="lb-ps-name">
         <strong>${s.username}</strong>
         <span class="lb-ps-sub">Your stats (local)</span>
@@ -232,7 +232,7 @@ function renderLeaderboard(sortKey = _currentSortKey) {
            role="button" tabindex="0">
         <div class="lb-card-left">
           <div class="lb-card-medal">${_medalIcon(rank)}</div>
-          <div class="lb-card-avatar">${initial}</div>
+          <div class="lb-card-avatar" data-avatar-user="${name}" data-avatar-open>${initial}</div>
           <div class="lb-card-info">
             <span class="lb-card-name">${name}${isMe ? ' <span class="lb-you-tag">You</span>' : ''}</span>
             <div class="lb-card-bar-wrap">
