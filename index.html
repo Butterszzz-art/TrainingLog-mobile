@@ -3694,112 +3694,181 @@
   <!-- All tab: replaces the old More bottom-sheet drawer with a normal
        tab so it lives in the same nav pattern as every other screen.
        Every item/onclick/conditional-visibility class below is carried
-       over unchanged from the old #moreDrawer. -->
+       over unchanged from the old #moreDrawer. Each section is one pod
+       of icon rows (same list pattern as Settings/History). -->
   <div id="allTab" class="tab-content all-hub">
     <div class="all-hub-header"><span class="pod-title" style="font-size:20px;">Everything</span></div>
 
     <div class="all-hub-section">
       <div class="all-hub-section-label">Training</div>
-      <div class="all-hub-grid">
-        <button class="pod all-hub-tile" data-tab="programTab" onclick="showTab('programTab')">
+      <div class="pod all-hub-list">
+        <button class="all-hub-tile" data-tab="programTab" onclick="showTab('programTab')">
           <span class="more-drawer-icon" data-icon="calendar"></span>
-          <span>Programs</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Programs</span>
+            <span class="all-hub-sub">Splits, blocks and this week</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile" data-tab="logHistoryTab" onclick="showTab('logHistoryTab')">
+        <button class="all-hub-tile" data-tab="logHistoryTab" onclick="showTab('logHistoryTab')">
           <span class="more-drawer-icon" data-icon="fileText"></span>
-          <span>History</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">History</span>
+            <span class="all-hub-sub">Every session you have logged</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile" data-tab="progressTab" onclick="showTab('progressTab')">
+        <button class="all-hub-tile" data-tab="progressTab" onclick="showTab('progressTab')">
           <span class="more-drawer-icon" data-icon="barChart"></span>
-          <span>Insights</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Insights</span>
+            <span class="all-hub-sub">Volume, strength and trends</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
       </div>
     </div>
 
     <div class="all-hub-section">
       <div class="all-hub-section-label">Body</div>
-      <div class="all-hub-grid">
-        <button class="pod all-hub-tile" data-tab="checkInTab" onclick="showTab('checkInTab')">
+      <div class="pod all-hub-list">
+        <button class="all-hub-tile" data-tab="checkInTab" onclick="showTab('checkInTab')">
           <span class="more-drawer-icon" data-icon="clipboard"></span>
-          <span>Check-In</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Check-In</span>
+            <span class="all-hub-sub">Photos and measurements</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile" data-tab="sleepTab" onclick="showTab('sleepTab')">
+        <button class="all-hub-tile" data-tab="sleepTab" onclick="showTab('sleepTab')">
           <span class="more-drawer-icon" data-icon="moon"></span>
-          <span>Sleep</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Sleep</span>
+            <span class="all-hub-sub">Hours and sleep quality</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile" data-tab="cardioTab" onclick="showTab('cardioTab')">
+        <button class="all-hub-tile" data-tab="cardioTab" onclick="showTab('cardioTab')">
           <span class="more-drawer-icon" data-icon="activity"></span>
-          <span>Cardio</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Cardio</span>
+            <span class="all-hub-sub">Sessions, steps and zones</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
       </div>
     </div>
 
     <div class="all-hub-section">
       <div class="all-hub-section-label">Libraries</div>
-      <div class="all-hub-grid">
-        <button class="pod all-hub-tile" data-tab="librariesTab" onclick="showTab('librariesTab')">
+      <div class="pod all-hub-list">
+        <button class="all-hub-tile" data-tab="librariesTab" onclick="showTab('librariesTab')">
           <span class="more-drawer-icon" data-icon="dumbbell"></span>
-          <span>Libraries</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Libraries</span>
+            <span class="all-hub-sub">Exercises and guides</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile bb-only" data-tab="posingTab" onclick="showTab('posingTab')">
+        <button class="all-hub-tile bb-only" data-tab="posingTab" onclick="showTab('posingTab')">
           <span class="more-drawer-icon" data-icon="award"></span>
-          <span>Posing</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Posing</span>
+            <span class="all-hub-sub">Mandatories and practice</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile pl-only" data-tab="powerliftingTab" onclick="showTab('powerliftingTab')">
+        <button class="all-hub-tile pl-only" data-tab="powerliftingTab" onclick="showTab('powerliftingTab')">
           <span class="more-drawer-icon" data-icon="dumbbell"></span>
-          <span>Lifting</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Lifting</span>
+            <span class="all-hub-sub">Powerlifting tools</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile athlete-only" data-tab="functionalTab" onclick="showTab('functionalTab')">
+        <button class="all-hub-tile athlete-only" data-tab="functionalTab" onclick="showTab('functionalTab')">
           <span class="more-drawer-icon" data-icon="zap"></span>
-          <span>Functional</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Functional</span>
+            <span class="all-hub-sub">Conditioning work</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile" data-tab="mobilityTab" onclick="showTab('mobilityTab')">
+        <button class="all-hub-tile" data-tab="mobilityTab" onclick="showTab('mobilityTab')">
           <span class="more-drawer-icon" data-icon="flower"></span>
-          <span>Flexibility</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Flexibility</span>
+            <span class="all-hub-sub">Mobility routines</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
       </div>
     </div>
 
     <div class="all-hub-section">
       <div class="all-hub-section-label">People &amp; coaching</div>
-      <div class="all-hub-grid">
-        <button class="pod all-hub-tile" data-tab="communityTab" onclick="showTab('communityTab')">
+      <div class="pod all-hub-list">
+        <button class="all-hub-tile" data-tab="communityTab" onclick="showTab('communityTab')">
           <span class="more-drawer-icon" data-icon="users"></span>
-          <span>Community</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Community</span>
+            <span class="all-hub-sub">Feed, friends and groups</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
         <!-- Leaderboard is reached through Community's own nav pill now
              (#leaderboardTab/#exerciseLeaderboardTab still exist and work
              if something else deep-links to them, they just lost their
              separate All-hub tile). -->
-        <button class="pod all-hub-tile" data-tab="communityTab" onclick="showTab('communityTab'); if (window.showCommunitySection) showCommunitySection('competition')">
-          <span class="more-drawer-icon" data-icon="award"></span>
-          <span>Leaderboard</span>
-        </button>
-        <button class="pod all-hub-tile coach-only" data-tab="clientsTab" onclick="showTab('clientsTab')">
-          <span class="more-drawer-icon" data-icon="users"></span>
-          <span>Clients</span>
-        </button>
-        <button class="pod all-hub-tile coach-only" data-tab="coachOpsTab" onclick="showTab('coachOpsTab')">
+        <button class="all-hub-tile" data-tab="communityTab" onclick="showTab('communityTab'); if (window.showCommunitySection) showCommunitySection('competition')">
           <span class="more-drawer-icon" data-icon="trophy"></span>
-          <span>Coach</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Leaderboard</span>
+            <span class="all-hub-sub">Lift rankings</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
+        </button>
+        <button class="all-hub-tile coach-only" data-tab="clientsTab" onclick="showTab('clientsTab')">
+          <span class="more-drawer-icon" data-icon="users"></span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Clients</span>
+            <span class="all-hub-sub">Your coaching roster</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
+        </button>
+        <button class="all-hub-tile coach-only" data-tab="coachOpsTab" onclick="showTab('coachOpsTab')">
+          <span class="more-drawer-icon" data-icon="trophy"></span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Coach</span>
+            <span class="all-hub-sub">Coaching tools</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
       </div>
     </div>
 
     <div class="all-hub-section">
       <div class="all-hub-section-label">System</div>
-      <div class="all-hub-grid">
-        <button class="pod all-hub-tile" data-tab="settingsTab" onclick="showTab('settingsTab')">
+      <div class="pod all-hub-list">
+        <button class="all-hub-tile" data-tab="settingsTab" onclick="showTab('settingsTab')">
           <span class="more-drawer-icon" data-icon="settings"></span>
-          <span>Settings</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Settings</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile" onclick="showTutorial({ force: true })">
+        <button class="all-hub-tile" onclick="showTutorial({ force: true })">
           <span class="more-drawer-icon" data-icon="lightbulb"></span>
-          <span>App tour</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">App tour</span>
+          </span>
+          <span class="all-hub-chev" data-icon="chevronRight"></span>
         </button>
-        <button class="pod all-hub-tile all-hub-logout" id="moreDrawerLogoutBtn" onclick="logout()">
+        <button class="all-hub-tile all-hub-logout" id="moreDrawerLogoutBtn" onclick="logout()">
           <span class="more-drawer-icon" data-icon="arrowLeft"></span>
-          <span>Logout</span>
+          <span class="all-hub-text">
+            <span class="all-hub-name">Log out</span>
+          </span>
         </button>
       </div>
     </div>
