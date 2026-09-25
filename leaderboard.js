@@ -26,6 +26,32 @@ function _parse(k) {
   try { return JSON.parse(localStorage.getItem(k)) || null; } catch { return null; }
 }
 
+function _escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+// GET /leaderboard returns { success, items: [{ username, totalVolume,
+// workoutCount }] }. Map that onto the row shape the cards/charts use.
+function normalizeLeaderboardResponse(data) {
+  const rows = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
+  return rows
+    .map(r => ({
+      name:           String(r?.username ?? r?.name ?? '').trim(),
+      workoutsLogged: Number(r?.workoutCount ?? r?.workoutsLogged) || 0,
+      totalVolume:    Math.round(Number(r?.totalVolume) || 0),
+    }))
+    .filter(r => r.name);
+}
+
+function _formatValue(value, sortKey) {
+  if (sortKey === 'totalVolume') {
+    return value >= 1000 ? `${(value / 1000).toFixed(1)}k kg` : `${value} kg`;
+  }
+  return String(value);
+}
+
 function _username() {
   return (window.getActiveUsername && window.getActiveUsername()) ||
     localStorage.getItem('fitnessAppUser') ||
@@ -197,23 +223,24 @@ function renderLeaderboard(sortKey = _currentSortKey) {
     const value   = d[sortKey] || 0;
     const pct     = Math.round((value / topValue) * 100);
     const isMe    = username && d.name.toLowerCase() === username.toLowerCase();
-    const initial = (d.name || '?').slice(0, 1).toUpperCase();
+    const name    = _escapeHtml(d.name);
+    const initial = _escapeHtml((d.name || '?').slice(0, 1).toUpperCase());
 
     return `
       <div class="lb-card ${_medalClass(rank)} ${isMe ? 'lb-card--me' : ''}"
-           data-name="${d.name}"
+           data-name="${name}"
            role="button" tabindex="0">
         <div class="lb-card-left">
           <div class="lb-card-medal">${_medalIcon(rank)}</div>
           <div class="lb-card-avatar">${initial}</div>
           <div class="lb-card-info">
-            <span class="lb-card-name">${d.name}${isMe ? ' <span class="lb-you-tag">You</span>' : ''}</span>
+            <span class="lb-card-name">${name}${isMe ? ' <span class="lb-you-tag">You</span>' : ''}</span>
             <div class="lb-card-bar-wrap">
               <div class="lb-card-bar" style="width:${pct}%"></div>
             </div>
           </div>
         </div>
-        <div class="lb-card-value">${value}</div>
+        <div class="lb-card-value">${_formatValue(value, sortKey)}</div>
       </div>`;
   }).join('');
 
@@ -246,7 +273,7 @@ function renderYourRankBanner(sorted, sortKey, username) {
   const above  = rank > 1 ? sorted[rank - 2] : null;
   const gap    = above ? (above[sortKey] || 0) - value : 0;
 
-  const labelMap = { workoutsLogged: 'workouts', studyHours: 'study hrs', groupActivity: 'activities' };
+  const labelMap = { workoutsLogged: 'workouts', totalVolume: 'lifted' };
   const unit = labelMap[sortKey] || sortKey;
 
   el.style.display = 'block';
@@ -256,7 +283,7 @@ function renderYourRankBanner(sorted, sortKey, username) {
         <span class="lb-rank-banner-medal">${_medalIcon(rank)}</span>
         <div>
           <div class="lb-rank-banner-title">Your rank: <strong>#${rank}</strong> of ${total}</div>
-          <div class="lb-rank-banner-sub">${value} ${unit}${gap > 0 ? ` &nbsp;·&nbsp; <span class="lb-gap">Need ${gap} more to reach #${rank - 1}</span>` : ' &nbsp;·&nbsp; <span class="lb-gap-top">You\'re #1! 🎉</span>'}</div>
+          <div class="lb-rank-banner-sub">${_formatValue(value, sortKey)} ${unit}${gap > 0 ? ` &nbsp;·&nbsp; <span class="lb-gap">Need ${_formatValue(gap, sortKey)} more to reach #${rank - 1}</span>` : ' &nbsp;·&nbsp; <span class="lb-gap-top">You\'re #1! 🎉</span>'}</div>
         </div>
       </div>
     </div>`;
@@ -271,7 +298,7 @@ function renderCharts(data) {
   if (!barCtx || !lineCtx) return;
 
   const labels  = data.map(d => d.name);
-  const barData = data.map(d => sum(d.weeklyVolume));
+  const barData = data.map(d => d.totalVolume || 0);
 
   const chartDefaults = {
     color: '#b2dfdb',
@@ -285,7 +312,7 @@ function renderCharts(data) {
     data: {
       labels,
       datasets: [{
-        label: 'Weekly Volume',
+        label: 'Total Volume (kg)',
         data: barData,
         backgroundColor: 'rgba(95,168,126,0.75)',
         borderColor:     '#5fa87e',
@@ -303,6 +330,13 @@ function renderCharts(data) {
     }
   });
 
+  // The backend doesn't send per-week progress yet — hide the line chart
+  // rather than drawing an empty one.
+  const hasProgress = data.some(d => Array.isArray(d.progress) && d.progress.length);
+  lineCtx.style.display = hasProgress ? '' : 'none';
+  if (lineChart) { lineChart.destroy(); lineChart = null; }
+  if (!hasProgress) return;
+
   const maxLen   = Math.max(...data.map(d => (d.progress || []).length), 1);
   const lineLbls = Array.from({ length: maxLen }, (_, i) => `W${i + 1}`);
   const palette  = ['#5fa87e','#81c784','#a5d6a7','#4db6ac','#80cbc4','#ffb74d','#ff8a65'];
@@ -316,7 +350,6 @@ function renderCharts(data) {
     pointRadius: 3,
   }));
 
-  if (lineChart) lineChart.destroy();
   lineChart = new Chart(lineCtx, {
     type: 'line',
     data: { labels: lineLbls, datasets: lineSets },
@@ -340,7 +373,9 @@ async function fetchLeaderboard() {
   if (empty)   empty.style.display   = 'none';
   try {
     const res = await fetch(`${window.SERVER_URL}/leaderboard`, { headers: getAuthHeaders(), signal: AbortSignal.timeout(5000) });
-    leaderboardData = await res.json();
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error?.message || data?.error || `Server returned ${res.status}`);
+    leaderboardData = normalizeLeaderboardResponse(data);
   } catch (e) {
     console.warn('fetch leaderboard failed', e);
     leaderboardData = [];
@@ -370,4 +405,8 @@ function initLeaderboard() {
 
 if (typeof window !== 'undefined') {
   window.initLeaderboard = initLeaderboard;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { normalizeLeaderboardResponse, renderLeaderboard, fetchLeaderboard };
 }
