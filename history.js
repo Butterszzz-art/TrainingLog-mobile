@@ -184,32 +184,6 @@ function mergeRemoteAndLocal(remoteItems, localItems) {
   return merged;
 }
 
-async function persistHistoryEntry(entry, saved) {
-  if (!saved) return entry;
-
-  const canonicalId = saved.id || saved.recordId || entry.id;
-  const canonical = {
-    ...entry,
-    ...saved,
-    id: canonicalId
-  };
-
-  const arr = readHistoryArray();
-  const idx = arr.findIndex(item =>
-    (item.id && canonicalId && item.id === canonicalId) ||
-    (item.createdAt && canonical.createdAt && item.createdAt === canonical.createdAt)
-  );
-
-  if (idx !== -1) {
-    arr[idx] = canonical;
-  } else {
-    arr.unshift(canonical);
-  }
-
-  writeHistoryArray(arr);
-  return canonical;
-}
-
 export async function syncWorkoutToBackend(workout) {
   try {
     if (typeof window === 'undefined' || !window.SERVER_URL) {
@@ -244,6 +218,9 @@ export async function syncWorkoutToBackend(workout) {
       return false;
     }
 
+    if (typeof window.invalidateBackendWorkouts === 'function') {
+      window.invalidateBackendWorkouts();
+    }
     console.log('[History] Synced workout to backend', data);
     return true;
   } catch (error) {
@@ -307,7 +284,36 @@ function mapLegacyWorkoutHistoryItems(username, data) {
   }));
 }
 
+// Maps a failure from the shared workout-data.js fetch onto the same errors
+// (and forced logout on a bad token) as the direct fetch path below.
+function throwWorkoutHistoryError(err) {
+  const body = err?.body;
+  if (typeof window !== 'undefined' && typeof window.isInvalidSignatureError === 'function' && body && window.isInvalidSignatureError(body)) {
+    if (typeof window.forceLogoutDueToInvalidToken === 'function') {
+      window.forceLogoutDueToInvalidToken();
+    }
+    throw new Error('Invalid token signature. Please log in again.');
+  }
+  if (err?.status === 401 || err?.status === 403) {
+    throw new Error('Unauthorized (token missing/expired). Please log in again.');
+  }
+  if (err?.status === 404) {
+    throw new Error('Endpoint /workouts not found on backend (not deployed or wrong SERVER_URL).');
+  }
+  throw err instanceof Error ? err : new Error('Failed to load workouts');
+}
+
 async function fetchWorkoutHistoryFromBackend(username) {
+  // Prefer the shared, cached fetch (src/js/workout-data.js) so history,
+  // overload, badges and exports don't each download the whole collection.
+  if (typeof window !== 'undefined' && typeof window.fetchBackendWorkoutItems === 'function') {
+    try {
+      return await window.fetchBackendWorkoutItems(username);
+    } catch (err) {
+      throwWorkoutHistoryError(err);
+    }
+  }
+
   const { response, url, hasAuth } = await fetchWorkoutHistoryResponse(username);
 
   const raw = await response.text();
@@ -397,21 +403,11 @@ export async function finalizeResistanceWorkout(state) {
   const entry = saveWorkoutToLocal(workout);
   applyMacroAdjustmentAfterWorkout(workout, workout.userId || getCurrentUserId());
 
-  // Non-blocking backend sync so local completion UX is unaffected.
-  syncWorkoutToBackend(workout).then(async synced => {
-    if (!synced || !window.SERVER_URL) return;
-    try {
-      const { response } = await fetchWorkoutHistoryResponse(workout.userId || getCurrentUserId());
-      if (!response.ok) return;
-      const data = await response.json();
-      const first = data?.items?.find(item => item?.workout?.id === workout.id || item?.id === workout.id);
-      if (first) {
-        await persistHistoryEntry(entry, first.workout || first);
-      }
-    } catch {
-      // Ignore follow-up canonicalization failures.
-    }
-  });
+  // Non-blocking backend sync so local completion UX is unaffected. (This
+  // used to re-download the user's entire backend history afterwards just
+  // to find the saved copy — but the backend stores `workout` exactly as
+  // sent, so that copy is what's already saved locally.)
+  syncWorkoutToBackend(workout).catch(() => {});
 
   return entry;
 }

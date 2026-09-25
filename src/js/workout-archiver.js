@@ -200,6 +200,9 @@ async function archiveWorkoutsToBackend(now = Date.now()) {
     // The "last time" progressive-overload lookup reads workoutHistory_{user}
     // directly; refresh its remote fallback cache so entries we just removed
     // locally don't momentarily disappear from that comparison.
+    if (typeof window.invalidateBackendWorkouts === 'function') {
+      window.invalidateBackendWorkouts();
+    }
     if (typeof window.refreshRemoteOverloadCache === 'function') {
       window.refreshRemoteOverloadCache(username);
     }
