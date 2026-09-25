@@ -11,6 +11,7 @@
   const FRIENDS_KEY = () => 'friends_' + _u();
   const INBOX_KEY = () => 'sharedInbox_' + _u();
   const OUTBOX_KEY = () => 'sharedOutbox_' + _u();
+  const _attr = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // ── Friends CRUD ────────────────────────────────────────────
 
@@ -208,7 +209,7 @@
       friends.forEach(f => {
         const initial = f.username.charAt(0).toUpperCase();
         html += '<div class="friend-item">'
-          + '<div class="friend-avatar">' + initial + '</div>'
+          + '<div class="friend-avatar" data-avatar-user="' + _attr(f.username) + '" data-avatar-open>' + initial + '</div>'
           + '<div class="friend-info">'
           + '<div class="friend-name">' + f.username + '</div>'
           + '<div class="friend-meta">Added ' + new Date(f.addedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</div>'
@@ -288,7 +289,7 @@
         const sel = _quickShareSelected.has(f.username) ? ' selected' : '';
         const init = f.username.charAt(0).toUpperCase();
         friendsHtml += '<div class="quick-share-friend' + sel + '" onclick="toggleQuickShareFriend(\'' + f.username + '\')">'
-          + '<div class="friend-avatar">' + init + '</div>'
+          + '<div class="friend-avatar" data-avatar-user="' + _attr(f.username) + '">' + init + '</div>'
           + '<span class="quick-share-friend-name">' + f.username + '</span>'
           + '<span class="quick-share-check">✓</span>'
           + '</div>';

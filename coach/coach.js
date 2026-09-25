@@ -219,7 +219,7 @@ function renderClientList() {
 
     return '<div class="client-row' + (isActive ? ' active' : '') + (pending ? ' is-pending' : '') + '" data-id="' + id + '" onclick="selectClient(\'' + id + '\')">'
       + (pending ? '<span class="client-checkbox"></span>' : '<input type="checkbox" class="client-checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleBulk(\'' + id + '\')" aria-label="Select ' + escapeHtml(c.clientName) + '">')
-      + '<div class="client-avatar">' + initials + '</div>'
+      + '<div class="client-avatar" data-avatar-user="' + escapeHtml(c.clientName || '') + '">' + initials + '</div>'
       + '<div class="client-info"><div class="client-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
       + '<div class="client-meta">' + meta + '</div></div>'
       + '<div class="client-alert ' + (pending ? 'pending' : escapeHtml(c.alertStatus || 'ok')) + '"></div></div>';
@@ -584,7 +584,7 @@ function renderDetailHeader(c) {
       + (sharingOff.length ? ' · Not sharing: ' + escapeHtml(sharingOff.join(', ')) : '');
 
   document.getElementById('detailHeader').innerHTML =
-    '<div class="detail-avatar">' + initials + '</div>'
+    '<div class="detail-avatar" data-avatar-user="' + escapeHtml(c.clientName || '') + '">' + initials + '</div>'
     + '<div class="detail-info"><div class="detail-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
     + '<div class="detail-meta">' + meta + '</div></div>'
     + '<span class="detail-status ' + (pending ? 'watch' : escapeHtml(c.alertStatus || 'ok')) + '">' + (pending ? 'pending' : escapeHtml(c.alertStatus || 'ok')) + '</span>'

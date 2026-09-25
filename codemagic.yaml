@@ -67,6 +67,14 @@ workflows:
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
+          # Profile photos use a file picker, which offers "Take Photo" on
+          # iOS. Without these usage strings iOS kills the app the moment the
+          # camera or library is opened.
+          PLIST=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Delete :NSCameraUsageDescription" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Pocket Coach uses the camera so you can take a profile photo.'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :NSPhotoLibraryUsageDescription" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Pocket Coach lets you choose a profile photo from your library.'" "$PLIST"
 
       - name: Sync web assets into ios/
         script: |

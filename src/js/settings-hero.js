@@ -20,6 +20,10 @@
       `<span class="sh-row-val">${right}</span></div>`;
   }
 
+  function _esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   function _togglePill(on) {
     return `<span class="sh-toggle ${on ? 'is-on' : ''}">${on ? 'ON' : 'OFF'}</span>`;
   }
@@ -31,6 +35,8 @@
 
     const u = _user();
     const initials = (u || '?').slice(0, 2).toUpperCase();
+    const profile = (global.Profiles && u && global.Profiles.get(u)) || null;
+    const canEdit = !!(global.Profiles && u);
     const appMode = typeof global.getCurrentAppMode === 'function' ? global.getCurrentAppMode() : 'athlete';
     const unit = typeof global.getBodyweightPreference === 'function' ? global.getBodyweightPreference().unit : 'kg';
     const theme = (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) || 'system default';
@@ -39,11 +45,13 @@
 
     el.innerHTML = `
       <div class="pod pod--hero sh-profile">
-        <div class="sh-profile-avatar">${initials}</div>
+        <div class="sh-profile-avatar"${u ? ` data-avatar-user="${_esc(u)}"` : ''}${canEdit ? ' data-avatar-edit role="button" tabindex="0" aria-label="Edit profile photo"' : ''}>${_esc(initials)}</div>
         <div class="sh-profile-info">
-          <div class="sh-profile-name">${u || 'Athlete'}</div>
-          <div class="sh-profile-meta">${appMode === 'both' ? 'Coach + athlete' : appMode === 'coach' ? 'Coach' : 'Athlete'}</div>
+          <div class="sh-profile-name">${_esc((profile && profile.displayName) || u || 'Athlete')}</div>
+          <div class="sh-profile-meta">${profile && profile.displayName && u ? '@' + _esc(u) + ' · ' : ''}${appMode === 'both' ? 'Coach + athlete' : appMode === 'coach' ? 'Coach' : 'Athlete'}</div>
+          ${profile && profile.bio ? `<div class="sh-profile-bio">${_esc(profile.bio)}</div>` : ''}
         </div>
+        ${canEdit ? '<button type="button" class="mx-outline sh-profile-edit" data-profile-edit>Edit profile</button>' : ''}
       </div>
 
       <div class="pod sh-group">
@@ -60,6 +68,12 @@
 
       <button class="sh-logout" onclick="if(typeof logout==='function') logout();">Log out</button>
     `;
+
+    el.querySelectorAll('[data-avatar-edit], [data-profile-edit]').forEach(btn => {
+      const open = () => global.Profiles && global.Profiles.openEditor();
+      btn.addEventListener('click', open);
+      btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    });
   }
 
   global.renderSettingsHero = renderSettingsHero;
