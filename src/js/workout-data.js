@@ -53,6 +53,80 @@
     return _mergeUnique([archived, active]);
   }
 
+  /* ── Shared backend fetch ─────────────────────────────────
+     Several screens want the backend's archived workouts (history,
+     progressive overload, badges, exports, challenges). Each used to
+     download the whole collection separately — every page load cost
+     one Firestore read per archived workout, several times over.
+     They now share one in-memory result per user: concurrent callers
+     share the in-flight request, it's reused for CACHE_TTL_MS, and
+     it's dropped whenever this device saves a workout to the backend
+     (invalidateBackendWorkouts). Fetched in pages of PAGE_SIZE; a
+     backend without paging support ignores `limit` and returns
+     everything with no `nextCursor`, which ends the loop. */
+
+  const CACHE_TTL_MS = 5 * 60 * 1000;
+  const PAGE_SIZE = 500;
+  const MAX_PAGES = 100;
+  const _backendCache = new Map(); // username -> { at, promise }
+
+  function _authToken() {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  }
+
+  async function _fetchAllBackendPages(username) {
+    const items = [];
+    let cursor = null;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const params = new URLSearchParams({ username, limit: String(PAGE_SIZE) });
+      if (cursor) params.set('cursor', cursor);
+      const res = await fetch(`${window.SERVER_URL}/workouts?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${_authToken() || ''}` },
+        signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !data.success) {
+        const err = new Error((data && data.error && data.error.message) || `Failed to load workouts (${res.status})`);
+        err.status = res.status;
+        err.body = data;
+        throw err;
+      }
+      if (Array.isArray(data.items)) items.push(...data.items);
+      cursor = data.nextCursor || null;
+      if (!cursor) break;
+    }
+    return items;
+  }
+
+  /**
+   * Raw `/workouts` items for `username` ({ id, date, title, workout }),
+   * shared and cached as described above. Rejects on failure (with
+   * `.status` / `.body` when the server answered); pass { force: true }
+   * to bypass the cache.
+   */
+  function fetchBackendWorkoutItems(username, { force = false } = {}) {
+    if (typeof window === 'undefined' || !window.SERVER_URL) return Promise.resolve([]);
+    if (!username) return Promise.reject(new Error('Missing username'));
+    if (!_authToken()) return Promise.reject(new Error('Missing auth token'));
+
+    const hit = _backendCache.get(username);
+    if (!force && hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.promise;
+
+    const promise = _fetchAllBackendPages(username);
+    _backendCache.set(username, { at: Date.now(), promise });
+    // Never cache a failure.
+    promise.catch(() => {
+      if (_backendCache.get(username)?.promise === promise) _backendCache.delete(username);
+    });
+    return promise;
+  }
+
+  /** Drop the cached backend workouts (one user, or everyone). */
+  function invalidateBackendWorkouts(username) {
+    if (username) _backendCache.delete(username);
+    else _backendCache.clear();
+  }
+
   /**
    * Fetch workouts that have already been hard-saved to the backend
    * (older than 4 weeks — see workout-archiver.js) so they no longer
@@ -60,19 +134,10 @@
    */
   async function fetchBackendWorkouts(username) {
     if (typeof window === 'undefined' || !window.SERVER_URL) return [];
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token) return [];
+    if (!_authToken()) return [];
 
     try {
-      const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(username)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
-      });
-      if (!res.ok) return [];
-      const data = await res.json().catch(() => null);
-      if (!data || !data.success) return [];
-
-      const items = Array.isArray(data.items) ? data.items : [];
+      const items = await fetchBackendWorkoutItems(username);
       return items.map(item => ({
         ...(item && item.workout),
         id: item && item.id,
@@ -98,10 +163,18 @@
   }
 
   if (typeof module !== 'undefined') {
-    module.exports = { getAllWorkoutsForUser, getAllWorkoutsForUserIncludingBackend, fetchBackendWorkouts };
+    module.exports = {
+      getAllWorkoutsForUser,
+      getAllWorkoutsForUserIncludingBackend,
+      fetchBackendWorkouts,
+      fetchBackendWorkoutItems,
+      invalidateBackendWorkouts
+    };
   }
   if (typeof window !== 'undefined') {
     window.getAllWorkoutsForUser = getAllWorkoutsForUser;
     window.getAllWorkoutsForUserIncludingBackend = getAllWorkoutsForUserIncludingBackend;
+    window.fetchBackendWorkoutItems = fetchBackendWorkoutItems;
+    window.invalidateBackendWorkouts = invalidateBackendWorkouts;
   }
 })();

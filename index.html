@@ -6275,15 +6275,8 @@ async function refreshRemoteOverloadCache(username) {
   if (!token) return;
 
   try {
-    const res = await fetch(`${window.SERVER_URL}/workouts?username=${encodeURIComponent(username)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(5000)
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data?.success) return;
-
-    const items = Array.isArray(data.items) ? data.items : [];
+    // Shared, cached fetch (src/js/workout-data.js).
+    const items = await window.fetchBackendWorkoutItems(username);
     _remoteOverloadCache = items.map(item => ({
       date: item?.date || item?.workout?.date || '',
       title: item?.title || item?.workout?.title || item?.workout?.name || 'Workout',

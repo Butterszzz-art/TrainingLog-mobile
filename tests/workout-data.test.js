@@ -1,6 +1,8 @@
 const {
   getAllWorkoutsForUser,
-  getAllWorkoutsForUserIncludingBackend
+  getAllWorkoutsForUserIncludingBackend,
+  fetchBackendWorkoutItems,
+  invalidateBackendWorkouts
 } = require('../src/js/workout-data');
 
 function makeLocalStorage() {
@@ -53,6 +55,7 @@ describe('getAllWorkoutsForUserIncludingBackend', () => {
     global.localStorage.setItem('token', 'jwt-token');
     global.fetch = jest.fn();
     global.AbortSignal = { timeout: () => undefined };
+    invalidateBackendWorkouts();
   });
 
   afterEach(() => {
@@ -79,7 +82,7 @@ describe('getAllWorkoutsForUserIncludingBackend', () => {
     const all = await getAllWorkoutsForUserIncludingBackend(user);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://backend.example/workouts?username=u1',
+      'https://backend.example/workouts?username=u1&limit=500',
       expect.objectContaining({ headers: { Authorization: 'Bearer jwt-token' } })
     );
     expect(all.map(w => w.id)).toEqual(['w-backend', 'w-local']);
@@ -105,5 +108,70 @@ describe('getAllWorkoutsForUserIncludingBackend', () => {
     const all = await getAllWorkoutsForUserIncludingBackend(user);
 
     expect(all.map(w => w.id)).toEqual(['w-local']);
+  });
+});
+
+describe('fetchBackendWorkoutItems (shared cache + paging)', () => {
+  const page = (items, nextCursor) => ({ ok: true, status: 200, json: async () => ({ success: true, items, nextCursor }) });
+
+  beforeEach(() => {
+    global.localStorage = makeLocalStorage();
+    global.localStorage.setItem('token', 'jwt-token');
+    global.window = { SERVER_URL: 'https://backend.example' };
+    global.fetch = jest.fn();
+    global.AbortSignal = { timeout: () => undefined };
+    invalidateBackendWorkouts();
+  });
+
+  afterEach(() => {
+    delete global.window;
+    delete global.fetch;
+    delete global.AbortSignal;
+  });
+
+  test('follows nextCursor until the last page', async () => {
+    global.fetch
+      .mockResolvedValueOnce(page([{ id: 'a' }, { id: 'b' }], 'b'))
+      .mockResolvedValueOnce(page([{ id: 'c' }], null));
+
+    const items = await fetchBackendWorkoutItems('u1');
+
+    expect(items.map(i => i.id)).toEqual(['a', 'b', 'c']);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch.mock.calls[1][0]).toBe('https://backend.example/workouts?username=u1&limit=500&cursor=b');
+  });
+
+  test('works with a backend that ignores paging (no nextCursor)', async () => {
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, items: [{ id: 'a' }] }) });
+    expect((await fetchBackendWorkoutItems('u1')).map(i => i.id)).toEqual(['a']);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('concurrent and repeat callers share one request until invalidated', async () => {
+    global.fetch.mockResolvedValue(page([{ id: 'a' }], null));
+
+    const [first, second] = await Promise.all([fetchBackendWorkoutItems('u1'), fetchBackendWorkoutItems('u1')]);
+    await fetchBackendWorkoutItems('u1');
+    expect(first).toBe(second);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    invalidateBackendWorkouts();
+    await fetchBackendWorkoutItems('u1');
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('does not cache failures, and exposes the status', async () => {
+    global.fetch
+      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ success: false }) })
+      .mockResolvedValueOnce(page([{ id: 'a' }], null));
+
+    await expect(fetchBackendWorkoutItems('u1')).rejects.toMatchObject({ status: 401 });
+    expect((await fetchBackendWorkoutItems('u1')).map(i => i.id)).toEqual(['a']);
+  });
+
+  test('rejects without calling the backend when there is no token', async () => {
+    localStorage.clear();
+    await expect(fetchBackendWorkoutItems('u1')).rejects.toThrow('Missing auth token');
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
