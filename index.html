@@ -5696,7 +5696,7 @@ function addLogEntry() {
   // This prevents duplicate sessions after an API sync that returns workouts in a different order.
   const todayIndex = workouts.findIndex(w => w.date === date);
   if (todayIndex === -1) {
-    workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
+    workouts.push({ id: newWorkoutId(), title: `Workout on ${date}`, date, log: [], restBreaks: [] });
   }
 
   const newEntry = {
@@ -5750,10 +5750,11 @@ function addLogEntry() {
   };
 
   localStorage.setItem(`workouts_${_activeUser}`, JSON.stringify(workouts));
+  // Your own sessions reach the backend through the workout archiver
+  // (POST /workouts). The per-exercise POST /saveWorkout that used to run
+  // here stored nothing — that route is retired on the backend.
   if (window.coachLoggingClient) {
     saveClientWorkoutToBackend(activeWorkout, window.coachLoggingClient);
-  } else if (typeof saveWorkoutToBackend === 'function') {
-    saveWorkoutToBackend(activeWorkout);
   }
   updatePRs(_activeUser, activeWorkout, calculateWorkoutVolume);
   updateGoalProgress(_activeUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
@@ -5980,6 +5981,17 @@ const ADVANCED_TAGS = [
   { key: 'cue', label: 'Cue' },
   { key: 'note', label: 'Note' }
 ];
+
+// Stable id for a new day's workout entry. The backend keys its copy by this
+// id, so re-saving the same session (coach logging re-posts it after every
+// exercise; the archiver can retry) updates one record instead of adding
+// another. Existing entries without an id are deliberately left alone:
+// giving them one now would change their local history key and duplicate
+// them in Log History.
+function newWorkoutId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `w-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 function createDefaultAdvancedSet() {
   return {
@@ -7445,7 +7457,7 @@ function logRestBreak(mins) {
     workouts.length === 0 ||
     workouts[workouts.length - 1].date !== date
   ) {
-    workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
+    workouts.push({ id: newWorkoutId(), title: `Workout on ${date}`, date, log: [], restBreaks: [] });
   }
   const workout = workouts[workouts.length - 1];
   if (!workout.restBreaks) workout.restBreaks = [];
@@ -8138,7 +8150,7 @@ async function completeWorkout() {
   }
 
   if (!todaysWorkout) {
-    workouts.push({ title: `Workout on ${date}`, date, log: [], restBreaks: [] });
+    workouts.push({ id: newWorkoutId(), title: `Workout on ${date}`, date, log: [], restBreaks: [] });
     localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
     trackWorkoutDate(date);
   }
@@ -8154,29 +8166,6 @@ async function completeWorkout() {
   }
   renderWorkouts();
   renderWorkoutHistory();
-}
-
-async function saveWorkoutToBackend(workout) {
-  ensureServerUrl();
-
-  const action = {
-    url: `${window.SERVER_URL}/saveWorkout`,
-    options: {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ username: currentUser, workout })
-    }
-  };
-
-  try {
-    const response = await fetch(action.url, { ...action.options, credentials: 'include' });
-    if (!response.ok) {
-      throw new Error(`Failed to save workout: ${response.status}`);
-    }
-  } catch (err) {
-    console.warn('Unable to reach server, queueing workout for retry', err);
-    if (window.queueAction) queueAction(action);
-  }
 }
 
 async function loadWorkoutsFromBackend() {
