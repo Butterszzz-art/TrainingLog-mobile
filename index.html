@@ -4623,6 +4623,9 @@ function _runPostLoginSequence(renderFn) {
     console.error('[Login] post-login render error:', err);
   }
   if (typeof window.renderYourCoachSection === 'function') window.renderYourCoachSection();
+  // Back mid-workout in performance mode — re-enter it now that login has
+  // navigated to Home (src/js/performance-mode.js)
+  if (typeof window.restorePerformanceModeIfNeeded === 'function') window.restorePerformanceModeIfNeeded();
 
   if (!loadingEl) return; // markup missing — app is already visible, nothing more to do
 
@@ -4865,6 +4868,13 @@ function showTab(tabName) {
   if (!tab) {
     console.warn(`[Tabs] Missing tab DOM node: ${tabName}`);
     return;
+  }
+  // Performance mode hides the bottom nav and only makes sense on the Log tab —
+  // any navigation elsewhere (e.g. login landing on Home) must leave it, or the
+  // user is stuck on a tab with no way to navigate.
+  if (tabName !== 'logTab' && document.body.classList.contains('performance-mode')
+      && typeof window.exitPerformanceMode === 'function') {
+    window.exitPerformanceMode();
   }
   tab.classList.add('active');
   // Sync bottom nav active state
@@ -17289,6 +17299,10 @@ async function fetchDailyLogs(username) {
   // Show the first tab initially
   initTrainingCalendar();
   showTab("homeTab");
+  // Back mid-workout in performance mode — re-enter it only now that startup
+  // has landed on Home, or it would sit on Home with the bottom nav hidden.
+  // No-op on the login screen; the post-login sequence restores it instead.
+  if (typeof window.restorePerformanceModeIfNeeded === 'function') window.restorePerformanceModeIfNeeded();
   renderPRs();
   renderMilestones();
   renderGoalBar();

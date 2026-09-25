@@ -77,6 +77,14 @@
     return m ? `${name} · Set ${m[1]}` : name;
   }
 
+  /** Restore performance mode on app start only while a workout is running
+   * AND a session is being restored. If the app opens on the login screen,
+   * restoring would hide the bottom nav behind it and strand the lifter on
+   * Home (with no nav) once they sign back in. */
+  function shouldRestoreOnLoad(settings, workoutTimer, savedUser) {
+    return !!(settings && settings.active && workoutTimer && workoutTimer.startTimeMs && savedUser);
+  }
+
   function normaliseRestSeconds(value) {
     const n = Number(value);
     return REST_PRESETS.includes(n) ? n : DEFAULT_REST_SECONDS;
@@ -268,14 +276,27 @@
       if (!document.hidden && isActive()) _requestWakeLock();
     });
 
-    // Survive a reload mid-workout — but only while a workout is actually
-    // running, so a stale flag never traps the lifter in the stripped view.
-    const workoutRunning = !!(_read(WORKOUT_TIMER_KEY) || {}).startTimeMs;
-    if (getSettings().active) {
-      if (workoutRunning) startPerformanceMode({ restore: true });
-      else _saveSettings({ active: false });
-    }
+    // Restoring after a reload is NOT done here: index.html calls
+    // restorePerformanceModeIfNeeded() once the session restore / login has
+    // finished navigating, otherwise that navigation (to Home) lands on top
+    // of performance mode and leaves the lifter with no bottom nav.
     _renderRestPresets();
+  }
+
+  /** Survive a reload mid-workout — but only while a workout is actually
+   * running and the user is signed in, so a stale flag never traps the
+   * lifter in the stripped view. Call after the app has navigated to its
+   * start tab. */
+  function restorePerformanceModeIfNeeded() {
+    if (typeof document === 'undefined') return;
+    const settings = getSettings();
+    if (!settings.active) return;
+    const ls = global.localStorage;
+    const savedUser = ls.getItem('fitnessAppUser') || ls.getItem('username') || ls.getItem('Username');
+    // On the login screen: keep the flag so the post-login call restores it
+    if (!savedUser) return;
+    if (shouldRestoreOnLoad(settings, _read(WORKOUT_TIMER_KEY), savedUser)) startPerformanceMode({ restore: true });
+    else _saveSettings({ active: false });
   }
 
   if (typeof document !== 'undefined') {
@@ -286,13 +307,14 @@
   const api = {
     REST_PRESETS, DEFAULT_REST_SECONDS, URGENT_SECONDS,
     getRestRemaining, createRestState, togglePausedState, adjustRestState, isRestUrgent,
-    formatNextUp, normaliseRestSeconds, getSettings,
-    startPerformanceMode, exitPerformanceMode, setPerformanceRestSeconds,
+    formatNextUp, normaliseRestSeconds, shouldRestoreOnLoad, getSettings,
+    startPerformanceMode, exitPerformanceMode, restorePerformanceModeIfNeeded, setPerformanceRestSeconds,
     toggleRestTimerPause, adjustRestTimer, hideRestOverCard,
   };
   global.PerformanceMode = api;
   global.startPerformanceMode = startPerformanceMode;
   global.exitPerformanceMode = exitPerformanceMode;
+  global.restorePerformanceModeIfNeeded = restorePerformanceModeIfNeeded;
   global.setPerformanceRestSeconds = setPerformanceRestSeconds;
   global.toggleRestTimerPause = toggleRestTimerPause;
   global.adjustRestTimer = adjustRestTimer;

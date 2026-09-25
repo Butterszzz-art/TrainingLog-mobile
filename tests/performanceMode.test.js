@@ -90,3 +90,20 @@ describe('performance-mode helpers', () => {
     expect(pm.getSettings()).toEqual({ active: false, restSeconds: 90 });
   });
 });
+
+describe('performance-mode restore on app start', () => {
+  const running = { startTimeMs: 1_700_000_000_000 };
+
+  test('restores mid-workout for a signed-in user', () => {
+    expect(pm.shouldRestoreOnLoad({ active: true }, running, 'lifter')).toBe(true);
+  });
+
+  test('does not restore on the login screen (no saved user)', () => {
+    expect(pm.shouldRestoreOnLoad({ active: true }, running, null)).toBe(false);
+  });
+
+  test('does not restore without a running workout or when inactive', () => {
+    expect(pm.shouldRestoreOnLoad({ active: true }, null, 'lifter')).toBe(false);
+    expect(pm.shouldRestoreOnLoad({ active: false }, running, 'lifter')).toBe(false);
+  });
+});
