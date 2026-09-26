@@ -120,7 +120,7 @@ function showGroupStats(id) {
     <h4>Exercise Totals</h4>
     <table><tr><th>Exercise</th><th>Total Volume</th></tr>${volumes}</table>
     <canvas id="groupVolumeChart" height="200"></canvas>
-    <div style="margin-top:10px;"><button onclick="showTab('communityTab'); if(window.showCommunitySection) showCommunitySection('competition');">Back to Leaderboard</button></div>
+    <div style="margin-top:10px;"><button onclick="showTab('communityTab'); if(window.showCommunitySection) showCommunitySection('groups');">Back to Community</button></div>
   `;
   showTab('groupStatsTab');
   if (typeof Chart !== 'undefined') {

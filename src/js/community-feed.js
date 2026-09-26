@@ -1,10 +1,12 @@
 /* =============================================================
-   COMMUNITY FEED  (improvements ⑥ ⑦ ⑨ ⑩ ⑪)
-   ⑥  Activity feed — recent workouts from localStorage
-   ⑦  Filter pills for group search
-   ⑨  Exercise leaderboard inline rendering
-   ⑩  Weekly challenge card
-   ⑪  Post composer + local posts feed
+   COMMUNITY FEED
+   - Activity feed: your recent workouts + your posts, as typed cards
+     (workout summary, PR, update) grouped by day
+   - Post composer (collapsed to one line until tapped)
+   - Group search filter chips + sort link
+   - Weekly challenge card (progress ring + Mon–Sun strip)
+   - Exercise leaderboard inline rendering
+   Styles: css/social-ui.css (sx-*), helpers: src/js/social-ui.js
    ============================================================= */
 
 (function initCommunityFeed() {
@@ -34,6 +36,14 @@
     return (name || '?').slice(0, 1).toUpperCase();
   }
 
+  function _icon(name) {
+    return window.sxIcon ? window.sxIcon(name) : '';
+  }
+
+  function _localISO(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   function _timeAgo(isoStr) {
     if (!isoStr) return '';
     const diff = Date.now() - new Date(isoStr).getTime();
@@ -46,7 +56,64 @@
     return `${d}d ago`;
   }
 
-  /* ── ⑥ Activity feed ─────────────────────────────────────── */
+  function _replay(el) {
+    if (!el) return;
+    el.classList.remove('sx-anim');
+    void el.offsetWidth;
+    el.classList.add('sx-anim');
+  }
+
+  /* ── Pure helpers (exported for tests) ───────────────────── */
+
+  // Headline numbers for a logged workout.
+  function summariseWorkout(w) {
+    const log = Array.isArray(w?.log) ? w.log : [];
+    let volume = 0, sets = 0, top = null;
+    const names = [];
+    for (const e of log) {
+      const name = e.name || e.exercise || '';
+      if (name && !names.includes(name)) names.push(name);
+      const wts = e.weightsArray || [];
+      const rps = e.repsArray    || [];
+      if (rps.length) sets += rps.length;
+      else sets += +e.sets || 0;
+      for (let i = 0; i < rps.length; i++) {
+        const kg = +wts[i] || 0, reps = +rps[i] || 0;
+        volume += kg * reps;
+        if (kg > 0 && reps > 0 && (!top || kg > top.kg || (kg === top.kg && reps > top.reps))) {
+          top = { name, kg, reps };
+        }
+      }
+    }
+    return { exercises: names.length, names, sets, volume: Math.round(volume), top };
+  }
+
+  // 'Today' / 'Yesterday' / 'This week' / 'Earlier' for a YYYY-MM-DD date.
+  function dayBucket(dateStr, now = new Date()) {
+    if (!dateStr) return 'Earlier';
+    const today = _localISO(now);
+    const y = new Date(now); y.setDate(y.getDate() - 1);
+    const wk = new Date(now); wk.setDate(wk.getDate() - 6);
+    const d = String(dateStr).slice(0, 10);
+    if (d >= today) return 'Today';
+    if (d === _localISO(y)) return 'Yesterday';
+    if (d >= _localISO(wk)) return 'This week';
+    return 'Earlier';
+  }
+
+  function _fmtKg(v) {
+    if (v >= 1e6)  return { n: (v / 1e6).toFixed(1), u: 'M kg' };
+    if (v >= 1000) return { n: (v / 1000).toFixed(1), u: 'k kg' };
+    return { n: String(v), u: 'kg' };
+  }
+
+  // Node (jest): expose the pure helpers and stop before touching the DOM.
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { summariseWorkout, dayBucket };
+  }
+  if (typeof document === 'undefined') return;
+
+  /* ── Activity feed ───────────────────────────────────────── */
 
   function _buildActivityItems(username) {
     // workouts_{user} alone only covers a rolling ~7 days (older entries
@@ -57,34 +124,78 @@
     const posts    = _parse('communityPosts_v1') || [];
     const items    = [];
 
-    // Convert last 15 workouts to feed items
     [...workouts].reverse().slice(0, 15).forEach(w => {
-      const exercises = (w.log || []).map(e => e.name || e.exercise || '').filter(Boolean);
-      const topEx     = exercises.slice(0, 2).join(', ') || 'a workout';
-      const setCount  = (w.log || []).reduce((s, e) => s + (e.repsArray?.length || e.sets || 0), 0);
       items.push({
-        type:    'workout',
-        user:    username,
-        text:    `logged ${topEx}${setCount ? ` — ${setCount} sets` : ''}`,
-        date:    w.date,
-        ts:      w.timestamp || w.date,
-        emoji:   '💪',
+        kind:  'session',
+        user:  username,
+        title: w.title || w.name || 'Workout',
+        stats: summariseWorkout(w),
+        date:  w.date,
+        ts:    w.timestamp || w.date,
       });
     });
 
-    // Merge community posts
     posts.forEach(p => items.push({
-      type:  p.type || 'update',
-      user:  p.user || username,
-      text:  p.text,
-      ts:    p.ts,
-      date:  p.ts ? p.ts.slice(0, 10) : '',
-      emoji: p.type === 'pr' ? '🏆' : p.type === 'update' ? '📝' : '💪',
+      kind: 'post',
+      type: p.type || 'update',
+      user: p.user || username,
+      text: p.text,
+      ts:   p.ts,
+      date: p.ts ? _localISO(new Date(p.ts)) : '',
     }));
 
     // Sort newest-first
     items.sort((a, b) => (b.ts || b.date || '') > (a.ts || a.date || '') ? 1 : -1);
     return items.slice(0, 30);
+  }
+
+  function _head(item, sub, chip) {
+    const user = _attr(item.user);
+    return `
+      <div class="sx-post-h">
+        <span class="sx-av" data-avatar-user="${user}" data-avatar-open>${_initial(item.user)}</span>
+        <div style="min-width:0"><b>${user}</b><small>${sub}</small></div>
+        ${chip}
+      </div>`;
+  }
+
+  function _cardHTML(item, i) {
+    if (item.kind === 'session') {
+      const s = item.stats;
+      const vol = _fmtKg(s.volume);
+      const when = item.ts && item.ts !== item.date ? _timeAgo(item.ts) : '';
+      const sub = `${_attr(item.title)}${when ? ` · ${when}` : ''}`;
+      const names = s.names.slice(0, 3).map(_attr).join(', ') + (s.names.length > 3 ? ` +${s.names.length - 3}` : '');
+      return `
+        <article class="pod sx-post sx-in" style="--i:${i}">
+          ${_head(item, sub, '<span class="sx-chip sx-chip--up">Workout</span>')}
+          <div class="sx-wk">
+            <div><span class="sx-lbl">Volume</span><span class="sx-num">${vol.n}<small>${vol.u}</small></span></div>
+            <div><span class="sx-lbl">Exercises</span><span class="sx-num">${s.exercises}</span></div>
+            <div><span class="sx-lbl">Sets</span><span class="sx-num">${s.sets}</span></div>
+          </div>
+          ${s.top ? `<div class="sx-topset"><span>Top set</span><b>${_attr(s.top.name)} ${s.top.kg} kg × ${s.top.reps}</b></div>`
+            : names ? `<div class="sx-topset"><span>Exercises</span><b>${names}</b></div>` : ''}
+        </article>`;
+    }
+
+    const sub = `${item.type === 'pr' ? 'New PR' : item.type === 'workout' ? 'Workout' : 'Update'} · ${_timeAgo(item.ts) || _attr(item.date)}`;
+    if (item.type === 'pr') {
+      return `
+        <article class="pod sx-post sx-post--pr sx-in" style="--i:${i}">
+          ${_head(item, sub, '<span class="sx-chip sx-chip--down">PR</span>')}
+          <div class="sx-pr-row">
+            <span class="sx-medal">${_icon('trophy')}</span>
+            <p>${_attr(item.text)}</p>
+          </div>
+        </article>`;
+    }
+    const chip = item.type === 'workout' ? '<span class="sx-chip sx-chip--up">Workout</span>' : '<span class="sx-chip">Update</span>';
+    return `
+      <article class="pod sx-post sx-in" style="--i:${i}">
+        ${_head(item, sub, chip)}
+        <p>${_attr(item.text)}</p>
+      </article>`;
   }
 
   function renderActivityFeed() {
@@ -95,49 +206,68 @@
     // Update composer avatar
     const av = document.getElementById('feedComposerAvatar');
     if (av) {
-      av.textContent = _initial(username);
+      if (!av.querySelector('img')) av.textContent = _initial(username);
       if (username) av.setAttribute('data-avatar-user', username);
     }
+    const seg = document.getElementById('feedTagSeg');
+    if (seg && window.sxPlaceThumb) window.sxPlaceThumb(seg);
 
     if (!username) {
-      container.innerHTML = `<p class="feed-empty">Log in to see your activity feed.</p>`;
+      container.innerHTML = `<div class="pod sx-empty">Log in to see your activity feed.</div>`;
       return;
     }
 
     const items = _buildActivityItems(username);
     if (!items.length) {
-      container.innerHTML = `<p class="feed-empty">No activity yet — log a workout to get started!</p>`;
+      container.innerHTML = `<div class="pod sx-empty">No activity yet. Log a workout and it shows up here.</div>`;
       return;
     }
 
-    container.innerHTML = items.map(item => `
-      <div class="feed-card">
-        <div class="feed-card-avatar" data-avatar-user="${_attr(item.user)}" data-avatar-open>${_initial(item.user)}</div>
-        <div class="feed-card-body">
-          <div class="feed-card-header">
-            <strong class="feed-card-name">${item.user}</strong>
-            <span class="feed-card-type ${item.type}">${item.emoji}</span>
-            <span class="feed-card-time">${item.date || ''}</span>
-          </div>
-          <p class="feed-card-text">${item.text}</p>
-        </div>
-      </div>`).join('');
+    let last = null;
+    container.innerHTML = items.map((item, i) => {
+      const bucket = dayBucket(item.date);
+      const label = bucket !== last ? `<div class="sx-lbl sx-day-lbl">${bucket}</div>` : '';
+      last = bucket;
+      return label + _cardHTML(item, Math.min(i, 8));
+    }).join('');
+    _replay(container);
   }
 
   window.renderActivityFeed = renderActivityFeed;
 
-  /* ── ⑪ Post composer ─────────────────────────────────────── */
+  /* ── Post composer ───────────────────────────────────────── */
 
   let _selectedPostTag = 'workout';
 
-  // Wire tag buttons
-  document.querySelectorAll('.feed-tag-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.feed-tag-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      _selectedPostTag = btn.dataset.tag;
+  function _setComposerOpen(open) {
+    const toggle = document.getElementById('feedComposerToggle');
+    const body   = document.getElementById('feedComposerBody');
+    if (!toggle || !body) return;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    body.classList.toggle('is-open', open);
+    if (open) {
+      const seg = document.getElementById('feedTagSeg');
+      setTimeout(() => {
+        if (seg && window.sxPlaceThumb) window.sxPlaceThumb(seg);
+        const ta = document.getElementById('feedPostText');
+        if (ta) ta.focus({ preventScroll: true });
+      }, 60);
+    }
+  }
+
+  function _initComposer() {
+    const toggle = document.getElementById('feedComposerToggle');
+    if (toggle) toggle.addEventListener('click', () => _setComposerOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+
+    document.querySelectorAll('.feed-tag-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.feed-tag-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _selectedPostTag = btn.dataset.tag;
+        if (window.sxPlaceThumb) window.sxPlaceThumb(btn.parentElement);
+      });
     });
-  });
+  }
 
   function submitCommunityPost() {
     const ta       = document.getElementById('feedPostText');
@@ -150,15 +280,24 @@
     // Keep last 200
     _save('communityPosts_v1', posts.slice(0, 200));
     if (ta) ta.value = '';
+    _setComposerOpen(false);
     renderActivityFeed();
+    if (typeof window.showToast === 'function') window.showToast('Posted');
   }
 
   window.submitCommunityPost = submitCommunityPost;
 
-  /* ── ⑦ Filter pills for group search ────────────────────── */
+  /* ── Group filter chips + sort link ─────────────────────── */
+
+  const SORT_MODES = [
+    { value: '',        label: 'Default' },
+    { value: 'active',  label: 'Most active' },
+    { value: 'members', label: 'Most members' },
+    { value: 'alpha',   label: 'A–Z' },
+  ];
 
   function _initGroupFilterPills() {
-    // Tag pills → sync to hidden #tagFilter input + call doGroupSearch
+    // Tag chips → sync to hidden #tagFilter input + call doGroupSearch
     document.querySelectorAll('#commTagPills .comm-pill').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('#commTagPills .comm-pill').forEach(b => b.classList.remove('active'));
@@ -169,29 +308,32 @@
       });
     });
 
-    // Sort pills → sync to hidden #sortFilter select + call doGroupSearch
-    document.querySelectorAll('#commSortPills .comm-sort-pill').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#commSortPills .comm-sort-pill').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+    // Sort link cycles through the modes → hidden #sortFilter select
+    const sortBtn = document.getElementById('commSortLink');
+    if (sortBtn) {
+      sortBtn.addEventListener('click', () => {
         const sf = document.getElementById('sortFilter');
-        if (sf) sf.value = btn.dataset.sort;
+        const cur = SORT_MODES.findIndex(m => m.value === (sf ? sf.value : ''));
+        const next = SORT_MODES[(cur + 1) % SORT_MODES.length];
+        if (sf) sf.value = next.value;
+        const lbl = document.getElementById('commSortLabel');
+        if (lbl) lbl.textContent = next.label;
         if (window.doGroupSearch) window.doGroupSearch();
       });
-    });
+    }
   }
 
-  // Also patch clearGroupFilters to reset pills
+  // Also patch clearGroupFilters to reset the chips and sort label
   const _origClear = window.clearGroupFilters;
   window.clearGroupFilters = function () {
     if (_origClear) _origClear();
     document.querySelectorAll('#commTagPills .comm-pill').forEach((b, i) =>
       b.classList.toggle('active', i === 0));
-    document.querySelectorAll('#commSortPills .comm-sort-pill').forEach((b, i) =>
-      b.classList.toggle('active', i === 0));
+    const lbl = document.getElementById('commSortLabel');
+    if (lbl) lbl.textContent = SORT_MODES[0].label;
   };
 
-  /* ── ⑩ Weekly challenge card ─────────────────────────────── */
+  /* ── Weekly challenge card ───────────────────────────────── */
 
   const WEEKLY_GOALS = [
     { label: 'Log 4 workouts',           key: 'workouts',  target: 4 },
@@ -203,48 +345,46 @@
   function _thisWeekStart() {
     const d = new Date();
     const day = d.getDay(); // 0=Sun
-    const diff = (day === 0 ? -6 : 1 - day);
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
+    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+    return _localISO(d);
   }
 
   function _weeklyProgress(username) {
     const weekStart = _thisWeekStart();
-    const today     = new Date().toISOString().slice(0, 10);
+    const today     = _localISO(new Date());
     // Merge workouts_{user} with workoutHistory_{user} for the same reason
     // as _buildActivityItems above — see archiveOldWorkouts.js.
     const workouts  = ((window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [])
       .filter(w => w.date >= weekStart && w.date <= today);
 
-    // Pick the "challenge of the week" based on ISO week number
+    // Pick the "challenge of the week" based on the week of the month
     const wk = Math.ceil(new Date().getDate() / 7);
     const challenge = WEEKLY_GOALS[wk % WEEKLY_GOALS.length];
 
     let progress = 0;
+    let doneDates = new Set();
     if (challenge.key === 'workouts') {
-      progress = workouts.length;
+      progress  = workouts.length;
+      doneDates = new Set(workouts.map(w => String(w.date).slice(0, 10)));
     } else if (challenge.key === 'cardio') {
-      const cardio = _parse(`cardioLog_${username}`) || _parse('cardioLog') || [];
-      progress = cardio.filter(e => e.date >= weekStart).length;
+      const cardio = (_parse(`cardioLog_${username}`) || _parse('cardioLog') || []).filter(e => e.date >= weekStart);
+      progress  = cardio.length;
+      doneDates = new Set(cardio.map(e => String(e.date).slice(0, 10)));
     } else if (challenge.key === 'daily') {
-      const workedDates = new Set(workouts.map(w => w.date));
-      let d = new Date(weekStart);
-      const end = new Date(today);
-      while (d <= end) {
-        if (workedDates.has(d.toISOString().slice(0, 10))) progress++;
-        d.setDate(d.getDate() + 1);
-      }
+      doneDates = new Set(workouts.map(w => String(w.date).slice(0, 10)));
+      progress  = doneDates.size;
     } else if (challenge.key === 'protein') {
       const diary = _parse(`foodDiary_${username}`) || [];
       const targets = _parse(`macroTargets_${username}`) || {};
       const pTarget = targets.protein || 0;
       if (pTarget > 0) {
-        progress = diary.filter(e => e.date >= weekStart && (e.protein || 0) >= pTarget).length;
+        const hit = diary.filter(e => e.date >= weekStart && (e.protein || 0) >= pTarget);
+        progress  = hit.length;
+        doneDates = new Set(hit.map(e => String(e.date).slice(0, 10)));
       }
     }
 
-    return { challenge, progress, target: challenge.target };
+    return { challenge, progress, target: challenge.target, doneDates, weekStart, today };
   }
 
   function renderWeeklyChallenge() {
@@ -253,30 +393,43 @@
     const username = _user();
     if (!username) { el.innerHTML = ''; return; }
 
-    const { challenge, progress, target } = _weeklyProgress(username);
-    const pct     = Math.min(100, Math.round((progress / target) * 100));
-    const done    = progress >= target;
+    const { challenge, progress, target, doneDates, weekStart, today } = _weeklyProgress(username);
+    const done = progress >= target;
+    const ring = window.sxRing
+      ? window.sxRing(progress / target, `<span class="sx-num">${Math.min(progress, target)}/${target}</span>`, done)
+      : '';
+
+    const start = new Date(weekStart + 'T12:00:00');
+    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((letter, i) => {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const iso = _localISO(d);
+      const cls = [doneDates.has(iso) ? 'is-done' : '', iso === today ? 'is-today' : ''].join(' ');
+      return `<div class="sx-day ${cls}"><i></i>${letter}</div>`;
+    }).join('');
+
+    const daysLeft = 7 - Math.round((new Date(today + 'T12:00:00') - start) / 86400000) - 1;
+    const sub = done
+      ? '<b>Challenge complete.</b> Nice work.'
+      : `${target - progress} to go · ${daysLeft <= 0 ? 'last day' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}`;
 
     el.innerHTML = `
-      <div class="comm-challenge-card ${done ? 'done' : ''}">
-        <div class="comm-challenge-header">
-          <span class="comm-challenge-icon">${done ? '✅' : '🎯'}</span>
-          <div class="comm-challenge-info">
-            <div class="comm-challenge-title">This week's challenge</div>
-            <div class="comm-challenge-label">${challenge.label}</div>
+      <div class="pod pod--hero" style="margin-bottom:14px">
+        <div class="sx-chal">
+          ${ring}
+          <div style="min-width:0">
+            <div class="sx-lbl">This week's challenge</div>
+            <div class="sx-chal-t">${challenge.label}</div>
+            <div class="sx-chal-sub">${sub}</div>
           </div>
-          <div class="comm-challenge-count">${progress}/${target}</div>
         </div>
-        <div class="comm-challenge-bar-wrap">
-          <div class="comm-challenge-bar" style="width:${pct}%"></div>
-        </div>
-        ${done ? '<div class="comm-challenge-badge">🏅 Challenge complete!</div>' : ''}
+        <div class="sx-days" aria-hidden="true">${days}</div>
       </div>`;
+    if (window.sxFillRings) window.sxFillRings(el);
   }
 
   window.renderWeeklyChallenge = renderWeeklyChallenge;
 
-  /* ── ⑨ Exercise leaderboard inline ─────────────────────── */
+  /* ── Exercise leaderboard inline ─────────────────────────── */
 
   function _initExerciseLbInline() {
     const sel = document.getElementById('exerciseLbSelectInline');
@@ -346,6 +499,7 @@
 
   function _init() {
     _initGroupFilterPills();
+    _initComposer();
     _initExerciseLbInline();
   }
 
