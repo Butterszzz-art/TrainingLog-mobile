@@ -342,48 +342,155 @@ function calculateLeaderboard(members) {
   };
 }
 
+const GROUP_TAG_STYLES = ['strength', 'hypertrophy', 'conditioning', 'crossfit'];
+
+function _escGroup(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function _groupInitials(name) {
+  const words = String(name || '?').trim().split(/\s+/).filter(Boolean);
+  const two = words.length > 1 ? words[0][0] + words[1][0] : String(name || '?').slice(0, 2);
+  return two.toUpperCase();
+}
+
+// Posts per day for the last 7 days, oldest first, today last.
+function groupActivity7d(posts, now = new Date()) {
+  const out = new Array(7).fill(0);
+  const dayKey = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const index = {};
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (6 - i));
+    index[dayKey(d)] = i;
+  }
+  (Array.isArray(posts) ? posts : []).forEach(p => {
+    if (!p || !p.date) return;
+    const d = new Date(p.date);
+    if (Number.isNaN(d.getTime())) return;
+    const i = index[dayKey(d)];
+    if (i !== undefined) out[i]++;
+  });
+  return out;
+}
+
+function _groupTagStyle(g) {
+  const tag = (g.tags || []).map(t => String(t).toLowerCase()).find(t => GROUP_TAG_STYLES.includes(t));
+  return tag ? `sx-mono--${tag}` : '';
+}
+
+function _groupMeta(g) {
+  const count = Array.isArray(g.members) ? g.members.length : 0;
+  const tag = (g.tags || [])[0];
+  return `${tag ? `${_escGroup(tag)} · ` : ''}${count} member${count === 1 ? '' : 's'}`;
+}
+
+function _groupBars(g) {
+  const days = groupActivity7d(g.posts);
+  if (!days.some(Boolean)) return '';
+  const max = Math.max(...days);
+  return `<div class="sx-bars" role="img" aria-label="Posts per day, last 7 days">${days.map((n, i) =>
+    `<i class="${i === 6 ? 'is-today' : ''}" style="height:${Math.round((n / max) * 100)}%;--b:${i}"></i>`).join('')}</div>`;
+}
+
+function _groupLastActive(g) {
+  // Newest post, whatever order the posts arrived in
+  const t = Math.max(0, ...(Array.isArray(g.posts) ? g.posts : [])
+    .map(p => new Date(p && p.date).getTime()).filter(n => !Number.isNaN(n)));
+  if (!t) return 'No posts yet';
+  const days = Math.floor((Date.now() - t) / 86400000);
+  return days <= 0 ? 'Active today' : days === 1 ? 'Active yesterday' : `Active ${days}d ago`;
+}
+
+function _groupHead(g) {
+  return `
+    <div class="sx-g-h">
+      <span class="sx-mono ${_groupTagStyle(g)}">${_escGroup(_groupInitials(g.name))}</span>
+      <div style="min-width:0"><span class="sx-g-name">${_escGroup(g.name)}</span><span class="sx-g-meta">${_groupMeta(g)}</span></div>
+    </div>`;
+}
+
 function renderGroups(list) {
   const container = document.getElementById('groupList');
   if (!container) return;
-  container.innerHTML = '';
-  list.forEach(g => {
-    const card = document.createElement('div');
-    card.className = 'group-card card group-item';
+  const userId = getCurrentUserId();
+  const mine   = list.filter(g => isMemberOf(g, userId));
+  const others = list.filter(g => !isMemberOf(g, userId));
 
-    const title = document.createElement('div');
-    title.className = 'group-title';
-    title.textContent = g.name;
-    card.appendChild(title);
+  // Your groups: swipeable row
+  const mineWrap = document.getElementById('groupMineWrap');
+  const mineEl   = document.getElementById('groupMine');
+  if (mineWrap && mineEl) {
+    mineWrap.style.display = mine.length ? '' : 'none';
+    const mineCount = document.getElementById('groupMineCount');
+    if (mineCount) mineCount.textContent = mine.length;
+    mineEl.innerHTML = mine.map((g, i) => `
+      <div class="pod ${i === 0 ? 'pod--hero' : ''} sx-in" style="--i:${i}" role="button" tabindex="0" data-group-open="${i}">
+        ${_groupHead(g)}
+        <div class="sx-g-foot"><span class="sx-g-ct">${_groupLastActive(g)}</span>${_groupBars(g)}</div>
+      </div>`).join('');
+    mineEl.querySelectorAll('[data-group-open]').forEach(card => {
+      const g = mine[+card.dataset.groupOpen];
+      card.addEventListener('click', () => openGroup(g.id));
+      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openGroup(g.id); } });
+    });
+  }
 
-    const descText = g.goal && g.goal.trim() ? g.goal : 'No description';
-    const desc = document.createElement('div');
-    desc.className = 'group-desc';
-    desc.textContent = descText;
-    card.appendChild(desc);
+  // Discover list
+  if (!others.length) {
+    const searching = !!(document.getElementById('groupSearchInput')?.value || document.getElementById('tagFilter')?.value);
+    container.innerHTML = `<div class="pod sx-empty">${searching ? 'No groups match that search.'
+      : mine.length ? "You're in every group so far. Start a new one below." : 'No groups yet. Start the first one below.'}</div>`;
+  } else {
+    container.innerHTML = others.map((g, i) => {
+      const members = Array.isArray(g.members) ? g.members : [];
+      const faces = members.slice(0, 3).map(m => {
+        const id = _escGroup(m.username || m.userId || '');
+        return `<span class="sx-av sx-av--sm" data-avatar-user="${id}">${_escGroup(String(id).slice(0, 1).toUpperCase() || '?')}</span>`;
+      }).join('');
+      const tags = (g.tags || []).slice(0, 3).map(t => `<span class="mx-tag">${_escGroup(t)}</span>`).join('');
+      return `
+        <article class="pod sx-gcard group-item sx-in" style="--i:${Math.min(i, 8)}">
+          ${_groupHead(g)}
+          ${g.goal && g.goal.trim() ? `<p>${_escGroup(g.goal)}</p>` : ''}
+          ${tags ? `<div class="sx-tags">${tags}</div>` : ''}
+          <div class="sx-g-foot">
+            ${faces ? `<div class="sx-stack">${faces}</div>` : ''}
+            <span class="sx-g-ct">${members.length > 3 ? `+${members.length - 3}` : _groupLastActive(g)}</span>
+            ${_groupBars(g)}
+            <button type="button" class="sx-join" data-join="${i}">Join</button>
+          </div>
+        </article>`;
+    }).join('');
+    container.querySelectorAll('[data-join]').forEach(btn => {
+      const g = others[+btn.dataset.join];
+      btn.addEventListener('click', () => {
+        if (!getCurrentUserId()) { joinGroup(g.id); return; }
+        btn.classList.add('is-joined');
+        btn.disabled = true;
+        const check = typeof ICONS !== 'undefined' && ICONS.check ? `<span class="ui-icon" data-icon="check">${ICONS.check}</span>` : '';
+        btn.innerHTML = `${check}Joined`;
+        setTimeout(() => joinGroup(g.id), 450);
+      });
+    });
+  }
 
-    const count = Array.isArray(g.members) ? g.members.length : 0;
-    const members = document.createElement('div');
-    members.className = 'group-members';
-    members.textContent = `${count} member${count === 1 ? '' : 's'}`;
-    card.appendChild(members);
-
-    const isMember = isMemberOf(g, getCurrentUserId());
-    const btn = document.createElement('button');
-    btn.className = 'action-btn';
-    btn.textContent = isMember ? 'View Group' : 'Join';
-    btn.onclick = () => {
-      if (isMember) openGroup(g.id); else joinGroup(g.id);
-    };
-    card.appendChild(btn);
-
-    container.appendChild(card);
-  });
+  const panel = document.getElementById('groupsPanel');
+  if (panel) { panel.classList.remove('sx-anim'); void panel.offsetWidth; panel.classList.add('sx-anim'); }
 }
 
 function getCurrentUserId() {
   if (typeof window !== 'undefined' && window.currentUser) return window.currentUser;
+  // index.html keeps the signed-in username in a script-level `let
+  // currentUser`, which is not a window property.
+  if (typeof window !== 'undefined' && typeof window.getActiveUsername === 'function') {
+    const active = window.getActiveUsername();
+    if (active) return active;
+  }
   if (typeof localStorage !== 'undefined') {
-    const stored = localStorage.getItem('currentUser');
+    const stored = localStorage.getItem('currentUser') || localStorage.getItem('fitnessAppUser');
     if (stored) return stored;
   }
   return null;
@@ -522,6 +629,8 @@ function showCommunitySection(section) {
   document.querySelectorAll('.comm-nav-btn').forEach(b => b.classList.remove('active'));
   const activeBtn = document.getElementById(navMap[section]);
   if (activeBtn) activeBtn.classList.add('active');
+  const nav = document.getElementById('commNav');
+  if (nav && window.sxPlaceThumb) window.sxPlaceThumb(nav);
 
   if (section === 'groups') {
     loadGroups();
@@ -677,5 +786,5 @@ if (typeof window !== 'undefined') {
 
 // allow tests to import functions
 if (typeof module !== 'undefined') {
-  module.exports = { calculateLeaderboard, filterGroups, sortGroups };
+  module.exports = { calculateLeaderboard, filterGroups, sortGroups, groupActivity7d };
 }

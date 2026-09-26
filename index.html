@@ -51,6 +51,7 @@
   <link rel="stylesheet" href="css/engagement.css">
   <link rel="stylesheet" href="css/macros-today.css">
   <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/social-ui.css">
   <link rel="stylesheet" href="css/performance-mode.css">
   <link rel="stylesheet" href="css/profiles.css">
   <link rel="manifest" href="manifest.json">
@@ -2318,12 +2319,16 @@
 </div>
 
 <div id="communityTab" class="tab-content">
-  <nav class="community-nav">
-    <button class="comm-nav-btn" onclick="showCommunitySection('groups')"      id="commNavGroups"><span class="ui-icon" data-icon="users"></span> Groups</button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('feed')"        id="commNavFeed"><span class="ui-icon" data-icon="megaphone"></span> Feed</button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('competition')" id="commNavCompetition"><span class="ui-icon" data-icon="trophy"></span> Leaderboard</button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('share')"       id="commNavShare"><span class="ui-icon" data-icon="link"></span> Share<span id="commShareBadge" class="comm-nav-badge" style="display:none">0</span></button>
-    <button class="comm-nav-btn" onclick="showCommunitySection('friends')"     id="commNavFriends"><span class="ui-icon" data-icon="handshake"></span> Friends<span id="commFriendsBadge" class="comm-nav-badge" style="display:none">0</span></button>
+  <div class="sx-head">
+    <div><div class="sx-lbl">Your people</div><h2 class="sx-title">Community</h2></div>
+    <button type="button" class="sx-link" onclick="showTab('leaderboardTab')"><span class="ui-icon" data-icon="trophy"></span>Leaderboard</button>
+  </div>
+  <nav class="sx-seg" id="commNav" role="tablist" aria-label="Community sections">
+    <span class="sx-seg-thumb"></span>
+    <button class="comm-nav-btn" role="tab" onclick="showCommunitySection('groups')"  id="commNavGroups">Groups</button>
+    <button class="comm-nav-btn" role="tab" onclick="showCommunitySection('feed')"    id="commNavFeed">Feed</button>
+    <button class="comm-nav-btn" role="tab" onclick="showCommunitySection('friends')" id="commNavFriends">Friends<span id="commFriendsBadge" class="comm-nav-badge" style="display:none">0</span></button>
+    <button class="comm-nav-btn" role="tab" onclick="showCommunitySection('share')"   id="commNavShare">Share<span id="commShareBadge" class="comm-nav-badge" style="display:none">0</span></button>
   </nav>
 
   <!-- ── Groups panel ── -->
@@ -2333,27 +2338,30 @@
     <!-- ⑩ Weekly challenge card -->
     <div id="communityChallenge"></div>
 
-    <!-- ⑦ Filter pills replacing raw inputs -->
-    <div class="comm-filter-row">
-      <input id="groupSearchInput" class="comm-search-input" placeholder="Search groups…"
-             oninput="doGroupSearch()">
-      <button class="comm-clear-btn" onclick="clearGroupFilters()" title="Clear"><span class="ui-icon" data-icon="x"></span></button>
+    <!-- Your groups (filled by renderGroups) -->
+    <div id="groupMineWrap" style="display:none;">
+      <div class="sx-sec"><span class="sx-lbl">Your groups</span><span class="sx-lbl" id="groupMineCount"></span></div>
+      <div id="groupMine" class="sx-mine"></div>
     </div>
-    <div class="comm-tag-pills" id="commTagPills">
+
+    <div class="sx-sec">
+      <span class="sx-lbl">Discover</span>
+      <span style="display:flex;gap:16px">
+        <button type="button" class="sx-link" id="commSortLink" aria-label="Change sort order"><span class="ui-icon" data-icon="refresh"></span><span id="commSortLabel">Default</span></button>
+        <button type="button" class="sx-link" onclick="loadGroups()">Refresh</button>
+      </span>
+    </div>
+    <div class="sx-search">
+      <span class="ui-icon" data-icon="search"></span>
+      <input id="groupSearchInput" placeholder="Search groups" aria-label="Search groups" oninput="doGroupSearch()">
+      <button type="button" class="sx-clear" onclick="clearGroupFilters()" aria-label="Clear search and filters"><span class="ui-icon" data-icon="x"></span></button>
+    </div>
+    <div class="sx-chips comm-tag-pills" id="commTagPills">
       <button class="comm-pill active" data-tag="">All</button>
       <button class="comm-pill" data-tag="strength">Strength</button>
       <button class="comm-pill" data-tag="hypertrophy">Hypertrophy</button>
       <button class="comm-pill" data-tag="conditioning">Conditioning</button>
       <button class="comm-pill" data-tag="crossfit">CrossFit</button>
-    </div>
-    <div class="comm-sort-row">
-      <span class="comm-sort-label">Sort:</span>
-      <div id="commSortPills">
-        <button class="comm-sort-pill active" data-sort="">Default</button>
-        <button class="comm-sort-pill" data-sort="members">Members</button>
-        <button class="comm-sort-pill" data-sort="active">Active</button>
-        <button class="comm-sort-pill" data-sort="alpha">A-Z</button>
-      </div>
     </div>
 
     <!-- Hidden inputs kept for doGroupSearch() compatibility -->
@@ -2362,36 +2370,39 @@
     <select id="sortFilter" style="display:none;"><option value=""></option><option value="members">Most Members</option><option value="active">Recently Active</option><option value="alpha">Alphabetical (A-Z)</option></select>
     <button id="groupSearchBtn" style="display:none;"></button>
 
-    <div id="groupList" class="group-list"></div>
-    <div class="community-actions">
-      <button class="action-btn" onclick="showCreateGroup()">+ Create Group</button>
-      <button class="action-btn" onclick="loadGroups()">Refresh</button>
-    </div>
+    <div id="groupList" class="group-list sx-list" style="gap:8px;margin-top:12px"></div>
+    <button type="button" class="sx-fab" onclick="showCreateGroup()"><span class="ui-icon" data-icon="plus"></span>Create group</button>
     <div id="groupDetail" style="display:none;"></div>
   </div>
 
   <!-- ⑥⑪ Feed panel: activity + posts -->
   <div id="feedPanel" class="panel" style="display:none;">
 
-    <!-- ⑪ Post composer -->
-    <div class="feed-composer">
-      <div class="feed-composer-top">
-        <div class="feed-avatar" id="feedComposerAvatar">Y</div>
-        <textarea id="feedPostText" class="feed-textarea"
-                  placeholder="Share a workout, PR, or update…" rows="2"></textarea>
-      </div>
-      <div class="feed-composer-actions">
-        <div class="feed-tag-group">
-          <button class="feed-tag-btn active" data-tag="workout"><span class="ui-icon" data-icon="dumbbell"></span> Workout</button>
-          <button class="feed-tag-btn" data-tag="pr"><span class="ui-icon" data-icon="trophy"></span> PR</button>
-          <button class="feed-tag-btn" data-tag="update"><span class="ui-icon" data-icon="pencil"></span> Update</button>
+    <!-- Post composer: one line until tapped -->
+    <button type="button" class="sx-composer" id="feedComposerToggle" aria-expanded="false" aria-controls="feedComposerBody" aria-label="Write a post">
+      <span class="sx-av sx-av--sm" id="feedComposerAvatar">Y</span>
+      <span class="sx-composer-ph">Share a workout, PR or update</span>
+      <span class="sx-plus"><span class="ui-icon" data-icon="plus"></span></span>
+    </button>
+    <div class="sx-composer-body" id="feedComposerBody">
+      <div>
+        <div class="pod">
+          <textarea id="feedPostText" placeholder="Share a workout, PR, or update…" rows="2" aria-label="Post text"></textarea>
+          <div class="sx-composer-row">
+            <div class="sx-seg feed-tag-group" id="feedTagSeg" role="group" aria-label="Post type">
+              <span class="sx-seg-thumb"></span>
+              <button class="feed-tag-btn active" data-tag="workout">Workout</button>
+              <button class="feed-tag-btn" data-tag="pr">PR</button>
+              <button class="feed-tag-btn" data-tag="update">Update</button>
+            </div>
+            <button type="button" class="sx-post-btn" onclick="submitCommunityPost()">Post</button>
+          </div>
         </div>
-        <button class="feed-post-btn" onclick="submitCommunityPost()">Post</button>
       </div>
     </div>
 
     <!-- ⑥ Activity feed -->
-    <div id="activityFeed" class="activity-feed">
+    <div id="activityFeed" class="sx-feed" style="margin-top:14px">
       <!-- populated by renderActivityFeed() -->
     </div>
   </div>
@@ -2482,47 +2493,56 @@
 </div><!-- /communityTab -->
 
 <div id="leaderboardTab" class="tab-content">
-  <div class="lb-page">
+  <div id="lbPage">
 
-    <!-- ① Always-visible personal stats (local data, no backend needed) -->
-    <div id="lbPersonalStats" class="lb-personal-stats">
-      <!-- populated by renderPersonalStats() -->
+    <div class="sx-head">
+      <div><div class="sx-lbl">Community</div><h2 class="sx-title">Leaderboard</h2></div>
+      <button type="button" class="sx-link" onclick="showTab('communityTab')"><span class="ui-icon" data-icon="users"></span>Community</button>
     </div>
 
-    <!-- ② Your rank banner (shown after backend fetch) -->
+    <!-- Sort (segmented control; .lb-sort-pill buttons are wired in initLeaderboard) -->
+    <div class="sx-seg" id="lbSortPills" role="tablist" aria-label="Rank by">
+      <span class="sx-seg-thumb"></span>
+      <button class="lb-sort-pill active" role="tab" data-sort="workoutsLogged">Workouts</button>
+      <button class="lb-sort-pill" role="tab" data-sort="totalVolume">Volume</button>
+    </div>
+    <!-- hidden select kept for JS compatibility -->
+    <select id="leaderSortStatic" style="display:none;">
+      <option value="workoutsLogged">Workouts Logged</option>
+      <option value="totalVolume">Total Volume</option>
+    </select>
+
+    <!-- Your rank card (filled after the backend fetch) -->
     <div id="lbYourRank" style="display:none;"></div>
 
-    <!-- ③ Sort controls -->
-    <div class="lb-controls">
-      <span class="lb-controls-label">Sort by</span>
-      <div class="lb-sort-pills" id="lbSortPills">
-        <button class="lb-sort-pill active" data-sort="workoutsLogged">Workouts</button>
-        <button class="lb-sort-pill" data-sort="totalVolume">Volume</button>
-      </div>
-      <!-- hidden select kept for JS compatibility -->
-      <select id="leaderSortStatic" style="display:none;">
-        <option value="workoutsLogged">Workouts Logged</option>
-        <option value="totalVolume">Total Volume</option>
-      </select>
-    </div>
+    <!-- Top three -->
+    <div id="lbPodium" class="sx-podium"></div>
 
-    <!-- ④ Rank list -->
-    <div id="leaderboardContainer" class="lb-list"></div>
+    <!-- Two above and two below you, when you're outside the top five -->
+    <div id="lbAroundYou" style="display:none;"></div>
+
+    <!-- Everyone else -->
+    <div id="lbTableHead" class="sx-sec" style="display:none;"><span class="sx-lbl">Everyone</span><span class="sx-lbl" id="lbCount"></span></div>
+    <div id="leaderboardContainer" class="sx-list"></div>
     <div id="leaderboardLoading" class="lb-loading" style="display:none;">
       <div class="lb-spinner"></div><span>Loading leaderboard…</span>
     </div>
-    <p id="leaderboardEmpty" class="lb-empty" style="display:none;">
-      No community data yet — be the first to show up here!
+    <p id="leaderboardEmpty" class="sx-note" style="display:none;margin-top:14px">
+      No community data yet. Log a workout to be the first on the board.
     </p>
 
-    <!-- ⑤ Charts (collapsible) -->
+    <!-- Local personal stats (no backend needed) -->
+    <div class="sx-sec"><span class="sx-lbl">Your numbers</span><span class="sx-lbl" style="color:var(--mx-faint)">On this device</span></div>
+    <div id="lbPersonalStats"></div>
+
+    <!-- Charts (collapsible) -->
     <details class="lb-charts-section">
-      <summary class="lb-charts-summary"><span class="ui-icon" data-icon="barChart"></span> Charts</summary>
+      <summary class="lb-charts-summary"><span class="ui-icon" data-icon="barChart"></span> Volume chart</summary>
       <canvas id="lbBarChart" height="220"></canvas>
       <canvas id="lbLineChart" height="200" style="margin-top:16px;"></canvas>
     </details>
 
-    <!-- ⑨ Exercise leaderboard inline (replaces hidden separate tab) -->
+    <!-- Exercise leaderboard inline -->
     <details class="lb-charts-section lb-exercise-section" id="lbExerciseSection">
       <summary class="lb-charts-summary"><span class="ui-icon" data-icon="dumbbell"></span> Exercise Leaderboard</summary>
       <div class="lb-exercise-inner">
@@ -3800,7 +3820,7 @@
             <span class="all-hub-sub">Feed and friends</span>
           </span>
         </button>
-        <button class="all-hub-tile all-hub-card" data-tab="communityTab" onclick="showTab('communityTab'); if (window.showCommunitySection) showCommunitySection('competition')">
+        <button class="all-hub-tile all-hub-card" data-tab="leaderboardTab" onclick="showTab('leaderboardTab')">
           <span class="more-drawer-icon" data-icon="trophy"></span>
           <span class="all-hub-text">
             <span class="all-hub-name">Leaderboard</span>
@@ -3901,6 +3921,7 @@
 <script src="archiveOldWorkouts.js"></script>
 <script src="src/js/workout-data.js"></script>
 <script src="progressiveOverload.js"></script>
+<script src="src/js/social-ui.js"></script>
 <script src="community.js"></script>
 <script src="exerciseMuscleMap.js"></script>
 <script src="src/js/customExercises.js"></script>
