@@ -100,24 +100,9 @@
 
   /* ── Toast ───────────────────────────────────────────────────── */
 
+  // Builder "errors" are all fix-it prompts (missing title, pop-up blocked), so they read as warnings.
   function showToast(msg, isError = false) {
-    let el = document.getElementById('pbv2Toast');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'pbv2Toast';
-      document.body.appendChild(el);
-    }
-    el.className = isError ? 'error' : '';
-    el.textContent = msg;
-    requestAnimationFrame(() => {
-      el.style.opacity = '1';
-      el.style.transform = 'translateX(-50%) translateY(0)';
-    });
-    clearTimeout(el._timer);
-    el._timer = setTimeout(() => {
-      el.style.opacity = '0';
-      el.style.transform = 'translateX(-50%) translateY(12px)';
-    }, 3200);
+    if (typeof window.showToast === 'function') window.showToast(msg, isError ? 'warn' : 'success', 3200);
   }
 
   /* ── PDF export ──────────────────────────────────────────────── */

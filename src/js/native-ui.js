@@ -3,7 +3,7 @@
  * Mobile-safe replacements for alert(), confirm(), prompt().
  *
  * Globals exposed:
- *   window.showToast(msg, type, duration)  → void
+ *   window.showToast(msg, type, duration)  → void  (alias: window.nativeToast)
  *   window.showConfirm(msg, opts)          → Promise<boolean>
  *   window.showPrompt(msg, opts)           → Promise<string|null>
  *
@@ -15,8 +15,38 @@
   'use strict';
 
   // ── Toast ──────────────────────────────────────────────────────────────────
+  // Toasts stack (max 3, newest nearest the nav) in #toastStack. Tap to
+  // dismiss. Styling lives in css/base.css (.tst*).
 
-  let _toastTimer = null;
+  const TOAST_MAX = 3;
+  const TOAST_ICONS = {
+    success: '<path d="M5 12.5l4.2 4.2L19 7"/>',
+    error:   '<path d="M7 7l10 10M17 7L7 17"/>',
+    warn:    '<path d="M12 6v8"/><circle cx="12" cy="18" r=".6" fill="currentColor"/>',
+    info:    '<path d="M12 11v7"/><circle cx="12" cy="6.5" r=".6" fill="currentColor"/>',
+  };
+  const TOAST_KICKERS = { success: 'Done', error: 'Something went wrong', warn: 'Heads up', info: 'Note' };
+  // Many callers prefix messages with an emoji; the badge already carries the tone.
+  const LEADING_EMOJI = /^(?:\p{Extended_Pictographic}|ℹ)[️‍]*\s*/u;
+
+  function _toastStack() {
+    let stack = document.getElementById('toastStack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.id = 'toastStack';
+      stack.className = 'tst-stack';
+      document.body.appendChild(stack);
+    }
+    return stack;
+  }
+
+  function _dismissToast(el) {
+    if (!el || el._closing) return;
+    el._closing = true;
+    clearTimeout(el._timer);
+    el.classList.add('tst--out');
+    setTimeout(() => el.remove(), 220);
+  }
 
   /**
    * @param {string} msg
@@ -24,24 +54,30 @@
    * @param {number} [duration=3000]
    */
   function showToast(msg, type, duration) {
-    type     = type     || 'info';
+    type     = TOAST_ICONS[type] ? type : 'info';
     duration = duration || 3000;
 
-    let el = document.getElementById('nativeToast');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'nativeToast';
-      document.body.appendChild(el);
-    }
+    const text  = String(msg == null ? '' : msg).replace(LEADING_EMOJI, '').trim();
+    const stack = _toastStack();
 
-    const icons = { info: 'ℹ️', success: '✅', error: '❌', warn: '⚠️' };
-    el.className = `native-toast native-toast--${type} native-toast--show`;
-    el.innerHTML = `<span class="nt-icon">${icons[type] || icons.info}</span><span class="nt-msg">${_esc(msg)}</span>`;
+    // Same message already up: replace it rather than stacking a duplicate.
+    let live = Array.from(stack.children).filter(t => !t._closing);
+    live.filter(t => t._text === text && t._type === type).forEach(_dismissToast);
+    live = live.filter(t => !t._closing);
+    live.slice(0, Math.max(0, live.length - TOAST_MAX + 1)).forEach(_dismissToast);
 
-    if (_toastTimer) clearTimeout(_toastTimer);
-    _toastTimer = setTimeout(() => {
-      el.classList.remove('native-toast--show');
-    }, duration);
+    const el = document.createElement('div');
+    el.className = `tst tst--${type}`;
+    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    el.innerHTML =
+      `<span class="tst-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${TOAST_ICONS[type]}</svg></span>` +
+      `<span class="tst-body"><span class="tst-kick">${TOAST_KICKERS[type]}</span><span class="tst-msg">${_esc(text)}</span></span>` +
+      `<span class="tst-meter" aria-hidden="true"><span style="animation-duration:${duration}ms"></span></span>`;
+    el._text = text;
+    el._type = type;
+    el.addEventListener('click', () => _dismissToast(el));
+    stack.appendChild(el);
+    el._timer = setTimeout(() => _dismissToast(el), duration);
   }
 
   // ── Confirm modal ──────────────────────────────────────────────────────────
@@ -226,6 +262,8 @@
   // ── Exports ───────────────────────────────────────────────────────────────
 
   window.showToast        = showToast;
+  // ~35 call sites use nativeToast(), which was never defined, so they were silent.
+  window.nativeToast      = function (msg, type, duration) { window.showToast(msg, type, duration); };
   window.showConfirm      = showConfirm;
   window.showPrompt       = showPrompt;
   window.openReportWindow = openReportWindow;

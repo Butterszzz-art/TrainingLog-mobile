@@ -1110,33 +1110,6 @@
   box-shadow: none;
 }
 
-/* Builder toast ────────────────────────────────────────────── */
-
-#pbv2Toast {
-  position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%) translateY(12px);
-  background: var(--card-bg);
-  border: 1px solid var(--primary);
-  border-radius: 10px;
-  padding: 10px 20px;
-  font-size: 0.82rem;
-  color: var(--primary);
-  font-weight: 600;
-  font-family: 'Poppins', sans-serif;
-  z-index: 2000;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.28s, transform 0.28s;
-  pointer-events: none;
-}
-
-#pbv2Toast.error {
-  border-color: var(--danger-text);
-  color: var(--danger-text);
-}
-
 /* ── Responsive ───────────────────────────────────────────────── */
 
 @media (max-width: 600px) {
