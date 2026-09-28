@@ -28,12 +28,14 @@
 
   function _isThisWeek(dateStr) {
     if (!dateStr) return false;
+    // Compare local YYYY-MM-DD keys: new Date('2026-09-28') is UTC midnight,
+    // which lands on the previous day anywhere west of UTC.
+    const key = _entryKey(dateStr);
+    if (!key) return false;
     const monday = _isoWeekStart();
     const sunday = new Date(monday);
     sunday.setDate(sunday.getDate() + 6);
-    sunday.setHours(23, 59, 59, 999);
-    const d = new Date(dateStr);
-    return d >= monday && d <= sunday;
+    return key >= _toDateKey(monday) && key <= _toDateKey(sunday);
   }
 
   function _pad(n) { return String(n).padStart(2, '0'); }
@@ -108,7 +110,7 @@
     // PRs set this week
     const prBoard = _parse(`prBoard_${username}`) || {};
     let prsThisWeek = 0;
-    const weekStart = _isoWeekStart().toISOString().slice(0, 10);
+    const weekStart = _toDateKey(_isoWeekStart());
     for (const ex of Object.values(prBoard)) {
       if (ex.date && ex.date >= weekStart) prsThisWeek++;
     }
@@ -131,14 +133,11 @@
 
     // Streak
     let streak = 0;
-    const sortedDates = workouts.map(w => w.date).filter(Boolean).sort().reverse();
-    const seen = new Set();
-    sortedDates.forEach(d => seen.add(d));
+    const seen = new Set(workouts.map(w => _entryKey(w.date)).filter(Boolean));
     let check = new Date();
     check.setHours(0, 0, 0, 0);
     while (true) {
-      const iso = check.toISOString().slice(0, 10);
-      if (seen.has(iso)) { streak++; check.setDate(check.getDate() - 1); }
+      if (seen.has(_toDateKey(check))) { streak++; check.setDate(check.getDate() - 1); }
       else break;
     }
 
@@ -167,11 +166,30 @@
 
   /* ── Render ──────────────────────────────────────────────── */
 
-  function _readinessBadge(score) {
-    if (score === null) return '<span class="ws-na">—</span>';
-    if (score >= 67) return `<span class="ws-high">${score}%</span>`;
-    if (score >= 40) return `<span class="ws-med">${score}%</span>`;
-    return `<span class="ws-low">${score}%</span>`;
+  /** Planned sessions per week from the training profile (0 = not set). */
+  function _weekTarget(username) {
+    const settings = _parse(`settings_${username}`) || {};
+    const n = parseInt(settings.profile && settings.profile.daysPerWeek, 10);
+    return n > 0 && n <= 7 ? n : 0;
+  }
+
+  function _readinessTone(score) {
+    if (score === null) return '';
+    if (score >= 67) return 'is-good';
+    if (score >= 40) return 'is-mid';
+    return 'is-low';
+  }
+
+  function _fmtVolume(v) {
+    if (!(v > 0)) return '—';
+    return v >= 1000 ? `${(v / 1000).toFixed(1)}<small>k</small>` : String(v);
+  }
+
+  function _stat(value, label, tone) {
+    return `<div class="wk-stat">
+      <span class="wk-stat-v ${tone || ''}">${value}</span>
+      <span class="wk-cap">${label}</span>
+    </div>`;
   }
 
   function renderWeeklySummaryCard() {
@@ -185,58 +203,56 @@
     }
 
     const d = _gatherWeekData(username);
+    const target = _weekTarget(username);
     const mon = _isoWeekStart();
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const workouts = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
-    const workedDays = new Set(workouts.filter(w => _isThisWeek(w.date)).map(w => w.date));
+    const sun = new Date(mon);
+    sun.setDate(sun.getDate() + 6);
+    const fmt = dt => dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-    // Mini calendar dots
-    const dots = dayNames.map((day, i) => {
-      const d2 = new Date(mon);
-      d2.setDate(d2.getDate() + i);
-      const iso = d2.toISOString().slice(0, 10);
-      const isToday = iso === new Date().toISOString().slice(0, 10);
-      const worked  = workedDays.has(iso);
-      return `<div class="ws-day ${worked ? 'worked' : ''} ${isToday ? 'today' : ''}">
-        <span class="ws-day-name">${day}</span>
-        <span class="ws-day-dot">${worked ? '●' : '○'}</span>
-      </div>`;
+    const workouts = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
+    const workedDays = new Set(workouts.map(w => _entryKey(w.date)).filter(Boolean));
+    const todayKey = _toDateKey(new Date());
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    const strip = dayNames.map((name, i) => {
+      const day = new Date(mon);
+      day.setDate(day.getDate() + i);
+      const key = _toDateKey(day);
+      const done = workedDays.has(key);
+      const today = key === todayKey;
+      const cls = `wk-day${done ? ' is-done' : ''}${today ? ' is-today' : ''}`;
+      const aria = `${name}${today ? ' (today)' : ''}: ${done ? 'trained' : 'no session'}`;
+      return `<li class="${cls}" aria-label="${aria}">
+        <span class="wk-bar"></span>
+        <span class="wk-cap" aria-hidden="true">${name[0]}</span>
+      </li>`;
     }).join('');
 
+    const hitTarget = target > 0 && d.workoutCount >= target;
+    const stats = [
+      _stat(_fmtVolume(d.totalVolume), 'kg volume'),
+      _stat(d.prsThisWeek > 0 ? d.prsThisWeek : '—', d.prsThisWeek === 1 ? 'New PR' : 'New PRs', d.prsThisWeek > 0 ? 'is-pr' : ''),
+      _stat(d.avgReadiness === null ? '—' : d.avgReadiness, 'Readiness', _readinessTone(d.avgReadiness)),
+      d.calTarget ? _stat(`${d.calDaysHit}<small>/7</small>`, 'Cal days') : '',
+    ].join('');
+
     host.innerHTML = `
-      <div class="weekly-summary-card">
-        <div class="ws-header">
-          <span class="ws-title">📅 This Week</span>
-          <span class="ws-subtitle">Week of ${mon.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+      <div class="wk-board">
+        <div class="wk-top">
+          <div class="wk-hero">
+            <div class="wk-hero-num${hitTarget ? ' is-hit' : ''}">
+              <span class="wk-hero-val">${d.workoutCount}</span>${target ? `<span class="wk-hero-of">/${target}</span>` : ''}
+            </div>
+            <span class="wk-cap">${d.workoutCount === 1 ? 'Session' : 'Sessions'}</span>
+            ${d.streak > 0 ? `<span class="wk-cap wk-streak">${d.streak}-day streak</span>` : ''}
+          </div>
+          <div class="wk-week">
+            <span class="wk-cap wk-range">${fmt(mon)} – ${fmt(sun)}</span>
+            <ol class="wk-strip" aria-label="Days trained this week">${strip}</ol>
+          </div>
         </div>
-        <div class="ws-calendar">${dots}</div>
-        <div class="ws-stats">
-          <div class="ws-stat">
-            <span class="ws-stat-val">${d.workoutCount}</span>
-            <span class="ws-stat-lbl">Workouts</span>
-          </div>
-          <div class="ws-stat">
-            <span class="ws-stat-val">${d.totalVolume > 0 ? (d.totalVolume >= 1000 ? (d.totalVolume / 1000).toFixed(1) + 'k' : d.totalVolume) : '—'}</span>
-            <span class="ws-stat-lbl">kg volume</span>
-          </div>
-          <div class="ws-stat">
-            <span class="ws-stat-val">${d.prsThisWeek > 0 ? '🏆 ' + d.prsThisWeek : '—'}</span>
-            <span class="ws-stat-lbl">New PRs</span>
-          </div>
-          <div class="ws-stat">
-            <span class="ws-stat-val">${d.streak > 0 ? '🔥 ' + d.streak : '0'}</span>
-            <span class="ws-stat-lbl">Day streak</span>
-          </div>
-          <div class="ws-stat">
-            <span class="ws-stat-val">${_readinessBadge(d.avgReadiness)}</span>
-            <span class="ws-stat-lbl">Avg readiness</span>
-          </div>
-          ${d.calTarget ? `<div class="ws-stat">
-            <span class="ws-stat-val">${d.calDaysHit}/7</span>
-            <span class="ws-stat-lbl">Cal targets hit</span>
-          </div>` : ''}
-        </div>
-        ${d.workoutCount === 0 ? '<p class="ws-empty">No workouts logged yet this week. Get after it! 💪</p>' : ''}
+        <div class="wk-stats">${stats}</div>
+        ${d.workoutCount === 0 ? '<p class="wk-empty">No sessions yet this week. Today\'s a good day to start.</p>' : ''}
       </div>
     `;
   }
@@ -251,6 +267,11 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(renderWeeklySummaryCard, 1000);
+
+    // Re-render on return to Home so a session logged elsewhere shows up.
+    document.addEventListener('traininglog:tab-changed', (e) => {
+      if (e.detail?.tab === 'homeTab') renderWeeklySummaryCard();
+    });
   });
 
   window.renderWeeklySummaryCard = renderWeeklySummaryCard;
