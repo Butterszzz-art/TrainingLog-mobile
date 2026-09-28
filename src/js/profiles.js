@@ -23,6 +23,7 @@
   const DEFAULT_SERVER = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
   const CACHE_KEY = 'pcProfiles_v1';
   const HIDDEN_KEY = 'pcHiddenAvatars_v1';
+  const BLOCKED_KEY = 'pcBlockedUsers_v1';
   const CACHE_MAX = 80;
   const FRESH_MS = 10 * 60 * 1000;
   const LOOKUP_MAX = 100;
@@ -161,7 +162,8 @@
   function clearCache() {
     _cache = {};
     const ls = storage();
-    if (ls) { try { ls.removeItem(CACHE_KEY); ls.removeItem(HIDDEN_KEY); } catch { /* ignore */ } }
+    if (ls) { try { ls.removeItem(CACHE_KEY); ls.removeItem(HIDDEN_KEY); ls.removeItem(BLOCKED_KEY); } catch { /* ignore */ } }
+    _blockedLoadedAt = 0;
   }
 
   function getCached(username) {
@@ -181,6 +183,52 @@
     const set = hiddenSet();
     if (hide) set.add(key); else set.delete(key);
     writeJson(HIDDEN_KEY, [...set]);
+    refresh(key);
+  }
+
+  /* ── Blocked users ───────────────────────────────────────── */
+  // App Store Guideline 1.2: users must be able to block abusive users. The
+  // server keeps the list (and hides the blocked user's profile, ends any
+  // friendship); this local copy lets the feed and leaderboard drop their
+  // rows too. Screens listen for 'pc:blocks-changed' to re-render.
+
+  function blockedSet() {
+    return new Set(readJson(BLOCKED_KEY, []));
+  }
+
+  function isBlocked(username) {
+    const key = profileKey(username);
+    return !!key && blockedSet().has(key);
+  }
+
+  function storeBlocked(list) {
+    const next = [...new Set(list.map(profileKey).filter(Boolean))].sort();
+    const prev = [...blockedSet()].sort();
+    writeJson(BLOCKED_KEY, next);
+    if (next.join() !== prev.join() && typeof document !== 'undefined') {
+      document.dispatchEvent(new CustomEvent('pc:blocks-changed', { detail: { blocked: next } }));
+    }
+  }
+
+  // Throttled so list screens can call it on every render — the user may sign
+  // in after this module initialises.
+  let _blockedLoadedAt = 0;
+  async function loadBlocked({ force = false } = {}) {
+    if (!force && Date.now() - _blockedLoadedAt < FRESH_MS) return;
+    if (!authHeaders().Authorization) return;
+    _blockedLoadedAt = Date.now();
+    try {
+      storeBlocked((await api('GET', '/blocks')).blocked || []);
+    } catch { /* offline or signed out — keep the cached list */ }
+  }
+
+  async function setBlocked(username, block) {
+    const key = profileKey(username);
+    if (!key) return;
+    await api(block ? 'POST' : 'DELETE', '/' + encodeURIComponent(key) + '/block');
+    const set = blockedSet();
+    if (block) set.add(key); else set.delete(key);
+    storeBlocked([...set]);
     refresh(key);
   }
 
@@ -339,13 +387,22 @@
     top.appendChild(names);
     sheet.appendChild(top);
 
-    if (entry.hidden) {
-      sheet.appendChild(el('p', 'mx-para pc-profile-private', 'This profile is private.'));
+    const blocked = entry.blocked || isBlocked(key);
+    const actions = el('div', 'pc-profile-actions');
+    const blockBtn = el('button', 'mx-outline mx-outline--block' + (blocked ? '' : ' mx-outline--danger'),
+      blocked ? 'Unblock @' + (entry.username || username) : 'Block @' + (entry.username || username));
+    blockBtn.type = 'button';
+    blockBtn.addEventListener('click', () => confirmBlock(entry.username || username, !blocked));
+
+    if (blocked || entry.hidden) {
+      sheet.appendChild(el('p', 'mx-para pc-profile-private',
+        blocked ? 'You’ve blocked this person. You won’t see their profile, posts or leaderboard entries.' : 'This profile is private.'));
+      actions.appendChild(blockBtn);
+      sheet.appendChild(actions);
       return;
     }
     if (entry.bio) sheet.appendChild(el('p', 'mx-para pc-profile-bio', entry.bio));
 
-    const actions = el('div', 'pc-profile-actions');
     if (entry.avatar || hiddenByMe) {
       const hideBtn = el('button', 'mx-outline mx-outline--block', hiddenByMe ? 'Show their photo' : 'Hide their photo');
       hideBtn.type = 'button';
@@ -359,7 +416,33 @@
     reportBtn.type = 'button';
     reportBtn.addEventListener('click', () => openReport(entry.username || username));
     actions.appendChild(reportBtn);
+    actions.appendChild(blockBtn);
     sheet.appendChild(actions);
+  }
+
+  function confirmBlock(username, block) {
+    const sheet = openSheet((block ? 'Block ' : 'Unblock ') + username);
+    sheetHead(sheet, (block ? 'Block @' : 'Unblock @') + username + '?');
+    sheet.appendChild(el('p', 'mx-para', block
+      ? 'You won’t see their profile, posts or leaderboard entries, and neither of you can send the other a friend request. If you’re friends, that ends too. They aren’t told. We’re also notified so we can check whether they broke the rules.'
+      : 'You’ll see their profile, posts and leaderboard entries again. You won’t become friends automatically.'));
+    const status = el('p', 'pc-status');
+    const go = el('button', 'mx-cta', block ? 'Block' : 'Unblock');
+    go.type = 'button';
+    go.addEventListener('click', async () => {
+      go.disabled = true;
+      status.textContent = block ? 'Blocking…' : 'Unblocking…';
+      try {
+        await setBlocked(username, block);
+        closeSheet();
+        if (typeof global.showToast === 'function') global.showToast(block ? 'Blocked @' + username : 'Unblocked @' + username);
+      } catch (err) {
+        status.textContent = err.message || 'Something went wrong. Try again.';
+        go.disabled = false;
+      }
+    });
+    sheet.appendChild(go);
+    sheet.appendChild(status);
   }
 
   function openReport(username) {
@@ -403,7 +486,11 @@
         await api('POST', '/' + encodeURIComponent(username) + '/report', { reason: chosen, note: note.value });
         sheet.textContent = '';
         sheetHead(sheet, 'Thanks');
-        sheet.appendChild(el('p', 'mx-para', 'Your report was sent. You can also hide this person’s photo from their profile card.'));
+        sheet.appendChild(el('p', 'mx-para', 'Your report was sent and we’ll review it within 24 hours. If you don’t want to see this person at all, you can block them.'));
+        const blockNow = el('button', 'mx-outline mx-outline--block mx-outline--danger', 'Block @' + username);
+        blockNow.type = 'button';
+        blockNow.addEventListener('click', () => confirmBlock(username, true));
+        sheet.appendChild(blockNow);
       } catch (err) {
         status.textContent = err.message || 'Could not send the report.';
         send.disabled = false;
@@ -619,6 +706,9 @@
     clearCache,
     profileKey,
     initialsFor,
+    isBlocked,
+    loadBlocked,
+    setBlocked,
   };
   global.Profiles = api_;
 

@@ -217,7 +217,10 @@
       return;
     }
 
-    const items = _buildActivityItems(username);
+    // Drop anyone the user has blocked (see Profiles.isBlocked).
+    window.Profiles?.loadBlocked?.();
+    const items = _buildActivityItems(username)
+      .filter(item => !window.Profiles?.isBlocked?.(item.user));
     if (!items.length) {
       container.innerHTML = `<div class="pod sx-empty">No activity yet. Log a workout and it shows up here.</div>`;
       return;
@@ -234,6 +237,7 @@
   }
 
   window.renderActivityFeed = renderActivityFeed;
+  document.addEventListener('pc:blocks-changed', renderActivityFeed);
 
   /* ── Post composer ───────────────────────────────────────── */
 

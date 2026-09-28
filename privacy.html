@@ -6,93 +6,84 @@
   <title>Privacy Policy — Pocket Coach</title>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/tokens.css">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font-body);
-      color: var(--text-primary);
-      background: var(--wash-mobile);
-      background-color: var(--ground);
-      background-attachment: fixed;
-      min-height: 100vh;
-      padding: 24px 16px 48px;
-    }
-    .container {
-      max-width: 700px;
-      margin: 0 auto;
-      padding: 24px 20px 12px;
-      border-radius: var(--radius-hero);
-      background: var(--pod-bg);
-      border: 1px solid var(--pod-border);
-      box-shadow: var(--pod-bevel);
-    }
-    h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1; text-transform: uppercase; margin-bottom: 8px; }
-    .updated { font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #86998e; margin-bottom: 28px; }
-    h2 { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--green-90); margin: 28px 0 10px; }
-    p, li { font-size: 15px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 10px; }
-    strong { color: var(--text-primary); }
-    ul { padding-left: 20px; margin-bottom: 12px; }
-    a { color: var(--green-90); }
-    a:focus-visible { outline: 2px solid var(--green-70); outline-offset: 2px; }
-    .back {
-      display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 12px;
-      font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--green-90); text-decoration: none;
-    }
-  </style>
+  <link rel="stylesheet" href="css/legal.css">
 </head>
 <body>
   <div class="container">
     <a href="index.html" class="back">← Back to Pocket Coach</a>
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: June 26, 2026</p>
+    <p class="updated">Last updated: September 28, 2026</p>
+
+    <p>This policy explains what Pocket Coach ("we", "us") collects, why, who we share it with, and the choices you have. Pocket Coach is the data controller for your personal data. Contact: <a href="mailto:armanbahali@gmail.com">armanbahali@gmail.com</a>.</p>
 
     <h2>1. Information We Collect</h2>
-    <p>Pocket Coach collects the following information to provide our fitness tracking service:</p>
     <ul>
-      <li><strong>Account information:</strong> Username and password (password is hashed and never stored in plain text)</li>
-      <li><strong>Fitness data:</strong> Workout logs, bodyweight entries, macro tracking, sleep logs, readiness scores, and progress photos</li>
-      <li><strong>App preferences:</strong> Training mode, unit preferences, theme settings, and archetype selection</li>
+      <li><strong>Account information:</strong> username, email address, and password. Passwords are handled by Google Firebase Authentication and are never stored by us in plain text.</li>
+      <li><strong>Profile information you choose to add:</strong> display name, bio, and profile photo.</li>
+      <li><strong>Fitness and health data you log:</strong> workouts, exercises and weights lifted, bodyweight and body measurements, nutrition and macros, sleep logs, readiness and check-in scores, cardio, injuries or rehab notes, goals, and progress photos.</li>
+      <li><strong>Activity data from a service you connect:</strong> if you connect an activity tracker in Settings → Activity Sync, we receive data such as steps and activity from that service. You can disconnect at any time.</li>
+      <li><strong>Community and coaching data:</strong> groups you join, posts and programs you share, leaderboard entries, friend and coach connections, users you block, and reports you submit about other users.</li>
+      <li><strong>Subscription information:</strong> your plan and subscription status. Card details are entered on Stripe's checkout page and handled by Stripe — we never see or store your full card number.</li>
+      <li><strong>App preferences:</strong> units, theme, training mode, and similar settings.</li>
     </ul>
-    <p>We do not collect email addresses, phone numbers, or payment information unless explicitly provided.</p>
+    <p>We don't use advertising trackers, we don't track you across other apps or websites, and we don't sell your data.</p>
 
-    <h2>2. How We Store Your Data</h2>
-    <p>Your fitness data is stored in two places:</p>
+    <h2>2. How We Use It</h2>
+    <table class="legal-table">
+      <tr><th>Purpose</th><th>Legal basis (UK/EU GDPR)</th></tr>
+      <tr><td>Create and run your account, store and sync your logs, show your progress</td><td>Performance of our contract with you</td></tr>
+      <tr><td>Process health and fitness data you log</td><td>Your explicit consent, given by choosing to log it. You can delete it at any time.</td></tr>
+      <tr><td>AI features (see section 3)</td><td>Your explicit consent, asked for in the app before first use</td></tr>
+      <tr><td>Subscriptions and billing</td><td>Performance of contract; legal obligations (tax and accounting records)</td></tr>
+      <tr><td>Community features, leaderboards, and coach sharing</td><td>Performance of contract, at your request</td></tr>
+      <tr><td>Keeping the Service safe: reviewing reports, preventing abuse and fraud, rate limiting</td><td>Our legitimate interests</td></tr>
+    </table>
+
+    <h2 id="ai">3. AI Features</h2>
+    <p>Pocket Coach's AI features (for example the AI coach, weekly briefs and reviews, program generation, macro and sleep insights, plateau checks, rehab plans, and coach message drafts) are powered by <strong>Anthropic's Claude</strong> API.</p>
     <ul>
-      <li><strong>Locally on your device:</strong> Most data is stored in your browser's localStorage. This data stays on your device and is not transmitted unless you explicitly sync.</li>
-      <li><strong>Cloud storage:</strong> Account credentials and synced data are stored securely in Airtable, a SOC 2 Type II certified cloud platform.</li>
+      <li><strong>What is sent:</strong> the data needed for the feature you use — such as your recent workouts, exercises and weights, bodyweight, nutrition, sleep and readiness scores, goals, and any message you type. We don't send your password or payment details.</li>
+      <li><strong>Consent first:</strong> the app asks your permission before sending any data to Anthropic. If you decline, AI features stay off and the rest of the app works normally. You can change this at any time in Settings → App → Privacy &amp; Legal.</li>
+      <li><strong>How Anthropic handles it:</strong> Anthropic processes the data to generate a response on our behalf. Under its commercial terms it does not use API data to train its models and deletes it after a limited retention period (currently up to 30 days), unless it must keep it longer for safety or legal reasons.</li>
     </ul>
 
-    <h2>3. AI Features</h2>
-    <p>Pocket Coach uses AI (powered by Anthropic's Claude) to provide coaching insights, program generation, and check-in summaries. When you use AI features:</p>
+    <h2>4. Who We Share Data With</h2>
+    <p>We share data only with service providers who process it on our behalf, and only as needed to run the Service:</p>
+    <table class="legal-table">
+      <tr><th>Provider</th><th>What for</th></tr>
+      <tr><td>Google (Firebase Authentication, Cloud Firestore, Cloud Functions)</td><td>Sign-in, account and data storage, our server</td></tr>
+      <tr><td>Airtable</td><td>Storage for some older accounts and logs</td></tr>
+      <tr><td>Anthropic</td><td>AI features, only with your consent</td></tr>
+      <tr><td>Stripe</td><td>Subscription checkout, billing, and the billing portal</td></tr>
+      <tr><td>The activity service you connect (if any)</td><td>Syncing your activity data</td></tr>
+    </table>
+    <p>Other people see your data only when you choose to share it: your profile, posts, and leaderboard entries are visible to other users; programs you share go to the people you share them with; and a coach you connect with can see the data you share with them. We may also disclose data if the law requires it.</p>
+
+    <h2>5. International Transfers</h2>
+    <p>Our providers may process data in the United States and other countries. Where data leaves the UK or EEA we rely on appropriate safeguards such as the UK/EU Standard Contractual Clauses or the EU–US Data Privacy Framework.</p>
+
+    <h2>6. How Long We Keep It</h2>
+    <p>We keep your data while your account is open. When you delete your account, we delete your data from our systems straight away, except billing records we must keep for tax and accounting law, and backups that expire on a rolling basis. Some data (such as preferences and draft logs) is also stored on your device and is removed when you log out or delete the app.</p>
+
+    <h2>7. Your Choices and Rights</h2>
     <ul>
-      <li>Your fitness data (workout logs, check-in scores, bodyweight) is sent to Anthropic's API to generate personalized responses</li>
-      <li>Anthropic does not use your data to train their models</li>
-      <li>AI-generated content is not stored by Anthropic after processing</li>
+      <li><strong>Export:</strong> download all your data at any time from Progress → Tools (CSV or full JSON backup).</li>
+      <li><strong>Delete:</strong> permanently delete your account and data from Settings → App → Danger Zone — no need to contact us. This also cancels any active subscription.</li>
+      <li><strong>AI consent:</strong> turn AI data sharing on or off in Settings → App → Privacy &amp; Legal.</li>
+      <li><strong>Your rights:</strong> depending on where you live, you can ask to access, correct, delete, or port your data, object to or restrict processing, and withdraw consent at any time (this doesn't affect processing before you withdrew it). Email us to use these rights. You can also complain to your data protection authority — in the UK, the Information Commissioner's Office (ico.org.uk).</li>
     </ul>
 
-    <h2>4. Data Sharing</h2>
-    <p>We do not sell, rent, or share your personal data with third parties. Your data is only shared when:</p>
-    <ul>
-      <li>You explicitly share a workout template or program with a friend via the Friends feature</li>
-      <li>You are connected to a coach who can view your check-in data</li>
-      <li>Required by law</li>
-    </ul>
+    <h2>8. Security</h2>
+    <p>Data is encrypted in transit (HTTPS), stored with providers that encrypt data at rest, and access to it is limited. No system is perfectly secure, so please use a strong, unique password.</p>
 
-    <h2>5. Data Export & Deletion</h2>
-    <p>You can export all your data at any time from Settings → Export Your Data (CSV or full JSON backup). You can permanently delete your account and all associated data at any time from Settings → App → Danger Zone, no need to contact us. This immediately cancels any active subscription and removes your data from our systems.</p>
+    <h2>9. Children</h2>
+    <p>Pocket Coach is not intended for anyone under 16, and we don't knowingly collect data from children. If you believe a child has created an account, contact us and we will delete it.</p>
 
-    <h2>6. Cookies & Tracking</h2>
-    <p>Pocket Coach does not use cookies, analytics trackers, or third-party advertising. We do not track your browsing activity.</p>
+    <h2>10. Changes to This Policy</h2>
+    <p>We may update this policy. We will post changes here with a new date, and tell you in the app if a change is significant.</p>
 
-    <h2>7. Children's Privacy</h2>
-    <p>Pocket Coach is not intended for users under 16 years of age. We do not knowingly collect data from children.</p>
-
-    <h2>8. Changes to This Policy</h2>
-    <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated date.</p>
-
-    <h2>9. Contact</h2>
-    <p>For questions about this privacy policy or to request data deletion, contact: <a href="mailto:armanbahali@gmail.com">armanbahali@gmail.com</a></p>
+    <h2>11. Contact</h2>
+    <p>Questions or requests about your data: <a href="mailto:armanbahali@gmail.com">armanbahali@gmail.com</a></p>
   </div>
 </body>
 </html>

@@ -1,96 +1,128 @@
-// Payment rail abstraction — skeleton.
+// Payment rail — Stripe for every platform and region.
 //
-// Why this exists: Apple App Store Guideline 3.1.1 requires digital
-// subscriptions that unlock features *inside* the app to go through
-// StoreKit on iOS, not an external processor. The Stripe checkout that
-// already exists in this file (checkoutWithStripe/openManageBilling in
-// index.html) is fine for web and Android but cannot be the purchase path
-// inside the iOS build. This module is the single place that decides which
-// rail to use, so every call site (pricing.html, the upgrade modal, the
-// Settings subscription panel) asks *this* which rail applies instead of
-// each hardcoding "call Stripe".
+// Both storefronts we ship to permit linking OUT of the app to a third-party
+// processor (Stripe) instead of Apple's own In-App Purchase — under
+// different rules:
+//   - US: since the Epic v. Apple injunction (April 2025) Apple's US
+//     storefront guidelines allow buttons/links to an external purchase
+//     page with no entitlement and no Apple commission.
+//   - EU: requires applying for, and being granted, Apple's StoreKit
+//     External Purchase Link Entitlement (DMA terms). Once granted, Apple
+//     requires ITS OWN system disclosure sheet (StoreKit ExternalPurchase /
+//     ExternalPurchaseLink APIs), which a plain webview can't call — the EU
+//     launch needs a small native plugin on top of this file. Until then,
+//     release to the US storefront only in App Store Connect.
+//
+// Rather than branch per-region (which needs Apple's native Storefront API,
+// not device locale), this ships ONE conservative disclosure screen for
+// every iOS purchase: tell the user plainly they're leaving the app to pay
+// elsewhere, then hand off to Safari.
+//
+// How the hand-off works: Capacitor's iOS WebView refuses to load any
+// top-level URL outside the app's own origin (capacitor.config.json has no
+// server.allowNavigation) and passes it to UIApplication.open() instead —
+// i.e. the user's default browser, not an in-app browser sheet. So a plain
+// `location.href = stripeUrl` is already a genuine external link. Don't add
+// @capacitor/browser for this: it opens SFSafariViewController, which is an
+// in-app browser and doesn't meet the EU "default browser" requirement.
+//
+// Other territories: external purchase links are still prohibited in most
+// of them — expanding there needs real Apple IAP or excluding them.
 //
 // Both rails converge server-side on the same users/{uid} fields via
-// applyEntitlement() in traininglog-backend-sync/server.js — see that
-// repo's IAP-SETUP.md for the full picture and the remaining manual setup.
-//
-// Status: the web/Android (Stripe) path is real and already shipped. The
-// iOS (Apple IAP) path is NOT implemented yet — purchaseViaIAP/restoreViaIAP
-// below are stubs that surface a clear "not available yet" message rather
-// than silently failing or (worse) falling back to Stripe checkout inside
-// an iOS build, which is exactly the App Store guideline violation this
-// exists to avoid. Wiring them up needs: the ios/ native project to exist,
-// a Capacitor IAP plugin installed, and the App Store Connect product setup
-// in IAP-SETUP.md.
+// applyEntitlement() — see traininglog-backend's IAP-SETUP.md.
 (function () {
   'use strict';
 
   function getPlatform() {
-    // Capacitor's own platform detection — 'ios' | 'android' | 'web'.
-    // Falls back to 'web' outside a Capacitor shell (plain browser/PWA).
     if (typeof window.Capacitor !== 'undefined' && typeof window.Capacitor.getPlatform === 'function') {
       return window.Capacitor.getPlatform();
     }
     return 'web';
   }
 
-  function usesAppleIAP() {
+  // True on iOS: there, Stripe checkout must be preceded by the external
+  // purchase disclosure. This app never uses StoreKit.
+  function needsExternalPurchaseFlow() {
     return getPlatform() === 'ios';
   }
 
-  // Purchase entry point — call this instead of checkoutWithStripe() directly
-  // from any new UI, so it automatically routes to the correct rail. Existing
-  // Stripe call sites (openCheckout's "Pay with Card" button) are left as-is
-  // for web/Android and gated off on iOS — see index.html's openCheckout().
+  // Entry point — call this instead of checkoutWithStripe() directly so the
+  // disclosure step always runs first on iOS.
   async function purchase(plan, billing) {
-    if (usesAppleIAP()) return purchaseViaIAP(plan, billing);
+    if (needsExternalPurchaseFlow()) {
+      return showExternalPurchaseDisclosure(plan, billing);
+    }
     if (typeof window.checkoutWithStripe !== 'function') {
       throw new Error('Stripe checkout is not available.');
     }
     return window.checkoutWithStripe(plan, billing);
   }
 
+  // Stripe subscriptions are tied to the account, not a device or an Apple
+  // ID — there's nothing to "restore".
   async function restore() {
-    if (usesAppleIAP()) return restoreViaIAP();
-    // Stripe has no client-side "restore" concept — a subscription is tied
-    // to the account, not the device, so there's nothing to restore.
     return { restored: false, reason: 'not_applicable' };
   }
 
-  // Opens whatever subscription-management surface applies to this platform.
-  // Apple doesn't allow deep-linking out to a third-party billing portal for
-  // an App-Store-purchased subscription, so iOS gets Apple's own management
-  // screen instead of Stripe's billing portal.
+  // Stripe owns subscription management on every platform — the billing
+  // portal opens in Safari on iOS the same way checkout does.
   function manage() {
-    if (usesAppleIAP()) {
-      window.location.href = 'itms-apps://apps.apple.com/account/subscriptions';
-      return;
-    }
     if (typeof window.openManageBilling === 'function') {
       window.openManageBilling();
     }
   }
 
-  // ── Apple IAP stubs — NOT implemented, see the file header ────────────────
-  async function purchaseViaIAP(_plan, _billing) {
-    const message = 'In-app purchases are coming soon on iOS.';
-    if (typeof window.nativeToast === 'function') window.nativeToast(message, 'error');
-    else if (typeof window.showToast === 'function') window.showToast(message);
-    throw new Error('Apple IAP purchase path is not implemented yet — see payments.js and IAP-SETUP.md.');
+  // The user finishes paying in Safari and comes back to the app by hand, so
+  // re-read their plan the next time the app is foregrounded.
+  function refreshPlanOnReturn() {
+    function onVisible() {
+      if (document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', onVisible);
+      if (typeof window.loadUserPlan === 'function') window.loadUserPlan();
+    }
+    document.addEventListener('visibilitychange', onVisible);
   }
 
-  async function restoreViaIAP() {
-    const message = 'Restore purchases is coming soon on iOS.';
-    if (typeof window.nativeToast === 'function') window.nativeToast(message, 'error');
-    else if (typeof window.showToast === 'function') window.showToast(message);
-    return { restored: false, reason: 'not_implemented' };
+  function showExternalPurchaseDisclosure(plan, billing) {
+    const existing = document.getElementById('externalPurchaseDisclosure');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'payment-method-modal';
+    modal.id = 'externalPurchaseDisclosure';
+    modal.innerHTML = `
+      <div class="payment-method-inner" role="dialog" aria-modal="true" aria-labelledby="externalPurchaseTitle">
+        <h3 id="externalPurchaseTitle">You're leaving Pocket Coach</h3>
+        <p class="payment-sub">
+          Payment is completed on our website in your browser, outside the
+          App Store. Apple is not responsible for the privacy or security of
+          that purchase. Your subscription is billed and managed there, not
+          through your Apple ID, and App Store refunds and purchase history
+          don't apply to it.
+        </p>
+        <button class="pay-btn pay-stripe" id="externalPurchaseContinueBtn">
+          Continue to payment
+        </button>
+        <button class="close-payment-modal" aria-label="Cancel" onclick="this.closest('.payment-method-modal').remove()">
+          <span class="ui-icon">${(window.ICONS && window.ICONS.x) || '✕'}</span>
+        </button>
+      </div>`;
+    document.body.appendChild(modal);
+
+    document.getElementById('externalPurchaseContinueBtn').addEventListener('click', async () => {
+      modal.remove();
+      await window.checkoutWithStripe(plan, billing, { external: true });
+    });
   }
 
   window.pocketCoachPayments = {
     getPlatform,
-    usesAppleIAP,
+    needsExternalPurchaseFlow,
+    usesAppleIAP: needsExternalPurchaseFlow, // alias so old call sites don't silently break
     purchase,
     restore,
-    manage
+    manage,
+    refreshPlanOnReturn
   };
 })();

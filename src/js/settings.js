@@ -1036,6 +1036,7 @@ function injectSettingsMarkup() {
     if (container.dataset.loaded === 'true') {
       bindActivitySyncControls(container);
       bindDeleteAccountAction(container);
+      window.pocketCoachAIConsent?.bindSettings(container);
     }
     return;
   }
@@ -1065,6 +1066,7 @@ function injectSettingsMarkup() {
       bindLogoutAction(container);
       bindDeleteAccountAction(container);
       bindActivitySyncControls(container);
+      window.pocketCoachAIConsent?.bindSettings(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
       renderProfileGamificationSummary(container);

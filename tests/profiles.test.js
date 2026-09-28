@@ -166,3 +166,59 @@ describe('profile card', () => {
     expect(report.body).toEqual({ reason: 'spam', note: '' });
   });
 });
+
+describe('blocking', () => {
+  const clickButton = (doc, text) =>
+    [...doc.querySelectorAll('#pcProfileSheet button')].find(b => b.textContent === text).click();
+
+  test('blocking from the card calls the API, remembers the block and announces it', async () => {
+    const { w, doc, calls } = setup({
+      alice: { username: 'Alice', displayName: '', bio: 'hi', avatarVersion: null },
+    });
+    const events = [];
+    doc.addEventListener('pc:blocks-changed', e => events.push(e.detail.blocked));
+    w.Profiles.openProfileCard('alice');
+    await tick();
+    clickButton(doc, 'Block @Alice');
+    clickButton(doc, 'Block');
+    await tick();
+
+    const block = calls.find(c => c.url.endsWith('/api/profiles/alice/block'));
+    expect(block.method).toBe('POST');
+    expect(w.Profiles.isBlocked('ALICE')).toBe(true);
+    expect(events).toEqual([['alice']]);
+
+    w.Profiles.openProfileCard('alice');
+    await tick();
+    const sheet = doc.getElementById('pcProfileSheet');
+    expect(sheet.querySelector('.pc-profile-private').textContent).toMatch(/blocked/);
+    expect(sheet.querySelector('.pc-profile-bio')).toBeNull();
+
+    clickButton(doc, 'Unblock @Alice');
+    clickButton(doc, 'Unblock');
+    await tick();
+    expect(calls.filter(c => c.url.endsWith('/api/profiles/alice/block')).map(c => c.method)).toEqual(['POST', 'DELETE']);
+    expect(w.Profiles.isBlocked('alice')).toBe(false);
+  });
+
+  test('private profiles can still be blocked', async () => {
+    const { w, doc } = setup({});
+    w.Profiles.openProfileCard('bob');
+    await tick();
+    expect([...doc.querySelectorAll('#pcProfileSheet button')].some(b => b.textContent === 'Block @bob')).toBe(true);
+  });
+
+  test('loadBlocked syncs the server list, throttled unless forced', async () => {
+    const { w, calls } = setup({});
+    w.fetch = async (url, opts) => {
+      calls.push({ url, method: opts.method });
+      return { ok: true, status: 200, json: async () => ({ success: true, blocked: ['Carl'] }) };
+    };
+    await w.Profiles.loadBlocked();
+    await w.Profiles.loadBlocked();
+    expect(calls.filter(c => c.url.endsWith('/api/profiles/blocks'))).toHaveLength(1);
+    expect(w.Profiles.isBlocked('carl')).toBe(true);
+    await w.Profiles.loadBlocked({ force: true });
+    expect(calls.filter(c => c.url.endsWith('/api/profiles/blocks'))).toHaveLength(2);
+  });
+});
