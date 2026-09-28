@@ -665,8 +665,15 @@ function bindLogoutAction(container = document) {
 // "Delete template"/"Delete this entire workout" flows) rather than
 // introducing new modal UI for a single button.
 async function deleteAccountFlow(button) {
+  // Apple 5.1.1(v): App Store subscribers must be told that deleting the
+  // account doesn't stop Apple billing them — only Apple can cancel it.
+  const appleBilled = window.currentSubSource === 'apple'
+    || !!window.pocketCoachPayments?.usesAppleIAP?.();
   const warned = confirm(
     'Delete your account? This permanently removes your workouts, programs, macros, logs, and any coach/client links. This cannot be undone.'
+    + (appleBilled
+      ? '\n\nIf you subscribed through the App Store, deleting your account does not cancel that subscription. Cancel it first in Settings → your name → Subscriptions.'
+      : '')
   );
   if (!warned) return;
 
@@ -1036,6 +1043,7 @@ function injectSettingsMarkup() {
     if (container.dataset.loaded === 'true') {
       bindActivitySyncControls(container);
       bindDeleteAccountAction(container);
+      window.pocketCoachAIConsent?.bindSettings(container);
     }
     return;
   }
@@ -1065,6 +1073,7 @@ function injectSettingsMarkup() {
       bindLogoutAction(container);
       bindDeleteAccountAction(container);
       bindActivitySyncControls(container);
+      window.pocketCoachAIConsent?.bindSettings(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
       renderProfileGamificationSummary(container);

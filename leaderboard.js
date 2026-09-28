@@ -408,7 +408,11 @@ function renderLeaderboard(sortKey = _currentSortKey) {
     return;
   }
 
-  const sorted   = [...leaderboardData].sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+  // Blocked users are left out entirely (see Profiles.isBlocked).
+  window.Profiles?.loadBlocked?.();
+  const sorted   = leaderboardData
+    .filter(d => !window.Profiles?.isBlocked?.(d.name))
+    .sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
   const topValue = sorted[0]?.[sortKey] || 1;
 
   // Rank deltas against this week's baseline
@@ -745,6 +749,9 @@ function initLeaderboard() {
 
 if (typeof window !== 'undefined') {
   window.initLeaderboard = initLeaderboard;
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('pc:blocks-changed', () => renderLeaderboard(_currentSortKey));
+  }
 }
 
 if (typeof module !== 'undefined' && module.exports) {

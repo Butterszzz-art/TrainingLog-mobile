@@ -69,6 +69,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="public/icons/favicon-16.png">
   <link rel="icon" href="favicon.ico">
   <script src="src/js/native-ui.js"></script>
+  <script src="src/js/ai-consent.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -183,10 +184,6 @@
 
     <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
 
-    <div class="login-beta">
-      <span class="ui-icon" data-icon="zap"></span> <strong>Beta:</strong> Server may take ~30s to wake on first use — wait and try again if it hangs.
-    </div>
-
     <button id="loginButton" class="login-cta loading-btn" onclick="startLogin()">
       <span>Log In</span><span class="spinner"></span>
     </button>
@@ -195,7 +192,13 @@
     </button>
     <button type="button" id="forgotPasswordLink" class="login-forgot-link" onclick="startForgotPassword()">Forgot password?</button>
 
-    <a href="pricing.html" class="login-pricing-link">See pricing &amp; plans →</a>
+    <p class="login-legal" id="signupLegalNote" style="display:none;">
+      By creating an account you agree to the <a href="terms.html">Terms of Use</a>
+      and confirm you've read the <a href="privacy.html">Privacy Policy</a>.
+    </p>
+
+    <a href="pricing.html" class="login-pricing-link" id="loginPricingLink">See pricing &amp; plans →</a>
+    <p class="login-legal"><a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a></p>
   </div>
 
 </div>
@@ -3388,6 +3391,7 @@
             </div>
             <button onclick="openManageBilling()" style="padding:8px 16px;border-radius:10px;font-size:0.78rem;font-weight:700;margin:0;box-shadow:none;" id="subActionBtn">Upgrade</button>
           </div>
+          <button type="button" id="subRestoreBtn" class="payment-restore" hidden onclick="pocketCoachPayments.restore()">Restore Purchases</button>
         </div>
       </div>
 
@@ -4360,6 +4364,7 @@ async function loadUserPlan() {
     const data = await res.json();
     window.currentUserPlan = data.plan || 'free';
     window.currentSubStatus = data.status || 'none';
+    window.currentSubSource = data.source || ''; // 'stripe' | 'apple'
     window.currentReferralCode = data.referralCode || '';
     window.currentReferralCredits = data.referralCredits || 0;
     localStorage.setItem('userPlan', window.currentUserPlan);
@@ -4379,39 +4384,73 @@ window.isActiveSub = isActiveSub;
 function renderLockedCard(featureName, requiredPlan) {
   requiredPlan = requiredPlan || 'pro';
   var planLabel = requiredPlan === 'coach' ? 'Coach' : 'Pro';
-  var price = requiredPlan === 'coach' ? '£16' : '£9';
+  var monthly = planPrice(requiredPlan, 'monthly');
   return '<div class="locked-feature-card">'
     + '<div class="locked-icon">' + ICONS.lock + '</div>'
     + '<div class="locked-title">' + featureName + '</div>'
-    + '<div class="locked-desc">Available on ' + planLabel + ' (from ' + price + '/month)</div>'
+    + '<div class="locked-desc">Available on ' + planLabel + (monthly ? ' (from ' + monthly.billed + ')' : '') + '</div>'
     + '<button class="upgrade-cta-btn" onclick="openUpgradeModal(\'' + requiredPlan + '\')">Unlock with ' + planLabel + '</button>'
     + '</div>';
 }
 
-function openCheckout(plan) {
+function usesAppleIAP() {
+  return !!(window.pocketCoachPayments && window.pocketCoachPayments.usesAppleIAP());
+}
+
+// Prices for a plan. Web/Android: our GBP list prices (Stripe). iOS: the App
+// Store's localized price for the user's storefront (EUR in the EU), or null
+// until StoreKit has loaded the products — see src/js/payments.js.
+function planPrice(key, billing) {
+  if (usesAppleIAP()) return window.pocketCoachPayments.applePrice(key, billing);
+  var p = UPGRADE_PLANS[key] || UPGRADE_PLANS.pro;
+  return billing === 'annual'
+    ? { headline: '£' + p.annual, per: '/mo', note: p.annualNote, billed: '£' + (p.annual * 12) + ' per year', trial: '7-day free trial' }
+    : { headline: '£' + p.monthly, per: '/mo', note: '', billed: '£' + p.monthly + ' per month', trial: '7-day free trial' };
+}
+
+// Apple Guideline 3.1.2: before buying an auto-renewing subscription the user
+// must see the price, the billing period, that it renews, how to cancel, and
+// links to the Terms and Privacy Policy. The iOS wording follows Apple's
+// standard subscription disclosure.
+function subscriptionTermsHtml(price) {
+  var links = '<a href="terms.html">Terms of Use</a> · <a href="privacy.html">Privacy Policy</a>';
+  if (usesAppleIAP()) {
+    return 'Payment is charged to your Apple ID when you confirm. The subscription renews automatically at '
+      + price.billed + ' unless it is cancelled at least 24 hours before the end of the current period'
+      + (price.trial ? ' (including the free trial)' : '') + '. Manage or cancel it in your Apple ID settings. ' + links;
+  }
+  return 'Your subscription renews automatically at ' + price.billed + ' until you cancel. '
+    + 'Cancel any time before the trial ends and you won\'t be charged. '
+    + 'Manage or cancel any time from Progress → Tools → Subscription. ' + links;
+}
+
+function subscriptionsUnavailable() {
+  if (typeof nativeToast === 'function') nativeToast('Subscriptions aren\'t available right now. Please try again later.', 'error');
+}
+
+async function openCheckout(plan) {
   var billing = localStorage.getItem('billingCycle') || 'annual';
-  // Apple Guideline 3.1.1: the iOS build must not offer Stripe as the
-  // purchase path for a digital subscription unlocked in-app — see
-  // src/js/payments.js. purchaseViaIAP() is a stub until that's wired up, so
-  // this button is honest about "coming soon" rather than silently opening
-  // Stripe checkout inside an iOS build (or pretending IAP already works).
-  var isIOS = typeof window.pocketCoachPayments !== 'undefined' && window.pocketCoachPayments.usesAppleIAP();
-  var payButtonHtml = isIOS
-    ? '<button class="pay-btn pay-stripe" onclick="pocketCoachPayments.purchase(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Continue</button>'
-      + '<p class="payment-note">In-app purchase — powered by the App Store</p>'
-    : '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Pay with Card</button>'
-      + '<p class="payment-note">Secure checkout powered by Stripe</p>';
+  var p = UPGRADE_PLANS[plan] || UPGRADE_PLANS.pro;
+  if (usesAppleIAP()) await window.pocketCoachPayments.loadAppleProducts();
+  var price = planPrice(plan, billing);
+  if (!price) { subscriptionsUnavailable(); return; }
+
   var modal = document.createElement('div');
   modal.className = 'payment-method-modal';
   modal.innerHTML = '<div class="payment-method-inner">'
-    + '<h3>Choose payment method</h3>'
-    + '<p class="payment-sub">Both options include a 7-day free trial</p>'
-    + payButtonHtml
-    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
+    + '<h3>' + p.name + ' plan</h3>'
+    + '<p class="payment-sub">' + (price.trial ? price.trial + ', then ' : '') + price.billed + '</p>'
+    + '<button class="pay-btn pay-stripe" onclick="this.closest(\'.payment-method-modal\').remove();pocketCoachPayments.purchase(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Continue</button>'
+    + (usesAppleIAP()
+      ? '<button type="button" class="payment-restore" onclick="this.closest(\'.payment-method-modal\').remove();pocketCoachPayments.restore()">Restore Purchases</button>'
+      : '<p class="payment-note">Secure checkout powered by Stripe</p>')
+    + '<p class="payment-note payment-terms">' + subscriptionTermsHtml(price) + '</p>'
+    + '<button class="close-payment-modal" aria-label="Close" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
     + '</div>';
   document.body.appendChild(modal);
 }
 
+// Web and Android only — iOS buys through the App Store (payments.js).
 async function checkoutWithStripe(plan, billing) {
   document.querySelector('.payment-method-modal')?.remove();
   var username = window.currentUser || localStorage.getItem('fitnessAppUser');
@@ -4433,7 +4472,7 @@ var UPGRADE_PLANS = {
   pro: {
     name: 'Pro', badge: 'Most popular', chip: 'mx-chip--green', cardCls: 'pod--hero',
     monthly: 9, annual: 7, annualNote: 'Billed £84/year · save £24',
-    sub: '7-day free trial',
+    sub: null, // the trial, or "Cancel anytime" when there isn't one
     features: [
       ['sparkles', 'AI check-in summaries'],
       ['sparkles', 'AI macro advisor'],
@@ -4456,21 +4495,31 @@ var UPGRADE_PLANS = {
   }
 };
 
+function upgradePriceHtml(key, billing) {
+  var price = planPrice(key, billing);
+  if (!price) return { price: '<span class="upg-per">Loading price…</span>', note: '' };
+  return { price: price.headline + '<span class="upg-per">' + price.per + '</span>', note: price.note };
+}
+
 function upgradePlanCard(key, isAnnual) {
   var p = UPGRADE_PLANS[key];
   var idBase = key === 'pro' ? 'modalPro' : 'modalCoach';
+  var billing = isAnnual ? 'annual' : 'monthly';
+  var shown = upgradePriceHtml(key, billing);
+  var price = planPrice(key, billing);
+  var sub = p.sub || (price && price.trial) || 'Cancel anytime';
   return '<section class="pod ' + p.cardCls + ' mx-pod upg-plan upg-plan--' + key + '" aria-label="' + p.name + ' plan">'
     + '<div class="pod-row"><h4 class="pod-title mx-h3">' + p.name + '</h4><span class="mx-chip mx-chip--sm ' + p.chip + '">' + p.badge + '</span></div>'
     + '<div class="upg-price-block">'
-    +   '<div class="upg-price" id="' + idBase + 'Price">£' + (isAnnual ? p.annual : p.monthly) + '<span class="upg-per">/mo</span></div>'
-    +   '<div class="upg-note" id="' + idBase + 'Note">' + (isAnnual ? p.annualNote : '') + '</div>'
+    +   '<div class="upg-price" id="' + idBase + 'Price">' + shown.price + '</div>'
+    +   '<div class="upg-note" id="' + idBase + 'Note">' + shown.note + '</div>'
     + '</div>'
-    + '<div class="mx-meta">' + p.sub + '</div>'
+    + '<div class="mx-meta" id="' + idBase + 'Sub">' + sub + '</div>'
     + '<ul class="upg-features">'
     + p.features.map(function (f) { return '<li><span class="ui-icon">' + ICONS[f[0]] + '</span>' + f[1] + '</li>'; }).join('')
     + '</ul>'
     + '<button type="button" class="mx-cta upg-cta upg-cta--' + key + '" onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'' + key + '\')">'
-    +   '<span>Start Free Trial</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.sparkles + '</span></span>'
+    +   '<span id="' + idBase + 'Cta">' + (price && price.trial ? 'Start Free Trial' : 'Subscribe') + '</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.sparkles + '</span></span>'
     + '</button>'
     + '</section>';
 }
@@ -4479,6 +4528,7 @@ function openUpgradeModal(defaultPlan) {
   defaultPlan = defaultPlan || 'pro';
   var billing = localStorage.getItem('billingCycle') || 'annual';
   var isAnnual = billing === 'annual';
+  var apple = usesAppleIAP();
 
   var overlay = document.createElement('div');
   overlay.className = 'payment-method-modal';
@@ -4494,24 +4544,36 @@ function openUpgradeModal(defaultPlan) {
     +   '<span id="modalBillMonthly" class="' + (!isAnnual ? 'is-on' : '') + '">Monthly</span>'
     +   '<label class="upg-switch"><input type="checkbox" id="modalBillingToggle" ' + (isAnnual ? 'checked' : '') + ' onchange="toggleModalBilling()" aria-label="Bill annually"><span></span></label>'
     +   '<span id="modalBillAnnual" class="' + (isAnnual ? 'is-on' : '') + '">Annual</span>'
-    +   '<span class="mx-chip mx-chip--green mx-chip--sm">Save 20%</span>'
+    // App Store prices vary by country, so the saving isn't a fixed 20% there.
+    +   (apple ? '' : '<span class="mx-chip mx-chip--green mx-chip--sm">Save 20%</span>')
     + '</div>'
     + upgradePlanCard('pro', isAnnual)
     + upgradePlanCard('coach', isAnnual)
+    + (apple ? '<button type="button" class="payment-restore" onclick="this.closest(\'.payment-method-modal\').remove();pocketCoachPayments.restore()">Restore Purchases</button>' : '')
+    + '<p class="payment-note payment-terms"><a href="terms.html">Terms of Use</a> · <a href="privacy.html">Privacy Policy</a></p>'
     + '</div>';
   document.body.appendChild(overlay);
+  if (apple) window.pocketCoachPayments.loadAppleProducts().then(refreshModalPrices);
+}
+
+function refreshModalPrices() {
+  var isAnnual = !!document.getElementById('modalBillingToggle')?.checked;
+  var billing = isAnnual ? 'annual' : 'monthly';
+  [['modalPro', 'pro'], ['modalCoach', 'coach']].forEach(function (pair) {
+    var shown = upgradePriceHtml(pair[1], billing);
+    var price = planPrice(pair[1], billing);
+    var el = function (suffix) { return document.getElementById(pair[0] + suffix); };
+    if (el('Price')) el('Price').innerHTML = shown.price;
+    if (el('Note')) el('Note').textContent = shown.note;
+    if (el('Sub') && !UPGRADE_PLANS[pair[1]].sub) el('Sub').textContent = (price && price.trial) || 'Cancel anytime';
+    if (el('Cta')) el('Cta').textContent = price && price.trial ? 'Start Free Trial' : 'Subscribe';
+  });
 }
 
 function toggleModalBilling() {
   var isAnnual = document.getElementById('modalBillingToggle')?.checked;
   localStorage.setItem('billingCycle', isAnnual ? 'annual' : 'monthly');
-  [['modalPro', 'pro'], ['modalCoach', 'coach']].forEach(function (pair) {
-    var p = UPGRADE_PLANS[pair[1]];
-    var price = document.getElementById(pair[0] + 'Price');
-    var note = document.getElementById(pair[0] + 'Note');
-    if (price) price.innerHTML = '£' + (isAnnual ? p.annual : p.monthly) + '<span class="upg-per">/mo</span>';
-    if (note) note.textContent = isAnnual ? p.annualNote : '';
-  });
+  refreshModalPrices();
   document.getElementById('modalBillMonthly')?.classList.toggle('is-on', !isAnnual);
   document.getElementById('modalBillAnnual')?.classList.toggle('is-on', !!isAnnual);
 }
@@ -4519,13 +4581,9 @@ function toggleModalBilling() {
 async function openManageBilling() {
   var username = window.currentUser || localStorage.getItem('fitnessAppUser');
   if (!isPro() && !isCoach()) { openUpgradeModal(); return; }
-  // Already subscribed: Apple doesn't allow linking out to Stripe's billing
-  // portal for an App-Store-purchased subscription — send iOS users to
-  // Apple's own subscription management screen instead. See payments.js.
-  if (typeof window.pocketCoachPayments !== 'undefined' && window.pocketCoachPayments.usesAppleIAP()) {
-    window.pocketCoachPayments.manage();
-    return;
-  }
+  // iOS: Apple's subscription settings, or a note for web subscribers —
+  // the iOS app never links to Stripe (see payments.js).
+  if (usesAppleIAP()) { window.pocketCoachPayments.manage(); return; }
   try {
     var res = await fetch(window.SERVER_URL + '/api/stripe/portal?username=' + encodeURIComponent(username), {
       headers: getAuthHeaders()
@@ -4554,8 +4612,10 @@ function renderSubscriptionPanel() {
     var s = window.currentSubStatus || 'none';
     status.textContent = s === 'active' ? 'Active subscription' : s === 'trialing' ? 'Free trial active' : s === 'past_due' ? 'Payment issue' : 'No active subscription';
   }
+  var restore = document.getElementById('subRestoreBtn');
+  if (restore) restore.hidden = !usesAppleIAP();
   if (btn) {
-    btn.textContent = (plan === 'pro' || plan === 'coach') ? 'Manage Billing' : 'Upgrade';
+    btn.textContent = (plan === 'pro' || plan === 'coach') ? 'Manage Subscription' : 'Upgrade';
     btn.style.background = (plan === 'pro' || plan === 'coach') ? 'transparent' : '';
     btn.style.border = (plan === 'pro' || plan === 'coach') ? '1px solid var(--border-color)' : '';
     btn.style.color = (plan === 'pro' || plan === 'coach') ? 'var(--secondary-text)' : '';
@@ -4997,6 +5057,8 @@ function showTab(tabName) {
         const _cBadge = document.getElementById('commShareBadge');
         if (_cBadge) { _cBadge.style.display = _cInbox.length ? '' : 'none'; _cBadge.textContent = _cInbox.length; }
       }
+      // Pick up friend requests sent since the last poll (updates the Friends badge)
+      if (window.Friends) window.Friends.sync().catch(() => {});
       break;
     case 'mobilityTab':
       if (typeof window.initMobilityTab === 'function') window.initMobilityTab();
@@ -17342,6 +17404,12 @@ window.fetchWorkoutHistory = fetchWorkoutHistory;
 window.startSignup = startSignup;
 
 // ── Login screen helpers ──────────────────────────────────────
+// pricing.html is the marketing site's page — inside the native apps the
+// upgrade sheet is the one source of truth for plans and prices.
+if (window.Capacitor?.isNativePlatform?.()) {
+  document.getElementById('loginPricingLink')?.remove();
+}
+
 function _switchLoginTab(mode) {
   const isLogin = mode === 'login';
   document.getElementById('loginTabBtn')?.classList.toggle('login-tab--active', isLogin);
@@ -17359,6 +17427,8 @@ function _switchLoginTab(mode) {
   if (emailField) {
     emailField.style.display = (!isLogin && window.firebaseAuth?.isAvailable()) ? '' : 'none';
   }
+  const legalNote = document.getElementById('signupLegalNote');
+  if (legalNote) legalNote.style.display = isLogin ? 'none' : '';
   const pw = document.getElementById('password');
   if (pw) pw.autocomplete = isLogin ? 'current-password' : 'new-password';
   const err = document.getElementById('loginError');

@@ -1,0 +1,36 @@
+/* Shared styles for the standalone legal pages (privacy.html, terms.html). */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--wash-mobile);
+  background-color: var(--ground);
+  background-attachment: fixed;
+  min-height: 100vh;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(48px + env(safe-area-inset-bottom, 0px));
+}
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 24px 20px 12px;
+  border-radius: var(--radius-hero);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+}
+h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1; text-transform: uppercase; margin-bottom: 8px; }
+.updated { font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #86998e; margin-bottom: 28px; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--green-90); margin: 28px 0 10px; }
+p, li { font-size: 15px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 10px; }
+strong { color: var(--text-primary); }
+ul { padding-left: 20px; margin-bottom: 12px; }
+a { color: var(--green-90); overflow-wrap: anywhere; }
+a:focus-visible { outline: 2px solid var(--green-70); outline-offset: 2px; }
+.back {
+  display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 12px;
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--green-90); text-decoration: none;
+}
+.legal-table { width: 100%; border-collapse: collapse; margin: 4px 0 14px; font-size: 14px; }
+.legal-table th, .legal-table td { text-align: left; vertical-align: top; padding: 8px 8px 8px 0; border-bottom: 1px solid var(--pod-border); color: var(--text-secondary); line-height: 1.5; }
+.legal-table th { color: var(--text-primary); font-weight: 700; }

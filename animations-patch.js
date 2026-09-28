@@ -48,32 +48,7 @@
     };
   }
 
-  // ── showToast: play a collapse-out before the toast is fully hidden ──
-  if (typeof window.showToast === 'function') {
-    const _origShowToast = window.showToast;
-    let hideTimer = null;
-    let cleanupTimer = null;
-
-    window.showToast = function (msg, type, duration) {
-      duration = duration || 3000;
-      _origShowToast(msg, type, duration);
-
-      const el = document.getElementById('nativeToast');
-      if (!el) return;
-
-      el.classList.remove('native-toast--hiding');
-      if (hideTimer) clearTimeout(hideTimer);
-      if (cleanupTimer) clearTimeout(cleanupTimer);
-
-      hideTimer = setTimeout(function () {
-        el.classList.remove('native-toast--show');
-        el.classList.add('native-toast--hiding');
-        cleanupTimer = setTimeout(function () {
-          el.classList.remove('native-toast--hiding');
-        }, 240);
-      }, duration);
-    };
-  }
+  // Toast enter/exit animation now lives in native-ui.js + css/base.css (.tst).
 
   // ── Set rows: spring in on add, collapse out before removal ──────────
   const setContainer = document.getElementById('setInputsContainer');
