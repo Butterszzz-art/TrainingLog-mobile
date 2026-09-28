@@ -15,6 +15,7 @@ definitions:
         # repo-only files (server code must never ship inside the app).
         mkdir -p www
         rsync -a --exclude='www' \
+                 --exclude='/assets' \
                  --exclude='ios' \
                  --exclude='android' \
                  --exclude='node_modules' \
@@ -57,12 +58,10 @@ definitions:
       name: Generate app icon and splash
       script: |
         # Without this the app ships Capacitor's placeholder icon, which App
-        # Review rejects. Source must be square, full-bleed, no transparency
-        # (iOS rounds the corners itself). TODO: swap in a real 1024x1024
-        # master — icon-512.png is upscaled here.
-        mkdir -p assets
-        sips -s format png --resampleHeightWidth 1024 1024 public/icons/icon-512.png --out assets/icon-only.png
-        cp assets/icon-only.png assets/logo.png
+        # Review rejects. assets/icon-only.png is the sign-in logo's plate art
+        # (from public/icons/plate.jpg) as a 1024x1024 full-bleed square with no
+        # transparency — iOS rounds the corners itself. assets/logo.png is the
+        # same plate on a transparent background for the splash screen.
         npx --yes @capacitor/assets@3 generate --ios \
           --iconBackgroundColor '#0b130d' \
           --splashBackgroundColor '#0b130d' \
@@ -260,6 +259,7 @@ workflows:
         script: |
           mkdir -p www
           rsync -a --exclude='www' \
+                   --exclude='/assets' \
                    --exclude='ios' \
                    --exclude='android' \
                    --exclude='node_modules' \
