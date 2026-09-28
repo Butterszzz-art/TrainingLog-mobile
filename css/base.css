@@ -380,16 +380,14 @@ th {
   display: block;
   height: 100%;
   background: var(--tst-meter);
-  transform-origin: left;
-  animation: tst-drain linear forwards;
+  transform-origin: left; /* drained by native-ui.js (Web Animations) so it can pause */
 }
 
-@keyframes tst-in    { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
-@keyframes tst-out   { to   { opacity: 0; transform: translateY(10px) scale(0.97); } }
-@keyframes tst-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes tst-in  { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes tst-out { to   { opacity: 0; transform: translateY(10px) scale(0.97); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tst, .tst.tst--out, .tst-meter > span { animation: none; }
+  .tst, .tst.tst--out { animation: none; }
 }
 
 /* Modal overlay */
