@@ -69,6 +69,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="public/icons/favicon-16.png">
   <link rel="icon" href="favicon.ico">
   <script src="src/js/native-ui.js"></script>
+  <script src="src/js/ai-consent.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -183,10 +184,6 @@
 
     <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
 
-    <div class="login-beta">
-      <span class="ui-icon" data-icon="zap"></span> <strong>Beta:</strong> Server may take ~30s to wake on first use — wait and try again if it hangs.
-    </div>
-
     <button id="loginButton" class="login-cta loading-btn" onclick="startLogin()">
       <span>Log In</span><span class="spinner"></span>
     </button>
@@ -195,7 +192,13 @@
     </button>
     <button type="button" id="forgotPasswordLink" class="login-forgot-link" onclick="startForgotPassword()">Forgot password?</button>
 
-    <a href="pricing.html" class="login-pricing-link">See pricing &amp; plans →</a>
+    <p class="login-legal" id="signupLegalNote" style="display:none;">
+      By creating an account you agree to the <a href="terms.html">Terms of Use</a>
+      and confirm you've read the <a href="privacy.html">Privacy Policy</a>.
+    </p>
+
+    <a href="pricing.html" class="login-pricing-link" id="loginPricingLink">See pricing &amp; plans →</a>
+    <p class="login-legal"><a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a></p>
   </div>
 
 </div>
@@ -4394,29 +4397,35 @@ function renderLockedCard(featureName, requiredPlan) {
 
 function openCheckout(plan) {
   var billing = localStorage.getItem('billingCycle') || 'annual';
-  // Apple Guideline 3.1.1: the iOS build must not offer Stripe as the
-  // purchase path for a digital subscription unlocked in-app — see
-  // src/js/payments.js. purchaseViaIAP() is a stub until that's wired up, so
-  // this button is honest about "coming soon" rather than silently opening
-  // Stripe checkout inside an iOS build (or pretending IAP already works).
-  var isIOS = typeof window.pocketCoachPayments !== 'undefined' && window.pocketCoachPayments.usesAppleIAP();
-  var payButtonHtml = isIOS
-    ? '<button class="pay-btn pay-stripe" onclick="pocketCoachPayments.purchase(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Continue</button>'
-      + '<p class="payment-note">In-app purchase — powered by the App Store</p>'
-    : '<button class="pay-btn pay-stripe" onclick="checkoutWithStripe(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Pay with Card</button>'
-      + '<p class="payment-note">Secure checkout powered by Stripe</p>';
+  var p = UPGRADE_PLANS[plan] || UPGRADE_PLANS.pro;
+  // One path on every platform — pocketCoachPayments.purchase() shows the
+  // external-purchase disclosure first on iOS (see src/js/payments.js).
+  // The terms line is Apple Guideline 3.1.2: before buying an
+  // auto-renewing subscription the user must see the price, the billing
+  // period, that it renews, and links to the Terms and Privacy Policy.
+  var priceLine = billing === 'annual'
+    ? '£' + (p.annual * 12) + ' per year'
+    : '£' + p.monthly + ' per month';
   var modal = document.createElement('div');
   modal.className = 'payment-method-modal';
   modal.innerHTML = '<div class="payment-method-inner">'
-    + '<h3>Choose payment method</h3>'
-    + '<p class="payment-sub">Both options include a 7-day free trial</p>'
-    + payButtonHtml
-    + '<button class="close-payment-modal" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
+    + '<h3>' + p.name + ' plan</h3>'
+    + '<p class="payment-sub">7-day free trial, then ' + priceLine + '</p>'
+    + '<button class="pay-btn pay-stripe" onclick="pocketCoachPayments.purchase(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Continue</button>'
+    + '<p class="payment-note">Secure checkout powered by Stripe</p>'
+    + '<p class="payment-note payment-terms">Your subscription renews automatically at ' + priceLine
+    +   ' until you cancel. Cancel any time before the trial ends and you won\'t be charged. Manage or cancel any time from Progress → Tools → Subscription. '
+    +   '<a href="terms.html">Terms of Use</a> · <a href="privacy.html">Privacy Policy</a></p>'
+    + '<button class="close-payment-modal" aria-label="Close" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
     + '</div>';
   document.body.appendChild(modal);
 }
 
-async function checkoutWithStripe(plan, billing) {
+// opts.external: the iOS flow, after the disclosure. Setting location.href
+// to Stripe's URL doesn't navigate the WebView there — Capacitor hands any
+// non-app URL to Safari (see payments.js) — so the user comes back to the
+// app by hand and we re-read their plan when it's foregrounded.
+async function checkoutWithStripe(plan, billing, opts = {}) {
   document.querySelector('.payment-method-modal')?.remove();
   var username = window.currentUser || localStorage.getItem('fitnessAppUser');
   try {
@@ -4426,8 +4435,12 @@ async function checkoutWithStripe(plan, billing) {
       body: JSON.stringify({ username: username, plan: plan, billing: billing })
     });
     var data = await res.json();
-    if (data.url) window.location.href = data.url;
-    else if (typeof nativeToast === 'function') nativeToast('Could not start checkout', 'error');
+    if (!data.url) {
+      if (typeof nativeToast === 'function') nativeToast('Could not start checkout', 'error');
+      return;
+    }
+    if (opts.external) window.pocketCoachPayments?.refreshPlanOnReturn();
+    window.location.href = data.url;
   } catch {
     if (typeof nativeToast === 'function') nativeToast('Connection error', 'error');
   }
@@ -4523,12 +4536,11 @@ function toggleModalBilling() {
 async function openManageBilling() {
   var username = window.currentUser || localStorage.getItem('fitnessAppUser');
   if (!isPro() && !isCoach()) { openUpgradeModal(); return; }
-  // Already subscribed: Apple doesn't allow linking out to Stripe's billing
-  // portal for an App-Store-purchased subscription — send iOS users to
-  // Apple's own subscription management screen instead. See payments.js.
-  if (typeof window.pocketCoachPayments !== 'undefined' && window.pocketCoachPayments.usesAppleIAP()) {
-    window.pocketCoachPayments.manage();
-    return;
+  // Stripe's billing portal on every platform — subscriptions are never
+  // bought through Apple. On iOS the portal URL opens in Safari (see
+  // payments.js), so refresh the plan when the user comes back.
+  if (window.pocketCoachPayments?.needsExternalPurchaseFlow()) {
+    window.pocketCoachPayments.refreshPlanOnReturn();
   }
   try {
     var res = await fetch(window.SERVER_URL + '/api/stripe/portal?username=' + encodeURIComponent(username), {
@@ -17346,6 +17358,12 @@ window.fetchWorkoutHistory = fetchWorkoutHistory;
 window.startSignup = startSignup;
 
 // ── Login screen helpers ──────────────────────────────────────
+// pricing.html is the marketing site's page — inside the native apps the
+// upgrade sheet is the one source of truth for plans and prices.
+if (window.Capacitor?.isNativePlatform?.()) {
+  document.getElementById('loginPricingLink')?.remove();
+}
+
 function _switchLoginTab(mode) {
   const isLogin = mode === 'login';
   document.getElementById('loginTabBtn')?.classList.toggle('login-tab--active', isLogin);
@@ -17363,6 +17381,8 @@ function _switchLoginTab(mode) {
   if (emailField) {
     emailField.style.display = (!isLogin && window.firebaseAuth?.isAvailable()) ? '' : 'none';
   }
+  const legalNote = document.getElementById('signupLegalNote');
+  if (legalNote) legalNote.style.display = isLogin ? 'none' : '';
   const pw = document.getElementById('password');
   if (pw) pw.autocomplete = isLogin ? 'current-password' : 'new-password';
   const err = document.getElementById('loginError');

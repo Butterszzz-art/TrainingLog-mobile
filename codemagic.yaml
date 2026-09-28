@@ -1,12 +1,94 @@
+definitions:
+  # Shared iOS steps. Capacitor comes from package.json (v8) — don't
+  # install a different major on top of it; plugins must match core.
+  scripts:
+    - &ios_npm
+      name: Install JS dependencies
+      script: |
+        npm ci || npm install
+
+    - &ios_bundle
+      name: Bundle web assets into www/
+      script: |
+        # Capacitor requires a named webDir folder (not ".").
+        # Copy the app files into www/, skipping native, build, server and
+        # repo-only files (server code must never ship inside the app).
+        mkdir -p www
+        rsync -a --exclude='www' \
+                 --exclude='ios' \
+                 --exclude='android' \
+                 --exclude='node_modules' \
+                 --exclude='.git' \
+                 --exclude='.claude' \
+                 --exclude='.env*' \
+                 --exclude='scripts' \
+                 --exclude='tests' \
+                 --exclude='src/routes' \
+                 --exclude='*.md' \
+                 --exclude='*.ts' \
+                 --exclude='codemagic.yaml' \
+                 --exclude='server.js' \
+                 --exclude='package*.json' \
+                 --exclude='babel.config.json' \
+                 . www/
+
+    - &ios_native
+      name: Generate iOS native project
+      script: |
+        if [ ! -d "ios" ]; then
+          npx cap add ios
+        fi
+        PLIST=ios/App/App/Info.plist
+        set_plist() {
+          /usr/libexec/PlistBuddy -c "Delete :$1" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :$1 $2 $3" "$PLIST"
+        }
+        # Profile photos use a file picker, which offers "Take Photo" on
+        # iOS. Without these usage strings iOS kills the app the moment the
+        # camera or library is opened.
+        set_plist NSCameraUsageDescription string "Pocket Coach uses the camera so you can take a profile photo."
+        set_plist NSPhotoLibraryUsageDescription string "Pocket Coach lets you choose a profile photo from your library."
+        # Only standard HTTPS — exempt from export compliance, so App Store
+        # Connect doesn't hold every build for the encryption questionnaire.
+        set_plist ITSAppUsesNonExemptEncryption bool false
+        set_plist CFBundleDisplayName string "Pocket Coach"
+
+    - &ios_icons
+      name: Generate app icon and splash
+      script: |
+        # Without this the app ships Capacitor's placeholder icon, which App
+        # Review rejects. Source must be square, full-bleed, no transparency
+        # (iOS rounds the corners itself). TODO: swap in a real 1024x1024
+        # master — icon-512.png is upscaled here.
+        mkdir -p assets
+        sips -s format png --resampleHeightWidth 1024 1024 public/icons/icon-512.png --out assets/icon-only.png
+        cp assets/icon-only.png assets/logo.png
+        npx --yes @capacitor/assets@3 generate --ios \
+          --iconBackgroundColor '#0b130d' \
+          --splashBackgroundColor '#0b130d' \
+          --logoSplashScale 0.3
+
+    - &ios_sync
+      name: Sync web assets into ios/
+      script: |
+        npx cap sync ios
+
+    - &ios_pods
+      name: Install CocoaPods (older CocoaPods-based projects only)
+      script: |
+        # Capacitor 8 generates a Swift Package Manager project by default.
+        if [ -f ios/App/Podfile ]; then
+          cd ios/App && pod install --repo-update
+        fi
+
 workflows:
 
   # ─────────────────────────────────────────────────────────────────
-  # iOS – Capacitor build (no local Mac needed)
-  # Codemagic installs Capacitor and generates the ios/ project
-  # fresh on every build run.
+  # iOS – unsigned simulator build (no Apple account needed).
+  # Runs on every push to main to catch build breaks.
   # ─────────────────────────────────────────────────────────────────
   ios-capacitor:
-    name: Pocket Coach – iOS
+    name: Pocket Coach – iOS (simulator)
     max_build_duration: 60
     instance_type: mac_mini_m2
 
@@ -20,77 +102,25 @@ workflows:
           source: true
 
     environment:
-      # ── Uncomment + fill in once you have an Apple Developer account ──
-      # ios_signing:
-      #   distribution_type: development          # change to app_store for TestFlight
-      #   bundle_identifier: com.pocketcoach.app
       vars:
-        XCODE_WORKSPACE: ios/App/App.xcworkspace
-        XCODE_SCHEME: App
         BUNDLE_ID: com.pocketcoach.app
-        CAP_VERSION: "6"
-      node: 20
+      node: 22
+      xcode: latest
 
     scripts:
-      - name: Install JS dependencies
-        script: |
-          npm install
-
-      - name: Install Capacitor core + iOS
-        script: |
-          npm install \
-            @capacitor/core@^${CAP_VERSION} \
-            @capacitor/cli@^${CAP_VERSION} \
-            @capacitor/ios@^${CAP_VERSION}
-
-      - name: Bundle web assets into www/
-        script: |
-          # Capacitor requires a named webDir folder (not ".").
-          # Copy all app files into www/, skipping native/build folders.
-          mkdir -p www
-          rsync -a --exclude='www' \
-                   --exclude='ios' \
-                   --exclude='android' \
-                   --exclude='node_modules' \
-                   --exclude='.git' \
-                   --exclude='.claude' \
-                   --exclude='scripts' \
-                   --exclude='tests' \
-                   --exclude='codemagic.yaml' \
-                   --exclude='server.js' \
-                   --exclude='package*.json' \
-                   --exclude='babel.config.json' \
-                   . www/
-
-      - name: Generate iOS native project
-        script: |
-          if [ ! -d "ios" ]; then
-            npx cap add ios
-          fi
-          # Profile photos use a file picker, which offers "Take Photo" on
-          # iOS. Without these usage strings iOS kills the app the moment the
-          # camera or library is opened.
-          PLIST=ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Delete :NSCameraUsageDescription" "$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Pocket Coach uses the camera so you can take a profile photo.'" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Delete :NSPhotoLibraryUsageDescription" "$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Pocket Coach lets you choose a profile photo from your library.'" "$PLIST"
-
-      - name: Sync web assets into ios/
-        script: |
-          npx cap sync ios
-
-      - name: Install CocoaPods
-        script: |
-          cd ios/App && pod install --repo-update
-
-      - name: Build (simulator – unsigned, no Apple account needed)
+      - *ios_npm
+      - *ios_bundle
+      - *ios_native
+      - *ios_icons
+      - *ios_sync
+      - *ios_pods
+      - name: Build (simulator – unsigned)
         script: |
           set -o pipefail
           mkdir -p "$CM_BUILD_DIR/build"
-          xcodebuild \
-            -workspace "$XCODE_WORKSPACE" \
-            -scheme "$XCODE_SCHEME" \
+          if [ -d ios/App/App.xcworkspace ]; then PROJ="-workspace ios/App/App.xcworkspace"; else PROJ="-project ios/App/App.xcodeproj"; fi
+          xcodebuild $PROJ \
+            -scheme App \
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
@@ -101,41 +131,96 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
             build 2>&1 | tee /tmp/xcodebuild.log | xcpretty --color
-          echo "--- xcodebuild exit: $?"
 
       - name: Zip .app for download
         script: |
-          echo "=== Searching for .app ==="
-          # Search both known locations
           APP_PATH=$(find "$CM_BUILD_DIR/build" "$CM_BUILD_DIR/DerivedData" \
             -name "*.app" -type d 2>/dev/null | grep -v "\.xctest" | head -1)
           echo "Found .app at: $APP_PATH"
           if [ -n "$APP_PATH" ]; then
             zip -r "$CM_BUILD_DIR/PocketCoach.app.zip" "$APP_PATH"
-            echo "✅ Zipped → PocketCoach.app.zip"
           else
-            echo "=== build tree ==="
-            find "$CM_BUILD_DIR/build" -type d 2>/dev/null | head -40
-            echo "=== last 50 lines of xcodebuild log ==="
             tail -50 /tmp/xcodebuild.log
             exit 1
           fi
 
-      # ── REAL DEVICE / TESTFLIGHT (uncomment when Apple account is ready) ──
-      # - name: Build signed IPA
-      #   script: |
-      #     xcode-project use-profiles
-      #     xcode-project build-ipa \
-      #       --workspace "$XCODE_WORKSPACE" \
-      #       --scheme "$XCODE_SCHEME"
-
     artifacts:
       - PocketCoach.app.zip
-      - /tmp/xcodebuild_logs/*.log
-      # Signed build artifact (uncomment with signing):
-      # - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild.log
 
     publishing:
+      email:
+        recipients:
+          - armanbahali@gmail.com
+        notify:
+          success: true
+          failure: true
+
+
+  # ─────────────────────────────────────────────────────────────────
+  # iOS – signed App Store build → TestFlight / App Store Connect.
+  # Start it manually from the Codemagic UI. Needs, in Codemagic:
+  #   1. Team settings → Integrations → Developer Portal: an App Store
+  #      Connect API key saved under the name used below.
+  #   2. The app record (bundle ID com.pocketcoach.app) created in
+  #      App Store Connect.
+  # Codemagic then creates/fetches the distribution certificate and
+  # provisioning profile itself.
+  # ─────────────────────────────────────────────────────────────────
+  ios-app-store:
+    name: Pocket Coach – iOS (App Store)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: Pocket Coach ASC key
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.pocketcoach.app
+      vars:
+        BUNDLE_ID: com.pocketcoach.app
+        APP_VERSION: "1.0.0"
+      node: 22
+      xcode: latest
+
+    scripts:
+      - *ios_npm
+      - *ios_bundle
+      - *ios_native
+      - *ios_icons
+      - *ios_sync
+      - *ios_pods
+      - name: Set version and build number
+        script: |
+          cd ios/App
+          agvtool new-marketing-version "$APP_VERSION"
+          agvtool new-version -all "$BUILD_NUMBER"
+
+      - name: Apply signing profiles
+        script: |
+          xcode-project use-profiles
+
+      - name: Build signed IPA
+        script: |
+          if [ -d ios/App/App.xcworkspace ]; then
+            xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
+          else
+            xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+          fi
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Uploads to TestFlight. Flip submit_to_app_store to true once the
+        # listing, screenshots and review notes are filled in.
+        submit_to_testflight: true
+        submit_to_app_store: false
       email:
         recipients:
           - armanbahali@gmail.com
@@ -164,20 +249,12 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: com.pocketcoach.app
-        CAP_VERSION: "6"
-      node: 20
+      node: 22
 
     scripts:
       - name: Install JS dependencies
         script: |
-          npm install
-
-      - name: Install Capacitor core + Android
-        script: |
-          npm install \
-            @capacitor/core@^${CAP_VERSION} \
-            @capacitor/cli@^${CAP_VERSION} \
-            @capacitor/android@^${CAP_VERSION}
+          npm ci || npm install
 
       - name: Bundle web assets into www/
         script: |
@@ -188,8 +265,12 @@ workflows:
                    --exclude='node_modules' \
                    --exclude='.git' \
                    --exclude='.claude' \
+                   --exclude='.env*' \
                    --exclude='scripts' \
                    --exclude='tests' \
+                   --exclude='src/routes' \
+                   --exclude='*.md' \
+                   --exclude='*.ts' \
                    --exclude='codemagic.yaml' \
                    --exclude='server.js' \
                    --exclude='package*.json' \
