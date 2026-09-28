@@ -72,28 +72,42 @@ function saveGroups() {
   }
 }
 
-// Async createGroup to call backend or fallback to local
-async function createGroup(name, goal = '', tags = []) {
+// Async createGroup to call backend or fallback to local. `memberIds` are
+// usernames (normally friends picked in the create sheet) added alongside the
+// creator.
+async function createGroup(name, goal = '', tags = [], memberIds = []) {
   if (!name) return null;
+  const creator = getCurrentUserId();
+  const now = new Date().toISOString();
+  const members = [];
+  if (creator) members.push({ userId: creator, joinedAt: now });
+  memberIds.forEach(id => {
+    if (id && !members.some(m => m.userId.toLowerCase() === String(id).toLowerCase())) {
+      members.push({ userId: id, invitedAt: now });
+    }
+  });
   if (typeof fetch !== 'undefined' && window && window.currentUser) {
     try {
       const res = await fetch(`${window.SERVER_URL}/community/groups`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags }),
+        body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags, members: members.map(m => m.userId) }),
         signal: AbortSignal.timeout(5000)
       });
-      const g = normalizeGroup(await res.json());
-      groups.push(g);
-      saveGroups();
-      return g;
+      if (res.ok) {
+        const g = normalizeGroup(await res.json());
+        members.forEach(m => { if (!isMemberOf(g, m.userId)) g.members.push(m); });
+        groups.push(g);
+        saveGroups();
+        return g;
+      }
     } catch (e) {
       console.warn('createGroup failed', e);
     }
   }
   // fallback local group creation
-  const g = normalizeGroup({ id: Date.now(), name, goal, tags, members: [], posts: [] });
+  const g = normalizeGroup({ id: Date.now(), name, goal, tags, members, posts: [] });
   groups.push(g);
   saveGroups();
   return g;
@@ -541,7 +555,10 @@ async function openGroup(id) {
   detail.innerHTML = `
     <h3>${group.name}</h3>
     <div>
-      <input id="inviteUserInput" placeholder="User ID" />
+      <input id="inviteUserInput" placeholder="Friend's username" list="inviteFriendOptions" autocomplete="off" />
+      <datalist id="inviteFriendOptions">${(typeof window.getFriends === 'function' ? window.getFriends() : [])
+        .filter(f => !isMemberOf(group, f.username))
+        .map(f => `<option value="${_escGroup(f.username)}"></option>`).join('')}</datalist>
       <button onclick="inviteUserToGroup(${id}, document.getElementById('inviteUserInput').value)">Invite</button>
     </div>
     <div id="groupPosts">${postsHtml}</div>
@@ -589,16 +606,80 @@ function shareProgramInput(id, dataStr) {
   shareProgramToGroup(id, parsed);
 }
 
+// Bottom sheet: name, goal, tags and a tap-to-select list of your friends.
 function showCreateGroup() {
-  window.showPrompt('Group name?').then(name => {
-    if (!name) return;
-    window.showPrompt('Group goal? (optional)').then(goal => {
-      window.showPrompt('Tags? (comma separated)').then(tagsStr => {
-        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
-        createGroup(name, goal || '', tags).then(() => renderGroups(groups));
-      });
-    });
+  let overlay = document.getElementById('createGroupOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'createGroupOverlay';
+    overlay.className = 'quick-share-overlay';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+  }
+  const friends = typeof window.getFriends === 'function' ? window.getFriends() : [];
+  const selected = new Set();
+
+  const friendsHtml = friends.length
+    ? `<div class="quick-share-friends">${friends.map(f => `
+        <div class="quick-share-friend" role="checkbox" aria-checked="false" tabindex="0" data-friend="${_escGroup(f.username)}">
+          <div class="friend-avatar" data-avatar-user="${_escGroup(f.username)}">${_escGroup(String(f.username).charAt(0).toUpperCase())}</div>
+          <span class="quick-share-friend-name">${_escGroup(f.username)}</span>
+          <span class="quick-share-check">✓</span>
+        </div>`).join('')}</div>`
+    : `<div class="friends-empty" style="margin-bottom:12px">No friends yet — add some from the Friends tab and they'll show up here.</div>`;
+
+  overlay.innerHTML = `
+    <div class="quick-share-panel" role="dialog" aria-modal="true" aria-labelledby="createGroupTitle">
+      <div class="quick-share-handle"></div>
+      <div class="quick-share-title" id="createGroupTitle">Create group</div>
+      <div class="quick-share-subtitle">Name it, then tap friends to add them</div>
+      <label class="create-group-field"><span>Name</span><input id="createGroupName" type="text" maxlength="60" placeholder="e.g. Morning Lifters"></label>
+      <label class="create-group-field"><span>Goal (optional)</span><input id="createGroupGoal" type="text" maxlength="80" placeholder="e.g. Hit a 200kg deadlift"></label>
+      <label class="create-group-field"><span>Tags (optional, comma separated)</span><input id="createGroupTags" type="text" placeholder="strength, beginner"></label>
+      <div class="create-group-field"><span>Add friends${friends.length ? ` <em id="createGroupCount" style="font-style:normal"></em>` : ''}</span></div>
+      ${friendsHtml}
+      <button class="quick-share-send" id="createGroupSubmit" disabled>Create group</button>
+    </div>`;
+  overlay.classList.add('open');
+
+  const nameInput = overlay.querySelector('#createGroupName');
+  const submit = overlay.querySelector('#createGroupSubmit');
+  const count = overlay.querySelector('#createGroupCount');
+  const refresh = () => {
+    submit.disabled = !nameInput.value.trim();
+    submit.textContent = selected.size
+      ? `Create group with ${selected.size} friend${selected.size === 1 ? '' : 's'}`
+      : 'Create group';
+    if (count) count.textContent = selected.size ? `· ${selected.size} selected` : '';
+  };
+  nameInput.addEventListener('input', refresh);
+  overlay.querySelectorAll('[data-friend]').forEach(el => {
+    const toggle = () => {
+      const name = el.dataset.friend;
+      if (selected.has(name)) selected.delete(name); else selected.add(name);
+      el.classList.toggle('selected', selected.has(name));
+      el.setAttribute('aria-checked', String(selected.has(name)));
+      refresh();
+    };
+    el.addEventListener('click', toggle);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
   });
+  submit.addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    if (!name) return;
+    submit.disabled = true;
+    const goal = overlay.querySelector('#createGroupGoal').value.trim();
+    const tagsStr = overlay.querySelector('#createGroupTags').value;
+    const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+    await createGroup(name, goal, tags, [...selected]);
+    overlay.classList.remove('open');
+    renderGroups(groups);
+    if (typeof showToast === 'function') {
+      showToast(selected.size ? `Created ${name} with ${selected.size} friend${selected.size === 1 ? '' : 's'}` : `Created ${name}`);
+    }
+  });
+  refresh();
+  setTimeout(() => nameInput.focus(), 50);
 }
 
 // ----- Competition Features -----
@@ -786,5 +867,5 @@ if (typeof window !== 'undefined') {
 
 // allow tests to import functions
 if (typeof module !== 'undefined') {
-  module.exports = { calculateLeaderboard, filterGroups, sortGroups, groupActivity7d };
+  module.exports = { calculateLeaderboard, filterGroups, sortGroups, groupActivity7d, createGroup, getGroups };
 }
