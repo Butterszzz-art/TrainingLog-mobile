@@ -17,8 +17,15 @@
   // ── Toast ──────────────────────────────────────────────────────────────────
   // Toasts stack (max 3, newest nearest the nav) in #toastStack. Tap to
   // dismiss. Styling lives in css/base.css (.tst*).
+  //
+  // Timing: a burst of toasts leaves one at a time (each outlives the one
+  // above it by TOAST_GAP), long messages get extra reading time, and every
+  // timer pauses while a finger/pointer is on the stack.
 
-  const TOAST_MAX = 3;
+  const TOAST_MAX      = 3;
+  const TOAST_GAP      = 1500;  // ms between consecutive toasts leaving
+  const TOAST_MIN_LEFT = 2000;  // a new arrival never leaves older toasts less than this
+  const TOAST_MAX_LIFE = 9000;
   const TOAST_ICONS = {
     success: '<path d="M5 12.5l4.2 4.2L19 7"/>',
     error:   '<path d="M7 7l10 10M17 7L7 17"/>',
@@ -35,9 +42,44 @@
       stack = document.createElement('div');
       stack.id = 'toastStack';
       stack.className = 'tst-stack';
+      // pointerenter/leave also fire for touch press/release, so holding a toast pauses them all.
+      stack.addEventListener('pointerenter', () => _liveToasts(stack).forEach(_pauseToast));
+      stack.addEventListener('pointerleave', () => _liveToasts(stack).forEach(t => _scheduleToast(t, t._left)));
       document.body.appendChild(stack);
     }
     return stack;
+  }
+
+  function _liveToasts(stack) {
+    return Array.from(stack.children).filter(t => !t._closing);
+  }
+
+  const _reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // (Re)start a toast's countdown with `ms` left; the meter drains from its
+  // current fill to empty over the same time.
+  function _scheduleToast(el, ms) {
+    clearTimeout(el._timer);
+    el._paused = false;
+    el._deadline = Date.now() + ms;
+    el._life = Math.max(el._life || 0, ms);
+    el._timer = setTimeout(() => _dismissToast(el), ms);
+
+    const bar = el.querySelector('.tst-meter > span');
+    if (!bar || !bar.animate || _reduceMotion()) return;
+    if (el._meter) el._meter.cancel();
+    el._meter = bar.animate(
+      [{ transform: `scaleX(${ms / el._life})` }, { transform: 'scaleX(0)' }],
+      { duration: ms, easing: 'linear', fill: 'forwards' }
+    );
+  }
+
+  function _pauseToast(el) {
+    if (el._paused) return;
+    el._paused = true;
+    clearTimeout(el._timer);
+    el._left = Math.max(0, el._deadline - Date.now());
+    if (el._meter) el._meter.pause();
   }
 
   function _dismissToast(el) {
@@ -61,10 +103,29 @@
     const stack = _toastStack();
 
     // Same message already up: replace it rather than stacking a duplicate.
-    let live = Array.from(stack.children).filter(t => !t._closing);
+    let live = _liveToasts(stack);
     live.filter(t => t._text === text && t._type === type).forEach(_dismissToast);
     live = live.filter(t => !t._closing);
     live.slice(0, Math.max(0, live.length - TOAST_MAX + 1)).forEach(_dismissToast);
+    live = live.filter(t => !t._closing);
+
+    // Toasts already up get at least TOAST_MIN_LEFT more, and each leaves at
+    // least TOAST_GAP after the one above it, so a burst never vanishes at once.
+    const now = Date.now();
+    let prevLeft = -Infinity;
+    live.forEach(t => {
+      const left = t._paused ? t._left : t._deadline - now;
+      const need = Math.max(TOAST_MIN_LEFT, prevLeft + TOAST_GAP);
+      if (left < need) {
+        if (t._paused) t._left = need; else _scheduleToast(t, need);
+      }
+      prevLeft = Math.max(left, need);
+    });
+
+    // ~50ms per character on top of a base, so long messages stay up longer.
+    // TOAST_MAX_LIFE caps only these automatic extensions, never the caller's duration.
+    const life = Math.max(duration,
+      Math.min(TOAST_MAX_LIFE, Math.max(1800 + text.length * 50, prevLeft + TOAST_GAP)));
 
     const el = document.createElement('div');
     el.className = `tst tst--${type}`;
@@ -72,12 +133,14 @@
     el.innerHTML =
       `<span class="tst-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${TOAST_ICONS[type]}</svg></span>` +
       `<span class="tst-body"><span class="tst-kick">${TOAST_KICKERS[type]}</span><span class="tst-msg">${_esc(text)}</span></span>` +
-      `<span class="tst-meter" aria-hidden="true"><span style="animation-duration:${duration}ms"></span></span>`;
+      `<span class="tst-meter" aria-hidden="true"><span></span></span>`;
     el._text = text;
     el._type = type;
     el.addEventListener('click', () => _dismissToast(el));
     stack.appendChild(el);
-    el._timer = setTimeout(() => _dismissToast(el), duration);
+    _scheduleToast(el, life);
+    // Added while a finger is already on the stack: stay paused until release.
+    if (stack.matches(':hover') && live.some(t => t._paused)) _pauseToast(el);
   }
 
   // ── Confirm modal ──────────────────────────────────────────────────────────
