@@ -590,43 +590,67 @@ function _fmt(totalSeconds) {
     return localStorage.getItem('activitySyncConnected') === '1';
   }
 
-  function _syncRing(count, goal) {
-    const fill = document.getElementById('stepRingFill');
-    if (!fill) return;
-    const r = 34;
-    const c = 2 * Math.PI * r;
+  function _syncMeter(count, goal) {
     const pct = goal > 0 ? Math.min(count / goal, 1) : 0;
-    fill.style.strokeDasharray  = c;
-    fill.style.strokeDashoffset = c * (1 - pct);
+    const fill = document.getElementById('stepMeterFill');
+    if (fill) fill.style.width = `${Math.round(pct * 100)}%`;
+    const meter = fill?.parentElement;
+    if (meter) meter.setAttribute('aria-valuenow', String(Math.round(pct * 100)));
 
-    const countEl = document.getElementById('stepRingCount');
-    if (countEl) countEl.textContent = count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count;
+    const countEl = document.getElementById('stepTodayCount');
+    if (countEl) countEl.textContent = count.toLocaleString();
 
     const goalEl = document.getElementById('stepGoalLabel');
-    if (goalEl) goalEl.textContent = `Goal: ${goal.toLocaleString()} steps`;
+    if (goalEl) goalEl.textContent = goal.toLocaleString();
 
+    // A synced wearable owns the number, so the manual "+ Add" entry goes away.
     const synced = _isSynced();
-    const inputRow = document.querySelector('.step-input-row');
-    if (inputRow) inputRow.style.display = synced ? 'none' : '';
+    const addBtn = document.getElementById('stepAddBtn');
+    if (addBtn) addBtn.hidden = synced;
     const syncedLabel = document.getElementById('stepSyncedLabel');
     if (syncedLabel) syncedLabel.style.display = synced ? '' : 'none';
+    if (synced) _toggleInput(false);
 
     const input = document.getElementById('stepCountInput');
     if (input && !synced && !input.matches(':focus')) input.value = count || '';
   }
 
+  function _toggleInput(open) {
+    const row = document.getElementById('stepInputRow');
+    const addBtn = document.getElementById('stepAddBtn');
+    if (!row) return;
+    row.hidden = !open;
+    if (addBtn) {
+      addBtn.setAttribute('aria-expanded', String(open));
+      addBtn.textContent = open ? 'Close' : '+ Add';
+    }
+  }
+
   function refreshStepWidget() {
-    _syncRing(_getCount(), _getGoal());
+    _syncMeter(_getCount(), _getGoal());
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     refreshStepWidget();
 
-    document.getElementById('stepSaveBtn')?.addEventListener('click', () => {
+    document.getElementById('stepAddBtn')?.addEventListener('click', () => {
+      const row = document.getElementById('stepInputRow');
+      const open = !!row?.hidden;
+      _toggleInput(open);
+      if (open) document.getElementById('stepCountInput')?.focus();
+    });
+
+    const save = () => {
       const input = document.getElementById('stepCountInput');
       const count = parseInt(input?.value) || 0;
       _saveCount(count);
+      input?.blur();
+      _toggleInput(false);
       refreshStepWidget();
+    };
+    document.getElementById('stepSaveBtn')?.addEventListener('click', save);
+    document.getElementById('stepCountInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') save();
     });
 
     // Refresh when switching to homeTab

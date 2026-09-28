@@ -111,81 +111,217 @@
   padding-left: 2px;
 }
 
-/* ── Weekly 2-col grid ──────────────────────────────────────── */
+/* ── Weekly scoreboard (weekly-summary.js + step widget) ────── */
 
-.home-weekly-grid {
-  display: grid;
-  /* minmax(0, …) so a child's min-content (step ring + input row,
-     3-up .ws-stats) can't blow the track past the viewport. */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  align-items: stretch;
-}
-
-.home-weekly-grid > * {
-  min-width: 0;
-}
-
-/* The summary card fills its grid cell — its standalone 10px margin
-   pushed it out of the column and under the step card. */
-.home-weekly-grid .weekly-summary-card {
-  margin: 0;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-/* Under ~640px a half-width column (≈280px or less) can't fit the
-   7-day strip + 3-up stat tiles or the step input row — stack. */
-@media (max-width: 640px) {
-  .home-weekly-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* Let the step widget's fixed-width row shrink inside the card */
-/* Ring sits beside the info when there's room, above it when the card is
-   narrow (320px phones, or a half-width column on wider screens). */
-.home-step-card .step-widget {
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.home-step-card .step-widget-info {
-  flex: 1 1 140px;
-  min-width: 0;
-}
-
-/* Save wraps under the input on the narrowest phones rather than
-   crushing the input to an unusable width. */
-.home-step-card .step-input-row {
-  flex-wrap: wrap;
-}
-
-.home-step-card .step-count-input {
-  flex: 1 1 120px;
-  width: auto;
-  min-width: 0;
-}
-
-.home-step-card .step-save-btn {
-  flex-shrink: 0;
-}
-
-/* Step card — replaces the heavy inline styles */
-.home-step-card {
+.wk-card {
   background: var(--pod-bg);
   border: 1px solid var(--pod-border);
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-bevel);
-  padding: 14px;
-  /* Grid rows stretch to the taller summary card — keep the widget centred. */
-  display: flex;
-  align-items: center;
+  padding: 16px 18px;
 }
 
-.home-step-card > .step-widget {
+.wk-card .wk-cap {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mx-faint);
+}
+
+.wk-top {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.wk-hero { flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
+.wk-card .wk-streak { color: var(--green-90); }
+
+.wk-hero-num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  line-height: 0.9;
+  margin-bottom: 6px;
+}
+.wk-hero-val { font-size: 60px; color: var(--text-primary); }
+.wk-hero-of  { font-size: 26px; color: var(--green-40); margin-left: 2px; }
+.wk-hero-num.is-hit .wk-hero-val,
+.wk-hero-num.is-hit .wk-hero-of { color: var(--green-90); }
+
+.wk-week {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.wk-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.wk-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.wk-bar {
+  display: block;
+  width: 100%;
+  height: 34px;
+  border-radius: 6px;
+  background: var(--surface-raised);
+}
+.wk-day.is-done .wk-bar { background: var(--green-60); }
+.wk-day.is-today .wk-bar { box-shadow: inset 0 0 0 1.5px var(--green-70); }
+.wk-day.is-today:not(.is-done) .wk-bar { background: transparent; box-shadow: none; border: 1.5px dashed var(--green-70); }
+.wk-card .wk-day.is-done .wk-cap { color: var(--green-100); }
+.wk-card .wk-day.is-today .wk-cap { color: var(--text-primary); }
+
+.wk-stats {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border-top: 1px solid var(--border-default);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.wk-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 0 10px;
+  border-left: 1px solid var(--border-default);
+}
+.wk-stat:first-child { padding-left: 0; border-left: 0; }
+.wk-card .wk-stat .wk-cap { font-size: 11px; }
+
+.wk-stat-v {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.wk-stat-v small { font-size: 13px; color: var(--mx-faint); margin-left: 1px; }
+.wk-stat-v.is-pr   { color: var(--brass-light); }
+.wk-stat-v.is-good { color: var(--green-90); }
+.wk-stat-v.is-mid  { color: var(--brass-base); }
+.wk-stat-v.is-low  { color: var(--danger-text-mobile); }
+
+.wk-empty {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+/* Steps — lives inside the same card, below the scoreboard */
+.wk-steps {
+  border-top: 1px solid var(--border-default);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.wk-steps-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wk-steps-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--green-90);
+}
+
+.wk-steps-main { flex: 1; min-width: 0; }
+
+.wk-steps-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.wk-steps-head > .wk-cap { white-space: nowrap; }
+.wk-steps-count { font-weight: 700; color: var(--text-primary); }
+
+.wk-card .wk-steps-add,
+.wk-card .wk-steps-save {
+  flex-shrink: 0;
+  width: auto;
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  min-height: 32px;
+  box-shadow: none;
+  cursor: pointer;
+}
+.wk-card .wk-steps-add {
+  background: transparent;
+  border: 1px solid var(--green-60);
+  color: var(--green-100);
+}
+.wk-card .wk-steps-save {
+  background: var(--green-60);
+  border: 1px solid var(--green-60);
+  color: #fff;
+}
+.wk-card .wk-steps-add[hidden] { display: none; }
+
+.wk-steps-note {
+  margin: 8px 0 0 30px;
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+
+.wk-steps-input {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 0 30px;
+}
+.wk-steps-input[hidden] { display: none; }
+
+.wk-card .wk-steps-field {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin: 0;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+@media (max-width: 380px) {
+  .wk-card { padding: 14px; }
+  .wk-top { gap: 12px; }
+  .wk-hero-val { font-size: 50px; }
+  .wk-stat { padding: 0 6px; }
+  .wk-card .wk-stat .wk-cap { letter-spacing: 0.04em; }
+  .wk-stat-v { font-size: 19px; }
 }
 
 /* Shrink the mode cards when they're in the demoted zone */

@@ -671,34 +671,30 @@
     <!-- ── Coach: Today's brief (src/js/coach-brief.js) ────────── -->
     <div class="home-zone" id="coachBriefCard"></div>
 
-    <!-- ── Zone 3: Weekly glance — summary + steps (2-col) ─────── -->
+    <!-- ── Zone 3: Weekly glance — scoreboard + steps in one card ─ -->
     <div class="home-zone home-zone--weekly">
       <div class="home-section-label">This week</div>
-      <div class="home-weekly-grid">
+      <div class="wk-card">
         <div id="weeklySummaryCard"></div>
-        <div id="stepWidgetCard" class="home-step-card">
-          <div class="step-widget">
-            <div class="step-ring-wrap">
-              <svg class="step-ring-svg" viewBox="0 0 80 80">
-                <circle class="step-ring-track" cx="40" cy="40" r="34"/>
-                <circle id="stepRingFill" class="step-ring-fill" cx="40" cy="40" r="34"
-                        stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
-              </svg>
-              <div class="step-ring-inner">
-                <span id="stepRingCount" class="step-ring-count">0</span>
-                <span class="step-ring-icon" data-icon="footprints"></span>
+        <div id="stepWidgetCard" class="wk-steps">
+          <div class="wk-steps-row">
+            <span class="wk-steps-icon ui-icon" data-icon="footprints" aria-hidden="true"></span>
+            <div class="wk-steps-main">
+              <div class="wk-steps-head">
+                <span class="wk-cap">Steps</span>
+                <span class="wk-cap"><b id="stepTodayCount" class="wk-steps-count">0</b> / <span id="stepGoalLabel">10,000</span></span>
               </div>
+              <div class="mx-meter mx-meter--thin" role="progressbar" aria-label="Steps towards today's goal"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="stepMeterFill" style="width:0%"></i></div>
             </div>
-            <div class="step-widget-info">
-              <div id="stepGoalLabel" class="step-widget-goal">Goal: 10,000 steps</div>
-              <div id="stepWidgetSyncInfo" class="step-widget-sync-info" style="display:none;"></div>
-              <div class="step-input-row">
-                <input id="stepCountInput" type="number" class="step-count-input"
-                       placeholder="Steps today" min="0" inputmode="numeric"/>
-                <button id="stepSaveBtn" class="step-save-btn">Save</button>
-              </div>
-              <div id="stepSyncedLabel" class="step-synced-label" style="display:none;">Synced from your device</div>
-            </div>
+            <button id="stepAddBtn" type="button" class="wk-steps-add" aria-expanded="false" aria-controls="stepInputRow">+ Add</button>
+          </div>
+          <div id="stepWidgetSyncInfo" class="wk-steps-note" style="display:none;"></div>
+          <div id="stepSyncedLabel" class="wk-steps-note" style="display:none;">Synced from your device</div>
+          <div id="stepInputRow" class="wk-steps-input" hidden>
+            <input id="stepCountInput" type="number" class="wk-steps-field"
+                   placeholder="6500" min="0" inputmode="numeric" aria-label="Steps today"/>
+            <button id="stepSaveBtn" type="button" class="wk-steps-save">Save</button>
           </div>
         </div>
       </div>
