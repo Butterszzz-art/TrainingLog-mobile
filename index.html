@@ -5013,6 +5013,8 @@ function showTab(tabName) {
         const _cBadge = document.getElementById('commShareBadge');
         if (_cBadge) { _cBadge.style.display = _cInbox.length ? '' : 'none'; _cBadge.textContent = _cInbox.length; }
       }
+      // Pick up friend requests sent since the last poll (updates the Friends badge)
+      if (window.Friends) window.Friends.sync().catch(() => {});
       break;
     case 'mobilityTab':
       if (typeof window.initMobilityTab === 'function') window.initMobilityTab();

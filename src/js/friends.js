@@ -1,42 +1,185 @@
 /* =============================================================
    FRIENDS & SOCIAL SHARING
-   localStorage-first friends list, quick-share panel, and
-   shared template/program inbox.
+   Friend requests (send → the other person accepts), quick-share
+   panel, and shared template/program inbox.
+
+   Friendships live on the server (/api/friends) so the other person
+   actually hears about a request. The accepted list is cached in
+   localStorage so getFriends() stays synchronous for the share sheet
+   and the group builder. The app polls for new requests and shows a
+   toast, a badge on the Friends tab and (if allowed) a system
+   notification when someone adds you or accepts your request.
    ============================================================= */
 
 (function () {
   'use strict';
 
+  const DEFAULT_SERVER = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
+  const POLL_MS = 2 * 60 * 1000;
   const _u = () => window.currentUser || localStorage.getItem('fitnessAppUser') || 'anon';
   const FRIENDS_KEY = () => 'friends_' + _u();
+  const REQUESTS_KEY = () => 'friendRequests_' + _u();
+  const SEEN_KEY = () => 'friendRequestsSeen_' + _u();
+  const MIGRATED_KEY = () => 'friendsMigrated_' + _u();
   const INBOX_KEY = () => 'sharedInbox_' + _u();
   const OUTBOX_KEY = () => 'sharedOutbox_' + _u();
   const _attr = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const _toast = (msg, type) => { if (typeof window.nativeToast === 'function') window.nativeToast(msg, type); };
+  const _lower = s => String(s || '').toLowerCase();
 
-  // ── Friends CRUD ────────────────────────────────────────────
+  function _readJson(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
+  }
+
+  // ── Server API ──────────────────────────────────────────────
+
+  function _authHeaders() {
+    if (typeof window.getAuthHeaders === 'function') {
+      try { return window.getAuthHeaders() || {}; } catch { /* fall through */ }
+    }
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: 'Bearer ' + token } : {};
+  }
+
+  async function api(method, path, body) {
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, _authHeaders());
+    if (!headers.Authorization) {
+      const err = new Error('Sign in to add friends.');
+      err.code = 'friends.signed_out';
+      throw err;
+    }
+    const res = await fetch((window.SERVER_URL || DEFAULT_SERVER) + '/api/friends' + path, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    let data = null;
+    try { data = await res.json(); } catch { /* non-JSON */ }
+    if (!res.ok || !data || data.success === false) {
+      const err = new Error(data?.error?.message || 'Could not reach the server. Try again.');
+      err.code = data?.error?.code || 'friends.network';
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  // ── Friends & requests (local cache) ────────────────────────
 
   function getFriends() {
-    try { return JSON.parse(localStorage.getItem(FRIENDS_KEY()) || '[]'); } catch { return []; }
+    return _readJson(FRIENDS_KEY(), []);
   }
 
   function saveFriends(list) {
     localStorage.setItem(FRIENDS_KEY(), JSON.stringify(list));
   }
 
-  function addFriend(username) {
-    username = (username || '').trim().toLowerCase();
-    if (!username) return false;
-    if (username === _u().toLowerCase()) return false;
-    const friends = getFriends();
-    if (friends.find(f => f.username.toLowerCase() === username)) return false;
-    friends.push({ username, addedAt: new Date().toISOString() });
-    saveFriends(friends);
+  function getRequests() {
+    const r = _readJson(REQUESTS_KEY(), {});
+    return { incoming: r.incoming || [], outgoing: r.outgoing || [] };
+  }
+
+  function saveRequests(r) {
+    localStorage.setItem(REQUESTS_KEY(), JSON.stringify({ incoming: r.incoming || [], outgoing: r.outgoing || [] }));
+  }
+
+  function updateFriendsBadge() {
+    const badge = document.getElementById('commFriendsBadge');
+    if (!badge) return;
+    const n = getRequests().incoming.length;
+    badge.style.display = n ? '' : 'none';
+    badge.textContent = n;
+  }
+
+  function _systemNotify(body, tag) {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
+        new Notification('Pocket Coach', { body, tag, icon: '/favicon.ico' });
+      }
+    } catch { /* not supported */ }
+  }
+
+  // Toast (and system notification when the app is in the background) for
+  // requests we haven't told the user about yet, and for our own requests
+  // that were just accepted.
+  function _notifyChanges(prevOutgoing, data) {
+    const seen = new Set(_readJson(SEEN_KEY(), []));
+    const fresh = data.incoming.filter(r => !seen.has(_lower(r.username)));
+    if (fresh.length === 1) {
+      const msg = fresh[0].username + ' sent you a friend request';
+      _toast(msg, 'info');
+      _systemNotify(msg, 'pc-friend-req');
+    } else if (fresh.length > 1) {
+      const msg = fresh.length + ' new friend requests';
+      _toast(msg, 'info');
+      _systemNotify(msg, 'pc-friend-req');
+    }
+    localStorage.setItem(SEEN_KEY(), JSON.stringify(data.incoming.map(r => _lower(r.username))));
+
+    const nowFriends = new Set(data.friends.map(f => _lower(f.username)));
+    prevOutgoing.filter(r => nowFriends.has(_lower(r.username))).forEach(r => {
+      const msg = r.username + ' accepted your friend request';
+      _toast(msg, 'success');
+      _systemNotify(msg, 'pc-friend-acc-' + _lower(r.username));
+    });
+  }
+
+  // Friends added before requests existed were one-sided. Send each of them
+  // a request once so they get to confirm too.
+  async function _migrateLegacyFriends(data) {
+    if (localStorage.getItem(MIGRATED_KEY())) return false;
+    localStorage.setItem(MIGRATED_KEY(), '1');
+    const known = new Set([...data.friends, ...data.incoming, ...data.outgoing].map(r => _lower(r.username)));
+    const legacy = getFriends().filter(f => f && f.username && !known.has(_lower(f.username)));
+    if (!legacy.length) return false;
+    await Promise.all(legacy.map(f => api('POST', '/requests', { username: f.username }).catch(() => null)));
     return true;
   }
 
-  function removeFriend(username) {
-    const friends = getFriends().filter(f => f.username.toLowerCase() !== username.toLowerCase());
-    saveFriends(friends);
+  let _syncQueue = Promise.resolve();
+
+  // Pull friends + pending requests from the server into the cache. Calls run
+  // one after another, so a refresh after a write never reuses a GET that
+  // started before it.
+  function syncFriends({ notify = true } = {}) {
+    const run = async () => {
+      const prevOutgoing = getRequests().outgoing;
+      let data = await api('GET', '');
+      if (await _migrateLegacyFriends(data)) data = await api('GET', '');
+      saveFriends(data.friends.map(f => ({ username: f.username, addedAt: f.since || null })));
+      saveRequests(data);
+      if (notify) _notifyChanges(prevOutgoing, data);
+      updateFriendsBadge();
+      return data;
+    };
+    const p = _syncQueue.then(run, run);
+    _syncQueue = p.catch(() => {});
+    return p;
+  }
+
+  async function sendFriendRequest(username) {
+    username = String(username || '').trim();
+    if (!username) return null;
+    if (_lower(username) === _lower(_u())) {
+      const err = new Error('You can’t add yourself.');
+      err.code = 'friends.self';
+      throw err;
+    }
+    const res = await api('POST', '/requests', { username });
+    await syncFriends({ notify: false }).catch(() => {});
+    return res;
+  }
+
+  async function respondToRequest(username, accept) {
+    const res = await api('POST', '/requests/' + encodeURIComponent(username) + (accept ? '/accept' : '/decline'));
+    await syncFriends({ notify: false }).catch(() => {});
+    return res;
+  }
+
+  async function removeFriend(username) {
+    await api('DELETE', '/' + encodeURIComponent(username));
+    saveFriends(getFriends().filter(f => _lower(f.username) !== _lower(username)));
+    await syncFriends({ notify: false }).catch(() => {});
   }
 
   // ── Inbox / Outbox ──────────────────────────────────────────
@@ -188,12 +331,38 @@
       html += '</div>';
     }
 
+    const { incoming, outgoing } = getRequests();
+    const shortDate = d => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    const avatar = (name, open) => '<div class="friend-avatar" data-avatar-user="' + _attr(name) + '"' + (open ? ' data-avatar-open' : '') + '>'
+      + _attr(String(name).charAt(0).toUpperCase()) + '</div>';
+
+    // Incoming friend requests
+    if (incoming.length) {
+      html += '<div class="friends-card friends-requests">'
+        + '<h3>Friend requests (' + incoming.length + ')</h3>'
+        + '<div class="friends-list">';
+      incoming.forEach(r => {
+        const name = _attr(r.username);
+        html += '<div class="friend-item">'
+          + avatar(r.username, true)
+          + '<div class="friend-info">'
+          + '<div class="friend-name">' + name + '</div>'
+          + '<div class="friend-meta">Wants to be your friend' + (r.sentAt ? ' · ' + shortDate(r.sentAt) : '') + '</div>'
+          + '</div>'
+          + '<div class="friend-actions">'
+          + '<button class="friend-accept-btn" onclick="acceptFriendRequestUI(\'' + name + '\')">Accept</button>'
+          + '<button class="friend-remove-btn" onclick="declineFriendRequestUI(\'' + name + '\')" aria-label="Decline request from ' + name + '">Decline</button>'
+          + '</div></div>';
+      });
+      html += '</div></div>';
+    }
+
     // Add friend
     html += '<div class="friends-card">'
       + '<h3>Friends</h3>'
       + '<div class="friends-add-row">'
-      + '<input type="text" id="addFriendInput" placeholder="Username…">'
-      + '<button class="friends-add-btn" onclick="addFriendFromInput()">+ Add</button>'
+      + '<input type="text" id="addFriendInput" placeholder="Username…" autocapitalize="off" autocomplete="off">'
+      + '<button class="friends-add-btn" id="addFriendBtn" onclick="addFriendFromInput()">Send request</button>'
       + '</div>';
 
     // Import via share code
@@ -202,21 +371,33 @@
       + '<button class="share-code-copy" onclick="importFromShareCode()">Import</button>'
       + '</div>';
 
-    if (!friends.length) {
-      html += '<div class="friends-empty">No friends added yet. Enter a username above to connect.</div>';
+    if (!friends.length && !outgoing.length) {
+      html += '<div class="friends-empty">No friends yet. Enter a username above — they\'ll get a request to accept.</div>';
     } else {
       html += '<div class="friends-list">';
       friends.forEach(f => {
-        const initial = f.username.charAt(0).toUpperCase();
+        const name = _attr(f.username);
         html += '<div class="friend-item">'
-          + '<div class="friend-avatar" data-avatar-user="' + _attr(f.username) + '" data-avatar-open>' + initial + '</div>'
+          + avatar(f.username, true)
           + '<div class="friend-info">'
-          + '<div class="friend-name">' + f.username + '</div>'
-          + '<div class="friend-meta">Added ' + new Date(f.addedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</div>'
+          + '<div class="friend-name">' + name + '</div>'
+          + '<div class="friend-meta">' + (f.addedAt ? 'Friends since ' + shortDate(f.addedAt) : 'Friend') + '</div>'
           + '</div>'
           + '<div class="friend-actions">'
-          + '<button class="friend-share-btn" onclick="openQuickShare(null, \'' + f.username + '\')">Share</button>'
-          + '<button class="friend-remove-btn" onclick="removeFriendUI(\'' + f.username + '\')">✕</button>'
+          + '<button class="friend-share-btn" onclick="openQuickShare(null, \'' + name + '\')">Share</button>'
+          + '<button class="friend-remove-btn" onclick="removeFriendUI(\'' + name + '\')" aria-label="Remove ' + name + '">✕</button>'
+          + '</div></div>';
+      });
+      outgoing.forEach(r => {
+        const name = _attr(r.username);
+        html += '<div class="friend-item friend-item--pending">'
+          + avatar(r.username, false)
+          + '<div class="friend-info">'
+          + '<div class="friend-name">' + name + '</div>'
+          + '<div class="friend-meta">Request sent · waiting for them to accept</div>'
+          + '</div>'
+          + '<div class="friend-actions">'
+          + '<button class="friend-remove-btn" onclick="cancelFriendRequestUI(\'' + name + '\')">Cancel</button>'
           + '</div></div>';
       });
       html += '</div>';
@@ -224,6 +405,13 @@
     html += '</div>';
 
     container.innerHTML = html;
+    updateFriendsBadge();
+  }
+
+  // Draw from cache right away, then again once the server answers.
+  function openFriendsPanel() {
+    renderFriendsPanel();
+    syncFriends().then(renderFriendsPanel).catch(() => {});
   }
 
   // ── Quick Share Panel ───────────────────────────────────────
@@ -431,21 +619,53 @@
     } catch { return []; }
   }
 
-  window.addFriendFromInput = function () {
+  function _friendError(err) {
+    _toast(err?.message || 'Something went wrong. Try again.', err?.code === 'friends.already_friends' ? 'warn' : 'error');
+  }
+
+  window.addFriendFromInput = async function () {
     const input = document.getElementById('addFriendInput');
-    if (!input?.value?.trim()) return;
-    const ok = addFriend(input.value);
-    if (ok) {
-      input.value = '';
-      if (typeof nativeToast === 'function') nativeToast('Friend added!', 'success');
-    } else {
-      if (typeof nativeToast === 'function') nativeToast('Already a friend or invalid username', 'warn');
+    const btn = document.getElementById('addFriendBtn');
+    const name = input?.value?.trim();
+    if (!name) return;
+    if (btn) btn.disabled = true;
+    try {
+      const res = await sendFriendRequest(name);
+      if (input) input.value = '';
+      if (res?.status === 'accepted') _toast('You and ' + res.username + ' are now friends!', 'success');
+      else _toast('Friend request sent to ' + (res?.username || name), 'success');
+    } catch (err) {
+      _friendError(err);
+    } finally {
+      if (btn) btn.disabled = false;
+      renderFriendsPanel();
     }
+  };
+
+  window.acceptFriendRequestUI = async function (username) {
+    try {
+      await respondToRequest(username, true);
+      _toast('You and ' + username + ' are now friends!', 'success');
+    } catch (err) { _friendError(err); }
     renderFriendsPanel();
   };
 
-  window.removeFriendUI = function (username) {
-    removeFriend(username);
+  window.declineFriendRequestUI = async function (username) {
+    try { await respondToRequest(username, false); } catch (err) { _friendError(err); }
+    renderFriendsPanel();
+  };
+
+  window.cancelFriendRequestUI = async function (username) {
+    try { await respondToRequest(username, false); } catch (err) { _friendError(err); }
+    renderFriendsPanel();
+  };
+
+  window.removeFriendUI = async function (username) {
+    const ok = typeof window.showConfirm === 'function'
+      ? await window.showConfirm('Remove ' + username + ' from your friends?', { confirmText: 'Remove', danger: true })
+      : true;
+    if (!ok) return;
+    try { await removeFriend(username); } catch (err) { _friendError(err); }
     renderFriendsPanel();
   };
 
@@ -468,8 +688,27 @@
   window.sendQuickShare = sendQuickShare;
   window.copyShareCode = copyShareCode;
   window.importFromShareCode = importFromShareCode;
-  window.renderFriendsPanel = renderFriendsPanel;
+  window.renderFriendsPanel = openFriendsPanel;
   window.generateShareCode = generateShareCode;
   window.decodeShareCode = decodeShareCode;
   window.getFriends = getFriends;
+  window.Friends = { sync: syncFriends, sendRequest: sendFriendRequest, respond: respondToRequest, remove: removeFriend, getFriends, getRequests };
+
+  // ── Polling for new requests ────────────────────────────────
+
+  function _poll() {
+    if (document.visibilityState === 'hidden' && !('Notification' in window && Notification.permission === 'granted')) return;
+    if (!_authHeaders().Authorization) return;
+    syncFriends().then(() => {
+      const panel = document.getElementById('friendsPanel');
+      if (panel && panel.style.display !== 'none') renderFriendsPanel();
+    }).catch(() => {});
+  }
+
+  if (!window.__FRIENDS_NO_POLL) {
+    setTimeout(_poll, 3000);
+    setInterval(_poll, POLL_MS);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') _poll(); });
+  }
+  updateFriendsBadge();
 })();
