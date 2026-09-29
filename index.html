@@ -17558,14 +17558,22 @@ function commShareSetType(type) {
 function _populateCommShareGroups() {
   const sel = document.getElementById('commShareGroupSelect');
   if (!sel) return;
-  const grps = (typeof groups !== 'undefined' ? groups : [])
-    .filter(g => g.members?.some(m => (m.userId || m) === currentUser));
-  if (!grps.length) {
-    sel.innerHTML = '<option value="">No groups joined yet</option>';
-    return;
-  }
-  sel.innerHTML = '<option value="">— select a group —</option>' +
-    grps.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  const render = () => {
+    const grps = (typeof groups !== 'undefined' ? groups : [])
+      .filter(g => typeof isMemberOf === 'function' ? isMemberOf(g, currentUser) : g.isMember);
+    if (!grps.length) {
+      sel.innerHTML = '<option value="">No groups joined yet</option>';
+      return;
+    }
+    const prev = sel.value;
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    sel.innerHTML = '<option value="">— select a group —</option>' +
+      grps.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('');
+    if (prev) sel.value = prev;
+  };
+  render();
+  /* Groups live on the server now; refresh the list if it hasn't loaded yet */
+  if (typeof fetchGroups === 'function') fetchGroups().then(render).catch(() => {});
 }
 
 /* Render the selectable list of user's own templates or programs */
@@ -17716,18 +17724,16 @@ async function _commSendToGroup(groupId, message) {
   const groupEl   = document.getElementById('commShareGroupSelect');
   const groupName = groupEl?.options[groupEl?.selectedIndex]?.text || 'Group';
 
-  /* Piggyback on existing shareProgramToGroup from community.js */
-  if (typeof shareProgramToGroup === 'function') {
-    try {
-      await shareProgramToGroup(groupId, {
-        ...item.data,
-        _type: item.type,
-        _sharedBy: currentUser,
-        _itemName: item.name,
-        _message: message
-      });
-    } catch (e) { console.warn('shareProgramToGroup failed', e); }
-  }
+  /* Posts the item into the group (community.js); it shows its own error toast */
+  if (typeof shareProgramToGroup !== 'function') return;
+  const shared = await shareProgramToGroup(groupId, {
+    ...item.data,
+    _type: item.type,
+    _sharedBy: currentUser,
+    _itemName: item.name,
+    _message: message
+  });
+  if (!shared) return;
 
   _commAddToOutbox({ type: item.type, name: item.name, to: groupName, toType: 'group', date: new Date().toISOString().slice(0, 10) });
 

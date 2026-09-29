@@ -105,19 +105,3 @@ describe('friend requests', () => {
     expect(calls.filter(c => c.method === 'POST').length).toBe(1);
   });
 });
-
-describe('create group with friends', () => {
-  test('selected friends are added as members along with the creator', async () => {
-    const dom = new JSDOM('<!doctype html><body></body>', { url: 'https://app.test/' });
-    global.window = dom.window;
-    global.document = dom.window.document;
-    global.localStorage = dom.window.localStorage;
-    window.currentUser = null; // skip the server call
-    localStorage.setItem('fitnessAppUser', 'me_user');
-    jest.resetModules();
-    const { createGroup } = require('../community');
-    const g = await createGroup('Lifters', '', [], ['alice', 'bob', 'alice']);
-    expect(g.members.map(m => m.userId)).toEqual(['me_user', 'alice', 'bob']);
-    delete global.window; delete global.document; delete global.localStorage;
-  });
-});

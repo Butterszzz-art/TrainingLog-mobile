@@ -42,8 +42,8 @@ What's done in code, and what still has to happen outside it. Work top to bottom
 1. **Apple Developer Program** membership ($99/yr).
 2. Add your **legal name and postal address** to `terms.html` and
    `privacy.html` (EU consumer law requires it for paid services).
-3. Confirm **governing law** in `terms.html` §11 (currently England & Wales).
-   With the EU as your main market you may prefer your own EU country.
+3. ~~Governing law~~ done: the Netherlands (`terms.html` §11), with the Dutch
+   Autoriteit Persoonsgegevens as the privacy authority (`privacy.html` §7).
 4. Have someone qualified review the Terms and Privacy Policy.
 5. **EU trader status (Digital Services Act):** App Store Connect asks whether
    you're a trader. Selling subscriptions makes you one, and Apple then shows
@@ -71,7 +71,8 @@ What's done in code, and what still has to happen outside it. Work top to bottom
 10. In the backend `.env`: `APPLE_IAP_ENABLED=true` and `APPLE_APP_ID=` (the numeric
     Apple ID from App Store Connect → App Information).
 11. Deploy (use `$env:FUNCTIONS_DISCOVERY_TIMEOUT=60` in PowerShell if the deploy
-    times out), then merge the backend pull request.
+    times out), then merge the backend pull request. Groups need the new
+    Firestore index and rules too: `firebase deploy --only functions,firestore`.
 
 ### App Store Connect — listing
 12. Create the app record: bundle ID `com.pocketcoach.app`, name "Pocket Coach".
@@ -95,12 +96,11 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     then run the **iOS (App Store)** workflow.
 21. On a real iPhone **and** iPad via TestFlight, signed in with the sandbox tester:
     sign-up, AI consent, buying Pro, Restore Purchases, Manage Subscription,
-    block/report (check the moderation email), account deletion, camera/photo
+    block/report (check the moderation email), a group post and a group report, account deletion, camera/photo
     prompts.
 
 ### Worth fixing before or soon after launch
-- **Community groups:** posts only save on the device, so nobody else sees
-  them. Hide the Groups tab or build the backend. A reviewer may call it
-  unfinished.
+- **Community feed:** posts written in Community → Feed still only save on
+  the device (Groups are now server-backed and shared).
 - **Reports:** the Terms promise action within 24 hours. Watch the moderation inbox.
 - **`pricing.html`** doesn't match the app's plans (hidden in the native app).

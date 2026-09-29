@@ -1,12 +1,17 @@
-// Groups array and localStorage handling
+// Community groups. Groups, members and posts live on the server
+// (/api/groups, see the backend's src/routes/groups.js) so every member sees
+// the same thing. The last list is cached per user in localStorage only so
+// the tab isn't empty while offline; nothing is created locally any more.
 let groups = [];
-if (typeof localStorage !== 'undefined') {
-  groups = JSON.parse(localStorage.getItem('communityGroups')) || [];
-  groups = normalizeGroups(groups);
-}
 
-const serverUrl = (typeof window !== 'undefined' && window.SERVER_URL) ||
-  'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
+const DEFAULT_GROUPS_SERVER = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
+const GROUP_POLL_MS = 30 * 1000;
+const GROUP_REPORT_REASONS = [
+  ['inappropriate', 'Inappropriate or offensive'],
+  ['harassment', 'Harassment or bullying'],
+  ['spam', 'Spam'],
+  ['other', 'Something else'],
+];
 
 function getAuthHeaders() {
   if (typeof localStorage === 'undefined') {
@@ -16,24 +21,49 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// Sample data used for prototype leaderboards
-const sampleExerciseData = {
-  Squat: [
-    { user: 'Alice', volume: 12000, sets: 50, reps: 200 },
-    { user: 'Bob', volume: 11000, sets: 45, reps: 180 },
-    { user: 'Cara', volume: 9000, sets: 40, reps: 160 }
-  ],
-  'Bench Press': [
-    { user: 'Alice', volume: 8000, sets: 40, reps: 160 },
-    { user: 'Bob', volume: 7500, sets: 38, reps: 150 },
-    { user: 'Cara', volume: 7000, sets: 35, reps: 140 }
-  ],
-  Deadlift: [
-    { user: 'Alice', volume: 14000, sets: 45, reps: 180 },
-    { user: 'Bob', volume: 13500, sets: 42, reps: 170 },
-    { user: 'Cara', volume: 12000, sets: 40, reps: 160 }
-  ]
-};
+function _groupsCacheKey() {
+  return `communityGroups_v2_${getCurrentUserId() || 'anon'}`;
+}
+
+function _loadCachedGroups() {
+  if (typeof localStorage === 'undefined') return [];
+  try { return normalizeGroups(JSON.parse(localStorage.getItem(_groupsCacheKey())) || []); } catch { return []; }
+}
+
+function saveGroups() {
+  if (typeof localStorage === 'undefined') return;
+  try { localStorage.setItem(_groupsCacheKey(), JSON.stringify(groups)); } catch { /* quota */ }
+}
+
+async function groupsApi(method, path, body) {
+  const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+  if (!headers.Authorization) {
+    const err = new Error('Sign in to use groups.');
+    err.code = 'groups.signed_out';
+    throw err;
+  }
+  const base = (typeof window !== 'undefined' && window.SERVER_URL) || DEFAULT_GROUPS_SERVER;
+  const res = await fetch(`${base}/api/groups${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  let data = null;
+  try { data = await res.json(); } catch { /* non-JSON */ }
+  if (!res.ok || !data || data.success === false) {
+    const err = new Error(data?.error?.message || 'Could not reach the server. Try again.');
+    err.code = data?.error?.code || 'groups.network';
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+function _groupToast(msg, type) {
+  if (typeof window === 'undefined') return;
+  if (typeof window.showToast === 'function') window.showToast(msg, type);
+  else if (typeof window.nativeToast === 'function') window.nativeToast(msg, type);
+}
 
 function normalizeMember(member) {
   if (!member) return null;
@@ -50,6 +80,8 @@ function normalizeMember(member) {
   return null;
 }
 
+// Server groups carry `recentPostTimes`; exposing them as `posts` keeps the
+// activity bars, "Active 2d ago" and the "Most active" sort working.
 function normalizeGroup(group) {
   if (!group) return group;
   if (Array.isArray(group.members)) {
@@ -59,6 +91,11 @@ function normalizeGroup(group) {
   } else {
     group.members = [];
   }
+  if (Array.isArray(group.recentPostTimes)) {
+    group.posts = group.recentPostTimes.map(date => ({ date }));
+  } else if (!Array.isArray(group.posts)) {
+    group.posts = [];
+  }
   return group;
 }
 
@@ -66,50 +103,24 @@ function normalizeGroups(list = []) {
   return list.map(g => normalizeGroup({ ...g }));
 }
 
-function saveGroups() {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('communityGroups', JSON.stringify(groups));
-  }
+function _upsertGroup(g) {
+  const i = groups.findIndex(x => x.id === g.id);
+  if (i >= 0) groups[i] = g; else groups.unshift(g);
+  saveGroups();
 }
 
-// Async createGroup to call backend or fallback to local. `memberIds` are
-// usernames (normally friends picked in the create sheet) added alongside the
-// creator.
+function _rerenderGroups() {
+  const sort = (typeof document !== 'undefined' && document.getElementById('sortFilter')?.value) || '';
+  renderGroups(sortGroups(groups, sort));
+}
+
+// `memberIds` are friends picked in the create sheet; the server only
+// accepts accepted friends. Throws with a readable message on failure.
 async function createGroup(name, goal = '', tags = [], memberIds = []) {
   if (!name) return null;
-  const creator = getCurrentUserId();
-  const now = new Date().toISOString();
-  const members = [];
-  if (creator) members.push({ userId: creator, joinedAt: now });
-  memberIds.forEach(id => {
-    if (id && !members.some(m => m.userId.toLowerCase() === String(id).toLowerCase())) {
-      members.push({ userId: id, invitedAt: now });
-    }
-  });
-  if (typeof fetch !== 'undefined' && window && window.currentUser) {
-    try {
-      const res = await fetch(`${window.SERVER_URL}/community/groups`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ name, creatorId: window.currentUser, goal, tags, members: members.map(m => m.userId) }),
-        signal: AbortSignal.timeout(5000)
-      });
-      if (res.ok) {
-        const g = normalizeGroup(await res.json());
-        members.forEach(m => { if (!isMemberOf(g, m.userId)) g.members.push(m); });
-        groups.push(g);
-        saveGroups();
-        return g;
-      }
-    } catch (e) {
-      console.warn('createGroup failed', e);
-    }
-  }
-  // fallback local group creation
-  const g = normalizeGroup({ id: Date.now(), name, goal, tags, members, posts: [] });
-  groups.push(g);
-  saveGroups();
+  const { group } = await groupsApi('POST', '', { name, goal, tags, members: memberIds });
+  const g = normalizeGroup(group);
+  _upsertGroup(g);
   return g;
 }
 
@@ -117,44 +128,10 @@ function getGroups() {
   return groups;
 }
 
-async function fetchGroups(userId) {
-  if (!userId || typeof fetch === 'undefined') return getGroups();
-  try {
-    const res = await fetch(`${window.SERVER_URL}/community/groups?userId=${encodeURIComponent(userId)}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: getAuthHeaders(),
-      signal: AbortSignal.timeout(5000)
-    });
-    if (res.ok) {
-      groups = normalizeGroups(await res.json());
-      saveGroups();
-    }
-  } catch (e) {
-    console.warn('fetchGroups failed', e);
-  }
-  return groups;
-}
-
-async function searchGroups(opts = {}) {
-  const params = new URLSearchParams();
-  if (opts.goal) params.set('goal', opts.goal);
-  if (opts.tag) params.set('tag', opts.tag);
-  if (opts.search) params.set('search', opts.search);
-  try {
-    const res = await fetch(`${window.SERVER_URL}/community/groups?${params.toString()}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: getAuthHeaders(),
-      signal: AbortSignal.timeout(5000)
-    });
-    if (res.ok) {
-      groups = normalizeGroups(await res.json());
-      saveGroups();
-    }
-  } catch (e) {
-    console.warn('searchGroups failed', e);
-  }
+async function fetchGroups() {
+  const { groups: list } = await groupsApi('GET', '');
+  groups = normalizeGroups(list || []);
+  saveGroups();
   return groups;
 }
 
@@ -174,11 +151,9 @@ function filterGroups(list, opts = {}) {
 }
 
 function getLastActiveDate(g) {
-  if (Array.isArray(g.posts) && g.posts.length) {
-    const last = g.posts[g.posts.length - 1];
-    return new Date(last.date).getTime();
-  }
-  return 0;
+  const times = (Array.isArray(g.posts) ? g.posts : [])
+    .map(p => new Date(p && p.date).getTime()).filter(n => !Number.isNaN(n));
+  return times.length ? Math.max(...times) : 0;
 }
 
 function sortGroups(list, mode) {
@@ -193,105 +168,36 @@ function sortGroups(list, mode) {
   return sorted;
 }
 
-async function fetchPosts(groupId) {
-  try {
-    const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/posts`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: getAuthHeaders(),
-      signal: AbortSignal.timeout(5000)
-    });
-    if (res.ok) {
-      const posts = await res.json();
-      const g = groups.find(gr => gr.id === groupId);
-      if (g) {
-        g.posts = posts;
-        saveGroups();
-      }
-      return posts;
-    }
-  } catch (e) {
-    console.warn('fetchPosts failed', e);
-  }
-  const g = groups.find(gr => gr.id === groupId);
-  return (g && g.posts) || [];
-}
-
-async function inviteUserToGroup(groupId, invitedUserId) {
-  if (!invitedUserId || typeof fetch === 'undefined') return;
-  try {
-    const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/invite`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ invitedUserId }),
-      signal: AbortSignal.timeout(5000)
-    });
-    if (res.ok) {
-      const g = groups.find(gr => gr.id === groupId);
-      if (g) {
-        if (!Array.isArray(g.members)) g.members = [];
-        if (!isMemberOf(g, invitedUserId)) {
-          g.members.push({ userId: invitedUserId, invitedAt: new Date().toISOString() });
-          saveGroups();
-        }
-      }
-      alert('Invitation sent');
-      openGroup(groupId);
-    } else {
-      const err = await res.json().catch(() => ({}));
-      alert(err.error || 'Failed to invite user');
-    }
-  } catch (e) {
-    console.warn('inviteUserToGroup failed', e);
-    alert('Failed to invite user');
-  }
-}
-
+// Shares a program or template into a group as a post other members can
+// save. Called from the Share panel; returns true on success.
 async function shareProgramToGroup(groupId, programData) {
-  if (!programData || typeof fetch === 'undefined' || !window.currentUser) return;
+  if (!programData) return false;
+  const { _type, _itemName, _message, _sharedBy, ...data } = programData;
   try {
-    const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/share`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ senderId: window.currentUser, programData }),
-      signal: AbortSignal.timeout(5000)
+    await groupsApi('POST', `/${encodeURIComponent(groupId)}/posts`, {
+      text: _message || '',
+      share: { type: _type === 'template' ? 'template' : 'program', name: _itemName || data.name || 'Untitled', data },
     });
-    if (res.ok) {
-      alert('Program shared');
-    } else {
-      const err = await res.json().catch(() => ({}));
-      alert(err.error || 'Failed to share program');
-    }
+    return true;
   } catch (e) {
-    console.warn('shareProgramToGroup failed', e);
-    alert('Failed to share program');
+    _groupToast(e.message, 'error');
+    return false;
   }
 }
 
-
-async function fetchProgress(groupId) {
-  try {
-    const res = await fetch(`${window.SERVER_URL}/community/groups/${groupId}/progress`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: getAuthHeaders(),
-      signal: AbortSignal.timeout(5000)
-    });
-    if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn('fetchProgress failed', e);
-  }
-  return null;
-}
-
+let _groupsLoadError = '';
 
 function loadGroups() {
-  return fetchGroups(window.currentUser).then(list => {
-    const sort = document.getElementById('sortFilter')?.value || '';
-    renderGroups(sortGroups(list, sort));
-  });
+  if (!groups.length) groups = _loadCachedGroups();
+  _rerenderGroups();
+  return fetchGroups()
+    .then(() => { _groupsLoadError = ''; })
+    .catch(e => { _groupsLoadError = e.message; })
+    .then(() => {
+      if (document.getElementById('groupSearchInput')?.value || document.getElementById('tagFilter')?.value) doGroupSearch();
+      else _rerenderGroups();
+      return groups;
+    });
 }
 
 function doGroupSearch() {
@@ -299,14 +205,9 @@ function doGroupSearch() {
   const goal = document.getElementById('goalFilter')?.value.trim() ?? '';
   const tag = document.getElementById('tagFilter')?.value.trim() ?? '';
   const sort = document.getElementById('sortFilter')?.value ?? '';
-  const btn = document.getElementById('groupSearchBtn');
-  if (btn) btn.classList.add('loading');
-  setTimeout(() => {
-    let list = filterGroups(groups, { search, goal, tag });
-    list = sortGroups(list, sort);
-    renderGroups(list);
-    if (btn) btn.classList.remove('loading');
-  }, 10);
+  let list = filterGroups(groups, { search, goal, tag });
+  list = sortGroups(list, sort);
+  renderGroups(list);
 }
 
 function clearGroupFilters() {
@@ -317,34 +218,6 @@ function clearGroupFilters() {
   if (_g('sortFilter'))       _g('sortFilter').value = '';
   renderGroups(sortGroups(groups));
 }
-
-// Add post locally and via backend
-async function addPost(groupId, user, text) {
-  const g = groups.find(gr => gr.id === groupId);
-  if (!g) return;
-  if (typeof fetch !== 'undefined') {
-    try {
-      await fetch(`${window.SERVER_URL}/community/groups/${groupId}/posts`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ userId: user, text }),
-        signal: AbortSignal.timeout(5000)
-      });
-    } catch (e) {
-      console.warn('addPost failed', e);
-    }
-  }
-  g.posts.push({ user, text, date: new Date().toISOString() });
-  saveGroups();
-}
-
-
-
-
-
-
-
 
 function calculateLeaderboard(members) {
   if (!Array.isArray(members)) return { consistent: [], improving: [] };
@@ -410,9 +283,7 @@ function _groupBars(g) {
 }
 
 function _groupLastActive(g) {
-  // Newest post, whatever order the posts arrived in
-  const t = Math.max(0, ...(Array.isArray(g.posts) ? g.posts : [])
-    .map(p => new Date(p && p.date).getTime()).filter(n => !Number.isNaN(n)));
+  const t = getLastActiveDate(g);
   if (!t) return 'No posts yet';
   const days = Math.floor((Date.now() - t) / 86400000);
   return days <= 0 ? 'Active today' : days === 1 ? 'Active yesterday' : `Active ${days}d ago`;
@@ -455,8 +326,10 @@ function renderGroups(list) {
   // Discover list
   if (!others.length) {
     const searching = !!(document.getElementById('groupSearchInput')?.value || document.getElementById('tagFilter')?.value);
-    container.innerHTML = `<div class="pod sx-empty">${searching ? 'No groups match that search.'
-      : mine.length ? "You're in every group so far. Start a new one below." : 'No groups yet. Start the first one below.'}</div>`;
+    const msg = _groupsLoadError && !groups.length ? `Couldn’t load groups. ${_escGroup(_groupsLoadError)}`
+      : searching ? 'No groups match that search.'
+      : mine.length ? "You're in every group so far. Start a new one below." : 'No groups yet. Start the first one below.';
+    container.innerHTML = `<div class="pod sx-empty">${msg}</div>`;
   } else {
     container.innerHTML = others.map((g, i) => {
       const members = Array.isArray(g.members) ? g.members : [];
@@ -480,13 +353,15 @@ function renderGroups(list) {
     }).join('');
     container.querySelectorAll('[data-join]').forEach(btn => {
       const g = others[+btn.dataset.join];
-      btn.addEventListener('click', () => {
-        if (!getCurrentUserId()) { joinGroup(g.id); return; }
-        btn.classList.add('is-joined');
+      btn.addEventListener('click', async () => {
+        if (!getCurrentUserId()) { _groupToast('Please sign in to join groups'); return; }
         btn.disabled = true;
+        const ok = await joinGroup(g.id, { open: false });
+        if (!ok) { btn.disabled = false; return; }
+        btn.classList.add('is-joined');
         const check = typeof ICONS !== 'undefined' && ICONS.check ? `<span class="ui-icon" data-icon="check">${ICONS.check}</span>` : '';
         btn.innerHTML = `${check}Joined`;
-        setTimeout(() => joinGroup(g.id), 450);
+        setTimeout(() => { _rerenderGroups(); openGroup(g.id); }, 450);
       });
     });
   }
@@ -510,100 +385,393 @@ function getCurrentUserId() {
   return null;
 }
 
+// Usernames are case-insensitive on the server.
 function isMemberOf(group, userId) {
-  if (!Array.isArray(group?.members) || !userId) return false;
+  if (!group || !userId) return false;
+  const key = String(userId).toLowerCase();
+  if (typeof group.isMember === 'boolean' && String(getCurrentUserId() || '').toLowerCase() === key) return group.isMember;
+  if (!Array.isArray(group.members)) return false;
   return group.members.some(member => {
     if (member == null) return false;
-    if (typeof member === 'string') return member === userId;
-    if (typeof member === 'object') {
-      return member.userId === userId || member.id === userId || member.username === userId;
-    }
-    return false;
+    const id = typeof member === 'string' ? member : (member.userId || member.id || member.username);
+    return String(id || '').toLowerCase() === key;
   });
 }
 
-function joinGroup(id) {
-  const g = groups.find(gr => gr.id === id);
-  if (!g) return;
-  const userId = getCurrentUserId();
-  if (!userId) {
-    if (typeof showToast === 'function') showToast('Please sign in to join groups');
-    return;
+async function joinGroup(id, { open = true } = {}) {
+  if (!getCurrentUserId()) {
+    _groupToast('Please sign in to join groups');
+    return false;
   }
-  if (!Array.isArray(g.members)) g.members = [];
-  if (!isMemberOf(g, userId)) {
-    g.members.push({ userId, joinedAt: new Date().toISOString() });
-    saveGroups();
-    const sort = document.getElementById('sortFilter')?.value || '';
-    renderGroups(sortGroups(groups, sort));
-    if (typeof showToast === 'function') showToast(`You joined ${g.name}`);
+  try {
+    const { group } = await groupsApi('POST', `/${encodeURIComponent(id)}/join`);
+    const g = normalizeGroup(group);
+    _upsertGroup(g);
+    _groupToast(`You joined ${g.name}`);
+    if (open) { _rerenderGroups(); openGroup(id); }
+    return true;
+  } catch (e) {
+    _groupToast(e.message, 'error');
+    if (e.status === 404) loadGroups();
+    return false;
   }
-  openGroup(id);
 }
 
-async function openGroup(id) {
+// ── Group sheet: posts, composer, members, report ─────────────
+
+let _groupSheet = { id: null, posts: [], timer: null, loading: false };
+
+function _timeAgoGroup(iso) {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '';
+  const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 7 * 86400) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(t).toLocaleDateString();
+}
+
+function _groupOverlay() {
+  let overlay = document.getElementById('groupSheetOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'groupSheetOverlay';
+    overlay.className = 'quick-share-overlay';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeGroup(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeGroup(); });
+  }
+  return overlay;
+}
+
+function closeGroup() {
+  const overlay = document.getElementById('groupSheetOverlay');
+  if (overlay) overlay.classList.remove('open');
+  if (_groupSheet.timer) clearInterval(_groupSheet.timer);
+  _groupSheet = { id: null, posts: [], timer: null, loading: false };
+}
+
+function _postHtml(p) {
+  const author = _escGroup(p.author);
+  const icon = p.share && p.share.type === 'template' ? 'clipboard' : 'calendar';
+  const share = p.share ? `
+    <div class="sx-gshare">
+      <span class="ui-icon" data-icon="${icon}">${typeof ICONS !== 'undefined' && ICONS[icon] ? ICONS[icon] : ''}</span>
+      <div style="min-width:0"><b>${_escGroup(p.share.name)}</b><small>${p.share.type === 'template' ? 'Template' : 'Program'}</small></div>
+      ${p.mine ? '' : `<button type="button" class="sx-join" data-post-save="${_escGroup(p.id)}">Save</button>`}
+    </div>` : '';
+  return `
+    <article class="pod sx-post" data-post-id="${_escGroup(p.id)}">
+      <div class="sx-post-h">
+        <span class="sx-av" data-avatar-user="${author}" data-avatar-open>${_escGroup(String(p.author || '?').charAt(0).toUpperCase())}</span>
+        <div style="min-width:0"><b>${author}</b><small>${_timeAgoGroup(p.date)}</small></div>
+        <button type="button" class="sx-gpost-menu" data-post-menu="${_escGroup(p.id)}" aria-label="Post options">•••</button>
+      </div>
+      ${p.text ? `<p class="sx-gpost-text">${_escGroup(p.text)}</p>` : ''}
+      ${share}
+    </article>`;
+}
+
+function _renderGroupSheet(group) {
+  const overlay = _groupOverlay();
+  const member = isMemberOf(group, getCurrentUserId());
+  const friends = typeof window.getFriends === 'function' ? window.getFriends() : [];
+  const invitable = friends.filter(f => !isMemberOf(group, f.username));
+  const postsHtml = !member
+    ? '<div class="sx-empty">Join the group to see posts and chat with members.</div>'
+    : _groupSheet.loading && !_groupSheet.posts.length
+      ? '<div class="sx-empty">Loading posts…</div>'
+      : _groupSheet.posts.length
+        ? _groupSheet.posts.map(_postHtml).join('')
+        : '<div class="sx-empty">No posts yet. Say hi to the group.</div>';
+
+  overlay.innerHTML = `
+    <div class="quick-share-panel sx-gsheet" role="dialog" aria-modal="true" aria-labelledby="groupSheetTitle">
+      <div class="quick-share-handle"></div>
+      <div class="sx-gsheet-top">
+        <span class="sx-mono ${_groupTagStyle(group)}">${_escGroup(_groupInitials(group.name))}</span>
+        <div style="min-width:0;flex:1">
+          <div class="quick-share-title" id="groupSheetTitle">${_escGroup(group.name)}</div>
+          <div class="quick-share-subtitle" style="margin:0">${_groupMeta(group)}${group.owner ? ` · run by @${_escGroup(group.owner)}` : ''}</div>
+        </div>
+        <button type="button" class="sx-gpost-menu" id="groupSheetMenu" aria-label="Group options">•••</button>
+        <button type="button" class="sx-gsheet-close" id="groupSheetClose" aria-label="Close">✕</button>
+      </div>
+      ${group.goal ? `<p class="sx-gsheet-goal">${_escGroup(group.goal)}</p>` : ''}
+      <div class="sx-gsheet-members">${(group.members || []).slice(0, 12).map(m => {
+        const id = _escGroup(m.userId);
+        return `<span class="sx-av sx-av--sm" data-avatar-user="${id}" data-avatar-open title="@${id}">${_escGroup(String(m.userId || '?').charAt(0).toUpperCase())}</span>`;
+      }).join('')}${(group.members || []).length > 12 ? `<span class="sx-g-ct">+${group.members.length - 12}</span>` : ''}</div>
+      ${member ? `
+        <div class="sx-gcompose">
+          <textarea id="groupPostText" rows="2" maxlength="1000" placeholder="Write to the group…" aria-label="Post to the group"></textarea>
+          <button type="button" class="sx-post-btn" id="groupPostBtn">Post</button>
+        </div>
+        ${invitable.length ? `
+          <div class="sx-ginvite">
+            <select id="groupInviteSelect" aria-label="Add a friend">
+              <option value="">Add a friend…</option>
+              ${invitable.map(f => `<option value="${_escGroup(f.username)}">@${_escGroup(f.username)}</option>`).join('')}
+            </select>
+            <button type="button" class="sx-link" id="groupInviteBtn">Add</button>
+          </div>` : ''}`
+      : `<button type="button" class="quick-share-send" id="groupSheetJoin">Join group</button>`}
+      <div class="sx-feed sx-gposts" id="groupPosts">${postsHtml}</div>
+      ${member && _groupSheet.hasMore ? '<button type="button" class="sx-link" id="groupMorePosts" style="margin:10px auto 0;display:flex">Show older posts</button>' : ''}
+    </div>`;
+  overlay.classList.add('open');
+  _wireGroupSheet(group);
+}
+
+function _wireGroupSheet(group) {
+  const overlay = _groupOverlay();
+  const $ = sel => overlay.querySelector(sel);
+  $('#groupSheetClose')?.addEventListener('click', closeGroup);
+  $('#groupSheetJoin')?.addEventListener('click', async e => {
+    e.currentTarget.disabled = true;
+    if (!(await joinGroup(group.id, { open: false }))) { e.currentTarget.disabled = false; return; }
+    _rerenderGroups();
+    openGroup(group.id);
+  });
+  $('#groupSheetMenu')?.addEventListener('click', () => _groupMenu(group));
+
+  const postBtn = $('#groupPostBtn');
+  const ta = $('#groupPostText');
+  postBtn?.addEventListener('click', async () => {
+    const text = ta.value.trim();
+    if (!text) return;
+    postBtn.disabled = true;
+    try {
+      const { post } = await groupsApi('POST', `/${encodeURIComponent(group.id)}/posts`, { text });
+      _groupSheet.posts.unshift(post);
+      group.posts = [{ date: post.date }, ...(group.posts || [])];
+      saveGroups();
+      _renderGroupSheet(group);
+    } catch (e) {
+      _groupToast(e.message, 'error');
+      postBtn.disabled = false;
+    }
+  });
+
+  $('#groupInviteBtn')?.addEventListener('click', async () => {
+    const username = $('#groupInviteSelect').value;
+    if (!username) return;
+    try {
+      const res = await groupsApi('POST', `/${encodeURIComponent(group.id)}/invite`, { username });
+      group.members.push({ userId: res.username });
+      saveGroups();
+      _groupToast(`Added @${res.username} to ${group.name}`);
+      _renderGroupSheet(group);
+      _rerenderGroups();
+    } catch (e) {
+      _groupToast(e.message, 'error');
+    }
+  });
+
+  $('#groupMorePosts')?.addEventListener('click', () => _loadGroupPosts(group, { older: true }));
+
+  overlay.querySelectorAll('[data-post-menu]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const post = _groupSheet.posts.find(p => p.id === btn.dataset.postMenu);
+      if (post) _postMenu(group, post);
+    });
+  });
+  overlay.querySelectorAll('[data-post-save]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const post = _groupSheet.posts.find(p => p.id === btn.dataset.postSave);
+      if (post && _saveSharedItem(post.share, post.author)) {
+        btn.disabled = true;
+        btn.textContent = 'Saved';
+      }
+    });
+  });
+}
+
+async function _loadGroupPosts(group, { older = false } = {}) {
+  if (!isMemberOf(group, getCurrentUserId())) return;
+  const id = group.id;
+  const before = older && _groupSheet.posts.length ? _groupSheet.posts[_groupSheet.posts.length - 1].date : '';
+  try {
+    const res = await groupsApi('GET', `/${encodeURIComponent(id)}/posts${before ? `?before=${encodeURIComponent(before)}` : ''}`);
+    if (_groupSheet.id !== id) return;
+    _groupSheet.posts = older ? [..._groupSheet.posts, ...res.posts] : res.posts;
+    if (!older || !res.hasMore) _groupSheet.hasMore = res.hasMore;
+  } catch (e) {
+    if (_groupSheet.id !== id) return;
+    if (e.status === 404 || e.status === 403) {
+      closeGroup();
+      _groupToast(e.message, 'error');
+      loadGroups();
+      return;
+    }
+    if (!older && !_groupSheet.posts.length) _groupToast(e.message, 'error');
+  }
+  _groupSheet.loading = false;
+  // Don't wipe a half-written post on the background refresh.
+  const draft = document.getElementById('groupPostText');
+  const text = draft ? draft.value : '';
+  const focused = draft && document.activeElement === draft;
+  _renderGroupSheet(group);
+  const next = document.getElementById('groupPostText');
+  if (next && text) { next.value = text; if (focused) next.focus(); }
+}
+
+function openGroup(id) {
   const group = groups.find(gr => gr.id === id);
   if (!group) return;
-  const detail = document.getElementById('groupDetail');
-  if (!detail) return;
-  detail.style.display = 'block';
-  await fetchPosts(id);
-  const postsHtml = (group.posts || [])
-    .sort((a,b) => new Date(a.date)-new Date(b.date))
-    .map(p => `<div><strong>${p.user}</strong>: ${p.text} <small>${new Date(p.date).toLocaleString()}</small></div>`)
-    .join('');
-  detail.innerHTML = `
-    <h3>${group.name}</h3>
-    <div>
-      <input id="inviteUserInput" placeholder="Friend's username" list="inviteFriendOptions" autocomplete="off" />
-      <datalist id="inviteFriendOptions">${(typeof window.getFriends === 'function' ? window.getFriends() : [])
-        .filter(f => !isMemberOf(group, f.username))
-        .map(f => `<option value="${_escGroup(f.username)}"></option>`).join('')}</datalist>
-      <button onclick="inviteUserToGroup(${id}, document.getElementById('inviteUserInput').value)">Invite</button>
-    </div>
-    <div id="groupPosts">${postsHtml}</div>
-    <textarea id="newPostText"></textarea>
-    <button onclick="addPostToGroup(${id}, window.currentUser, document.getElementById('newPostText').value)">Post</button>
-    <h4>Share Program</h4>
-    <textarea id="shareProgramData"></textarea>
-    <button onclick="shareProgramInput(${id}, document.getElementById('shareProgramData').value)">Share</button>
-    <button onclick="loadGroupStats(${id})">Load Progress</button>
-    <div id="groupProgress"></div>
-  `;
+  if (_groupSheet.timer) clearInterval(_groupSheet.timer);
+  _groupSheet = { id, posts: [], timer: null, loading: true, hasMore: false };
+  _renderGroupSheet(group);
+  _loadGroupPosts(group);
+  _groupSheet.timer = setInterval(() => {
+    const draft = document.getElementById('groupPostText');
+    if (draft && draft.value) return; // don't refresh while typing
+    _loadGroupPosts(group);
+  }, GROUP_POLL_MS);
 }
 
-async function loadGroupStats(id) {
-  const data = await fetchProgress(id);
-  const div = document.getElementById('groupProgress');
-  if (!div || !data) return;
-  const rows = (data.members || [])
-    .map(m => `<tr><td>${m.userId}</td><td>${m.volume||0}</td><td>${m.reps||0}</td></tr>`) 
-    .join('');
-  const lb = data.leaderboard;
-  div.innerHTML = `
-    <table><tr><th>User</th><th>Volume</th><th>Reps</th></tr>${rows}</table>
-    <p>Most Consistent: ${lb.consistent.join(', ')}</p>
-    <p>Most Improving: ${lb.improving.join(', ')}</p>`;
-}
-
-// wrapper helpers for inline onclick handlers
-function addPostToGroup(id, user, text) {
-  if (!text) return;
-  addPost(id, user, text);
-  // re-render group to show new post
-  openGroup(id);
-}
-
-function shareProgramInput(id, dataStr) {
-  if (!dataStr) return;
-  let parsed;
-  try {
-    parsed = JSON.parse(dataStr);
-  } catch (e) {
-    console.warn('Invalid program data', e);
-    return;
+// Small action list shown in the same sheet overlay (above the sheet).
+function _actionSheet(title, actions) {
+  let el = document.getElementById('groupActionOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'groupActionOverlay';
+    el.className = 'quick-share-overlay';
+    el.style.zIndex = '3100';
+    document.body.appendChild(el);
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
   }
-  shareProgramToGroup(id, parsed);
+  el.innerHTML = `
+    <div class="quick-share-panel" role="dialog" aria-modal="true" aria-label="${_escGroup(title)}">
+      <div class="quick-share-handle"></div>
+      <div class="quick-share-title">${_escGroup(title)}</div>
+      <div class="sx-gactions">${actions.map((a, i) =>
+        `<button type="button" class="mx-outline mx-outline--block${a.danger ? ' mx-outline--danger' : ''}" data-action="${i}">${_escGroup(a.label)}</button>`).join('')}
+        <button type="button" class="mx-outline mx-outline--block" data-action="cancel">Cancel</button>
+      </div>
+    </div>`;
+  el.classList.add('open');
+  el.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.classList.remove('open');
+      const a = actions[+btn.dataset.action];
+      if (a) a.run();
+    });
+  });
+}
+
+function _confirmGroup(message) {
+  return typeof window.confirm === 'function' ? window.confirm(message) : true;
+}
+
+function _reportFlow(title, path) {
+  _actionSheet(title, GROUP_REPORT_REASONS.map(([reason, label]) => ({
+    label,
+    run: async () => {
+      try {
+        await groupsApi('POST', path, { reason });
+        _groupToast('Thanks. Our moderators will review this within 24 hours.');
+      } catch (e) {
+        _groupToast(e.message, 'error');
+      }
+    },
+  })));
+}
+
+function _postMenu(group, post) {
+  const actions = [];
+  if (!post.mine) {
+    actions.push({ label: 'Report post', run: () => _reportFlow('Why are you reporting this post?', `/${encodeURIComponent(group.id)}/posts/${encodeURIComponent(post.id)}/report`) });
+    if (window.Profiles && typeof window.Profiles.openProfileCard === 'function') {
+      actions.push({ label: `View @${post.author} (block or report)`, run: () => window.Profiles.openProfileCard(post.author) });
+    }
+  }
+  if (post.canDelete) {
+    actions.push({
+      label: 'Delete post',
+      danger: true,
+      run: async () => {
+        if (!_confirmGroup('Delete this post?')) return;
+        try {
+          await groupsApi('DELETE', `/${encodeURIComponent(group.id)}/posts/${encodeURIComponent(post.id)}`);
+          _groupSheet.posts = _groupSheet.posts.filter(p => p.id !== post.id);
+          _renderGroupSheet(group);
+        } catch (e) {
+          _groupToast(e.message, 'error');
+        }
+      },
+    });
+  }
+  if (actions.length) _actionSheet('Post', actions);
+}
+
+function _groupMenu(group) {
+  const actions = [];
+  const member = isMemberOf(group, getCurrentUserId());
+  if (!group.isOwner) {
+    actions.push({ label: 'Report group', run: () => _reportFlow('Why are you reporting this group?', `/${encodeURIComponent(group.id)}/report`) });
+  }
+  if (member) {
+    actions.push({
+      label: 'Leave group',
+      danger: true,
+      run: async () => {
+        const note = group.isOwner && group.members.length > 1 ? ' Another member will take over as owner.' : '';
+        if (!_confirmGroup(`Leave ${group.name}?${note}`)) return;
+        try {
+          await groupsApi('POST', `/${encodeURIComponent(group.id)}/leave`);
+          closeGroup();
+          _groupToast(`You left ${group.name}`);
+          loadGroups();
+        } catch (e) {
+          _groupToast(e.message, 'error');
+        }
+      },
+    });
+  }
+  if (group.isOwner) {
+    actions.push({
+      label: 'Delete group',
+      danger: true,
+      run: async () => {
+        if (!_confirmGroup(`Delete ${group.name} and all its posts for everyone? This can’t be undone.`)) return;
+        try {
+          await groupsApi('DELETE', `/${encodeURIComponent(group.id)}`);
+          groups = groups.filter(g => g.id !== group.id);
+          saveGroups();
+          closeGroup();
+          _groupToast(`Deleted ${group.name}`);
+          _rerenderGroups();
+        } catch (e) {
+          _groupToast(e.message, 'error');
+        }
+      },
+    });
+  }
+  _actionSheet(group.name, actions);
+}
+
+// Saves a program/template someone shared in a group into your own library
+// (same storage the Share inbox uses).
+function _saveSharedItem(share, from) {
+  const user = getCurrentUserId();
+  if (!share || !user || typeof localStorage === 'undefined') return false;
+  const read = key => { try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; } };
+  if (share.type === 'template') {
+    const key = `managedTemplates_${user}`;
+    const tpls = read(key);
+    tpls.unshift({ localId: `local_${Date.now()}`, name: `${share.name} (from @${from})`, data: share.data, source: 'community' });
+    localStorage.setItem(key, JSON.stringify(tpls));
+    _groupToast(`"${share.name}" added to your Templates!`, 'success');
+  } else {
+    const key = `programs_${user}`;
+    const progs = read(key);
+    progs.unshift({ ...share.data, id: `comm_${Date.now()}`, name: `${share.name} (from @${from})`, _sharedBy: from });
+    localStorage.setItem(key, JSON.stringify(progs));
+    _groupToast(`"${share.name}" added to your Programs!`, 'success');
+  }
+  return true;
 }
 
 // Bottom sheet: name, goal, tags and a tap-to-select list of your friends.
@@ -632,7 +800,7 @@ function showCreateGroup() {
     <div class="quick-share-panel" role="dialog" aria-modal="true" aria-labelledby="createGroupTitle">
       <div class="quick-share-handle"></div>
       <div class="quick-share-title" id="createGroupTitle">Create group</div>
-      <div class="quick-share-subtitle">Name it, then tap friends to add them</div>
+      <div class="quick-share-subtitle">Anyone can find and join your group. Tap friends to add them now.</div>
       <label class="create-group-field"><span>Name</span><input id="createGroupName" type="text" maxlength="60" placeholder="e.g. Morning Lifters"></label>
       <label class="create-group-field"><span>Goal (optional)</span><input id="createGroupGoal" type="text" maxlength="80" placeholder="e.g. Hit a 200kg deadlift"></label>
       <label class="create-group-field"><span>Tags (optional, comma separated)</span><input id="createGroupTags" type="text" placeholder="strength, beginner"></label>
@@ -671,18 +839,43 @@ function showCreateGroup() {
     const goal = overlay.querySelector('#createGroupGoal').value.trim();
     const tagsStr = overlay.querySelector('#createGroupTags').value;
     const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
-    await createGroup(name, goal, tags, [...selected]);
-    overlay.classList.remove('open');
-    renderGroups(groups);
-    if (typeof showToast === 'function') {
-      showToast(selected.size ? `Created ${name} with ${selected.size} friend${selected.size === 1 ? '' : 's'}` : `Created ${name}`);
+    let g;
+    try {
+      g = await createGroup(name, goal, tags, [...selected]);
+    } catch (e) {
+      _groupToast(e.message, 'error');
+      refresh();
+      return;
     }
+    overlay.classList.remove('open');
+    _rerenderGroups();
+    _groupToast(selected.size ? `Created ${g.name} with ${selected.size} friend${selected.size === 1 ? '' : 's'}` : `Created ${g.name}`);
+    openGroup(g.id);
   });
   refresh();
   setTimeout(() => nameInput.focus(), 50);
 }
 
 // ----- Competition Features -----
+// Sample data used for prototype leaderboards
+const sampleExerciseData = {
+  Squat: [
+    { user: 'Alice', volume: 12000, sets: 50, reps: 200 },
+    { user: 'Bob', volume: 11000, sets: 45, reps: 180 },
+    { user: 'Cara', volume: 9000, sets: 40, reps: 160 }
+  ],
+  'Bench Press': [
+    { user: 'Alice', volume: 8000, sets: 40, reps: 160 },
+    { user: 'Bob', volume: 7500, sets: 38, reps: 150 },
+    { user: 'Cara', volume: 7000, sets: 35, reps: 140 }
+  ],
+  Deadlift: [
+    { user: 'Alice', volume: 14000, sets: 45, reps: 180 },
+    { user: 'Bob', volume: 13500, sets: 42, reps: 170 },
+    { user: 'Cara', volume: 12000, sets: 40, reps: 160 }
+  ]
+};
+
 let currentCommunitySection = 'groups';
 let competitionChart;
 
@@ -738,13 +931,6 @@ function calcStatsForGroup(g) {
 function renderCompetition(metric = 'workouts') {
   const container = document.getElementById('competitionContent');
   if (!container) return;
-  if (!groups.length) {
-    groups = [
-      { id: 1, name: 'Alpha Team', progress: { a: { workouts: 20, studyHours: 5 } }, posts: [{}] },
-      { id: 2, name: 'Bravo Squad', progress: { b: { workouts: 15, studyHours: 8 } }, posts: [] },
-      { id: 3, name: 'Charlie Crew', progress: { c: { workouts: 25, studyHours: 3 } }, posts: [{},{}] }
-    ];
-  }
   const data = groups.map(g => {
     const stats = calcStatsForGroup(g);
     return { id: g.id, name: g.name, ...stats };
@@ -854,9 +1040,8 @@ function renderGroupExerciseLeaderboard(exercise, timeframe) {
 if (typeof window !== 'undefined') {
   window.loadGroups = loadGroups;
   window.showCreateGroup = showCreateGroup;
-  window.addPostToGroup = addPostToGroup;
-  window.shareProgramInput = shareProgramInput;
-  window.inviteUserToGroup = inviteUserToGroup;
+  window.openGroup = openGroup;
+  window.closeGroup = closeGroup;
   window.shareProgramToGroup = shareProgramToGroup;
   window.doGroupSearch = doGroupSearch;
   window.clearGroupFilters = clearGroupFilters;
@@ -867,5 +1052,5 @@ if (typeof window !== 'undefined') {
 
 // allow tests to import functions
 if (typeof module !== 'undefined') {
-  module.exports = { calculateLeaderboard, filterGroups, sortGroups, groupActivity7d, createGroup, getGroups };
+  module.exports = { calculateLeaderboard, filterGroups, sortGroups, groupActivity7d, createGroup, getGroups, fetchGroups, isMemberOf, normalizeGroup };
 }
