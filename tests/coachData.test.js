@@ -205,3 +205,74 @@ describe('buildWeeklyReviewFacts', () => {
     expect(facts.week).toEqual({ start: '2026-09-14', end: '2026-09-20', inProgress: false });
   });
 });
+
+describe('buildBodyFacts', () => {
+  const at = '2026-09-23T08:00:00.000Z';
+  // Weigh-ins every 3 days over 4 weeks, moving `perWeek` kg a week.
+  const weighIns = perWeek => Array.from({ length: 10 }, (_, i) => {
+    const d = new Date(Date.parse('2026-08-27T00:00:00Z') + i * 3 * 86400000);
+    return { date: d.toISOString().slice(0, 10), kg: +(80 + (perWeek * i * 3) / 7).toFixed(2) };
+  });
+  const days = n => Array.from({ length: n }, (_, i) => new Date(Date.parse('2026-09-23T00:00:00Z') - i * 86400000).toISOString().slice(0, 10));
+
+  test('flat weight on a cut is the top takeaway', () => {
+    const out = CoachData.buildBodyFacts({ generatedAt: at, profile: { phase: 'Cut', unit: 'kg' }, bodyweight: weighIns(0) });
+    expect(out.facts.weight.ratePerWeek).toBe(0);
+    expect(out.takeaways[0]).toMatchObject({ key: 'weight', tone: 'watch' });
+    expect(out.takeaways[0].text).toMatch(/flat/);
+    expect(out.hasData).toBe(true);
+  });
+
+  test('a sustainable cut rate is a keep-going takeaway', () => {
+    const out = CoachData.buildBodyFacts({ generatedAt: at, profile: { phase: 'cut' }, bodyweight: weighIns(-0.5) });
+    expect(out.facts.weight.ratePerWeek).toBeCloseTo(-0.5, 1);
+    expect(out.takeaways[0]).toMatchObject({ key: 'weight', tone: 'good' });
+  });
+
+  test('low protein and short sleep are ranked above good news', () => {
+    const intake = days(5).map(date => ({ date, kcal: 2300, protein: 120 }));
+    const sleep = days(7).map(date => ({ date, hours: 6.2 }));
+    const cardio = days(5).map(date => ({ date, durationMin: 35 }));
+    const out = CoachData.buildBodyFacts({
+      generatedAt: at, profile: {}, sleep, cardio,
+      macros: { targets: { calories: 2400, protein: 180 }, intake },
+    });
+    expect(out.takeaways.map(t => t.key)).toEqual(['protein', 'sleep', 'cardio']);
+    expect(out.takeaways[0].text).toMatch(/120g vs your 180g/);
+    expect(out.headline).toMatch(/2 things/);
+  });
+
+  test('placeholder targets are ignored and sparse logging is flagged', () => {
+    const out = CoachData.buildBodyFacts({
+      generatedAt: at, profile: {},
+      macros: { targets: { calories: 343, protein: 17 }, intake: [{ date: '2026-09-23', kcal: 1700, protein: 120 }] },
+    });
+    expect(out.facts.nutrition).toMatchObject({ calorieTarget: null, proteinTarget: null, daysLogged7d: 1 });
+    expect(out.takeaways[0].key).toBe('logging');
+  });
+
+  test('no data at all', () => {
+    const out = CoachData.buildBodyFacts({ generatedAt: at, profile: {} });
+    expect(out).toMatchObject({ hasData: false, takeaways: [] });
+  });
+});
+
+describe('buildCoachDataPack intake', () => {
+  test('packs recent macro history plus today, last save of a day wins', () => {
+    const store = memoryStore({
+      [`macroHistory_${u}`]: JSON.stringify([
+        { date: '2026-09-01', totals: { protein: 100, carbs: 100, fats: 50 } }, // too old
+        { date: '2026-09-21', totals: { protein: 100, carbs: 200, fats: 60 } },
+        { date: '2026-09-21', totals: { protein: 150, carbs: 200, fats: 60 } },
+      ]),
+      dailyMacroDate: '2026-09-23',
+      dailyMacroProgress: JSON.stringify({ protein: 40, carbs: 50, fats: 10 }),
+    });
+    const pack = CoachData.buildCoachDataPack(store, u, undefined, NOW);
+    expect(pack.macros.targets).toBeUndefined();
+    expect(pack.macros.intake).toEqual([
+      { date: '2026-09-21', kcal: 1940, protein: 150 },
+      { date: '2026-09-23', kcal: 450, protein: 40 },
+    ]);
+  });
+});

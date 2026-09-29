@@ -188,6 +188,35 @@ describe('POST /api/ai/coach', () => {
     expect(body).toMatchObject({ source: 'rules', aiError: 'failed' });
   });
 
+  const bodyPack = {
+    generatedAt: '2026-09-23T07:00:00.000Z',
+    profile: { unit: 'kg', phase: 'cut' },
+    sleep: [{ date: '2026-09-22', hours: 6 }, { date: '2026-09-21', hours: 6.4 }],
+  };
+
+  test('body: AI takeaways come back and only facts are sent', async () => {
+    mockScript = [{ message: { stop_reason: 'end_turn', content: [{ type: 'text', text: '{"headline":"Sleep is the lever this week.","bullets":[{"text":"Get to bed 30 min earlier","tone":"watch"}]}' }] } }];
+    const body = await (await fetch(base + '/body', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: bodyPack }),
+    })).json();
+    expect(body).toMatchObject({ source: 'ai', headline: 'Sleep is the lever this week.' });
+    expect(body.bullets).toEqual([{ text: 'Get to bed 30 min earlier', tone: 'watch' }]);
+    const sent = JSON.parse(mockCalls[0].messages[0].content);
+    expect(sent.facts.sleep).toMatchObject({ nights7d: 2, avgHours: 6.2 });
+    expect(sent.draft[0].tone).toBe('watch');
+  });
+
+  test('body: no data or a failed AI call returns the rules takeaways', async () => {
+    let body = await (await fetch(base + '/body', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: {} }) })).json();
+    expect(body.source).toBe('rules');
+    expect(mockCalls).toHaveLength(0);
+
+    mockScript = [{ throw: new Error('network down') }];
+    body = await (await fetch(base + '/body', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: bodyPack }) })).json();
+    expect(body).toMatchObject({ source: 'rules', aiError: 'failed' });
+    expect(body.bullets[0].text).toMatch(/Sleep averages 6.2h/);
+  });
+
   test('OpenRouter: a fully rate-limited chain is retried once after a pause', async () => {
     const Anthropic = require('@anthropic-ai/sdk');
     const saved = { a: process.env.ANTHROPIC_API_KEY, m: process.env.OPENROUTER_MODELS };

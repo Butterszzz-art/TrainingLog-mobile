@@ -459,6 +459,59 @@ router.post('/review', async (req, res) => {
   }
 });
 
+// ── POST /api/ai/coach/body — Body tab "Coach takeaways" ─────────────────────
+// Body: { data, memory, style }. `data` is the coach data pack (its macro
+// targets may be the phone's adaptive ones, so the advice matches what the
+// Macros card shows). Facts come from the same rules the phone runs offline;
+// Claude only rewrites them as practical takeaways.
+// Returns { headline, bullets, source: 'ai' | 'rules' }.
+
+const { buildBodyFacts } = require('../js/coach-data');
+
+const BODY_MODEL = process.env.COACH_BODY_MODEL || BRIEF_MODEL;
+
+const BODY_INSTRUCTIONS = `You write the "Coach takeaways" box on the Body tab of Pocket Coach, a training app. It sits under the athlete's weight, macros, sleep and cardio cards and tells them what to actually do this week.
+
+You get a JSON object with "facts" computed from their log and a rules-based "draft" of takeaways. Write:
+- headline: one sentence (max 25 words) — the overall read of their body data and the single most important lever this week.
+- bullets: up to 3 takeaways (max 90 characters each), most important first. Each one is practical: say what to change or keep doing, concretely (a food swap, a kcal amount, a bedtime, a walk). Use tone "watch" for something to fix, "good" for something to keep, "info" for neutral.
+
+Base every takeaway on the facts; keep numbers exactly as given and don't add numbers or facts that aren't there. Coaching safety: never suggest eating below ~1,200 kcal or losing faster than ~1% bodyweight a week. No greetings, no emoji, no exclamation marks, no medical advice.
+
+Reply with only a JSON object, no other text: {"headline": string, "bullets": [{"text": string, "tone": "good" | "watch" | "info"}]}`;
+
+router.post('/body', async (req, res) => {
+  if (!isConfigured()) {
+    return res.status(404).json({ error: 'AI_NOT_CONFIGURED' });
+  }
+  const { data, memory, style } = req.body || {};
+  const pack = data && typeof data === 'object' ? data : {};
+  const body = buildBodyFacts(pack);
+  const rules = { headline: body.headline, bullets: body.takeaways.map(({ text, tone }) => ({ text, tone })), source: 'rules' };
+  if (!body.hasData) return res.json(rules);
+
+  try {
+    const reply = await createMessage(BODY_MODEL, {
+      max_tokens: 2000,
+      output_config: provider() === 'anthropic'
+        ? { effort: 'low', format: { type: 'json_schema', schema: BRIEF_SCHEMA } }
+        : { effort: 'low' },
+      system: [
+        { type: 'text', text: BODY_INSTRUCTIONS },
+        { type: 'text', text: athleteContext({ profile: pack.profile || {}, memory, style, today: body.facts.date }) },
+      ],
+      messages: [{ role: 'user', content: JSON.stringify({ facts: body.facts, draft: rules.bullets }) }],
+    }, { timeoutMs: perModelTimeoutMs(20000) });
+    if (reply.stop_reason === 'refusal') return res.json(rules);
+    const parsed = parseBrief(reply.content.filter(b => b.type === 'text').map(b => b.text).join(''));
+    if (!parsed) return res.json(rules);
+    return res.json({ headline: parsed.headline, bullets: parsed.bullets.length ? parsed.bullets : rules.bullets, source: 'ai' });
+  } catch (err) {
+    console.error('[AI body]', err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err.message);
+    return res.json({ ...rules, aiError: err instanceof Anthropic.APIError ? err.status : 'failed' });
+  }
+});
+
 router.parseBrief = parseBrief;
 router.proposalsToCards = proposalsToCards;
 module.exports = router;
