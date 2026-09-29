@@ -1091,6 +1091,7 @@ function injectSettingsMarkup() {
         appModeSel.addEventListener('change', (e) => {
           if (typeof setCurrentAppMode === 'function') setCurrentAppMode(e.target.value);
           if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
+          window.promptCoachUpgradeIfLocked?.();
           if (coachToggle) {
             coachToggle.checked = typeof isCoachModeEnabled === 'function' && isCoachModeEnabled();
             coachToggle.disabled = e.target.value !== 'both';
@@ -1106,6 +1107,10 @@ function injectSettingsMarkup() {
           if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
           coachToggle.disabled = getCurrentAppMode() !== 'both';
           const isEnabled = typeof isCoachModeEnabled === 'function' && isCoachModeEnabled();
+          if (e.target.checked && !isEnabled && window.promptCoachUpgradeIfLocked?.()) {
+            coachToggle.checked = false;
+            return;
+          }
           if (isEnabled) {
             if (typeof showTab === 'function') showTab('clientsTab');
           } else {

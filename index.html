@@ -4372,6 +4372,8 @@ async function loadUserPlan() {
     window.currentUserPlanLoaded = true;
     localStorage.setItem('userPlan', window.currentUserPlan);
     localStorage.setItem('userIsAdmin', window.currentIsAdmin ? '1' : '');
+    // Coach Mode depends on the plan — re-apply now that we know it.
+    if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
   } catch {
     window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
   }
@@ -4385,6 +4387,21 @@ function hasPaidAccess() {
   return isPro() || window.currentIsAdmin === true || localStorage.getItem('userIsAdmin') === '1';
 }
 window.hasPaidAccess = hasPaidAccess;
+
+// Coach tools (Coach Mode: client roster, coach ops, logging for clients)
+// are the Coach plan — Pro isn't enough. Admins included. The server
+// enforces the same rule (requireCoachPlan in the backend).
+function hasCoachAccess() {
+  return window.currentUserPlan === 'coach' || window.currentIsAdmin === true
+    || localStorage.getItem('userIsAdmin') === '1';
+}
+// True only once we know the account lacks the Coach plan — before the plan
+// loads, a real coach isn't locked out of their own dashboard.
+function coachPlanKnownMissing() {
+  var known = window.currentUserPlanLoaded || localStorage.getItem('userPlan') !== null;
+  return known && !hasCoachAccess();
+}
+window.hasCoachAccess = hasCoachAccess;
 function isCoach() { return window.currentUserPlan === 'coach'; }
 function isActiveSub() { return ['active', 'trialing'].includes(window.currentSubStatus); }
 
@@ -10195,12 +10212,28 @@ function setCurrentAppMode(mode) {
   return nextMode;
 }
 
-function isCoachModeEnabled() {
+// The user's chosen mode, whatever their plan.
+function isCoachModePreferred() {
   const mode = getCurrentAppMode();
   if (mode === 'coach') return true;
   if (mode === 'athlete') return false;
   return localStorage.getItem(COACH_MODE_ENABLED_STORAGE_KEY) === 'true';
 }
+
+// Coach Mode is on only with the Coach plan (or admin). The preference is
+// kept, so it switches on as soon as the user upgrades.
+function isCoachModeEnabled() {
+  return isCoachModePreferred() && !coachPlanKnownMissing();
+}
+
+// Called when the user turns Coach Mode on in Settings.
+function promptCoachUpgradeIfLocked() {
+  if (!isCoachModePreferred() || !coachPlanKnownMissing()) return false;
+  if (typeof showToast === 'function') showToast('Coach Mode is part of the Coach plan.');
+  if (typeof openUpgradeModal === 'function') openUpgradeModal('coach');
+  return true;
+}
+window.promptCoachUpgradeIfLocked = promptCoachUpgradeIfLocked;
 
 function setCoachModeEnabled(value) {
   const mode = getCurrentAppMode();
@@ -10219,6 +10252,11 @@ function setCoachModeEnabled(value) {
 
 function applyAppModeToNavigation() {
   const coachModeEnabled = isCoachModeEnabled();
+  // Lost Coach access (plan loaded / downgraded) while on a coach tab.
+  const activeId = document.querySelector('.tab-content.active')?.id;
+  if (!coachModeEnabled && (activeId === 'clientsTab' || activeId === 'coachOpsTab') && typeof showTab === 'function') {
+    showTab('homeTab');
+  }
   document.querySelectorAll('.coach-only').forEach((el) => {
     // Tab-content divs (display:block) vs bn-item nav buttons (display:flex)
     // Use empty string to revert to stylesheet default rather than forcing 'block'.
@@ -10286,6 +10324,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setCoachModeEnabled(shouldEnableCoachMode);
       syncModeControls();
       applyAppModeToNavigation();
+      promptCoachUpgradeIfLocked();
       if (isCoachModeEnabled()) {
         showTab('clientsTab');
       } else if (activeTab && (activeTab.id === 'clientsTab' || activeTab.id === 'coachOpsTab')) {
@@ -10303,6 +10342,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setCoachModeEnabled(event.target.checked);
       syncModeControls();
       applyAppModeToNavigation();
+      promptCoachUpgradeIfLocked();
       if (isCoachModeEnabled()) {
         showTab('clientsTab');
       } else if (activeTab && (activeTab.id === 'clientsTab' || activeTab.id === 'coachOpsTab')) {
