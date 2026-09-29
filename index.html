@@ -2288,7 +2288,7 @@
       <button id="progAiGenBtn" onclick="openProgAiGen()" class="cta-capsule" style="justify-content:center;gap:8px;">
         <span class="ui-icon" data-icon="sparkles"></span><span>Generate with AI</span>
       </button>
-      <div id="progAiGenLocked" style="display:none;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;"><span class="ui-icon" data-icon="lock"></span> AI Program Generator — Pro feature</div>
+      <div id="progAiGenLocked" role="button" tabindex="0" onclick="openUpgradeModal('pro')" style="display:none;cursor:pointer;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;"><span class="ui-icon" data-icon="lock"></span> AI Program Generator — Pro feature</div>
     </div>
 
     <!-- Builder view (wizard lives here) -->
@@ -3025,7 +3025,7 @@
             <button id="macroAiAdvisorBtn" class="macro-save-btn macro-ai-btn" onclick="openMacroAiAdvisor()">
               <span class="ui-icon" data-icon="sparkles"></span><span>AI Macro Advisor</span>
             </button>
-            <div id="macroAiAdvisorLocked" style="display:none;text-align:center;margin-top:8px;font-size:0.8rem;color:var(--secondary-text);">
+            <div id="macroAiAdvisorLocked" role="button" tabindex="0" onclick="openUpgradeModal('pro')" style="display:none;cursor:pointer;text-align:center;margin-top:8px;font-size:0.8rem;color:var(--secondary-text);">
               <span class="ui-icon" data-icon="lock"></span> Pro feature — upgrade to unlock
             </div>
           </div>
@@ -4368,13 +4368,23 @@ async function loadUserPlan() {
     window.currentSubSource = data.source || ''; // 'stripe' | 'apple'
     window.currentReferralCode = data.referralCode || '';
     window.currentReferralCredits = data.referralCredits || 0;
+    window.currentIsAdmin = data.admin === true;
+    window.currentUserPlanLoaded = true;
     localStorage.setItem('userPlan', window.currentUserPlan);
+    localStorage.setItem('userIsAdmin', window.currentIsAdmin ? '1' : '');
   } catch {
     window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
   }
 }
 
 function isPro() { return window.currentUserPlan === 'pro' || window.currentUserPlan === 'coach'; }
+// Paid features (every AI feature, the premium library): subscribers and
+// admins. The server enforces the same rule — see src/planAccess.js in the
+// backend. isPro() stays "has a subscription" for billing screens.
+function hasPaidAccess() {
+  return isPro() || window.currentIsAdmin === true || localStorage.getItem('userIsAdmin') === '1';
+}
+window.hasPaidAccess = hasPaidAccess;
 function isCoach() { return window.currentUserPlan === 'coach'; }
 function isActiveSub() { return ['active', 'trialing'].includes(window.currentSubStatus); }
 
@@ -4475,10 +4485,11 @@ var UPGRADE_PLANS = {
     monthly: 9, annual: 7, annualNote: 'Billed £84/year · save £24',
     sub: null, // the trial, or "Cancel anytime" when there isn't one
     features: [
-      ['sparkles', 'AI check-in summaries'],
-      ['sparkles', 'AI macro advisor'],
-      ['sparkles', 'AI program generator'],
-      ['sparkles', 'AI plateau detector'],
+      ['sparkles', 'AI coach, daily briefs & weekly reviews'],
+      ['sparkles', 'AI program generator & plateau detector'],
+      ['sparkles', 'AI macro, sleep & check-in insights'],
+      ['sparkles', 'AI rehab plans'],
+      ['bookOpen', 'Premium e-books & training programs'],
       ['sparkles', 'Priority support']
     ]
   },
@@ -13039,10 +13050,10 @@ function renderPhotoComparison() {
 }
 
 // ── Pro user gate ─────────────────────────────────────────────────────────────
-// Replace with real billing check when subscription is added.
+// Every AI feature is Pro (admins included) — see hasPaidAccess(). The server
+// refuses AI requests from free accounts too.
 function isProUser() {
-  const u = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  return localStorage.getItem(`proUser_${u}`) === 'true' || true; // default open during beta
+  return hasPaidAccess();
 }
 
 // ── AI check-in summary ───────────────────────────────────────────────────────
@@ -13056,7 +13067,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
       <div class="ci-ai-card ci-ai-card--locked">
         <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
         <p>Upgrade to Pro to get an AI-generated summary of every check-in.</p>
-        <button class="ci-ai-upgrade-btn" onclick="window.showToast?.('Pro subscriptions coming soon!','info',3000)">Upgrade</button>
+        <button class="ci-ai-upgrade-btn" onclick="openUpgradeModal('pro')">Upgrade</button>
       </div>`;
     return;
   }

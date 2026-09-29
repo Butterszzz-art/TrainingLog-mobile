@@ -10,6 +10,9 @@
 // caller already handles as "AI unavailable" (deterministic fallbacks keep
 // working). The choice can be changed in Settings → App → Privacy & Legal.
 //
+// The same wrapper is the app side of the Pro gate: every AI feature is Pro,
+// so known-free accounts are stopped before any request (see "Pro gate").
+//
 // Must load before any script that calls an AI route.
 (function () {
   'use strict';
@@ -120,14 +123,63 @@
     }), { status: 403, headers: { 'Content-Type': 'application/json' } });
   }
 
+  /* ── Pro gate ───────────────────────────────────────────── */
+  // Every AI feature is Pro. The server enforces it (403
+  // plan.upgrade_required); this stops known-free accounts before a request
+  // (or a consent prompt) happens. Admins (plan response `admin: true`) pass.
+  // The upgrade sheet only opens when the user just tapped something, so
+  // AI that loads on its own (e.g. the Home brief) quietly shows its fallback.
+  var lastInteraction = 0;
+  var lastUpgradePrompt = 0;
+  ['pointerdown', 'keydown'].forEach(function (type) {
+    document.addEventListener(type, function () { lastInteraction = Date.now(); }, true);
+  });
+
+  function storedPlan() {
+    try { return localStorage.getItem('userPlan'); } catch (e) { return null; }
+  }
+
+  // True only when we know the account is free — if the plan hasn't loaded
+  // yet, let the server decide rather than block a paying user.
+  function knownFreeAccount() {
+    if (typeof window.hasPaidAccess === 'function' && window.hasPaidAccess()) return false;
+    var plan = window.currentUserPlanLoaded ? window.currentUserPlan : storedPlan();
+    return plan === 'free';
+  }
+
+  function upgradeRequiredResponse() {
+    var now = Date.now();
+    if (now - lastInteraction < 5000 && now - lastUpgradePrompt > 3000) {
+      lastUpgradePrompt = now;
+      if (typeof window.showToast === 'function') window.showToast('AI features are part of Pocket Coach Pro.');
+      if (typeof window.openUpgradeModal === 'function') window.openUpgradeModal('pro');
+    }
+    return new Response(JSON.stringify({
+      success: false,
+      error: { code: 'plan.upgrade_required', message: 'AI features are part of Pocket Coach Pro. Upgrade to use them.' }
+    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // The server is the source of truth: if it says upgrade (plan changed,
+  // stale local state), prompt the same way.
+  function sendAi(input, init) {
+    return nativeFetch(input, init).then(function (res) {
+      if (res.status !== 403) return res;
+      return res.clone().json().then(function (body) {
+        return body && body.error && body.error.code === 'plan.upgrade_required' ? upgradeRequiredResponse() : res;
+      }, function () { return res; });
+    });
+  }
+
   if (nativeFetch) {
     window.fetch = function (input, init) {
       if (!isAiRequest(input)) return nativeFetch(input, init);
+      if (knownFreeAccount()) return Promise.resolve(upgradeRequiredResponse());
       var consent = currentConsent();
-      if (consent === 'granted') return nativeFetch(input, init);
+      if (consent === 'granted') return sendAi(input, init);
       if (consent === 'declined') return Promise.resolve(declinedResponse());
       return prompt().then(function (agreed) {
-        return agreed ? nativeFetch(input, init) : declinedResponse();
+        return agreed ? sendAi(input, init) : declinedResponse();
       });
     };
   }
