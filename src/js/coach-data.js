@@ -17,6 +17,7 @@
   const WORKOUT_DAYS = 56;     // localStorage only keeps ~4 weeks anyway
   const BODYWEIGHT_DAYS = 120;
   const SLEEP_DAYS = 45;
+  const INTAKE_DAYS = 14;
   const MAX_MEMORY = 40;
 
   const ACCESS_KEYS = ['workouts', 'body', 'recovery', 'nutrition'];
@@ -169,6 +170,32 @@
     };
   }
 
+  // Daily intake totals for the last INTAKE_DAYS days, oldest first. Past days
+  // come from macroHistory_{u} (last save of a day wins); today comes from the
+  // live dailyMacroProgress, which isn't archived until the day rolls over.
+  function packIntake(store, username, now) {
+    const byDay = {};
+    const toRow = (date, t) => {
+      const p = num(t && t.protein) || 0, c = num(t && t.carbs) || 0, f = num(t && (t.fats ?? t.fat)) || 0;
+      const kcal = num(t && t.calories) || Math.round(p * 4 + c * 4 + f * 9);
+      return kcal > 0 ? { date, kcal: Math.round(kcal), protein: Math.round(p) } : null;
+    };
+    arr(readJSON(store, `macroHistory_${username}`, [])).forEach(h => {
+      const d = day(h && h.date);
+      if (!d || !withinDays(d, now, INTAKE_DAYS)) return;
+      const row = toRow(d, h.totals || h);
+      if (row) byDay[d] = row;
+    });
+    const todayLocal = isoDay(new Date(now));
+    const todayUtc = new Date(now).toISOString().slice(0, 10);
+    const savedDate = store.getItem('dailyMacroDate');
+    if (savedDate === todayLocal || savedDate === todayUtc) {
+      const row = toRow(todayLocal, readJSON(store, 'dailyMacroProgress', null));
+      if (row) byDay[todayLocal] = row;
+    }
+    return Object.values(byDay).sort((x, y) => (x.date < y.date ? -1 : 1));
+  }
+
   /**
    * Everything the coach may read, for `username`, as of `now`.
    * Sections switched off in `access` are omitted (the server treats a
@@ -226,11 +253,13 @@
 
     if (a.nutrition) {
       const t = readJSON(store, `macroTargets_${username}`, null);
+      const macros = {};
       if (t && (num(t.calories) || num(t.protein))) {
-        pack.macros = {
-          targets: { calories: num(t.calories), protein: num(t.protein), carbs: num(t.carbs), fat: num(t.fat ?? t.fats) },
-        };
+        macros.targets = { calories: num(t.calories), protein: num(t.protein), carbs: num(t.carbs), fat: num(t.fat ?? t.fats) };
       }
+      const intake = packIntake(store, username, now);
+      if (intake.length) macros.intake = intake;
+      if (macros.targets || macros.intake) pack.macros = macros;
     }
 
     return pack;
@@ -639,8 +668,148 @@
     };
   }
 
+  // ── Body tab takeaways ───────────────────────────────────────────
+  // Rules-only read of weight, nutrition, sleep and cardio for the Body
+  // tab's "Coach takeaways" box. Like the brief, the phone shows the rules
+  // version offline and POST /api/ai/coach/body has Claude reword the same
+  // facts, so the AI can't cite numbers that aren't here.
+
+  // Least-squares slope over [{t, v}] in units per week.
+  function weeklySlope(points) {
+    if (points.length < 3) return null;
+    const xs = points.map(p => p.t / (7 * DAY));
+    const mx = mean(xs), my = mean(points.map(p => p.v));
+    let nume = 0, den = 0;
+    points.forEach((p, i) => { nume += (xs[i] - mx) * (p.v - my); den += (xs[i] - mx) ** 2; });
+    return den ? nume / den : null;
+  }
+
+  const TONE_ORDER = { watch: 0, info: 1, good: 2 };
+
+  /**
+   * @param pack  buildCoachDataPack() output. pack.macros.targets may be
+   *              swapped for the adaptive targets the Macros tab shows.
+   * @returns { facts, headline, takeaways: [{key, text, tone}], hasData }
+   */
+  function buildBodyFacts(pack) {
+    const p = pack || {};
+    const now = Date.parse(p.generatedAt) || Date.now();
+    const unit = (p.profile && p.profile.unit) === 'lb' ? 'lb' : 'kg';
+    const toUnit = kg => (unit === 'lb' ? kg * 2.20462 : kg);
+    const phase = phaseDirection(p.profile && p.profile.phase);
+    const out = []; // { key, text, tone }
+    const facts = { date: isoDay(new Date(now)), unit, phase: phase ? phase.word : null };
+
+    // Weight: trend over the last 28 days against the phase goal.
+    const weights = arr(p.bodyweight).filter(e => num(e.kg)).sort((a, b) => (a.date < b.date ? -1 : 1));
+    if (weights.length) {
+      const latest = weights[weights.length - 1];
+      const recent = weights.filter(e => now - Date.parse(e.date) <= 28 * DAY);
+      const span = recent.length ? (Date.parse(recent[recent.length - 1].date) - Date.parse(recent[0].date)) / DAY : 0;
+      const slope = span >= 7 ? weeklySlope(recent.map(e => ({ t: Date.parse(e.date), v: e.kg }))) : null;
+      const pct = slope != null ? (slope / latest.kg) * 100 : null;
+      const daysSince = Math.floor((now - Date.parse(latest.date)) / DAY);
+      facts.weight = {
+        latest: r1(toUnit(latest.kg)), daysSinceWeighIn: daysSince, weighIns28d: recent.length,
+        ratePerWeek: slope != null ? r1(toUnit(slope)) : null, pctPerWeek: pct != null ? r1(pct) : null,
+      };
+      if (slope != null) {
+        const speed = `${Math.abs(r1(toUnit(slope)))} ${unit}/wk`; // after "Losing" / "Gaining"
+        const rate = `${slope > 0 ? '+' : slope < 0 ? '−' : ''}${speed}`;
+        if (phase && phase.dir < 0) {
+          if (pct > -0.1) out.push({ key: 'weight', tone: 'watch', text: `Weight is flat (${rate}) on your cut. Trim ~150 kcal a day or add a cardio session.` });
+          else if (pct < -1) out.push({ key: 'weight', tone: 'watch', text: `Losing ${speed}, faster than ~1% a week. Add ~150 kcal back to protect muscle.` });
+          else out.push({ key: 'weight', tone: 'good', text: `Losing ${speed}, a sustainable pace for a cut. Keep things as they are.` });
+        } else if (phase && phase.dir > 0) {
+          if (pct <= 0.05) out.push({ key: 'weight', tone: 'watch', text: `Weight isn't climbing (${rate}) on your bulk. Add ~150–200 kcal a day.` });
+          else if (pct > 0.5) out.push({ key: 'weight', tone: 'watch', text: `Gaining ${speed}, quicker than ~0.5% a week. Ease off ~150 kcal to limit fat gain.` });
+          else out.push({ key: 'weight', tone: 'good', text: `Gaining ${speed}, a lean rate for a bulk. Stay the course.` });
+        } else if (phase && phase.dir === 0 && Math.abs(pct) > 0.3) {
+          out.push({ key: 'weight', tone: 'watch', text: `Weight is drifting ${rate} during maintenance. Nudge calories ${slope > 0 ? 'down' : 'up'} ~100 kcal.` });
+        } else {
+          out.push({ key: 'weight', tone: 'info', text: `Weight trend is ${rate} over the last 4 weeks.` });
+        }
+      }
+      if (daysSince >= 5) {
+        out.push({ key: 'weighin', tone: 'info', text: `No weigh-in for ${daysSince} days. Weigh in tomorrow morning to keep the trend honest.` });
+      } else if (slope == null) {
+        out.push({ key: 'weighin', tone: 'info', text: 'Weigh in 3–4 mornings a week to unlock your weight trend.' });
+      }
+    }
+
+    // Nutrition: the last 7 days of logged intake against the targets.
+    const macros = p.macros || {};
+    const targets = macros.targets || {};
+    // Guard against placeholder targets (e.g. an unset profile) producing nonsense advice.
+    const kcalTarget = num(targets.calories) >= 1000 ? num(targets.calories) : null;
+    const proteinTarget = num(targets.protein) >= 40 ? num(targets.protein) : null;
+    const week = arr(macros.intake).filter(d => now - Date.parse(d.date) < 7 * DAY && num(d.kcal));
+    if (week.length || kcalTarget) {
+      const avgKcal = mean(week.map(d => d.kcal));
+      const avgProtein = mean(week.map(d => num(d.protein) || 0));
+      facts.nutrition = {
+        daysLogged7d: week.length,
+        avgCalories: avgKcal != null ? Math.round(avgKcal) : null, calorieTarget: kcalTarget,
+        avgProtein: avgProtein != null ? Math.round(avgProtein) : null, proteinTarget,
+      };
+      if (week.length < 3) {
+        out.push({ key: 'logging', tone: 'info', text: `Only ${week.length} of the last 7 days have meals logged. Log a few more so your numbers mean something.` });
+      } else {
+        if (proteinTarget && avgProtein < proteinTarget * 0.9) {
+          out.push({ key: 'protein', tone: 'watch', text: `Protein averages ${Math.round(avgProtein)}g vs your ${proteinTarget}g target. Add a ~30g serving to one meal.` });
+        } else if (proteinTarget) {
+          out.push({ key: 'protein', tone: 'good', text: `Protein is on point at ${Math.round(avgProtein)}g a day.` });
+        }
+        if (kcalTarget && Math.abs(avgKcal - kcalTarget) > kcalTarget * 0.1) {
+          const over = avgKcal > kcalTarget;
+          out.push({ key: 'calories', tone: 'watch', text: `Calories average ${Math.round(avgKcal).toLocaleString('en-US')}, ${over ? 'above' : 'below'} your ${kcalTarget.toLocaleString('en-US')} target. ${over ? 'Trim a snack or portion each day.' : 'Eat closer to target to keep training quality up.'}` });
+        }
+      }
+    }
+
+    // Sleep: last 7 nights.
+    const nights = arr(p.sleep).filter(n => num(n.hours) && now - Date.parse(n.date) < 7 * DAY);
+    if (nights.length) {
+      const avg = mean(nights.map(n => n.hours));
+      const short = nights.filter(n => n.hours < 6).length;
+      const q = nights.filter(n => num(n.quality));
+      facts.sleep = { nights7d: nights.length, avgHours: r1(avg), shortNights: short,
+        avgQuality: q.length ? r1(mean(q.map(n => n.quality))) : null };
+      if (avg < 7) out.push({ key: 'sleep', tone: 'watch', text: `Sleep averages ${r1(avg)}h this week${short ? ` with ${short} night${short === 1 ? '' : 's'} under 6h` : ''}. Aim for lights-out 30 min earlier.` });
+      else out.push({ key: 'sleep', tone: 'good', text: `Sleep averages ${r1(avg)}h, solid for recovery.` });
+    }
+
+    // Cardio: last 7 days.
+    const cardio = arr(p.cardio).filter(c => now - Date.parse(c.date) < 7 * DAY);
+    if (arr(p.cardio).length) {
+      const mins = Math.round(cardio.reduce((s, c) => s + (num(c.durationMin) || 0), 0));
+      facts.cardio = { sessions7d: cardio.length, minutes7d: mins };
+      if (mins >= 150) out.push({ key: 'cardio', tone: 'good', text: `${mins} min of cardio this week, above the 150 min guideline.` });
+      else if (phase && phase.dir < 0) out.push({ key: 'cardio', tone: 'info', text: `${mins} min of cardio this week. A couple of 20–30 min walks would help the cut.` });
+    }
+
+    const hasData = Boolean(facts.weight || facts.nutrition || facts.sleep || facts.cardio);
+    const takeaways = out
+      .map((x, i) => ({ ...x, i }))
+      .sort((a, b) => TONE_ORDER[a.tone] - TONE_ORDER[b.tone] || a.i - b.i)
+      .slice(0, 3)
+      .map(({ key, text, tone }) => ({ key, text, tone }));
+
+    const watches = out.filter(x => x.tone === 'watch').length;
+    const headline = !hasData
+      ? 'Log your weight, meals or sleep and your coach will pull out what matters here.'
+      : watches === 0
+        ? 'Your body data is trending the right way. Keep doing what you are doing.'
+        : watches === 1
+          ? 'One thing to adjust this week. The rest is on track.'
+          : `${watches} things worth adjusting this week, most important first.`;
+
+    return { facts, headline, takeaways, hasData };
+  }
+
   const api = {
     ACCESS_KEYS,
+    buildBodyFacts,
     buildBriefDigest,
     buildWeeklyReviewFacts,
     buildCoachDataPack,

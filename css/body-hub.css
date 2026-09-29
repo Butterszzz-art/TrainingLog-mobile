@@ -1,15 +1,17 @@
 /* =============================================================
    BODY TAB — SUMMARY HUB
-   2x2 "at a glance" grid rendered inside #bodyTab by body-hub.js.
-   Reuses the pod language (design-system.css) — kicker/value/sub
-   stacked the way .stat-tile does, just sized up for a headline
-   number per mini-tab.
+   "At a glance" grid rendered inside #bodyTab by body-hub.js:
+   Weight and Macros as full-width cards (sparkline / macro bars),
+   Sleep and Cardio side by side (7-day bars). Reuses the pod
+   language (design-system.css) — kicker/value/sub stacked the way
+   .stat-tile does, sized up for a headline number per mini-tab.
    Depends on: tokens.css, design-system.css
    ============================================================= */
 
 .body-hub-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-content: start;
   gap: 10px;
   margin-top: 4px;
 }
@@ -17,8 +19,10 @@
 .body-hub-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 3px;
+  min-width: 0;
+  margin: 0; /* global button rule adds 12px top/bottom */
   text-align: left;
   border-radius: var(--radius-pod);
   background: var(--pod-bg);
@@ -26,7 +30,17 @@
   box-shadow: var(--pod-bevel);
   padding: 13px 15px;
   font-family: var(--font-body);
+  color: inherit;
   cursor: pointer;
+}
+
+.body-hub-card--wide { grid-column: 1 / -1; }
+
+.body-hub-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .body-hub-kicker {
@@ -36,6 +50,13 @@
   letter-spacing: 0.14em;
   color: var(--text-label);
   text-transform: uppercase;
+}
+
+.body-hub-aside {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .body-hub-value {
@@ -67,7 +88,204 @@
 
 .body-hub-stars { letter-spacing: 1px; color: var(--warning-gold, var(--text-muted)); }
 
+/* ── Preview area ─────────────────────────────────────────── */
+
+/* margin-top:auto pins the chart to the card bottom so side-by-side
+   cards line up even when one sub line wraps. */
+.body-hub-preview {
+  display: block;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+/* Weight sparkline */
+.body-hub-spark {
+  display: block;
+  width: 100%;
+  height: 44px;
+  overflow: visible;
+}
+.body-hub-spark polyline {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.body-hub-spark-area {
+  fill: var(--primary);
+  opacity: 0.12;
+}
+.body-hub-spark--ghost polyline {
+  stroke: var(--text-faint);
+  stroke-dasharray: 4 4;
+  opacity: 0.6;
+}
+
+/* Macro bars */
+.body-hub-macros {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.body-hub-macro { display: block; min-width: 0; }
+.body-hub-macro-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 5px;
+  white-space: nowrap;
+}
+.body-hub-macro-row > span:first-child { color: var(--text-muted); }
+.body-hub-of { color: var(--text-faint); font-weight: 500; }
+.body-hub-track {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border-soft);
+  overflow: hidden;
+}
+.body-hub-track-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+.body-hub-track-fill--c { background: var(--warning-gold, var(--primary)); }
+.body-hub-track-fill--f { background: var(--text-muted); }
+
+/* 7-day bars (sleep / cardio) */
+.body-hub-bars {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  align-items: end;
+}
+.body-hub-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.body-hub-bar-col {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 40px;
+  border-radius: 3px;
+  background: var(--border-row);
+}
+.body-hub-bar-fill {
+  display: block;
+  width: 100%;
+  border-radius: 3px;
+  background: var(--primary);
+  opacity: 0.75;
+}
+.body-hub-bar.is-today .body-hub-bar-fill { opacity: 1; }
+.body-hub-bar-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+.body-hub-bar.is-today .body-hub-bar-label { color: var(--text-color); }
+
+.body-hub-bars--ghost .body-hub-bar-fill {
+  background: var(--text-faint);
+  opacity: 0.25;
+}
+
+/* ── Coach takeaways box (under the grid) ─────────────────── */
+
+.body-hub-coach {
+  margin-top: 10px;
+  padding: 14px 15px 15px;
+  border-radius: var(--radius-pod);
+  background:
+    linear-gradient(160deg, rgba(47, 138, 99, 0.14), rgba(47, 138, 99, 0) 60%),
+    var(--pod-bg);
+  border: 1px solid var(--border-featured);
+  box-shadow: var(--pod-bevel);
+  font-family: var(--font-body);
+}
+
+.body-hub-coach-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.body-hub-coach-head .body-hub-kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--primary);
+}
+.body-hub-coach-head svg { width: 13px; height: 13px; }
+
+.body-hub-coach-stamp {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.body-hub-coach.is-loading .body-hub-coach-stamp { animation: body-hub-pulse 1.4s ease-in-out infinite; }
+@keyframes body-hub-pulse { 50% { opacity: 0.35; } }
+
+.body-hub-coach-headline {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-color);
+}
+
+.body-hub-coach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.body-hub-coach-list li {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary, var(--text-muted));
+}
+
+.body-hub-coach-ask {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  margin: 12px 0 0;
+  padding: 0 14px;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  border: 1px solid var(--border-chip);
+  box-shadow: none;
+  color: var(--text-color);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body-hub-coach.is-loading .body-hub-coach-stamp { animation: none; }
+}
+
 @media (hover: hover) {
+  .body-hub-coach-ask:hover { border-color: var(--border-hover); background: var(--pod-bg-hover); }
   .body-hub-card:hover {
     background: var(--pod-bg-hover);
     border-color: var(--border-hover);
