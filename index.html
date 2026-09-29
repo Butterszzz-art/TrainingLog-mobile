@@ -2409,12 +2409,6 @@
     </div>
   </div>
 
-  <!-- Competition panel -->
-  <div id="competitionPanel" class="panel" style="display:none;">
-    <h2>Community Leaderboard</h2>
-    <div id="competitionContent"></div>
-  </div>
-
   <!-- Legacy posts panel (kept for compatibility) -->
   <div id="postsPanel" class="panel" style="display:none;"></div>
 
@@ -2427,15 +2421,16 @@
 
       <!-- Mode: user vs group -->
       <div class="comm-share-mode-row">
-        <button class="comm-share-mode-btn active" data-mode="user"  onclick="commShareSetMode('user')"><span class="ui-icon" data-icon="users"></span> To a User</button>
+        <button class="comm-share-mode-btn active" data-mode="user"  onclick="commShareSetMode('user')"><span class="ui-icon" data-icon="users"></span> To a Friend</button>
         <button class="comm-share-mode-btn"        data-mode="group" onclick="commShareSetMode('group')"><span class="ui-icon" data-icon="users"></span> To a Group</button>
       </div>
 
       <!-- User mode -->
       <div id="commShareUserMode">
         <div class="comm-share-field">
-          <label for="commShareRecipient">Recipient username</label>
-          <input type="text" id="commShareRecipient" placeholder="e.g. john_lifts" autocomplete="off">
+          <label for="commShareRecipient">Friend's username</label>
+          <input type="text" id="commShareRecipient" placeholder="e.g. john_lifts" autocomplete="off" list="commShareFriendOptions">
+          <datalist id="commShareFriendOptions"></datalist>
         </div>
       </div>
 
@@ -2572,25 +2567,6 @@
 <div id="groupStatsTab" class="tab-content">
   <div class="stats-screen">
     <div id="groupStatsContent"></div>
-  </div>
-</div>
-
-<div id="exerciseLeaderboardTab" class="tab-content">
-  <h2>Exercise Leaderboard</h2>
-  <div class="leaderboard-screen">
-    <div class="leaderboard-controls">
-      <label for="exerciseLbSelect">Exercise</label>
-      <select id="exerciseLbSelect"></select>
-    </div>
-    <div class="timeframe-buttons">
-      <button data-range="weekly">Weekly</button>
-      <button data-range="monthly">Monthly</button>
-      <button data-range="all">All-Time</button>
-    </div>
-    <div id="exerciseLeaderboardContainer"></div>
-    <div style="margin-top:10px;">
-      <button onclick="showTab('leaderboardTab')">Back to Leaderboard</button>
-    </div>
   </div>
 </div>
 
@@ -3931,7 +3907,6 @@
 <script src="src/js/customExercises.js"></script>
 <script src="leaderboard.js"></script>
 <script src="recoveryMap.js"></script>
-<script src="exerciseLeaderboard.js"></script>
 <script src="stats.js"></script>
 <script src="src/config/constants.js"></script>
 <script src="src/utils/macroEngine.js"></script>
@@ -5082,13 +5057,8 @@ function showTab(tabName) {
       break;
     case 'communityTab':
       if (window.showCommunitySection) showCommunitySection('groups');
-      // Refresh inbox badge whenever community tab is opened
-      if (currentUser) {
-        const _cInbox = (JSON.parse(localStorage.getItem(`communityInbox_${currentUser}`)) || [])
-          .filter(i => !i.accepted && !i.dismissed);
-        const _cBadge = document.getElementById('commShareBadge');
-        if (_cBadge) { _cBadge.style.display = _cInbox.length ? '' : 'none'; _cBadge.textContent = _cInbox.length; }
-      }
+      // Refresh the Share inbox badge whenever the community tab is opened
+      if (currentUser && window.Shares) window.Shares.refresh().catch(() => {});
       // Pick up friend requests sent since the last poll (updates the Friends badge)
       if (window.Friends) window.Friends.sync().catch(() => {});
       break;
@@ -5097,9 +5067,6 @@ function showTab(tabName) {
       break;
     case 'leaderboardTab':
       if (window.initLeaderboard) initLeaderboard();
-      break;
-    case 'exerciseLeaderboardTab':
-      if (window.initExerciseLeaderboard) initExerciseLeaderboard();
       break;
     case 'userStatsTab':
       break;
@@ -8012,28 +7979,12 @@ async function sendTemplate() {
   const templateData = selected?.data;
   if (!templateData) { window.showToast('Failed to share template.', 'warn'); return; }
 
+  /* Lands in the friend's Community → Share inbox (src/js/shares.js) */
   try {
-    const response = await fetch(`${window.SERVER_URL}/sendTemplate`, {
-      method: 'POST',
-      credentials: "include",
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({
-        fromUser: currentUser,
-        toUser: otherUser,
-        templateName: (templateData.title || selected.name || 'Template') + " (Shared)",
-        templateData
-      })
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      window.showToast('Template sent!', 'success');
-    } else {
-      window.showToast(result.message || 'Failed to send template.', 'warn');
-    }
+    await window.Shares.send(otherUser, { type: 'template', name: templateData.title || selected.name || 'Template', data: templateData });
+    window.showToast('Template sent! It’s waiting in their Share inbox.', 'success');
   } catch (error) {
-    console.error('Send template error:', error);
-    window.showToast('Error sending template.', 'error');
+    window.showToast(error.message || 'Failed to send template.', 'warn');
   }
 }
 
@@ -17523,10 +17474,10 @@ window.loadSelectedResistanceTemplate = loadSelectedResistanceTemplate;
 window.sendTemplate = sendTemplate;
 
 /* ══════════════════════════════════════════════════════════════
-   COMMUNITY SHARE — peer-to-peer program & template sharing
-   localStorage keys:
-     communityInbox_${u}  — items received by user u
-     communityOutbox_${u} — items sent by user u
+   COMMUNITY SHARE — send a program or template to a friend or a group
+   Friend shares go through the server inbox (src/js/shares.js, /api/shares);
+   group shares post into the group (community.js). This device keeps a
+   history of what it sent in communityOutbox_${u}.
    ═════════════════════════════════════════════════════════════ */
 
 let _commShareMode = 'user';       // 'user' | 'group'
@@ -17604,11 +17555,11 @@ function renderCommShareItemList() {
   }
 
   listEl.innerHTML = items.map(item => `
-    <div class="comm-share-item" data-id="${item.id}" onclick="commShareSelectItem('${item.id}')">
+    <div class="comm-share-item" data-id="${_commEsc(item.id)}" onclick="commShareSelectItem(this.dataset.id)">
       <div class="comm-share-item-check">✓</div>
       <div class="comm-share-item-info">
-        <div class="comm-share-item-name">${item.name}</div>
-        <div class="comm-share-item-desc">${item.desc}</div>
+        <div class="comm-share-item-name">${_commEsc(item.name)}</div>
+        <div class="comm-share-item-desc">${_commEsc(item.desc)}</div>
       </div>
     </div>`).join('');
 }
@@ -17656,60 +17607,20 @@ function _commResolveItem() {
 async function _commSendToUser(recipient, message) {
   const item = _commResolveItem();
   if (!item) { window.showToast?.('Could not find the selected item.', 'warn'); return; }
+  if (!window.Shares) return;
 
-  /* Try backend (best-effort; template endpoint already exists) */
-  if (item.type === 'template') {
-    try {
-      await fetch(`${window.SERVER_URL}/sendTemplate`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({
-          fromUser: currentUser,
-          toUser: recipient,
-          templateName: `${item.name} (from @${currentUser})`,
-          templateData: item.data,
-          message
-        }),
-        signal: AbortSignal.timeout(5000)
-      });
-    } catch (e) { console.warn('Community sendTemplate backend unavailable, using local', e); }
-  } else {
-    try {
-      await fetch(`${window.SERVER_URL}/shareProgram`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({
-          fromUser: currentUser,
-          toUser: recipient,
-          programData: item.data,
-          message
-        }),
-        signal: AbortSignal.timeout(5000)
-      });
-    } catch (e) { console.warn('Community shareProgram backend unavailable, using local', e); }
+  /* Delivered through the server inbox (src/js/shares.js); friends only */
+  let share;
+  try {
+    share = await window.Shares.send(recipient, item, message);
+  } catch (err) {
+    window.showToast?.(err.message, 'error');
+    return;
   }
 
-  /* Always persist to recipient's local inbox (works same-device; server handles cross-device) */
-  const inboxKey = `communityInbox_${recipient}`;
-  const inbox = JSON.parse(localStorage.getItem(inboxKey)) || [];
-  inbox.unshift({
-    id: `share_${Date.now()}`,
-    type: item.type,
-    name: item.name,
-    from: currentUser,
-    data: item.data,
-    message,
-    date: new Date().toISOString().slice(0, 10),
-    accepted: false
-  });
-  localStorage.setItem(inboxKey, JSON.stringify(inbox));
+  _commAddToOutbox({ type: item.type, name: item.name, to: `@${share.to || recipient}`, toType: 'user', date: new Date().toISOString().slice(0, 10) });
 
-  /* Record in sender's outbox */
-  _commAddToOutbox({ type: item.type, name: item.name, to: `@${recipient}`, toType: 'user', date: new Date().toISOString().slice(0, 10) });
-
-  window.showToast?.(`"${item.name}" sent to @${recipient}!`, 'success', 3500);
+  window.showToast?.(`"${item.name}" sent to @${share.to || recipient}!`, 'success', 3500);
   if (document.getElementById('commShareRecipient')) document.getElementById('commShareRecipient').value = '';
   if (document.getElementById('commShareMessage'))   document.getElementById('commShareMessage').value   = '';
   _commShareSelectedId = null;
@@ -17753,64 +17664,51 @@ function _commAddToOutbox(item) {
   localStorage.setItem(key, JSON.stringify(outbox));
 }
 
-/* Render inbox (received items) */
+/* Render inbox (received items) from the server inbox (src/js/shares.js) */
 function renderCommShareInbox() {
   const el = document.getElementById('commShareInbox');
-  if (!el || !currentUser) return;
-
-  const inbox = (JSON.parse(localStorage.getItem(`communityInbox_${currentUser}`)) || [])
-    .filter(i => !i.accepted && !i.dismissed);
-
-  _renderCommInboxItems(el, inbox);
-
-  /* Also try backend non-blocking */
-  _fetchCommBackendInbox().then(backendItems => {
-    if (!backendItems?.length) return;
-    const existing = new Set(inbox.map(i => i.id));
-    backendItems.filter(b => !existing.has(b.id)).forEach(b => inbox.unshift(b));
-    _renderCommInboxItems(el, inbox);
-    _updateCommShareBadge(inbox.length);
-  });
-
-  _updateCommShareBadge(inbox.length);
+  if (!el || !currentUser || !window.Shares) return;
+  _renderCommInboxItems(el, window.Shares.getInbox());
+  window.Shares.refresh({ throwOnError: true })
+    .then(() => _renderCommInboxItems(el, window.Shares.getInbox()))
+    .catch(err => {
+      if (!window.Shares.getInbox().length) el.innerHTML = `<div class="comm-share-empty">Couldn’t load shared items. ${_commEsc(err.message)}</div>`;
+    });
 }
 
-async function _fetchCommBackendInbox() {
-  try {
-    const res = await fetch(
-      `${window.SERVER_URL}/shared-inbox?username=${encodeURIComponent(currentUser)}`,
-      { credentials: 'include', headers: getAuthHeaders(), signal: AbortSignal.timeout(5000) }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return Array.isArray(data?.items) ? data.items : null;
-  } catch { return null; }
+function _commEsc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function _renderCommInboxItems(el, items) {
   if (!items?.length) {
-    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When someone shares a program or template with you, it appears here. <span class="ui-icon">${ICONS.download}</span></div>`;
+    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When a friend shares a program or template with you, it appears here. <span class="ui-icon">${ICONS.download}</span></div>`;
     return;
   }
   const typeColors = { template: '#5295e0', program: '#9070d8' };
   const typeLabels = { template: `<span class="ui-icon">${ICONS.clipboard}</span> Template`, program: `<span class="ui-icon">${ICONS.calendar}</span> Program` };
   el.innerHTML = items.map(item => `
-    <div class="comm-inbox-item" id="commInboxItem_${item.id}">
+    <div class="comm-inbox-item" data-share-id="${_commEsc(item.id)}">
       <div class="comm-inbox-header">
-        <span class="comm-inbox-from">@${item.from || 'unknown'}</span>
+        <span class="comm-inbox-from">@${_commEsc(item.from || 'unknown')}</span>
         <span class="comm-inbox-type-badge"
               style="background:${typeColors[item.type] || '#888'}22;color:${typeColors[item.type] || '#aaa'};border:1px solid ${typeColors[item.type] || '#888'}44">
-          ${typeLabels[item.type] || item.type}
+          ${typeLabels[item.type] || _commEsc(item.type)}
         </span>
-        <span class="comm-inbox-date">${item.date || ''}</span>
+        <span class="comm-inbox-date">${_commEsc((item.sentAt || '').slice(0, 10))}</span>
       </div>
-      <div class="comm-inbox-item-name">${item.name}</div>
-      ${item.message ? `<div class="comm-inbox-message">"${item.message}"</div>` : ''}
+      <div class="comm-inbox-item-name">${_commEsc(item.name)}</div>
+      ${item.note ? `<div class="comm-inbox-message">"${_commEsc(item.note)}"</div>` : ''}
       <div class="comm-inbox-actions">
-        <button class="comm-inbox-accept-btn"  onclick="commAcceptShare('${item.id}')"><span class="ui-icon">${ICONS.check}</span> Accept &amp; Save</button>
-        <button class="comm-inbox-dismiss-btn" onclick="commDismissShare('${item.id}')">Dismiss</button>
+        <button class="comm-inbox-accept-btn" data-share-accept><span class="ui-icon">${ICONS.check}</span> Accept &amp; Save</button>
+        <button class="comm-inbox-dismiss-btn" data-share-dismiss>Dismiss</button>
       </div>
     </div>`).join('');
+  el.querySelectorAll('[data-share-id]').forEach(row => {
+    const id = row.dataset.shareId;
+    row.querySelector('[data-share-accept]').addEventListener('click', () => commAcceptShare(id));
+    row.querySelector('[data-share-dismiss]').addEventListener('click', () => commDismissShare(id));
+  });
 }
 
 /* Render outbox (sent history) */
@@ -17825,71 +17723,32 @@ function renderCommShareOutbox() {
   el.innerHTML = outbox.slice(0, 15).map(item => `
     <div class="comm-outbox-item">
       <div class="comm-outbox-to">
-        <div class="comm-outbox-to-name">${icons[item.toType] || `<span class="ui-icon">${ICONS.users}</span>`} ${item.to}</div>
-        <div class="comm-outbox-to-desc">${item.type === 'template' ? `<span class="ui-icon">${ICONS.clipboard}</span>` : `<span class="ui-icon">${ICONS.calendar}</span>`} ${item.name}</div>
+        <div class="comm-outbox-to-name">${icons[item.toType] || `<span class="ui-icon">${ICONS.users}</span>`} ${_commEsc(item.to)}</div>
+        <div class="comm-outbox-to-desc">${item.type === 'template' ? `<span class="ui-icon">${ICONS.clipboard}</span>` : `<span class="ui-icon">${ICONS.calendar}</span>`} ${_commEsc(item.name)}</div>
       </div>
       <div class="comm-outbox-date">${item.date || ''}</div>
     </div>`).join('');
 }
 
-/* Accept an inbox item → add to local library */
-function commAcceptShare(shareId) {
-  const key   = `communityInbox_${currentUser}`;
-  const inbox = JSON.parse(localStorage.getItem(key)) || [];
-  const item  = inbox.find(i => i.id === shareId);
-  if (!item) return;
-
-  if (item.type === 'template') {
-    const tplKey = `managedTemplates_${currentUser}`;
-    const tpls   = JSON.parse(localStorage.getItem(tplKey)) || [];
-    tpls.unshift({
-      localId: `local_${Date.now()}`,
-      name: `${item.name} (from @${item.from})`,
-      data: item.data,
-      source: 'community'
-    });
-    localStorage.setItem(tplKey, JSON.stringify(tpls));
-    window.showToast?.(`"${item.name}" added to your Templates!`, 'success', 3500);
-  } else {
-    const progKey = `programs_${currentUser}`;
-    const progs   = JSON.parse(localStorage.getItem(progKey)) || [];
-    progs.unshift({
-      ...item.data,
-      id: `comm_${Date.now()}`,
-      name: `${item.name} (from @${item.from})`,
-      _sharedBy: item.from
-    });
-    localStorage.setItem(progKey, JSON.stringify(progs));
-    window.showToast?.(`"${item.name}" added to your Programs!`, 'success', 3500);
-  }
-
-  item.accepted = true;
-  localStorage.setItem(key, JSON.stringify(inbox));
-  document.getElementById(`commInboxItem_${shareId}`)?.remove();
-  _updateCommShareBadge(
-    (JSON.parse(localStorage.getItem(key)) || []).filter(i => !i.accepted && !i.dismissed).length
-  );
+/* Accept an inbox item → add to local library, then clear it from the inbox */
+async function commAcceptShare(shareId) {
+  document.querySelector(`[data-share-id="${CSS.escape(shareId)}"]`)?.remove();
+  await window.Shares?.accept(shareId);
+  renderCommShareInbox();
 }
 
 /* Dismiss an inbox item */
-function commDismissShare(shareId) {
-  const key   = `communityInbox_${currentUser}`;
-  const inbox = JSON.parse(localStorage.getItem(key)) || [];
-  const item  = inbox.find(i => i.id === shareId);
-  if (item) { item.dismissed = true; localStorage.setItem(key, JSON.stringify(inbox)); }
-  document.getElementById(`commInboxItem_${shareId}`)?.remove();
-}
-
-/* Show/hide the red badge on the Share nav button */
-function _updateCommShareBadge(count) {
-  const badge = document.getElementById('commShareBadge');
-  if (!badge) return;
-  badge.style.display = count > 0 ? '' : 'none';
-  badge.textContent   = count;
+async function commDismissShare(shareId) {
+  document.querySelector(`[data-share-id="${CSS.escape(shareId)}"]`)?.remove();
+  await window.Shares?.dismiss(shareId);
+  renderCommShareInbox();
 }
 
 /* Orchestrate the whole share panel on open */
 function renderSharePanel() {
+  const dl = document.getElementById('commShareFriendOptions');
+  if (dl) dl.innerHTML = (typeof window.getFriends === 'function' ? window.getFriends() : [])
+    .map(f => `<option value="${_commEsc(f.username)}"></option>`).join('');
   renderCommShareItemList();
   renderCommShareInbox();
   renderCommShareOutbox();
@@ -20011,6 +19870,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/client-coaching.js"></script>
   <script src="src/js/workout-archiver.js"></script>
+  <script src="src/js/workout-sync.js"></script>
   <script src="src/js/ui-declutter.js"></script>
   <script src="src/js/pr-tracker.js"></script>
   <script src="src/js/workout-intelligence.js"></script>
@@ -20025,6 +19885,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/progress-report.js"></script>
   <script src="src/js/progress-story.js"></script>
   <script src="src/js/community-feed.js"></script>
+  <script src="src/js/shares.js"></script>
   <script src="src/js/friends.js"></script>
   <script src="src/js/rehab.js"></script>
   <script src="src/js/reminders.js"></script>

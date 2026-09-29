@@ -71,8 +71,11 @@ What's done in code, and what still has to happen outside it. Work top to bottom
 10. In the backend `.env`: `APPLE_IAP_ENABLED=true` and `APPLE_APP_ID=` (the numeric
     Apple ID from App Store Connect → App Information).
 11. Deploy (use `$env:FUNCTIONS_DISCOVERY_TIMEOUT=60` in PowerShell if the deploy
-    times out), then merge the backend pull request. Groups need the new
-    Firestore index and rules too: `firebase deploy --only functions,firestore`.
+    times out), then merge the backend pull request. Groups, the Feed and the
+    exercise leaderboard need the new Firestore indexes and rules too:
+    `firebase deploy --only functions,firestore`. Then fill the exercise
+    leaderboard from existing workouts once:
+    `node scripts/backfill-exercise-bests.js`.
 
 ### App Store Connect — listing
 12. Create the app record: bundle ID `com.pocketcoach.app`, name "Pocket Coach".
@@ -96,11 +99,9 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     then run the **iOS (App Store)** workflow.
 21. On a real iPhone **and** iPad via TestFlight, signed in with the sandbox tester:
     sign-up, AI consent, buying Pro, Restore Purchases, Manage Subscription,
-    block/report (check the moderation email), a group post and a group report, account deletion, camera/photo
+    block/report (check the moderation email), a group post and a group report, a Feed post seen by a friend, sharing a program with a friend, account deletion, camera/photo
     prompts.
 
 ### Worth fixing before or soon after launch
-- **Community feed:** posts written in Community → Feed still only save on
-  the device (Groups are now server-backed and shared).
 - **Reports:** the Terms promise action within 24 hours. Watch the moderation inbox.
 - **`pricing.html`** doesn't match the app's plans (hidden in the native app).

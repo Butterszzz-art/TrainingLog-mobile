@@ -753,25 +753,10 @@ function _groupMenu(group) {
 }
 
 // Saves a program/template someone shared in a group into your own library
-// (same storage the Share inbox uses).
+// (same stores the Share inbox uses, see src/js/shares.js).
 function _saveSharedItem(share, from) {
-  const user = getCurrentUserId();
-  if (!share || !user || typeof localStorage === 'undefined') return false;
-  const read = key => { try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; } };
-  if (share.type === 'template') {
-    const key = `managedTemplates_${user}`;
-    const tpls = read(key);
-    tpls.unshift({ localId: `local_${Date.now()}`, name: `${share.name} (from @${from})`, data: share.data, source: 'community' });
-    localStorage.setItem(key, JSON.stringify(tpls));
-    _groupToast(`"${share.name}" added to your Templates!`, 'success');
-  } else {
-    const key = `programs_${user}`;
-    const progs = read(key);
-    progs.unshift({ ...share.data, id: `comm_${Date.now()}`, name: `${share.name} (from @${from})`, _sharedBy: from });
-    localStorage.setItem(key, JSON.stringify(progs));
-    _groupToast(`"${share.name}" added to your Programs!`, 'success');
-  }
-  return true;
+  if (!share || typeof window === 'undefined' || !window.Shares) return false;
+  return window.Shares.saveToLibrary(share, from);
 }
 
 // Bottom sheet: name, goal, tags and a tap-to-select list of your friends.
@@ -856,34 +841,13 @@ function showCreateGroup() {
   setTimeout(() => nameInput.focus(), 50);
 }
 
-// ----- Competition Features -----
-// Sample data used for prototype leaderboards
-const sampleExerciseData = {
-  Squat: [
-    { user: 'Alice', volume: 12000, sets: 50, reps: 200 },
-    { user: 'Bob', volume: 11000, sets: 45, reps: 180 },
-    { user: 'Cara', volume: 9000, sets: 40, reps: 160 }
-  ],
-  'Bench Press': [
-    { user: 'Alice', volume: 8000, sets: 40, reps: 160 },
-    { user: 'Bob', volume: 7500, sets: 38, reps: 150 },
-    { user: 'Cara', volume: 7000, sets: 35, reps: 140 }
-  ],
-  Deadlift: [
-    { user: 'Alice', volume: 14000, sets: 45, reps: 180 },
-    { user: 'Bob', volume: 13500, sets: 42, reps: 170 },
-    { user: 'Cara', volume: 12000, sets: 40, reps: 160 }
-  ]
-};
-
+// ----- Community sections -----
 let currentCommunitySection = 'groups';
-let competitionChart;
 
 function showCommunitySection(section) {
   currentCommunitySection = section;
   const panels = {
     groups:      document.getElementById('groupsPanel'),
-    competition: document.getElementById('competitionPanel'),
     posts:       document.getElementById('postsPanel'),
     feed:        document.getElementById('feedPanel'),
     share:       document.getElementById('commSharePanel'),
@@ -896,7 +860,6 @@ function showCommunitySection(section) {
   const navMap = {
     groups:      'commNavGroups',
     feed:        'commNavFeed',
-    competition: 'commNavCompetition',
     share:       'commNavShare',
     friends:     'commNavFriends',
   };
@@ -909,8 +872,6 @@ function showCommunitySection(section) {
   if (section === 'groups') {
     loadGroups();
     if (window.renderWeeklyChallenge) renderWeeklyChallenge();
-  } else if (section === 'competition') {
-    renderCompetition();
   } else if (section === 'feed') {
     if (window.renderActivityFeed) renderActivityFeed();
   } else if (section === 'share') {
@@ -918,123 +879,6 @@ function showCommunitySection(section) {
   } else if (section === 'friends') {
     if (typeof window.renderFriendsPanel === 'function') window.renderFriendsPanel();
   }
-}
-
-function calcStatsForGroup(g) {
-  const members = Object.values(g.progress || {});
-  const workouts = members.reduce((s,m) => s + (m.workouts || 0), 0);
-  const studyHours = members.reduce((s,m) => s + (m.studyHours || 0), 0);
-  const engagement = (g.posts?.length || 0);
-  return { workouts, studyHours, engagement };
-}
-
-function renderCompetition(metric = 'workouts') {
-  const container = document.getElementById('competitionContent');
-  if (!container) return;
-  const data = groups.map(g => {
-    const stats = calcStatsForGroup(g);
-    return { id: g.id, name: g.name, ...stats };
-  });
-  data.sort((a,b) => (b[metric]||0) - (a[metric]||0));
-
-  const rows = data.map((d,i) =>
-    `<div class="leader-entry" data-id="${d.id}"><span>#${i+1}</span><span><strong>${d.name}</strong></span><span>${d[metric]||0}</span></div>`
-  ).join('');
-
-  container.innerHTML = `
-    <div class="leaderboard-controls">
-      <label for="leaderSort">Sort by</label>
-      <select id="leaderSort" onchange="renderCompetition(this.value)">
-        <option value="workouts">Workouts Logged</option>
-        <option value="studyHours">Study Hours</option>
-        <option value="engagement">Group Activity</option>
-      </select>
-      <div class="leaderboard">${rows}</div>
-      <canvas id="competitionChart" height="200"></canvas>
-      <div id="leaderDetails" class="leader-details" style="display:none;"></div>
-    </div>`;
-
-  container.querySelectorAll('.leader-entry').forEach(el => {
-    el.addEventListener('click', () => {
-      if (window.showGroupStats) {
-        window.showGroupStats(el.dataset.id);
-      } else {
-        showLeaderDetail(el.dataset.id);
-      }
-    });
-  });
-
-  renderCompetitionChart(data.slice(0,5), metric);
-}
-
-function renderCompetitionChart(items, metric) {
-  const ctx = document.getElementById('competitionChart');
-  if (!ctx || typeof Chart === 'undefined') return;
-  if (competitionChart) competitionChart.destroy();
-  competitionChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: items.map(i => i.name),
-      datasets: [{ label: metric, data: items.map(i => i[metric]||0) }]
-    },
-    options: { plugins: { legend: { display: false } }, responsive: true }
-  });
-}
-
-function showLeaderDetail(groupId) {
-  const g = groups.find(gr => gr.id == groupId);
-  if (!g) return;
-  const detail = document.getElementById('leaderDetails');
-  if (!detail) return;
-  const stats = calcStatsForGroup(g);
-  const exercises = Object.keys(sampleExerciseData);
-  const exOptions = exercises.map(e => `<option value="${e}">${e}</option>`).join('');
-  detail.innerHTML = `
-    <strong>${g.name}</strong><br>
-    Workouts: ${stats.workouts}<br>
-    Study Hours: ${stats.studyHours}<br>
-    Posts: ${stats.engagement}
-    <div class="exercise-compare">
-      <h4>Exercise Comparison</h4>
-      <label for="exerciseSelect">Exercise</label>
-      <select id="exerciseSelect">${exOptions}</select>
-      <label for="timeFilter">Timeframe</label>
-      <select id="timeFilter">
-        <option value="weekly">Weekly</option>
-        <option value="monthly">Monthly</option>
-        <option value="all">All-Time</option>
-      </select>
-      <div id="exerciseLb"></div>
-    </div>`;
-  detail.style.display = 'block';
-
-  const selectEl = document.getElementById('exerciseSelect');
-  const timeEl = document.getElementById('timeFilter');
-  const render = () => renderGroupExerciseLeaderboard(selectEl.value, timeEl.value);
-  selectEl.onchange = render;
-  timeEl.onchange = render;
-  render();
-}
-
-// Renamed from renderExerciseLeaderboard — that name collided with an
-// unrelated, differently-shaped function of the same name in
-// exerciseLeaderboard.js (zero-arg, reads its own #exerciseLbSelect/
-// #exerciseLeaderboardContainer). Since exerciseLeaderboard.js loads after
-// this file, its version silently won every call, meaning the Exercise
-// Comparison panel inside a group's leader detail view has been rendering
-// nothing since whichever script started shadowing this one.
-function renderGroupExerciseLeaderboard(exercise, timeframe) {
-  const container = document.getElementById('exerciseLb');
-  if (!container) return;
-  const data = sampleExerciseData[exercise] || [];
-  if (!data.length) {
-    container.innerHTML = '<p>No data available for this exercise/timeframe.</p>';
-    return;
-  }
-  const rows = data.map((d,i) =>
-    `<div class="leader-entry"><span>#${i+1}</span><span><strong>${d.user}</strong></span><span>${d.volume.toLocaleString()} kg</span><span>${d.sets} sets, ${d.reps} reps</span></div>`
-  ).join('');
-  container.innerHTML = `<div class="leaderboard">${rows}</div>`;
 }
 
 if (typeof window !== 'undefined') {
@@ -1047,7 +891,6 @@ if (typeof window !== 'undefined') {
   window.clearGroupFilters = clearGroupFilters;
   window.joinGroup = joinGroup;
   window.showCommunitySection = showCommunitySection;
-  window.renderCompetition = renderCompetition;
 }
 
 // allow tests to import functions

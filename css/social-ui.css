@@ -783,6 +783,13 @@ button[class*="sx-"] {
 /* The legacy Groups-panel h2 duplicates the new header */
 #groupsPanel > h2 { display: none; }
 
+/* Feed posts: chip + ••• menu in the header */
+.sx-post-h--menu { grid-template-columns: 34px minmax(0, 1fr) auto auto; }
+.sx-attach-hint { font-size: 12.5px; color: var(--text-tertiary); padding: 0 2px 8px; }
+.sx-attach-hint[hidden] { display: none; }
+.lb-card-sub { display: block; font-size: 12px; color: var(--mx-faint); }
+.lb-card-value small { font-size: 0.7em; color: var(--text-tertiary); }
+
 /* Group sheet (community.js openGroup) */
 .sx-gsheet { max-height: 88vh; display: flex; flex-direction: column; gap: 12px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 .sx-gsheet .quick-share-handle { margin-bottom: 0; }
