@@ -668,6 +668,9 @@
     <!-- ── Greeting row: "Morning, {name}" + date/streak, search+avatar ── -->
     <div class="home-greeting-row" id="homeGreetingRow"></div>
 
+    <!-- ── Hero: days out / phase / status — the first thing you see (renderHomeDashboard) ── -->
+    <div class="home-zone home-zone--top-hero" id="homeHeroSlot"></div>
+
     <!-- ── Coach: Today's brief (src/js/coach-brief.js) ────────── -->
     <div class="home-zone" id="coachBriefCard"></div>
 
@@ -730,8 +733,8 @@
       <div id="todayProgramCard"></div>
     </div>
 
-    <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered —
-         'hero' renders first, matching the mockup's hero-first layout) ── -->
+    <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered;
+         the 'hero' card is pulled out into #homeHeroSlot at the top) ── -->
     <div id="homeDashboardContent" class="home-dashboard"></div>
 
     <!-- ── Zone 5: Status modes (demoted — utility, not training) ── -->
@@ -11399,7 +11402,12 @@ function renderHomeDashboard() {
   const { username, profile } = getHomeDashboardSourceData();
   const archetype = getHomeAthleteArchetype(profile, username);
   const cardRenderers = getHomeDashboardCardRenderers(profile, username, archetype);
+  // The hero (days out / phase / status) sits at the very top of Home, above
+  // the coach brief and weekly glance, so it renders into its own slot.
+  const heroSlot = document.getElementById('homeHeroSlot');
+  if (heroSlot) heroSlot.innerHTML = cardRenderers.hero() || '';
   const orderedCards = getHomeDashboardCardOrder(archetype)
+    .filter(cardId => !(heroSlot && cardId === 'hero'))
     .map(cardId => cardRenderers[cardId]?.())
     .filter(Boolean);
   container.innerHTML = `<div class="home-command-grid">${orderedCards.join('')}</div>`;
