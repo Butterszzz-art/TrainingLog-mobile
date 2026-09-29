@@ -70,3 +70,79 @@ describe('AI consent guard', () => {
     });
   });
 });
+
+describe('Pro gate', () => {
+  // Like setup(), but lets the fake server answer with a chosen status/body.
+  function gated({ plan = null, paid = false, server = { status: 200, body: {} } } = {}) {
+    const dom = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', url: 'https://app.test/' });
+    const w = dom.window;
+    if (plan) w.localStorage.setItem('userPlan', plan);
+    w.localStorage.setItem('pc.aiConsent.v1', 'granted');
+    const sent = [];
+    w.fetch = async url => {
+      sent.push(url);
+      const res = { ok: server.status < 400, status: server.status, json: async () => server.body };
+      res.clone = () => res;
+      return res;
+    };
+    w.Response = class { constructor(body, init) { this.body = JSON.parse(body); this.status = init.status; } };
+    w.showToast = jest.fn();
+    w.openUpgradeModal = jest.fn();
+    w.hasPaidAccess = () => paid;
+    w.eval(SRC);
+    return { w, doc: w.document, sent };
+  }
+
+  test('known-free accounts are stopped before any request or consent prompt', async () => {
+    const { w, doc, sent } = gated({ plan: 'free' });
+    w.localStorage.removeItem('pc.aiConsent.v1');
+    const res = await w.fetch('https://api.test/api/ai/coach');
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('plan.upgrade_required');
+    expect(sent).toEqual([]);
+    expect(doc.querySelector('.ai-consent-overlay')).toBeNull();
+  });
+
+  test('background AI stays quiet; a tap opens the upgrade sheet', async () => {
+    const { w, doc } = gated({ plan: 'free' });
+    await w.fetch('https://api.test/api/ai/coach/brief');
+    expect(w.openUpgradeModal).not.toHaveBeenCalled();
+    doc.dispatchEvent(new w.Event('pointerdown'));
+    await w.fetch('https://api.test/api/ai/generate-program');
+    expect(w.openUpgradeModal).toHaveBeenCalledWith('pro');
+    expect(w.showToast).toHaveBeenCalledWith('AI features are part of Pocket Coach Pro.');
+  });
+
+  test('paid accounts and admins go through', async () => {
+    const { w, sent } = gated({ plan: 'free', paid: true });
+    expect((await w.fetch('https://api.test/api/ai/coach')).status).toBe(200);
+    expect(sent).toEqual(['https://api.test/api/ai/coach']);
+  });
+
+  test('an unknown plan lets the server decide', async () => {
+    const { w, sent } = gated({ plan: null });
+    await w.fetch('https://api.test/api/ai/coach');
+    expect(sent).toHaveLength(1);
+  });
+
+  test('a server upgrade_required answer prompts the same way', async () => {
+    const { w, doc } = gated({
+      plan: 'pro',
+      server: { status: 403, body: { success: false, error: { code: 'plan.upgrade_required' } } },
+    });
+    doc.dispatchEvent(new w.Event('keydown'));
+    const res = await w.fetch('https://api.test/ai/chat');
+    expect(res.status).toBe(403);
+    expect(w.openUpgradeModal).toHaveBeenCalledWith('pro');
+  });
+
+  test('other 403s pass through untouched', async () => {
+    const { w } = gated({
+      plan: 'pro',
+      server: { status: 403, body: { success: false, error: { code: 'auth.forbidden' } } },
+    });
+    const res = await w.fetch('https://api.test/api/ai/coach');
+    expect(await res.json()).toEqual({ success: false, error: { code: 'auth.forbidden' } });
+    expect(w.openUpgradeModal).not.toHaveBeenCalled();
+  });
+});

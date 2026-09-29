@@ -170,6 +170,14 @@ async function loadClients() {
       headers: authHeaders(),
     });
     const data = await res.json();
+    if (data?.error?.code === 'plan.coach_required') {
+      // Coach tools are Coach-plan only (enforced by the server).
+      _clients = [];
+      renderWorkspace();
+      listEl.innerHTML = '<div class="client-list-loading">Coaching tools are part of the Coach plan. '
+        + 'Upgrade from the Pocket Coach app to manage clients.</div>';
+      return;
+    }
     if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
     // A genuinely empty roster is a real, honest state — render it as such
     // (see renderClientList/renderWorkspace) rather than papering over it

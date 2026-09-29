@@ -532,7 +532,7 @@
       el.addEventListener('click', onClick);
       el.addEventListener('input', onInput);
     }
-    const wantPaid = typeof global.isPro === 'function' ? global.isPro() : false;
+    const wantPaid = typeof global.hasPaidAccess === 'function' ? global.hasPaidAccess() : false;
     const stale = state.index && isPaid() !== wantPaid;
     if (!state.index || state.error || stale) loadIndex();
     else render();

@@ -2288,7 +2288,7 @@
       <button id="progAiGenBtn" onclick="openProgAiGen()" class="cta-capsule" style="justify-content:center;gap:8px;">
         <span class="ui-icon" data-icon="sparkles"></span><span>Generate with AI</span>
       </button>
-      <div id="progAiGenLocked" style="display:none;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;"><span class="ui-icon" data-icon="lock"></span> AI Program Generator — Pro feature</div>
+      <div id="progAiGenLocked" role="button" tabindex="0" onclick="openUpgradeModal('pro')" style="display:none;cursor:pointer;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;"><span class="ui-icon" data-icon="lock"></span> AI Program Generator — Pro feature</div>
     </div>
 
     <!-- Builder view (wizard lives here) -->
@@ -3025,7 +3025,7 @@
             <button id="macroAiAdvisorBtn" class="macro-save-btn macro-ai-btn" onclick="openMacroAiAdvisor()">
               <span class="ui-icon" data-icon="sparkles"></span><span>AI Macro Advisor</span>
             </button>
-            <div id="macroAiAdvisorLocked" style="display:none;text-align:center;margin-top:8px;font-size:0.8rem;color:var(--secondary-text);">
+            <div id="macroAiAdvisorLocked" role="button" tabindex="0" onclick="openUpgradeModal('pro')" style="display:none;cursor:pointer;text-align:center;margin-top:8px;font-size:0.8rem;color:var(--secondary-text);">
               <span class="ui-icon" data-icon="lock"></span> Pro feature — upgrade to unlock
             </div>
           </div>
@@ -4368,13 +4368,40 @@ async function loadUserPlan() {
     window.currentSubSource = data.source || ''; // 'stripe' | 'apple'
     window.currentReferralCode = data.referralCode || '';
     window.currentReferralCredits = data.referralCredits || 0;
+    window.currentIsAdmin = data.admin === true;
+    window.currentUserPlanLoaded = true;
     localStorage.setItem('userPlan', window.currentUserPlan);
+    localStorage.setItem('userIsAdmin', window.currentIsAdmin ? '1' : '');
+    // Coach Mode depends on the plan — re-apply now that we know it.
+    if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
   } catch {
     window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
   }
 }
 
 function isPro() { return window.currentUserPlan === 'pro' || window.currentUserPlan === 'coach'; }
+// Paid features (every AI feature, the premium library): subscribers and
+// admins. The server enforces the same rule — see src/planAccess.js in the
+// backend. isPro() stays "has a subscription" for billing screens.
+function hasPaidAccess() {
+  return isPro() || window.currentIsAdmin === true || localStorage.getItem('userIsAdmin') === '1';
+}
+window.hasPaidAccess = hasPaidAccess;
+
+// Coach tools (Coach Mode: client roster, coach ops, logging for clients)
+// are the Coach plan — Pro isn't enough. Admins included. The server
+// enforces the same rule (requireCoachPlan in the backend).
+function hasCoachAccess() {
+  return window.currentUserPlan === 'coach' || window.currentIsAdmin === true
+    || localStorage.getItem('userIsAdmin') === '1';
+}
+// True only once we know the account lacks the Coach plan — before the plan
+// loads, a real coach isn't locked out of their own dashboard.
+function coachPlanKnownMissing() {
+  var known = window.currentUserPlanLoaded || localStorage.getItem('userPlan') !== null;
+  return known && !hasCoachAccess();
+}
+window.hasCoachAccess = hasCoachAccess;
 function isCoach() { return window.currentUserPlan === 'coach'; }
 function isActiveSub() { return ['active', 'trialing'].includes(window.currentSubStatus); }
 
@@ -4475,10 +4502,11 @@ var UPGRADE_PLANS = {
     monthly: 9, annual: 7, annualNote: 'Billed £84/year · save £24',
     sub: null, // the trial, or "Cancel anytime" when there isn't one
     features: [
-      ['sparkles', 'AI check-in summaries'],
-      ['sparkles', 'AI macro advisor'],
-      ['sparkles', 'AI program generator'],
-      ['sparkles', 'AI plateau detector'],
+      ['sparkles', 'AI coach, daily briefs & weekly reviews'],
+      ['sparkles', 'AI program generator & plateau detector'],
+      ['sparkles', 'AI macro, sleep & check-in insights'],
+      ['sparkles', 'AI rehab plans'],
+      ['bookOpen', 'Premium e-books & training programs'],
       ['sparkles', 'Priority support']
     ]
   },
@@ -10184,12 +10212,28 @@ function setCurrentAppMode(mode) {
   return nextMode;
 }
 
-function isCoachModeEnabled() {
+// The user's chosen mode, whatever their plan.
+function isCoachModePreferred() {
   const mode = getCurrentAppMode();
   if (mode === 'coach') return true;
   if (mode === 'athlete') return false;
   return localStorage.getItem(COACH_MODE_ENABLED_STORAGE_KEY) === 'true';
 }
+
+// Coach Mode is on only with the Coach plan (or admin). The preference is
+// kept, so it switches on as soon as the user upgrades.
+function isCoachModeEnabled() {
+  return isCoachModePreferred() && !coachPlanKnownMissing();
+}
+
+// Called when the user turns Coach Mode on in Settings.
+function promptCoachUpgradeIfLocked() {
+  if (!isCoachModePreferred() || !coachPlanKnownMissing()) return false;
+  if (typeof showToast === 'function') showToast('Coach Mode is part of the Coach plan.');
+  if (typeof openUpgradeModal === 'function') openUpgradeModal('coach');
+  return true;
+}
+window.promptCoachUpgradeIfLocked = promptCoachUpgradeIfLocked;
 
 function setCoachModeEnabled(value) {
   const mode = getCurrentAppMode();
@@ -10208,6 +10252,11 @@ function setCoachModeEnabled(value) {
 
 function applyAppModeToNavigation() {
   const coachModeEnabled = isCoachModeEnabled();
+  // Lost Coach access (plan loaded / downgraded) while on a coach tab.
+  const activeId = document.querySelector('.tab-content.active')?.id;
+  if (!coachModeEnabled && (activeId === 'clientsTab' || activeId === 'coachOpsTab') && typeof showTab === 'function') {
+    showTab('homeTab');
+  }
   document.querySelectorAll('.coach-only').forEach((el) => {
     // Tab-content divs (display:block) vs bn-item nav buttons (display:flex)
     // Use empty string to revert to stylesheet default rather than forcing 'block'.
@@ -10275,6 +10324,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setCoachModeEnabled(shouldEnableCoachMode);
       syncModeControls();
       applyAppModeToNavigation();
+      promptCoachUpgradeIfLocked();
       if (isCoachModeEnabled()) {
         showTab('clientsTab');
       } else if (activeTab && (activeTab.id === 'clientsTab' || activeTab.id === 'coachOpsTab')) {
@@ -10292,6 +10342,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setCoachModeEnabled(event.target.checked);
       syncModeControls();
       applyAppModeToNavigation();
+      promptCoachUpgradeIfLocked();
       if (isCoachModeEnabled()) {
         showTab('clientsTab');
       } else if (activeTab && (activeTab.id === 'clientsTab' || activeTab.id === 'coachOpsTab')) {
@@ -13039,10 +13090,10 @@ function renderPhotoComparison() {
 }
 
 // ── Pro user gate ─────────────────────────────────────────────────────────────
-// Replace with real billing check when subscription is added.
+// Every AI feature is Pro (admins included) — see hasPaidAccess(). The server
+// refuses AI requests from free accounts too.
 function isProUser() {
-  const u = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  return localStorage.getItem(`proUser_${u}`) === 'true' || true; // default open during beta
+  return hasPaidAccess();
 }
 
 // ── AI check-in summary ───────────────────────────────────────────────────────
@@ -13056,7 +13107,7 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
       <div class="ci-ai-card ci-ai-card--locked">
         <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
         <p>Upgrade to Pro to get an AI-generated summary of every check-in.</p>
-        <button class="ci-ai-upgrade-btn" onclick="window.showToast?.('Pro subscriptions coming soon!','info',3000)">Upgrade</button>
+        <button class="ci-ai-upgrade-btn" onclick="openUpgradeModal('pro')">Upgrade</button>
       </div>`;
     return;
   }
