@@ -49,7 +49,11 @@
   // mode: 'list'  — array; each entry syncs on its own. idField names the
   //                 field that identifies an entry (falls back to a hash of
   //                 the entry's content when missing or not unique).
-  //       'value' — the whole stored string syncs as one item.
+  //       'map'   — object; each top-level key syncs on its own (PRs by
+  //                 exercise, metrics by date, settings by name).
+  //       'value' — the whole stored string syncs as one item (last edit
+  //                 wins). Used for single values and for state objects
+  //                 whose parts depend on each other.
   const STORES = [
     { name: 'bodyweightLog',    key: u => `bodyweightLog_${u}`,    mode: 'list', idField: 'date' },
     { name: 'bodyMeasurements', key: u => `bodyMeasurements_${u}`, mode: 'list', idField: 'date' },
@@ -70,6 +74,45 @@
     { name: 'dailyMacroDate',     key: u => `dailyMacroDate_${u}`,     mode: 'value' },
     { name: 'macroResetTime',     key: u => `macroResetTime_${u}`,     mode: 'value' },
     { name: 'macroDayType',       key: u => `macroDayType_${u}`,       mode: 'value' },
+    // Logs
+    { name: 'sleepLog',        key: u => `sleepLog_${u}`,        mode: 'list', idField: 'date' },
+    { name: 'checkIns',        key: u => `checkIns_${u}`,        mode: 'list', idField: 'id' },
+    { name: 'plOneRM',         key: u => `plOneRM_${u}`,         mode: 'list' },
+    { name: 'injuries',        key: u => `injuries_${u}`,        mode: 'list', idField: 'id' },
+    { name: 'rehabLog',        key: u => `rehabLog_${u}`,        mode: 'list', idField: 'id' },
+    { name: 'dailyPulse',      key: u => `dailyPulse_${u}`,      mode: 'list', idField: 'date' },
+    { name: 'goals',           key: u => `goals_${u}`,           mode: 'list', idField: 'id' },
+    { name: 'workoutDates',    key: u => `workoutDates_${u}`,    mode: 'list' },
+    { name: 'exercises',       key: u => `exercises_${u}`,       mode: 'list' },
+    { name: 'customExercises', key: u => `customExercises_${u}`, mode: 'list', idField: 'name' },
+    { name: 'aiChatHistory',   key: u => `aiChatHistory_${u}`,   mode: 'value' },
+    // Keyed records
+    { name: 'prs',             key: u => `prs_${u}`,             mode: 'map' },
+    { name: 'prBoard',         key: u => `prBoard_${u}`,         mode: 'map' },
+    { name: 'recoveryMetrics', key: u => `recoveryMetrics_${u}`, mode: 'map' },
+    { name: 'settings',        key: u => `settings_${u}`,        mode: 'map' },
+    // Profile, targets and plans
+    { name: 'userHeight',          key: u => `userHeight_${u}`,          mode: 'value' },
+    { name: 'userDivision',        key: u => `userDivision_${u}`,        mode: 'value' },
+    { name: 'currentBodyweight',   key: u => `currentBodyweight_${u}`,   mode: 'value' },
+    { name: 'weightTrend',         key: u => `weightTrend_${u}`,         mode: 'value' },
+    { name: 'macroSettings',       key: u => `macroSettings_${u}`,       mode: 'value' },
+    { name: 'macroTargetsAdjustedDate', key: u => `macroTargetsAdjustedDate_${u}`, mode: 'value' },
+    { name: 'macroDayContext',     key: u => `macroDayContext_${u}`,     mode: 'value' },
+    { name: 'muscleWeeklyTargets', key: u => `muscleWeeklyTargets_${u}`, mode: 'value' },
+    { name: 'aiGeneratedProgram',  key: u => `aiGeneratedProgram_${u}`,  mode: 'value' },
+    { name: 'programBuilderDraft', key: u => `programBuilderV2Draft:${u}`, mode: 'value' },
+    { name: 'plAttempts',          key: u => `plAttempts_${u}`,          mode: 'value' },
+    { name: 'reminders',           key: u => `reminders_${u}`,           mode: 'value' },
+    { name: 'appTourDone',         key: u => `app_tour_done_${u}`,       mode: 'value' },
+    // Coaching / prep engine state: each is one object whose parts belong
+    // together, so it syncs whole.
+    { name: 'tl_checkins_v1',      key: u => `tl_checkins_v1_${u}`,      mode: 'value' },
+    { name: 'tl_daily_mission_v1', key: u => `tl_daily_mission_v1_${u}`, mode: 'value' },
+    { name: 'tl_gamification_v2',  key: u => `tl_gamification_v2_${u}`,  mode: 'value' },
+    { name: 'tl_posing_log_v1',    key: u => `tl_posing_log_v1_${u}`,    mode: 'value' },
+    { name: 'tl_posing_target_v1', key: u => `tl_posing_target_v1_${u}`, mode: 'value' },
+    { name: 'tl_phase_state_v1',   key: u => `tl_phase_state_v1_${u}`,   mode: 'value' },
   ];
 
   // Keys the app reads and writes without an account name. Reads and writes
@@ -104,6 +147,15 @@
     }
   }
 
+  function parseMap(raw) {
+    try {
+      const v = JSON.parse(raw);
+      return v && typeof v === 'object' && !Array.isArray(v) ? v : null;
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Splits one store's raw localStorage string into items.
    * Returns null when the key is missing or unreadable (skip the store),
@@ -114,6 +166,15 @@
     const items = new Map();
     if (store.mode === 'value') {
       items.set('value', { data: raw, h: hash(raw) });
+      return items;
+    }
+    if (store.mode === 'map') {
+      const obj = parseMap(raw);
+      if (!obj) return null;
+      Object.keys(obj).forEach(k => {
+        if (obj[k] === undefined) return;
+        items.set(`k:${k}`, { data: obj[k], h: hash(stableStringify(obj[k])) });
+      });
       return items;
     }
     const list = parseList(raw);
@@ -171,6 +232,15 @@
     if (store.mode === 'value') {
       const last = changes[changes.length - 1];
       return last.deleted ? null : String(last.data);
+    }
+    if (store.mode === 'map') {
+      const obj = parseMap(raw) || {};
+      changes.forEach(({ id, data, deleted }) => {
+        const k = id.slice(2);
+        if (deleted) delete obj[k];
+        else obj[k] = data;
+      });
+      return JSON.stringify(obj);
     }
     const list = parseList(raw) || [];
     const current = splitStore(store, JSON.stringify(list)) || new Map();
@@ -493,7 +563,11 @@
       pushTimer = setTimeout(sync, PUSH_DEBOUNCE_MS);
     };
     // Sync shortly after any write to a synced store.
-    const watched = key => STORES.some(s => key.startsWith(s.name + '_')) || SCOPED_KEYS.has(key);
+    const watched = key => {
+      if (SCOPED_KEYS.has(key)) return true;
+      const user = currentUser(rawGet);
+      return !!user && STORES.some(s => s.key(user) === key);
+    };
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
       const r = setItem.call(this, key, value);

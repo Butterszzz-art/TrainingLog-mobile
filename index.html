@@ -19222,6 +19222,12 @@ window.renderSessionHistory = renderSessionHistory;
   const sleepTab = document.getElementById('sleepTab');
   if (sleepTab) observer.observe(sleepTab, { attributes: true, attributeFilter: ['class'] });
 
+  // Sleep logged on another device (cloud-sync.js)
+  window.addEventListener('cloudsync:applied', e => {
+    const stores = (e.detail && e.detail.stores) || [];
+    if (stores.includes('sleepLog') && document.getElementById('sleepTab')?.classList.contains('active')) renderSleepTab();
+  });
+
   document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('sleepTab')?.classList.contains('active')) renderSleepTab();
   });
