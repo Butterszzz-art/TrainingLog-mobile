@@ -1,0 +1,15 @@
+{
+  "name": "capacitor-instagram-stories",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Capacitor plugin: share a background image and a movable sticker to Instagram Stories (Meta Sharing to Stories).",
+  "license": "UNLICENSED",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  }
+}

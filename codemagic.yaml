@@ -23,6 +23,7 @@ definitions:
                  --exclude='.claude' \
                  --exclude='.env*' \
                  --exclude='scripts' \
+                 --exclude='/plugins' \
                  --exclude='tests' \
                  --exclude='src/routes' \
                  --exclude='*.md' \
@@ -44,11 +45,17 @@ definitions:
           /usr/libexec/PlistBuddy -c "Delete :$1" "$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :$1 $2 $3" "$PLIST"
         }
-        # Profile photos use a file picker, which offers "Take Photo" on
-        # iOS. Without these usage strings iOS kills the app the moment the
-        # camera or library is opened.
-        set_plist NSCameraUsageDescription string "Pocket Coach uses the camera so you can take a profile photo."
-        set_plist NSPhotoLibraryUsageDescription string "Pocket Coach lets you choose a profile photo from your library."
+        # Profile photos and workout-story backgrounds use a file picker,
+        # which offers "Take Photo" on iOS. Without these usage strings iOS
+        # kills the app the moment the camera or library is opened.
+        set_plist NSCameraUsageDescription string "Pocket Coach uses the camera so you can take a profile photo or a photo for your workout story."
+        set_plist NSPhotoLibraryUsageDescription string "Pocket Coach lets you choose a profile photo or a workout story background from your library."
+        # Share to Instagram Stories (plugins/instagram-stories) checks
+        # canOpenURL("instagram-stories://"), which iOS only answers for
+        # schemes listed here.
+        /usr/libexec/PlistBuddy -c "Delete :LSApplicationQueriesSchemes" "$PLIST" 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes array" "$PLIST"
+        /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes:0 string instagram-stories" "$PLIST"
         # Only standard HTTPS — exempt from export compliance, so App Store
         # Connect doesn't hold every build for the encryption questionnaire.
         set_plist ITSAppUsesNonExemptEncryption bool false
@@ -267,6 +274,7 @@ workflows:
                    --exclude='.claude' \
                    --exclude='.env*' \
                    --exclude='scripts' \
+                   --exclude='/plugins' \
                    --exclude='tests' \
                    --exclude='src/routes' \
                    --exclude='*.md' \
