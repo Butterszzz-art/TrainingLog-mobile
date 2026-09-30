@@ -4701,7 +4701,9 @@ async function loadReferralPanel() {
   }
 
   try {
-    var res = await fetch(window.SERVER_URL + '/api/referral/stats?username=' + encodeURIComponent(username));
+    var res = await fetch(window.SERVER_URL + '/api/referral/stats?username=' + encodeURIComponent(username), {
+      headers: getAuthHeaders()
+    });
     var data = await res.json();
     if (linkInput && data.referralCode) {
       linkInput.value = 'https://pocketcoachcoms.org/#signup?ref=' + data.referralCode;
