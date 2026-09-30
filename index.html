@@ -180,6 +180,10 @@
           </button>
         </div>
       </div>
+      <label class="login-remember" id="rememberMeRow">
+        <input type="checkbox" id="rememberMe" checked />
+        <span>Remember me</span>
+      </label>
     </div>
 
     <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
@@ -4045,6 +4049,51 @@ let activeTab = null;
 let airtableToken = '';
 let airtableBaseId = '';
 
+// ── Remember me ──────────────────────────────────────────────────────────────
+// On (default): stay signed in across launches and prefill the username after
+// logout. Off: the session lives only until the app/tab is closed —
+// sessionStorage is wiped on a cold start, so a missing marker means "new
+// launch" and the saved session is dropped.
+const REMEMBER_ME_KEY = 'pc_rememberMe';
+const REMEMBERED_USER_KEY = 'pc_rememberedUsername';
+const SESSION_MARKER_KEY = 'pc_sessionActive';
+
+function _isRememberMeOn() {
+  try { return localStorage.getItem(REMEMBER_ME_KEY) !== '0'; } catch { return true; }
+}
+
+function _applyRememberMe(username) {
+  const remember = document.getElementById('rememberMe')?.checked ?? _isRememberMeOn();
+  try {
+    localStorage.setItem(REMEMBER_ME_KEY, remember ? '1' : '0');
+    if (remember && username) localStorage.setItem(REMEMBERED_USER_KEY, String(username));
+    else localStorage.removeItem(REMEMBERED_USER_KEY);
+    sessionStorage.setItem(SESSION_MARKER_KEY, '1');
+  } catch { /* storage unavailable — keep default behaviour */ }
+}
+
+if (savedUser && !_isRememberMeOn()) {
+  let sessionActive = false;
+  try { sessionActive = sessionStorage.getItem(SESSION_MARKER_KEY) === '1'; } catch { /* treat as new launch */ }
+  if (!sessionActive) {
+    forceFreshLogin();
+    // Firebase keeps its own session in IndexedDB — end it too, or
+    // onIdTokenChanged would repopulate the token
+    document.addEventListener('DOMContentLoaded', () => { window.firebaseAuth?.logout?.(); });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const box = document.getElementById('rememberMe');
+  if (box) box.checked = _isRememberMeOn();
+  const input = document.getElementById('username');
+  let remembered = null;
+  try { remembered = localStorage.getItem(REMEMBERED_USER_KEY); } catch { /* ignore */ }
+  if (input && !input.value && remembered && _isRememberMeOn()) {
+    input.value = remembered;
+  }
+});
+
 function forceFreshLogin() {
   if (typeof window.clearAuthState === 'function') {
     window.clearAuthState();
@@ -4316,6 +4365,7 @@ async function _checkLocalCredentials(username, password) {
 function _doLocalLogin(username) {
   setCurrentUser(username);
   localStorage.setItem('fitnessAppUser', username);
+  _applyRememberMe(username);
   _runPostLoginSequence(() => {
     openSection('pocketFit');
     if (typeof window.renderWorkouts === 'function') window.renderWorkouts();
@@ -4836,6 +4886,7 @@ async function startLogin() {
       localStorage.setItem("fitnessAppUser", username);
       persistLoginIdentity(username, result.token);
       _saveLocalCredentials(username, password); // cache for offline login
+      _applyRememberMe(username);
 
       const userDisplayEl = document.getElementById("userDisplay");
       if (userDisplayEl) userDisplayEl.textContent = username;
@@ -5413,6 +5464,7 @@ async function continueAfterVerification() {
     if (username) {
       setCurrentUser(username);
       localStorage.setItem('fitnessAppUser', username);
+      _applyRememberMe(username);
     }
     const verifyEl = document.getElementById('verifyEmailContainer');
     if (verifyEl) verifyEl.style.display = 'none';
