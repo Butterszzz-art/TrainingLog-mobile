@@ -279,3 +279,70 @@ describe('installScopedKeys', () => {
     expect(ls.m.get('theme')).toBe('dark');
   });
 });
+
+describe('store registry', () => {
+  test('names are unique and accepted by the server', () => {
+    const names = STORES.map(s => s.name);
+    expect(new Set(names).size).toBe(names.length);
+    names.forEach(n => expect(n).toMatch(/^[A-Za-z][A-Za-z0-9_]{0,63}$/));
+  });
+
+  test('keys are unique per account and include the account name', () => {
+    const keys = STORES.map(s => s.key('bob'));
+    expect(new Set(keys).size).toBe(keys.length);
+    keys.forEach(k => expect(k).toContain('bob'));
+  });
+
+  test('never syncs device-only bookkeeping', () => {
+    const keys = STORES.map(s => s.key('bob'));
+    ['workoutSyncFp_bob', 'cloudSync_bob', 'token', 'fitnessAppUser', 'aiProfile_bob', 'friends_bob']
+      .forEach(k => expect(keys).not.toContain(k));
+  });
+});
+
+describe('map stores', () => {
+  test('split per key and merge per key', () => {
+    const s = store('prs');
+    const items = splitStore(s, JSON.stringify({ Bench: 100, Squat: 140 }));
+    expect([...items.keys()]).toEqual(['k:Bench', 'k:Squat']);
+    const next = JSON.parse(applyToStore(s, JSON.stringify({ Bench: 100, Squat: 140 }), [
+      { id: 'k:Bench', data: 105 },
+      { id: 'k:Squat', deleted: true },
+      { id: 'k:Deadlift', data: 180 },
+    ]));
+    expect(next).toEqual({ Bench: 105, Deadlift: 180 });
+  });
+
+  test('an array stored where a map is expected is skipped', () => {
+    expect(splitStore(store('settings'), '[1,2]')).toBeNull();
+  });
+
+  test('different settings changed on two devices both survive', async () => {
+    const server = fakeServer();
+    const phone = device(server, 'bob');
+    const laptop = device(server, 'bob');
+    phone.set('settings_bob', { units: 'kg', theme: 'dark' });
+    await phone.sync();
+    await laptop.sync();
+    phone.set('settings_bob', { units: 'lbs', theme: 'dark' });
+    laptop.set('settings_bob', { units: 'kg', theme: 'light' });
+    await phone.sync();
+    await laptop.sync();
+    await phone.sync();
+    expect(phone.get('settings_bob')).toEqual({ units: 'lbs', theme: 'light' });
+    expect(laptop.get('settings_bob')).toEqual({ units: 'lbs', theme: 'light' });
+  });
+
+  test('sleep entries logged on each device end up on both, newest first', async () => {
+    const server = fakeServer();
+    const phone = device(server, 'bob');
+    const laptop = device(server, 'bob');
+    phone.set('sleepLog_bob', [{ date: '2026-09-02', duration: 7 }, { date: '2026-09-01', duration: 8 }]);
+    await phone.sync();
+    await laptop.sync();
+    laptop.set('sleepLog_bob', [{ date: '2026-09-03', duration: 6 }, ...laptop.get('sleepLog_bob')]);
+    await laptop.sync();
+    await phone.sync();
+    expect(phone.get('sleepLog_bob').map(e => e.date)).toEqual(['2026-09-03', '2026-09-02', '2026-09-01']);
+  });
+});
