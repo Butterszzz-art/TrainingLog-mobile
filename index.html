@@ -2330,7 +2330,10 @@
 <div id="communityTab" class="tab-content">
   <div class="sx-head">
     <div><div class="sx-lbl">Your people</div><h2 class="sx-title">Community</h2></div>
-    <button type="button" class="sx-link" onclick="showTab('leaderboardTab')"><span class="ui-icon" data-icon="trophy"></span>Leaderboard</button>
+    <div class="sx-head-r">
+      <button type="button" class="sx-link" onclick="showTab('leaderboardTab')" aria-label="Leaderboard"><span class="ui-icon" data-icon="trophy"></span><span class="sx-head-lbl">Leaderboard</span></button>
+      <button type="button" class="nt-bell" aria-label="Notifications"><span class="ui-icon" data-icon="bell"></span><span class="nt-badge" data-notif-badge hidden>0</span></button>
+    </div>
   </div>
   <nav class="sx-seg" id="commNav" role="tablist" aria-label="Community sections">
     <span class="sx-seg-thumb"></span>
@@ -2501,7 +2504,10 @@
 
     <div class="sx-head">
       <div><div class="sx-lbl">Community</div><h2 class="sx-title">Leaderboard</h2></div>
-      <button type="button" class="sx-link" onclick="showTab('communityTab')"><span class="ui-icon" data-icon="users"></span>Community</button>
+      <div class="sx-head-r">
+        <button type="button" class="sx-link" onclick="showTab('communityTab')" aria-label="Community"><span class="ui-icon" data-icon="users"></span><span class="sx-head-lbl">Community</span></button>
+        <button type="button" class="nt-bell" aria-label="Notifications"><span class="ui-icon" data-icon="bell"></span><span class="nt-badge" data-notif-badge hidden>0</span></button>
+      </div>
     </div>
 
     <!-- Sort (segmented control; .lb-sort-pill buttons are wired in initLeaderboard) -->
@@ -3806,6 +3812,7 @@
             <span class="all-hub-name">Community</span>
             <span class="all-hub-sub">Feed and friends</span>
           </span>
+          <span class="nt-badge nt-badge--tile" data-notif-badge hidden>0</span>
         </button>
         <button class="all-hub-tile all-hub-card" data-tab="leaderboardTab" onclick="showTab('leaderboardTab')">
           <span class="more-drawer-icon" data-icon="trophy"></span>
@@ -5115,12 +5122,14 @@ function showTab(tabName) {
       if (currentUser && window.Shares) window.Shares.refresh().catch(() => {});
       // Pick up friend requests sent since the last poll (updates the Friends badge)
       if (window.Friends) window.Friends.sync().catch(() => {});
+      if (window.Notifications) window.Notifications.refresh().catch(() => {});
       break;
     case 'mobilityTab':
       if (typeof window.initMobilityTab === 'function') window.initMobilityTab();
       break;
     case 'leaderboardTab':
       if (window.initLeaderboard) initLeaderboard();
+      if (window.Notifications) window.Notifications.refresh().catch(() => {});
       break;
     case 'userStatsTab':
       break;
@@ -19942,6 +19951,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/community-feed.js"></script>
   <script src="src/js/shares.js"></script>
   <script src="src/js/friends.js"></script>
+  <script src="src/js/notifications.js"></script>
   <script src="src/js/rehab.js"></script>
   <script src="src/js/reminders.js"></script>
   <script src="src/js/today-program.js"></script>
