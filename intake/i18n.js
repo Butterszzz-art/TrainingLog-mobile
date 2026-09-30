@@ -80,8 +80,8 @@ export const VERTALINGEN = {
     'field.afkeuren': 'Afkeuren',
     'placeholder.afkeuren': 'bv. geen groente, glutenvrij, Enter om toe te voegen',
 
-    'section.peds': 'PEDs',
-    'field.pedsGebruikt': 'Ik gebruik PEDs',
+    'section.peds': 'Prestatieverhogende middelen',
+    'field.pedsGebruikt': 'Ik gebruik prestatieverhogende middelen',
 
     'section.lifestyle': 'Lifestyle',
     'field.activityLevel': 'Activiteitsniveau (buiten training)',
@@ -212,8 +212,8 @@ export const VERTALINGEN = {
     'field.afkeuren': 'Dislikes / exclusions',
     'placeholder.afkeuren': 'e.g. no vegetables, gluten-free, press Enter to add',
 
-    'section.peds': 'PEDs',
-    'field.pedsGebruikt': 'I use PEDs',
+    'section.peds': 'Performance-enhancing substances',
+    'field.pedsGebruikt': 'I use performance-enhancing substances',
 
     'section.lifestyle': 'Lifestyle',
     'field.activityLevel': 'Activity level (outside training)',
@@ -344,8 +344,8 @@ export const VERTALINGEN = {
     'field.afkeuren': 'Exclusiones',
     'placeholder.afkeuren': 'p. ej. sin verduras, sin gluten, pulsa Intro para añadir',
 
-    'section.peds': 'PEDs',
-    'field.pedsGebruikt': 'Uso PEDs (esteroides/ayudas ergogénicas)',
+    'section.peds': 'Sustancias para mejorar el rendimiento',
+    'field.pedsGebruikt': 'Uso sustancias para mejorar el rendimiento',
 
     'section.lifestyle': 'Estilo de vida',
     'field.activityLevel': 'Nivel de actividad (fuera del entrenamiento)',
@@ -476,8 +476,8 @@ export const VERTALINGEN = {
     'field.afkeuren': 'Restrições',
     'placeholder.afkeuren': 'ex.: sem vegetais, sem glúten, pressione Enter para adicionar',
 
-    'section.peds': 'PEDs',
-    'field.pedsGebruikt': 'Uso PEDs (esteroides/recursos ergogênicos)',
+    'section.peds': 'Substâncias para melhorar o desempenho',
+    'field.pedsGebruikt': 'Uso substâncias para melhorar o desempenho',
 
     'section.lifestyle': 'Estilo de vida',
     'field.activityLevel': 'Nível de atividade (fora do treino)',
