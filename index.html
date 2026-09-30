@@ -13037,14 +13037,14 @@ function renderPhotoComparison() {
   const entry = checkIns.find(e => e.date === date);
   if (!entry) { grid.style.display = 'none'; return; }
 
-  // "now" = latest photo stored for current user
-  const nowFront = localStorage.getItem(`progressPhoto_${userId}_front`) || '';
-  const oldFront = entry.frontPhoto || '';
-
+  // "now" = latest photo stored for current user. Both are photo
+  // references (or old data URLs) — see progress-photos.js.
+  const resolvePhoto = v => (window.ProgressPhotos ? window.ProgressPhotos.resolve(v) : Promise.resolve(v || ''));
   const imgOld = document.getElementById('photoCompare_front_old');
   const imgNew = document.getElementById('photoCompare_front_new');
-  if (imgOld) { imgOld.src = oldFront; imgOld.style.opacity = oldFront ? '1' : '0.3'; }
-  if (imgNew) { imgNew.src = nowFront; imgNew.style.opacity = nowFront ? '1' : '0.3'; }
+  const showPhoto = (img, src) => { if (img) { img.src = src; img.style.opacity = src ? '1' : '0.3'; } };
+  resolvePhoto(entry.frontPhoto || '').then(src => showPhoto(imgOld, src)).catch(() => showPhoto(imgOld, ''));
+  resolvePhoto(localStorage.getItem(`progressPhoto_${userId}_front`) || '').then(src => showPhoto(imgNew, src)).catch(() => showPhoto(imgNew, ''));
 
   grid.style.display = '';
   if (empty) empty.style.display = 'none';
@@ -19872,6 +19872,7 @@ window.renderCaffeinePod = renderCaffeinePod;
     </script>
 
   <script src="src/js/archetype-config.js"></script>
+  <script src="src/js/progress-photos.js"></script>
   <script src="src/js/archetype-features.js"></script>
   <script src="src/js/macro-pill-controls.js"></script>
   <script src="src/js/activity-sync-bridge.js"></script>

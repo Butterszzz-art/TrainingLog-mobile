@@ -346,3 +346,27 @@ describe('map stores', () => {
     expect(phone.get('sleepLog_bob').map(e => e.date)).toEqual(['2026-09-03', '2026-09-02', '2026-09-01']);
   });
 });
+
+describe('account data on the device', () => {
+  const { accountKeys, SCOPED_KEYS } = require('../src/js/cloud-sync.js');
+
+  test('finds every key of the account and nothing of similar names', () => {
+    const keys = [
+      'workouts_bob', 'cardioLog_bob', 'programs@bob', 'dailyMacroMeals_bob', 'progressPhoto_bob_front',
+      'cloudSync_bob', 'programBuilderV2Draft:bob', 'missionCelebrated_bob_2026-09-01',
+      'workouts_a_bob', 'cardioLog_bobby', 'programs@alice', 'theme', 'token',
+    ];
+    expect(accountKeys(keys, 'bob').sort()).toEqual([
+      'cardioLog_bob', 'cloudSync_bob', 'dailyMacroMeals_bob', 'missionCelebrated_bob_2026-09-01',
+      'programBuilderV2Draft:bob', 'programs@bob', 'progressPhoto_bob_front', 'workouts_bob',
+    ]);
+  });
+
+  test('scoped copies of old shared keys never collide with per-account keys', () => {
+    const scoped = [...SCOPED_KEYS.values()].map(fn => fn('bob'));
+    const stores = STORES.filter(s => !s.name.startsWith('g_')).map(s => s.key('bob'));
+    const tier1 = ['dailyMacroMeals_bob', 'dailyMacroProgress_bob', 'dailyMacroDate_bob', 'macroResetTime_bob', 'macroDayType_bob'];
+    scoped.filter(k => !tier1.includes(k)).forEach(k => expect(stores).not.toContain(k));
+    expect(SCOPED_KEYS.get('programs')('bob')).toBe('programs@bob');
+  });
+});
