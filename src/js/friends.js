@@ -1,7 +1,7 @@
 /* =============================================================
    FRIENDS & SOCIAL SHARING
    Friend requests (send → the other person accepts), quick-share
-   panel, and shared template/program inbox.
+   panel, and shared template/program inbox (server-side, see shares.js).
 
    Friendships live on the server (/api/friends) so the other person
    actually hears about a request. The accepted list is cached in
@@ -21,8 +21,6 @@
   const REQUESTS_KEY = () => 'friendRequests_' + _u();
   const SEEN_KEY = () => 'friendRequestsSeen_' + _u();
   const MIGRATED_KEY = () => 'friendsMigrated_' + _u();
-  const INBOX_KEY = () => 'sharedInbox_' + _u();
-  const OUTBOX_KEY = () => 'sharedOutbox_' + _u();
   const _attr = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const _toast = (msg, type) => { if (typeof window.nativeToast === 'function') window.nativeToast(msg, type); };
   const _lower = s => String(s || '').toLowerCase();
@@ -182,104 +180,22 @@
     await syncFriends({ notify: false }).catch(() => {});
   }
 
-  // ── Inbox / Outbox ──────────────────────────────────────────
+  // ── Shared items (server inbox, see shares.js) ──────────────
+
+  // Library records → { type, name, data } for Shares. Templates keep their
+  // exercises under `data`; a program is the program object itself.
+  function _toShareItem(item) {
+    const type = item?.type === 'program' || (item?.days && item?.type !== 'template') ? 'program' : 'template';
+    const rest = { ...(item || {}) };
+    delete rest.type;
+    const data = type === 'template' && rest.data && typeof rest.data === 'object' ? rest.data : rest;
+    return { type, name: item?.name || data?.title || (type === 'program' ? 'Program' : 'Template'), data };
+  }
 
   function getInbox() {
-    try { return JSON.parse(localStorage.getItem(INBOX_KEY()) || '[]'); } catch { return []; }
-  }
-
-  function saveInbox(list) {
-    localStorage.setItem(INBOX_KEY(), JSON.stringify(list));
-  }
-
-  function getOutbox() {
-    try { return JSON.parse(localStorage.getItem(OUTBOX_KEY()) || '[]'); } catch { return []; }
-  }
-
-  function saveOutbox(list) {
-    localStorage.setItem(OUTBOX_KEY(), JSON.stringify(list));
-  }
-
-  function sendToFriend(recipientUsername, item, note) {
-    const outbox = getOutbox();
-    const entry = {
-      id: Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      to: recipientUsername,
-      from: _u(),
-      item,
-      note: note || '',
-      sentAt: new Date().toISOString(),
-    };
-    outbox.unshift(entry);
-    saveOutbox(outbox);
-
-    // Also put in recipient's inbox (localStorage — works for same-device demos)
-    const recipientKey = 'sharedInbox_' + recipientUsername;
-    try {
-      const rInbox = JSON.parse(localStorage.getItem(recipientKey) || '[]');
-      rInbox.unshift(entry);
-      localStorage.setItem(recipientKey, JSON.stringify(rInbox));
-    } catch {}
-
-    // Also try backend
-    const serverUrl = window.SERVER_URL || '';
-    if (serverUrl && navigator.onLine) {
-      fetch(serverUrl + '/sendTemplate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          senderUsername: _u(),
-          recipientUsername,
-          templateName: item.name,
-          templateData: item,
-        }),
-      }).catch(() => {});
-    }
-
-    return entry;
-  }
-
-  function acceptInboxItem(itemId) {
-    const inbox = getInbox();
-    const idx = inbox.findIndex(i => i.id === itemId);
-    if (idx < 0) return null;
-    const item = inbox[idx];
-    inbox.splice(idx, 1);
-    saveInbox(inbox);
-
-    // Save the template/program to user's library
-    if (item.item?.type === 'template' || item.item?.exercises) {
-      const key = 'exerciseTemplates_' + _u();
-      try {
-        const templates = JSON.parse(localStorage.getItem(key) || '[]');
-        templates.push({
-          ...item.item,
-          name: item.item.name + ' (from ' + item.from + ')',
-          receivedAt: new Date().toISOString(),
-        });
-        localStorage.setItem(key, JSON.stringify(templates));
-      } catch {}
-    }
-
-    if (item.item?.type === 'program' || item.item?.days) {
-      const key = 'programs_' + _u();
-      try {
-        const programs = JSON.parse(localStorage.getItem(key) || '[]');
-        programs.push({
-          ...item.item,
-          name: item.item.name + ' (from ' + item.from + ')',
-          receivedAt: new Date().toISOString(),
-        });
-        localStorage.setItem(key, JSON.stringify(programs));
-      } catch {}
-    }
-
-    return item;
-  }
-
-  function dismissInboxItem(itemId) {
-    const inbox = getInbox().filter(i => i.id !== itemId);
-    saveInbox(inbox);
+    return window.Shares
+      ? window.Shares.getInbox().map(s => ({ id: s.id, from: s.from, sentAt: s.sentAt, note: s.note, item: { name: s.name, type: s.type } }))
+      : [];
   }
 
   // ── Share Code (encode/decode for clipboard sharing) ────────
@@ -318,14 +234,14 @@
         const date = new Date(item.sentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         html += '<div class="shared-inbox-item">'
           + '<div class="shared-inbox-header">'
-          + '<span class="shared-inbox-from">From ' + item.from + '</span>'
+          + '<span class="shared-inbox-from">From ' + _attr(item.from) + '</span>'
           + '<span class="shared-inbox-date">' + date + '</span>'
           + '</div>'
-          + '<div class="shared-inbox-name">' + (item.item?.name || 'Workout') + '</div>'
-          + (item.note ? '<div class="shared-inbox-note">"' + item.note + '"</div>' : '')
+          + '<div class="shared-inbox-name">' + _attr(item.item?.name || 'Workout') + '</div>'
+          + (item.note ? '<div class="shared-inbox-note">"' + _attr(item.note) + '"</div>' : '')
           + '<div class="shared-inbox-actions">'
-          + '<button class="shared-inbox-accept" onclick="acceptSharedItem(\'' + item.id + '\')">Save to Library</button>'
-          + '<button class="shared-inbox-dismiss" onclick="dismissSharedItem(\'' + item.id + '\')">Dismiss</button>'
+          + '<button class="shared-inbox-accept" data-share-id="' + _attr(item.id) + '" onclick="acceptSharedItem(this.dataset.shareId)">Save to Library</button>'
+          + '<button class="shared-inbox-dismiss" data-share-id="' + _attr(item.id) + '" onclick="dismissSharedItem(this.dataset.shareId)">Dismiss</button>'
           + '</div></div>';
       });
       html += '</div>';
@@ -412,6 +328,7 @@
   function openFriendsPanel() {
     renderFriendsPanel();
     syncFriends().then(renderFriendsPanel).catch(() => {});
+    window.Shares?.refresh().then(renderFriendsPanel).catch(() => {});
   }
 
   // ── Quick Share Panel ───────────────────────────────────────
@@ -548,21 +465,27 @@
     }
   }
 
-  function sendQuickShare() {
-    if (!_quickShareItem || _quickShareSelected.size === 0) return;
+  async function sendQuickShare() {
+    if (!_quickShareItem || _quickShareSelected.size === 0 || !window.Shares) return;
     const note = document.getElementById('quickShareNote')?.value?.trim() || '';
+    const item = _toShareItem(_quickShareItem);
     let sent = 0;
-    _quickShareSelected.forEach(username => {
-      sendToFriend(username, _quickShareItem, note);
-      sent++;
-    });
-
-    const overlay = document.getElementById('quickShareOverlay');
-    if (overlay) overlay.classList.remove('open');
-
-    if (typeof nativeToast === 'function') {
-      nativeToast('Sent to ' + sent + ' friend' + (sent > 1 ? 's' : ''), 'success');
+    let lastError = null;
+    for (const username of _quickShareSelected) {
+      try {
+        await window.Shares.send(username, item, note);
+        sent++;
+      } catch (err) {
+        lastError = err;
+      }
     }
+
+    if (sent) {
+      const overlay = document.getElementById('quickShareOverlay');
+      if (overlay) overlay.classList.remove('open');
+      _toast('Sent to ' + sent + ' friend' + (sent > 1 ? 's' : ''), 'success');
+    }
+    if (lastError) _toast(lastError.message, 'error');
     renderFriendsPanel();
   }
 
@@ -587,26 +510,16 @@
       return;
     }
 
-    // Add to inbox
-    const inbox = getInbox();
-    inbox.unshift({
-      id: Date.now() + '_import',
-      from: 'share code',
-      to: _u(),
-      item,
-      note: 'Imported via share code',
-      sentAt: new Date().toISOString(),
-    });
-    saveInbox(inbox);
+    // Straight into the library (Shares shows its own toast)
+    if (window.Shares) window.Shares.saveToLibrary(_toShareItem(item), null);
     input.value = '';
-    if (typeof nativeToast === 'function') nativeToast('Imported! Check your Received section.', 'success');
     renderFriendsPanel();
   }
 
   // ── UI Helpers ──────────────────────────────────────────────
 
   function _getUserTemplates() {
-    try { return JSON.parse(localStorage.getItem('exerciseTemplates_' + _u()) || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('managedTemplates_' + _u()) || '[]'); } catch { return []; }
   }
 
   function _getUserPrograms() {
@@ -669,16 +582,13 @@
     renderFriendsPanel();
   };
 
-  window.acceptSharedItem = function (itemId) {
-    const item = acceptInboxItem(itemId);
-    if (item && typeof nativeToast === 'function') {
-      nativeToast('Saved "' + (item.item?.name || 'item') + '" to your library!', 'success');
-    }
+  window.acceptSharedItem = async function (itemId) {
+    await window.Shares?.accept(itemId);
     renderFriendsPanel();
   };
 
-  window.dismissSharedItem = function (itemId) {
-    dismissInboxItem(itemId);
+  window.dismissSharedItem = async function (itemId) {
+    await window.Shares?.dismiss(itemId);
     renderFriendsPanel();
   };
 

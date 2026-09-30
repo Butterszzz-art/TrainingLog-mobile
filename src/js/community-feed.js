@@ -1,11 +1,11 @@
 /* =============================================================
    COMMUNITY FEED
-   - Activity feed: your recent workouts + your posts, as typed cards
-     (workout summary, PR, update) grouped by day
+   - Activity feed: posts from you and your friends (/api/feed) plus
+     your own recent workouts, as typed cards grouped by day
    - Post composer (collapsed to one line until tapped)
    - Group search filter chips + sort link
    - Weekly challenge card (progress ring + Mon–Sun strip)
-   - Exercise leaderboard inline rendering
+   - Exercise leaderboard (best estimated 1RM, /api/leaderboard/exercises)
    Styles: css/social-ui.css (sx-*), helpers: src/js/social-ui.js
    ============================================================= */
 
@@ -16,10 +16,6 @@
 
   function _parse(k) {
     try { return JSON.parse(localStorage.getItem(k)) || null; } catch { return null; }
-  }
-
-  function _save(k, v) {
-    try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* quota */ }
   }
 
   function _user() {
@@ -113,7 +109,51 @@
   }
   if (typeof document === 'undefined') return;
 
+  /* ── Server API (/api/feed, /api/leaderboard/exercises) ──── */
+
+  const DEFAULT_SERVER = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
+
+  async function _api(method, path, body) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      const err = new Error('Sign in to see your friends’ posts.');
+      err.code = 'feed.signed_out';
+      throw err;
+    }
+    const res = await fetch((window.SERVER_URL || DEFAULT_SERVER) + path, {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    let data = null;
+    try { data = await res.json(); } catch { /* non-JSON */ }
+    if (!res.ok || !data || data.success === false) {
+      const err = new Error(data?.error?.message || 'Could not reach the server. Try again.');
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  function _toast(msg, type) {
+    if (typeof window.showToast === 'function') window.showToast(msg, type);
+    else if (typeof window.nativeToast === 'function') window.nativeToast(msg, type);
+  }
+
   /* ── Activity feed ───────────────────────────────────────── */
+
+  // Posts from you and your friends (server), plus your own logged
+  // workouts (this device). Friends only see what you post.
+  let _feed = { user: null, posts: [], error: '', loading: false };
+
+  // Your most recent logged workout from the last 7 days, if any.
+  function _latestWorkout(username) {
+    const workouts = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
+    const since = new Date(); since.setDate(since.getDate() - 7);
+    const logged = workouts.filter(w => Array.isArray(w?.log) && w.log.length && String(w.date || '') >= _localISO(since));
+    if (!logged.length) return null;
+    return logged.reduce((a, b) => (String(b.timestamp || b.date) > String(a.timestamp || a.date) ? b : a));
+  }
 
   function _buildActivityItems(username) {
     // workouts_{user} alone only covers a rolling ~7 days (older entries
@@ -121,7 +161,6 @@
     // both so the "last 15 workouts" feed still has something to show for
     // users who train less than 15 times a week.
     const workouts = (window.getAllWorkoutsForUser && window.getAllWorkoutsForUser(username)) || [];
-    const posts    = _parse('communityPosts_v1') || [];
     const items    = [];
 
     [...workouts].reverse().slice(0, 15).forEach(w => {
@@ -135,58 +174,70 @@
       });
     });
 
-    posts.forEach(p => items.push({
+    _feed.posts.forEach(p => items.push({
       kind: 'post',
+      id: p.id,
       type: p.type || 'update',
-      user: p.user || username,
+      user: p.author,
       text: p.text,
-      ts:   p.ts,
-      date: p.ts ? _localISO(new Date(p.ts)) : '',
+      workout: p.workout,
+      mine: p.mine,
+      canDelete: p.canDelete,
+      ts:   p.date,
+      date: p.date ? _localISO(new Date(p.date)) : '',
     }));
 
     // Sort newest-first
     items.sort((a, b) => (b.ts || b.date || '') > (a.ts || a.date || '') ? 1 : -1);
-    return items.slice(0, 30);
+    return items.slice(0, 60);
   }
 
   function _head(item, sub, chip) {
     const user = _attr(item.user);
+    const menu = item.kind === 'post'
+      ? `<button type="button" class="sx-gpost-menu" data-feed-menu="${_attr(item.id)}" aria-label="Post options">•••</button>`
+      : '';
     return `
-      <div class="sx-post-h">
+      <div class="sx-post-h${menu ? ' sx-post-h--menu' : ''}">
         <span class="sx-av" data-avatar-user="${user}" data-avatar-open>${_initial(item.user)}</span>
         <div style="min-width:0"><b>${user}</b><small>${sub}</small></div>
-        ${chip}
+        ${chip}${menu}
       </div>`;
+  }
+
+  function _statsBlock(s) {
+    const vol = _fmtKg(s.volume || 0);
+    const names = (s.names || []).slice(0, 3).map(_attr).join(', ') + ((s.names || []).length > 3 ? ` +${s.names.length - 3}` : '');
+    return `
+          <div class="sx-wk">
+            <div><span class="sx-lbl">Volume</span><span class="sx-num">${vol.n}<small>${vol.u}</small></span></div>
+            <div><span class="sx-lbl">Exercises</span><span class="sx-num">${+s.exercises || 0}</span></div>
+            <div><span class="sx-lbl">Sets</span><span class="sx-num">${+s.sets || 0}</span></div>
+          </div>
+          ${s.top ? `<div class="sx-topset"><span>Top set</span><b>${_attr(s.top.name)} ${+s.top.kg} kg × ${+s.top.reps}</b></div>`
+            : names ? `<div class="sx-topset"><span>Exercises</span><b>${names}</b></div>` : ''}`;
   }
 
   function _cardHTML(item, i) {
     if (item.kind === 'session') {
-      const s = item.stats;
-      const vol = _fmtKg(s.volume);
       const when = item.ts && item.ts !== item.date ? _timeAgo(item.ts) : '';
-      const sub = `${_attr(item.title)}${when ? ` · ${when}` : ''}`;
-      const names = s.names.slice(0, 3).map(_attr).join(', ') + (s.names.length > 3 ? ` +${s.names.length - 3}` : '');
+      const sub = `${_attr(item.title)}${when ? ` · ${when}` : ''} · only you`;
       return `
         <article class="pod sx-post sx-in" style="--i:${i}">
           ${_head(item, sub, '<span class="sx-chip sx-chip--up">Workout</span>')}
-          <div class="sx-wk">
-            <div><span class="sx-lbl">Volume</span><span class="sx-num">${vol.n}<small>${vol.u}</small></span></div>
-            <div><span class="sx-lbl">Exercises</span><span class="sx-num">${s.exercises}</span></div>
-            <div><span class="sx-lbl">Sets</span><span class="sx-num">${s.sets}</span></div>
-          </div>
-          ${s.top ? `<div class="sx-topset"><span>Top set</span><b>${_attr(s.top.name)} ${s.top.kg} kg × ${s.top.reps}</b></div>`
-            : names ? `<div class="sx-topset"><span>Exercises</span><b>${names}</b></div>` : ''}
+          ${_statsBlock(item.stats)}
         </article>`;
     }
 
-    const sub = `${item.type === 'pr' ? 'New PR' : item.type === 'workout' ? 'Workout' : 'Update'} · ${_timeAgo(item.ts) || _attr(item.date)}`;
+    const sub = `${item.type === 'pr' ? 'New PR' : item.type === 'workout' ? (item.workout ? _attr(item.workout.title) : 'Workout') : 'Update'} · ${_timeAgo(item.ts) || _attr(item.date)}`;
+    const text = item.text ? `<p class="sx-gpost-text">${_attr(item.text)}</p>` : '';
     if (item.type === 'pr') {
       return `
         <article class="pod sx-post sx-post--pr sx-in" style="--i:${i}">
           ${_head(item, sub, '<span class="sx-chip sx-chip--down">PR</span>')}
           <div class="sx-pr-row">
             <span class="sx-medal">${_icon('trophy')}</span>
-            <p>${_attr(item.text)}</p>
+            ${text}
           </div>
         </article>`;
     }
@@ -194,16 +245,65 @@
     return `
       <article class="pod sx-post sx-in" style="--i:${i}">
         ${_head(item, sub, chip)}
-        <p>${_attr(item.text)}</p>
+        ${text}
+        ${item.workout ? _statsBlock(item.workout) : ''}
       </article>`;
   }
 
-  function renderActivityFeed() {
+  function _paintFeed() {
     const container = document.getElementById('activityFeed');
     if (!container) return;
     const username = _user();
+    if (!username) {
+      container.innerHTML = `<div class="pod sx-empty">Log in to see your activity feed.</div>`;
+      return;
+    }
 
+    // Drop anyone the user has blocked (see Profiles.isBlocked).
+    const items = _buildActivityItems(username)
+      .filter(item => !window.Profiles?.isBlocked?.(item.user));
+    const notice = _feed.error
+      ? `<div class="pod sx-empty">Couldn’t load posts from friends. ${_attr(_feed.error)}</div>` : '';
+    if (!items.length) {
+      container.innerHTML = notice || `<div class="pod sx-empty">${_feed.loading ? 'Loading…'
+        : 'Nothing here yet. Post an update or a PR, and add friends to see theirs.'}</div>`;
+      return;
+    }
+
+    let last = null;
+    container.innerHTML = notice + items.map((item, i) => {
+      const bucket = dayBucket(item.date);
+      const label = bucket !== last ? `<div class="sx-lbl sx-day-lbl">${bucket}</div>` : '';
+      last = bucket;
+      return label + _cardHTML(item, Math.min(i, 8));
+    }).join('');
+    container.querySelectorAll('[data-feed-menu]').forEach(btn => {
+      btn.addEventListener('click', () => _postMenu(btn.dataset.feedMenu));
+    });
+    _replay(container);
+  }
+
+  async function _loadFeed() {
+    const user = _user();
+    if (_feed.user !== user) _feed = { user, posts: [], error: '', loading: false };
+    if (!user || _feed.loading) return;
+    _feed.loading = true;
+    try {
+      const data = await _api('GET', '/api/feed');
+      if (_feed.user !== user) return;
+      _feed.posts = data.posts || [];
+      _feed.error = '';
+    } catch (err) {
+      if (_feed.user === user) _feed.error = err.message;
+    } finally {
+      if (_feed.user === user) _feed.loading = false;
+    }
+    _paintFeed();
+  }
+
+  function renderActivityFeed() {
     // Update composer avatar
+    const username = _user();
     const av = document.getElementById('feedComposerAvatar');
     if (av) {
       if (!av.querySelector('img')) av.textContent = _initial(username);
@@ -212,36 +312,82 @@
     const seg = document.getElementById('feedTagSeg');
     if (seg && window.sxPlaceThumb) window.sxPlaceThumb(seg);
 
-    if (!username) {
-      container.innerHTML = `<div class="pod sx-empty">Log in to see your activity feed.</div>`;
-      return;
-    }
-
-    // Drop anyone the user has blocked (see Profiles.isBlocked).
     window.Profiles?.loadBlocked?.();
-    const items = _buildActivityItems(username)
-      .filter(item => !window.Profiles?.isBlocked?.(item.user));
-    if (!items.length) {
-      container.innerHTML = `<div class="pod sx-empty">No activity yet. Log a workout and it shows up here.</div>`;
-      return;
-    }
-
-    let last = null;
-    container.innerHTML = items.map((item, i) => {
-      const bucket = dayBucket(item.date);
-      const label = bucket !== last ? `<div class="sx-lbl sx-day-lbl">${bucket}</div>` : '';
-      last = bucket;
-      return label + _cardHTML(item, Math.min(i, 8));
-    }).join('');
-    _replay(container);
+    _paintFeed();
+    _loadFeed();
   }
 
   window.renderActivityFeed = renderActivityFeed;
-  document.addEventListener('pc:blocks-changed', renderActivityFeed);
+  document.addEventListener('pc:blocks-changed', _paintFeed);
+
+  const FEED_REPORT_REASONS = [
+    ['inappropriate', 'Inappropriate or offensive'],
+    ['harassment', 'Harassment or bullying'],
+    ['spam', 'Spam'],
+    ['other', 'Something else'],
+  ];
+
+  // Uses the action sheet from community.js.
+  function _postMenu(id) {
+    const post = _feed.posts.find(p => p.id === id);
+    if (!post || typeof _actionSheet !== 'function') return;
+    const actions = [];
+    if (!post.mine) {
+      actions.push({
+        label: 'Report post',
+        run: () => _actionSheet('Why are you reporting this post?', FEED_REPORT_REASONS.map(([reason, label]) => ({
+          label,
+          run: async () => {
+            try {
+              await _api('POST', `/api/feed/${encodeURIComponent(id)}/report`, { reason });
+              _toast('Thanks. Our moderators will review this within 24 hours.');
+            } catch (err) { _toast(err.message, 'error'); }
+          },
+        }))),
+      });
+      if (window.Profiles?.openProfileCard) {
+        actions.push({ label: `View @${post.author} (block or report)`, run: () => window.Profiles.openProfileCard(post.author) });
+      }
+    }
+    if (post.canDelete) {
+      actions.push({
+        label: 'Delete post',
+        danger: true,
+        run: async () => {
+          if (typeof window.confirm === 'function' && !window.confirm('Delete this post?')) return;
+          try {
+            await _api('DELETE', `/api/feed/${encodeURIComponent(id)}`);
+            _feed.posts = _feed.posts.filter(p => p.id !== id);
+            _paintFeed();
+          } catch (err) { _toast(err.message, 'error'); }
+        },
+      });
+    }
+    if (actions.length) _actionSheet('Post', actions);
+  }
 
   /* ── Post composer ───────────────────────────────────────── */
 
   let _selectedPostTag = 'workout';
+
+  // "Workout" posts carry a summary of your latest logged workout.
+  function _updateAttachHint() {
+    let hint = document.getElementById('feedAttachHint');
+    const row = document.querySelector('#feedComposerBody .sx-composer-row');
+    if (!row) return;
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.id = 'feedAttachHint';
+      hint.className = 'sx-attach-hint';
+      row.parentElement.insertBefore(hint, row);
+    }
+    const w = _selectedPostTag === 'workout' ? _latestWorkout(_user()) : null;
+    hint.hidden = !w;
+    if (w) {
+      const s = summariseWorkout(w);
+      hint.textContent = `Attaching ${w.title || 'your latest workout'} · ${s.exercises} exercise${s.exercises === 1 ? '' : 's'}, ${s.sets} sets`;
+    }
+  }
 
   function _setComposerOpen(open) {
     const toggle = document.getElementById('feedComposerToggle');
@@ -250,6 +396,7 @@
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     body.classList.toggle('is-open', open);
     if (open) {
+      _updateAttachHint();
       const seg = document.getElementById('feedTagSeg');
       setTimeout(() => {
         if (seg && window.sxPlaceThumb) window.sxPlaceThumb(seg);
@@ -269,24 +416,32 @@
         btn.classList.add('active');
         _selectedPostTag = btn.dataset.tag;
         if (window.sxPlaceThumb) window.sxPlaceThumb(btn.parentElement);
+        _updateAttachHint();
       });
     });
   }
 
-  function submitCommunityPost() {
-    const ta       = document.getElementById('feedPostText');
-    const username = _user();
-    const text     = ta ? ta.value.trim() : '';
-    if (!text) return;
-
-    const posts = _parse('communityPosts_v1') || [];
-    posts.unshift({ user: username, text, type: _selectedPostTag, ts: new Date().toISOString() });
-    // Keep last 200
-    _save('communityPosts_v1', posts.slice(0, 200));
-    if (ta) ta.value = '';
-    _setComposerOpen(false);
-    renderActivityFeed();
-    if (typeof window.showToast === 'function') window.showToast('Posted');
+  let _posting = false;
+  async function submitCommunityPost() {
+    const ta   = document.getElementById('feedPostText');
+    const text = ta ? ta.value.trim() : '';
+    const w = _selectedPostTag === 'workout' ? _latestWorkout(_user()) : null;
+    if ((!text && !w) || _posting) return;
+    const body = { type: _selectedPostTag, text };
+    if (w) body.workout = { title: w.title || w.name || 'Workout', ...summariseWorkout(w) };
+    _posting = true;
+    try {
+      const { post } = await _api('POST', '/api/feed', body);
+      _feed.posts = [post, ..._feed.posts];
+      if (ta) ta.value = '';
+      _setComposerOpen(false);
+      _paintFeed();
+      _toast('Posted. Your friends will see it in their feed.');
+    } catch (err) {
+      _toast(err.message, 'error');
+    } finally {
+      _posting = false;
+    }
   }
 
   window.submitCommunityPost = submitCommunityPost;
@@ -433,50 +588,68 @@
 
   window.renderWeeklyChallenge = renderWeeklyChallenge;
 
-  /* ── Exercise leaderboard inline ─────────────────────────── */
+  /* ── Exercise leaderboard (Leaderboard tab) ──────────────── */
+
+  // Best estimated 1RM per lifter for the main barbell lifts, from
+  // everyone's logged workouts (GET /api/leaderboard/exercises).
+  const LIFTS = [
+    { id: 'squat', label: 'Squat' },
+    { id: 'bench', label: 'Bench Press' },
+    { id: 'deadlift', label: 'Deadlift' },
+    { id: 'ohp', label: 'Overhead Press' },
+    { id: 'row', label: 'Barbell Row' },
+  ];
 
   function _initExerciseLbInline() {
     const sel = document.getElementById('exerciseLbSelectInline');
-    if (!sel || typeof sampleExerciseLeaderboard === 'undefined') return;
+    const container = document.getElementById('exerciseLeaderboardInline');
+    if (!sel || !container) return;
 
-    // Populate exercise select
-    Object.keys(sampleExerciseLeaderboard).forEach(ex => {
-      const opt = document.createElement('option');
-      opt.value = ex; opt.textContent = ex;
-      sel.appendChild(opt);
-    });
-
+    sel.innerHTML = LIFTS.map(l => `<option value="${l.id}">${l.label}</option>`).join('');
     let currentRange = 'weekly';
+    let seq = 0;
 
-    function renderInline() {
-      const exercise = sel.value;
-      const data = sampleExerciseLeaderboard[exercise]?.[currentRange] || [];
-      const container = document.getElementById('exerciseLeaderboardInline');
-      if (!container) return;
+    async function renderInline() {
+      const mySeq = ++seq;
+      container.innerHTML = '<div class="sx-note">Loading…</div>';
+      let data;
+      try {
+        data = await _api('GET', `/api/leaderboard/exercises?lift=${encodeURIComponent(sel.value)}&range=${currentRange}`);
+      } catch (err) {
+        if (mySeq === seq) container.innerHTML = `<div class="sx-note">Couldn’t load the leaderboard. ${_attr(err.message)}</div>`;
+        return;
+      }
+      if (mySeq !== seq) return;
+      const rows = (data.items || []).filter(d => !window.Profiles?.isBlocked?.(d.username));
+      if (!rows.length) {
+        const span = currentRange === 'weekly' ? 'this week' : currentRange === 'monthly' ? 'in the last 30 days' : 'yet';
+        container.innerHTML = `<div class="sx-note">Nobody has logged this lift ${span}. Log a set of up to 12 reps to get on the board.</div>`;
+        return;
+      }
 
       const username = _user();
-      const topVal   = data[0]?.volume || 1;
-
-      container.innerHTML = data.map((d, i) => {
+      const topVal = rows[0].e1rm || 1;
+      container.innerHTML = rows.map((d, i) => {
         const rank  = i + 1;
-        const pct   = Math.round((d.volume / topVal) * 100);
+        const pct   = Math.round((d.e1rm / topVal) * 100);
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span class="lb-rank-num">#${rank}</span>`;
-        const isMe  = username && d.user.toLowerCase() === username.toLowerCase();
+        const isMe  = username && String(d.username).toLowerCase() === username.toLowerCase();
         return `
           <div class="lb-card ${rank <= 3 ? `lb-card--${['gold','silver','bronze'][rank-1]}` : ''} ${isMe ? 'lb-card--me' : ''}">
             <div class="lb-card-left">
               <div class="lb-card-medal">${medal}</div>
-              <div class="lb-card-avatar" data-avatar-user="${_attr(d.user)}" data-avatar-open>${_initial(d.user)}</div>
+              <div class="lb-card-avatar" data-avatar-user="${_attr(d.username)}" data-avatar-open>${_initial(d.username)}</div>
               <div class="lb-card-info">
-                <span class="lb-card-name">${d.user}${isMe ? ' <span class="lb-you-tag">You</span>' : ''}</span>
+                <span class="lb-card-name">${_attr(d.username)}${isMe ? ' <span class="lb-you-tag">You</span>' : ''}</span>
+                <span class="lb-card-sub">${+d.kg} kg × ${+d.reps}</span>
                 <div class="lb-card-bar-wrap">
                   <div class="lb-card-bar" style="width:${pct}%"></div>
                 </div>
               </div>
             </div>
-            <div class="lb-card-value">${(d.volume/1000).toFixed(1)}k</div>
+            <div class="lb-card-value" title="Estimated one-rep max">${Math.round(d.e1rm)}<small> kg</small></div>
           </div>`;
-      }).join('');
+      }).join('') + '<div class="sx-note" style="margin-top:8px">Ranked by estimated one-rep max from each lifter’s best set (up to 12 reps).</div>';
     }
 
     sel.onchange = renderInline;
