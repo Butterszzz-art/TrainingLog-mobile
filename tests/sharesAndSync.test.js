@@ -65,38 +65,66 @@ describe('Shares (friend inbox)', () => {
 });
 
 describe('recent workout sync', () => {
-  const today = new Date().toISOString().slice(0, 10);
-  const old = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10);
+  const day = n => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const today = day(0);
+  const old = day(40);
+  const set = (name, kg) => [{ name, repsArray: [5], weightsArray: [kg] }];
   const workouts = [
-    { id: 'w1', date: today, title: 'Push', log: [{ name: 'Bench', repsArray: [5], weightsArray: [80] }] },
+    { id: 'w1', date: today, title: 'Push', log: set('Bench', 80) },
     { id: 'w2', date: today, title: 'Empty', log: [] },
-    { date: today, title: 'No id', log: [{ name: 'Squat', repsArray: [5], weightsArray: [100] }] },
+    { date: today, title: 'No id', log: set('Squat', 100) },
   ];
   const history = [
-    { id: 'w3', date: old, title: 'Old', log: [{ name: 'Row', repsArray: [5], weightsArray: [60] }] },
-    { id: 'w1', date: today, title: 'Push (dupe)', log: [{ name: 'Bench', repsArray: [5], weightsArray: [80] }] },
+    { id: 'w3', date: old, title: 'Old', log: set('Row', 60) },
+    { id: 'w1', date: today, title: 'Push (dupe)', log: set('Bench', 80) },
   ];
 
-  function setup() {
-    const env = page(['src/js/workout-sync.js'], async () => ({ status: 200, body: { success: true, recordId: 'x' } }));
+  // Behaves like the backend's /workouts routes (stores the workout as-is).
+  function fakeWorkoutServer() {
+    const saved = new Map();
+    const handler = async (method, p, body) => {
+      if (method === 'POST' && p === '/workouts') {
+        saved.set(String(body.workout.id), { ...body.workout });
+        return { status: 200, body: { success: true, recordId: body.workout.id } };
+      }
+      if (method === 'DELETE' && p.startsWith('/workouts/')) {
+        const id = decodeURIComponent(p.slice('/workouts/'.length));
+        return { status: 200, body: { success: true, deleted: saved.delete(id) } };
+      }
+      if (method === 'GET' && p.startsWith('/workouts?')) {
+        const since = new URLSearchParams(p.split('?')[1]).get('since') || '';
+        const items = [...saved.values()]
+          .filter(w => String(w.date).slice(0, 10) >= since)
+          .map(w => ({ id: w.id, date: w.date, title: w.title, workout: w }));
+        return { status: 200, body: { success: true, items, nextCursor: null } };
+      }
+      return { status: 404, body: { success: false } };
+    };
+    return { saved, handler };
+  }
+
+  function setup(server = fakeWorkoutServer()) {
+    const env = page(['src/js/workout-sync.js'], server.handler);
     env.w.localStorage.setItem('workouts_me_user', JSON.stringify(workouts));
     env.w.localStorage.setItem('workoutHistory_me_user', JSON.stringify(history));
-    return env;
+    return { ...env, server };
   }
+  const posts = calls => calls.filter(c => c.method === 'POST');
+  const local = (w, key = 'workouts_me_user') => JSON.parse(w.localStorage.getItem(key));
 
   test('posts only recent workouts with an id and sets, once until they change', async () => {
     const { w, calls } = setup();
     expect(await w.syncRecentWorkouts()).toBe(1);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ method: 'POST', path: '/workouts', body: { title: 'Push', workout: { id: 'w1' } } });
+    expect(posts(calls)).toHaveLength(1);
+    expect(posts(calls)[0]).toMatchObject({ path: '/workouts', body: { title: 'Push', workout: { id: 'w1' } } });
 
     expect(await w.syncRecentWorkouts()).toBe(0);
-    expect(calls).toHaveLength(1);
+    expect(posts(calls)).toHaveLength(1);
 
     const edited = [{ ...workouts[0], log: [{ name: 'Bench', repsArray: [5, 5], weightsArray: [80, 82.5] }] }];
     w.localStorage.setItem('workouts_me_user', JSON.stringify(edited));
     expect(await w.syncRecentWorkouts()).toBe(1);
-    expect(calls[1].body.workout.log[0].repsArray).toEqual([5, 5]);
+    expect(posts(calls)[1].body.workout.log[0].repsArray).toEqual([5, 5]);
   });
 
   test('does nothing when signed out', async () => {
@@ -104,6 +132,70 @@ describe('recent workout sync', () => {
     w.localStorage.removeItem('token');
     expect(await w.syncRecentWorkouts()).toBe(0);
     expect(calls).toHaveLength(0);
+  });
+
+  test('a new device gets recent workouts into the right local store', async () => {
+    const server = fakeWorkoutServer();
+    server.saved.set('a', { id: 'a', date: day(1), title: 'Legs', log: set('Squat', 120) });
+    server.saved.set('b', { id: 'b', date: day(12), title: 'Pull', log: set('Row', 70) });
+    const env = page(['src/js/workout-sync.js'], server.handler);
+    await env.w.syncRecentWorkouts();
+    expect(local(env.w).map(x => x.id)).toEqual(['a']);
+    expect(local(env.w, 'workoutHistory_me_user').map(x => x.id)).toEqual(['b']);
+    expect(posts(env.calls)).toHaveLength(0); // nothing echoed back
+  });
+
+  test('deleting on one device deletes on the server and the other device', async () => {
+    const server = fakeWorkoutServer();
+    const phone = setup(server);
+    await phone.w.syncRecentWorkouts();
+    const laptop = page(['src/js/workout-sync.js'], server.handler);
+    await laptop.w.syncRecentWorkouts();
+    expect(local(laptop.w).map(x => x.id)).toEqual(['w1']);
+
+    phone.w.localStorage.setItem('workouts_me_user', JSON.stringify([]));
+    phone.w.localStorage.setItem('workoutHistory_me_user', JSON.stringify([history[0]]));
+    await phone.w.syncRecentWorkouts();
+    expect(phone.calls.some(c => c.method === 'DELETE' && c.path === '/workouts/w1')).toBe(true);
+    expect(server.saved.has('w1')).toBe(false);
+
+    await laptop.w.syncRecentWorkouts();
+    expect(local(laptop.w)).toEqual([]);
+  });
+
+  test('an edit on one device replaces the copy on the other', async () => {
+    const server = fakeWorkoutServer();
+    const phone = setup(server);
+    await phone.w.syncRecentWorkouts();
+    const laptop = page(['src/js/workout-sync.js'], server.handler);
+    await laptop.w.syncRecentWorkouts();
+
+    const edited = { ...local(laptop.w)[0], title: 'Push (heavy)' };
+    laptop.w.localStorage.setItem('workouts_me_user', JSON.stringify([edited]));
+    await laptop.w.syncRecentWorkouts();
+    await phone.w.syncRecentWorkouts();
+    expect(local(phone.w).find(x => x.id === 'w1').title).toBe('Push (heavy)');
+  });
+
+  test('a workout archived off the device is not deleted from the server', async () => {
+    const server = fakeWorkoutServer();
+    const env = setup(server);
+    await env.w.syncRecentWorkouts();
+    // Pretend w1 synced long ago and the archiver removed it locally.
+    const fp = JSON.parse(env.w.localStorage.getItem('workoutSyncFp_me_user'));
+    fp.w1.d = day(27);
+    env.w.localStorage.setItem('workoutSyncFp_me_user', JSON.stringify(fp));
+    env.w.localStorage.setItem('workouts_me_user', JSON.stringify([]));
+    env.w.localStorage.setItem('workoutHistory_me_user', JSON.stringify([]));
+    await env.w.syncRecentWorkouts({ pull: false });
+    expect(env.calls.some(c => c.method === 'DELETE')).toBe(false);
+  });
+
+  test('reads fingerprints saved by the previous version', async () => {
+    const { w, calls } = setup();
+    w.localStorage.setItem('workoutSyncFp_me_user', JSON.stringify({ w1: 'stale:1' }));
+    expect(await w.syncRecentWorkouts()).toBe(1);
+    expect(calls.some(c => c.method === 'DELETE')).toBe(false);
   });
 });
 
