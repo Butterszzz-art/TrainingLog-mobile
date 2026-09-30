@@ -32,6 +32,11 @@
   const LOCAL_ACTIVE_DAYS = 7; // archiveOldWorkouts.js moves older ones to workoutHistory_
   const DELETE_MARGIN_DAYS = 2; // don't mistake archiving at the window edge for a delete
   const INTERVAL_MS = 60 * 1000;
+  // A pull re-reads the whole 28-day window, so the timer only pulls this
+  // often; pushes still go out every tick, and coming back to the app
+  // always pulls.
+  const PULL_INTERVAL_MS = 5 * 60 * 1000;
+  let _lastPullAt = 0;
   const FP_PREFIX = 'workoutSyncFp_';
   let _running = false;
 
@@ -263,6 +268,7 @@
         if (e && e.d && e.d < cutoff) delete synced[id];
       });
       if (pushed.ok && pull && localStorage.getItem('cloudSyncDisabled') !== '1') {
+        _lastPullAt = now;
         const pulled = await _pullChanges(username, synced, now);
         if (pulled) _refreshScreens();
       }
@@ -277,7 +283,7 @@
 
   function _tick() {
     if (document.visibilityState === 'hidden') return;
-    syncRecentWorkouts();
+    syncRecentWorkouts({ pull: Date.now() - _lastPullAt >= PULL_INTERVAL_MS });
   }
 
   if (typeof window !== 'undefined') {

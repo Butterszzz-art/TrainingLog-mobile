@@ -112,18 +112,9 @@
     syncPresetSegFromSelect();
   }
 
+  // Only while the Macros tab is open (pollWhileTabActive lives in
+  // archetype-features.js, which loads first).
   document.addEventListener('DOMContentLoaded', () => {
-    let pollId = setInterval(syncAllMacroSegRows, 400);
-    syncAllMacroSegRows();
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        clearInterval(pollId);
-        pollId = 0;
-      } else if (!pollId) {
-        pollId = setInterval(syncAllMacroSegRows, 400);
-        syncAllMacroSegRows();
-      }
-    });
+    window.pollWhileTabActive?.('macroTab', syncAllMacroSegRows, 400);
   });
 })();
