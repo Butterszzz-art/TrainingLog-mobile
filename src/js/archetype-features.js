@@ -117,39 +117,43 @@ function _fmt(totalSeconds) {
     return `progressPhoto_${user}_${slot}`;
   }
 
+  function _show(slot, src) {
+    const preview = document.getElementById(`photoPreview_${slot}`);
+    if (!preview || !src) return;
+    preview.src = src;
+    preview.style.display = 'block';
+    preview.parentElement?.querySelector('.photo-placeholder')?.remove();
+    preview.parentElement?.classList.add('has-photo');
+  }
+
+  // Slots hold a photo reference (progress-photos.js) or, from older
+  // versions, a data URL; resolve() handles both.
   function _loadSaved() {
     SLOTS.forEach(slot => {
       const saved = localStorage.getItem(_storageKey(slot));
       if (!saved) return;
-      const preview = document.getElementById(`photoPreview_${slot}`);
-      if (preview) {
-        preview.src = saved;
-        preview.style.display = 'block';
-        preview.parentElement?.querySelector('.photo-placeholder')?.remove();
-        preview.parentElement?.classList.add('has-photo');
-      }
+      const resolve = window.ProgressPhotos ? window.ProgressPhotos.resolve(saved) : Promise.resolve(saved);
+      resolve.then(src => _show(slot, src)).catch(() => {});
     });
   }
 
-  function _onFileChange(slot, input) {
+  async function _onFileChange(slot, input) {
     const file = input.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = e.target.result;
-      localStorage.setItem(_storageKey(slot), data);
-      const preview = document.getElementById(`photoPreview_${slot}`);
-      if (preview) {
-        preview.src = data;
-        preview.style.display = 'block';
-        preview.parentElement?.querySelector('.photo-placeholder')?.remove();
-        preview.parentElement?.classList.add('has-photo');
-      }
-      // Keep the hidden text input in sync for backward compat with saveWeeklyCheckIn
+    try {
+      // Shrinks the photo, stores it on the device and uploads it; the
+      // slot key now holds a reference instead of the image itself.
+      const { ref, data } = await window.ProgressPhotos.savePhoto(slot, file);
+      _show(slot, data);
+      // Keep the hidden text input in sync for saveWeeklyCheckIn
       const legacyInput = document.getElementById(`checkIn${slot.charAt(0).toUpperCase() + slot.slice(1)}PhotoInput`);
-      if (legacyInput) legacyInput.value = data;
-    };
-    reader.readAsDataURL(file);
+      if (legacyInput) legacyInput.value = ref;
+    } catch (err) {
+      console.warn('[ProgressPhotos] save failed:', err.message);
+      window.showToast?.(err.message || 'Could not save that photo.', 'error');
+    } finally {
+      input.value = '';
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {

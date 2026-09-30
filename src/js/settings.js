@@ -704,6 +704,11 @@ async function deleteAccountFlow(button) {
       throw new Error(data?.error?.message || `HTTP ${res.status}`);
     }
     if (typeof showToast === 'function') showToast('Account deleted.');
+    // Remove the account's data from this device too (cloud-sync.js).
+    const deletedUser = getActiveUsername();
+    if (deletedUser && window.cloudSync?.clearAccountData) {
+      await window.cloudSync.clearAccountData(deletedUser).catch(() => {});
+    }
     // logout() clears local storage and Firebase's session, then reloads —
     // the account is already gone server-side at this point.
     if (typeof window.logout === 'function') {
@@ -717,6 +722,48 @@ async function deleteAccountFlow(button) {
     button.disabled = false;
     button.textContent = originalLabel;
   }
+}
+
+// "Sync Across Devices" row: when this device last synced, whether
+// anything is waiting to go up, and a Sync Now button.
+function describeCloudSync(status, online) {
+  if (!status) return 'Sync isn’t available in this version.';
+  if (status.disabled) return 'Sync is paused right now. Your data is safe on this device.';
+  const pending = status.pending ? ` · ${status.pending} change${status.pending === 1 ? '' : 's'} waiting to upload` : '';
+  if (!online) return `You’re offline${pending}. Changes upload when you reconnect.`;
+  if (status.lastError) return `Last sync didn’t finish (${status.lastError}). It will retry automatically${pending}.`;
+  if (!status.lastSyncedAt) return `Not synced yet on this device${pending}.`;
+  const mins = Math.round((Date.now() - status.lastSyncedAt) / 60000);
+  const when = mins < 1 ? 'just now' : mins === 1 ? '1 minute ago' : mins < 60 ? `${mins} minutes ago` : new Date(status.lastSyncedAt).toLocaleString();
+  return status.pending ? `Last synced ${when}${pending}.` : `Up to date · last synced ${when}.`;
+}
+
+function bindCloudSyncStatus(container = document) {
+  const text = container.querySelector('#cloudSyncStatus');
+  const button = container.querySelector('#cloudSyncNowBtn');
+  if (!text || !button || button.dataset.bound === '1') return;
+  button.dataset.bound = '1';
+  const render = () => {
+    const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+    text.textContent = describeCloudSync(window.cloudSync?.status?.(), online);
+    button.disabled = !window.cloudSync || window.cloudSync.isDisabled?.() || !online;
+  };
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'Syncing…';
+    try {
+      await window.cloudSync?.syncNow?.();
+      await window.syncRecentWorkouts?.();
+    } finally {
+      button.textContent = 'Sync Now';
+      render();
+    }
+  });
+  window.addEventListener('cloudsync:applied', render);
+  window.addEventListener('online', render);
+  window.addEventListener('offline', render);
+  render();
+  setInterval(render, 30 * 1000);
 }
 
 function bindDeleteAccountAction(container = document) {
@@ -1043,6 +1090,7 @@ function injectSettingsMarkup() {
     if (container.dataset.loaded === 'true') {
       bindActivitySyncControls(container);
       bindDeleteAccountAction(container);
+      bindCloudSyncStatus(container);
       window.pocketCoachAIConsent?.bindSettings(container);
     }
     return;
@@ -1072,6 +1120,7 @@ function injectSettingsMarkup() {
       bindReminderToggle(container);
       bindLogoutAction(container);
       bindDeleteAccountAction(container);
+      bindCloudSyncStatus(container);
       bindActivitySyncControls(container);
       window.pocketCoachAIConsent?.bindSettings(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });

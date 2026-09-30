@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v25';
+const CACHE_VERSION = 'pocket-coach-v26';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -68,6 +68,7 @@ const APP_SHELL = [
   '/src/js/workout-archiver.js',
   '/src/js/workout-sync.js',
   '/src/js/cloud-sync.js',
+  '/src/js/progress-photos.js',
   '/src/js/archetype-features.js',
   '/src/js/native-ui.js',
   '/src/js/ai-consent.js',
@@ -137,7 +138,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.includes('/api/profiles/')) return;
   // Synced data and workouts are per account too, and the URL doesn't say
   // whose they are (the account is in the Authorization header).
-  if (url.pathname.includes('/api/sync/') || /\/workouts\/?$/.test(url.pathname)) return;
+  if (url.pathname.includes('/api/sync/') || url.pathname.includes('/api/photos/') || /\/workouts\/?$/.test(url.pathname)) return;
 
   // API GET requests: network-first, fall back to cached response
   if (url.pathname.startsWith('/api/') || url.origin !== location.origin) {

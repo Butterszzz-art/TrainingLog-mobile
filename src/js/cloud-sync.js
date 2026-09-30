@@ -107,17 +107,78 @@
     { name: 'appTourDone',         key: u => `app_tour_done_${u}`,       mode: 'value' },
     // Coaching / prep engine state: each is one object whose parts belong
     // together, so it syncs whole.
-    { name: 'tl_checkins_v1',      key: u => `tl_checkins_v1_${u}`,      mode: 'value' },
+    { name: 'tl_checkins_v1',      key: u => `tl_checkins_v1_${u}`,      mode: 'list', idField: 'date' },
     { name: 'tl_daily_mission_v1', key: u => `tl_daily_mission_v1_${u}`, mode: 'value' },
     { name: 'tl_gamification_v2',  key: u => `tl_gamification_v2_${u}`,  mode: 'value' },
     { name: 'tl_posing_log_v1',    key: u => `tl_posing_log_v1_${u}`,    mode: 'value' },
     { name: 'tl_posing_target_v1', key: u => `tl_posing_target_v1_${u}`, mode: 'value' },
     { name: 'tl_phase_state_v1',   key: u => `tl_phase_state_v1_${u}`,   mode: 'value' },
+    // Progress photos: which photos exist, and the current one per slot.
+    // The images themselves go through /api/photos (progress-photos.js).
+    { name: 'progressPhotos',     key: u => `progressPhotos_${u}`,       mode: 'list', idField: 'id' },
+    { name: 'progressPhotoFront', key: u => `progressPhoto_${u}_front`,  mode: 'value' },
+    { name: 'progressPhotoSide',  key: u => `progressPhoto_${u}_side`,   mode: 'value' },
+    { name: 'progressPhotoBack',  key: u => `progressPhoto_${u}_back`,   mode: 'value' },
   ];
 
-  // Keys the app reads and writes without an account name. Reads and writes
-  // of these go to `${key}_${user}` while someone is signed in.
-  const SCOPED_KEYS = new Set(['dailyMacroMeals', 'dailyMacroProgress', 'dailyMacroDate', 'macroResetTime', 'macroDayType']);
+  // Keys the app reads and writes without an account name. While someone is
+  // signed in, reads and writes of these go to a per-account key instead
+  // (installScopedKeys), and the first account to sign in after this update
+  // takes over the old shared value. The first five were scoped first and
+  // use `${key}_${user}`; the rest use `${key}@${user}` so they can't
+  // collide with newer per-account keys of the same name (programs_ vs
+  // the legacy 'programs', for example).
+  //
+  // sync: how the per-account copy syncs (a STORES mode), or null for
+  // per-device caches that only need scoping.
+  const SCOPED = [
+    ['dailyMacroMeals', '_', null], ['dailyMacroProgress', '_', null], ['dailyMacroDate', '_', null],
+    ['macroResetTime', '_', null], ['macroDayType', '_', null], // synced via STORES above
+    ['personalDetails', '@', 'value'],
+    ['defaultWeightUnit', '@', 'value'],
+    ['dailyReadiness_v1', '@', 'map'],
+    ['dailySteps', '@', 'value'],
+    ['waterTracker_v1', '@', 'value'],
+    ['favMeals', '@', 'list', 'name'],
+    ['macroInputs', '@', 'value'],
+    ['programs', '@', 'list', 'id'],
+    ['activeProgram', '@', 'value'],
+    ['programTemplates', '@', 'value'],
+    ['programAssignments', '@', 'value'],
+    ['crossfitWorkouts', '@', 'list'],
+    ['crossfitTemplates', '@', 'list'],
+    ['plMeetDetails', '@', 'value'],
+    ['plCutPlanInputs', '@', 'value'],
+    ['athleteArchetype', '@', 'value'],
+    ['trainingMode', '@', 'value'],
+    ['trainingPreset', '@', 'value'],
+    ['restPreset', '@', 'value'],
+    ['autoIncrementEnabled', '@', 'value'],
+    ['appMode', '@', 'value'],
+    ['coachModeEnabled', '@', 'value'],
+    ['coachNutritionAssignments_v1', '@', 'value'],
+    ['coachCustomExercises_v1', '@', 'list', 'id'],
+    ['challengeData_v1', '@', 'value'],
+    ['milestoneBadges_v1', '@', 'value'],
+    ['tl_performance_mode_v1', '@', 'value'],
+    ['lifestyle_schedule', '@', 'list'],
+    ['lifestyle_study', '@', 'list'],
+    ['lifestyle_todo', '@', 'list'],
+    ['lifestyle_habits', '@', 'list'],
+    ['lifestyle_habitLog', '@', 'value'],
+    ['lifestyle_goals', '@', 'list'],
+    // Local copies of workout history (rebuilt from workouts): scoped so
+    // one account never sees another's, not synced.
+    ['workoutHistory', '@', null],
+    ['tl_workout_history_v1', '@', null],
+  ];
+  const SCOPED_KEYS = new Map(SCOPED.map(([key, sep]) => [key, user => `${key}${sep}${user}`]));
+  SCOPED.forEach(([key, sep, mode, idField]) => {
+    if (!mode) return;
+    // Store names can't hold '@' or start with a digit; strip to [A-Za-z0-9_].
+    STORES.push({ name: `g_${key.replace(/[^A-Za-z0-9_]/g, '_')}`, key: u => `${key}${sep}${u}`, mode, idField });
+  });
+
 
   /* ── Pure helpers (exported for tests) ───────────────────── */
 
@@ -318,6 +379,7 @@
     const byName = new Map(STORES.map(s => [s.name, s]));
     let running = null;
     let disabled = false;
+    const status = { lastSyncedAt: null, lastError: null };
 
     function loadState(user) {
       try {
@@ -472,8 +534,11 @@
             (await pullAll(user, state, { skipDirty: true })).forEach(n => touched.add(n));
           }
           saveState(user, state);
+          status.lastSyncedAt = now();
+          status.lastError = null;
         } catch (err) {
           saveState(user, state);
+          status.lastError = err.message;
           if (!disabled) console.warn('[CloudSync] failed:', err.message);
         }
         if (touched.size) onApplied([...touched]);
@@ -486,7 +551,49 @@
       }
     }
 
-    return { syncOnce, isDisabled: () => disabled };
+    // Entries changed on this device that haven't reached the server yet.
+    function pendingCount() {
+      const user = getUser();
+      if (!user) return 0;
+      const state = loadState(user);
+      let n = 0;
+      STORES.forEach(store => {
+        const local = splitStore(store, storage.getItem(store.key(user)));
+        if (local) n += diffStore(store, local, state.shadow[store.name], 0).items.length;
+      });
+      return n;
+    }
+
+    return {
+      syncOnce,
+      isDisabled: () => disabled,
+      status: () => ({ ...status, disabled, pending: pendingCount() }),
+    };
+  }
+
+  // Per-account keys that aren't synced but still hold the account's data
+  // or bookkeeping (removed on account deletion along with STORES/SCOPED).
+  const OTHER_ACCOUNT_PREFIXES = [
+    'workouts_', 'workoutHistory_', 'workoutSyncFp_', STATE_PREFIX, 'weightLog_', 'aiProfile_',
+    'aiCoachSeen_', 'friends_', 'friendRequests_', 'friendRequestsSeen_', 'friendsMigrated_',
+    'coachLinked_', 'coachSharedAt_', 'activitySync_', 'activitySyncSleep_', 'communityOutbox_',
+    'tl_compliance_summary_v1_', 'managedTemplates_', 'nutritionTargets_',
+  ];
+  const OTHER_ACCOUNT_INFIXES = ['progressPhoto_', 'missionCelebrated_', 'aiPlateauCheck_', 'aiPlateauDismiss_'];
+
+  /**
+   * Keys in `keys` that belong to `user`: every synced and scoped key, the
+   * known per-account prefixes, and `${prefix}${user}_...` patterns. Exact
+   * matches only, so deleting "bob" never touches "a_bob"'s data.
+   */
+  function accountKeys(keys, user) {
+    if (!user) return [];
+    const exact = new Set([
+      ...STORES.map(s => s.key(user)),
+      ...[...SCOPED_KEYS.values()].map(fn => fn(user)),
+      ...OTHER_ACCOUNT_PREFIXES.map(p => `${p}${user}`),
+    ]);
+    return keys.filter(k => exact.has(k) || OTHER_ACCOUNT_INFIXES.some(p => k.startsWith(`${p}${user}_`)));
   }
 
   /* ── Browser wiring ─────────────────────────────────────── */
@@ -501,7 +608,7 @@
       if (self !== localStorageRef() || !SCOPED_KEYS.has(key)) return key;
       const user = currentUser(orig.getItem.bind(self));
       if (!user) return key;
-      const target = `${key}_${user}`;
+      const target = SCOPED_KEYS.get(key)(user);
       // One-time move of the old shared value to whoever signs in first.
       if (orig.getItem.call(self, target) === null) {
         const legacy = orig.getItem.call(self, key);
@@ -534,6 +641,7 @@
       call('loadMacroTargetsFromLocal'); call('renderMacroSlots'); call('renderDailyMacroProgress'); call('updateMacroUI');
     }
     if (has('managedTemplates')) { call('renderTemplateLibraryList'); call('renderTemplateOptions'); }
+    if (has('progressPhotoFront', 'progressPhotoSide', 'progressPhotoBack')) call('reloadProgressPhotos');
     call('renderBodyHub');
     window.dispatchEvent(new CustomEvent('cloudsync:applied', { detail: { stores } }));
   }
@@ -554,7 +662,7 @@
 
     // Move any shared (pre-account) values to the signed-in account before
     // the first sync reads the account's keys.
-    const primeScoped = () => { if (currentUser(rawGet)) SCOPED_KEYS.forEach(k => window.localStorage.getItem(k)); };
+    const primeScoped = () => { if (currentUser(rawGet)) SCOPED_KEYS.forEach((_, k) => window.localStorage.getItem(k)); };
     const sync = () => { primeScoped(); return engine.syncOnce(); };
 
     let pushTimer = null;
@@ -575,7 +683,16 @@
       return r;
     };
 
-    window.cloudSync = { syncNow: sync, isDisabled: engine.isDisabled };
+    // After account deletion: remove everything this device holds for the
+    // account (the server copy is already gone).
+    async function clearAccountData(user) {
+      const all = [];
+      for (let i = 0; i < window.localStorage.length; i++) all.push(window.localStorage.key(i));
+      accountKeys(all, user).forEach(k => orig.removeItem.call(window.localStorage, k));
+      if (window.ProgressPhotos) await window.ProgressPhotos.forgetLocal(user).catch(() => {});
+    }
+
+    window.cloudSync = { syncNow: sync, isDisabled: engine.isDisabled, status: engine.status, clearAccountData };
     setTimeout(sync, 4000);
     setInterval(() => { if (document.visibilityState !== 'hidden') sync(); }, INTERVAL_MS);
     // Push what was just logged when the app goes to the background, and
@@ -586,7 +703,7 @@
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-      STORES, SCOPED_KEYS, hash, stableStringify, splitStore, applyToStore, diffStore,
+      STORES, SCOPED_KEYS, accountKeys, hash, stableStringify, splitStore, applyToStore, diffStore,
       chunkItems, laggedCursor, insertByDate, createEngine, installScopedKeys,
     };
   }
