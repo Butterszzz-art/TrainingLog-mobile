@@ -19,6 +19,7 @@
     "@capacitor/ios": "^8.3.1",
     "@capgo/native-purchases": "^8.8.1",
     "bcrypt": "^6.0.0",
+    "capacitor-instagram-stories": "file:plugins/instagram-stories",
     "chart.js": "^4.5.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
