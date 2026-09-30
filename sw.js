@@ -67,6 +67,7 @@ const APP_SHELL = [
   '/src/js/programs.js',
   '/src/js/workout-archiver.js',
   '/src/js/workout-sync.js',
+  '/src/js/cloud-sync.js',
   '/src/js/archetype-features.js',
   '/src/js/native-ui.js',
   '/src/js/ai-consent.js',
@@ -134,6 +135,9 @@ self.addEventListener('fetch', (event) => {
   // Profiles depend on who is asking (visibility settings, your own profile
   // at /me), so they are never served from the shared cache either.
   if (url.pathname.includes('/api/profiles/')) return;
+  // Synced data and workouts are per account too, and the URL doesn't say
+  // whose they are (the account is in the Authorization header).
+  if (url.pathname.includes('/api/sync/') || /\/workouts\/?$/.test(url.pathname)) return;
 
   // API GET requests: network-first, fall back to cached response
   if (url.pathname.startsWith('/api/') || url.origin !== location.origin) {
