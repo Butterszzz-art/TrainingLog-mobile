@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v26';
+const CACHE_VERSION = 'pocket-coach-v27';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -89,6 +89,13 @@ const APP_SHELL = [
   '/src/js/profiles.js',
   '/src/js/settings-hero.js',
   '/css/profiles.css',
+  // Third-party libraries (served locally, see index.html)
+  '/public/js/chart.min.js',
+  '/public/js/confetti-1.9.3.min.js',
+  '/public/js/firebase-app-compat-10.14.1.js',
+  '/public/js/firebase-auth-compat-10.14.1.js',
+  '/public/js/litepicker.js',
+  '/public/css/litepicker.css',
 ];
 
 /* ── Install: pre-cache app shell ─────────────────────────── */

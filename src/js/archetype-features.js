@@ -25,6 +25,31 @@ function _beep(freq = 880, duration = 0.18, gain = 0.3) {
   } catch (_) {}
 }
 
+/**
+ * Runs fn every `ms` while the tab with id `tabId` is open (showTab() gives
+ * it .active) and the app is in the foreground, plus once right away each
+ * time the tab opens or the app comes back. Also used by
+ * macro-pill-controls.js.
+ */
+window.pollWhileTabActive = function pollWhileTabActive(tabId, fn, ms) {
+  const tab = document.getElementById(tabId);
+  if (!tab) return;
+  let id = 0;
+  const update = () => {
+    const run = tab.classList.contains('active') && !document.hidden;
+    if (run && !id) {
+      fn();
+      id = setInterval(fn, ms);
+    } else if (!run && id) {
+      clearInterval(id);
+      id = 0;
+    }
+  };
+  new MutationObserver(update).observe(tab, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('visibilitychange', update);
+  update();
+};
+
 function _pad(n) { return String(n).padStart(2, '0'); }
 
 function _fmt(totalSeconds) {
@@ -48,7 +73,18 @@ function _fmt(totalSeconds) {
     const fill = document.getElementById(fillId);
     if (!bar || !fill) return;
     const pct = bar.max > 0 ? Math.min((bar.value / bar.max) * 100, 100) : 0;
-    fill.style.width = pct + '%';
+    _setStyleWidth(fill, pct + '%');
+  }
+
+  // The poll below runs every 300 ms, so only touch the DOM when a value
+  // actually changed — an unconditional textContent write forces style and
+  // layout work on every tick even when nothing is different.
+  function _setText(el, text) {
+    if (el.textContent !== text) el.textContent = text;
+  }
+
+  function _setStyleWidth(el, width) {
+    if (el.style.width !== width) el.style.width = width;
   }
 
   // "X kcal left / over" under the hero number. Reads the same
@@ -61,14 +97,14 @@ function _fmt(totalSeconds) {
     const target = Number(document.getElementById('macroCalsTarget')?.textContent) || 0;
     if (!bar || !left || !label) return;
     if (target <= 0) {
-      left.textContent = '—';
-      label.textContent = 'left';
+      _setText(left, '—');
+      _setText(label, 'left');
       left.closest('b')?.classList.remove('is-over');
       return;
     }
     const diff = Math.round(target - (Number(bar.value) || 0));
-    left.textContent  = Math.abs(diff).toLocaleString();
-    label.textContent = diff < 0 ? 'over' : 'left';
+    _setText(left, Math.abs(diff).toLocaleString());
+    _setText(label, diff < 0 ? 'over' : 'left');
     left.closest('b')?.classList.toggle('is-over', diff < 0);
   }
 
@@ -77,7 +113,7 @@ function _fmt(totalSeconds) {
     if (!el) return;
     const refeed   = document.getElementById('refeedDayToggle')?.checked;
     const training = document.getElementById('trainingDayToggle')?.checked;
-    el.textContent = refeed ? 'Today · Refeed day' : training ? 'Today · Training day' : 'Today';
+    _setText(el, refeed ? 'Today · Refeed day' : training ? 'Today · Training day' : 'Today');
   }
 
   function syncAll() {
@@ -87,20 +123,10 @@ function _fmt(totalSeconds) {
   }
 
   // Poll at 300 ms so we don't need to touch every JS call that sets bar values.
-  // Interval is paused when the app is backgrounded to avoid draining battery.
+  // Everything it syncs lives in the Macros tab (#macroTab), so it only runs
+  // while that tab is open and the app is in the foreground.
   document.addEventListener('DOMContentLoaded', () => {
-    let _pollId = setInterval(syncAll, 300);
-    syncAll();
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        clearInterval(_pollId);
-        _pollId = 0;
-      } else if (!_pollId) {
-        _pollId = setInterval(syncAll, 300);
-        syncAll(); // immediate sync on resume
-      }
-    });
+    window.pollWhileTabActive?.('macroTab', syncAll, 300);
   });
 
   // Expose for callers that update bar values programmatically
