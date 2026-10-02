@@ -444,6 +444,8 @@
       console.warn('[AppTour] app shell not visible; tour not started');
       return;
     }
+    // The tour points at nav items, so bring a collapsed nav back first.
+    if (global.NavCollapse) global.NavCollapse.expand();
     tour = { index: 0, target: null, dom: buildDom(), raf: 0, lastKey: '', busy: false };
     document.addEventListener('click', onDocClick, true);
     document.addEventListener('input', checkUntil, true);
