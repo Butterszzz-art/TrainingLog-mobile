@@ -129,6 +129,7 @@
       date,
       minutes,
       notes: typeof entry.notes === 'string' ? entry.notes.trim() : '',
+      ...(Number(entry.photoCount) > 0 ? { photoCount: Math.round(Number(entry.photoCount)) } : {}),
       createdAt: entry.createdAt || new Date().toISOString()
     };
   }

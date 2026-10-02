@@ -45,10 +45,11 @@ definitions:
           /usr/libexec/PlistBuddy -c "Delete :$1" "$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :$1 $2 $3" "$PLIST"
         }
-        # Profile photos and workout-story backgrounds use a file picker,
+        # Posing photo check-ins open the camera in-app; profile photos and
+        # workout-story backgrounds use a file picker,
         # which offers "Take Photo" on iOS. Without these usage strings iOS
         # kills the app the moment the camera or library is opened.
-        set_plist NSCameraUsageDescription string "Pocket Coach uses the camera so you can take a profile photo or a photo for your workout story."
+        set_plist NSCameraUsageDescription string "Pocket Coach uses the camera for posing photo check-ins, profile photos and workout story photos."
         set_plist NSPhotoLibraryUsageDescription string "Pocket Coach lets you choose a profile photo or a workout story background from your library."
         # Share to Instagram Stories (plugins/instagram-stories) checks
         # canOpenURL("instagram-stories://"), which iOS only answers for

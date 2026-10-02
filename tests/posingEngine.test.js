@@ -45,4 +45,11 @@ describe('posingEngine', () => {
     expect(overdue.overdue).toBe(true);
     expect(overdue.daysSinceLastSession).toBe(3);
   });
+
+  test('keeps the photo count from a photo check-in', () => {
+    const withPhotos = posingEngine.logPosingSession(userId, { id: 'ps1', date: '2026-03-25', minutes: 2, photoCount: 8 });
+    const plain = posingEngine.logPosingSession(userId, { date: '2026-03-25', minutes: 10 });
+    expect(withPhotos).toMatchObject({ id: 'ps1', photoCount: 8 });
+    expect(plain).not.toHaveProperty('photoCount');
+  });
 });

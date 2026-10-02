@@ -2742,6 +2742,18 @@
     <!-- Week hero: ring, sessions/streak tiles, 7-day strip (populated by renderPosingTab) -->
     <div id="posingSummaryCard" class="posing-summary"></div>
 
+    <section class="pod mx-pod posing-capture-pod" aria-label="Photo check-in">
+      <div class="pod-row">
+        <h3 class="pod-title mx-h3">Photo Check-In</h3>
+        <span class="mx-meta">Hands-free</span>
+      </div>
+      <p class="mx-para">Prop your phone up, step back and hit start. It counts you down out loud and takes a photo every few seconds.</p>
+      <button type="button" class="mx-cta" onclick="openPosingCapture()">
+        <span>Start photo check-in</span>
+        <span class="mx-cta-icon"><span class="ui-icon" data-icon="camera"></span></span>
+      </button>
+    </section>
+
     <section class="pod mx-pod" aria-label="Log a posing session">
       <div class="pod-row">
         <h3 class="pod-title mx-h3">Log Session</h3>
@@ -3947,6 +3959,8 @@
 <script src="checkinEngine.js"></script>
 <script src="dailyMissionEngine.js"></script>
 <script src="posingEngine.js"></script>
+<script src="posingMediaStore.js"></script>
+<script src="posingCapture.js"></script>
 <script src="complianceEngine.js"></script>
 <script src="engagementFeatures.js"></script>
 <script src="lifestyle.js"></script>
@@ -11219,9 +11233,28 @@ function addPosingSession() {
 function removePosingSession(sessionId) {
   if (!window.posingEngine) return;
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const entry = window.posingEngine.getPosingHistory(userId, { limit: 500 }).find(e => e.id === sessionId);
+  if (entry?.photoCount) {
+    if (!confirm(`Remove this session and its ${entry.photoCount} photo${entry.photoCount === 1 ? '' : 's'}?`)) return;
+    window.posingMediaStore?.deleteSessionPhotos?.(userId, sessionId)
+      .catch(err => console.warn('Deleting posing photos failed.', err));
+  }
   window.posingEngine.removePosingSession(userId, sessionId);
   renderPosingTab();
   renderHomeDashboard();
+}
+
+function openPosingCapture() {
+  if (!window.posingCapture) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  window.posingCapture.open({
+    userId,
+    onSaved: (session) => {
+      if (!session) return;
+      renderPosingTab();
+      renderHomeDashboard();
+    }
+  });
 }
 
 /** Highlight the quick-minute preset that matches the minutes field. */
@@ -11259,6 +11292,7 @@ function stepPosingTarget(kind, delta) {
 window.savePosingTargets = savePosingTargets;
 window.addPosingSession = addPosingSession;
 window.removePosingSession = removePosingSession;
+window.openPosingCapture = openPosingCapture;
 window.syncPosingPresets = syncPosingPresets;
 window.setPosingMinutes = setPosingMinutes;
 window.stepPosingMinutes = stepPosingMinutes;
@@ -11365,12 +11399,14 @@ function renderPosingTab() {
               </div>
               <div class="mx-meter mx-meter--thin" role="img" aria-label="${_esc(entry.minutes)} minutes"><i style="width:${pct}%"></i></div>
               ${tags ? `<div class="mx-tags">${tags}</div>` : ''}
+              ${entry.photoCount ? `<div class="posing-thumbs" data-posing-photos="${_esc(entry.id)}" aria-label="${_esc(entry.photoCount)} check-in photos"></div>` : ''}
             </div>
             <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="removePosingSession('${_esc(entry.id)}')" title="Remove" aria-label="Remove ${dow} ${day} ${mon} session"><span class="ui-icon">${ICONS.x}</span></button>
           </div>`;
       }).join('')
     : '<div class="mx-empty">No posing sessions yet.</div>';
 
+  window.posingCapture?.hydrateHistoryThumbs?.(body, userId);
   syncPosingPresets();
 }
 
