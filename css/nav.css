@@ -105,6 +105,103 @@
   margin: 0 2px;
 }
 
+/* ── Collapse handle (src/js/nav-collapse.js) ─────────────────── */
+
+/* Small tab on the capsule's top edge. The button itself is a 64x40
+   tap target; only the inner tab is drawn. */
+#bottomNav .bn-collapse-handle {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 64px;
+  height: 40px;
+  margin: 0 0 0 -32px;
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#bottomNav .bn-collapse-handle:hover {
+  background: none;
+  transform: none;
+}
+
+.bn-collapse-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 18px;
+  margin-bottom: -1px; /* sit on the capsule's border */
+  background: var(--surface-navbar);
+  border: 1px solid var(--border-nav);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  color: var(--secondary-text);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.bn-collapse-tab svg {
+  display: block;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bn-collapse-tab {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed: the capsule slides just below the screen (past its 14px
+   float gap), leaving only the handle visible above the safe area. */
+body.nav-collapsed #bottomNav {
+  transform: translateY(calc(100% + 14px));
+  box-shadow: none;
+}
+
+/* ...and the handle lifts off the edge into a free-floating pill. */
+body.nav-collapsed .bn-collapse-tab {
+  transform: translateY(-10px);
+  height: 22px;
+  border-bottom: 1px solid var(--border-nav);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-nav-bar);
+  color: var(--text-color);
+}
+
+body.nav-collapsed .bn-collapse-tab svg {
+  transform: rotate(180deg);
+}
+
+/* Things that sit above the nav follow it down. */
+body.nav-collapsed #appContainer {
+  padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+}
+body.nav-collapsed.workout-active #appContainer {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+body.nav-collapsed #workoutFocusBar {
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+body.nav-collapsed #aiCoachFab {
+  bottom: calc(36px + env(safe-area-inset-bottom, 0px));
+}
+body.nav-collapsed.workout-active #aiCoachFab {
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+@media (prefers-reduced-motion: reduce) {
+  #bottomNav,
+  .bn-collapse-tab,
+  .bn-collapse-tab svg {
+    transition: none;
+  }
+}
+
 /* ── "All" hub screen (replaces the old More drawer) ──────────── */
 
 /* Uses the shared .tab-content wash like every other screen. Items are
