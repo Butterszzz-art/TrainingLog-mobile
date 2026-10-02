@@ -231,8 +231,9 @@
     }
   }
 
-  // Check-ins as stored, with any missing bodyweight filled in from the
-  // weigh-in log so every consumer sees the same weight data.
+  // Check-ins as stored, with bodyweight taken from the Weight tab's
+  // weigh-in log so every consumer sees the same weight data. The weigh-in
+  // log is the source of truth; a check-in's own number is only a fallback.
   function loadCheckIns(userId) {
     return withWeighInBodyweights(loadStoredCheckIns(userId), loadWeighIns(userId));
   }
@@ -286,44 +287,17 @@
     return best;
   }
 
+  // A weigh-in on the check-in's own date always wins. An earlier weigh-in
+  // from the lookback window only fills a check-in that has no bodyweight.
   function withWeighInBodyweights(checkIns, weighIns) {
     if (!Array.isArray(weighIns) || !weighIns.length) return checkIns;
     return checkIns.map((entry) => {
-      if (Number.isFinite(toFiniteNumber(entry.bodyweight))) return entry;
       const match = findWeighInForDate(weighIns, entry.date);
       if (!match) return entry;
+      const hasOwn = Number.isFinite(toFiniteNumber(entry.bodyweight));
+      if (hasOwn && match.date !== entry.date) return entry;
       return { ...entry, bodyweight: match.weightKg, bodyweightSource: 'weigh-in', bodyweightDate: match.date };
     });
-  }
-
-  // Mirror a check-in's bodyweight (kg) into the weigh-in log so the Weight
-  // tab, macros and trend tools see it. Keeps any calories/cardio already
-  // logged on that day and leaves matching entries untouched.
-  function syncCheckInToWeighInLog(userId, checkIn) {
-    const kg = toFiniteNumber(checkIn?.bodyweight);
-    const date = typeof checkIn?.date === 'string' ? checkIn.date.slice(0, 10) : '';
-    if (!Number.isFinite(kg) || kg <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-
-    const log = readBodyweightLog(userId);
-    const index = log.findIndex((entry) => entry?.date === date);
-    const existing = index >= 0 ? log[index] : null;
-    const existingKg = weighInEntryToKg(existing);
-    if (Number.isFinite(existingKg) && Math.abs(existingKg - kg) < 0.05) return false;
-
-    const weightKg = Number(kg.toFixed(1));
-    const unit = existing?.unit === 'lb' ? 'lb' : 'kg';
-    const next = {
-      weight: unit === 'lb' ? Number((weightKg / LB_TO_KG).toFixed(1)) : weightKg,
-      unit,
-      weightKg,
-      date,
-      calories: existing?.calories ?? null,
-      cardio: existing?.cardio ?? null
-    };
-    if (index >= 0) log[index] = next; else log.push(next);
-    log.sort((a, b) => String(a?.date || '').localeCompare(String(b?.date || '')));
-    getStorage().setItem(getBodyweightLogKey(userId), JSON.stringify(log));
-    return true;
   }
 
   function loadCheckInState(userId) {
@@ -630,7 +604,6 @@
     const updated = [normalized, ...deduped].sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
     storage.setItem(getStorageKey(userId), JSON.stringify(updated));
     syncCheckInStateToBackend(resolveUserId(userId), updated);
-    syncCheckInToWeighInLog(userId, normalized);
     return updated;
   }
 
@@ -676,8 +649,7 @@
     getCheckInInsightTimeline,
     getStorageKey,
     loadWeighIns,
-    findWeighInForDate,
-    syncCheckInToWeighInLog
+    findWeighInForDate
   };
 
   if (typeof module !== 'undefined' && module.exports) {

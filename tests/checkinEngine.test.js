@@ -289,21 +289,26 @@ describe('checkinEngine weigh-in integration', () => {
       .toMatch(/moving down/);
   });
 
-  test('saveCheckIn mirrors bodyweight into the weigh-in log, keeping that day\'s extras', () => {
-    setWeighIns('athleteW', [{ date: '2026-03-08', weight: 180, unit: 'lb', calories: 2400, cardio: 30 }]);
-    engine.saveCheckIn('athleteW', { date: '2026-03-08', bodyweight: '81' });
-    engine.saveCheckIn('athleteW', { date: '2026-03-15', bodyweight: 80.5 });
-
-    expect(getWeighIns('athleteW')).toEqual([
-      { weight: 178.6, unit: 'lb', weightKg: 81, date: '2026-03-08', calories: 2400, cardio: 30 },
-      { weight: 80.5, unit: 'kg', weightKg: 80.5, date: '2026-03-15', calories: null, cardio: null }
+  test('a weigh-in on the check-in date overrides the check-in bodyweight', () => {
+    setWeighIns('athleteW', [
+      { date: '2026-03-08', weight: 180, unit: 'lb' },
+      { date: '2026-03-12', weight: 81, unit: 'kg', weightKg: 81 }
     ]);
+    engine.saveCheckIn('athleteW', { date: '2026-03-08', bodyweight: 84 });
+    engine.saveCheckIn('athleteW', { date: '2026-03-15', bodyweight: 80.2 });
+
+    const [later, sameDay] = engine.loadCheckIns('athleteW');
+    expect(sameDay.bodyweight).toBe(81.6);
+    expect(sameDay.bodyweightSource).toBe('weigh-in');
+    // An earlier weigh-in does not replace a check-in's own number.
+    expect(later.bodyweight).toBe(80.2);
   });
 
-  test('saveCheckIn leaves a matching weigh-in untouched', () => {
+  test('saving a check-in never changes the weigh-in log', () => {
     const original = [{ date: '2026-03-08', weight: 82.1, unit: 'kg', weightKg: 82.1, calories: 2500 }];
     setWeighIns('athleteW', original);
-    engine.saveCheckIn('athleteW', { date: '2026-03-08', bodyweight: 82.1 });
+    engine.saveCheckIn('athleteW', { date: '2026-03-08', bodyweight: 79 });
+    engine.saveCheckIn('athleteW', { date: '2026-03-15', bodyweight: 80 });
     expect(getWeighIns('athleteW')).toEqual(original);
   });
 });
