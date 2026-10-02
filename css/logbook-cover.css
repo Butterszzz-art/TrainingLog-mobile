@@ -1,0 +1,128 @@
+/* =============================================================
+   LOGBOOK COVER
+   The user's own name + cover colour at the top of the Log tab,
+   styled like the cover of a paper training journal.
+   See src/js/logbook-cover.js. Only the cover takes the colour;
+   everything inside the logbook keeps the normal theme.
+   ============================================================= */
+
+.lb-cover-host { padding: 6px 12px 0; }
+
+.lb-cover {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px 12px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 45%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.18)),
+    var(--logbook-cover, #236b4e);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.lb-cover:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.lb-cover:active { transform: scale(0.99); }
+.lb-cover--preview { cursor: default; }
+.lb-cover--preview:active { transform: none; }
+
+/* Darker strip down the left edge, like a bound spine */
+.lb-cover-spine {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 10px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.10);
+}
+
+.lb-cover-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.lb-cover-kicker {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.lb-cover-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lb-cover-edit {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-pill, 999px);
+  font-family: var(--font-label);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Editor sheet ───────────────────────────────────────────── */
+
+.lb-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+.lb-swatch {
+  aspect-ratio: 1;
+  width: 100%;
+  min-width: 36px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  padding: 0;
+  margin: 0;
+  min-height: 0;
+  cursor: pointer;
+}
+.lb-swatch.is-selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+.lb-swatch:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* Settings hero row */
+.sh-row--btn {
+  width: 100%;
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.lb-dot {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  vertical-align: middle;
+}
+
+@media (max-width: 360px) {
+  .lb-swatches { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lb-cover-title { font-size: 19px; }
+}

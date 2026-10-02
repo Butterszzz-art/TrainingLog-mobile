@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="css/tabs.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/log.css">
+  <link rel="stylesheet" href="css/logbook-cover.css">
   <link rel="stylesheet" href="css/progress.css">
   <link rel="stylesheet" href="css/training-mode.css">
   <link rel="stylesheet" href="css/powerlifting.css">
@@ -763,6 +764,9 @@
   </div>
 
   <div id="logTab" class="tab-content">
+  <!-- Personal logbook cover: the user's own name + cover colour
+       (src/js/logbook-cover.js). Tap to customise. -->
+  <div id="logbookCover" class="lb-cover-host" hidden></div>
   <!-- ── Flow Capture shortcuts: repeat last workout / quick check-in ── -->
   <div class="fc-shortcut-row" id="fcShortcutRow">
     <button type="button" class="fc-shortcut" onclick="repeatLastWorkoutShortcut()">
@@ -5117,6 +5121,7 @@ function showTab(tabName) {
       }
       break;
     case 'logTab':
+      if (typeof window.renderLogbookCover === 'function') window.renderLogbookCover();
       if (typeof window.renderTrainHero === 'function') window.renderTrainHero();
       if (typeof window.renderVolumeLandmarks === 'function') window.renderVolumeLandmarks();
       if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
@@ -20155,6 +20160,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/session-queue.js"></script>
   <script src="src/js/performance-mode.js"></script>
   <script src="src/js/profiles.js"></script>
+  <script src="src/js/logbook-cover.js"></script>
   <script src="src/js/settings-hero.js"></script>
   <script src="src/js/libraries.js"></script>
   <script src="src/js/session-context.js"></script>

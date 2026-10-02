@@ -64,6 +64,7 @@
     { name: 'managedTemplates', key: u => `managedTemplates_${u}`, mode: 'list', idField: 'id' },
     { name: 'mobilityRoutines', key: u => `mobilityRoutines_${u}`, mode: 'list', idField: 'id' },
     { name: 'mobilitySessions', key: u => `mobilitySessions_${u}`, mode: 'list', idField: 'id' },
+    { name: 'logbookCover',     key: u => `logbookCover_${u}`,     mode: 'value' },
     // Today's nutrition (scoped per account below).
     { name: 'dailyMacroMeals',    key: u => `dailyMacroMeals_${u}`,    mode: 'value' },
     { name: 'dailyMacroProgress', key: u => `dailyMacroProgress_${u}`, mode: 'value' },
@@ -463,6 +464,7 @@
     if (has('macroTargets', 'dailyMacroMeals', 'dailyMacroProgress', 'dailyMacroDate', 'macroDayType')) {
       call('loadMacroTargetsFromLocal'); call('renderMacroSlots'); call('renderDailyMacroProgress'); call('updateMacroUI');
     }
+    if (has('logbookCover')) { call('renderLogbookCover'); call('renderSettingsHero'); }
     if (has('managedTemplates')) { call('renderTemplateLibraryList'); call('renderTemplateOptions'); }
     call('renderBodyHub');
     window.dispatchEvent(new CustomEvent('cloudsync:applied', { detail: { stores } }));
