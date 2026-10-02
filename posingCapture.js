@@ -752,8 +752,12 @@
   // ── Thumbnails in the posing history ─────────────────────────────────────
 
   let historyUrls = [];
+  let historyGen = 0;
 
   async function hydrateHistoryThumbs(container, userId) {
+    // Each history render supersedes the last; a slower earlier pass must not
+    // write into the new rows or leak its object URLs.
+    const gen = ++historyGen;
     historyUrls.forEach((u) => URL.revokeObjectURL(u));
     historyUrls = [];
     const store = globalScope.posingMediaStore;
@@ -762,12 +766,12 @@
     await Promise.all(slots.map(async (slot) => {
       try {
         const photos = await store.listSessionPhotos(userId, slot.dataset.posingPhotos);
-        if (!slot.isConnected || !photos.length) return;
+        if (gen !== historyGen || !slot.isConnected || !photos.length) return;
         const shown = photos.slice(0, 5);
         slot.innerHTML = shown.map((p, i) => {
-          const url = store.toObjectUrl(p, { thumb: true });
+          const url = store.thumbUrl(p);
           historyUrls.push(url);
-          return `<button type="button" class="posing-thumb" data-photo-index="${i}" aria-label="View photo ${i + 1}${p.pose ? `, ${escapeHtml(p.pose)}` : ''}"><img src="${url}" alt=""></button>`;
+          return `<button type="button" class="posing-thumb" data-photo-index="${i}" aria-label="View photo ${i + 1}${p.pose ? `, ${escapeHtml(p.pose)}` : ''}"><img src="${url}" alt="" loading="lazy" decoding="async"></button>`;
         }).join('') + (photos.length > shown.length ? `<span class="posing-thumb-more">+${photos.length - shown.length}</span>` : '');
         slot.onclick = (event) => {
           const btn = event.target.closest('[data-photo-index]');
@@ -796,15 +800,35 @@
       </div>
       <button type="button" class="pcap-icon-btn pcap-viewer-close" data-v="close" aria-label="Close">${icon('close')}</button>`;
 
-    function show() {
-      if (url) URL.revokeObjectURL(url);
+    let thumb = '';
+    let closed = false;
+    let showToken = 0;
+    function setSrc(next) {
+      viewer.querySelector('img').src = next;
+    }
+    // Show the thumbnail at once, then swap in the full-size photo when it
+    // has been read from storage (unless the user has moved on by then).
+    async function show() {
       const p = photos[index];
-      url = store.toObjectUrl(p);
-      viewer.querySelector('img').src = url;
+      const token = ++showToken;
+      if (thumb) URL.revokeObjectURL(thumb);
+      thumb = store.thumbUrl(p);
+      setSrc(thumb);
+      if (url) { URL.revokeObjectURL(url); url = ''; }
       viewer.querySelector('[data-v="label"]').textContent = `${index + 1} / ${photos.length}${p.pose ? ` · ${p.pose}` : ''}`;
+      try {
+        const blob = await store.getPhotoBlob(p);
+        if (!blob || closed || token !== showToken) return;
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      } catch (error) {
+        console.warn('Loading posing photo failed', error);
+      }
     }
     function shut() {
+      closed = true;
       if (url) URL.revokeObjectURL(url);
+      if (thumb) URL.revokeObjectURL(thumb);
       document.removeEventListener('keydown', onKey);
       viewer.remove();
     }
