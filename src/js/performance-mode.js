@@ -134,7 +134,10 @@
 
   function _todaysLoggedExercises() {
     const u = global.coachLoggingClient || global.currentUser || global.localStorage.getItem('fitnessAppUser');
-    const todayStr = new Date().toISOString().slice(0, 10);
+    // Local calendar day — workouts are keyed by it, not by UTC's date.
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const todayStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const workouts = (u && _read('workouts_' + u)) || [];
     const today = Array.isArray(workouts) ? workouts.find((w) => w.date === todayStr) : null;
     return new Set(((today && today.log) || []).map((e) => e.exercise));
