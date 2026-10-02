@@ -455,7 +455,7 @@
       try { if (typeof window[name] === 'function') window[name](); } catch (err) { console.warn(`[CloudSync] ${name} failed:`, err.message); }
     };
     const has = (...names) => names.some(n => stores.includes(n));
-    if (has('bodyweightLog')) { call('renderWeights'); call('renderBwMonthlyHistory'); }
+    if (has('bodyweightLog')) { call('renderWeights'); call('renderBwMonthlyHistory'); call('renderCheckInTab'); }
     if (has('bodyMeasurements')) { call('renderMeasurementsHistory'); call('renderMeasurementsChart'); }
     if (has('cardioLog')) call('renderCardio');
     if (has('crossfitLog', 'crossfitWorkouts')) call('renderCrossfitWorkouts');

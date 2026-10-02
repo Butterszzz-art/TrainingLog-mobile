@@ -231,3 +231,79 @@ describe('checkinEngine', () => {
     expect(archive.comparisons[0].status).toBe('placeholder');
   });
 });
+
+describe('checkinEngine weigh-in integration', () => {
+  const engine = require('../checkinEngine');
+  let store;
+  beforeEach(() => {
+    store = {};
+    global.localStorage = {
+      getItem: key => (Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null),
+      setItem: (key, value) => { store[key] = String(value); },
+      removeItem: key => { delete store[key]; }
+    };
+  });
+
+  const setWeighIns = (user, log) => localStorage.setItem(`bodyweightLog_${user}`, JSON.stringify(log));
+  const getWeighIns = user => JSON.parse(localStorage.getItem(`bodyweightLog_${user}`) || '[]');
+
+  test('loadWeighIns reads the Weight tab log in kg, oldest first', () => {
+    setWeighIns('athleteW', [
+      { date: '2026-03-10', weight: 180, unit: 'lb' },
+      { date: '2026-03-03', weight: 82.4, unit: 'kg', weightKg: 82.4 },
+      { date: 'bad', weight: 80 }
+    ]);
+    expect(engine.loadWeighIns('athleteW')).toEqual([
+      { date: '2026-03-03', weightKg: 82.4 },
+      { date: '2026-03-10', weightKg: 81.6 }
+    ]);
+  });
+
+  test('findWeighInForDate prefers the same day, else the latest within the lookback', () => {
+    const weighIns = [
+      { date: '2026-03-01', weightKg: 83 },
+      { date: '2026-03-05', weightKg: 82.5 },
+      { date: '2026-03-08', weightKg: 82 }
+    ];
+    expect(engine.findWeighInForDate(weighIns, '2026-03-08')).toEqual({ date: '2026-03-08', weightKg: 82 });
+    expect(engine.findWeighInForDate(weighIns, '2026-03-07')).toEqual({ date: '2026-03-05', weightKg: 82.5 });
+    expect(engine.findWeighInForDate(weighIns, '2026-03-20')).toBeNull();
+  });
+
+  test('loadCheckIns fills a missing bodyweight from the weigh-in log', () => {
+    setWeighIns('athleteW', [{ date: '2026-03-06', weight: 82.1, unit: 'kg', weightKg: 82.1 }]);
+    engine.saveCheckIn('athleteW', { date: '2026-03-08', energy: 7 });
+    engine.saveCheckIn('athleteW', { date: '2026-03-01', bodyweight: 84 });
+
+    const [latest, older] = engine.loadCheckIns('athleteW');
+    expect(latest.bodyweight).toBe(82.1);
+    expect(latest.bodyweightSource).toBe('weigh-in');
+    expect(older.bodyweight).toBe(84);
+
+    // The derived value is not written back into the check-in store.
+    const stored = JSON.parse(localStorage.getItem(engine.getStorageKey('athleteW')));
+    expect(stored.find(e => e.date === '2026-03-08').bodyweight).toBe('');
+
+    // Weight trend insights now see both weights.
+    expect(engine.getCheckInInsights(engine.loadCheckIns('athleteW')).insightMap.weightTrend)
+      .toMatch(/moving down/);
+  });
+
+  test('saveCheckIn mirrors bodyweight into the weigh-in log, keeping that day\'s extras', () => {
+    setWeighIns('athleteW', [{ date: '2026-03-08', weight: 180, unit: 'lb', calories: 2400, cardio: 30 }]);
+    engine.saveCheckIn('athleteW', { date: '2026-03-08', bodyweight: '81' });
+    engine.saveCheckIn('athleteW', { date: '2026-03-15', bodyweight: 80.5 });
+
+    expect(getWeighIns('athleteW')).toEqual([
+      { weight: 178.6, unit: 'lb', weightKg: 81, date: '2026-03-08', calories: 2400, cardio: 30 },
+      { weight: 80.5, unit: 'kg', weightKg: 80.5, date: '2026-03-15', calories: null, cardio: null }
+    ]);
+  });
+
+  test('saveCheckIn leaves a matching weigh-in untouched', () => {
+    const original = [{ date: '2026-03-08', weight: 82.1, unit: 'kg', weightKg: 82.1, calories: 2500 }];
+    setWeighIns('athleteW', original);
+    engine.saveCheckIn('athleteW', { date: '2026-03-08', bodyweight: 82.1 });
+    expect(getWeighIns('athleteW')).toEqual(original);
+  });
+});

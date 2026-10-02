@@ -1445,6 +1445,7 @@
           <div class="ci-field ci-field--num">
             <label for="checkInBodyweightInput">Bodyweight (kg)</label>
             <input type="number" step="0.1" id="checkInBodyweightInput" placeholder="e.g. 82.5">
+            <small id="checkInBodyweightSource" class="ci-opt" style="display:none"></small>
           </div>
         </div>
         <div class="ci-row-2">
@@ -12950,6 +12951,8 @@ function renderCheckInTab() {
   const checkIns = window.checkinEngine.loadCheckIns(userId);
   const latestCheckIn = Array.isArray(checkIns) && checkIns.length ? checkIns[0] : null;
   renderCheckInArchetypeFields(archetype, latestCheckIn);
+  bindCheckInWeighInPrefill(userId);
+  prefillCheckInBodyweightFromWeighIns(userId);
   hydrateCheckInFormFromLatestEntry(checkIns);
   bindCheckInSliderDisplays();
   autoFillCardioAdherenceSlider(userId);
@@ -13070,7 +13073,13 @@ function hydrateCheckInFormFromLatestEntry(checkIns) {
     el.value = formatter ? formatter(value) : (value ?? '');
   };
 
-  setValueIfEmpty('checkInBodyweightInput', latest.bodyweight);
+  // Bodyweight comes from the weigh-in log (see prefillCheckInBodyweightFromWeighIns);
+  // only fall back to last week's check-in when no recent weigh-in exists.
+  const bodyweightInput = document.getElementById('checkInBodyweightInput');
+  if (bodyweightInput && !bodyweightInput.value && latest.bodyweight !== '' && latest.bodyweight != null) {
+    bodyweightInput.value = latest.bodyweight;
+    bodyweightInput.dataset.autofill = 'last-check-in';
+  }
   setValueIfEmpty('checkInWaistInput', latest.waist);
   setValueIfEmpty('checkInPhaseInput', latest.phase);
   setValueIfEmpty('checkInWeekLabelInput', latest.weekLabel);
@@ -13097,6 +13106,50 @@ function hydrateCheckInFormFromLatestEntry(checkIns) {
   setValueIfEmpty('checkInAdjustmentCardioNotes', latest.adjustments?.cardioNotes);
   setValueIfEmpty('checkInAdjustmentStepsNotes', latest.adjustments?.stepsNotes);
   setValueIfEmpty('checkInAdjustmentRefeedNotes', latest.adjustments?.refeedNotes);
+}
+
+// Fill the check-in bodyweight from the Weight tab's weigh-in log for the
+// selected date. Only overwrites the field when it is empty or was itself
+// auto-filled, so a value the user typed is never replaced.
+function prefillCheckInBodyweightFromWeighIns(userId) {
+  const input = document.getElementById('checkInBodyweightInput');
+  const hint = document.getElementById('checkInBodyweightSource');
+  if (!input || !window.checkinEngine?.loadWeighIns) return;
+  if (input.value && !input.dataset.autofill) return;
+
+  const date = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const match = window.checkinEngine.findWeighInForDate(window.checkinEngine.loadWeighIns(userId), date);
+  if (match) {
+    input.value = match.weightKg;
+    input.dataset.autofill = 'weigh-in';
+    if (hint) {
+      hint.textContent = match.date === date ? 'From your weigh-in log' : `From your ${match.date} weigh-in`;
+      hint.style.display = '';
+    }
+  } else {
+    if (input.dataset.autofill === 'weigh-in') {
+      input.value = '';
+      delete input.dataset.autofill;
+    }
+    if (hint) hint.style.display = 'none';
+  }
+}
+
+function bindCheckInWeighInPrefill(userId) {
+  const input = document.getElementById('checkInBodyweightInput');
+  const dateInput = document.getElementById('checkInDateInput');
+  if (input && !input.dataset.weighInBound) {
+    input.dataset.weighInBound = '1';
+    input.addEventListener('input', () => {
+      delete input.dataset.autofill;
+      const hint = document.getElementById('checkInBodyweightSource');
+      if (hint) hint.style.display = 'none';
+    });
+  }
+  if (dateInput && !dateInput.dataset.weighInBound) {
+    dateInput.dataset.weighInBound = '1';
+    dateInput.addEventListener('change', () => prefillCheckInBodyweightFromWeighIns(userId));
+  }
 }
 
 function bindCheckInSliderDisplays() {

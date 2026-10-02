@@ -2,6 +2,12 @@
   'use strict';
 
   const STORAGE_PREFIX = 'tl_checkins_v1_';
+  // Same key the Weight tab (index.html addWeightEntry/renderWeights) uses.
+  const BODYWEIGHT_LOG_PREFIX = 'bodyweightLog_';
+  const LB_TO_KG = 0.453592;
+  // A check-in with no bodyweight of its own borrows the closest weigh-in
+  // logged on or up to this many days before its date.
+  const WEIGH_IN_LOOKBACK_DAYS = 6;
   const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const MODE_LABELS = {
     improvement: 'Improvement Season',
@@ -101,6 +107,7 @@
       phaseWeekLabel,
       weeksOutLabel,
       bodyweight: safe.bodyweight ?? '',
+      bodyweightSource: typeof safe.bodyweightSource === 'string' ? safe.bodyweightSource : '',
       waist: safe.waist ?? '',
       energy,
       hunger: safe.hunger ?? '',
@@ -210,7 +217,7 @@
     return getSeasonWeekLabel(entryDate, phaseState.startDate, label);
   }
 
-  function loadCheckIns(userId) {
+  function loadStoredCheckIns(userId) {
     const raw = getStorage().getItem(getStorageKey(userId));
     if (!raw) return [];
     try {
@@ -222,6 +229,101 @@
     } catch (_error) {
       return [];
     }
+  }
+
+  // Check-ins as stored, with any missing bodyweight filled in from the
+  // weigh-in log so every consumer sees the same weight data.
+  function loadCheckIns(userId) {
+    return withWeighInBodyweights(loadStoredCheckIns(userId), loadWeighIns(userId));
+  }
+
+  function getBodyweightLogKey(userId) {
+    return `${BODYWEIGHT_LOG_PREFIX}${resolveUserId(userId)}`;
+  }
+
+  function readBodyweightLog(userId) {
+    try {
+      const parsed = JSON.parse(getStorage().getItem(getBodyweightLogKey(userId)) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function weighInEntryToKg(entry) {
+    if (!entry || typeof entry !== 'object') return null;
+    const kg = Number(entry.weightKg);
+    if (entry.weightKg !== null && entry.weightKg !== undefined && entry.weightKg !== '' && Number.isFinite(kg) && kg > 0) return kg;
+    const weight = Number(entry.weight);
+    if (!Number.isFinite(weight) || weight <= 0) return null;
+    return entry.unit === 'lb' ? weight * LB_TO_KG : weight;
+  }
+
+  // Weigh-ins from the Weight tab as [{ date, weightKg }], oldest first.
+  function loadWeighIns(userId) {
+    return readBodyweightLog(userId)
+      .map((entry) => ({
+        date: typeof entry?.date === 'string' ? entry.date.slice(0, 10) : '',
+        weightKg: weighInEntryToKg(entry)
+      }))
+      .filter((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry.date) && Number.isFinite(entry.weightKg))
+      .map((entry) => ({ date: entry.date, weightKg: Number(entry.weightKg.toFixed(1)) }))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  }
+
+  // The weigh-in on `date`, else the latest one within the lookback window
+  // before it. Returns null when nothing close enough was logged.
+  function findWeighInForDate(weighIns, date, lookbackDays = WEIGH_IN_LOOKBACK_DAYS) {
+    const target = toUtcStart(date);
+    if (!Number.isFinite(target)) return null;
+    const earliest = target - lookbackDays * 86400000;
+    let best = null;
+    (Array.isArray(weighIns) ? weighIns : []).forEach((entry) => {
+      const at = toUtcStart(entry?.date);
+      if (!Number.isFinite(at) || at > target || at < earliest) return;
+      if (!best || at >= toUtcStart(best.date)) best = entry;
+    });
+    return best;
+  }
+
+  function withWeighInBodyweights(checkIns, weighIns) {
+    if (!Array.isArray(weighIns) || !weighIns.length) return checkIns;
+    return checkIns.map((entry) => {
+      if (Number.isFinite(toFiniteNumber(entry.bodyweight))) return entry;
+      const match = findWeighInForDate(weighIns, entry.date);
+      if (!match) return entry;
+      return { ...entry, bodyweight: match.weightKg, bodyweightSource: 'weigh-in', bodyweightDate: match.date };
+    });
+  }
+
+  // Mirror a check-in's bodyweight (kg) into the weigh-in log so the Weight
+  // tab, macros and trend tools see it. Keeps any calories/cardio already
+  // logged on that day and leaves matching entries untouched.
+  function syncCheckInToWeighInLog(userId, checkIn) {
+    const kg = toFiniteNumber(checkIn?.bodyweight);
+    const date = typeof checkIn?.date === 'string' ? checkIn.date.slice(0, 10) : '';
+    if (!Number.isFinite(kg) || kg <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+
+    const log = readBodyweightLog(userId);
+    const index = log.findIndex((entry) => entry?.date === date);
+    const existing = index >= 0 ? log[index] : null;
+    const existingKg = weighInEntryToKg(existing);
+    if (Number.isFinite(existingKg) && Math.abs(existingKg - kg) < 0.05) return false;
+
+    const weightKg = Number(kg.toFixed(1));
+    const unit = existing?.unit === 'lb' ? 'lb' : 'kg';
+    const next = {
+      weight: unit === 'lb' ? Number((weightKg / LB_TO_KG).toFixed(1)) : weightKg,
+      unit,
+      weightKg,
+      date,
+      calories: existing?.calories ?? null,
+      cardio: existing?.cardio ?? null
+    };
+    if (index >= 0) log[index] = next; else log.push(next);
+    log.sort((a, b) => String(a?.date || '').localeCompare(String(b?.date || '')));
+    getStorage().setItem(getBodyweightLogKey(userId), JSON.stringify(log));
+    return true;
   }
 
   function loadCheckInState(userId) {
@@ -522,12 +624,13 @@
 
   function saveCheckIn(userId, checkIn, phaseState = {}) {
     const storage = getStorage();
-    const existing = loadCheckIns(userId);
+    const existing = loadStoredCheckIns(userId);
     const normalized = normalizeCheckIn(checkIn, phaseState);
     const deduped = existing.filter((entry) => entry.date !== normalized.date);
     const updated = [normalized, ...deduped].sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
     storage.setItem(getStorageKey(userId), JSON.stringify(updated));
     syncCheckInStateToBackend(resolveUserId(userId), updated);
+    syncCheckInToWeighInLog(userId, normalized);
     return updated;
   }
 
@@ -571,7 +674,10 @@
     buildSeasonArchive,
     getCheckInInsights,
     getCheckInInsightTimeline,
-    getStorageKey
+    getStorageKey,
+    loadWeighIns,
+    findWeighInForDate,
+    syncCheckInToWeighInLog
   };
 
   if (typeof module !== 'undefined' && module.exports) {
