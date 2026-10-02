@@ -42,6 +42,8 @@
     const theme = (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) || 'system default';
     const vacation = typeof global.getVacationMode === 'function' ? global.getVacationMode() : { active: false };
     const sick = typeof global.getSickMode === 'function' ? global.getSickMode() : { active: false };
+    const cover = u && global.LogbookCover ? global.LogbookCover.getCover(u) : null;
+    const coverBg = cover ? global.LogbookCover.colorById(cover.color).bg : '';
 
     el.innerHTML = `
       <div class="pod pod--hero sh-profile">
@@ -60,6 +62,15 @@
         ${_row('Theme', theme)}
       </div>
 
+      ${cover ? `<div class="pod sh-group">
+        <div class="pod-kicker" style="margin-bottom:6px;">Logbook</div>
+        <button type="button" class="sh-row sh-row--btn" data-logbook-edit>
+          <span class="sh-row-label">Name &amp; cover</span>
+          <span class="sh-row-sub">${_esc(cover.displayName)}</span>
+          <span class="sh-row-val"><span class="lb-dot" style="background:${_esc(coverBg)}"></span></span>
+        </button>
+      </div>` : ''}
+
       <div class="pod sh-group">
         <div class="pod-kicker" style="margin-bottom:6px;">Modes</div>
         <div class="sh-row"><span class="sh-row-label">Vacation mode</span><span class="sh-row-sub">pauses streak</span>${_togglePill(!!vacation.active)}</div>
@@ -74,6 +85,8 @@
       btn.addEventListener('click', open);
       btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     });
+    const lbBtn = el.querySelector('[data-logbook-edit]');
+    if (lbBtn) lbBtn.addEventListener('click', () => global.openLogbookCoverEditor && global.openLogbookCoverEditor());
   }
 
   global.renderSettingsHero = renderSettingsHero;
