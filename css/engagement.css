@@ -259,3 +259,11 @@
 @media (prefers-reduced-motion: reduce) {
   .pulse-level-dot, .macro-fav-add { transition: none; }
 }
+
+/* Inline variant under the Log button (index.html #flowCaptureInline). */
+#flowCaptureInline .fc-dialog {
+  max-width: none;
+  margin-top: 12px;
+  padding: 16px 16px 12px;
+  box-shadow: none;
+}

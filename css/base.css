@@ -337,6 +337,15 @@ th {
 }
 .tst.tst--out { animation: tst-out 0.22s ease-in both; pointer-events: none; }
 
+/* On the Log tab the stack sat right over the Log button, and a tap on a
+   toast dismissed it instead of logging the set — so there it moves to the
+   top of the screen and lets taps through (toasts still time out). */
+body:has(#logTab.active) .tst-stack {
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  bottom: auto;
+}
+body:has(#logTab.active) .tst { pointer-events: none; }
+
 .tst--warn  { --tst-accent: var(--brass-light);        --tst-tint: var(--warning-bg); --tst-edge: var(--border-brass); --tst-meter: var(--fill-meter-brass); }
 .tst--error { --tst-accent: var(--danger-text-mobile); --tst-tint: var(--danger-bg);  --tst-edge: var(--border-alert); --tst-meter: linear-gradient(90deg, #61202c, var(--danger-strong)); }
 .tst--info  { --tst-accent: var(--text-tertiary);      --tst-tint: rgba(116, 138, 126, 0.14); --tst-edge: var(--border-chip); --tst-meter: linear-gradient(90deg, var(--text-rule), var(--text-tertiary)); }

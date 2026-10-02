@@ -165,6 +165,17 @@ describe('addLogEntry', () => {
     expect(workouts[0].log.map(e => e.exercise)).toEqual(['Bench', 'Squat']);
   });
 
+  test('post-log check-in opens once per exercise, not after every set', () => {
+    const shown = [];
+    vm.runInContext('showFlowCaptureModal = (exercise, sets) => __shown.push(exercise);', Object.assign(context, { __shown: shown }));
+    const log = (exercise) => context.triggerFlowCapture({ exercise, sets: 1, date: '2024-01-01' });
+    log('Bench'); log('Bench'); log('bench '); log('Squat'); log('Bench');
+    expect(shown).toEqual(['Bench', 'Squat']);
+    // A new day asks again.
+    context.triggerFlowCapture({ exercise: 'Bench', sets: 1, date: '2024-01-02' });
+    expect(shown).toEqual(['Bench', 'Squat', 'Bench']);
+  });
+
   test('does not dispatch tl:set-logged when validation fails', () => {
     const doc = context.document;
     const events = [];
