@@ -84,7 +84,7 @@
 .body-hub-empty .body-hub-sub { color: var(--text-faint); }
 
 .body-hub-trend--up { color: var(--danger-text); }
-.body-hub-trend--down { color: var(--primary); }
+.body-hub-trend--down { color: var(--primary-text); }
 
 .body-hub-stars { letter-spacing: 1px; color: var(--warning-gold, var(--text-muted)); }
 
@@ -225,7 +225,7 @@
   align-items: center;
   gap: 6px;
   margin: 0;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .body-hub-coach-head svg { width: 13px; height: 13px; }
 

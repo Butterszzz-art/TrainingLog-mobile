@@ -35,6 +35,8 @@
   --elevated-bg:    #18231e;
   --primary:        #2f8a63;
   --primary-dark:   #236b4e;
+  /* --primary as a text colour is under 4.5:1 on cards; use this for green text */
+  --primary-text:   #42a679;
   --text-color:     #f4f7f5;
   --secondary-text: #b8c2bc;
   --text-muted:     #8c9891;

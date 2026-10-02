@@ -76,7 +76,7 @@
       <div id="foodSelectedInfo" class="food-selected-info" hidden>
         <div class="food-selected-top">
           <span class="food-selected-name" id="foodSelectedName"></span>
-          <button class="food-selected-clear" onclick="clearFoodSelection()">✕</button>
+          <button type="button" class="food-selected-clear" onclick="clearFoodSelection()" aria-label="Clear selected food">✕</button>
         </div>
         <div class="food-macro-badges">
           <span class="food-macro-badge kcal-badge" id="fsbKcal">0 kcal</span>

@@ -135,7 +135,7 @@
 }
 
 .kcal-badge    { background: rgba(240,160,64,0.2);  color: #f0a040; }
-.protein-badge { background: rgba(95,168,126,0.2);  color: var(--primary); }
+.protein-badge { background: rgba(95,168,126,0.2);  color: var(--primary-text); }
 .carbs-badge   { background: rgba(77,168,218,0.2);  color: #4da8da; }
 .fat-badge     { background: rgba(167,139,250,0.2); color: #a78bfa; }
 .unit-badge    { background: rgba(120,120,120,0.15); color: var(--text-muted); }
@@ -200,7 +200,7 @@
   background: var(--bg-color);
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .food-diary-tot {
@@ -299,7 +299,7 @@
 .challenge-count {
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   white-space: nowrap;
 }
 
@@ -357,7 +357,7 @@
 
 .milestone-earned-tag {
   font-size: 0.65rem;
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 600;
 }
 
@@ -405,7 +405,7 @@
 }
 
 .mc-icon   { font-size: 3rem; margin-bottom: 8px; }
-.mc-title  { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary); margin-bottom: 4px; font-weight: 700; }
+.mc-title  { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-text); margin-bottom: 4px; font-weight: 700; }
 .mc-name   { font-size: 1.2rem; font-weight: 800; color: var(--text-color); margin-bottom: 6px; }
 .mc-desc   { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px; }
 .mc-close  {
@@ -531,7 +531,7 @@
   padding: 6px;
   border-radius: 6px;
 }
-.cc-save-msg.ok    { color: var(--primary); background: rgba(95,168,126,0.1); }
+.cc-save-msg.ok    { color: var(--primary-text); background: rgba(95,168,126,0.1); }
 .cc-save-msg.error { color: var(--danger-text); background: var(--danger-bg); }
 
 /* History column */
@@ -599,7 +599,7 @@
 .cc-hc-type {
   font-size: 0.73rem;
   background: rgba(95,168,126,0.15);
-  color: var(--primary);
+  color: var(--primary-text);
   border-radius: 20px;
   padding: 2px 8px;
   font-weight: 600;
@@ -894,7 +894,7 @@
   margin-bottom: 2px;
 }
 
-.readiness-score-num.high   { color: var(--primary); }
+.readiness-score-num.high   { color: var(--primary-text); }
 .readiness-score-num.medium { color: #f0a040; }
 .readiness-score-num.low    { color: var(--danger-text); }
 
@@ -944,7 +944,7 @@
   text-align: center;
 }
 
-.readiness-home-score.high   { color: var(--primary); }
+.readiness-home-score.high   { color: var(--primary-text); }
 .readiness-home-score.medium { color: #f0a040; }
 .readiness-home-score.low    { color: var(--danger-text); }
 
@@ -965,7 +965,7 @@
 
 .readiness-home-retake {
   font-size: 0.72rem;
-  color: var(--primary);
+  color: var(--primary-text);
   background: transparent;
   border: 1px solid var(--primary);
   border-radius: 20px;
@@ -1130,7 +1130,7 @@
 .pr-modal-headline {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   margin: 0 0 14px;
 }
 
@@ -1481,7 +1481,7 @@
 
 .history-result-best {
   font-size: 0.78rem;
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 600;
   margin-top: 6px;
 }
@@ -1560,7 +1560,7 @@
 .pr-board-rm {
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   white-space: nowrap;
 }
 
@@ -1885,7 +1885,7 @@
 }
 
 .wt-stat-val.wt-up   { color: var(--danger-text); }
-.wt-stat-val.wt-down { color: var(--primary); }
+.wt-stat-val.wt-down { color: var(--primary-text); }
 
 .wt-stat-lbl {
   font-size: 0.62rem;
@@ -1958,7 +1958,7 @@
 }
 
 .wt-week-change.up { color: var(--danger-text); }
-.wt-week-change.down { color: var(--primary); }
+.wt-week-change.down { color: var(--primary-text); }
 .wt-week-change.flat { color: var(--text-muted); }
 
 .wt-week-count {
@@ -1991,7 +1991,7 @@
 }
 
 .wt-rate-val.wt-gaining { color: var(--danger-text); }
-.wt-rate-val.wt-losing  { color: var(--primary); }
+.wt-rate-val.wt-losing  { color: var(--primary-text); }
 .wt-rate-val.wt-stable   { color: var(--highlight); }
 
 .wt-rate-lbl {
@@ -2059,7 +2059,7 @@
   background: var(--bg-color);
   border: 1px solid var(--primary);
   border-radius: 8px;
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 0.82rem;
   font-weight: 700;
   font-family: 'Poppins', sans-serif;
@@ -2165,7 +2165,7 @@
 }
 
 .wt-table tbody td:first-child { color: var(--text-muted); font-size: 0.78rem; }
-.wt-table tbody td strong { color: var(--primary); }
+.wt-table tbody td strong { color: var(--primary-text); }
 
 .wt-del-btn {
   background: none;
@@ -2261,7 +2261,7 @@
   border-bottom: 1px solid var(--border-color);
 }
 .wt-estimate-table tbody tr:last-child td { border-bottom: none; }
-.wt-estimate-table tbody td:last-child { font-weight: 700; color: var(--primary); }
+.wt-estimate-table tbody td:last-child { font-weight: 700; color: var(--primary-text); }
 
 /* =============================================================
    LEADERBOARD IMPROVEMENTS
@@ -2359,7 +2359,7 @@
 .lb-ps-val {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .lb-ps-lbl {
@@ -2375,7 +2375,7 @@
   font-size: 0.78rem;
   font-weight: 700;
 }
-.lb-ps-badge.green  { background: rgba(95,168,126,0.2); color: var(--primary); }
+.lb-ps-badge.green  { background: rgba(95,168,126,0.2); color: var(--primary-text); }
 .lb-ps-badge.amber  { background: rgba(255,183,77,0.15); color: #ffb74d; }
 .lb-ps-badge.red    { background: rgba(239,83,80,0.15);  color: #ef5350; }
 
@@ -2542,7 +2542,7 @@
 .lb-card-value {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   min-width: 36px;
   text-align: right;
 }
@@ -2571,7 +2571,7 @@
   font-size: 0.9rem;
   color: var(--text-color);
 }
-.lb-rank-banner-title strong { color: var(--primary); }
+.lb-rank-banner-title strong { color: var(--primary-text); }
 
 .lb-rank-banner-sub {
   font-size: 0.75rem;
@@ -2580,7 +2580,7 @@
 }
 
 .lb-gap     { color: #ffb74d; }
-.lb-gap-top { color: var(--primary); }
+.lb-gap-top { color: var(--primary-text); }
 
 /* ── Loading / empty states ─────────────────────────────────── */
 
@@ -2655,7 +2655,7 @@
 }
 .lb-exercise-btn:hover {
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* Responsive: stack personal stats grid on tiny screens */
@@ -2801,7 +2801,7 @@
 .comm-sort-pill:hover {
   background: rgba(95,168,126,0.15);
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── ⑩ Weekly challenge card ─────────────────────────────────── */
@@ -2846,7 +2846,7 @@
 .comm-challenge-count {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   white-space: nowrap;
 }
 
@@ -2868,7 +2868,7 @@
 .comm-challenge-badge {
   margin-top: 6px;
   font-size: 0.78rem;
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 600;
 }
 
@@ -2942,7 +2942,7 @@
 .feed-tag-btn:hover {
   background: rgba(95,168,126,0.15);
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .feed-post-btn {
@@ -3067,5 +3067,5 @@
 .lb-time-pill:hover {
   background: rgba(95,168,126,0.15);
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }

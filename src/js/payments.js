@@ -168,7 +168,7 @@
   }
 
   // Entry point for every "buy" button.
-  async function purchase(plan, billing) {
+  async function purchase(plan, billing, opts) {
     if (usesAppleIAP()) {
       try {
         return await purchaseViaApple(plan, billing);
@@ -180,7 +180,7 @@
     if (typeof window.checkoutWithStripe !== 'function') {
       throw new Error('Stripe checkout is not available.');
     }
-    return window.checkoutWithStripe(plan, billing);
+    return window.checkoutWithStripe(plan, billing, opts);
   }
 
   // Apple requires a Restore Purchases option for subscriptions. Re-sends

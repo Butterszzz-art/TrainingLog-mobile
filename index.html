@@ -4,9 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Pocket Coach</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+  <link href="vendor/fonts/fonts.css" rel="stylesheet">
   <link rel="stylesheet" href="ProgramTab.css">
   <link rel="stylesheet" href="style.css">
   <meta name="theme-color" content="#0b0f0d">
@@ -75,7 +73,7 @@
   <script src="src/js/native-ui.js"></script>
   <script src="src/js/ai-consent.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="vendor/chart-4.5.1.umd.min.js"></script>
   <script>
     /* ── Chart.js theme — matches the app's dark pod design system so
        charts don't look like a foreign, unstyled widget dropped onto
@@ -125,11 +123,12 @@
       Chart.defaults.scale.ticks.color = P.textFaint;
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="vendor/confetti-1.9.3.browser.js"></script>
+  <script src="src/js/a11y-keyboard.js"></script>
 
   <!-- Firebase Auth (Phase 1 migration) — compat SDK for this script-tag codebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="vendor/firebase-app-compat-10.14.1.js"></script>
+  <script src="vendor/firebase-auth-compat-10.14.1.js"></script>
   <script src="src/js/firebase-config.js"></script>
   <script src="src/js/firebase-auth.js"></script>
 
@@ -175,7 +174,7 @@
         <div class="login-pw-wrap">
           <input type="password" id="password" class="login-input" placeholder="Enter your password"
                  autocomplete="current-password" />
-          <button type="button" class="login-pw-eye" onclick="_toggleLoginPw(this)" tabindex="-1" aria-label="Show password">
+          <button type="button" class="login-pw-eye" onclick="_toggleLoginPw(this)" aria-label="Show password">
             <svg id="loginEyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -183,6 +182,16 @@
             </svg>
           </button>
         </div>
+      </div>
+      <div class="login-consents" id="signupConsents" style="display:none;">
+        <label class="login-remember login-consent">
+          <input type="checkbox" id="signupAgeConfirm" />
+          <span>I'm 16 or older</span>
+        </label>
+        <label class="login-remember login-consent">
+          <input type="checkbox" id="signupHealthConsent" />
+          <span>I agree that Pocket Coach can store the health and fitness data I log (workouts, bodyweight, nutrition, sleep, injuries) to run the app. I can withdraw this by deleting my account. <a href="privacy.html">Privacy Policy</a></span>
+        </label>
       </div>
       <label class="login-remember" id="rememberMeRow">
         <input type="checkbox" id="rememberMe" checked />
@@ -2203,7 +2212,7 @@
           </div>
           <div class="pl-grid-3">
             <div class="pl-score-tile">
-              <div id="scoreWilks" class="pl-score-value" style="color:var(--primary);">—</div>
+              <div id="scoreWilks" class="pl-score-value" style="color:var(--primary-text);">—</div>
               <div class="pl-score-label">Wilks</div>
             </div>
             <div class="pl-score-tile">
@@ -3029,7 +3038,7 @@
 
         <div id="macroMealsPanel" class="panel">
           <details id="mealsCard" class="card" style="margin-top:10px;">
-            <summary>Meals <button onclick="scanBarcode()" class="icon-btn"><span class="ui-icon" data-icon="camera"></span></button></summary>
+            <summary>Meals <button type="button" onclick="scanBarcode()" class="icon-btn" aria-label="Scan barcode"><span class="ui-icon" data-icon="camera"></span></button></summary>
             <div style="margin-top:10px;">
               <div style="margin-bottom:10px;">
                 <select id="favSelect" onchange="logFavorite(this.value)">
@@ -4510,7 +4519,16 @@ async function openCheckout(plan) {
   modal.innerHTML = '<div class="payment-method-inner">'
     + '<h3>' + p.name + ' plan</h3>'
     + '<p class="payment-sub">' + (price.trial ? price.trial + ', then ' : '') + price.billed + '</p>'
-    + '<button class="pay-btn pay-stripe" onclick="this.closest(\'.payment-method-modal\').remove();pocketCoachPayments.purchase(\'' + plan + '\',\'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Continue</button>'
+    // EU/UK 14-day right of withdrawal: Stripe buyers must ask for the paid
+    // service to start within the 14 days (unticked, required). The server
+    // refuses checkout without it. Apple handles this for App Store purchases.
+    + (usesAppleIAP() ? '' :
+        '<label class="payment-waiver"><input type="checkbox" id="withdrawalWaiver"> '
+      + '<span>I want my subscription to start straight away' + (price.trial ? ' when the free trial ends' : '')
+      + '. I understand that if I cancel within 14 days of subscribing, I get a refund minus the days of paid service I\'ve used. '
+      + '<a href="terms.html#refunds">Refunds</a></span></label>'
+      + '<p class="payment-waiver-error" id="withdrawalWaiverError" role="alert"></p>')
+    + '<button class="pay-btn pay-stripe" onclick="continueCheckout(this, \'' + plan + '\', \'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Continue</button>'
     + (usesAppleIAP()
       ? '<button type="button" class="payment-restore" onclick="this.closest(\'.payment-method-modal\').remove();pocketCoachPayments.restore()">Restore Purchases</button>'
       : '<p class="payment-note">Secure checkout powered by Stripe</p>')
@@ -4520,15 +4538,28 @@ async function openCheckout(plan) {
   document.body.appendChild(modal);
 }
 
+function continueCheckout(btn, plan, billing) {
+  var waiver = document.getElementById('withdrawalWaiver');
+  if (waiver && !waiver.checked) {
+    var err = document.getElementById('withdrawalWaiverError');
+    if (err) err.textContent = 'Please tick the box to continue.';
+    waiver.focus();
+    return;
+  }
+  btn.closest('.payment-method-modal').remove();
+  pocketCoachPayments.purchase(plan, billing, { withdrawalWaiver: !!(waiver && waiver.checked) });
+}
+window.continueCheckout = continueCheckout;
+
 // Web and Android only — iOS buys through the App Store (payments.js).
-async function checkoutWithStripe(plan, billing) {
+async function checkoutWithStripe(plan, billing, opts) {
   document.querySelector('.payment-method-modal')?.remove();
   var username = window.currentUser || localStorage.getItem('fitnessAppUser');
   try {
     var res = await fetch(window.SERVER_URL + '/api/stripe/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username, plan: plan, billing: billing })
+      body: JSON.stringify({ username: username, plan: plan, billing: billing, withdrawalWaiver: !!(opts && opts.withdrawalWaiver) })
     });
     var data = await res.json();
     if (data.url) window.location.href = data.url;
@@ -4540,7 +4571,7 @@ async function checkoutWithStripe(plan, billing) {
 
 var UPGRADE_PLANS = {
   pro: {
-    name: 'Pro', badge: 'Most popular', chip: 'mx-chip--green', cardCls: 'pod--hero',
+    name: 'Pro', badge: 'AI features', chip: 'mx-chip--green', cardCls: 'pod--hero',
     monthly: 9, annual: 7, annualNote: 'Billed £84/year · save £24',
     sub: null, // the trial, or "Cancel anytime" when there isn't one
     features: [
@@ -4615,8 +4646,9 @@ function openUpgradeModal(defaultPlan) {
     +   '<span id="modalBillMonthly" class="' + (!isAnnual ? 'is-on' : '') + '">Monthly</span>'
     +   '<label class="upg-switch"><input type="checkbox" id="modalBillingToggle" ' + (isAnnual ? 'checked' : '') + ' onchange="toggleModalBilling()" aria-label="Bill annually"><span></span></label>'
     +   '<span id="modalBillAnnual" class="' + (isAnnual ? 'is-on' : '') + '">Annual</span>'
-    // App Store prices vary by country, so the saving isn't a fixed 20% there.
-    +   (apple ? '' : '<span class="mx-chip mx-chip--green mx-chip--sm">Save 20%</span>')
+    // App Store prices vary by country, so the saving isn't a fixed % there.
+    // Web: Pro saves 22% (£84 vs £108), Coach 19% (£156 vs £192).
+    +   (apple ? '' : '<span class="mx-chip mx-chip--green mx-chip--sm">Save up to 22%</span>')
     + '</div>'
     + upgradePlanCard('pro', isAnnual)
     + upgradePlanCard('coach', isAnnual)
@@ -5373,6 +5405,21 @@ async function startSignup() {
     setLoading(btn, false);
     return;
   }
+  // Both consents are required and re-checked by /auth/signup-complete.
+  const consents = {
+    ageConfirmed: !!document.getElementById('signupAgeConfirm')?.checked,
+    healthData:   !!document.getElementById('signupHealthConsent')?.checked
+  };
+  if (!consents.ageConfirmed) {
+    if (errorEl) errorEl.textContent = "You must be 16 or older to use Pocket Coach.";
+    setLoading(btn, false);
+    return;
+  }
+  if (!consents.healthData) {
+    if (errorEl) errorEl.textContent = "Please agree to the storage of your health and fitness data — the app can't work without it.";
+    setLoading(btn, false);
+    return;
+  }
 
   // ── Firebase Auth ────────────────────────────────────────────────────────
   // Signup collects all three: username (login identifier), email (new —
@@ -5393,8 +5440,8 @@ async function startSignup() {
       // signed-in session instead.
       const alreadyCreated = typeof firebase !== 'undefined' && firebase.auth?.().currentUser;
       const result = alreadyCreated
-        ? await window.firebaseAuth.completeSignup({ username })
-        : await window.firebaseAuth.signup({ username, email, password });
+        ? await window.firebaseAuth.completeSignup({ username, consents })
+        : await window.firebaseAuth.signup({ username, email, password, consents });
       // Identity is stored, but the app stays locked until email verification —
       // the server rejects every protected route for unverified accounts.
       persistLoginIdentity(username, null);
@@ -6037,7 +6084,7 @@ function renderFlowCaptureModal() {
   const overlay = _flowCaptureHost || getFlowCaptureOverlay();
   const { rpe, sore, exercise, sets } = _flowCaptureState;
   const renderChips = (options, selected, groupKey) => options.map((item) => `
-    <div class="mx-preset ${selected === item.key ? 'active' : ''}" onclick="setFlowCaptureAnswer('${groupKey}', '${item.key}')">${_fcEscape(item.label)}</div>
+    <div role="button" tabindex="0" class="mx-preset ${selected === item.key ? 'active' : ''}" onclick="setFlowCaptureAnswer('${groupKey}', '${item.key}')">${_fcEscape(item.label)}</div>
   `).join('');
 
   overlay.innerHTML = `
@@ -6238,7 +6285,7 @@ function renderMethodForm(adv, baseWeight) {
           <div class="adv-row">
             <input type="number" step="0.5" data-adv="dropWeight" data-index="${i}" value="${drop.weight ?? ''}" placeholder="Weight" />
             <input type="number" step="1" data-adv="dropReps" data-index="${i}" value="${drop.reps ?? ''}" placeholder="Reps" />
-            <button class="adv-btn" type="button" data-adv="removeDrop" data-index="${i}"><span class="ui-icon">${ICONS.x}</span></button>
+            <button class="adv-btn" type="button" data-adv="removeDrop" data-index="${i}" aria-label="Remove drop set"><span class="ui-icon">${ICONS.x}</span></button>
           </div>
         `
       )
@@ -11531,7 +11578,7 @@ function renderDailyPulseCard() {
        </div>`
     : `<p class="pulse-question">${escapeCoachText(question.label)}</p>
        <div class="pulse-level-row">
-         ${[1, 2, 3, 4, 5].map(v => `<div class="pulse-level-dot" data-v="${v}" onclick="submitDailyPulse('${question.key}', ${v})">${v}</div>`).join('')}
+         ${[1, 2, 3, 4, 5].map(v => `<div role="button" tabindex="0" class="pulse-level-dot" data-v="${v}" onclick="submitDailyPulse('${question.key}', ${v})">${v}</div>`).join('')}
        </div>`;
 
   container.innerHTML = `
@@ -14265,8 +14312,8 @@ function renderCardioCatchUpBanner(logArg) {
 
   if (loggedToday || hour < 16) { container.innerHTML = ''; return; }
 
-  const typeChips = CARDIO_CATCHUP_TYPES.map(t => `<div class="mx-preset ${_cardioCatchUpState.type === t.key ? 'active' : ''}" onclick="selectCardioCatchUpType('${t.key}')">${t.label}</div>`).join('');
-  const durChips = CARDIO_CATCHUP_DURATIONS.map(d => `<div class="mx-preset ${_cardioCatchUpState.duration === d ? 'active' : ''}" onclick="selectCardioCatchUpDuration(${d})">${d} min</div>`).join('');
+  const typeChips = CARDIO_CATCHUP_TYPES.map(t => `<div role="button" tabindex="0" class="mx-preset ${_cardioCatchUpState.type === t.key ? 'active' : ''}" onclick="selectCardioCatchUpType('${t.key}')">${t.label}</div>`).join('');
+  const durChips = CARDIO_CATCHUP_DURATIONS.map(d => `<div role="button" tabindex="0" class="mx-preset ${_cardioCatchUpState.duration === d ? 'active' : ''}" onclick="selectCardioCatchUpDuration(${d})">${d} min</div>`).join('');
 
   container.innerHTML = `
     <div class="nudge-pod">
@@ -14483,7 +14530,7 @@ function renderCardio() {
   if (legacyBody) {
     legacyBody.innerHTML = '';
     log.forEach((entry, index) => {
-      legacyBody.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes || ''}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`;
+      legacyBody.innerHTML += `<tr><td>${entry.date}</td><td>${entry.type}</td><td>${entry.duration}</td><td>${entry.distance || '-'}</td><td>${entry.calories || '-'}</td><td>${entry.notes || ''}</td><td><button onclick="removeCardioEntry(${index})" class="remove-btn" aria-label="Remove cardio entry"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`;
     });
   }
 
@@ -17614,6 +17661,8 @@ function _switchLoginTab(mode) {
   if (emailField) {
     emailField.style.display = (!isLogin && window.firebaseAuth?.isAvailable()) ? '' : 'none';
   }
+  const consentsBox = document.getElementById('signupConsents');
+  if (consentsBox) consentsBox.style.display = isLogin ? 'none' : '';
   const legalNote = document.getElementById('signupLegalNote');
   if (legalNote) legalNote.style.display = isLogin ? 'none' : '';
   const pw = document.getElementById('password');
@@ -17731,7 +17780,7 @@ function renderCommShareItemList() {
   }
 
   listEl.innerHTML = items.map(item => `
-    <div class="comm-share-item" data-id="${_commEsc(item.id)}" onclick="commShareSelectItem(this.dataset.id)">
+    <div role="button" tabindex="0" class="comm-share-item" data-id="${_commEsc(item.id)}" onclick="commShareSelectItem(this.dataset.id)">
       <div class="comm-share-item-check">✓</div>
       <div class="comm-share-item-info">
         <div class="comm-share-item-name">${_commEsc(item.name)}</div>
@@ -19010,7 +19059,7 @@ function renderSessionHistory() {
 
     const volDisplay = totalVolume > 0 ? (totalVolume >= 1000 ? (totalVolume / 1000).toFixed(1) + 'k' : totalVolume) + ' ' + unit : '—';
 
-    return '<div class="session-card" onclick="this.classList.toggle(\'open\')">'
+    return '<div role="button" tabindex="0" class="session-card" onclick="this.classList.toggle(\'open\')">'
       + '<div class="session-card-header">'
       + '<div class="session-card-left">'
       + '<span class="session-card-date">' + dateLabel + '</span>'
@@ -19767,7 +19816,7 @@ function renderOneRMHistory(entries) {
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:0.88rem;">
       <span style="color:var(--secondary-text)">${e.date}</span>
       <span>${e.weight}${unit} × ${e.reps}${e.rpe ? ` @RPE${e.rpe}` : ''}</span>
-      <span style="color:var(--primary);font-weight:700">≈ ${e.estimated}${unit}</span>
+      <span style="color:var(--primary-text);font-weight:700">≈ ${e.estimated}${unit}</span>
     </div>`).join('');
   container.innerHTML = `<h4 style="margin:0 0 4px;font-size:0.85rem;color:var(--text-muted)">Recent entries</h4>${rows}`;
 }
@@ -20021,9 +20070,9 @@ window.renderCaffeinePod = renderCaffeinePod;
     <!-- include Litepicker for progress calendar -->
     <link
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"
+      href="vendor/litepicker-2.0.12.css"
     />
-    <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+    <script src="vendor/litepicker-2.0.12.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async function() {
         const picker = new Litepicker({

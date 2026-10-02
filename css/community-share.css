@@ -79,7 +79,7 @@
 .comm-share-type-btn.active {
   background: rgba(45,125,91,0.15);
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── Field (label + input) ──────────────────────────────────── */
@@ -259,7 +259,7 @@
 .comm-inbox-item-name {
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   margin-bottom: 4px;
 }
 

@@ -368,7 +368,7 @@
       if (templates.length) {
         libraryPicker += '<div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;">Templates</div>';
         templates.forEach((t, i) => {
-          libraryPicker += '<div class="quick-share-friend" onclick="selectQuickShareItem(\'template\',' + i + ')" data-lib="template-' + i + '">'
+          libraryPicker += '<div role="button" tabindex="0" class="quick-share-friend" onclick="selectQuickShareItem(\'template\',' + i + ')" data-lib="template-' + i + '">'
             + '<span style="flex:1;font-size:0.85rem;font-weight:600;color:var(--text-color);">📋 ' + (t.name || 'Template ' + (i+1)) + '</span>'
             + '</div>';
         });
@@ -376,7 +376,7 @@
       if (programs.length) {
         libraryPicker += '<div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin:10px 0 6px;text-transform:uppercase;">Programs</div>';
         programs.forEach((p, i) => {
-          libraryPicker += '<div class="quick-share-friend" onclick="selectQuickShareItem(\'program\',' + i + ')" data-lib="program-' + i + '">'
+          libraryPicker += '<div role="button" tabindex="0" class="quick-share-friend" onclick="selectQuickShareItem(\'program\',' + i + ')" data-lib="program-' + i + '">'
             + '<span style="flex:1;font-size:0.85rem;font-weight:600;color:var(--text-color);">🗓 ' + (p.name || 'Program ' + (i+1)) + '</span>'
             + '</div>';
         });
@@ -393,7 +393,7 @@
       friends.forEach(f => {
         const sel = _quickShareSelected.has(f.username) ? ' selected' : '';
         const init = f.username.charAt(0).toUpperCase();
-        friendsHtml += '<div class="quick-share-friend' + sel + '" onclick="toggleQuickShareFriend(\'' + f.username + '\')">'
+        friendsHtml += '<div role="button" tabindex="0" class="quick-share-friend' + sel + '" onclick="toggleQuickShareFriend(\'' + f.username + '\')">'
           + '<div class="friend-avatar" data-avatar-user="' + _attr(f.username) + '">' + init + '</div>'
           + '<span class="quick-share-friend-name">' + f.username + '</span>'
           + '<span class="quick-share-check">✓</span>'

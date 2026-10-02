@@ -95,6 +95,18 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+/* Same ring for everything else a keyboard can reach. !important because
+   many component rules set `outline: none` on :focus; :focus-visible only
+   matches keyboard focus, so taps and clicks are unaffected. */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid #42a679 !important;
+  outline-offset: 2px;
+}
+
 .form-error {
   color: var(--danger);
   margin: 4px 0 0;

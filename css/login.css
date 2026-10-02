@@ -198,6 +198,12 @@
   box-shadow: none;
 }
 
+/* Signup consents: wrap long text, keep the box aligned to the first line */
+.login-consents { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.login-remember.login-consent { align-items: flex-start; line-height: 1.4; user-select: auto; }
+.login-remember.login-consent input { flex-shrink: 0; margin-top: 2px; }
+.login-consent a { color: var(--text-secondary, #c9d2cc); text-decoration: underline; }
+
 /* ── Error message ──────────────────────────────────────────── */
 
 .login-remember {

@@ -1563,7 +1563,7 @@ body.theme-dark .set-row {
 }
 .tag-chip.active {
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .tag-input {
   margin-top: 4px;
@@ -2167,7 +2167,7 @@ body.theme-dark .set-row {
   justify-content: center;
   font-weight: 800;
   font-size: 1.1rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .apc-chip {
@@ -2215,7 +2215,7 @@ body.theme-dark .set-row {
   border-radius: 10px;
   border: 1px dashed rgba(45,125,91,0.4);
   background: transparent;
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;

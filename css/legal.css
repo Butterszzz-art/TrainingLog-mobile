@@ -21,6 +21,7 @@ body {
 h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1; text-transform: uppercase; margin-bottom: 8px; }
 .updated { font-family: var(--font-label); font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #86998e; margin-bottom: 28px; }
 h2 { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--green-90); margin: 28px 0 10px; }
+h3 { font-family: var(--font-body); font-weight: 600; font-size: 16px; color: var(--green-90); margin: 20px 0 8px; }
 p, li { font-size: 15px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 10px; }
 strong { color: var(--text-primary); }
 ul { padding-left: 20px; margin-bottom: 12px; }

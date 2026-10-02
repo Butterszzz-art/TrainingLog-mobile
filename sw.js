@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v28';
+const CACHE_VERSION = 'pocket-coach-v29';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -88,8 +88,15 @@ const APP_SHELL = [
   '/css/rehab.css',
   '/src/js/profiles.js',
   '/src/js/settings-hero.js',
+  '/src/js/a11y-keyboard.js',
   '/css/profiles.css',
   '/css/exercise-card.css',
+  // Self-hosted third-party libraries and fonts (vendor/README.md)
+  '/vendor/fonts/fonts.css',
+  '/vendor/chart-4.5.1.umd.min.js',
+  '/vendor/confetti-1.9.3.browser.js',
+  '/vendor/firebase-app-compat-10.14.1.js',
+  '/vendor/firebase-auth-compat-10.14.1.js',
 ];
 
 /* ── Install: pre-cache app shell ─────────────────────────── */

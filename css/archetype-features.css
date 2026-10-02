@@ -349,7 +349,7 @@
 .attempt-total-value {
   font-size: 1.4rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* Weigh-in reminder alert */

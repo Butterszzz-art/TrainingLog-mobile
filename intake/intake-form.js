@@ -124,7 +124,7 @@ export function maakKrachtRij(rij) {
     <td><input type="number" step="0.5" class="k-kg" value="${rij.kg ?? 0}"></td>
     <td><input type="number" class="k-reps" value="${rij.herhalingen ?? 0}"></td>
     <td><input type="number" class="k-sets" value="${rij.sets ?? 0}"></td>
-    <td><button type="button" class="btn btn--danger btn--small" data-remove-rij>&times;</button></td>
+    <td><button type="button" class="btn btn--danger btn--small" data-remove-rij aria-label="Rij verwijderen">&times;</button></td>
   `;
   tr.querySelector('[data-remove-rij]').addEventListener('click', () => tr.remove());
   return tr;

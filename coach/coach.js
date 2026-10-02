@@ -225,7 +225,7 @@ function renderClientList() {
       : escapeHtml(c.trainingMode || '—') + ' · ' + (daysSince === null ? 'No check-in' : daysSince + 'd ago');
     const id = escapeHtml(c.id);
 
-    return '<div class="client-row' + (isActive ? ' active' : '') + (pending ? ' is-pending' : '') + '" data-id="' + id + '" onclick="selectClient(\'' + id + '\')">'
+    return '<div role="button" tabindex="0" class="client-row' + (isActive ? ' active' : '') + (pending ? ' is-pending' : '') + '" data-id="' + id + '" onclick="selectClient(\'' + id + '\')">'
       + (pending ? '<span class="client-checkbox"></span>' : '<input type="checkbox" class="client-checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleBulk(\'' + id + '\')" aria-label="Select ' + escapeHtml(c.clientName) + '">')
       + '<div class="client-avatar" data-avatar-user="' + escapeHtml(c.clientName || '') + '">' + initials + '</div>'
       + '<div class="client-info"><div class="client-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
@@ -367,7 +367,7 @@ function renderWorkspace() {
     const days = daysSinceIso(c.lastCheckIn);
     const rate = c.weeklyWeightChangePercent;
     const next = (c.alerts || [])[0];
-    return '<div class="ws-roster-row" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">' +
+    return '<div role="button" tabindex="0" class="ws-roster-row" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">' +
       '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>' +
       '<span class="ws-roster-cell">' + escapeHtml(c.currentProgram || c.activeProgramName || '—') + '</span>' +
       '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (c.currentBodyweight != null ? c.currentBodyweight + ' kg' : '—') + '</span>' +
@@ -431,7 +431,7 @@ function renderCheckinsList() {
   el.innerHTML = stale.length
     ? stale.map(({ client: c, days }) => {
         const label = Number.isFinite(days) ? Math.floor(days) + 'd since last check-in' : 'No check-in shared yet';
-        return '<div class="ws-roster-row" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">'
+        return '<div role="button" tabindex="0" class="ws-roster-row" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">'
           + '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>'
           + '<span class="ws-roster-cell">' + escapeHtml(label) + '</span>'
           + '</div>';
@@ -1256,7 +1256,7 @@ function renderLeadList() {
     const createdMs = l.createdAt?._seconds ? l.createdAt._seconds * 1000 : l.createdAt;
     const created = createdMs ? new Date(createdMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—';
 
-    return '<div class="client-row' + (isActive ? ' active' : '') + '" onclick="selectLead(\'' + l.id + '\')">'
+    return '<div role="button" tabindex="0" class="client-row' + (isActive ? ' active' : '') + '" onclick="selectLead(\'' + l.id + '\')">'
       + '<div class="client-avatar">' + escapeHtml(initials) + '</div>'
       + '<div class="client-info"><div class="client-name">' + escapeHtml(l.naam || 'Unnamed') + '</div>'
       + '<div class="client-meta">' + escapeHtml(created) + ' · ' + escapeHtml(l.status || 'new') + '</div></div>'
