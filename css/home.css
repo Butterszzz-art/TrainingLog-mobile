@@ -1223,7 +1223,7 @@
 .sm-toggle--on {
   background: rgba(45, 125, 91, 0.15);
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 #sickModeBanner {

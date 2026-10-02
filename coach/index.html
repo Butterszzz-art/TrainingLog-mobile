@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pocket Coach — Coach Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&family=Anton&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+  <link href="../vendor/fonts/fonts.css" rel="stylesheet">
   <link rel="stylesheet" href="../css/tokens.css">
   <link rel="stylesheet" href="../css/design-system.css">
   <link rel="stylesheet" href="coach.css">
@@ -266,8 +264,9 @@
   </div>
 
   <!-- Firebase Auth (Phase 1 migration) — compat SDK for this script-tag codebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="../vendor/firebase-app-compat-10.14.1.js"></script>
+  <script src="../vendor/firebase-auth-compat-10.14.1.js"></script>
+  <script src="../src/js/a11y-keyboard.js"></script>
   <script src="../src/js/firebase-config.js"></script>
   <script src="../src/js/firebase-auth.js"></script>
   <script src="../src/js/ai-consent.js"></script>

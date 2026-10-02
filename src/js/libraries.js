@@ -169,7 +169,7 @@
 
     const groups = ['all', 'Chest', 'Back', 'Delts', 'Arms', 'Legs', 'Core'];
     const pillRow = groups.map(g =>
-      `<span class="pill${g === _activeGroup ? ' active' : ''}" onclick="selectLibraryGroup('${g}')">${g === 'all' ? 'All' : g}</span>`
+      `<span role="button" tabindex="0" class="pill${g === _activeGroup ? ' active' : ''}" onclick="selectLibraryGroup('${g}')">${g === 'all' ? 'All' : g}</span>`
     ).join('');
 
     const filtered = _activeGroup === 'all' ? history : history.filter(e => e.muscle === _activeGroup);
@@ -192,9 +192,9 @@
         ${rows || '<p class="ws-empty-note">Nothing logged in this group yet.</p>'}
       </div>
       <div class="pill-nav" style="margin-top:12px;">
-        <span class="pill" onclick="showTab('functionalTab')">Functional</span>
-        <span class="pill" onclick="showTab('mobilityTab')">Flexibility</span>
-        <span class="pill" onclick="showTab('posingTab')">Posing</span>
+        <span role="button" tabindex="0" class="pill" onclick="showTab('functionalTab')">Functional</span>
+        <span role="button" tabindex="0" class="pill" onclick="showTab('mobilityTab')">Flexibility</span>
+        <span role="button" tabindex="0" class="pill" onclick="showTab('posingTab')">Posing</span>
       </div>
     `;
   }

@@ -1223,3 +1223,15 @@ textarea.coach-input { min-height: 60px; resize: vertical; }
 .coach-builder-day { display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
 .coach-builder-day textarea { font-size: 0.8rem; text-transform: none; font-weight: 400; }
 .detail-header .capsule-chip { margin-left: 8px; }
+
+/* Keyboard focus ring (same as css/base.css in the main app). */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid #42a679 !important;
+  outline-offset: 2px;
+}

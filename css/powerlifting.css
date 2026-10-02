@@ -295,7 +295,7 @@
 .pl-result-total {
   font-family: var(--font-display);
   font-size: 1.6rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .pl-result-total-label {

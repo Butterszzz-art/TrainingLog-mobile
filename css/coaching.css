@@ -71,7 +71,7 @@
 .coach-stat-chip .chip-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   line-height: 1;
 }
 
@@ -103,7 +103,7 @@
 .coach-bulk-count {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   flex-shrink: 0;
 }
 
@@ -503,7 +503,7 @@
 
 .coach-client-list-item:last-child { border-bottom: none; }
 .coach-client-list-item:hover { background: var(--surface-bg); }
-.coach-client-list-item.active { background: rgba(45,125,91,0.1); color: var(--primary); font-weight: 600; }
+.coach-client-list-item.active { background: rgba(45,125,91,0.1); color: var(--primary-text); font-weight: 600; }
 
 .coach-client-list-avatar {
   width: 30px;
@@ -897,7 +897,7 @@
   padding: 10px 20px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--primary-text);
   z-index: 1500;
   opacity: 0;
   transition: opacity 0.3s, transform 0.3s;

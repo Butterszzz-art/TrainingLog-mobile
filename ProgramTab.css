@@ -147,7 +147,7 @@
 .pbv2-step.done .pbv2-step-icon {
   border-color: var(--primary);
   background: transparent;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .pbv2-step-label {
@@ -159,7 +159,7 @@
 
 .pbv2-step.active .pbv2-step-label,
 .pbv2-step.done .pbv2-step-label {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── Step content area ────────────────────────────────────────── */
@@ -288,7 +288,7 @@
   display: inline-block;
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--primary-text);
   background: rgba(95, 168, 126, 0.12);
   padding: 2px 8px;
   border-radius: 20px;
@@ -340,7 +340,7 @@
 }
 
 .pbv2-day-btn:hover { background: rgba(255,255,255,0.04); color: var(--text-color); }
-.pbv2-day-btn.active { background: rgba(95,168,126,0.14); color: var(--primary); font-weight: 700; }
+.pbv2-day-btn.active { background: rgba(95,168,126,0.14); color: var(--primary-text); font-weight: 700; }
 
 .pbv2-day-btn-meta {
   font-size: 0.68rem;
@@ -383,7 +383,7 @@
   margin-top: 8px;
   transition: border-color 0.15s, color 0.15s;
 }
-.pbv2-add-day-btn:hover { border-color: var(--primary); color: var(--primary); }
+.pbv2-add-day-btn:hover { border-color: var(--primary); color: var(--primary-text); }
 
 /* Right: exercise editor */
 .pbv2-exercise-pane {
@@ -475,7 +475,7 @@
 }
 
 .pbv2-picker-row-add {
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 1.1rem;
   font-weight: 700;
   line-height: 1;
@@ -585,7 +585,7 @@
   font-family: 'Poppins', sans-serif;
   transition: border-color 0.15s, color 0.15s;
 }
-.pbv2-add-set-btn:hover { border-color: var(--primary); color: var(--primary); }
+.pbv2-add-set-btn:hover { border-color: var(--primary); color: var(--primary-text); }
 
 .pbv2-no-exercises {
   text-align: center;
@@ -791,7 +791,7 @@
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 }
-.pbv2-advanced-btn:hover { border-color: var(--primary); color: var(--primary); }
+.pbv2-advanced-btn:hover { border-color: var(--primary); color: var(--primary-text); }
 
 /* ── Bottom nav (Back / Next) ─────────────────────────────────── */
 
@@ -817,7 +817,7 @@
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 }
-.pbv2-nav-back:hover { border-color: var(--primary); color: var(--primary); }
+.pbv2-nav-back:hover { border-color: var(--primary); color: var(--primary-text); }
 
 .pbv2-nav-next {
   flex: 2;
@@ -857,7 +857,7 @@
   border-radius: 8px;
   border: 1px solid var(--primary);
   background: transparent;
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 0.82rem;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
@@ -925,7 +925,7 @@
   font-size: 0.72rem;
   font-weight: 600;
   background: rgba(95, 168, 126, 0.14);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .prog-card-actions {
@@ -939,7 +939,7 @@
   border-radius: 8px;
   border: 1px solid var(--primary);
   background: transparent;
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 0.84rem;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
@@ -960,7 +960,7 @@
   white-space: nowrap;
   transition: border-color 0.15s, color 0.15s;
 }
-.prog-card-export:hover { border-color: var(--primary); color: var(--primary); }
+.prog-card-export:hover { border-color: var(--primary); color: var(--primary-text); }
 
 .prog-card-del {
   padding: 9px 12px;
@@ -981,7 +981,7 @@
   border-radius: 8px;
   border: 1px solid var(--primary);
   background: rgba(95, 168, 126, 0.1);
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 0.82rem;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
@@ -1049,7 +1049,7 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--primary);
+  color: var(--primary-text);
   margin-bottom: 4px;
 }
 
@@ -1105,7 +1105,7 @@
 }
 .prog-ai-reanalyse:hover {
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
   transform: none;
   box-shadow: none;
 }
@@ -1206,7 +1206,7 @@
 }
 .pbv2-day-tab.active {
   background: var(--card-bg);
-  color: var(--primary);
+  color: var(--primary-text);
   border-color: var(--primary);
 }
 
@@ -1315,7 +1315,7 @@
 .pag-eq-pill.active {
   background: rgba(95, 168, 126, 0.12);
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .pag-eq-pill:hover:not(.active) {
   border-color: var(--text-muted);

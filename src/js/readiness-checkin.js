@@ -173,7 +173,7 @@
     const entry = getTodayEntry();
     if (!entry || entry.skipped) {
       host.innerHTML = `
-        <div class="readiness-home-card" onclick="retakeReadiness()">
+        <div role="button" tabindex="0" class="readiness-home-card" onclick="retakeReadiness()">
           <span class="readiness-home-score medium">?</span>
           <div class="readiness-home-info">
             <p class="readiness-home-label">Readiness not logged</p>

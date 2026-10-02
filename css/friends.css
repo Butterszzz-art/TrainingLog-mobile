@@ -378,7 +378,7 @@
 .shared-inbox-from {
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .shared-inbox-date {

@@ -164,8 +164,9 @@ describe('manage', () => {
 describe('web and Android', () => {
   test('use Stripe and never touch StoreKit', async () => {
     const { pay, w, nativeCalls } = setup({ platform: 'android' });
-    await pay.purchase('coach', 'monthly');
-    expect(w.checkoutWithStripe).toHaveBeenCalledWith('coach', 'monthly');
+    await pay.purchase('coach', 'monthly', { withdrawalWaiver: true });
+    // The checkout sheet's 14-day withdrawal waiver is passed through to Stripe checkout.
+    expect(w.checkoutWithStripe).toHaveBeenCalledWith('coach', 'monthly', { withdrawalWaiver: true });
     expect(await pay.restore()).toEqual({ restored: false, reason: 'not_applicable' });
     expect(nativeCalls).toEqual([]);
   });

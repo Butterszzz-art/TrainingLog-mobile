@@ -732,7 +732,7 @@
           <span class="home-status-pill ${pillCls}">${done} / ${routines.length} done</span>
         </div>
         ${pending.length === 0
-          ? '<p class="home-mission-progress" style="color:var(--primary);font-weight:600;">All routines completed today 🎉</p>'
+          ? '<p class="home-mission-progress" style="color:var(--primary-text);font-weight:600;">All routines completed today 🎉</p>'
           : `<ul class="home-upcoming-list">${items}</ul>`}
       </section>`;
   };

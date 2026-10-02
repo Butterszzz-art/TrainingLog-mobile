@@ -68,7 +68,7 @@
   // against a pre-Firebase account and verifying its old password) was
   // retired once migration completed — every account now lives in Firebase
   // from the start, so there's nothing left to reclaim.
-  async function signup({ username, email, password, referredBy }) {
+  async function signup({ username, email, password, referredBy, consents }) {
     if (!available()) throw new Error('Firebase is not configured.');
 
     const availRes = await fetch(
@@ -93,7 +93,7 @@
     }
 
     const idToken = await cred.user.getIdToken();
-    const complete = await postJson('/auth/signup-complete', { username, referredBy }, idToken);
+    const complete = await postJson('/auth/signup-complete', { username, referredBy, consents }, idToken);
     if (!complete.ok) {
       const code = complete.data?.error?.code;
       const message = complete.data?.error?.message || 'Could not complete signup.';
@@ -112,11 +112,11 @@
 
   // Retry only the username-claim step, after a 409 race in signup (someone
   // else claimed the username between the availability check and now).
-  async function completeSignup({ username, referredBy }) {
+  async function completeSignup({ username, referredBy, consents }) {
     const user = firebase.auth().currentUser;
     if (!user) throw new Error('Not signed in.');
     const idToken = await user.getIdToken();
-    const complete = await postJson('/auth/signup-complete', { username, referredBy }, idToken);
+    const complete = await postJson('/auth/signup-complete', { username, referredBy, consents }, idToken);
     if (!complete.ok) {
       throw new Error(complete.data?.error?.message || 'Could not complete signup.');
     }

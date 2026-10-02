@@ -93,7 +93,7 @@
 .sleep-star.active {
   background: rgba(45, 125, 91, 0.15);
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── Tags row ──────────────────────────────────────────────── */
@@ -123,7 +123,7 @@
 .sleep-tag.active {
   background: rgba(45, 125, 91, 0.15);
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── Notes ─────────────────────────────────────────────────── */
@@ -170,7 +170,7 @@
 .sleep-stat-value {
   font-size: 1.3rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   line-height: 1;
   margin-bottom: 4px;
 }
@@ -318,7 +318,7 @@
 .sleep-entry-duration {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .sleep-entry-quality {
@@ -386,7 +386,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .sleep-ai-body {
@@ -447,7 +447,7 @@
 .sleep-score-value {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   line-height: 1;
 }
 
@@ -509,5 +509,5 @@
   margin-left: 6px;
   font-size: 0.68rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--primary-text);
 }

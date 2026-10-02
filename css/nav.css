@@ -299,7 +299,7 @@
   font-family: 'Courier New', monospace;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .wfb-label {
