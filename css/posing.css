@@ -65,11 +65,13 @@
 .posing-thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
 .posing-thumbs:empty { display: none; }
 .posing-thumb {
-  width: 44px;
-  height: 58px;
+  width: 42px;
+  height: 56px;
   padding: 0;
-  border: 1px solid var(--border-row);
-  border-radius: 8px;
+  margin: 0;
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--border-row);
+  border-radius: 10px;
   overflow: hidden;
   background: var(--surface-recessed);
   cursor: pointer;
@@ -87,18 +89,48 @@
 body.pcap-open { overflow: hidden; }
 
 .pcap {
+  --pcap-glass: rgba(10, 14, 12, 0.52);
+  --pcap-glass-strong: rgba(10, 14, 12, 0.72);
+  --pcap-line: rgba(255, 255, 255, 0.10);
+  --pcap-dim: rgba(255, 255, 255, 0.56);
+  --pcap-accent: var(--green-90);
   position: fixed;
   inset: 0;
   z-index: 10000;
   background: #000;
   color: #fff;
   font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
   overflow: hidden;
+  animation: pcap-in 220ms ease-out;
 }
+@keyframes pcap-in { from { opacity: 0; } to { opacity: 1; } }
+/* Undo the app-wide button look (green fill, shadow, margin) inside the
+   overlay; :where keeps this at element specificity so the classes below win. */
+:where(.pcap, .pcap-viewer) button {
+  margin: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.pcap button:hover,
+.pcap-viewer button:hover { filter: none; }
+.pcap button:active,
+.pcap-viewer button:active { transform: none; }
+.pcap .pcap-icon-btn:active,
+.pcap-viewer .pcap-icon-btn:active { box-shadow: inset 0 0 0 1px var(--pcap-line); background: rgba(255, 255, 255, 0.14); }
+.pcap .pcap-shutter:active { box-shadow: inset 0 0 0 3px #fff; }
+.pcap .pcap-stop:active { box-shadow: inset 0 0 0 1px var(--pcap-line); transform: scale(0.94); }
+.pcap .pcap-btn:active { transform: scale(0.98); }
+.pcap .pcap-btn--ghost:active { box-shadow: inset 0 0 0 1px var(--pcap-line); }
+.pcap-ico { width: 20px; height: 20px; display: block; flex: none; }
+
 .pcap-video {
   position: absolute;
   inset: 0;
@@ -108,7 +140,17 @@ body.pcap-open { overflow: hidden; }
   z-index: 0;
 }
 .pcap--mirror .pcap-video { transform: scaleX(-1); }
-.pcap > *:not(.pcap-video) { position: relative; z-index: 1; }
+/* Soft top/bottom shading so controls read on any background. */
+.pcap-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 22%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 42%);
+}
+.pcap > *:not(.pcap-video):not(.pcap-scrim):not(.pcap-flash) { position: relative; z-index: 1; }
 
 /* Show each block only in its state. */
 .pcap .pcap-only-setup,
@@ -117,36 +159,89 @@ body.pcap-open { overflow: hidden; }
 .pcap .pcap-only-error { display: none; }
 .pcap[data-state="setup"] .pcap-only-setup,
 .pcap[data-state="running"] .pcap-only-running,
-.pcap[data-state="finishing"] .pcap-only-running { display: flex; }
+.pcap[data-state="finishing"] .pcap-only-running,
 .pcap[data-state="review"] .pcap-only-review,
 .pcap[data-state="error"] .pcap-only-error { display: flex; }
 .pcap[data-state="review"] .pcap-video,
-.pcap[data-state="error"] .pcap-video { display: none; }
+.pcap[data-state="review"] .pcap-scrim,
+.pcap[data-state="error"] .pcap-video,
+.pcap[data-state="error"] .pcap-scrim { display: none; }
 .pcap[data-state="review"],
 .pcap[data-state="error"] { background: var(--ground); }
 
-.pcap-top { display: grid; grid-template-columns: 42px 1fr 42px; align-items: center; gap: 12px; text-align: center; }
+/* Top bar */
+.pcap-top {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
 .pcap-title {
   font-family: var(--font-label);
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  font-size: 14px;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  color: rgba(255, 255, 255, 0.86);
 }
-.pcap-round {
-  width: 42px;
-  height: 42px;
+.pcap-icon-btn {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
-  font-size: 18px;
+  border: 0;
+  background: var(--pcap-glass);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: inset 0 0 0 1px var(--pcap-line);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 }
+.pcap-icon-btn .pcap-ico { width: 18px; height: 18px; }
+
+/* Photos × interval pill */
+.pcap-controls {
+  align-self: center;
+  align-items: center;
+  margin-top: 14px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--pcap-glass);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: inset 0 0 0 1px var(--pcap-line);
+}
+.pcap-ctl { display: flex; align-items: center; }
+.pcap-ctl button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pcap-dim);
+  cursor: pointer;
+}
+.pcap-ctl button .pcap-ico { width: 15px; height: 15px; }
+.pcap-ctl button:active:not(:disabled) { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.pcap-ctl button:disabled { opacity: 0.25; cursor: default; }
+.pcap-ctl-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 52px;
+  justify-content: center;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.pcap-ctl-val .pcap-ico { width: 15px; height: 15px; color: var(--pcap-accent); }
+.pcap-ctl-div { width: 1px; height: 18px; background: var(--pcap-line); margin: 0 4px; }
 
 /* Countdown */
 .pcap-stage {
@@ -154,232 +249,367 @@ body.pcap-open { overflow: hidden; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 14px;
   text-align: center;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
 }
-.pcap-stage-lbl, .pcap-progress {
+.pcap-stage-lbl {
   font-family: var(--font-label);
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
 }
+.pcap-ring {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  background: rgba(8, 12, 10, 0.4);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.pcap-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pcap-ring-track { fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 5; }
+.pcap-ring-arc { fill: none; stroke: var(--pcap-accent); stroke-width: 5; stroke-linecap: round; }
 .pcap-count {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-display);
-  font-size: 120px;
+  font-size: 84px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: var(--green-100);
 }
-.pcap-pose { font-family: var(--font-display); font-size: 26px; letter-spacing: 0.02em; min-height: 1em; }
-.pcap-progress { opacity: 0.8; }
+.pcap-count.is-tick { animation: pcap-tick 360ms cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes pcap-tick { from { transform: scale(1.18); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
+.pcap-pose {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--pcap-glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px var(--pcap-line);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+}
+.pcap-pose[hidden] { display: none; }
+.pcap-dots { display: flex; gap: 6px; align-items: center; min-height: 6px; }
+.pcap-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.28); transition: background 200ms, transform 200ms; }
+.pcap-dots i.is-done { background: var(--pcap-accent); }
+.pcap-dots span {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--pcap-dim);
+}
 
 .pcap-flash {
-  position: absolute !important;
+  position: absolute;
   inset: 0;
   background: #fff;
   opacity: 0;
   pointer-events: none;
-  z-index: 2 !important;
+  z-index: 2;
 }
-.pcap-flash.is-on { animation: pcap-flash 280ms ease-out; }
-@keyframes pcap-flash { from { opacity: 0.85; } to { opacity: 0; } }
+.pcap-flash.is-on { animation: pcap-flash 240ms ease-out; }
+@keyframes pcap-flash { from { opacity: 0.45; } to { opacity: 0; } }
 
-/* Settings panel */
-.pcap-panel {
+/* Settings sheet */
+.pcap-sheet {
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin-top: auto;
-  margin-bottom: 14px;
-  padding: 14px;
-  border-radius: var(--radius-pod);
-  background: rgba(8, 12, 10, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  margin-bottom: 18px;
+  padding: 12px;
+  border-radius: 20px;
+  background: var(--pcap-glass);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: inset 0 0 0 1px var(--pcap-line);
 }
-.pcap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.pcap-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pcap-row { display: flex; align-items: center; gap: 12px; }
 .pcap-lbl {
+  flex: none;
+  width: 62px;
+  white-space: nowrap;
   font-family: var(--font-label);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pcap-dim);
+}
+.pcap-seg {
+  flex: 1;
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.35);
+  min-width: 0;
+}
+.pcap-seg button {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--pcap-dim);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 160ms, color 160ms;
+}
+.pcap-seg button[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Bottom dock */
+.pcap-bottom { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.pcap[data-state="running"] .pcap-bottom,
+.pcap[data-state="finishing"] .pcap-bottom { margin-top: auto; }
+.pcap-dock {
+  width: 100%;
+  max-width: 340px;
+  align-items: center;
+  justify-content: space-between;
+}
+.pcap-side {
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.pcap-side .pcap-icon-btn { width: 44px; height: 44px; }
+.pcap-side-lbl {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pcap-dim);
+}
+.pcap-shutter {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 0;
+  padding: 6px;
+  background: transparent;
+  box-shadow: inset 0 0 0 3px #fff;
+  cursor: pointer;
+}
+.pcap-shutter span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 120ms ease;
+}
+.pcap-shutter:active span { transform: scale(0.9); }
+.pcap-stop {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--pcap-glass-strong);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px var(--pcap-line);
+  align-items: center;
+  justify-content: center;
+  color: #ff6b5e;
+  cursor: pointer;
+}
+.pcap-stop .pcap-ico { width: 22px; height: 22px; }
+.pcap-strip { gap: 6px; min-height: 52px; justify-content: center; }
+.pcap-strip img {
+  width: 39px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.75), 0 4px 12px rgba(0, 0, 0, 0.4);
+  animation: pcap-pop 260ms cubic-bezier(.2, .9, .3, 1.2);
+}
+@keyframes pcap-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Shared buttons */
+.pcap-btn {
+  height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-label) !important;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.pcap-btn .pcap-ico { width: 18px; height: 18px; }
+.pcap-btn--ghost { background: rgba(255, 255, 255, 0.06); box-shadow: inset 0 0 0 1px var(--pcap-line); color: #fff; }
+.pcap-btn--primary { background: var(--fill-btn-primary-mobile); color: var(--label-on-green) !important; }
+.pcap-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Review */
+.pcap-review {
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  margin-top: 16px;
+}
+.pcap-review-head { display: flex; flex-direction: column; gap: 4px; }
+.pcap-review-num { display: flex; align-items: baseline; gap: 8px; }
+.pcap-review-num b { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1; }
+.pcap-review-num span {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 13px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--secondary-text);
 }
-.pcap-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.pcap-chip {
-  flex: 1 1 auto;
-  min-height: 34px;
-  padding: 0 10px;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-}
-.pcap-chips--tight .pcap-chip { padding: 0 6px; }
-.pcap-chip[aria-pressed="true"] {
-  background: var(--fill-btn-primary-mobile);
-  border-color: transparent;
-  color: var(--label-on-green);
-}
-.pcap-stepper {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 40px;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-.pcap-stepper button {
-  width: 40px;
-  height: 100%;
-  border: 0;
-  background: none;
-  color: #fff;
-  font-size: 20px;
-  cursor: pointer;
-}
-.pcap-stepper button:disabled { opacity: 0.3; cursor: default; }
-.pcap-stepper output { font-family: var(--font-display); font-size: 20px; font-variant-numeric: tabular-nums; }
-
-/* Bottom bar */
-.pcap-bottom { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.pcap-shutter {
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  border: 4px solid #fff;
-  background: transparent;
-  padding: 5px;
-  cursor: pointer;
-}
-.pcap-shutter span { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--green-70); }
-.pcap-stop {
-  align-items: center;
-  justify-content: center;
-  min-width: 140px;
-  min-height: 48px;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-family: var(--font-label);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.pcap-strip { gap: 6px; min-height: 64px; justify-content: center; }
-.pcap-strip img {
-  width: 48px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-}
-
-/* Review */
-.pcap-review {
-  position: absolute !important;
-  inset: calc(env(safe-area-inset-top, 0px) + 66px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
-  flex-direction: column;
-  gap: 10px;
-  min-height: 0;
-}
-.pcap-review-head { display: flex; align-items: baseline; justify-content: space-between; }
-.pcap-review-head h3 { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 400; }
-.pcap-review-head span, .pcap-hint { color: var(--secondary-text); font-size: 13px; margin: 0; }
+.pcap-hint { margin: 0; color: var(--text-muted); font-size: 13px; }
 .pcap-grid-photos {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   align-content: start;
+  margin: 0 -2px;
+  padding: 2px;
 }
 .pcap-photo {
   position: relative;
   padding: 0;
   aspect-ratio: 3 / 4;
-  border-radius: 12px;
+  border: 0;
+  border-radius: 14px;
   overflow: hidden;
-  border: 2px solid var(--green-70);
   background: var(--surface-recessed);
   cursor: pointer;
+  transition: opacity 160ms, transform 160ms;
 }
 .pcap-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pcap-photo span {
+.pcap-photo-check {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-60);
+  color: #fff;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.25);
+}
+.pcap-photo-check .pcap-ico { width: 13px; height: 13px; stroke-width: 3; }
+.pcap-photo-pose {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 14px 6px 5px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 18px 8px 7px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.03em;
   text-align: left;
 }
-.pcap-photo[aria-pressed="false"] { border-color: transparent; opacity: 0.35; }
+.pcap-photo[aria-pressed="false"] { opacity: 0.38; transform: scale(0.96); }
+.pcap-photo[aria-pressed="false"] .pcap-photo-check { background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.8); }
+.pcap-photo[aria-pressed="false"] .pcap-photo-check .pcap-ico { display: none; }
 .pcap-review-actions { display: flex; gap: 10px; }
-.pcap-review-actions .mx-outline { flex: 1; }
-.pcap-review-actions .mx-cta { flex: 1.6; width: auto; margin: 0; justify-content: center; }
-.pcap-review-actions .mx-cta:disabled { opacity: 0.45; }
+.pcap-review-actions .pcap-btn--ghost { flex: 1; }
+.pcap-review-actions .pcap-btn--primary { flex: 1.7; }
 
 /* Error */
 .pcap-error {
-  position: absolute !important;
-  inset: 0;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 18px;
-  padding: 32px;
+  padding: 24px;
   text-align: center;
 }
-.pcap-error p { margin: 0; max-width: 320px; line-height: 1.5; color: var(--text-color); }
+.pcap-error-ico {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--pcap-line);
+  color: var(--text-muted);
+}
+.pcap-error-ico .pcap-ico { width: 28px; height: 28px; }
+.pcap-error p { margin: 0; max-width: 300px; line-height: 1.5; color: var(--secondary-text); font-size: 15px; }
+.pcap-error .pcap-btn { min-width: 160px; }
 
 /* Full-size photo viewer (from history thumbnails) */
 .pcap-viewer {
   position: fixed;
   inset: 0;
   z-index: 10001;
-  background: rgba(0, 0, 0, 0.94);
+  background: rgba(0, 0, 0, 0.96);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(env(safe-area-inset-top, 0px) + 60px) 12px calc(env(safe-area-inset-bottom, 0px) + 70px);
+  padding: calc(env(safe-area-inset-top, 0px) + 64px) 12px calc(env(safe-area-inset-bottom, 0px) + 84px);
+  animation: pcap-in 180ms ease-out;
+  --pcap-glass: rgba(255, 255, 255, 0.08);
+  --pcap-line: rgba(255, 255, 255, 0.1);
 }
-.pcap-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; }
+.pcap-viewer .pcap-ico { width: 18px; height: 18px; }
+.pcap-viewer button { color: #fff; }
+.pcap-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 14px; }
 .pcap-viewer-close { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 16px; }
 .pcap-viewer-bar {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
   left: 0;
   right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  color: #fff;
+  gap: 20px;
+  font-family: var(--font-label);
+  font-weight: 700;
   font-size: 14px;
+  letter-spacing: 0.06em;
 }
-.pcap-viewer-bar button {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  font-size: 24px;
-  cursor: pointer;
-}
+.pcap-viewer-bar .pcap-icon-btn { width: 44px; height: 44px; }

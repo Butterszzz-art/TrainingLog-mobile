@@ -283,6 +283,7 @@
     settings: null,
     state: 'closed',
     runner: null,
+    schedule: [],
     cues: null,
     shots: [],
     shotUrls: [],
@@ -296,9 +297,13 @@
 
   function q(sel) { return ui.root?.querySelector(sel); }
 
+  const STATE_TITLES = { setup: 'Check-in', running: 'Check-in', finishing: 'Check-in', review: 'Review', error: 'Check-in' };
+
   function setState(state) {
     ui.state = state;
-    if (ui.root) ui.root.dataset.state = state;
+    if (!ui.root) return;
+    ui.root.dataset.state = state;
+    q('[data-el="title"]').textContent = STATE_TITLES[state] || 'Check-in';
   }
 
   async function startCamera() {
@@ -342,6 +347,36 @@
     ui.shotUrls = [];
   }
 
+  const ICON_PATHS = {
+    close: '<path d="M18 6 6 18M6 6l12 12"/>',
+    flip: '<path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="3"/><path d="m18 22-3-3 3-3"/><path d="m6 2 3 3-3 3"/>',
+    camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+    cameraOff: '<path d="m2 2 20 20"/><path d="M7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16"/><path d="M9.5 4h5L17 7h3a2 2 0 0 1 2 2v7.5"/><path d="M14.1 15.2a3 3 0 0 1-4.3-4.3"/>',
+    timer: '<path d="M10 2h4"/><path d="m12 14 3-3"/><circle cx="12" cy="14" r="8"/>',
+    minus: '<path d="M5 12h14"/>',
+    plus: '<path d="M5 12h14M12 5v14"/>',
+    voice: '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/>',
+    beep: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    mute: '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
+    prev: '<path d="m15 18-6-6 6-6"/>',
+    next: '<path d="m9 18 6-6-6-6"/>'
+  };
+
+  function icon(name) {
+    return `<svg class="pcap-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]}</svg>`;
+  }
+
+  const CUE_META = {
+    voice: { icon: 'voice', label: 'Voice' },
+    beep: { icon: 'beep', label: 'Beep' },
+    off: { icon: 'mute', label: 'Silent' }
+  };
+
+  const RING_R = 70;
+  const RING_C = 2 * Math.PI * RING_R;
+
   function buildOverlay() {
     const root = document.createElement('div');
     root.id = 'posingCaptureOverlay';
@@ -351,86 +386,89 @@
     root.setAttribute('aria-label', 'Posing photo check-in');
     root.innerHTML = `
       <video class="pcap-video" playsinline muted autoplay></video>
+      <div class="pcap-scrim" aria-hidden="true"></div>
       <div class="pcap-flash" aria-hidden="true"></div>
 
       <header class="pcap-top">
-        <button type="button" class="pcap-round" data-act="close" aria-label="Close">✕</button>
-        <span class="pcap-title">Photo check-in</span>
-        <button type="button" class="pcap-round pcap-only-setup" data-act="flip" aria-label="Switch camera">⟲</button>
+        <button type="button" class="pcap-icon-btn" data-act="close" aria-label="Close">${icon('close')}</button>
+        <span class="pcap-title" data-el="title">Check-in</span>
+        <span class="pcap-top-spacer"></span>
       </header>
 
-      <div class="pcap-stage pcap-only-running" aria-live="polite">
-        <span class="pcap-stage-lbl" data-el="stageLbl">Get in position</span>
-        <span class="pcap-count" data-el="count"></span>
-        <span class="pcap-pose" data-el="pose"></span>
-        <span class="pcap-progress" data-el="progress"></span>
+      <div class="pcap-controls pcap-only-setup" aria-label="Photos and timer">
+        <div class="pcap-ctl">
+          <button type="button" data-step="shots" data-delta="-1" aria-label="Fewer photos">${icon('minus')}</button>
+          <span class="pcap-ctl-val">${icon('camera')}<output data-el="shots"></output></span>
+          <button type="button" data-step="shots" data-delta="1" aria-label="More photos">${icon('plus')}</button>
+        </div>
+        <span class="pcap-ctl-div" aria-hidden="true"></span>
+        <div class="pcap-ctl">
+          <button type="button" data-step="interval" data-delta="-1" aria-label="Shorter interval">${icon('minus')}</button>
+          <span class="pcap-ctl-val">${icon('timer')}<output data-el="interval"></output></span>
+          <button type="button" data-step="interval" data-delta="1" aria-label="Longer interval">${icon('plus')}</button>
+        </div>
       </div>
 
-      <section class="pcap-panel pcap-only-setup" aria-label="Capture settings">
-        <div class="pcap-field">
-          <span class="pcap-lbl">Pose guide</span>
-          <div class="pcap-chips" data-group="guide">
-            ${Object.entries(POSE_GUIDES).map(([key, g]) => `<button type="button" class="pcap-chip" data-guide="${key}">${escapeHtml(g.label)}</button>`).join('')}
+      <div class="pcap-stage pcap-only-running" aria-live="polite">
+        <span class="pcap-stage-lbl" data-el="stageLbl"></span>
+        <div class="pcap-ring">
+          <svg viewBox="0 0 160 160" aria-hidden="true">
+            <circle cx="80" cy="80" r="${RING_R}" class="pcap-ring-track"/>
+            <circle cx="80" cy="80" r="${RING_R}" class="pcap-ring-arc" data-el="arc" stroke-dasharray="${RING_C.toFixed(1)}" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
+          </svg>
+          <span class="pcap-count" data-el="count"></span>
+        </div>
+        <span class="pcap-pose" data-el="pose"></span>
+        <div class="pcap-dots" data-el="progress"></div>
+      </div>
+
+      <section class="pcap-sheet pcap-only-setup" aria-label="Capture settings">
+        <div class="pcap-row">
+          <span class="pcap-lbl">Poses</span>
+          <div class="pcap-seg" role="group" aria-label="Pose guide">
+            ${Object.entries(POSE_GUIDES).map(([key, g]) => `<button type="button" data-guide="${key}">${escapeHtml(key === 'free' ? 'Free' : g.label)}</button>`).join('')}
           </div>
         </div>
-        <div class="pcap-grid">
-          <div class="pcap-field">
-            <span class="pcap-lbl">Photos</span>
-            <div class="pcap-stepper">
-              <button type="button" data-step="shots" data-delta="-1" aria-label="Fewer photos">−</button>
-              <output data-el="shots"></output>
-              <button type="button" data-step="shots" data-delta="1" aria-label="More photos">+</button>
-            </div>
-          </div>
-          <div class="pcap-field">
-            <span class="pcap-lbl">Every</span>
-            <div class="pcap-stepper">
-              <button type="button" data-step="interval" data-delta="-1" aria-label="Shorter interval">−</button>
-              <output data-el="interval"></output>
-              <button type="button" data-step="interval" data-delta="1" aria-label="Longer interval">+</button>
-            </div>
-          </div>
-        </div>
-        <div class="pcap-grid">
-          <div class="pcap-field">
-            <span class="pcap-lbl">Start after</span>
-            <div class="pcap-chips pcap-chips--tight" data-group="startDelay">
-              ${START_DELAYS.map((s) => `<button type="button" class="pcap-chip" data-delay="${s}">${s}s</button>`).join('')}
-            </div>
-          </div>
-          <div class="pcap-field">
-            <span class="pcap-lbl">Cues</span>
-            <div class="pcap-chips pcap-chips--tight" data-group="cues">
-              <button type="button" class="pcap-chip" data-cues="voice">Voice</button>
-              <button type="button" class="pcap-chip" data-cues="beep">Beep</button>
-              <button type="button" class="pcap-chip" data-cues="off">Off</button>
-            </div>
+        <div class="pcap-row">
+          <span class="pcap-lbl">Start in</span>
+          <div class="pcap-seg" role="group" aria-label="Start delay">
+            ${START_DELAYS.map((s) => `<button type="button" data-delay="${s}">${s}s</button>`).join('')}
           </div>
         </div>
       </section>
 
       <footer class="pcap-bottom">
         <div class="pcap-strip pcap-only-running" data-el="strip"></div>
-        <button type="button" class="pcap-shutter pcap-only-setup" data-act="start" aria-label="Start photo check-in"><span></span></button>
-        <button type="button" class="pcap-stop pcap-only-running" data-act="stop">Stop</button>
+        <div class="pcap-dock pcap-only-setup">
+          <button type="button" class="pcap-side" data-act="cues" aria-label="Sound cues">
+            <span class="pcap-icon-btn" data-el="cueIcon"></span>
+            <span class="pcap-side-lbl" data-el="cueLabel"></span>
+          </button>
+          <button type="button" class="pcap-shutter" data-act="start" aria-label="Start photo check-in"><span></span></button>
+          <button type="button" class="pcap-side" data-act="flip" aria-label="Switch camera">
+            <span class="pcap-icon-btn">${icon('flip')}</span>
+            <span class="pcap-side-lbl">Flip</span>
+          </button>
+        </div>
+        <button type="button" class="pcap-stop pcap-only-running" data-act="stop" aria-label="Stop">${icon('stop')}</button>
       </footer>
 
       <section class="pcap-review pcap-only-review" aria-label="Review photos">
         <div class="pcap-review-head">
-          <h3>Review</h3>
-          <span data-el="reviewCount"></span>
+          <div class="pcap-review-num"><b data-el="reviewKept"></b><span data-el="reviewOf"></span></div>
+          <p class="pcap-hint">Tap a photo to leave it out.</p>
         </div>
-        <p class="pcap-hint">Tap a photo to drop it from this check-in.</p>
         <div class="pcap-grid-photos" data-el="reviewGrid"></div>
         <div class="pcap-review-actions">
-          <button type="button" class="mx-outline" data-act="retake">Retake</button>
-          <button type="button" class="mx-cta" data-act="save"><span>Save check-in</span></button>
+          <button type="button" class="pcap-btn pcap-btn--ghost" data-act="retake">Retake</button>
+          <button type="button" class="pcap-btn pcap-btn--primary" data-act="save">${icon('check')}<span>Save check-in</span></button>
         </div>
       </section>
 
       <section class="pcap-error pcap-only-error" role="alert">
+        <span class="pcap-error-ico">${icon('cameraOff')}</span>
         <p data-el="errorMsg"></p>
-        <button type="button" class="mx-outline" data-act="close">Close</button>
+        <button type="button" class="pcap-btn pcap-btn--ghost" data-act="close">Close</button>
       </section>
     `;
     root.addEventListener('click', onClick);
@@ -443,9 +481,14 @@
     q('[data-el="shots"]').textContent = String(s.shots);
     q('[data-el="interval"]').textContent = `${s.interval}s`;
     ui.root.querySelectorAll('[data-step="shots"]').forEach((b) => { b.disabled = guided; });
+    q('[data-step="interval"][data-delta="-1"]').disabled = s.interval <= LIMITS.interval.min;
+    q('[data-step="interval"][data-delta="1"]').disabled = s.interval >= LIMITS.interval.max;
     ui.root.querySelectorAll('[data-guide]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.guide === s.guide)));
     ui.root.querySelectorAll('[data-delay]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.delay) === s.startDelay)));
-    ui.root.querySelectorAll('[data-cues]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cues === s.cues)));
+    const cue = CUE_META[s.cues];
+    q('[data-el="cueIcon"]').innerHTML = icon(cue.icon);
+    q('[data-el="cueLabel"]').textContent = cue.label;
+    q('[data-act="cues"]').setAttribute('aria-label', `Sound cues: ${cue.label}`);
   }
 
   function updateSettings(patch) {
@@ -460,16 +503,38 @@
   function renderStrip() {
     const strip = q('[data-el="strip"]');
     if (!strip) return;
-    strip.innerHTML = ui.shotUrls.slice(-5).map((u) => `<img src="${u}" alt="">`).join('');
+    strip.innerHTML = ui.shotUrls.slice(-4).map((u) => `<img src="${u}" alt="">`).join('');
+  }
+
+  function renderProgress(doneCount) {
+    const el = q('[data-el="progress"]');
+    const total = ui.settings.shots;
+    if (total <= 12) {
+      el.innerHTML = Array.from({ length: total }, (_v, i) => `<i class="${i < doneCount ? 'is-done' : ''}"></i>`).join('');
+    } else {
+      el.innerHTML = `<span>${doneCount} / ${total}</span>`;
+    }
   }
 
   function onFrame({ elapsed, nextShot }) {
     if (!nextShot) return;
-    const secs = Math.max(1, Math.ceil((nextShot.at - elapsed) / 1000));
-    q('[data-el="count"]').textContent = String(secs);
-    q('[data-el="stageLbl"]').textContent = nextShot.index === 0 ? 'First photo in' : 'Next photo in';
+    const remaining = Math.max(0, nextShot.at - elapsed);
+    const secs = Math.max(1, Math.ceil(remaining / 1000));
+    const countEl = q('[data-el="count"]');
+    if (countEl.textContent !== String(secs)) {
+      countEl.textContent = String(secs);
+      countEl.classList.remove('is-tick');
+      void countEl.offsetWidth; // restart the animation
+      countEl.classList.add('is-tick');
+    }
+    const shotsBefore = ui.schedule.filter((s) => s.type === 'shot' && s.index === nextShot.index - 1);
+    const spanStart = shotsBefore.length ? shotsBefore[0].at : 0;
+    const fraction = Math.min(1, remaining / Math.max(1, nextShot.at - spanStart));
+    q('[data-el="arc"]').setAttribute('stroke-dashoffset', (RING_C * (1 - fraction)).toFixed(1));
+    q('[data-el="stageLbl"]').textContent = nextShot.index === 0 ? 'Get in position' : `Photo ${nextShot.index + 1} of ${ui.settings.shots}`;
     q('[data-el="pose"]').textContent = nextShot.pose || '';
-    q('[data-el="progress"]').textContent = `Photo ${nextShot.index + 1} of ${ui.settings.shots}`;
+    q('[data-el="pose"]').hidden = !nextShot.pose;
+    renderProgress(nextShot.index);
   }
 
   function flash() {
@@ -508,9 +573,11 @@
     ui.cues.unlock();
     requestWakeLock();
     renderStrip();
+    renderProgress(0);
     setState('running');
     ui.startedAt = Date.now();
-    ui.runner = createScheduleRunner(buildCaptureSchedule(ui.settings), { onStep, onFrame });
+    ui.schedule = buildCaptureSchedule(ui.settings);
+    ui.runner = createScheduleRunner(ui.schedule, { onStep, onFrame });
     ui.runner.start();
   }
 
@@ -545,7 +612,8 @@
     grid.innerHTML = ui.shots.map((s, i) => `
       <button type="button" class="pcap-photo" data-photo="${i}" aria-pressed="true" aria-label="Photo ${i + 1}${s.pose ? `, ${escapeHtml(s.pose)}` : ''}">
         <img src="${ui.shotUrls[i]}" alt="">
-        ${s.pose ? `<span>${escapeHtml(s.pose)}</span>` : ''}
+        <span class="pcap-photo-check">${icon('check')}</span>
+        ${s.pose ? `<span class="pcap-photo-pose">${escapeHtml(s.pose)}</span>` : ''}
       </button>`).join('');
     updateReviewCount();
   }
@@ -557,7 +625,8 @@
 
   function updateReviewCount() {
     const kept = keptShots().length;
-    q('[data-el="reviewCount"]').textContent = `${kept} of ${ui.shots.length} kept`;
+    q('[data-el="reviewKept"]').textContent = String(kept);
+    q('[data-el="reviewOf"]').textContent = `of ${ui.shots.length} photo${ui.shots.length === 1 ? '' : 's'} kept`;
     q('[data-act="save"]').disabled = kept === 0;
   }
 
@@ -620,7 +689,7 @@
     } else if (act === 'save') saveCheckIn();
     else if (target.dataset.guide) updateSettings({ guide: target.dataset.guide });
     else if (target.dataset.delay) updateSettings({ startDelay: Number(target.dataset.delay) });
-    else if (target.dataset.cues) updateSettings({ cues: target.dataset.cues });
+    else if (act === 'cues') updateSettings({ cues: CUE_MODES[(CUE_MODES.indexOf(ui.settings.cues) + 1) % CUE_MODES.length] });
     else if (target.dataset.step) {
       const key = target.dataset.step;
       updateSettings({ [key]: ui.settings[key] + Number(target.dataset.delta) });
@@ -721,11 +790,11 @@
     viewer.innerHTML = `
       <img alt="">
       <div class="pcap-viewer-bar">
-        <button type="button" data-v="prev" aria-label="Previous photo">‹</button>
+        <button type="button" class="pcap-icon-btn" data-v="prev" aria-label="Previous photo">${icon('prev')}</button>
         <span data-v="label"></span>
-        <button type="button" data-v="next" aria-label="Next photo">›</button>
+        <button type="button" class="pcap-icon-btn" data-v="next" aria-label="Next photo">${icon('next')}</button>
       </div>
-      <button type="button" class="pcap-round pcap-viewer-close" data-v="close" aria-label="Close">✕</button>`;
+      <button type="button" class="pcap-icon-btn pcap-viewer-close" data-v="close" aria-label="Close">${icon('close')}</button>`;
 
     function show() {
       if (url) URL.revokeObjectURL(url);
