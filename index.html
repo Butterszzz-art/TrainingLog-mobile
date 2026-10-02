@@ -1022,7 +1022,7 @@
                 </div>
                 <div class="log-adv-field log-adv-field--full">
                   <label class="log-adv-label" for="entryDate">Log date</label>
-                  <input type="date" id="entryDate" oninput="_updateLogAdvDot()" />
+                  <input type="date" id="entryDate" oninput="delete this.dataset.autoDate; _updateLogAdvDot()" />
                 </div>
               </div>
             </div>
@@ -1036,6 +1036,9 @@
               <span id="qlLogBtnLabel">Log set</span>
               <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>
             </button>
+            <!-- Post-log check-in renders here, below the Log button, rather
+                 than as a full-screen overlay (see showFlowCaptureModal). -->
+            <div id="flowCaptureInline" style="display:none;"></div>
           </div>
 
           <!-- Quick-log weight entry sheet: tapping the weight value above
@@ -5779,7 +5782,7 @@ function addLogEntry() {
   const maxedOut = document.getElementById("maxedOutToggle")?.checked || false;
   const unit = document.getElementById("weightUnit").value || 'kg';
   const dateInput = document.getElementById("entryDate");
-  const date = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().split('T')[0];
+  const date = resolveEntryDate(dateInput);
 
 
   if (!exercise || !sets || isNaN(sets) || sets < 1) {
@@ -5949,9 +5952,7 @@ function addLogEntry() {
   document.getElementById("setInputsContainer").innerHTML = '';
   const maxedOutToggleEl = document.getElementById("maxedOutToggle");
   if (maxedOutToggleEl) maxedOutToggleEl.checked = false;
-  if (dateInput) {
-    dateInput.value = new Date().toISOString().split('T')[0];
-  }
+  resetEntryDateToToday(dateInput);
 
   // ✅ Reset set counter
   currentSetCount = 0;
@@ -5964,12 +5965,20 @@ function addLogEntry() {
 
 // ── Flow Capture: post-log micro check-in (RPE + soreness) ─────────────
 
+// Exercises already asked about, per day. Quick log calls addLogEntry() once
+// per set, so asking after every set re-opened the check-in on top of the
+// Log button and the lifter's next tap closed it instead of logging the set.
+const _flowCapturePrompted = new Set();
+
 function triggerFlowCapture(entry) {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !entry?.exercise) return;
   try {
     window.dailyMissionEngine?.syncMissionFromWorkoutCompletion?.({ date: entry.date }, userId);
   } catch (_error) { /* mission engine unavailable */ }
+  const promptKey = `${entry.date}|${String(entry.exercise).trim().toLowerCase()}`;
+  if (_flowCapturePrompted.has(promptKey)) return;
+  _flowCapturePrompted.add(promptKey);
   showFlowCaptureModal(entry.exercise, entry.sets);
 }
 window.triggerFlowCapture = triggerFlowCapture;
@@ -6001,10 +6010,22 @@ function getFlowCaptureOverlay() {
   return el;
 }
 
+// While the Log tab is open the check-in renders inline under the Log button,
+// so it never covers the button; elsewhere it falls back to the overlay.
+let _flowCaptureHost = null;
+
+function getFlowCaptureHost() {
+  const inline = document.getElementById('flowCaptureInline');
+  if (inline && inline.parentElement && inline.parentElement.offsetParent !== null) return inline;
+  return getFlowCaptureOverlay();
+}
+
 function showFlowCaptureModal(exercise, sets) {
+  closeFlowCaptureModal();
   _flowCaptureState = { rpe: null, sore: null, exercise: exercise || '', sets: sets || 0 };
+  _flowCaptureHost = getFlowCaptureHost();
   renderFlowCaptureModal();
-  getFlowCaptureOverlay().style.display = 'flex';
+  _flowCaptureHost.style.display = _flowCaptureHost.id === 'flowCaptureInline' ? 'block' : 'flex';
 }
 
 function _fcEscape(value) {
@@ -6012,14 +6033,14 @@ function _fcEscape(value) {
 }
 
 function renderFlowCaptureModal() {
-  const overlay = getFlowCaptureOverlay();
+  const overlay = _flowCaptureHost || getFlowCaptureOverlay();
   const { rpe, sore, exercise, sets } = _flowCaptureState;
   const renderChips = (options, selected, groupKey) => options.map((item) => `
     <div class="mx-preset ${selected === item.key ? 'active' : ''}" onclick="setFlowCaptureAnswer('${groupKey}', '${item.key}')">${_fcEscape(item.label)}</div>
   `).join('');
 
   overlay.innerHTML = `
-    <div class="nm-dialog fc-dialog" role="dialog" aria-modal="true">
+    <div class="nm-dialog fc-dialog" ${overlay.id === 'flowCaptureInline' ? 'role="group" aria-label="Set check-in"' : 'role="dialog" aria-modal="true"'}>
       <p class="fc-title">${_fcEscape(exercise)} logged</p>
       <p class="fc-sub">${sets} set${sets === 1 ? '' : 's'} &middot; while it's fresh</p>
       <p class="fc-question">How did that feel?</p>
@@ -6055,8 +6076,11 @@ function saveFlowCaptureAndClose() {
 }
 
 function closeFlowCaptureModal() {
-  const overlay = document.getElementById('flowCaptureOverlay');
-  if (overlay) { overlay.style.display = 'none'; overlay.innerHTML = ''; }
+  ['flowCaptureOverlay', 'flowCaptureInline'].forEach(id => {
+    const host = document.getElementById(id);
+    if (host) { host.style.display = 'none'; host.innerHTML = ''; }
+  });
+  _flowCaptureHost = null;
 }
 window.closeFlowCaptureModal = closeFlowCaptureModal;
 
@@ -6143,6 +6167,31 @@ const ADVANCED_TAGS = [
 // another. Existing entries without an id are deliberately left alone:
 // giving them one now would change their local history key and duplicate
 // them in Log History.
+// The lifter's own calendar day (YYYY-MM-DD), not UTC's. Workouts are keyed
+// by this, so using toISOString() here split a session in two whenever it
+// crossed UTC midnight (8pm in New York, 10am in Sydney) and filed the
+// later sets under tomorrow's (or the earlier ones under yesterday's) date.
+function localDateKey(d = new Date()) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// #entryDate is pre-filled with today so the Log date field isn't blank, and
+// that value is remembered in data-auto-date. An unchanged pre-fill means
+// "today" at the moment the set is logged — otherwise an app left open
+// overnight would log the next session's first exercise into yesterday's
+// workout. Picking a date clears the marker (see the input's oninput).
+function resetEntryDateToToday(input = document.getElementById('entryDate')) {
+  if (!input) return;
+  input.value = localDateKey();
+  input.dataset.autoDate = input.value;
+}
+
+function resolveEntryDate(input) {
+  if (!input || !input.value || input.value === input.dataset.autoDate) return localDateKey();
+  return input.value;
+}
+
 function newWorkoutId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
   return `w-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -7133,7 +7182,7 @@ let _sessionRatingWorkoutIndex = null;
 let _sessionRatingDraft = {};
 
 function _findWorkoutIndexForRating(workouts) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateKey();
   const todayIdx = workouts.findIndex(w => w?.date === today && Array.isArray(w.log) && w.log.length);
   if (todayIdx !== -1) return todayIdx;
   for (let i = workouts.length - 1; i >= 0; i--) {
@@ -7359,7 +7408,9 @@ function renderWorkouts() {
   });
 
   if (workoutsUpdated) {
-    localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+    // Same key it was read from — writing to currentUser's while a coach was
+    // viewing a client replaced the coach's own log with the client's.
+    localStorage.setItem(`workouts_${_logUser}`, JSON.stringify(workouts));
   }
 
   renderWorkoutHistory();
@@ -7607,14 +7658,15 @@ function formatRestTime(sec) {
 
 function logRestBreak(mins) {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const date = new Date().toISOString().split('T')[0];
-  if (
-    workouts.length === 0 ||
-    workouts[workouts.length - 1].date !== date
-  ) {
-    workouts.push({ id: newWorkoutId(), title: `Workout on ${date}`, date, log: [], restBreaks: [] });
+  const date = localDateKey();
+  // Find today's session anywhere in the list — synced workouts are sorted
+  // by date, so it isn't always the last one, and pushing a second
+  // same-day workout here split the session.
+  let workout = workouts.find(w => w.date === date);
+  if (!workout) {
+    workout = { id: newWorkoutId(), title: `Workout on ${date}`, date, log: [], restBreaks: [] };
+    workouts.push(workout);
   }
-  const workout = workouts[workouts.length - 1];
   if (!workout.restBreaks) workout.restBreaks = [];
   workout.restBreaks.push(parseFloat(mins.toFixed(2)));
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
@@ -8007,7 +8059,7 @@ function loadSelectedResistanceTemplate() {
           linkedExerciseIds,
           templateExerciseId: exercise.id || `exercise_${exerciseIndex}`,
           unit: 'kg',
-          date: new Date().toISOString().split('T')[0]
+          date: localDateKey()
         };
       })
       : []);
@@ -8019,8 +8071,8 @@ function loadSelectedResistanceTemplate() {
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   workouts.push({
-    title: template.title || selectedTemplate?.name || `Template Workout ${new Date().toISOString().split('T')[0]}`,
-    date: new Date().toISOString().split('T')[0],
+    title: template.title || selectedTemplate?.name || `Template Workout ${localDateKey()}`,
+    date: localDateKey(),
     metadata: template.metadata || {},
     log: templateLog,
     restBreaks: []
@@ -8262,7 +8314,7 @@ async function deleteSelectedTemplate() {
 }
 
 async function completeWorkout() {
-  const date = new Date().toISOString().split('T')[0];
+  const date = localDateKey();
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const todaysWorkout = workouts.find(w => w.date === date);
   const latestWorkout = todaysWorkout || workouts[workouts.length - 1];
@@ -16132,7 +16184,10 @@ function trackWorkoutDate(date) {
 
 function goToDate(date) {
   const input = document.getElementById('entryDate');
-  if (input) input.value = date;
+  if (input) {
+    input.value = date;
+    delete input.dataset.autoDate;
+  }
 }
 
 function normalizeIsoDate(date) {
@@ -17081,10 +17136,7 @@ function showHistoryMiniTab(type) {
       });
     }
 
-    const dateInput = document.getElementById('entryDate');
-    if (dateInput) {
-      dateInput.value = new Date().toISOString().split('T')[0];
-    }
+    resetEntryDateToToday();
 
     loadPersonalDetailsToDOM();
     const savePersonalBtn = document.getElementById('savePersonalDetailsBtn');

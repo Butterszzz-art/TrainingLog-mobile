@@ -12,6 +12,12 @@
 
   const WEEKDAY_MAP = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
+  // Local calendar day — workouts are keyed by it (index.html localDateKey()).
+  function _localDateKey(d = new Date()) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   function _user() {
     return global.currentUser || (typeof localStorage !== 'undefined' && localStorage.getItem('fitnessAppUser'));
   }
@@ -197,7 +203,7 @@
     if (!el) return;
 
     const u = global.currentUser || (typeof localStorage !== 'undefined' && localStorage.getItem('fitnessAppUser'));
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = _localDateKey();
     let workouts = [];
     try { workouts = u ? JSON.parse(localStorage.getItem('workouts_' + u)) || [] : []; } catch { workouts = []; }
     const today = workouts.find(w => w.date === todayStr);
@@ -466,7 +472,7 @@
   function _todaysSetCount(name) {
     const u = _user();
     if (!u || typeof localStorage === 'undefined') return 0;
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = _localDateKey();
     try {
       const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
       const today = workouts.find(w => w.date === todayStr);

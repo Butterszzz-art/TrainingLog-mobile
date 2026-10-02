@@ -109,6 +109,73 @@ describe('addLogEntry', () => {
     expect(events).toEqual([{ exercise: 'Bench', sets: 1, date: '2024-01-01' }]);
   });
 
+  function fillOneSet(doc) {
+    doc.getElementById('exercise').value = 'Bench';
+    doc.getElementById('sets').value = '1';
+    doc.getElementById('weightUnit').value = 'kg';
+    doc.getElementById('reps_0').value = '5';
+    doc.getElementById('weight_0').value = '100';
+  }
+
+  function localToday() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  test('a stale pre-filled log date (app left open overnight) logs to today', () => {
+    const doc = context.document;
+    const input = doc.getElementById('entryDate');
+    // Pre-filled when the app was opened yesterday, never touched since.
+    input.value = '2024-01-01';
+    input.dataset.autoDate = '2024-01-01';
+    fillOneSet(doc);
+    context.addLogEntry();
+    const workouts = JSON.parse(context.localStorage.getItem('workouts_u1'));
+    expect(workouts.map(w => w.date)).toEqual([localToday()]);
+    // Re-armed with today's local date for the next set.
+    expect(input.value).toBe(localToday());
+    expect(input.dataset.autoDate).toBe(localToday());
+  });
+
+  test('a date the lifter picked is still honoured', () => {
+    const doc = context.document;
+    const input = doc.getElementById('entryDate');
+    input.value = '2024-01-01';
+    input.dataset.autoDate = '2024-01-01';
+    input.value = '2023-12-31';
+    delete input.dataset.autoDate; // what the input's oninput does
+    fillOneSet(doc);
+    context.addLogEntry();
+    const workouts = JSON.parse(context.localStorage.getItem('workouts_u1'));
+    expect(workouts.map(w => w.date)).toEqual(['2023-12-31']);
+  });
+
+  test('sets logged on the same local day share one workout', () => {
+    const doc = context.document;
+    doc.getElementById('entryDate').value = '';
+    fillOneSet(doc);
+    context.addLogEntry();
+    fillOneSet(doc);
+    doc.getElementById('exercise').value = 'Squat';
+    context.addLogEntry();
+    const workouts = JSON.parse(context.localStorage.getItem('workouts_u1'));
+    expect(workouts).toHaveLength(1);
+    expect(workouts[0].date).toBe(localToday());
+    expect(workouts[0].log.map(e => e.exercise)).toEqual(['Bench', 'Squat']);
+  });
+
+  test('post-log check-in opens once per exercise, not after every set', () => {
+    const shown = [];
+    vm.runInContext('showFlowCaptureModal = (exercise, sets) => __shown.push(exercise);', Object.assign(context, { __shown: shown }));
+    const log = (exercise) => context.triggerFlowCapture({ exercise, sets: 1, date: '2024-01-01' });
+    log('Bench'); log('Bench'); log('bench '); log('Squat'); log('Bench');
+    expect(shown).toEqual(['Bench', 'Squat']);
+    // A new day asks again.
+    context.triggerFlowCapture({ exercise: 'Bench', sets: 1, date: '2024-01-02' });
+    expect(shown).toEqual(['Bench', 'Squat', 'Bench']);
+  });
+
   test('does not dispatch tl:set-logged when validation fails', () => {
     const doc = context.document;
     const events = [];
