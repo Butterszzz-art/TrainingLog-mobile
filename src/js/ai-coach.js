@@ -1,5 +1,5 @@
 /* =============================================================
-   AI COACH — chat UI (floating panel + Coach tab embed)
+   AI COACH — chat UI (edge-tab sidebar + Coach tab embed)
    Streams from POST /api/ai/coach (src/routes/coach.js). Each reply
    can carry, besides text: "checked" traces (what the coach looked
    up), inline e1RM charts, proposal cards the athlete can Apply, and
@@ -33,6 +33,7 @@
     brain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.2 3.7 2.4 4.9.8.8 1.1 1.6 1.1 2.6V18h5v-1.5c0-1 .3-1.8 1.1-2.6C16.8 12.7 18 11.2 18 9a6 6 0 0 0-6-6z"/><path d="M9.5 21h5"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    collapse: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>',
     send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>',
     stop: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>',
@@ -291,7 +292,6 @@
     root.innerHTML = '';
 
     const header = el('div', 'aic-header');
-    if (opts.floating) header.appendChild(el('div', 'aic-header-drag'));
     const info = el('div', 'aic-header-info');
     const avatar = el('div', 'aic-avatar');
     avatar.innerHTML = ICON.coach;
@@ -304,7 +304,7 @@
     const memBtn = iconBtn('aic-icon-btn', 'brain', 'What your coach knows');
     const newBtn = iconBtn('aic-icon-btn', 'plus', 'New conversation');
     actions.append(memBtn, newBtn);
-    if (opts.floating) actions.appendChild(iconBtn('aic-icon-btn aic-close', 'close', 'Close'));
+    if (opts.floating) actions.appendChild(iconBtn('aic-icon-btn aic-close', 'collapse', 'Collapse coach'));
     header.append(info, actions);
 
     const messages = el('div', 'aic-messages');
@@ -621,11 +621,38 @@
     };
   }
 
-  /* ── floating panel ──────────────────────────────────────── */
+  /* ── sidebar ─────────────────────────────────────────────── */
+
+  // The coach lives in a sidebar that slides in from the right edge. While
+  // it's collapsed only a small tab (#aiCoachFab) sticks out of the edge,
+  // mid-screen, so it never collides with the bottom nav or focus bar.
+
+  const SWIPE_MIN = 40; // px of horizontal travel before a drag counts
 
   let panelCtrl = null;
 
-  function buildFloatingPanel(u) {
+  // Calls fn when a mostly-horizontal swipe in the given direction (+1 right,
+  // -1 left) ends on target.
+  function onSwipe(target, dir, fn) {
+    let x0 = 0, y0 = 0, tracking = false;
+    target.addEventListener('touchstart', e => {
+      tracking = e.touches.length === 1;
+      if (!tracking) return;
+      x0 = e.touches[0].clientX;
+      y0 = e.touches[0].clientY;
+    }, { passive: true });
+    target.addEventListener('touchend', e => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - x0;
+      const dy = t.clientY - y0;
+      if (dx * dir >= SWIPE_MIN && Math.abs(dx) > Math.abs(dy) * 1.5) fn();
+    }, { passive: true });
+  }
+
+  function buildSidebar(u) {
     const backdrop = el('div');
     backdrop.id = 'aiCoachBackdrop';
     const panel = el('div');
@@ -637,44 +664,52 @@
 
     const chat = createChat(panel, u, { floating: true });
 
+    function setTab(expanded) {
+      const tab = document.getElementById('aiCoachFab');
+      if (!tab) return;
+      tab.setAttribute('aria-expanded', String(expanded));
+      tab.classList.toggle('aic-tab--hidden', expanded);
+    }
     function close() {
       panel.classList.remove('aic-open');
       backdrop.classList.remove('aic-open');
-      const fab = document.getElementById('aiCoachFab');
-      if (fab) fab.hidden = false;
+      setTab(false);
     }
     function open(question) {
       panel.classList.add('aic-open');
       backdrop.classList.add('aic-open');
-      const fab = document.getElementById('aiCoachFab');
-      if (fab) fab.hidden = true;
+      setTab(true);
       if (question) chat.ask(question); else chat.focus();
     }
     chat.closeButton.addEventListener('click', close);
     backdrop.addEventListener('click', close);
+    onSwipe(panel, 1, close);
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && panel.classList.contains('aic-open')) close();
     });
     return { open, close };
   }
 
-  function initFloatingButton(u) {
+  function initSidebarTab(u) {
     if (document.getElementById('aiCoachFab')) return;
-    const fab = el('button');
-    fab.id = 'aiCoachFab';
-    fab.type = 'button';
-    fab.setAttribute('aria-label', 'Open your coach');
-    fab.innerHTML = ICON.coach;
-    document.body.appendChild(fab);
+    const tab = el('button');
+    tab.id = 'aiCoachFab';
+    tab.type = 'button';
+    tab.setAttribute('aria-label', 'Open your coach');
+    tab.setAttribute('aria-controls', 'aiCoachPanel');
+    tab.setAttribute('aria-expanded', 'false');
+    tab.innerHTML = ICON.coach;
+    document.body.appendChild(tab);
 
-    panelCtrl = buildFloatingPanel(u);
-    fab.addEventListener('click', () => panelCtrl.open());
+    panelCtrl = buildSidebar(u);
+    tab.addEventListener('click', () => panelCtrl.open());
+    onSwipe(tab, -1, () => panelCtrl.open());
 
     const seenKey = `aiCoachSeen_${u}`;
     if (!localStorage.getItem(seenKey)) {
-      setTimeout(() => fab.classList.add('aic-pulse'), 800);
+      setTimeout(() => tab.classList.add('aic-pulse'), 800);
       setTimeout(() => {
-        fab.classList.remove('aic-pulse');
+        tab.classList.remove('aic-pulse');
         localStorage.setItem(seenKey, '1');
       }, 5200);
     }
@@ -684,7 +719,7 @@
 
   window.initAiCoach = function (username) {
     if (!username || !window.CoachData) return;
-    initFloatingButton(username);
+    initSidebarTab(username);
   };
 
   window.initAiCoachEmbed = function (container, username) {
@@ -695,7 +730,7 @@
     createChat(box, username, { floating: false });
   };
 
-  // openAiCoach('Why has my squat stalled?') opens the panel and asks it.
+  // openAiCoach('Why has my squat stalled?') opens the sidebar and asks it.
   window.openAiCoach = function (question) {
     if (panelCtrl) panelCtrl.open(typeof question === 'string' ? question : undefined);
   };

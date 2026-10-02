@@ -6,8 +6,8 @@
  * down on the nav) slides the capsule off the bottom of the screen, leaving
  * only the handle peeking up; tapping the handle again (or swiping up on
  * it) slides the nav back. The state lives on <body> as `.nav-collapsed`
- * so other fixed elements (AI coach FAB, workout focus bar, content
- * padding) can follow it in CSS — see css/nav.css.
+ * so other fixed elements (workout focus bar, content padding) can follow
+ * it in CSS — see css/nav.css.
  *
  * The choice is a per-device preference, kept in localStorage as
  * `bottomNavCollapsed` = '1'.
