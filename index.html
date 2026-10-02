@@ -55,6 +55,7 @@
   <link rel="stylesheet" href="css/social-ui.css">
   <link rel="stylesheet" href="css/performance-mode.css">
   <link rel="stylesheet" href="css/profiles.css">
+  <link rel="stylesheet" href="css/exercise-card.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -6574,10 +6575,16 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   const header = document.createElement('div');
   header.className = 'exercise-header';
 
+  const titleBlock = document.createElement('div');
+  titleBlock.className = 'exercise-title-block';
+
   const tag = document.createElement('span');
   tag.className = 'exercise-tag';
   tag.textContent = entry.muscleGroup || entry.primaryMuscle || 'Exercise';
-  header.appendChild(tag);
+  const kickerRow = document.createElement('div');
+  kickerRow.className = 'exercise-kicker-row';
+  kickerRow.appendChild(tag);
+  titleBlock.appendChild(kickerRow);
 
   const titleRow = document.createElement('div');
   titleRow.className = 'exercise-title-row';
@@ -6590,9 +6597,12 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
     const maxedBadge = document.createElement('span');
     maxedBadge.className = 'maxed-out-badge';
     maxedBadge.title = "At this machine's weight limit — try more reps next time instead of more weight.";
-    maxedBadge.textContent = '🔒 Maxed Out';
+    maxedBadge.textContent = 'Maxed';
     titleRow.appendChild(maxedBadge);
   }
+
+  titleBlock.appendChild(titleRow);
+  header.appendChild(titleBlock);
 
   const previous = getPreviousExerciseEntry(entry.exercise, workoutIndex);
   const trend = getExerciseTrend(entry, previous?.exercise);
@@ -6601,11 +6611,9 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
     trendBadge.className = `exercise-trend-badge ${trend.cls}`;
     trendBadge.title = trend.label;
     trendBadge.setAttribute('aria-label', trend.label);
-    trendBadge.textContent = trend.icon;
-    titleRow.appendChild(trendBadge);
+    trendBadge.textContent = trend.cls === 'trend-up' ? '▲ Up' : trend.cls === 'trend-down' ? '▼ Down' : '— Steady';
+    kickerRow.appendChild(trendBadge);
   }
-
-  header.appendChild(titleRow);
 
   const headerMenuButton = document.createElement('button');
   headerMenuButton.type = 'button';
@@ -6617,22 +6625,22 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
 
   card.appendChild(header);
 
+  // One quiet line instead of a nested card — the date and sets are all
+  // that matter once the session is logged.
   if (previous) {
     const lastPanel = document.createElement('div');
     lastPanel.className = 'last-time-card';
 
-    const lastTitle = document.createElement('div');
+    const lastTitle = document.createElement('span');
     lastTitle.className = 'last-time-title';
-    lastTitle.textContent = 'Last time';
+    const lastDate = previous.date
+      ? new Date(previous.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : '';
+    lastTitle.textContent = lastDate ? `Last · ${lastDate}` : 'Last time';
+    lastPanel.title = previous.title || '';
     lastPanel.appendChild(lastTitle);
 
-    const lastMeta = document.createElement('div');
-    lastMeta.className = 'last-time-meta';
-    const lastDate = previous.date ? new Date(previous.date).toLocaleDateString() : 'Unknown date';
-    lastMeta.textContent = `${lastDate} • ${previous.title}`;
-    lastPanel.appendChild(lastMeta);
-
-    const lastSets = document.createElement('div');
+    const lastSets = document.createElement('span');
     lastSets.className = 'last-time-sets';
     lastSets.textContent = formatLastTimeSets(previous.exercise);
     lastPanel.appendChild(lastSets);
@@ -6640,38 +6648,25 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
     card.appendChild(lastPanel);
   }
 
-  const goalData = [];
-  const hasGoal = typeof entry.goal === 'number' && !Number.isNaN(entry.goal);
-  if (hasGoal && entry.goal !== 0) {
-    goalData.push(`Target Load: ${entry.goal} ${entry.unit || 'kg'}`);
-  }
-  
-  const hasRepGoal = typeof entry.repGoal === 'number' && !Number.isNaN(entry.repGoal);
-  if (hasRepGoal && entry.repGoal !== 0) {
-    goalData.push(`Target Reps: ${entry.repGoal}`);
-  }
+  const hasGoal = typeof entry.goal === 'number' && !Number.isNaN(entry.goal) && entry.goal !== 0;
+  const hasRepGoal = typeof entry.repGoal === 'number' && !Number.isNaN(entry.repGoal) && entry.repGoal !== 0;
+  const chips = [];
+  if (hasGoal) chips.push(`Target ${entry.goal} ${entry.unit || 'kg'}`);
+  if (hasRepGoal) chips.push(`Target ${entry.repGoal} reps`);
 
   const specialTypes = Array.from(new Set((entry.setTypeArray || []).filter(type => type && type !== DEFAULT_SET_TYPE)));
-  if (specialTypes.length) {
-    goalData.push(`Set Focus: ${specialTypes.map(type => SET_TYPE_LABELS[type] || type).join(', ')}`);
-  }
+  specialTypes.forEach(type => chips.push(SET_TYPE_LABELS[type] || type));
 
-  if (goalData.length) {
-    const setTypeBar = document.createElement('div');
-    setTypeBar.className = 'set-type-bar';
-    setTypeBar.textContent = goalData.join(' • ');
-    card.appendChild(setTypeBar);
-  }
-
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const recommendation = entry.nextSessionRecommendation || (typeof suggestNextSession === 'function'
-    ? suggestNextSession(entry, workouts)
-    : null);
-  if (recommendation?.message) {
-    const recommendationBar = document.createElement('div');
-    recommendationBar.className = 'set-type-bar';
-    recommendationBar.textContent = `Next session recommendation: ${recommendation.message}`;
-    card.appendChild(recommendationBar);
+  if (chips.length) {
+    const chipRow = document.createElement('div');
+    chipRow.className = 'set-type-bar';
+    chips.forEach(text => {
+      const chip = document.createElement('span');
+      chip.className = 'exercise-chip';
+      chip.textContent = text;
+      chipRow.appendChild(chip);
+    });
+    card.appendChild(chipRow);
   }
 
   // ── Per-exercise progress strip ─────────────────────────────
@@ -6685,7 +6680,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
     const allDone = doneSets === totalSets;
     progressStrip.innerHTML = `
       <div class="ex-progress-bar-wrap">
-        <div class="ex-progress-bar" style="width:${pct}%;background:${allDone ? 'var(--primary)' : 'rgba(45,125,91,0.55)'};"></div>
+        <div class="ex-progress-bar" style="width:${pct}%;"></div>
       </div>
       <span class="ex-progress-label">${allDone ? `<span class="ui-icon">${ICONS.check}</span>` : `${doneSets}/${totalSets}`} sets</span>
     `;
@@ -6703,20 +6698,41 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
 
   card.appendChild(setList);
 
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const recommendation = entry.nextSessionRecommendation || (typeof suggestNextSession === 'function'
+    ? suggestNextSession(entry, workouts)
+    : null);
+  if (recommendation?.message) {
+    const recommendationBar = document.createElement('div');
+    recommendationBar.className = 'exercise-next';
+    const recLabel = document.createElement('b');
+    recLabel.textContent = 'Next time';
+    recommendationBar.appendChild(recLabel);
+    recommendationBar.appendChild(document.createTextNode(recommendation.message));
+    card.appendChild(recommendationBar);
+  }
+
+  // Goals are set from the Log form; on an already-logged exercise the
+  // inputs stay hidden until "Edit Goals" in the ⋮ menu asks for them.
   const goalRow = document.createElement('div');
   goalRow.className = 'goal-row';
+  goalRow.hidden = true;
 
   const goalInput = document.createElement('input');
   goalInput.type = 'number';
-  goalInput.placeholder = 'Weight Goal';
-  goalInput.value = hasGoal && entry.goal !== 0 ? entry.goal : '';
+  goalInput.inputMode = 'decimal';
+  goalInput.placeholder = `Target ${entry.unit || 'kg'}`;
+  goalInput.setAttribute('aria-label', 'Weight goal');
+  goalInput.value = hasGoal ? entry.goal : '';
   goalInput.addEventListener('change', event => editGoalValue(workoutIndex, entryIndex, 'goal', event.target.value));
   goalRow.appendChild(goalInput);
 
   const repGoalInput = document.createElement('input');
   repGoalInput.type = 'number';
-  repGoalInput.placeholder = 'Rep Goal';
-  repGoalInput.value = hasRepGoal && entry.repGoal !== 0 ? entry.repGoal : '';
+  repGoalInput.inputMode = 'numeric';
+  repGoalInput.placeholder = 'Target reps';
+  repGoalInput.setAttribute('aria-label', 'Rep goal');
+  repGoalInput.value = hasRepGoal ? entry.repGoal : '';
   repGoalInput.addEventListener('change', event => editGoalValue(workoutIndex, entryIndex, 'repGoal', event.target.value));
   goalRow.appendChild(repGoalInput);
 
@@ -6741,7 +6757,8 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
 
   const indexLabel = document.createElement('span');
   indexLabel.className = 'set-index';
-  indexLabel.textContent = `Set ${setIndex + 1}`;
+  indexLabel.textContent = `${setIndex + 1}`;
+  indexLabel.setAttribute('aria-label', `Set ${setIndex + 1}`);
   setRow.appendChild(indexLabel);
 
   const weightWrapper = document.createElement('div');
@@ -6751,6 +6768,8 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   weightLabel.textContent = 'Weight';
   const weightInput = document.createElement('input');
   weightInput.type = 'number';
+  weightInput.inputMode = 'decimal';
+  weightInput.setAttribute('aria-label', `Set ${setIndex + 1} weight`);
   weightInput.value = entry.weightsArray?.[setIndex] ?? '';
   weightInput.addEventListener('change', event => editSetValue(workoutIndex, entryIndex, 'weight', event.target.value, setIndex));
   weightWrapper.appendChild(weightLabel);
@@ -6770,16 +6789,21 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   repsLabel.textContent = isUnilateral ? 'Reps/side' : 'Reps';
   const repsInput = document.createElement('input');
   repsInput.type = 'number';
+  repsInput.inputMode = 'numeric';
+  repsInput.setAttribute('aria-label', `Set ${setIndex + 1} reps`);
   repsInput.value = entry.repsArray?.[setIndex] ?? '';
   repsInput.addEventListener('change', event => editSetValue(workoutIndex, entryIndex, 'rep', event.target.value, setIndex));
   repsWrapper.appendChild(repsLabel);
   repsWrapper.appendChild(repsInput);
+  const repsUnit = document.createElement('span');
+  repsUnit.className = 'set-unit';
+  repsUnit.textContent = isUnilateral ? 'reps/side' : 'reps';
+  repsWrapper.appendChild(repsUnit);
   if (isUnilateral) {
     const uniTag = document.createElement('span');
     uniTag.className = 'set-type-pill';
     uniTag.title = 'Unilateral — each side done separately';
-    uniTag.style.cssText = 'background:rgba(99,102,241,0.15);color:#818cf8;border-color:rgba(99,102,241,0.4);font-size:0.68rem;';
-    uniTag.textContent = '⟺ L/R';
+    uniTag.textContent = 'L/R';
     repsWrapper.appendChild(uniTag);
   }
   setRow.appendChild(repsWrapper);
@@ -6798,7 +6822,10 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   completeCheckbox.checked = entry.completedArray?.[setIndex] || false;
   completeCheckbox.addEventListener('change', event => toggleSetCompletion(workoutIndex, entryIndex, setIndex, event.target.checked));
   completeLabel.appendChild(completeCheckbox);
-  completeLabel.appendChild(document.createTextNode(' Done'));
+  const completeText = document.createElement('span');
+  completeText.className = 'set-complete-text';
+  completeText.textContent = 'Done';
+  completeLabel.appendChild(completeText);
   setRow.appendChild(completeLabel);
 
   const setMenuButton = document.createElement('button');
@@ -6842,13 +6869,13 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   advancedBlock.dataset.workout = workoutIndex;
   advancedBlock.dataset.entry = entryIndex;
   advancedBlock.dataset.set = setIndex;
-  // Collapsed by default — a plain set is just Weight/Reps/Done, like a
-  // paper logbook. Only sets that already have a method/state/tag set
-  // (e.g. re-opening a workout mid-session) start expanded.
+  // Hidden by default — a logged set is just Weight/Reps/Done, like a
+  // paper logbook. Sets that already carry a method/state/tag show a
+  // collapsed header; everything else opens via the set's ⋮ menu.
   const hasAdvancedContent = Boolean(
     advancedData.method || advancedData.state || Object.values(advancedData.tags || {}).some(Boolean)
   );
-  if (hasAdvancedContent) advancedBlock.classList.add('expanded');
+  if (!hasAdvancedContent) advancedBlock.hidden = true;
   advancedBlock.innerHTML = `
     <div class="set-advanced-header">Advanced</div>
     <div class="set-advanced-body">
@@ -7105,6 +7132,13 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
     addButton('Add Set After', () => addSetToLog(workoutIndex, entryIndex, setIndex));
     addButton('Delete Set', () => deleteSetFromLog(workoutIndex, entryIndex, setIndex));
     addButton('Toggle Skip', () => toggleSkipSet(workoutIndex, entryIndex, setIndex));
+    const advancedBlock = target.closest('.set-row-wrapper')?.querySelector('.set-advanced');
+    if (advancedBlock) {
+      addButton('Advanced Options', () => {
+        advancedBlock.hidden = false;
+        advancedBlock.classList.add('expanded');
+      });
+    }
 
     const divider = document.createElement('div');
     divider.className = 'context-menu-divider';
@@ -7122,6 +7156,13 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
     const _entryForMenu = _workoutsForMenu[workoutIndex]?.log?.[entryIndex];
 
     addButton('Add Set', () => addSetToLog(workoutIndex, entryIndex));
+    const goalRow = card.querySelector('.goal-row');
+    if (goalRow) {
+      addButton('Edit Goals', () => {
+        goalRow.hidden = false;
+        goalRow.querySelector('input')?.focus();
+      });
+    }
     addButton(_entryForMenu?.maxedOut ? 'Un-mark Maxed Out' : 'Mark as Maxed Out', () => toggleMaxedOut(workoutIndex, entryIndex));
     addButton('Delete Exercise', () => removeLogEntry(workoutIndex, entryIndex));
   }
@@ -7356,17 +7397,34 @@ function renderWorkouts() {
     const volume = calculateWorkoutVolume(workout);
     const unit = workout.log?.[0]?.unit || workout.unit || 'kg';
 
-    const volumeText = document.createElement('p');
-    volumeText.className = 'workout-volume';
-    volumeText.textContent = `Total Volume: ${volume} ${unit}`;
-    meta.appendChild(volumeText);
+    const stats = document.createElement('div');
+    stats.className = 'workout-stats';
+    const addStat = (cls, label, value, suffix) => {
+      const stat = document.createElement('div');
+      stat.className = `workout-stat ${cls}`;
+      const l = document.createElement('span');
+      l.className = 'workout-stat-l';
+      l.textContent = label;
+      const v = document.createElement('span');
+      v.className = 'workout-stat-v';
+      v.textContent = value;
+      if (suffix) {
+        const small = document.createElement('small');
+        small.textContent = suffix;
+        v.appendChild(small);
+      }
+      stat.append(l, v);
+      stats.appendChild(stat);
+    };
+
+    addStat('workout-volume', 'Total volume', Math.round(Number(volume) || 0).toLocaleString(), unit);
 
     if (workout.restBreaks && workout.restBreaks.length) {
-      const rest = document.createElement('p');
-      rest.className = 'workout-rest';
-      rest.textContent = `Rest Breaks: ${workout.restBreaks.join(', ')} minutes`;
-      meta.appendChild(rest);
+      const restNums = workout.restBreaks.map(Number).filter(n => Number.isFinite(n));
+      const avgRest = restNums.length ? restNums.reduce((a, b) => a + b, 0) / restNums.length : 0;
+      addStat('workout-rest', 'Avg rest', String(Math.round(avgRest * 10) / 10), 'min');
     }
+    meta.appendChild(stats);
 
     if (workout.sessionRating) {
       const ratingLabels = { progressive: 'Progressive', fatigue: 'Fatigue', missedWeightGoal: 'Weight goal', missedRepGoal: 'Rep goal' };
@@ -7383,21 +7441,21 @@ function renderWorkouts() {
 
     const rateSessionButton = document.createElement('button');
     rateSessionButton.type = 'button';
-    rateSessionButton.className = 'rate-session-btn';
+    rateSessionButton.className = 'rate-session-btn workout-action';
     rateSessionButton.textContent = workout.sessionRating ? 'Edit Rating' : 'Rate Session';
     rateSessionButton.addEventListener('click', () => openSessionRatingModal(workoutIndex));
     meta.appendChild(rateSessionButton);
 
     const shareWorkoutButton = document.createElement('button');
     shareWorkoutButton.type = 'button';
-    shareWorkoutButton.className = 'share-story-btn';
+    shareWorkoutButton.className = 'share-story-btn workout-action';
     shareWorkoutButton.innerHTML = '<span class="ui-icon">' + ICONS.share + '</span> Share as Story';
     shareWorkoutButton.addEventListener('click', () => openWorkoutStoryModal(workoutIndex));
     meta.appendChild(shareWorkoutButton);
 
     const deleteWorkoutButton = document.createElement('button');
     deleteWorkoutButton.type = 'button';
-    deleteWorkoutButton.className = 'remove-btn';
+    deleteWorkoutButton.className = 'remove-btn workout-action workout-action--danger';
     deleteWorkoutButton.textContent = 'Delete Workout';
     deleteWorkoutButton.addEventListener('click', () => removeWorkout(workoutIndex));
     meta.appendChild(deleteWorkoutButton);
