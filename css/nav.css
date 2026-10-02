@@ -188,12 +188,6 @@ body.nav-collapsed.workout-active #appContainer {
 body.nav-collapsed #workoutFocusBar {
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
-body.nav-collapsed #aiCoachFab {
-  bottom: calc(36px + env(safe-area-inset-bottom, 0px));
-}
-body.nav-collapsed.workout-active #aiCoachFab {
-  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-}
 @media (prefers-reduced-motion: reduce) {
   #bottomNav,
   .bn-collapse-tab,
