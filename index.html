@@ -17,6 +17,8 @@
       } catch (e) { /* storage unavailable: show the login form */ }
     })();
   </script>
+  <!-- Sets the user's app colour on <html> before first paint. -->
+  <script src="src/js/logbook-cover.js"></script>
   <link href="vendor/fonts/fonts.css" rel="stylesheet">
   <link rel="stylesheet" href="ProgramTab.css">
   <link rel="stylesheet" href="style.css">
@@ -91,12 +93,17 @@
   <script>
     /* ── Chart.js theme — matches the app's dark pod design system so
        charts don't look like a foreign, unstyled widget dropped onto
-       the page. Palette pulled from css/tokens.css green ramp. ── */
+       the page. Palette pulled from css/tokens.css green ramp; the
+       primary* entries are getters so a chart drawn after the user
+       changes the app colour picks up the new hue. ── */
+    function _accent(token, alpha) {
+      return typeof window.accentColor === 'function' ? window.accentColor(token, alpha) : '#3d9d73';
+    }
     window.CHART_PALETTE = {
-      primary: '#3d9d73',
-      primaryDeep: '#2f8a63',
-      primaryLight: '#6fae8b',
-      primaryPale: '#8ec2a4',
+      get primary() { return _accent('--green-70'); },
+      get primaryDeep() { return _accent('--green-60'); },
+      get primaryLight() { return _accent('--green-90'); },
+      get primaryPale() { return _accent('--green-100'); },
       gold: '#c79a54',
       danger: '#dc3545',
       text: '#f4f7f5',
@@ -4189,6 +4196,7 @@ function forceFreshLogin() {
 
 function setCurrentUser(user) {
   currentUser = user && typeof user === 'object' ? user.username : user;
+  if (typeof window.applyAppAccent === 'function') window.applyAppAccent();
   if (typeof window.renderGamificationUI === 'function' && currentUser) {
     window.renderGamificationUI(currentUser);
   }
@@ -10706,6 +10714,7 @@ function logout(options = {}) {
   localStorage.removeItem('authToken');
   localStorage.removeItem('username');
   localStorage.removeItem('Username');
+  if (typeof window.applyAppAccent === 'function') window.applyAppAccent();
   // Firebase keeps its session in IndexedDB — sign out there too, or the
   // onIdTokenChanged listener re-populates the token on next load
   const fbSignOut = window.firebaseAuth?.logout?.() || Promise.resolve();
@@ -11540,8 +11549,8 @@ function renderPosingTab() {
           <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
             <defs>
               <linearGradient id="posingRingGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#6fae8b"></stop>
-                <stop offset="1" stop-color="#2f8a63"></stop>
+                <stop offset="0" style="stop-color: var(--green-90)"></stop>
+                <stop offset="1" style="stop-color: var(--green-60)"></stop>
               </linearGradient>
             </defs>
             <circle cx="66" cy="66" r="55" fill="none" stroke="#0b100e" stroke-width="12"></circle>
@@ -13392,16 +13401,16 @@ function generateCheckInSummary() {
     const line = xs.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(' ');
     const area = `${line} L${xs[xs.length - 1].toFixed(1)} 76 L${xs[0].toFixed(1)} 76 Z`;
     const dots = xs.map((x, i) => i === xs.length - 1
-      ? `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="5" fill="#6fae8b" stroke="#101614" stroke-width="2"/>`
-      : `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3.5" fill="#101614" stroke="#3d9d73" stroke-width="2"/>`).join('');
+      ? `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="5" stroke="#101614" stroke-width="2" style="fill: var(--green-90)"/>`
+      : `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3.5" fill="#101614" stroke-width="2" style="stroke: var(--green-70)"/>`).join('');
     const change = vals[vals.length - 1] - vals[0];
     spark = `
       <div>
         <div class="ci-spark-cap"><span class="mx-lbl">Bodyweight · last ${pts.length}</span><span class="mx-delta mx-delta--flat">${change === 0 ? 'no change' : (change < 0 ? '▼ ' : '▲ ') + Math.abs(change).toFixed(1) + ' kg'}</span></div>
         <svg class="ci-spark" viewBox="0 0 300 76" role="img" aria-label="Bodyweight from ${vals[0]} to ${vals[vals.length - 1]} kg over ${pts.length} check-ins">
-          <defs><linearGradient id="ciSparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d9d73" stop-opacity="0.35"/><stop offset="1" stop-color="#3d9d73" stop-opacity="0"/></linearGradient></defs>
+          <defs><linearGradient id="ciSparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity="0.35" style="stop-color: var(--green-70)"/><stop offset="1" stop-opacity="0" style="stop-color: var(--green-70)"/></linearGradient></defs>
           <path d="${area}" fill="url(#ciSparkFill)"/>
-          <path d="${line}" fill="none" stroke="#6fae8b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="${line}" fill="none" style="stroke: var(--green-90)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           ${dots}
         </svg>
       </div>`;
@@ -14141,7 +14150,7 @@ function renderWeightHero(log, lastKg, displayUnit) {
         const y = pad + (1 - (v - min) / range) * (h - pad * 2);
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       });
-      sparkEl.innerHTML = `<polyline points="${coords.join(' ')}" fill="none" stroke="#6fae8b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+      sparkEl.innerHTML = `<polyline points="${coords.join(' ')}" fill="none" style="stroke: var(--green-90)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
       sparkEl.style.display = '';
     } else {
       sparkEl.style.display = 'none';
@@ -14796,7 +14805,7 @@ function renderLineChart(labels, label, data, trend, forecast) {
           data,
           tension: .4,
           borderColor: P.primary,
-          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, 'rgba(61,157,115,0.22)', 'rgba(61,157,115,0)'),
+          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, _accent('--acc-3d9d73', 0.22), _accent('--acc-3d9d73', 0)),
           fill: true
         },
         trend ? { label: 'Trend', data: trend, borderDash: [5,5], borderColor: P.textMuted, tension:.4, fill:false } : null,
@@ -14973,7 +14982,7 @@ function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) 
           data: volumes,
           tension: .35,
           borderColor: P.primary,
-          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, 'rgba(61,157,115,0.22)', 'rgba(61,157,115,0)'),
+          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, _accent('--acc-3d9d73', 0.22), _accent('--acc-3d9d73', 0)),
           fill: true,
           yAxisID: 'yVolume'
         },
@@ -15128,10 +15137,10 @@ function renderExerciseChart(exerciseName, metric = 'weight') {
         {
           label: metricLabel,
           data: values,
-          borderColor: '#2d7d5b',
-          backgroundColor: 'rgba(45,125,91,0.10)',
+          borderColor: _accent('--acc-2d7d5b'),
+          backgroundColor: _accent('--acc-2d7d5b', 0.10),
           borderWidth: 2.5,
-          pointBackgroundColor: '#2d7d5b',
+          pointBackgroundColor: _accent('--acc-2d7d5b'),
           pointRadius: values.length <= 12 ? 5 : 3,
           pointHoverRadius: 7,
           tension: 0.35,
@@ -15896,7 +15905,7 @@ async function showBodyweightProgress() {
           label: 'Bodyweight',
           data: weights,
           borderColor: P.primary,
-          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, 'rgba(61,157,115,0.22)', 'rgba(61,157,115,0)'),
+          backgroundColor: (c) => chartAreaGradient(ctx, c.chart, _accent('--acc-3d9d73', 0.22), _accent('--acc-3d9d73', 0)),
           fill: true,
           yAxisID: 'yWeight',
           tension: 0.35
@@ -20003,9 +20012,9 @@ function renderOneRMChart() {
       datasets: [{
         label: `${lift} Estimated 1RM`,
         data,
-        borderColor: '#2d7d5b',
-        backgroundColor: 'rgba(45,125,91,0.12)',
-        pointBackgroundColor: '#2d7d5b',
+        borderColor: _accent('--acc-2d7d5b'),
+        backgroundColor: _accent('--acc-2d7d5b', 0.12),
+        pointBackgroundColor: _accent('--acc-2d7d5b'),
         tension: 0.35,
         fill: true,
       }]
@@ -20350,7 +20359,6 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/session-queue.js"></script>
   <script src="src/js/performance-mode.js"></script>
   <script src="src/js/profiles.js"></script>
-  <script src="src/js/logbook-cover.js"></script>
   <script src="src/js/settings-hero.js"></script>
   <script src="src/js/libraries.js"></script>
   <script src="src/js/session-context.js"></script>

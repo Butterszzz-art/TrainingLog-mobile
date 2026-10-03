@@ -95,7 +95,7 @@
 .home-zone--modes {
   padding-top: 4px;
   margin-top: 4px;
-  border-top: 1px solid rgba(95, 168, 126, 0.1);
+  border-top: 1px solid rgba(var(--acc-5fa87e), 0.1);
 }
 
 /* ── Section labels ─────────────────────────────────────────── */
@@ -219,7 +219,7 @@
 }
 .wk-stat-v small { font-size: 13px; color: var(--mx-faint); margin-left: 1px; }
 .wk-stat-v.is-pr   { color: var(--brass-light); }
-.wk-stat-v.is-good { color: var(--green-90); }
+.wk-stat-v.is-good { color: var(--positive-text); }
 .wk-stat-v.is-mid  { color: var(--brass-base); }
 .wk-stat-v.is-low  { color: var(--danger-text-mobile); }
 
@@ -691,7 +691,7 @@
 
 .home-stat-chip,
 .home-metric-chip {
-  background: rgba(41, 74, 61, 0.34);
+  background: rgba(var(--acc-294a3d), 0.34);
   border: 1px solid rgba(90, 129, 112, 0.44);
   border-radius: 10px;
   padding: 9px;
@@ -761,7 +761,7 @@
 .home-mission-checkbox input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: #25935f;
+  accent-color: rgb(var(--acc-25935f));
   flex-shrink: 0;
 }
 
@@ -785,7 +785,7 @@
 }
 
 .home-mission-item.is-complete .home-mission-status {
-  color: #53c284;
+  color: rgb(var(--acc-53c284));
 }
 
 /* ── Mission progress panel ─────────────────────────────────── */
@@ -797,15 +797,15 @@
   color: #bcc9c2;
   padding: 8px 10px;
   border-radius: 10px;
-  background: rgba(30, 56, 46, 0.42);
+  background: rgba(var(--acc-1e382e), 0.42);
   border: 1px solid rgba(101, 136, 121, 0.34);
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .home-mission-progress.is-complete {
-  color: #8ce6b5;
-  background: rgba(46, 204, 113, 0.18);
-  border-color: rgba(77, 183, 123, 0.34);
+  color: rgb(var(--acc-8ce6b5));
+  background: rgba(var(--acc-2ecc71), 0.18);
+  border-color: rgba(var(--acc-4db77b), 0.34);
 }
 
 /* ── Status pills ───────────────────────────────────────────── */
@@ -916,7 +916,7 @@
 .home-progress-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #247f58, #56b486);
+  background: linear-gradient(90deg, rgb(var(--acc-247f58)), rgb(var(--acc-56b486)));
   transform-origin: left;
   animation: homeProgressFill 0.6s ease both;
 }
@@ -982,7 +982,7 @@
   min-width: 5px;
   max-width: 36px;
   border-radius: 4px 4px 2px 2px;
-  background: linear-gradient(180deg, rgba(111, 202, 156, 0.88), rgba(44, 119, 84, 0.52));
+  background: linear-gradient(180deg, rgba(var(--acc-6fca9c), 0.88), rgba(var(--acc-2c7754), 0.52));
   opacity: 0.9;
 }
 
@@ -1024,7 +1024,7 @@
 
 .tpc-card {
   background: var(--pod-bg-hero);
-  border: 1px solid rgba(74, 132, 102, 0.3);
+  border: 1px solid rgba(var(--acc-4a8466), 0.3);
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-shadow-hero);
   padding: 15px 16px 13px;
@@ -1103,7 +1103,7 @@
 
 .tpc-split-cell--today {
   border-color: var(--primary, #5fa87e);
-  background: rgba(95, 168, 126, 0.1);
+  background: rgba(var(--acc-5fa87e), 0.1);
 }
 
 .tpc-split-cell--rest {
@@ -1221,7 +1221,7 @@
 }
 
 .sm-toggle--on {
-  background: rgba(45, 125, 91, 0.15);
+  background: rgba(var(--acc-2d7d5b), 0.15);
   border-color: var(--primary);
   color: var(--primary-text);
 }
@@ -1318,7 +1318,7 @@
 
 .tab-content article,
 .tab-content .card {
-  border-top: 1px solid rgba(45, 125, 91, 0.28);
+  border-top: 1px solid rgba(var(--acc-2d7d5b), 0.28);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -1326,10 +1326,10 @@
 .stat-value,
 .big-stat,
 .readiness-score {
-  text-shadow: 0 0 18px rgba(45, 125, 91, 0.45);
+  text-shadow: 0 0 18px rgba(var(--acc-2d7d5b), 0.45);
 }
 
 /* Focus bar label — tighten up the glow for the timer */
 .wfb-timer {
-  text-shadow: 0 0 10px rgba(95, 168, 126, 0.5);
+  text-shadow: 0 0 10px rgba(var(--acc-5fa87e), 0.5);
 }

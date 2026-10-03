@@ -413,7 +413,7 @@
   height: 38px;
   padding: 9px;
   border-radius: 50%;
-  background: rgba(6, 12, 9, 0.32);
+  background: rgba(var(--acc-060c09), 0.32);
   color: #f4f7f5;
   flex: none;
 }
@@ -442,7 +442,7 @@
 }
 .ci-sec-btn .ui-icon { width: 16px; height: 16px; }
 .ci-btn-row .ci-sec-btn { padding: 0 6px; letter-spacing: 0.06em; white-space: nowrap; font-size: 12.5px; gap: 6px; }
-.ci-sec-btn:active { background: rgba(47, 138, 99, 0.12); }
+.ci-sec-btn:active { background: rgba(var(--acc-2f8a63), 0.12); }
 
 .ci-btn-row { display: flex; gap: 8px; margin: 0; }
 
@@ -648,7 +648,7 @@
 }
 .ci-tc-status-badge .ui-icon { width: 13px; height: 13px; }
 .ci-tc-status-badge.approved,
-.ci-tc-status-badge.reviewed      { border-color: var(--border-featured); background: rgba(47, 138, 99, 0.13); color: var(--green-90); }
+.ci-tc-status-badge.reviewed      { border-color: var(--border-featured); background: rgba(var(--acc-2f8a63), 0.13); color: var(--green-90); }
 .ci-tc-status-badge.pending       { border-color: var(--border-brass); background: var(--warning-bg); color: var(--brass-light); }
 .ci-tc-status-badge.needs_changes { border-color: var(--border-alert); background: var(--danger-bg); color: var(--danger-text-mobile); }
 
@@ -664,7 +664,7 @@
   gap: 8px;
   font-size: 13.5px;
   color: var(--text-secondary);
-  background: rgba(47, 138, 99, 0.10);
+  background: rgba(var(--acc-2f8a63), 0.10);
   border: 1px solid var(--border-featured);
   border-radius: var(--radius-tight);
   padding: 10px 12px;

@@ -709,12 +709,12 @@ body.theme-dark .set-row {
   padding: 9px 18px;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, #2d7d5b 0%, #1a5c3f 100%);
+  background: linear-gradient(135deg, rgb(var(--acc-2d7d5b)) 0%, rgb(var(--acc-1a5c3f)) 100%);
   color: #fff;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(45,125,91,0.35);
+  box-shadow: 0 2px 10px rgba(var(--acc-2d7d5b),0.35);
   margin: 0;
   transition: transform 0.12s, box-shadow 0.12s;
   -webkit-tap-highlight-color: transparent;
@@ -723,7 +723,7 @@ body.theme-dark .set-row {
 
 .share-story-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(45,125,91,0.45);
+  box-shadow: 0 4px 16px rgba(var(--acc-2d7d5b),0.45);
 }
 
 .share-story-btn:active {
@@ -1366,8 +1366,8 @@ body.theme-dark .set-row {
   font-size: 11px;
   font-weight: 700;
   color: var(--green-90);
-  background: rgba(111, 174, 139, 0.12);
-  border: 1px solid rgba(111, 174, 139, 0.3);
+  background: rgba(var(--acc-6fae8b), 0.12);
+  border: 1px solid rgba(var(--acc-6fae8b), 0.3);
   padding: 6px 12px;
   border-radius: var(--radius-pill);
   display: inline-flex;
@@ -1765,8 +1765,8 @@ body.theme-dark .set-row {
 }
 
 .gamification-badge-pill {
-  background: rgba(45, 125, 91, 0.15);
-  border: 1px solid rgba(45, 125, 91, 0.35);
+  background: rgba(var(--acc-2d7d5b), 0.15);
+  border: 1px solid rgba(var(--acc-2d7d5b), 0.35);
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 0.85rem;
@@ -1932,7 +1932,7 @@ body.theme-dark .set-row {
 #checkInTab .checkin-form-section select,
 #checkInTab .checkin-form-section textarea,
 #checkInTab > .panel > input:not([type="checkbox"]):not([type="range"]) {
-  background: #0c1511;
+  background: rgb(var(--acc-0c1511));
   border: 1px solid rgba(92, 140, 117, 0.45);
   border-radius: 12px;
   color: var(--text-color);
@@ -1949,8 +1949,8 @@ body.theme-dark .set-row {
 #checkInTab .checkin-form-section select:focus,
 #checkInTab .checkin-form-section textarea:focus,
 #checkInTab > .panel > input:not([type="checkbox"]):not([type="range"]):focus {
-  border-color: rgba(94, 173, 131, 0.75);
-  box-shadow: 0 0 0 2px rgba(46, 125, 91, 0.33), 0 0 18px rgba(37, 113, 80, 0.26);
+  border-color: rgba(var(--acc-5ead83), 0.75);
+  box-shadow: 0 0 0 2px rgba(var(--acc-2e7d5b), 0.33), 0 0 18px rgba(var(--acc-257150), 0.26);
 }
 
 #checkInTab .checkin-form-section label {
@@ -1964,7 +1964,7 @@ body.theme-dark .set-row {
   padding: 10px 12px;
   border: 1px solid rgba(92, 140, 117, 0.32);
   border-radius: 12px;
-  background: rgba(7, 12, 10, 0.55);
+  background: rgba(var(--acc-070c0a), 0.55);
 }
 
 .checkin-slider-header {
@@ -1985,9 +1985,9 @@ body.theme-dark .set-row {
   text-align: center;
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(86, 146, 115, 0.48);
-  background: rgba(23, 55, 41, 0.9);
-  color: #ecfff4;
+  border: 1px solid rgba(var(--acc-569273), 0.48);
+  background: rgba(var(--acc-173729), 0.9);
+  color: rgb(var(--acc-ecfff4));
   line-height: 1.1;
   font-size: 0.92rem;
 }
@@ -2007,8 +2007,8 @@ body.theme-dark .set-row {
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    #2f8c63 0%,
-    #2f8c63 var(--checkin-slider-progress),
+    rgb(var(--acc-2f8c63)) 0%,
+    rgb(var(--acc-2f8c63)) var(--checkin-slider-progress),
     #2a312d var(--checkin-slider-progress),
     #2a312d 100%
   );
@@ -2021,9 +2021,9 @@ body.theme-dark .set-row {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1px solid rgba(128, 202, 164, 0.72);
-  background: radial-gradient(circle at 30% 30%, #4ec086, #1f6a49 70%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(39, 134, 93, 0.2);
+  border: 1px solid rgba(var(--acc-80caa4), 0.72);
+  background: radial-gradient(circle at 30% 30%, rgb(var(--acc-4ec086)), rgb(var(--acc-1f6a49)) 70%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(var(--acc-27865d), 0.2);
   cursor: pointer;
 }
 
@@ -2036,16 +2036,16 @@ body.theme-dark .set-row {
 .checkin-slider-field input[type="range"]::-moz-range-progress {
   height: 8px;
   border-radius: 999px;
-  background: #2f8c63;
+  background: rgb(var(--acc-2f8c63));
 }
 
 .checkin-slider-field input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid rgba(128, 202, 164, 0.72);
-  background: #2a8c5f;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(39, 134, 93, 0.2);
+  border: 1px solid rgba(var(--acc-80caa4), 0.72);
+  background: rgb(var(--acc-2a8c5f));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(var(--acc-27865d), 0.2);
   cursor: pointer;
 }
 
@@ -2121,7 +2121,7 @@ body.theme-dark .set-row {
   color: var(--secondary-text, #b8c2bc) !important;
 }
 .litepicker .day-item:hover {
-  background: rgba(45,125,91,0.2) !important;
+  background: rgba(var(--acc-2d7d5b),0.2) !important;
   color: var(--text-color) !important;
 }
 .litepicker .day-item.is-today {
@@ -2134,7 +2134,7 @@ body.theme-dark .set-row {
   color: #fff !important;
 }
 .litepicker .day-item.is-in-range {
-  background: rgba(45,125,91,0.15) !important;
+  background: rgba(var(--acc-2d7d5b),0.15) !important;
   color: var(--text-color) !important;
 }
 .litepicker .day-item.is-locked {
@@ -2160,8 +2160,8 @@ body.theme-dark .set-row {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(45,125,91,0.2), rgba(45,125,91,0.08));
-  border: 1px solid rgba(45,125,91,0.35);
+  background: linear-gradient(135deg, rgba(var(--acc-2d7d5b),0.2), rgba(var(--acc-2d7d5b),0.08));
+  border: 1px solid rgba(var(--acc-2d7d5b),0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2173,8 +2173,8 @@ body.theme-dark .set-row {
 .apc-chip {
   padding: 4px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(45,125,91,0.25);
-  background: rgba(45,125,91,0.08);
+  border: 1px solid rgba(var(--acc-2d7d5b),0.25);
+  background: rgba(var(--acc-2d7d5b),0.08);
   color: var(--secondary-text);
   font-size: 0.75rem;
   font-weight: 600;
@@ -2195,8 +2195,8 @@ body.theme-dark .set-row {
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  background: rgba(45,125,91,0.06);
-  border: 1px solid rgba(45,125,91,0.18);
+  background: rgba(var(--acc-2d7d5b),0.06);
+  border: 1px solid rgba(var(--acc-2d7d5b),0.18);
   border-left: 3px solid var(--primary);
   border-radius: 0 10px 10px 0;
   font-size: 0.82rem;
@@ -2213,7 +2213,7 @@ body.theme-dark .set-row {
   margin: 10px 0 0;
   padding: 10px;
   border-radius: 10px;
-  border: 1px dashed rgba(45,125,91,0.4);
+  border: 1px dashed rgba(var(--acc-2d7d5b),0.4);
   background: transparent;
   color: var(--primary-text);
   font-size: 0.82rem;
@@ -2223,7 +2223,7 @@ body.theme-dark .set-row {
 }
 
 .apc-gen-btn:hover {
-  background: rgba(45,125,91,0.08);
+  background: rgba(var(--acc-2d7d5b),0.08);
   transform: none;
   box-shadow: none;
 }
@@ -2236,8 +2236,8 @@ body.theme-dark .set-row {
   justify-content: space-between;
   gap: 10px;
   padding: 10px 14px;
-  background: rgba(45,125,91,0.08);
-  border: 1px solid rgba(45,125,91,0.25);
+  background: rgba(var(--acc-2d7d5b),0.08);
+  border: 1px solid rgba(var(--acc-2d7d5b),0.25);
   border-radius: 12px;
   margin-bottom: 12px;
   font-size: 0.82rem;
@@ -2518,7 +2518,7 @@ body.theme-dark .set-row {
 
 .macro-toggle-card:has(input:checked) {
   border-color: var(--border-featured);
-  background: rgba(111, 174, 139, 0.12);
+  background: rgba(var(--acc-6fae8b), 0.12);
 }
 
 .macro-toggle-icon {
@@ -2540,7 +2540,7 @@ body.theme-dark .set-row {
 }
 
 .referral-credit-badge {
-  background: rgba(45,125,91,0.15);
+  background: rgba(var(--acc-2d7d5b),0.15);
   border: 1px solid var(--primary);
   border-radius: 10px;
   padding: 10px 14px;

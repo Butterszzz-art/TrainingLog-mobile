@@ -41,7 +41,7 @@
 
 .mob-log.is-done,
 .mob-copy.is-done {
-  background: rgba(47, 138, 99, 0.14);
+  background: rgba(var(--acc-2f8a63), 0.14);
   border-color: var(--border-featured-strong);
   color: var(--green-100);
 }

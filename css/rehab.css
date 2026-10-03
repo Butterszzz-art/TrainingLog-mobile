@@ -88,7 +88,7 @@
   box-shadow: none;
 }
 
-.rehab-sev-pill.sev-1.active { background: rgba(45,125,91,0.2); border-color: var(--primary); color: var(--primary-text); }
+.rehab-sev-pill.sev-1.active { background: rgba(var(--acc-2d7d5b),0.2); border-color: var(--primary); color: var(--primary-text); }
 .rehab-sev-pill.sev-2.active { background: rgba(198,148,79,0.2); border-color: var(--highlight); color: var(--highlight); }
 .rehab-sev-pill.sev-3.active { background: rgba(230,168,23,0.2); border-color: #e6a817; color: #e6a817; }
 .rehab-sev-pill.sev-4.active { background: rgba(220,120,50,0.2); border-color: #dc7832; color: #dc7832; }
@@ -139,7 +139,7 @@
 
 .injury-status.active { background: var(--danger-bg); color: var(--danger-text); }
 .injury-status.recovering { background: rgba(230,168,23,0.15); color: #e6a817; }
-.injury-status.resolved { background: rgba(45,125,91,0.15); color: var(--primary-text); }
+.injury-status.resolved { background: rgba(var(--acc-2d7d5b),0.15); color: var(--primary-text); }
 
 .injury-meta {
   font-size: 0.75rem;
@@ -204,7 +204,7 @@
 
 .rehab-routine-card {
   background: var(--card-bg);
-  border: 1px solid rgba(45,125,91,0.25);
+  border: 1px solid rgba(var(--acc-2d7d5b),0.25);
   border-left: 3px solid var(--primary);
   border-radius: 0 12px 12px 0;
   padding: 14px;
@@ -265,7 +265,7 @@
 
 .rehab-ai-card {
   background: var(--card-bg);
-  border: 1px solid rgba(45,125,91,0.25);
+  border: 1px solid rgba(var(--acc-2d7d5b),0.25);
   border-left: 3px solid var(--highlight);
   border-radius: 0 12px 12px 0;
   padding: 14px;

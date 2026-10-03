@@ -140,7 +140,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
   border: none;
   background: none;
   box-shadow: none;
-  color: #1f5c43;
+  color: rgb(var(--acc-1f5c43));
   font-family: var(--font-body);
   font-size: 0.82rem;
   font-weight: 600;
@@ -151,7 +151,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
 
 .login-tab:hover {
   background: none;
-  color: #143d2c;
+  color: rgb(var(--acc-143d2c));
   transform: none;
   box-shadow: none;
 }
@@ -203,8 +203,8 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
 .login-input::placeholder { color: rgba(27, 36, 32, 0.42); }
 
 .login-input:focus {
-  border-bottom-color: #1f5c43;
-  box-shadow: 0 1.5px 0 #1f5c43;
+  border-bottom-color: rgb(var(--acc-1f5c43));
+  box-shadow: 0 1.5px 0 rgb(var(--acc-1f5c43));
 }
 
 /* Password row with eye toggle */
@@ -247,7 +247,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
 .login-consents { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 .login-remember.login-consent { align-items: flex-start; line-height: 1.4; user-select: auto; }
 .login-remember.login-consent input { flex-shrink: 0; margin-top: 2px; }
-.login-consent a { color: #1f5c43; text-decoration: underline; }
+.login-consent a { color: rgb(var(--acc-1f5c43)); text-decoration: underline; }
 
 .login-remember {
   display: flex;
@@ -264,7 +264,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
   width: 18px;
   height: 18px;
   margin: 0;
-  accent-color: #1f5c43;
+  accent-color: rgb(var(--acc-1f5c43));
   cursor: pointer;
 }
 
@@ -369,7 +369,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
   display: block;
   text-align: center;
   margin-top: 10px;
-  color: #1f5c43;
+  color: rgb(var(--acc-1f5c43));
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
@@ -415,7 +415,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
      these overlays sit on top of the already-rendered app, so the gradient's
      translucent top stop must not let it bleed through. */
   background-color: #080b0a;
-  background-image: radial-gradient(ellipse at top, rgba(30, 75, 55, 0.35) 0%, #080b0a 55%);
+  background-image: radial-gradient(ellipse at top, rgba(var(--acc-1e4b37), 0.35) 0%, #080b0a 55%);
   animation: pc-fadein 0.5s ease both;
 }
 
@@ -441,7 +441,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
   width: 236px;
   height: 236px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(95, 168, 126, 0.28) 0%, rgba(95, 168, 126, 0) 68%);
+  background: radial-gradient(circle, rgba(var(--acc-5fa87e), 0.28) 0%, rgba(var(--acc-5fa87e), 0) 68%);
   animation: pc-halo 3.2s ease-in-out infinite;
 }
 
@@ -505,7 +505,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
 .pc-progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #2f8a63, #6fae8b);
+  background: linear-gradient(90deg, var(--green-60), var(--green-90));
   transition: width 0.28s ease;
   width: 0%;
 }
@@ -570,7 +570,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
 .pc-book-underline {
   height: 2px;
   margin-top: 8px;
-  background: var(--primary, #2f8a63);
+  background: var(--primary, var(--green-60));
   animation: pc-book-underline 0.4s ease-out 0.9s both;
 }
 
@@ -585,7 +585,7 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
   border-radius: 4px 14px 14px 4px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 45%),
-    #1f5c43;
+    rgb(var(--acc-1f5c43));
   box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   color: #fff;
   transform-origin: left center;

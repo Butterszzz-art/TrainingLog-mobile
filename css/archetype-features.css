@@ -50,9 +50,9 @@
   flex-shrink: 0;
 }
 
-.macro-dot-cal     { background: var(--green-70);  box-shadow: 0 0 6px rgba(61, 157, 115, 0.5); }
-.macro-dot-protein { background: var(--green-100); box-shadow: 0 0 6px rgba(142, 194, 164, 0.5); }
-.macro-dot-carbs   { background: var(--green-90);  box-shadow: 0 0 6px rgba(111, 174, 139, 0.5); }
+.macro-dot-cal     { background: var(--green-70);  box-shadow: 0 0 6px rgba(var(--acc-3d9d73), 0.5); }
+.macro-dot-protein { background: var(--green-100); box-shadow: 0 0 6px rgba(var(--acc-8ec2a4), 0.5); }
+.macro-dot-carbs   { background: var(--green-90);  box-shadow: 0 0 6px rgba(var(--acc-6fae8b), 0.5); }
 .macro-dot-fat     { background: var(--brass-base); box-shadow: 0 0 6px rgba(199, 154, 84, 0.5); }
 
 .macro-card-name {

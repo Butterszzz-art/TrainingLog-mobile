@@ -1,18 +1,22 @@
 /**
  * logbook-cover.js
- * Lets the user personalise their logbook like a paper journal: a cover
- * colour (from a fixed palette, so text always stays readable) and their
- * own name for the book ("Arman's Lifting Log").
+ * Lets the user personalise their logbook like a paper journal: an app
+ * colour and their own name for the book ("Arman's Lifting Log").
  *
  * Stored per account in localStorage as `logbookCover_${user}`:
  *   { color: 'forest', name: 'My Lifting Log' }
  * The colour is saved as a palette id, not a hex value, so the shades can
  * be tuned later without touching anyone's saved data. cloud-sync.js
- * syncs the key as a 'value' store, so the cover follows the account to
+ * syncs the key as a 'value' store, so the colour follows the account to
  * every device.
  *
- * Only the cover banner at the top of the Log tab and its accent take the
- * colour; sets, charts and the rest of the app keep the normal theme.
+ * The colour is app-wide: applyAppAccent() sets data-accent on <html>,
+ * and css/tokens.css swaps the whole green ramp for that hue. The cover
+ * banner uses the ramp's --green-50 shade. Success, warning and error
+ * colours stay fixed, which is why there is no red, rose or gold option.
+ *
+ * This file is loaded in <head> so the colour is on <html> before the
+ * first paint.
  */
 (function (global) {
   'use strict';
@@ -22,20 +26,25 @@
 
   // Every cover has white text on it, so each `bg` must keep >= 4.5:1
   // contrast against #fff (checked in tests/logbookCover.test.js).
+  // Every cover has white text on it, so each `bg` must keep >= 4.5:1
+  // contrast against #fff (checked in tests/logbookCover.test.js).
+  // `bg` mirrors --green-50 of the matching data-accent block in
+  // css/tokens.css; `swatch` is its --green-70, for the picker.
   const PALETTE = [
-    { id: 'forest',   label: 'Forest',   bg: '#236b4e' },
-    { id: 'navy',     label: 'Navy',     bg: '#1f3a68' },
-    { id: 'oxblood',  label: 'Oxblood',  bg: '#7a1f2b' },
-    { id: 'leather',  label: 'Leather',  bg: '#7a4a24' },
-    { id: 'plum',     label: 'Plum',     bg: '#5b2a6e' },
-    { id: 'teal',     label: 'Teal',     bg: '#11616b' },
-    { id: 'slate',    label: 'Slate',    bg: '#3b4652' },
-    { id: 'charcoal', label: 'Charcoal', bg: '#24272a' },
-    { id: 'crimson',  label: 'Crimson',  bg: '#a3202f' },
-    { id: 'ochre',    label: 'Ochre',    bg: '#8a5a12' },
-    { id: 'olive',    label: 'Olive',    bg: '#4f5a1e' },
-    { id: 'rose',     label: 'Rose',     bg: '#9c3b62' },
+    { id: 'forest', label: 'Forest', bg: '#236b4e', swatch: '#3d9d73' },
+    { id: 'teal',   label: 'Teal',   bg: '#00696e', swatch: '#0e9ba1' },
+    { id: 'ocean',  label: 'Ocean',  bg: '#2a618b', swatch: '#438fca' },
+    { id: 'indigo', label: 'Indigo', bg: '#4c5693', swatch: '#7280d5' },
+    { id: 'plum',   label: 'Plum',   bg: '#754978', swatch: '#ac6faf' },
+    { id: 'copper', label: 'Copper', bg: '#824d2d', swatch: '#be7347' },
   ];
+
+  // Cover colours from before the colour went app-wide, mapped to the
+  // nearest current option so nobody's saved choice is lost.
+  const LEGACY = {
+    navy: 'ocean', oxblood: 'plum', leather: 'copper', slate: 'ocean',
+    charcoal: 'forest', crimson: 'plum', ochre: 'copper', olive: 'forest', rose: 'plum',
+  };
 
   function _user() {
     return global.currentUser || (typeof localStorage !== 'undefined' && localStorage.getItem('fitnessAppUser')) || null;
@@ -46,8 +55,48 @@
   }
 
   function colorById(id) {
+    if (LEGACY[id]) id = LEGACY[id];
     return PALETTE.find(c => c.id === id) || PALETTE.find(c => c.id === DEFAULT_COLOR);
   }
+
+  // Puts the colour on <html> (Forest is the stylesheet default, so it
+  // clears the attribute). With no signed-in user it falls back to Forest.
+  function applyAppAccent(id) {
+    if (typeof document === 'undefined' || !document.documentElement) return;
+    if (id === undefined) id = _user() ? getCover().color : DEFAULT_COLOR;
+    const color = colorById(id).id;
+    const root = document.documentElement;
+    if (color === DEFAULT_COLOR) root.removeAttribute('data-accent');
+    else root.setAttribute('data-accent', color);
+  }
+
+  // Reads a ramp token for canvas drawing (charts, share images), which
+  // can't use CSS variables. Takes a --green-* token or an --acc-* channel
+  // list and returns #rrggbb, or rgba() when `alpha` is given. Outside a
+  // browser it falls back to the Forest value (an --acc-* name is its
+  // own Forest hex).
+  function accentColor(token, alpha) {
+    let v = '';
+    try { v = getComputedStyle(document.documentElement).getPropertyValue(token).trim(); } catch { v = ''; }
+    let rgb = null;
+    const hex = /^#([0-9a-f]{6})$/i.exec(v);
+    if (hex) {
+      const n = parseInt(hex[1], 16);
+      rgb = [n >> 16, (n >> 8) & 255, n & 255];
+    } else if (/^\d+\s*,\s*\d+\s*,\s*\d+$/.test(v)) {
+      rgb = v.split(',').map(Number);
+    } else {
+      const fallback = FOREST_TOKENS[token] || (/^--acc-([0-9a-f]{6})$/.exec(token) || [])[1] || '2f8a63';
+      const n = parseInt(fallback.replace('#', ''), 16);
+      rgb = [n >> 16, (n >> 8) & 255, n & 255];
+    }
+    if (alpha != null) return 'rgba(' + rgb.join(', ') + ', ' + alpha + ')';
+    return '#' + rgb.map(c => c.toString(16).padStart(2, '0')).join('');
+  }
+  const FOREST_TOKENS = {
+    '--green-100': '#8ec2a4', '--green-90': '#6fae8b', '--green-70': '#3d9d73', '--green-60': '#2f8a63',
+    '--green-50': '#236b4e', '--green-30': '#17472f', '--green-20': '#143c2b',
+  };
 
   // Trims, collapses whitespace, drops control characters and caps length.
   function cleanName(raw) {
@@ -82,6 +131,7 @@
       name: name !== undefined ? cleanName(name) : current.name,
     };
     localStorage.setItem(key, JSON.stringify(next));
+    applyAppAccent(next.color);
     renderLogbookCover();
     if (typeof global.renderSettingsHero === 'function') global.renderSettingsHero();
     return getCover(user);
@@ -98,6 +148,7 @@
 
   function renderLogbookCover() {
     if (typeof document === 'undefined') return;
+    try { applyAppAccent(); } catch { /* storage unavailable: keep Forest */ }
     const host = document.getElementById('logbookCover');
     if (!host) return;
     const user = _user();
@@ -107,11 +158,10 @@
     const color = colorById(cover.color);
     host.hidden = false;
     host.textContent = '';
-    host.style.setProperty('--logbook-cover', color.bg);
 
     const btn = _el('button', 'lb-cover');
     btn.type = 'button';
-    btn.setAttribute('aria-label', 'Customise logbook cover: ' + cover.displayName);
+    btn.setAttribute('aria-label', 'Customise logbook and app colour: ' + cover.displayName);
     btn.appendChild(_el('span', 'lb-cover-spine'));
     const text = _el('span', 'lb-cover-text');
     text.appendChild(_el('span', 'lb-cover-kicker', 'Logbook'));
@@ -124,9 +174,12 @@
 
   /* ── Editor sheet ────────────────────────────────────────── */
 
+  // Closing without saving puts the saved colour back, since the sheet
+  // previews the chosen colour on the whole app while it is open.
   function closeEditor() {
     const existing = document.getElementById('lbCoverSheet');
     if (existing) existing.remove();
+    applyAppAccent();
   }
 
   function openLogbookCoverEditor() {
@@ -180,15 +233,15 @@
     sheet.appendChild(nameField);
 
     const colorField = _el('div', 'mx-field');
-    colorField.appendChild(_el('span', 'mx-lbl', 'Cover colour'));
+    colorField.appendChild(_el('span', 'mx-lbl', 'App colour'));
     const swatches = _el('div', 'lb-swatches');
     swatches.setAttribute('role', 'radiogroup');
-    swatches.setAttribute('aria-label', 'Cover colour');
+    swatches.setAttribute('aria-label', 'App colour');
     PALETTE.forEach(c => {
       const sw = _el('button', 'lb-swatch');
       sw.type = 'button';
       sw.dataset.color = c.id;
-      sw.style.background = c.bg;
+      sw.style.background = 'linear-gradient(135deg, ' + c.swatch + ', ' + c.bg + ')';
       sw.setAttribute('role', 'radio');
       sw.setAttribute('aria-label', c.label);
       sw.title = c.label;
@@ -196,6 +249,7 @@
       swatches.appendChild(sw);
     });
     colorField.appendChild(swatches);
+    colorField.appendChild(_el('p', 'lb-hint', 'Changes buttons, charts and highlights across the app. Gains and PRs always stay green.'));
     sheet.appendChild(colorField);
 
     const save = _el('button', 'mx-cta', 'Save');
@@ -208,7 +262,7 @@
     sheet.appendChild(save);
 
     function repaint() {
-      preview.style.setProperty('--logbook-cover', colorById(chosen).bg);
+      applyAppAccent(chosen);
       pTitle.textContent = cleanName(nameInput.value) || defaultName(user);
       swatches.querySelectorAll('.lb-swatch').forEach(sw => {
         const on = sw.dataset.color === chosen;
@@ -223,11 +277,14 @@
     try { nameInput.focus({ preventScroll: true }); } catch { /* older webviews */ }
   }
 
-  global.LogbookCover = { PALETTE, NAME_MAX, getCover, setCover, cleanName, colorById, openEditor: openLogbookCoverEditor };
+  global.LogbookCover = { PALETTE, NAME_MAX, getCover, setCover, cleanName, colorById, applyAppAccent, accentColor, openEditor: openLogbookCoverEditor };
+  global.applyAppAccent = applyAppAccent;
+  global.accentColor = accentColor;
   global.renderLogbookCover = renderLogbookCover;
   global.openLogbookCoverEditor = openLogbookCoverEditor;
 
   if (typeof document !== 'undefined') {
+    try { applyAppAccent(); } catch { /* storage unavailable: keep Forest */ }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderLogbookCover);
     else renderLogbookCover();
   }

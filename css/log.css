@@ -195,7 +195,7 @@
   align-items: center;
   border-radius: var(--radius-pill);
   background: rgba(0, 0, 0, 0.42);
-  border: 1px solid rgba(74, 132, 102, 0.34);
+  border: 1px solid rgba(var(--acc-4a8466), 0.34);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
   height: 50px;
 }
@@ -256,7 +256,7 @@
 
 /* kg/lbs toggle button next to the "Weight" label */
 .ql-unit-toggle {
-  border: 1px solid rgba(74, 132, 102, 0.4);
+  border: 1px solid rgba(var(--acc-4a8466), 0.4);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-label);
   font-size: 8.5px;
@@ -339,7 +339,7 @@
   height: 54px;
   border-radius: var(--radius-pill);
   background: rgba(0, 0, 0, 0.42);
-  border: 1px solid rgba(74, 132, 102, 0.34);
+  border: 1px solid rgba(var(--acc-4a8466), 0.34);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
   color: var(--text-color);
   text-align: center;
@@ -359,7 +359,7 @@
 .ql-plate-chip {
   height: 44px;
   border-radius: 12px;
-  border: 1px solid rgba(74, 132, 102, 0.34);
+  border: 1px solid rgba(var(--acc-4a8466), 0.34);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-color);
   font-weight: 700;
@@ -381,7 +381,7 @@
   flex: 1;
   height: 46px;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(74, 132, 102, 0.34);
+  border: 1px solid rgba(var(--acc-4a8466), 0.34);
   background: rgba(255, 255, 255, 0.04);
   color: var(--secondary-text);
   font-weight: 700;
@@ -415,7 +415,7 @@
 .log-add-set-btn:hover {
   border-color: var(--primary, #5fa87e);
   color: var(--primary, #5fa87e);
-  background: rgba(95, 168, 126, 0.08);
+  background: rgba(var(--acc-5fa87e), 0.08);
 }
 
 /* Row 0 is generated the same as every other row (getSetInputHTML) so its
@@ -572,8 +572,8 @@
   justify-content: space-between;
   margin: 8px 12px 12px;
   padding: 10px 16px 10px 14px;
-  background: rgba(38, 92, 68, 0.16);
-  border: 1px solid rgba(74, 132, 102, 0.38);
+  background: rgba(var(--acc-265c44), 0.16);
+  border: 1px solid rgba(var(--acc-4a8466), 0.38);
   border-radius: var(--radius-pill);
   box-shadow: var(--pod-bevel);
 }
@@ -881,7 +881,7 @@
 }
 
 .set-opt-pill:has(input:checked) {
-  background: rgba(95, 168, 126, 0.14);
+  background: rgba(var(--acc-5fa87e), 0.14);
   border-color: var(--primary, #5fa87e);
   color: var(--primary, #5fa87e);
 }
@@ -931,7 +931,7 @@
 }
 
 .role-segment-opt:has(input:checked) {
-  background: rgba(95, 168, 126, 0.14);
+  background: rgba(var(--acc-5fa87e), 0.14);
   color: var(--primary, #5fa87e);
 }
 
@@ -981,7 +981,7 @@
 
 .log-form-card {
   background: var(--pod-bg-hero);
-  border: 1px solid rgba(74, 132, 102, 0.3);
+  border: 1px solid rgba(var(--acc-4a8466), 0.3);
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-shadow-hero);
   padding: 15px;
@@ -1067,7 +1067,7 @@
 .highlight-today { background-color: #FF7043; }
 
 #training-calendar td.calendar-completed {
-  background-color: rgba(46, 160, 67, 0.75);
+  background-color: rgba(var(--acc-2ea043), 0.75);
   color: #fff;
 }
 
@@ -1147,7 +1147,7 @@
 
 .scb-chip--on {
   border-color: var(--primary, #5fa87e);
-  background: rgba(95, 168, 126, 0.12);
+  background: rgba(var(--acc-5fa87e), 0.12);
   color: var(--primary, #5fa87e);
 }
 
@@ -1157,7 +1157,7 @@
   font-size: 0.62rem;
   font-weight: 700;
   background: var(--primary, #5fa87e);
-  color: #0b130d;
+  color: rgb(var(--acc-0b130d));
   border-radius: 6px;
   padding: 1px 5px;
   margin-left: 2px;
@@ -1439,7 +1439,7 @@
 
 .tpl-pod {
   background: var(--pod-bg-hero);
-  border: 1px solid rgba(74, 132, 102, 0.3);
+  border: 1px solid rgba(var(--acc-4a8466), 0.3);
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-bevel);
   padding: 15px;
@@ -1505,7 +1505,7 @@
   margin: 4px 0 0;
   padding: 10px;
   border-radius: var(--radius-pill);
-  border: 1px dashed rgba(74, 132, 102, 0.4);
+  border: 1px dashed rgba(var(--acc-4a8466), 0.4);
   background: transparent;
   color: var(--primary-text);
   font-family: var(--font-label);
@@ -1518,7 +1518,7 @@
 }
 
 .tpl-add-exercise-btn:hover {
-  background: rgba(47, 138, 99, 0.1);
+  background: rgba(var(--acc-2f8a63), 0.1);
   border-color: var(--primary);
   filter: none;
 }

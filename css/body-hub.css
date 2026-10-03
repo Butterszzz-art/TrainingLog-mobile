@@ -206,7 +206,7 @@
   padding: 14px 15px 15px;
   border-radius: var(--radius-pod);
   background:
-    linear-gradient(160deg, rgba(47, 138, 99, 0.14), rgba(47, 138, 99, 0) 60%),
+    linear-gradient(160deg, rgba(var(--acc-2f8a63), 0.14), rgba(var(--acc-2f8a63), 0) 60%),
     var(--pod-bg);
   border: 1px solid var(--border-featured);
   box-shadow: var(--pod-bevel);

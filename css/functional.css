@@ -152,7 +152,7 @@
 .hyrox-station-name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 500; color: var(--text-primary); line-height: 1.25; }
 .hyrox-station-name small { display: block; margin-top: 1px; font-size: 12px; font-weight: 400; color: var(--text-tertiary); }
 /* logged rows: runs green, stations brass */
-.hyrox-station.is-done .hyrox-station-num { background: rgba(47, 138, 99, 0.16); border-color: var(--border-featured-strong); color: var(--green-100); }
+.hyrox-station.is-done .hyrox-station-num { background: rgba(var(--acc-2f8a63), 0.16); border-color: var(--border-featured-strong); color: var(--green-100); }
 .hyrox-station.is-done[data-kind="station"] .hyrox-station-num { background: rgba(168, 124, 56, 0.18); border-color: var(--border-brass); color: var(--brass-light); }
 
 .hyrox-time-input { text-align: center; }

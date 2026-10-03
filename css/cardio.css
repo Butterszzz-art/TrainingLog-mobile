@@ -90,7 +90,7 @@
   align-items: center;
   gap: 12px;
   border-radius: var(--radius-md);
-  background: rgba(47, 138, 99, 0.10);
+  background: rgba(var(--acc-2f8a63), 0.10);
   border: 1px solid var(--border-featured);
   padding: 11px 14px;
   animation: cardio-fadein 0.2s ease;

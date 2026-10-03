@@ -14,6 +14,13 @@
 (function initProgressStory() {
   'use strict';
 
+  // Ramp colours come from the live page so the image matches the
+  // user's app colour (see accentColor in src/js/logbook-cover.js).
+  const _accent = (token, alpha) =>
+    (typeof window !== 'undefined' && typeof window.accentColor === 'function')
+      ? window.accentColor(token, alpha)
+      : '#2f8a63';
+
   /* ── Palette — mirrors css/tokens.css so this stays in sync with
      the app's real theme instead of hardcoding a second palette. ── */
   const T = {
@@ -27,13 +34,13 @@
     textSecondary:'#c9d2cc',
     textLabel:   '#6d8076',
     textFaint:   '#5a675f',
-    green100:    '#8ec2a4',
-    green90:     '#6fae8b',
-    green70:     '#3d9d73',
-    green60:     '#2f8a63',
-    green50:     '#236b4e',
-    green30:     '#17472f',
-    green20:     '#143c2b',
+    get green100() { return _accent('--green-100'); },
+    get green90() { return _accent('--green-90'); },
+    get green70() { return _accent('--green-70'); },
+    get green60() { return _accent('--green-60'); },
+    get green50() { return _accent('--green-50'); },
+    get green30() { return _accent('--green-30'); },
+    get green20() { return _accent('--green-20'); },
     brassLight:  '#e0bd82',
     brass:       '#c79a54',
     brassDeep:   '#6d5124',
@@ -163,8 +170,8 @@
     ctx.fillRect(0, 0, W, H);
 
     const glow = ctx.createRadialGradient(W * 0.5, -H * 0.05, 0, W * 0.5, -H * 0.05, W * 1.1);
-    glow.addColorStop(0, 'rgba(52,122,88,0.42)');
-    glow.addColorStop(0.5, 'rgba(35,84,62,0.18)');
+    glow.addColorStop(0, _accent('--acc-347a58', 0.42));
+    glow.addColorStop(0.5, _accent('--acc-23543e', 0.18));
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);

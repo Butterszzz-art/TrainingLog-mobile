@@ -60,7 +60,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(150deg, var(--green-70, #3d9d73), var(--green-35, #1a5138));
+  background: linear-gradient(150deg, var(--green-70, var(--green-70)), var(--green-35, var(--green-35)));
   color: var(--pill-text-active, #fff);
   font-family: var(--font-display, sans-serif);
   font-size: 26px;
@@ -111,4 +111,4 @@
   cursor: pointer;
 }
 .pc-report-reason input { width: auto; margin: 0; flex: none; }
-.pc-report-reason:has(input:checked) { border-color: var(--green-70, #3d9d73); }
+.pc-report-reason:has(input:checked) { border-color: var(--green-70, var(--green-70)); }

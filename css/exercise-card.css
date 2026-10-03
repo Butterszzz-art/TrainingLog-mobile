@@ -92,7 +92,7 @@
   opacity: 1;
 }
 #workoutsContainer .exercise-trend-badge.trend-up {
-  color: var(--green-90);
+  color: var(--positive-text);
   border-color: var(--border-featured);
   background: rgba(47, 138, 99, 0.13);
 }
