@@ -5452,6 +5452,25 @@ function loadMacroTargetsFromLocal() {
   return null;
 }
 
+function normalizeMacroTargets(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const pick = (...keys) => {
+    for (const k of keys) {
+      const v = Number(raw[k]);
+      if (raw[k] != null && raw[k] !== '' && Number.isFinite(v)) return v;
+    }
+    return null;
+  };
+  const calories = pick('calories', 'Calories');
+  if (!calories) return null;
+  return {
+    calories,
+    protein: pick('protein', 'Protein') || 0,
+    fat:     pick('fat', 'Fat') || 0,
+    carbs:   pick('carbs', 'Carbs') || 0,
+  };
+}
+
 async function fetchUserMacroTargets(username) {
   if (!username) return false;
   try {
@@ -5463,7 +5482,12 @@ async function fetchUserMacroTargets(username) {
     const data = await response.json();
     if (!data.success || !data.item) throw new Error('No macro targets found for this user');
 
-    const fields = data.item;
+    // The server returns Airtable-shaped fields (Calories/Protein/Fat/Carbs);
+    // everything on the device reads lowercase keys. Storing the item as-is
+    // replaced the user's saved targets with an object the macro tab can't
+    // read, so saves looked like they never went through after a restart.
+    const fields = normalizeMacroTargets(data.item);
+    if (!fields) throw new Error('No macro targets found for this user');
     saveMacroTargetsToTop(fields);
     localStorage.setItem('macroTargets', JSON.stringify(fields));
     localStorage.setItem(`macroTargets_${username}`, JSON.stringify(fields));
@@ -9214,8 +9238,10 @@ function calculateMacroTargets(goalOverride, rateOverride) {
     carbs: macros.carbGrams,
   };
   if (currentUser) {
-    localStorage.setItem('macroTargets_' + currentUser, JSON.stringify(autoTargets));
     saveMacroTargetsToTop(autoTargets);
+    // Keep the server copy in step too — otherwise the next sign-in pulls the
+    // old targets back down over this calculation.
+    saveToAirtable(currentUser, autoTargets, { silent: true });
   }
 
   // Refresh the Targets tab (rings, bars, per-macro rows) so a freshly-picked
@@ -9228,7 +9254,7 @@ function calculateMacroTargets(goalOverride, rateOverride) {
 }
 
 function getMacroTargetValues() {
-  const saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser || ""}`)) || {};
+  const saved = normalizeMacroTargets(JSON.parse(localStorage.getItem(`macroTargets_${currentUser || ""}`))) || {};
   const assignedPlanTargets = getAssignedNutritionTargetsForCurrentDay(currentUser);
   if (assignedPlanTargets) {
     return assignedPlanTargets;
@@ -9802,9 +9828,11 @@ function saveMacroTargets() {
     carbs: +document.getElementById("targetCarbs").value,
   };
 
-  localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(targets));
-  alert("Targets saved!");
+  saveMacroTargetsToTop(targets);
   renderMacroTargets(); // optional: live refresh UI
+  saveToAirtable(currentUser, targets, { silent: true }).then(ok => {
+    window.showToast?.(ok ? "Targets saved!" : "Saved on this device, but syncing to your account failed.", ok ? 'success' : 'error');
+  });
 }
 
 
@@ -9897,9 +9925,9 @@ function adjustMacros(changedId) {
   
 function renderMacroTargets(options = {}) {
   const { useFallback = false } = options;
-  let saved = JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`));
+  let saved = normalizeMacroTargets(JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`)));
   if (!saved && useFallback) {
-    saved = loadMacroTargetsFromLocal();
+    saved = normalizeMacroTargets(loadMacroTargetsFromLocal());
     if (saved && currentUser) {
       localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(saved));
     }
@@ -9975,10 +10003,13 @@ function saveSliderMacros() {
     const c = Number(document.getElementById("carbSlider").value);
     const calTotal = p*4 + f*9 + c*4;
       const target = { calories: calTotal, protein: p, fat: f, carbs: c };
-      // persist to Airtable and update local display
-      saveToAirtable(currentUser, target).then(() => {
-        window.showToast("Macro targets saved!");
-        saveMacroTargetsToTop(target);
+      // Save on the device first so the targets stick even if the request
+      // fails, then only report success once the server accepted them.
+      saveMacroTargetsToTop(target);
+      updateMacroUI();
+      saveToAirtable(currentUser, target, { silent: true }).then(ok => {
+        if (ok) window.showToast?.("Macro targets saved!", 'success');
+        else window.showToast?.("Saved on this device, but syncing to your account failed.", 'error');
       });
   }
 
@@ -9988,7 +10019,9 @@ function updateSliderMacros() {
 }
 
 
-async function saveToAirtable(username, target) {
+// Resolves true only when the server accepted the targets.
+async function saveToAirtable(username, target, { silent = false } = {}) {
+  if (!username) return false;
   try {
     const r = await fetch(`${window.SERVER_URL}/macrotargets`, {
       method: "POST",
@@ -10001,20 +10034,30 @@ async function saveToAirtable(username, target) {
         carbs:    target.carbs
       })
     });
-    const d = await r.json();
-    if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.success === false) {
       console.error("Macro targets save error:", d);
-      alert(`Could not save macros: ${d.error?.message || "unknown"}`);
+      if (!silent) alert(`Could not save macros: ${d.error?.message || "unknown"}`);
+      return false;
     }
+    return true;
   } catch (err) {
     console.error(err);
-    alert("Network error saving macros.");
+    if (!silent) alert("Network error saving macros.");
+    return false;
   }
 }
 
   
 function saveMacroTargetsToTop(target) {
     localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(target));
+    // getMacroTargetValues() prefers these in-memory values over storage, so
+    // a value left over from "Set" custom calories would otherwise mask every
+    // later save for the rest of the session.
+    macroTargetCalories = Number(target.calories) || 0;
+    macroTargetProtein  = Number(target.protein) || 0;
+    macroTargetFat      = Number(target.fat) || 0;
+    macroTargetCarbs    = Number(target.carbs) || 0;
     document.getElementById("macroCalsTarget").textContent    = target.calories;
     document.getElementById("macroProteinTarget").textContent = target.protein;
     document.getElementById("macroFatTarget").textContent     = target.fat;
@@ -10084,6 +10127,12 @@ function applyCustomCalories() {
   macroTargetProtein = protein;
   macroTargetFat     = fat;
   macroTargetCarbs   = carbs;
+
+  if (currentUser) {
+    const customTargets = { calories: customCal, protein, fat, carbs };
+    saveMacroTargetsToTop(customTargets);
+    saveToAirtable(currentUser, customTargets, { silent: true });
+  }
 
   macroRanges = {
     protein: { min: 0, max: Math.round(protein * 1.2) },
@@ -17729,7 +17778,7 @@ async function fetchDailyLogs(username) {
   }
 
 
-  const savedTargets = JSON.parse(localStorage.getItem(`macroTargets_${savedUser}`));
+  const savedTargets = normalizeMacroTargets(JSON.parse(localStorage.getItem(`macroTargets_${savedUser}`)));
   if (savedTargets) {
     saveMacroTargetsToTop(savedTargets);
     const _ph = Math.round(savedTargets.protein * 1.5);
