@@ -51,6 +51,9 @@ definitions:
         # kills the app the moment the camera or library is opened.
         set_plist NSCameraUsageDescription string "Pocket Coach uses the camera for posing photo check-ins, profile photos and workout story photos."
         set_plist NSPhotoLibraryUsageDescription string "Pocket Coach lets you choose a profile photo or a workout story background from your library."
+        # "Save image" on the workout story writes to Photos
+        # (plugins/instagram-stories saveImage).
+        set_plist NSPhotoLibraryAddUsageDescription string "Pocket Coach saves your workout story images to your photo library."
         # Share to Instagram Stories (plugins/instagram-stories) checks
         # canOpenURL("instagram-stories://"), which iOS only answers for
         # schemes listed here.

@@ -52,6 +52,34 @@
     return cap.Plugins?.InstagramStories || cap.registerPlugin?.('InstagramStories') || null;
   }
 
+  // The native save/share methods live on the same local plugin. Builds
+  // from before they were added don't have them, so callers fall back.
+  function nativeImagePlugin(method) {
+    const cap = window.Capacitor;
+    if (!isNative() || !cap?.isPluginAvailable?.('InstagramStories')) return null;
+    const plugin = cap.Plugins?.InstagramStories || cap.registerPlugin?.('InstagramStories');
+    return plugin && typeof plugin[method] === 'function' ? plugin : null;
+  }
+
+  // Resolves true when the native method handled it; false when this
+  // build has no such method or it isn't implemented natively yet.
+  async function nativeImage(method, canvas, name, type) {
+    const plugin = nativeImagePlugin(method);
+    if (!plugin) return false;
+    try {
+      const result = await plugin[method]({ image: base64(canvas, type, 0.92), fileName: name, mimeType: type });
+      if (method === 'saveImage') toast(result?.shared ? 'Pick where to save it' : 'Saved to your photos', 'success');
+      return true;
+    } catch (e) {
+      if (e && e.code === 'UNIMPLEMENTED') return false;
+      if (e && e.code === 'DENIED') {
+        toast('Allow Pocket Coach to add photos in Settings to save images.', 'warn');
+        return true;
+      }
+      throw e;
+    }
+  }
+
   // ── Open / close ────────────────────────────────────────────────────
   function openWorkoutStoryModal(workoutIndex) {
     const user = currentUserName();
@@ -231,18 +259,32 @@
     return true;
   }
 
-  async function onSave() {
-    const canvas = composeStory();
-    // WebViews ignore <a download>; the share sheet has "Save Image".
-    if (isNative()) {
-      try { if (await shareFile(canvas, fileName('.jpg'), 'image/jpeg')) return; } catch (_e) { /* fall through */ }
+  // In the app, <a download> does nothing (WebViews ignore it) and Android
+  // has no navigator.share, so saving goes through the native plugin.
+  async function saveCanvas(canvas, name, type) {
+    try {
+      if (await nativeImage('saveImage', canvas, name, type)) return;
+      if (isNative()) {
+        // Older app build without saveImage: the share sheet has "Save Image".
+        if (await shareFile(canvas, name, type)) return;
+        toast('Saving isn\'t supported in this version of the app. Update Pocket Coach to save images.', 'warn');
+        return;
+      }
+      download(canvas, name.replace(/\.jpg$/, '.png'));
+    } catch (e) {
+      console.warn('[story] save failed', e);
+      toast('Couldn\'t save the image. Try again.', 'warn');
     }
-    download(canvas, fileName('.png'));
+  }
+
+  function onSave() {
+    return saveCanvas(composeStory(), fileName('.jpg'), 'image/jpeg');
   }
 
   async function onShare() {
     const canvas = composeStory();
     try {
+      if (await nativeImage('shareImage', canvas, fileName('.jpg'), 'image/jpeg')) return;
       if (await shareFile(canvas, fileName('.jpg'), 'image/jpeg')) return;
       if (navigator.clipboard?.write && window.ClipboardItem) {
         const blob = await toBlob(canvas, 'image/png');
@@ -257,12 +299,8 @@
     }
   }
 
-  async function onSaveSticker() {
-    const sticker = $('wstorySticker');
-    if (isNative()) {
-      try { if (await shareFile(sticker, fileName('-sticker.png'), 'image/png')) return; } catch (_e) { /* fall through */ }
-    }
-    download(sticker, fileName('-sticker.png'));
+  function onSaveSticker() {
+    return saveCanvas($('wstorySticker'), fileName('-sticker.png'), 'image/png');
   }
 
   async function onInstagram() {

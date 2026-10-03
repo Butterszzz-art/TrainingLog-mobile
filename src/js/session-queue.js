@@ -397,6 +397,10 @@
   let _qlExerciseName = null;
   let _qlWeight = null;
   let _qlReps = null;
+  // Last exercise a set was quick-logged for. Once the lifter moves on to a
+  // different exercise, the previous one's weight/reps stop being sticky.
+  let _qlLoggedName = null;
+  const _sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 
   function _round1(n) { return Math.round(n * 10) / 10; }
 
@@ -670,8 +674,12 @@
         // hardcoded 20kg/8reps guess — getExerciseStats() already computes
         // lastTopSet for the stats line below, it just wasn't being used
         // to seed the stepper too.
-        let fallbackWeight = _qlWeight ?? 20;
-        let fallbackReps = _qlReps ?? 8;
+        // Sticky values belong to the exercise they were set for: starting
+        // a different one after logging used to carry e.g. Bench's reps
+        // over to Squat when Squat had no history of its own.
+        const movedOn = isNewExercise && _qlLoggedName && !_sameName(name, _qlLoggedName);
+        let fallbackWeight = movedOn ? 20 : (_qlWeight ?? 20);
+        let fallbackReps = movedOn ? 8 : (_qlReps ?? 8);
         if (isNewExercise && typeof global.getExerciseStats === 'function') {
           const stats = global.getExerciseStats(name);
           if (stats && stats.lastTopSet) {
@@ -712,6 +720,18 @@
     document.getElementById('quickLogPanel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  /** Removing rows back down to one hands row 0 back to the steppers; adopt
+   * what was typed there, or the next tap on Log would overwrite it with
+   * the steppers' older values (quickLogSet() rewrites row 0 from them). */
+  function syncQuickLogFromRow0() {
+    if (typeof document === 'undefined') return;
+    const weightEl = document.getElementById('weight_0');
+    const repsEl = document.getElementById('reps_0');
+    if (weightEl && weightEl.value !== '' && Number.isFinite(Number(weightEl.value))) _qlWeight = Number(weightEl.value);
+    if (repsEl && repsEl.value !== '' && Number.isFinite(Number(repsEl.value))) _qlReps = Number(repsEl.value);
+    _syncQuickLogDisplay();
+  }
+
   function quickLogStep(field, delta) {
     if (field === 'weight') {
       const step = (_qlWeight || 0) >= 100 ? 5 : 2.5;
@@ -746,6 +766,7 @@
     // than duplicating its validation logic.
     const succeeded = exerciseEl && exerciseEl.value === '';
     if (succeeded) {
+      _qlLoggedName = name;
       exerciseEl.value = name;
       const liveTitle = document.getElementById('exerciseLiveTitle');
       if (liveTitle) { liveTitle.hidden = false; liveTitle.textContent = name; }
@@ -761,13 +782,14 @@
   }
 
   const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
-    initQuickLog, quickLogStep, quickLogSet, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
+    initQuickLog, quickLogStep, quickLogSet, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, refreshLogButtonLabel: _updateQuickLogButtonLabel };
   global.renderVolumeLandmarks = renderVolumeLandmarks;
   global.initQuickLog = initQuickLog;
   global.quickLogStep = quickLogStep;
   global.quickLogSet = quickLogSet;
+  global.syncQuickLogFromRow0 = syncQuickLogFromRow0;
   global.startQuickLogFor = startQuickLogFor;
   global.syncQuickLogUnit = syncQuickLogUnit;
   global.toggleQuickLogUnit = toggleQuickLogUnit;
