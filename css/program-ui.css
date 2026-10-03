@@ -45,7 +45,7 @@
 #programTab .pbv2-step.active .pbv2-step-icon { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
 #programTab .pbv2-step.active .pbv2-step-label { color: var(--green-90); }
 #programTab .pbv2-step.done { cursor: pointer; }
-#programTab .pbv2-step.done .pbv2-step-icon { background: rgba(47, 138, 99, 0.18); border-color: var(--green-70); color: var(--green-90); }
+#programTab .pbv2-step.done .pbv2-step-icon { background: rgba(var(--acc-2f8a63), 0.18); border-color: var(--green-70); color: var(--green-90); }
 #programTab .pbv2-step.done .pbv2-step-label { color: var(--text-tertiary); }
 
 /* headings */
@@ -85,7 +85,7 @@
 #programTab .pbv2-split-info { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
 #programTab .pbv2-split-days-badge {
   display: inline-flex; align-items: center; margin: 0; padding: 3px 10px; border-radius: var(--radius-pill);
-  background: rgba(47, 138, 99, 0.16); border: 1px solid rgba(47, 138, 99, 0.4); color: var(--green-90);
+  background: rgba(var(--acc-2f8a63), 0.16); border: 1px solid rgba(var(--acc-2f8a63), 0.4); color: var(--green-90);
   font-family: var(--font-label); font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
 }
 #programTab .pbv2-split-desc { font-size: 13.5px; line-height: 1.45; color: var(--text-secondary); }
@@ -187,7 +187,7 @@
 #programTab .pbv2-picker-row-name { font-size: 15px; color: var(--text-primary); }
 #programTab .pbv2-picker-row-add {
   width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 50%;
-  background: rgba(47, 138, 99, 0.16); border: 1px solid rgba(47, 138, 99, 0.4); color: var(--green-90); font-size: 15px;
+  background: rgba(var(--acc-2f8a63), 0.16); border: 1px solid rgba(var(--acc-2f8a63), 0.4); color: var(--green-90); font-size: 15px;
 }
 
 /* ── Schedule step ─────────────────────────────────────────── */
@@ -225,7 +225,7 @@
   font-family: var(--font-display); font-size: 18px; font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase;
 }
 #programTab .pbv2-save-btn .ui-icon {
-  width: 36px; height: 36px; padding: 9px; border-radius: 50%; background: rgba(0, 0, 0, 0.28); color: #eafaf1;
+  width: 36px; height: 36px; padding: 9px; border-radius: 50%; background: rgba(0, 0, 0, 0.28); color: rgb(var(--acc-eafaf1));
 }
 #programTab .pbv2-advanced-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin: 0; padding: 0 18px;
@@ -293,7 +293,7 @@
 #programTab .prog-card-meta { margin: 0; font-size: 13px; color: var(--text-tertiary); }
 #programTab .prog-card-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
 #programTab .prog-badge {
-  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--radius-pill); background: rgba(47, 138, 99, 0.16); border: 1px solid rgba(47, 138, 99, 0.4); color: var(--green-90);
+  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--radius-pill); background: rgba(var(--acc-2f8a63), 0.16); border: 1px solid rgba(var(--acc-2f8a63), 0.4); color: var(--green-90);
   font-family: var(--font-label); font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
 }
 #programTab .prog-card-actions { display: flex; gap: 8px; margin: 2px 0 0; }

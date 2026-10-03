@@ -273,7 +273,7 @@ body.performance-mode .rest-banner-skip {
   grid-area: skip;
   background: #f0a040;
   border-color: #f0a040;
-  color: #0b130d;
+  color: rgb(var(--acc-0b130d));
 }
 
 body.performance-mode .rest-banner-bar {
@@ -306,19 +306,19 @@ body.performance-mode .rest-banner-bar {
 /* Last 10 seconds — the whole card turns green: "Get ready" */
 body.performance-mode .rest-banner.is-urgent {
   border-color: var(--green-70);
-  background: linear-gradient(168deg, #10261b, #0b1510);
+  background: linear-gradient(168deg, rgb(var(--acc-10261b)), rgb(var(--acc-0b1510)));
 }
 body.performance-mode .rest-banner.is-urgent .rest-banner-pm-title,
 body.performance-mode .rest-banner.is-urgent .rest-banner-time,
 body.performance-mode .rest-banner.is-urgent .rest-banner-pm-btn { color: var(--green-70); }
 body.performance-mode .rest-banner.is-urgent .rest-banner-ring-fill { stroke: var(--green-70); }
-body.performance-mode .rest-banner.is-urgent .rest-banner-ring-track { stroke: rgba(61, 157, 115, 0.18); }
-body.performance-mode .rest-banner.is-urgent .rest-banner-pm-btn { border-color: rgba(61, 157, 115, 0.45); }
+body.performance-mode .rest-banner.is-urgent .rest-banner-ring-track { stroke: rgba(var(--acc-3d9d73), 0.18); }
+body.performance-mode .rest-banner.is-urgent .rest-banner-pm-btn { border-color: rgba(var(--acc-3d9d73), 0.45); }
 body.performance-mode .rest-banner.is-urgent .rest-banner-skip {
   background: var(--green-70);
   border-color: var(--green-70);
 }
-body.performance-mode .rest-banner.is-urgent .rest-banner-bar { background: rgba(61, 157, 115, 0.18); }
+body.performance-mode .rest-banner.is-urgent .rest-banner-bar { background: rgba(var(--acc-3d9d73), 0.18); }
 body.performance-mode .rest-banner.is-urgent .rest-banner-bar i { background: var(--green-70); }
 
 /* ── "Rest over!" card ──────────────────────────────────────── */
@@ -334,7 +334,7 @@ body.performance-mode .rest-over-card {
   padding: 16px;
   border-radius: var(--radius-pod);
   border: 1.5px solid var(--green-70);
-  background: #0f2419;
+  background: rgb(var(--acc-0f2419));
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55);
   animation: pm-rest-over-in 0.3s cubic-bezier(.2, .8, .3, 1) both;
 }

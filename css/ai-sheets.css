@@ -56,7 +56,7 @@
   align-items: center;
   justify-content: center;
   background: var(--fill-avatar);
-  color: #eafaf1;
+  color: rgb(var(--acc-eafaf1));
 }
 .ai-sheet-badge .ui-icon { width: 18px; height: 18px; }
 .ai-sheet-name { font-family: var(--font-display); font-size: 20px; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.02em; color: var(--text-primary); }
@@ -105,7 +105,7 @@
 .ai-row-vals { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 18px; font-variant-numeric: tabular-nums; }
 .ai-cur { color: var(--text-tertiary); }
 .ai-arrow { color: var(--mx-faint); font-family: var(--font-label); }
-.ai-up { color: var(--green-90); }
+.ai-up { color: var(--positive-text); }
 .ai-down { color: var(--danger-text-mobile); }
 .ai-same { color: var(--text-primary); }
 

@@ -135,7 +135,7 @@
 }
 
 .kcal-badge    { background: rgba(240,160,64,0.2);  color: #f0a040; }
-.protein-badge { background: rgba(95,168,126,0.2);  color: var(--primary-text); }
+.protein-badge { background: rgba(var(--acc-5fa87e),0.2);  color: var(--primary-text); }
 .carbs-badge   { background: rgba(77,168,218,0.2);  color: #4da8da; }
 .fat-badge     { background: rgba(167,139,250,0.2); color: #a78bfa; }
 .unit-badge    { background: rgba(120,120,120,0.15); color: var(--text-muted); }
@@ -342,7 +342,7 @@
 
 .milestone-badge.earned {
   border-color: var(--primary);
-  background: linear-gradient(135deg, rgba(95,168,126,0.08), transparent);
+  background: linear-gradient(135deg, rgba(var(--acc-5fa87e),0.08), transparent);
 }
 
 .milestone-badge.earned:hover { transform: translateY(-2px); }
@@ -531,7 +531,7 @@
   padding: 6px;
   border-radius: 6px;
 }
-.cc-save-msg.ok    { color: var(--primary-text); background: rgba(95,168,126,0.1); }
+.cc-save-msg.ok    { color: var(--positive-text); background: rgba(95,168,126,0.1); }
 .cc-save-msg.error { color: var(--danger-text); background: var(--danger-bg); }
 
 /* History column */
@@ -598,7 +598,7 @@
 
 .cc-hc-type {
   font-size: 0.73rem;
-  background: rgba(95,168,126,0.15);
+  background: rgba(var(--acc-5fa87e),0.15);
   color: var(--primary-text);
   border-radius: 20px;
   padding: 2px 8px;
@@ -873,14 +873,14 @@
 
 .readiness-emoji-btn.selected {
   border-color: var(--primary);
-  background: rgba(95,168,126,0.12);
+  background: rgba(var(--acc-5fa87e),0.12);
 }
 
 .readiness-score-preview {
   text-align: center;
   padding: 10px;
   border-radius: 10px;
-  background: rgba(95,168,126,0.07);
+  background: rgba(var(--acc-5fa87e),0.07);
   margin-bottom: 14px;
   font-size: 0.88rem;
   color: var(--text-muted);
@@ -1023,7 +1023,7 @@
 
 .export-btn:hover {
   border-color: var(--primary);
-  background: rgba(95,168,126,0.06);
+  background: rgba(var(--acc-5fa87e),0.06);
 }
 
 .export-btn-icon { font-size: 1.3rem; }
@@ -1040,8 +1040,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(95,168,126,0.08);
-  border: 1px solid rgba(95,168,126,0.25);
+  background: rgba(var(--acc-5fa87e),0.08);
+  border: 1px solid rgba(var(--acc-5fa87e),0.25);
   border-radius: 10px;
   padding: 10px 14px;
   margin: 8px 10px 0;
@@ -1305,7 +1305,7 @@
   font-family: var(--font-label);
   font-weight: 700;
   font-size: 0.86rem;
-  color: var(--ov-accent, var(--green-70));
+  color: var(--ov-accent, var(--positive-strong));
   padding-bottom: 3px;
 }
 
@@ -1384,7 +1384,7 @@
 
 /* Strategy palettes */
 .ov-pod.is-increase {
-  --ov-accent: var(--green-70);
+  --ov-accent: var(--positive-strong);
   --ov-border: var(--border-featured);
   --ov-meter: var(--fill-meter-a);
 }
@@ -1471,8 +1471,8 @@
 }
 
 .history-set-chip {
-  background: rgba(95,168,126,0.08);
-  border: 1px solid rgba(95,168,126,0.15);
+  background: rgba(var(--acc-5fa87e),0.08);
+  border: 1px solid rgba(var(--acc-5fa87e),0.15);
   border-radius: 6px;
   padding: 3px 8px;
   font-size: 0.76rem;
@@ -1823,8 +1823,8 @@
   font-weight: 700;
   padding: 4px 11px;
   border-radius: var(--radius-pill);
-  background: rgba(38, 92, 68, 0.22);
-  border: 1px solid rgba(74, 132, 102, 0.42);
+  background: rgba(var(--acc-265c44), 0.22);
+  border: 1px solid rgba(var(--acc-4a8466), 0.42);
   color: var(--green-100);
 }
 
@@ -2004,7 +2004,7 @@
 /* ── Entry card ── */
 .wt-entry-card {
   background: var(--pod-bg-hero);
-  border: 1px solid rgba(74, 132, 102, 0.3);
+  border: 1px solid rgba(var(--acc-4a8466), 0.3);
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-shadow-hero);
   padding: 15px 15px 13px;
@@ -2157,7 +2157,7 @@
   transition: background 0.15s;
 }
 .wt-table tbody tr:last-child { border-bottom: none; }
-.wt-table tbody tr:hover { background: rgba(95,168,126,0.04); }
+.wt-table tbody tr:hover { background: rgba(var(--acc-5fa87e),0.04); }
 
 .wt-table tbody td {
   padding: 9px 12px;
@@ -2283,7 +2283,7 @@
   border: 1px solid var(--primary);
   border-radius: 14px;
   padding: 14px 16px;
-  box-shadow: 0 0 12px rgba(95,168,126,0.12);
+  box-shadow: 0 0 12px rgba(var(--acc-5fa87e),0.12);
 }
 
 .lb-ps-note {
@@ -2375,7 +2375,7 @@
   font-size: 0.78rem;
   font-weight: 700;
 }
-.lb-ps-badge.green  { background: rgba(95,168,126,0.2); color: var(--primary-text); }
+.lb-ps-badge.green  { background: rgba(var(--acc-5fa87e),0.2); color: var(--primary-text); }
 .lb-ps-badge.amber  { background: rgba(255,183,77,0.15); color: #ffb74d; }
 .lb-ps-badge.red    { background: rgba(239,83,80,0.15);  color: #ef5350; }
 
@@ -2452,7 +2452,7 @@
 .lb-card--gold   { border-color: #FFD700; background: rgba(255,215,0,0.05); }
 .lb-card--silver { border-color: #C0C0C0; background: rgba(192,192,192,0.05); }
 .lb-card--bronze { border-color: #CD7F32; background: rgba(205,127,50,0.05); }
-.lb-card--me     { border-color: var(--primary) !important; box-shadow: 0 0 10px rgba(95,168,126,0.25); }
+.lb-card--me     { border-color: var(--primary) !important; box-shadow: 0 0 10px rgba(var(--acc-5fa87e),0.25); }
 
 .lb-card-left {
   display: flex;
@@ -2550,7 +2550,7 @@
 /* ── ③ Your-rank banner ─────────────────────────────────────── */
 
 .lb-rank-banner {
-  background: linear-gradient(135deg, rgba(95,168,126,0.15), rgba(95,168,126,0.05));
+  background: linear-gradient(135deg, rgba(var(--acc-5fa87e),0.15), rgba(var(--acc-5fa87e),0.05));
   border: 1px solid var(--primary);
   border-radius: 12px;
   padding: 12px 16px;
@@ -2799,7 +2799,7 @@
 }
 .comm-sort-pill.active,
 .comm-sort-pill:hover {
-  background: rgba(95,168,126,0.15);
+  background: rgba(var(--acc-5fa87e),0.15);
   border-color: var(--primary);
   color: var(--primary-text);
 }
@@ -2816,7 +2816,7 @@
 }
 .comm-challenge-card.done {
   border-color: var(--primary);
-  background: rgba(95,168,126,0.06);
+  background: rgba(var(--acc-5fa87e),0.06);
 }
 
 .comm-challenge-header {
@@ -2940,7 +2940,7 @@
 }
 .feed-tag-btn.active,
 .feed-tag-btn:hover {
-  background: rgba(95,168,126,0.15);
+  background: rgba(var(--acc-5fa87e),0.15);
   border-color: var(--primary);
   color: var(--primary-text);
 }
@@ -3065,7 +3065,7 @@
 }
 .lb-time-pill.active,
 .lb-time-pill:hover {
-  background: rgba(95,168,126,0.15);
+  background: rgba(var(--acc-5fa87e),0.15);
   border-color: var(--primary);
   color: var(--primary-text);
 }

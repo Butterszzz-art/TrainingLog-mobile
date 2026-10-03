@@ -836,7 +836,7 @@ function _renderWorkoutsChart(clients) {
   const withData = clients.filter(c => c.workoutsLoggedThisWeek !== null && c.workoutsLoggedThisWeek !== undefined);
   _analyticsCharts.workouts = new Chart(canvas, {
     type: 'bar',
-    data: { labels: withData.map(c => c.name), datasets: [{ label: 'Sessions', data: withData.map(c => c.workoutsLoggedThisWeek), backgroundColor: '#3d9d73', borderRadius: 6 }] },
+    data: { labels: withData.map(c => c.name), datasets: [{ label: 'Sessions', data: withData.map(c => c.workoutsLoggedThisWeek), backgroundColor: window.accentColor ? window.accentColor('--green-70') : '#3d9d73', borderRadius: 6 }] },
     options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { min: 0, ticks: { ..._chartTick, stepSize: 1 }, grid: _chartGrid }, x: { ticks: _chartTick } } }
   });
 }
