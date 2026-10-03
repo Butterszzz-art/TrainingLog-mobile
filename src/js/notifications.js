@@ -2,8 +2,9 @@
    NOTIFICATIONS — what other people did that involves you
    Server inbox at /api/notifications (backend src/routes/notifications.js):
    friend requests and accepts, shared templates/programs, being added to
-   a group, new group posts, friends' feed posts, and being passed on a
-   leaderboard.
+   a group, new group posts, friends' feed posts, being passed on a
+   leaderboard, and coaching: a coach's invite (with Accept), their notes
+   and plan updates, and, for coaches, an accepted invite.
 
    UI: a bell in the Community and Leaderboard headers opens a sheet with
    the list (tap a row to jump to it) and per-category mute switches.
@@ -25,8 +26,9 @@
     { id: 'groups', label: 'Groups', sub: 'Being added to a group, new posts' },
     { id: 'feed', label: 'Friends’ posts', sub: 'Workouts, PRs and updates in your feed' },
     { id: 'leaderboard', label: 'Leaderboards', sub: 'When someone passes you' },
+    { id: 'coaching', label: 'Coaching', sub: 'Invites, notes and plan updates from a coach' },
   ];
-  const ICON_FOR = { friends: 'users', shares: 'download', groups: 'message', feed: 'activity', leaderboard: 'trophy' };
+  const ICON_FOR = { friends: 'users', shares: 'download', groups: 'message', feed: 'activity', leaderboard: 'trophy', coaching: 'clipboard' };
   // friends.js already toasts these when it polls.
   const NO_TOAST = new Set(['friend_request', 'friend_accepted']);
 
@@ -93,6 +95,8 @@
         return count > 1 ? `<b>${count} new posts</b> in ${group}, latest from ${_esc(n.actor)}` : `${who} posted in ${group}`;
       case 'feed_post':
         return count > 1 ? `${who} shared ${count} new posts` : `${who} ${_esc(n.text)}`;
+      case 'coach_note':
+        return count > 1 ? `${who} sent you ${count} notes` : `${who} ${_esc(n.text)}`;
       case 'exercise_passed':
       case 'volume_passed':
         return `${who} ${_esc(n.text)}${count > 1 ? ` <span class="nt-x">×${count}</span>` : ''}`;
@@ -215,6 +219,15 @@
     if (typeof global.showCommunitySection === 'function') global.showCommunitySection(section);
   }
 
+  // Settings › Your Coach: the invite (Accept / Decline), notes and plan.
+  function _yourCoach() {
+    if (typeof global.showTab === 'function') global.showTab('settingsTab');
+    const section = document.getElementById('yourCoachSection');
+    const scroll = () => section && !section.hidden && section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const render = typeof global.renderYourCoachSection === 'function' ? global.renderYourCoachSection() : null;
+    Promise.resolve(render).catch(() => {}).then(() => setTimeout(scroll, 60));
+  }
+
   function open(n) {
     closeSheet();
     switch (n.type) {
@@ -253,6 +266,14 @@
       case 'volume_passed':
         if (typeof global.showTab === 'function') global.showTab('leaderboardTab');
         return;
+      case 'coach_invite':
+      case 'coach_note':
+      case 'coach_plan':
+        return _yourCoach();
+      case 'coach_accepted':
+      case 'coach_left':
+        if (typeof global.showTab === 'function') global.showTab('clientsTab');
+        return;
       default:
         return undefined;
     }
@@ -272,12 +293,19 @@
   function _onKey(e) { if (e.key === 'Escape') closeSheet(); }
 
   function _rowHtml(n) {
-    const actions = n.type === 'friend_request' && !n._answered
-      ? `<span class="nt-actions">
+    let actions = '';
+    if (n.type === 'friend_request' && !n._answered) {
+      actions = `<span class="nt-actions">
            <button type="button" class="nt-btn nt-btn--go" data-act="accept">Accept</button>
            <button type="button" class="nt-btn" data-act="decline">Decline</button>
-         </span>`
-      : '';
+         </span>`;
+    } else if (n.type === 'coach_invite' && n.data?.status === 'pending' && !n._answered) {
+      // Decline (and what accepting shares) lives in Settings › Your Coach;
+      // tapping the row goes there.
+      actions = `<span class="nt-actions">
+           <button type="button" class="nt-btn nt-btn--go" data-act="coach-accept">Accept</button>
+         </span>`;
+    }
     return `
       <li class="nt-row${n.read ? '' : ' is-unread'}" data-id="${_esc(n.id)}">
         <button type="button" class="nt-main" data-act="open">
@@ -294,7 +322,7 @@
 
   function _renderList(list) {
     if (!_items.length) {
-      list.innerHTML = `<div class="nt-empty">${_icon('bell')}<p>Nothing yet. Friend requests, things friends send you, group activity and leaderboard moves show up here.</p></div>`;
+      list.innerHTML = `<div class="nt-empty">${_icon('bell')}<p>Nothing yet. Friend requests, things friends send you, group activity, leaderboard moves and coach invites show up here.</p></div>`;
       return;
     }
     // "New" = unread when the sheet opened, so rows don't jump as they're read.
@@ -316,6 +344,24 @@
     const act = btn.dataset.act;
     if (act === 'open') return open(n);
     if (act === 'dismiss') return dismiss(n.id);
+    if (act === 'coach-accept' && typeof global.acceptCoachInvite === 'function') {
+      const coach = n.data?.coach || n.actor;
+      const ok = typeof global.showConfirm === 'function'
+        ? await global.showConfirm(`Let ${coach} coach you? They'll see your check-ins, bodyweight and weekly workout counts. You can change what they see, or leave, in Settings › Your Coach.`, { confirmText: 'Accept' })
+        : true;
+      if (!ok) return;
+      btn.disabled = true;
+      try {
+        await global.acceptCoachInvite(coach);
+        _toast(`You're now coached by ${coach}.`, 'success');
+        n._answered = true;
+        _changed();
+      } catch (err) {
+        btn.disabled = false;
+        _toast(err.message || 'Could not accept the invite.', 'error');
+      }
+      return;
+    }
     if ((act === 'accept' || act === 'decline') && global.Friends) {
       btn.disabled = true;
       try {

@@ -152,3 +152,59 @@ describe('notifications', () => {
     expect(seen).toEqual(['groups', 'loaded', 'open:g1']);
   });
 });
+
+describe('coaching notifications', () => {
+  const invite = (extra = {}) => n('ci', {
+    type: 'coach_invite', category: 'coaching', actor: 'CoachKim', text: 'wants to coach you',
+    data: { coach: 'CoachKim', status: 'pending' }, ...extra,
+  });
+
+  test('a pending invite offers Accept; an accepted one does not', async () => {
+    const { N, doc } = setup({ items: [invite(), invite({ id: 'old', data: { coach: 'Bo', status: 'accepted' } })] });
+    await N.refresh();
+    N.openSheet();
+    expect(doc.querySelector('.nt-row[data-id="ci"] [data-act="coach-accept"]')).not.toBeNull();
+    expect(doc.querySelector('.nt-row[data-id="old"] [data-act="coach-accept"]')).toBeNull();
+    expect(doc.querySelector('.nt-row[data-id="ci"] .nt-text').textContent).toBe('CoachKim wants to coach you');
+  });
+
+  test('Accept asks first (it shares data), then accepts', async () => {
+    const { N, w, doc, toasts } = setup({ items: [invite()] });
+    const accepted = [];
+    const asked = [];
+    w.acceptCoachInvite = async coach => { accepted.push(coach); };
+    w.showConfirm = async msg => { asked.push(msg); return asked.length > 1; };
+    await N.refresh();
+    N.openSheet();
+    const press = () => doc.querySelector('[data-act="coach-accept"]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    press();
+    await new Promise(r => setTimeout(r, 0));
+    expect(asked[0]).toMatch(/check-ins, bodyweight and weekly workout counts/);
+    expect(accepted).toEqual([]);
+    press();
+    await new Promise(r => setTimeout(r, 0));
+    await new Promise(r => setTimeout(r, 0));
+    expect(accepted).toEqual(['CoachKim']);
+    expect(toasts.at(-1)).toEqual({ msg: "You're now coached by CoachKim.", type: 'success' });
+    expect(doc.querySelector('[data-act="coach-accept"]')).toBeNull();
+  });
+
+  test('collapsed notes read as a count', () => {
+    const { N } = setup();
+    expect(N.describe(n('cn', { type: 'coach_note', category: 'coaching', actor: 'Kim', text: 'sent you a note', count: 3 })))
+      .toBe('<b>Kim</b> sent you 3 notes');
+  });
+
+  test('invites, notes and plan updates open Settings; an accept opens Clients', async () => {
+    const { N, w } = setup();
+    const seen = [];
+    w.showTab = t => seen.push(t);
+    w.renderYourCoachSection = async () => seen.push('rendered');
+    N.open(invite());
+    N.open(n('cn', { type: 'coach_note', category: 'coaching' }));
+    N.open(n('ca', { type: 'coach_accepted', category: 'coaching' }));
+    N.open(n('cl', { type: 'coach_left', category: 'coaching' }));
+    await new Promise(r => setTimeout(r, 0));
+    expect(seen).toEqual(['settingsTab', 'rendered', 'settingsTab', 'rendered', 'clientsTab', 'clientsTab']);
+  });
+});

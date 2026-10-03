@@ -321,6 +321,16 @@
     pushShare();
   }
 
+  // Accept a coach's invite. Shared by the Accept button here and the one in
+  // the notifications sheet (src/js/notifications.js).
+  async function acceptCoachInvite(coachUsername) {
+    await api$('POST', '/api/coach/clients/accept', { coachUsername });
+    root.localStorage.setItem(linkKey(), 'true');
+    await renderYourCoachSection();
+    pushShare({ force: true });
+    if (root.Notifications) root.Notifications.refresh().catch(() => {});
+  }
+
   async function onClick(e) {
     const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-macros],[data-yc-share]');
     if (!t) return;
@@ -328,11 +338,8 @@
     if (t.dataset.ycAccept) {
       t.disabled = true;
       try {
-        await api$('POST', '/api/coach/clients/accept', { coachUsername: t.dataset.ycAccept });
+        await acceptCoachInvite(t.dataset.ycAccept);
         toast(`You're now coached by ${t.dataset.ycAccept}.`);
-        root.localStorage.setItem(linkKey(), 'true');
-        await renderYourCoachSection();
-        pushShare({ force: true });
       } catch (err) { toast(err.message || 'Could not accept the invite.', 'error'); t.disabled = false; }
       return;
     }
@@ -349,6 +356,7 @@
         await api$('DELETE', `/api/client/coaches/${encodeURIComponent(t.dataset.ycLeave)}`);
         toast(pending ? 'Invite declined.' : `You've left ${name}.`);
         renderYourCoachSection();
+        if (root.Notifications) root.Notifications.refresh().catch(() => {});
       } catch (err) { toast(err.message || 'Something went wrong. Try again.', 'error'); }
       return;
     }
@@ -406,6 +414,7 @@
   }
 
   root.renderYourCoachSection = renderYourCoachSection;
+  root.acceptCoachInvite = acceptCoachInvite;
   root.pushCoachShare = pushShare;
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
   else init();
