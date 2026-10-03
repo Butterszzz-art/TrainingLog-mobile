@@ -4,6 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Pocket Coach</title>
+  <script>
+    // Signed in from a previous launch: start in the opening animation, not
+    // the login form, so the form never flashes before the app takes over.
+    // Mirrors the savedUser / remember-me check in the main script below.
+    (function () {
+      try {
+        var user = localStorage.getItem('fitnessAppUser') || localStorage.getItem('username') || localStorage.getItem('Username');
+        var remember = localStorage.getItem('pc_rememberMe') !== '0';
+        var active = sessionStorage.getItem('pc_sessionActive') === '1';
+        if (user && (remember || active)) document.documentElement.classList.add('pc-booting');
+      } catch (e) { /* storage unavailable: show the login form */ }
+    })();
+  </script>
   <link href="vendor/fonts/fonts.css" rel="stylesheet">
   <link rel="stylesheet" href="ProgramTab.css">
   <link rel="stylesheet" href="style.css">
@@ -142,22 +155,21 @@
 
   <!-- Branding -->
   <div class="login-brand">
-    <div class="login-logo">
-      <img src="public/icons/login-logo.jpg" alt="Pocket Coach" width="112" height="112" decoding="async">
-    </div>
+    <img class="login-plate" src="public/icons/plate.jpg" alt="" width="96" height="96" decoding="async">
+    <p class="login-kicker">Training log</p>
     <h1 class="login-app-name">Pocket Coach</h1>
-    <p class="login-tagline">Your personal logbook</p>
   </div>
 
-  <!-- Tab switcher: Log In / Sign Up -->
-  <div class="login-tabs">
-    <button class="login-tab login-tab--active" id="loginTabBtn" type="button" onclick="_switchLoginTab('login')">Log In</button>
-    <button class="login-tab" id="signupTabBtn" type="button" onclick="_switchLoginTab('signup')">Sign Up</button>
-  </div>
-
-  <!-- Form card -->
+  <!-- Name-plate card, like the label on a logbook cover -->
   <div class="login-card">
-    <p class="login-heading" id="loginTabHeading">Welcome back</p>
+    <div class="login-card-head">
+      <p class="login-heading" id="loginTabHeading">This log belongs to</p>
+      <!-- Log In / Sign Up switch: only the inactive one shows, as a link -->
+      <div class="login-tabs">
+        <button class="login-tab login-tab--active" id="loginTabBtn" type="button" onclick="_switchLoginTab('login')">Have a log? Log in</button>
+        <button class="login-tab" id="signupTabBtn" type="button" onclick="_switchLoginTab('signup')">New log?</button>
+      </div>
+    </div>
 
     <div class="login-fields">
       <div class="login-field">
@@ -203,10 +215,10 @@
     <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
 
     <button id="loginButton" class="login-cta loading-btn" onclick="startLogin()">
-      <span>Log In</span><span class="spinner"></span>
+      <span>Open my log</span><span class="spinner"></span>
     </button>
     <button id="signupButton" class="login-cta login-cta--hidden loading-btn" onclick="startSignup()">
-      <span>Create Account</span><span class="spinner"></span>
+      <span>Start my log</span><span class="spinner"></span>
     </button>
     <button type="button" id="forgotPasswordLink" class="login-forgot-link" onclick="startForgotPassword()">Forgot password?</button>
 
@@ -257,10 +269,20 @@
   <div class="pc-progress-pct" id="loadingProgressPct">0%</div>
 </div>
 
-<!-- ── Session-ready screen (brief confirmation before entering the app) ── -->
+<!-- ── Session-ready screen: the logbook cover swings open on today's page ── -->
 <div id="sessionReadyContainer" class="login-ready-screen" style="display:none;" onclick="window._finishPostLoginSequence && window._finishPostLoginSequence()">
-  <div class="pc-ready-kicker">Session ready</div>
-  <div class="pc-ready-headline" id="sessionReadyHeadline">Let's move.</div>
+  <div class="pc-book">
+    <div class="pc-book-page">
+      <div class="pc-ready-kicker" id="sessionReadyKicker">Session ready</div>
+      <div class="pc-ready-headline" id="sessionReadyHeadline">Let's move.</div>
+      <div class="pc-book-underline"></div>
+    </div>
+    <div class="pc-book-cover" aria-hidden="true">
+      <img src="public/icons/plate.jpg" alt="" class="pc-book-plate">
+      <div class="pc-book-kicker">Training log</div>
+      <div class="pc-book-title">Pocket Coach</div>
+    </div>
+  </div>
 </div>
 
 <!-- ── Onboarding Wizard (shown after first signup) ─────────────────── -->
@@ -4795,10 +4817,10 @@ window.currentSubStatus = 'none';
 
 // ────────────────────────────────────────────────────────────────────────────
 
-// ── Post-login sequence: loading screen → session-ready screen → home tab ──
-// Runs after credentials are verified. The real render/init work happens
-// immediately (hidden behind the loading overlay) so the animation is purely
-// cosmetic and never delays the app being ready underneath it.
+// ── Opening sequence: loading screen → logbook opens → home tab ──
+// Plays after a sign-in and on every launch while already signed in. The real
+// render/init work happens underneath the overlay, so the animation never
+// delays the app being ready.
 const LOGIN_LOADING_STEPS = [
   "Signing you in",
   "Syncing your log",
@@ -4807,6 +4829,16 @@ const LOGIN_LOADING_STEPS = [
   "Almost there"
 ];
 const LOGIN_LOADING_DURATION_MS = 2200;
+// Launch only: the bar holds at this point until startup reports the app is
+// rendered, and gives up waiting after LOGIN_LOADING_MAX_WAIT_MS.
+const LOGIN_LOADING_HOLD_PCT = 90;
+const LOGIN_LOADING_MAX_WAIT_MS = 6000;
+// Matches the cover-open + zoom-out timing in css/login.css
+const LOGBOOK_OPEN_MS = 1900;
+
+let _loadingTimer = null;
+let _loadingAppReady = false;
+let _readyTimer = null;
 
 function _escapeLoginHtml(value) {
   const div = document.createElement('div');
@@ -4814,9 +4846,47 @@ function _escapeLoginHtml(value) {
   return div.innerHTML;
 }
 
+function _startLoadingScreen() {
+  const loadingEl = document.getElementById('loadingContainer');
+  if (!loadingEl) { _loadingAppReady = true; return; }
+  if (_loadingTimer) return; // already running (launch sequence)
+
+  loadingEl.style.display = '';
+  const fillEl = document.getElementById('loadingProgressFill');
+  const pctEl = document.getElementById('loadingProgressPct');
+  const statusEl = document.getElementById('loadingStatusLabel');
+  const t0 = Date.now();
+
+  // setInterval, not requestAnimationFrame — this has to keep advancing even if
+  // the webview loses foreground/compositing focus mid-login (e.g. an OS
+  // permission prompt steals focus right after sign-in).
+  _loadingTimer = setInterval(() => {
+    const elapsed = Date.now() - t0;
+    if (elapsed >= LOGIN_LOADING_MAX_WAIT_MS) _loadingAppReady = true;
+    const cap = _loadingAppReady ? 100 : LOGIN_LOADING_HOLD_PCT;
+    const pct = Math.min(cap, (elapsed / LOGIN_LOADING_DURATION_MS) * 100);
+    if (fillEl) fillEl.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+    if (statusEl) {
+      const idx = Math.min(LOGIN_LOADING_STEPS.length - 1, Math.floor((pct / 100) * LOGIN_LOADING_STEPS.length));
+      statusEl.textContent = LOGIN_LOADING_STEPS[idx];
+    }
+    if (pct >= 100) {
+      clearInterval(_loadingTimer);
+      _loadingTimer = null;
+      setTimeout(_showSessionReady, 350);
+    }
+  }, 60);
+}
+
+// Startup calls this once Home has rendered underneath the launch overlay.
+function _markAppReady() {
+  _loadingAppReady = true;
+}
+window._markAppReady = _markAppReady;
+
 function _runPostLoginSequence(renderFn) {
   const loginEl = document.getElementById('loginContainer');
-  const loadingEl = document.getElementById('loadingContainer');
   if (loginEl) loginEl.style.display = 'none';
 
   try {
@@ -4829,39 +4899,22 @@ function _runPostLoginSequence(renderFn) {
   // navigated to Home (src/js/performance-mode.js)
   if (typeof window.restorePerformanceModeIfNeeded === 'function') window.restorePerformanceModeIfNeeded();
 
-  if (!loadingEl) return; // markup missing — app is already visible, nothing more to do
-
-  loadingEl.style.display = '';
-  const fillEl = document.getElementById('loadingProgressFill');
-  const pctEl = document.getElementById('loadingProgressPct');
-  const statusEl = document.getElementById('loadingStatusLabel');
-  const t0 = Date.now();
-
-  // setInterval, not requestAnimationFrame — this has to keep advancing even if
-  // the webview loses foreground/compositing focus mid-login (e.g. an OS
-  // permission prompt steals focus right after sign-in).
-  const timer = setInterval(() => {
-    const pct = Math.min(100, ((Date.now() - t0) / LOGIN_LOADING_DURATION_MS) * 100);
-    if (fillEl) fillEl.style.width = pct + '%';
-    if (pctEl) pctEl.textContent = Math.round(pct) + '%';
-    if (statusEl) {
-      const idx = Math.min(LOGIN_LOADING_STEPS.length - 1, Math.floor((pct / 100) * LOGIN_LOADING_STEPS.length));
-      statusEl.textContent = LOGIN_LOADING_STEPS[idx];
-    }
-    if (pct >= 100) {
-      clearInterval(timer);
-      setTimeout(_showSessionReady, 450);
-    }
-  }, 60);
+  _loadingAppReady = true;
+  _startLoadingScreen();
 }
 
 function _showSessionReady() {
   const loadingEl = document.getElementById('loadingContainer');
   const readyEl = document.getElementById('sessionReadyContainer');
   if (loadingEl) loadingEl.style.display = 'none';
+  document.documentElement.classList.remove('pc-booting');
 
   if (!readyEl) return;
 
+  const kickerEl = document.getElementById('sessionReadyKicker');
+  if (kickerEl) {
+    kickerEl.textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  }
   const headlineEl = document.getElementById('sessionReadyHeadline');
   if (headlineEl) {
     const workoutName = (typeof window.getTodayWorkoutName === 'function') ? window.getTodayWorkoutName() : null;
@@ -4870,14 +4923,25 @@ function _showSessionReady() {
       : `Let's move.`;
   }
   readyEl.style.display = '';
-  setTimeout(window._finishPostLoginSequence, 600);
+  _readyTimer = setTimeout(window._finishPostLoginSequence, LOGBOOK_OPEN_MS);
 }
 
 function _finishPostLoginSequence() {
+  clearTimeout(_readyTimer);
   const readyEl = document.getElementById('sessionReadyContainer');
   if (readyEl) readyEl.style.display = 'none';
 }
 window._finishPostLoginSequence = _finishPostLoginSequence;
+
+// Launch while already signed in: play the opening straight away (the
+// pc-booting class set in <head> already hides the login form). Startup's
+// DOMContentLoaded handler renders Home underneath and calls _markAppReady().
+if (savedUser) {
+  _startLoadingScreen();
+} else {
+  // forceFreshLogin() dropped the session — back to the login form
+  document.documentElement.classList.remove('pc-booting');
+}
 
 async function startLogin() {
   const btn = document.getElementById('loginButton');
@@ -17723,6 +17787,9 @@ async function fetchDailyLogs(username) {
   if (typeof updateStreakCounter === 'function') updateStreakCounter();
   scheduleStreakReminderJob();
 
+  // Home is rendered — let the launch loading screen finish (no-op otherwise)
+  if (typeof window._markAppReady === 'function') window._markAppReady();
+
 }); // closing DOMContentLoaded
 
 window.openSection = openSection;
@@ -17743,7 +17810,7 @@ function _switchLoginTab(mode) {
   document.getElementById('loginTabBtn')?.classList.toggle('login-tab--active', isLogin);
   document.getElementById('signupTabBtn')?.classList.toggle('login-tab--active', !isLogin);
   const heading = document.getElementById('loginTabHeading');
-  if (heading) heading.textContent = isLogin ? 'Welcome back' : 'Create your account';
+  if (heading) heading.textContent = isLogin ? 'This log belongs to' : 'Start a new log';
   const loginBtn  = document.getElementById('loginButton');
   const signupBtn = document.getElementById('signupButton');
   if (loginBtn)  loginBtn.classList.toggle('login-cta--hidden', !isLogin);
