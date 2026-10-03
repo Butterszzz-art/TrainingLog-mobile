@@ -40,7 +40,16 @@
 /* Signed in from a previous launch: skip straight to the opening
    animation (class set by the boot script in index.html <head>). */
 html.pc-booting #loginContainer { display: none !important; }
-html.pc-booting #loadingContainer { display: flex !important; }
+html.pc-booting #loadingContainer { display: flex !important; animation: none; }
+
+/* Launch: the native splash fades straight onto this screen, so skip the
+   overlay fade-in and let the plate pop and spin into place instead. */
+html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+
+@keyframes pc-plate-pop {
+  from { opacity: 0; transform: scale(0.45) rotate(-140deg); }
+  to { opacity: 1; transform: none; }
+}
 
 /* ── Branding block ─────────────────────────────────────────── */
 

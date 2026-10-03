@@ -284,6 +284,24 @@
     </div>
   </div>
 </div>
+<script>
+  // The native splash stays up (launchAutoHide: false in capacitor.config.json)
+  // until the opening screen above has actually painted, then fades straight
+  // into it, so there's no blank frame between the two.
+  (function () {
+    var cap = window.Capacitor;
+    if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+    if (!cap.isPluginAvailable || !cap.isPluginAvailable('SplashScreen')) return;
+    var done = false;
+    function hide() {
+      if (done) return;
+      done = true;
+      cap.nativePromise('SplashScreen', 'hide', { fadeOutDuration: 200 }).catch(function () {});
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(hide); });
+    setTimeout(hide, 4000); // never let the splash outstay a stalled load
+  })();
+</script>
 
 <!-- ── Onboarding Wizard (shown after first signup) ─────────────────── -->
 <div id="onboardingOverlay" class="onboarding-overlay" hidden>
