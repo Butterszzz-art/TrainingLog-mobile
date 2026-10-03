@@ -1,10 +1,15 @@
 package com.pocketcoach.instagramstories;
 
 import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Base64;
 
 import androidx.core.content.FileProvider;
@@ -18,6 +23,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * Shares to Instagram Stories with Meta's ADD_TO_STORY intent: the
@@ -100,6 +106,92 @@ public class InstagramStoriesPlugin extends Plugin {
             });
         } catch (IOException | IllegalArgumentException e) {
             call.reject("Couldn't prepare the images", e);
+        }
+    }
+
+    /**
+     * Saves an image to the gallery (Pictures/Pocket Coach). The WebView
+     * ignores <a download> and has no navigator.share, so the web "Save
+     * image" did nothing on Android. Options: image (base64), fileName,
+     * mimeType. Resolves { saved: true }, or { shared: true } on Android 9
+     * and older, where writing to shared storage needs a permission we don't
+     * ask for — the share sheet (with "Save to device"/Photos) opens instead.
+     */
+    @PluginMethod
+    public void saveImage(PluginCall call) {
+        String image = call.getString("image");
+        String fileName = call.getString("fileName", "pocket-coach.png");
+        String mimeType = call.getString("mimeType", "image/png");
+        if (image == null || image.isEmpty()) {
+            call.reject("image is required");
+            return;
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            openShareSheet(call, image, fileName, mimeType, true);
+            return;
+        }
+        ContentResolver resolver = getContext().getContentResolver();
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Images.Media.DISPLAY_NAME, fileName);
+        values.put(MediaStore.Images.Media.MIME_TYPE, mimeType);
+        values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Pocket Coach");
+        values.put(MediaStore.Images.Media.IS_PENDING, 1);
+        Uri uri = null;
+        try {
+            uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            if (uri == null) throw new IOException("MediaStore insert failed");
+            try (OutputStream out = resolver.openOutputStream(uri)) {
+                if (out == null) throw new IOException("Couldn't open " + uri);
+                out.write(Base64.decode(image, Base64.DEFAULT));
+            }
+            values.clear();
+            values.put(MediaStore.Images.Media.IS_PENDING, 0);
+            resolver.update(uri, values, null, null);
+            JSObject result = new JSObject();
+            result.put("saved", true);
+            call.resolve(result);
+        } catch (IOException | IllegalArgumentException | SecurityException e) {
+            if (uri != null) resolver.delete(uri, null, null);
+            call.reject("Couldn't save the image", e);
+        }
+    }
+
+    /** Opens the system share sheet with one image. Options: image (base64), fileName, mimeType. */
+    @PluginMethod
+    public void shareImage(PluginCall call) {
+        String image = call.getString("image");
+        if (image == null || image.isEmpty()) {
+            call.reject("image is required");
+            return;
+        }
+        openShareSheet(call, image, call.getString("fileName", "pocket-coach.png"), call.getString("mimeType", "image/png"), false);
+    }
+
+    private void openShareSheet(PluginCall call, String image, String fileName, String mimeType, boolean fromSave) {
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("No activity");
+            return;
+        }
+        try {
+            Uri uri = writeImage(image, fileName);
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType(mimeType);
+            send.putExtra(Intent.EXTRA_STREAM, uri);
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent chooser = Intent.createChooser(send, null);
+            activity.runOnUiThread(() -> {
+                try {
+                    activity.startActivity(chooser);
+                    JSObject result = new JSObject();
+                    result.put(fromSave ? "shared" : "opened", true);
+                    call.resolve(result);
+                } catch (Exception e) {
+                    call.reject("Couldn't open the share sheet", e);
+                }
+            });
+        } catch (IOException | IllegalArgumentException e) {
+            call.reject("Couldn't prepare the image", e);
         }
     }
 

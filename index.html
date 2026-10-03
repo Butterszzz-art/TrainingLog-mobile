@@ -5759,6 +5759,9 @@ function removeSet(indexToRemove) {
     updateRepsLabel(i);
   }
   document.getElementById("sets").value = currentSetCount;
+  // Back to one row: the steppers take over row 0 again, so they pick up
+  // what was typed there instead of overwriting it on the next Log tap.
+  if (currentSetCount === 1 && typeof syncQuickLogFromRow0 === 'function') syncQuickLogFromRow0();
   updateAddButtonState();
   if (typeof refreshLogButtonLabel === 'function') refreshLogButtonLabel();
 }

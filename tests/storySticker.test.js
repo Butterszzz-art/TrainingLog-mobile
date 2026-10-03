@@ -1,4 +1,4 @@
-const { buildStickerData, sessionFocus, trendPoints } = require('../src/js/story-sticker');
+const { buildStickerData, sessionFocus, trendPoints, setsAndBest } = require('../src/js/story-sticker');
 const { getMuscleGroup } = require('../exerciseMuscleMap');
 
 const set = (exercise, weights, reps) => ({ exercise, weightsArray: weights, repsArray: reps, unit: 'kg' });
@@ -19,6 +19,21 @@ describe('buildStickerData', () => {
     expect(d.sets).toBe(3);
     expect(d.exercises).toBe(2);
     expect(d.topLift).toMatchObject({ exercise: 'Leg Extension', weight: 170, reps: 6 });
+  });
+
+  test("top lift carries its own set count, summed across quick-logged entries", () => {
+    const w = {
+      date: '2026-09-29',
+      log: [set('Bench Press', [100], [8]), set('Squat', [60, 60], [10, 10]), set('Bench Press', [100, 95], [8, 8]), set('bench press ', [90], [10])],
+    };
+    const d = buildStickerData(w, [w], getMuscleGroup);
+    expect(d.topLift).toMatchObject({ exercise: 'Bench Press', weight: 100, reps: 8, sets: 4 });
+    expect(d.sets).toBe(6);
+  });
+
+  test('formats the top lift as sets, then reps × weight', () => {
+    expect(setsAndBest({ sets: 4, reps: 8, weight: 100, unit: 'kg' })).toBe('4 sets · 8 reps × 100 kg');
+    expect(setsAndBest({ sets: 1, reps: 1, weight: 142.5, unit: 'lb' })).toBe('1 set · 1 rep × 142.5 lb');
   });
 
   test('flags a PR when the top lift beats every earlier session', () => {

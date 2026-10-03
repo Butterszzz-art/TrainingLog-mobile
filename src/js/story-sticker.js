@@ -76,6 +76,14 @@
     return counts[top] / total >= 0.6 ? top : null;
   }
 
+  // Sets logged for one exercise across every entry of the session (quick
+  // log saves each set as its own entry).
+  function setCountFor(workout, key) {
+    return (workout?.log || []).reduce((n, e) => (
+      nameKey(e.exercise) === key ? n + (e.repsArray || []).length : n
+    ), 0);
+  }
+
   function exerciseKeys(workout) {
     return new Set((workout?.log || []).map((e) => nameKey(e.exercise)).filter(Boolean));
   }
@@ -120,7 +128,7 @@
    * Everything the sticker shows, from the workout and the user's history.
    * @returns {{
    *   volume:number, unit:string, sets:number, exercises:number,
-   *   topLift: null | {exercise, weight, reps, e1rm, unit},
+   *   topLift: null | {exercise, weight, reps, e1rm, unit, sets},  // sets: that exercise's sets this session
    *   progress: null | {text:string, kind:'pr'|'volume'|'strength'},
    *   trend: number[]   // top lift's best e1RM per session, oldest → today
    * }}
@@ -187,10 +195,17 @@
       unit,
       sets,
       exercises: exerciseKeys(workout).size,
-      topLift: topLift ? { exercise: topLift.exercise, weight: topLift.weight, reps: topLift.reps, e1rm: topLift.e1rm, unit: topLift.unit } : null,
+      topLift: topLift ? { exercise: topLift.exercise, weight: topLift.weight, reps: topLift.reps, e1rm: topLift.e1rm, unit: topLift.unit, sets: setCountFor(workout, topLift.key) } : null,
       progress,
       trend,
     };
+  }
+
+  // "4 sets · 8 reps × 100 kg"
+  function setsAndBest(t) {
+    const sets = `${t.sets} set${t.sets === 1 ? '' : 's'}`;
+    const reps = `${t.reps} rep${t.reps === 1 ? '' : 's'}`;
+    return `${sets} · ${reps} × ${formatNumber(t.weight)} ${t.unit}`;
   }
 
   function formatNumber(n) {
@@ -278,15 +293,15 @@
       y += 20;
     }
 
-    y += 70;
-    label('Sets');
-    value(String(data.sets), 104);
-
+    // The featured lift: its sets this session, then its best set spelled
+    // out as reps × weight — a bare "100×8" read as sets × reps.
     if (data.topLift) {
       y += 70;
-      label('Top lift');
+      label('Top lift'); // a PR is already called out on the ★ line above
       const t = data.topLift;
-      value(`${t.exercise} ${formatNumber(t.weight)}×${t.reps}`, 76);
+      value(t.exercise, 84);
+      y += 46;
+      value(setsAndBest(t), 60);
     }
 
     if (hasTrend) {
@@ -327,7 +342,7 @@
     return y;
   }
 
-  const api = { buildStickerData, sessionFocus, trendPoints, drawSticker, epley };
+  const api = { buildStickerData, sessionFocus, trendPoints, drawSticker, epley, setsAndBest };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.StorySticker = api;
 })(typeof window !== 'undefined' ? window : null);

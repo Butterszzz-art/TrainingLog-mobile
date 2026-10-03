@@ -1,5 +1,6 @@
 import Foundation
 import Capacitor
+import Photos
 import UIKit
 
 /// Shares to Instagram Stories the way Meta documents it: the images go on
@@ -15,7 +16,9 @@ public class InstagramStoriesPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "InstagramStories"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "share", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "share", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveImage", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "shareImage", returnType: CAPPluginReturnPromise)
     ]
 
     private static let pasteboardTTL: TimeInterval = 60 * 5
@@ -73,6 +76,58 @@ public class InstagramStoriesPlugin: CAPPlugin, CAPBridgedPlugin {
                     call.reject("Couldn't open Instagram")
                 }
             }
+        }
+    }
+
+    /// Saves an image to Photos. WKWebView ignores <a download>, so the web
+    /// "Save image" did nothing. Needs NSPhotoLibraryAddUsageDescription
+    /// (codemagic.yaml adds it). Options: image (base64). Resolves { saved: true }.
+    @objc func saveImage(_ call: CAPPluginCall) {
+        guard let base64 = call.getString("image"), let data = Data(base64Encoded: base64),
+              UIImage(data: data) != nil else {
+            call.reject("image is required")
+            return
+        }
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else {
+                call.reject("Photo library access was denied", "DENIED")
+                return
+            }
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
+            }) { success, error in
+                if success {
+                    call.resolve(["saved": true])
+                } else {
+                    call.reject("Couldn't save the image", nil, error)
+                }
+            }
+        }
+    }
+
+    /// Opens the system share sheet with one image. Options: image (base64).
+    @objc func shareImage(_ call: CAPPluginCall) {
+        guard let base64 = call.getString("image"), let data = Data(base64Encoded: base64),
+              let image = UIImage(data: data) else {
+            call.reject("image is required")
+            return
+        }
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                call.reject("No view controller")
+                return
+            }
+            let sheet = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+            // iPad presents share sheets as popovers, which need an anchor.
+            if let popover = sheet.popoverPresentationController {
+                popover.sourceView = presenter.view
+                popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.maxY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+            }
+            sheet.completionWithItemsHandler = { _, completed, _, _ in
+                call.resolve(["opened": true, "completed": completed])
+            }
+            presenter.present(sheet, animated: true)
         }
     }
 }
