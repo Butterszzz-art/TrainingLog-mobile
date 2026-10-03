@@ -17,6 +17,7 @@
     "@capacitor/cli": "^8.3.1",
     "@capacitor/core": "^8.3.1",
     "@capacitor/ios": "^8.3.1",
+    "@capacitor/splash-screen": "^8.0.2",
     "@capgo/native-purchases": "^8.8.1",
     "bcrypt": "^6.0.0",
     "capacitor-instagram-stories": "file:plugins/instagram-stories",
