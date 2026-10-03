@@ -13,6 +13,8 @@ definitions:
         # Capacitor requires a named webDir folder (not ".").
         # Copy the app files into www/, skipping native, build, server and
         # repo-only files (server code must never ship inside the app).
+        # The coach portal, intake form and web pricing/checkout pages are
+        # web-only: the native apps are athlete-only and sell through IAP.
         mkdir -p www
         rsync -a --exclude='www' \
                  --exclude='/assets' \
@@ -32,6 +34,10 @@ definitions:
                  --exclude='server.js' \
                  --exclude='package*.json' \
                  --exclude='babel.config.json' \
+                 --exclude='/coach' \
+                 --exclude='/intake' \
+                 --exclude='/pricing.html' \
+                 --exclude='/payment-success.html' \
                  . www/
 
     - &ios_native
@@ -287,6 +293,10 @@ workflows:
                    --exclude='server.js' \
                    --exclude='package*.json' \
                    --exclude='babel.config.json' \
+                   --exclude='/coach' \
+                   --exclude='/intake' \
+                   --exclude='/pricing.html' \
+                   --exclude='/payment-success.html' \
                    . www/
 
       - name: Generate Android native project
