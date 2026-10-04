@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v38';
+const CACHE_VERSION = 'pocket-coach-v39';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -23,6 +23,7 @@ const APP_SHELL = [
   '/public/icons/login-logo.jpg',
   '/css/onboarding.css',
   '/css/tutorial.css',
+  '/css/next-step-chips.css',
   '/css/sleep.css',
   '/css/tabs.css',
   '/css/home.css',
@@ -83,6 +84,7 @@ const APP_SHELL = [
   '/src/js/ai-coach.js',
   '/src/js/coach-brief.js',
   '/src/js/coach-review.js',
+  '/src/js/next-step-chips.js',
   '/src/js/archetype-config.js',
   '/src/js/shares.js',
   '/src/js/notifications.js',
