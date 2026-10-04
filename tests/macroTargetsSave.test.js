@@ -80,3 +80,38 @@ describe('saveSliderMacros', () => {
     expect(toasts[0].type).toBe('error');
   });
 });
+
+// A second, coach-plan `function normalizeMacroTargets(targets = {})` later in
+// the same inline script used to replace the one above. It threw on null, so a
+// load with no saved targets aborted the main script at startup and left every
+// later `const`/`let` in the TDZ.
+describe('missing macro targets', () => {
+  test('index.html declares normalizeMacroTargets only once', () => {
+    expect(html.match(/function normalizeMacroTargets\(/g)).toHaveLength(1);
+  });
+
+  function setup(stored) {
+    const ctx = {
+      currentUser: 'alice',
+      localStorage: { getItem: k => (k in stored ? stored[k] : null) },
+      document: { getElementById: () => null },
+    };
+    vm.createContext(ctx);
+    vm.runInContext(`
+      let macroTargetCalories = 0, macroTargetProtein = 0, macroTargetFat = 0, macroTargetCarbs = 0;
+      ${extract('function normalizeMacroTargets(', 'async function fetchUserMacroTargets')}
+      ${extract('function getMacroTargetValues()', 'function renderAssignedNutritionPlanForAthlete()')}
+      this.getMacroTargetValues = getMacroTargetValues;
+    `, ctx);
+    return ctx;
+  }
+
+  test('getMacroTargetValues returns zeros instead of throwing when nothing is saved', () => {
+    expect(setup({}).getMacroTargetValues()).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  });
+
+  test('getMacroTargetValues reads saved targets, keeping their calories', () => {
+    const ctx = setup({ macroTargets_alice: JSON.stringify({ calories: 2500, protein: 180, fat: 70, carbs: 250 }) });
+    expect(ctx.getMacroTargetValues()).toEqual({ calories: 2500, protein: 180, carbs: 250, fat: 70 });
+  });
+});

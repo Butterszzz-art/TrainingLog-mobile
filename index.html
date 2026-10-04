@@ -9311,7 +9311,10 @@ function roundMacroNumber(value) {
   return Math.max(0, Math.round(parsed));
 }
 
-function normalizeMacroTargets(targets = {}) {
+// Coach plan days store macros only; calories are derived. Not to be confused
+// with normalizeMacroTargets() (saved user targets), which this used to share a
+// name with and silently replace, crashing startup when no targets were saved.
+function normalizePlanDayTargets(targets = {}) {
   const protein = roundMacroNumber(targets.protein);
   const carbs = roundMacroNumber(targets.carbs);
   const fat = roundMacroNumber(targets.fat);
@@ -9346,7 +9349,7 @@ function getAssignedNutritionTargetsForCurrentDay(userId) {
         ? assigned.days?.low
         : fallback;
   if (!selected) return null;
-  return normalizeMacroTargets(selected);
+  return normalizePlanDayTargets(selected);
 }
 
 function renderAssignedNutritionPlanForAthlete() {
