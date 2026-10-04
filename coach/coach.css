@@ -1235,3 +1235,80 @@ textarea:focus-visible,
   outline: 2px solid #42a679 !important;
   outline-offset: 2px;
 }
+
+/* ── Master plan: form, adjust targets, actions ─────────────────────────
+   Same language as the plan preview (src/js/plan-preview.js): uppercase
+   Barlow Condensed labels, dark elevated fields, pill buttons, and the
+   phase pills (green build, gold maintain, rust cut). */
+.mp-form {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 12px;
+}
+.mp-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mp-field--wide { margin-top: 4px; }
+.mp-field-label {
+  font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.11em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.mp-input {
+  width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px;
+  border-radius: var(--radius-sm, 12px); border: 1px solid var(--border);
+  background: var(--elevated-bg, var(--surface)); color: var(--text);
+  font-family: var(--font-label); font-size: 16px; font-weight: 700; letter-spacing: 0.02em;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mp-input--text { font-family: var(--font-body, inherit); font-weight: 400; font-size: 14px; letter-spacing: 0; }
+.mp-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(47, 138, 99, 0.25); }
+.mp-input::placeholder { color: var(--text-muted); font-weight: 400; }
+select.mp-input { appearance: none; padding-right: 32px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+.mp-input-wrap { position: relative; display: block; }
+.mp-input-wrap .mp-input { padding-right: 52px; font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: 0.01em; }
+.mp-unit {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;
+  font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-muted);
+}
+.mp-field.is-changed .mp-input { border-color: var(--highlight); box-shadow: 0 0 0 1px var(--highlight); }
+.mp-field.is-changed .mp-field-label { color: var(--highlight); }
+.mp-field.is-changed .mp-field-label::after { content: ' · edited'; }
+
+.mp-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 18px;
+  border: 0; border-radius: var(--radius-pill, 999px); cursor: pointer;
+  background: linear-gradient(135deg, #2f8a63, #236b4e 60%, #17472f); color: #050c08;
+  font-family: var(--font-label); font-size: 13px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase;
+}
+.mp-btn--gold { background: linear-gradient(135deg, #d4ab68, #b3843f); }
+.mp-btn:hover { filter: brightness(1.08); }
+.mp-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+.mp-adjust {
+  margin-top: 14px; background: var(--card-bg, var(--card)); border: 1px solid var(--border);
+  border-radius: var(--radius-md, 16px); overflow: hidden;
+}
+.mp-adjust-summary {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 14px 16px; cursor: pointer; list-style: none;
+}
+.mp-adjust-summary::-webkit-details-marker { display: none; }
+.mp-adjust-summary::before {
+  content: '+'; font-family: var(--font-display); font-size: 20px; line-height: 1; color: var(--primary-text, var(--primary)); width: 14px;
+}
+.mp-adjust[open] .mp-adjust-summary::before { content: '–'; }
+.mp-adjust-title { font-family: var(--font-display); font-size: 20px; text-transform: uppercase; color: var(--text); }
+.mp-adjust-hint {
+  font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-muted);
+}
+.mp-adjust-body { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px; }
+.mp-adjust-phase {
+  padding: 12px; border-radius: var(--radius-sm, 12px); background: var(--elevated-bg, var(--surface));
+  border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px;
+}
+.mp-adjust-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.mp-adjust-dates {
+  font-family: var(--font-label); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-sec);
+}
+.mp-adjust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.mp-adjust-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.mp-adjust-count {
+  font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-muted);
+}

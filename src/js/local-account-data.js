@@ -3,8 +3,8 @@
    state, weigh-ins, macros and progress photos also live in localStorage and
    IndexedDB, and delete-account.html promises those go too.
 
-   Logging out does NOT call this: check-ins and phase state are only stored
-   on the device today, so clearing them on logout would lose them.
+   Logging out does NOT call this: entries logged offline may not have
+   synced yet (cloud-sync.js), so clearing them on logout could lose them.
 
    Another account signed in on the same device keeps its own data — only
    keys that belong to `username`, plus the unscoped keys that always hold

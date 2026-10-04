@@ -775,7 +775,8 @@ function renderProgram(c) {
         + escapeHtml((current.days[d] || []).map(formatExercise).join(' · ')) + '</span></div>').join('')
     : '<p class="ws-empty-note">' + (c.currentProgram ? escapeHtml(c.currentProgram) + ' (no longer in your library)' : 'No program assigned.') + '</p>';
 
-  el.innerHTML = '<div class="d-card"><div class="d-card-title">Assign Program</div>'
+  el.innerHTML = masterPlanCard(c)
+    + '<div class="d-card"><div class="d-card-title">Assign Program</div>'
     + '<select id="coachProgramSelect" class="coach-input">' + options + '</select>'
     + '<div class="detail-breadcrumb-actions" style="margin-top:10px;">'
     + '<button class="bulk-action-btn" onclick="assignProgram()">Assign</button>'
@@ -786,6 +787,214 @@ function renderProgram(c) {
     + '<div class="d-card"><div class="d-card-title">Assigned: ' + escapeHtml(c.currentProgram || 'none') + '</div>' + preview
     + (c.activeProgramName && c.activeProgramName !== c.currentProgram ? '<p class="ws-empty-note">Client is currently following: ' + escapeHtml(c.activeProgramName) + '</p>' : '')
     + '</div>';
+  initMasterPlan(c);
+}
+
+// ── Master plan (generate → preview → draft → approve → publish) ───────────
+// The backend generates the plan from one of your intake leads and a package
+// (src/plan/generator.js there). Nothing reaches the client until you
+// approve AND publish it; the preview below is exactly what they will see,
+// plus the rule behind each number and any red flags.
+let _planMeta = null;
+let _planState = { clientId: null, plan: null };
+
+function nextMondayIso() {
+  const d = new Date();
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function masterPlanCard(c) {
+  const leadOptions = _leads.length
+    ? _leads.map(l => '<option value="' + escapeHtml(l.id) + '">' + escapeHtml(l.naam || 'Unnamed') + (l.status === 'converted' ? ' (converted)' : '') + '</option>').join('')
+    : '<option value="">No intake leads</option>';
+  return '<div class="d-card"><div class="d-card-title">Master Plan</div>'
+    + '<div id="planCurrent"><p class="ws-empty-note">Loading plans…</p></div>'
+    + '<div class="mp-form">'
+    + '<label class="mp-field"><span class="mp-field-label">Intake</span><select id="planLead" class="mp-input">' + leadOptions + '</select></label>'
+    + '<label class="mp-field"><span class="mp-field-label">Package</span><select id="planPackage" class="mp-input"></select></label>'
+    + '<label class="mp-field"><span class="mp-field-label">Start date</span><input id="planStart" type="date" class="mp-input" value="' + nextMondayIso() + '"></label>'
+    + '<label class="mp-field"><span class="mp-field-label">Tier</span><select id="planTier" class="mp-input"><option value="basis">Basis</option><option value="medium" selected>Medium</option><option value="premium">Premium</option></select></label>'
+    + '</div>'
+    + '<div class="mp-adjust-actions">'
+    + '<button type="button" class="mp-btn" onclick="previewMasterPlan()">Preview</button>'
+    + '<button type="button" class="mp-btn mp-btn--gold" onclick="saveMasterPlanDraft()">Save as draft</button>'
+    + '</div>'
+    + '<div id="planMsg" class="ws-empty-note" style="margin-top:8px;"></div>'
+    + '<div id="planPreviewArea" style="margin-top:12px;"></div></div>';
+}
+
+async function planApi(path, options = {}) {
+  const res = await fetch(SERVER_URL + '/api/coach/plans' + path, { ...options, headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.success === false) throw new Error(data?.error?.message || ('HTTP ' + res.status));
+  return data;
+}
+
+function planMsg(text) {
+  const el = document.getElementById('planMsg');
+  if (el) el.textContent = text || '';
+}
+
+function planFormBody(clientId) {
+  return {
+    clientUid: clientId,
+    leadId: document.getElementById('planLead')?.value || undefined,
+    packageId: document.getElementById('planPackage')?.value,
+    startDate: document.getElementById('planStart')?.value,
+    tier: document.getElementById('planTier')?.value,
+  };
+}
+
+async function initMasterPlan(c) {
+  _planState = { clientId: c.id, plan: null };
+  if (window.PlanPreview) window.PlanPreview.ensureStyles();
+  try {
+    if (!_planMeta) _planMeta = await planApi('/meta');
+    const sel = document.getElementById('planPackage');
+    if (sel) {
+      sel.innerHTML = _planMeta.packages.map(p => '<option value="' + escapeHtml(p.id) + '">'
+        + escapeHtml(p.name) + ' (' + p.phases.map(ph => ph.type + ' ' + ph.weeks).join(' → ') + ')</option>').join('');
+    }
+    const { plans } = await planApi('/?clientUid=' + encodeURIComponent(c.id));
+    if (_planState.clientId !== c.id) return; // switched client meanwhile
+    const latest = plans.find(p => p.status !== 'superseded');
+    if (latest) await openMasterPlan(latest.planId);
+    else document.getElementById('planCurrent').innerHTML = '<p class="ws-empty-note">No plan yet. Pick an intake and a package, then preview.</p>';
+  } catch (err) {
+    const cur = document.getElementById('planCurrent');
+    if (cur) cur.innerHTML = '<p class="ws-empty-note">Plans unavailable: ' + escapeHtml(err.message) + '</p>';
+  }
+}
+
+function renderPlanActions(plan) {
+  const cur = document.getElementById('planCurrent');
+  if (!cur) return;
+  const actions = plan.status === 'draft'
+    ? '<button type="button" class="mp-btn" onclick="approveMasterPlan()">Approve</button>'
+    : plan.status === 'approved'
+      ? '<button type="button" class="mp-btn mp-btn--gold" onclick="publishMasterPlan()">Publish to client</button>'
+      : '';
+  const statusText = plan.status === 'published' && plan.approval?.publishedAt
+    ? 'published ' + plan.approval.publishedAt.slice(0, 10)
+    : plan.status;
+  cur.innerHTML = '<p style="margin:0 0 6px;"><strong>' + escapeHtml(plan.package.name) + '</strong> · '
+    + escapeHtml(statusText) + '</p>'
+    + (actions ? '<div class="mp-adjust-actions">' + actions + '</div>' : '');
+}
+
+// Inline adjustments for an unpublished plan: rest/training-day kcal and
+// protein per phase, and the cut target. Each change is logged server-side
+// with the reason given here.
+function planAdjustField(label, path, value, unit, step) {
+  return '<label class="mp-field"><span class="mp-field-label">' + escapeHtml(label) + '</span>'
+    + '<span class="mp-input-wrap"><input class="mp-input" type="number" inputmode="decimal"' + (step ? ' step="' + step + '"' : '')
+    + ' data-path="' + escapeHtml(path) + '" data-original="' + escapeHtml(value ?? '') + '" value="' + escapeHtml(value ?? '') + '"'
+    + (value == null ? ' placeholder="Set"' : '') + ' oninput="planAdjustChanged()">'
+    + '<span class="mp-unit">' + escapeHtml(unit) + '</span></span></label>';
+}
+
+function planAdjustForm(plan) {
+  if (plan.status === 'published' || plan.status === 'superseded') return '';
+  const fmtDate = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const phases = plan.phases.map((p, i) => {
+    const target = (p.endCriteria?.any || []).findIndex(c => c.kind === 'target');
+    const label = { cut: 'Cut', maintain: 'Maintain', build: 'Build' }[p.type] || p.type;
+    return '<div class="mp-adjust-phase pp-phase--' + escapeHtml(p.type) + '">'
+      + '<div class="mp-adjust-head"><span class="pp-phase-name">' + escapeHtml(label) + '</span>'
+      + '<span class="mp-adjust-dates">' + escapeHtml(fmtDate(p.plannedStart)) + ' – ' + escapeHtml(fmtDate(p.plannedEnd)) + ' · ' + escapeHtml(p.caps?.maxWeeks) + ' wk</span></div>'
+      + '<div class="mp-adjust-grid">'
+      + planAdjustField('Rest day', 'phases[' + i + '].nutrition.restDay.kcal', p.nutrition.restDay.kcal, 'kcal')
+      + planAdjustField('Training day', 'phases[' + i + '].nutrition.trainingDay.kcal', p.nutrition.trainingDay.kcal, 'kcal')
+      + planAdjustField('Protein', 'phases[' + i + '].nutrition.restDay.proteinG', p.nutrition.restDay.proteinG, 'g', '0.1')
+      + (target >= 0 ? planAdjustField('Target weight', 'phases[' + i + '].endCriteria.any[' + target + '].value', p.endCriteria.any[target].value, 'kg', '0.1') : '')
+      + '</div></div>';
+  }).join('');
+  return '<details class="mp-adjust"><summary class="mp-adjust-summary"><span class="mp-adjust-title">Adjust targets</span>'
+    + '<span class="mp-adjust-hint">Every change is logged with your reason</span></summary>'
+    + '<div class="mp-adjust-body">' + phases
+    + '<label class="mp-field mp-field--wide"><span class="mp-field-label">Reason</span>'
+    + '<input id="planAdjustReason" class="mp-input mp-input--text" placeholder="Why — kept in the plan\'s change log"></label>'
+    + '<div class="mp-adjust-actions"><button type="button" class="mp-btn" onclick="saveMasterPlanAdjustments()">Save adjustments</button>'
+    + '<span id="planAdjustCount" class="mp-adjust-count">No changes yet</span></div>'
+    + '</div></details>';
+}
+
+// Marks edited fields and keeps the "N changes" counter current.
+function planAdjustChanged() {
+  const inputs = [...document.querySelectorAll('#planPreviewArea .mp-input[data-path]')];
+  let changed = 0;
+  inputs.forEach(inp => {
+    const dirty = inp.value !== '' && String(Number(inp.value)) !== String(Number(inp.dataset.original || NaN));
+    inp.closest('.mp-field').classList.toggle('is-changed', dirty);
+    if (dirty) changed++;
+  });
+  const count = document.getElementById('planAdjustCount');
+  if (count) count.textContent = changed ? changed + ' change' + (changed === 1 ? '' : 's') + ' to save' : 'No changes yet';
+}
+
+function showPlan(plan) {
+  _planState.plan = plan;
+  const area = document.getElementById('planPreviewArea');
+  if (!area || !window.PlanPreview) return;
+  area.innerHTML = window.PlanPreview.render(plan, { coachView: true }) + (plan._saved === false ? '' : planAdjustForm(plan));
+  if (plan.status && plan._saved !== false) renderPlanActions(plan);
+}
+
+async function openMasterPlan(planId) {
+  const { plan } = await planApi('/' + encodeURIComponent(planId));
+  showPlan(plan);
+}
+
+async function previewMasterPlan() {
+  planMsg('Generating preview…');
+  try {
+    const { plan } = await planApi('/preview', { method: 'POST', body: JSON.stringify(planFormBody(_planState.clientId)) });
+    planMsg('Preview only — not saved. Save it as a draft to edit, approve and publish it.');
+    showPlan({ ...plan, _saved: false });
+  } catch (err) { planMsg('Could not generate: ' + err.message); }
+}
+
+async function saveMasterPlanDraft() {
+  planMsg('Saving draft…');
+  try {
+    const { plan } = await planApi('/', { method: 'POST', body: JSON.stringify(planFormBody(_planState.clientId)) });
+    planMsg('Draft saved. Review it, then approve and publish.');
+    showPlan(plan);
+  } catch (err) { planMsg('Could not save: ' + err.message); }
+}
+
+async function saveMasterPlanAdjustments() {
+  const plan = _planState.plan;
+  if (!plan?.planId) return;
+  const reason = document.getElementById('planAdjustReason')?.value || '';
+  const get = (obj, path) => path.split(/\.|\[|\]/).filter(Boolean).reduce((o, k) => (o == null ? undefined : o[/^\d+$/.test(k) ? Number(k) : k]), obj);
+  const changes = [...document.querySelectorAll('#planPreviewArea [data-path]')]
+    .filter(inp => inp.value !== '' && Number(inp.value) !== get(plan, inp.dataset.path))
+    .map(inp => ({ path: inp.dataset.path, value: Number(inp.value), reason }));
+  if (!changes.length) { planMsg('Nothing changed.'); return; }
+  try {
+    const { plan: updated } = await planApi('/' + encodeURIComponent(plan.planId), { method: 'PATCH', body: JSON.stringify({ changes }) });
+    planMsg(changes.length + ' change' + (changes.length === 1 ? '' : 's') + ' saved' + (plan.status === 'approved' ? ' — approve again before publishing.' : '.'));
+    showPlan(updated);
+  } catch (err) { planMsg('Could not save: ' + err.message); }
+}
+
+async function approveMasterPlan() {
+  try {
+    const { plan } = await planApi('/' + encodeURIComponent(_planState.plan.planId) + '/approve', { method: 'POST' });
+    planMsg('Approved. Publish it to send it to the client.');
+    showPlan(plan);
+  } catch (err) { planMsg('Could not approve: ' + err.message); }
+}
+
+async function publishMasterPlan() {
+  if (!confirm('Publish this plan? The client will see it in their app and be notified.')) return;
+  try {
+    const { plan } = await planApi('/' + encodeURIComponent(_planState.plan.planId) + '/publish', { method: 'POST' });
+    planMsg('Published. The client can see it under Program → My Plan.');
+    showPlan(plan);
+  } catch (err) { planMsg('Could not publish: ' + err.message); }
 }
 
 // Writes real fields on the client's Firestore doc (PATCH /api/coach/clients/:id)

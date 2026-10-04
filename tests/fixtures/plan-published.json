@@ -1,0 +1,579 @@
+{
+  "schema": "pocketcoach.plan/1",
+  "planId": "pln_00000000-0000-4000-8000-000000000001",
+  "status": "published",
+  "version": 1,
+  "supersedes": null,
+  "client": {
+    "uid": "u1",
+    "coachUid": "c1",
+    "leadId": null
+  },
+  "package": {
+    "id": "physique_28",
+    "name": "Physique Plan",
+    "tier": "medium",
+    "totalWeeks": 28,
+    "billing": {
+      "blockWeeks": 4,
+      "blocks": 7,
+      "startDate": "2026-10-12"
+    }
+  },
+  "ruleVersion": "pocketcoach-rules@0.2.0",
+  "phases": [
+    {
+      "phaseId": "ph1",
+      "order": 1,
+      "type": "build",
+      "goal": "spieropbouw",
+      "plannedStart": "2026-10-12",
+      "plannedEnd": "2027-01-31",
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 16
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "timeCap",
+            "weeks": 16,
+            "ruleId": "pkg.physique_28"
+          }
+        ]
+      },
+      "nutrition": {
+        "maintenanceKcal": 3484,
+        "bmr": 1858,
+        "restDay": {
+          "kcal": 3832,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 490
+        },
+        "trainingDay": {
+          "kcal": 4335,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 615.7
+        },
+        "ranges": {
+          "eiwit": {
+            "min": 134.4,
+            "praktisch": 151.2,
+            "maxSlank": 201.6
+          },
+          "vet": {
+            "min": 70.4,
+            "max": 140.8
+          },
+          "beoogdeInname": {
+            "min": 3684,
+            "max": 3984
+          },
+          "energyFactor": {
+            "type": "surplusKcal",
+            "min": 200,
+            "max": 500
+          }
+        },
+        "mealSplit": {
+          "rustdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 122.5,
+              "kcal": 928
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 122.5,
+              "kcal": 928
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 122.5,
+              "kcal": 988
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 122.5,
+              "kcal": 988
+            }
+          ],
+          "trainingsdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 153.9,
+              "kcal": 1053
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 153.9,
+              "kcal": 1053
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 153.9,
+              "kcal": 1114
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 153.9,
+              "kcal": 1114
+            }
+          ]
+        }
+      },
+      "training": {
+        "split": {
+          "naam": "Upper / Lower",
+          "dagen": [
+            "Upper A",
+            "Lower A",
+            "Upper B",
+            "Lower B"
+          ],
+          "sessionsPerWeek": 4,
+          "muscleFrequency": 2,
+          "ruleId": "train.split.by_frequency"
+        },
+        "weeklySetsPerMuscle": {
+          "chest": 16,
+          "back": 16,
+          "shoulders": 16,
+          "biceps": 16,
+          "triceps": 16,
+          "quads": 16,
+          "hamstrings": 16,
+          "glutes": 16,
+          "calves": 16
+        },
+        "setsPerSession": 7.8,
+        "progression": {
+          "scheme": "double_progression",
+          "repRange": [
+            6,
+            12
+          ],
+          "rir": [
+            3,
+            0
+          ],
+          "ruleId": "train.progression.scheme"
+        },
+        "deloads": {
+          "mode": "reactive",
+          "scope": "exercise",
+          "triggerStrengthLossPct": 2.5,
+          "ruleId": "train.deload.policy"
+        },
+        "programRef": null
+      },
+      "recovery": {
+        "sleepHoursFlagBelow": 6,
+        "ruleIds": [
+          "safety.sleep.min_hours"
+        ]
+      }
+    },
+    {
+      "phaseId": "ph2",
+      "order": 2,
+      "type": "maintain",
+      "goal": "onderhoud",
+      "plannedStart": "2027-02-01",
+      "plannedEnd": "2027-02-28",
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 4
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "timeCap",
+            "weeks": 4,
+            "ruleId": "pkg.physique_28"
+          }
+        ]
+      },
+      "nutrition": {
+        "maintenanceKcal": 3484,
+        "bmr": 1858,
+        "restDay": {
+          "kcal": 3484,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 402.9
+        },
+        "trainingDay": {
+          "kcal": 3986,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 528.6
+        },
+        "ranges": {
+          "eiwit": {
+            "min": 134.4,
+            "praktisch": 151.2,
+            "maxSlank": 201.6
+          },
+          "vet": {
+            "min": 70.4,
+            "max": 140.8
+          },
+          "beoogdeInname": {
+            "min": 3379,
+            "max": 3588
+          },
+          "energyFactor": {
+            "type": "factor",
+            "min": 0.97,
+            "max": 1.03
+          }
+        },
+        "mealSplit": {
+          "rustdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 100.7,
+              "kcal": 841
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 100.7,
+              "kcal": 841
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 100.7,
+              "kcal": 901
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 100.7,
+              "kcal": 901
+            }
+          ],
+          "trainingsdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 132.2,
+              "kcal": 966
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 132.2,
+              "kcal": 966
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 132.2,
+              "kcal": 1027
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 132.2,
+              "kcal": 1027
+            }
+          ]
+        }
+      },
+      "training": {
+        "split": {
+          "naam": "Upper / Lower",
+          "dagen": [
+            "Upper A",
+            "Lower A",
+            "Upper B",
+            "Lower B"
+          ],
+          "sessionsPerWeek": 4,
+          "muscleFrequency": 2,
+          "ruleId": "train.split.by_frequency"
+        },
+        "weeklySetsPerMuscle": {
+          "chest": 14,
+          "back": 14,
+          "shoulders": 14,
+          "biceps": 14,
+          "triceps": 14,
+          "quads": 14,
+          "hamstrings": 14,
+          "glutes": 14,
+          "calves": 14
+        },
+        "setsPerSession": 7.1,
+        "progression": {
+          "scheme": "double_progression",
+          "repRange": [
+            6,
+            12
+          ],
+          "rir": [
+            3,
+            0
+          ],
+          "ruleId": "train.progression.scheme"
+        },
+        "deloads": {
+          "mode": "reactive",
+          "scope": "exercise",
+          "triggerStrengthLossPct": 2.5,
+          "ruleId": "train.deload.policy"
+        },
+        "programRef": null
+      },
+      "recovery": {
+        "sleepHoursFlagBelow": 6,
+        "ruleIds": [
+          "safety.sleep.min_hours"
+        ]
+      }
+    },
+    {
+      "phaseId": "ph3",
+      "order": 3,
+      "type": "cut",
+      "goal": "vetverlies",
+      "plannedStart": "2027-03-01",
+      "plannedEnd": "2027-04-25",
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 8
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "target",
+            "metric": "bodyweightKg7dAvg",
+            "op": "<=",
+            "value": null,
+            "setBy": "coach",
+            "ruleId": "pkg.physique_28"
+          },
+          {
+            "kind": "timeCap",
+            "weeks": 8,
+            "ruleId": "pkg.physique_28"
+          }
+        ]
+      },
+      "nutrition": {
+        "maintenanceKcal": 3484,
+        "bmr": 1858,
+        "restDay": {
+          "kcal": 2787,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 228.8
+        },
+        "trainingDay": {
+          "kcal": 3290,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 354.4
+        },
+        "ranges": {
+          "eiwit": {
+            "min": 134.4,
+            "praktisch": 151.2,
+            "maxSlank": 201.6
+          },
+          "vet": {
+            "min": 70.4,
+            "max": 140.8
+          },
+          "beoogdeInname": {
+            "min": 2438,
+            "max": 3135
+          },
+          "energyFactor": {
+            "type": "factor",
+            "min": 0.7,
+            "max": 0.9
+          }
+        },
+        "mealSplit": {
+          "rustdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 57.2,
+              "kcal": 666
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 57.2,
+              "kcal": 666
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 57.2,
+              "kcal": 727
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 57.2,
+              "kcal": 727
+            }
+          ],
+          "trainingsdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 88.6,
+              "kcal": 792
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 88.6,
+              "kcal": 792
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 88.6,
+              "kcal": 853
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 88.6,
+              "kcal": 853
+            }
+          ]
+        }
+      },
+      "training": {
+        "split": {
+          "naam": "Upper / Lower",
+          "dagen": [
+            "Upper A",
+            "Lower A",
+            "Upper B",
+            "Lower B"
+          ],
+          "sessionsPerWeek": 4,
+          "muscleFrequency": 2,
+          "ruleId": "train.split.by_frequency"
+        },
+        "weeklySetsPerMuscle": {
+          "chest": 11,
+          "back": 11,
+          "shoulders": 11,
+          "biceps": 11,
+          "triceps": 11,
+          "quads": 11,
+          "hamstrings": 11,
+          "glutes": 11,
+          "calves": 11
+        },
+        "setsPerSession": 5.7,
+        "progression": {
+          "scheme": "double_progression",
+          "repRange": [
+            6,
+            12
+          ],
+          "rir": [
+            3,
+            0
+          ],
+          "ruleId": "train.progression.scheme"
+        },
+        "deloads": {
+          "mode": "reactive",
+          "scope": "exercise",
+          "triggerStrengthLossPct": 2.5,
+          "ruleId": "train.deload.policy"
+        },
+        "programRef": null
+      },
+      "recovery": {
+        "sleepHoursFlagBelow": 6,
+        "ruleIds": [
+          "safety.sleep.min_hours"
+        ]
+      }
+    }
+  ],
+  "adjustments": [],
+  "approval": {
+    "generatedAt": "2026-10-04T09:00:00.000Z",
+    "generatedBy": "plan-generator@1",
+    "approvedAt": "2026-10-05T10:00:00Z",
+    "approvedBy": "arman",
+    "publishedAt": "2026-10-05T10:05:00Z"
+  }
+}

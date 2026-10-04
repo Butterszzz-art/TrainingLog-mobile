@@ -279,3 +279,23 @@ describe('installScopedKeys', () => {
     expect(ls.m.get('theme')).toBe('dark');
   });
 });
+
+describe('check-ins and phase state', () => {
+  test('check-ins sync one item per date; the phase state as one value', () => {
+    const checkIns = [
+      { date: '2026-10-04', bodyweight: 82.1, phase: 'mini_cut' },
+      { date: '2026-09-27', bodyweight: 82.9, phase: 'mini_cut' },
+    ];
+    const items = splitStore(store('tl_checkins_v1'), JSON.stringify(checkIns));
+    expect([...items.keys()]).toEqual(['date:2026-10-04', 'date:2026-09-27']);
+
+    const phase = JSON.stringify({ mode: 'contest_prep', showDate: '2027-05-01' });
+    const value = splitStore(store('tl_phase_state_v1'), phase);
+    expect([...value.keys()]).toEqual(['value']);
+  });
+
+  test("the store names are the keys' prefixes, so writes trigger a sync", () => {
+    expect(store('tl_checkins_v1').key('ana')).toBe('tl_checkins_v1_ana');
+    expect(store('tl_phase_state_v1').key('ana')).toBe('tl_phase_state_v1_ana');
+  });
+});
