@@ -98,7 +98,10 @@
       ? `Deload an exercise only when its performance drops unexpectedly${t.deloads.triggerStrengthLossPct ? ` (more than ${esc(t.deloads.triggerStrengthLossPct)}% strength loss)` : ''}.`
       : (t.deloads?.intervalWeeks ? `Deload every ${esc(t.deloads.intervalWeeks)} weeks.` : '');
     const progression = t.progression?.scheme === 'double_progression' && Array.isArray(t.progression.repRange)
-      ? `Double progression in ${esc(t.progression.repRange[0])}–${esc(t.progression.repRange[1])} reps: add reps, then the smallest load step.`
+      ? `Double progression in ${esc(t.progression.repRange[0])}–${esc(t.progression.repRange[1])} reps: add reps, then the smallest load step.${
+        Array.isArray(t.progression.rir) && t.progression.failure === 'last_set_only'
+          ? ` Keep ${esc(t.progression.rir[1])}–${esc(t.progression.rir[0])} reps in reserve; go to failure only on an exercise's last set.`
+          : ''}`
       : '';
     const flags = coachView ? flagList((phase.redFlags || []).filter((f) => !commonFlags.has(flagKey(f)))) : '';
     const prov = coachView
