@@ -142,13 +142,26 @@
     return (ids || []).length;
   }
 
+  /** Every photo this user stored on the device (used on account deletion). */
+  async function deleteUserPhotos(userId) {
+    const db = await openDb();
+    const tx = db.transaction([STORE, DATA_STORE], 'readwrite');
+    const ids = await requestResult(tx.objectStore(STORE).index('byUser').getAllKeys(userId));
+    (ids || []).forEach((id) => {
+      tx.objectStore(STORE).delete(id);
+      tx.objectStore(DATA_STORE).delete(id);
+    });
+    await txDone(tx);
+    return (ids || []).length;
+  }
+
   /** Object URL for a photo's thumbnail (from a listSessionPhotos row). */
   function thumbUrl(photo) {
     if (!photo?.thumb) return '';
     return URL.createObjectURL(new Blob([photo.thumb], { type: photo.type || 'image/jpeg' }));
   }
 
-  const api = { isAvailable, savePhotos, listSessionPhotos, getPhotoBlob, deleteSessionPhotos, thumbUrl };
+  const api = { isAvailable, savePhotos, listSessionPhotos, getPhotoBlob, deleteSessionPhotos, deleteUserPhotos, thumbUrl };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;

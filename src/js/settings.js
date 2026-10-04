@@ -704,8 +704,12 @@ async function deleteAccountFlow(button) {
       throw new Error(data?.error?.message || `HTTP ${res.status}`);
     }
     if (typeof showToast === 'function') showToast('Account deleted.');
-    // logout() clears local storage and Firebase's session, then reloads —
-    // the account is already gone server-side at this point.
+    // The account is already gone server-side. Remove its data from this
+    // device too (logout() alone only drops the session keys), then log out,
+    // which signs out of Firebase and reloads.
+    if (typeof window.clearLocalAccountData === 'function') {
+      await window.clearLocalAccountData(getActiveUsername());
+    }
     if (typeof window.logout === 'function') {
       window.logout();
     } else {
