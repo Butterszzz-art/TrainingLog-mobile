@@ -65,6 +65,10 @@
     { name: 'mobilityRoutines', key: u => `mobilityRoutines_${u}`, mode: 'list', idField: 'id' },
     { name: 'mobilitySessions', key: u => `mobilitySessions_${u}`, mode: 'list', idField: 'id' },
     { name: 'logbookCover',     key: u => `logbookCover_${u}`,     mode: 'value' },
+    // Check-ins (one per date, see checkinEngine.js) and the current
+    // training phase (prepMode.js). The store name is the key prefix.
+    { name: 'tl_checkins_v1',    key: u => `tl_checkins_v1_${u}`,    mode: 'list', idField: 'date' },
+    { name: 'tl_phase_state_v1', key: u => `tl_phase_state_v1_${u}`, mode: 'value' },
     // Today's nutrition (scoped per account below).
     { name: 'dailyMacroMeals',    key: u => `dailyMacroMeals_${u}`,    mode: 'value' },
     { name: 'dailyMacroProgress', key: u => `dailyMacroProgress_${u}`, mode: 'value' },
@@ -466,6 +470,7 @@
     }
     if (has('logbookCover')) { call('renderLogbookCover'); call('renderSettingsHero'); }
     if (has('managedTemplates')) { call('renderTemplateLibraryList'); call('renderTemplateOptions'); }
+    if (has('tl_checkins_v1', 'tl_phase_state_v1')) call('renderCheckInTab');
     call('renderBodyHub');
     window.dispatchEvent(new CustomEvent('cloudsync:applied', { detail: { stores } }));
   }

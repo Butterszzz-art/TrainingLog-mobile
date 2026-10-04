@@ -615,21 +615,14 @@
     return sorted;
   }
 
-  function syncCheckInStateToBackend(userId, state) {
-    const resolvedUser = resolveUserId(userId);
-    try {
-      // Future backend endpoint: PUT /api/bodybuilding/checkins/:userId
-      // Keep check-ins working from local storage if network sync fails.
-      if (typeof globalScope.fetch !== 'function') return false;
-      return globalScope.fetch(`/api/bodybuilding/checkins/${encodeURIComponent(resolvedUser)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Array.isArray(state) ? state : []),
-        signal: AbortSignal.timeout(5000)
-      }).then(() => true).catch(() => false);
-    } catch (_error) {
-      return false;
-    }
+  // Check-ins reach the server through cloud sync (src/js/cloud-sync.js,
+  // store "tl_checkins_v1"): writing the storage key schedules a push, one
+  // item per check-in date. This only asks for that push to happen now.
+  function syncCheckInStateToBackend(_userId, _state) {
+    const sync = globalScope.cloudSync && globalScope.cloudSync.syncNow;
+    if (typeof sync !== 'function') return false;
+    Promise.resolve().then(sync).catch(() => {});
+    return true;
   }
 
   const api = {
