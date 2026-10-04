@@ -18,7 +18,10 @@
   const FACEBOOK_APP_ID = '1059510706961005';
   const OUT_W = 1080;
   const OUT_H = 1920;
-  const BG_TOP = '#0f2318';
+  // Top of the background follows the user's app colour (Forest: #0f2318).
+  const bgTop = () => (typeof window !== 'undefined' && typeof window.accentColor === 'function')
+    ? window.accentColor('--acc-0f2318')
+    : '#0f2318';
   const BG_BOTTOM = '#060d0a';
 
   const state = {
@@ -202,7 +205,7 @@
       ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
     } else {
       const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, BG_TOP);
+      g.addColorStop(0, bgTop());
       g.addColorStop(1, BG_BOTTOM);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
@@ -312,7 +315,7 @@
       const opts = {
         appId: FACEBOOK_APP_ID,
         stickerImage: base64($('wstorySticker'), 'image/png'),
-        backgroundTopColor: BG_TOP,
+        backgroundTopColor: bgTop(),
         backgroundBottomColor: BG_BOTTOM,
       };
       if (state.photo) opts.backgroundImage = base64(photoOnly(), 'image/jpeg', 0.9);

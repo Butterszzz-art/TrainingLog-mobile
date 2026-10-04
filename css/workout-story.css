@@ -30,7 +30,7 @@ body.wstory-open { overflow: hidden; }
   margin: 0 auto;
   border-radius: 20px;
   overflow: hidden;
-  background: linear-gradient(180deg, #0f2318 0%, #060d0a 100%);
+  background: linear-gradient(180deg, rgb(var(--acc-0f2318)) 0%, rgb(var(--acc-060d0a)) 100%);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
   touch-action: none;
 }

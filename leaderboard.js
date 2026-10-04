@@ -500,10 +500,10 @@ function _sparkSVG(series) {
   const last = pts[pts.length - 1];
   return `
     <svg class="sx-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Your last ${series.length} weeks">
-      <defs><linearGradient id="sxSparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d9d73" stop-opacity=".35"/><stop offset="1" stop-color="#3d9d73" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="sxSparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity=".35" style="stop-color: var(--green-70)"/><stop offset="1" stop-opacity="0" style="stop-color: var(--green-70)"/></linearGradient></defs>
       <path d="${line} L${W - pad} ${H} L${pad} ${H} Z" fill="url(#sxSparkFill)"/>
-      <path d="${line}" fill="none" stroke="#6fae8b" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="#8ec2a4" stroke="#050807" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      <path d="${line}" fill="none" style="stroke: var(--green-90)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" style="fill: var(--green-100)" stroke="#050807" stroke-width="2" vector-effect="non-scaling-stroke"/>
     </svg>
     <div class="sx-spark-cap"><span>${series.length} weeks ago</span><span>This week</span></div>`;
 }
@@ -650,8 +650,8 @@ function renderCharts(data) {
       datasets: [{
         label: 'Total Volume (kg)',
         data: barData,
-        backgroundColor: 'rgba(95,168,126,0.75)',
-        borderColor:     '#5fa87e',
+        backgroundColor: window.accentColor ? window.accentColor('--acc-5fa87e', 0.75) : 'rgba(95,168,126,0.75)',
+        borderColor:     window.accentColor ? window.accentColor('--acc-5fa87e') : '#5fa87e',
         borderWidth: 1,
         borderRadius: 4,
       }]

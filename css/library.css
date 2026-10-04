@@ -30,7 +30,7 @@
   padding: 12px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-featured);
-  background: rgba(47, 138, 99, 0.10);
+  background: rgba(var(--acc-2f8a63), 0.10);
 }
 #progLibraryView .plib-upsell > .ui-icon { width: 20px; height: 20px; flex: none; color: var(--green-90); }
 #progLibraryView .plib-upsell > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -67,7 +67,7 @@
 #progLibraryView .plib-card-ico {
   flex: none; width: 40px; height: 40px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(47, 138, 99, 0.13); border: 1px solid var(--border-featured); color: var(--green-90);
+  background: rgba(var(--acc-2f8a63), 0.13); border: 1px solid var(--border-featured); color: var(--green-90);
 }
 #progLibraryView .plib-card-ico .ui-icon { width: 20px; height: 20px; }
 #progLibraryView .plib-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }

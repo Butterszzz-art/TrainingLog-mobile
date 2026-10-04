@@ -81,7 +81,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(45, 125, 91, 0.22), inset 0 1px 4px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--acc-2d7d5b), 0.22), inset 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 /* Keyboard-navigation focus ring — explicit per the redesign spec,
@@ -91,7 +91,7 @@ textarea:focus {
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #3d9d73;
+  outline: 2px solid var(--green-70);
   outline-offset: 2px;
 }
 
@@ -103,7 +103,7 @@ a:focus-visible,
 summary:focus-visible,
 [role="button"]:focus-visible,
 [tabindex]:not([tabindex="-1"]):focus-visible {
-  outline: 2px solid #42a679 !important;
+  outline: 2px solid var(--primary-text) !important;
   outline-offset: 2px;
 }
 
@@ -323,7 +323,7 @@ th {
 
 .tst {
   --tst-accent: var(--green-90);
-  --tst-tint:   rgba(47, 138, 99, 0.14);
+  --tst-tint:   rgba(var(--acc-2f8a63), 0.14);
   --tst-edge:   var(--border-featured-strong);
   --tst-meter:  var(--fill-meter-a);
   position: relative;
@@ -481,7 +481,7 @@ body:has(#logTab.active) .tst { pointer-events: none; }
 .nm-btn--confirm {
   background: var(--primary, #5fa87e);
   border-color: var(--primary, #5fa87e);
-  color: #0b130d;
+  color: rgb(var(--acc-0b130d));
 }
 
 .nm-btn--danger {

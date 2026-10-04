@@ -103,7 +103,7 @@
   color: var(--text-tertiary);
   white-space: nowrap;
 }
-.mx-chip--green { border-color: var(--border-featured); background: rgba(47, 138, 99, 0.13); color: var(--green-90); }
+.mx-chip--green { border-color: var(--border-featured); background: rgba(var(--acc-2f8a63), 0.13); color: var(--green-90); }
 .mx-chip--brass { border-color: var(--border-brass); background: var(--warning-bg); color: var(--brass-light); }
 .mx-chip--red   { border-color: var(--border-alert); background: var(--danger-bg); color: var(--danger-text-mobile); }
 .mx-chip--sm    { padding: 2px 9px; font-size: 11.5px; }
@@ -124,7 +124,7 @@
   color: var(--text-tertiary);
 }
 .mx-tag .ui-icon { width: 12px; height: 12px; }
-.mx-tag--hi { border-color: var(--border-featured); background: rgba(47, 138, 99, 0.10); color: var(--green-90); }
+.mx-tag--hi { border-color: var(--border-featured); background: rgba(var(--acc-2f8a63), 0.10); color: var(--green-90); }
 .mx-tag--brass { border-color: var(--border-brass); background: var(--warning-bg); color: var(--brass-light); }
 .mx-tag--red   { border-color: var(--border-alert); background: var(--danger-bg); color: var(--danger-text-mobile); }
 
@@ -178,7 +178,7 @@
   color: var(--text-tertiary);
   margin-left: 3px;
 }
-.mx-delta { font-family: var(--font-label); font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em; color: var(--green-90); }
+.mx-delta { font-family: var(--font-label); font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em; color: var(--positive-text); }
 .mx-delta--up { color: var(--brass-light); }
 .mx-delta--flat { color: var(--text-tertiary); }
 
@@ -535,7 +535,7 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: rgba(6, 12, 9, 0.32);
+  background: rgba(var(--acc-060c09), 0.32);
   color: #f4f7f5;
   display: flex;
   align-items: center;
@@ -574,7 +574,7 @@
 .mx-quote {
   margin: 0;
   border-radius: var(--radius-tight);
-  background: rgba(47, 138, 99, 0.10);
+  background: rgba(var(--acc-2f8a63), 0.10);
   border: 1px solid var(--border-featured);
   padding: 10px 12px;
   font-size: 13.5px;

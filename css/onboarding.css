@@ -99,7 +99,7 @@
 
 .ob-archetype-card.selected {
   border-color: var(--primary, #5fa87e);
-  background: rgba(95, 168, 126, 0.12);
+  background: rgba(var(--acc-5fa87e), 0.12);
 }
 
 .ob-archetype-card strong {
@@ -337,8 +337,8 @@
 /* ── Step 6: Macro preview card ──────────────────────────────── */
 
 .ob-macro-preview {
-  background: rgba(45, 125, 91, 0.08);
-  border: 1px solid rgba(45, 125, 91, 0.25);
+  background: rgba(var(--acc-2d7d5b), 0.08);
+  border: 1px solid rgba(var(--acc-2d7d5b), 0.25);
   border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 20px;

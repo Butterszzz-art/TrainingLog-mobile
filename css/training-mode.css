@@ -54,5 +54,5 @@
 .mode-btn.active {
   background: var(--primary);
   color: var(--text-color);
-  box-shadow: 0 2px 8px rgba(45, 125, 91, 0.35);
+  box-shadow: 0 2px 8px rgba(var(--acc-2d7d5b), 0.35);
 }

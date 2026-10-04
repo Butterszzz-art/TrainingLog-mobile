@@ -215,7 +215,11 @@
 
   // ── Drawing ────────────────────────────────────────────────────────
   const STICKER_W = 1080;
-  const ACCENT = '#52d68a';
+  // Bright tone of the user's app colour (Forest: #52d68a).
+  const accent = () =>
+    (typeof window !== 'undefined' && typeof window.accentColor === 'function')
+      ? window.accentColor('--acc-52d68a')
+      : '#52d68a';
   const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
   // Trend line points, normalised into a w × h box. A flat history sits
@@ -323,7 +327,7 @@
       ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.arc(first.x, first.y, 14, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(last.x, last.y, 26, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = ACCENT;
+      ctx.fillStyle = accent();
       ctx.beginPath(); ctx.arc(last.x, last.y, 17, 0, Math.PI * 2); ctx.fill();
       ctx.shadowBlur = 18;
       y = y0 + boxH + 84;

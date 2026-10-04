@@ -90,8 +90,8 @@
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background: rgba(45, 125, 91, 0.1);
-  border: 1px solid rgba(45, 125, 91, 0.3);
+  background: rgba(var(--acc-2d7d5b), 0.1);
+  border: 1px solid rgba(var(--acc-2d7d5b), 0.3);
   border-radius: 10px;
   margin-bottom: 14px;
   flex-wrap: wrap;
@@ -385,7 +385,7 @@
 
 .prog-day-col.drag-over {
   border-color: var(--primary);
-  background: rgba(45, 125, 91, 0.06);
+  background: rgba(var(--acc-2d7d5b), 0.06);
 }
 
 .prog-day-label {
@@ -503,7 +503,7 @@
 
 .coach-client-list-item:last-child { border-bottom: none; }
 .coach-client-list-item:hover { background: var(--surface-bg); }
-.coach-client-list-item.active { background: rgba(45,125,91,0.1); color: var(--primary-text); font-weight: 600; }
+.coach-client-list-item.active { background: rgba(var(--acc-2d7d5b),0.1); color: var(--primary-text); font-weight: 600; }
 
 .coach-client-list-avatar {
   width: 30px;
@@ -636,7 +636,7 @@
 
 .coach-msg-tag.note     { background: rgba(77,168,218,0.18); color: #4da8da; }
 .coach-msg-tag.alert    { background: var(--danger-bg);  color: var(--danger-text); }
-.coach-msg-tag.praise   { background: rgba(68,162,113,0.15); color: #4da87a; }
+.coach-msg-tag.praise   { background: rgba(var(--acc-44a271),0.15); color: rgb(var(--acc-4da87a)); }
 
 /* Notification toggle row */
 .coach-notif-row {
@@ -812,7 +812,7 @@
   font-weight: 700;
 }
 
-.gdpr-badge.consented  { background: rgba(68,162,113,0.12); color: #4da87a; border: 1px solid rgba(68,162,113,0.3); }
+.gdpr-badge.consented  { background: rgba(var(--acc-44a271),0.12); color: rgb(var(--acc-4da87a)); border: 1px solid rgba(var(--acc-44a271),0.3); }
 .gdpr-badge.pending    { background: rgba(240,160,64,0.12);  color: #f0a040; border: 1px solid rgba(240,160,64,0.35); }
 .gdpr-badge.withdrawn  { background: var(--danger-bg);   color: var(--danger-text); border: 1px solid var(--danger-border); }
 
