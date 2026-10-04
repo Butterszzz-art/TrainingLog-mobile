@@ -810,15 +810,15 @@ function masterPlanCard(c) {
     : '<option value="">No intake leads</option>';
   return '<div class="d-card"><div class="d-card-title">Master Plan</div>'
     + '<div id="planCurrent"><p class="ws-empty-note">Loading plans…</p></div>'
-    + '<div class="mp-form" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;">'
-    + '<label>Intake<select id="planLead" class="coach-input">' + leadOptions + '</select></label>'
-    + '<label>Package<select id="planPackage" class="coach-input"></select></label>'
-    + '<label>Start date<input id="planStart" type="date" class="coach-input" value="' + nextMondayIso() + '"></label>'
-    + '<label>Tier<select id="planTier" class="coach-input"><option value="basis">Basis</option><option value="medium" selected>Medium</option><option value="premium">Premium</option></select></label>'
+    + '<div class="mp-form">'
+    + '<label class="mp-field"><span class="mp-field-label">Intake</span><select id="planLead" class="mp-input">' + leadOptions + '</select></label>'
+    + '<label class="mp-field"><span class="mp-field-label">Package</span><select id="planPackage" class="mp-input"></select></label>'
+    + '<label class="mp-field"><span class="mp-field-label">Start date</span><input id="planStart" type="date" class="mp-input" value="' + nextMondayIso() + '"></label>'
+    + '<label class="mp-field"><span class="mp-field-label">Tier</span><select id="planTier" class="mp-input"><option value="basis">Basis</option><option value="medium" selected>Medium</option><option value="premium">Premium</option></select></label>'
     + '</div>'
-    + '<div class="detail-breadcrumb-actions" style="margin-top:10px;">'
-    + '<button class="bulk-action-btn" onclick="previewMasterPlan()">Preview</button>'
-    + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="saveMasterPlanDraft()">Save as draft</button>'
+    + '<div class="mp-adjust-actions">'
+    + '<button type="button" class="mp-btn" onclick="previewMasterPlan()">Preview</button>'
+    + '<button type="button" class="mp-btn mp-btn--gold" onclick="saveMasterPlanDraft()">Save as draft</button>'
     + '</div>'
     + '<div id="planMsg" class="ws-empty-note" style="margin-top:8px;"></div>'
     + '<div id="planPreviewArea" style="margin-top:12px;"></div></div>';
@@ -871,35 +871,66 @@ function renderPlanActions(plan) {
   const cur = document.getElementById('planCurrent');
   if (!cur) return;
   const actions = plan.status === 'draft'
-    ? '<button class="bulk-action-btn" onclick="approveMasterPlan()">Approve</button>'
+    ? '<button type="button" class="mp-btn" onclick="approveMasterPlan()">Approve</button>'
     : plan.status === 'approved'
-      ? '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="publishMasterPlan()">Publish to client</button>'
+      ? '<button type="button" class="mp-btn mp-btn--gold" onclick="publishMasterPlan()">Publish to client</button>'
       : '';
   const statusText = plan.status === 'published' && plan.approval?.publishedAt
     ? 'published ' + plan.approval.publishedAt.slice(0, 10)
     : plan.status;
   cur.innerHTML = '<p style="margin:0 0 6px;"><strong>' + escapeHtml(plan.package.name) + '</strong> · '
     + escapeHtml(statusText) + '</p>'
-    + (actions ? '<div class="detail-breadcrumb-actions">' + actions + '</div>' : '');
+    + (actions ? '<div class="mp-adjust-actions">' + actions + '</div>' : '');
 }
 
 // Inline adjustments for an unpublished plan: rest/training-day kcal and
-// protein per phase, and the cut target. Each change is logged server-side.
+// protein per phase, and the cut target. Each change is logged server-side
+// with the reason given here.
+function planAdjustField(label, path, value, unit, step) {
+  return '<label class="mp-field"><span class="mp-field-label">' + escapeHtml(label) + '</span>'
+    + '<span class="mp-input-wrap"><input class="mp-input" type="number" inputmode="decimal"' + (step ? ' step="' + step + '"' : '')
+    + ' data-path="' + escapeHtml(path) + '" data-original="' + escapeHtml(value ?? '') + '" value="' + escapeHtml(value ?? '') + '"'
+    + (value == null ? ' placeholder="Set"' : '') + ' oninput="planAdjustChanged()">'
+    + '<span class="mp-unit">' + escapeHtml(unit) + '</span></span></label>';
+}
+
 function planAdjustForm(plan) {
   if (plan.status === 'published' || plan.status === 'superseded') return '';
-  const rows = plan.phases.map((p, i) => {
+  const fmtDate = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const phases = plan.phases.map((p, i) => {
     const target = (p.endCriteria?.any || []).findIndex(c => c.kind === 'target');
-    return '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:end;margin-top:6px;">'
-      + '<strong style="min-width:90px;">' + escapeHtml(p.type) + ' ' + (i + 1) + '</strong>'
-      + '<label>Rest kcal<input class="coach-input" type="number" data-path="phases[' + i + '].nutrition.restDay.kcal" value="' + p.nutrition.restDay.kcal + '" style="width:90px;"></label>'
-      + '<label>Train kcal<input class="coach-input" type="number" data-path="phases[' + i + '].nutrition.trainingDay.kcal" value="' + p.nutrition.trainingDay.kcal + '" style="width:90px;"></label>'
-      + '<label>Protein g<input class="coach-input" type="number" data-path="phases[' + i + '].nutrition.restDay.proteinG" value="' + p.nutrition.restDay.proteinG + '" style="width:80px;"></label>'
-      + (target >= 0 ? '<label>Target kg<input class="coach-input" type="number" step="0.1" data-path="phases[' + i + '].endCriteria.any[' + target + '].value" value="' + (p.endCriteria.any[target].value ?? '') + '" style="width:80px;"></label>' : '')
-      + '</div>';
+    const label = { cut: 'Cut', maintain: 'Maintain', build: 'Build' }[p.type] || p.type;
+    return '<div class="mp-adjust-phase pp-phase--' + escapeHtml(p.type) + '">'
+      + '<div class="mp-adjust-head"><span class="pp-phase-name">' + escapeHtml(label) + '</span>'
+      + '<span class="mp-adjust-dates">' + escapeHtml(fmtDate(p.plannedStart)) + ' – ' + escapeHtml(fmtDate(p.plannedEnd)) + ' · ' + escapeHtml(p.caps?.maxWeeks) + ' wk</span></div>'
+      + '<div class="mp-adjust-grid">'
+      + planAdjustField('Rest day', 'phases[' + i + '].nutrition.restDay.kcal', p.nutrition.restDay.kcal, 'kcal')
+      + planAdjustField('Training day', 'phases[' + i + '].nutrition.trainingDay.kcal', p.nutrition.trainingDay.kcal, 'kcal')
+      + planAdjustField('Protein', 'phases[' + i + '].nutrition.restDay.proteinG', p.nutrition.restDay.proteinG, 'g', '0.1')
+      + (target >= 0 ? planAdjustField('Target weight', 'phases[' + i + '].endCriteria.any[' + target + '].value', p.endCriteria.any[target].value, 'kg', '0.1') : '')
+      + '</div></div>';
   }).join('');
-  return '<details class="d-card" style="margin-top:10px;"><summary>Adjust targets</summary>' + rows
-    + '<label style="display:block;margin-top:8px;">Reason<input id="planAdjustReason" class="coach-input" placeholder="Why (kept in the plan\'s change log)"></label>'
-    + '<div class="detail-breadcrumb-actions" style="margin-top:8px;"><button class="bulk-action-btn" onclick="saveMasterPlanAdjustments()">Save adjustments</button></div></details>';
+  return '<details class="mp-adjust"><summary class="mp-adjust-summary"><span class="mp-adjust-title">Adjust targets</span>'
+    + '<span class="mp-adjust-hint">Every change is logged with your reason</span></summary>'
+    + '<div class="mp-adjust-body">' + phases
+    + '<label class="mp-field mp-field--wide"><span class="mp-field-label">Reason</span>'
+    + '<input id="planAdjustReason" class="mp-input mp-input--text" placeholder="Why — kept in the plan\'s change log"></label>'
+    + '<div class="mp-adjust-actions"><button type="button" class="mp-btn" onclick="saveMasterPlanAdjustments()">Save adjustments</button>'
+    + '<span id="planAdjustCount" class="mp-adjust-count">No changes yet</span></div>'
+    + '</div></details>';
+}
+
+// Marks edited fields and keeps the "N changes" counter current.
+function planAdjustChanged() {
+  const inputs = [...document.querySelectorAll('#planPreviewArea .mp-input[data-path]')];
+  let changed = 0;
+  inputs.forEach(inp => {
+    const dirty = inp.value !== '' && String(Number(inp.value)) !== String(Number(inp.dataset.original || NaN));
+    inp.closest('.mp-field').classList.toggle('is-changed', dirty);
+    if (dirty) changed++;
+  });
+  const count = document.getElementById('planAdjustCount');
+  if (count) count.textContent = changed ? changed + ' change' + (changed === 1 ? '' : 's') + ' to save' : 'No changes yet';
 }
 
 function showPlan(plan) {
