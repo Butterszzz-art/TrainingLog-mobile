@@ -145,6 +145,10 @@
     const review = coachView && (plan.unverifiedRules || []).length
       ? `<p class="pp-review">${esc(plan.unverifiedRules.length)} of the rules behind these numbers are not yet verified against Butters University (marked “?”).${plan.status === 'draft' ? ' Check them before approving.' : ''}</p>`
       : '';
+    const conflicts = coachView ? ((plan.butters && plan.butters.conflicts) || []) : [];
+    const buConflicts = conflicts.length
+      ? `<div class="pp-review pp-review--conflict"><div class="pp-sub">Differs from Butters University</div><ul class="pp-bu">${conflicts.map((c) => `<li><span class="pp-rule">${esc(c.ruleId)}</span> ${esc(c.note)}</li>`).join('')}</ul></div>`
+      : '';
     const { shared, common } = splitFlags(plan);
     const intakeFlags = coachView && shared.length ? `<div class="pp-intake-flags"><div class="pp-sub">From the intake</div>${flagList(shared)}</div>` : '';
     const overrides = coachView && (plan.overrides || []).length
@@ -156,7 +160,7 @@
         <div class="pp-meta">${esc(pkg.totalWeeks)} weeks · ${esc(fmtDate(phaseStart(first)))} – ${esc(fmtDate(phaseEnd(last)))}${coachView && pkg.tier ? ` · ${esc(pkg.tier)}` : ''}</div>
         ${status}
       </header>
-      ${review}${overrides}${intakeFlags}
+      ${review}${buConflicts}${overrides}${intakeFlags}
       ${renderTimeline(plan, today)}
       ${plan.phases.map((p) => renderPhase(p, { today, coachView, commonFlags: common })).join('')}
       ${coachView && plan.ruleVersion ? `<p class="pp-footer">Rules: ${esc(plan.ruleVersion)}</p>` : ''}
@@ -201,6 +205,9 @@
 .pp-rule--unverified{background:rgba(199,154,84,.16);color:var(--highlight,#c79a54)}
 .pp-intake-flags{padding:10px 12px;border-radius:var(--radius-sm,12px);border:1px solid var(--border-color,rgba(127,127,127,.25))}
 .pp-flags{margin:6px 0 0;padding-left:18px;font-size:13px}
+.pp-review--conflict{background:rgba(176,90,60,.10);border-color:rgba(176,90,60,.35)}
+.pp-bu{margin:6px 0 0;padding-left:18px;font-size:13px}
+.pp-bu li{margin:4px 0}
 .pp-flag--rood{color:#e0796a}.pp-flag--oranje{color:var(--highlight,#c79a54)}.pp-flag--info{color:var(--secondary-text,inherit)}
 .pp-empty{padding:24px 16px;text-align:center;color:var(--secondary-text,#888);border:1px dashed var(--border-color,rgba(127,127,127,.3));border-radius:var(--radius-md,16px)}
 .pp-empty strong{display:block;font-family:var(--font-display,inherit);font-size:22px;text-transform:uppercase;color:var(--text-color,inherit);margin-bottom:6px}

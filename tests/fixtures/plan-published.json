@@ -20,7 +20,7 @@
       "startDate": "2026-10-12"
     }
   },
-  "ruleVersion": "pocketcoach-rules@0.1.0",
+  "ruleVersion": "pocketcoach-rules@0.2.0",
   "phases": [
     {
       "phaseId": "ph1",

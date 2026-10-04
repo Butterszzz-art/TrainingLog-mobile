@@ -43,6 +43,15 @@ describe('PlanPreview.render', () => {
     expect(coach).toContain('not yet verified against Butters University');
   });
 
+  test('coach view lists the rules that differ from Butters University', () => {
+    const coach = PlanPreview.render(draft, { today: '2026-10-26', coachView: true });
+    expect(coach).toContain('Differs from Butters University');
+    for (const c of draft.butters.conflicts) expect(coach).toContain(c.ruleId);
+    expect(PlanPreview.render(draft, { today: '2026-10-26' })).not.toContain('Differs from Butters University');
+    const noConflicts = { ...draft, butters: { ...draft.butters, conflicts: [] } };
+    expect(PlanPreview.render(noConflicts, { coachView: true })).not.toContain('Differs from Butters University');
+  });
+
   test('escapes text from the plan', () => {
     const evil = { ...published, package: { ...published.package, name: '<img src=x onerror=alert(1)>' } };
     expect(PlanPreview.render(evil)).not.toContain('<img');

@@ -20,7 +20,7 @@
       "startDate": "2026-10-12"
     }
   },
-  "ruleVersion": "pocketcoach-rules@0.1.0",
+  "ruleVersion": "pocketcoach-rules@0.2.0",
   "unverifiedRules": [
     "nutr.bmr.method",
     "nutr.pal.table",
@@ -41,6 +41,34 @@
     "safety.injury.conflicts",
     "safety.sleep.min_hours"
   ],
+  "butters": {
+    "source": {
+      "repo": "Butterszzz-art/butters-university",
+      "path": "README.md",
+      "commit": "3959b1179ae4bcdf383f3af05e4895eaed167885"
+    },
+    "conflicts": [
+      {
+        "ruleId": "nutr.pal.table",
+        "note": "BU PAL values leave out resistance training (that is costed separately) and run 1.00–1.48. ClientIntake uses 1.2–1.725, which double-counts training on top of the training-day expenditure."
+      },
+      {
+        "ruleId": "nutr.energy.factor",
+        "note": "BU scales the surplus by training status (beginner 5–15%, intermediate 2–7%, advanced 1–3%) and the deficit by leanness (about 2.5–7.5% near contest leanness up to 30–50% at high body fat). ClientIntake uses a fixed factor per goal: 0.8 cut, 1.0 maintain, 1.1 build."
+      },
+      {
+        "ruleId": "safety.deficit.max",
+        "note": "BU allows deficits of 30–50% at higher body fat (and up to 30% early in a lean prep). The 25% safety cap is stricter. That may be intended as a safety margin, but BU does not state it."
+      }
+    ],
+    "partial": [
+      "nutr.bmr.method",
+      "nutr.fat.pct_ree",
+      "train.volume.max_per_session",
+      "train.progression.scheme",
+      "safety.sleep.min_hours"
+    ]
+  },
   "inputsSnapshot": {
     "gewicht": 84,
     "vetpercentage": 18,
