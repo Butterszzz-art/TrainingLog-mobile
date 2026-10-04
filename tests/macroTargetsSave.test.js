@@ -80,3 +80,33 @@ describe('saveSliderMacros', () => {
     expect(toasts[0].type).toBe('error');
   });
 });
+
+// The daily/post-workout auto-adjustment wrote its adjusted numbers over the
+// user's saved targets (compounding day after day), so adjustments looked like
+// they reset after reopening the app or logging a workout.
+describe('saved targets are only changed by the user', () => {
+  test('nothing auto-adjusts and overwrites macroTargets_<user>', () => {
+    const history = fs.readFileSync('history.js', 'utf8');
+    for (const src of [html, history]) {
+      expect(src).not.toMatch(/applyDailyMacroAdjustment\(/);
+      expect(src).not.toMatch(/maybeApplyDailyMacroAdjustment|applyMacroAdjustmentAfterWorkout/);
+    }
+  });
+
+  test('getMacroTargetValues prefers stored targets over stale in-memory values', () => {
+    const store = { macroTargets_alice: JSON.stringify({ calories: 2200, protein: 170, fat: 70, carbs: 230 }) };
+    const ctx = {
+      currentUser: 'alice',
+      localStorage: { getItem: k => store[k] ?? null },
+      getAssignedNutritionTargetsForCurrentDay: () => null,
+    };
+    vm.createContext(ctx);
+    vm.runInContext(`
+      let macroTargetCalories = 1800, macroTargetProtein = 120, macroTargetFat = 50, macroTargetCarbs = 180;
+      ${extract('function normalizeMacroTargets(', 'async function fetchUserMacroTargets')}
+      ${extract('function getMacroTargetValues()', 'function getMacroCyclingSettings()')}
+      this.getMacroTargetValues = getMacroTargetValues;
+    `, ctx);
+    expect({ ...ctx.getMacroTargetValues() }).toEqual({ calories: 2200, protein: 170, carbs: 230, fat: 70 });
+  });
+});
