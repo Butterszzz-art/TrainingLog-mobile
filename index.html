@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/onboarding.css">
   <link rel="stylesheet" href="css/tutorial.css">
+  <link rel="stylesheet" href="css/next-step-chips.css">
   <link rel="stylesheet" href="css/sleep.css">
   <link rel="stylesheet" href="css/friends.css">
   <link rel="stylesheet" href="css/rehab.css">
@@ -9313,7 +9314,10 @@ function roundMacroNumber(value) {
   return Math.max(0, Math.round(parsed));
 }
 
-function normalizeMacroTargets(targets = {}) {
+// Coach plan days store macros only; calories are derived. Not to be confused
+// with normalizeMacroTargets() (saved user targets), which this used to share a
+// name with and silently replace, crashing startup when no targets were saved.
+function normalizePlanDayTargets(targets = {}) {
   const protein = roundMacroNumber(targets.protein);
   const carbs = roundMacroNumber(targets.carbs);
   const fat = roundMacroNumber(targets.fat);
@@ -9348,7 +9352,7 @@ function getAssignedNutritionTargetsForCurrentDay(userId) {
         ? assigned.days?.low
         : fallback;
   if (!selected) return null;
-  return normalizeMacroTargets(selected);
+  return normalizePlanDayTargets(selected);
 }
 
 function renderAssignedNutritionPlanForAthlete() {
@@ -20397,6 +20401,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/ai-coach.js"></script>
   <script src="src/js/coach-brief.js"></script>
   <script src="src/js/coach-review.js"></script>
+  <script src="src/js/next-step-chips.js"></script>
 
 <!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
 <div id="macroAiBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeMacroAiAdvisor()"></div>
