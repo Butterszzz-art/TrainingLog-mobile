@@ -82,6 +82,9 @@ export const VERTALINGEN = {
 
     'section.peds': 'Prestatieverhogende middelen',
     'field.pedsGebruikt': 'Ik gebruik prestatieverhogende middelen',
+    'section.toestemming': 'Toestemming',
+    'field.toestemmingGezondheid': 'Ik geef uitdrukkelijk toestemming om mijn gezondheidsgegevens uit dit formulier (zoals blessures, middelengebruik, vetpercentage en slaap) te verwerken om mijn coachingplan op te stellen. Ik kan deze toestemming altijd intrekken.',
+    'link.privacy': 'Lees hoe ik je gegevens gebruik (privacyverklaring)',
 
     'section.lifestyle': 'Lifestyle',
     'field.activityLevel': 'Activiteitsniveau (buiten training)',
@@ -214,6 +217,9 @@ export const VERTALINGEN = {
 
     'section.peds': 'Performance-enhancing substances',
     'field.pedsGebruikt': 'I use performance-enhancing substances',
+    'section.toestemming': 'Consent',
+    'field.toestemmingGezondheid': 'I explicitly consent to the processing of the health data in this form (such as injuries, substance use, body fat and sleep) to create my coaching plan. I can withdraw this consent at any time.',
+    'link.privacy': 'Read how I use your data (privacy policy)',
 
     'section.lifestyle': 'Lifestyle',
     'field.activityLevel': 'Activity level (outside training)',
@@ -346,6 +352,9 @@ export const VERTALINGEN = {
 
     'section.peds': 'Sustancias para mejorar el rendimiento',
     'field.pedsGebruikt': 'Uso sustancias para mejorar el rendimiento',
+    'section.toestemming': 'Consentimiento',
+    'field.toestemmingGezondheid': 'Doy mi consentimiento explícito para el tratamiento de los datos de salud de este formulario (como lesiones, uso de sustancias, grasa corporal y sueño) para elaborar mi plan de coaching. Puedo retirar este consentimiento en cualquier momento.',
+    'link.privacy': 'Lee cómo uso tus datos (política de privacidad)',
 
     'section.lifestyle': 'Estilo de vida',
     'field.activityLevel': 'Nivel de actividad (fuera del entrenamiento)',
@@ -478,6 +487,9 @@ export const VERTALINGEN = {
 
     'section.peds': 'Substâncias para melhorar o desempenho',
     'field.pedsGebruikt': 'Uso substâncias para melhorar o desempenho',
+    'section.toestemming': 'Consentimento',
+    'field.toestemmingGezondheid': 'Dou meu consentimento explícito para o tratamento dos dados de saúde deste formulário (como lesões, uso de substâncias, gordura corporal e sono) para elaborar meu plano de coaching. Posso retirar este consentimento a qualquer momento.',
+    'link.privacy': 'Leia como uso seus dados (política de privacidade)',
 
     'section.lifestyle': 'Estilo de vida',
     'field.activityLevel': 'Nível de atividade (fora do treino)',

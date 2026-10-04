@@ -2,7 +2,7 @@ import { downloadJson } from './utils.js?v=1';
 import {
   maakLeegClient, initTagInputs, vulIntakeFormIn, leesIntakeForm, maakKrachtRij, renderApparatuurChecklist,
 } from './intake-form.js?v=1';
-import { TALEN, vertaal, apparatuurLabel } from './i18n.js?v=1';
+import { TALEN, vertaal, apparatuurLabel } from './i18n.js?v=2';
 
 // This page never talks to the coach dashboard directly: no client list, no
 // calculations shown here, no localStorage key shared with coach.js. It only
@@ -12,6 +12,9 @@ import { TALEN, vertaal, apparatuurLabel } from './i18n.js?v=1';
 const SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
 const DRAFT_KEY = 'pt-intake:client-draft:v1';
 const TAAL_KEY = 'pt-intake:client-taal:v1';
+// Stored with the lead as the record of which consent wording was agreed to;
+// bump it when the consent text or the privacy policy's prospect section changes.
+const CONSENT_VERSION = 'intake-2026-10-04';
 
 let huidigClient = null;
 let huidigeTaal = 'nl';
@@ -118,7 +121,13 @@ async function verstuur() {
     const res = await fetch(SERVER_URL + '/api/intake', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ intake: huidigClient.intake }),
+      body: JSON.stringify({
+        intake: huidigClient.intake,
+        consents: {
+          healthData: document.getElementById('f-toestemming-gezondheid').checked,
+          version: CONSENT_VERSION,
+        },
+      }),
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
