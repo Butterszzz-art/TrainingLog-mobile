@@ -15,7 +15,7 @@
 
 .sleep-log-card {
   background: var(--pod-bg-hero);
-  border: 1px solid rgba(74, 132, 102, 0.3);
+  border: 1px solid rgba(var(--acc-4a8466), 0.3);
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-shadow-hero);
   padding: 16px;
@@ -91,7 +91,7 @@
 }
 
 .sleep-star.active {
-  background: rgba(45, 125, 91, 0.15);
+  background: rgba(var(--acc-2d7d5b), 0.15);
   border-color: var(--primary);
   color: var(--primary-text);
 }
@@ -121,7 +121,7 @@
 }
 
 .sleep-tag.active {
-  background: rgba(45, 125, 91, 0.15);
+  background: rgba(var(--acc-2d7d5b), 0.15);
   border-color: var(--primary);
   color: var(--primary-text);
 }
@@ -335,7 +335,7 @@
   font-size: 0.65rem;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(45, 125, 91, 0.1);
+  background: rgba(var(--acc-2d7d5b), 0.1);
   color: var(--text-muted);
 }
 
@@ -367,7 +367,7 @@
 
 .sleep-ai-card {
   background: var(--card-bg);
-  border: 1px solid rgba(45, 125, 91, 0.25);
+  border: 1px solid rgba(var(--acc-2d7d5b), 0.25);
   border-left: 3px solid var(--primary);
   border-radius: 0 12px 12px 0;
   padding: 14px;
@@ -430,7 +430,7 @@
 
 .sleep-score-card {
   background: var(--pod-bg-hero);
-  border: 1px solid rgba(74, 132, 102, 0.3);
+  border: 1px solid rgba(var(--acc-4a8466), 0.3);
   border-radius: var(--radius-pod);
   box-shadow: var(--pod-shadow-hero);
   padding: 16px;
@@ -489,7 +489,7 @@
 
 .sleep-stage-bar-fill.deep  { background: var(--primary); }
 .sleep-stage-bar-fill.rem   { background: var(--highlight); }
-.sleep-stage-bar-fill.light { background: rgba(45, 125, 91, 0.4); }
+.sleep-stage-bar-fill.light { background: rgba(var(--acc-2d7d5b), 0.4); }
 .sleep-stage-bar-fill.awake { background: var(--danger-strong); }
 
 .sleep-stage-mins {

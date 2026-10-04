@@ -256,7 +256,7 @@
 .rest-preset-btn:hover,
 .rest-preset-btn.active-preset {
   background: var(--primary, #5fa87e);
-  color: #0b130d;
+  color: rgb(var(--acc-0b130d));
 }
 
 .rest-subview-inner {

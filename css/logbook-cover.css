@@ -1,9 +1,9 @@
 /* =============================================================
    LOGBOOK COVER
-   The user's own name + cover colour at the top of the Log tab,
-   styled like the cover of a paper training journal.
-   See src/js/logbook-cover.js. Only the cover takes the colour;
-   everything inside the logbook keeps the normal theme.
+   The user's own name at the top of the Log tab, styled like the
+   cover of a paper training journal. The cover takes the app colour
+   the user picked (--green-50 of the active data-accent ramp).
+   See src/js/logbook-cover.js.
    ============================================================= */
 
 .lb-cover-host { padding: 6px 12px 0; }
@@ -22,7 +22,7 @@
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 45%),
     linear-gradient(0deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.18)),
-    var(--logbook-cover, #236b4e);
+    var(--green-50);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   color: #fff;
   text-align: left;
@@ -98,6 +98,12 @@
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
 }
 .lb-swatch:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.lb-hint {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
 
 /* Settings hero row */
 .sh-row--btn {

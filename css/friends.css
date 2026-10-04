@@ -67,7 +67,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), #245f47);
+  background: linear-gradient(135deg, var(--primary), rgb(var(--acc-245f47)));
   color: #fff;
   display: flex;
   align-items: center;
@@ -135,7 +135,7 @@
 }
 
 .friends-requests {
-  border-color: rgba(45,125,91,0.45);
+  border-color: rgba(var(--acc-2d7d5b),0.45);
 }
 
 .friend-item--pending {
@@ -234,7 +234,7 @@
 .quick-share-item {
   padding: 12px;
   background: var(--surface-bg);
-  border: 1px solid rgba(45,125,91,0.25);
+  border: 1px solid rgba(var(--acc-2d7d5b),0.25);
   border-radius: 12px;
   margin-bottom: 16px;
 }
@@ -273,7 +273,7 @@
 
 .quick-share-friend.selected {
   border-color: var(--primary);
-  background: rgba(45,125,91,0.1);
+  background: rgba(var(--acc-2d7d5b),0.1);
 }
 
 .quick-share-friend .friend-avatar {

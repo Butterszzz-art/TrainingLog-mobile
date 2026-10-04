@@ -486,7 +486,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.attempt-status-btn.good    { border-color: var(--border-featured-strong); background: rgba(47, 138, 99, 0.16); color: var(--green-100); }
+.attempt-status-btn.good    { border-color: var(--border-featured-strong); background: rgba(47, 138, 99, 0.16); color: var(--positive-light); }
 .attempt-status-btn.no-lift { border-color: var(--border-alert); background: var(--danger-bg); color: var(--danger-text-mobile); }
 
 .attempt-total-row { flex-direction: row; align-items: center; justify-content: space-between; margin: 0 0 12px; }

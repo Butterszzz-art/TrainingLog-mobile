@@ -34,7 +34,7 @@
   font-weight: 800;
   letter-spacing: 0.06em;
 }
-.wr-delta--pos  { color: var(--green-90); }
+.wr-delta--pos  { color: var(--positive-text); }
 .wr-delta--neg  { color: var(--brass-light); }
 .wr-delta--flat { color: var(--text-tertiary); }
 

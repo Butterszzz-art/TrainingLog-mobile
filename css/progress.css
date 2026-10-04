@@ -321,7 +321,7 @@
 .ex-summary-card:hover,
 .ex-summary-card:focus-visible {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(45,125,91,0.18);
+  box-shadow: 0 0 0 2px rgba(var(--acc-2d7d5b),0.18);
 }
 
 .ex-summary-name {

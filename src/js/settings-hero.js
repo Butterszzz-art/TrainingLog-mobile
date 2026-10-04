@@ -65,7 +65,7 @@
       ${cover ? `<div class="pod sh-group">
         <div class="pod-kicker" style="margin-bottom:6px;">Logbook</div>
         <button type="button" class="sh-row sh-row--btn" data-logbook-edit>
-          <span class="sh-row-label">Name &amp; cover</span>
+          <span class="sh-row-label">Name &amp; app colour</span>
           <span class="sh-row-sub">${_esc(cover.displayName)}</span>
           <span class="sh-row-val"><span class="lb-dot" style="background:${_esc(coverBg)}"></span></span>
         </button>

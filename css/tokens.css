@@ -16,15 +16,15 @@
   --ground-mid-mobile:   #0a120e;
   --ground-mid-desktop:  #080d0a;
   --wash-mobile: radial-gradient(150% 92% at 50% -6%,
-    rgba(52, 122, 88, 0.55) 0%,
-    rgba(35, 84, 62, 0.42) 26%,
-    rgba(20, 44, 33, 0.5) 52%,
+    rgba(var(--acc-347a58), 0.55) 0%,
+    rgba(var(--acc-23543e), 0.42) 26%,
+    rgba(var(--acc-142c21), 0.5) 52%,
     var(--ground-mid-mobile) 74%,
     var(--ground) 100%);
   --wash-desktop: radial-gradient(120% 80% at 18% -18%,
-    rgba(52, 122, 88, 0.40) 0%,
-    rgba(28, 68, 50, 0.30) 30%,
-    rgba(14, 30, 22, 0.50) 58%,
+    rgba(var(--acc-347a58), 0.40) 0%,
+    rgba(var(--acc-1c4432), 0.30) 30%,
+    rgba(var(--acc-0e1e16), 0.50) 58%,
     var(--ground-mid-desktop) 80%,
     var(--ground) 100%);
 
@@ -33,8 +33,8 @@
   --surface-bg:     #0e1411;
   --card-bg:        #121b17;
   --elevated-bg:    #18231e;
-  --primary:        #2f8a63;
-  --primary-dark:   #236b4e;
+  --primary:        var(--green-60);
+  --primary-dark:   var(--green-50);
   /* --primary as a text colour is under 4.5:1 on cards; use this for green text */
   --primary-text:   #42a679;
   --text-color:     #f4f7f5;
@@ -95,8 +95,8 @@
   --surface-navbar:    rgba(14, 20, 17, 0.95);
   --surface-well:      #120d05;
   --surface-hatch: repeating-linear-gradient(135deg, #151c18, #151c18 6px, #121815 6px, #121815 12px);
-  --pod-bg-hero:       linear-gradient(168deg, rgba(22, 36, 28, 0.94), rgba(12, 18, 15, 0.985));
-  --pod-bg-hero-alt:   linear-gradient(168deg, rgba(22, 36, 28, 0.92), rgba(12, 18, 15, 0.985));
+  --pod-bg-hero:       linear-gradient(168deg, rgba(var(--acc-16241c), 0.94), rgba(12, 18, 15, 0.985));
+  --pod-bg-hero-alt:   linear-gradient(168deg, rgba(var(--acc-16241c), 0.92), rgba(12, 18, 15, 0.985));
   --pod-bevel:         inset 0 1px 0 rgba(255, 255, 255, 0.038);
 
   /* ── Modernist redesign — borders (roles, per mockup frequency) ── */
@@ -106,8 +106,8 @@
   --border-chip:             rgba(116, 138, 126, 0.24); /* chip outline */
   --border-soft:             rgba(116, 138, 126, 0.18); /* soft inner */
   --border-nav:              rgba(116, 138, 126, 0.22); /* nav bar */
-  --border-featured:         rgba(74, 132, 102, 0.30);  /* featured pod */
-  --border-featured-strong:  rgba(74, 132, 102, 0.42);
+  --border-featured:         rgba(var(--acc-4a8466), 0.30);  /* featured pod */
+  --border-featured-strong:  rgba(var(--acc-4a8466), 0.42);
   --border-brass:            rgba(168, 124, 56, 0.38);
   --border-alert:            rgba(158, 50, 65, 0.42);
   --border-hover:            rgba(116, 138, 126, 0.28);
@@ -129,19 +129,81 @@
   --green-30:  #17472f; /* deep */
   --green-20:  #143c2b; /* deepest */
   --label-on-green: #050c08;
+
+  /* RGB channels of every green the stylesheets used as a literal, named
+     after the Forest value (darkest first). Use as rgba(var(--acc-2f8a63), 0.2). */
+  --acc-060c09: 6, 12, 9;
+  --acc-070c0a: 7, 12, 10;
+  --acc-060d0a: 6, 13, 10;
+  --acc-0b130d: 11, 19, 13;
+  --acc-0b1510: 11, 21, 16;
+  --acc-0c1511: 12, 21, 17;
+  --acc-0e1e16: 14, 30, 22;
+  --acc-0f2318: 15, 35, 24;
+  --acc-0f2419: 15, 36, 25;
+  --acc-16241c: 22, 36, 28;
+  --acc-10261b: 16, 38, 27;
+  --acc-15291f: 21, 41, 31;
+  --acc-142c21: 20, 44, 33;
+  --acc-173729: 23, 55, 41;
+  --acc-1e382e: 30, 56, 46;
+  --acc-143d2c: 20, 61, 44;
+  --acc-1c4432: 28, 68, 50;
+  --acc-1e4b37: 30, 75, 55;
+  --acc-294a3d: 41, 74, 61;
+  --acc-23543e: 35, 84, 62;
+  --acc-1a5c3f: 26, 92, 63;
+  --acc-1f5c43: 31, 92, 67;
+  --acc-265c44: 38, 92, 68;
+  --acc-245f47: 36, 95, 71;
+  --acc-1f6a49: 31, 106, 73;
+  --acc-2b6e52: 43, 110, 82;
+  --acc-257150: 37, 113, 80;
+  --acc-2c7754: 44, 119, 84;
+  --acc-347a58: 52, 122, 88;
+  --acc-2d7d5b: 45, 125, 91;
+  --acc-2e7d5b: 46, 125, 91;
+  --acc-247f58: 36, 127, 88;
+  --acc-27865d: 39, 134, 93;
+  --acc-4a8466: 74, 132, 102;
+  --acc-2f8a63: 47, 138, 99;
+  --acc-2a8c5f: 42, 140, 95;
+  --acc-2f8c63: 47, 140, 99;
+  --acc-25935f: 37, 147, 95;
+  --acc-569273: 86, 146, 115;
+  --acc-2ea043: 46, 160, 67;
+  --acc-3d9d73: 61, 157, 115;
+  --acc-44a271: 68, 162, 113;
+  --acc-38a870: 56, 168, 112;
+  --acc-4da87a: 77, 168, 122;
+  --acc-5fa87e: 95, 168, 126;
+  --acc-5ead83: 94, 173, 131;
+  --acc-6fae8b: 111, 174, 139;
+  --acc-56b486: 86, 180, 134;
+  --acc-4db77b: 77, 183, 123;
+  --acc-4ec086: 78, 192, 134;
+  --acc-53c284: 83, 194, 132;
+  --acc-2ecc71: 46, 204, 113;
+  --acc-8ec2a4: 142, 194, 164;
+  --acc-6fca9c: 111, 202, 156;
+  --acc-80caa4: 128, 202, 164;
+  --acc-52d68a: 82, 214, 138;
+  --acc-8ce6b5: 140, 230, 181;
+  --acc-eafaf1: 234, 250, 241;
+  --acc-ecfff4: 236, 255, 244;
   --nav-label-active-desktop: #eafaf1;
 
-  --fill-btn-primary-mobile:  linear-gradient(135deg, #2f8a63, #236b4e 58%, #17472f);
-  --fill-btn-primary-desktop: linear-gradient(135deg, #2f8a63, #236b4e 60%, #17472f);
-  --fill-nav-center:          linear-gradient(135deg, #3d9d73, #236b4e 60%, #143c2b);
-  --fill-avatar:               linear-gradient(150deg, #3d9d73, #17472f);
-  --fill-avatar-alt:           linear-gradient(150deg, #3d9d73, #1a5138);
-  --fill-meter-a:               linear-gradient(90deg, #2f8a63, #6fae8b);
-  --fill-meter-b:               linear-gradient(90deg, #236b4e, #6fae8b);
-  --fill-bar-a:                 linear-gradient(180deg, #3f7f5f, #1d5039);
-  --fill-bar-b:                 linear-gradient(180deg, #6fae8b, #236b4e);
-  --fill-bar-c:                 linear-gradient(180deg, #3d9d73, #1d5039);
-  --glow-live:                  0 0 11px #6fae8b;
+  --fill-btn-primary-mobile:  linear-gradient(135deg, var(--green-60), var(--green-50) 58%, var(--green-30));
+  --fill-btn-primary-desktop: linear-gradient(135deg, var(--green-60), var(--green-50) 60%, var(--green-30));
+  --fill-nav-center:          linear-gradient(135deg, var(--green-70), var(--green-50) 60%, var(--green-20));
+  --fill-avatar:               linear-gradient(150deg, var(--green-70), var(--green-30));
+  --fill-avatar-alt:           linear-gradient(150deg, var(--green-70), var(--green-35));
+  --fill-meter-a:               linear-gradient(90deg, var(--green-60), var(--green-90));
+  --fill-meter-b:               linear-gradient(90deg, var(--green-50), var(--green-90));
+  --fill-bar-a:                 linear-gradient(180deg, var(--green-65), var(--green-40));
+  --fill-bar-b:                 linear-gradient(180deg, var(--green-90), var(--green-50));
+  --fill-bar-c:                 linear-gradient(180deg, var(--green-70), var(--green-40));
+  --glow-live:                  0 0 11px var(--green-90);
 
   /* ── Modernist redesign — pills (legacy aliases) ──────────────── */
   --pill-bg-active:    var(--fill-btn-primary-desktop);
@@ -186,8 +248,12 @@
   --fill-avatar-flag:     linear-gradient(150deg, #9e3241, #61202c);
   --fill-avatar-flag-alt: linear-gradient(150deg, #9e3241, #6e2130);
 
-  /* ── Modernist redesign — positive status (alias) ─────────────── */
-  --positive-text: var(--green-90);
+  /* ── Positive status — fixed green ─────────────────────────────
+     Gains, PRs and "good" states stay green whichever app colour the
+     user picks, so good news never reads as a warning. */
+  --positive-text:   #6fae8b;
+  --positive-strong: #3d9d73;
+  --positive-light:  #8ec2a4;
 
   /* ── Modernist redesign — text ramp (in order of use frequency) ── */
   --text-label:     #6d8076; /* eyebrow labels, inactive nav */
@@ -218,4 +284,389 @@ body.theme-neon {
   --card-bg:      #001100;
   --border-color: #39FF14;
   --sidebar-bg:   #003300;
+}
+
+/* ── App colour (accent) ─────────────────────────────────────────
+   src/js/logbook-cover.js sets data-accent on <html>. Each block swaps
+   the green ramp for the same ramp in another hue, keeping every
+   shade's perceived lightness (OKLCH L) so contrast stays the same.
+   Everything built on --green-*, --primary* and --acc-* follows;
+   --positive-*, brass and red stay put. Forest is the :root default.
+   The variables are set on <html> itself so tokens defined there in
+   terms of the ramp (--primary, --fill-*, --wash-*) resolve to the
+   new hue. */
+
+:root[data-accent="teal"] {
+  --green-100: #7dc2c5;
+  --green-90: #57aeb2;
+  --green-80: #368f94;
+  --green-70: #0e9ba1;
+  --green-65: #207e83;
+  --green-60: #03888d;
+  --green-50: #00696e;
+  --green-40: #014f53;
+  --green-35: #025053;
+  --green-30: #044649;
+  --green-20: #003c3e;
+  --primary-text: #0fa4ab;
+  --nav-label-active-desktop: #e6fafb;
+  --acc-060c09: 5, 12, 12;
+  --acc-070c0a: 6, 12, 12;
+  --acc-060d0a: 5, 13, 13;
+  --acc-0b130d: 7, 19, 20;
+  --acc-0b1510: 8, 21, 22;
+  --acc-0c1511: 10, 21, 21;
+  --acc-0e1e16: 9, 30, 31;
+  --acc-0f2318: 6, 35, 36;
+  --acc-0f2419: 6, 36, 37;
+  --acc-16241c: 17, 36, 37;
+  --acc-10261b: 7, 38, 39;
+  --acc-15291f: 14, 41, 42;
+  --acc-142c21: 12, 44, 45;
+  --acc-173729: 11, 55, 57;
+  --acc-1e382e: 24, 56, 57;
+  --acc-143d2c: 0, 61, 63;
+  --acc-1c4432: 9, 68, 70;
+  --acc-1e4b37: 7, 75, 78;
+  --acc-294a3d: 33, 74, 76;
+  --acc-23543e: 10, 83, 87;
+  --acc-1a5c3f: 6, 90, 94;
+  --acc-1f5c43: 5, 91, 95;
+  --acc-265c44: 9, 91, 95;
+  --acc-245f47: 4, 94, 98;
+  --acc-1f6a49: 7, 104, 108;
+  --acc-2b6e52: 2, 109, 114;
+  --acc-257150: 0, 111, 116;
+  --acc-2c7754: 10, 117, 122;
+  --acc-347a58: 12, 121, 126;
+  --acc-2d7d5b: 4, 123, 128;
+  --acc-2e7d5b: 7, 123, 128;
+  --acc-247f58: 3, 124, 129;
+  --acc-27865d: 4, 131, 136;
+  --acc-4a8466: 51, 132, 136;
+  --acc-2f8a63: 3, 136, 141;
+  --acc-2a8c5f: 12, 136, 142;
+  --acc-2f8c63: 10, 137, 143;
+  --acc-25935f: 11, 142, 148;
+  --acc-569273: 64, 146, 150;
+  --acc-2ea043: 4, 153, 160;
+  --acc-3d9d73: 14, 155, 161;
+  --acc-44a271: 19, 160, 166;
+  --acc-38a870: 13, 164, 171;
+  --acc-4da87a: 6, 167, 174;
+  --acc-5fa87e: 58, 168, 173;
+  --acc-5ead83: 57, 172, 178;
+  --acc-6fae8b: 87, 174, 178;
+  --acc-56b486: 33, 179, 186;
+  --acc-4db77b: 16, 180, 188;
+  --acc-4ec086: 7, 189, 197;
+  --acc-53c284: 26, 191, 199;
+  --acc-2ecc71: 10, 196, 204;
+  --acc-8ec2a4: 125, 194, 197;
+  --acc-6fca9c: 72, 201, 208;
+  --acc-80caa4: 103, 201, 207;
+  --acc-52d68a: 8, 210, 218;
+  --acc-8ce6b5: 104, 229, 236;
+  --acc-eafaf1: 230, 250, 251;
+  --acc-ecfff4: 233, 254, 255;
+}
+
+:root[data-accent="ocean"] {
+  --green-100: #8db9e0;
+  --green-90: #6ea4d1;
+  --green-80: #5186b2;
+  --green-70: #438fca;
+  --green-65: #4075a0;
+  --green-60: #367db4;
+  --green-50: #2a618b;
+  --green-40: #204868;
+  --green-35: #1d496b;
+  --green-30: #17405f;
+  --green-20: #17364f;
+  --primary-text: #4897d5;
+  --nav-label-active-desktop: #edf7ff;
+  --acc-060c09: 6, 11, 15;
+  --acc-070c0a: 7, 11, 15;
+  --acc-060d0a: 6, 12, 17;
+  --acc-0b130d: 10, 18, 24;
+  --acc-0b1510: 11, 19, 26;
+  --acc-0c1511: 13, 20, 26;
+  --acc-0e1e16: 14, 27, 38;
+  --acc-0f2318: 15, 32, 46;
+  --acc-0f2419: 15, 33, 47;
+  --acc-16241c: 22, 34, 44;
+  --acc-10261b: 16, 35, 49;
+  --acc-15291f: 21, 38, 52;
+  --acc-142c21: 21, 40, 56;
+  --acc-173729: 25, 50, 71;
+  --acc-1e382e: 33, 52, 68;
+  --acc-143d2c: 23, 55, 80;
+  --acc-1c4432: 30, 62, 87;
+  --acc-1e4b37: 33, 68, 97;
+  --acc-294a3d: 44, 69, 90;
+  --acc-23543e: 38, 77, 108;
+  --acc-1a5c3f: 30, 82, 122;
+  --acc-1f5c43: 36, 83, 120;
+  --acc-265c44: 41, 84, 118;
+  --acc-245f47: 41, 86, 122;
+  --acc-1f6a49: 35, 95, 140;
+  --acc-2b6e52: 49, 100, 141;
+  --acc-257150: 42, 102, 148;
+  --acc-2c7754: 47, 108, 155;
+  --acc-347a58: 54, 111, 157;
+  --acc-2d7d5b: 51, 113, 162;
+  --acc-2e7d5b: 52, 113, 162;
+  --acc-247f58: 42, 114, 168;
+  --acc-27865d: 45, 120, 177;
+  --acc-4a8466: 75, 123, 163;
+  --acc-2f8a63: 54, 125, 180;
+  --acc-2a8c5f: 46, 126, 185;
+  --acc-2f8c63: 53, 126, 183;
+  --acc-25935f: 38, 131, 198;
+  --acc-569273: 87, 136, 178;
+  --acc-2ea043: 9, 141, 221;
+  --acc-3d9d73: 67, 143, 202;
+  --acc-44a271: 67, 147, 210;
+  --acc-38a870: 55, 151, 222;
+  --acc-4da87a: 78, 154, 214;
+  --acc-5fa87e: 93, 156, 209;
+  --acc-5ead83: 94, 160, 215;
+  --acc-6fae8b: 110, 164, 209;
+  --acc-56b486: 88, 165, 227;
+  --acc-4db77b: 71, 166, 239;
+  --acc-4ec086: 78, 174, 249;
+  --acc-53c284: 78, 177, 253;
+  --acc-2ecc71: 85, 181, 255;
+  --acc-8ec2a4: 141, 185, 224;
+  --acc-6fca9c: 113, 188, 249;
+  --acc-80caa4: 129, 190, 242;
+  --acc-52d68a: 118, 192, 254;
+  --acc-8ce6b5: 166, 213, 255;
+  --acc-eafaf1: 237, 247, 255;
+  --acc-ecfff4: 245, 250, 255;
+}
+
+:root[data-accent="indigo"] {
+  --green-100: #a5b0e7;
+  --green-90: #8c99da;
+  --green-80: #707bba;
+  --green-70: #7280d5;
+  --green-65: #606ba8;
+  --green-60: #636fbe;
+  --green-50: #4c5693;
+  --green-40: #39416e;
+  --green-35: #394171;
+  --green-30: #313864;
+  --green-20: #2a3053;
+  --primary-text: #7988e1;
+  --nav-label-active-desktop: #f2f5ff;
+  --acc-060c09: 9, 10, 16;
+  --acc-070c0a: 9, 10, 15;
+  --acc-060d0a: 9, 11, 18;
+  --acc-0b130d: 14, 16, 26;
+  --acc-0b1510: 16, 18, 28;
+  --acc-0c1511: 16, 18, 27;
+  --acc-0e1e16: 22, 25, 41;
+  --acc-0f2318: 25, 28, 48;
+  --acc-0f2419: 25, 29, 50;
+  --acc-16241c: 28, 31, 46;
+  --acc-10261b: 27, 31, 52;
+  --acc-15291f: 31, 35, 54;
+  --acc-142c21: 32, 37, 59;
+  --acc-173729: 40, 45, 74;
+  --acc-1e382e: 43, 48, 72;
+  --acc-143d2c: 43, 49, 85;
+  --acc-1c4432: 49, 56, 92;
+  --acc-1e4b37: 54, 61, 102;
+  --acc-294a3d: 58, 64, 94;
+  --acc-23543e: 61, 69, 114;
+  --acc-1a5c3f: 64, 73, 129;
+  --acc-1f5c43: 66, 74, 126;
+  --acc-265c44: 67, 76, 124;
+  --acc-245f47: 69, 78, 129;
+  --acc-1f6a49: 74, 84, 149;
+  --acc-2b6e52: 80, 90, 149;
+  --acc-257150: 80, 91, 156;
+  --acc-2c7754: 85, 96, 164;
+  --acc-347a58: 89, 100, 165;
+  --acc-2d7d5b: 90, 102, 171;
+  --acc-2e7d5b: 90, 102, 171;
+  --acc-247f58: 89, 101, 178;
+  --acc-27865d: 94, 107, 187;
+  --acc-4a8466: 102, 113, 170;
+  --acc-2f8a63: 99, 111, 190;
+  --acc-2a8c5f: 98, 111, 196;
+  --acc-2f8c63: 100, 113, 193;
+  --acc-25935f: 101, 115, 210;
+  --acc-569273: 115, 127, 186;
+  --acc-2ea043: 105, 118, 247;
+  --acc-3d9d73: 114, 128, 213;
+  --acc-44a271: 118, 132, 221;
+  --acc-38a870: 119, 134, 235;
+  --acc-4da87a: 125, 139, 225;
+  --acc-5fa87e: 130, 144, 218;
+  --acc-5ead83: 133, 147, 225;
+  --acc-6fae8b: 140, 153, 218;
+  --acc-56b486: 135, 151, 239;
+  --acc-4db77b: 132, 149, 253;
+  --acc-4ec086: 142, 158, 255;
+  --acc-53c284: 144, 161, 253;
+  --acc-2ecc71: 149, 165, 253;
+  --acc-8ec2a4: 165, 176, 231;
+  --acc-6fca9c: 158, 174, 254;
+  --acc-80caa4: 163, 178, 251;
+  --acc-52d68a: 164, 179, 255;
+  --acc-8ce6b5: 193, 204, 255;
+  --acc-eafaf1: 242, 245, 255;
+  --acc-ecfff4: 248, 249, 255;
+}
+
+:root[data-accent="plum"] {
+  --green-100: #cca4ce;
+  --green-90: #ba8bbc;
+  --green-80: #9b6e9d;
+  --green-70: #ac6faf;
+  --green-65: #8a5e8c;
+  --green-60: #985f9b;
+  --green-50: #754978;
+  --green-40: #58375a;
+  --green-35: #5a365c;
+  --green-30: #4f2f51;
+  --green-20: #422943;
+  --primary-text: #b675b9;
+  --nav-label-active-desktop: #fdf1fd;
+  --acc-060c09: 13, 9, 13;
+  --acc-070c0a: 13, 9, 13;
+  --acc-060d0a: 14, 9, 14;
+  --acc-0b130d: 21, 14, 21;
+  --acc-0b1510: 23, 16, 23;
+  --acc-0c1511: 23, 16, 23;
+  --acc-0e1e16: 33, 21, 33;
+  --acc-0f2318: 39, 24, 39;
+  --acc-0f2419: 40, 25, 40;
+  --acc-16241c: 39, 28, 39;
+  --acc-10261b: 42, 26, 43;
+  --acc-15291f: 45, 30, 45;
+  --acc-142c21: 48, 32, 49;
+  --acc-173729: 60, 39, 61;
+  --acc-1e382e: 60, 43, 61;
+  --acc-143d2c: 67, 41, 69;
+  --acc-1c4432: 74, 48, 76;
+  --acc-1e4b37: 82, 53, 84;
+  --acc-294a3d: 79, 57, 80;
+  --acc-23543e: 92, 60, 94;
+  --acc-1a5c3f: 102, 61, 104;
+  --acc-1f5c43: 101, 63, 103;
+  --acc-265c44: 100, 65, 102;
+  --acc-245f47: 104, 67, 106;
+  --acc-1f6a49: 117, 71, 120;
+  --acc-2b6e52: 120, 78, 122;
+  --acc-257150: 124, 77, 127;
+  --acc-2c7754: 131, 82, 134;
+  --acc-347a58: 134, 86, 136;
+  --acc-2d7d5b: 137, 87, 140;
+  --acc-2e7d5b: 137, 87, 140;
+  --acc-247f58: 140, 85, 144;
+  --acc-27865d: 148, 90, 151;
+  --acc-4a8466: 142, 101, 144;
+  --acc-2f8a63: 152, 95, 155;
+  --acc-2a8c5f: 155, 93, 159;
+  --acc-2f8c63: 154, 96, 157;
+  --acc-25935f: 164, 95, 168;
+  --acc-569273: 157, 114, 159;
+  --acc-2ea043: 185, 91, 192;
+  --acc-3d9d73: 172, 111, 175;
+  --acc-44a271: 178, 113, 182;
+  --acc-38a870: 186, 113, 190;
+  --acc-4da87a: 183, 121, 187;
+  --acc-5fa87e: 182, 128, 185;
+  --acc-5ead83: 187, 131, 190;
+  --acc-6fae8b: 186, 139, 188;
+  --acc-56b486: 196, 132, 199;
+  --acc-4db77b: 202, 127, 206;
+  --acc-4ec086: 211, 134, 215;
+  --acc-53c284: 214, 135, 218;
+  --acc-2ecc71: 231, 125, 238;
+  --acc-8ec2a4: 204, 164, 206;
+  --acc-6fca9c: 218, 154, 221;
+  --acc-80caa4: 215, 162, 218;
+  --acc-52d68a: 238, 144, 243;
+  --acc-8ce6b5: 247, 181, 250;
+  --acc-eafaf1: 253, 241, 254;
+  --acc-ecfff4: 255, 246, 255;
+}
+
+:root[data-accent="copper"] {
+  --green-100: #d9a88d;
+  --green-90: #c88f6f;
+  --green-80: #a97152;
+  --green-70: #be7347;
+  --green-65: #976142;
+  --green-60: #a8633a;
+  --green-50: #824d2d;
+  --green-40: #623922;
+  --green-35: #64391f;
+  --green-30: #58311a;
+  --green-20: #4a2b18;
+  --primary-text: #c87a4c;
+  --nav-label-active-desktop: #fff2ec;
+  --acc-060c09: 15, 9, 6;
+  --acc-070c0a: 14, 10, 7;
+  --acc-060d0a: 16, 10, 6;
+  --acc-0b130d: 23, 15, 10;
+  --acc-0b1510: 25, 16, 11;
+  --acc-0c1511: 25, 17, 12;
+  --acc-0e1e16: 36, 22, 15;
+  --acc-0f2318: 43, 25, 15;
+  --acc-0f2419: 44, 26, 16;
+  --acc-16241c: 42, 29, 22;
+  --acc-10261b: 46, 28, 17;
+  --acc-15291f: 49, 31, 22;
+  --acc-142c21: 53, 33, 22;
+  --acc-173729: 66, 41, 26;
+  --acc-1e382e: 65, 44, 33;
+  --acc-143d2c: 75, 43, 25;
+  --acc-1c4432: 82, 50, 31;
+  --acc-1e4b37: 91, 55, 34;
+  --acc-294a3d: 86, 59, 44;
+  --acc-23543e: 101, 62, 39;
+  --acc-1a5c3f: 114, 64, 34;
+  --acc-1f5c43: 112, 66, 39;
+  --acc-265c44: 111, 68, 43;
+  --acc-245f47: 115, 70, 43;
+  --acc-1f6a49: 131, 74, 40;
+  --acc-2b6e52: 133, 81, 51;
+  --acc-257150: 138, 80, 46;
+  --acc-2c7754: 145, 86, 50;
+  --acc-347a58: 147, 90, 57;
+  --acc-2d7d5b: 152, 90, 55;
+  --acc-2e7d5b: 152, 91, 55;
+  --acc-247f58: 156, 89, 48;
+  --acc-27865d: 165, 94, 51;
+  --acc-4a8466: 155, 104, 76;
+  --acc-2f8a63: 168, 99, 58;
+  --acc-2a8c5f: 173, 98, 52;
+  --acc-2f8c63: 171, 100, 57;
+  --acc-25935f: 183, 100, 48;
+  --acc-569273: 170, 117, 87;
+  --acc-2ea043: 208, 99, 11;
+  --acc-3d9d73: 190, 115, 71;
+  --acc-44a271: 197, 118, 72;
+  --acc-38a870: 207, 118, 63;
+  --acc-4da87a: 202, 126, 81;
+  --acc-5fa87e: 198, 132, 94;
+  --acc-5ead83: 204, 135, 96;
+  --acc-6fae8b: 200, 143, 111;
+  --acc-56b486: 215, 136, 91;
+  --acc-4db77b: 224, 132, 78;
+  --acc-4ec086: 233, 140, 84;
+  --acc-53c284: 236, 141, 84;
+  --acc-2ecc71: 255, 135, 57;
+  --acc-8ec2a4: 217, 168, 141;
+  --acc-6fca9c: 237, 159, 114;
+  --acc-80caa4: 232, 166, 130;
+  --acc-52d68a: 254, 157, 100;
+  --acc-8ce6b5: 255, 191, 156;
+  --acc-eafaf1: 255, 242, 236;
+  --acc-ecfff4: 255, 248, 244;
 }
