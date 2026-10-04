@@ -335,3 +335,11 @@
   #programTab .pbv2-goal-grid { grid-template-columns: 1fr; }
   #programTab .pbv2-step-label { font-size: 10px; letter-spacing: 0.06em; }
 }
+
+/* Four top tabs (Build · My Programs · Library · My Plan) don't fit a phone
+   width with icons; drop the icons and tighten the pills there. */
+@media (max-width: 480px) {
+  #programTab .prog-top-nav { gap: 6px; }
+  #programTab .prog-top-btn { padding: 0 6px; gap: 0; font-size: 12px; letter-spacing: 0.06em; min-width: 0; }
+  #programTab .prog-top-btn .ui-icon { display: none; }
+}

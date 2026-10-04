@@ -875,8 +875,11 @@ function renderPlanActions(plan) {
     : plan.status === 'approved'
       ? '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="publishMasterPlan()">Publish to client</button>'
       : '';
+  const statusText = plan.status === 'published' && plan.approval?.publishedAt
+    ? 'published ' + plan.approval.publishedAt.slice(0, 10)
+    : plan.status;
   cur.innerHTML = '<p style="margin:0 0 6px;"><strong>' + escapeHtml(plan.package.name) + '</strong> · '
-    + escapeHtml(plan.status) + (plan.approval?.publishedAt ? ' · published ' + escapeHtml(plan.approval.publishedAt.slice(0, 10)) : '') + '</p>'
+    + escapeHtml(statusText) + '</p>'
     + (actions ? '<div class="detail-breadcrumb-actions">' + actions + '</div>' : '');
 }
 
