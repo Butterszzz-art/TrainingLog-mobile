@@ -2358,6 +2358,7 @@
       <button class="prog-top-btn active" onclick="showProgramView('build')"><span class="ui-icon" data-icon="settings"></span> Build</button>
       <button class="prog-top-btn" onclick="showProgramView('list')"><span class="ui-icon" data-icon="clipboard"></span> My Programs</button>
       <button class="prog-top-btn" onclick="showProgramView('library')"><span class="ui-icon" data-icon="bookOpen"></span> Library</button>
+      <button class="prog-top-btn" onclick="showProgramView('plan')"><span class="ui-icon" data-icon="calendar"></span> My Plan</button>
     </nav>
     <div id="progAiGenBtnWrap" style="padding:10px 12px 0;">
       <button id="progAiGenBtn" onclick="openProgAiGen()" class="cta-capsule" style="justify-content:center;gap:8px;">
@@ -2385,6 +2386,9 @@
 
     <!-- Library view: ready-made programs + guides (Pro) -->
     <div id="progLibraryView" style="display:none;"></div>
+
+    <!-- My Plan: the master plan the coach published (src/js/my-plan.js) -->
+    <div id="progPlanView" style="display:none;padding:12px;"></div>
 
     <select id="programTemplateSelect" style="display:none;"></select>
   </div>
@@ -4039,6 +4043,8 @@
 <script src="src/js/programBuilderV2Core.js"></script>
 
 <!-- Then V2 UI -->
+<script src="src/js/plan-preview.js"></script>
+<script src="src/js/my-plan.js"></script>
 <script src="src/js/ProgramTabV2.js"></script>
 <script src="src/js/premium-library.js"></script>
 <script>

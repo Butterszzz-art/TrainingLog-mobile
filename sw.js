@@ -54,6 +54,8 @@ const APP_SHELL = [
   '/src/js/weekly-recap.js',
   '/src/js/challenges.js',
   '/src/js/progress-report.js',
+  '/src/js/plan-preview.js',
+  '/src/js/my-plan.js',
   '/src/js/ProgramTabV2.js',
   '/src/js/programBuilderV2Core.js',
   '/src/js/premium-library.js',

@@ -1310,12 +1310,19 @@
     const builderContainer = document.getElementById('programBuilderContainer');
     const listView         = document.getElementById('progListView');
     const libraryView      = document.getElementById('progLibraryView');
+    const planView         = document.getElementById('progPlanView');
     const btns             = document.querySelectorAll('#progTopNav .prog-top-btn');
     const setActive = (n) => btns.forEach((b, i) => b.classList.toggle('active', i === n));
 
     if (libraryView) libraryView.style.display = view === 'library' ? '' : 'none';
+    if (planView) planView.style.display = view === 'plan' ? '' : 'none';
 
-    if (view === 'library') {
+    if (view === 'plan') {
+      if (builderContainer) builderContainer.style.display = 'none';
+      if (listView) listView.style.display = 'none';
+      setActive(3);
+      if (window.MyPlan) window.MyPlan.showMyPlan(planView);
+    } else if (view === 'library') {
       if (builderContainer) builderContainer.style.display = 'none';
       if (listView) listView.style.display = 'none';
       setActive(2);

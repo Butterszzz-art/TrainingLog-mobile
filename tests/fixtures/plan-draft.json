@@ -1,0 +1,944 @@
+{
+  "schema": "pocketcoach.plan/1",
+  "planId": "pln_00000000-0000-4000-8000-000000000001",
+  "status": "draft",
+  "version": 1,
+  "supersedes": null,
+  "client": {
+    "uid": "u1",
+    "coachUid": "c1",
+    "leadId": null
+  },
+  "package": {
+    "id": "physique_28",
+    "name": "Physique Plan",
+    "tier": "medium",
+    "totalWeeks": 28,
+    "billing": {
+      "blockWeeks": 4,
+      "blocks": 7,
+      "startDate": "2026-10-12"
+    }
+  },
+  "ruleVersion": "pocketcoach-rules@0.1.0",
+  "unverifiedRules": [
+    "nutr.bmr.method",
+    "nutr.pal.table",
+    "nutr.tef.factor",
+    "nutr.training_day.expenditure",
+    "nutr.energy.factor",
+    "nutr.protein.g_per_kg",
+    "nutr.fat.pct_ree",
+    "nutr.meals.count",
+    "nutr.meals.post_training_protein",
+    "train.volume.henselmans",
+    "train.status.from_experience",
+    "train.split.by_frequency",
+    "train.volume.max_per_session",
+    "train.progression.scheme",
+    "train.deload.policy",
+    "safety.deficit.max",
+    "safety.injury.conflicts",
+    "safety.sleep.min_hours"
+  ],
+  "inputsSnapshot": {
+    "gewicht": 84,
+    "vetpercentage": 18,
+    "geslacht": "man",
+    "trainingservaring": 3,
+    "activityLevel": "actief",
+    "trainingsdagenPerWeek": 4,
+    "apparatuur": []
+  },
+  "injuryConflicts": [
+    {
+      "oefening": "squat",
+      "reden": "Mogelijk risicovol bij gemelde klacht: \"knie\""
+    },
+    {
+      "oefening": "front squat",
+      "reden": "Mogelijk risicovol bij gemelde klacht: \"knie\""
+    },
+    {
+      "oefening": "lunges",
+      "reden": "Mogelijk risicovol bij gemelde klacht: \"knie\""
+    },
+    {
+      "oefening": "leg press",
+      "reden": "Mogelijk risicovol bij gemelde klacht: \"knie\""
+    },
+    {
+      "oefening": "leg extension",
+      "reden": "Mogelijk risicovol bij gemelde klacht: \"knie\""
+    },
+    {
+      "oefening": "bulgarian split squat",
+      "reden": "Mogelijk risicovol bij gemelde klacht: \"knie\""
+    }
+  ],
+  "phases": [
+    {
+      "phaseId": "ph1",
+      "order": 1,
+      "type": "build",
+      "goal": "spieropbouw",
+      "plannedStart": "2026-10-12",
+      "plannedEnd": "2027-01-31",
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 16
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "timeCap",
+            "weeks": 16,
+            "ruleId": "pkg.physique_28"
+          }
+        ]
+      },
+      "nutrition": {
+        "maintenanceKcal": 3484,
+        "bmr": 1858,
+        "restDay": {
+          "kcal": 3832,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 490
+        },
+        "trainingDay": {
+          "kcal": 4335,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 615.7
+        },
+        "ranges": {
+          "eiwit": {
+            "min": 134.4,
+            "praktisch": 151.2,
+            "maxSlank": 201.6
+          },
+          "vet": {
+            "min": 70.4,
+            "max": 140.8
+          },
+          "beoogdeInname": {
+            "min": 3684,
+            "max": 3984
+          },
+          "energyFactor": {
+            "type": "surplusKcal",
+            "min": 200,
+            "max": 500
+          }
+        },
+        "mealSplit": {
+          "rustdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 122.5,
+              "kcal": 928
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 122.5,
+              "kcal": 928
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 122.5,
+              "kcal": 988
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 122.5,
+              "kcal": 988
+            }
+          ],
+          "trainingsdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 153.9,
+              "kcal": 1053
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 153.9,
+              "kcal": 1053
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 153.9,
+              "kcal": 1114
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 153.9,
+              "kcal": 1114
+            }
+          ]
+        },
+        "settingsUsed": {
+          "trainingsdagenPerWeek": 4,
+          "trainingsduurMinuten": 60,
+          "MET": 5.7,
+          "pal": 1.55,
+          "tef": 1.1,
+          "energiebalansFactor": 1.1,
+          "eiwitFactor": 1.8,
+          "percentageVetVanREE": 0.4,
+          "aantalMaaltijden": 4,
+          "postTrainingBoost": 1.5
+        },
+        "provenance": {
+          "bmr": {
+            "value": 1858,
+            "ruleId": "nutr.bmr.method",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "pal": {
+            "value": 1.55,
+            "ruleId": "nutr.pal.table",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "tef": {
+            "value": 1.1,
+            "ruleId": "nutr.tef.factor",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "kcal": {
+            "value": 1.1,
+            "ruleId": "nutr.energy.factor",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "proteinG": {
+            "value": 1.8,
+            "ruleId": "nutr.protein.g_per_kg",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "fatG": {
+            "value": 0.4,
+            "ruleId": "nutr.fat.pct_ree",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "mealSplit": {
+            "value": 1.5,
+            "ruleId": "nutr.meals.post_training_protein",
+            "ruleVersion": 1,
+            "verified": false
+          }
+        }
+      },
+      "training": {
+        "split": {
+          "naam": "Upper / Lower",
+          "dagen": [
+            "Upper A",
+            "Lower A",
+            "Upper B",
+            "Lower B"
+          ],
+          "sessionsPerWeek": 4,
+          "muscleFrequency": 2,
+          "ruleId": "train.split.by_frequency"
+        },
+        "weeklySetsPerMuscle": {
+          "chest": 16,
+          "back": 16,
+          "shoulders": 16,
+          "biceps": 16,
+          "triceps": 16,
+          "quads": 16,
+          "hamstrings": 16,
+          "glutes": 16,
+          "calves": 16
+        },
+        "setsPerSession": 7.8,
+        "provenance": {
+          "weeklySetsPerMuscle": {
+            "value": 15.6,
+            "ruleId": "train.volume.henselmans",
+            "ruleVersion": 1,
+            "verified": false,
+            "inputs": {
+              "status": 2,
+              "female": 0,
+              "recovery": 1,
+              "energyFactor": 1.1,
+              "muscleFrequency": 2
+            }
+          },
+          "status": {
+            "value": 2,
+            "ruleId": "train.status.from_experience",
+            "ruleVersion": 1,
+            "verified": false
+          }
+        },
+        "progression": {
+          "scheme": "double_progression",
+          "repRange": [
+            6,
+            12
+          ],
+          "rir": [
+            3,
+            0
+          ],
+          "ruleId": "train.progression.scheme"
+        },
+        "deloads": {
+          "mode": "reactive",
+          "scope": "exercise",
+          "triggerStrengthLossPct": 2.5,
+          "ruleId": "train.deload.policy"
+        },
+        "programRef": null
+      },
+      "recovery": {
+        "sleepHoursFlagBelow": 6,
+        "ruleIds": [
+          "safety.sleep.min_hours"
+        ]
+      },
+      "redFlags": [
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"front squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"lunges\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"leg press\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"leg extension\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"bulgarian split squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        }
+      ]
+    },
+    {
+      "phaseId": "ph2",
+      "order": 2,
+      "type": "maintain",
+      "goal": "onderhoud",
+      "plannedStart": "2027-02-01",
+      "plannedEnd": "2027-02-28",
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 4
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "timeCap",
+            "weeks": 4,
+            "ruleId": "pkg.physique_28"
+          }
+        ]
+      },
+      "nutrition": {
+        "maintenanceKcal": 3484,
+        "bmr": 1858,
+        "restDay": {
+          "kcal": 3484,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 402.9
+        },
+        "trainingDay": {
+          "kcal": 3986,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 528.6
+        },
+        "ranges": {
+          "eiwit": {
+            "min": 134.4,
+            "praktisch": 151.2,
+            "maxSlank": 201.6
+          },
+          "vet": {
+            "min": 70.4,
+            "max": 140.8
+          },
+          "beoogdeInname": {
+            "min": 3379,
+            "max": 3588
+          },
+          "energyFactor": {
+            "type": "factor",
+            "min": 0.97,
+            "max": 1.03
+          }
+        },
+        "mealSplit": {
+          "rustdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 100.7,
+              "kcal": 841
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 100.7,
+              "kcal": 841
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 100.7,
+              "kcal": 901
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 100.7,
+              "kcal": 901
+            }
+          ],
+          "trainingsdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 132.2,
+              "kcal": 966
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 132.2,
+              "kcal": 966
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 132.2,
+              "kcal": 1027
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 132.2,
+              "kcal": 1027
+            }
+          ]
+        },
+        "settingsUsed": {
+          "trainingsdagenPerWeek": 4,
+          "trainingsduurMinuten": 60,
+          "MET": 5.7,
+          "pal": 1.55,
+          "tef": 1.1,
+          "energiebalansFactor": 1,
+          "eiwitFactor": 1.8,
+          "percentageVetVanREE": 0.4,
+          "aantalMaaltijden": 4,
+          "postTrainingBoost": 1.5
+        },
+        "provenance": {
+          "bmr": {
+            "value": 1858,
+            "ruleId": "nutr.bmr.method",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "pal": {
+            "value": 1.55,
+            "ruleId": "nutr.pal.table",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "tef": {
+            "value": 1.1,
+            "ruleId": "nutr.tef.factor",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "kcal": {
+            "value": 1,
+            "ruleId": "nutr.energy.factor",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "proteinG": {
+            "value": 1.8,
+            "ruleId": "nutr.protein.g_per_kg",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "fatG": {
+            "value": 0.4,
+            "ruleId": "nutr.fat.pct_ree",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "mealSplit": {
+            "value": 1.5,
+            "ruleId": "nutr.meals.post_training_protein",
+            "ruleVersion": 1,
+            "verified": false
+          }
+        }
+      },
+      "training": {
+        "split": {
+          "naam": "Upper / Lower",
+          "dagen": [
+            "Upper A",
+            "Lower A",
+            "Upper B",
+            "Lower B"
+          ],
+          "sessionsPerWeek": 4,
+          "muscleFrequency": 2,
+          "ruleId": "train.split.by_frequency"
+        },
+        "weeklySetsPerMuscle": {
+          "chest": 14,
+          "back": 14,
+          "shoulders": 14,
+          "biceps": 14,
+          "triceps": 14,
+          "quads": 14,
+          "hamstrings": 14,
+          "glutes": 14,
+          "calves": 14
+        },
+        "setsPerSession": 7.1,
+        "provenance": {
+          "weeklySetsPerMuscle": {
+            "value": 14.1,
+            "ruleId": "train.volume.henselmans",
+            "ruleVersion": 1,
+            "verified": false,
+            "inputs": {
+              "status": 2,
+              "female": 0,
+              "recovery": 1,
+              "energyFactor": 1,
+              "muscleFrequency": 2
+            }
+          },
+          "status": {
+            "value": 2,
+            "ruleId": "train.status.from_experience",
+            "ruleVersion": 1,
+            "verified": false
+          }
+        },
+        "progression": {
+          "scheme": "double_progression",
+          "repRange": [
+            6,
+            12
+          ],
+          "rir": [
+            3,
+            0
+          ],
+          "ruleId": "train.progression.scheme"
+        },
+        "deloads": {
+          "mode": "reactive",
+          "scope": "exercise",
+          "triggerStrengthLossPct": 2.5,
+          "ruleId": "train.deload.policy"
+        },
+        "programRef": null
+      },
+      "recovery": {
+        "sleepHoursFlagBelow": 6,
+        "ruleIds": [
+          "safety.sleep.min_hours"
+        ]
+      },
+      "redFlags": [
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"front squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"lunges\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"leg press\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"leg extension\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"bulgarian split squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        }
+      ]
+    },
+    {
+      "phaseId": "ph3",
+      "order": 3,
+      "type": "cut",
+      "goal": "vetverlies",
+      "plannedStart": "2027-03-01",
+      "plannedEnd": "2027-04-25",
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 8
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "target",
+            "metric": "bodyweightKg7dAvg",
+            "op": "<=",
+            "value": null,
+            "setBy": "coach",
+            "ruleId": "pkg.physique_28"
+          },
+          {
+            "kind": "timeCap",
+            "weeks": 8,
+            "ruleId": "pkg.physique_28"
+          }
+        ]
+      },
+      "nutrition": {
+        "maintenanceKcal": 3484,
+        "bmr": 1858,
+        "restDay": {
+          "kcal": 2787,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 228.8
+        },
+        "trainingDay": {
+          "kcal": 3290,
+          "proteinG": 151.2,
+          "fatG": 140.8,
+          "carbG": 354.4
+        },
+        "ranges": {
+          "eiwit": {
+            "min": 134.4,
+            "praktisch": 151.2,
+            "maxSlank": 201.6
+          },
+          "vet": {
+            "min": 70.4,
+            "max": 140.8
+          },
+          "beoogdeInname": {
+            "min": 2438,
+            "max": 3135
+          },
+          "energyFactor": {
+            "type": "factor",
+            "min": 0.7,
+            "max": 0.9
+          }
+        },
+        "mealSplit": {
+          "rustdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 57.2,
+              "kcal": 666
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 57.2,
+              "kcal": 666
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 57.2,
+              "kcal": 727
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 57.2,
+              "kcal": 727
+            }
+          ],
+          "trainingsdag": [
+            {
+              "maaltijd": 1,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 88.6,
+              "kcal": 792
+            },
+            {
+              "maaltijd": 2,
+              "postTraining": false,
+              "eiwit": 30.2,
+              "vet": 35.2,
+              "koolhydraten": 88.6,
+              "kcal": 792
+            },
+            {
+              "maaltijd": 3,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 88.6,
+              "kcal": 853
+            },
+            {
+              "maaltijd": 4,
+              "postTraining": true,
+              "eiwit": 45.4,
+              "vet": 35.2,
+              "koolhydraten": 88.6,
+              "kcal": 853
+            }
+          ]
+        },
+        "settingsUsed": {
+          "trainingsdagenPerWeek": 4,
+          "trainingsduurMinuten": 60,
+          "MET": 5.7,
+          "pal": 1.55,
+          "tef": 1.1,
+          "energiebalansFactor": 0.8,
+          "eiwitFactor": 1.8,
+          "percentageVetVanREE": 0.4,
+          "aantalMaaltijden": 4,
+          "postTrainingBoost": 1.5
+        },
+        "provenance": {
+          "bmr": {
+            "value": 1858,
+            "ruleId": "nutr.bmr.method",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "pal": {
+            "value": 1.55,
+            "ruleId": "nutr.pal.table",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "tef": {
+            "value": 1.1,
+            "ruleId": "nutr.tef.factor",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "kcal": {
+            "value": 0.8,
+            "ruleId": "nutr.energy.factor",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "proteinG": {
+            "value": 1.8,
+            "ruleId": "nutr.protein.g_per_kg",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "fatG": {
+            "value": 0.4,
+            "ruleId": "nutr.fat.pct_ree",
+            "ruleVersion": 1,
+            "verified": false
+          },
+          "mealSplit": {
+            "value": 1.5,
+            "ruleId": "nutr.meals.post_training_protein",
+            "ruleVersion": 1,
+            "verified": false
+          }
+        }
+      },
+      "training": {
+        "split": {
+          "naam": "Upper / Lower",
+          "dagen": [
+            "Upper A",
+            "Lower A",
+            "Upper B",
+            "Lower B"
+          ],
+          "sessionsPerWeek": 4,
+          "muscleFrequency": 2,
+          "ruleId": "train.split.by_frequency"
+        },
+        "weeklySetsPerMuscle": {
+          "chest": 11,
+          "back": 11,
+          "shoulders": 11,
+          "biceps": 11,
+          "triceps": 11,
+          "quads": 11,
+          "hamstrings": 11,
+          "glutes": 11,
+          "calves": 11
+        },
+        "setsPerSession": 5.7,
+        "provenance": {
+          "weeklySetsPerMuscle": {
+            "value": 11.3,
+            "ruleId": "train.volume.henselmans",
+            "ruleVersion": 1,
+            "verified": false,
+            "inputs": {
+              "status": 2,
+              "female": 0,
+              "recovery": 1,
+              "energyFactor": 0.8,
+              "muscleFrequency": 2
+            }
+          },
+          "status": {
+            "value": 2,
+            "ruleId": "train.status.from_experience",
+            "ruleVersion": 1,
+            "verified": false
+          }
+        },
+        "progression": {
+          "scheme": "double_progression",
+          "repRange": [
+            6,
+            12
+          ],
+          "rir": [
+            3,
+            0
+          ],
+          "ruleId": "train.progression.scheme"
+        },
+        "deloads": {
+          "mode": "reactive",
+          "scope": "exercise",
+          "triggerStrengthLossPct": 2.5,
+          "ruleId": "train.deload.policy"
+        },
+        "programRef": null
+      },
+      "recovery": {
+        "sleepHoursFlagBelow": 6,
+        "ruleIds": [
+          "safety.sleep.min_hours"
+        ]
+      },
+      "redFlags": [
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"front squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"lunges\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"leg press\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"leg extension\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        },
+        {
+          "niveau": "oranje",
+          "bericht": "Let op bij \"bulgarian split squat\": Mogelijk risicovol bij gemelde klacht: \"knie\"."
+        }
+      ]
+    }
+  ],
+  "overrides": [],
+  "adjustments": [],
+  "approval": {
+    "generatedAt": "2026-10-04T09:00:00.000Z",
+    "generatedBy": "plan-generator@1",
+    "approvedAt": null,
+    "approvedBy": null,
+    "publishedAt": null
+  }
+}
