@@ -4,8 +4,7 @@
   "description": "",
   "main": "archiveOldWorkouts.js",
   "scripts": {
-    "test": "jest",
-    "start": "node server.js"
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
