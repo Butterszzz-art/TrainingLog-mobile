@@ -40,56 +40,26 @@ npm install
 npm test
 ```
 
-## Server Configuration
+## Backend
 
-`server.js` exposes a `/config` endpoint that provides the Airtable credentials. Create a `.env` file with the following variables before starting the server. `CORS_ORIGINS` may list allowed origins separated by commas:
+The production API is the Express app in the separate `traininglog-backend`
+repository, deployed as the Firebase Cloud Function `api`
+(`https://us-central1-pocketcoach-280c4.cloudfunctions.net/api`). This repo has
+no server of its own: the web app, the native apps, `coach/` and `intake/` all
+call that URL (see `config.js` and `src/config/constants.js`).
 
-```bash
-AIRTABLE_TOKEN=yourTokenHere
-AIRTABLE_BASE_ID=yourBaseIdHere
-CORS_ORIGINS=https://your-site.github.io,https://your-pwa-origin
-```
+Never put API tokens or credentials in this repository. Server secrets live in
+the backend's Secret Manager; the front end only needs the public backend URL.
 
-Run the server with:
-
-```bash
-npm start
-```
-
-## Front-End Configuration
-
-The web app can optionally read Airtable credentials from a local
-`config.js` module. Copy `config.example.js` to `config.js` and fill in your
-values:
-`config.js` contains private credentials. The file is ignored by Git so you
-can keep your token out of version control.
-
-The web app reads Airtable credentials from a small `config.js` file at
-runtime. Copy `config.example.js` to `config.js` and fill in your values:
-
-```bash
-cp config.example.js config.js
-# edit config.js and set AIRTABLE_TOKEN and AIRTABLE_BASE_ID
-```
-
-The file exports two constants:
-
-```javascript
-window.SERVER_URL = 'https://us-central1-pocketcoach-280c4.cloudfunctions.net/api';
-window.airtableConfig = {
-  airtableToken: 'yourToken',
-  airtableBaseId: 'yourBase'
-};
-```
-
-You can override the backend URL by setting the `REACT_APP_BACKEND_URL`
-environment variable. When no backend is reachable, the page falls back to the
-values provided in `config.js`. During development you may want to point it at a
-local server by creating an `.env.development` file containing
+To point a local build at a local backend, create `.env.development` containing
 
 ```ini
 REACT_APP_BACKEND_URL=http://localhost:3000
 ```
+
+The AI coach chat route (`src/routes/coach.js`, `src/coach/`) is kept here with
+its tests until it is moved into the backend; the production backend does not
+serve it yet.
 
 ## Using the Rest-Pause/Drop-Set logger component
 
