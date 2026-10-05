@@ -154,7 +154,7 @@ describe('AI consent after the provider change', () => {
     const pending = w.fetch('https://api.test/api/ai/coach');
     await tick();
     expect(sent).toEqual([]);
-    expect(doc.querySelector('.ai-consent-sheet').textContent).toMatch(/may store your requests/);
+    expect(doc.querySelector('.ai-consent-sheet').textContent).toMatch(/Ollama first[\s\S]*OpenRouter[\s\S]*may store it/);
     doc.querySelector('.ai-consent-agree').click();
     expect((await pending).status).toBe(200);
   });
