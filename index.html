@@ -3154,6 +3154,7 @@
             <summary>
               <span class="ui-icon" data-icon="clipboard"></span> Meals
               <button type="button" onclick="event.preventDefault(); event.stopPropagation(); scanBarcode()" class="macro-meals-scan" aria-label="Scan barcode"><span class="ui-icon" data-icon="camera"></span></button>
+              <button type="button" onclick="event.preventDefault(); event.stopPropagation(); addMealFromSummary()" class="macro-meals-scan macro-meals-quick-add" aria-label="Add meal"><span class="ui-icon" data-icon="plus"></span></button>
             </summary>
             <div class="macro-meals-body">
               <select id="favSelect" class="macro-meals-field" onchange="logFavorite(this.value)">
@@ -8928,6 +8929,21 @@ function addMacroMeal() {
             .addEventListener("click", () => removeMacroMeal(idx));
 
   }
+
+// The + on the Meals row: works while the section is collapsed, so open it
+// and bring the new meal's form into view.
+function addMealFromSummary() {
+  const card = document.getElementById("mealsCard");
+  if (card) card.open = true;
+  addMacroMeal();
+  const meals = document.querySelectorAll("#macroMealContainer .macro-meal-card");
+  const last = meals[meals.length - 1];
+  if (last) {
+    last.scrollIntoView({ behavior: "smooth", block: "center" });
+    last.querySelector("input")?.focus({ preventScroll: true });
+  }
+}
+window.addMealFromSummary = addMealFromSummary;
 
 function toggleMeal(contentId, btn) {
   const div = document.getElementById(contentId);

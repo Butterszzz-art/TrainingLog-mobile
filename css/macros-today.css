@@ -596,3 +596,21 @@
 .macro-meals-add .ui-icon { width: 14px; height: 14px; }
 #macroMealContainer { display: flex; flex-direction: column; gap: 10px; }
 #macroMealContainer:empty { display: none; }
+/* Camera and + sit together at the right of the Meals row */
+.macro-meals-quick-add { margin-left: 6px; color: var(--green-90); }
+/* The Meals row has its own + (add meal), so open/close is a chevron here */
+.macro-meals-accordion > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin: -3px 2px 0 12px;
+  border-right: 2px solid var(--green-90);
+  border-bottom: 2px solid var(--green-90);
+  transform: rotate(45deg);
+  transition: transform 0.2s;
+}
+.macro-meals-accordion[open] > summary::after {
+  content: '';
+  margin-top: 3px;
+  transform: rotate(-135deg);
+}
