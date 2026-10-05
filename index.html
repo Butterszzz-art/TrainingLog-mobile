@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="css/onboarding.css">
   <link rel="stylesheet" href="css/tutorial.css">
   <link rel="stylesheet" href="css/next-step-chips.css">
+  <link rel="stylesheet" href="css/guide.css">
   <link rel="stylesheet" href="css/sleep.css">
   <link rel="stylesheet" href="css/friends.css">
   <link rel="stylesheet" href="css/rehab.css">
@@ -743,6 +744,9 @@
     <!-- ── Coach: Today's brief (src/js/coach-brief.js) ────────── -->
     <div class="home-zone" id="coachBriefCard"></div>
 
+    <!-- ── Guide: goal path / next step (src/js/guide-ui.js) ──── -->
+    <div class="home-zone" id="guidePathCard"></div>
+
     <!-- ── Zone 3: Weekly glance — scoreboard + steps in one card ─ -->
     <div class="home-zone home-zone--weekly">
       <div class="home-section-label">This week</div>
@@ -781,6 +785,9 @@
     <div class="home-zone home-zone--recap">
       <div id="weeklyRecapCard"></div>
     </div>
+
+    <!-- ── Guide: milestone suggestions + weekly tip (src/js/guide-ui.js) ── -->
+    <div class="home-zone" id="guideDiscoverCard"></div>
 
     <!-- ── Tasks: readiness, due items, pulse, today's session, dashboard ── -->
     <div class="home-zone home-zone--action">
@@ -3794,6 +3801,9 @@
        coach-only comes as a pair, so every grid stays an even count. -->
   <div id="allTab" class="tab-content all-hub">
     <div class="all-hub-header"><span class="pod-title" style="font-size:20px;">Everything</span></div>
+
+    <!-- Search, goal path, tours, connections (src/js/guide-ui.js) -->
+    <div id="guideAllSection" class="all-hub-section"></div>
 
     <div class="all-hub-section">
       <div class="all-hub-section-label">Training</div>
@@ -20402,6 +20412,9 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/coach-brief.js"></script>
   <script src="src/js/coach-review.js"></script>
   <script src="src/js/next-step-chips.js"></script>
+  <script src="src/js/guide-core.js"></script>
+  <script src="src/js/guide-tours.js"></script>
+  <script src="src/js/guide-ui.js"></script>
 
 <!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
 <div id="macroAiBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeMacroAiAdvisor()"></div>
