@@ -1,0 +1,64 @@
+/* ── Onboarding step 0 "Make it yours" (src/js/onboarding-cover.js) ── */
+
+/* Live logbook cover. White text on every palette bg (>= 4.5:1, see
+   tests/logbookCover.test.js). */
+.obc-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 18px;
+  padding: 18px 20px 20px;
+  border-radius: 16px;
+  background: var(--green-50, #236b4e);
+  color: #fff;
+  box-shadow: inset 6px 0 0 rgba(0, 0, 0, 0.18), 0 10px 24px rgba(0, 0, 0, 0.28);
+  transition: background-color 0.25s ease;
+}
+.obc-preview-kicker {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.obc-preview-name {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+.obc-preview-by { font-size: 13px; opacity: 0.85; min-height: 1em; }
+
+.obc-field { margin-bottom: 14px; }
+.obc-field input { font-family: var(--font-body); }
+.obc-hint { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
+
+.obc-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.obc-swatch,
+button.obc-swatch {
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--obc-swatch);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.obc-swatch:hover { transform: scale(1.06); }
+.obc-swatch.is-selected {
+  border-color: var(--text-color, #fff);
+  box-shadow: inset 0 0 0 3px var(--surface-bg, #141e17);
+}
+.obc-swatch:focus-visible { outline: 2px solid var(--text-color, #fff); outline-offset: 2px; }
+
+#obStep0 .ob-next-btn { margin-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .obc-preview, .obc-swatch { transition: none; }
+}

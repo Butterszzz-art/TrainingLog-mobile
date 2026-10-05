@@ -39,7 +39,7 @@
     if (btn && !btn.classList.contains('active')) btn.click();
   }
 
-  const STEPS = [
+  const MAIN_STEPS = [
     {
       title: 'Quick hands-on tour',
       text: "We'll highlight each part of the app. When you see <b>Tap</b>, tap the glowing spot yourself. You can leave anytime.",
@@ -154,6 +154,11 @@
       finale: true,
     },
   ];
+
+  // Themed mini-tours (src/js/guide-tours.js) pass their own steps to
+  // startAppTour(); the main tour above is the default.
+  let STEPS = MAIN_STEPS;
+  let tourOpts = {};
 
   let tour = null; // active tour state, or null
 
@@ -419,7 +424,10 @@
     if (!tour) return;
     const t = tour;
     if (completed) confetti();
-    try { localStorage.setItem(doneKey(), completed ? 'done' : 'exited'); } catch (_) { /* storage blocked */ }
+    if (STEPS === MAIN_STEPS) {
+      try { localStorage.setItem(doneKey(), completed ? 'done' : 'exited'); } catch (_) { /* storage blocked */ }
+    }
+    const opts = tourOpts;
     tour = null;
     cancelAnimationFrame(t.raf);
     document.removeEventListener('click', onDocClick, true);
@@ -431,14 +439,20 @@
     t.dom.root.style.transition = 'opacity 0.3s';
     t.dom.root.style.opacity = '0';
     setTimeout(() => t.dom.root.remove(), 320);
-    if (completed && typeof global.showTab === 'function') {
+    if (typeof opts.onEnd === 'function') {
+      try { opts.onEnd(completed); } catch (err) { console.warn('[AppTour] onEnd failed:', err); }
+    } else if (completed && typeof global.showTab === 'function') {
       global.showTab('homeTab');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
-  function startAppTour() {
+  // startAppTour() runs the main tour; startAppTour(steps, { onEnd })
+  // runs a themed one through the same engine.
+  function startAppTour(steps, opts) {
     if (tour) return;
+    STEPS = Array.isArray(steps) && steps.length ? steps : MAIN_STEPS;
+    tourOpts = (Array.isArray(steps) && opts) || {};
     const nav = document.getElementById('bottomNav');
     if (!nav || !nav.getClientRects().length) {
       console.warn('[AppTour] app shell not visible; tour not started');
@@ -459,5 +473,6 @@
   }
 
   global.startAppTour = startAppTour;
+  global.isAppTourActive = () => !!tour;
   global.endAppTour = () => endTour(false);
 })(typeof window !== 'undefined' ? window : globalThis);

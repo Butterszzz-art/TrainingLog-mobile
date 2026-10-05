@@ -222,3 +222,30 @@ describe('blocking', () => {
     expect(calls.filter(c => c.url.endsWith('/api/profiles/blocks'))).toHaveLength(2);
   });
 });
+
+describe('setDisplayName', () => {
+  test('changes only the display name, keeping bio and visibility', async () => {
+    const { w, calls } = setup({});
+    w.fetch = async (url, opts) => {
+      const body = opts.body ? JSON.parse(opts.body) : null;
+      calls.push({ url, method: opts.method, body });
+      if (opts.method === 'GET') {
+        return { ok: true, status: 200, json: async () => ({ success: true, profile: { username: 'me_user', displayName: '', bio: 'Lifter', visibility: 'coach', avatarVersion: 'v2', avatar: PHOTO } }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ success: true, profile: { username: 'me_user', ...body, avatarVersion: 'v2' } }) };
+    };
+    await w.Profiles.setDisplayName('  Arman   B  ');
+    const put = calls.find(c => c.method === 'PUT');
+    expect(put.url).toBe('https://api.test/api/profiles/me');
+    expect(put.body).toEqual({ displayName: 'Arman B', bio: 'Lifter', visibility: 'coach' });
+    const cached = w.Profiles.get('me_user');
+    expect(cached.displayName).toBe('Arman B');
+    expect(cached.avatar).toBe(PHOTO);
+  });
+
+  test('rejects when signed out', async () => {
+    const { w } = setup({});
+    w.localStorage.removeItem('token');
+    await expect(w.Profiles.setDisplayName('X')).rejects.toThrow('Not signed in');
+  });
+});
