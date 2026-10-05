@@ -124,6 +124,17 @@ describe('importing and starting a library program', () => {
     expect(saved[0].weeks).toHaveLength(3);
   });
 
+  test('a program imported from a file keeps its own source tag', () => {
+    const g = memoryGlobal();
+    const source = { type: 'file-import', fileName: 'coach.xlsx', importedFrom: 'import-demo' };
+    const program = core.importLibraryProgram(g, { ...libraryProgram(), id: 'import-demo', rev: undefined }, { userId: 'lifter', source });
+
+    expect(program.id).toMatch(/^imp-import-demo-/);
+    expect(program.source).toEqual(source);
+    expect(core.getWeekCount(program)).toBe(3);
+    expect(core.getWeekDays(program, 2)).toBe(program.weeks[0].days); // sameAs: 1
+  });
+
   test('importing twice keeps two separate copies', () => {
     const g = memoryGlobal();
     const realNow = Date.now;

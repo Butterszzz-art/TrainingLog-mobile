@@ -619,7 +619,9 @@
   function importLibraryProgram(globalObj, libraryProgram, options) {
     if (!libraryProgram || typeof libraryProgram !== "object") return null;
     const opts = options || {};
-    const id = "lib-" + libraryProgram.id + "-" + Date.now();
+    // opts.source tags programs that didn't come from the Library, e.g. a
+    // coach's file converted by POST /api/ai/coach/import-program.
+    const id = (opts.source ? "imp-" : "lib-") + libraryProgram.id + "-" + Date.now();
     const copy = JSON.parse(JSON.stringify(libraryProgram));
     delete copy.kind;
     delete copy.rev;
@@ -634,7 +636,7 @@
       frequency: Array.isArray(copy.frequency) && copy.frequency.length
         ? copy.frequency.slice()
         : weekdays.map(function (day) { return WEEKDAY_ABBR[day - 1]; }).filter(Boolean),
-      source: { type: "library", id: libraryProgram.id, rev: libraryProgram.rev || null },
+      source: opts.source || { type: "library", id: libraryProgram.id, rev: libraryProgram.rev || null },
       importedAt: new Date().toISOString(),
       coachId: opts.userId || null,
       userId: opts.userId || null,

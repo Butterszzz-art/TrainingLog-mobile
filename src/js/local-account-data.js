@@ -19,7 +19,7 @@
     'macroResetTime', 'macroDayType', 'macroTargets', 'dailySteps',
     'workoutHistory', 'resistanceLogs', 'archivedWorkoutIds',
     'programs', 'activeProgram', 'trainingMode', 'plMeetDetails', 'plCutPlanInputs',
-    'crossfitTemplates', 'pcProfiles_v1', 'pc.aiConsent.v1',
+    'crossfitTemplates', 'pcProfiles_v1', 'pc.aiConsent.v1', 'pc.aiConsent.v2',
     'coachNutritionAssignments_v1', 'coachCustomExercises_v1', 'coachUser',
     'userPlan', 'billingCycle', 'userIsAdmin', '_localAuth',
     'fitnessAppUser', 'currentUser', 'username', 'Username', 'token', 'authToken'
