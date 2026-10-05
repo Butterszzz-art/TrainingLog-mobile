@@ -51,15 +51,16 @@
     </table>
 
     <h2 id="ai">3. AI Features</h2>
-    <p>Pocket Coach's AI features (for example the AI coach, weekly briefs and reviews, program generation and program import, macro and sleep insights, plateau checks, rehab plans, and coach message drafts) are powered by open AI models that we reach through two services:</p>
+    <p>Pocket Coach's AI features (for example the AI coach, weekly briefs and reviews, program generation and program import, macro and sleep insights, plateau checks, rehab plans, and coach message drafts) are powered by open AI models that we reach through three services:</p>
     <ul>
       <li><strong>Ollama</strong> (Ollama Cloud) handles requests first. It runs the models on its own servers in the US and Europe and, under its terms, does not log or store requests and never trains on them.</li>
-      <li><strong>OpenRouter</strong> handles a request when Ollama can't (for example when its capacity is used up, or for PDF files). It forwards the request to an AI model provider; we currently use free models run by <strong>Google, NVIDIA, Alibaba (Qwen) and Nex AGI</strong>, and which of them answers can change from one request to the next.</li>
+      <li><strong>Groq</strong> handles short requests (such as the daily brief) when Ollama can't. It processes them on our behalf under its data processing terms and keeps them for up to 30 days, for example for abuse monitoring.</li>
+      <li><strong>OpenRouter</strong> handles a request when neither can (for example when its capacity is used up, or for PDF files). It forwards the request to an AI model provider; we currently use free models run by <strong>Google, NVIDIA, Alibaba (Qwen) and Nex AGI</strong>, and which of them answers can change from one request to the next.</li>
     </ul>
     <ul>
       <li><strong>What is sent:</strong> the data needed for the feature you use — such as your recent workouts, exercises and weights, bodyweight, nutrition, sleep and readiness scores, goals, any message you type, and any file you import as a training program. We don't send your password or payment details.</li>
-      <li><strong>Consent first:</strong> the app asks your permission before sending any data to Ollama, OpenRouter or OpenRouter's model providers. If you decline, AI features stay off and the rest of the app works normally. You can change this at any time in Settings → App → Privacy &amp; Legal.</li>
-      <li><strong>How it is handled:</strong> each service uses the data only to generate a response, under its own terms and privacy policy (see <a href="https://ollama.com/privacy" target="_blank" rel="noopener">Ollama's</a> and <a href="https://openrouter.ai/privacy" target="_blank" rel="noopener">OpenRouter's</a> privacy policies). <strong>When a request goes through OpenRouter, the providers of free models may store it and may use it to improve their models.</strong> Only use AI features with information you are comfortable sharing on these terms, and don't type in details you don't need to, such as medical history.</li>
+      <li><strong>Consent first:</strong> the app asks your permission before sending any data to Ollama, Groq, OpenRouter or OpenRouter's model providers. If you decline, AI features stay off and the rest of the app works normally. You can change this at any time in Settings → App → Privacy &amp; Legal.</li>
+      <li><strong>How it is handled:</strong> each service uses the data only to generate a response, under its own terms and privacy policy (see the privacy policies of <a href="https://ollama.com/privacy" target="_blank" rel="noopener">Ollama</a>, <a href="https://console.groq.com/docs/your-data" target="_blank" rel="noopener">Groq</a> and <a href="https://openrouter.ai/privacy" target="_blank" rel="noopener">OpenRouter</a>). <strong>When a request goes through OpenRouter, the providers of free models may store it and may use it to improve their models.</strong> Only use AI features with information you are comfortable sharing on these terms, and don't type in details you don't need to, such as medical history.</li>
     </ul>
 
     <h2>4. Who We Share Data With</h2>
@@ -69,7 +70,8 @@
       <tr><td>Google (Firebase Authentication, Cloud Firestore, Cloud Functions)</td><td>Sign-in, account and data storage, our server</td></tr>
       <tr><td>Airtable</td><td>Storage for some older accounts and logs</td></tr>
       <tr><td>Ollama (Ollama Cloud)</td><td>AI features, only with your consent</td></tr>
-      <tr><td>OpenRouter, and the AI model providers it forwards requests to (currently Google, NVIDIA, Alibaba (Qwen) and Nex AGI)</td><td>AI features when Ollama can't handle a request, only with your consent</td></tr>
+      <tr><td>Groq</td><td>Short AI requests when Ollama can't handle them, only with your consent</td></tr>
+      <tr><td>OpenRouter, and the AI model providers it forwards requests to (currently Google, NVIDIA, Alibaba (Qwen) and Nex AGI)</td><td>AI features when Ollama and Groq can't handle a request, only with your consent</td></tr>
       <tr><td>Stripe</td><td>Subscription checkout, billing, and the billing portal</td></tr>
       <tr><td>Apple</td><td>In-app subscriptions on iPhone and iPad (App Store)</td></tr>
       <tr><td>The activity service you connect (if any)</td><td>Syncing your activity data</td></tr>
@@ -77,7 +79,7 @@
     <p>Other people see your data only when you choose to share it: your profile, posts, and leaderboard entries are visible to other users; programs you share go to the people you share them with; and a coach you connect with can see the data you share with them. We may also disclose data if the law requires it.</p>
 
     <h2>5. International Transfers</h2>
-    <p>Our providers may process data in the United States and other countries. Where data leaves the UK or EEA we rely on appropriate safeguards such as the UK/EU Standard Contractual Clauses or the EU–US Data Privacy Framework. Ollama processes AI requests in the United States and Europe (and Singapore for some models); requests sent through OpenRouter may be processed in the United States and in other countries where the chosen model provider runs its servers.</p>
+    <p>Our providers may process data in the United States and other countries. Where data leaves the UK or EEA we rely on appropriate safeguards such as the UK/EU Standard Contractual Clauses or the EU–US Data Privacy Framework. Ollama processes AI requests in the United States and Europe (and Singapore for some models), Groq in the United States; requests sent through OpenRouter may be processed in the United States and in other countries where the chosen model provider runs its servers.</p>
 
     <h2>6. How Long We Keep It</h2>
     <p>We keep your data while your account is open. When you delete your account, we delete your data from our systems straight away, except billing records we must keep for tax and accounting law, backups that expire on a rolling basis, and reports about other users that we need to keep the community safe. Deleting your account also removes your coach's copy of your coaching data. Some data (such as preferences, check-ins, draft logs and progress photos) is also stored on your device: deleting your account removes it from the device you delete it on. Logging out keeps it on the device so you don't lose entries that haven't synced; delete the app to remove it from other devices.</p>

@@ -3,8 +3,8 @@
 // get the user's explicit permission before doing so.
 //
 // Every AI feature talks to our server's /api/ai/* (and legacy /ai/*)
-// routes, which forward the user's data to Ollama Cloud, or OpenRouter and
-// the AI model providers it routes to (see privacy.html#ai). Rather than gate each
+// routes, which forward the user's data to Ollama Cloud, Groq, or OpenRouter
+// and the AI model providers it routes to (see privacy.html#ai). Rather than gate each
 // of the ~15 call sites, this wraps window.fetch once: the first AI request
 // on a device shows a consent sheet and waits for the answer. Agree → the
 // request goes ahead. Decline → it resolves to a 403 JSON error, which every
@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  // v2: the providers changed from Anthropic to Ollama + OpenRouter (2026-10-05), so
+  // v2: the providers changed from Anthropic to Ollama + Groq + OpenRouter (2026-10-05), so
   // consent given to the old wording is asked for again. Bump this whenever
   // the consent sheet's description of who gets the data changes.
   var STORAGE_KEY = 'pc.aiConsent.v2'; // 'granted' | 'declined'
@@ -86,7 +86,7 @@
         overlay.innerHTML =
           '<div class="ai-consent-sheet" role="dialog" aria-modal="true" aria-labelledby="aiConsentTitle">'
           + '<h3 id="aiConsentTitle">Share your data with our AI providers?</h3>'
-          + '<p>Pocket Coach\'s AI features — the AI coach, weekly briefs and reviews, program generator and import, macro, sleep and plateau insights, and rehab plans — run on open AI models. Requests go to <strong>Ollama</strong> first, which doesn\'t log, store or train on them. When Ollama can\'t take one, it goes to <strong>OpenRouter</strong>, which forwards it to a free model from Google, NVIDIA, Alibaba (Qwen) or Nex AGI.</p>'
+          + '<p>Pocket Coach\'s AI features — the AI coach, weekly briefs and reviews, program generator and import, macro, sleep and plateau insights, and rehab plans — run on open AI models. Requests go to <strong>Ollama</strong> first, which doesn\'t log, store or train on them. Short ones Ollama can\'t take go to <strong>Groq</strong>, which keeps them for up to 30 days. Anything else goes to <strong>OpenRouter</strong>, which forwards it to a free model from Google, NVIDIA, Alibaba (Qwen) or Nex AGI.</p>'
           + '<p>To use them, the app sends the relevant parts of your data to these services:</p>'
           + '<ul><li>workouts, exercises and weights</li><li>bodyweight, nutrition, sleep and readiness scores</li><li>your goals, anything you type to the coach, and program files you import</li></ul>'
           + '<p><strong>When a request goes through OpenRouter, the providers of free models may store it and use it to improve their models.</strong> Your password and payment details are never sent. '
