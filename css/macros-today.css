@@ -370,3 +370,207 @@
 #macroTargetsPanel .macro-heatmap-accordion > summary .ui-icon { width: 15px; height: 15px; }
 #macroTargetsPanel .macro-trends-accordion > div,
 #macroTargetsPanel .macro-heatmap-accordion > div { padding: 0 2px 14px; }
+
+/* ── Adjust: slider rows (label left, value right) ──────────── */
+.macro-slider-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 14px 0 6px;
+}
+.macro-card .macro-slider-head label { margin: 0; }
+.macro-slider-val .mx-num {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.macro-slider-val small,
+.macro-total-val small {
+  margin-left: 2px;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mx-faint);
+}
+
+/* Total calories: label + display number, like the Today hero */
+.macro-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.macro-total .mx-lbl { font-size: 11px; }
+.macro-total-val .mx-num {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+/* Advanced: +/− instead of the browser's disclosure triangle */
+.macro-advanced summary {
+  display: flex;
+  align-items: center;
+}
+.macro-advanced summary::-webkit-details-marker { display: none; }
+.macro-advanced summary::after {
+  content: '+';
+  margin-left: auto;
+  font-size: 15px;
+  color: var(--green-90);
+}
+.macro-advanced[open] summary::after { content: '−'; }
+
+/* Profile: five activity levels on one row */
+.macro-seg-row[data-macro-seg-for="activity"] {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.macro-seg-row[data-macro-seg-for="activity"] .macro-seg-btn {
+  min-width: 0;
+  padding: 8px 2px;
+  font-size: 12px;
+}
+
+/* ── Meals: flat row like Weekly trends, fields in the kit style ── */
+.macro-meals-accordion {
+  margin-top: 0;
+  border-bottom: 1px solid var(--border-row);
+}
+.macro-meals-accordion > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 2px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mx-label);
+}
+.macro-meals-accordion > summary::-webkit-details-marker { display: none; }
+.macro-meals-accordion > summary::after {
+  content: '+';
+  margin-left: 10px;
+  font-size: 16px;
+  color: var(--green-90);
+}
+.macro-meals-accordion[open] > summary::after { content: '−'; }
+.macro-meals-accordion > summary .ui-icon { width: 15px; height: 15px; }
+.macro-meals-scan {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pod-border);
+  background: var(--pod-bg-alt);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.macro-meals-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 2px 16px;
+}
+.macro-meals-field {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-tight);
+  padding: 10px 12px;
+}
+.macro-meals-recipe {
+  display: flex;
+  gap: 8px;
+}
+.macro-meals-recipe .macro-save-btn {
+  width: auto;
+  margin-top: 0;
+  padding: 10px 18px;
+}
+.macro-meal-card {
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
+  padding: 12px 14px 14px;
+}
+.macro-meal-card .toggle-meal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.macro-meal-card .meal-toggle-icon { width: 14px; height: 14px; color: var(--green-90); }
+.macro-meal-body { margin-top: 4px; }
+.macro-meal-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+.macro-meal-grid .macro-tile-label { display: block; }
+.macro-meal-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+.macro-meal-actions .meal-submit {
+  flex: 1;
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.macro-meal-actions .meal-submit .ui-icon { width: 14px; height: 14px; }
+.macro-meal-remove {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pod-border);
+  background: var(--pod-bg-alt);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+#macroMealContainer .macro-meal-card .toggle-meal {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  min-height: 0;
+}
+
+/* Free-text fields in the Adjust/Profile cards: body-size text, not the
+   oversized default input font */
+#coachNotes,
+#customCalories,
+#digestionNotesInput {
+  font-family: var(--font-body);
+  font-size: 14px;
+}

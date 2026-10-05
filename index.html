@@ -3150,17 +3150,18 @@
         </div>
 
         <div id="macroMealsPanel" class="panel">
-          <details id="mealsCard" class="card" style="margin-top:10px;">
-            <summary>Meals <button type="button" onclick="scanBarcode()" class="icon-btn" aria-label="Scan barcode"><span class="ui-icon" data-icon="camera"></span></button></summary>
-            <div style="margin-top:10px;">
-              <div style="margin-bottom:10px;">
-                <select id="favSelect" onchange="logFavorite(this.value)">
-                  <option value="">Favorites</option>
-                </select>
-              </div>
-              <div style="display:flex;margin-bottom:10px;">
-                <input id="recipeUrl" placeholder="Import recipe URL" style="flex:1;padding:6px;"/>
-                <button onclick="fetchRecipe()" style="margin-left:6px;">Fetch</button>
+          <details id="mealsCard" class="macro-meals-accordion">
+            <summary>
+              <span class="ui-icon" data-icon="clipboard"></span> Meals
+              <button type="button" onclick="event.preventDefault(); event.stopPropagation(); scanBarcode()" class="macro-meals-scan" aria-label="Scan barcode"><span class="ui-icon" data-icon="camera"></span></button>
+            </summary>
+            <div class="macro-meals-body">
+              <select id="favSelect" class="macro-meals-field" onchange="logFavorite(this.value)">
+                <option value="">Log a favorite…</option>
+              </select>
+              <div class="macro-meals-recipe">
+                <input id="recipeUrl" class="macro-meals-field" placeholder="Import recipe URL"/>
+                <button type="button" class="macro-save-btn" onclick="fetchRecipe()">Fetch</button>
               </div>
               <div id="macroMealContainer"></div>
             </div>
@@ -3180,13 +3181,13 @@
         <div id="adjustMacroSection" class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card">
             <h3>Daily Tracking</h3>
-            <label>Protein: <span id="proteinVal">0</span> g</label>
+            <div class="macro-slider-head"><label for="proteinSlider">Protein</label><span class="macro-slider-val"><b class="mx-num" id="proteinVal">0</b><small>g</small></span></div>
             <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" title="Default: 2 g/kg when cutting, 1.8 g/kg when maintaining/bulking">
             <p class="macro-slider-caption">Defaults to 2 g/kg while cutting, 1.8 g/kg while maintaining or bulking — drag to override.</p>
-            <label>Fat: <span id="fatVal">0</span> g</label>
+            <div class="macro-slider-head"><label for="fatSlider">Fat</label><span class="macro-slider-val"><b class="mx-num" id="fatVal">0</b><small>g</small></span></div>
             <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" title="Default: 25 % of calories when cutting, 30 % when maintaining/bulking; min 0.6 g/kg">
             <p class="macro-slider-caption">Defaults to 25% of calories while cutting, 30% while maintaining or bulking (0.6 g/kg floor).</p>
-            <label>Carbs: <span id="carbVal">0</span> g</label>
+            <div class="macro-slider-head"><label for="carbSlider">Carbs</label><span class="macro-slider-val"><b class="mx-num" id="carbVal">0</b><small>g</small></span></div>
             <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" title="Carbs get the remaining calories after protein and fat">
             <p class="macro-slider-caption">Fills whatever calories are left after protein and fat.</p>
             <textarea id="coachNotes" rows="3" placeholder="Trainer notes (optional)"></textarea>
@@ -3198,7 +3199,7 @@
                 <label><input type="checkbox" id="adjustHighFat"> High-fat phase</label>
               </div>
             </details>
-            <p class="macro-total">Total Calories: <span id="macroTotalCals">0</span> / <span id="calTarget">0</span> kcal</p>
+            <div class="macro-total"><span class="mx-lbl">Total calories</span><span class="macro-total-val"><b class="mx-num" id="macroTotalCals">0</b><small> / <span id="calTarget">0</span> kcal</small></span></div>
             <button onclick="saveSliderMacros()" class="macro-save-btn">Save Macros</button>
           </div>
         </div>
@@ -3247,7 +3248,7 @@
 
         <div class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card">
-            <h3>Personal Details</h3>
+            <h3>Body stats</h3>
             <p class="macro-helper" style="margin-top:0;">Used for calorie and macro calculations.</p>
 
             <div class="macro-tile-grid">
@@ -3322,11 +3323,9 @@
                 <div class="macro-tile-input"><input type="number" id="sodiumMgInput" min="0" step="50" placeholder="—"><span class="macro-tile-unit">mg</span></div>
               </div>
             </div>
-            <p id="hydrationSodiumSummary"></p>
-            <label style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
-              Digestion Notes
-              <textarea id="digestionNotesInput" rows="3" placeholder="Bloating, appetite, bowel regularity, food tolerances..."></textarea>
-            </label>
+            <p id="hydrationSodiumSummary" class="macro-helper"></p>
+            <label for="digestionNotesInput" style="margin-top:14px;">Digestion notes</label>
+            <textarea id="digestionNotesInput" rows="3" placeholder="Bloating, appetite, bowel regularity, food tolerances..."></textarea>
           </div>
         </div>
 
@@ -8872,27 +8871,38 @@ function handleExerciseBlur() {
 function addMacroMeal() {
     const idx = macroMeals.length;
     const container = document.getElementById("macroMealContainer");
+    // idx keys the stored meal; the label counts the cards actually shown.
+    const mealNumber = container.querySelectorAll(".macro-meal-card").length + 1;
     container.insertAdjacentHTML("beforeend", `
-      <div id="meal${idx}" style="border:1px solid var(--border-color); padding:10px; margin:10px 0;">
-        <button data-idx="${idx}" class="toggle-meal"><span class="ui-icon meal-toggle-icon">${ICONS.plus}</span> Meal ${idx+1}</button>
-        <div id="mealContent${idx}" style="display:block; margin-top:10px;">
-          <label>Timing Slot:</label>
-          <select id="mealSlot${idx}">
+      <div id="meal${idx}" class="macro-meal-card">
+        <button type="button" data-idx="${idx}" class="toggle-meal"><span class="ui-icon meal-toggle-icon">${ICONS.chevronDown}</span> Meal ${mealNumber}</button>
+        <div id="mealContent${idx}" class="macro-meal-body" style="display:block;">
+          <label for="mealSlot${idx}" class="macro-seg-label">Timing</label>
+          <select id="mealSlot${idx}" class="macro-meals-field">
             <option value="breakfast">Breakfast</option>
             <option value="pre_workout">Pre-workout</option>
             <option value="post_workout">Post-workout</option>
             <option value="intra_day">Intra-day</option>
             <option value="pre_bed">Pre-bed</option>
           </select>
-          <label>Protein:</label>
-          <input type="number" id="protein${idx}" placeholder="g">
-          <label>Carbs:</label>
-          <input type="number" id="carbs${idx}" placeholder="g">
-          <label>Fats:</label>
-          <input type="number" id="fats${idx}" placeholder="g">
-          <br>
-          <button data-idx="${idx}" class="meal-submit"><span class="ui-icon">${ICONS.plus}</span> Add to Tracker</button>
-          <button data-idx="${idx}" class="remove-meal"><span class="ui-icon">${ICONS.x}</span> Remove</button>
+          <div class="macro-tile-grid macro-meal-grid">
+            <div class="macro-tile">
+              <label for="protein${idx}" class="macro-tile-label">Protein</label>
+              <div class="macro-tile-input"><input type="number" id="protein${idx}" min="0" inputmode="decimal"><span class="macro-tile-unit">g</span></div>
+            </div>
+            <div class="macro-tile">
+              <label for="carbs${idx}" class="macro-tile-label">Carbs</label>
+              <div class="macro-tile-input"><input type="number" id="carbs${idx}" min="0" inputmode="decimal"><span class="macro-tile-unit">g</span></div>
+            </div>
+            <div class="macro-tile">
+              <label for="fats${idx}" class="macro-tile-label">Fat</label>
+              <div class="macro-tile-input"><input type="number" id="fats${idx}" min="0" inputmode="decimal"><span class="macro-tile-unit">g</span></div>
+            </div>
+          </div>
+          <div class="macro-meal-actions">
+            <button type="button" data-idx="${idx}" class="meal-submit macro-save-btn"><span class="ui-icon">${ICONS.plus}</span> Add to tracker</button>
+            <button type="button" data-idx="${idx}" class="remove-meal macro-meal-remove" aria-label="Remove meal ${mealNumber}"><span class="ui-icon">${ICONS.x}</span></button>
+          </div>
         </div>
       </div>
     `);
@@ -8908,7 +8918,7 @@ function addMacroMeal() {
         if (icon) icon.innerHTML = ICONS.chevronDown;
       } else {
         content.style.display = "none";
-        if (icon) icon.innerHTML = ICONS.plus;
+        if (icon) icon.innerHTML = ICONS.chevronRight;
       }
     });
     document.querySelector(`#meal${idx} .meal-submit`)
@@ -8926,7 +8936,7 @@ function toggleMeal(contentId, btn) {
     if (icon) icon.innerHTML = ICONS.chevronDown;
   } else {
     div.style.display = "none";
-    if (icon) icon.innerHTML = ICONS.plus;
+    if (icon) icon.innerHTML = ICONS.chevronRight;
   }
 }
 
@@ -8964,7 +8974,7 @@ function submitMeal(idx) {
   if (content) {
     content.style.display = "none";
     const icon = document.querySelector(`#meal${idx} .toggle-meal .meal-toggle-icon`);
-    if (icon) icon.innerHTML = ICONS.plus;
+    if (icon) icon.innerHTML = ICONS.chevronRight;
   }
 
   const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
@@ -9712,7 +9722,7 @@ function updateMacroUI() {
     return;
   }
   // #calTarget is a plain number in every other writer (the static markup
-  // is "Total Calories: <macroTotalCals> / <calTarget> kcal") — writing a
+  // is "<macroTotalCals> / <calTarget> kcal") — writing a
   // compound "X / Y kcal" string into just macroTotalCals, as this used to,
   // produced "Total Calories: 1450 / 2400 kcal / 2400 kcal".
   macroTotalCalsEl.textContent = totalCals;
@@ -9979,7 +9989,7 @@ function _updateSliderDisplay() {
   if (fEl) fEl.textContent = f;
   if (cEl) cEl.textContent = c;
   // #calTarget is a plain number everywhere else — the static markup already
-  // supplies "Total Calories: <macroTotalCals> / <calTarget> kcal" around
+  // supplies "<macroTotalCals> / <calTarget> kcal" around
   // these two spans, so writing a combined "X / Y kcal" string into just
   // macroTotalCals doubled up the unit ("... / 2400 kcal / 2400 kcal").
   if (tEl) tEl.textContent = totalCals;
