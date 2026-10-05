@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/onboarding.css">
+  <link rel="stylesheet" href="css/onboarding-cover.css">
   <link rel="stylesheet" href="css/tutorial.css">
   <link rel="stylesheet" href="css/next-step-chips.css">
   <link rel="stylesheet" href="css/guide.css">
@@ -317,7 +318,8 @@
   <div class="onboarding-card">
     <!-- Progress dots -->
     <div class="onboarding-progress">
-      <span class="ob-step ob-active" data-step="1"></span>
+      <span class="ob-step ob-active" data-step="0"></span>
+      <span class="ob-step" data-step="1"></span>
       <span class="ob-step" data-step="2"></span>
       <span class="ob-step" data-step="3"></span>
       <span class="ob-step" data-step="4"></span>
@@ -325,8 +327,39 @@
       <span class="ob-step" data-step="6"></span>
     </div>
 
+    <!-- Step 0: Make it yours — display name, logbook name, colour
+         (src/js/onboarding-cover.js fills the swatches and saves) -->
+    <div class="ob-screen active" id="obStep0">
+      <div class="ob-step-label">Welcome</div>
+      <h2>Make it yours</h2>
+      <p class="ob-subtitle">Name your logbook and pick its colour. You can change all of this later in Settings.</p>
+      <div class="obc-preview" id="obcPreview" aria-hidden="true">
+        <span class="obc-preview-kicker">Training log</span>
+        <span class="obc-preview-name" id="obcPreviewName"></span>
+        <span class="obc-preview-by" id="obcPreviewBy"></span>
+      </div>
+      <div class="ob-stat-field obc-field">
+        <label for="obcDisplayName">Your name</label>
+        <div class="ob-stat-input-wrap">
+          <input type="text" id="obcDisplayName" maxlength="40" autocomplete="nickname" autocapitalize="words" enterkeyhint="next">
+        </div>
+        <span class="obc-hint" id="obcHandleHint"></span>
+      </div>
+      <div class="ob-stat-field obc-field">
+        <label for="obcLogbookName">Logbook name</label>
+        <div class="ob-stat-input-wrap">
+          <input type="text" id="obcLogbookName" maxlength="40" autocapitalize="words" enterkeyhint="done">
+        </div>
+      </div>
+      <div class="ob-stat-field obc-field">
+        <label id="obcColorLabel">Colour</label>
+        <div class="obc-swatches" id="obcSwatches" role="radiogroup" aria-labelledby="obcColorLabel"></div>
+      </div>
+      <button class="ob-next-btn" id="obNext0">Continue</button>
+    </div>
+
     <!-- Step 1: Training focus -->
-    <div class="ob-screen active" id="obStep1">
+    <div class="ob-screen" id="obStep1">
       <div class="ob-step-label">Step 1 of 6</div>
       <h2>What's your training focus?</h2>
       <p class="ob-subtitle">We'll personalise the app for you</p>
@@ -353,6 +386,7 @@
         </button>
       </div>
       <button class="ob-next-btn" id="obNext1" disabled>Continue</button>
+      <button class="ob-back-btn" id="obBack1">Back</button>
     </div>
 
     <!-- Step 2: Primary goal -->
@@ -18640,17 +18674,20 @@ function showOnboarding() {
   if (overlay) {
     overlay.removeAttribute('hidden');
     _initOnboarding();
-    _obGoToStep(1);
+    _obGoToStep(0);
   }
 }
 
 function _obGoToStep(step) {
-  document.querySelectorAll('.ob-screen').forEach((el, i) => {
-    el.classList.toggle('active', i + 1 === step);
+  // By id/data-step rather than position: step 0 ("Make it yours") sits
+  // in front of the original six.
+  document.querySelectorAll('.ob-screen').forEach((el) => {
+    el.classList.toggle('active', el.id === `obStep${step}`);
   });
-  document.querySelectorAll('.ob-step').forEach((dot, i) => {
-    dot.classList.toggle('ob-active', i + 1 === step);
-    dot.classList.toggle('ob-done', i + 1 < step);
+  document.querySelectorAll('.ob-step').forEach((dot) => {
+    const n = Number(dot.dataset.step);
+    dot.classList.toggle('ob-active', n === step);
+    dot.classList.toggle('ob-done', n < step);
   });
   if (step === 6) _obRenderMacroPreview();
 }
@@ -18761,8 +18798,14 @@ function _initOnboarding() {
     const card = e.target.closest('.ob-archetype-card');
     if (card) { window._selectArchetype(card); return; }
 
-    // Navigation
+    // Navigation (step 0 saves through onboarding-cover.js first)
+    if (e.target.closest('#obNext0')) {
+      if (typeof window.saveOnboardingCover === 'function') window.saveOnboardingCover();
+      _obGoToStep(1);
+      return;
+    }
     if (e.target.closest('#obNext1')) { _obGoToStep(2); return; }
+    if (e.target.closest('#obBack1')) { _obGoToStep(0); return; }
     if (e.target.closest('#obBack2')) { _obGoToStep(1); return; }
     if (e.target.closest('#obNext2')) { _obGoToStep(3); return; }
     if (e.target.closest('#obBack3')) { _obGoToStep(2); return; }
@@ -20415,6 +20458,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/guide-core.js"></script>
   <script src="src/js/guide-tours.js"></script>
   <script src="src/js/guide-ui.js"></script>
+  <script src="src/js/onboarding-cover.js"></script>
 
 <!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
 <div id="macroAiBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeMacroAiAdvisor()"></div>

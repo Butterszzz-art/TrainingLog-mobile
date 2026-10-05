@@ -49,6 +49,15 @@
 
   function goalById(id) { return GOALS.find(g => g.id === id) || null; }
 
+  // Onboarding already asks for a training focus and a goal
+  // (settings.profile.athleteArchetype / primaryGoal); suggest the
+  // matching path so users aren't asked the same thing twice.
+  function suggestGoal(profile) {
+    const p = profile || {};
+    if (p.athleteArchetype === 'powerlifter') return 'strength';
+    return { cut: 'fatloss', bulk: 'muscle', recomp: 'muscle', maintain: 'habit' }[p.primaryGoal] || null;
+  }
+
   function goalProgress(goalId, ctx) {
     const goal = goalById(goalId);
     if (!goal) return null;
@@ -171,7 +180,7 @@
     { from: 'The week', fromTab: null, to: 'Weekly recap', toTab: 'homeTab', text: 'Each Monday, Home recaps last week’s sessions, PRs and body data.' },
   ];
 
-  const api = { GOALS, FEATURES, CONNECTIONS, goalById, goalProgress, featureByTab, searchFeatures, isNew, pickDiscover, isoWeek };
+  const api = { GOALS, FEATURES, CONNECTIONS, goalById, suggestGoal, goalProgress, featureByTab, searchFeatures, isNew, pickDiscover, isoWeek };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else global.GuideCore = api;

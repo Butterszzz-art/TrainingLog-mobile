@@ -158,10 +158,20 @@
     return overlay;
   }
 
-  function goalListHtml(current) {
-    return `<div class="gd-goals">${G.GOALS.map(g => `
-      <button type="button" class="gd-goal${g.id === current ? ' is-current' : ''}" data-gd-goal="${g.id}">
-        <span class="gd-goal-name">${esc(g.label)}</span>
+  function suggestedGoal(u) {
+    const settings = readJSON(`settings_${u}`, {}) || {};
+    return G.suggestGoal(settings.profile);
+  }
+
+  // Suggested goal first, so the onboarding answer is one tap away.
+  function orderedGoals(suggested) {
+    return suggested ? [G.goalById(suggested)].concat(G.GOALS.filter(g => g.id !== suggested)) : G.GOALS;
+  }
+
+  function goalListHtml(current, suggested) {
+    return `<div class="gd-goals">${orderedGoals(suggested).map(g => `
+      <button type="button" class="gd-goal${g.id === current ? ' is-current' : ''}${g.id === suggested ? ' is-suggested' : ''}" data-gd-goal="${g.id}">
+        <span class="gd-goal-name">${esc(g.label)}${g.id === suggested && g.id !== current ? '<span class="gd-suggested">Suggested</span>' : ''}</span>
         <span class="gd-goal-blurb">${esc(g.blurb)}</span>
       </button>`).join('')}</div>`;
   }
@@ -170,7 +180,7 @@
     const ctx = ctxNow();
     if (!ctx) return;
     openSheet('What are you training for?',
-      `<p class="mx-sub gd-lead">Pick one and we’ll show you the few parts of the app that matter for it, in order.</p>${goalListHtml(ctx.s.goal)}`,
+      `<p class="mx-sub gd-lead">Pick one and we’ll show you the few parts of the app that matter for it, in order.</p>${goalListHtml(ctx.s.goal, suggestedGoal(ctx.u))}`,
       overlay => overlay.querySelectorAll('[data-gd-goal]').forEach(b => b.addEventListener('click', () => chooseGoal(b.dataset.gdGoal, true))));
   }
 
@@ -245,6 +255,7 @@
     if (!host) return;
     const { s, c } = ctx;
     if (!s.goal) {
+      const suggested = suggestedGoal(ctx.u);
       if (s.pathHidden) { host.innerHTML = ''; return; }
       host.innerHTML = `
         <section class="pod mx-pod gd-card" aria-label="Choose your goal">
@@ -254,7 +265,8 @@
           </div>
           <h3 class="pod-title mx-h3">What are you training for?</h3>
           <p class="mx-sub">We’ll show you the few parts of the app that matter for your goal.</p>
-          <div class="gd-goal-chips">${G.GOALS.map(g => `<button type="button" class="mx-chip gd-goal-chip" data-gd-goal="${g.id}">${esc(g.label)}</button>`).join('')}</div>
+          <div class="gd-goal-chips">${orderedGoals(suggested).map(g => `<button type="button" class="mx-chip gd-goal-chip${g.id === suggested ? ' is-suggested' : ''}" data-gd-goal="${g.id}">${esc(g.label)}</button>`).join('')}</div>
+          ${suggested ? `<p class="mx-sub gd-suggest-note">Suggested from your sign-up answers: <b>${esc(G.goalById(suggested).label)}</b>.</p>` : ''}
         </section>`;
       host.querySelectorAll('[data-gd-goal]').forEach(b => b.addEventListener('click', () => chooseGoal(b.dataset.gdGoal, false)));
       host.querySelector('[data-gd-hide]').addEventListener('click', () => { update(st => { st.pathHidden = true; }); renderAllViews(); });

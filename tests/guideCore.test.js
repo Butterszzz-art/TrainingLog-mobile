@@ -114,3 +114,14 @@ describe('isoWeek', () => {
     expect(G.isoWeek('2026-10-04')).toBe('2026-W40');
   });
 });
+
+describe('suggestGoal (from onboarding answers)', () => {
+  test('maps archetype and goal to a path', () => {
+    expect(G.suggestGoal({ athleteArchetype: 'powerlifter', primaryGoal: 'cut' })).toBe('strength');
+    expect(G.suggestGoal({ primaryGoal: 'cut' })).toBe('fatloss');
+    expect(G.suggestGoal({ primaryGoal: 'bulk' })).toBe('muscle');
+    expect(G.suggestGoal({ primaryGoal: 'maintain' })).toBe('habit');
+    expect(G.suggestGoal({})).toBeNull();
+    expect(G.suggestGoal(null)).toBeNull();
+  });
+});

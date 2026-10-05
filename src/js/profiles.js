@@ -676,6 +676,26 @@
     sheet.appendChild(el('p', 'pc-hint', 'Photos are cropped to a square and shrunk before upload. Keep it respectful: profiles can be reported and removed.'));
   }
 
+  // Sets just the display name (used by onboarding). PUT /me takes the
+  // whole profile, so re-send the current bio and visibility unchanged.
+  async function setDisplayName(name) {
+    const me = currentUser();
+    const key = profileKey(me);
+    if (!key) throw new Error('Not signed in');
+    const clean = String(name == null ? '' : name).replace(/\s+/g, ' ').trim().slice(0, NAME_MAX);
+    const current = (await api('GET', '/me')).profile || {};
+    const saved = (await api('PUT', '/me', {
+      displayName: clean,
+      bio: current.bio || '',
+      visibility: current.visibility || 'everyone',
+    })).profile;
+    mergeProfile(key, { ...saved, avatarVersion: saved.avatarVersion || current.avatarVersion, avatar: current.avatar || undefined });
+    persistCache();
+    refresh(key);
+    if (typeof global.renderSettingsHero === 'function') global.renderSettingsHero();
+    return saved;
+  }
+
   /* ── Wiring ──────────────────────────────────────────────── */
 
   function init() {
@@ -700,6 +720,7 @@
 
   const api_ = {
     openEditor,
+    setDisplayName,
     openProfileCard,
     refresh,
     get: getCached,

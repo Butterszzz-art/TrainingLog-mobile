@@ -273,3 +273,21 @@ button.gd-result {
   line-height: 1.4;
   pointer-events: none;
 }
+
+/* Goal suggested from the onboarding answers */
+.gd-goal-chip.is-suggested { border-color: var(--primary); color: var(--primary-text, var(--primary)); }
+.gd-goal.is-suggested { border-color: var(--primary); }
+.gd-suggested {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+.gd-suggest-note { font-size: 12.5px; }
