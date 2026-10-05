@@ -2407,6 +2407,9 @@
         <span class="ui-icon" data-icon="sparkles"></span><span>Generate with AI</span>
       </button>
       <div id="progAiGenLocked" role="button" tabindex="0" onclick="openUpgradeModal('pro')" style="display:none;cursor:pointer;opacity:0.65;font-size:0.85rem;color:var(--secondary-text);text-align:center;padding:8px 0;"><span class="ui-icon" data-icon="lock"></span> AI Program Generator — Pro feature</div>
+      <button id="progImportBtn" type="button" onclick="openProgImport()" class="mx-outline mx-outline--block" style="margin-top:8px;justify-content:center;gap:8px;">
+        <span class="ui-icon" data-icon="fileText"></span><span>Import a program from a file</span>
+      </button>
     </div>
 
     <!-- Builder view (wizard lives here) -->
@@ -4092,6 +4095,7 @@
 <script src="src/js/my-plan.js"></script>
 <script src="src/js/ProgramTabV2.js"></script>
 <script src="src/js/premium-library.js"></script>
+<script src="src/js/program-import.js"></script>
 <script>
   // Shared inline-SVG icon set (Feather/Lucide style: stroke=currentColor,
   // viewBox 0 0 24 24) replacing keyboard/HTML emoji used as functional UI
@@ -20652,6 +20656,22 @@ window.renderCaffeinePod = renderCaffeinePod;
 </script>
 
 <!-- ── AI Program Generator panel ──────────────────────────────────────── -->
+<!-- Import a coach's program from a file (src/js/program-import.js) -->
+<div id="progImportBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeProgImport()"></div>
+<div id="progImportPanel" class="ai-sheet" role="dialog" aria-modal="true" aria-label="Import a program" style="display:none;transform:translateY(100%);">
+  <div class="ai-sheet-head">
+    <div class="ai-sheet-title">
+      <div class="ai-sheet-badge"><span class="ui-icon" data-icon="fileText"></span></div>
+      <div>
+        <div class="ai-sheet-name">Import a program</div>
+        <div id="progImportStatus" class="ai-sheet-status">Excel, Word, PDF or photo</div>
+      </div>
+    </div>
+    <button type="button" class="mx-iconbtn" aria-label="Close" onclick="closeProgImport()"><span class="ui-icon" data-icon="x"></span></button>
+  </div>
+  <div id="progImportBody" class="ai-sheet-body"></div>
+</div>
+
 <div id="progAiGenBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeProgAiGen()"></div>
 <div id="progAiGenPanel" class="ai-sheet" role="dialog" aria-modal="true" aria-label="AI Program Generator" style="display:none;transform:translateY(100%);">
   <div class="ai-sheet-head">
