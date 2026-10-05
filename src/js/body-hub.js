@@ -173,7 +173,8 @@
     const savedDate = localStorage.getItem('dailyMacroDate');
     const progress = savedDate === today ? _parse('dailyMacroProgress', null) : null;
     const p = progress || { protein: 0, carbs: 0, fats: 0 };
-    const totalCals = Math.round((p.protein || 0) * 4 + (p.carbs || 0) * 4 + (p.fats || 0) * 9);
+    // `cals` is calories logged on their own, on top of the macros.
+    const totalCals = Math.max(0, Math.round((p.protein || 0) * 4 + (p.carbs || 0) * 4 + (p.fats || 0) * 9 + (Number(p.cals) || 0)));
 
     let t = null;
     try {

@@ -193,16 +193,12 @@
     const carbs   = Math.round(_sel.carbs100 * s);
     const fat     = Math.round(_sel.fat100 * s);
 
-    // Inject values by setting quick-add inputs then firing addMacro
-    const map = { cal: ['qaCals', kcal], protein: ['qaProtein', protein], carbs: ['qaCarbs', carbs], fat: ['qaFat', fat] };
-    for (const [type, [inputId, val]] of Object.entries(map)) {
-      const el = document.getElementById(inputId);
-      if (el) {
-        const prev = el.value;
-        el.value = val;
-        if (window.addMacro) window.addMacro(type);
-        el.value = prev; // restore so user's preset isn't lost
-      }
+    // Log the food's macros. Calories follow from them; whatever the label's
+    // kcal differs by (fibre, alcohol, rounding) goes in as direct calories,
+    // so the day's total matches the food's kcal instead of counting it twice.
+    if (window.logMacroAmounts) {
+      const macroKcal = protein * 4 + carbs * 4 + fat * 9;
+      window.logMacroAmounts({ protein, carbs, fats: fat, cals: kcal - macroKcal });
     }
 
     // Persist to food diary
