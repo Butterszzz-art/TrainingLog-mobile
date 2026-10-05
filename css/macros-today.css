@@ -574,3 +574,25 @@
   font-family: var(--font-body);
   font-size: 14px;
 }
+
+.macro-meals-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  border: 1px dashed var(--pod-border);
+  border-radius: var(--radius-pod);
+  background: transparent;
+  color: var(--green-90);
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.macro-meals-add .ui-icon { width: 14px; height: 14px; }
+#macroMealContainer { display: flex; flex-direction: column; gap: 10px; }
+#macroMealContainer:empty { display: none; }

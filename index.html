@@ -3164,10 +3164,11 @@
                 <button type="button" class="macro-save-btn" onclick="fetchRecipe()">Fetch</button>
               </div>
               <div id="macroMealContainer"></div>
+              <!-- In the flow after the meal cards; as a fixed floating button
+                   it sat on top of the last meal's buttons. -->
+              <button type="button" id="addMealFab" class="macro-meals-add" onclick="addMacroMeal()"><span class="ui-icon" data-icon="plus"></span> Add meal</button>
             </div>
           </details>
-
-          <button id="addMealFab" class="fab" onclick="addMacroMeal()">＋</button>
         </div>
       </div>
     </div>
