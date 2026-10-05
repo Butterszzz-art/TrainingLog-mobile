@@ -4380,7 +4380,6 @@ let macroRanges = {
   tdee:    0
 };
 
-let consumed = { cal: 0, protein: 0, carbs: 0, fat: 0 };
 
 const defaultExercises = [
   'Bench Press', 'Squat', 'Deadlift', 'Overhead Press', 'Barbell Row',
@@ -8945,18 +8944,17 @@ function submitMeal(idx) {
 
   // Save meals to dailyMacroMeals array in localStorage
   const currentMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
+  const previous = currentMeals[idx] || { protein: 0, carbs: 0, fats: 0 };
   currentMeals[idx] = { protein: p, carbs: c, fats: f, slot };
   localStorage.setItem("dailyMacroMeals", JSON.stringify(currentMeals));
 
-  // Update totals and save
-  const newTotals = currentMeals.reduce((totals, meal) => {
-    totals.protein += meal.protein || 0;
-    totals.carbs += meal.carbs || 0;
-    totals.fats += meal.fats || 0;
-    return totals;
-  }, { protein:0, carbs:0, fats:0 });
-
-  updateDailyMacroProgress(newTotals.protein, newTotals.carbs, newTotals.fats);
+  // Add only what changed for this meal. Adding the sum of every meal again
+  // on each submit counted earlier meals twice.
+  updateDailyMacroProgress(
+    p - (previous.protein || 0),
+    c - (previous.carbs || 0),
+    f - (previous.fats || 0)
+  );
 
   // Now update the UI with the updated macro meals and new daily progress
   updateMacroUI();
@@ -9514,7 +9512,12 @@ function getAdaptiveMacroTargets() {
   };
 }
 
-function addMacro(type) {
+// Quick-add chips, the ± buttons and food search all land here. They used to
+// bump an in-memory counter for just that one row: protein/carbs/fat never
+// added calories, nothing was saved, and the next updateMacroUI() (or a
+// reload) wiped it. Now every change goes into today's saved progress, which
+// updateMacroUI() reads, so calories, bars and the pace nudge stay in step.
+function getQuickAddStep(type) {
   const inputMap = {
     cal: "qaCals",
     protein: "qaProtein",
@@ -9524,102 +9527,21 @@ function addMacro(type) {
   const defaultSteps = { cal: 100, protein: 10, carbs: 10, fat: 5 };
   const input = document.getElementById(inputMap[type]);
   const parsed = input ? Number(input.value) : NaN;
-  const step = Number.isFinite(parsed) && parsed > 0 ? parsed : defaultSteps[type];
-  consumed[type] += step;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultSteps[type];
+}
 
-  const targets = getMacroTargetValues();
-  const progressMap = {
-    cal: "macroCalsProgress",
-    protein: "macroProteinProgress",
-    carbs: "macroCarbsProgress",
-    fat: "macroFatProgress",
-  };
-  const barMap = {
-    cal: "calsBar",
-    protein: "proteinBar",
-    carbs: "carbBar",
-    fat: "fatBar",
-  };
-  const label = document.getElementById(progressMap[type]);
-  const bar = document.getElementById(barMap[type]);
-  if (label) label.textContent = consumed[type];
-  if (bar) bar.value = consumed[type];
+function quickAddDelta(type, amount) {
+  if (type === "cal") return { cals: amount };
+  if (type === "fat") return { fats: amount };
+  return { [type]: amount };
+}
 
-  if (type === "cal") {
-    const net = document.getElementById("macroCalsNet");
-    if (net) net.textContent = consumed[type];
-  }
-  const max =
-    type === "cal"
-      ? targets.calories
-      : type === "protein"
-        ? targets.protein
-        : type === "fat"
-          ? targets.fat
-          : targets.carbs;
-  if (bar && Number.isFinite(max) && max > 0) {
-    bar.max = max;
-  }
-  updateMacroSummary({
-    cal: { value: consumed.cal, target: targets.calories, unit: "kcal" },
-    protein: { value: consumed.protein, target: targets.protein, unit: "g" },
-    carbs: { value: consumed.carbs, target: targets.carbs, unit: "g" },
-    fat: { value: consumed.fat, target: targets.fat, unit: "g" },
-  });
+function addMacro(type) {
+  logMacroAmounts(quickAddDelta(type, getQuickAddStep(type)));
 }
 
 function subtractMacro(type) {
-  const inputMap = {
-    cal: "qaCals",
-    protein: "qaProtein",
-    carbs: "qaCarbs",
-    fat: "qaFat",
-  };
-  const defaultSteps = { cal: 100, protein: 10, carbs: 10, fat: 5 };
-  const input = document.getElementById(inputMap[type]);
-  const parsed = input ? Number(input.value) : NaN;
-  const step = Number.isFinite(parsed) && parsed > 0 ? parsed : defaultSteps[type];
-  consumed[type] = Math.max(0, consumed[type] - step);
-
-  const targets = getMacroTargetValues();
-  const progressMap = {
-    cal: "macroCalsProgress",
-    protein: "macroProteinProgress",
-    carbs: "macroCarbsProgress",
-    fat: "macroFatProgress",
-  };
-  const barMap = {
-    cal: "calsBar",
-    protein: "proteinBar",
-    carbs: "carbBar",
-    fat: "fatBar",
-  };
-  const label = document.getElementById(progressMap[type]);
-  const bar = document.getElementById(barMap[type]);
-  if (label) label.textContent = consumed[type];
-  if (bar) bar.value = consumed[type];
-
-  if (type === "cal") {
-    const net = document.getElementById("macroCalsNet");
-    if (net) net.textContent = consumed[type];
-  }
-  const max =
-    type === "cal"
-      ? targets.calories
-      : type === "protein"
-        ? targets.protein
-        : type === "fat"
-          ? targets.fat
-          : targets.carbs;
-  if (bar && Number.isFinite(max) && max > 0) {
-    bar.max = max;
-  }
-  updateMacroSummary({
-    cal: { value: consumed.cal, target: targets.calories, unit: "kcal" },
-    protein: { value: consumed.protein, target: targets.protein, unit: "g" },
-    carbs: { value: consumed.carbs, target: targets.carbs, unit: "g" },
-    fat: { value: consumed.fat, target: targets.fat, unit: "g" },
-  });
+  logMacroAmounts(quickAddDelta(type, -getQuickAddStep(type)));
 }
 
 function getMacroProgressColor(percent) {
@@ -9742,15 +9664,13 @@ window.addMacroFavorite = addMacroFavorite;
 
 function updateMacroUI() {
   renderAssignedNutritionPlanForAthlete();
-  // Calculate totals from macroMeals array
-  let totalProtein = 0, totalCarbs = 0, totalFats = 0;
-  macroMeals.forEach(meal => {
-    totalProtein += meal.protein || 0;
-    totalCarbs += meal.carbs || 0;
-    totalFats += meal.fats || 0;
-  });
-
-  const totalCals = totalProtein * 4 + totalCarbs * 4 + totalFats * 9;
+  // Today's saved intake is the one source of truth: meals, favorites,
+  // quick-add and food search all write to it.
+  const progress = loadDailyMacroProgress();
+  const totalProtein = progress.protein;
+  const totalCarbs = progress.carbs;
+  const totalFats = progress.fats;
+  const totalCals = progress.calories;
 
   const adaptiveTargets = getAdaptiveMacroTargets();
   const cardioCals = adaptiveTargets.cardioCalories || 0;
@@ -10243,18 +10163,43 @@ function getTodayDateString() {
   return d.toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
+// Today's intake. `cals` is calories logged on their own ("+250 kcal"), on
+// top of what protein/carbs/fat add up to; `calories` is the day's total.
+function macroProgressCalories(progress) {
+  const p = progress || {};
+  const fromMacros = (Number(p.protein) || 0) * 4 + (Number(p.carbs) || 0) * 4 + (Number(p.fats) || 0) * 9;
+  return Math.max(0, Math.round(fromMacros + (Number(p.cals) || 0)));
+}
+
+function emptyMacroProgress() {
+  return { protein: 0, carbs: 0, fats: 0, cals: 0, calories: 0 };
+}
+
 function loadDailyMacroProgress() {
   const today = getTodayDateString();
   const savedDate = localStorage.getItem("dailyMacroDate");
   if (savedDate !== today) {
     // New day, reset saved macros
     localStorage.setItem("dailyMacroDate", today);
-    localStorage.setItem("dailyMacroProgress", JSON.stringify({ protein: 0, carbs: 0, fats: 0 }));
-    return { protein: 0, carbs: 0, fats: 0 };
+    localStorage.setItem("dailyMacroProgress", JSON.stringify(emptyMacroProgress()));
+    return emptyMacroProgress();
   }
 
-  const progress = JSON.parse(localStorage.getItem("dailyMacroProgress"));
-  return progress || { protein: 0, carbs: 0, fats: 0 };
+  let progress = null;
+  try {
+    progress = JSON.parse(localStorage.getItem("dailyMacroProgress"));
+  } catch (_err) {
+    progress = null;
+  }
+  if (!progress || typeof progress !== "object") return emptyMacroProgress();
+  const out = {
+    protein: Number(progress.protein) || 0,
+    carbs: Number(progress.carbs) || 0,
+    fats: Number(progress.fats ?? progress.fat) || 0,
+    cals: Number(progress.cals) || 0,
+  };
+  out.calories = macroProgressCalories(out);
+  return out;
 }
 
 function getTodayCardioCalories() {
@@ -10280,16 +10225,40 @@ function getCardioMinutesForDate(date) {
             .reduce((sum, e) => sum + (parseFloat(e.duration) || 0), 0);
 }
 
-function saveDailyMacroProgress(protein, carbs, fats) {
+function saveDailyMacroProgress(protein, carbs, fats, cals) {
   const today = getTodayDateString();
+  if (cals === undefined) cals = loadDailyMacroProgress().cals;
+  const progress = { protein, carbs, fats, cals: Number(cals) || 0 };
+  progress.calories = macroProgressCalories(progress);
   localStorage.setItem("dailyMacroDate", today);
-  localStorage.setItem("dailyMacroProgress", JSON.stringify({ protein, carbs, fats }));
+  localStorage.setItem("dailyMacroProgress", JSON.stringify(progress));
+  return progress;
 }
+
+// Adds (or with negative numbers, removes) amounts from today's saved intake
+// and refreshes the Macros tab. Nothing drops below zero.
+function logMacroAmounts({ protein = 0, carbs = 0, fats = 0, cals = 0 } = {}) {
+  const current = loadDailyMacroProgress();
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const next = {
+    protein: Math.max(0, round1(current.protein + (Number(protein) || 0))),
+    carbs: Math.max(0, round1(current.carbs + (Number(carbs) || 0))),
+    fats: Math.max(0, round1(current.fats + (Number(fats) || 0))),
+  };
+  const fromMacros = next.protein * 4 + next.carbs * 4 + next.fats * 9;
+  // Direct calories can go negative to trim a rounded-up food entry, but
+  // never below what the macros alone add up to.
+  next.cals = Math.max(-fromMacros, Math.round(current.cals + (Number(cals) || 0)));
+  const saved = saveDailyMacroProgress(next.protein, next.carbs, next.fats, next.cals);
+  updateMacroUI();
+  return saved;
+}
+window.logMacroAmounts = logMacroAmounts;
 
 function renderDailyMacroProgress() {
   const progress = loadDailyMacroProgress();
 
-  const totalCals = progress.protein * 4 + progress.carbs * 4 + progress.fats * 9;
+  const totalCals = progress.calories;
 
   document.getElementById("proteinBar").value = progress.protein;
   document.getElementById("macroProteinProgress").textContent = progress.protein;
@@ -10315,7 +10284,7 @@ function updateDailyMacroProgress(protein, carbs, fats) {
   const newCarbs = current.carbs + carbs;
   const newFats = current.fats + fats;
 
-  saveDailyMacroProgress(newProtein, newCarbs, newFats);
+  saveDailyMacroProgress(newProtein, newCarbs, newFats, current.cals);
   renderDailyMacroProgress();
 }
 
@@ -10387,12 +10356,13 @@ function checkMacroReset() {
 
   if (now - lastReset >= 86400000) { // 24h
     const previousTotals = JSON.parse(localStorage.getItem("dailyMacroProgress")) || { protein:0, carbs:0, fats:0 };
+    previousTotals.calories = macroProgressCalories(previousTotals);
     const previousMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
     const date = new Date(lastReset).toISOString().split('T')[0];
     addMacroHistoryEntry(date, previousMeals, previousTotals);
     saveDailyMacroLog(currentUser, date, previousMeals, previousTotals);
 
-    const calories = previousTotals.protein * 4 + previousTotals.carbs * 4 + previousTotals.fats * 9;
+    const calories = macroProgressCalories(previousTotals);
     const cardioMinutes = getCardioMinutesForDate(date);
     const wKey = `bodyweightLog_${currentUser}`;
     const wLog = JSON.parse(localStorage.getItem(wKey)) || [];
@@ -10404,7 +10374,7 @@ function checkMacroReset() {
       renderWeights();
     }
 
-    localStorage.setItem("dailyMacroProgress", JSON.stringify({ protein:0, carbs:0, fats:0 }));
+    localStorage.setItem("dailyMacroProgress", JSON.stringify(emptyMacroProgress()));
     localStorage.setItem("dailyMacroMeals", JSON.stringify([]));
     localStorage.setItem("macroResetTime", now.toString());
   } else if (!localStorage.getItem("macroResetTime")) {
