@@ -3,7 +3,8 @@
 // get the user's explicit permission before doing so.
 //
 // Every AI feature talks to our server's /api/ai/* (and legacy /ai/*)
-// routes, which forward the user's data to Anthropic. Rather than gate each
+// routes, which forward the user's data to OpenRouter and the AI model
+// providers it routes to (see privacy.html#ai). Rather than gate each
 // of the ~15 call sites, this wraps window.fetch once: the first AI request
 // on a device shows a consent sheet and waits for the answer. Agree → the
 // request goes ahead. Decline → it resolves to a 403 JSON error, which every
@@ -17,7 +18,10 @@
 (function () {
   'use strict';
 
-  var STORAGE_KEY = 'pc.aiConsent.v1'; // 'granted' | 'declined'
+  // v2: the provider changed from Anthropic to OpenRouter (2026-10-05), so
+  // consent given to the old wording is asked for again. Bump this whenever
+  // the consent sheet's description of who gets the data changes.
+  var STORAGE_KEY = 'pc.aiConsent.v2'; // 'granted' | 'declined'
   var AI_ROUTE = /\/(api\/)?ai\//;
   var nativeFetch = window.fetch ? window.fetch.bind(window) : null;
   var pendingPrompt = null;
@@ -82,10 +86,10 @@
         overlay.innerHTML =
           '<div class="ai-consent-sheet" role="dialog" aria-modal="true" aria-labelledby="aiConsentTitle">'
           + '<h3 id="aiConsentTitle">Share your data with our AI provider?</h3>'
-          + '<p>Pocket Coach\'s AI features — the AI coach, weekly briefs and reviews, program generator, macro, sleep and plateau insights, and rehab plans — are powered by <strong>Anthropic\'s Claude</strong>.</p>'
-          + '<p>To use them, the app sends the relevant parts of your data to Anthropic:</p>'
-          + '<ul><li>workouts, exercises and weights</li><li>bodyweight, nutrition, sleep and readiness scores</li><li>your goals and anything you type to the coach</li></ul>'
-          + '<p>Anthropic uses it only to generate your response and doesn\'t train its models on it. Your password and payment details are never sent. '
+          + '<p>Pocket Coach\'s AI features — the AI coach, weekly briefs and reviews, program generator and import, macro, sleep and plateau insights, and rehab plans — run on AI models reached through <strong>OpenRouter</strong>. We currently use free models from Google, NVIDIA, Alibaba (Qwen) and Nex AGI.</p>'
+          + '<p>To use them, the app sends the relevant parts of your data to OpenRouter and the model provider that answers:</p>'
+          + '<ul><li>workouts, exercises and weights</li><li>bodyweight, nutrition, sleep and readiness scores</li><li>your goals, anything you type to the coach, and program files you import</li></ul>'
+          + '<p><strong>Providers of free models may store your requests and use them to improve their models.</strong> Your password and payment details are never sent. '
           + 'See the <a href="' + PRIVACY_URL + '">Privacy Policy</a>.</p>'
           + '<p>You can change this any time in Settings → App → Privacy &amp; Legal.</p>'
           + '<div class="ai-consent-actions">'
@@ -194,7 +198,7 @@
     toggle.dataset.bound = 'true';
     toggle.addEventListener('change', function () {
       setConsent(toggle.checked ? 'granted' : 'declined');
-      var msg = toggle.checked ? 'AI features turned on.' : 'AI features turned off. No data will be sent to Anthropic.';
+      var msg = toggle.checked ? 'AI features turned on.' : 'AI features turned off. No data will be sent to AI providers.';
       if (typeof window.showToast === 'function') window.showToast(msg);
     });
   }
