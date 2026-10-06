@@ -4050,6 +4050,7 @@
 <script src="community.js"></script>
 <script src="exerciseMuscleMap.js"></script>
 <script src="src/js/customExercises.js"></script>
+<script src="src/js/exerciseAutoClassify.js"></script>
 <script src="leaderboard.js"></script>
 <script src="recoveryMap.js"></script>
 <script src="stats.js"></script>
@@ -4453,6 +4454,8 @@ function loadUserExercises() {
   if (typeof getCustomMuscleMapObject === 'function' && typeof setCustomExerciseMuscleMap === 'function') {
     setCustomExerciseMuscleMap(getCustomMuscleMapObject(currentUser));
   }
+  // Catch names in older history the AI fallback hasn't seen yet.
+  if (typeof window.scheduleExerciseAutoClassify === 'function') window.scheduleExerciseAutoClassify(currentUser);
   updateExerciseSuggestions();
   loadExerciseLibrary(); // fire-and-forget — renders with defaults/cache immediately, upgrades when it resolves
 }
@@ -6149,6 +6152,11 @@ function addLogEntry() {
   };
 
   localStorage.setItem(`workouts_${_activeUser}`, JSON.stringify(workouts));
+  // A name nothing local could place on a muscle group goes to the AI
+  // fallback in the background (own log only — guesses are per user).
+  if (!window.coachLoggingClient && typeof window.scheduleExerciseAutoClassify === 'function') {
+    window.scheduleExerciseAutoClassify(_activeUser);
+  }
   // Your own sessions reach the backend through the workout archiver
   // (POST /workouts). The per-exercise POST /saveWorkout that used to run
   // here stored nothing — that route is retired on the backend.

@@ -11,7 +11,10 @@
  * something that would fall into the 'other' bucket in the volume block.
  *
  * Storage: one localStorage array per user, `customExercises_<user>`,
- * each entry `{ name, muscleGroup, createdAt }`. A custom assignment takes
+ * each entry `{ name, muscleGroup, createdAt }`. Entries the AI fallback
+ * added (src/js/exerciseAutoClassify.js) also carry `source: 'ai'`,
+ * `confidence` and `canonicalName`; saving the name here by hand replaces
+ * the guess with the user's own choice, which the AI never overwrites. A custom assignment takes
  * priority over the built-in map (see exerciseMuscleMap.js's
  * setCustomExerciseMuscleMap) — so this doubles as a fix for a specific
  * exercise this app already grouped in a way the user disagrees with.
@@ -101,6 +104,36 @@
     return { ok: true, list };
   }
 
+  // Saves the AI's guesses for names nothing else could place. Never
+  // replaces an existing entry — a user's own assignment always wins, and a
+  // name already guessed isn't re-guessed. Returns the entries added.
+  function saveAiExerciseGuesses(user, guesses) {
+    if (!user || !Array.isArray(guesses)) return [];
+    const list = loadCustomExercises(user);
+    const taken = new Set(list.map((entry) => String(entry.name || '').toLowerCase()));
+    const added = [];
+    guesses.forEach((g) => {
+      const name = typeof g?.name === 'string' ? g.name.trim() : '';
+      if (!name || taken.has(name.toLowerCase()) || !VALID_MUSCLE_GROUPS.has(g.muscleGroup)) return;
+      taken.add(name.toLowerCase());
+      const record = {
+        name,
+        muscleGroup: g.muscleGroup,
+        createdAt: new Date().toISOString(),
+        source: 'ai',
+        confidence: Number(g.confidence) || 0,
+        canonicalName: typeof g.canonicalName === 'string' ? g.canonicalName : null
+      };
+      list.push(record);
+      added.push(record);
+    });
+    if (added.length) {
+      persistCustomExercises(user, list);
+      refreshRuntimeMuscleMap(user);
+    }
+    return added;
+  }
+
   function removeCustomExercise(user, name) {
     if (!user) return [];
     const lower = String(name || '').toLowerCase();
@@ -138,8 +171,11 @@
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((entry) => `
         <div class="custom-exercise-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color);">
-          <span style="font-size:0.9rem;">${escapeHtml(entry.name)} <span style="color:var(--secondary-text);">— ${escapeHtml(muscleGroupLabel(entry.muscleGroup))}</span></span>
-          <button type="button" class="secondary" data-remove-custom-exercise="${escapeHtml(entry.name)}" style="padding:4px 10px;font-size:0.78rem;">Remove</button>
+          <span style="font-size:0.9rem;">${escapeHtml(entry.name)} <span style="color:var(--secondary-text);">— ${escapeHtml(muscleGroupLabel(entry.muscleGroup))}</span>${entry.source === 'ai' ? ` <span class="custom-exercise-ai-tag" title="${escapeHtml(entry.canonicalName ? `Read as ${entry.canonicalName}. ` : '')}Save this name with another group to change it." style="font-size:0.7rem;padding:1px 6px;border-radius:999px;border:1px solid var(--border-color);color:var(--secondary-text);white-space:nowrap;">AI guess</span>` : ''}</span>
+          <span style="display:flex;gap:6px;">
+            ${entry.source === 'ai' ? `<button type="button" class="secondary" data-change-custom-exercise="${escapeHtml(entry.name)}" style="padding:4px 10px;font-size:0.78rem;">Change</button>` : ''}
+            <button type="button" class="secondary" data-remove-custom-exercise="${escapeHtml(entry.name)}" style="padding:4px 10px;font-size:0.78rem;">Remove</button>
+          </span>
         </div>
       `)
       .join('');
@@ -210,6 +246,15 @@
     if (listContainer.dataset.bound !== 'true') {
       listContainer.dataset.bound = 'true';
       listContainer.addEventListener('click', (event) => {
+        // "Change" on an AI guess: put the name in the form so picking a
+        // group and saving replaces the guess with the user's own choice.
+        const change = event.target.closest('[data-change-custom-exercise]');
+        if (change) {
+          const nameInput = document.getElementById('customExerciseName');
+          if (nameInput) nameInput.value = change.getAttribute('data-change-custom-exercise');
+          if (groupSelect) groupSelect.focus();
+          return;
+        }
         const btn = event.target.closest('[data-remove-custom-exercise]');
         if (!btn) return;
         const user = getActiveUser();
@@ -225,6 +270,7 @@
       CUSTOM_MUSCLE_GROUPS,
       loadCustomExercises,
       saveCustomExercise,
+      saveAiExerciseGuesses,
       removeCustomExercise,
       getCustomMuscleMapObject
     };
@@ -233,6 +279,8 @@
     window.CUSTOM_MUSCLE_GROUPS = CUSTOM_MUSCLE_GROUPS;
     window.loadCustomExercises = loadCustomExercises;
     window.saveCustomExercise = saveCustomExercise;
+    window.saveAiExerciseGuesses = saveAiExerciseGuesses;
+    window.muscleGroupLabel = muscleGroupLabel;
     window.removeCustomExercise = removeCustomExercise;
     window.getCustomMuscleMapObject = getCustomMuscleMapObject;
     window.initCustomExerciseManager = initCustomExerciseManager;
