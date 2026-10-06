@@ -1079,15 +1079,211 @@ const normalizedExerciseMuscleMap = Object.fromEntries([
 ]);
 
 // Per-user overrides set from Settings → Advanced ("create new exercise" /
-// reassign muscle group). Lives only in memory here — src/js/customExercises.js
-// owns persistence and calls setCustomExerciseMuscleMap() to push the user's
-// saved overrides in after login. Deliberately checked *before* the tables
-// above so an advanced lifter's own assignment always wins, including for
-// exercise names this file already has an opinion on.
+// reassign muscle group), plus the AI's guesses for names nothing else could
+// place (src/js/exerciseAutoClassify.js saves those through the same store).
+// Lives only in memory here — src/js/customExercises.js owns persistence and
+// calls setCustomExerciseMuscleMap() to push the user's saved overrides in
+// after login. Deliberately checked *before* the tables above so an advanced
+// lifter's own assignment always wins, including for exercise names this
+// file already has an opinion on.
 let customExerciseMuscleMap = {};
+
+// ── Resolving names the tables don't know verbatim ──────────────────────────
+// Exercise names reach the log from more places than the constrained entry
+// field: imported coach programs, old history, templates, custom names. An
+// exact-match miss used to land in 'other' and vanish from the volume
+// totals. Before giving up, try (in order, cheapest and safest first):
+//   1. the same tables keyed by a cleaned-up name — abbreviations expanded
+//      (db, bb, ohp, rdl…), punctuation, plurals and set notation stripped —
+//      and by its sorted words, so "DB incline press" finds "Incline
+//      Dumbbell Press";
+//   2. the same after correcting typo'd words against the catalog's own
+//      vocabulary ("benhc press" → "bench press");
+//   3. keyword rules ("paused bench press" → chest, "nordic curl" →
+//      hamstrings), ordered so the more specific pattern wins.
+// What still misses stays 'other' until the AI fallback names it.
+const exerciseNameResolver = (() => {
+  const PHRASES = [
+    [/\blat raise/g, 'lateral raise'],
+    [/\bpull ?downs?\b/g, 'pulldown'],
+    [/\bpush ?downs?\b/g, 'pushdown'],
+    [/\bpull ?ups?\b/g, 'pull up'],
+    [/\bchin ?ups?\b/g, 'chin up'],
+    [/\bpush ?ups?\b/g, 'push up'],
+    [/\bsit ?ups?\b/g, 'sit up'],
+    [/\bstep ?ups?\b/g, 'step up'],
+    [/\bskull ?crushers?\b/g, 'skull crusher'],
+    [/\bflyes\b|\bflys\b|\bflies\b/g, 'fly'],
+  ];
+  const WORDS = {
+    db: 'dumbbell', dbs: 'dumbbell', bb: 'barbell', kb: 'kettlebell', kbs: 'kettlebell',
+    ohp: 'overhead press', rdl: 'romanian deadlift', rdls: 'romanian deadlift', dl: 'deadlift', dls: 'deadlift',
+    sldl: 'stiff leg deadlift', sldls: 'stiff leg deadlift', cgbp: 'close grip bench press',
+    bp: 'bench press', ghr: 'glute ham raise', bss: 'bulgarian split squat',
+    tri: 'tricep', tris: 'tricep', bi: 'bicep', bis: 'bicep', ext: 'extension',
+    inc: 'incline', dec: 'decline', rev: 'reverse', mach: 'machine', alt: 'alternating',
+    sa: 'single arm', sl: 'single leg',
+  };
+  const FILLER = new Set(['with', 'the', 'a', 'an', 'on', 'and', 'w', 'to', 'of', 'for', 'bar']);
+
+  const singular = (w) => {
+    if (/sses$/.test(w)) return w.slice(0, -2); // presses → press
+    return w.length > 3 && /s$/.test(w) && !/(ss|us)$/.test(w) ? w.slice(0, -1) : w;
+  };
+
+  function normalizeTokens(name) {
+    let s = String(name || '').toLowerCase()
+      .replace(/['’]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ');
+    PHRASES.forEach(([re, to]) => { s = s.replace(re, to); });
+    const out = [];
+    s.split(' ').forEach((w) => {
+      if (!w || /^\d/.test(w) || FILLER.has(w)) return; // set notation, weights, filler
+      (WORDS[w] || w).split(' ').forEach((part) => out.push(singular(part)));
+    });
+    return out;
+  }
+
+  const sortedKey = (tokens) => tokens.slice().sort().join(' ');
+
+  function buildIndex(entries) {
+    const exact = new Map();
+    const sorted = new Map();
+    entries.forEach(([name, muscle]) => {
+      const tokens = normalizeTokens(name);
+      if (!tokens.length) return;
+      exact.set(tokens.join(' '), muscle);
+      sorted.set(sortedKey(tokens), muscle);
+    });
+    return { exact, sorted };
+  }
+
+  // Built on first use. Later entries overwrite earlier ones, so the
+  // curated table wins over the generated one.
+  let catalog = null;
+  let vocab = null;
+  function catalogIndex() {
+    if (catalog) return catalog;
+    const entries = [...Object.entries(generatedExerciseMuscleMap), ...Object.entries(exerciseMuscleMap)];
+    catalog = buildIndex(entries);
+    vocab = new Map();
+    entries.forEach(([name]) => normalizeTokens(name).forEach((t) => vocab.set(t, (vocab.get(t) || 0) + 1)));
+    return catalog;
+  }
+
+  let custom = buildIndex([]);
+  const memo = new Map();
+  function setCustom(map) {
+    custom = buildIndex(Object.entries(map));
+    memo.clear();
+  }
+
+  function lookup(tokens) {
+    if (!tokens.length) return null;
+    const key = tokens.join(' ');
+    const sKey = sortedKey(tokens);
+    const idx = catalogIndex();
+    return custom.exact.get(key) || custom.sorted.get(sKey) || idx.exact.get(key) || idx.sorted.get(sKey) || null;
+  }
+
+  // Edit distance where swapping two neighbouring letters counts as one
+  // edit ("benhc" → "bench"), giving up once it exceeds `max`.
+  function distance(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev2 = null;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      let rowMin = i;
+      for (let j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (prev2 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) cur[j] = Math.min(cur[j], prev2[j - 2] + 1);
+        if (cur[j] < rowMin) rowMin = cur[j];
+      }
+      if (rowMin > max) return max + 1;
+      prev2 = prev;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  // Swap each unknown word of 4+ letters for the closest catalog word: one
+  // edit for short words, two from 7 letters. A tie goes to the more common
+  // word; with no word that close it stays as typed. Null when nothing changed.
+  function correctTokens(tokens) {
+    catalogIndex();
+    let changed = false;
+    const out = tokens.map((t) => {
+      if (t.length < 4 || vocab.has(t)) return t;
+      const max = t.length >= 7 ? 2 : 1;
+      let best = null;
+      let bestDist = max + 1;
+      let bestCount = 0;
+      vocab.forEach((count, word) => {
+        const d = distance(t, word, max);
+        if (d < bestDist || (d === bestDist && count > bestCount)) {
+          best = word; bestDist = d; bestCount = count;
+        }
+      });
+      if (best === null || bestDist > max) return t;
+      changed = true;
+      return best;
+    });
+    return changed ? out : null;
+  }
+
+  // Ordered: the first matching rule wins, so specific patterns ("leg
+  // curl", "glute kickback", "upright row") sit above the broad ones
+  // ("curl", "kickback", "row") they would otherwise be caught by.
+  const RULES = [
+    [/\bchest dip\b/, 'chest'],
+    [/\b(glute ham|nordic|leg curl|hamstring|romanian|stiff leg|good morning)\b/, 'hamstrings'],
+    [/\b(wrist|forearm)\b/, 'forearms'],
+    [/\b(calf|calve|tibialis)\b/, 'calves'],
+    [/\babduct/, 'abductors'],
+    [/\badduct/, 'adductors'],
+    [/\b(hip thrust|glute|bridge|donkey kick|clamshell|frog pump)/, 'glutes'],
+    [/\bshrug\b/, 'traps'],
+    [/\b(tricep|pushdown|skull crusher|french press|jm press|close grip bench|kickback|dip)\b/, 'triceps'],
+    [/\b(lateral raise|front raise|rear delt|delt|deltoid|shoulder|overhead press|military|arnold|face pull|upright row|lu raise|y raise)\b/, 'shoulders'],
+    [/\b(curl|bicep)\b/, 'biceps'],
+    [/\b(squat|leg press|lunge|leg extension|hack|step up|sissy|wall sit)\b/, 'quads'],
+    [/\b(pulldown|pull up|chin up|row|lat|deadlift|pullover|back extension|hyperextension|rack pull)\b/, 'back'],
+    [/\b(bench|chest|pec|fly|push up|svend)\b|\b(incline|decline)\b.*\bpress\b/, 'chest'],
+    [/\b(crunche?|sit up|plank|ab|core|oblique|leg raise|knee raise|russian twist|woodchop|woodchopper|hollow|pallof|rollout|dead bug|toes to bar)\b/, 'abs'],
+  ];
+  function byRule(tokens) {
+    const s = tokens.join(' ');
+    const rule = RULES.find(([re]) => re.test(s));
+    return rule ? rule[1] : null;
+  }
+
+  // → { muscle, via } where via says how the name was placed:
+  // 'exact' | 'normalized' | 'corrected' | 'keyword' | null (unresolved).
+  function resolve(name) {
+    if (typeof name !== 'string' || !name.trim()) return { muscle: 'other', via: null };
+    const raw = name.trim().toLowerCase();
+    const hit = customExerciseMuscleMap[raw] || normalizedExerciseMuscleMap[raw];
+    if (hit) return { muscle: hit, via: 'exact' };
+    if (memo.has(raw)) return memo.get(raw);
+
+    const tokens = normalizeTokens(raw);
+    const corrected = correctTokens(tokens);
+    let result = { muscle: 'other', via: null };
+    let m;
+    if ((m = lookup(tokens))) result = { muscle: m, via: 'normalized' };
+    else if (corrected && (m = lookup(corrected))) result = { muscle: m, via: 'corrected' };
+    else if ((m = byRule(corrected || tokens))) result = { muscle: m, via: 'keyword' };
+    memo.set(raw, result);
+    return result;
+  }
+
+  return { resolve, setCustom, normalize: (name) => normalizeTokens(name).join(' ') };
+})();
 
 function setCustomExerciseMuscleMap(map) {
   customExerciseMuscleMap = (map && typeof map === 'object') ? map : {};
+  exerciseNameResolver.setCustom(customExerciseMuscleMap);
 }
 
 // Every exercise name this file can resolve to a muscle group, in its
@@ -1098,21 +1294,28 @@ function getAllExerciseNames() {
   return [...Object.keys(generatedExerciseMuscleMap), ...Object.keys(exerciseMuscleMap)];
 }
 
-// Utility to look up a muscle group by exercise name (case-insensitive)
+// How a name maps to a muscle group: { muscle, via } (see resolve() above).
+// via === null means nothing could place it and it counts as 'other'.
+function resolveExerciseMuscle(exerciseName) {
+  return exerciseNameResolver.resolve(exerciseName);
+}
+
+// Look up a muscle group by exercise name — case-insensitive and forgiving
+// of abbreviations, word order and typos (see above).
 function getMuscleGroup(exerciseName) {
-  if (typeof exerciseName !== 'string') {
-    return 'other';
-  }
-  const normalized = exerciseName.trim().toLowerCase();
-  return customExerciseMuscleMap[normalized] || normalizedExerciseMuscleMap[normalized] || 'other';
+  return exerciseNameResolver.resolve(exerciseName).muscle;
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { exerciseMuscleMap, getMuscleGroup, setCustomExerciseMuscleMap, getAllExerciseNames };
+  module.exports = {
+    exerciseMuscleMap, getMuscleGroup, resolveExerciseMuscle, setCustomExerciseMuscleMap, getAllExerciseNames,
+    normalizeExerciseKey: exerciseNameResolver.normalize
+  };
 }
 if (typeof window !== 'undefined') {
   window.exerciseMuscleMap = exerciseMuscleMap;
   window.getMuscleGroup = getMuscleGroup;
+  window.resolveExerciseMuscle = resolveExerciseMuscle;
   window.setCustomExerciseMuscleMap = setCustomExerciseMuscleMap;
   window.getAllExerciseNames = getAllExerciseNames;
 }
