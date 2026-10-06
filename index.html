@@ -4254,7 +4254,16 @@ function forceFreshLogin() {
 
 function setCurrentUser(user) {
   currentUser = user && typeof user === 'object' ? user.username : user;
+  // `let currentUser` isn't on window, and the login flows write
+  // fitnessAppUser only after this call — so modules that look the user up
+  // via window.currentUser || fitnessAppUser (logbook-cover.js for the app
+  // colour, among others) would otherwise still see "signed out" here.
+  window.currentUser = currentUser || null;
   if (typeof window.applyAppAccent === 'function') window.applyAppAccent();
+  if (typeof window.renderLogbookCover === 'function') window.renderLogbookCover();
+  // Login doesn't reload the page, so anything that loaded user data at
+  // startup (while signed out) reloads it from here.
+  window.dispatchEvent(new CustomEvent('traininglog:user-changed', { detail: { user: currentUser } }));
   if (typeof window.renderGamificationUI === 'function' && currentUser) {
     window.renderGamificationUI(currentUser);
   }
@@ -10717,6 +10726,7 @@ function logout(options = {}) {
   localStorage.removeItem('authToken');
   localStorage.removeItem('username');
   localStorage.removeItem('Username');
+  window.currentUser = null;
   if (typeof window.applyAppAccent === 'function') window.applyAppAccent();
   // Firebase keeps its session in IndexedDB — sign out there too, or the
   // onIdTokenChanged listener re-populates the token on next load

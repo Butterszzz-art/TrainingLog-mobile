@@ -553,6 +553,10 @@ function _fmt(totalSeconds) {
     document.getElementById('attemptSheetTable')?.addEventListener('input', () => _save());
   });
 
+  // Login doesn't reload the page: without this the sheet keeps what it
+  // loaded while signed out, and the next edit saves those blanks over the
+  // account's attempts.
+  window.addEventListener('traininglog:user-changed', _load);
   // Re-render weigh-in alert whenever meet prep is saved
   window.addEventListener('traininglog:meet-saved', _renderWeighInAlert);
   window.renderWeighInAlert = _renderWeighInAlert;
