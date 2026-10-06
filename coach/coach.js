@@ -38,9 +38,38 @@ function authHeaders() {
   return { Authorization: 'Bearer ' + (localStorage.getItem('token') || _token), 'Content-Type': 'application/json' };
 }
 
+// fetch() for the backend's protected routes. A 401 usually means the
+// Firebase token expired before watchTokenRefresh replaced it, so mint a new
+// one and retry once; if that still fails the session is gone — back to login.
+async function coachFetch(url, options = {}) {
+  const res = await fetch(url, { ...options, headers: { ...options.headers, ...authHeaders() } });
+  if (res.status !== 401) return res;
+  const token = await window.firebaseAuth?.currentToken?.({ forceRefresh: true }).catch(() => null);
+  if (!token) { showLoginGate(); return res; }
+  const retry = await fetch(url, { ...options, headers: { ...options.headers, ...authHeaders() } });
+  if (retry.status === 401) showLoginGate();
+  return retry;
+}
+
+function showLoginGate() {
+  _token = null;
+  localStorage.removeItem('coachUser');
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('loginGate').style.display = '';
+  const errorEl = document.getElementById('loginError');
+  if (errorEl) errorEl.textContent = 'Your session expired. Sign in again.';
+}
+
 // ── Auth ──────────────────────────────────────────────────────
 
-function checkAuth() {
+async function checkAuth() {
+  if (!_username) return;
+  // The stored token is an hour-old Firebase ID token at most page loads;
+  // wait for Firebase to restore the session and hand out a fresh one before
+  // any request goes out, instead of sending the stale one and getting 401s.
+  const token = await window.firebaseAuth?.currentToken?.().catch(() => null);
+  if (token) _token = token;
+  else if (window.firebaseAuth?.isAvailable()) _token = null; // no Firebase session left
   if (_token && _username) {
     document.getElementById('loginGate').style.display = 'none';
     document.getElementById('appShell').style.display = '';
@@ -166,7 +195,7 @@ async function loadClients() {
   _clientsLoadError = false;
 
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/clients?coachId=' + encodeURIComponent(_username), {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients?coachId=' + encodeURIComponent(_username), {
       headers: authHeaders(),
     });
     const data = await res.json();
@@ -475,7 +504,7 @@ async function bulkMessage() {
   if (!msg) return;
 
   const results = await Promise.all(clients.map(c =>
-    fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(c.id) + '/notes', {
+    coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(c.id) + '/notes', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ text: msg })
@@ -507,7 +536,7 @@ let _clientDetails = {};
 
 async function loadClientDetail(id) {
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(id), { headers: authHeaders() });
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(id), { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
     _clientDetails[id] = data.client;
@@ -608,7 +637,7 @@ async function removeClient() {
     : 'Remove ' + client.clientName + '? The link ends and everything they shared with you is deleted. This can\'t be undone.');
   if (!ok) return;
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(client.id), { method: 'DELETE', headers: authHeaders() });
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(client.id), { method: 'DELETE', headers: authHeaders() });
     const data = await res.json();
     if (!res.ok || !data.success) { alert(data?.error?.message || 'Could not remove.'); return; }
     delete _clientDetails[client.id];
@@ -735,7 +764,7 @@ const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 async function loadPrograms() {
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/programs', { headers: authHeaders() });
+    const res = await coachFetch(SERVER_URL + '/api/coach/programs', { headers: authHeaders() });
     const data = await res.json();
     if (res.ok && data.success) _programs = data.programs || [];
   } catch { /* keep the last list */ }
@@ -825,7 +854,7 @@ function masterPlanCard(c) {
 }
 
 async function planApi(path, options = {}) {
-  const res = await fetch(SERVER_URL + '/api/coach/plans' + path, { ...options, headers: authHeaders() });
+  const res = await coachFetch(SERVER_URL + '/api/coach/plans' + path, { ...options, headers: authHeaders() });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.success === false) throw new Error(data?.error?.message || ('HTTP ' + res.status));
   return data;
@@ -1001,7 +1030,7 @@ async function publishMasterPlan() {
 // — mirrored server-side onto the client's own coachAssignment view.
 async function patchClient(clientId, fields) {
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId), {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify(fields)
@@ -1065,7 +1094,7 @@ async function saveCoachProgram() {
   if (!total) { alert('Add at least one exercise.'); return; }
   const id = 'prog_' + Date.now().toString(36);
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/programs/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ name, days }) });
+    const res = await coachFetch(SERVER_URL + '/api/coach/programs/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ name, days }) });
     const data = await res.json();
     if (!res.ok || !data.success) { alert(data?.error?.message || 'Could not save.'); return; }
   } catch {
@@ -1162,7 +1191,7 @@ function renderNotes(c) {
 
 async function loadClientNotes(clientId) {
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/notes', { headers: authHeaders() });
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/notes', { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
     _clientNotesCache[clientId] = Array.isArray(data.notes) ? data.notes : [];
@@ -1197,7 +1226,7 @@ async function saveNote() {
   if (!client) return;
 
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(client.id) + '/notes', {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(client.id) + '/notes', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ text })
@@ -1259,7 +1288,7 @@ async function sendCoachInvite() {
   if (errorEl) errorEl.textContent = '';
 
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/clients/invite', {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/invite', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ clientUsername: username })
@@ -1318,7 +1347,7 @@ async function aiAnalyse() {
   if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">🧠 Analysing check-in…</p>';
 
   try {
-    const res = await fetch(SERVER_URL + '/api/ai/checkin-summary', {
+    const res = await coachFetch(SERVER_URL + '/api/ai/checkin-summary', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
@@ -1363,7 +1392,7 @@ async function aiDraft() {
   const box = document.getElementById('aiResultBox');
   if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">✍️ Drafting message…</p>';
   try {
-    const res = await fetch(SERVER_URL + '/api/ai/coach-draft-message', { method: 'POST', headers: authHeaders(), body: JSON.stringify(draftPayload(client)) });
+    const res = await coachFetch(SERVER_URL + '/api/ai/coach-draft-message', { method: 'POST', headers: authHeaders(), body: JSON.stringify(draftPayload(client)) });
     const data = await res.json();
     _lastDraft = data.draft || '';
     if (box) box.innerHTML = aiBox('AI Draft Message', _lastDraft || 'No draft available.', 'var(--highlight)')
@@ -1378,7 +1407,7 @@ function aiDraftIntoNotes() {
   if (!client) return;
   const textarea = document.getElementById('coachNoteInput');
   if (textarea) textarea.value = 'Generating AI draft…';
-  fetch(SERVER_URL + '/api/ai/coach-draft-message', { method: 'POST', headers: authHeaders(), body: JSON.stringify(draftPayload(client)) })
+  coachFetch(SERVER_URL + '/api/ai/coach-draft-message', { method: 'POST', headers: authHeaders(), body: JSON.stringify(draftPayload(client)) })
     .then(r => r.json())
     .then(data => { if (textarea) textarea.value = data.draft || 'Could not generate draft.'; })
     .catch(() => { if (textarea) textarea.value = 'Failed to generate — check connection.'; });
@@ -1411,7 +1440,7 @@ function fmt(n, decimals = 0) {
 
 async function loadLeads() {
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/leads', { headers: authHeaders() });
+    const res = await coachFetch(SERVER_URL + '/api/coach/leads', { headers: authHeaders() });
     const data = await res.json();
     _leads = (data.success && Array.isArray(data.leads)) ? data.leads : [];
   } catch {
@@ -1598,7 +1627,7 @@ async function convertLead(leadId) {
   if (!username?.trim()) return;
 
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/clients/invite', {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/invite', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ clientUsername: username.trim() })
@@ -1609,7 +1638,7 @@ async function convertLead(leadId) {
       return;
     }
 
-    await fetch(SERVER_URL + '/api/coach/leads/' + encodeURIComponent(leadId), {
+    await coachFetch(SERVER_URL + '/api/coach/leads/' + encodeURIComponent(leadId), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify({ status: 'converted' })
@@ -1635,7 +1664,7 @@ async function dismissLead(leadId, dismiss) {
   if (!lead) return;
 
   try {
-    const res = await fetch(SERVER_URL + '/api/coach/leads/' + encodeURIComponent(leadId), {
+    const res = await coachFetch(SERVER_URL + '/api/coach/leads/' + encodeURIComponent(leadId), {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify({ status: dismiss ? 'dismissed' : 'new' })
