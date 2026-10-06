@@ -211,6 +211,23 @@
     return { verified: true, token };
   }
 
+  // Waits for Firebase to restore the saved session (currentUser is null
+  // until it has), then returns a valid ID token — getIdToken() mints a new
+  // one if the stored one has expired. Returns null when nobody is signed in.
+  // forceRefresh: true mints a new token even if the current one looks valid.
+  async function currentToken({ forceRefresh = false } = {}) {
+    if (!available()) return null;
+    const auth = firebase.auth();
+    const user = auth.currentUser || await new Promise(resolve => {
+      const unsubscribe = auth.onAuthStateChanged(u => { unsubscribe(); resolve(u); });
+    });
+    if (!user) return null;
+    const token = await user.getIdToken(forceRefresh);
+    localStorage.setItem('token', token);
+    localStorage.setItem('authToken', token);
+    return token;
+  }
+
   async function logout() {
     if (available()) {
       try { await firebase.auth().signOut(); } catch { /* non-critical */ }
@@ -225,6 +242,7 @@
     resetPassword,
     resendVerification,
     reloadAndGetToken,
+    currentToken,
     logout
   };
 })();
