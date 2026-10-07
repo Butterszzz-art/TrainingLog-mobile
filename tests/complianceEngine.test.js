@@ -71,7 +71,7 @@ describe('complianceEngine', () => {
 
     const insights = complianceEngine.getComplianceInsights(userId, '2026-03-26');
     expect(Array.isArray(insights.insights)).toBe(true);
-    expect(insights.insights.join(' ').toLowerCase()).toContain('cardio consistency slipping');
-    expect(insights.insights.join(' ').toLowerCase()).toContain('posing overdue warning');
+    expect(insights.insights.join(' ').toLowerCase()).toContain('cardio has been slipping');
+    expect(insights.insights.join(' ').toLowerCase()).toContain('posing is overdue');
   });
 });

@@ -80,7 +80,7 @@
         <div class="vm-card-left">
           <span class="vm-icon">${v.active ? '🏖️' : '🏋️'}</span>
           <div>
-            <span class="vm-title">${v.active ? 'Vacation Mode On' : 'Vacation Mode'}</span>
+            <span class="vm-title">${v.active ? 'Vacation mode on' : 'Vacation mode'}</span>
             ${v.active
               ? `<span class="vm-sub">Streak &amp; program paused since ${v.since}</span>`
               : `<span class="vm-sub">Pause streak &amp; program tracking</span>`}
