@@ -1864,6 +1864,21 @@
 /* ── Hero readout + sparkline (renderWeightHero) ── */
 .wt-hero { margin-bottom: 10px; }
 
+.wt-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.wt-share-btn {
+  width: auto;
+  min-height: 34px;
+  padding: 0 14px;
+  gap: 6px;
+  font-size: 13px;
+}
+.wt-share-btn[hidden] { display: none; }
+
 .wt-hero-num-row {
   display: flex;
   align-items: baseline;

@@ -81,3 +81,20 @@ body.wstory-open { overflow: hidden; }
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+/* Extra options a sticker can add under the preview (weight story). */
+.wtstory-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.wtstory-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13.5px;
+  cursor: pointer;
+}
