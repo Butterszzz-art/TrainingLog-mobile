@@ -189,6 +189,21 @@ describe('two devices', () => {
     expect(laptop.get('bodyMeasurements_bob')).toEqual([{ date: '2026-09-08', waist: 79 }]);
   });
 
+  test("marking today complete, and reopening it, reach the other device", async () => {
+    // Stored as the raw date string; reopening writes "" (a removed key
+    // is skipped by sync, so it would never reopen the other device).
+    phone.storage.setItem('macroDayComplete_bob', '2026-10-07');
+    await phone.sync();
+    await laptop.sync();
+    expect(laptop.storage.getItem('macroDayComplete_bob')).toBe('2026-10-07');
+    expect(laptop.applied).toContain('macroDayComplete');
+
+    phone.storage.setItem('macroDayComplete_bob', '');
+    await phone.sync();
+    await laptop.sync();
+    expect(laptop.storage.getItem('macroDayComplete_bob')).toBe('');
+  });
+
   test('an edit replaces the entry instead of duplicating it', async () => {
     phone.set('programs_bob', [{ id: 'p1', name: 'PPL' }]);
     await phone.sync();

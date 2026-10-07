@@ -640,41 +640,54 @@
 /* ── Body Measurements ───────────────────────────────────────── */
 
 .measurements-section {
-  margin-top: 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  /* sits after #weightLogPanel; line up with its 12px side padding */
+  margin: 0 12px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   overflow: hidden;
 }
 
 .measurements-section > summary {
-  padding: 12px 16px;
+  padding: 14px 16px;
   cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-color);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--text-primary, var(--text-color));
   list-style: none;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--card-bg);
   user-select: none;
 }
 
 .measurements-section > summary::before {
-  content: '▶';
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  transition: transform 0.2s;
+  content: none;
 }
 
-.measurements-section[open] > summary::before { transform: rotate(90deg); }
+.measurements-section > summary::-webkit-details-marker { display: none; }
+.measurements-section > summary .ui-icon { width: 16px; height: 16px; }
+.measurements-section > summary::after {
+  content: '+';
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 18px;
+  color: var(--green-90);
+}
+.measurements-section[open] > summary::after { content: '−'; }
 
-.measurements-body { padding: 14px; }
+.measurements-body {
+  padding: 0 16px 16px;
+}
 
 .measurements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
   margin-bottom: 14px;
 }
 
@@ -682,24 +695,35 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 600;
+  background: var(--surface-recessed, var(--bg-color));
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-tight);
+  padding: 9px 11px;
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-label);
 }
 
 .measurements-field input {
-  padding: 8px 10px;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-color);
-  font-size: 0.86rem;
-  font-family: 'Poppins', sans-serif;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-primary, var(--text-color));
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.1rem;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .measurements-field input:focus {
   outline: none;
-  border-color: var(--primary);
 }
 
 .measurements-save-row {
@@ -711,24 +735,28 @@
 
 .measurements-date-input {
   flex: 1;
-  padding: 9px 12px;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-color);
-  font-size: 0.84rem;
-  font-family: 'Poppins', sans-serif;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface-recessed, var(--bg-color));
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-tight);
+  color: var(--text-primary, var(--text-color));
+  font-family: var(--font-body);
+  font-size: 14px;
 }
 
 .measurements-save-btn {
-  padding: 9px 18px;
-  border-radius: 8px;
+  padding: 11px 20px;
   border: none;
-  background: var(--primary);
-  color: var(--label-on-green);
-  font-size: 0.86rem;
-  font-weight: 700;
-  font-family: 'Poppins', sans-serif;
+  border-radius: var(--radius-pill);
+  background: var(--fill-btn-primary-mobile);
+  color: var(--nav-label-active-desktop, var(--label-on-green));
+  box-shadow: var(--shadow-button-sm);
+  font-family: var(--font-label);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   cursor: pointer;
 }
 
@@ -742,11 +770,15 @@
 }
 
 .measurements-history-table th {
-  color: var(--text-muted);
-  font-weight: 600;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-label);
   text-align: left;
   padding: 5px 8px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-row, var(--border-color));
   white-space: nowrap;
 }
 
@@ -771,21 +803,22 @@
 }
 
 .measurements-metric-pill {
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid var(--border-color);
-  background: transparent;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pod-border);
+  background: var(--pod-bg-alt);
   color: var(--text-muted);
-  font-size: 0.74rem;
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .measurements-metric-pill.active {
-  background: var(--primary);
-  color: var(--label-on-green);
-  border-color: var(--primary);
-  font-weight: 600;
+  background: var(--fill-btn-primary-mobile);
+  color: var(--nav-label-active-desktop, var(--label-on-green));
+  border-color: transparent;
+  font-weight: 700;
 }
 
 /* ── Daily Readiness Modal ───────────────────────────────────── */
@@ -1917,9 +1950,15 @@
 }
 
 .wt-weekly-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--text-primary, var(--text-color));
 }
 
 .wt-weekly-grid {
@@ -2015,33 +2054,36 @@
 
 .wt-entry-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
 }
 
 .wt-field-group {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .wt-field-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--text-label);
 }
 
 .wt-input {
   width: 100%;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-color);
-  padding: 9px 11px;
-  font-size: 0.95rem;
-  font-family: 'Poppins', sans-serif;
+  min-width: 0;
+  background: var(--surface-recessed, var(--bg-color));
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-tight);
+  color: var(--text-primary, var(--text-color));
+  font-family: var(--font-body);
+  padding: 10px 12px;
+  font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
   box-sizing: border-box;
@@ -2053,16 +2095,24 @@
   gap: 6px;
 }
 
-.wt-weight-input { flex: 1; }
+.wt-weight-input {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
 
 .wt-unit-toggle {
-  background: var(--bg-color);
-  border: 1px solid var(--primary);
-  border-radius: 8px;
-  color: var(--primary-text);
-  font-size: 0.82rem;
-  font-weight: 700;
-  font-family: 'Poppins', sans-serif;
+  flex: none;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-tight);
+  color: var(--green-90, var(--primary-text));
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   padding: 0 12px;
   cursor: pointer;
   white-space: nowrap;
@@ -2077,14 +2127,21 @@
 
 .wt-add-btn {
   width: 100%;
-  background: var(--fill-btn-primary-mobile);
-  color: var(--label-on-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 13px;
   border: none;
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  font-family: 'Poppins', sans-serif;
+  border-radius: var(--radius-pill);
+  background: var(--fill-btn-primary-mobile);
+  color: var(--nav-label-active-desktop, var(--label-on-green));
+  box-shadow: var(--shadow-button-sm);
+  font-family: var(--font-label);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: filter 0.2s;
 }
@@ -2092,9 +2149,10 @@
 
 /* ── Log card ── */
 .wt-log-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   overflow: hidden;
 }
 
@@ -2102,19 +2160,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
-  background: var(--bg-color);
-  border-bottom: 1px solid var(--border-color);
+  padding: 14px 14px 10px;
 }
 
 .wt-log-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--text-primary, var(--text-color));
 }
 
 .wt-log-count {
-  font-size: 0.72rem;
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -2135,39 +2201,64 @@
 .wt-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  table-layout: fixed;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .wt-table thead th {
-  background: var(--bg-color);
-  color: var(--text-muted);
-  font-size: 0.7rem;
-  font-weight: 600;
+  background: var(--pod-bg);
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding: 7px 12px;
+  color: var(--text-label);
+  padding: 6px 8px;
   text-align: left;
+  border-bottom: 1px solid var(--border-row, var(--border-color));
   position: sticky;
   top: 0;
   z-index: 1;
 }
 
 .wt-table tbody tr {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-row, var(--border-color));
   transition: background 0.15s;
 }
 .wt-table tbody tr:last-child { border-bottom: none; }
 .wt-table tbody tr:hover { background: rgba(var(--acc-5fa87e),0.04); }
 
 .wt-table tbody td {
-  padding: 9px 12px;
-  color: var(--text-color);
+  padding: 10px 8px;
+  color: var(--text-primary, var(--text-color));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.wt-table tbody td:first-child { color: var(--text-muted); font-size: 0.78rem; }
+.wt-table tbody td:first-child {
+  color: var(--text-secondary, var(--text-muted));
+}
+/* Fixed columns so the remove button never scrolls off-screen */
+.wt-table th, .wt-table td { text-align: left; border-left: 0; border-right: 0; }
+.wt-table th:nth-child(1) { width: 22%; padding-left: 14px; }
+.wt-table th:nth-child(2) { width: 27%; }
+.wt-table th:nth-child(3) { width: 19%; }
+.wt-table th:nth-child(4) { width: 20%; }
+.wt-table th:last-child { width: 36px; }
+.wt-table td:first-child { padding-left: 14px; }
+.wt-table td:last-child { padding: 4px 8px 4px 0; text-align: right; }
 .wt-table tbody td strong { color: var(--primary-text); }
 
 .wt-del-btn {
+  min-height: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -2181,18 +2272,22 @@
 
 /* ── Calorie estimator ── */
 .wt-estimator-section {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pod);
+  box-shadow: var(--pod-bevel);
   overflow: hidden;
 }
 
 .wt-estimator-summary {
   cursor: pointer;
-  padding: 12px 14px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text-color);
+  padding: 14px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--text-primary, var(--text-color));
   list-style: none;
   user-select: none;
   display: flex;
@@ -2201,22 +2296,28 @@
 }
 .wt-estimator-summary::marker,
 .wt-estimator-summary::-webkit-details-marker { display: none; }
-.wt-estimator-section[open] .wt-estimator-summary::before { content: '▼ '; font-size: 0.65rem; color: var(--text-muted); }
-.wt-estimator-section:not([open]) .wt-estimator-summary::before { content: '▶ '; font-size: 0.65rem; color: var(--text-muted); }
+.wt-estimator-summary .ui-icon { width: 16px; height: 16px; }
+.wt-estimator-summary::after {
+  content: '+';
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 18px;
+  color: var(--green-90);
+}
+.wt-estimator-section[open] .wt-estimator-summary::after { content: '−'; }
 
 .wt-estimator-body {
   padding: 0 14px 14px;
-  border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 .wt-estimator-hint {
-  font-size: 0.78rem;
+  font-size: 12.5px;
   color: var(--text-muted);
-  line-height: 1.4;
-  margin: 10px 0 0;
+  line-height: 1.45;
+  margin: 0;
 }
 
 .wt-estimator-row {
@@ -2225,14 +2326,18 @@
 }
 
 .wt-estimate-btn {
-  background: var(--primary);
-  color: var(--label-on-green);
+  flex: none;
+  padding: 10px 18px;
   border: none;
-  border-radius: 8px;
-  padding: 9px 16px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  font-family: 'Poppins', sans-serif;
+  border-radius: var(--radius-pill);
+  background: var(--fill-btn-primary-mobile);
+  color: var(--nav-label-active-desktop, var(--label-on-green));
+  box-shadow: var(--shadow-button-sm);
+  font-family: var(--font-label);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
   transition: opacity 0.2s;
@@ -2242,26 +2347,36 @@
 .wt-estimate-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.83rem;
-  border-radius: 8px;
-  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
+.wt-estimate-table thead th:last-child { text-align: right; }
 .wt-estimate-table thead th {
-  background: var(--bg-color);
-  color: var(--text-muted);
-  font-size: 0.7rem;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding: 6px 10px;
+  color: var(--text-label);
+  padding: 6px 2px;
   text-align: left;
+  border-bottom: 1px solid var(--border-row, var(--border-color));
 }
 .wt-estimate-table tbody td {
-  padding: 8px 10px;
-  color: var(--text-color);
-  border-bottom: 1px solid var(--border-color);
+  padding: 10px 2px;
+  text-align: left;
+  color: var(--text-primary, var(--text-color));
+  border-bottom: 1px solid var(--border-row, var(--border-color));
 }
 .wt-estimate-table tbody tr:last-child td { border-bottom: none; }
-.wt-estimate-table tbody td:last-child { font-weight: 700; color: var(--primary-text); }
+.wt-estimate-table tbody td:last-child {
+  text-align: right;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--green-90, var(--primary-text));
+}
 
 /* =============================================================
    LEADERBOARD IMPROVEMENTS
@@ -3069,3 +3184,18 @@
   border-color: var(--primary);
   color: var(--primary-text);
 }
+
+.measurements-input {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.wt-add-btn .ui-icon { width: 14px; height: 14px; }
+
+.wt-estimate-table,
+.wt-estimate-table th,
+.wt-estimate-table td { border-left: 0; border-right: 0; }
+.wt-estimate-table { border: 0; }
+.measurements-metric-pill { min-height: 0; margin: 0; }

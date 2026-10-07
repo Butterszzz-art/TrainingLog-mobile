@@ -614,3 +614,52 @@
   margin-top: 3px;
   transform: rotate(-135deg);
 }
+
+/* ── Copy previous day / Mark complete ─────────────────────── */
+.macro-day-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.macro-day-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  padding: 11px 10px;
+  border: 1px solid var(--pod-border);
+  border-radius: var(--radius-pill);
+  background: var(--pod-bg-alt);
+  color: var(--text-secondary);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.macro-day-btn [data-label] { overflow: hidden; text-overflow: ellipsis; }
+.macro-day-btn .ui-icon { flex: none; width: 14px; height: 14px; }
+.macro-day-btn:disabled { opacity: 0.45; cursor: default; }
+.macro-day-btn--complete { color: var(--green-90); }
+.macro-day-btn--complete.is-complete {
+  background: var(--fill-btn-primary-mobile);
+  border-color: transparent;
+  color: var(--nav-label-active-desktop, #eafaf1);
+}
+.macro-day-complete-badge { color: var(--green-90); }
+.macro-day-complete-badge[hidden] { display: none; }
+
+/* Completed day: everything that logs intake is visibly off. The JS guard
+   (guardMacroDayLocked) is what actually blocks changes. */
+#macrosTargetsView.is-day-complete .macro-quick-chips,
+#macrosTargetsView.is-day-complete #macroCustomAdd,
+#macrosTargetsView.is-day-complete #macroFavoritesContainer,
+#macrosTargetsView.is-day-complete #macroMealsPanel {
+  opacity: 0.45;
+  pointer-events: none;
+}
