@@ -41,6 +41,7 @@ export async function importRecipe(url) {
 }
 
 export function quickAdd(type, amountInputId) {
+  if (window.guardMacroDayLocked?.()) return;
   const id = amountInputId || `qa${type.charAt(0).toUpperCase()+type.slice(1)}`;
   const amt = Number(document.getElementById(id)?.value || 0);
   if (!amt) return;
@@ -54,6 +55,7 @@ export function quickAdd(type, amountInputId) {
 }
 
 export async function fetchRecipe() {
+  if (window.guardMacroDayLocked?.()) return;
   const input = document.getElementById('recipeUrl');
   if (!input) return;
   const url = input.value;

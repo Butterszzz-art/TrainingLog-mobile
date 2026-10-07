@@ -2974,6 +2974,7 @@
               <div class="macro-hero-top">
                 <span class="mx-lbl" id="macroHeroDayLabel">Today</span>
                 <span id="offlineBadge" class="mx-chip mx-chip--sm mx-chip--brass" style="display:none;"><span class="ui-icon" data-icon="clock"></span> Offline</span>
+                <span id="macroDayCompleteBadge" class="mx-chip mx-chip--sm macro-day-complete-badge" hidden><span class="ui-icon" data-icon="check"></span> Complete</span>
               </div>
               <div class="macro-hero-num-row">
                 <span class="macro-hero-num mx-num" id="macroCalsProgress">0</span>
@@ -3012,6 +3013,16 @@
               <progress id="carbBar" value="0" max="100"></progress>
               <progress id="fatBar" value="0" max="100"></progress>
             </section>
+
+            <!-- Copy the last logged day / lock today (renderMacroDayActions) -->
+            <div class="macro-day-actions">
+              <button type="button" id="macroCopyDayBtn" class="macro-day-btn" onclick="copyPreviousMacroDay()">
+                <span class="ui-icon" data-icon="refresh"></span><span data-label>Copy previous day</span>
+              </button>
+              <button type="button" id="macroDayCompleteBtn" class="macro-day-btn macro-day-btn--complete" aria-pressed="false" onclick="toggleMacroDayComplete()">
+                <span class="ui-icon" data-icon="check"></span><span data-label>Mark complete</span>
+              </button>
+            </div>
 
             <!-- Quick add: one tap per common amount. "Custom" opens the
                  exact qty input + ± buttons addMacro()/subtractMacro() read. -->
@@ -8976,6 +8987,7 @@ function toggleMeal(contentId, btn) {
 
 function submitMeal(idx) {
   checkMacroReset();
+  if (guardMacroDayLocked()) return;
   if (!localStorage.getItem("macroResetTime")) {
     localStorage.setItem("macroResetTime", Date.now().toString());
   }
@@ -9690,6 +9702,7 @@ window.renderMacroNudge = renderMacroNudge;
 
 function addMacroFavorite(favId) {
   if (!currentUser || !window.engagementFeatures) return;
+  if (guardMacroDayLocked()) return;
   const favorites = window.engagementFeatures.loadMacroFavorites(currentUser);
   const fav = favorites.find(f => f.id === favId);
   if (!fav) return;
@@ -9776,6 +9789,7 @@ function updateMacroUI() {
   );
 
   renderMacroNudge();
+  renderMacroDayActions();
 
   const hydrationInput = document.getElementById("hydrationMlInput");
   const sodiumInput = document.getElementById("sodiumMgInput");
@@ -10223,9 +10237,9 @@ function loadDailyMacroProgress() {
   const today = getTodayDateString();
   const savedDate = localStorage.getItem("dailyMacroDate");
   if (savedDate !== today) {
-    // New day, reset saved macros
-    localStorage.setItem("dailyMacroDate", today);
-    localStorage.setItem("dailyMacroProgress", JSON.stringify(emptyMacroProgress()));
+    // New day: archive the last one, then start empty. Before sign-in there's
+    // no account to archive under, so leave storage alone until there is.
+    rolloverMacroDay();
     return emptyMacroProgress();
   }
 
@@ -10279,9 +10293,113 @@ function saveDailyMacroProgress(protein, carbs, fats, cals) {
   return progress;
 }
 
+// ── Day completion ──
+// "Mark complete" locks today's log; every logging path checks
+// guardMacroDayLocked() first. The stored date makes the lock lapse on its
+// own the next day.
+function macroDayCompleteKey() {
+  return `macroDayComplete_${currentUser || ""}`;
+}
+
+function isMacroDayComplete(date = getTodayDateString()) {
+  return !!currentUser && localStorage.getItem(macroDayCompleteKey()) === date;
+}
+
+function guardMacroDayLocked() {
+  if (!isMacroDayComplete()) return false;
+  window.showToast?.("Today is marked complete. Reopen it to make changes.", "warn");
+  return true;
+}
+window.isMacroDayComplete = isMacroDayComplete;
+window.guardMacroDayLocked = guardMacroDayLocked;
+
+function toggleMacroDayComplete() {
+  if (!currentUser) return;
+  if (isMacroDayComplete()) {
+    if (!confirm("Reopen today's log so you can change it?")) return;
+    localStorage.removeItem(macroDayCompleteKey());
+    window.showToast?.("Day reopened.", "success");
+  } else {
+    localStorage.setItem(macroDayCompleteKey(), getTodayDateString());
+    window.showToast?.("Day marked complete.", "success");
+  }
+  updateMacroUI();
+}
+window.toggleMacroDayComplete = toggleMacroDayComplete;
+
+// ── Copy previous day ──
+// The most recent day before today that has anything logged.
+function getPreviousMacroDay() {
+  const today = getTodayDateString();
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(`macroHistory_${currentUser}`)) || []; } catch (_err) { history = []; }
+  return history
+    .filter(h => h && h.date && h.date < today && macroProgressCalories(h.totals || {}) > 0)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0] || null;
+}
+
+function describeMacroDay(date) {
+  const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  if (date === yesterday) return "yesterday";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ""));
+  if (!m) return date;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    .toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+function copyPreviousMacroDay() {
+  if (!currentUser || guardMacroDayLocked()) return;
+  const previous = getPreviousMacroDay();
+  if (!previous) {
+    window.showToast?.("No earlier day to copy yet.", "warn");
+    return;
+  }
+  const label = describeMacroDay(previous.date);
+  const current = loadDailyMacroProgress();
+  if (current.calories > 0 && !confirm(`Replace today's log with ${label}'s?`)) return;
+
+  const t = previous.totals || {};
+  saveDailyMacroProgress(
+    Number(t.protein) || 0,
+    Number(t.carbs) || 0,
+    Number(t.fats ?? t.fat) || 0,
+    Number(t.cals) || 0
+  );
+  const meals = Array.isArray(previous.meals) ? previous.meals : [];
+  localStorage.setItem("dailyMacroMeals", JSON.stringify(meals));
+  updateMacroUI();
+  window.showToast?.(`Copied ${label}'s log.`, "success");
+}
+window.copyPreviousMacroDay = copyPreviousMacroDay;
+
+// Shows the copy/complete row's current state and locks the logging UI.
+function renderMacroDayActions() {
+  const complete = isMacroDayComplete();
+  const view = document.getElementById("macrosTargetsView");
+  if (view) view.classList.toggle("is-day-complete", complete);
+  const badge = document.getElementById("macroDayCompleteBadge");
+  if (badge) badge.hidden = !complete;
+
+  const completeBtn = document.getElementById("macroDayCompleteBtn");
+  if (completeBtn) {
+    completeBtn.classList.toggle("is-complete", complete);
+    completeBtn.setAttribute("aria-pressed", complete ? "true" : "false");
+    const text = completeBtn.querySelector("[data-label]");
+    if (text) text.textContent = complete ? "Reopen day" : "Mark complete";
+  }
+  const copyBtn = document.getElementById("macroCopyDayBtn");
+  if (copyBtn) {
+    const previous = currentUser ? getPreviousMacroDay() : null;
+    copyBtn.disabled = complete || !previous;
+    const text = copyBtn.querySelector("[data-label]");
+    if (text) text.textContent = previous ? `Copy ${describeMacroDay(previous.date)}` : "Copy previous day";
+  }
+}
+
 // Adds (or with negative numbers, removes) amounts from today's saved intake
 // and refreshes the Macros tab. Nothing drops below zero.
 function logMacroAmounts({ protein = 0, carbs = 0, fats = 0, cals = 0 } = {}) {
+  if (guardMacroDayLocked()) return null;
   const current = loadDailyMacroProgress();
   const round1 = (n) => Math.round(n * 10) / 10;
   const next = {
@@ -10323,6 +10441,7 @@ function renderDailyMacroProgress() {
 
 // Call this when a meal is added or macros change:
 function updateDailyMacroProgress(protein, carbs, fats) {
+  if (guardMacroDayLocked()) return;
   const current = loadDailyMacroProgress();
   const newProtein = current.protein + protein;
   const newCarbs = current.carbs + carbs;
@@ -10394,35 +10513,57 @@ async function saveDailyMacroLog(username, date, meals, totals) {
   }
 }
   
-function checkMacroReset() {
-  const lastReset = parseInt(localStorage.getItem("macroResetTime")) || Date.now();
-  const now = Date.now();
+// When the date changes: archive the day that just ended under its own date
+// (history, server log, that day's bodyweight row), then start today empty.
+// This used to run 24h after an arbitrary "reset time", while
+// loadDailyMacroProgress() zeroed the day as soon as the date changed, so
+// yesterday was usually wiped before it was ever archived.
+function rolloverMacroDay() {
+  if (!currentUser) return false;
+  const today = getTodayDateString();
+  const savedDate = localStorage.getItem("dailyMacroDate");
+  if (savedDate === today) return false;
 
-  if (now - lastReset >= 86400000) { // 24h
-    const previousTotals = JSON.parse(localStorage.getItem("dailyMacroProgress")) || { protein:0, carbs:0, fats:0 };
-    previousTotals.calories = macroProgressCalories(previousTotals);
-    const previousMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || [];
-    const date = new Date(lastReset).toISOString().split('T')[0];
-    addMacroHistoryEntry(date, previousMeals, previousTotals);
-    saveDailyMacroLog(currentUser, date, previousMeals, previousTotals);
+  if (savedDate) {
+    let previous = null;
+    let previousMeals = [];
+    try { previous = JSON.parse(localStorage.getItem("dailyMacroProgress")); } catch (_err) { previous = null; }
+    try { previousMeals = JSON.parse(localStorage.getItem("dailyMacroMeals")) || []; } catch (_err) { previousMeals = []; }
+    const totals = {
+      protein: Number(previous?.protein) || 0,
+      carbs: Number(previous?.carbs) || 0,
+      fats: Number(previous?.fats ?? previous?.fat) || 0,
+      cals: Number(previous?.cals) || 0,
+    };
+    totals.calories = macroProgressCalories(totals);
+    if (totals.calories > 0) {
+      const extra = isMacroDayComplete(savedDate) ? { complete: true } : {};
+      addMacroHistoryEntry(savedDate, previousMeals, totals, extra);
+      saveDailyMacroLog(currentUser, savedDate, previousMeals, totals);
 
-    const calories = macroProgressCalories(previousTotals);
-    const cardioMinutes = getCardioMinutesForDate(date);
-    const wKey = `bodyweightLog_${currentUser}`;
-    const wLog = JSON.parse(localStorage.getItem(wKey)) || [];
-    const wEntry = wLog.find(e => e.date === date);
-    if (wEntry) {
-      wEntry.calories = calories;
-      wEntry.cardio = cardioMinutes;
-      localStorage.setItem(wKey, JSON.stringify(wLog));
-      renderWeights();
+      const wKey = `bodyweightLog_${currentUser}`;
+      const wLog = JSON.parse(localStorage.getItem(wKey)) || [];
+      const wEntry = wLog.find(e => e.date === savedDate);
+      if (wEntry) {
+        wEntry.calories = totals.calories;
+        wEntry.cardio = getCardioMinutesForDate(savedDate);
+        localStorage.setItem(wKey, JSON.stringify(wLog));
+        if (typeof renderWeights === "function") renderWeights();
+      }
     }
+  }
 
-    localStorage.setItem("dailyMacroProgress", JSON.stringify(emptyMacroProgress()));
-    localStorage.setItem("dailyMacroMeals", JSON.stringify([]));
-    localStorage.setItem("macroResetTime", now.toString());
-  } else if (!localStorage.getItem("macroResetTime")) {
-    localStorage.setItem("macroResetTime", now.toString());
+  localStorage.setItem("dailyMacroDate", today);
+  localStorage.setItem("dailyMacroProgress", JSON.stringify(emptyMacroProgress()));
+  localStorage.setItem("dailyMacroMeals", JSON.stringify([]));
+  localStorage.setItem("macroResetTime", Date.now().toString());
+  return true;
+}
+
+function checkMacroReset() {
+  rolloverMacroDay();
+  if (!localStorage.getItem("macroResetTime")) {
+    localStorage.setItem("macroResetTime", Date.now().toString());
   }
 }
 
@@ -17237,10 +17378,13 @@ window.startCircuitTimer = startCircuitTimer;
 window.toggleCircuitPause = toggleCircuitPause;
 window.stopCircuitTimer = stopCircuitTimer;
 
-function addMacroHistoryEntry(date, meals, totals) {
+// One entry per date: saving a day again replaces it rather than adding a
+// second row that readers would have to de-duplicate.
+function addMacroHistoryEntry(date, meals, totals, extra = {}) {
   const key = `macroHistory_${currentUser}`;
-  const macroHistory = JSON.parse(localStorage.getItem(key)) || [];
-  macroHistory.push({ date, meals, totals });
+  const macroHistory = (JSON.parse(localStorage.getItem(key)) || []).filter(h => h && h.date !== date);
+  macroHistory.push({ date, meals, totals, ...extra });
+  macroHistory.sort((a, b) => String(a.date).localeCompare(String(b.date)));
   localStorage.setItem(key, JSON.stringify(macroHistory));
 }
 
