@@ -25,7 +25,8 @@
   const BG_BOTTOM = '#060d0a';
 
   const state = {
-    workout: null,
+    draw: null,           // (canvas) => void — paints the current sticker
+    fileBase: 'pocket-coach-story',
     photo: null,          // HTMLImageElement
     x: 0.5, y: 0.42,      // sticker centre, as a fraction of the stage
     scale: 0.8,           // sticker width, as a fraction of the stage width
@@ -84,23 +85,47 @@
   }
 
   // ── Open / close ────────────────────────────────────────────────────
+  /**
+   * Open the composer with any sticker. Used by the workout story below
+   * and the weight story (src/js/weight-story.js).
+   * @param {{draw:(canvas:HTMLCanvasElement)=>void, fileBase:string,
+   *   label?:string, controls?:HTMLElement|null}} opts
+   *   controls — extra options shown under the preview; call
+   *   StoryComposer.redraw() when they change the sticker.
+   */
+  function openStoryComposer({ draw, fileBase, label, controls }) {
+    state.draw = draw;
+    state.fileBase = fileBase || 'pocket-coach-story';
+    state.x = 0.5; state.y = 0.42; state.scale = 0.8;
+
+    const box = $('wstoryControls');
+    box.replaceChildren(...(controls ? [controls] : []));
+    box.hidden = !controls;
+    $('workoutStoryModal').setAttribute('aria-label', label || 'Share as a story');
+    redraw();
+
+    $('workoutStoryModal').hidden = false;
+    document.body.classList.add('wstory-open');
+    layoutSticker();
+    refreshInstagramButton();
+  }
+
+  function redraw() {
+    if (state.draw) state.draw($('wstorySticker'));
+  }
+
   function openWorkoutStoryModal(workoutIndex) {
     const user = currentUserName();
     const workouts = readJSON(`workouts_${user}`);
     const workout = workouts[workoutIndex];
     if (!workout) return;
     const history = workouts.concat(readJSON(`workoutHistory_${user}`));
-
-    state.workout = workout;
-    state.x = 0.5; state.y = 0.42; state.scale = 0.8;
-
     const data = window.StorySticker.buildStickerData(workout, history, window.getMuscleGroup);
-    window.StorySticker.drawSticker($('wstorySticker'), data);
-
-    $('workoutStoryModal').hidden = false;
-    document.body.classList.add('wstory-open');
-    layoutSticker();
-    refreshInstagramButton();
+    openStoryComposer({
+      draw: (canvas) => window.StorySticker.drawSticker(canvas, data),
+      fileBase: `pocket-coach-${workout.date || 'workout'}`,
+      label: 'Share workout as a story',
+    });
   }
 
   function closeWorkoutStoryModal() {
@@ -237,7 +262,7 @@
   const base64 = (canvas, type, q) => canvas.toDataURL(type, q).split(',')[1];
 
   function fileName(suffix) {
-    return `pocket-coach-${state.workout?.date || 'workout'}${suffix}`;
+    return `${state.fileBase}${suffix}`;
   }
 
   function download(canvas, name) {
@@ -358,4 +383,5 @@
 
   window.openWorkoutStoryModal = openWorkoutStoryModal;
   window.closeWorkoutStoryModal = closeWorkoutStoryModal;
+  window.StoryComposer = { open: openStoryComposer, redraw, close: closeWorkoutStoryModal };
 })();

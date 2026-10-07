@@ -1350,7 +1350,10 @@
 
       <!-- ── Hero: big current-weight readout + sparkline (renderWeightHero) ── -->
       <div class="pod pod--hero wt-hero" id="wtHero" style="display:none;">
-        <div class="pod-kicker">Bodyweight</div>
+        <div class="wt-hero-top">
+          <div class="pod-kicker">Bodyweight</div>
+          <button type="button" class="mx-outline wt-share-btn" id="wtShareStoryBtn" onclick="openWeightStoryModal()"><span class="ui-icon" data-icon="share"></span> Share</button>
+        </div>
         <div class="wt-hero-num-row">
           <span class="home-hero-num" id="wtHeroValue">—</span>
           <span class="wt-hero-unit" id="wtHeroUnit">kg</span>
@@ -14294,6 +14297,8 @@ function renderWeightHero(log, lastKg, displayUnit) {
 
   if (valueEl) valueEl.textContent = toDispNum(lastKg) ?? '—';
   if (unitEl) unitEl.textContent = displayUnit;
+  const shareBtn = document.getElementById('wtShareStoryBtn');
+  if (shareBtn) shareBtn.hidden = log.length < 2;
 
   const recent = log.slice(-7);
   const recentVals = recent.map(e => getEntryWeightKg(e)).filter(v => v != null);
@@ -20610,6 +20615,7 @@ window.renderCaffeinePod = renderCaffeinePod;
         <canvas id="wstorySticker" class="wstory-sticker" aria-label="Workout stats sticker"></canvas>
       </div>
       <p class="wstory-hint">Drag the stats to move them. Pinch to resize.</p>
+      <div id="wstoryControls" class="wstory-controls" hidden></div>
       <div class="wstory-photo-row">
         <button type="button" id="wstoryPhotoBtn" class="mx-outline wstory-photo-btn"><span class="ui-icon" data-icon="camera"></span> <span id="wstoryPhotoLabel">Add a photo</span></button>
         <button type="button" id="wstoryClearBtn" class="mx-outline wstory-clear" hidden>Remove</button>
@@ -20626,6 +20632,8 @@ window.renderCaffeinePod = renderCaffeinePod;
   </div>
   <script src="src/js/story-sticker.js"></script>
   <script src="src/js/workout-story.js"></script>
+  <script src="src/js/weight-sticker.js"></script>
+  <script src="src/js/weight-story.js"></script>
   <script src="src/js/mobility.js"></script>
   <script src="src/js/coach-data.js"></script>
   <script src="src/js/ai-coach.js"></script>
