@@ -1385,7 +1385,7 @@
       <!-- ── Weekly averages & rate card ── -->
       <div class="wt-weekly-card" id="wtWeeklyCard" style="display:none;">
         <div class="wt-weekly-header">
-          <span class="wt-weekly-title"><span class="ui-icon" data-icon="barChart"></span> Weekly Breakdown</span>
+          <span class="wt-weekly-title"><span class="ui-icon" data-icon="barChart"></span> Weekly breakdown</span>
         </div>
         <div class="wt-weekly-grid" id="wtWeeklyGrid"></div>
         <div class="wt-rate-row" id="wtRateRow">
@@ -1421,7 +1421,7 @@
             <input type="date" id="weightDateInput" class="wt-input wt-date-input" />
           </div>
         </div>
-        <button class="wt-add-btn" onclick="addWeightEntry()">＋ Log Weight</button>
+        <button type="button" class="wt-add-btn" onclick="addWeightEntry()"><span class="ui-icon" data-icon="plus"></span> Log weight</button>
       </div>
 
       <!-- ── Weight log table ── -->
@@ -1449,7 +1449,7 @@
 
       <!-- ── Calorie estimator (collapsible) ── -->
       <details class="wt-estimator-section">
-        <summary class="wt-estimator-summary"><span class="ui-icon" data-icon="gauge"></span> Calorie Estimator</summary>
+        <summary class="wt-estimator-summary"><span class="ui-icon" data-icon="gauge"></span> Calorie estimator</summary>
         <div class="wt-estimator-body">
           <p class="wt-estimator-hint">Enter your average daily calories to estimate your maintenance based on your logged weight trend. Requires 7+ days of data.</p>
           <div class="wt-estimator-row">
@@ -1472,17 +1472,17 @@
     </div>
 
     <!-- ── Body Measurements ── -->
-    <details class="measurements-section" id="measurementsSection" style="margin:10px 10px 0;">
-      <summary><span class="ui-icon" data-icon="scale"></span> Body Measurements</summary>
+    <details class="measurements-section" id="measurementsSection">
+      <summary><span class="ui-icon" data-icon="scale"></span> Body measurements</summary>
       <div class="measurements-body">
         <div class="measurements-grid">
-          <label class="measurements-field">Neck (cm)<input type="number" id="measure_neck" step="0.1" min="20" max="60" placeholder="—"></label>
-          <label class="measurements-field">Shoulders (cm)<input type="number" id="measure_shoulders" step="0.1" min="60" max="160" placeholder="—"></label>
-          <label class="measurements-field">Chest (cm)<input type="number" id="measure_chest" step="0.1" min="50" max="160" placeholder="—"></label>
-          <label class="measurements-field">Waist (cm)<input type="number" id="measure_waist" step="0.1" min="40" max="160" placeholder="—"></label>
-          <label class="measurements-field">Hips (cm)<input type="number" id="measure_hips" step="0.1" min="50" max="160" placeholder="—"></label>
-          <label class="measurements-field">Arm (cm)<input type="number" id="measure_arm" step="0.1" min="15" max="60" placeholder="—"></label>
-          <label class="measurements-field">Thigh (cm)<input type="number" id="measure_thigh" step="0.1" min="20" max="90" placeholder="—"></label>
+          <label class="measurements-field">Neck<span class="measurements-input"><input type="number" id="measure_neck" step="0.1" min="20" max="60" placeholder="—"><span class="macro-tile-unit">cm</span></span></label>
+          <label class="measurements-field">Shoulders<span class="measurements-input"><input type="number" id="measure_shoulders" step="0.1" min="60" max="160" placeholder="—"><span class="macro-tile-unit">cm</span></span></label>
+          <label class="measurements-field">Chest<span class="measurements-input"><input type="number" id="measure_chest" step="0.1" min="50" max="160" placeholder="—"><span class="macro-tile-unit">cm</span></span></label>
+          <label class="measurements-field">Waist<span class="measurements-input"><input type="number" id="measure_waist" step="0.1" min="40" max="160" placeholder="—"><span class="macro-tile-unit">cm</span></span></label>
+          <label class="measurements-field">Hips<span class="measurements-input"><input type="number" id="measure_hips" step="0.1" min="50" max="160" placeholder="—"><span class="macro-tile-unit">cm</span></span></label>
+          <label class="measurements-field">Arm<span class="measurements-input"><input type="number" id="measure_arm" step="0.1" min="15" max="60" placeholder="—"><span class="macro-tile-unit">cm</span></span></label>
+          <label class="measurements-field">Thigh<span class="measurements-input"><input type="number" id="measure_thigh" step="0.1" min="20" max="90" placeholder="—"><span class="macro-tile-unit">cm</span></span></label>
         </div>
         <div class="measurements-save-row">
           <input type="date" id="measureDate" class="measurements-date-input">
@@ -13941,7 +13941,8 @@ function applyBodyweightPreference(pref) {
   const unit = pref.unit === 'lb' ? 'lb' : 'kg';
   const input = document.getElementById('currentWeightInput');
   if (input) {
-    input.placeholder = `Current Weight (${unit})`;
+    input.placeholder = '0.0';
+    input.setAttribute('aria-label', `Current weight (${unit})`);
     if (pref.value !== null && pref.value !== undefined && !Number.isNaN(pref.value)) {
       input.value = pref.value;
     } else if (!input.matches(':focus')) {
@@ -14048,6 +14049,16 @@ function addWeightEntry() {
   }
 }
 
+// "Oct 7" for this year, "Oct 7, 2025" otherwise; anything unparseable as-is.
+function formatWeightLogDate(isoDate) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate || ''));
+  if (!m) return isoDate || '—';
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const opts = { month: 'short', day: 'numeric' };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString(undefined, opts);
+}
+
 function renderWeights() {
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   // Ensure sorted by date ascending
@@ -14111,7 +14122,7 @@ function renderWeights() {
     const weightDisplay = converted !== null && converted !== undefined
       ? `${converted} ${displayUnit}`
       : '-';
-    body.innerHTML += `<tr><td>${entry.date}</td><td><strong>${weightDisplay}</strong></td><td>${entry.calories ?? '—'}</td><td>${entry.cardio != null ? entry.cardio + ' min' : '—'}</td><td><button onclick="removeWeightEntry(${index})" class="wt-del-btn" title="Remove"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`;
+    body.innerHTML += `<tr><td title="${entry.date}">${formatWeightLogDate(entry.date)}</td><td><strong>${weightDisplay}</strong></td><td>${entry.calories ?? '—'}</td><td>${entry.cardio != null ? entry.cardio + ' min' : '—'}</td><td><button onclick="removeWeightEntry(${index})" class="wt-del-btn" title="Remove"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`;
   });
   if (document.getElementById('progressTab').classList.contains('active')) {
     const isBodyweightActive = document.getElementById('bodyweightProgressBtn')?.classList.contains('active');
@@ -14371,8 +14382,8 @@ function estimateCalories() {
   const maintenance = Math.round(avgCals + (caloriesBurned / log.length));
   document.getElementById("calorieEstimateTable").innerHTML = `
     <tr><td>Maintenance</td><td>${maintenance} kcal</td></tr>
-    <tr><td>Weight Loss (-500)</td><td>${maintenance - 500} kcal</td></tr>
-    <tr><td>Weight Gain (+500)</td><td>${maintenance + 500} kcal</td></tr>
+    <tr><td>Lose (−500)</td><td>${maintenance - 500} kcal</td></tr>
+    <tr><td>Gain (+500)</td><td>${maintenance + 500} kcal</td></tr>
   `;
 }
 
