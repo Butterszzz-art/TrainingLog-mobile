@@ -75,6 +75,8 @@
     { name: 'dailyMacroDate',     key: u => `dailyMacroDate_${u}`,     mode: 'value' },
     { name: 'macroResetTime',     key: u => `macroResetTime_${u}`,     mode: 'value' },
     { name: 'macroDayType',       key: u => `macroDayType_${u}`,       mode: 'value' },
+    // The date today's log was marked complete ("" once reopened).
+    { name: 'macroDayComplete',   key: u => `macroDayComplete_${u}`,   mode: 'value' },
   ];
 
   // Keys the app reads and writes without an account name. Reads and writes
@@ -465,7 +467,7 @@
     if (has('crossfitLog', 'crossfitWorkouts')) call('renderCrossfitWorkouts');
     if (has('hyroxLog')) call('renderHyroxHistory');
     if (has('macroHistory')) call('renderMacroHistory');
-    if (has('macroTargets', 'dailyMacroMeals', 'dailyMacroProgress', 'dailyMacroDate', 'macroDayType')) {
+    if (has('macroTargets', 'dailyMacroMeals', 'dailyMacroProgress', 'dailyMacroDate', 'macroDayType', 'macroDayComplete')) {
       call('loadMacroTargetsFromLocal'); call('renderMacroSlots'); call('renderDailyMacroProgress'); call('updateMacroUI');
     }
     if (has('logbookCover')) { call('renderLogbookCover'); call('renderSettingsHero'); }

@@ -10317,7 +10317,10 @@ function toggleMacroDayComplete() {
   if (!currentUser) return;
   if (isMacroDayComplete()) {
     if (!confirm("Reopen today's log so you can change it?")) return;
-    localStorage.removeItem(macroDayCompleteKey());
+    // Written as "" rather than removed: cloud sync skips a missing key
+    // (never reads it as a delete), so a removal wouldn't reopen the day
+    // on the account's other devices.
+    localStorage.setItem(macroDayCompleteKey(), "");
     window.showToast?.("Day reopened.", "success");
   } else {
     localStorage.setItem(macroDayCompleteKey(), getTodayDateString());
