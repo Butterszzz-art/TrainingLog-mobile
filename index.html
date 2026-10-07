@@ -61,6 +61,7 @@
   <link rel="stylesheet" href="css/paywall.css">
   <link rel="stylesheet" href="css/ai-sheets.css">
   <link rel="stylesheet" href="css/coach-ui.css">
+  <link rel="stylesheet" href="css/coach-videos.css">
   <link rel="stylesheet" href="css/program-ui.css">
   <link rel="stylesheet" href="css/checkin.css">
   <link rel="stylesheet" href="css/community-share.css">
@@ -3649,6 +3650,8 @@
   <div id="coachSub_analytics" class="coach-subview"></div>
   <div id="coachSub_ai" class="coach-subview"></div>
   <div id="coachSub_videos" class="coach-subview">
+    <!-- Program / diet / cardio walkthroughs — rendered by src/js/coach-videos.js -->
+    <div id="coachVideoLibrary"></div>
     <section class="pod mx-pod">
       <div class="pod-row"><h4 class="pod-title mx-h3">Technique Videos</h4></div>
       <p class="mx-sub">Attach a video link per exercise. Your clients see a Watch button when they log that exercise.</p>
@@ -3669,7 +3672,7 @@
     </section>
     <section class="pod mx-pod">
       <div class="pod-row">
-        <h4 class="pod-title mx-h3">Your Videos</h4>
+        <h4 class="pod-title mx-h3">Your Technique Videos</h4>
         <button type="button" class="mx-outline" onclick="loadCoachExerciseVideos()"><span class="ui-icon" data-icon="refresh"></span> Refresh</button>
       </div>
       <div id="coachVideoList" class="coach-video-list"><div class="mx-empty">No videos yet.</div></div>
@@ -10786,6 +10789,7 @@ function initCoachOpsSubtabs() {
     if (target === 'gdpr'       && typeof renderCoachGdpr === 'function')       renderCoachGdpr();
     if (target === 'programs'   && typeof renderCoachProgramBuilder === 'function') renderCoachProgramBuilder();
     if (target === 'videos'     && typeof loadCoachExerciseVideos === 'function')   loadCoachExerciseVideos();
+    if (target === 'videos'     && window.CoachVideos)                              window.CoachVideos.loadCoachVideos();
     if (target === 'ai' && typeof window.initAiCoachEmbed === 'function') {
       const aiContainer = document.getElementById('coachSub_ai');
       if (aiContainer && !aiContainer.dataset.aicInit) {
@@ -12363,6 +12367,16 @@ function renderExerciseVideoHint(exerciseName) {
     </a>
     ${match.notes ? `<span class="exercise-video-note">${_escVideoHtml(match.notes)}</span>` : ''}
   `;
+  // Play it in the in-app player (src/js/coach-videos.js); the href stays as
+  // the fallback if that script isn't loaded.
+  hint.querySelector('.exercise-video-link').addEventListener('click', e => {
+    if (!window.CoachVideos) return;
+    e.preventDefault();
+    window.CoachVideos.openPlayer({
+      title: `${match.exerciseName} technique`, videoUrl: match.videoUrl, message: match.notes,
+      category: 'technique', coachUsername: match.coachId
+    });
+  });
 }
 window.renderExerciseVideoHint = renderExerciseVideoHint;
 
@@ -20518,6 +20532,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/macro-pill-controls.js"></script>
   <script src="src/js/activity-sync-bridge.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
+  <script src="src/js/coach-videos.js"></script>
   <script src="src/js/client-coaching.js"></script>
   <script src="src/js/workout-archiver.js"></script>
   <script src="src/js/workout-sync.js"></script>

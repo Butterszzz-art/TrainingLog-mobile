@@ -1,0 +1,116 @@
+/* Coach videos (src/js/coach-videos.js): the coach's library pod, the
+   client's "Videos from your coach" rows, and the player sheet. */
+
+/* ── Thumbnail tile (coach list + client rows) ──────────────── */
+.cv-thumb,
+button.cv-thumb {
+  width: 56px;
+  height: 42px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-tight, 10px);
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-chip);
+  box-shadow: none;
+  color: var(--green-90);
+  cursor: pointer;
+}
+.cv-thumb .ui-icon { width: 20px; height: 20px; }
+
+/* Client rows are whole-row buttons; undo the global button look. */
+#yourCoachSection button.yc-video {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border-row);
+  border-radius: 0;
+  box-shadow: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+#yourCoachSection button.yc-video:first-of-type { border-top: 0; }
+#yourCoachSection .yc-video .mx-row-title { text-transform: none; letter-spacing: 0.02em; }
+
+/* ── Coach form ─────────────────────────────────────────────── */
+#coachVideoLibrary .cv-url-hint { min-height: 1.2em; margin: 6px 2px 0; }
+#coachVideoLibrary .cv-url-hint.is-ok { color: var(--green-90); }
+#coachVideoLibrary .cv-url-hint.is-bad { color: var(--danger-text-mobile, #e07a6a); }
+#coachVideoLibrary .cv-audience { margin-top: 2px; }
+#coachVideoLibrary .cv-clients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+#coachVideoLibrary .cv-clients[hidden] { display: none; }
+#coachVideoLibrary .cv-client {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border-chip);
+  background: var(--surface-recessed);
+  font-size: 14px;
+  cursor: pointer;
+}
+#coachVideoLibrary .cv-client input { width: 18px; height: 18px; margin: 0; accent-color: var(--green-90); }
+#coachVideoLibrary .cv-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+#coachVideoLibrary .cv-actions .mx-outline { flex: none; }
+#coachVideoLibrary .cv-row .mx-row-title { text-transform: none; letter-spacing: 0.02em; }
+
+/* ── Player sheet ───────────────────────────────────────────── */
+.cv-sheet { gap: 12px; }
+.cv-head-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cv-head-text .mx-h3 { margin: 0; overflow-wrap: anywhere; }
+.cv-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-tight, 10px);
+  overflow: hidden;
+  background: #000;
+}
+.cv-frame iframe,
+.cv-frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+.cv-frame--empty {
+  aspect-ratio: auto;
+  background: var(--surface-recessed);
+}
+.cv-nofeed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.cv-nofeed .ui-icon { width: 22px; height: 22px; color: var(--green-90); }
+.cv-message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+a.cv-open { align-self: flex-start; text-decoration: none; }
