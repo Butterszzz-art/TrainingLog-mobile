@@ -10996,6 +10996,15 @@ function formatExactDate(dateLike) {
   return parsed.toISOString().slice(0, 10);
 }
 
+/** Short readable date for Home cards ("Sun, Oct 11"); YYYY-MM-DD read as local. */
+function formatHomeDate(dateLike, fallback = '—') {
+  if (!dateLike) return fallback;
+  const str = String(dateLike);
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(`${str}T00:00:00`) : new Date(str);
+  if (Number.isNaN(parsed.getTime())) return fallback;
+  return parsed.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
 function getWeeksOutLabel(dateLike) {
   if (!dateLike) return 'Weeks out TBD';
   const showDate = new Date(dateLike);
@@ -11027,10 +11036,10 @@ function renderHeroPhaseHeader(profile, username) {
   const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
   const archetype = getHomeAthleteArchetype(profile, username);
   const heroToplineByArchetype = {
-    bodybuilder: 'Physique Command Center',
-    powerlifter: 'Strength Command Center',
-    hybrid: 'Hybrid Performance Hub',
-    recreational: 'Habit Command Center'
+    bodybuilder: 'Your prep',
+    powerlifter: 'Your strength block',
+    hybrid: 'Your season',
+    recreational: 'Your habits'
   };
   const athleteName = getSafeDisplayValue(phaseState.athleteName || profile.athleteName || username, 'Athlete');
   const phase = getSafeDisplayValue(window.prepModeApi?.getCurrentPhaseLabel?.(phaseState) || phaseState.currentPhase || profile.currentPhase, 'Build Phase');
@@ -11042,11 +11051,14 @@ function renderHeroPhaseHeader(profile, username) {
   );
   const showDateLike = phaseState.showDate || profile.showDate;
   const showCountdown = formatCountdownDays(showDateLike);
-  const showDate = formatExactDate(showDateLike);
+  const showDate = formatHomeDate(showDateLike, 'Not set');
   const weeksOut = getWeeksOutLabel(showDateLike);
   const snapshot = getComplianceSnapshot(profile, username, archetype);
   const currentStatus = formatComplianceStatus(snapshot.dailyStatus);
-  const nextReview = getSafeDisplayValue(getNextScheduledCheckIn(profile, username), 'Not scheduled');
+  const nextReview = formatHomeDate(getNextScheduledCheckIn(profile, username), 'Not scheduled');
+  // Week labels already carry the phase ("Improvement Season Week 1"), so
+  // don't print the phase twice in the subtitle.
+  const heroMeta = weekLabel.toLowerCase().startsWith(phase.toLowerCase()) ? weekLabel : `${phase} &middot; ${weekLabel}`;
   const statusPill = getHomeStatusPillClass(currentStatus);
   const todayLabel = formatExactDate(new Date().toISOString());
 
@@ -11069,7 +11081,7 @@ function renderHeroPhaseHeader(profile, username) {
     return `
       <section class="pod pod--hero home-dashboard-card home-hero-card">
         <div class="pod-row">
-          <span class="pod-kicker">Habit Command Center</span>
+          <span class="pod-kicker">${heroToplineByArchetype.recreational}</span>
           <span class="home-status-pill ${statusPill}">${currentStatus}</span>
         </div>
         <div class="home-hero-num-row">
@@ -11090,7 +11102,7 @@ function renderHeroPhaseHeader(profile, username) {
   return `
     <section class="pod pod--hero home-dashboard-card home-hero-card">
       <div class="pod-row">
-        <span class="pod-kicker">${heroToplineByArchetype[archetype] || 'Command Center'}</span>
+        <span class="pod-kicker">${heroToplineByArchetype[archetype] || 'Your training'}</span>
         <span class="home-status-pill ${statusPill}">${currentStatus}</span>
       </div>
       ${countdownNum != null ? `
@@ -11099,12 +11111,12 @@ function renderHeroPhaseHeader(profile, username) {
         <div><div class="home-hero-num-label">days out</div><div class="home-hero-num-sub">${weeksOut}</div></div>
       </div>` : `
       <h2 class="home-hero-athlete">${athleteName}</h2>
-      <p class="home-hero-meta">${phase} &middot; ${weekLabel}</p>`}
+      <p class="home-hero-meta">${heroMeta}</p>`}
       <div class="home-hero-statgrid">
         <div><div class="home-hero-stat-lbl">Phase</div><div class="home-hero-stat-val">${phase}</div></div>
         <div><div class="home-hero-stat-lbl">Show date</div><div class="home-hero-stat-val">${showDate}</div></div>
-        <div><div class="home-hero-stat-lbl">Status</div><div class="home-hero-stat-val">${currentStatus}</div></div>
-        <div><div class="home-hero-stat-lbl">Next review</div><div class="home-hero-stat-val">${nextReview}</div></div>
+        <div><div class="home-hero-stat-lbl">Today</div><div class="home-hero-stat-val">${currentStatus}</div></div>
+        <div><div class="home-hero-stat-lbl">Next check-in</div><div class="home-hero-stat-val">${nextReview}</div></div>
       </div>
     </section>
   `;
@@ -11123,12 +11135,12 @@ function getCountdownDaysNumber(dateLike) {
 
 function formatComplianceStatus(statusKey) {
   const labels = {
-    on_track: 'On Track',
-    slightly_behind: 'Slightly Behind',
-    at_risk: 'At Risk',
-    off_track: 'Off Track'
+    on_track: 'On track',
+    slightly_behind: 'Slightly behind',
+    at_risk: 'At risk',
+    off_track: 'Off track'
   };
-  return labels[statusKey] || 'Off Track';
+  return labels[statusKey] || 'Off track';
 }
 
 function getComplianceSnapshot(profile, username, archetype) {
@@ -11140,7 +11152,7 @@ function getComplianceSnapshot(profile, username, archetype) {
   const rolling7 = window.complianceEngine?.calculateRolling7DayCompliance?.(username, new Date().toISOString().slice(0, 10), archetype)
     || { percent: weekly.averagePercent || 0, status: weekly.status || 'off_track' };
   const trend = window.complianceEngine?.getComplianceTrend?.(username, archetype)
-    || { trend: 'steady', delta: 0, insight: 'Immediate course correction required' };
+    || { trend: 'steady', delta: 0, insight: 'Behind this week. Start with today’s checklist' };
   const insightsPayload = window.complianceEngine?.getComplianceInsights?.(username, new Date().toISOString().slice(0, 10), archetype)
     || { insights: [trend.insight], missed: { byTask: {}, topMissedTask: null } };
   return { dailyPercent, dailyStatus, weekly, rolling7, trend, insightsPayload };
@@ -11160,16 +11172,16 @@ function getHomeAthleteArchetype(profile, username) {
 
 function getArchetypeStatusLabelMap(archetype) {
   const base = {
-    daily: 'Today’s Compliance',
-    weekly: 'Weekly Compliance',
-    rolling: 'Rolling 7-Day',
+    daily: 'Today',
+    weekly: 'This week',
+    rolling: 'Last 7 days',
     streak: 'Streak',
-    onTrack: 'On-Track'
+    onTrack: 'Phase week'
   };
-  if (archetype === 'bodybuilder') return { ...base, daily: 'Daily Check-In Score', weekly: 'Prep Compliance', rolling: '7-Day Prep Trend', streak: 'Posing/Prep Streak', onTrack: 'Stage-Ready Status' };
-  if (archetype === 'powerlifter') return { ...base, daily: 'Training Readiness', weekly: 'Execution Consistency', rolling: '7-Day Strength Trend', streak: 'Consistency Streak', onTrack: 'Meet-Prep Status' };
-  if (archetype === 'recreational') return { ...base, daily: 'Daily Habits', weekly: 'Week Consistency', rolling: '7-Day Routine Trend', streak: 'Habit Streak', onTrack: 'Momentum' };
-  return { ...base, daily: 'Daily Execution', weekly: 'Weekly Compliance', rolling: '7-Day Balance', streak: 'Streak', onTrack: 'On-Track' };
+  if (archetype === 'bodybuilder') return { ...base, streak: 'Prep streak', onTrack: 'Prep week' };
+  if (archetype === 'powerlifter') return { ...base, onTrack: 'Block week' };
+  if (archetype === 'recreational') return { ...base, streak: 'Habit streak' };
+  return base;
 }
 
 function getHomeStatusPillClass(status) {
@@ -11206,7 +11218,7 @@ function getMacroSnapshot(profile, username) {
   const fatCurrent = Number(merged.fatCurrent ?? merged.fatConsumed ?? 0);
   const caloriesCurrent = Number(merged.caloriesCurrent ?? merged.caloriesConsumed ?? (proteinCurrent * 4 + carbsCurrent * 4 + fatCurrent * 9));
   return {
-    dayType: getSafeDisplayValue(merged.dayType || merged.macroDayType, 'Day type TBD'),
+    dayType: getSafeDisplayValue(merged.dayType || merged.macroDayType, ''),
     proteinCurrent, proteinTarget, carbsCurrent, carbsTarget, fatCurrent, fatTarget, caloriesCurrent, caloriesTarget
   };
 }
@@ -11243,7 +11255,7 @@ function renderStatusSummary(profile, username, archetype) {
   return `
     <section class="home-dashboard-card">
       <div class="home-card-header">
-        <h3 class="home-card-title">Status Summary</h3>
+        <h3 class="home-card-title">How you're tracking</h3>
         <span class="home-status-pill ${pillClass}">${onTrack}</span>
       </div>
       <div class="home-stat-grid">
@@ -11262,16 +11274,17 @@ function renderCheckInInsightSummary(profile, username) {
   const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
   const insightPayload = window.checkinEngine?.getCheckInInsights?.(checkIns) || null;
   const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
-  const lines = insightPayload?.summaryFull?.length
-    ? insightPayload.summaryFull.slice(0, 3)
-    : ['Log two or more check-ins to unlock trend intelligence.'];
+  const lines = insightPayload?.summaryFull?.length ? insightPayload.summaryFull.slice(0, 3) : [];
+  const body = lines.length
+    ? `<ul class="home-upcoming-list">
+        ${lines.map(line => `<li class="home-upcoming-item"><span>${line}</span></li>`).join('')}
+      </ul>`
+    : `<p class="home-placeholder-note">Log two check-ins and we'll show you what's changing.</p>`;
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Check-In Intelligence · ${timelineLabel}</h3>
-      <p class="home-mission-progress">${insightPayload?.summaryShort || lines[0]}</p>
-      <ul class="home-upcoming-list">
-        ${lines.map(line => `<li class="home-upcoming-item"><span>Insight</span><strong>${line}</strong></li>`).join('')}
-      </ul>
+      <h3 class="home-card-title">Check-in trends</h3>
+      <p class="home-mission-progress">${timelineLabel}</p>
+      ${body}
     </section>
   `;
 }
@@ -11307,7 +11320,7 @@ function renderMissionItem(itemKey, state, labelOverride = '') {
           onchange="toggleMissionItem('${itemKey}', this.checked)"
         />
         <span class="home-mission-label">${label}</span>
-        <span class="home-mission-status">${checked ? 'Done' : 'Pending'}</span>
+        <span class="home-mission-status">${checked ? 'Done' : 'To do'}</span>
       </label>
     </li>
   `;
@@ -11316,17 +11329,17 @@ function renderMissionItem(itemKey, state, labelOverride = '') {
 function getMissionLabelForArchetype(itemKey, archetype) {
   const overrides = {
     bodybuilder: {
-      bodyweightLogged: 'Bodyweight Trend',
-      macrosComplete: 'Macros Hit',
-      cardioComplete: 'Cardio Complete',
-      posingComplete: 'Posing Session',
-      recoveryLogged: 'Recovery Check-In'
+      bodyweightLogged: 'Weigh in',
+      macrosComplete: 'Hit your macros',
+      cardioComplete: 'Cardio',
+      posingComplete: 'Posing practice',
+      recoveryLogged: 'Recovery check-in'
     },
     powerlifter: {
-      workoutComplete: 'Top Lift Session',
-      bodyweightLogged: 'Weight Class Check',
-      recoveryLogged: 'Recovery Logged',
-      cardioComplete: 'GPP/Cardio',
+      workoutComplete: 'Lift session',
+      bodyweightLogged: 'Weight class check',
+      recoveryLogged: 'Recovery check-in',
+      cardioComplete: 'GPP / cardio',
       macrosComplete: 'Fueling'
     },
     hybrid: {
@@ -11337,12 +11350,12 @@ function getMissionLabelForArchetype(itemKey, archetype) {
       recoveryLogged: 'Recovery'
     },
     recreational: {
-      workoutComplete: 'Workout Complete',
-      cardioComplete: 'Move/Cardio',
-      bodyweightLogged: 'Weight Check',
-      macrosComplete: 'Nutrition Win',
-      stepsComplete: 'Steps Goal',
-      recoveryLogged: 'Recovery Habit'
+      workoutComplete: 'Workout',
+      cardioComplete: 'Move / cardio',
+      bodyweightLogged: 'Weigh in',
+      macrosComplete: 'Eat to plan',
+      stepsComplete: 'Steps goal',
+      recoveryLogged: 'Recovery'
     }
   };
   return overrides[archetype]?.[itemKey] || MISSION_ITEM_META[itemKey] || itemKey;
@@ -11424,16 +11437,16 @@ function renderTodaysMission(profile, username, archetype) {
     .join('');
   const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   const posingOverdue = window.posingEngine?.getOverdueStatus?.(userId, new Date().toISOString().slice(0, 10));
-  const completionSummary = `${compliance.completed}/${compliance.total} complete · ${compliance.percent}%`;
   const completionLabel = compliance.isComplete
-    ? 'Mission complete. Great work today.'
-    : `Mission in progress · ${completionSummary}`;
-  const overdueRow = posingOverdue?.overdue
-    ? `<div class="home-warning-row">${posingOverdue.message || 'Posing overdue warning.'}</div>`
+    ? 'All done. Great work today.'
+    : `${compliance.completed} of ${compliance.total} done today`;
+  // Only nag about posing when posing is on today's checklist.
+  const overdueRow = posingOverdue?.overdue && requiredItems.includes('posingComplete')
+    ? `<div class="home-warning-row">${posingOverdue.message || 'Posing is overdue.'}</div>`
     : '';
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">${archetype === 'recreational' ? 'Daily Habits' : 'Daily Mission'}</h3>
+      <h3 class="home-card-title">${archetype === 'recreational' ? 'Daily habits' : "Today's checklist"}</h3>
       <p class="home-mission-progress ${compliance.isComplete ? 'is-complete' : ''}">${completionLabel}</p>
       <div class="home-progress-track" style="margin-bottom:10px;">
         <div class="home-progress-fill" style="--fill-target:${compliance.percent}%;width:${compliance.percent}%"></div>
@@ -11452,7 +11465,7 @@ function getLatestCheckIn(userId) {
 }
 
 function buildWeightSparkline(weights) {
-  if (!weights.length) return '<p class="home-placeholder-note">Trend visual unlocks after two or more check-ins.</p>';
+  if (!weights.length) return '<p class="home-placeholder-note">Log two check-ins to see your trend.</p>';
   const min = Math.min(...weights);
   const max = Math.max(...weights);
   const span = max - min;
@@ -11479,13 +11492,13 @@ function renderArchetypeFocusCard(profile, username) {
     'Not logged'
   );
   const trendDelta = weightSeries.length >= 2 ? (weightSeries[weightSeries.length - 1] - weightSeries[0]).toFixed(1) : null;
-  const trendText = trendDelta === null ? 'Awaiting check-ins' : `${trendDelta > 0 ? '+' : ''}${trendDelta} over 7-day window`;
+  const trendText = trendDelta === null ? 'Needs 2 check-ins' : `${trendDelta > 0 ? '+' : ''}${trendDelta} over the last week`;
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Next: Bodyweight & Body Metrics</h3>
+      <h3 class="home-card-title">Bodyweight</h3>
       <ul class="home-upcoming-list">
-        <li class="home-upcoming-item"><span>Current Weight</span><strong>${latestWeight}</strong></li>
-        <li class="home-upcoming-item"><span>7-Day Average</span><strong>${avgWeight}</strong></li>
+        <li class="home-upcoming-item"><span>Latest</span><strong>${latestWeight}</strong></li>
+        <li class="home-upcoming-item"><span>7-day average</span><strong>${avgWeight}</strong></li>
         <li class="home-upcoming-item"><span>Trend</span><strong>${trendText}</strong></li>
       </ul>
       ${buildWeightSparkline(weightSeries)}
@@ -11498,8 +11511,8 @@ function renderMacroProgressCard(profile, username) {
   return `
     <section class="home-dashboard-card">
       <div class="home-card-header">
-        <h3 class="home-card-title">Macro Progress</h3>
-        <span class="home-status-pill is-good">${macro.dayType}</span>
+        <h3 class="home-card-title">Macros today</h3>
+        ${macro.dayType ? `<span class="home-status-pill is-good">${macro.dayType}</span>` : ''}
       </div>
       ${renderProgressRow('Protein (g)', macro.proteinCurrent, macro.proteinTarget)}
       ${renderProgressRow('Carbs (g)', macro.carbsCurrent, macro.carbsTarget)}
@@ -11521,14 +11534,14 @@ function renderWeeklyComplianceCard(profile, username) {
 
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Weekly Compliance</h3>
+      <h3 class="home-card-title">Consistency</h3>
       <div class="home-stat-grid">
-        <div class="home-stat-chip"><p class="home-stat-label">Average</p><p class="home-stat-value">${snapshot.weekly.averagePercent}%</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Rolling 7-Day</p><p class="home-stat-value">${snapshot.rolling7.percent}%</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">90%+ Days</p><p class="home-stat-value">${snapshot.weekly.completedDays}/7</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Trend</p><p class="home-stat-value">${trendDirection} (${deltaPrefix}${snapshot.trend.delta}%)</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Weekly average</p><p class="home-stat-value">${snapshot.weekly.averagePercent}%</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Last 7 days</p><p class="home-stat-value">${snapshot.rolling7.percent}%</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Full days</p><p class="home-stat-value">${snapshot.weekly.completedDays} of 7</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">vs last week</p><p class="home-stat-value">${trendDirection} · ${deltaPrefix}${snapshot.trend.delta}%</p></div>
       </div>
-      <p class="home-mission-progress"><strong>Check-In Intelligence:</strong> ${snapshot.insightsPayload.insights.join(' · ') || snapshot.trend.insight}</p>
+      <p class="home-mission-progress">${snapshot.insightsPayload.insights.join(' · ') || snapshot.trend.insight}</p>
     </section>
   `;
 }
@@ -11806,18 +11819,24 @@ function renderUpcomingPrepEvents(profile, username) {
   const checkIn = getSafeDisplayValue(getNextScheduledCheckIn(profile, username), 'Not scheduled');
   const nextCheckInPhaseWeek = window.checkinEngine?.getWeekLabelForCheckIn
     ? window.checkinEngine.getWeekLabelForCheckIn({ date: checkIn, phase: phaseState.mode || 'improvement' }, phaseState)
-    : 'Phase week TBD';
-  const peakWeek = getSafeDisplayValue(profile.peakWeekStart, 'Placeholder');
-  const countdown = formatCountdownDays(phaseState.showDate || profile.showDate);
+    : '';
+  const showDateLike = phaseState.showDate || profile.showDate;
+  // Peak week and show day only mean something once a show is on the calendar.
+  const peakWeekRow = showDateLike && profile.peakWeekStart
+    ? `<li class="home-upcoming-item"><span>Peak week</span><strong>${formatHomeDate(profile.peakWeekStart)}</strong></li>`
+    : '';
+  const showRow = showDateLike
+    ? `<li class="home-upcoming-item"><span>Show day</span><strong>${formatCountdownDays(showDateLike)}</strong></li>`
+    : '';
 
   return `
     <section class="home-dashboard-card">
-      <h3 class="home-card-title">Upcoming / Countdown</h3>
+      <h3 class="home-card-title">Coming up</h3>
       <ul class="home-upcoming-list">
-        <li class="home-upcoming-item"><span>Next Check-in</span><strong>${checkIn}</strong></li>
-        <li class="home-upcoming-item"><span>Scheduled Label</span><strong>${nextCheckInPhaseWeek}</strong></li>
-        <li class="home-upcoming-item"><span>Peak Week</span><strong>${peakWeek}</strong></li>
-        <li class="home-upcoming-item"><span>Show Day Countdown</span><strong>${countdown}</strong></li>
+        <li class="home-upcoming-item"><span>Next check-in</span><strong>${formatHomeDate(checkIn, 'Not scheduled')}</strong></li>
+        ${nextCheckInPhaseWeek ? `<li class="home-upcoming-item"><span>Phase week</span><strong>${nextCheckInPhaseWeek}</strong></li>` : ''}
+        ${peakWeekRow}
+        ${showRow}
       </ul>
     </section>
   `;
@@ -11857,12 +11876,12 @@ function renderCompactProgressionSummary(profile, username) {
   const latestBadge = summary.latestBadge?.title || summary.badges?.slice?.(-1)?.[0]?.title || 'No badges yet';
   const recentProgressText = summary.recentEvents?.length
     ? summary.recentEvents.slice().reverse()[0]?.message
-    : getSafeDisplayValue(profile.recentProgressSummary, 'Keep logging to unlock progression insights.');
+    : getSafeDisplayValue(profile.recentProgressSummary, 'Log a session to start earning XP.');
 
   return `
     <section class="home-dashboard-card">
       <div class="home-card-header">
-        <h3 class="home-card-title">XP / Progression</h3>
+        <h3 class="home-card-title">Level &amp; XP</h3>
         <span class="home-status-pill is-good">Level ${summary.level}</span>
       </div>
       <div class="home-progress-track" style="margin-bottom:10px;">
@@ -11872,8 +11891,8 @@ function renderCompactProgressionSummary(profile, username) {
       <div class="home-stat-grid">
         <div class="home-stat-chip"><p class="home-stat-label">Total XP</p><p class="home-stat-value">${summary.totalXp}</p></div>
         <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${summary.streak} day${summary.streak === 1 ? '' : 's'}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Today</p><p class="home-stat-value">${summary.todaysXp?.amount || 0} XP</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Latest Badge</p><p class="home-stat-value">${latestBadge}</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Earned today</p><p class="home-stat-value">${summary.todaysXp?.amount || 0} XP</p></div>
+        <div class="home-stat-chip"><p class="home-stat-label">Latest badge</p><p class="home-stat-value">${latestBadge}</p></div>
       </div>
       <p class="home-mission-progress"><strong>Recent:</strong> ${recentProgressText}</p>
     </section>

@@ -49,6 +49,13 @@
       stepsComplete: 0.24
     })
   });
+  // Weekly insight lines shown on Home and in Coach Corner.
+  const INSIGHT = Object.freeze({
+    onTrack: 'On track',
+    cardio: 'Cardio has been slipping',
+    posingBehind: 'Posing is behind target',
+    posingOverdue: 'Posing is overdue'
+  });
   const STORAGE_PREFIX = 'tl_compliance_summary_v1_';
 
   function getStorage() {
@@ -354,24 +361,32 @@
     };
   }
 
+  // Posing only nags people who pose: bodybuilders, or anyone who has
+  // logged a session before. getOverdueStatus reports "overdue" for users
+  // with no sessions at all, which would otherwise flag every lifter.
+  function isPosingOverdue(userId, dateKey, archetype) {
+    const status = globalScope.posingEngine?.getOverdueStatus?.(userId, dateKey);
+    if (!status?.overdue) return false;
+    return status.daysSinceLastSession != null || archetype === 'bodybuilder';
+  }
+
   function buildInsight(userId, weekly) {
     const lastDay = weekly.days.length ? weekly.days[weekly.days.length - 1].date : resolveDate();
-    if (weekly.averagePercent >= 90) return 'On track';
+    if (weekly.averagePercent >= 90) return INSIGHT.onTrack;
 
     const cardioRate = getMetricCompletionRate(userId, 'cardioComplete', lastDay, 7);
-    if (cardioRate > 0 && cardioRate < 60) return 'Cardio consistency slipping';
+    if (cardioRate > 0 && cardioRate < 60) return INSIGHT.cardio;
 
     const posingRate = getMetricCompletionRate(userId, 'posingComplete', lastDay, 7);
-    if (posingRate > 0 && posingRate < 60) return 'Posing behind target';
-    const posingOverdue = globalScope.posingEngine?.getOverdueStatus?.(userId, lastDay);
-    if (posingOverdue?.overdue) return 'Posing overdue warning';
+    if (posingRate > 0 && posingRate < 60) return INSIGHT.posingBehind;
+    if (isPosingOverdue(userId, lastDay, weekly.archetype)) return INSIGHT.posingOverdue;
 
     const bodyweightRate = getMetricCompletionRate(userId, 'bodyweightLogged', lastDay, 7);
-    if (bodyweightRate >= 75) return 'Weight logging strong this week';
+    if (bodyweightRate >= 75) return 'Weigh-ins are solid this week';
 
-    if (weekly.averagePercent >= 75) return 'Execution slightly behind target';
-    if (weekly.averagePercent >= 50) return 'Urgency required to regain compliance';
-    return 'Immediate course correction required';
+    if (weekly.averagePercent >= 75) return 'Just a little behind this week';
+    if (weekly.averagePercent >= 50) return 'Slipping this week. A couple of full days will turn it around';
+    return 'Behind this week. Start with today’s checklist';
   }
 
   function getComplianceTrend(userId, archetype) {
@@ -401,19 +416,18 @@
     const headline = buildInsight(userId, weekly);
     if (headline) insights.push(headline);
 
-    if (missed.topMissedTask && missed.topMissedTask.task === 'cardioComplete' && !insights.includes('Cardio consistency slipping')) {
-      insights.push('Cardio consistency slipping');
+    if (missed.topMissedTask && missed.topMissedTask.task === 'cardioComplete' && !insights.includes(INSIGHT.cardio)) {
+      insights.push(INSIGHT.cardio);
     }
-    if (missed.topMissedTask && missed.topMissedTask.task === 'posingComplete' && !insights.includes('Posing behind target')) {
-      insights.push('Posing behind target');
+    if (missed.topMissedTask && missed.topMissedTask.task === 'posingComplete' && !insights.includes(INSIGHT.posingBehind)) {
+      insights.push(INSIGHT.posingBehind);
     }
-    const posingOverdue = globalScope.posingEngine?.getOverdueStatus?.(userId, endDate);
-    if (posingOverdue?.overdue && !insights.includes('Posing overdue warning')) {
-      insights.push('Posing overdue warning');
+    if (isPosingOverdue(userId, endDate, weekly.archetype) && !insights.includes(INSIGHT.posingOverdue)) {
+      insights.push(INSIGHT.posingOverdue);
     }
 
-    if (!insights.includes('On track') && weekly.averagePercent >= 90) {
-      insights.unshift('On track');
+    if (!insights.includes(INSIGHT.onTrack) && weekly.averagePercent >= 90) {
+      insights.unshift(INSIGHT.onTrack);
     }
 
     return {
