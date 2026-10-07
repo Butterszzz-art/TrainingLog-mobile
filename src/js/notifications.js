@@ -97,6 +97,9 @@
         return count > 1 ? `${who} shared ${count} new posts` : `${who} ${_esc(n.text)}`;
       case 'coach_note':
         return count > 1 ? `${who} sent you ${count} notes` : `${who} ${_esc(n.text)}`;
+      case 'coach_video':
+        return count > 1 ? `${who} sent you ${count} videos`
+          : `${who} ${_esc(n.text)}${n.data?.title ? `: ${_esc(n.data.title)}` : ''}`;
       case 'exercise_passed':
       case 'volume_passed':
         return `${who} ${_esc(n.text)}${count > 1 ? ` <span class="nt-x">×${count}</span>` : ''}`;
@@ -220,10 +223,14 @@
   }
 
   // Settings › Your Coach: the invite (Accept / Decline), notes and plan.
-  function _yourCoach() {
+  // anchorId: a part of the section to scroll to instead of its top.
+  function _yourCoach(anchorId) {
     if (typeof global.showTab === 'function') global.showTab('settingsTab');
     const section = document.getElementById('yourCoachSection');
-    const scroll = () => section && !section.hidden && section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const scroll = () => {
+      if (!section || section.hidden) return;
+      (document.getElementById(anchorId) || section).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
     const render = typeof global.renderYourCoachSection === 'function' ? global.renderYourCoachSection() : null;
     Promise.resolve(render).catch(() => {}).then(() => setTimeout(scroll, 60));
   }
@@ -270,6 +277,8 @@
       case 'coach_note':
       case 'coach_plan':
         return _yourCoach();
+      case 'coach_video':
+        return _yourCoach('ycVideos');
       case 'coach_accepted':
       case 'coach_left':
         if (typeof global.showTab === 'function') global.showTab('clientsTab');

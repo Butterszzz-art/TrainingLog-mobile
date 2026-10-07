@@ -2,7 +2,8 @@
    CLIENT SIDE OF COACHING
    - Your Coach (Settings): pending invites (accept / decline), the
      linked coach, their assigned program (import) and macro targets
-     (apply), their notes, and what you share with them.
+     (apply), their notes, their videos (played by src/js/coach-videos.js)
+     and what you share with them.
    - Share: pushes a small snapshot (recent check-ins, bodyweight,
      weekly workout counts, compliance) to POST /api/client/coach-share
      when you have a coach. The server filters it by your sharing
@@ -175,7 +176,7 @@
     return data;
   }
 
-  const state = { invites: [], assignments: [], notes: [], sharing: null };
+  const state = { invites: [], assignments: [], notes: [], videos: [], sharing: null };
 
   // ── sharing push ─────────────────────────────────────────────────
 
@@ -211,16 +212,18 @@
 
   async function load() {
     const get = path => api$('GET', path).catch(() => null);
-    const [inv, asn, notes, sharing] = await Promise.all([
+    const [inv, asn, notes, sharing, videos] = await Promise.all([
       get('/api/client/coach-invites'),
       get('/api/client/coach-assignment'),
       get('/api/client/coach-notes'),
-      get('/api/client/coach-sharing')
+      get('/api/client/coach-sharing'),
+      get('/api/client/coach-videos')
     ]);
     if (!inv && !asn && !notes) return false;
     state.invites = (inv && inv.invites) || [];
     state.assignments = (asn && asn.assignments) || [];
     state.notes = (notes && notes.notes) || [];
+    state.videos = (videos && videos.videos) || [];
     state.sharing = (sharing && sharing.sharing) || state.sharing || { checkIns: true, bodyweight: true, workouts: true };
     const linked = state.invites.some(i => i.status === 'active');
     root.localStorage.setItem(linkKey(), linked ? 'true' : 'false');
@@ -294,6 +297,18 @@
       ${switchRow('bodyweight', 'Bodyweight', 'Your weigh-ins from the last 4 months')}
       ${switchRow('workouts', 'Workouts', 'Sessions per week and how closely you follow your program')}` : '';
 
+    const cv = root.CoachVideos;
+    const videosHtml = state.videos.length && cv ? `
+      <div class="pod-row"><h4 class="pod-title mx-h3">Videos from your coach</h4><span class="mx-meta">${state.videos.length}</span></div>
+      ${state.videos.map(v => `
+        <button type="button" class="mx-row yc-video" data-yc-video="${esc(v.id)}" aria-label="Play ${esc(v.title)}">
+          <span class="cv-thumb" aria-hidden="true"><span class="ui-icon">${icon('video')}</span></span>
+          <span class="mx-row-main">
+            <span class="mx-row-title">${esc(v.title)}</span>
+            <span class="mx-row-sub">${esc(cv.categoryLabel(v.category))} · ${esc(v.coachUsername)}${v.createdAt ? ' · ' + esc(fmtDate(Date.parse(v.createdAt))) : ''}</span>
+          </span>
+        </button>`).join('')}` : '';
+
     const notesHtml = state.notes.length ? `
       <div class="pod-row"><h4 class="pod-title mx-h3">Notes from your coach</h4><span class="mx-meta">${state.notes.length}</span></div>
       ${state.notes.slice(0, 10).map(n => `
@@ -307,6 +322,7 @@
         <div class="pod-row"><h3 class="pod-title mx-h3">Your Coach</h3></div>
         ${pendingHtml}${activeHtml}
       </section>
+      ${videosHtml ? `<section class="pod mx-pod yc-pod" id="ycVideos">${videosHtml}</section>` : ''}
       ${sharingHtml ? `<section class="pod mx-pod yc-pod">${sharingHtml}</section>` : ''}
       ${notesHtml ? `<section class="pod mx-pod yc-pod">${notesHtml}</section>` : ''}`;
   }
@@ -332,8 +348,14 @@
   }
 
   async function onClick(e) {
-    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-macros],[data-yc-share]');
+    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-macros],[data-yc-share],[data-yc-video]');
     if (!t) return;
+
+    if (t.dataset.ycVideo) {
+      const v = state.videos.find(x => x.id === t.dataset.ycVideo);
+      if (v && root.CoachVideos) root.CoachVideos.openPlayer(v);
+      return;
+    }
 
     if (t.dataset.ycAccept) {
       t.disabled = true;
