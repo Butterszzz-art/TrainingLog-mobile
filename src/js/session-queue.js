@@ -1,16 +1,12 @@
 /**
  * session-queue.js
- * Renders a read-only "today's planned exercises" list at the top of the
- * Train tab's Log sub-view, so the lifter can see the day's plan before/
- * while logging sets manually below. Reuses the same activeProgram/
- * programs_<user> localStorage read pattern as today-program.js (each
- * home/train card file keeps its own small copy of these helpers rather
- * than sharing a module system — matches the existing codebase pattern).
+ * Renders the "today's plan" list at the top of the Train tab's Log
+ * sub-view. Which day is today comes from program-schedule.js (shared with
+ * the Home card). The plan can be loaded into today's log like a template
+ * (loadTodayProgramIntoLog), and its rows tick off as sets are logged.
  */
 (function (global) {
   'use strict';
-
-  const WEEKDAY_MAP = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
   // Local calendar day — workouts are keyed by it (index.html localDateKey()).
   function _localDateKey(d = new Date()) {
@@ -22,73 +18,21 @@
     return global.currentUser || (typeof localStorage !== 'undefined' && localStorage.getItem('fitnessAppUser'));
   }
 
-  function _getActiveRecord() {
-    const u = _user();
-    if (!u) return null;
-    try {
-      return JSON.parse(
-        localStorage.getItem(`activeProgram_${u}`) ||
-        localStorage.getItem('activeProgram') ||
-        'null'
-      );
-    } catch { return null; }
+  function _schedule() {
+    if (global.programSchedule) return global.programSchedule;
+    try { return typeof require === 'function' ? require('./program-schedule') : null; } catch { return null; }
   }
 
-  function _getPrograms() {
-    const u = _user();
-    if (!u) return [];
-    try {
-      return (
-        JSON.parse(localStorage.getItem(`programs_${u}`)) ||
-        JSON.parse(localStorage.getItem('programs') || '[]')
-      );
-    } catch { return []; }
-  }
-
-  function _parseLocalDate(str) {
-    if (!str) return null;
-    const [y, m, d] = str.split('-').map(Number);
-    if (!y) return null;
-    return new Date(y, m - 1, d);
-  }
-
-  function _countTrainingDaysBetween(from, until, trainingDayNums) {
-    let count = 0;
-    const cur = new Date(from);
-    while (cur < until) {
-      if (trainingDayNums.includes(cur.getDay())) count++;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return count;
-  }
-
-  /** Resolve today's program day object ({ name, exercises: [...] }), or null. */
+  /** Resolve today's program day object ({ name, exercises: [...] }), or null.
+   * Follows program-schedule.js, so a "Do it today" swap on Home applies here. */
   function getTodaysPlannedDay() {
-    const active = _getActiveRecord();
-    if (!active) return null;
-
-    const programs = _getPrograms();
-    const program = programs.find(p => p.id === active.programId);
-    if (!program || !Array.isArray(program.days) || !program.days.length) return null;
-
-    const rawFreq = program.frequency || program.weekdays || ['Mon', 'Wed', 'Fri'];
-    const trainingNums = rawFreq.map(d => WEEKDAY_MAP[d]).filter(n => n !== undefined);
-    if (!trainingNums.length) return null;
-
-    const startDate = _parseLocalDate(active.startDate || program.startDate);
-    if (!startDate) return null;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (!trainingNums.includes(today.getDay()) || today < startDate) return null; // rest day
-
-    const tdBefore = _countTrainingDaysBetween(startDate, today, trainingNums);
-    const nDays = program.days.length;
-    const idx = tdBefore % nDays;
-    // Multi-week programs (library) have different days each week.
-    const core = global.programBuilderV2Core;
-    const weekDays = core ? core.getWeekDays(program, Math.floor(tdBefore / nDays) + 1) : program.days;
-    return { ...((weekDays && weekDays[idx]) || program.days[idx]), programName: program.name };
+    const ps = _schedule();
+    if (!ps) return null;
+    const schedule = ps.getActiveSchedule(_user());
+    if (!schedule) return null;
+    const today = schedule.dayFor(new Date());
+    if (!today.isTraining || !today.day) return null; // rest day
+    return { ...today.day, programName: schedule.program.name, programId: schedule.program.id, weekNum: today.weekNum, weekCount: schedule.weekCount };
   }
 
   function _setSummary(ex) {
@@ -160,6 +104,13 @@
     const totalSets = _totalSets(exercises);
     const rpeTarget = _avgTargetRpe(exercises);
     const muscles = _muscleSummary(exercises);
+    const ps = _schedule();
+    const progress = ps ? ps.dayProgress(day, ps.workoutsOn(_localDateKey(), _user())) : null;
+    const doneSets = progress ? progress.doneSets : 0;
+    const doneKg = progress ? progress.doneKg : 0;
+    const pct = tonnageTargetKg > 0
+      ? Math.min(100, Math.round((doneKg / tonnageTargetKg) * 100))
+      : (totalSets ? Math.round((doneSets / totalSets) * 100) : 0);
 
     el.innerHTML = `
       <div class="pod pod--hero train-hero-card">
@@ -171,11 +122,11 @@
           ${rpeTarget ? `<div class="train-hero-rpe"><div class="home-hero-stat-lbl">Target RPE</div><div class="train-hero-rpe-val">${rpeTarget}</div></div>` : ''}
         </div>
         <div class="train-hero-tonnage-row">
-          <span>TONNAGE 0.0t / ${(tonnageTargetKg / 1000).toFixed(1)}t</span>
-          <span>0% &middot; 0 of ${totalSets} sets</span>
+          <span>TONNAGE ${(doneKg / 1000).toFixed(1)}t / ${(tonnageTargetKg / 1000).toFixed(1)}t</span>
+          <span>${pct}% &middot; ${doneSets} of ${totalSets} sets</span>
         </div>
-        <div class="train-hero-tonnage-track"><div class="train-hero-tonnage-fill" style="width:0%"></div></div>
-        <button class="cta-capsule train-hero-cta" onclick="goToQuickLog()">Start session</button>
+        <div class="train-hero-tonnage-track"><div class="train-hero-tonnage-fill" style="width:${pct}%"></div></div>
+        <button class="cta-capsule train-hero-cta" onclick="if(typeof loadTodayProgramIntoLog==='function') loadTodayProgramIntoLog(); else goToQuickLog();">${doneSets ? 'Continue session' : 'Start session'}</button>
         <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="if(typeof startPerformanceMode==='function') startPerformanceMode();"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>
       </div>`;
   }
@@ -337,8 +288,126 @@
       </div>`;
   }
 
+  // ── Today's program in the log ──────────────────────────────────
+  // The program day loads into today's log the same way a saved template
+  // does (index.html loadSelectedResistanceTemplate): one workout whose sets
+  // carry the planned reps/weights and get ticked Done as they're lifted.
+  // metadata.source === 'program' marks it so it's loaded only once and so
+  // program-schedule.js dayProgress() counts its ticked sets.
+
+  function _readWorkouts(u) {
+    try { return JSON.parse(localStorage.getItem('workouts_' + u)) || []; } catch { return []; }
+  }
+
+  /** Index of today's workout loaded from this program day, or -1. */
+  function _loadedProgramWorkoutIndex(day, workouts) {
+    const todayStr = _localDateKey();
+    return workouts.findIndex(w => w && w.date === todayStr && w.metadata && w.metadata.source === 'program'
+      && w.metadata.programDay === day.name);
+  }
+
+  function _lastWeightFor(name) {
+    if (typeof global.getExerciseStats !== 'function') return null;
+    try {
+      const stats = global.getExerciseStats(name);
+      return stats && stats.lastTopSet && Number(stats.lastTopSet.weight) > 0 ? Number(stats.lastTopSet.weight) : null;
+    } catch { return null; }
+  }
+
+  /** Build the template-style log entries for a program day. Planned weight
+   * wins; otherwise last time's top-set weight; otherwise blank (0). */
+  function buildProgramDayLog(day, dateKey, lastWeightFor) {
+    const lookup = typeof lastWeightFor === 'function' ? lastWeightFor : () => null;
+    return (Array.isArray(day.exercises) ? day.exercises : []).map((ex, exerciseIndex) => {
+      const sets = Array.isArray(ex.sets) && ex.sets.length ? ex.sets : [{ reps: 0 }];
+      const fallback = lookup(ex.name);
+      return {
+        exercise: ex.name,
+        sets: sets.length,
+        repsArray: sets.map(set => Number(set.reps) || 0),
+        weightsArray: sets.map(set => (Number(set.weight) > 0 ? Number(set.weight) : (fallback || 0))),
+        dropsetArray: sets.map(() => false),
+        restPauseArray: sets.map(() => false),
+        skippedArray: sets.map(() => false),
+        completedArray: sets.map(() => false),
+        setTypeArray: sets.map(set => set.setType || 'standard'),
+        groupType: ex.supersetGroup ? 'superset' : 'straight',
+        groupId: ex.supersetGroup ? `program_${ex.supersetGroup}` : null,
+        templateExerciseId: `program_${exerciseIndex}`,
+        unit: 'kg',
+        date: dateKey,
+      };
+    });
+  }
+
+  function _openAndScrollTo(workoutIndex, entryIndex) {
+    if (typeof document === 'undefined') return;
+    const details = document.getElementById(`workoutDetails${workoutIndex}`);
+    if (details) details.style.display = 'block';
+    const strip = entryIndex != null ? document.getElementById(`exProgress_${workoutIndex}_${entryIndex}`) : null;
+    const target = (strip && strip.parentElement) || details;
+    if (target && target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /** Load today's program day into today's log like a template (once), then
+   * open it. Returns the workout index, or -1 when there's nothing to load. */
+  function loadTodayProgramIntoLog(opts) {
+    const options = opts || {};
+    const day = getTodaysPlannedDay();
+    const u = _user();
+    if (!day || !u || !Array.isArray(day.exercises) || !day.exercises.length) {
+      if (global.showToast) global.showToast('No program session planned today.', 'warn');
+      return -1;
+    }
+    const workouts = _readWorkouts(u);
+    let index = _loadedProgramWorkoutIndex(day, workouts);
+    if (index === -1) {
+      const dateKey = _localDateKey();
+      workouts.push({
+        title: day.name,
+        date: dateKey,
+        metadata: { source: 'program', programId: day.programId || null, programDay: day.name, programName: day.programName || '' },
+        log: buildProgramDayLog(day, dateKey, _lastWeightFor),
+        restBreaks: [],
+      });
+      localStorage.setItem('workouts_' + u, JSON.stringify(workouts));
+      index = workouts.length - 1;
+      if (typeof global.renderWorkouts === 'function') global.renderWorkouts();
+      if (global.showToast) global.showToast(`${day.name} loaded from your program`, 'success');
+    }
+    renderSessionQueue();
+    if (options.scroll !== false) setTimeout(() => _openAndScrollTo(index, null), 60);
+    return index;
+  }
+
+  function _escHTML(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /** The "Today's program" row above the template picker in the log form. */
+  function renderProgramTemplateRow() {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('programTemplateRow');
+    if (!el) return;
+    const day = getTodaysPlannedDay();
+    const exercises = day && Array.isArray(day.exercises) ? day.exercises : [];
+    if (!day || !exercises.length) { el.innerHTML = ''; el.hidden = true; return; }
+    const loaded = _loadedProgramWorkoutIndex(day, _readWorkouts(_user())) !== -1;
+    const week = day.weekCount > 1 ? ` · week ${day.weekNum}` : '';
+    el.hidden = false;
+    el.innerHTML = `
+      <button type="button" class="sq-program-load${loaded ? ' is-loaded' : ''}" onclick="loadTodayProgramIntoLog()">
+        <span class="sq-program-load-text">
+          <span class="sq-program-load-name">${loaded ? `${_escHTML(day.name)} is in today's log` : `Today's program: ${_escHTML(day.name)}`}</span>
+          <span class="sq-program-load-sub">${_escHTML(day.programName || 'Your program')}${week} · ${exercises.length} lift${exercises.length === 1 ? '' : 's'}</span>
+        </span>
+        <span class="sq-program-load-cta">${loaded ? 'Show' : 'Load'}</span>
+      </button>`;
+  }
+
   function renderSessionQueue() {
     if (typeof document === 'undefined') return;
+    renderProgramTemplateRow();
     const el = document.getElementById('sessionQueueCard');
     if (!el) return;
 
@@ -346,32 +415,53 @@
     const exercises = day && Array.isArray(day.exercises) ? day.exercises : [];
     if (!day || !exercises.length) { el.innerHTML = ''; return; }
 
+    const ps = _schedule();
+    const progress = ps ? ps.dayProgress(day, ps.workoutsOn(_localDateKey(), _user())) : null;
+    const tracking = !!(progress && progress.started);
+    const currentIdx = tracking ? progress.lifts.findIndex(l => !l.complete) : -1;
+
     const _esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     const hasStats = typeof global.getExerciseStats === 'function';
     const rows = exercises.map((ex, i) => {
       const first = (ex.sets && ex.sets[0]) || {};
-      const stats = hasStats ? global.getExerciseStats(ex.name) : null;
-      const pctHTML = stats && stats.pctOf1rm != null
-        ? `<span class="sq-e1rm">${stats.pctOf1rm}%</span>` : '<span class="sq-e1rm">—</span>';
-      const deltaHTML = stats && stats.deltaWeight != null
-        ? `<span class="sq-delta ${stats.deltaWeight > 0 ? 'is-up' : stats.deltaWeight < 0 ? 'is-down' : 'is-flat'}">${stats.deltaWeight > 0 ? '+' : ''}${stats.deltaWeight}</span>`
-        : '<span class="sq-delta is-flat">=</span>';
+      const lift = progress ? progress.lifts[i] : null;
+      const done = !!(lift && lift.complete);
+      let tail;
+      if (tracking) {
+        tail = `<span class="sq-setcount">${lift ? lift.done : 0}/${lift ? lift.planned : 0}</span>`;
+      } else {
+        const stats = hasStats ? global.getExerciseStats(ex.name) : null;
+        const pctHTML = stats && stats.pctOf1rm != null
+          ? `<span class="sq-e1rm">${stats.pctOf1rm}%</span>` : '<span class="sq-e1rm">—</span>';
+        const deltaHTML = stats && stats.deltaWeight != null
+          ? `<span class="sq-delta ${stats.deltaWeight > 0 ? 'is-up' : stats.deltaWeight < 0 ? 'is-down' : 'is-flat'}">${stats.deltaWeight > 0 ? '+' : ''}${stats.deltaWeight}</span>`
+          : '<span class="sq-delta is-flat">=</span>';
+        tail = pctHTML + deltaHTML;
+      }
       return `
-      <div class="sq-row sq-row--tap" data-ex-name="${_esc(ex.name)}" data-ex-weight="${first.weight ?? ''}" data-ex-reps="${first.reps ?? ''}">
-        <span class="sq-index">${i + 1}</span>
+      <div class="sq-row sq-row--tap${done ? ' is-done' : ''}${i === currentIdx ? ' is-current' : ''}" data-ex-name="${_esc(ex.name)}" data-ex-weight="${first.weight ?? ''}" data-ex-reps="${first.reps ?? ''}">
+        <span class="sq-index">${done ? '✓' : i + 1}</span>
         <span class="sq-name">${ex.name}</span>
         <span class="sq-summary">${_setSummary(ex)}</span>
-        ${pctHTML}
-        ${deltaHTML}
+        ${tail}
       </div>`;
     }).join('');
+
+    const head = tracking
+      ? `<span class="sq-count">${progress.doneLifts} of ${progress.totalLifts} &middot; ${progress.doneSets}/${progress.totalSets} sets</span>`
+      : '<span class="sq-count">load &middot; %1RM &middot; &Delta; last</span>';
+    const pct = tracking && progress.totalSets ? Math.round((progress.doneSets / progress.totalSets) * 100) : 0;
+    const bar = tracking
+      ? `<div class="sq-progress" role="progressbar" aria-label="Sets done today" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>`
+      : '';
 
     el.innerHTML = `
       <div class="pod sq-card">
         <div class="pod-row">
           <span class="pod-kicker">Today's plan · ${day.name}</span>
-          <span class="sq-count">load &middot; %1RM &middot; &Delta; last</span>
+          ${head}
         </div>
+        ${bar}
         ${rows}
       </div>`;
 
@@ -379,7 +469,19 @@
       el._tapWired = true;
       el.addEventListener('click', (e) => {
         const row = e.target.closest('.sq-row--tap');
-        if (!row || typeof global.startQuickLogFor !== 'function') return;
+        if (!row) return;
+        // Day loaded like a template: jump to that lift's card to tick sets.
+        const planned = getTodaysPlannedDay();
+        const workouts = _readWorkouts(_user());
+        const loadedIdx = planned ? _loadedProgramWorkoutIndex(planned, workouts) : -1;
+        if (loadedIdx !== -1) {
+          const name = String(row.dataset.exName || '').trim().toLowerCase();
+          const log = workouts[loadedIdx].log || [];
+          const entryIndex = log.findIndex(entry => String(entry.exercise || '').trim().toLowerCase() === name);
+          _openAndScrollTo(loadedIdx, entryIndex === -1 ? null : entryIndex);
+          return;
+        }
+        if (typeof global.startQuickLogFor !== 'function') return;
         global.startQuickLogFor(row.dataset.exName, {
           weight: row.dataset.exWeight ? Number(row.dataset.exWeight) : null,
           reps: row.dataset.exReps ? Number(row.dataset.exReps) : null,
@@ -781,7 +883,7 @@
     }
   }
 
-  const api = { getTodaysPlannedDay, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
+  const api = { getTodaysPlannedDay, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
     initQuickLog, quickLogStep, quickLogSet, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, refreshLogButtonLabel: _updateQuickLogButtonLabel };
@@ -804,6 +906,8 @@
   global.refreshLogButtonLabel = _updateQuickLogButtonLabel;
   global.getTodaysPlannedDay = getTodaysPlannedDay;
   global.renderSessionQueue = renderSessionQueue;
+  global.loadTodayProgramIntoLog = loadTodayProgramIntoLog;
+  global.renderProgramTemplateRow = renderProgramTemplateRow;
   global.renderTrainHero = renderTrainHero;
   global.renderTrainReadinessStrip = renderTrainReadinessStrip;
   global.renderSessionSoFar = renderSessionSoFar;

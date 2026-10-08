@@ -62,3 +62,33 @@ describe('session-queue', () => {
     expect(getTodaysPlannedDay()).toBeNull();
   });
 });
+
+describe('buildProgramDayLog', () => {
+  const { buildProgramDayLog } = require('../src/js/session-queue');
+
+  test('turns a program day into template-style log entries', () => {
+    const day = {
+      name: 'Upper B',
+      exercises: [
+        { name: 'Incline Press', sets: [{ reps: 8, weight: 30 }, { reps: 8, weight: 30 }] },
+        { name: 'Pull-up', sets: [{ reps: 6 }, { reps: 6 }, { reps: 6 }] },
+      ],
+    };
+    const log = buildProgramDayLog(day, '2026-10-08', name => (name === 'Pull-up' ? 5 : 99));
+    expect(log).toHaveLength(2);
+    expect(log[0]).toMatchObject({
+      exercise: 'Incline Press',
+      sets: 2,
+      repsArray: [8, 8],
+      weightsArray: [30, 30], // planned weight wins over last time's
+      completedArray: [false, false],
+      date: '2026-10-08',
+    });
+    expect(log[1].weightsArray).toEqual([5, 5, 5]); // no planned weight: last time's
+  });
+
+  test('blank weight when there is no plan or history', () => {
+    const log = buildProgramDayLog({ exercises: [{ name: 'Curl', sets: [{ reps: 12 }] }] }, '2026-10-08');
+    expect(log[0].weightsArray).toEqual([0]);
+  });
+});
