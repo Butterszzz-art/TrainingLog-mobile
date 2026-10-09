@@ -450,6 +450,79 @@
 .sq-row--tap { cursor: pointer; }
 .sq-row--tap:hover { background: rgba(255, 255, 255, 0.02); }
 
+/* Today's program day, offered above the template picker and loaded into
+   the log like a template (session-queue.js renderProgramTemplateRow) */
+.sq-program-load {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 9px 10px 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--acc-4a8466), 0.38);
+  background: linear-gradient(90deg, rgba(var(--acc-5fa87e), 0.14), rgba(var(--acc-5fa87e), 0.02));
+  color: var(--text-color);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sq-program-load-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sq-program-load-name { font-size: 0.88rem; font-weight: 700; }
+.sq-program-load-sub { font-size: 0.72rem; color: var(--positive-text); font-weight: 600; }
+.sq-program-load-cta {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--pill-bg-active);
+  color: var(--pill-text-active);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sq-program-load.is-loaded { background: transparent; border-color: rgba(116, 138, 126, 0.2); }
+.sq-program-load.is-loaded .sq-program-load-sub { color: var(--text-muted); }
+.sq-program-load.is-loaded .sq-program-load-cta {
+  background: transparent;
+  border: 1px solid rgba(116, 138, 126, 0.35);
+  color: var(--text-color);
+}
+.sq-program-load:focus-visible { outline: 2px solid var(--primary, #5fa87e); outline-offset: 2px; }
+
+/* Plan rows tick off as today's sets are logged */
+.sq-progress {
+  height: 4px;
+  margin: 2px 0 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(116, 138, 126, 0.16);
+  overflow: hidden;
+}
+.sq-progress i {
+  display: block;
+  height: 100%;
+  background: var(--primary, #5fa87e);
+  transition: width 0.3s ease;
+}
+.sq-setcount {
+  min-width: 36px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sq-row.is-done .sq-index,
+.sq-row.is-done .sq-setcount { color: var(--positive-text); }
+.sq-row.is-done .sq-name { color: var(--text-muted); }
+.sq-row.is-current {
+  margin: 0 -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  background: rgba(var(--acc-5fa87e), 0.1);
+}
+.sq-row.is-current .sq-setcount { color: var(--text-color); }
+
 /* ── Weekly volume landmarks (MEV/MAV/MRV) ──────────────────────── */
 
 .vl-card { margin-bottom: 10px; }

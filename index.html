@@ -773,6 +773,12 @@
     <!-- ── Greeting row: "Morning, {name}" + date/streak, search+avatar ── -->
     <div class="home-greeting-row" id="homeGreetingRow"></div>
 
+    <!-- ── Up today: the active program's session, swipeable across the
+         week; offers saved programs when none is started (today-program.js) ── -->
+    <div class="home-zone home-zone--up-today">
+      <div id="todayProgramCard"></div>
+    </div>
+
     <!-- ── Hero: days out / phase / status — the first thing you see (renderHomeDashboard) ── -->
     <div class="home-zone home-zone--top-hero" id="homeHeroSlot"></div>
 
@@ -835,10 +841,6 @@
     <!-- ── Daily Pulse: one-tap rotating check-in question ───────── -->
     <div class="home-zone" id="dailyPulseCard"></div>
 
-    <!-- ── Zone 1: Today's session — program day + split strip ──── -->
-    <div class="home-zone home-zone--hero">
-      <div id="todayProgramCard"></div>
-    </div>
 
     <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered;
          the 'hero' card is pulled out into #homeHeroSlot at the top) ── -->
@@ -980,6 +982,9 @@
                offered up front as an alternative starting point rather than
                buried under a disclosure. Full template build/manage lives
                in the separate Templates sub-tab; this is just the shortcut. -->
+          <!-- Today's program day, loaded into the log like a template
+               (session-queue.js renderProgramTemplateRow) -->
+          <div id="programTemplateRow" hidden></div>
           <select id="resistanceTemplateSelect" class="log-template-select log-template-quickload" onchange="loadSelectedResistanceTemplate()">
             <option value="">Load a saved template…</option>
           </select>
@@ -7749,6 +7754,10 @@ function renderWorkouts() {
   if (document.getElementById('progressTab').classList.contains('active')) {
     showWorkoutProgress();
   }
+  // Ticking sets off moves the program plan on (Log plan + Home card).
+  if (typeof window.renderTrainHero === 'function') window.renderTrainHero();
+  if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
+  if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
 
   window.renderWorkouts = renderWorkouts;
   window.toggleWorkoutDetails = toggleWorkoutDetails;
@@ -20574,6 +20583,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/notifications.js"></script>
   <script src="src/js/rehab.js"></script>
   <script src="src/js/reminders.js"></script>
+  <script src="src/js/program-schedule.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/session-queue.js"></script>
   <script src="src/js/performance-mode.js"></script>
