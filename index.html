@@ -1000,6 +1000,7 @@
                Settings → Advanced instead of silently logging an exercise
                that can't be grouped by muscle. -->
           <div id="exerciseNameHint" class="form-error" style="display:none;"></div>
+          <button type="button" id="quickNewExerciseBtn" class="log-quick-new-exercise" onclick="openCustomExerciseCreator(document.getElementById('exercise').value)">+ New custom exercise</button>
 
           <!-- Progressive overload hint -->
           <div id="overloadHint" class="overload-hint"></div>
@@ -5970,6 +5971,31 @@ function removeSet(indexToRemove) {
   if (typeof refreshLogButtonLabel === 'function') refreshLogButtonLabel();
 }
 
+// Shortcut from the Log tab straight to Settings → Advanced → custom exercise
+// form, with whatever was typed in the exercise field prefilled.
+function openCustomExerciseCreator(prefillName) {
+  const name = String(prefillName || '').trim();
+  showTab('settingsTab');
+  let tries = 0;
+  (function openAdvanced() {
+    // settings.html is fetched async on first open — wait for it.
+    const subtab = document.querySelector('.settings-subtab[data-settings-subtab="advanced"]');
+    const nameInput = document.getElementById('customExerciseName');
+    if (!subtab || !nameInput) {
+      if (++tries < 40) setTimeout(openAdvanced, 100);
+      return;
+    }
+    subtab.click();
+    if (name) nameInput.value = name;
+    const section = nameInput.closest('section') || nameInput;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Name typed already → jump to the muscle group; otherwise to the name.
+    const groupSelect = document.getElementById('customExerciseMuscleGroup');
+    (name && groupSelect ? groupSelect : nameInput).focus({ preventScroll: true });
+  })();
+}
+window.openCustomExerciseCreator = openCustomExerciseCreator;
+
 function updateAddButtonState() {
   const exercise = document.getElementById('exercise').value.trim();
   const sets = parseInt(document.getElementById('sets').value, 10);
@@ -5980,7 +6006,7 @@ function updateAddButtonState() {
   const knownExercise = typeof isKnownExerciseName === 'function' ? isKnownExerciseName(exercise) : true;
   if (hint) {
     if (exercise && !knownExercise) {
-      hint.textContent = 'Pick an exercise from the suggestions, or add a custom one in Settings → Advanced.';
+      hint.textContent = 'Pick an exercise from the suggestions, or create it as a custom exercise below.';
       hint.style.display = 'block';
     } else {
       hint.style.display = 'none';
@@ -17665,7 +17691,12 @@ function showHistoryMiniTab(type) {
 
     const endWorkoutBtn = document.getElementById('endWorkoutBtn');
     if (endWorkoutBtn) {
-      endWorkoutBtn.addEventListener('click', () => {
+      endWorkoutBtn.addEventListener('click', async () => {
+        // Guard against misclicks — ending stops the timer and saves.
+        if (typeof window.showConfirm === 'function') {
+          const ok = await window.showConfirm('End this workout? The timer will stop and your session will be saved.', { confirmText: 'End workout', cancelText: 'Keep going' });
+          if (!ok) return;
+        }
         if (typeof window.stopWorkoutTimerAndSave === 'function') {
           try {
             const maybePromise = window.stopWorkoutTimerAndSave();
@@ -18859,9 +18890,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const wfbEndBtn = document.getElementById('wfbEndBtn');
   if (wfbEndBtn) {
     wfbEndBtn.addEventListener('click', () => {
+      // The main handler asks for confirmation and exits focus mode itself,
+      // so cancelling keeps the user in focus mode.
       const mainEndBtn = document.getElementById('endWorkoutBtn');
       if (mainEndBtn) mainEndBtn.click();
-      exitWorkoutFocusMode();
+      else exitWorkoutFocusMode();
     });
   }
 
