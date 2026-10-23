@@ -1743,3 +1743,19 @@
    of the entry's own margin, leaving ~48px gaps between cards. */
 #workoutsContainer .workout-entry { margin-bottom: 10px; }
 #workoutsContainer .workout-entry > div > button { margin: 0; }
+
+/* ── "+ New custom exercise" shortcut under the exercise field ─── */
+#quickNewExerciseBtn.log-quick-new-exercise {
+  display: block;
+  width: auto;
+  margin: 4px 0 6px auto;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  color: var(--primary, #2f8a63);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+#quickNewExerciseBtn.log-quick-new-exercise:hover { text-decoration: underline; }
