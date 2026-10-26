@@ -71,6 +71,9 @@
     for (const entry of log) {
       const name = (entry.exercise || entry.name || '').trim();
       if (!name) continue;
+      // Alt Machine / Alt Gym sets don't compare with the usual setup, so
+      // they can't set (or inflate) a PR.
+      if (typeof window.isAltSessionEntry === 'function' && window.isAltSessionEntry(entry, latest)) continue;
 
       const repsArr    = Array.isArray(entry.repsArray)    ? entry.repsArray    : [];
       const weightsArr = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];

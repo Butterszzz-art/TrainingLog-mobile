@@ -56,6 +56,7 @@
       for (const entry of log) {
         const name = (entry.exercise || entry.name || '').toLowerCase().trim();
         if (!name.includes(query) && !query.includes(name)) continue;
+        if (typeof window.isAltSessionEntry === 'function' && window.isAltSessionEntry(entry, w)) continue;
 
         const repsArr    = Array.isArray(entry.repsArray)    ? entry.repsArray    : [];
         const weightsArr = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];

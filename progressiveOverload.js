@@ -2,6 +2,20 @@ function normalizeExerciseName(entry) {
   return String(entry?.exercise || '').trim().toLowerCase();
 }
 
+/**
+ * True when an entry was logged on different equipment (Alt Machine) or at a
+ * different gym (Alt Gym). Those sets aren't comparable to normal sessions, so
+ * they're left out of "last time", progression rates and PRs — but still count
+ * for volume, streaks and history.
+ *
+ * New entries carry their own `sessionCtx`. Older workouts were tagged as a
+ * whole via `workout._sessionCtx`, which applies when the entry has no tag.
+ */
+function isAltSessionEntry(entry, workout) {
+  const ctx = (entry && entry.sessionCtx) || (workout && workout._sessionCtx);
+  return !!(ctx && (ctx.altMachine || ctx.altGym));
+}
+
 function getLastEntry(exerciseName, workouts) {
   if (!Array.isArray(workouts)) return null;
   const targetName = String(exerciseName || '').trim().toLowerCase();
@@ -10,7 +24,7 @@ function getLastEntry(exerciseName, workouts) {
   for (let i = workouts.length - 1; i >= 0; i--) {
     const w = workouts[i];
     if (!w || !Array.isArray(w.log)) continue;
-    const entry = w.log.find(e => normalizeExerciseName(e) === targetName);
+    const entry = w.log.find(e => normalizeExerciseName(e) === targetName && !isAltSessionEntry(e, w));
     if (entry) return entry;
   }
   return null;
@@ -25,7 +39,7 @@ function getExerciseHistory(exerciseName, workouts) {
   workouts.forEach(workout => {
     if (!Array.isArray(workout?.log)) return;
     workout.log.forEach(entry => {
-      if (normalizeExerciseName(entry) === targetName) {
+      if (normalizeExerciseName(entry) === targetName && !isAltSessionEntry(entry, workout)) {
         history.push(entry);
       }
     });
@@ -109,6 +123,10 @@ function suggestNextSession(exercise, workouts = []) {
   const exerciseName = typeof exercise === 'string' ? exercise : exercise?.exercise;
   const targetName = String(exerciseName || '').trim();
   if (!targetName) return null;
+
+  // A set logged on alt equipment or at another gym says nothing about the
+  // usual setup, so it can't be the basis for next session's suggestion.
+  if (typeof exercise === 'object' && exercise && isAltSessionEntry(exercise)) return null;
 
   const history = getExerciseHistory(targetName, workouts);
   const lastEntry = (typeof exercise === 'object' && exercise)
@@ -220,9 +238,10 @@ function getProgressiveOverloadSuggestion(exerciseName, workouts) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { getProgressiveOverloadSuggestion, suggestNextSession };
+  module.exports = { getProgressiveOverloadSuggestion, suggestNextSession, isAltSessionEntry };
 }
 if (typeof window !== 'undefined') {
   window.getProgressiveOverloadSuggestion = getProgressiveOverloadSuggestion;
   window.suggestNextSession = suggestNextSession;
+  window.isAltSessionEntry = isAltSessionEntry;
 }

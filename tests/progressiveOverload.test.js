@@ -81,3 +81,45 @@ describe('getProgressiveOverloadSuggestion', () => {
     expect(recommendation.message).toMatch(/maxed out/i);
   });
 });
+
+describe('alt machine / alt gym entries', () => {
+  const { isAltSessionEntry } = require('../progressiveOverload');
+  const bench = (weight, extra = {}) => ({
+    exercise: 'Bench', weightsArray: [weight], repsArray: [8], repGoal: 8, unit: 'kg', ...extra
+  });
+
+  test('isAltSessionEntry reads the entry tag, then the legacy workout tag', () => {
+    expect(isAltSessionEntry(bench(100))).toBe(false);
+    expect(isAltSessionEntry(bench(100, { sessionCtx: { altMachine: true } }))).toBe(true);
+    expect(isAltSessionEntry(bench(100, { sessionCtx: { altGym: true, gymName: 'X' } }))).toBe(true);
+    expect(isAltSessionEntry(bench(100), { _sessionCtx: { altGym: true } })).toBe(true);
+    expect(isAltSessionEntry(bench(100), { _sessionCtx: { altGym: false, altMachine: false } })).toBe(false);
+  });
+
+  test('suggestion by name ignores the newer alt-gym session', () => {
+    const workouts = [
+      { log: [bench(100)] },
+      { log: [bench(140, { sessionCtx: { altGym: true } })] }
+    ];
+    const next = suggestNextSession('Bench', workouts);
+    expect(next.previousSets).toEqual([{ reps: 8, weight: 100 }]);
+    expect(next.basedOnSessions).toBe(1);
+  });
+
+  test('legacy whole-workout tag is still skipped', () => {
+    const workouts = [
+      { log: [bench(100)] },
+      { _sessionCtx: { altMachine: true }, log: [bench(60)] }
+    ];
+    expect(suggestNextSession('Bench', workouts).previousSets).toEqual([{ reps: 8, weight: 100 }]);
+  });
+
+  test('no suggestion is made from an alt entry itself', () => {
+    const alt = bench(140, { sessionCtx: { altMachine: true } });
+    expect(suggestNextSession(alt, [{ log: [bench(100)] }, { log: [alt] }])).toBeNull();
+  });
+
+  test('only alt sessions logged → nothing to base a suggestion on', () => {
+    expect(suggestNextSession('Bench', [{ log: [bench(100, { sessionCtx: { altGym: true } })] }])).toBeNull();
+  });
+});

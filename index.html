@@ -6180,6 +6180,10 @@ function addLogEntry() {
     targetRIR: Number.isFinite(targetRIR) ? targetRIR : null,
     maxedOut,
   };
+  // Tag with Alt Machine / Alt Gym first — the suggestion below and the PR
+  // check after save both skip tagged entries.
+  if (typeof window.applySessionContext === 'function') window.applySessionContext(newEntry);
+
   const activeWorkoutIndex = workouts.findIndex(w => w.date === date);
   workouts[activeWorkoutIndex].log.push(newEntry);
 
@@ -6192,7 +6196,6 @@ function addLogEntry() {
   }
 
   const activeWorkout = workouts[activeWorkoutIndex];
-  if (typeof window.applySessionContext === 'function') window.applySessionContext(activeWorkout);
   const computedMetrics = typeof calculateWorkoutMetrics === 'function'
     ? calculateWorkoutMetrics(activeWorkout)
     : {
@@ -6839,7 +6842,8 @@ function getPreviousExerciseEntry(exerciseName, workoutIndex) {
       : (activeIdx === undefined || activeIdx < workoutIndex);
     if (!isEarlier) return;
 
-    const match = w.log.find(e => String(e?.exercise || '').trim().toLowerCase() === targetName);
+    const match = w.log.find(e => String(e?.exercise || '').trim().toLowerCase() === targetName
+      && !(typeof isAltSessionEntry === 'function' && isAltSessionEntry(e, w)));
     if (!match) return;
 
     if (!best || wDate > best.date) {
@@ -6910,7 +6914,11 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   titleBlock.appendChild(titleRow);
   header.appendChild(titleBlock);
 
-  const previous = getPreviousExerciseEntry(entry.exercise, workoutIndex);
+  // Alt Machine / Alt Gym sets aren't comparable to the usual setup, so they
+  // get no up/down trend.
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const isAltEntry = typeof isAltSessionEntry === 'function' && isAltSessionEntry(entry, workouts[workoutIndex]);
+  const previous = isAltEntry ? null : getPreviousExerciseEntry(entry.exercise, workoutIndex);
   const trend = getExerciseTrend(entry, previous?.exercise);
   if (trend) {
     const trendBadge = document.createElement('span');
@@ -7004,7 +7012,6 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
 
   card.appendChild(setList);
 
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const recommendation = entry.nextSessionRecommendation || (typeof suggestNextSession === 'function'
     ? suggestNextSession(entry, workouts)
     : null);
@@ -8830,7 +8837,8 @@ function getLastExerciseEntry(exerciseName) {
 
   for (let i = workouts.length - 1; i >= 0; i--) {
     const log = Array.isArray(workouts[i]?.log) ? workouts[i].log : [];
-    const match = log.find(entry => String(entry?.exercise || '').trim().toLowerCase() === normalizedName);
+    const match = log.find(entry => String(entry?.exercise || '').trim().toLowerCase() === normalizedName
+      && !(typeof isAltSessionEntry === 'function' && isAltSessionEntry(entry, workouts[i])));
     if (match) return match;
   }
 

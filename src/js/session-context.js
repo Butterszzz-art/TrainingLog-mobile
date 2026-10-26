@@ -3,8 +3,8 @@
  * Three niche quality-of-life features:
  *
  * 1. Vacation Mode   – pauses streak & program tracking, shows banner on home.
- * 2. Alt-Machine flag – per-workout marker that equipment differs from usual.
- * 3. Alt-Gym flag     – per-workout marker for a different gym location.
+ * 2. Alt-Machine flag – tags exercises logged on different equipment than usual.
+ * 3. Alt-Gym flag     – tags exercises logged at a different gym.
  *
  * All state lives in localStorage so it survives page reloads.
  */
@@ -173,30 +173,75 @@
   window.renderSickBanner = renderSickBanner;
 
   // ── 2 & 3. ALT-MACHINE / ALT-GYM (per-session flags) ──────────────────────
+  //
+  // While a flag is on, every exercise logged gets a `sessionCtx` tag. Tagged
+  // entries are skipped by "last time", progression and PR checks (see
+  // isAltSessionEntry in progressiveOverload.js) but still count for volume,
+  // streaks and history.
 
   const SESSION_CTX_KEY = 'sessionContext';
+  const EMPTY_CTX = { altMachine: false, altGym: false, gymName: '', date: null };
+
+  function _today() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function _escapeAttr(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
   function getSessionContext() {
-    return _get(SESSION_CTX_KEY) || { altMachine: false, altGym: false, gymName: '' };
+    const ctx = _get(SESSION_CTX_KEY);
+    if (!ctx) return { ...EMPTY_CTX };
+    // Flags are for one session. If they were set on an earlier day and never
+    // cleared (app closed before "End workout"), drop them rather than
+    // silently tagging today's lifts.
+    if ((ctx.altMachine || ctx.altGym) && ctx.date !== _today()) {
+      _set(SESSION_CTX_KEY, { ...EMPTY_CTX });
+      return { ...EMPTY_CTX };
+    }
+    return { ...EMPTY_CTX, ...ctx };
+  }
+
+  function _saveSessionContext(patch) {
+    const ctx = { ...getSessionContext(), ...patch, date: _today() };
+    _set(SESSION_CTX_KEY, ctx);
+    return ctx;
   }
 
   function setSessionContext(patch) {
-    const ctx = { ...getSessionContext(), ...patch };
-    _set(SESSION_CTX_KEY, ctx);
+    _saveSessionContext(patch);
     renderSessionContextBar();
   }
 
-  /** Attach session context metadata to a workout before saving. */
-  function applySessionContext(workoutObj) {
+  /**
+   * Tag a log entry with the current flags before it's saved. Removes any old
+   * tag when no flag is on, so a re-saved entry never keeps a stale one.
+   */
+  function applySessionContext(entry) {
+    if (!entry || typeof entry !== 'object') return entry;
     const ctx = getSessionContext();
     if (ctx.altMachine || ctx.altGym) {
-      workoutObj._sessionCtx = {
-        altMachine: ctx.altMachine || false,
-        altGym:     ctx.altGym    || false,
-        gymName:    ctx.gymName   || '',
+      entry.sessionCtx = {
+        altMachine: !!ctx.altMachine,
+        altGym:     !!ctx.altGym,
+        gymName:    ctx.altGym ? (ctx.gymName || '').trim() : '',
       };
+    } else {
+      delete entry.sessionCtx;
     }
-    return workoutObj;
+    return entry;
+  }
+
+  function _noteText(ctx) {
+    const tags = [
+      ctx.altMachine ? 'alt machine' : '',
+      ctx.altGym ? `alt gym${ctx.gymName ? ' (' + ctx.gymName + ')' : ''}` : '',
+    ].filter(Boolean).join(' + ');
+    return `⚠️ Exercises you log now will be tagged ${tags} and left out of progression and PRs.`;
   }
 
   function renderSessionContextBar() {
@@ -209,7 +254,8 @@
         <!-- Alt Machine toggle -->
         <button class="scb-chip ${ctx.altMachine ? 'scb-chip--on' : ''}"
                 onclick="window.toggleAltMachine()"
-                title="Mark this session as using different equipment than usual">
+                aria-pressed="${ctx.altMachine}"
+                title="Mark exercises as using different equipment than usual">
           <span class="scb-chip-icon">🔧</span>
           <span class="scb-chip-label">Alt&nbsp;Machine</span>
           ${ctx.altMachine ? '<span class="scb-chip-badge">ON</span>' : ''}
@@ -218,7 +264,8 @@
         <!-- Alt Gym toggle + name input -->
         <button class="scb-chip ${ctx.altGym ? 'scb-chip--on' : ''}"
                 onclick="window.toggleAltGym()"
-                title="Mark this session as being at a different gym">
+                aria-pressed="${ctx.altGym}"
+                title="Mark exercises as done at a different gym">
           <span class="scb-chip-icon">📍</span>
           <span class="scb-chip-label">Alt&nbsp;Gym</span>
           ${ctx.altGym ? '<span class="scb-chip-badge">ON</span>' : ''}
@@ -229,17 +276,16 @@
                  id="altGymNameInput"
                  type="text"
                  placeholder="Gym name (optional)"
-                 value="${ctx.gymName || ''}"
+                 value="${_escapeAttr(ctx.gymName)}"
                  oninput="window.setAltGymName(this.value)"
                  maxlength="40" />
         ` : ''}
       </div>
-      ${ctx.altMachine || ctx.altGym ? `
-        <p class="scb-note">
-          ⚠️ This session will be tagged
-          ${[ctx.altMachine ? 'alt machine' : '', ctx.altGym ? `alt gym${ctx.gymName ? ' (' + ctx.gymName + ')' : ''}` : ''].filter(Boolean).join(' + ')}.
-          Progression comparisons will exclude it.
-        </p>` : ''}`;
+      ${ctx.altMachine || ctx.altGym ? '<p class="scb-note"></p>' : ''}`;
+
+    // textContent, not innerHTML — the gym name is user input.
+    const note = bar.querySelector('.scb-note');
+    if (note) note.textContent = _noteText(ctx);
   }
 
   function toggleAltMachine() {
@@ -253,12 +299,17 @@
   }
 
   function setAltGymName(name) {
-    setSessionContext({ gymName: name });
+    // Save and update the note only. Re-rendering the bar here would rebuild
+    // the input and drop focus after every keystroke.
+    const ctx = _saveSessionContext({ gymName: String(name || '').slice(0, 40) });
+    const note = document.querySelector('#sessionContextBar .scb-note');
+    if (note) note.textContent = _noteText(ctx);
   }
 
   /** Call after a workout is successfully saved to reset single-use flags. */
   function clearSessionContextAfterSave() {
-    setSessionContext({ altMachine: false, altGym: false, gymName: '' });
+    _set(SESSION_CTX_KEY, { ...EMPTY_CTX });
+    renderSessionContextBar();
   }
 
   // ── Init ────────────────────────────────────────────────────────────────────

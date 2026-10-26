@@ -176,6 +176,19 @@ describe('addLogEntry', () => {
     expect(shown).toEqual(['Bench', 'Squat', 'Bench']);
   });
 
+  test('entry is tagged by session context before the next-session suggestion runs', () => {
+    const seen = [];
+    context.applySessionContext = (entry) => { entry.sessionCtx = { altMachine: true, altGym: false, gymName: '' }; return entry; };
+    vm.runInContext('suggestNextSession = (entry) => { __seen.push(entry.sessionCtx); return null; };', Object.assign(context, { __seen: seen }));
+    fillOneSet(context.document);
+    context.document.getElementById('entryDate').value = '2024-01-01';
+    context.addLogEntry();
+    expect(seen).toEqual([{ altMachine: true, altGym: false, gymName: '' }]);
+    const workouts = JSON.parse(context.localStorage.getItem('workouts_u1'));
+    expect(workouts[0].log[0].sessionCtx).toEqual({ altMachine: true, altGym: false, gymName: '' });
+    expect(workouts[0]._sessionCtx).toBeUndefined();
+  });
+
   test('does not dispatch tl:set-logged when validation fails', () => {
     const doc = context.document;
     const events = [];
