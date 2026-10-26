@@ -7296,7 +7296,11 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   const hasAdvancedContent = Boolean(
     advancedData.method || advancedData.state || Object.values(advancedData.tags || {}).some(Boolean)
   );
-  if (!hasAdvancedContent) advancedBlock.hidden = true;
+  const advKey = advancedSetKey(workoutIndex, entryIndex, setIndex);
+  if (!hasAdvancedContent && !expandedAdvancedSets.has(advKey)) advancedBlock.hidden = true;
+  // Keep the panel open across re-renders, so picking Myo-reps, Tempo, etc.
+  // shows that method's input boxes instead of collapsing the panel.
+  if (expandedAdvancedSets.has(advKey)) advancedBlock.classList.add('expanded');
   advancedBlock.innerHTML = `
     <div class="set-advanced-header">Advanced</div>
     <div class="set-advanced-body">
@@ -7310,11 +7314,19 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
     </div>
   `;
   advancedBlock.querySelector('.set-advanced-header').addEventListener('click', () => {
-    advancedBlock.classList.toggle('expanded');
+    const open = advancedBlock.classList.toggle('expanded');
+    if (open) expandedAdvancedSets.add(advKey);
+    else expandedAdvancedSets.delete(advKey);
   });
 
   wrapper.appendChild(advancedBlock);
   return wrapper;
+}
+
+// Advanced panels the lifter has open, keyed "workout_entry_set".
+const expandedAdvancedSets = new Set();
+function advancedSetKey(workoutIndex, entryIndex, setIndex) {
+  return `${workoutIndex}_${entryIndex}_${setIndex}`;
 }
 
 function updateAdvancedSet(workoutIndex, entryIndex, setIndex, updater, shouldRender = false) {
@@ -7328,6 +7340,7 @@ function updateAdvancedSet(workoutIndex, entryIndex, setIndex, updater, shouldRe
   updater({ workouts, entry, adv });
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   if (shouldRender) {
+    expandedAdvancedSets.add(advancedSetKey(workoutIndex, entryIndex, setIndex));
     renderWorkouts();
   }
 }
@@ -7558,6 +7571,7 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
       addButton('Advanced Options', () => {
         advancedBlock.hidden = false;
         advancedBlock.classList.add('expanded');
+        expandedAdvancedSets.add(advancedSetKey(workoutIndex, entryIndex, setIndex));
       });
     }
 
