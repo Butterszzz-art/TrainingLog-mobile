@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v44';
+const CACHE_VERSION = 'pocket-coach-v45';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -108,6 +108,7 @@ const APP_SHELL = [
   '/src/js/a11y-keyboard.js',
   '/css/profiles.css',
   '/css/exercise-card.css',
+  '/css/session-sheets.css',
   // Self-hosted third-party libraries and fonts (vendor/README.md)
   '/vendor/fonts/fonts.css',
   '/vendor/chart-4.5.1.umd.min.js',

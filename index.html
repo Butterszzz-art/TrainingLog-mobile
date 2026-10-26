@@ -74,6 +74,7 @@
   <link rel="stylesheet" href="css/performance-mode.css">
   <link rel="stylesheet" href="css/profiles.css">
   <link rel="stylesheet" href="css/exercise-card.css">
+  <link rel="stylesheet" href="css/session-sheets.css">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA / Capacitor meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -7518,10 +7519,10 @@ document.addEventListener('scroll', closeContextMenu, true);
 /* ── Session rating (End Workout feedback) ───────────────────── */
 
 const SESSION_RATING_QUESTIONS = [
-  { key: 'progressive', label: 'Progressive overload', low: 'No, same or less', high: 'Yes, clearly more' },
-  { key: 'fatigue', label: 'Fatigue', low: 'Fresh', high: 'Extremely fatigued' },
-  { key: 'missedWeightGoal', label: 'Weight goal', low: 'Hit it', high: 'Missed it badly' },
-  { key: 'missedRepGoal', label: 'Rep goal', low: 'Hit it', high: 'Missed it badly' }
+  { key: 'progressive', label: 'Progressive overload', icon: 'barChart', low: 'No, same or less', high: 'Yes, clearly more' },
+  { key: 'fatigue', label: 'Fatigue', icon: 'gauge', low: 'Fresh', high: 'Extremely fatigued' },
+  { key: 'missedWeightGoal', label: 'Weight goal', icon: 'dumbbell', low: 'Hit it', high: 'Missed it badly' },
+  { key: 'missedRepGoal', label: 'Rep goal', icon: 'target', low: 'Hit it', high: 'Missed it badly' }
 ];
 
 let _sessionRatingWorkoutIndex = null;
@@ -7537,10 +7538,28 @@ function _findWorkoutIndexForRating(workouts) {
   return -1;
 }
 
+function _sessionRatingKeydown(e) {
+  if (e.key === 'Escape') closeSessionRatingModal();
+}
+
 function closeSessionRatingModal() {
-  document.getElementById('sessionRatingModalOverlay')?.remove();
+  const overlay = document.getElementById('sessionRatingModalOverlay');
+  if (overlay) {
+    // Drop the id straight away so a re-open can't grab the closing sheet.
+    overlay.removeAttribute('id');
+    overlay.classList.remove('visible');
+    setTimeout(() => overlay.remove(), 340);
+  }
+  document.removeEventListener('keydown', _sessionRatingKeydown);
   _sessionRatingWorkoutIndex = null;
   _sessionRatingDraft = {};
+}
+
+function _sessionRatingValueText(q, v) {
+  if (!v) return 'Tap 1–5';
+  if (v === 1) return q.low;
+  if (v === 5) return q.high;
+  return `${v} / 5`;
 }
 
 function openSessionRatingModal(workoutIndex) {
@@ -7553,41 +7572,84 @@ function openSessionRatingModal(workoutIndex) {
   _sessionRatingWorkoutIndex = workoutIndex;
   _sessionRatingDraft = { ...(workout.sessionRating || {}) };
 
+  const icon = name => (ICONS[name] ? `<span class="ui-icon" aria-hidden="true">${ICONS[name]}</span>` : '');
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const log = Array.isArray(workout.log) ? workout.log : [];
+  const setCount = log.reduce((n, e) => n + (Array.isArray(e?.repsArray) ? e.repsArray.length : (Number(e?.sets) || 0)), 0);
+  const chips = [
+    workout.title ? `<span class="tl-sheet-chip">${icon('clipboard')}${esc(workout.title)}</span>` : '',
+    log.length ? `<span class="tl-sheet-chip">${icon('dumbbell')}${log.length} exercise${log.length === 1 ? '' : 's'}</span>` : '',
+    setCount ? `<span class="tl-sheet-chip">${icon('check')}${setCount} set${setCount === 1 ? '' : 's'}</span>` : ''
+  ].join('');
+  const isEdit = !!workout.sessionRating;
+
   const modal = document.createElement('div');
-  modal.className = 'gdpr-modal-overlay';
+  modal.className = 'tl-sheet-overlay session-rating-overlay';
   modal.id = 'sessionRatingModalOverlay';
   modal.innerHTML = `
-    <div class="gdpr-modal">
-      <h3>How did that session go?</h3>
-      <p>Rate each 1–5. Optional — skip if you'd rather not.</p>
-      <div class="session-rating-form">
-        ${SESSION_RATING_QUESTIONS.map(q => `
-          <div class="rating-question">
-            <label>${q.label}</label>
-            <div class="rating-scale" data-question="${q.key}">
-              ${[1, 2, 3, 4, 5].map(v => `<button type="button" class="rating-scale-btn${_sessionRatingDraft[q.key] === v ? ' selected' : ''}" data-question="${q.key}" data-value="${v}">${v}</button>`).join('')}
+    <div class="tl-sheet" role="dialog" aria-modal="true" aria-labelledby="sessionRatingTitle" tabindex="-1">
+      <header class="tl-sheet-head">
+        <div>
+          <p class="tl-sheet-kicker">${icon('trophy')}${isEdit ? 'Session review' : 'Workout complete'}</p>
+          <h2 class="tl-sheet-title" id="sessionRatingTitle">How did it go?</h2>
+          <p class="tl-sheet-sub">Quick 1–5 for each. All optional.</p>
+          ${chips ? `<div class="tl-sheet-chips">${chips}</div>` : ''}
+        </div>
+        <button type="button" class="tl-sheet-close" aria-label="Close" onclick="closeSessionRatingModal()">${icon('x') || '✕'}</button>
+      </header>
+      <div class="tl-sheet-body session-rating-form">
+        ${SESSION_RATING_QUESTIONS.map(q => {
+          const cur = _sessionRatingDraft[q.key];
+          return `
+          <div class="tl-q${cur ? ' answered' : ''}" data-q="${q.key}">
+            <div class="tl-q-head">
+              <span class="tl-q-icon">${icon(q.icon)}</span>
+              <span class="tl-q-label" id="srq-${q.key}">${q.label}</span>
+              <span class="tl-q-value" data-value-for="${q.key}">${_sessionRatingValueText(q, cur)}</span>
             </div>
-            <div class="rating-scale-labels"><span>${q.low}</span><span>${q.high}</span></div>
-          </div>
-        `).join('')}
+            <div class="tl-seg" role="radiogroup" aria-labelledby="srq-${q.key}">
+              ${[1, 2, 3, 4, 5].map(v => `<button type="button" class="tl-seg-btn rating-scale-btn${cur === v ? ' on selected' : ''}${cur && v < cur ? ' filled' : ''}" role="radio" aria-checked="${cur === v}" aria-label="${v}" data-question="${q.key}" data-value="${v}">${v}</button>`).join('')}
+            </div>
+            <div class="tl-seg-ends"><span>${q.low}</span><span>${q.high}</span></div>
+          </div>`;
+        }).join('')}
+        <button type="button" class="tl-sheet-link" onclick="saveEndedWorkoutAsTemplateFromRating()">
+          <span class="tl-q-icon">${icon('save')}</span>
+          <span>Save as template</span>
+          <span class="tl-chev">${icon('chevronRight')}</span>
+        </button>
       </div>
-      <div class="gdpr-modal-actions">
-        <button class="gdpr-export-btn" onclick="closeSessionRatingModal()">Skip</button>
-        <button class="gdpr-export-btn" onclick="saveEndedWorkoutAsTemplateFromRating()">💾 Save as Template</button>
-        <button class="gdpr-save-btn" onclick="submitSessionRating()">Save</button>
-      </div>
+      <footer class="tl-sheet-actions">
+        <button type="button" class="tl-sheet-btn tl-sheet-btn--ghost" onclick="closeSessionRatingModal()">Skip</button>
+        <button type="button" class="tl-sheet-btn tl-sheet-btn--primary" onclick="submitSessionRating()">${icon('check')}Save review</button>
+      </footer>
     </div>`;
   document.body.appendChild(modal);
 
-  modal.querySelectorAll('.rating-scale-btn').forEach(btn => {
+  modal.querySelectorAll('.tl-seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const { question, value } = btn.dataset;
-      _sessionRatingDraft[question] = Number(value);
-      modal.querySelectorAll(`.rating-scale-btn[data-question="${question}"]`).forEach(b => {
-        b.classList.toggle('selected', b.dataset.value === value);
+      const val = Number(value);
+      _sessionRatingDraft[question] = val;
+      modal.querySelectorAll(`.tl-seg-btn[data-question="${question}"]`).forEach(b => {
+        const v = Number(b.dataset.value);
+        b.classList.toggle('on', v === val);
+        b.classList.toggle('selected', v === val);
+        b.classList.toggle('filled', v < val);
+        b.setAttribute('aria-checked', v === val ? 'true' : 'false');
       });
+      const q = SESSION_RATING_QUESTIONS.find(x => x.key === question);
+      const valueEl = modal.querySelector(`[data-value-for="${question}"]`);
+      if (valueEl && q) valueEl.textContent = _sessionRatingValueText(q, val);
+      modal.querySelector(`.tl-q[data-q="${question}"]`)?.classList.add('answered');
     });
   });
+
+  document.addEventListener('keydown', _sessionRatingKeydown);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    modal.classList.add('visible');
+    modal.querySelector('.tl-sheet')?.focus({ preventScroll: true });
+  }));
 }
 
 function submitSessionRating() {
