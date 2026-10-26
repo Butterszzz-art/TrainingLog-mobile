@@ -47,6 +47,8 @@
     if (!exerciseName || !username) return null;
     const query    = exerciseName.toLowerCase().trim();
     const workouts = _loadWorkouts(username);
+    const gymKey = typeof window.getCurrentGymKey === 'function' ? window.getCurrentGymKey() : '';
+    if (gymKey === null) return null;
 
     // Search from newest to oldest
     for (let i = workouts.length - 1; i >= 0; i--) {
@@ -56,6 +58,8 @@
       for (const entry of log) {
         const name = (entry.exercise || entry.name || '').toLowerCase().trim();
         if (!name.includes(query) && !query.includes(name)) continue;
+        // Only sessions at the gym you're at now, on the usual machine.
+        if (typeof window.isComparableEntry === 'function' && !window.isComparableEntry(entry, w, gymKey)) continue;
 
         const repsArr    = Array.isArray(entry.repsArray)    ? entry.repsArray    : [];
         const weightsArr = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
@@ -158,13 +162,15 @@
     const sessions = Math.max(0, Number(recommendation.basedOnSessions) || 0);
     const meterPct = Math.min(96, 20 + sessions * 6);
     const relDate = _relativeDate(date);
+    const ctx = typeof window.getSessionContext === 'function' ? window.getSessionContext() : null;
+    const gymLabel = ctx && ctx.altGym ? String(ctx.gymName || '').trim() : '';
 
     return `
       <div class="ov-pod ${meta.cls}">
         <div class="ov-accent"></div>
         <div class="ov-top">
           <span class="ov-live"></span>
-          <span class="ov-eyebrow">Progressive overload</span>
+          <span class="ov-eyebrow">${gymLabel ? 'At ' + _esc(gymLabel) : 'Progressive overload'}</span>
           <span class="ov-sessions">${sessions} session${sessions === 1 ? '' : 's'}</span>
         </div>
         <div class="ov-body">
@@ -392,6 +398,11 @@
       if (exerciseInput) {
         // Debounced — only fires after 350ms pause
         let _hintTimer = null;
+        // Switching gym changes which sessions count as "last time".
+        document.addEventListener('tl:gym-changed', () => {
+          clearTimeout(_hintTimer);
+          _hintTimer = setTimeout(renderOverloadHint, 350);
+        });
         exerciseInput.addEventListener('input', () => {
           clearTimeout(_hintTimer);
           _hintTimer = setTimeout(renderOverloadHint, 350);

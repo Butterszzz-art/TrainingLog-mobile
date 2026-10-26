@@ -26,7 +26,8 @@ describe('addLogEntry', () => {
       <input id="reps_0">
       <input id="weight_0">
       <input id="dropset_0" type="checkbox">
-      <input id="restPause_0" type="checkbox">`);
+      <input id="restPause_0" type="checkbox">
+      <input id="altMachineToggle" type="checkbox">`);
 
     context = {
       document: dom.window.document,
@@ -174,6 +175,22 @@ describe('addLogEntry', () => {
     // A new day asks again.
     context.triggerFlowCapture({ exercise: 'Bench', sets: 1, date: '2024-01-02' });
     expect(shown).toEqual(['Bench', 'Squat', 'Bench']);
+  });
+
+  test('entry is tagged by session context before the next-session suggestion runs', () => {
+    const seen = [];
+    context.applySessionContext = (entry, opts) => { entry.sessionCtx = { altMachine: !!opts.altMachine, altGym: false, gymName: '' }; return entry; };
+    vm.runInContext('suggestNextSession = (entry) => { __seen.push(entry.sessionCtx); return null; };', Object.assign(context, { __seen: seen }));
+    fillOneSet(context.document);
+    context.document.getElementById('entryDate').value = '2024-01-01';
+    context.document.getElementById('altMachineToggle').checked = true;
+    context.addLogEntry();
+    // The form toggle resets for the next exercise.
+    expect(context.document.getElementById('altMachineToggle').checked).toBe(false);
+    expect(seen).toEqual([{ altMachine: true, altGym: false, gymName: '' }]);
+    const workouts = JSON.parse(context.localStorage.getItem('workouts_u1'));
+    expect(workouts[0].log[0].sessionCtx).toEqual({ altMachine: true, altGym: false, gymName: '' });
+    expect(workouts[0]._sessionCtx).toBeUndefined();
   });
 
   test('does not dispatch tl:set-logged when validation fails', () => {

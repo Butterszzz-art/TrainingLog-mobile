@@ -1019,6 +1019,20 @@
   color: #e6a817;
 }
 
+/* Different machine — deliberately low-key: same pill, no colour change
+   beyond the standard "on" state, sits beside Maxed Out. */
+.alt-machine-pill {
+  margin: 8px 0 8px 6px;
+}
+
+/* Small muted wrench on a logged exercise done on a different machine. */
+.alt-machine-mark {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
 .set-remove-btn {
   width: 28px;
   height: 28px;
@@ -1237,10 +1251,26 @@
   margin-left: 2px;
 }
 
+.scb-gyms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.scb-gym-visits {
+  font-size: 0.66rem;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
 .scb-gym-input {
-  flex: 1;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 8px;
   min-width: 130px;
-  max-width: 220px;
+  max-width: 260px;
   padding: 6px 12px;
   border-radius: 20px;
   border: 1px solid var(--primary, #5fa87e);

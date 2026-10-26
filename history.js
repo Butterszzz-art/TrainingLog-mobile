@@ -433,6 +433,109 @@ function histEsc(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* ── Alt Gym / Alt Machine tags ─────────────────────────────────────────
+   The History stores keep only names, reps and weights, so tags are read
+   from the full workout records (`workouts_<user>` and the 7-day archive
+   `workoutHistory_<user>`) — the same records the "last time" and PR
+   comparisons use, so edits made here change those too. */
+
+const WRENCH_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.8-.6-.6-2.8z"/></svg>';
+const PIN_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+const SOURCE_STORES = user => [`workouts_${user}`, `workoutHistory_${user}`];
+
+function readSourceStore(key) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Read the full workout records once → [{ key, list }]. */
+function loadSources(user) {
+  return user ? SOURCE_STORES(user).map(key => ({ key, list: readSourceStore(key) })) : [];
+}
+
+/** Find the full workout record behind a History item → { key, list, index } or null. */
+function findSourceWorkout(sources, log) {
+  if (!log) return null;
+  const ids = [log.id, log.workout?.id].filter(Boolean);
+  const day = String(log.date || '').slice(0, 10);
+  let dateMatch = null;
+  let dateMatches = 0;
+  for (const { key, list } of sources) {
+    for (let index = 0; index < list.length; index++) {
+      const w = list[index];
+      if (!Array.isArray(w?.log)) continue;
+      if (w.id && ids.includes(w.id)) return { key, list, index };
+      if (day && String(w.date || '').slice(0, 10) === day) {
+        dateMatches++;
+        dateMatch = { key, list, index };
+      }
+    }
+  }
+  // Fall back to the date only when it's unambiguous.
+  return dateMatches === 1 ? dateMatch : null;
+}
+
+/** Summary of a workout's tags → { gym, gymUnnamed, machine:Set(lowercased names) }. */
+function workoutTags(workout) {
+  const tags = { gym: '', gymUnnamed: false, machine: new Set() };
+  (workout?.log || []).forEach(e => {
+    const ctx = e?.sessionCtx || workout?._sessionCtx;
+    if (!ctx) return;
+    if (ctx.altGym) {
+      const name = String(ctx.gymName || '').trim();
+      if (name) tags.gym = tags.gym || name;
+      else tags.gymUnnamed = true;
+    }
+    if (ctx.altMachine) tags.machine.add(String(e.exercise || '').trim().toLowerCase());
+  });
+  return tags;
+}
+
+function sourceTags(sources, log) {
+  const src = findSourceWorkout(sources, log);
+  return workoutTags(src ? src.list[src.index] : null);
+}
+
+function hasAnyTag(tags) {
+  return !!(tags.gym || tags.gymUnnamed || tags.machine.size);
+}
+
+function tagBadgesHtml(tags) {
+  const out = [];
+  if (tags.gym || tags.gymUnnamed) {
+    out.push(`<span class="hist-tag">${PIN_SVG}${histEsc(tags.gym || 'Other gym')}</span>`);
+  }
+  if (tags.machine.size) {
+    out.push(`<span class="hist-tag">${WRENCH_SVG}${tags.machine.size} different machine</span>`);
+  }
+  return out.length ? `<span class="hist-tags">${out.join('')}</span>` : '';
+}
+
+/** Apply `fn(entry, workout)` to every entry of the source workout, then save it. */
+function editSourceWorkout(user, log, fn) {
+  const src = findSourceWorkout(loadSources(user), log);
+  if (!src) return false;
+  const workout = src.list[src.index];
+  // Fold a legacy whole-workout tag into the entries so edits stick.
+  if (workout._sessionCtx) {
+    workout.log.forEach(e => { if (!e.sessionCtx) e.sessionCtx = { ...workout._sessionCtx }; });
+    delete workout._sessionCtx;
+  }
+  workout.log.forEach(e => {
+    const ctx = { altMachine: false, altGym: false, gymName: '', ...(e.sessionCtx || {}) };
+    fn(ctx, e);
+    if (ctx.altMachine || ctx.altGym) e.sessionCtx = ctx;
+    else delete e.sessionCtx;
+    delete e.nextSessionRecommendation;
+  });
+  localStorage.setItem(src.key, JSON.stringify(src.list));
+  return true;
+}
+
 /** Total lifted volume (sum of weight × reps) for a list of exercises. */
 function historyVolume(exercises) {
   return (Array.isArray(exercises) ? exercises : []).reduce((sum, ex) => {
@@ -469,6 +572,7 @@ function historyGroupLabel(dateValue, now = new Date()) {
 
 function renderHistoryList(containerEl) {
   const now = new Date();
+  const sources = loadSources(getCurrentUserId());
   const inMonth = cachedWorkoutHistory.filter(log => {
     const d = new Date(log?.date);
     return !Number.isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
@@ -499,6 +603,7 @@ function renderHistoryList(containerEl) {
             <span class="mx-row-title">${histEsc(title)}</span>
             <span class="mx-row-sub">${histEsc(buildExerciseSummary(log?.exercises))}</span>
             <span class="mx-meta">${histEsc(when)}</span>
+            ${tagBadgesHtml(sourceTags(sources, log))}
           </span>
           <span class="ui-icon hist-go">${HIST_ICON('chevronRight')}</span>
         </button>
@@ -537,7 +642,36 @@ function formatSessionRatingSummary(sessionRating) {
     .join(' · ');
 }
 
+function tagPodHtml(src, tags) {
+  if (!src) return '';
+  if (tags.gym || tags.gymUnnamed) {
+    return `
+      <section class="pod mx-pod hist-tag-pod" aria-label="Gym">
+        <div class="pod-row"><span class="hist-tag">${PIN_SVG}${histEsc(tags.gym || 'Other gym (no name)')}</span></div>
+        <p class="mx-meta hist-tag-copy">${tags.gym
+          ? 'Compared only with your other visits there. Not counted for PRs.'
+          : 'Not compared with anything until it has a name. Not counted for PRs.'}</p>
+        <div class="hist-tag-actions">
+          <button type="button" class="hist-tag-btn" data-hist-action="gym-set">${tags.gym ? 'Change gym' : 'Name gym'}</button>
+          <button type="button" class="hist-tag-btn" data-hist-action="gym-clear">Count as usual gym</button>
+        </div>
+      </section>`;
+  }
+  return `<div class="hist-tag-actions hist-tag-actions--quiet"><button type="button" class="hist-tag-link" data-hist-action="gym-set">${PIN_SVG}Done at another gym?</button></div>`;
+}
+
+function machineButtonHtml(on, index) {
+  return on
+    ? `<button type="button" class="hist-machine-btn is-on" data-hist-action="machine" data-ex-index="${index}" aria-pressed="true" title="Different machine — tap to count it normally">${WRENCH_SVG}<span>Different machine</span></button>`
+    : `<button type="button" class="hist-machine-btn" data-hist-action="machine" data-ex-index="${index}" aria-pressed="false" aria-label="Mark as different machine" title="Mark as different machine">${WRENCH_SVG}</button>`;
+}
+
+let currentDetailLog = null;
+
 function renderHistoryDetail(containerEl, log) {
+  currentDetailLog = log;
+  const src = findSourceWorkout(loadSources(getCurrentUserId()), log);
+  const tags = workoutTags(src ? src.list[src.index] : null);
   const title = log?.title || 'Resistance Workout';
   const dateLabel = formatWorkoutDate(log?.date);
   const exercises = Array.isArray(log?.exercises) ? log.exercises : [];
@@ -547,7 +681,7 @@ function renderHistoryDetail(containerEl, log) {
         .map(key => ({ label: SESSION_RATING_LABELS[key], value: Number(log.sessionRating[key]) || 0 }))
     : [];
 
-  const exerciseHtml = exercises.map(ex => {
+  const exerciseHtml = exercises.map((ex, exIndex) => {
     const reps = Array.isArray(ex?.repsArray) ? ex.repsArray : [];
     const weights = Array.isArray(ex?.weightsArray) ? ex.weightsArray : [];
     const length = Math.max(reps.length, weights.length);
@@ -561,7 +695,10 @@ function renderHistoryDetail(containerEl, log) {
       <section class="pod mx-pod history-detail-card" aria-label="${histEsc(ex?.name || 'Exercise')}">
         <div class="pod-row">
           <h4 class="pod-title mx-h3 history-detail-title">${histEsc(ex?.name || 'Exercise')}</h4>
-          ${vol > 0 ? `<span class="mx-meta">${Math.round(vol).toLocaleString()} kg</span>` : ''}
+          <span class="hist-card-end">
+            ${vol > 0 ? `<span class="mx-meta">${Math.round(vol).toLocaleString()} kg</span>` : ''}
+            ${src ? machineButtonHtml(tags.machine.has(String(ex?.name || '').trim().toLowerCase()), exIndex) : ''}
+          </span>
         </div>
         <div class="history-detail-sets hist-sets">${sets.length ? sets.join('') : '<div class="history-detail-empty mx-meta">No sets recorded.</div>'}</div>
       </section>`;
@@ -588,6 +725,7 @@ function renderHistoryDetail(containerEl, log) {
             </div>`).join('')}
         </div>
       </section>` : ''}
+    ${tagPodHtml(src, tags)}
     <div class="history-detail-list">${exerciseHtml}</div>
   `;
 }
@@ -676,9 +814,50 @@ export async function renderWorkoutHistory(containerEl = document.getElementById
     }
 
     if (event.target.closest('#historyBackBtn')) {
+      currentDetailLog = null;
       renderHistoryList(containerEl);
+      return;
+    }
+
+    const actionBtn = event.target.closest('[data-hist-action]');
+    if (actionBtn && currentDetailLog) {
+      handleTagAction(containerEl, currentDetailLog, actionBtn);
     }
   };
+}
+
+async function askGymName(current) {
+  const msg = 'Which gym was this at?';
+  if (typeof window.showPrompt === 'function') return window.showPrompt(msg, { defaultValue: current || '' });
+  return typeof window.prompt === 'function' ? window.prompt(msg, current || '') : null;
+}
+
+async function handleTagAction(containerEl, log, button) {
+  const user = getCurrentUserId();
+  const action = button.dataset.histAction;
+  const src = findSourceWorkout(loadSources(user), log);
+  if (!src) return;
+  const tags = workoutTags(src.list[src.index]);
+
+  if (action === 'machine') {
+    const ex = (log.exercises || [])[Number(button.dataset.exIndex)];
+    const name = String(ex?.name || '').trim().toLowerCase();
+    if (!name) return;
+    const turnOn = !tags.machine.has(name);
+    editSourceWorkout(user, log, (ctx, e) => {
+      if (String(e.exercise || '').trim().toLowerCase() === name) ctx.altMachine = turnOn;
+    });
+  } else if (action === 'gym-set') {
+    const answer = await askGymName(tags.gym);
+    if (answer == null) return;
+    const gymName = String(answer).trim().slice(0, 40);
+    editSourceWorkout(user, log, ctx => { ctx.altGym = true; ctx.gymName = gymName; });
+  } else if (action === 'gym-clear') {
+    editSourceWorkout(user, log, ctx => { ctx.altGym = false; ctx.gymName = ''; });
+  } else {
+    return;
+  }
+  renderHistoryDetail(containerEl, log);
 }
 
 const historyApi = {
