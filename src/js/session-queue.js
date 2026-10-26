@@ -499,6 +499,9 @@
   let _qlExerciseName = null;
   let _qlWeight = null;
   let _qlReps = null;
+  // Left/right reps for an L/R set with "Same reps both sides" switched off.
+  let _qlRepsLeft = null;
+  let _qlRepsRight = null;
   // Last exercise a set was quick-logged for. Once the lifter moves on to a
   // different exercise, the previous one's weight/reps stop being sticky.
   let _qlLoggedName = null;
@@ -512,6 +515,47 @@
     const r = document.getElementById('qlRepsVal');
     if (w) w.textContent = _qlWeight != null ? _qlWeight : '—';
     if (r) r.textContent = _qlReps != null ? _qlReps : '—';
+    const rl = document.getElementById('qlRepsLeftVal');
+    const rr = document.getElementById('qlRepsRightVal');
+    if (rl) rl.textContent = _qlRepsLeft != null ? _qlRepsLeft : '—';
+    if (rr) rr.textContent = _qlRepsRight != null ? _qlRepsRight : '—';
+  }
+
+  function _qlSidesUneven() {
+    if (typeof document === 'undefined') return false;
+    const uni = document.getElementById('qlUnilateral');
+    const same = document.getElementById('qlSameSides');
+    return !!(uni && uni.checked && same && !same.checked);
+  }
+
+  /** Show/hide the L/R panel and swap the single Reps stepper for the
+   * Left/Right steppers while the sides differ. */
+  function _syncQuickLogSidesUI() {
+    if (typeof document === 'undefined') return;
+    const uni = document.getElementById('qlUnilateral');
+    const panel = document.getElementById('qlSidesPanel');
+    const row = document.getElementById('qlSidesRow');
+    const repsField = document.getElementById('qlRepsField');
+    const uneven = _qlSidesUneven();
+    if (panel) panel.hidden = !(uni && uni.checked);
+    if (row) row.hidden = !uneven;
+    if (repsField) repsField.hidden = uneven;
+  }
+
+  function toggleQuickLogUnilateral() {
+    _syncQuickLogSidesUI();
+    _writeQuickLogToForm();
+  }
+
+  function toggleQuickLogSameSides() {
+    // Splitting sides: start both from the current reps.
+    if (_qlSidesUneven()) {
+      _qlRepsLeft = _qlReps;
+      _qlRepsRight = _qlReps;
+    }
+    _syncQuickLogSidesUI();
+    _syncQuickLogDisplay();
+    _writeQuickLogToForm();
   }
 
   function _writeQuickLogToForm() {
@@ -543,6 +587,20 @@
     if (rpEl) rpEl.checked = !!(rpPill && rpPill.checked);
     if (uniEl) uniEl.checked = !!(uniPill && uniPill.checked);
 
+    // Left/right split → row 0's sides fields (updateRepsLabel opens them
+    // and syncSideReps sets reps_0 to the count the set is logged as).
+    const samePill = document.getElementById('qlSameSides');
+    const sameEl = document.getElementById('sameSides_0');
+    if (sameEl) sameEl.checked = !(samePill && !samePill.checked);
+    if (_qlSidesUneven()) {
+      const leftEl = document.getElementById('repsLeft_0');
+      const rightEl = document.getElementById('repsRight_0');
+      if (leftEl) leftEl.value = _qlRepsLeft != null ? _qlRepsLeft : '';
+      if (rightEl) rightEl.value = _qlRepsRight != null ? _qlRepsRight : '';
+      if (typeof global.syncSideReps === 'function') global.syncSideReps(0);
+    }
+    if (typeof global.updateRepsLabel === 'function') global.updateRepsLabel(0);
+
     if (typeof global.updateAddButtonState === 'function') global.updateAddButtonState();
   }
 
@@ -571,6 +629,11 @@
       const el = document.getElementById(id);
       if (el) el.checked = false;
     });
+    const same = document.getElementById('qlSameSides');
+    if (same) same.checked = true;
+    _qlRepsLeft = null;
+    _qlRepsRight = null;
+    _syncQuickLogSidesUI();
   }
 
   /** Sets already logged today for this exact exercise name — real count
@@ -838,6 +901,10 @@
     if (field === 'weight') {
       const step = (_qlWeight || 0) >= 100 ? 5 : 2.5;
       _qlWeight = Math.max(0, _round1((_qlWeight ?? 20) + delta * step));
+    } else if (field === 'repsLeft') {
+      _qlRepsLeft = Math.max(0, (_qlRepsLeft ?? _qlReps ?? 8) + delta);
+    } else if (field === 'repsRight') {
+      _qlRepsRight = Math.max(0, (_qlRepsRight ?? _qlReps ?? 8) + delta);
     } else {
       _qlReps = Math.max(0, (_qlReps ?? 8) + delta);
     }
@@ -853,7 +920,11 @@
     if (typeof document === 'undefined') return;
     const exerciseEl = document.getElementById('exercise');
     const name = exerciseEl ? exerciseEl.value.trim() : '';
-    if (!name || _qlReps == null || _qlReps <= 0) return;
+    if (!name) return;
+    if (_qlSidesUneven()) {
+      // Each side needs a count, and at least one side some reps.
+      if (_qlRepsLeft == null || _qlRepsRight == null || (_qlRepsLeft <= 0 && _qlRepsRight <= 0)) return;
+    } else if (_qlReps == null || _qlReps <= 0) return;
 
     const setsInput = document.getElementById('sets');
     if (setsInput) setsInput.value = '1';
@@ -886,10 +957,13 @@
   const api = { getTodaysPlannedDay, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
     initQuickLog, quickLogStep, quickLogSet, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
-    confirmQuickLogWeightSheet, toggleQuickLogSetRole, refreshLogButtonLabel: _updateQuickLogButtonLabel };
+    confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
+    refreshLogButtonLabel: _updateQuickLogButtonLabel };
   global.renderVolumeLandmarks = renderVolumeLandmarks;
   global.initQuickLog = initQuickLog;
   global.quickLogStep = quickLogStep;
+  global.toggleQuickLogUnilateral = toggleQuickLogUnilateral;
+  global.toggleQuickLogSameSides = toggleQuickLogSameSides;
   global.quickLogSet = quickLogSet;
   global.syncQuickLogFromRow0 = syncQuickLogFromRow0;
   global.startQuickLogFor = startQuickLogFor;

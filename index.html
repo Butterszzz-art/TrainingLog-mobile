@@ -1029,7 +1029,7 @@
                   <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('weight',1)" aria-label="Increase weight">+</button>
                 </div>
               </div>
-              <div class="ql-field">
+              <div class="ql-field" id="qlRepsField">
                 <div class="ql-label">Reps</div>
                 <div class="ql-stepper">
                   <button type="button" class="ql-step" onclick="quickLogStep('reps',-1)" aria-label="Decrease reps">−</button>
@@ -1050,7 +1050,36 @@
               <label class="set-opt-pill backoff-pill" title="Back-off Set — reduced-load set after the top set, excluded from PRs"><input type="checkbox" id="qlBackoff" onchange="if(typeof toggleQuickLogSetRole==='function') toggleQuickLogSetRole('backoff');" /><span>BO</span></label>
               <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="qlDropset" /><span>Drop</span></label>
               <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="qlRestPause" /><span>RP</span></label>
-              <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="qlUnilateral" /><span>L/R</span></label>
+              <label class="set-opt-pill" title="Unilateral — each side done separately"><input type="checkbox" id="qlUnilateral" onchange="if(typeof toggleQuickLogUnilateral==='function') toggleQuickLogUnilateral();" /><span>L/R</span></label>
+            </div>
+
+            <!-- L/R on: left/right reps. "Same reps both sides" (on by
+                 default) keeps the single Reps stepper above; switching it
+                 off swaps that stepper for separate Left/Right steppers. -->
+            <div class="ql-sides-panel" id="qlSidesPanel" hidden>
+              <label class="same-sides-toggle">
+                <input type="checkbox" id="qlSameSides" checked onchange="if(typeof toggleQuickLogSameSides==='function') toggleQuickLogSameSides();" />
+                <span class="same-sides-switch" aria-hidden="true"></span>
+                <span>Same reps both sides</span>
+              </label>
+              <div class="ql-row ql-sides-row" id="qlSidesRow" hidden>
+                <div class="ql-field">
+                  <div class="ql-label">Left reps</div>
+                  <div class="ql-stepper">
+                    <button type="button" class="ql-step" onclick="quickLogStep('repsLeft',-1)" aria-label="Decrease left reps">−</button>
+                    <span class="ql-val" id="qlRepsLeftVal">—</span>
+                    <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('repsLeft',1)" aria-label="Increase left reps">+</button>
+                  </div>
+                </div>
+                <div class="ql-field">
+                  <div class="ql-label">Right reps</div>
+                  <div class="ql-stepper">
+                    <button type="button" class="ql-step" onclick="quickLogStep('repsRight',-1)" aria-label="Decrease right reps">−</button>
+                    <span class="ql-val" id="qlRepsRightVal">—</span>
+                    <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('repsRight',1)" aria-label="Increase right reps">+</button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Unit select: hidden while the kg/lb toggle button above
@@ -5817,6 +5846,7 @@ function editSetValue(workoutIndex, entryIndex, type, value, setIndex) {
 
   if (type === 'rep') {
     entry.repsArray[setIndex] = +value;
+    if (Array.isArray(entry.sideRepsArray)) entry.sideRepsArray[setIndex] = null;
   } else if (type === 'weight') {
     entry.weightsArray[setIndex] = +value;
   } else if (type === 'dropset') {
@@ -5896,10 +5926,48 @@ function getSetInputHTML(i) {
       </div>
       <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
       <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
-      <label class="set-opt-pill" title="Unilateral — each side done separately (total reps × 2)"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
+      <label class="set-opt-pill" title="Unilateral — each side done separately"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
       <button class="set-remove-btn" onclick="removeSet(${i})" title="Remove set"><span class="ui-icon">${ICONS.x}</span></button>
+      <div class="set-sides-panel" id="sidesPanel_${i}" hidden>
+        <label class="same-sides-toggle">
+          <input type="checkbox" id="sameSides_${i}" checked onchange="updateRepsLabel(${i})" />
+          <span class="same-sides-switch" aria-hidden="true"></span>
+          <span>Same reps both sides</span>
+        </label>
+        <div class="set-sides-inputs" id="sidesInputs_${i}" hidden>
+          <label class="set-side-field">Left <input type="number" inputmode="numeric" id="repsLeft_${i}" placeholder="Reps" oninput="syncSideReps(${i})" /></label>
+          <label class="set-side-field">Right <input type="number" inputmode="numeric" id="repsRight_${i}" placeholder="Reps" oninput="syncSideReps(${i})" /></label>
+        </div>
+      </div>
     </div>
   `;
+}
+
+// L/R sets: "Same reps both sides" (default) uses the row's one reps
+// field per side. Switched off, separate Left/Right fields appear and the
+// row's reps field is driven from them (lower side — see getSideReps).
+function isUnevenSides(i) {
+  const uniEl = document.getElementById(`unilateral_${i}`);
+  const sameEl = document.getElementById(`sameSides_${i}`);
+  return !!(uniEl && uniEl.checked && sameEl && !sameEl.checked);
+}
+
+// Reps a set counts as when the sides differ: the weaker side, so PRs and
+// progression only credit reps done on both sides.
+function getSideReps(left, right) {
+  return Math.min(left, right);
+}
+
+function syncSideReps(i) {
+  const repsEl = document.getElementById(`reps_${i}`);
+  const leftEl = document.getElementById(`repsLeft_${i}`);
+  const rightEl = document.getElementById(`repsRight_${i}`);
+  if (!repsEl || !leftEl || !rightEl || !isUnevenSides(i)) return;
+  const l = parseInt(leftEl.value, 10);
+  const r = parseInt(rightEl.value, 10);
+  repsEl.value = Number.isFinite(l) && Number.isFinite(r) ? getSideReps(l, r) : '';
+  updateRepsLabel(i);
+  updateAddButtonState();
 }
 
 function updateRepsLabel(i) {
@@ -5907,8 +5975,27 @@ function updateRepsLabel(i) {
   const uniEl = document.getElementById(`unilateral_${i}`);
   const labelEl = document.getElementById(`repsLabel_${i}`);
   if (!repsEl || !uniEl || !labelEl) return;
+
+  const panel = document.getElementById(`sidesPanel_${i}`);
+  const inputs = document.getElementById(`sidesInputs_${i}`);
+  const leftEl = document.getElementById(`repsLeft_${i}`);
+  const rightEl = document.getElementById(`repsRight_${i}`);
+  const uneven = isUnevenSides(i);
+  if (panel) panel.hidden = !uniEl.checked;
+  if (inputs) inputs.hidden = !uneven;
+  repsEl.closest('.set-input-row')?.classList.toggle('sides-uneven', uneven);
+  // Opening the Left/Right fields: start both from the current reps.
+  if (uneven && leftEl && rightEl && leftEl.value === '' && rightEl.value === '' && repsEl.value !== '') {
+    leftEl.value = repsEl.value;
+    rightEl.value = repsEl.value;
+  }
+
   const reps = parseInt(repsEl.value, 10);
-  if (uniEl.checked && reps > 0) {
+  if (uneven) {
+    const l = parseInt(leftEl?.value, 10);
+    const r = parseInt(rightEl?.value, 10);
+    labelEl.textContent = Number.isFinite(l) && Number.isFinite(r) ? `L ${l} / R ${r}` : '';
+  } else if (uniEl.checked && reps > 0) {
     labelEl.textContent = `× 2 = ${reps * 2} total`;
   } else {
     labelEl.textContent = '';
@@ -5937,6 +6024,9 @@ function removeSet(indexToRemove) {
   const unis = [];
   const tops = [];
   const backoffs = [];
+  const sames = [];
+  const lefts = [];
+  const rights = [];
 
   for (let i = 0; i < currentSetCount + 1; i++) {
     if (i !== indexToRemove) {
@@ -5947,6 +6037,9 @@ function removeSet(indexToRemove) {
       unis.push(document.getElementById(`unilateral_${i}`)?.checked || false);
       tops.push(document.getElementById(`topSet_${i}`)?.checked || false);
       backoffs.push(document.getElementById(`backoff_${i}`)?.checked || false);
+      sames.push(document.getElementById(`sameSides_${i}`)?.checked ?? true);
+      lefts.push(document.getElementById(`repsLeft_${i}`)?.value ?? '');
+      rights.push(document.getElementById(`repsRight_${i}`)?.value ?? '');
     }
   }
 
@@ -5962,6 +6055,12 @@ function removeSet(indexToRemove) {
     if (topEl) topEl.checked = tops[i];
     const boEl = document.getElementById(`backoff_${i}`);
     if (boEl) boEl.checked = backoffs[i];
+    const sameEl = document.getElementById(`sameSides_${i}`);
+    if (sameEl) sameEl.checked = sames[i];
+    const leftEl = document.getElementById(`repsLeft_${i}`);
+    if (leftEl) leftEl.value = lefts[i];
+    const rightEl = document.getElementById(`repsRight_${i}`);
+    if (rightEl) rightEl.value = rights[i];
     updateRepsLabel(i);
   }
   document.getElementById("sets").value = currentSetCount;
@@ -6102,6 +6201,9 @@ function addLogEntry() {
   const setTypeArray = [];
   const advancedArray = [];
   const unilateralArray = [];
+  // Per set: { left, right } when an L/R set had different reps per side,
+  // else null (same both sides, or not unilateral).
+  const sideRepsArray = [];
 
   for (let i = 0; i < sets; i++) {
     const reps = +document.getElementById(`reps_${i}`).value;
@@ -6111,6 +6213,16 @@ function addLogEntry() {
     const ds = document.getElementById(`dropset_${i}`).checked;
     const rp = document.getElementById(`restPause_${i}`).checked;
     const uni = document.getElementById(`unilateral_${i}`)?.checked || false;
+    let sideReps = null;
+    if (uni && isUnevenSides(i)) {
+      const left = parseInt(document.getElementById(`repsLeft_${i}`)?.value, 10);
+      const right = parseInt(document.getElementById(`repsRight_${i}`)?.value, 10);
+      if (!Number.isFinite(left) || !Number.isFinite(right) || left < 0 || right < 0) {
+        alert("Please enter reps for both the left and right side.");
+        return;
+      }
+      sideReps = { left, right };
+    }
     const isTopSet = document.getElementById(`topSet_${i}`)?.checked || false;
     const isBackoffSet = document.getElementById(`backoff_${i}`)?.checked || false;
     if (isNaN(reps) || isNaN(weight)) {
@@ -6123,6 +6235,7 @@ function addLogEntry() {
     dropsetArray.push(ds);
     restPauseArray.push(rp);
     unilateralArray.push(uni);
+    sideRepsArray.push(sideReps);
     skippedArray.push(false);
     completedArray.push(false);
     // Top Set / Back-off are how the lifter tags which set is their main
@@ -6168,6 +6281,7 @@ function addLogEntry() {
     dropsetArray,
     restPauseArray,
     unilateralArray,
+    sideRepsArray,
     skippedArray,
     completedArray,
     setTypeArray,
@@ -7109,7 +7223,8 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
     const uniTag = document.createElement('span');
     uniTag.className = 'set-type-pill';
     uniTag.title = 'Unilateral — each side done separately';
-    uniTag.textContent = 'L/R';
+    const sides = entry.sideRepsArray?.[setIndex];
+    uniTag.textContent = sides ? `L ${sides.left} / R ${sides.right}` : 'L/R';
     repsWrapper.appendChild(uniTag);
   }
   setRow.appendChild(repsWrapper);
