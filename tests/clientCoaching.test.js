@@ -100,3 +100,73 @@ describe('coach program sets×reps', () => {
     expect(_formatScheme({ sets: 4, reps: 8, repsMax: 10 })).toBe('4×8-10');
   });
 });
+
+describe('parseNote', () => {
+  const { parseNote } = require('../src/js/client-coaching.js');
+  test('reads the heads-up and praise tags the coach app adds', () => {
+    expect(parseNote('[HEADS-UP] Deload next week')).toEqual({ kind: 'alert', text: 'Deload next week' });
+    expect(parseNote('[PRAISE] Big squat PR')).toEqual({ kind: 'praise', text: 'Big squat PR' });
+  });
+  test('leaves plain notes and unknown brackets alone', () => {
+    expect(parseNote('Keep cardio at 4x30')).toEqual({ kind: 'note', text: 'Keep cardio at 4x30' });
+    expect(parseNote('[TIP] eat')).toEqual({ kind: 'note', text: '[TIP] eat' });
+    expect(parseNote(null)).toEqual({ kind: 'note', text: '' });
+  });
+});
+
+describe('unseenCounts', () => {
+  const { unseenCounts } = require('../src/js/client-coaching.js');
+  test('counts messages, videos and plan changes newer than the last visit', () => {
+    const st = {
+      notes: [{ createdAt: { _seconds: 200 } }, { createdAt: { _seconds: 50 } }],
+      videos: [{ createdAt: '1970-01-01T00:03:20Z' }],
+      assignments: [{ updatedAt: { _seconds: 300 }, currentProgram: 'Block 2' }, { updatedAt: { _seconds: 300 } }]
+    };
+    expect(unseenCounts(st, 100 * 1000)).toEqual({ notes: 1, videos: 1, plans: 1 });
+    expect(unseenCounts(st, 400 * 1000)).toEqual({ notes: 0, videos: 0, plans: 0 });
+  });
+  test('handles missing lists', () => {
+    expect(unseenCounts({}, 0)).toEqual({ notes: 0, videos: 0, plans: 0 });
+  });
+});
+
+describe('buildCoachOverview', () => {
+  const { buildCoachOverview } = require('../src/js/client-coaching.js');
+  const NOW = new Date(2026, 8, 24, 12); // Thu 24 Sep 2026
+  const day = n => { const d = new Date(NOW); d.setDate(d.getDate() - n); return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-'); };
+
+  test('tracks sessions, program week, bodyweight, check-ins and macros against the coach', () => {
+    const store = memoryStore({
+      programs_ana: [{ id: 'p1', name: 'Block 2', days: [1, 2, 3, 4] }],
+      activeProgram_ana: { programId: 'p1', startDate: day(17) },
+      workoutHistory_ana: [{ id: 'a', date: day(0) }, { id: 'b', date: day(1) }, { id: 'c', date: day(8) }],
+      bodyweightLog_ana: [{ date: day(30), weightKg: 80 }, { date: day(2), weightKg: 79 }, { date: day(90), weightKg: 85 }],
+      tl_checkins_v1_ana: [{ date: day(3) }, { date: day(40) }]
+    });
+    const ov = buildCoachOverview(store, 'ana', NOW, {
+      unit: 'kg',
+      targets: { calories: 2000, protein: 150, carbs: 200, fat: 60 },
+      macros: { calories: 1000, protein: 150, carbs: 50, fats: 66 }
+    });
+    expect(ov.perWeek).toBe(4);
+    expect(ov.thisWeek).toBe(2);
+    expect(ov.programWeek).toBe(3);
+    expect(ov.weekly).toHaveLength(8);
+    expect(ov.bodyweight.points).toHaveLength(2); // 90 days ago is outside 8 weeks
+    expect(ov.bodyweight.latest).toBe(79);
+    expect(ov.bodyweight.change).toBe(-1);
+    expect(ov.daysSinceCheckIn).toBe(3);
+    expect(ov.checkInsLast4Weeks).toBe(1);
+    expect(ov.macros.map(m => m.pct)).toEqual([50, 100, 25, 110]);
+  });
+
+  test('converts kg to lb and leaves macros out without coach targets', () => {
+    const store = memoryStore({ bodyweightLog_ana: [{ date: day(1), weightKg: 100 }] });
+    const ov = buildCoachOverview(store, 'ana', NOW, { unit: 'lb' });
+    expect(ov.bodyweight.latest).toBeCloseTo(220.46, 1);
+    expect(ov.bodyweight.change).toBeNull();
+    expect(ov.macros).toBeNull();
+    expect(ov.compliance).toBeNull();
+    expect(ov.daysSinceCheckIn).toBeNull();
+  });
+});

@@ -274,9 +274,10 @@
         if (typeof global.showTab === 'function') global.showTab('leaderboardTab');
         return;
       case 'coach_invite':
-      case 'coach_note':
       case 'coach_plan':
         return _yourCoach();
+      case 'coach_note':
+        return _yourCoach('ycNotes');
       case 'coach_video':
         return _yourCoach('ycVideos');
       case 'coach_accepted':
