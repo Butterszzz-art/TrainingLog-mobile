@@ -1,0 +1,12 @@
+{
+  "name": "capacitor-health-connect",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Capacitor plugin: read daily nutrition totals (calories, protein, carbs, fat) from Android Health Connect, e.g. food logged in Cronometer.",
+  "license": "UNLICENSED",
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  }
+}
