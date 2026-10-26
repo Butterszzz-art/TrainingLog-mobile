@@ -45,86 +45,133 @@
 
   const QUESTIONS = [
     {
-      key: 'sleep', label: '😴 Sleep quality',
-      options: ['😫 Terrible', '😕 Poor', '😐 OK', '😊 Good', '😁 Great'],
+      key: 'sleep', label: 'Sleep quality', icon: 'moon',
+      options: ['Terrible', 'Poor', 'OK', 'Good', 'Great'],
     },
     {
-      key: 'soreness', label: '💪 Muscle soreness',
-      options: ['🔥 Very sore', '😣 Sore', '😐 Mild', '🙂 Fine', '✅ None'],
+      key: 'soreness', label: 'Muscle soreness', icon: 'activity',
+      options: ['Very sore', 'Sore', 'Mild', 'Fine', 'None'],
     },
     {
-      key: 'motivation', label: '⚡ Motivation',
-      options: ['😴 None', '😕 Low', '😐 Some', '😊 Ready', '🔥 Fired up!'],
+      key: 'motivation', label: 'Motivation', icon: 'zap',
+      options: ['None', 'Low', 'Some', 'Ready', 'Fired up'],
     },
   ];
 
+  const TIER_SHORT = { high: 'Good to go', medium: 'Moderate', low: 'Low readiness' };
+
+  function _icon(name) {
+    const svg = (typeof ICONS !== 'undefined' && ICONS[name]) || '';
+    return svg ? `<span class="ui-icon" aria-hidden="true">${svg}</span>` : '';
+  }
+
   let _ratings = { sleep: 0, soreness: 0, motivation: 0 };
+
+  function _onKeydown(e) {
+    if (e.key === 'Escape') window.dismissReadiness();
+  }
 
   function _buildModal() {
     const overlay = document.createElement('div');
-    overlay.className = 'readiness-overlay';
+    overlay.className = 'tl-sheet-overlay readiness-overlay';
     overlay.id = 'readinessOverlay';
 
-    overlay.innerHTML = `
-      <div class="readiness-modal">
-        <p class="readiness-modal-title">☀️ Morning check-in</p>
-        <p class="readiness-modal-sub">Quick 3-question readiness score — takes 10 seconds.</p>
+    const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
-        ${QUESTIONS.map(q => `
-          <div class="readiness-question">
-            <span class="readiness-question-label">${q.label}</span>
-            <div class="readiness-emoji-row" data-qkey="${q.key}">
-              ${q.options.map((opt, i) => `
-                <button type="button" class="readiness-emoji-btn" data-val="${i + 1}" data-qkey="${q.key}">
-                  <span>${opt.split(' ')[0]}</span>
-                  <span>${i + 1}</span>
-                </button>
-              `).join('')}
+    overlay.innerHTML = `
+      <div class="tl-sheet readiness-modal" role="dialog" aria-modal="true" aria-labelledby="readinessTitle" tabindex="-1">
+        <header class="tl-sheet-head">
+          <div>
+            <p class="tl-sheet-kicker">${_icon('sparkles')}Daily check-in · ${dateLabel}</p>
+            <h2 class="tl-sheet-title" id="readinessTitle">How are you feeling?</h2>
+            <p class="tl-sheet-sub">Three taps for today's readiness score.</p>
+          </div>
+          <button type="button" class="tl-sheet-close" aria-label="Skip for today" onclick="dismissReadiness()">${_icon('x') || '✕'}</button>
+        </header>
+
+        <div class="tl-sheet-body">
+          ${QUESTIONS.map(q => `
+            <div class="tl-q" data-q="${q.key}">
+              <div class="tl-q-head">
+                <span class="tl-q-icon">${_icon(q.icon)}</span>
+                <span class="tl-q-label" id="rq-${q.key}">${q.label}</span>
+                <span class="tl-q-value" data-value-for="${q.key}">Tap 1–5</span>
+              </div>
+              <div class="tl-seg" role="radiogroup" aria-labelledby="rq-${q.key}">
+                ${q.options.map((opt, i) => `
+                  <button type="button" class="tl-seg-btn readiness-emoji-btn" role="radio" aria-checked="false"
+                    aria-label="${i + 1} — ${opt}" data-val="${i + 1}" data-qkey="${q.key}">${i + 1}</button>
+                `).join('')}
+              </div>
+              <div class="tl-seg-ends"><span>${q.options[0]}</span><span>${q.options[4]}</span></div>
+            </div>
+          `).join('')}
+
+          <div class="tl-score" id="readinessScorePreview" aria-live="polite">
+            <span class="tl-score-num" id="readinessScoreNum">—</span>
+            <div class="tl-score-info">
+              <span class="tl-score-label" id="readinessScoreLabel">Readiness</span>
+              <span class="tl-score-tip" id="readinessScoreTip">Answer all three to see your score.</span>
+              <div class="tl-score-meter"><i id="readinessScoreBar"></i></div>
             </div>
           </div>
-        `).join('')}
-
-        <div class="readiness-score-preview" id="readinessScorePreview">
-          <span class="readiness-score-num" id="readinessScoreNum">—</span>
-          <span>Tap above to see your score</span>
         </div>
 
-        <button type="button" class="readiness-submit-btn" onclick="submitReadiness()">Log Readiness</button>
-        <button type="button" class="readiness-skip-btn" onclick="dismissReadiness()">Skip for today</button>
+        <footer class="tl-sheet-actions">
+          <button type="button" class="tl-sheet-btn tl-sheet-btn--ghost readiness-skip-btn" onclick="dismissReadiness()">Skip</button>
+          <button type="button" class="tl-sheet-btn tl-sheet-btn--primary readiness-submit-btn" aria-disabled="true" onclick="submitReadiness()">${_icon('check')}Log readiness</button>
+        </footer>
       </div>
     `;
 
-    // Wire emoji buttons
-    overlay.querySelectorAll('.readiness-emoji-btn').forEach(btn => {
+    overlay.querySelectorAll('.tl-seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const qkey = btn.dataset.qkey;
         const val  = parseInt(btn.dataset.val, 10);
         _ratings[qkey] = val;
 
-        // Highlight selected
-        overlay.querySelectorAll(`.readiness-emoji-btn[data-qkey="${qkey}"]`).forEach(b => {
-          b.classList.toggle('selected', b === btn);
+        overlay.querySelectorAll(`.tl-seg-btn[data-qkey="${qkey}"]`).forEach(b => {
+          const v = parseInt(b.dataset.val, 10);
+          b.classList.toggle('on', v === val);
+          b.classList.toggle('filled', v < val);
+          b.classList.toggle('selected', v === val);
+          b.setAttribute('aria-checked', v === val ? 'true' : 'false');
         });
+
+        const q = QUESTIONS.find(x => x.key === qkey);
+        const valueEl = overlay.querySelector(`[data-value-for="${qkey}"]`);
+        if (valueEl && q) valueEl.textContent = q.options[val - 1];
+        overlay.querySelector(`.tl-q[data-q="${qkey}"]`)?.classList.add('answered');
 
         _updateScorePreview(overlay);
       });
     });
 
     document.body.appendChild(overlay);
-    requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('visible')));
+    document.addEventListener('keydown', _onKeydown);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      overlay.classList.add('visible');
+      overlay.querySelector('.tl-sheet')?.focus({ preventScroll: true });
+    }));
   }
 
   function _updateScorePreview(overlay) {
     const { sleep, soreness, motivation } = _ratings;
     if (!sleep || !soreness || !motivation) return;
 
-    const score  = Math.round(((sleep + soreness + motivation) / 15) * 100);
-    const tier   = _tier(score);
-    const numEl  = overlay.querySelector('#readinessScoreNum');
-    if (numEl) {
-      numEl.textContent = score + '%';
-      numEl.className   = 'readiness-score-num ' + tier.cls;
-    }
+    const score = Math.round(((sleep + soreness + motivation) / 15) * 100);
+    const tier  = _tier(score);
+    const card  = overlay.querySelector('#readinessScorePreview');
+    const numEl = overlay.querySelector('#readinessScoreNum');
+    const lblEl = overlay.querySelector('#readinessScoreLabel');
+    const tipEl = overlay.querySelector('#readinessScoreTip');
+    const bar   = overlay.querySelector('#readinessScoreBar');
+    if (card)  card.dataset.tier = tier.cls;
+    if (numEl) numEl.innerHTML = `${score}<small>%</small>`;
+    if (lblEl) lblEl.textContent = TIER_SHORT[tier.cls] || tier.label;
+    if (tipEl) tipEl.textContent = tier.tip;
+    if (bar)   bar.style.width = score + '%';
+    overlay.querySelector('.readiness-submit-btn')?.setAttribute('aria-disabled', 'false');
   }
 
   window.submitReadiness = function () {
@@ -147,8 +194,10 @@
   window.dismissReadiness = function () {
     const overlay = document.getElementById('readinessOverlay');
     if (!overlay) return;
+    overlay.removeAttribute('id');
     overlay.classList.remove('visible');
-    setTimeout(() => overlay.remove(), 320);
+    document.removeEventListener('keydown', _onKeydown);
+    setTimeout(() => overlay.remove(), 340);
     // Mark as skipped today so we don't re-prompt
     const all = _load();
     if (!all[TODAY()]) {
@@ -160,6 +209,7 @@
   window.retakeReadiness = function () {
     const existing = document.getElementById('readinessOverlay');
     if (existing) existing.remove();
+    document.removeEventListener('keydown', _onKeydown);
     _ratings = { sleep: 0, soreness: 0, motivation: 0 };
     _buildModal();
   };
