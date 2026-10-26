@@ -1182,6 +1182,12 @@
               <span id="qlLogBtnLabel">Log set</span>
               <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>
             </button>
+            <!-- Done with this exercise: clears the form for the next one
+                 (session-queue.js startNewExercise). Logged sets stay. -->
+            <button type="button" class="log-next-exercise-btn" id="nextExerciseBtn" onclick="if(typeof startNewExercise==='function') startNewExercise();">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              New exercise
+            </button>
             <!-- Post-log check-in renders here, below the Log button, rather
                  than as a full-screen overlay (see showFlowCaptureModal). -->
             <div id="flowCaptureInline" style="display:none;"></div>

@@ -1829,3 +1829,30 @@
 @media (max-width: 420px) {
   .set-sides-panel { padding-left: 0; }
 }
+
+/* "New exercise" — secondary action under the Log button: clears the form
+   so the next exercise can be typed in (session-queue.js startNewExercise). */
+.log-next-exercise-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin: 10px 0 0;
+  padding: 11px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-color, inherit);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.log-next-exercise-btn:hover,
+.log-next-exercise-btn:focus-visible {
+  border-color: var(--primary, #5fa87e);
+  color: var(--primary, #5fa87e);
+  background: rgba(var(--acc-5fa87e), 0.08);
+}

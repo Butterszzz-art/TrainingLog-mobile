@@ -77,4 +77,22 @@ describe('quick log', () => {
     api.quickLogSet();
     expect(window.logged).toEqual([{ exercise: 'Goblet Squat', reps: 12, weight: 32 }]);
   });
+
+  test('New exercise clears the form after logging, ready for the next one', () => {
+    const api = loadQuickLog();
+    typeExercise(api, 'Bench Press');
+    api.quickLogStep('reps', 2);
+    api.quickLogSet();
+    expect(document.getElementById('exercise').value).toBe('Bench Press');
+
+    window.generateSetInputs(3); // extra rows added for the old exercise
+    api.startNewExercise();
+    expect(document.getElementById('exercise').value).toBe('');
+    expect(document.getElementById('quickLogPanel').hidden).toBe(true);
+    expect(document.querySelectorAll('.set-input-row').length).toBe(1);
+    expect(window.logged).toHaveLength(1); // nothing extra logged
+
+    typeExercise(api, 'Goblet Squat');
+    expect(document.getElementById('qlRepsVal').textContent).toBe('8');
+  });
 });
