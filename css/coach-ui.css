@@ -439,7 +439,23 @@
 /* Settings → Your Coach (athlete side) */
 #yourCoachSection { margin-top: 16px; padding: 0 6px; }
 #yourCoachSection[hidden] { display: none; }
-#yourCoachSection .yc-actions { display: flex; gap: 8px; }
-#yourCoachSection .yc-actions > * { flex: 1; }
-#yourCoachSection .yc-note { font-size: 14.5px; line-height: 1.5; color: var(--text-primary); white-space: pre-wrap; overflow-wrap: anywhere; }
+#yourCoachHomeCard[hidden] { display: none; }
+#yourCoachSection .yc-actions,
+#yourCoachHomeCard .yc-actions { display: flex; gap: 8px; }
+#yourCoachSection .yc-actions > *,
+#yourCoachHomeCard .yc-actions > * { flex: 1; }
+#yourCoachSection .yc-note,
+#yourCoachHomeCard .yc-note { font-size: 14.5px; line-height: 1.5; color: var(--text-primary); white-space: pre-wrap; overflow-wrap: anywhere; }
 #yourCoachSection .mx-row .mx-outline { flex: none; min-height: 40px; padding: 0 14px; }
+/* Message date line with its Heads-up / Praise / New tags */
+.yc-msg-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.yc-msg.is-new .yc-note { font-weight: 600; }
+#yourCoachHomeCard .yc-home--invite { border-color: var(--border-featured); }
+#yourCoachHomeCard .yc-actions { margin-top: 10px; }
+#yourCoachHomeCard button.yc-home-msg {
+  width: 100%; min-height: 0; margin: 0; padding: 12px 0;
+  background: transparent; border: 0; border-top: 1px solid var(--border-row); border-radius: 0; box-shadow: none;
+  color: inherit; text-align: left; font: inherit; letter-spacing: normal; text-transform: none; cursor: pointer;
+}
+#yourCoachHomeCard .yc-note--clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+#yourCoachHomeCard .yc-home-open { width: 100%; margin-top: 10px; }

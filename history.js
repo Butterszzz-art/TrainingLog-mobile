@@ -481,7 +481,7 @@ function findSourceWorkout(sources, log) {
 
 /** Summary of a workout's tags → { gym, gymUnnamed, machine:Set(lowercased names) }. */
 function workoutTags(workout) {
-  const tags = { gym: '', gymUnnamed: false, machine: new Set() };
+  const tags = { gym: '', gymUnnamed: false, machine: new Set(), coach: String(workout?.loggedByCoach || '') };
   (workout?.log || []).forEach(e => {
     const ctx = e?.sessionCtx || workout?._sessionCtx;
     if (!ctx) return;
@@ -501,7 +501,7 @@ function sourceTags(sources, log) {
 }
 
 function hasAnyTag(tags) {
-  return !!(tags.gym || tags.gymUnnamed || tags.machine.size);
+  return !!(tags.gym || tags.gymUnnamed || tags.machine.size || tags.coach);
 }
 
 function tagBadgesHtml(tags) {
@@ -511,6 +511,9 @@ function tagBadgesHtml(tags) {
   }
   if (tags.machine.size) {
     out.push(`<span class="hist-tag">${WRENCH_SVG}${tags.machine.size} different machine</span>`);
+  }
+  if (tags.coach) {
+    out.push(`<span class="hist-tag">Logged by ${histEsc(tags.coach)}</span>`);
   }
   return out.length ? `<span class="hist-tags">${out.join('')}</span>` : '';
 }

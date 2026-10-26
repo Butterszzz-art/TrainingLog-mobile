@@ -100,3 +100,32 @@ describe('coach program sets×reps', () => {
     expect(_formatScheme({ sets: 4, reps: 8, repsMax: 10 })).toBe('4×8-10');
   });
 });
+
+describe('parseNote', () => {
+  const { parseNote } = require('../src/js/client-coaching.js');
+  test('reads the heads-up and praise tags the coach app adds', () => {
+    expect(parseNote('[HEADS-UP] Deload next week')).toEqual({ kind: 'alert', text: 'Deload next week' });
+    expect(parseNote('[PRAISE] Big squat PR')).toEqual({ kind: 'praise', text: 'Big squat PR' });
+  });
+  test('leaves plain notes and unknown brackets alone', () => {
+    expect(parseNote('Keep cardio at 4x30')).toEqual({ kind: 'note', text: 'Keep cardio at 4x30' });
+    expect(parseNote('[TIP] eat')).toEqual({ kind: 'note', text: '[TIP] eat' });
+    expect(parseNote(null)).toEqual({ kind: 'note', text: '' });
+  });
+});
+
+describe('unseenCounts', () => {
+  const { unseenCounts } = require('../src/js/client-coaching.js');
+  test('counts messages, videos and plan changes newer than the last visit', () => {
+    const st = {
+      notes: [{ createdAt: { _seconds: 200 } }, { createdAt: { _seconds: 50 } }],
+      videos: [{ createdAt: '1970-01-01T00:03:20Z' }],
+      assignments: [{ updatedAt: { _seconds: 300 }, currentProgram: 'Block 2' }, { updatedAt: { _seconds: 300 } }]
+    };
+    expect(unseenCounts(st, 100 * 1000)).toEqual({ notes: 1, videos: 1, plans: 1 });
+    expect(unseenCounts(st, 400 * 1000)).toEqual({ notes: 0, videos: 0, plans: 0 });
+  });
+  test('handles missing lists', () => {
+    expect(unseenCounts({}, 0)).toEqual({ notes: 0, videos: 0, plans: 0 });
+  });
+});
