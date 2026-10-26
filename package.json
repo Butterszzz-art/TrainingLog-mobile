@@ -19,6 +19,7 @@
     "@capacitor/splash-screen": "^8.0.2",
     "@capgo/native-purchases": "^8.8.1",
     "bcrypt": "^6.0.0",
+    "capacitor-health-connect": "file:plugins/health-connect",
     "capacitor-instagram-stories": "file:plugins/instagram-stories",
     "chart.js": "^4.5.0",
     "cors": "^2.8.5",

@@ -3035,6 +3035,17 @@
               </button>
             </div>
 
+            <!-- Health Connect import (Android app only; health-nutrition.js
+                 shows it). Brings in food logged in Cronometer etc. -->
+            <div id="healthNutritionCard" class="pod macro-health-sync" hidden>
+              <div class="macro-health-sync-text">
+                <span class="mx-lbl">Health Connect</span>
+                <small id="healthNutritionStatus" class="mx-meta"></small>
+                <button type="button" id="healthNutritionOff" class="mx-link macro-health-sync-off" onclick="HealthNutrition.turnOff()" hidden>Turn off</button>
+              </div>
+              <button type="button" id="healthNutritionBtn" class="macro-day-btn" onclick="HealthNutrition.onButton()"><span data-label>Connect</span></button>
+            </div>
+
             <!-- Quick add: one tap per common amount. "Custom" opens the
                  exact qty input + ± buttons addMacro()/subtractMacro() read. -->
             <div class="macro-section-head">
@@ -4092,6 +4103,7 @@
 <script type="module" src="autoProgression.js"></script>
 <script type="module" src="periodization.js"></script>
 <script type="module" src="macrosFeatures.js"></script>
+<script src="src/js/health-nutrition.js"></script>
 <script type="module" src="workoutTimer.js"></script>
 <script src="cardioTab.js"></script>
 <script src="weightTab.js"></script>
@@ -5297,6 +5309,7 @@ function showTab(tabName) {
         renderHeatmap();
         updateOfflineBadge();
       }
+      if (window.HealthNutrition) window.HealthNutrition.refresh();
       if (typeof showMacroSubTab === 'function') {
         showMacroSubTab(getSavedMacroSubTab() || 'targets');
       } else if (typeof openMacrosMain === 'function') {

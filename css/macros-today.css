@@ -663,3 +663,29 @@
   opacity: 0.45;
   pointer-events: none;
 }
+
+/* ── Health Connect import card ─────────────────────────────── */
+.macro-health-sync {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 14px;
+}
+.macro-health-sync[hidden] { display: none; }
+.macro-health-sync-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+.macro-health-sync-text .mx-meta {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.macro-health-sync-off { font-size: 12px; padding: 0; }
+.macro-health-sync-off[hidden] { display: none; }
+.macro-health-sync .macro-day-btn { flex: none; padding: 10px 14px; }
