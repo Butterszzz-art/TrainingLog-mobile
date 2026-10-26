@@ -430,7 +430,8 @@
 #setInputsContainer .set-input-row:first-child { display: none; }
 #quickLogPanel.ql-multi-mode #setInputsContainer .set-input-row:first-child { display: flex; }
 #quickLogPanel.ql-multi-mode > .ql-row,
-#quickLogPanel.ql-multi-mode > .ql-setopts-row { display: none; }
+#quickLogPanel.ql-multi-mode > .ql-setopts-row,
+#quickLogPanel.ql-multi-mode > .ql-sides-panel { display: none; }
 
 /* The kg/lb toggle button lives inside .ql-row (hidden above in multi
    mode) — surface the plain unit select in its place so units are still
@@ -1715,3 +1716,86 @@
   cursor: pointer;
 }
 #quickNewExerciseBtn.log-quick-new-exercise:hover { text-decoration: underline; }
+
+/* ── L/R sets: "Same reps both sides" switch + Left/Right reps ──── */
+
+.ql-sides-panel { margin: -2px 0 10px; }
+.ql-sides-panel[hidden],
+.ql-sides-row[hidden],
+.set-sides-panel[hidden],
+.set-sides-inputs[hidden] { display: none; }
+.ql-sides-row { margin: 8px 0 0; }
+
+.same-sides-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-color);
+  cursor: pointer;
+  user-select: none;
+}
+.same-sides-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+.same-sides-switch {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--border-color);
+  transition: background 0.15s, border-color 0.15s;
+}
+.same-sides-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-color);
+  transition: transform 0.15s;
+}
+.same-sides-toggle input:checked + .same-sides-switch {
+  background: var(--primary, #5fa87e);
+  border-color: var(--primary, #5fa87e);
+}
+.same-sides-toggle input:checked + .same-sides-switch::after { transform: translateX(16px); }
+.same-sides-toggle input:focus-visible + .same-sides-switch {
+  outline: 2px solid var(--primary, #5fa87e);
+  outline-offset: 2px;
+}
+
+/* Per-row version (2+ sets on screen) — wraps onto its own line. */
+.set-sides-panel {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  padding-left: 60px;
+}
+.set-sides-inputs { display: flex; gap: 10px; }
+.set-side-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.set-side-field input { width: 64px; }
+/* Sides differ: the Left/Right fields drive the row's reps. */
+.set-input-row.sides-uneven .set-input-reps { display: none; }
+
+@media (max-width: 420px) {
+  .set-sides-panel { padding-left: 0; }
+}
