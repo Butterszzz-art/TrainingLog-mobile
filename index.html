@@ -3750,9 +3750,9 @@
 
   <!-- Your Coach: pending invite (Accept), linked coach + whatever they've
        assigned (program/macro summary), and their notes to you. Populated
-       by renderYourCoachSection() in src/js/client-coaching.js, hidden entirely if
-       there's nothing to show (no invite, no coach, no notes) rather than
-       rendering an empty shell. -->
+       by renderYourCoachSection() in src/js/client-coaching.js and refreshed
+       each time Settings opens. Shown to every signed-in athlete, with a
+       "No coach yet" row when there's nothing to show. -->
   <div id="yourCoachSection" class="your-coach" hidden></div>
 
   </div> <!-- #settingsTab -->
@@ -5449,6 +5449,8 @@ function showTab(tabName) {
       if (typeof initSettingsPage === 'function') {
         initSettingsPage();
       }
+      // Pick up coach invites sent since the app was opened.
+      if (typeof window.renderYourCoachSection === 'function') window.renderYourCoachSection();
       const theme = localStorage.getItem('theme') || 'light';
       const themeSel = document.getElementById('themeSelect');
       if (themeSel) themeSel.value = theme;

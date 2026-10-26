@@ -219,7 +219,7 @@
       get('/api/client/coach-sharing'),
       get('/api/client/coach-videos')
     ]);
-    if (!inv && !asn && !notes) return false;
+    if (!inv) return false;
     state.invites = (inv && inv.invites) || [];
     state.assignments = (asn && asn.assignments) || [];
     state.notes = (notes && notes.notes) || [];
@@ -246,12 +246,38 @@
       </div>`;
   }
 
+  // Shown when there's no coach yet, so athletes always have a place to look
+  // for an invite instead of a section that only appears once one exists.
+  function emptyHtml(failed) {
+    return `
+      <div class="mx-row">
+        <span class="mx-row-ico"><span class="ui-icon">${icon('users')}</span></span>
+        <div class="mx-row-main">
+          <span class="mx-row-title">${failed ? 'Couldn\u2019t check for invites' : 'No coach yet'}</span>
+          <span class="mx-row-sub">${failed
+            ? 'Check your connection and try again.'
+            : 'When a coach invites you, their invite shows up here and in your notifications. Share your username with them to get started.'}</span>
+        </div>
+        <button type="button" class="mx-outline" data-yc-refresh="1">${failed ? 'Try again' : 'Check'}</button>
+      </div>`;
+  }
+
+  function renderFailed() {
+    const section = doc.getElementById('yourCoachSection');
+    if (!section) return;
+    section.hidden = false;
+    section.innerHTML = `
+      <section class="pod mx-pod yc-pod" aria-label="Your coach">
+        <div class="pod-row"><h3 class="pod-title mx-h3">Your Coach</h3></div>
+        ${emptyHtml(true)}
+      </section>`;
+  }
+
   function render() {
     const section = doc.getElementById('yourCoachSection');
     if (!section) return;
     const pending = state.invites.filter(i => i.status === 'pending');
     const active = state.invites.filter(i => i.status === 'active');
-    if (!pending.length && !active.length && !state.notes.length) { section.hidden = true; section.innerHTML = ''; return; }
     section.hidden = false;
 
     const pendingHtml = pending.map(inv => `
@@ -320,7 +346,7 @@
     section.innerHTML = `
       <section class="pod mx-pod yc-pod" aria-label="Your coach">
         <div class="pod-row"><h3 class="pod-title mx-h3">Your Coach</h3></div>
-        ${pendingHtml}${activeHtml}
+        ${pendingHtml}${activeHtml}${pending.length || active.length ? '' : emptyHtml()}
       </section>
       ${videosHtml ? `<section class="pod mx-pod yc-pod" id="ycVideos">${videosHtml}</section>` : ''}
       ${sharingHtml ? `<section class="pod mx-pod yc-pod">${sharingHtml}</section>` : ''}
@@ -330,11 +356,31 @@
   async function renderYourCoachSection() {
     const section = doc.getElementById('yourCoachSection');
     if (!section) return;
-    if (!root.localStorage.getItem('token')) { section.hidden = true; return; }
-    const ok = await load();
-    if (!ok) { section.hidden = true; return; }
-    render();
-    pushShare();
+    if (!root.localStorage.getItem('token')) { section.hidden = true; section.innerHTML = ''; return; }
+    // One fetch at a time; a call made mid-fetch (say, right after Accept)
+    // waits for it and then fetches again so it sees the latest state.
+    if (inflight) return inflight.then(() => renderYourCoachSection());
+    inflight = (async () => {
+      const ok = await load();
+      // Keep showing what we already have if a refresh fails.
+      if (!ok) { if (!loadedOnce) renderFailed(); return; }
+      loadedOnce = true;
+      render();
+      pushShare();
+    })().finally(() => { inflight = null; });
+    return inflight;
+  }
+  let inflight = null;
+  let loadedOnce = false;
+
+  // A new pending invite in the bell that Settings doesn't know about yet:
+  // re-fetch so Your Coach shows it without a restart.
+  function onNotificationsChanged(e) {
+    const items = (e && e.detail && e.detail.items) || [];
+    const known = new Set(state.invites.map(i => String(i.coachUsername).toLowerCase()));
+    const fresh = items.some(n => n && n.type === 'coach_invite' && n.data && n.data.status === 'pending'
+      && !known.has(String(n.data.coach || n.actor || '').toLowerCase()));
+    if (fresh) renderYourCoachSection();
   }
 
   // Accept a coach's invite. Shared by the Accept button here and the one in
@@ -348,8 +394,15 @@
   }
 
   async function onClick(e) {
-    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-macros],[data-yc-share],[data-yc-video]');
+    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-macros],[data-yc-share],[data-yc-video],[data-yc-refresh]');
     if (!t) return;
+
+    if (t.dataset.ycRefresh) {
+      t.disabled = true;
+      await renderYourCoachSection();
+      t.disabled = false;
+      return;
+    }
 
     if (t.dataset.ycVideo) {
       const v = state.videos.find(x => x.id === t.dataset.ycVideo);
@@ -432,7 +485,11 @@
     doc.getElementById('yourCoachSection')?.addEventListener('click', onClick);
     hookCheckInSaves();
     renderYourCoachSection();
-    doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'hidden') pushShare(); });
+    doc.addEventListener('visibilitychange', () => {
+      if (doc.visibilityState === 'hidden') pushShare();
+      else renderYourCoachSection();
+    });
+    doc.addEventListener('pc:notifications-changed', onNotificationsChanged);
   }
 
   root.renderYourCoachSection = renderYourCoachSection;
