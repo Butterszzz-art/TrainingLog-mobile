@@ -135,37 +135,66 @@
 
   /* ── Celebration Modal ────────────────────────────────────── */
 
+  const PR_CARD_MS = 6000;
+
+  // A compact card at the top of the screen (below the rest timer when it's
+  // showing). No backdrop, so the Log button stays usable; tap it to skip.
   function showPRCelebration(prs) {
-    // Remove any existing modal
+    document.getElementById('_prModal')?._close?.();
     document.getElementById('_prModal')?.remove();
+    window.holdToastsForSpotlight?.();
 
     const overlay = document.createElement('div');
     overlay.className = 'pr-modal-overlay';
     overlay.id = '_prModal';
 
-    const itemsHTML = prs.map(pr => `
+    const shown = prs.slice(0, 3);
+    const itemsHTML = shown.map(pr => `
       <div class="pr-modal-item">
-        <div class="pr-modal-item-name">
-          ${_esc(pr.exercise)}
-          <span class="pr-modal-item-type">NEW PR</span>
-        </div>
-        <div class="pr-modal-item-detail">
-          ${pr.weight} kg × ${pr.reps} reps
-          · Est. 1RM: <strong>${pr.e1rm} kg</strong>
-        </div>
+        <span class="pr-modal-item-name">${_esc(pr.exercise)}</span>
+        <span class="pr-modal-item-detail">${pr.weight} kg × ${pr.reps}
+          · e1RM <strong>${pr.e1rm} kg</strong></span>
       </div>
     `).join('');
+    const more = prs.length - shown.length;
 
     overlay.innerHTML = `
-      <div class="pr-modal">
-        <span class="pr-modal-trophy">🏆</span>
-        <p class="pr-modal-headline">Personal Record${prs.length > 1 ? 's' : ''}!</p>
-        <div class="pr-modal-items">${itemsHTML}</div>
-        <button class="pr-modal-close" onclick="document.getElementById('_prModal').remove()">
-          Keep it up! 💪
-        </button>
+      <div class="pr-modal" role="status" aria-live="polite" tabindex="0">
+        <span class="pr-modal-trophy" aria-hidden="true">🏆</span>
+        <div class="pr-modal-body">
+          <div class="pr-modal-head">
+            <span class="pr-modal-headline">New PR${prs.length > 1 ? 's' : ''}</span>
+            <span class="pr-modal-skip">Tap to skip</span>
+          </div>
+          <div class="pr-modal-items">${itemsHTML}</div>
+          ${more > 0 ? `<div class="pr-modal-more">+${more} more</div>` : ''}
+        </div>
+        <span class="pr-modal-meter" aria-hidden="true"><span></span></span>
       </div>
     `;
+
+    const top = typeof window.notifyTopOffset === 'function' ? window.notifyTopOffset() : 0;
+    if (top) overlay.style.setProperty('--pr-top', top + 'px');
+
+    let timer = null;
+    const close = () => {
+      if (overlay._closed) return;
+      overlay._closed = true;
+      clearTimeout(timer);
+      overlay.classList.remove('visible');
+      setTimeout(() => {
+        overlay.remove();
+        window.flushToastQueue?.();
+      }, 250);
+    };
+    overlay._close = close;
+
+    const card = overlay.querySelector('.pr-modal');
+    card.addEventListener('click', close);
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); close(); }
+    });
+    card.style.setProperty('--pr-card-ms', PR_CARD_MS + 'ms');
 
     document.body.appendChild(overlay);
 
@@ -174,8 +203,7 @@
       requestAnimationFrame(() => overlay.classList.add('visible'));
     });
 
-    // Auto-dismiss after 8 seconds
-    setTimeout(() => overlay?.remove(), 8000);
+    timer = setTimeout(close, PR_CARD_MS);
   }
 
   /* ── PR Board rendering ───────────────────────────────────── */

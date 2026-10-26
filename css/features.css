@@ -973,51 +973,60 @@
 /* ── PR Celebration Modal ────────────────────────────────────── */
 
 .pr-modal-overlay {
+  /* No backdrop: just a card at the top (below the rest timer when it's
+     showing, via --pr-top). Taps outside it reach the page underneath. */
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.65);
+  left: 14px;
+  right: 14px;
+  top: var(--pr-top, calc(12px + env(safe-area-inset-top, 0px)));
   z-index: 3000;
   display: flex;
-  /* Top of the screen, clear of the Log button. */
-  align-items: flex-start;
   justify-content: center;
-  padding-top: calc(16px + env(safe-area-inset-top, 0px));
-  opacity: 0;
-  transition: opacity 0.3s;
   pointer-events: none;
 }
 
-.pr-modal-overlay.visible {
-  opacity: 1;
-  /* It pops up straight after a set is logged; taps outside the card must
-     still reach the Log button underneath, or the next set is swallowed. */
+.pr-modal {
+  --pr-gold: #e7b95a;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 14px 12px;
+  border-radius: var(--radius-pod, 18px);
+  background: var(--pod-bg-hero, var(--card-bg));
+  border: 1px solid rgba(231, 185, 90, 0.55);
+  box-shadow: var(--pod-shadow-hero, 0 12px 30px rgba(0, 0, 0, 0.45)), 0 0 24px rgba(231, 185, 90, 0.14);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--text-primary, var(--text-color));
+  text-align: left;
+  cursor: pointer;
   pointer-events: none;
+  opacity: 0;
+  transform: translateY(-12px) scale(0.98);
+  transition: opacity 0.22s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .pr-modal-overlay.visible .pr-modal {
   pointer-events: auto;
-}
-
-.pr-modal {
-  background: var(--card-bg);
-  border: 1px solid var(--primary);
-  border-radius: 20px;
-  padding: 24px 20px 20px;
-  width: min(360px, 90vw);
-  text-align: center;
-  transform: translateY(20px);
-  transition: transform 0.3s;
-  box-shadow: 0 0 40px rgba(95,168,126,0.25);
-}
-
-.pr-modal-overlay.visible .pr-modal {
-  transform: translateY(0);
+  opacity: 1;
+  transform: none;
 }
 
 .pr-modal-trophy {
-  font-size: 3rem;
-  display: block;
-  margin-bottom: 6px;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.35rem;
+  background: rgba(231, 185, 90, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(231, 185, 90, 0.4);
   animation: pr-bounce 0.6s ease;
 }
 
@@ -1027,62 +1036,87 @@
   100% { transform: scale(1);   opacity: 1; }
 }
 
-.pr-modal-headline {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--primary-text);
-  margin: 0 0 14px;
+.pr-modal-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.pr-modal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.pr-modal-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 18px;
+.pr-modal-headline {
+  font-family: var(--font-label, inherit);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pr-gold);
+  margin: 0;
 }
+
+.pr-modal-skip {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  opacity: 0.8;
+}
+
+.pr-modal-items { display: flex; flex-direction: column; gap: 2px; }
 
 .pr-modal-item {
-  background: rgba(95,168,126,0.08);
-  border: 1px solid rgba(95,168,126,0.2);
-  border-radius: 10px;
-  padding: 10px 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
 }
 
 .pr-modal-item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 700;
-  font-size: 0.92rem;
-  color: var(--text-color);
-  margin-bottom: 3px;
+  font-size: 14px;
 }
 
 .pr-modal-item-detail {
-  font-size: 0.8rem;
+  flex-shrink: 0;
+  font-size: 12.5px;
   color: var(--text-muted);
+  white-space: nowrap;
 }
+.pr-modal-item-detail strong { color: var(--text-primary, var(--text-color)); }
 
-.pr-modal-item-type {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: var(--primary);
-  color: var(--label-on-green);
-  margin-left: 6px;
-  vertical-align: middle;
+.pr-modal-more { font-size: 12px; color: var(--text-muted); }
+
+.pr-modal-meter {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 5px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(231, 185, 90, 0.14);
+  overflow: hidden;
 }
+.pr-modal-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--pr-gold);
+  transform-origin: left center;
+}
+.pr-modal-overlay.visible .pr-modal-meter > span {
+  animation: pr-meter var(--pr-card-ms, 6000ms) linear forwards;
+}
+@keyframes pr-meter { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
-.pr-modal-close {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  background: var(--primary);
-  color: var(--label-on-green);
-  font-size: 0.95rem;
-  font-weight: 700;
-  font-family: 'Poppins', sans-serif;
-  cursor: pointer;
+@media (prefers-reduced-motion: reduce) {
+  .pr-modal, .pr-modal-trophy { animation: none; transition: opacity 0.15s; transform: none; }
+  .pr-modal-overlay.visible .pr-modal-meter > span { animation: none; }
 }
 
 /* ── Progressive Overload Hint ───────────────────────────────── */

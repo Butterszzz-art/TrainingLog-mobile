@@ -118,6 +118,8 @@
 
   function tagIfPrBadge(el) {
     if (!el || el.nodeType !== 1 || el.classList.contains('pc-pr-badge')) return;
+    // The PR card styles its own trophy/headline; the pill style would stretch them.
+    if (el.closest && el.closest('#_prModal')) return;
     if (el.matches && el.matches(PR_SELECTOR)) {
       el.classList.add('pc-pr-badge');
       return;
