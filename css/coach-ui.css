@@ -459,3 +459,36 @@
 }
 #yourCoachHomeCard .yc-note--clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
 #yourCoachHomeCard .yc-home-open { width: 100%; margin-top: 10px; }
+
+/* ── Coach overview: KPI tiles, macro meters, weekly bars, weight line ── */
+.ycv { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+.ycv-tiles { margin-top: 2px; }
+.ycv-stat { padding: 9px 10px; }
+.ycv-stat .mx-stat-v { font-size: 22px; }
+.ycv-sub { font-size: 12px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.ycv-sub--good { color: var(--positive-text, var(--green-90)); }
+.ycv-sub--warn { color: var(--brass-light); }
+.ycv-sub--bad { color: var(--danger-text-mobile); }
+.ycv-block { display: flex; flex-direction: column; gap: 8px; }
+.ycv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ycv-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-tertiary); }
+.ycv-key { display: inline-block; width: 14px; border-top: 2px dashed var(--brass-light); }
+.ycv-figure { font-family: var(--font-display); font-size: 18px; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.ycv-macro { display: grid; grid-template-columns: 58px 1fr auto; align-items: center; gap: 10px; }
+.ycv-macro-l { font-family: var(--font-label); font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mx-label); }
+.ycv-macro-v { font-variant-numeric: tabular-nums; font-size: 13.5px; font-weight: 700; color: var(--text-primary); min-width: 92px; text-align: right; }
+.ycv-macro-v small { font-weight: 500; color: var(--text-tertiary); }
+.ycv-chart { width: 100%; height: auto; display: block; overflow: visible; }
+/* Weeks under target are dimmed; weeks on target are solid; this week is outlined. */
+.ycv-bar { fill: var(--green-90); fill-opacity: 0.3; }
+.ycv-bar.is-hit { fill-opacity: 0.9; }
+.ycv-bar.is-now { stroke: var(--green-90); stroke-width: 1.5; fill-opacity: 0.15; }
+.ycv-bar.is-now.is-hit { fill-opacity: 0.9; }
+.ycv-target { stroke: var(--brass-light); stroke-width: 1.5; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.ycv-axis { font-size: 9px; fill: var(--text-tertiary); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.ycv-axis.is-now { fill: var(--green-90); font-weight: 700; }
+.ycv-line { fill: none; stroke: var(--green-90); stroke-width: 2; stroke-linejoin: round; }
+.ycv-area { fill: var(--green-90); opacity: 0.12; }
+.ycv-dot { fill: var(--green-90); }
+.ycv-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.ycv-foot .mx-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -176,7 +176,71 @@
     };
   }
 
-  const api = { buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs };
+  // Numbers for the coach overview (Home card + Settings): how the athlete
+  // is tracking against what the coach set. All from data on the device.
+  function buildCoachOverview(store, username, nowInput, opts) {
+    const o = opts || {};
+    const now = nowInput instanceof Date ? nowInput : new Date(nowInput || Date.now());
+    const weekly = weeklySessionCounts(store, username, now, SHARE_WEEKS);
+    const program = activeProgram(store, username);
+    const perWeek = (program && program.perWeek) || null;
+    const thisWeek = weekly[weekly.length - 1].count;
+
+    let programWeek = null;
+    if (program && program.startDate) {
+      const start = weekStart(new Date(program.startDate + 'T12:00:00'));
+      const diff = Math.floor((weekStart(now) - start) / (7 * 864e5));
+      if (diff >= 0) programWeek = diff + 1;
+    }
+
+    // Bodyweight: last 8 weeks, in the athlete's unit.
+    const unit = o.unit === 'lb' ? 'lb' : 'kg';
+    const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 56);
+    const cutIso = isoDay(cutoff);
+    const bw = arr(readJSON(store, `bodyweightLog_${username}`, []))
+      .map(e => {
+        const day = String((e && e.date) || '').slice(0, 10);
+        let w = numOrNull(e && e.weightKg);
+        if (w !== null && unit === 'lb') w *= 2.20462;
+        if (w === null) w = numOrNull(e && e.weight);
+        return { date: day, weight: w };
+      })
+      .filter(e => e.date && e.date >= cutIso && e.weight !== null)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const bwLatest = bw.length ? bw[bw.length - 1].weight : null;
+    const bwChange = bw.length > 1 ? bwLatest - bw[0].weight : null;
+
+    const checkIns = arr(readJSON(store, CHECKIN_PREFIX + username, [])).filter(c => c && c.date)
+      .map(c => String(c.date).slice(0, 10)).sort();
+    const lastCheckIn = checkIns.length ? checkIns[checkIns.length - 1] : null;
+    const daysSinceCheckIn = lastCheckIn
+      ? Math.max(0, Math.round((new Date(isoDay(now) + 'T12:00:00') - new Date(lastCheckIn + 'T12:00:00')) / 864e5))
+      : null;
+
+    const t = o.targets;
+    const m = o.macros || {};
+    const macros = t ? [
+      { key: 'kcal', label: 'Kcal', value: Math.round(Number(m.calories) || 0), target: Number(t.calories) || 0, unit: '' },
+      { key: 'protein', label: 'Protein', value: Math.round(Number(m.protein) || 0), target: Number(t.protein) || 0, unit: 'g' },
+      { key: 'carbs', label: 'Carbs', value: Math.round(Number(m.carbs) || 0), target: Number(t.carbs) || 0, unit: 'g' },
+      { key: 'fat', label: 'Fat', value: Math.round(Number(m.fats != null ? m.fats : m.fat) || 0), target: Number(t.fat) || 0, unit: 'g' }
+    ].map(x => ({ ...x, pct: x.target ? Math.round((x.value / x.target) * 100) : 0 })) : null;
+
+    return {
+      weekly,
+      perWeek,
+      thisWeek,
+      programWeek,
+      compliance: compliancePercent(weekly, perWeek, program && program.startDate),
+      bodyweight: { points: bw, latest: bwLatest, change: bwChange, unit },
+      lastCheckIn,
+      daysSinceCheckIn,
+      checkInsLast4Weeks: checkIns.filter(d => d >= isoDay(new Date(now.getTime() - 28 * 864e5))).length,
+      macros
+    };
+  }
+
+  const api = { buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (!root || !root.document) return;
   root.ClientCoaching = api;
@@ -424,12 +488,107 @@
         <div class="pod-row"><h3 class="pod-title mx-h3">Your Coach</h3></div>
         ${pendingHtml}${activeHtml}${planHtml}${pending.length || active.length ? '' : emptyHtml()}
       </section>
+      ${active.length ? `<section class="pod mx-pod yc-pod" aria-label="How you're tracking">
+        <div class="pod-row"><h4 class="pod-title mx-h3">How you're tracking</h4></div>
+        ${overviewHtml(state.assignments.find(a => a.coachUid === active[0].coachUid) || {}, false)}
+      </section>` : ''}
       ${notesHtml ? `<section class="pod mx-pod yc-pod" id="ycNotes">${notesHtml}</section>` : ''}
       ${videosHtml ? `<section class="pod mx-pod yc-pod" id="ycVideos">${videosHtml}</section>` : ''}
       ${sharingHtml ? `<section class="pod mx-pod yc-pod">${sharingHtml}</section>` : ''}`;
   }
 
   let showAllNotes = false;
+
+  // ── Coach overview (stats) ───────────────────────────────────────
+
+  const fmt1 = n => (Math.round(n * 10) / 10).toFixed(1);
+
+  function overviewFor(asn) {
+    const macros = typeof root.loadDailyMacroProgress === 'function' ? (() => { try { return root.loadDailyMacroProgress(); } catch { return null; } })() : null;
+    return buildCoachOverview(root.localStorage, user(), new Date(), {
+      unit: root.localStorage.getItem('defaultWeightUnit') || 'kg',
+      targets: asn && asn.macroTargets,
+      macros
+    });
+  }
+
+  // 8 weekly bars, the coach's sessions-per-week as a dashed line.
+  function weeksChart(ov) {
+    const W = 300, H = 64, gap = 6, n = ov.weekly.length;
+    const max = Math.max(ov.perWeek || 0, ...ov.weekly.map(w => w.count), 1);
+    const bw = (W - gap * (n - 1)) / n;
+    const y = v => H - 12 - (v / max) * (H - 20);
+    const bars = ov.weekly.map((w, i) => {
+      const x = i * (bw + gap);
+      const h = Math.max(2, (H - 12) - y(w.count));
+      const hit = ov.perWeek && w.count >= ov.perWeek;
+      const cur = i === n - 1;
+      return `<rect x="${x.toFixed(1)}" y="${(H - 12 - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" class="ycv-bar${hit ? ' is-hit' : ''}${cur ? ' is-now' : ''}"/>`
+        + `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 1}" class="ycv-axis${cur ? ' is-now' : ''}">${w.count}</text>`;
+    }).join('');
+    const line = ov.perWeek ? `<line x1="0" x2="${W}" y1="${y(ov.perWeek).toFixed(1)}" y2="${y(ov.perWeek).toFixed(1)}" class="ycv-target"/>` : '';
+    return `<svg class="ycv-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Sessions per week, last 8 weeks${ov.perWeek ? `, target ${ov.perWeek}` : ''}">${bars}${line}</svg>`;
+  }
+
+  function weightChart(ov) {
+    const pts = ov.bodyweight.points;
+    if (pts.length < 2) return '';
+    const W = 300, H = 56;
+    const t0 = Date.parse(pts[0].date), t1 = Date.parse(pts[pts.length - 1].date) || t0 + 1;
+    const ws = pts.map(p => p.weight);
+    const lo = Math.min(...ws), hi = Math.max(...ws), span = hi - lo || 1;
+    const xy = pts.map(p => [((Date.parse(p.date) - t0) / ((t1 - t0) || 1)) * (W - 8) + 4, H - 6 - ((p.weight - lo) / span) * (H - 14)]);
+    const d = xy.map((q, i) => `${i ? 'L' : 'M'}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('');
+    const last = xy[xy.length - 1];
+    return `<svg class="ycv-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Bodyweight, last 8 weeks">
+      <path d="${d}L${last[0].toFixed(1)},${H}L${xy[0][0].toFixed(1)},${H}Z" class="ycv-area"/>
+      <path d="${d}" class="ycv-line" vector-effect="non-scaling-stroke"/>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" class="ycv-dot"/></svg>`;
+  }
+
+  function overviewHtml(asn, compact) {
+    const ov = overviewFor(asn);
+    const bwv = ov.bodyweight;
+    const tile = (label, value, sub, tone) => `
+      <div class="mx-stat ycv-stat"><span class="mx-stat-l">${label}</span>
+        <span class="mx-stat-v">${value}</span>${sub ? `<span class="ycv-sub${tone ? ' ycv-sub--' + tone : ''}">${sub}</span>` : ''}</div>`;
+    const comp = ov.compliance;
+    const compTone = comp == null ? '' : comp >= 85 ? 'good' : comp >= 60 ? 'warn' : 'bad';
+    const ci = ov.daysSinceCheckIn;
+    const tiles = `
+      <div class="mx-tiles ycv-tiles">
+        ${tile('Adherence', comp == null ? '—' : `${comp}<small>%</small>`, comp == null ? 'After week 1' : 'Last 4 weeks', compTone)}
+        ${tile('This week', `${ov.thisWeek}<small>${ov.perWeek ? '/' + ov.perWeek : ''}</small>`, ov.programWeek ? `Program wk ${ov.programWeek}` : 'Sessions', ov.perWeek && ov.thisWeek >= ov.perWeek ? 'good' : '')}
+        ${tile('Check-in', ci == null ? '—' : ci === 0 ? 'Today' : `${ci}<small>d ago</small>`, `${ov.checkInsLast4Weeks} in 4 wks`, ci != null && ci > 8 ? 'warn' : '')}
+      </div>`;
+
+    const macros = ov.macros ? `
+      <div class="ycv-block">
+        <div class="ycv-head"><span class="mx-lbl">Today vs coach targets</span></div>
+        ${ov.macros.map(x => `
+          <div class="ycv-macro">
+            <span class="ycv-macro-l">${x.label}</span>
+            <span class="mx-meter mx-meter--thin${x.pct > 110 ? ' mx-meter--brass' : ''}"><i style="width:${Math.min(100, x.pct)}%"></i></span>
+            <span class="ycv-macro-v">${x.value.toLocaleString()}<small>/${x.target.toLocaleString()}${x.unit}</small></span>
+          </div>`).join('')}
+      </div>` : '';
+
+    const weeks = `
+      <div class="ycv-block">
+        <div class="ycv-head"><span class="mx-lbl">Sessions · 8 weeks</span>${ov.perWeek ? `<span class="ycv-legend"><i class="ycv-key"></i>Target ${ov.perWeek}/wk</span>` : ''}</div>
+        ${weeksChart(ov)}
+      </div>`;
+
+    const wchart = weightChart(ov);
+    const weight = bwv.latest != null ? `
+      <div class="ycv-block">
+        <div class="ycv-head"><span class="mx-lbl">Bodyweight · 8 weeks</span>
+          <span class="ycv-figure">${fmt1(bwv.latest)} ${bwv.unit}${bwv.change != null ? ` <span class="ycv-sub">${bwv.change > 0 ? '+' : ''}${fmt1(bwv.change)}</span>` : ''}</span></div>
+        ${wchart}
+      </div>` : '';
+
+    return `<div class="ycv${compact ? ' ycv--compact' : ''}">${tiles}${macros}${weeks}${compact ? '' : weight}${compact && !ov.macros ? weight : ''}</div>`;
+  }
 
   // ── Home card ────────────────────────────────────────────────────
 
@@ -467,7 +626,6 @@
     const asn = state.assignments.find(a => a.coachUid === coach.coachUid || a.coachUsername === coach.coachUsername) || {};
     const latest = state.notes[0];
     const p = latest ? parseNote(latest.text) : null;
-    const m = asn.macroTargets;
     el.innerHTML = `
       <section class="pod mx-pod yc-pod yc-home" aria-label="Your coach">
         ${head(total ? `<span class="mx-chip mx-chip--brass mx-chip--sm">${total} new</span>` : '')}
@@ -475,6 +633,7 @@
           <span class="mx-row-ico"><span class="ui-icon">${icon('users')}</span></span>
           <div class="mx-row-main"><span class="mx-kicker">Coached by</span><span class="mx-row-title">${esc(active.map(a => a.coachUsername).join(', '))}</span></div>
         </div>
+        ${overviewHtml(asn, true)}
         ${latest ? `
         <button type="button" class="mx-row yc-home-msg" data-yc-open="ycNotes">
           <span class="mx-row-main">
@@ -482,12 +641,11 @@
             <span class="yc-note yc-note--clamp">${esc(p.text)}</span>
           </span>
         </button>` : ''}
-        ${asn.currentProgram ? `
-        <div class="mx-row"><div class="mx-row-main"><span class="mx-lbl">Program</span><span class="mx-row-title">${esc(asn.currentProgram)}</span></div></div>` : ''}
-        ${m ? `
-        <div class="mx-row"><div class="mx-row-main"><span class="mx-lbl">Macro targets</span><span class="mx-row-title">${m.calories} kcal · ${m.protein}P / ${m.carbs}C / ${m.fat}F</span></div></div>` : ''}
-        ${u.videos ? `
-        <div class="mx-row"><div class="mx-row-main"><span class="mx-lbl">Videos</span><span class="mx-row-title">${u.videos} new video${u.videos === 1 ? '' : 's'}</span></div></div>` : ''}
+        ${asn.currentProgram || u.videos ? `
+        <div class="ycv-foot">
+          ${asn.currentProgram ? `<span class="mx-tag"><span class="ui-icon">${icon('clipboard')}</span>${esc(asn.currentProgram)}</span>` : ''}
+          ${u.videos ? `<span class="mx-tag mx-tag--hi"><span class="ui-icon">${icon('video')}</span>${u.videos} new video${u.videos === 1 ? '' : 's'}</span>` : ''}
+        </div>` : ''}
         <button type="button" class="mx-outline mx-outline--block yc-home-open" data-yc-open="1">Open Your Coach</button>
       </section>`;
   }
