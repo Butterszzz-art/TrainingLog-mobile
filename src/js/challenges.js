@@ -268,6 +268,12 @@
   }
 
   function _celebrateMilestone(m) {
+    // Don't open on top of the PR card — wait until it's gone.
+    if (document.getElementById('_prModal')) {
+      setTimeout(() => _celebrateMilestone(m), 600);
+      return;
+    }
+    window.holdToastsForSpotlight?.();
     const el = document.createElement('div');
     el.className = 'milestone-celebrate';
     el.innerHTML = `
@@ -276,11 +282,17 @@
         <div class="mc-title">Badge Unlocked!</div>
         <div class="mc-name">${m.name}</div>
         <div class="mc-desc">${m.desc}</div>
-        <button class="mc-close" onclick="this.closest('.milestone-celebrate').remove()">Nice!</button>
+        <button class="mc-close" type="button">Nice!</button>
       </div>
     `;
+    const close = () => {
+      if (!el.parentNode) return;
+      el.remove();
+      window.flushToastQueue?.();
+    };
+    el.querySelector('.mc-close').addEventListener('click', close);
     document.body.appendChild(el);
-    setTimeout(() => { if (el.parentNode) el.remove(); }, 8000);
+    setTimeout(close, 8000);
   }
 
   /* ── Boot ─────────────────────────────────────────────────── */

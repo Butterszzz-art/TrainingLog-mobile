@@ -16,7 +16,7 @@
 
   // ── Toast ──────────────────────────────────────────────────────────────────
   // Toasts stack (max 3, newest nearest the nav) in #toastStack. Tap to
-  // dismiss. Styling lives in css/base.css (.tst*).
+  // dismiss. On the Log tab they show one at a time instead (see focus mode). Styling lives in css/base.css (.tst*).
   //
   // Timing: a burst of toasts leaves one at a time (each outlives the one
   // above it by TOAST_GAP), long messages get extra reading time, and every
@@ -87,7 +87,97 @@
     el._closing = true;
     clearTimeout(el._timer);
     el.classList.add('tst--out');
-    setTimeout(() => el.remove(), 220);
+    setTimeout(() => { el.remove(); _drainQueue(); }, 220);
+  }
+
+  // ── Focus mode: one notice at a time ───────────────────────────────────────
+  // Right after a set is logged several things can fire at once (next-session
+  // tip, deload hint, PR card, rest timer). On the Log tab — or while a
+  // celebration card is up — toasts queue and show one at a time, docked below
+  // the rest timer instead of on top of it.
+
+  const SPOTLIGHT_SEL  = '#_prModal, .milestone-celebrate';
+  const QUEUE_MAX      = 4;
+  const QUEUE_MAX_WAIT = 15000; // a tip that waited this long is stale — drop it
+  const _queue = [];
+  let _drainTimer = null;
+
+  function _onLogTab() {
+    const tab = document.getElementById('logTab');
+    return !!(tab && tab.classList.contains('active'));
+  }
+
+  function _spotlightOpen() {
+    return !!document.querySelector(SPOTLIGHT_SEL);
+  }
+
+  function _focusMode() {
+    return _onLogTab() || _spotlightOpen();
+  }
+
+  /** Top offset (px) that clears the rest timer / "Rest over" card when one is
+   * showing near the top of the screen. 0 = nothing to clear. */
+  function notifyTopOffset() {
+    let top = 0;
+    ['restBanner', 'restOverCard'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || el.hidden || !el.getClientRects().length) return;
+      const r = el.getBoundingClientRect();
+      if (r.height && r.bottom > 0 && r.top < window.innerHeight * 0.45) {
+        top = Math.max(top, Math.round(r.bottom + 8));
+      }
+    });
+    return top;
+  }
+
+  function _placeStack(stack) {
+    const top = _onLogTab() ? notifyTopOffset() : 0;
+    if (top) stack.style.setProperty('--tst-top', top + 'px');
+    else stack.style.removeProperty('--tst-top');
+  }
+
+  let _placeQueued = false;
+  function _onViewportChange() {
+    if (_placeQueued) return;
+    _placeQueued = true;
+    requestAnimationFrame(() => {
+      _placeQueued = false;
+      const stack = document.getElementById('toastStack');
+      if (stack && stack.children.length) _placeStack(stack);
+    });
+  }
+  window.addEventListener('scroll', _onViewportChange, { passive: true, capture: true });
+  window.addEventListener('resize', _onViewportChange, { passive: true });
+
+  function _drainQueue() {
+    clearTimeout(_drainTimer);
+    const now = Date.now();
+    while (_queue.length && now - _queue[0].at > QUEUE_MAX_WAIT) _queue.shift();
+    if (!_queue.length) return;
+    const stack = _toastStack();
+    if (_spotlightOpen() || _liveToasts(stack).length) {
+      // Re-check shortly — covers a celebration card closed without telling us.
+      _drainTimer = setTimeout(_drainQueue, 500);
+      return;
+    }
+    const next = _queue.shift();
+    _renderToast(next.text, next.type, next.duration);
+  }
+
+  /** A celebration card (PR, milestone) is about to open: toasts already up
+   * step aside and come back, in order, once it closes. */
+  function holdToastsForSpotlight() {
+    const stack = document.getElementById('toastStack');
+    if (!stack) return;
+    const now = Date.now();
+    _liveToasts(stack).reverse().forEach(t => {
+      _queue.unshift({ text: t._text, type: t._type, duration: TOAST_MIN_LEFT + 1000, at: now });
+      t._closing = true;
+      clearTimeout(t._timer);
+      t.classList.add('tst--out');
+      setTimeout(() => t.remove(), 220);
+    });
+    _queue.splice(QUEUE_MAX);
   }
 
   /**
@@ -101,6 +191,24 @@
 
     const text  = String(msg == null ? '' : msg).replace(LEADING_EMOJI, '').trim();
     const stack = _toastStack();
+
+    if (_focusMode()) {
+      const live = _liveToasts(stack);
+      const dupe = t => t.text === text && t.type === type;
+      if (live.some(t => t._text === text && t._type === type) || _queue.some(dupe)) return;
+      if (live.length || _spotlightOpen() || _queue.length) {
+        _queue.push({ text, type, duration, at: Date.now() });
+        if (_queue.length > QUEUE_MAX) _queue.shift();
+        _drainQueue();
+        return;
+      }
+    }
+    _renderToast(text, type, duration);
+  }
+
+  function _renderToast(text, type, duration) {
+    const stack = _toastStack();
+    _placeStack(stack);
 
     // Same message already up: replace it rather than stacking a duplicate.
     let live = _liveToasts(stack);
@@ -132,7 +240,7 @@
     el.setAttribute('role', type === 'error' ? 'alert' : 'status');
     el.innerHTML =
       `<span class="tst-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${TOAST_ICONS[type]}</svg></span>` +
-      `<span class="tst-body"><span class="tst-kick">${TOAST_KICKERS[type]}</span><span class="tst-msg">${_esc(text)}</span></span>` +
+      `<span class="tst-body"><span class="tst-head"><span class="tst-kick">${TOAST_KICKERS[type]}</span><span class="tst-skip">Tap to skip</span></span><span class="tst-msg">${_esc(text)}</span></span>` +
       `<span class="tst-meter" aria-hidden="true"><span></span></span>`;
     el._text = text;
     el._type = type;
@@ -325,6 +433,9 @@
   // ── Exports ───────────────────────────────────────────────────────────────
 
   window.showToast        = showToast;
+  window.flushToastQueue  = _drainQueue;
+  window.holdToastsForSpotlight = holdToastsForSpotlight;
+  window.notifyTopOffset  = notifyTopOffset;
   // ~35 call sites use nativeToast(), which was never defined, so they were silent.
   window.nativeToast      = function (msg, type, duration) { window.showToast(msg, type, duration); };
   window.showConfirm      = showConfirm;
