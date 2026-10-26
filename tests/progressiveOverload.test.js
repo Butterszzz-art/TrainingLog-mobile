@@ -122,4 +122,59 @@ describe('alt machine / alt gym entries', () => {
   test('only alt sessions logged → nothing to base a suggestion on', () => {
     expect(suggestNextSession('Bench', [{ log: [bench(100, { sessionCtx: { altGym: true } })] }])).toBeNull();
   });
+
+  const atGym = (weight, gymName, extra = {}) => bench(weight, { sessionCtx: { altMachine: false, altGym: true, gymName, ...extra } });
+
+  test('at a saved gym, suggestions come from earlier visits to that gym only', () => {
+    const workouts = [
+      { log: [atGym(80, 'PureGym Soho')] },
+      { log: [bench(100)] },
+      { log: [atGym(60, 'Hotel')] },
+    ];
+    const here = suggestNextSession('Bench', workouts, { gymKey: 'puregym soho' });
+    expect(here.previousSets).toEqual([{ reps: 8, weight: 80 }]);
+    expect(here.basedOnSessions).toBe(1);
+    // The usual gym still only sees usual-gym sessions.
+    expect(suggestNextSession('Bench', workouts, { gymKey: '' }).previousSets).toEqual([{ reps: 8, weight: 100 }]);
+    // A gym with no history has nothing to go on.
+    expect(suggestNextSession('Bench', workouts, { gymKey: 'new place' })).toBeNull();
+    // An unnamed gym is never compared.
+    expect(suggestNextSession('Bench', workouts, { gymKey: null })).toBeNull();
+  });
+
+  test('gym names match regardless of case and spacing', () => {
+    const workouts = [{ log: [atGym(80, '  PureGym   SOHO ')] }];
+    expect(suggestNextSession('Bench', workouts, { gymKey: 'puregym soho' }).previousSets).toEqual([{ reps: 8, weight: 80 }]);
+  });
+
+  test('an entry at a named gym is judged against that gym', () => {
+    const current = atGym(82.5, 'PureGym Soho');
+    const workouts = [{ log: [atGym(80, 'PureGym Soho')] }, { log: [bench(100)] }, { log: [current] }];
+    const next = suggestNextSession(current, workouts);
+    expect(next).not.toBeNull();
+    expect(next.basedOnSessions).toBe(2);
+  });
+
+  test('a different machine at a saved gym is still not compared', () => {
+    const workouts = [{ log: [atGym(80, 'PureGym Soho', { altMachine: true })] }];
+    expect(suggestNextSession('Bench', workouts, { gymKey: 'puregym soho' })).toBeNull();
+  });
+});
+
+describe('isComparableEntry / entryGymKey', () => {
+  const { isComparableEntry, entryGymKey } = require('../progressiveOverload');
+  test('keys', () => {
+    expect(entryGymKey({})).toBe('');
+    expect(entryGymKey({ sessionCtx: { altMachine: true } })).toBeNull();
+    expect(entryGymKey({ sessionCtx: { altGym: true, gymName: '' } })).toBeNull();
+    expect(entryGymKey({ sessionCtx: { altGym: true, gymName: ' A  B ' } })).toBe('a b');
+    expect(entryGymKey({}, { _sessionCtx: { altGym: true, gymName: 'X' } })).toBe('x');
+  });
+  test('comparable only at the same gym', () => {
+    const e = { sessionCtx: { altGym: true, gymName: 'X' } };
+    expect(isComparableEntry(e, null, 'x')).toBe(true);
+    expect(isComparableEntry(e, null, '')).toBe(false);
+    expect(isComparableEntry({}, null, '')).toBe(true);
+    expect(isComparableEntry({}, null, null)).toBe(false);
+  });
 });

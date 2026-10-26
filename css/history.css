@@ -151,3 +151,81 @@
 #logHistoryTab .macro-meal .mx-row-title { font-size: 14px; }
 #logHistoryTab .macro-meal-vals { display: flex; gap: 6px; flex: none; }
 #logHistoryTab .hist-fallback { list-style: none; margin: 0; }
+
+/* ── Alt Gym / Alt Machine tags (history.js) ──────────────────── */
+#logHistoryContainer .hist-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+#logHistoryContainer .hist-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e6a817;
+  border: 1px solid rgba(230, 168, 23, 0.4);
+  border-radius: 999px;
+  padding: 2px 9px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#logHistoryContainer .hist-tag-pod { margin-bottom: 12px; }
+#logHistoryContainer .hist-tag-copy {
+  margin: 6px 0 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.45;
+}
+#logHistoryContainer .hist-card-end { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+#logHistoryContainer .hist-tag-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#logHistoryContainer .hist-tag-actions--quiet { margin: 0 4px 12px; }
+#logHistoryContainer .hist-tag-btn {
+  margin: 0;
+  box-shadow: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#logHistoryContainer .hist-tag-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+/* Per-exercise machine toggle — a quiet icon until it's on. */
+#logHistoryContainer .hist-machine-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 8px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  opacity: 0.6;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#logHistoryContainer .hist-machine-btn.is-on { color: #e6a817; opacity: 1; }

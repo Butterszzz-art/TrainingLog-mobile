@@ -3,20 +3,50 @@ function normalizeExerciseName(entry) {
 }
 
 /**
- * True when an entry was logged on different equipment (Alt Machine) or at a
- * different gym (Alt Gym). Those sets aren't comparable to normal sessions, so
- * they're left out of "last time", progression rates and PRs — but still count
- * for volume, streaks and history.
+ * Which "gym" an entry's numbers belong to, for comparisons:
+ *   ''    — the usual gym (no tag)
+ *   'x'   — a saved alt gym, by normalised name
+ *   null  — not comparable with anything: a different machine, or an alt
+ *           gym with no name
  *
  * New entries carry their own `sessionCtx`. Older workouts were tagged as a
  * whole via `workout._sessionCtx`, which applies when the entry has no tag.
  */
-function isAltSessionEntry(entry, workout) {
-  const ctx = (entry && entry.sessionCtx) || (workout && workout._sessionCtx);
-  return !!(ctx && (ctx.altMachine || ctx.altGym));
+function normalizeGymName(name) {
+  return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-function getLastEntry(exerciseName, workouts) {
+function entryGymKey(entry, workout) {
+  const ctx = (entry && entry.sessionCtx) || (workout && workout._sessionCtx);
+  if (!ctx) return '';
+  if (ctx.altMachine) return null;
+  if (ctx.altGym) return normalizeGymName(ctx.gymName) || null;
+  return '';
+}
+
+/** True when an entry's numbers can be compared with sessions at `gymKey`. */
+function isComparableEntry(entry, workout, gymKey = '') {
+  const key = entryGymKey(entry, workout);
+  return key !== null && gymKey !== null && key === gymKey;
+}
+
+/**
+ * True for anything not logged normally at the usual gym. PRs only count
+ * usual-gym, usual-machine sets.
+ */
+function isAltSessionEntry(entry, workout) {
+  return entryGymKey(entry, workout) !== '';
+}
+
+/** The gym being trained at right now ('' usual, null unnamed alt gym). */
+function currentGymKey() {
+  if (typeof window !== 'undefined' && typeof window.getCurrentGymKey === 'function') {
+    return window.getCurrentGymKey();
+  }
+  return '';
+}
+
+function getLastEntry(exerciseName, workouts, gymKey = '') {
   if (!Array.isArray(workouts)) return null;
   const targetName = String(exerciseName || '').trim().toLowerCase();
   if (!targetName) return null;
@@ -24,13 +54,13 @@ function getLastEntry(exerciseName, workouts) {
   for (let i = workouts.length - 1; i >= 0; i--) {
     const w = workouts[i];
     if (!w || !Array.isArray(w.log)) continue;
-    const entry = w.log.find(e => normalizeExerciseName(e) === targetName && !isAltSessionEntry(e, w));
+    const entry = w.log.find(e => normalizeExerciseName(e) === targetName && isComparableEntry(e, w, gymKey));
     if (entry) return entry;
   }
   return null;
 }
 
-function getExerciseHistory(exerciseName, workouts) {
+function getExerciseHistory(exerciseName, workouts, gymKey = '') {
   if (!Array.isArray(workouts)) return [];
   const targetName = String(exerciseName || '').trim().toLowerCase();
   if (!targetName) return [];
@@ -39,7 +69,7 @@ function getExerciseHistory(exerciseName, workouts) {
   workouts.forEach(workout => {
     if (!Array.isArray(workout?.log)) return;
     workout.log.forEach(entry => {
-      if (normalizeExerciseName(entry) === targetName && !isAltSessionEntry(entry, workout)) {
+      if (normalizeExerciseName(entry) === targetName && isComparableEntry(entry, workout, gymKey)) {
         history.push(entry);
       }
     });
@@ -119,16 +149,20 @@ function roundToIncrement(value, increment) {
   return Number((Math.round(value / increment) * increment).toFixed(2));
 }
 
-function suggestNextSession(exercise, workouts = []) {
+function suggestNextSession(exercise, workouts = [], options = {}) {
   const exerciseName = typeof exercise === 'string' ? exercise : exercise?.exercise;
   const targetName = String(exerciseName || '').trim();
   if (!targetName) return null;
 
-  // A set logged on alt equipment or at another gym says nothing about the
-  // usual setup, so it can't be the basis for next session's suggestion.
-  if (typeof exercise === 'object' && exercise && isAltSessionEntry(exercise)) return null;
+  // Only compare like with like: an entry is judged against sessions at its
+  // own gym; a name alone against the gym being trained at now. A different
+  // machine (or an unnamed gym) has nothing to compare with.
+  const gymKey = (typeof exercise === 'object' && exercise)
+    ? entryGymKey(exercise)
+    : (options.gymKey !== undefined ? options.gymKey : currentGymKey());
+  if (gymKey === null) return null;
 
-  const history = getExerciseHistory(targetName, workouts);
+  const history = getExerciseHistory(targetName, workouts, gymKey);
   const lastEntry = (typeof exercise === 'object' && exercise)
     ? exercise
     : (history.length ? history[history.length - 1] : null);
@@ -238,10 +272,16 @@ function getProgressiveOverloadSuggestion(exerciseName, workouts) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { getProgressiveOverloadSuggestion, suggestNextSession, isAltSessionEntry };
+  module.exports = {
+    getProgressiveOverloadSuggestion, suggestNextSession,
+    isAltSessionEntry, isComparableEntry, entryGymKey, normalizeGymName
+  };
 }
 if (typeof window !== 'undefined') {
   window.getProgressiveOverloadSuggestion = getProgressiveOverloadSuggestion;
   window.suggestNextSession = suggestNextSession;
   window.isAltSessionEntry = isAltSessionEntry;
+  window.isComparableEntry = isComparableEntry;
+  window.entryGymKey = entryGymKey;
+  window.normalizeGymName = normalizeGymName;
 }

@@ -3,8 +3,9 @@
  * Three niche quality-of-life features:
  *
  * 1. Vacation Mode   – pauses streak & program tracking, shows banner on home.
- * 2. Alt-Machine flag – tags exercises logged on different equipment than usual.
- * 3. Alt-Gym flag     – tags exercises logged at a different gym.
+ * 2. Alt-Machine flag – per exercise: logged on different equipment than usual.
+ * 3. Alt-Gym flag     – per session: logged at another gym, picked from the
+ *                       gyms you've used before so visits compare with each other.
  *
  * All state lives in localStorage so it survives page reloads.
  */
@@ -172,38 +173,46 @@
   window.renderSickCard = renderSickCard;
   window.renderSickBanner = renderSickBanner;
 
-  // ── 2 & 3. ALT-MACHINE / ALT-GYM (per-session flags) ──────────────────────
+  // ── 2 & 3. ALT-MACHINE / ALT-GYM ─────────────────────────────────────────
   //
-  // While a flag is on, every exercise logged gets a `sessionCtx` tag. Tagged
-  // entries are skipped by "last time", progression and PR checks (see
-  // isAltSessionEntry in progressiveOverload.js) but still count for volume,
-  // streaks and history.
+  // Alt Gym is a session flag: while it's on, every exercise logged is tagged
+  // with the gym's name (`entry.sessionCtx`). Sessions at the same named gym
+  // are compared with each other; the usual gym's numbers and PRs stay
+  // separate. Alt Machine is per exercise — a toggle on the log form and in
+  // each card's menu — and passed in to applySessionContext().
+  // Comparison rules live in progressiveOverload.js (entryGymKey).
 
   const SESSION_CTX_KEY = 'sessionContext';
-  const EMPTY_CTX = { altMachine: false, altGym: false, gymName: '', date: null };
+  const EMPTY_CTX = { altGym: false, gymName: '', date: null };
+  const MAX_SAVED_GYMS = 6;
 
   function _today() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  function _escapeAttr(str) {
+  function _esc(str) {
     return String(str || '')
-      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
       .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function _gymKey(name) {
+    return typeof window.normalizeGymName === 'function'
+      ? window.normalizeGymName(name)
+      : String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
   }
 
   function getSessionContext() {
     const ctx = _get(SESSION_CTX_KEY);
     if (!ctx) return { ...EMPTY_CTX };
-    // Flags are for one session. If they were set on an earlier day and never
-    // cleared (app closed before "End workout"), drop them rather than
-    // silently tagging today's lifts.
-    if ((ctx.altMachine || ctx.altGym) && ctx.date !== _today()) {
+    // One session only. Left on from an earlier day (app closed before
+    // "End workout")? Drop it rather than silently tagging today's lifts.
+    if (ctx.altGym && ctx.date !== _today()) {
       _set(SESSION_CTX_KEY, { ...EMPTY_CTX });
       return { ...EMPTY_CTX };
     }
-    return { ...EMPTY_CTX, ...ctx };
+    return { altGym: !!ctx.altGym, gymName: ctx.gymName || '', date: ctx.date || null };
   }
 
   function _saveSessionContext(patch) {
@@ -217,18 +226,26 @@
     renderSessionContextBar();
   }
 
+  /** The gym being trained at: '' usual, a name key, or null (unnamed). */
+  function getCurrentGymKey() {
+    const ctx = getSessionContext();
+    if (!ctx.altGym) return '';
+    return _gymKey(ctx.gymName) || null;
+  }
+
   /**
-   * Tag a log entry with the current flags before it's saved. Removes any old
-   * tag when no flag is on, so a re-saved entry never keeps a stale one.
+   * Tag a log entry before it's saved. `opts.altMachine` comes from the log
+   * form. Removes any old tag when nothing applies.
    */
-  function applySessionContext(entry) {
+  function applySessionContext(entry, opts = {}) {
     if (!entry || typeof entry !== 'object') return entry;
     const ctx = getSessionContext();
-    if (ctx.altMachine || ctx.altGym) {
+    const altMachine = !!opts.altMachine;
+    if (altMachine || ctx.altGym) {
       entry.sessionCtx = {
-        altMachine: !!ctx.altMachine,
-        altGym:     !!ctx.altGym,
-        gymName:    ctx.altGym ? (ctx.gymName || '').trim() : '',
+        altMachine,
+        altGym:  !!ctx.altGym,
+        gymName: ctx.altGym ? String(ctx.gymName || '').trim() : '',
       };
     } else {
       delete entry.sessionCtx;
@@ -236,74 +253,127 @@
     return entry;
   }
 
+  function _readArray(key) {
+    try {
+      const v = JSON.parse(localStorage.getItem(key));
+      return Array.isArray(v) ? v : [];
+    } catch { return []; }
+  }
+
+  /**
+   * Gyms you've logged at before, most recent first, built from the tags on
+   * your own workouts (so nothing extra to keep in sync).
+   * → [{ key, name, visits, lastDate }]
+   */
+  function getSavedGyms() {
+    const user = _user();
+    const byKey = new Map();
+    const workouts = [..._readArray(`workoutHistory_${user}`), ..._readArray(`workouts_${user}`)];
+    workouts.forEach(w => {
+      const date = String(w?.date || '').slice(0, 10);
+      (Array.isArray(w?.log) ? w.log : []).forEach(e => {
+        const ctx = e?.sessionCtx || w?._sessionCtx;
+        if (!ctx?.altGym) return;
+        const name = String(ctx.gymName || '').trim();
+        const key = _gymKey(name);
+        if (!key) return;
+        const g = byKey.get(key) || { key, name, dates: new Set(), lastDate: '' };
+        g.dates.add(date);
+        if (date >= g.lastDate) { g.lastDate = date; g.name = name; }
+        byKey.set(key, g);
+      });
+    });
+    return [...byKey.values()]
+      .map(g => ({ key: g.key, name: g.name, visits: g.dates.size, lastDate: g.lastDate }))
+      .sort((a, b) => (a.lastDate < b.lastDate ? 1 : a.lastDate > b.lastDate ? -1 : a.name.localeCompare(b.name)));
+  }
+
   function _noteText(ctx) {
-    const tags = [
-      ctx.altMachine ? 'alt machine' : '',
-      ctx.altGym ? `alt gym${ctx.gymName ? ' (' + ctx.gymName + ')' : ''}` : '',
-    ].filter(Boolean).join(' + ');
-    return `⚠️ Exercises you log now will be tagged ${tags} and left out of progression and PRs.`;
+    const name = String(ctx.gymName || '').trim();
+    if (!name) return '⚠️ Pick or name the gym to compare with past visits. Until then these sets aren\'t compared, and your usual numbers and PRs are left alone.';
+    const known = getSavedGyms().find(g => g.key === _gymKey(name));
+    return known
+      ? `📍 Comparing with your ${known.visits === 1 ? 'last visit' : known.visits + ' past visits'} to ${name}. Your usual gym's numbers and PRs aren't affected.`
+      : `📍 First time at ${name} — today sets the baseline there. Your usual gym's numbers and PRs aren't affected.`;
+  }
+
+  function _markSelectedGym(bar, name) {
+    const key = _gymKey(name);
+    bar.querySelectorAll('.scb-gym-chip').forEach(chip => {
+      const on = chip.dataset.gymKey === key;
+      chip.classList.toggle('scb-chip--on', on);
+      chip.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
   }
 
   function renderSessionContextBar() {
     const bar = document.getElementById('sessionContextBar');
     if (!bar) return;
     const ctx = getSessionContext();
+    const gyms = ctx.altGym ? getSavedGyms().slice(0, MAX_SAVED_GYMS) : [];
 
     bar.innerHTML = `
       <div class="scb-wrap">
-        <!-- Alt Machine toggle -->
-        <button class="scb-chip ${ctx.altMachine ? 'scb-chip--on' : ''}"
-                onclick="window.toggleAltMachine()"
-                aria-pressed="${ctx.altMachine}"
-                title="Mark exercises as using different equipment than usual">
-          <span class="scb-chip-icon">🔧</span>
-          <span class="scb-chip-label">Alt&nbsp;Machine</span>
-          ${ctx.altMachine ? '<span class="scb-chip-badge">ON</span>' : ''}
-        </button>
-
-        <!-- Alt Gym toggle + name input -->
-        <button class="scb-chip ${ctx.altGym ? 'scb-chip--on' : ''}"
+        <button type="button" class="scb-chip ${ctx.altGym ? 'scb-chip--on' : ''}"
                 onclick="window.toggleAltGym()"
                 aria-pressed="${ctx.altGym}"
-                title="Mark exercises as done at a different gym">
+                title="Training somewhere else? Sessions are compared per gym">
           <span class="scb-chip-icon">📍</span>
           <span class="scb-chip-label">Alt&nbsp;Gym</span>
           ${ctx.altGym ? '<span class="scb-chip-badge">ON</span>' : ''}
         </button>
-
-        ${ctx.altGym ? `
-          <input class="scb-gym-input"
-                 id="altGymNameInput"
-                 type="text"
-                 placeholder="Gym name (optional)"
-                 value="${_escapeAttr(ctx.gymName)}"
-                 oninput="window.setAltGymName(this.value)"
-                 maxlength="40" />
-        ` : ''}
       </div>
-      ${ctx.altMachine || ctx.altGym ? '<p class="scb-note"></p>' : ''}`;
+      ${ctx.altGym ? `
+        ${gyms.length ? `
+          <div class="scb-gyms" role="radiogroup" aria-label="Saved gyms">
+            ${gyms.map(g => `
+              <button type="button" class="scb-chip scb-gym-chip" role="radio" aria-checked="false"
+                      data-gym-key="${_esc(g.key)}" data-gym-name="${_esc(g.name)}"
+                      onclick="window.setAltGymName(this.dataset.gymName, true)">
+                <span class="scb-chip-label">${_esc(g.name)}</span>
+                <span class="scb-gym-visits">${g.visits}×</span>
+              </button>`).join('')}
+          </div>` : ''}
+        <input class="scb-gym-input"
+               id="altGymNameInput"
+               type="text"
+               aria-label="Gym name"
+               placeholder="${gyms.length ? 'Or type a new gym' : 'Gym name'}"
+               value="${_esc(ctx.gymName)}"
+               oninput="window.setAltGymName(this.value)"
+               maxlength="40" />
+        <p class="scb-note"></p>` : ''}`;
 
-    // textContent, not innerHTML — the gym name is user input.
-    const note = bar.querySelector('.scb-note');
-    if (note) note.textContent = _noteText(ctx);
-  }
-
-  function toggleAltMachine() {
-    const ctx = getSessionContext();
-    setSessionContext({ altMachine: !ctx.altMachine });
+    if (ctx.altGym) {
+      // textContent, not innerHTML — the gym name is user input.
+      bar.querySelector('.scb-note').textContent = _noteText(ctx);
+      _markSelectedGym(bar, ctx.gymName);
+    }
   }
 
   function toggleAltGym() {
     const ctx = getSessionContext();
     setSessionContext({ altGym: !ctx.altGym });
+    document.dispatchEvent(new CustomEvent('tl:gym-changed', { detail: { gymName: ctx.gymName } }));
   }
 
-  function setAltGymName(name) {
-    // Save and update the note only. Re-rendering the bar here would rebuild
-    // the input and drop focus after every keystroke.
+  /**
+   * Set the gym's name. While typing, only the note and chip highlight are
+   * updated — re-rendering would rebuild the input and drop focus.
+   */
+  function setAltGymName(name, fromChip = false) {
     const ctx = _saveSessionContext({ gymName: String(name || '').slice(0, 40) });
-    const note = document.querySelector('#sessionContextBar .scb-note');
+    const bar = document.getElementById('sessionContextBar');
+    if (!bar) return;
+    if (fromChip) {
+      const input = bar.querySelector('#altGymNameInput');
+      if (input) input.value = ctx.gymName;
+    }
+    const note = bar.querySelector('.scb-note');
     if (note) note.textContent = _noteText(ctx);
+    _markSelectedGym(bar, ctx.gymName);
+    // "Last time" hints and pre-fill depend on the gym — refresh them.
+    document.dispatchEvent(new CustomEvent('tl:gym-changed', { detail: { gymName: ctx.gymName } }));
   }
 
   /** Call after a workout is successfully saved to reset single-use flags. */
@@ -336,8 +406,9 @@
 
   window.getSessionContext        = getSessionContext;
   window.applySessionContext      = applySessionContext;
-  window.toggleAltMachine         = toggleAltMachine;
   window.toggleAltGym             = toggleAltGym;
+  window.getCurrentGymKey         = getCurrentGymKey;
+  window.getSavedGyms             = getSavedGyms;
   window.setAltGymName            = setAltGymName;
   window.clearSessionContextAfterSave = clearSessionContextAfterSave;
   window.renderSessionContextBar  = renderSessionContextBar;
