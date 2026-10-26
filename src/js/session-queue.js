@@ -954,8 +954,43 @@
     }
   }
 
+  /** "New exercise" button: done with this exercise, clear the form so
+   * the next one can be typed straight in. Nothing is logged or lost —
+   * sets already logged stay in today's session. */
+  function startNewExercise() {
+    if (typeof document === 'undefined') return;
+    const exerciseEl = document.getElementById('exercise');
+    if (exerciseEl) exerciseEl.value = '';
+    ['exerciseLiveTitle', 'exerciseStatsLine'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) { el.hidden = true; el.textContent = ''; }
+    });
+    const hint = document.getElementById('exerciseNameHint');
+    if (hint) hint.style.display = 'none';
+    const overload = document.getElementById('overloadHint');
+    if (overload) overload.innerHTML = '';
+    // Drop any extra set rows so the next exercise starts from one set.
+    const setsInput = document.getElementById('sets');
+    if (setsInput) setsInput.value = '1';
+    if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
+    ['maxedOutToggle', 'altMachineToggle'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = false;
+    });
+    _resetQuickLogSetOpts();
+    _qlExerciseName = '';
+    if (typeof global.renderInjuryWarning === 'function') global.renderInjuryWarning('');
+    if (typeof global.renderExerciseVideoHint === 'function') global.renderExerciseVideoHint('');
+    initQuickLog(''); // hides the stepper panel until a name is typed
+    if (typeof global.updateAddButtonState === 'function') global.updateAddButtonState();
+    if (exerciseEl) {
+      exerciseEl.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      exerciseEl.focus?.();
+    }
+  }
+
   const api = { getTodaysPlannedDay, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
-    initQuickLog, quickLogStep, quickLogSet, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
+    initQuickLog, quickLogStep, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
     refreshLogButtonLabel: _updateQuickLogButtonLabel };
@@ -965,6 +1000,7 @@
   global.toggleQuickLogUnilateral = toggleQuickLogUnilateral;
   global.toggleQuickLogSameSides = toggleQuickLogSameSides;
   global.quickLogSet = quickLogSet;
+  global.startNewExercise = startNewExercise;
   global.syncQuickLogFromRow0 = syncQuickLogFromRow0;
   global.startQuickLogFor = startQuickLogFor;
   global.syncQuickLogUnit = syncQuickLogUnit;
