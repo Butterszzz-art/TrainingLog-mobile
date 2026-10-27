@@ -125,7 +125,11 @@
   function invalidateBackendWorkouts(username) {
     if (username) _backendCache.delete(username);
     else _backendCache.clear();
+    // Something changed on purpose (save/delete): the next load may
+    // legitimately come back empty and should replace the saved copy.
+    _acceptEmptyNext.add(username || '*');
   }
+  const _acceptEmptyNext = new Set();
 
   /**
    * Fetch workouts that have already been hard-saved to the backend
@@ -162,13 +166,120 @@
     return _mergeUnique([local, remote]);
   }
 
+  /* ── Full history for long-range screens (Insights / progress) ──
+     Charts, exercise trends, milestones and goals need every workout
+     the user has ever logged, not just what is still in localStorage.
+     loadFullWorkoutHistory() merges local data with the backend's
+     hard-saved workouts and keeps a copy of the backend part:
+       - in memory, so sync readers (getFullWorkoutHistory) can use it;
+       - in IndexedDB, so the history survives app restarts and offline
+         use. IndexedDB rather than localStorage because the archiver
+         moves old workouts off localStorage to free its small quota. */
+
+  const _remoteSnapshot = new Map(); // username -> normalized backend workouts
+  const IDB_NAME = 'traininglog-cache';
+  const IDB_STORE = 'kv';
+
+  function _idbOpen() {
+    return new Promise((resolve, reject) => {
+      if (typeof indexedDB === 'undefined') { reject(new Error('No IndexedDB')); return; }
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function _idbGet(key) {
+    const db = await _idbOpen();
+    return new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function _idbSet(key, value) {
+    const db = await _idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  function _mirrorKey(username) {
+    return `backendWorkouts_${username}`;
+  }
+
+  /** Backend item -> the same shape the app stores locally. */
+  function _fromBackendItem(item) {
+    const inner = item && item.workout && typeof item.workout === 'object' ? item.workout : {};
+    const rawDate = String(inner.date || (item && item.date) || '');
+    // Local workouts use YYYY-MM-DD; the backend stores a full ISO string.
+    const date = /^\d{4}-\d{2}-\d{2}T/.test(rawDate) ? rawDate.slice(0, 10) : rawDate;
+    return {
+      ...inner,
+      id: inner.id || (item && item.id),
+      backendId: item && item.id,
+      date,
+      title: inner.title || inner.name || (item && item.title) || 'Workout'
+    };
+  }
+
+  /** Read the on-device copy of backend workouts into memory (no network). */
+  async function primeFullWorkoutHistory(username) {
+    if (!username || _remoteSnapshot.has(username)) return;
+    try {
+      const saved = await _idbGet(_mirrorKey(username));
+      if (Array.isArray(saved) && !_remoteSnapshot.has(username)) _remoteSnapshot.set(username, saved);
+    } catch { /* no IndexedDB — memory only */ }
+  }
+
+  /**
+   * Every workout we know about for `username`, synchronously: local
+   * stores plus the last backend load (or its on-device copy).
+   */
+  function getFullWorkoutHistory(username) {
+    if (!username) return [];
+    return _mergeUnique([getAllWorkoutsForUser(username), _remoteSnapshot.get(username) || []]);
+  }
+
+  /**
+   * Refresh the backend part (shared 5-minute cache) and return the full
+   * merged history. Offline or signed out, falls back to the on-device copy.
+   */
+  async function loadFullWorkoutHistory(username, opts) {
+    if (!username) return [];
+    await primeFullWorkoutHistory(username);
+    try {
+      if (typeof window !== 'undefined' && window.SERVER_URL && _authToken()) {
+        const items = await fetchBackendWorkoutItems(username, opts);
+        const remote = items.map(_fromBackendItem);
+        // Don't let an empty answer wipe a good copy (e.g. a server hiccup).
+        const acceptEmpty = _acceptEmptyNext.delete(username) | _acceptEmptyNext.delete('*');
+        if (remote.length || acceptEmpty || !(_remoteSnapshot.get(username) || []).length) {
+          _remoteSnapshot.set(username, remote);
+          _idbSet(_mirrorKey(username), remote).catch(() => {});
+        }
+      }
+    } catch { /* offline — keep the copy we have */ }
+    return getFullWorkoutHistory(username);
+  }
+
   if (typeof module !== 'undefined') {
     module.exports = {
       getAllWorkoutsForUser,
       getAllWorkoutsForUserIncludingBackend,
       fetchBackendWorkouts,
       fetchBackendWorkoutItems,
-      invalidateBackendWorkouts
+      invalidateBackendWorkouts,
+      getFullWorkoutHistory,
+      loadFullWorkoutHistory,
+      primeFullWorkoutHistory
     };
   }
   if (typeof window !== 'undefined') {
@@ -176,5 +287,18 @@
     window.getAllWorkoutsForUserIncludingBackend = getAllWorkoutsForUserIncludingBackend;
     window.fetchBackendWorkoutItems = fetchBackendWorkoutItems;
     window.invalidateBackendWorkouts = invalidateBackendWorkouts;
+    window.getFullWorkoutHistory = getFullWorkoutHistory;
+    window.loadFullWorkoutHistory = loadFullWorkoutHistory;
+    window.primeFullWorkoutHistory = primeFullWorkoutHistory;
+    // Load the on-device copy early (no network) so Insights has long-term
+    // history from the first render, even offline.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          const u = window.currentUser || (typeof localStorage !== 'undefined' && localStorage.getItem('fitnessAppUser'));
+          if (u) primeFullWorkoutHistory(u);
+        }, 1500);
+      });
+    }
   }
 })();

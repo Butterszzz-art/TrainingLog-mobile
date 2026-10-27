@@ -175,3 +175,69 @@ describe('fetchBackendWorkoutItems (shared cache + paging)', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('loadFullWorkoutHistory / getFullWorkoutHistory (Insights long-term history)', () => {
+  const {
+    loadFullWorkoutHistory,
+    getFullWorkoutHistory,
+    invalidateBackendWorkouts: invalidate
+  } = require('../src/js/workout-data');
+
+  const okResponse = (items) => ({ ok: true, json: async () => ({ success: true, items }) });
+
+  beforeEach(() => {
+    global.localStorage = makeLocalStorage();
+    localStorage.setItem('token', 'tok');
+    global.window = { SERVER_URL: 'https://backend.example' };
+    global.fetch = jest.fn();
+    invalidate();
+  });
+
+  afterEach(() => {
+    delete global.window;
+    delete global.fetch;
+  });
+
+  test('merges local workouts with backend ones and normalizes backend dates', async () => {
+    const user = 'full1';
+    localStorage.setItem(`workouts_${user}`, JSON.stringify([{ id: 'recent', date: '2026-10-20', log: [{}] }]));
+    global.fetch.mockResolvedValue(okResponse([
+      { id: 'fs-1', date: '2026-01-05T00:00:00.000Z', title: 'Push', workout: { id: 'old', date: '2026-01-05', log: [{}] } },
+      { id: 'fs-2', date: '2026-02-09T00:00:00.000Z', title: 'Pull', workout: { log: [{}] } }
+    ]));
+
+    const all = await loadFullWorkoutHistory(user);
+
+    expect(all.map(w => w.id)).toEqual(['old', 'fs-2', 'recent']);
+    expect(all[1].date).toBe('2026-02-09');
+    // Sync readers (exercise charts, milestones) now see the same history.
+    expect(getFullWorkoutHistory(user).map(w => w.id)).toEqual(['old', 'fs-2', 'recent']);
+  });
+
+  test('keeps the last good backend copy when the network fails', async () => {
+    const user = 'full2';
+    global.fetch.mockResolvedValueOnce(okResponse([
+      { id: 'fs-1', date: '2026-01-05T00:00:00.000Z', workout: { id: 'old', date: '2026-01-05', log: [{}] } }
+    ]));
+    await loadFullWorkoutHistory(user);
+
+    invalidate(user);
+    global.fetch.mockRejectedValue(new Error('offline'));
+    const all = await loadFullWorkoutHistory(user);
+
+    expect(all.map(w => w.id)).toEqual(['old']);
+  });
+
+  test('an unexpected empty answer does not wipe the saved copy', async () => {
+    const user = 'full3';
+    global.fetch.mockResolvedValueOnce(okResponse([
+      { id: 'fs-1', workout: { id: 'old', date: '2026-01-05', log: [{}] } }
+    ]));
+    await loadFullWorkoutHistory(user);
+
+    global.fetch.mockResolvedValue(okResponse([]));
+    const all = await loadFullWorkoutHistory(user, { force: true });
+
+    expect(all.map(w => w.id)).toEqual(['old']);
+  });
+});
