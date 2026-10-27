@@ -15550,9 +15550,9 @@ function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) 
 let _exChart = null; // Chart.js instance for exercise chart
 
 function _buildExerciseMap() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workouts = getProgressWorkoutsSync().filter(w => w && w.date);
   const map = {}; // exercise name → [{date, entry}]
-  workouts.sort((a, b) => a.date.localeCompare(b.date));
+  workouts.sort((a, b) => String(a.date).localeCompare(String(b.date)));
   workouts.forEach(w => {
     (w.log || []).forEach(e => {
       if (!e.exercise) return;
@@ -15916,8 +15916,18 @@ function renderBodybuildingProgressPanel(workouts) {
   `;
 }
 
-async function fetchWorkouts() {
+// Insights needs the whole history, not just the last 7 days in
+// `workouts_{user}` (older logs are archived locally, then to the backend).
+function getProgressWorkoutsSync() {
+  if (typeof window.getFullWorkoutHistory === 'function') return window.getFullWorkoutHistory(currentUser);
   return JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+}
+
+async function fetchWorkouts() {
+  if (typeof window.loadFullWorkoutHistory === 'function') {
+    try { return await window.loadFullWorkoutHistory(currentUser); } catch {}
+  }
+  return getProgressWorkoutsSync();
 }
 
 async function fetchWorkoutHistory() {
@@ -16065,7 +16075,7 @@ function renderProgressArchetypeSpotlight(context = {}) {
 
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   const archetype = getProgressArchetype();
-  const workouts = Array.isArray(context.workouts) ? context.workouts : (JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || []);
+  const workouts = Array.isArray(context.workouts) ? context.workouts : getProgressWorkoutsSync();
   const workoutHistory = Array.isArray(context.workoutHistory) ? context.workoutHistory : [];
   const cardioHistory = Array.isArray(context.cardioHistory) ? context.cardioHistory : (JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || []);
   const bodyweightHistory = Array.isArray(context.bodyweightHistory) ? context.bodyweightHistory : [];
@@ -16479,7 +16489,20 @@ function showExerciseProgress() {
   document.getElementById('trainingLoadPanel').style.display = 'none';
   document.getElementById('recoveryPanel').style.display = 'none';
   renderExerciseProgress();
-  fetchWorkouts().then(renderBodybuildingProgressPanel);
+  const shownCount = getProgressWorkoutsSync().length;
+  fetchWorkouts().then((all) => {
+    // Older workouts arrived from the backend — redraw, keeping the picked exercise.
+    if (all.length !== shownCount && document.querySelector('#exerciseProgressBtn.active')) {
+      const picked = document.querySelector('#exPicker')?.value || '';
+      renderExerciseProgress();
+      const picker = document.querySelector('#exPicker');
+      if (picked && picker && [...picker.options].some(o => o.value === picked)) {
+        picker.value = picked;
+        picker.dispatchEvent(new Event('change'));
+      }
+    }
+    renderBodybuildingProgressPanel(all);
+  });
   renderProgressComplianceSummary();
   Promise.all([fetchWorkouts(), fetchWorkoutHistory(), fetchCardioHistory(), fetchBodyweightHistory()]).then(([workouts, workoutHistory, cardioHistory, bodyweightHistory]) => {
     renderProgressArchetypeSpotlight({
@@ -16675,7 +16698,7 @@ function renderPRs() {
 }
 
 function renderMilestones() {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workouts = getProgressWorkoutsSync();
   const milestones = checkMilestones(currentUser, workouts, calculateWorkoutVolume);
   const cont = document.getElementById('milestoneBadges');
   if (!cont) return;
@@ -16711,7 +16734,7 @@ function renderGoalBar() {
     return;
   }
   const topGoal = goals[0];
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workouts = getProgressWorkoutsSync();
   const progress = calculateGoalProgress(topGoal, workouts);
   const statusMeta = getGoalStatusMeta(progress.status);
   bar.innerHTML = `<div class="goal-card-track"><div class="goal-card-fill" style="background:${statusMeta.color};width:${progress.progressPercent}%;"></div></div><small class="goal-card-foot">${topGoal.title}: ${progress.currentValue.toFixed(1)}/${Number(topGoal.targetValue || 0).toFixed(1)} ${topGoal.unit || ''} • ${statusMeta.label}</small>`;
@@ -16862,7 +16885,7 @@ function renderGoalProgressList() {
   const list = document.getElementById('goalProgressList');
   if (!list) return;
   const goals = loadGoals(currentUser);
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workouts = getProgressWorkoutsSync();
 
   if (!Array.isArray(goals) || goals.length === 0) {
     list.innerHTML = '<h3>Goal Progress</h3><p style="color:var(--text-muted);">No SMART goals yet. Add one in Settings.</p>';
@@ -16911,12 +16934,12 @@ function showCoachInsights() {
   corner.appendChild(list);
 }
 
-function exportCSV() {
-  const workoutHistory = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+async function exportCSV() {
+  const workoutHistory = await fetchWorkouts();
   const rows = [['Date','Exercise','Sets','Reps','Weight']];
   workoutHistory.forEach(w => {
     (w.log||[]).forEach(e => {
-      rows.push([w.date, e.exercise, e.sets, e.repsArray.join('|'), e.weightsArray.join('|')]);
+      rows.push([w.date, e.exercise, e.sets, (e.repsArray || []).join('|'), (e.weightsArray || []).join('|')]);
     });
   });
   const csv = rows.map(r => r.join(',')).join('\n');
@@ -17099,7 +17122,7 @@ function isWorkoutCompleted(workout) {
 function renderTrainingCalendar(month, year) {
   const cal = document.getElementById('training-calendar');
   if (!cal) return;
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workouts = getProgressWorkoutsSync();
 
   cal.innerHTML = '';
 
