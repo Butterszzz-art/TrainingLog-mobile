@@ -125,6 +125,23 @@
     return out.slice(0, limit || 25);
   }
 
+  // Results from the device and both databases as they arrive: your own,
+  // coach and recent foods first, then Open Food Facts' best (Dutch first),
+  // USDA's best, then the rest. Either database may still be null (loading).
+  function combineSourceResults(localGroups, off, usda, limit) {
+    const o = off || [];
+    const u = usda || [];
+    return mergeResults(localGroups, [...o.slice(0, 12), ...u.slice(0, 6), ...o.slice(12), ...u.slice(6)], limit || 25);
+  }
+
+  // A search "found nothing good" when none of the first few results has
+  // every word typed in its name or brand (typos, Dutch words USDA doesn't
+  // know, a brand that isn't there). Then AI search is worth a try.
+  function isWeakSearch(query, foods, top) {
+    const list = (foods || []).slice(0, top || 5);
+    return !list.some(f => matchesQuery(f, query));
+  }
+
   // ── Food log entries ─────────────────────────────────────────────────
   // The food log is a flat list in localStorage (`foodLog_<user>`), one
   // entry per food logged. Cloud sync copies each entry to the server on
@@ -614,7 +631,7 @@
     amountLabel, editEntry, copyEntries, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
     scaleNutrients, gramsFor, sourceLabel, normalizeFood, kcalCheck, MICROS, microSummary,
-    matchesQuery, addRecent, mergeResults,
+    matchesQuery, addRecent, mergeResults, combineSourceResults, isWeakSearch,
     mealForHour, newEntryId, makeEntry, progressDelta, foodFromEntry, totals, entriesFor, groupByMeal, trimLog, migrateOldDiary,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
