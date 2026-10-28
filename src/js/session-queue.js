@@ -94,7 +94,7 @@
         <div class="pod pod--hero train-hero-card">
           <div class="pod-kicker">No session planned today</div>
           <p class="ws-empty-note" style="margin-top:8px;">Rest day, or no active program is assigned — log manually below whenever you're ready.</p>
-          <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="if(typeof startPerformanceMode==='function') startPerformanceMode();"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>
+          <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="_askGymThen(function(){ if(typeof startPerformanceMode==='function') startPerformanceMode(); })"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>
         </div>`;
       return;
     }
@@ -126,8 +126,8 @@
           <span>${pct}% &middot; ${doneSets} of ${totalSets} sets</span>
         </div>
         <div class="train-hero-tonnage-track"><div class="train-hero-tonnage-fill" style="width:${pct}%"></div></div>
-        <button class="cta-capsule train-hero-cta" onclick="if(typeof loadTodayProgramIntoLog==='function') loadTodayProgramIntoLog(); else goToQuickLog();">${doneSets ? 'Continue session' : 'Start session'}</button>
-        <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="if(typeof startPerformanceMode==='function') startPerformanceMode();"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>
+        <button class="cta-capsule train-hero-cta" onclick="_askGymThen(function(){ if(typeof loadTodayProgramIntoLog==='function') loadTodayProgramIntoLog(); else goToQuickLog(); })">${doneSets ? 'Continue session' : 'Start session'}</button>
+        <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="_askGymThen(function(){ if(typeof startPerformanceMode==='function') startPerformanceMode(); })"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>
       </div>`;
   }
 
@@ -1000,6 +1000,8 @@
   global.toggleQuickLogUnilateral = toggleQuickLogUnilateral;
   global.toggleQuickLogSameSides = toggleQuickLogSameSides;
   global.quickLogSet = quickLogSet;
+  // Start buttons ask "Where are you training?" first (session-context.js).
+  global._askGymThen = fn => (typeof global.askGymThen === 'function' ? global.askGymThen(fn) : fn());
   global.startNewExercise = startNewExercise;
   global.syncQuickLogFromRow0 = syncQuickLogFromRow0;
   global.startQuickLogFor = startQuickLogFor;
