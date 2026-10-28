@@ -64,6 +64,8 @@
     { name: 'foodLog',          key: u => `foodLog_${u}`,          mode: 'list', idField: 'id' },
     // The client's own foods (food-database.js / food-barcode.js).
     { name: 'customFoods',      key: u => `customFoods_${u}`,      mode: 'list', idField: 'id' },
+    // Saved meals (food-log-tools.js).
+    { name: 'mealTemplates',    key: u => `mealTemplates_${u}`,    mode: 'list', idField: 'id' },
     { name: 'programs',         key: u => `programs_${u}`,         mode: 'list', idField: 'id' },
     { name: 'activeProgram',    key: u => `activeProgram_${u}`,    mode: 'value' },
     { name: 'managedTemplates', key: u => `managedTemplates_${u}`, mode: 'list', idField: 'id' },

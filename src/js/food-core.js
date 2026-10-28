@@ -339,6 +339,151 @@
     };
   }
 
+  // "250 g", or "1 × 1 bakje (500g)" for a serving.
+  function amountLabel(e) {
+    const unit = (e && e.unit) || 'g';
+    const amount = e && e.amount != null ? e.amount : '';
+    return unit === 'g' || unit === 'ml' ? `${amount} ${unit}` : `${amount} × ${unit}`;
+  }
+
+  // ── Editing, copying, saved meals ────────────────────────────────────
+
+  // The entry with a new amount and/or meal/date. Nutrients are worked out
+  // again from the food it was made from, so per-100 data stays exact.
+  // changes: { grams, amount, unit, meal, date }
+  function editEntry(entry, changes) {
+    const c = changes || {};
+    const food = foodFromEntry(entry);
+    const out = { ...entry };
+    if (c.meal && MEALS.includes(c.meal)) out.meal = c.meal;
+    if (c.date && /^\d{4}-\d{2}-\d{2}$/.test(c.date)) out.date = c.date;
+    const g = num(c.grams);
+    if (food && g !== null && g > 0) {
+      NUTRIENT_KEYS.forEach(k => { delete out[k]; });
+      const n = scaleNutrients(food.per100, g);
+      Object.assign(out, n, { kcal: n.kcal || 0, protein: n.protein || 0, carbs: n.carbs || 0, fat: n.fat || 0 });
+      out.grams = round1(g);
+      out.amount = num(c.amount) ?? round1(g);
+      out.unit = c.unit || out.unit || food.basis;
+      if (!out.per100) { out.per100 = food.per100; out.basis = food.basis; }
+    }
+    return out;
+  }
+
+  // Copies of entries for another day (new ids, same meals and amounts).
+  function copyEntries(entries, toDate, { now, rand } = {}) {
+    let i = 0;
+    return (entries || []).map(e => ({
+      ...e,
+      id: newEntryId(toDate, rand ? `${rand}${i++}` : undefined),
+      date: toDate,
+      t: (now || 0) + i,
+    }));
+  }
+
+  // A saved meal ("my usual breakfast"): the foods and amounts, no date.
+  function templateFromEntries(name, entries, { id, now, rand } = {}) {
+    const items = (entries || []).map(e => {
+      const food = foodFromEntry(e);
+      return food ? { food, grams: e.grams || 100, amount: e.amount ?? e.grams, unit: e.unit || food.basis } : null;
+    }).filter(Boolean);
+    if (!items.length) return null;
+    const r = typeof rand === 'string' ? rand : Math.random().toString(36).slice(2, 10);
+    return { id: id || `meal:${r}`, name: String(name || '').trim().slice(0, 80) || 'Saved meal', items, updatedAt: now || 0 };
+  }
+
+  function entriesFromTemplate(tpl, { date, meal, now, rand } = {}) {
+    let i = 0;
+    return (tpl && Array.isArray(tpl.items) ? tpl.items : [])
+      .map(it => makeEntry(it.food, {
+        grams: it.grams, amount: it.amount, unit: it.unit, date, meal,
+        now: (now || 0) + i, rand: rand ? `${rand}${i++}` : undefined,
+      }));
+  }
+
+  // ── Recipes ──────────────────────────────────────────────────────────
+  // A recipe is one of your own foods (source 'recipe'): its nutrients per
+  // 100 g come from the ingredients, and "1 serving" is the total weight
+  // divided by the number of servings.
+  // input: { name, servings, ingredients: [{ food, grams }] }
+  // → { food, perServing } or { error }
+  function recipeFood(input, { id, now, rand } = {}) {
+    const r = input || {};
+    const name = String(r.name || '').trim().slice(0, 120);
+    if (!name) return { error: 'Give the recipe a name.' };
+    const servings = Math.round(num(r.servings) || 0);
+    if (servings < 1 || servings > 100) return { error: 'Number of servings must be between 1 and 100.' };
+    const items = (r.ingredients || []).filter(x => x && x.food && x.food.per100 && num(x.grams) > 0);
+    if (!items.length) return { error: 'Add at least one ingredient with an amount.' };
+    const totalGrams = items.reduce((s, x) => s + Number(x.grams), 0);
+    const sums = {};
+    const counts = {};
+    items.forEach(x => {
+      const n = scaleNutrients(x.food.per100, x.grams);
+      Object.keys(n).forEach(k => { sums[k] = (sums[k] || 0) + n[k]; counts[k] = (counts[k] || 0) + 1; });
+    });
+    const per100 = {};
+    Object.keys(sums).forEach(k => {
+      // Only when every ingredient has it, else the total would be too low.
+      if (counts[k] !== items.length && !['kcal', 'protein', 'carbs', 'fat'].includes(k)) return;
+      const v = (sums[k] * 100) / totalGrams;
+      per100[k] = k === 'kcal' ? Math.round(v) : round1(v);
+    });
+    ['kcal', 'protein', 'carbs', 'fat'].forEach(k => { if (per100[k] === undefined) per100[k] = 0; });
+    const serving = round1(totalGrams / servings);
+    const rid = typeof rand === 'string' ? rand : Math.random().toString(36).slice(2, 10);
+    const food = {
+      id: id || `custom:recipe-${rid}`,
+      source: 'recipe',
+      name,
+      brand: '',
+      basis: 'g',
+      per100,
+      servings: [{ label: `1 serving (${Math.round(serving)}g)`, grams: serving }, { label: `whole recipe (${Math.round(totalGrams)}g)`, grams: round1(totalGrams) }],
+      recipe: {
+        servings,
+        ingredients: items.map(x => ({ food: normalizeFood(x.food) || x.food, grams: round1(Number(x.grams)) })),
+      },
+      updatedAt: now || 0,
+    };
+    // Straight from the ingredient sums, so rounding per 100 g doesn't drift.
+    const perServing = {};
+    Object.keys(per100).forEach(k => {
+      const v = (sums[k] || 0) / servings;
+      perServing[k] = k === 'kcal' ? Math.round(v) : round1(v);
+    });
+    return { food, perServing };
+  }
+
+  // schema.org Recipe from a recipe web page (JSON-LD), for the URL import.
+  // → { name, servings, perServing: { kcal, protein, carbs, fat }, ingredients: [text] } or null
+  function parseRecipeJsonLd(html) {
+    const blocks = String(html || '').match(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi) || [];
+    const flatten = v => (Array.isArray(v) ? v.flatMap(flatten) : v && typeof v === 'object' ? [v, ...flatten(v['@graph'] || [])] : []);
+    for (const block of blocks) {
+      let data;
+      try { data = JSON.parse(block.replace(/^<script[^>]*>/i, '').replace(/<\/script>$/i, '')); } catch { continue; }
+      const recipe = flatten(data).find(x => [].concat(x['@type'] || []).includes('Recipe'));
+      if (!recipe) continue;
+      const n = recipe.nutrition || {};
+      const grams = v => { const m = /(\d+(?:[.,]\d+)?)/.exec(String(v || '')); return m ? Number(m[1].replace(',', '.')) : null; };
+      let kcal = grams(n.calories);
+      if (kcal !== null && /kj/i.test(String(n.calories)) && !/kcal/i.test(String(n.calories))) kcal = kcal / 4.184;
+      const yieldText = [].concat(recipe.recipeYield || [])[0];
+      return {
+        name: String(recipe.name || '').trim().slice(0, 120),
+        servings: Math.max(1, Math.min(100, Math.round(grams(yieldText) || 1))),
+        perServing: {
+          kcal: kcal === null ? null : Math.round(kcal),
+          protein: grams(n.proteinContent), carbs: grams(n.carbohydrateContent), fat: grams(n.fatContent),
+          fiber: grams(n.fiberContent), sugar: grams(n.sugarContent),
+        },
+        ingredients: [].concat(recipe.recipeIngredient || []).map(String).slice(0, 60),
+      };
+    }
+    return null;
+  }
+
   // ── CSV ──────────────────────────────────────────────────────────────
   // Quotes cells that need it, and defuses cells a spreadsheet would run
   // as a formula (food names from Open Food Facts are user-contributed).
@@ -375,6 +520,7 @@
   const api = {
     csvCell, toCsv, foodLogRows,
     normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
+    amountLabel, editEntry, copyEntries, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
     scaleNutrients, gramsFor, sourceLabel, normalizeFood,
     matchesQuery, addRecent, mergeResults,

@@ -3278,3 +3278,55 @@ button.food-search-item {
 
 .food-basis-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; }
 .food-basis-row select { width: auto; display: inline-block; padding: 4px 8px; }
+
+/* ── Food log tools (food-log-tools.js) ───────────────────── */
+.food-log-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 4px; }
+.food-diary-empty .food-log-toolbar { padding: 8px 0; }
+.food-mini-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.food-mini-btn:hover { color: var(--text-color); border-color: var(--primary); }
+.food-meal-hdr .food-mini-btn { padding: 1px 8px; font-size: 0.62rem; margin-right: 6px; }
+button.food-diary-nm {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.food-lib-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.food-lib-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 0 4px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.food-lib-to { text-transform: none; letter-spacing: 0; font-weight: 400; display: flex; align-items: center; gap: 6px; }
+.food-lib-to select { width: auto; padding: 3px 6px; font-size: 0.75rem; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; }
+.food-lib-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border-color); }
+.food-lib-row .food-add-btn { margin-left: 0; padding: 4px 10px; font-size: 0.78rem; }
+.food-lib-name { flex: 1; min-width: 0; font-size: 0.85rem; color: var(--text-color); }
+.food-lib-name small { display: block; color: var(--text-muted); font-size: 0.72rem; }
+.food-recipe-g { width: 92px; flex-shrink: 0; }
+.food-recipe-g input { padding: 5px 6px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-color); width: 100%; }
+/* The app's global button style adds a pill shape, drop shadow and block
+   display; these small controls inside the food log stay flat and inline. */
+.food-search-widget button, .food-diary-list button, .food-sheet button { box-shadow: none; }
+button.food-diary-nm { border-radius: 0; font-size: 0.85rem; display: block; }
+.food-mini-btn { display: inline-flex; align-items: center; width: auto; min-height: 0; line-height: 1.4; }
+.food-meal-hdr > span:last-child { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.food-own-link { border-radius: 0; width: auto; }
+.food-diary-list .food-mini-btn,
+.food-sheet .food-mini-btn,
+.food-sheet .food-diary-del,
+.food-diary-list .food-diary-del { display: inline-flex; margin: 0; width: auto; }
+.food-sheet .food-add-btn, .food-diary-list .food-add-btn, .food-search-widget .food-add-btn { width: auto; margin-top: 0; margin-bottom: 0; }
