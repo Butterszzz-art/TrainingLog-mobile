@@ -1080,6 +1080,10 @@ function injectSettingsMarkup() {
       window.pocketCoachAIConsent?.bindSettings(container);
       const hydrated = hydrateProfileFromPhaseState({ ...getDefaultSettings(), ...readStoredSettings() });
       applySettingsToUI(hydrated);
+      const gymPromptSetting = container.querySelector('#gymPromptSetting');
+      if (gymPromptSetting && typeof window.isGymPromptEnabled === 'function') {
+        gymPromptSetting.checked = window.isGymPromptEnabled();
+      }
       renderProfileGamificationSummary(container);
       if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
       if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
