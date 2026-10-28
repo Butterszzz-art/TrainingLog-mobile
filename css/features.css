@@ -3333,3 +3333,20 @@ button.food-diary-nm { border-radius: 0; font-size: 0.85rem; display: block; }
 .food-flag-badge { background: rgba(240,160,64,0.15); color: #f0a040; }
 .food-flag-dot { color: #f0a040; font-size: 0.75rem; }
 .food-selected-warn { margin: 0 0 8px; font-size: 0.75rem; color: #f0a040; line-height: 1.4; }
+
+/* ── Fibre & micros (secondary view under today's log) ───── */
+.food-micros { border-top: 1px solid var(--border-color); padding: 2px 12px 8px; }
+.food-micros summary { cursor: pointer; padding: 8px 0 6px; font-size: 0.78rem; font-weight: 600; color: var(--text-color); }
+.food-micros summary small { font-weight: 400; color: var(--text-muted); margin-left: 6px; }
+.food-micro-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 96px; align-items: center; gap: 10px; padding: 5px 0; font-size: 0.78rem; }
+.food-micro-lbl { color: var(--text-color); min-width: 0; }
+.food-micro-lbl small, .food-micro-val small { display: block; color: var(--text-muted); font-size: 0.66rem; }
+.food-micro-val { text-align: right; color: var(--text-color); white-space: nowrap; }
+.food-micro-bar { height: 5px; border-radius: 3px; background: var(--bg-color); overflow: hidden; }
+.food-micro-bar span { display: block; height: 100%; background: var(--primary); }
+.food-micro-row.is-low .food-micro-bar span,
+.food-micro-row.is-partial .food-micro-bar span { background: rgba(var(--acc-5fa87e), 0.5); }
+.food-micro-row.is-high .food-micro-bar span { background: #f0a040; }
+.food-micro-row.is-high .food-micro-val { color: #f0a040; }
+.food-micro-nodata { color: var(--text-muted); font-style: italic; }
+.food-micro-foot { margin: 6px 0 0; font-size: 0.66rem; color: var(--text-muted); line-height: 1.4; }

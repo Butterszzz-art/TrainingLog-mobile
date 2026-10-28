@@ -413,9 +413,53 @@
             <button type="button" class="food-diary-del" data-remove-entry="${_esc(e.id)}" aria-label="Remove ${_esc(e.name)}">✕</button>
           </div>`).join('')}`;
       }).join('')}
+      ${microsHtml(items)}
     `;
+    const det = host.querySelector('.food-micros');
+    if (det) det.addEventListener('toggle', () => { _microsOpen = det.open; });
   }
   window.renderFoodLog = renderFoodLog;
+
+  /* ── Fibre & micros (secondary view) ─────────────────────── */
+  // Collapsed under today's log so the macro screen stays about macros.
+  // A nutrient no logged food lists says "No data" instead of 0; when only
+  // some foods list it, the total is shown as a minimum.
+
+  let _microsOpen = false;
+
+  function _fmtMicro(v, unit) {
+    return `${v >= 100 ? Math.round(v) : Math.round(v * 10) / 10} ${unit}`;
+  }
+
+  function microsHtml(items) {
+    // Limits that depend on calories follow the day's target (not what's
+    // been eaten so far); without a target, the EU reference of 2000 kcal.
+    const target = _readJSON(`macroTargets_${_user()}`, null) || _readJSON('macroTargets', null);
+    const rows = Core.microSummary(items, Number(target && target.calories) > 0 ? Number(target.calories) : 2000);
+    const withData = rows.filter(r => r.status !== 'nodata').length;
+    const row = r => {
+      const target = r.ref ? `${r.kind === 'max' ? 'limit' : 'aim'} ${_fmtMicro(r.ref, r.unit)}` : '';
+      let value;
+      if (r.status === 'nodata') value = '<span class="food-micro-nodata">No data</span>';
+      else value = `${r.status === 'partial' ? '≥ ' : ''}${_fmtMicro(r.total, r.unit)}`;
+      const pct = r.percent === null ? 0 : Math.min(100, r.percent);
+      const sub = r.status === 'partial' ? `${r.missing} of ${r.of} foods have no data`
+        : r.status === 'high' ? `over the limit${r.note ? ` (${r.note})` : ''}`
+          : r.note && r.status !== 'nodata' ? r.note : '';
+      return `
+        <div class="food-micro-row is-${r.status}" title="${_esc(target)}">
+          <span class="food-micro-lbl">${_esc(r.label)}${sub ? `<small>${_esc(sub)}</small>` : ''}</span>
+          <span class="food-micro-bar" aria-hidden="true"><span style="width:${r.status === 'nodata' ? 0 : pct}%"></span></span>
+          <span class="food-micro-val">${value}<small>${_esc(target)}</small></span>
+        </div>`;
+    };
+    return `
+      <details class="food-micros"${_microsOpen ? ' open' : ''}>
+        <summary>Fibre &amp; micros <small>${withData ? `${withData} of ${rows.length} with data` : 'no data in today’s foods'}</small></summary>
+        ${rows.map(row).join('')}
+        <p class="food-micro-foot">Totals of the foods logged today, against the EU label reference intakes (fibre: Dutch Health Council). Quick-added macros have no micronutrients.</p>
+      </details>`;
+  }
 
   document.addEventListener('click', (e) => {
     const del = e.target.closest('[data-remove-entry]');

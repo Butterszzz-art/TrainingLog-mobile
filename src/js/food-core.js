@@ -175,6 +175,52 @@
     };
   }
 
+  // ── Fibre & micros ───────────────────────────────────────────────────
+  // Reference amounts per day for the secondary "Fibre & micros" view.
+  // Minerals and vitamins: the EU reference intakes on food labels (NRV,
+  // Regulation 1169/2011). Fibre: Dutch Health Council (30–40 g). Limits:
+  // sodium 2.4 g (6 g salt, Health Council), sugar and saturated fat as a
+  // share of the day's calories (WHO/Health Council: under 10 %).
+  const MICROS = [
+    { key: 'fiber', label: 'Fibre', unit: 'g', kind: 'min', ref: 30 },
+    { key: 'sugar', label: 'Sugars', unit: 'g', kind: 'max', refFromKcal: kcal => (kcal * 0.1) / 4, note: 'under 10 % of calories' },
+    { key: 'satFat', label: 'Saturated fat', unit: 'g', kind: 'max', refFromKcal: kcal => (kcal * 0.1) / 9, note: 'under 10 % of calories' },
+    { key: 'sodiumMg', label: 'Sodium', unit: 'mg', kind: 'max', ref: 2400 },
+    { key: 'ironMg', label: 'Iron', unit: 'mg', kind: 'min', ref: 14 },
+    { key: 'calciumMg', label: 'Calcium', unit: 'mg', kind: 'min', ref: 800 },
+    { key: 'potassiumMg', label: 'Potassium', unit: 'mg', kind: 'min', ref: 2000 },
+    { key: 'magnesiumMg', label: 'Magnesium', unit: 'mg', kind: 'min', ref: 375 },
+    { key: 'vitDUg', label: 'Vitamin D', unit: 'µg', kind: 'min', ref: 5 },
+    { key: 'b12Ug', label: 'Vitamin B12', unit: 'µg', kind: 'min', ref: 2.5 },
+  ];
+
+  // One row per nutrient for a day's entries:
+  //   { key, label, unit, kind, ref, total, missing, of, status, percent }
+  // status: 'nodata' (no food lists it), 'partial' (some foods don't: the
+  // total is a minimum), 'ok', 'low' (under a 'min' reference) or 'high'
+  // (over a 'max' limit). Never reports 0 for data that isn't there.
+  // dayKcal: the day's calorie target, for the limits that depend on it
+  // (defaults to the EU reference of 2000 kcal).
+  function microSummary(entries, dayKcal) {
+    const list = Array.isArray(entries) ? entries : [];
+    const kcal = num(dayKcal) || 2000;
+    return MICROS.map(m => {
+      const have = list.filter(e => num(e[m.key]) !== null);
+      const missing = list.length - have.length;
+      const total = have.reduce((s, e) => s + Number(e[m.key]), 0);
+      const ref = m.refFromKcal ? (kcal > 0 ? Math.round(m.refFromKcal(kcal)) : null) : m.ref;
+      const row = { key: m.key, label: m.label, unit: m.unit, kind: m.kind, ref, note: m.note || '', missing, of: list.length };
+      if (!list.length || !have.length) return { ...row, total: null, percent: null, status: 'nodata' };
+      const t = m.unit === 'g' ? round1(total) : Math.round(total * 10) / 10;
+      const percent = ref ? Math.round((t / ref) * 100) : null;
+      let status = 'ok';
+      if (ref && m.kind === 'max' && t > ref) status = 'high';
+      else if (missing) status = 'partial';
+      else if (ref && m.kind === 'min' && t < ref) status = 'low';
+      return { ...row, total: t, percent, status };
+    });
+  }
+
   // ── Data quality ─────────────────────────────────────────────────────
   // Calories vs. what the macros add up to (4P + 4C + 9F). Labels can
   // legitimately differ by fibre (2 kcal/g on EU labels), polyols, alcohol
@@ -540,7 +586,7 @@
     normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
     amountLabel, editEntry, copyEntries, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
-    scaleNutrients, gramsFor, sourceLabel, normalizeFood, kcalCheck,
+    scaleNutrients, gramsFor, sourceLabel, normalizeFood, kcalCheck, MICROS, microSummary,
     matchesQuery, addRecent, mergeResults,
     mealForHour, newEntryId, makeEntry, progressDelta, foodFromEntry, totals, entriesFor, groupByMeal, trimLog, migrateOldDiary,
   };
