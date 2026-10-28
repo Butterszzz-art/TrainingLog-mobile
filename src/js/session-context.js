@@ -183,7 +183,7 @@
   // Comparison rules live in progressiveOverload.js (entryGymKey).
 
   const SESSION_CTX_KEY = 'sessionContext';
-  const EMPTY_CTX = { altGym: false, gymName: '', date: null };
+  const EMPTY_CTX = { altGym: false, gymName: '', date: null, askedDate: null };
   const MAX_SAVED_GYMS = 6;
 
   function _today() {
@@ -212,7 +212,7 @@
       _set(SESSION_CTX_KEY, { ...EMPTY_CTX });
       return { ...EMPTY_CTX };
     }
-    return { altGym: !!ctx.altGym, gymName: ctx.gymName || '', date: ctx.date || null };
+    return { altGym: !!ctx.altGym, gymName: ctx.gymName || '', date: ctx.date || null, askedDate: ctx.askedDate || null };
   }
 
   function _saveSessionContext(patch) {
@@ -353,7 +353,8 @@
 
   function toggleAltGym() {
     const ctx = getSessionContext();
-    setSessionContext({ altGym: !ctx.altGym });
+    // Setting the gym by hand counts as answering "Where are you training?".
+    setSessionContext({ altGym: !ctx.altGym, askedDate: _today() });
     document.dispatchEvent(new CustomEvent('tl:gym-changed', { detail: { gymName: ctx.gymName } }));
   }
 
@@ -362,7 +363,7 @@
    * updated — re-rendering would rebuild the input and drop focus.
    */
   function setAltGymName(name, fromChip = false) {
-    const ctx = _saveSessionContext({ gymName: String(name || '').slice(0, 40) });
+    const ctx = _saveSessionContext({ gymName: String(name || '').slice(0, 40), askedDate: _today() });
     const bar = document.getElementById('sessionContextBar');
     if (!bar) return;
     if (fromChip) {
@@ -380,6 +381,108 @@
   function clearSessionContextAfterSave() {
     _set(SESSION_CTX_KEY, { ...EMPTY_CTX });
     renderSessionContextBar();
+  }
+
+  // ── "Where are you training?" — asked once when a workout starts ───────────
+
+  const GYM_PROMPT_OFF_KEY = 'gymPromptOff';
+
+  function isGymPromptEnabled() {
+    return _get(GYM_PROMPT_OFF_KEY) !== true;
+  }
+
+  function setGymPromptEnabled(on) {
+    _set(GYM_PROMPT_OFF_KEY, !on);
+  }
+
+  function _workoutInProgress() {
+    try {
+      const t = JSON.parse(localStorage.getItem('tl_workout_timer_v1'));
+      return !!(t && typeof t.startTimeMs === 'number');
+    } catch { return false; }
+  }
+
+  /** True when starting a workout now should ask where you're training. */
+  function shouldAskGym() {
+    if (!isGymPromptEnabled()) return false;
+    if (window.coachLoggingClient) return false;   // coach logging for a client
+    if (_workoutInProgress()) return false;        // already mid-workout
+    if (document.getElementById('gymAskSheet')) return false;
+    return getSessionContext().askedDate !== _today();
+  }
+
+  function _closeGymSheet() {
+    const el = document.getElementById('gymAskSheet');
+    if (el) el.remove();
+    document.removeEventListener('keydown', _gymSheetKeydown, true);
+  }
+
+  function _gymSheetKeydown(e) {
+    if (e.key === 'Escape') { e.preventDefault(); _closeGymSheet(); }
+  }
+
+  /**
+   * Run `fn` now, or — at the start of a workout — first ask which gym
+   * you're at, then run it. Returns true if the question was shown.
+   */
+  function askGymThen(fn) {
+    const run = () => { if (typeof fn === 'function') fn(); };
+    if (!shouldAskGym()) { run(); return false; }
+
+    const gyms = getSavedGyms().slice(0, MAX_SAVED_GYMS);
+    const wrap = document.createElement('div');
+    wrap.id = 'gymAskSheet';
+    wrap.className = 'gym-ask-overlay';
+    wrap.innerHTML = `
+      <div class="gym-ask-sheet" role="dialog" aria-modal="true" aria-labelledby="gymAskTitle">
+        <h2 class="gym-ask-title" id="gymAskTitle">Where are you training?</h2>
+        <p class="gym-ask-sub">Sessions are compared with others at the same gym.</p>
+        <button type="button" class="gym-ask-option gym-ask-option--usual" data-gym-choice="usual">
+          <span class="gym-ask-name">My usual gym</span>
+        </button>
+        ${gyms.map(g => `
+          <button type="button" class="gym-ask-option" data-gym-choice="saved" data-gym-name="${_esc(g.name)}">
+            <span class="gym-ask-name">📍 ${_esc(g.name)}</span>
+            <span class="gym-ask-meta">${g.visits} visit${g.visits === 1 ? '' : 's'}</span>
+          </button>`).join('')}
+        <form class="gym-ask-new" data-gym-choice="new">
+          <label class="gym-ask-label" for="gymAskNewName">${gyms.length ? 'Somewhere else' : 'Somewhere else? Name it'}</label>
+          <div class="gym-ask-new-row">
+            <input id="gymAskNewName" type="text" maxlength="40" placeholder="Gym name" autocomplete="off" />
+            <button type="submit" class="gym-ask-go">Start</button>
+          </div>
+        </form>
+        <button type="button" class="gym-ask-skip" data-gym-choice="never">Always my usual gym — don't ask again</button>
+      </div>`;
+    document.body.appendChild(wrap);
+
+    const choose = (altGym, gymName) => {
+      _saveSessionContext({ altGym, gymName: altGym ? gymName : '', askedDate: _today() });
+      _closeGymSheet();
+      renderSessionContextBar();
+      document.dispatchEvent(new CustomEvent('tl:gym-changed', { detail: { gymName: altGym ? gymName : '' } }));
+      run();
+    };
+
+    wrap.addEventListener('click', e => {
+      if (e.target === wrap) { _closeGymSheet(); return; }   // tap outside: cancel
+      const btn = e.target.closest('button[data-gym-choice]');
+      if (!btn) return;
+      const choice = btn.dataset.gymChoice;
+      if (choice === 'usual') choose(false, '');
+      else if (choice === 'saved') choose(true, btn.dataset.gymName || '');
+      else if (choice === 'never') { setGymPromptEnabled(false); choose(false, ''); }
+    });
+    wrap.querySelector('form').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = String(wrap.querySelector('#gymAskNewName').value || '').trim().slice(0, 40);
+      if (!name) { wrap.querySelector('#gymAskNewName').focus(); return; }
+      choose(true, name);
+    });
+    document.addEventListener('keydown', _gymSheetKeydown, true);
+    const first = wrap.querySelector('.gym-ask-option--usual');
+    if (first) first.focus();
+    return true;
   }
 
   // ── Init ────────────────────────────────────────────────────────────────────
@@ -409,6 +512,10 @@
   window.toggleAltGym             = toggleAltGym;
   window.getCurrentGymKey         = getCurrentGymKey;
   window.getSavedGyms             = getSavedGyms;
+  window.askGymThen               = askGymThen;
+  window.shouldAskGym             = shouldAskGym;
+  window.isGymPromptEnabled       = isGymPromptEnabled;
+  window.setGymPromptEnabled      = setGymPromptEnabled;
   window.setAltGymName            = setAltGymName;
   window.clearSessionContextAfterSave = clearSessionContextAfterSave;
   window.renderSessionContextBar  = renderSessionContextBar;
