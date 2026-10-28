@@ -234,15 +234,47 @@
 
   /* ── "Log food" sheet and the Macros tab's dock ──────────── */
 
-  function openFoodSearch({ focus = true } = {}) {
+  // The meal the sheet logs to when opened from a meal's "+" (else the
+  // last meal used, else one for the time of day).
+  let _sheetMeal = null;
+
+  // Search / Quick add / My foods tabs in the Log food sheet.
+  function showFoodSheetTab(name) {
+    const sheet = document.getElementById('foodSearchSheet');
+    if (!sheet) return;
+    sheet.querySelectorAll('[data-food-tab]').forEach(b => {
+      const on = b.dataset.foodTab === name;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    sheet.querySelectorAll('[data-food-panel]').forEach(p => { p.hidden = p.dataset.foodPanel !== name; });
+    if (name === 'mine' && typeof window.openFoodLibrary === 'function') {
+      window.openFoodLibrary({ host: document.getElementById('foodMyFoodsPanel'), meal: _sheetMeal || undefined });
+    }
+    if (name === 'search') setTimeout(() => document.getElementById('foodSearchInput')?.focus(), 30);
+  }
+  window.showFoodSheetTab = showFoodSheetTab;
+
+  document.addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-food-tab]');
+    if (tab) showFoodSheetTab(tab.dataset.foodTab);
+  });
+
+  function openFoodSearch({ focus = true, meal = null, tab = 'search' } = {}) {
     injectFoodSearchWidget();
     const sheet = document.getElementById('foodSearchSheet');
     if (!sheet) {
       document.getElementById('foodSearchWidget')?.scrollIntoView({ block: 'center' });
       return;
     }
+    _sheetMeal = Core.MEALS.includes(meal) ? meal : null;
+    const title = document.getElementById('foodSearchSheetTitle');
+    if (title) title.textContent = _sheetMeal ? `Log food · ${Core.MEAL_LABELS[_sheetMeal]}` : 'Log food';
+    const mealSel = document.getElementById('foodMealSelect');
+    if (mealSel && _sheetMeal) mealSel.value = _sheetMeal;
     sheet.hidden = false;
     document.body.classList.add('food-search-open');
+    showFoodSheetTab(tab);
     _updateDock();
     const input = document.getElementById('foodSearchInput');
     const results = document.getElementById('foodSearchResults');
@@ -256,6 +288,7 @@
     sheet.hidden = true;
     document.body.classList.remove('food-search-open');
     window.clearFoodSelection?.();
+    _sheetMeal = null;
     _updateDock();
   }
   window.openFoodSearch = openFoodSearch;
@@ -278,9 +311,22 @@
     const on = !!(_user() && tab && tab.classList.contains('active')
       && (!targets || !targets.classList.contains('is-hidden')) && !sheetOpen);
     dock.hidden = !on;
-    document.body.classList.toggle('food-dock-on', on);
+    const collapsed = _dockCollapsed();
+    dock.classList.toggle('is-collapsed', collapsed);
+    dock.querySelector('.food-dock-toggle')?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    document.body.classList.toggle('food-dock-on', on && !collapsed);
+    document.body.classList.toggle('food-dock-mini', on && collapsed);
   }
   window.updateFoodDock = _updateDock;
+
+  // Collapsed = one round search button; remembered on this device.
+  function _dockCollapsed() {
+    try { return localStorage.getItem('foodDockCollapsed') === '1'; } catch { return false; }
+  }
+  window.toggleFoodDock = function () {
+    try { localStorage.setItem('foodDockCollapsed', _dockCollapsed() ? '0' : '1'); } catch { /* storage blocked */ }
+    _updateDock();
+  };
 
   function _watchDock() {
     const watch = ['macroTab', 'macrosTargetsView'].map(id => document.getElementById(id)).filter(Boolean);
@@ -350,7 +396,7 @@
     }
     document.getElementById('foodSearchInput').value = '';
     const mealSel = document.getElementById('foodMealSelect');
-    if (mealSel) mealSel.value = _lastMeal || Core.mealForHour(new Date().getHours());
+    if (mealSel) mealSel.value = _sheetMeal || _lastMeal || Core.mealForHour(new Date().getHours());
     _refreshBadges();
   }
   window.selectFoodForLogging = _selectFood;
@@ -481,28 +527,41 @@
     renderShareAsk();
     const items = Core.entriesFor(loadLog(), _today());
     _updateMicrosButton(items);
-    const toolbar = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
-    if (!items.length) { host.innerHTML = toolbar ? `<div class="food-diary-empty">${toolbar}</div>` : ''; return; }
+    const icons = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
     const tot = Core.totals(items);
     const groups = Core.groupByMeal(items);
 
+    // Every meal gets a section; empty ones are a faint "+" placeholder.
     host.innerHTML = `
-      <div class="food-diary-hdr">
-        <span>🍽️ Today's food log</span>
-        <span class="food-diary-tot">${tot.kcal} kcal · ${Math.round(tot.protein)}P / ${Math.round(tot.carbs)}C / ${Math.round(tot.fat)}F</span>
+      <div class="food-log-hdr">
+        <span class="mx-lbl">Food log</span>
+        ${items.length ? `<span class="food-log-tot">${tot.kcal} kcal</span>` : ''}
+        ${icons}
       </div>
-      ${toolbar}
-      ${Core.MEALS.filter(m => groups[m].length).map(m => {
-        const mt = Core.totals(groups[m]);
+      ${Core.MEALS.map(m => {
+        const list = groups[m];
+        const label = Core.MEAL_LABELS[m];
+        const add = `<button type="button" class="food-meal-add" data-add-meal="${m}" aria-label="Add food to ${label.toLowerCase()}"><span class="ui-icon">${_icon('plus')}</span></button>`;
+        if (!list.length) {
+          return `<div class="food-meal-card is-empty"><span class="food-meal-name">${label}</span>${add}</div>`;
+        }
+        const mt = Core.totals(list);
         return `
-        <div class="food-meal-hdr"><span>${Core.MEAL_LABELS[m]}</span>
-          <span><button type="button" class="food-mini-btn" data-save-meal="${m}">Save as meal</button> <span class="food-meal-kcal">${mt.kcal} kcal</span></span></div>
-        ${groups[m].map(e => `
-          <div class="food-diary-row" data-entry-id="${_esc(e.id)}">
-            <button type="button" class="food-diary-nm" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">${_esc(e.name)}${e.amount ? `<small class="food-diary-amt"> · ${_esc(Core.amountLabel(e))}</small>` : ''}</button>
-            <span class="food-diary-kcal">${e.flag ? '<span class="food-flag-dot" title="Calories do not match the macros — check this food">⚠</span> ' : ''}${e.kcal} kcal</span>
-            <button type="button" class="food-diary-del" data-remove-entry="${_esc(e.id)}" aria-label="Remove ${_esc(e.name)}">✕</button>
-          </div>`).join('')}`;
+        <div class="food-meal-card">
+          <div class="food-meal-top">
+            <span class="food-meal-name">${label}</span>
+            <span class="food-meal-right">
+              <span class="food-meal-kcal">${mt.kcal} kcal</span>
+              <button type="button" class="food-icon-btn" data-save-meal="${m}" aria-label="Save ${label.toLowerCase()} as a meal" title="Save as a meal"><span class="ui-icon">${_icon('bookmark')}</span></button>
+              ${add}
+            </span>
+          </div>
+          ${list.map(e => `
+          <button type="button" class="food-entry" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">
+            <span class="food-entry-name">${_esc(e.name)}${e.amount ? `<small> · ${_esc(Core.amountLabel(e))}</small>` : ''}</span>
+            <span class="food-diary-kcal">${e.flag ? '<span class="food-flag-dot" title="Calories do not match the macros — check this food">⚠</span> ' : ''}${e.kcal}</span>
+          </button>`).join('')}
+        </div>`;
       }).join('')}
     `;
   }
@@ -597,6 +656,8 @@
   document.addEventListener('click', (e) => {
     const del = e.target.closest('[data-remove-entry]');
     if (del) removeEntry(del.dataset.removeEntry);
+    const add = e.target.closest('[data-add-meal]');
+    if (add) openFoodSearch({ meal: add.dataset.addMeal });
   });
 
   // Today's entries (used by other screens).

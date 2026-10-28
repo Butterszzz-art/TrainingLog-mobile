@@ -63,10 +63,8 @@ export function renderSparklines() {
   const proteins = macroHistory.map(h => h.totals.protein);
   const calCanvas = document.getElementById('calSpark');
   const proteinCanvas = document.getElementById('proteinSpark');
-  if (!calCanvas || !proteinCanvas) {
-    console.warn('Sparklines skipped: missing calSpark or proteinSpark canvas.');
-    return;
-  }
+  // The weekly trend charts moved to Insights; nothing to draw here.
+  if (!calCanvas || !proteinCanvas) return;
   const ctx1 = calCanvas.getContext('2d');
   const ctx2 = proteinCanvas.getContext('2d');
   if (window.calChart) window.calChart.destroy();

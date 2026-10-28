@@ -759,6 +759,12 @@
     <button type="button" class="food-dock-btn food-dock-btn--scan" onclick="scanFoodBarcode()">
       <span class="ui-icon" data-icon="camera"></span><span>Scan barcode</span>
     </button>
+    <button type="button" class="food-dock-toggle" onclick="toggleFoodDock()" aria-label="Hide the log food buttons" aria-expanded="true">
+      <span class="ui-icon" data-icon="chevronDown"></span>
+    </button>
+    <button type="button" class="food-dock-fab" onclick="toggleFoodDock()" aria-label="Show the log food buttons">
+      <span class="ui-icon" data-icon="search"></span>
+    </button>
   </div>
   <div id="foodSearchSheet" class="food-search-sheet" hidden>
     <div class="food-search-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="foodSearchSheetTitle">
@@ -766,7 +772,53 @@
         <h3 id="foodSearchSheetTitle">Log food</h3>
         <button type="button" class="food-sheet-x" onclick="closeFoodSearch()" aria-label="Close">✕</button>
       </div>
-      <div id="foodSearchHost"></div>
+      <div class="food-sheet-tabs" role="tablist" aria-label="How to log">
+        <button type="button" role="tab" class="food-sheet-tab is-active" data-food-tab="search" aria-selected="true">Search</button>
+        <button type="button" role="tab" class="food-sheet-tab" data-food-tab="quick" aria-selected="false">Quick add</button>
+        <button type="button" role="tab" class="food-sheet-tab" data-food-tab="mine" aria-selected="false">My foods</button>
+      </div>
+      <div id="foodSearchHost" class="food-sheet-panel" data-food-panel="search"></div>
+      <div id="foodQuickAddPanel" class="food-sheet-panel" data-food-panel="quick" hidden>
+        <p class="food-sheet-sub">Add calories or macros without picking a food (they count for today, not for a meal).</p>
+        <div class="macro-quick-chips">
+          <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 25)"><span class="macro-card-dot macro-dot-protein"></span>+25g P</button>
+          <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 100)"><span class="macro-card-dot macro-dot-cal"></span>+100 kcal</button>
+          <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 25)"><span class="macro-card-dot macro-dot-carbs"></span>+25g C</button>
+          <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 10)"><span class="macro-card-dot macro-dot-fat"></span>+10g F</button>
+          <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 10)"><span class="macro-card-dot macro-dot-protein"></span>+10g P</button>
+          <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 250)"><span class="macro-card-dot macro-dot-cal"></span>+250 kcal</button>
+          <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 10)"><span class="macro-card-dot macro-dot-carbs"></span>+10g C</button>
+          <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 5)"><span class="macro-card-dot macro-dot-fat"></span>+5g F</button>
+        </div>
+        <div id="macroCustomAdd" class="pod macro-custom">
+          <div class="macro-custom-row">
+            <span class="macro-custom-name"><span class="macro-card-dot macro-dot-cal"></span>Kcal</span>
+            <input id="qaCals" type="number" value="100" class="macro-qa-input" aria-label="Calories amount">
+            <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('cal')" aria-label="Remove calories">–</button>
+            <button class="macro-qa-btn" onclick="addMacro('cal')" aria-label="Add calories">+</button>
+          </div>
+          <div class="macro-custom-row">
+            <span class="macro-custom-name"><span class="macro-card-dot macro-dot-protein"></span>Protein</span>
+            <input id="qaProtein" type="number" value="10" class="macro-qa-input" aria-label="Protein grams">
+            <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('protein')" aria-label="Remove protein">–</button>
+            <button class="macro-qa-btn" onclick="addMacro('protein')" aria-label="Add protein">+</button>
+          </div>
+          <div class="macro-custom-row">
+            <span class="macro-custom-name"><span class="macro-card-dot macro-dot-carbs"></span>Carbs</span>
+            <input id="qaCarbs" type="number" value="10" class="macro-qa-input" aria-label="Carb grams">
+            <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('carbs')" aria-label="Remove carbs">–</button>
+            <button class="macro-qa-btn" onclick="addMacro('carbs')" aria-label="Add carbs">+</button>
+          </div>
+          <div class="macro-custom-row">
+            <span class="macro-custom-name"><span class="macro-card-dot macro-dot-fat"></span>Fat</span>
+            <input id="qaFat" type="number" value="5" class="macro-qa-input" aria-label="Fat grams">
+            <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('fat')" aria-label="Remove fat">–</button>
+            <button class="macro-qa-btn" onclick="addMacro('fat')" aria-label="Add fat">+</button>
+          </div>
+        </div>
+        <div id="macroFavoritesContainer"></div>
+      </div>
+      <div id="foodMyFoodsPanel" class="food-sheet-panel" data-food-panel="mine" hidden></div>
     </div>
   </div>
 
@@ -3093,6 +3145,76 @@
               <progress id="fatBar" value="0" max="100"></progress>
             </section>
 
+            <!-- ── Today's setup: day type, carb day and water in one card ── -->
+            <section class="pod macro-setup" aria-label="Today's setup">
+              <div class="macro-setup-row">
+                <div class="macro-setup-day">
+                  <div class="macro-daytype">
+              <label class="macro-toggle-card" id="trainingDayCard" onclick="document.getElementById('trainingDayToggle').click()">
+                <input type="checkbox" id="trainingDayToggle" style="display:none;">
+                <span class="macro-toggle-icon" data-icon="dumbbell"></span>
+                <span class="macro-toggle-label">Training day</span>
+              </label>
+              <label class="macro-toggle-card" id="refeedDayCard" onclick="document.getElementById('refeedDayToggle').click()">
+                <input type="checkbox" id="refeedDayToggle" style="display:none;">
+                <span class="macro-toggle-icon" data-icon="flame"></span>
+                <span class="macro-toggle-label">Refeed day</span>
+              </label>
+            </div>
+                </div>
+                <div class="macro-setup-carbs" aria-label="Carb day">
+            <div class="macro-seg-row" data-macro-seg-for="carbCycleSelect">
+              <button type="button" class="macro-seg-btn" data-val="low" onclick="setSegValue('carbCycleSelect', this)">Low</button>
+              <button type="button" class="macro-seg-btn active" data-val="normal" onclick="setSegValue('carbCycleSelect', this)">Normal</button>
+              <button type="button" class="macro-seg-btn" data-val="high" onclick="setSegValue('carbCycleSelect', this)">High</button>
+            </div>
+                </div>
+              </div>
+            <select id="carbCycleSelect" class="macro-seg-hidden" aria-hidden="true" tabindex="-1">
+              <option value="normal">Normal</option>
+              <option value="high">High Day</option>
+              <option value="low">Low Day</option>
+            </select>
+            <!-- Kept off-screen: updateMacroSummary() still writes
+                 descriptive text into these for anything that wants it. -->
+            <div id="macroDailySummary" class="macro-seg-hidden">
+              <span id="macroSummaryCals"></span>
+              <span id="macroSummaryProtein"></span>
+              <span id="macroSummaryCarbs"></span>
+              <span id="macroSummaryFat"></span>
+            </div>
+              <div class="macro-setup-water">
+                <span class="macro-setup-water-ico ui-icon" data-icon="droplet" aria-hidden="true"></span>
+                <p class="water-tracker-progress-text" id="waterProgressText">0 / 2500 ml · 0%</p>
+                <span class="macro-setup-water-add">
+                  <button type="button" class="macro-chip" onclick="addWater(250)">+250</button>
+                  <button type="button" class="macro-chip" onclick="addWater(500)">+500</button>
+                </span>
+              </div>
+              <div class="macro-hero-meter"><div class="macro-card-bar-fill macro-bar-carbs" id="waterVisBar"></div></div>
+              <details class="macro-setup-more">
+                <summary>More setup</summary>
+                <div class="macro-setup-more-body">
+            <p id="macroDayProfileSummary" class="macro-day-profile"></p>
+                  <div class="water-quick-adds">
+                    <button type="button" class="macro-chip" onclick="addWater(750)">+750 ml</button>
+                    <button type="button" class="mx-link" onclick="toggleWaterTargetEdit()">Water target</button>
+                    <button type="button" class="water-reset-link" onclick="resetWater()">Reset water</button>
+                  </div>
+                  <div class="water-custom-row">
+                <input type="number" id="waterCustomInput" class="water-custom-input"
+                  placeholder="Custom ml" min="1" max="2000" />
+                <button class="water-custom-add-btn" onclick="addWaterCustom()">Add</button>
+              </div>
+                  <div class="water-target-row" id="waterTargetRow">
+                <input type="number" id="waterTargetInput" class="water-target-input"
+                  placeholder="Daily target ml" min="500" max="9000" />
+                <button class="water-target-save-btn" onclick="setWaterTarget()">Save</button>
+              </div>
+                </div>
+              </details>
+            </section>
+
             <!-- Today's food log (renderFoodLog in food-database.js) -->
             <div id="foodDiaryList" class="food-diary-list"></div>
 
@@ -3117,130 +3239,7 @@
               <button type="button" id="healthNutritionBtn" class="macro-day-btn" onclick="HealthNutrition.onButton()"><span data-label>Connect</span></button>
             </div>
 
-            <!-- Quick add: one tap per common amount. "Custom" opens the
-                 exact qty input + ± buttons addMacro()/subtractMacro() read. -->
-            <div class="macro-section-head">
-              <span class="mx-lbl">Quick add</span>
-              <button type="button" class="mx-link" aria-controls="macroCustomAdd"
-                onclick="document.getElementById('macroCustomAdd').classList.toggle('is-hidden')">Custom</button>
-            </div>
-            <div class="macro-quick-chips">
-              <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 25)"><span class="macro-card-dot macro-dot-protein"></span>+25g P</button>
-              <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 100)"><span class="macro-card-dot macro-dot-cal"></span>+100 kcal</button>
-              <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 25)"><span class="macro-card-dot macro-dot-carbs"></span>+25g C</button>
-              <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 10)"><span class="macro-card-dot macro-dot-fat"></span>+10g F</button>
-              <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 10)"><span class="macro-card-dot macro-dot-protein"></span>+10g P</button>
-              <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 250)"><span class="macro-card-dot macro-dot-cal"></span>+250 kcal</button>
-              <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 10)"><span class="macro-card-dot macro-dot-carbs"></span>+10g C</button>
-              <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 5)"><span class="macro-card-dot macro-dot-fat"></span>+5g F</button>
-            </div>
-            <div id="macroCustomAdd" class="pod macro-custom is-hidden">
-              <div class="macro-custom-row">
-                <span class="macro-custom-name"><span class="macro-card-dot macro-dot-cal"></span>Kcal</span>
-                <input id="qaCals" type="number" value="100" class="macro-qa-input" aria-label="Calories amount">
-                <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('cal')" aria-label="Remove calories">–</button>
-                <button class="macro-qa-btn" onclick="addMacro('cal')" aria-label="Add calories">+</button>
-              </div>
-              <div class="macro-custom-row">
-                <span class="macro-custom-name"><span class="macro-card-dot macro-dot-protein"></span>Protein</span>
-                <input id="qaProtein" type="number" value="10" class="macro-qa-input" aria-label="Protein grams">
-                <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('protein')" aria-label="Remove protein">–</button>
-                <button class="macro-qa-btn" onclick="addMacro('protein')" aria-label="Add protein">+</button>
-              </div>
-              <div class="macro-custom-row">
-                <span class="macro-custom-name"><span class="macro-card-dot macro-dot-carbs"></span>Carbs</span>
-                <input id="qaCarbs" type="number" value="10" class="macro-qa-input" aria-label="Carb grams">
-                <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('carbs')" aria-label="Remove carbs">–</button>
-                <button class="macro-qa-btn" onclick="addMacro('carbs')" aria-label="Add carbs">+</button>
-              </div>
-              <div class="macro-custom-row">
-                <span class="macro-custom-name"><span class="macro-card-dot macro-dot-fat"></span>Fat</span>
-                <input id="qaFat" type="number" value="5" class="macro-qa-input" aria-label="Fat grams">
-                <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('fat')" aria-label="Remove fat">–</button>
-                <button class="macro-qa-btn" onclick="addMacro('fat')" aria-label="Add fat">+</button>
-              </div>
-            </div>
-
-            <!-- Favorites (renderMacroNudge) -->
-            <div id="macroFavoritesContainer"></div>
-
-            <!-- ── Water ── -->
-            <div class="macro-section-head">
-              <span class="mx-lbl">Water</span>
-              <button type="button" class="mx-link" onclick="toggleWaterTargetEdit()">Set target</button>
-            </div>
-            <div class="pod water-tracker-widget">
-              <p class="water-tracker-progress-text" id="waterProgressText">0 / 2500 ml · 0%</p>
-              <div class="macro-hero-meter"><div class="macro-card-bar-fill macro-bar-carbs" id="waterVisBar"></div></div>
-              <div class="water-quick-adds">
-                <button class="macro-chip" onclick="addWater(250)">+250</button>
-                <button class="macro-chip" onclick="addWater(500)">+500</button>
-                <button class="macro-chip" onclick="addWater(750)">+750</button>
-                <button class="water-reset-link" onclick="resetWater()">Reset</button>
-              </div>
-              <div class="water-custom-row">
-                <input type="number" id="waterCustomInput" class="water-custom-input"
-                  placeholder="Custom ml" min="1" max="2000" />
-                <button class="water-custom-add-btn" onclick="addWaterCustom()">Add</button>
-              </div>
-              <div class="water-target-row" id="waterTargetRow">
-                <input type="number" id="waterTargetInput" class="water-target-input"
-                  placeholder="Daily target ml" min="500" max="9000" />
-                <button class="water-target-save-btn" onclick="setWaterTarget()">Save</button>
-              </div>
-            </div>
-
-            <!-- ── Day type ── -->
-            <div class="macro-section-head"><span class="mx-lbl">Day type</span></div>
-            <div class="macro-daytype">
-              <label class="macro-toggle-card" id="trainingDayCard" onclick="document.getElementById('trainingDayToggle').click()">
-                <input type="checkbox" id="trainingDayToggle" style="display:none;">
-                <span class="macro-toggle-icon" data-icon="dumbbell"></span>
-                <span class="macro-toggle-label">Training day</span>
-              </label>
-              <label class="macro-toggle-card" id="refeedDayCard" onclick="document.getElementById('refeedDayToggle').click()">
-                <input type="checkbox" id="refeedDayToggle" style="display:none;">
-                <span class="macro-toggle-icon" data-icon="flame"></span>
-                <span class="macro-toggle-label">Refeed day</span>
-              </label>
-            </div>
-            <p class="macro-seg-label">Carb day</p>
-            <div class="macro-seg-row" data-macro-seg-for="carbCycleSelect">
-              <button type="button" class="macro-seg-btn" data-val="low" onclick="setSegValue('carbCycleSelect', this)">Low</button>
-              <button type="button" class="macro-seg-btn active" data-val="normal" onclick="setSegValue('carbCycleSelect', this)">Normal</button>
-              <button type="button" class="macro-seg-btn" data-val="high" onclick="setSegValue('carbCycleSelect', this)">High</button>
-            </div>
-            <select id="carbCycleSelect" class="macro-seg-hidden" aria-hidden="true" tabindex="-1">
-              <option value="normal">Normal</option>
-              <option value="high">High Day</option>
-              <option value="low">Low Day</option>
-            </select>
-            <!-- Kept off-screen: updateMacroSummary() still writes
-                 descriptive text into these for anything that wants it. -->
-            <div id="macroDailySummary" class="macro-seg-hidden">
-              <span id="macroSummaryCals"></span>
-              <span id="macroSummaryProtein"></span>
-              <span id="macroSummaryCarbs"></span>
-              <span id="macroSummaryFat"></span>
-            </div>
-            <p id="macroDayProfileSummary" class="macro-day-profile"></p>
-
-            <details class="macro-trends-accordion">
-              <summary><span class="ui-icon" data-icon="barChart"></span> Weekly trends</summary>
-              <div>
-                <div id="sparkContainer" style="display:flex;justify-content:space-around;">
-                  <canvas id="calSpark" width="120" height="40"></canvas>
-                  <canvas id="proteinSpark" width="120" height="40"></canvas>
-                </div>
-                <canvas id="weeklyTrend" width="300" height="100" style="margin-top:12px;"></canvas>
-              </div>
-            </details>
           </div>
-
-          <details class="macro-heatmap-accordion">
-            <summary><span class="ui-icon" data-icon="calendar"></span> Activity heatmap</summary>
-            <div><div id="heatmap" class="heatmap"></div></div>
-          </details>
 
           <!-- AI Macro Advisor -->
           <div style="padding:12px 0 4px;">
@@ -3253,7 +3252,7 @@
           </div>
         </div>
 
-        <div id="macroMealsPanel" class="panel">
+        <div id="macroMealsPanel" class="panel" hidden>
           <details id="mealsCard" class="macro-meals-accordion">
             <summary>
               <span class="ui-icon" data-icon="clipboard"></span> Meals
@@ -4226,6 +4225,8 @@
     timer: ICON_SVG_OPEN + '<line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg>',
     search: ICON_SVG_OPEN + '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
     clipboard: ICON_SVG_OPEN + '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/></svg>',
+    copy: ICON_SVG_OPEN + '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+    bookmark: ICON_SVG_OPEN + '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
     trophy: ICON_SVG_OPEN + '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2a2 2 0 0 1 2 2 4 4 0 0 1-4 4"/><path d="M7 5H5a2 2 0 0 0-2 2 4 4 0 0 0 4 4"/></svg>',
     scale: ICON_SVG_OPEN + '<path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
     footprints: ICON_SVG_OPEN + '<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3-2 5.5-2 8.5v2a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3 2 5.5 2 8.5v2a2 2 0 1 0 4 0Z"/></svg>',

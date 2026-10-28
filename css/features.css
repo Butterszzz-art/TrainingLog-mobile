@@ -3510,3 +3510,208 @@ html.pc-log-only #macroMicrosBtn { display: none !important; }
   min-width: 0;
 }
 .food-search-sheet .food-search-bar:focus-within { box-shadow: 0 0 0 3px rgba(66, 166, 121, 0.25); }
+
+/* ══ Macros tab revamp: setup card, meal sections, sheet tabs ══════ */
+
+/* Today's setup: day type + carb day on one line, water underneath */
+.macro-setup { padding: 12px 14px; margin-top: 12px; }
+.macro-setup-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.macro-setup .macro-daytype { gap: 6px; }
+.macro-setup .macro-daytype .macro-toggle-card {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  gap: 5px;
+}
+.macro-setup .macro-daytype .macro-toggle-icon { width: 13px; height: 13px; }
+.macro-setup .macro-daytype .macro-toggle-label { font-size: 10.5px; letter-spacing: 0.08em; }
+.macro-today .macro-setup .macro-seg-row { padding: 2px; }
+.macro-today .macro-setup .macro-seg-row { display: inline-flex; width: auto; }
+.macro-today .macro-setup .macro-seg-btn { flex: 0 0 auto; width: auto; font-size: 10.5px; padding: 5px 11px; letter-spacing: 0.06em; white-space: nowrap; overflow: visible; }
+.macro-today .macro-setup .water-tracker-progress-text strong,
+.macro-today .macro-setup .water-tracker-progress-text b { font-size: inherit; font-family: inherit; font-weight: 700; line-height: inherit; }
+.macro-setup-water { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.macro-setup-water-ico { width: 16px; height: 16px; color: #4da8da; flex-shrink: 0; display: inline-flex; }
+.macro-setup-water-ico svg { width: 16px; height: 16px; }
+.macro-today .macro-setup .water-tracker-progress-text { margin: 0; flex: 1; text-align: left; font-size: 0.8rem; }
+.macro-setup-water-add { display: inline-flex; gap: 6px; }
+.macro-setup-water-add .macro-chip { padding: 4px 10px; font-size: 0.75rem; margin: 0; }
+.macro-setup .macro-hero-meter { margin-top: 8px; }
+.macro-setup-more { margin-top: 8px; }
+.macro-setup-more > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 2px 0;
+}
+.macro-setup-more > summary::-webkit-details-marker { display: none; }
+.macro-setup-more > summary::after { content: ' ▾'; }
+.macro-setup-more[open] > summary::after { content: ' ▴'; }
+.macro-setup-more-body { padding-top: 6px; }
+.macro-setup-more-body .water-quick-adds { margin-top: 6px; }
+
+/* Food log: one card per meal, "+" on each, empty meals faint */
+#foodDiaryList.food-diary-list { background: none; border: none; border-radius: 0; overflow: visible; margin-top: 16px; }
+.food-log-hdr { display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; }
+.food-log-hdr .mx-lbl { flex: 1; }
+.food-log-tot { font-size: 0.75rem; color: var(--text-muted); }
+.food-log-icons { display: inline-flex; gap: 4px; }
+.food-diary-list .food-icon-btn,
+.food-search-sheet .food-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: pointer;
+}
+.food-icon-btn .ui-icon, .food-meal-add .ui-icon { width: 15px; height: 15px; display: inline-flex; }
+.food-icon-btn .ui-icon svg, .food-meal-add .ui-icon svg { width: 15px; height: 15px; }
+.food-meal-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.food-meal-card.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border-style: dashed;
+  padding: 8px 12px;
+}
+.food-meal-card.is-empty .food-meal-name { color: var(--text-muted); font-weight: 500; }
+.food-meal-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.food-meal-name { font-size: 0.9rem; font-weight: 600; color: var(--text-color); }
+.food-meal-right { display: inline-flex; align-items: center; gap: 6px; }
+.food-meal-right .food-meal-kcal { font-size: 0.75rem; color: var(--text-muted); margin-right: 2px; }
+.food-diary-list .food-meal-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary-text);
+  box-shadow: none;
+  cursor: pointer;
+}
+.food-diary-list .food-entry {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.food-entry-name { font-size: 0.85rem; color: var(--text-color); min-width: 0; }
+.food-entry-name small { color: var(--text-muted); font-size: 0.75rem; }
+.food-entry .food-diary-kcal { font-size: 0.82rem; flex-shrink: 0; }
+.food-diary-list .food-share-ask { margin: 0 0 10px; }
+
+/* Log food sheet: tabs */
+.food-sheet-tabs {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  margin: 2px 0 12px;
+  border-radius: 12px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+}
+.food-sheet-tabs .food-sheet-tab {
+  flex: 1;
+  margin: 0;
+  padding: 7px 4px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.food-sheet-tabs .food-sheet-tab.is-active { background: var(--primary); color: var(--label-on-green, #fff); }
+.food-sheet-panel[hidden] { display: none; }
+#foodQuickAddPanel .macro-quick-chips { flex-wrap: wrap; overflow: visible; margin: 4px 0 12px; }
+#foodQuickAddPanel .macro-custom { margin-bottom: 12px; }
+.food-quick-favs-lbl { margin: 6px 2px 4px; }
+#foodMyFoodsPanel .food-lib-actions { margin-top: 0; }
+
+/* Dock: collapsible to one round search button */
+.food-dock .food-dock-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 54px;
+  margin: 0;
+  padding: 0;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.food-dock .food-dock-toggle .ui-icon, .food-dock .food-dock-fab .ui-icon { width: 20px; height: 20px; display: inline-flex; }
+.food-dock .food-dock-toggle .ui-icon svg, .food-dock .food-dock-fab .ui-icon svg { width: 20px; height: 20px; }
+.food-dock { grid-template-columns: 1fr 1fr auto; }
+.food-dock .food-dock-fab { display: none; }
+.food-dock.is-collapsed { grid-template-columns: auto; justify-content: end; left: auto; }
+.food-dock.is-collapsed .food-dock-btn,
+.food-dock.is-collapsed .food-dock-toggle { display: none; }
+.food-dock.is-collapsed .food-dock-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: var(--label-on-green, #fff);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+body.food-dock-mini #macroTab { padding-bottom: 150px !important; }
+
+/* Live camera view for the barcode scanner (html5-qrcode) */
+.food-scan-reader { width: 100%; min-height: 220px; border-radius: 12px; overflow: hidden; background: #000; margin-bottom: 8px; }
+.food-scan-reader video { width: 100% !important; height: auto !important; display: block; object-fit: cover; }
+.food-scan-reader img[alt="Info icon"], .food-scan-reader > div:first-child > img { display: none !important; }
+
+/* Log only: these show numbers too */
+html.pc-log-only .food-log-tot,
+html.pc-log-only .food-meal-right .food-meal-kcal,
+html.pc-log-only #foodQuickAddPanel { display: none !important; }
+html.pc-log-only .food-sheet-tab[data-food-tab="quick"] { display: none; }
