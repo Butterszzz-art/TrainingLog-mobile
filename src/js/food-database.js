@@ -1,18 +1,21 @@
 /* =============================================================
-   FOOD DATABASE — USDA FoodData Central
-   Searchable food autocomplete injected above the macro meal
-   container. Selecting a food adds macros to the daily totals
-   and writes to a per-user food diary in localStorage.
+   FOOD DATABASE — food search + food log
+   Searchable food picker injected above the macro meal container.
+   Selecting a food adds macros to the daily totals and writes to a
+   per-user food diary in localStorage.
+
+   Search goes through our backend (/api/food/search), which asks
+   USDA FoodData Central with a server-side key and Open Food Facts,
+   then merges and caches the answers. No API key lives in the app.
+   Pure helpers live in food-core.js.
    ============================================================= */
 
 (function initFoodDatabase() {
   'use strict';
 
-  const API_KEY = 'DEMO_KEY'; // Free — 30 req/min per IP
-  const BASE    = 'https://api.nal.usda.gov/fdc/v1';
-
-  // USDA FDC nutrient IDs
-  const NID = { kcal: 1008, protein: 1003, carbs: 1005, fat: 1004 };
+  const Core = window.FoodCore;
+  const RECENT_KEY = u => `recentFoods_${u}`;
+  const _searchCache = new Map(); // query -> server foods, for this session
 
   /* ── Helpers ─────────────────────────────────────────────── */
 
@@ -27,35 +30,51 @@
       localStorage.getItem('username') || '';
   }
 
-  function _getNutrient(food, id) {
-    const n = (food.foodNutrients || []).find(n => n.nutrientId === id || n.nutrientNumber === String(id));
-    return +(n?.value ?? 0);
+  function _esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  /* ── USDA search ─────────────────────────────────────────── */
+  function _readJSON(key, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch { return fallback; }
+  }
 
-  async function searchUSDA(query) {
-    if (!query || query.length < 2) return [];
+  function _authHeaders() {
+    if (typeof window.getAuthHeaders === 'function') return window.getAuthHeaders();
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  /* ── Search ──────────────────────────────────────────────── */
+
+  // Foods on this device that match the query (recently logged ones).
+  function _localMatches(q) {
+    const recent = _readJSON(RECENT_KEY(_user()), []);
+    return [recent.filter(f => Core.matchesQuery(f, q))];
+  }
+
+  // → { foods, offline?, error? }
+  async function searchFoods(query) {
+    const q = String(query || '').trim().toLowerCase();
+    if (q.length < 2) return { foods: [] };
+    const local = _localMatches(q);
+    if (_searchCache.has(q)) return { foods: Core.mergeResults(local, _searchCache.get(q), 25) };
+    if (!navigator.onLine || !window.SERVER_URL) {
+      return { foods: Core.mergeResults(local, [], 25), offline: true };
+    }
     try {
-      const url = `${BASE}/foods/search?query=${encodeURIComponent(query)}&pageSize=8&dataType=Survey%20%28FNDDS%29,SR%20Legacy,Branded&api_key=${API_KEY}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.foods || []).slice(0, 8).map(f => ({
-        fdcId:       f.fdcId,
-        name:        f.description,
-        brand:       f.brandOwner || f.brandName || '',
-        kcal:        Math.round(_getNutrient(f, NID.kcal)),
-        protein:     +_getNutrient(f, NID.protein).toFixed(1),
-        carbs:       +_getNutrient(f, NID.carbs).toFixed(1),
-        fat:         +_getNutrient(f, NID.fat).toFixed(1),
-        servingSize: f.servingSize || 100,
-        servingUnit: f.servingSizeUnit || 'g',
-      }));
-    } catch {
-      return [];
+      const res = await fetch(`${window.SERVER_URL}/api/food/search?q=${encodeURIComponent(q)}&limit=20`, {
+        headers: _authHeaders(), signal: AbortSignal.timeout(9000),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !data.success) throw new Error((data && data.error && data.error.message) || 'Search failed');
+      const foods = (data.foods || []).map(Core.normalizeFood).filter(Boolean);
+      _searchCache.set(q, foods);
+      return { foods: Core.mergeResults(local, foods, 25) };
+    } catch (err) {
+      return { foods: Core.mergeResults(local, [], 25), error: err.message || 'Search failed' };
     }
   }
+  window.searchFoods = searchFoods;
 
   /* ── Inject food-search widget ───────────────────────────── */
 
@@ -68,9 +87,10 @@
     widget.className = 'food-search-widget';
     widget.innerHTML = `
       <div class="food-search-bar">
-        <span class="food-search-icon">🍽️</span>
-        <input type="text" id="foodSearchInput" class="food-search-input"
-          placeholder="Search food (USDA database)…" autocomplete="off" />
+        <span class="food-search-icon" aria-hidden="true">🍽️</span>
+        <input type="search" id="foodSearchInput" class="food-search-input"
+          placeholder="Search food — e.g. kwark, hagelslag, rice" autocomplete="off" enterkeyhint="search"
+          aria-label="Search food" />
       </div>
       <div id="foodSearchResults" class="food-search-results" hidden></div>
       <div id="foodSelectedInfo" class="food-selected-info" hidden>
@@ -85,11 +105,11 @@
           <span class="food-macro-badge fat-badge" id="fsbFat">0g F</span>
         </div>
         <div class="food-serving-row">
-          <label class="food-serving-label">Amount:</label>
+          <label class="food-serving-label" for="foodServingInput">Amount</label>
           <input type="number" id="foodServingInput" class="food-serving-input"
-            value="100" min="1" max="9999" />
-          <span id="foodServingUnit" class="food-serving-unit">g</span>
-          <button class="food-add-btn" onclick="addFoodMacrosToDaily()">＋ Add</button>
+            value="100" min="0" max="9999" step="any" inputmode="decimal" />
+          <select id="foodServingUnit" class="food-serving-unit-select" aria-label="Unit"></select>
+          <button type="button" class="food-add-btn" onclick="addFoodMacrosToDaily()">＋ Add</button>
         </div>
       </div>
     `;
@@ -98,80 +118,105 @@
 
     const input     = widget.querySelector('#foodSearchInput');
     const resultsEl = widget.querySelector('#foodSearchResults');
+    let seq = 0;
 
     const doSearch = _debounce(async (q) => {
       if (q.length < 2) { resultsEl.hidden = true; return; }
+      const mine = ++seq;
       resultsEl.hidden = false;
       resultsEl.innerHTML = '<div class="food-search-msg">Searching…</div>';
-      const foods = await searchUSDA(q);
-      if (!foods.length) {
-        resultsEl.innerHTML = '<div class="food-search-msg">No results — try a different term.</div>';
-        return;
-      }
-      resultsEl.innerHTML = foods.map(f => `
-        <div class="food-search-item"
-          data-name="${encodeURIComponent(f.name)}"
-          data-brand="${encodeURIComponent(f.brand)}"
-          data-kcal="${f.kcal}" data-protein="${f.protein}"
-          data-carbs="${f.carbs}" data-fat="${f.fat}"
-          data-serving="${f.servingSize}" data-unit="${encodeURIComponent(f.servingUnit)}"
-          onclick="_selectFoodItem(this)">
-          <div class="food-item-name">${f.name}</div>
-          ${f.brand ? `<div class="food-item-brand">${f.brand}</div>` : ''}
-          <div class="food-item-macros">
-            <span class="fim kcal-badge">${f.kcal} kcal</span>
-            <span class="fim protein-badge">${f.protein}P</span>
-            <span class="fim carbs-badge">${f.carbs}C</span>
-            <span class="fim fat-badge">${f.fat}F</span>
-            <span class="fim unit-badge">per ${f.servingSize}${f.servingUnit}</span>
-          </div>
-        </div>
-      `).join('');
-    }, 450);
+      const result = await searchFoods(q);
+      if (mine !== seq) return; // a newer search is on its way
+      _renderResults(resultsEl, result);
+    }, 400);
 
     input.addEventListener('input', () => doSearch(input.value.trim()));
+    resultsEl.addEventListener('click', (e) => {
+      const item = e.target.closest('[data-food-idx]');
+      if (item) _selectFood(_lastResults[Number(item.dataset.foodIdx)]);
+    });
     document.addEventListener('click', (e) => {
       if (!widget.contains(e.target)) resultsEl.hidden = true;
     });
+  }
+
+  let _lastResults = [];
+
+  function _renderResults(el, { foods, offline, error }) {
+    _lastResults = foods;
+    const note = offline ? 'Offline — showing foods you logged before.'
+      : error ? 'Search is unavailable right now — showing foods you logged before.' : '';
+    if (!foods.length) {
+      el.innerHTML = `<div class="food-search-msg">${_esc(note || 'No results — try another word (Dutch or English both work).')}</div>`;
+      return;
+    }
+    const hasOff = foods.some(f => f.source === 'off');
+    el.innerHTML = (note ? `<div class="food-search-msg">${_esc(note)}</div>` : '') + foods.map((f, i) => {
+      const p = f.per100;
+      return `
+        <button type="button" class="food-search-item" data-food-idx="${i}">
+          <span class="food-item-top">
+            <span class="food-item-name">${_esc(f.name)}</span>
+            <span class="food-src-badge food-src-${_esc(f.source)}">${_esc(Core.sourceLabel(f.source))}</span>
+          </span>
+          ${f.brand ? `<span class="food-item-brand">${_esc(f.brand)}</span>` : ''}
+          <span class="food-item-macros">
+            <span class="fim kcal-badge">${p.kcal} kcal</span>
+            <span class="fim protein-badge">${p.protein}P</span>
+            <span class="fim carbs-badge">${p.carbs}C</span>
+            <span class="fim fat-badge">${p.fat}F</span>
+            <span class="fim unit-badge">per 100${_esc(f.basis)}</span>
+          </span>
+        </button>`;
+    }).join('') + (hasOff ? '<div class="food-attrib">Product data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL)</div>' : '');
   }
 
   /* ── Selected food state ─────────────────────────────────── */
 
   let _sel = null;
 
-  window._selectFoodItem = function (el) {
-    const d = el.dataset;
-    _sel = {
-      name:        decodeURIComponent(d.name),
-      brand:       decodeURIComponent(d.brand),
-      kcal100:     +d.kcal,
-      protein100:  +d.protein,
-      carbs100:    +d.carbs,
-      fat100:      +d.fat,
-      servingSize: +d.serving || 100,
-      unit:        decodeURIComponent(d.unit),
-    };
+  function _selectFood(food) {
+    if (!food) return;
+    _sel = food;
     document.getElementById('foodSearchResults').hidden = true;
     document.getElementById('foodSelectedInfo').hidden  = false;
-    document.getElementById('foodSelectedName').textContent = _sel.name + (_sel.brand ? ` · ${_sel.brand}` : '');
-    document.getElementById('foodServingInput').value = _sel.servingSize;
-    document.getElementById('foodServingUnit').textContent = _sel.unit;
+    document.getElementById('foodSelectedName').textContent = food.name + (food.brand ? ` · ${food.brand}` : '');
+    const unitSel = document.getElementById('foodServingUnit');
+    unitSel.innerHTML = `<option value="${_esc(food.basis)}">${_esc(food.basis)}</option>`
+      + food.servings.map(s => `<option value="${_esc(s.label)}">${_esc(s.label)}</option>`).join('');
+    // Start from one serving when the food has one, else 100 g.
+    if (food.servings.length) {
+      unitSel.value = food.servings[0].label;
+      document.getElementById('foodServingInput').value = 1;
+    } else {
+      unitSel.value = food.basis;
+      document.getElementById('foodServingInput').value = 100;
+    }
     document.getElementById('foodSearchInput').value = '';
     _refreshBadges();
-  };
+  }
+  window.selectFoodForLogging = _selectFood;
+
+  function _selGrams() {
+    const qty = document.getElementById('foodServingInput').value;
+    const unit = document.getElementById('foodServingUnit').value;
+    return Core.gramsFor(_sel, qty, unit);
+  }
 
   function _refreshBadges() {
     if (!_sel) return;
-    const g = +document.getElementById('foodServingInput').value || 100;
-    const s = g / 100;
-    document.getElementById('fsbKcal').textContent    = Math.round(_sel.kcal100 * s) + ' kcal';
-    document.getElementById('fsbProtein').textContent = (_sel.protein100 * s).toFixed(1) + 'g P';
-    document.getElementById('fsbCarbs').textContent   = (_sel.carbs100 * s).toFixed(1) + 'g C';
-    document.getElementById('fsbFat').textContent     = (_sel.fat100 * s).toFixed(1) + 'g F';
+    const n = Core.scaleNutrients(_sel.per100, _selGrams());
+    document.getElementById('fsbKcal').textContent    = (n.kcal || 0) + ' kcal';
+    document.getElementById('fsbProtein').textContent = (n.protein || 0) + 'g P';
+    document.getElementById('fsbCarbs').textContent   = (n.carbs || 0) + 'g C';
+    document.getElementById('fsbFat').textContent     = (n.fat || 0) + 'g F';
   }
 
   document.addEventListener('input', (e) => {
     if (e.target.id === 'foodServingInput') _refreshBadges();
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'foodServingUnit') _refreshBadges();
   });
 
   window.clearFoodSelection = function () {
@@ -186,12 +231,13 @@
 
   window.addFoodMacrosToDaily = function () {
     if (!_sel) return;
-    const g    = +document.getElementById('foodServingInput').value || 100;
-    const s    = g / 100;
-    const kcal    = Math.round(_sel.kcal100 * s);
-    const protein = Math.round(_sel.protein100 * s);
-    const carbs   = Math.round(_sel.carbs100 * s);
-    const fat     = Math.round(_sel.fat100 * s);
+    const grams = _selGrams();
+    if (!grams) return;
+    const n = Core.scaleNutrients(_sel.per100, grams);
+    const kcal    = n.kcal || 0;
+    const protein = Math.round(n.protein || 0);
+    const carbs   = Math.round(n.carbs || 0);
+    const fat     = Math.round(n.fat || 0);
 
     // Log the food's macros. Calories follow from them; whatever the label's
     // kcal differs by (fibre, alcohol, rounding) goes in as direct calories,
@@ -201,8 +247,10 @@
       window.logMacroAmounts({ protein, carbs, fats: fat, cals: kcal - macroKcal });
     }
 
-    // Persist to food diary
     const name = _sel.name;
+    try {
+      localStorage.setItem(RECENT_KEY(_user()), JSON.stringify(Core.addRecent(_readJSON(RECENT_KEY(_user()), []), _sel, Date.now())));
+    } catch { /* storage full; the recent list is only a convenience */ }
     _logFood(name, kcal, protein, carbs, fat);
     clearFoodSelection();
     _toast(`✅ ${name.slice(0, 30)} — ${kcal} kcal added`);
@@ -249,7 +297,7 @@
       </div>
       ${items.map((e, i) => `
         <div class="food-diary-row">
-          <span class="food-diary-nm">${e.name.slice(0, 32)}</span>
+          <span class="food-diary-nm">${_esc(e.name.slice(0, 32))}</span>
           <span class="food-diary-kcal">${e.kcal} kcal</span>
           <button class="food-diary-del" onclick="_removeFoodEntry(${i})" title="Remove">✕</button>
         </div>

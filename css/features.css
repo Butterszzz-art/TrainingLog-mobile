@@ -183,6 +183,58 @@
 }
 .food-add-btn:hover { opacity: 0.85; }
 
+/* Search results are buttons (keyboard + screen reader friendly). */
+button.food-search-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  color: inherit;
+  font: inherit;
+}
+.food-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.food-item-name, .food-item-brand { display: block; }
+.food-src-badge {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+.food-src-off    { color: #4da8da; border-color: rgba(77,168,218,0.45); }
+.food-src-usda   { color: #f0a040; border-color: rgba(240,160,64,0.45); }
+.food-src-custom,
+.food-src-recipe { color: #a78bfa; border-color: rgba(167,139,250,0.45); }
+.food-src-coach  { color: var(--primary-text); border-color: var(--primary); }
+.food-attrib {
+  padding: 6px 12px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+.food-attrib a { color: inherit; text-decoration: underline; }
+.food-serving-unit-select {
+  max-width: 46%;
+  min-width: 0;
+  padding: 5px 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: 0.8rem;
+}
+
 /* Food diary list */
 .food-diary-list {
   background: var(--card-bg);
