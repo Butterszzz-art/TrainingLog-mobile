@@ -207,3 +207,60 @@ describe('custom foods', () => {
     expect(Core.customFoodFromForm({ name: 'x', barcode: '012345678905' }).food.barcode).toBe('0012345678905');
   });
 });
+
+test('amountLabel', () => {
+  expect(Core.amountLabel({ amount: 250, unit: 'g' })).toBe('250 g');
+  expect(Core.amountLabel({ amount: 1, unit: '1 bakje (500g)' })).toBe('1 × 1 bakje (500g)');
+});
+
+describe('editing and copying', () => {
+  const e = Core.makeEntry(kwark, { grams: 250, amount: 250, unit: 'g', date: '2026-10-28', meal: 'breakfast', now: 1, rand: 'a' });
+  test('editEntry rescales from per-100 data', () => {
+    const x = Core.editEntry(e, { grams: 500, amount: 1, unit: '1 bakje (500g)', meal: 'snacks' });
+    expect(x).toMatchObject({ id: e.id, kcal: 265, protein: 45, sodiumMg: 200, grams: 500, amount: 1, unit: '1 bakje (500g)', meal: 'snacks' });
+  });
+  test('editEntry with only a meal keeps the numbers', () => {
+    expect(Core.editEntry(e, { meal: 'lunch' })).toMatchObject({ kcal: 133, meal: 'lunch' });
+  });
+  test('copyEntries: new ids, new date', () => {
+    const c = Core.copyEntries([e, e], '2026-10-29', { now: 10, rand: 'z' });
+    expect(c.map(x => x.date)).toEqual(['2026-10-29', '2026-10-29']);
+    expect(new Set([e.id, ...c.map(x => x.id)]).size).toBe(3);
+    expect(c[0].kcal).toBe(133);
+  });
+  test('saved meal round trip', () => {
+    const tpl = Core.templateFromEntries('Ontbijt', [e], { now: 1, rand: 't' });
+    expect(tpl).toMatchObject({ id: 'meal:t', name: 'Ontbijt' });
+    const back = Core.entriesFromTemplate(tpl, { date: '2026-10-30', meal: 'breakfast', now: 5, rand: 'q' });
+    expect(back[0]).toMatchObject({ date: '2026-10-30', meal: 'breakfast', kcal: 133, grams: 250, name: 'Magere kwark' });
+    expect(Core.templateFromEntries('x', [])).toBeNull();
+  });
+});
+
+describe('recipes', () => {
+  const rice = { id: 'usda:1', source: 'usda', name: 'Rice', basis: 'g', per100: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4 }, servings: [] };
+  const chicken = { id: 'off:1', source: 'off', name: 'Kipfilet', basis: 'g', per100: { kcal: 105, protein: 23, carbs: 0, fat: 1.5 }, servings: [] };
+  test('per 100 g and per serving from ingredients', () => {
+    const r = Core.recipeFood({ name: 'Kip met rijst', servings: 2, ingredients: [{ food: rice, grams: 300 }, { food: chicken, grams: 300 }] }, { rand: 'r' });
+    expect(r.food).toMatchObject({ id: 'custom:recipe-r', source: 'recipe', name: 'Kip met rijst' });
+    expect(r.food.per100).toMatchObject({ kcal: 118, carbs: 14 });
+    expect(Math.abs(r.food.per100.protein - 12.85)).toBeLessThanOrEqual(0.051);
+    expect(r.food.servings[0].grams).toBe(300);
+    expect(r.perServing).toMatchObject({ kcal: 353, carbs: 42 });
+    expect(Math.abs(r.perServing.protein - 38.55)).toBeLessThanOrEqual(0.051);
+    // Only rice lists fibre, so the recipe's fibre would be too low: left out.
+    expect(r.food.per100.fiber).toBeUndefined();
+    expect(r.food.recipe.ingredients).toHaveLength(2);
+  });
+  test('validation', () => {
+    expect(Core.recipeFood({ name: '', servings: 1, ingredients: [{ food: rice, grams: 1 }] }).error).toMatch(/name/);
+    expect(Core.recipeFood({ name: 'x', servings: 0, ingredients: [{ food: rice, grams: 1 }] }).error).toMatch(/servings/);
+    expect(Core.recipeFood({ name: 'x', servings: 1, ingredients: [{ food: rice, grams: 0 }] }).error).toMatch(/ingredient/);
+  });
+  test('schema.org recipe on a page', () => {
+    const html = `<html><script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage"},{"@type":["Recipe"],"name":"Pasta pesto","recipeYield":["4","4 porties"],"recipeIngredient":["400 g pasta","1 pot pesto"],"nutrition":{"@type":"NutritionInformation","calories":"610 kcal","proteinContent":"18 g","carbohydrateContent":"75,5 g","fatContent":"25 g"}}]}</script></html>`;
+    expect(Core.parseRecipeJsonLd(html)).toEqual({ name: 'Pasta pesto', servings: 4, perServing: { kcal: 610, protein: 18, carbs: 75.5, fat: 25, fiber: null, sugar: null }, ingredients: ['400 g pasta', '1 pot pesto'] });
+    expect(Core.parseRecipeJsonLd('<html>no recipe</html>')).toBeNull();
+    expect(Core.parseRecipeJsonLd('<script type="application/ld+json">{bad json</script>')).toBeNull();
+  });
+});

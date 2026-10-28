@@ -54,6 +54,7 @@
     document.getElementById('foodSheet')?.remove();
   }
   window.closeFoodSheet = closeSheet;
+  window.FoodSheet = { open: openSheet, close: closeSheet, esc };
 
   /* ── Reading a barcode ───────────────────────────────────── */
 

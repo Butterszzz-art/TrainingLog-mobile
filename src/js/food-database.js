@@ -360,7 +360,8 @@
     }
     renderShareAsk();
     const items = Core.entriesFor(loadLog(), _today());
-    if (!items.length) { host.innerHTML = ''; return; }
+    const toolbar = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
+    if (!items.length) { host.innerHTML = toolbar ? `<div class="food-diary-empty">${toolbar}</div>` : ''; return; }
     const tot = Core.totals(items);
     const groups = Core.groupByMeal(items);
 
@@ -369,13 +370,15 @@
         <span>🍽️ Today's food log</span>
         <span class="food-diary-tot">${tot.kcal} kcal · ${Math.round(tot.protein)}P / ${Math.round(tot.carbs)}C / ${Math.round(tot.fat)}F</span>
       </div>
+      ${toolbar}
       ${Core.MEALS.filter(m => groups[m].length).map(m => {
         const mt = Core.totals(groups[m]);
         return `
-        <div class="food-meal-hdr"><span>${Core.MEAL_LABELS[m]}</span><span>${mt.kcal} kcal</span></div>
+        <div class="food-meal-hdr"><span>${Core.MEAL_LABELS[m]}</span>
+          <span><button type="button" class="food-mini-btn" data-save-meal="${m}">Save as meal</button> ${mt.kcal} kcal</span></div>
         ${groups[m].map(e => `
           <div class="food-diary-row" data-entry-id="${_esc(e.id)}">
-            <span class="food-diary-nm">${_esc(e.name)}${e.amount ? `<small class="food-diary-amt"> · ${_esc(e.amount)} ${_esc(e.unit || 'g')}</small>` : ''}</span>
+            <button type="button" class="food-diary-nm" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">${_esc(e.name)}${e.amount ? `<small class="food-diary-amt"> · ${_esc(Core.amountLabel(e))}</small>` : ''}</button>
             <span class="food-diary-kcal">${e.kcal} kcal</span>
             <button type="button" class="food-diary-del" data-remove-entry="${_esc(e.id)}" aria-label="Remove ${_esc(e.name)}">✕</button>
           </div>`).join('')}`;

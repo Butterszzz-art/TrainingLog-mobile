@@ -5,22 +5,16 @@ export async function scanBarcode() {
   alert('Barcode scanning is still loading — try again in a moment.');
 }
 
+// Recipe import from a link: reads the page's schema.org Recipe data
+// (src/js/food-log-tools.js). Returns { protein, carbs, fat } per serving,
+// or null. Never sends the user's cookies to the recipe site.
 export async function importRecipe(url) {
-  try {
-    const res = await fetch(url, { credentials: "include", signal: AbortSignal.timeout(5000) });
-    const text = await res.text();
-    const m = text.match(/(protein|fat|carb)s?\s*:?\s*(\d+)/gi);
-    if (!m) return null;
-    const result = { protein:0, carbs:0, fat:0 };
-    m.forEach(pair => {
-      const [_, key, val] = pair.match(/(protein|fat|carb)s?\s*:?\s*(\d+)/i);
-      result[key.toLowerCase()] = Number(val);
-    });
-    return result;
-  } catch(e) {
-    console.warn('Recipe import failed', e);
-    return null;
-  }
+  if (typeof window.importRecipeFromUrl !== 'function') return null;
+  const { recipe } = await window.importRecipeFromUrl(url);
+  const p = recipe && recipe.perServing;
+  return p && (p.protein !== null || p.carbs !== null || p.fat !== null)
+    ? { protein: p.protein || 0, carbs: p.carbs || 0, fat: p.fat || 0 }
+    : null;
 }
 
 export function quickAdd(type, amountInputId) {
@@ -37,24 +31,13 @@ export function quickAdd(type, amountInputId) {
   if (window.renderDailyMacroProgress) window.renderDailyMacroProgress();
 }
 
+// The Meals card's "Import recipe URL" field: opens the import, which lets
+// the user check the numbers and save the recipe as one of their foods
+// before logging it (it used to add the macros straight to today).
 export async function fetchRecipe() {
   if (window.guardMacroDayLocked?.()) return;
-  const input = document.getElementById('recipeUrl');
-  if (!input) return;
-  const url = input.value;
-  if (!url) return;
-  const data = await importRecipe(url);
-  if (data) {
-    quickAdd('protein', null); // triggers update later with manual amounts
-    const prog = JSON.parse(localStorage.getItem('dailyMacroProgress') || '{"protein":0,"carbs":0,"fats":0}');
-    prog.protein += data.protein || 0;
-    prog.carbs += data.carbs || 0;
-    prog.fats += data.fat || 0;
-    localStorage.setItem('dailyMacroProgress', JSON.stringify(prog));
-    if (window.renderDailyMacroProgress) window.renderDailyMacroProgress();
-  } else {
-    alert('Could not parse recipe');
-  }
+  const url = document.getElementById('recipeUrl')?.value || '';
+  if (typeof window.openRecipeImport === 'function') window.openRecipeImport(url);
 }
 
 export function logFavorite(meal) {
