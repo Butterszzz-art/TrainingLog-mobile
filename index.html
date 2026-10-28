@@ -3241,15 +3241,15 @@
 
           </div>
 
-          <!-- AI Macro Advisor -->
-          <div style="padding:12px 0 4px;">
-            <button id="macroAiAdvisorBtn" class="macro-save-btn macro-ai-btn" onclick="openMacroAiAdvisor()">
-              <span class="ui-icon" data-icon="sparkles"></span><span>AI Macro Advisor</span>
-            </button>
-            <div id="macroAiAdvisorLocked" role="button" tabindex="0" onclick="openUpgradeModal('pro')" style="display:none;cursor:pointer;text-align:center;margin-top:8px;font-size:0.8rem;color:var(--secondary-text);">
-              <span class="ui-icon" data-icon="lock"></span> Pro feature — upgrade to unlock
-            </div>
-          </div>
+          <!-- Weekly nutrition review (src/js/nutrition-review.js): last week's
+               "Nutrition and performance" section of the weekly review. It
+               replaces the separate AI Macro Advisor button; the advisor's
+               code stays for anything else that opens it. -->
+          <button type="button" id="macroNutritionReviewRow" class="pod macro-nr-row" onclick="openNutritionReview()">
+            <span class="macro-nr-ico ui-icon" data-icon="sparkles" aria-hidden="true"></span>
+            <span class="macro-nr-text"><b>Weekly nutrition review</b><small data-nr-sub>Last week's food, training and weight</small></span>
+            <span class="macro-nr-chev ui-icon" data-icon="chevronRight" aria-hidden="true"></span>
+          </button>
         </div>
 
         <div id="macroMealsPanel" class="panel" hidden>
@@ -3468,6 +3468,8 @@
         <div id="progressChartsPanel" class="panel">
         <section class="progress-chart">
           <div id="aiPlateauCard" style="display:none;margin-bottom:12px;"></div>
+          <!-- Nutrition vs training (src/js/nutrition-review.js) -->
+          <div id="nutritionInsightsCard" style="margin-bottom:12px;"></div>
           <div id="progressGamificationCard" class="gamification-panel gamification-card-shell" style="margin-bottom:12px;"></div>
           <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
           <canvas id="progressCanvas" height="220"></canvas>
@@ -5392,6 +5394,7 @@ function showTab(tabName) {
         updateOfflineBadge();
       }
       if (window.HealthNutrition) window.HealthNutrition.refresh();
+      if (typeof window.renderNutritionReviewRow === 'function') window.renderNutritionReviewRow();
       if (typeof showMacroSubTab === 'function') {
         showMacroSubTab(getSavedMacroSubTab() || 'targets');
       } else if (typeof openMacrosMain === 'function') {
@@ -5481,6 +5484,7 @@ function showTab(tabName) {
       }
       runPlateauCheck(currentUser);
       initProgressSubTabs();
+      if (typeof window.renderNutritionInsightsCard === 'function') window.renderNutritionInsightsCard();
       break;
     case 'logHistoryTab':
       renderWorkoutHistoryTab();
@@ -20955,6 +20959,8 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/food-database.js"></script>
   <script src="src/js/food-barcode.js"></script>
   <script src="src/js/food-log-tools.js"></script>
+  <script src="src/js/nutrition-insights.js"></script>
+  <script src="src/js/nutrition-review.js"></script>
   <script src="src/js/weekly-summary.js"></script>
   <script src="src/js/weekly-recap.js"></script>
   <script src="src/js/body-hub.js"></script>

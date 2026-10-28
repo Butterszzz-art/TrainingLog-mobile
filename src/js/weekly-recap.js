@@ -682,6 +682,7 @@
 
     return `
       <div class="wr-coach-review" data-week="${r.start}"></div>
+      <div class="wr-nutrition-review" data-week="${r.start}"></div>
       <p class="wr-headline">${_esc(_headline(r))}</p>
       ${_dayStrip(r)}
       <div class="wr-legend wr-key"><span class="wr-key-dot is-lift"></span>Lifting <span class="wr-key-dot is-cardio"></span>Cardio</div>
@@ -711,6 +712,9 @@
     // Coach review (src/js/coach-review.js) sits on top of the numbers when loaded.
     const reviewHost = overlay.querySelector('.wr-coach-review');
     if (reviewHost && typeof window.renderCoachReview === 'function') window.renderCoachReview(reviewHost, r);
+    // Nutrition and performance (src/js/nutrition-review.js) right under it.
+    const nutritionHost = overlay.querySelector('.wr-nutrition-review');
+    if (nutritionHost && typeof window.renderNutritionReview === 'function') window.renderNutritionReview(nutritionHost, r);
   }
 
   function _closeSheet() {
