@@ -15,6 +15,7 @@
 
   const Core = window.FoodCore;
   const RECENT_KEY = u => `recentFoods_${u}`;
+  const CUSTOM_KEY = u => `customFoods_${u}`; // synced (cloud-sync.js)
   const _searchCache = new Map(); // query -> server foods, for this session
 
   /* ── Helpers ─────────────────────────────────────────────── */
@@ -46,10 +47,38 @@
 
   /* ── Search ──────────────────────────────────────────────── */
 
-  // Foods on this device that match the query (recently logged ones).
+  // Foods on this device that match the query: your own foods first,
+  // then recently logged ones.
   function _localMatches(q) {
+    const custom = loadCustomFoods().map(Core.normalizeFood).filter(Boolean);
     const recent = _readJSON(RECENT_KEY(_user()), []);
-    return [recent.filter(f => Core.matchesQuery(f, q))];
+    return [custom.filter(f => Core.matchesQuery(f, q)), recent.filter(f => Core.matchesQuery(f, q))];
+  }
+
+  /* ── Custom foods ────────────────────────────────────────── */
+
+  function loadCustomFoods() {
+    const list = _readJSON(CUSTOM_KEY(_user()), []);
+    return Array.isArray(list) ? list : [];
+  }
+
+  // Adds or replaces (same id) one of the user's own foods.
+  function saveCustomFood(food) {
+    if (!_user() || !food || !food.id) return;
+    const list = loadCustomFoods().filter(f => f.id !== food.id);
+    list.push(food);
+    localStorage.setItem(CUSTOM_KEY(_user()), JSON.stringify(list));
+  }
+
+  function deleteCustomFood(id) {
+    if (!_user()) return;
+    localStorage.setItem(CUSTOM_KEY(_user()), JSON.stringify(loadCustomFoods().filter(f => f.id !== id)));
+  }
+
+  // A food with this barcode already on the device (your own first).
+  function localFoodByBarcode(code) {
+    const hit = Core.findByBarcode([loadCustomFoods(), _readJSON(RECENT_KEY(_user()), [])], code);
+    return hit ? Core.normalizeFood(hit) : null;
   }
 
   // → { foods, offline?, error? }
@@ -91,7 +120,9 @@
         <input type="search" id="foodSearchInput" class="food-search-input"
           placeholder="Search food — e.g. kwark, hagelslag, rice" autocomplete="off" enterkeyhint="search"
           aria-label="Search food" />
+        <button type="button" class="food-scan-btn" onclick="scanFoodBarcode()" aria-label="Scan a barcode">▥</button>
       </div>
+      <button type="button" class="food-own-link" onclick="openCustomFoodForm()">＋ Add your own food</button>
       <div id="foodSearchResults" class="food-search-results" hidden></div>
       <div id="foodSelectedInfo" class="food-selected-info" hidden>
         <div class="food-selected-top">
@@ -362,7 +393,11 @@
   window.getFoodDiaryToday = function () {
     return Core.entriesFor(loadLog(), _today());
   };
-  window.FoodLog = { load: loadLog, save: saveLog, add: addEntry, remove: removeEntry, today: _today };
+  window.FoodLog = {
+    load: loadLog, save: saveLog, add: addEntry, remove: removeEntry, today: _today,
+    customFoods: loadCustomFoods, saveCustomFood, deleteCustomFood, localFoodByBarcode,
+    authHeaders: _authHeaders, toast: (m) => _toast(m),
+  };
 
   /* ── Ask once about sharing the food log with a coach ────── */
   // The coach only sees the food log after the client says yes
