@@ -147,6 +147,12 @@
           <input type="checkbox" id="autoIncrementSetting" name="autoIncrementSetting" checked>
           Auto-increment weight suggestions
         </label>
+
+        <label for="gymPromptSetting" style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+          <input type="checkbox" id="gymPromptSetting" name="gymPromptSetting" checked
+                 onchange="if (typeof window.setGymPromptEnabled === 'function') window.setGymPromptEnabled(this.checked)">
+          Ask which gym I'm at when a workout starts
+        </label>
       </section>
 
       <section class="panel profile-section" aria-labelledby="sActivitySyncHeading">
