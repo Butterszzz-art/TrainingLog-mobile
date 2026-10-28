@@ -277,7 +277,7 @@
     return data;
   }
 
-  const state = { invites: [], assignments: [], notes: [], videos: [], sharing: null, plan: null, loadedAt: 0 };
+  const state = { invites: [], assignments: [], notes: [], videos: [], sharing: null, decided: null, plan: null, loadedAt: 0 };
 
   // ── sharing push ─────────────────────────────────────────────────
 
@@ -328,12 +328,41 @@
     state.assignments = (asn && asn.assignments) || [];
     state.notes = (notes && notes.notes) || [];
     state.videos = (videos && videos.videos) || [];
-    state.sharing = (sharing && sharing.sharing) || state.sharing || { checkIns: true, bodyweight: true, workouts: true };
+    state.sharing = (sharing && sharing.sharing) || state.sharing || { checkIns: true, bodyweight: true, workouts: true, nutrition: false };
+    state.decided = (sharing && sharing.decided) || state.decided;
     if (planRes && planRes.ok) state.plan = planRes.plan || null;
     state.loadedAt = Date.now();
     const linked = state.invites.some(i => i.status === 'active');
     root.localStorage.setItem(linkKey(), linked ? 'true' : 'false');
+    doc.dispatchEvent(new CustomEvent('pc:coach-sharing-changed'));
+    // "Log only": a coach can hide calorie/macro numbers from this client.
+    const activeUids = new Set(state.invites.filter(i => i.status === 'active').map(i => i.coachUid));
+    const logOnly = state.assignments.some(a => a.hideNutritionNumbers === true && activeUids.has(a.coachUid));
+    if (typeof root.setNutritionLogOnly === 'function') root.setNutritionLogOnly(logOnly);
     return true;
+  }
+
+  // ── Food log sharing (asked once) ────────────────────────────────
+  // The food log is opt-in. While the client hasn't answered yet and has an
+  // active coach, the food log screen asks (food-database.js).
+  function coachFoodLogAsk() {
+    const active = state.invites.filter(i => i.status === 'active');
+    if (!active.length || !state.decided || state.decided.nutrition !== false) return null;
+    return { coachName: active.map(i => i.coachUsername).filter(Boolean).join(' & ') };
+  }
+
+  async function answerCoachFoodLogShare(yes) {
+    try {
+      const data = await api$('PUT', '/api/client/coach-sharing', { nutrition: !!yes });
+      state.sharing = data.sharing;
+      state.decided = data.decided || { ...(state.decided || {}), nutrition: true };
+      doc.dispatchEvent(new CustomEvent('pc:coach-sharing-changed'));
+      if (doc.getElementById('yourCoachSection')) render();
+      return true;
+    } catch (err) {
+      toast(err.message || 'Could not update sharing.', 'error');
+      return false;
+    }
   }
 
   function fmtDate(ts) {
@@ -462,7 +491,8 @@
       <div class="pod-row"><h4 class="pod-title mx-h3">What your coach sees</h4></div>
       ${switchRow('checkIns', 'Check-ins', 'Scores, notes and the date of your latest check-in')}
       ${switchRow('bodyweight', 'Bodyweight', 'Your weigh-ins from the last 4 months')}
-      ${switchRow('workouts', 'Workouts', 'Sessions per week and how closely you follow your program')}` : '';
+      ${switchRow('workouts', 'Workouts', 'Sessions per week and how closely you follow your program')}
+      ${switchRow('nutrition', 'Food log', 'Foods, amounts and macros you log, day by day (off until you turn it on)')}` : '';
 
     const cv = root.CoachVideos;
     const videosHtml = state.videos.length && cv ? `
@@ -821,6 +851,8 @@
       try {
         const data = await api$('PUT', '/api/client/coach-sharing', { [key]: next });
         state.sharing = data.sharing;
+        if (data.decided) state.decided = data.decided;
+        doc.dispatchEvent(new CustomEvent('pc:coach-sharing-changed'));
         if (next) pushShare({ force: true });
       } catch (err) {
         t.setAttribute('aria-checked', String(!next));
@@ -847,6 +879,8 @@
   root.markYourCoachSeen = markSeenSoon;
   root.acceptCoachInvite = acceptCoachInvite;
   root.pushCoachShare = pushShare;
+  root.coachFoodLogAsk = coachFoodLogAsk;
+  root.answerCoachFoodLogShare = answerCoachFoodLogShare;
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
   else init();
 })(typeof window !== 'undefined' ? window : null);

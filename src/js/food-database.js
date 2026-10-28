@@ -1,8 +1,8 @@
 /* =============================================================
    FOOD DATABASE — food search + food log
    Searchable food picker injected above the macro meal container.
-   Selecting a food adds macros to the daily totals and writes to a
-   per-user food diary in localStorage.
+   Selecting a food adds macros to the daily totals and an entry to
+   the food log (foodLog_<user>, synced by cloud-sync.js).
 
    Search goes through our backend (/api/food/search), which asks
    USDA FoodData Central with a server-side key and Open Food Facts,
@@ -15,6 +15,8 @@
 
   const Core = window.FoodCore;
   const RECENT_KEY = u => `recentFoods_${u}`;
+  const CUSTOM_KEY = u => `customFoods_${u}`; // synced (cloud-sync.js)
+  const COACH_KEY = u => `coachFoods_${u}`;    // copy of the coach's list (server owns it)
   const _searchCache = new Map(); // query -> server foods, for this session
 
   /* ── Helpers ─────────────────────────────────────────────── */
@@ -46,10 +48,58 @@
 
   /* ── Search ──────────────────────────────────────────────── */
 
-  // Foods on this device that match the query (recently logged ones).
+  // Foods on this device that match the query: your own foods first,
+  // then recently logged ones.
   function _localMatches(q) {
+    const coach = loadCoachFoods();
+    const custom = loadCustomFoods().map(Core.normalizeFood).filter(Boolean);
     const recent = _readJSON(RECENT_KEY(_user()), []);
-    return [recent.filter(f => Core.matchesQuery(f, q))];
+    return [coach, custom, recent].map(list => list.filter(f => Core.matchesQuery(f, q)));
+  }
+
+  /* ── Coach-approved foods ────────────────────────────────── */
+  // Foods your coach approved for you. They rank first in search and can't
+  // be edited here (copy one into your own foods to change it).
+
+  function loadCoachFoods() {
+    const list = _readJSON(COACH_KEY(_user()), []);
+    return (Array.isArray(list) ? list : []).map(Core.normalizeFood).filter(Boolean);
+  }
+
+  async function refreshCoachFoods() {
+    if (!_user() || !window.SERVER_URL || !localStorage.getItem('token') || !navigator.onLine) return;
+    try {
+      const res = await fetch(`${window.SERVER_URL}/api/client/coach-foods`, { headers: _authHeaders(), signal: AbortSignal.timeout(9000) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !data.success) return;
+      localStorage.setItem(COACH_KEY(_user()), JSON.stringify((data.foods || []).map(Core.normalizeFood).filter(Boolean)));
+    } catch { /* keep the last copy */ }
+  }
+
+  /* ── Custom foods ────────────────────────────────────────── */
+
+  function loadCustomFoods() {
+    const list = _readJSON(CUSTOM_KEY(_user()), []);
+    return Array.isArray(list) ? list : [];
+  }
+
+  // Adds or replaces (same id) one of the user's own foods.
+  function saveCustomFood(food) {
+    if (!_user() || !food || !food.id) return;
+    const list = loadCustomFoods().filter(f => f.id !== food.id);
+    list.push(food);
+    localStorage.setItem(CUSTOM_KEY(_user()), JSON.stringify(list));
+  }
+
+  function deleteCustomFood(id) {
+    if (!_user()) return;
+    localStorage.setItem(CUSTOM_KEY(_user()), JSON.stringify(loadCustomFoods().filter(f => f.id !== id)));
+  }
+
+  // A food with this barcode already on the device (your own first).
+  function localFoodByBarcode(code) {
+    const hit = Core.findByBarcode([loadCoachFoods(), loadCustomFoods(), _readJSON(RECENT_KEY(_user()), [])], code);
+    return hit ? Core.normalizeFood(hit) : null;
   }
 
   // → { foods, offline?, error? }
@@ -91,13 +141,16 @@
         <input type="search" id="foodSearchInput" class="food-search-input"
           placeholder="Search food — e.g. kwark, hagelslag, rice" autocomplete="off" enterkeyhint="search"
           aria-label="Search food" />
+        <button type="button" class="food-scan-btn" onclick="scanFoodBarcode()" aria-label="Scan a barcode">▥</button>
       </div>
+      <button type="button" class="food-own-link" onclick="openCustomFoodForm()">＋ Add your own food</button>
       <div id="foodSearchResults" class="food-search-results" hidden></div>
       <div id="foodSelectedInfo" class="food-selected-info" hidden>
         <div class="food-selected-top">
           <span class="food-selected-name" id="foodSelectedName"></span>
           <button type="button" class="food-selected-clear" onclick="clearFoodSelection()" aria-label="Clear selected food">✕</button>
         </div>
+        <p id="foodSelectedWarn" class="food-selected-warn" hidden></p>
         <div class="food-macro-badges">
           <span class="food-macro-badge kcal-badge" id="fsbKcal">0 kcal</span>
           <span class="food-macro-badge protein-badge" id="fsbProtein">0g P</span>
@@ -109,9 +162,16 @@
           <input type="number" id="foodServingInput" class="food-serving-input"
             value="100" min="0" max="9999" step="any" inputmode="decimal" />
           <select id="foodServingUnit" class="food-serving-unit-select" aria-label="Unit"></select>
+        </div>
+        <div class="food-serving-row food-meal-row">
+          <label class="food-serving-label" for="foodMealSelect">Meal</label>
+          <select id="foodMealSelect" class="food-serving-unit-select">
+            ${Core.MEALS.map(m => `<option value="${m}">${Core.MEAL_LABELS[m]}</option>`).join('')}
+          </select>
           <button type="button" class="food-add-btn" onclick="addFoodMacrosToDaily()">＋ Add</button>
         </div>
       </div>
+      <div id="foodShareAsk" class="food-share-ask" hidden></div>
     `;
 
     container.parentNode.insertBefore(widget, container);
@@ -166,7 +226,9 @@
             <span class="fim carbs-badge">${p.carbs}C</span>
             <span class="fim fat-badge">${p.fat}F</span>
             <span class="fim unit-badge">per 100${_esc(f.basis)}</span>
+            ${Core.kcalCheck(p).ok ? '' : `<span class="fim food-flag-badge" title="Calories don't match the macros (4P + 4C + 9F = ${Core.kcalCheck(p).expected} kcal) — check the label">⚠ kcal ≠ macros</span>`}
           </span>
+          ${f.source === 'coach' && f.note ? `<span class="food-item-brand">${_esc(f.coachUsername || 'Coach')}: ${_esc(f.note)}</span>` : ''}
         </button>`;
     }).join('') + (hasOff ? '<div class="food-attrib">Product data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL)</div>' : '');
   }
@@ -181,6 +243,12 @@
     document.getElementById('foodSearchResults').hidden = true;
     document.getElementById('foodSelectedInfo').hidden  = false;
     document.getElementById('foodSelectedName').textContent = food.name + (food.brand ? ` · ${food.brand}` : '');
+    const warn = document.getElementById('foodSelectedWarn');
+    const check = Core.kcalCheck(food.per100);
+    if (warn) {
+      warn.hidden = check.ok;
+      warn.textContent = check.ok ? '' : `⚠ The calories (${food.per100.kcal} per 100${food.basis}) don't match the macros (${check.expected} kcal). The label data may be wrong — check it if you can.`;
+    }
     const unitSel = document.getElementById('foodServingUnit');
     unitSel.innerHTML = `<option value="${_esc(food.basis)}">${_esc(food.basis)}</option>`
       + food.servings.map(s => `<option value="${_esc(s.label)}">${_esc(s.label)}</option>`).join('');
@@ -193,9 +261,12 @@
       document.getElementById('foodServingInput').value = 100;
     }
     document.getElementById('foodSearchInput').value = '';
+    const mealSel = document.getElementById('foodMealSelect');
+    if (mealSel) mealSel.value = _lastMeal || Core.mealForHour(new Date().getHours());
     _refreshBadges();
   }
   window.selectFoodForLogging = _selectFood;
+  let _lastMeal = null;
 
   function _selGrams() {
     const qty = document.getElementById('foodServingInput').value;
@@ -227,97 +298,240 @@
     if (input) input.value  = '';
   };
 
-  /* ── Add food macros to daily totals ─────────────────────── */
+  /* ── Add food to the log ─────────────────────────────────── */
 
   window.addFoodMacrosToDaily = function () {
     if (!_sel) return;
+    if (window.guardMacroDayLocked?.()) return;
     const grams = _selGrams();
     if (!grams) return;
-    const n = Core.scaleNutrients(_sel.per100, grams);
-    const kcal    = n.kcal || 0;
-    const protein = Math.round(n.protein || 0);
-    const carbs   = Math.round(n.carbs || 0);
-    const fat     = Math.round(n.fat || 0);
-
-    // Log the food's macros. Calories follow from them; whatever the label's
-    // kcal differs by (fibre, alcohol, rounding) goes in as direct calories,
-    // so the day's total matches the food's kcal instead of counting it twice.
-    if (window.logMacroAmounts) {
-      const macroKcal = protein * 4 + carbs * 4 + fat * 9;
-      window.logMacroAmounts({ protein, carbs, fats: fat, cals: kcal - macroKcal });
-    }
-
-    const name = _sel.name;
+    const meal = document.getElementById('foodMealSelect')?.value || Core.mealForHour(new Date().getHours());
+    _lastMeal = meal;
+    const entry = Core.makeEntry(_sel, {
+      grams,
+      amount: document.getElementById('foodServingInput').value,
+      unit: document.getElementById('foodServingUnit').value,
+      date: _today(),
+      meal,
+      now: Date.now(),
+    });
     try {
       localStorage.setItem(RECENT_KEY(_user()), JSON.stringify(Core.addRecent(_readJSON(RECENT_KEY(_user()), []), _sel, Date.now())));
     } catch { /* storage full; the recent list is only a convenience */ }
-    _logFood(name, kcal, protein, carbs, fat);
+    addEntry(entry);
     clearFoodSelection();
-    _toast(`✅ ${name.slice(0, 30)} — ${kcal} kcal added`);
+    _toast(`✅ ${entry.name.slice(0, 30)} — ${entry.kcal} kcal added`);
   };
 
-  /* ── Food diary ──────────────────────────────────────────── */
+  /* ── Food log ────────────────────────────────────────────── */
+  // foodLog_<user>: flat list of entries (see food-core.js). Cloud sync
+  // copies each entry to the server; a coach the client shares the food log
+  // with reads it there. Entries older than 90 days are dropped.
 
-  function _logFood(name, kcal, protein, carbs, fat) {
-    const key   = `foodDiary_${_user()}`;
-    const today = new Date().toISOString().slice(0, 10);
-    let diary   = JSON.parse(localStorage.getItem(key) || '{}');
-    if (!diary[today]) diary[today] = [];
-    diary[today].push({ name, kcal, protein, carbs, fat, t: Date.now() });
-    // Trim to 60 days
-    const keys = Object.keys(diary).sort();
-    if (keys.length > 60) keys.slice(0, keys.length - 60).forEach(k => delete diary[k]);
-    localStorage.setItem(key, JSON.stringify(diary));
-    _renderDiary(today);
+  const LOG_KEY = u => `foodLog_${u}`;
+
+  // Same day boundary as the Macros tab's running totals.
+  function _today() {
+    return (typeof window.getTodayDateString === 'function' && window.getTodayDateString()) || new Date().toISOString().slice(0, 10);
   }
 
-  function _renderDiary(today) {
+  function loadLog() {
+    const log = _readJSON(LOG_KEY(_user()), []);
+    return Array.isArray(log) ? log : [];
+  }
+
+  function saveLog(log) {
+    if (!_user()) return;
+    localStorage.setItem(LOG_KEY(_user()), JSON.stringify(Core.trimLog(log, _today())));
+  }
+
+  // Adds an entry and, for today, its macros to the day's running totals.
+  function addEntry(entry) {
+    const log = loadLog();
+    log.push(entry);
+    saveLog(log);
+    if (entry.date === _today() && window.logMacroAmounts) window.logMacroAmounts(Core.progressDelta(entry, 1));
+    renderFoodLog();
+  }
+
+  function removeEntry(id) {
+    if (window.guardMacroDayLocked?.()) return;
+    const log = loadLog();
+    const entry = log.find(e => e.id === id);
+    if (!entry) return;
+    saveLog(log.filter(e => e.id !== id));
+    if (entry.date === _today() && window.logMacroAmounts) window.logMacroAmounts(Core.progressDelta(entry, -1));
+    renderFoodLog();
+  }
+
+  // One-time move of the old per-device diary into the synced food log.
+  function migrateOldDiary() {
+    const u = _user();
+    if (!u) return;
+    const oldKey = `foodDiary_${u}`;
+    const old = _readJSON(oldKey, null);
+    if (!old) return;
+    const log = loadLog();
+    const have = new Set(log.map(e => e.id));
+    Core.migrateOldDiary(old).forEach(e => { if (!have.has(e.id)) log.push(e); });
+    saveLog(log);
+    localStorage.removeItem(oldKey);
+  }
+
+  function renderFoodLog() {
     let host = document.getElementById('foodDiaryList');
     if (!host) {
+      const widget = document.getElementById('foodSearchWidget');
+      if (!widget) return;
       host = document.createElement('div');
       host.id = 'foodDiaryList';
       host.className = 'food-diary-list';
-      const widget = document.getElementById('foodSearchWidget');
-      if (widget) widget.after(host);
+      widget.after(host);
     }
-    const key    = `foodDiary_${_user()}`;
-    const diary  = JSON.parse(localStorage.getItem(key) || '{}');
-    const items  = diary[today] || [];
-    if (!items.length) { host.innerHTML = ''; return; }
-
-    const tot = items.reduce((a, e) => ({
-      kcal: a.kcal + e.kcal, protein: a.protein + e.protein,
-      carbs: a.carbs + e.carbs, fat: a.fat + e.fat,
-    }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+    renderShareAsk();
+    const items = Core.entriesFor(loadLog(), _today());
+    const toolbar = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
+    if (!items.length) { host.innerHTML = toolbar ? `<div class="food-diary-empty">${toolbar}</div>` : ''; return; }
+    const tot = Core.totals(items);
+    const groups = Core.groupByMeal(items);
 
     host.innerHTML = `
       <div class="food-diary-hdr">
         <span>🍽️ Today's food log</span>
-        <span class="food-diary-tot">${tot.kcal} kcal · ${tot.protein}P / ${tot.carbs}C / ${tot.fat}F</span>
+        <span class="food-diary-tot">${tot.kcal} kcal · ${Math.round(tot.protein)}P / ${Math.round(tot.carbs)}C / ${Math.round(tot.fat)}F</span>
       </div>
-      ${items.map((e, i) => `
-        <div class="food-diary-row">
-          <span class="food-diary-nm">${_esc(e.name.slice(0, 32))}</span>
-          <span class="food-diary-kcal">${e.kcal} kcal</span>
-          <button class="food-diary-del" onclick="_removeFoodEntry(${i})" title="Remove">✕</button>
-        </div>
-      `).join('')}
+      ${toolbar}
+      ${Core.MEALS.filter(m => groups[m].length).map(m => {
+        const mt = Core.totals(groups[m]);
+        return `
+        <div class="food-meal-hdr"><span>${Core.MEAL_LABELS[m]}</span>
+          <span><button type="button" class="food-mini-btn" data-save-meal="${m}">Save as meal</button> <span class="food-meal-kcal">${mt.kcal} kcal</span></span></div>
+        ${groups[m].map(e => `
+          <div class="food-diary-row" data-entry-id="${_esc(e.id)}">
+            <button type="button" class="food-diary-nm" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">${_esc(e.name)}${e.amount ? `<small class="food-diary-amt"> · ${_esc(Core.amountLabel(e))}</small>` : ''}</button>
+            <span class="food-diary-kcal">${e.flag ? '<span class="food-flag-dot" title="Calories do not match the macros — check this food">⚠</span> ' : ''}${e.kcal} kcal</span>
+            <button type="button" class="food-diary-del" data-remove-entry="${_esc(e.id)}" aria-label="Remove ${_esc(e.name)}">✕</button>
+          </div>`).join('')}`;
+      }).join('')}
+      ${microsHtml(items)}
     `;
+    const det = host.querySelector('.food-micros');
+    if (det) det.addEventListener('toggle', () => { _microsOpen = det.open; });
+  }
+  window.renderFoodLog = renderFoodLog;
+
+  /* ── Log-only mode ───────────────────────────────────────── */
+  // A coach can switch a client to "log only": calorie and macro numbers
+  // are hidden (CSS on html.pc-log-only) and the client just logs foods.
+  // The flag comes from the coach assignment (client-coaching.js) and is
+  // kept per user, so it also holds offline and before that loads.
+
+  const LOG_ONLY_KEY = u => `nutritionLogOnly_${u}`;
+
+  function applyLogOnly(on) {
+    document.documentElement.classList.toggle('pc-log-only', !!on);
+    const hero = document.querySelector('#macrosTargetsView .macro-hero');
+    let note = document.getElementById('logOnlyNote');
+    if (on && hero && !note) {
+      note = document.createElement('p');
+      note.id = 'logOnlyNote';
+      note.className = 'pc-log-only-note';
+      note.textContent = 'Your coach set your food log to "log only": just log what you eat — they look at the numbers for you.';
+      hero.before(note);
+    }
+    if (note) note.hidden = !on;
   }
 
-  window._removeFoodEntry = function (idx) {
-    const key   = `foodDiary_${_user()}`;
-    const today = new Date().toISOString().slice(0, 10);
-    let diary   = JSON.parse(localStorage.getItem(key) || '{}');
-    if (diary[today]) { diary[today].splice(idx, 1); localStorage.setItem(key, JSON.stringify(diary)); }
-    _renderDiary(today);
+  window.setNutritionLogOnly = function (on) {
+    if (_user()) localStorage.setItem(LOG_ONLY_KEY(_user()), on ? '1' : '0');
+    applyLogOnly(on);
   };
 
+  /* ── Fibre & micros (secondary view) ─────────────────────── */
+  // Collapsed under today's log so the macro screen stays about macros.
+  // A nutrient no logged food lists says "No data" instead of 0; when only
+  // some foods list it, the total is shown as a minimum.
+
+  let _microsOpen = false;
+
+  function _fmtMicro(v, unit) {
+    return `${v >= 100 ? Math.round(v) : Math.round(v * 10) / 10} ${unit}`;
+  }
+
+  function microsHtml(items) {
+    // Limits that depend on calories follow the day's target (not what's
+    // been eaten so far); without a target, the EU reference of 2000 kcal.
+    const target = _readJSON(`macroTargets_${_user()}`, null) || _readJSON('macroTargets', null);
+    const rows = Core.microSummary(items, Number(target && target.calories) > 0 ? Number(target.calories) : 2000);
+    const withData = rows.filter(r => r.status !== 'nodata').length;
+    const row = r => {
+      const target = r.ref ? `${r.kind === 'max' ? 'limit' : 'aim'} ${_fmtMicro(r.ref, r.unit)}` : '';
+      let value;
+      if (r.status === 'nodata') value = '<span class="food-micro-nodata">No data</span>';
+      else value = `${r.status === 'partial' ? '≥ ' : ''}${_fmtMicro(r.total, r.unit)}`;
+      const pct = r.percent === null ? 0 : Math.min(100, r.percent);
+      const sub = r.status === 'partial' ? `${r.missing} of ${r.of} foods have no data`
+        : r.status === 'high' ? `over the limit${r.note ? ` (${r.note})` : ''}`
+          : r.note && r.status !== 'nodata' ? r.note : '';
+      return `
+        <div class="food-micro-row is-${r.status}" title="${_esc(target)}">
+          <span class="food-micro-lbl">${_esc(r.label)}${sub ? `<small>${_esc(sub)}</small>` : ''}</span>
+          <span class="food-micro-bar" aria-hidden="true"><span style="width:${r.status === 'nodata' ? 0 : pct}%"></span></span>
+          <span class="food-micro-val">${value}<small>${_esc(target)}</small></span>
+        </div>`;
+    };
+    return `
+      <details class="food-micros"${_microsOpen ? ' open' : ''}>
+        <summary>Fibre &amp; micros <small>${withData ? `${withData} of ${rows.length} with data` : 'no data in today’s foods'}</small></summary>
+        ${rows.map(row).join('')}
+        <p class="food-micro-foot">Totals of the foods logged today, against the EU label reference intakes (fibre: Dutch Health Council). Quick-added macros have no micronutrients.</p>
+      </details>`;
+  }
+
+  document.addEventListener('click', (e) => {
+    const del = e.target.closest('[data-remove-entry]');
+    if (del) removeEntry(del.dataset.removeEntry);
+  });
+
+  // Today's entries (used by other screens).
   window.getFoodDiaryToday = function () {
-    const key   = `foodDiary_${_user()}`;
-    const today = new Date().toISOString().slice(0, 10);
-    return (JSON.parse(localStorage.getItem(key) || '{}')[today] || []);
+    return Core.entriesFor(loadLog(), _today());
   };
+  window.FoodLog = {
+    load: loadLog, save: saveLog, add: addEntry, remove: removeEntry, today: _today,
+    customFoods: loadCustomFoods, saveCustomFood, deleteCustomFood, localFoodByBarcode,
+    coachFoods: loadCoachFoods, refreshCoachFoods,
+    authHeaders: _authHeaders, toast: (m) => _toast(m),
+  };
+
+  /* ── Ask once about sharing the food log with a coach ────── */
+  // The coach only sees the food log after the client says yes
+  // (client-coaching.js owns the sharing switches).
+
+  function renderShareAsk() {
+    const el = document.getElementById('foodShareAsk');
+    if (!el) return;
+    const ask = typeof window.coachFoodLogAsk === 'function' ? window.coachFoodLogAsk() : null;
+    if (!ask) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.innerHTML = `
+      <p class="food-share-q">Share your food log with ${_esc(ask.coachName || 'your coach')}?</p>
+      <p class="food-share-sub">They'll see what you eat (foods, amounts and macros) to coach you on it. You can turn this off any time in Settings → Your Coach.</p>
+      <div class="food-share-actions">
+        <button type="button" class="food-add-btn" data-food-share="yes">Share</button>
+        <button type="button" class="food-share-no" data-food-share="no">Not now</button>
+      </div>`;
+  }
+
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-food-share]');
+    if (!b || typeof window.answerCoachFoodLogShare !== 'function') return;
+    b.disabled = true;
+    const ok = await window.answerCoachFoodLogShare(b.dataset.foodShare === 'yes');
+    if (ok && b.dataset.foodShare === 'yes') _toast('✅ Your coach can now see your food log');
+    renderShareAsk();
+  });
+  document.addEventListener('pc:coach-sharing-changed', renderShareAsk);
 
   /* ── Toast ───────────────────────────────────────────────── */
 
@@ -353,15 +567,18 @@
   /* ── Boot ─────────────────────────────────────────────────── */
 
   document.addEventListener('DOMContentLoaded', () => {
+    applyLogOnly(_user() && localStorage.getItem(LOG_ONLY_KEY(_user())) === '1');
     setTimeout(() => {
+      refreshCoachFoods();
+      migrateOldDiary();
       injectFoodSearchWidget();
-      _renderDiary(new Date().toISOString().slice(0, 10));
+      renderFoodLog();
     }, 1400);
 
     // Re-inject if user navigates to macro tab
     document.addEventListener('click', (e) => {
       if (e.target.closest('[data-tab="macroTab"]') || e.target.closest('.macros-subtab[data-macro-subtab="targets"]')) {
-        setTimeout(injectFoodSearchWidget, 350);
+        setTimeout(() => { injectFoodSearchWidget(); renderFoodLog(); }, 350);
       }
     });
   });

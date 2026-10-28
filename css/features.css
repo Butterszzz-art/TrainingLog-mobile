@@ -187,6 +187,9 @@
 button.food-search-item {
   display: block;
   width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
   text-align: left;
   background: none;
   border: none;
@@ -224,6 +227,38 @@ button.food-search-item {
   text-align: right;
 }
 .food-attrib a { color: inherit; text-decoration: underline; }
+.food-meal-row { margin-top: 8px; }
+.food-meal-hdr {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.food-diary-amt { color: var(--text-muted); font-weight: 400; }
+.food-share-ask {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: var(--bg-color);
+}
+.food-share-q { margin: 0 0 4px; font-size: 0.85rem; font-weight: 600; color: var(--text-color); }
+.food-share-sub { margin: 0 0 8px; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+.food-share-actions { display: flex; gap: 8px; align-items: center; }
+.food-share-actions .food-add-btn { margin-left: 0; }
+.food-share-no {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
 .food-serving-unit-select {
   max-width: 46%;
   min-width: 0;
@@ -3167,3 +3202,177 @@ button.food-search-item {
 .wt-estimate-table td { border-left: 0; border-right: 0; }
 .wt-estimate-table { border: 0; }
 .measurements-metric-pill { min-height: 0; margin: 0; }
+
+/* ── Barcode scan + custom food sheet (food-barcode.js) ───── */
+.food-scan-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.food-own-link {
+  display: inline-block;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  color: var(--primary-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.food-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1700;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.food-sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px 16px 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  animation: foodSheetUp 0.2s ease-out;
+}
+@keyframes foodSheetUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .food-sheet { animation: none; } }
+@media (min-width: 700px) { .food-sheet-backdrop { align-items: center; } .food-sheet { border-radius: 16px; } }
+.food-sheet-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.food-sheet-hdr h3 { margin: 0; font-size: 1rem; color: var(--text-color); }
+.food-sheet-x { background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 4px; }
+.food-sheet-sub { font-size: 0.78rem; color: var(--text-muted); margin: 0 0 10px; line-height: 1.4; }
+.food-scan-video { width: 100%; border-radius: 10px; background: #000; aspect-ratio: 4 / 3; object-fit: cover; margin-bottom: 8px; }
+.food-form { display: flex; flex-direction: column; gap: 8px; }
+.food-field { display: flex; flex-direction: column; gap: 3px; font-size: 0.74rem; color: var(--text-muted); font-weight: 600; min-width: 0; }
+.food-field input, .food-fieldset select {
+  padding: 7px 9px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-size: 0.88rem;
+  min-width: 0;
+}
+.food-field-in { display: flex; align-items: center; gap: 4px; }
+.food-field-in input { flex: 1; width: 100%; }
+.food-field-in small { color: var(--text-muted); min-width: 18px; }
+.food-fieldset { border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 10px 10px; margin: 0; }
+.food-fieldset legend { font-size: 0.74rem; font-weight: 700; color: var(--text-color); padding: 0 4px; }
+.food-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.food-grid--serving { grid-template-columns: 2fr 1fr; margin-top: 6px; }
+.food-more { margin-top: 8px; }
+.food-more summary { font-size: 0.74rem; color: var(--text-muted); cursor: pointer; margin-bottom: 6px; }
+.food-form-err { color: var(--danger-text, #e5484d); font-size: 0.78rem; margin: 0; }
+
+.food-basis-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; }
+.food-basis-row select { width: auto; display: inline-block; padding: 4px 8px; }
+
+/* ── Food log tools (food-log-tools.js) ───────────────────── */
+.food-log-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 4px; }
+.food-diary-empty .food-log-toolbar { padding: 8px 0; }
+.food-mini-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.food-mini-btn:hover { color: var(--text-color); border-color: var(--primary); }
+.food-meal-hdr .food-mini-btn { padding: 1px 8px; font-size: 0.62rem; margin-right: 6px; }
+button.food-diary-nm {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.food-lib-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.food-lib-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 0 4px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.food-lib-to { text-transform: none; letter-spacing: 0; font-weight: 400; display: flex; align-items: center; gap: 6px; }
+.food-lib-to select { width: auto; padding: 3px 6px; font-size: 0.75rem; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; }
+.food-lib-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border-color); }
+.food-lib-row .food-add-btn { margin-left: 0; padding: 4px 10px; font-size: 0.78rem; }
+.food-lib-name { flex: 1; min-width: 0; font-size: 0.85rem; color: var(--text-color); }
+.food-lib-name small { display: block; color: var(--text-muted); font-size: 0.72rem; }
+.food-recipe-g { width: 92px; flex-shrink: 0; }
+.food-recipe-g input { padding: 5px 6px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-color); width: 100%; }
+/* The app's global button style adds a pill shape, drop shadow and block
+   display; these small controls inside the food log stay flat and inline. */
+.food-search-widget button, .food-diary-list button, .food-sheet button { box-shadow: none; }
+button.food-diary-nm { border-radius: 0; font-size: 0.85rem; display: block; }
+.food-mini-btn { display: inline-flex; align-items: center; width: auto; min-height: 0; line-height: 1.4; }
+.food-meal-hdr > span:last-child { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.food-own-link { border-radius: 0; width: auto; }
+.food-diary-list .food-mini-btn,
+.food-sheet .food-mini-btn,
+.food-sheet .food-diary-del,
+.food-diary-list .food-diary-del { display: inline-flex; margin: 0; width: auto; }
+.food-sheet .food-add-btn, .food-diary-list .food-add-btn, .food-search-widget .food-add-btn { width: auto; margin-top: 0; margin-bottom: 0; }
+.food-flag-badge { background: rgba(240,160,64,0.15); color: #f0a040; }
+.food-flag-dot { color: #f0a040; font-size: 0.75rem; }
+.food-selected-warn { margin: 0 0 8px; font-size: 0.75rem; color: #f0a040; line-height: 1.4; }
+
+/* ── Fibre & micros (secondary view under today's log) ───── */
+.food-micros { border-top: 1px solid var(--border-color); padding: 2px 12px 8px; }
+.food-micros summary { cursor: pointer; padding: 8px 0 6px; font-size: 0.78rem; font-weight: 600; color: var(--text-color); }
+.food-micros summary small { font-weight: 400; color: var(--text-muted); margin-left: 6px; }
+.food-micro-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 96px; align-items: center; gap: 10px; padding: 5px 0; font-size: 0.78rem; }
+.food-micro-lbl { color: var(--text-color); min-width: 0; }
+.food-micro-lbl small, .food-micro-val small { display: block; color: var(--text-muted); font-size: 0.66rem; }
+.food-micro-val { text-align: right; color: var(--text-color); white-space: nowrap; }
+.food-micro-bar { height: 5px; border-radius: 3px; background: var(--bg-color); overflow: hidden; }
+.food-micro-bar span { display: block; height: 100%; background: var(--primary); }
+.food-micro-row.is-low .food-micro-bar span,
+.food-micro-row.is-partial .food-micro-bar span { background: rgba(var(--acc-5fa87e), 0.5); }
+.food-micro-row.is-high .food-micro-bar span { background: #f0a040; }
+.food-micro-row.is-high .food-micro-val { color: #f0a040; }
+.food-micro-nodata { color: var(--text-muted); font-style: italic; }
+.food-micro-foot { margin: 6px 0 0; font-size: 0.66rem; color: var(--text-muted); line-height: 1.4; }
+
+/* ── Log-only mode (coach setting, food-database.js) ───────── */
+html.pc-log-only #macrosTargetsView .macro-hero,
+html.pc-log-only #macrosTargetsView .macro-quick-chips,
+html.pc-log-only #macroCustomAdd,
+html.pc-log-only #assignedNutritionPlanCard,
+html.pc-log-only .macro-trends-accordion,
+html.pc-log-only .macro-heatmap-accordion,
+html.pc-log-only .food-macro-badges,
+html.pc-log-only .food-item-macros,
+html.pc-log-only .food-diary-kcal,
+html.pc-log-only .food-diary-tot,
+html.pc-log-only .food-meal-kcal,
+html.pc-log-only .food-micros,
+html.pc-log-only .food-selected-warn,
+html.pc-log-only [data-edit-preview],
+html.pc-log-only .food-lib-name small { display: none !important; }
+.pc-log-only-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}

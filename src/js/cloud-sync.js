@@ -59,6 +59,13 @@
     { name: 'hyroxLog',         key: u => `hyroxLog_${u}`,         mode: 'list', idField: 'ts' },
     { name: 'macroHistory',     key: u => `macroHistory_${u}`,     mode: 'list', idField: 'date' },
     { name: 'macroTargets',     key: u => `macroTargets_${u}`,     mode: 'value' },
+    // The food log, one item per food logged (food-database.js). A coach
+    // the client shares it with reads these on the server.
+    { name: 'foodLog',          key: u => `foodLog_${u}`,          mode: 'list', idField: 'id' },
+    // The client's own foods (food-database.js / food-barcode.js).
+    { name: 'customFoods',      key: u => `customFoods_${u}`,      mode: 'list', idField: 'id' },
+    // Saved meals (food-log-tools.js).
+    { name: 'mealTemplates',    key: u => `mealTemplates_${u}`,    mode: 'list', idField: 'id' },
     { name: 'programs',         key: u => `programs_${u}`,         mode: 'list', idField: 'id' },
     { name: 'activeProgram',    key: u => `activeProgram_${u}`,    mode: 'value' },
     { name: 'managedTemplates', key: u => `managedTemplates_${u}`, mode: 'list', idField: 'id' },
@@ -467,6 +474,7 @@
     if (has('crossfitLog', 'crossfitWorkouts')) call('renderCrossfitWorkouts');
     if (has('hyroxLog')) call('renderHyroxHistory');
     if (has('macroHistory')) call('renderMacroHistory');
+    if (has('foodLog')) call('renderFoodLog');
     if (has('macroTargets', 'dailyMacroMeals', 'dailyMacroProgress', 'dailyMacroDate', 'macroDayType', 'macroDayComplete')) {
       call('loadMacroTargetsFromLocal'); call('renderMacroSlots'); call('renderDailyMacroProgress'); call('updateMacroUI');
     }

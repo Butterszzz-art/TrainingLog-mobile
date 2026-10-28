@@ -533,11 +533,18 @@
       doneDates = new Set(workouts.map(w => String(w.date).slice(0, 10)));
       progress  = doneDates.size;
     } else if (challenge.key === 'protein') {
-      const diary = _parse(`foodDiary_${username}`) || [];
+      // Daily protein from the archived day totals plus today's running total
+      // (the old food diary was an object keyed by date, so .filter threw).
+      const history = (_parse(`macroHistory_${username}`) || []).map(h => ({ date: h && h.date, protein: Number(h && h.totals && h.totals.protein) || 0 }));
+      const todayProgress = _parse('dailyMacroProgress');
+      if (todayProgress && localStorage.getItem('dailyMacroDate')) {
+        history.push({ date: localStorage.getItem('dailyMacroDate'), protein: Number(todayProgress.protein) || 0 });
+      }
+      const diary = history;
       const targets = _parse(`macroTargets_${username}`) || {};
       const pTarget = targets.protein || 0;
       if (pTarget > 0) {
-        const hit = diary.filter(e => e.date >= weekStart && (e.protein || 0) >= pTarget);
+        const hit = diary.filter(e => e.date && e.date >= weekStart && (e.protein || 0) >= pTarget);
         progress  = hit.length;
         doneDates = new Set(hit.map(e => String(e.date).slice(0, 10)));
       }
