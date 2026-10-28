@@ -177,8 +177,10 @@
     }
   }
 
+  // A found or new product opens in the "Log food" sheet, ready to confirm
+  // the amount and meal.
   function showFoodWidget() {
-    // The food search lives in the Meals card on the Macros tab.
+    if (typeof window.openFoodSearch === 'function') { window.openFoodSearch({ focus: false }); return; }
     const card = document.getElementById('mealsCard');
     if (card && !card.open) card.open = true;
     if (typeof window.injectFoodSearchWidget === 'function') window.injectFoodSearchWidget();

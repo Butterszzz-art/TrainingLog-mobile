@@ -750,6 +750,26 @@
   </nav>
 
 
+  <!-- Macros tab: big Search food / Scan barcode buttons above the nav, and
+       the sheet the food search opens in (food-database.js). -->
+  <div id="foodDock" class="food-dock" hidden>
+    <button type="button" class="food-dock-btn food-dock-btn--search" onclick="openFoodSearch()">
+      <span class="ui-icon" data-icon="search"></span><span>Search food</span>
+    </button>
+    <button type="button" class="food-dock-btn food-dock-btn--scan" onclick="scanFoodBarcode()">
+      <span class="ui-icon" data-icon="camera"></span><span>Scan barcode</span>
+    </button>
+  </div>
+  <div id="foodSearchSheet" class="food-search-sheet" hidden>
+    <div class="food-search-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="foodSearchSheetTitle">
+      <div class="food-sheet-hdr">
+        <h3 id="foodSearchSheetTitle">Log food</h3>
+        <button type="button" class="food-sheet-x" onclick="closeFoodSearch()" aria-label="Close">✕</button>
+      </div>
+      <div id="foodSearchHost"></div>
+    </div>
+  </div>
+
   <div id="appContainer" class="main-content">
 
   <div id="homeTab" class="tab-content">
@@ -3030,6 +3050,10 @@
                 <span class="mx-lbl" id="macroHeroDayLabel">Today</span>
                 <span id="offlineBadge" class="mx-chip mx-chip--sm mx-chip--brass" style="display:none;"><span class="ui-icon" data-icon="clock"></span> Offline</span>
                 <span id="macroDayCompleteBadge" class="mx-chip mx-chip--sm macro-day-complete-badge" hidden><span class="ui-icon" data-icon="check"></span> Complete</span>
+                <!-- Fibre and micros for today (openMicrosSheet in food-database.js) -->
+                <button type="button" id="macroMicrosBtn" class="macro-micros-btn" onclick="openMicrosSheet()" aria-label="Fibre and micros for today">
+                  <span class="ui-icon" data-icon="leaf"></span><span>Micros</span><span class="macro-micros-dot" id="macroMicrosDot" hidden></span>
+                </button>
               </div>
               <div class="macro-hero-num-row">
                 <span class="macro-hero-num mx-num" id="macroCalsProgress">0</span>
@@ -3068,6 +3092,9 @@
               <progress id="carbBar" value="0" max="100"></progress>
               <progress id="fatBar" value="0" max="100"></progress>
             </section>
+
+            <!-- Today's food log (renderFoodLog in food-database.js) -->
+            <div id="foodDiaryList" class="food-diary-list"></div>
 
             <!-- Copy the last logged day / lock today (renderMacroDayActions) -->
             <div class="macro-day-actions">

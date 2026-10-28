@@ -128,20 +128,24 @@
 
   /* ── Inject food-search widget ───────────────────────────── */
 
+  // The search lives in the "Log food" sheet that the Macros tab's Search
+  // food button opens (#foodSearchHost). Older markup without the sheet
+  // gets it above the meal cards, as before.
   function injectFoodSearchWidget() {
+    const host = document.getElementById('foodSearchHost');
     const container = document.getElementById('macroMealContainer');
-    if (!container || document.getElementById('foodSearchWidget')) return;
+    if ((!host && !container) || document.getElementById('foodSearchWidget')) return;
 
     const widget = document.createElement('div');
     widget.id = 'foodSearchWidget';
     widget.className = 'food-search-widget';
     widget.innerHTML = `
       <div class="food-search-bar">
-        <span class="food-search-icon" aria-hidden="true">🍽️</span>
+        <span class="food-search-icon ui-icon" aria-hidden="true">${_icon('search')}</span>
         <input type="search" id="foodSearchInput" class="food-search-input"
           placeholder="Search food — e.g. kwark, hagelslag, rice" autocomplete="off" enterkeyhint="search"
           aria-label="Search food" />
-        <button type="button" class="food-scan-btn" onclick="scanFoodBarcode()" aria-label="Scan a barcode">▥</button>
+        <button type="button" class="food-scan-btn" onclick="scanFoodBarcode()" aria-label="Scan a barcode"><span class="ui-icon" aria-hidden="true">${_icon('camera')}</span></button>
       </div>
       <button type="button" class="food-own-link" onclick="openCustomFoodForm()">＋ Add your own food</button>
       <div id="foodSearchResults" class="food-search-results" hidden></div>
@@ -174,14 +178,15 @@
       <div id="foodShareAsk" class="food-share-ask" hidden></div>
     `;
 
-    container.parentNode.insertBefore(widget, container);
+    if (host) host.appendChild(widget);
+    else container.parentNode.insertBefore(widget, container);
 
     const input     = widget.querySelector('#foodSearchInput');
     const resultsEl = widget.querySelector('#foodSearchResults');
     let seq = 0;
 
     const doSearch = _debounce(async (q) => {
-      if (q.length < 2) { resultsEl.hidden = true; return; }
+      if (q.length < 2) { _renderRecent(resultsEl); return; }
       const mine = ++seq;
       resultsEl.hidden = false;
       resultsEl.innerHTML = '<div class="food-search-msg">Searching…</div>';
@@ -196,11 +201,94 @@
       if (item) _selectFood(_lastResults[Number(item.dataset.foodIdx)]);
     });
     document.addEventListener('click', (e) => {
-      if (!widget.contains(e.target)) resultsEl.hidden = true;
+      // In the sheet the results stay put; inline they close on outside taps.
+      if (!host && !widget.contains(e.target)) resultsEl.hidden = true;
     });
   }
 
   let _lastResults = [];
+
+  // The app's icon set (index.html's top-level ICONS).
+  function _icon(name) {
+    // eslint-disable-next-line no-undef
+    const set = typeof ICONS !== 'undefined' ? ICONS : window.ICONS;
+    return (set && set[name]) || '';
+  }
+
+  // Before anything is typed: your own and recent foods, one tap to log.
+  function _renderRecent(el) {
+    const coach = loadCoachFoods();
+    const custom = loadCustomFoods().map(Core.normalizeFood).filter(Boolean);
+    const recent = _readJSON(RECENT_KEY(_user()), []).map(Core.normalizeFood).filter(Boolean);
+    const foods = Core.mergeResults([recent, coach, custom], [], 12);
+    if (!foods.length) {
+      el.hidden = false;
+      el.innerHTML = '<div class="food-search-msg">Type a food (Dutch or English), or scan a barcode.</div>';
+      _lastResults = [];
+      return;
+    }
+    _renderResults(el, { foods });
+    el.insertAdjacentHTML('afterbegin', '<div class="food-search-msg food-search-recent-hdr">Recent and your foods</div>');
+    el.hidden = false;
+  }
+
+  /* ── "Log food" sheet and the Macros tab's dock ──────────── */
+
+  function openFoodSearch({ focus = true } = {}) {
+    injectFoodSearchWidget();
+    const sheet = document.getElementById('foodSearchSheet');
+    if (!sheet) {
+      document.getElementById('foodSearchWidget')?.scrollIntoView({ block: 'center' });
+      return;
+    }
+    sheet.hidden = false;
+    document.body.classList.add('food-search-open');
+    _updateDock();
+    const input = document.getElementById('foodSearchInput');
+    const results = document.getElementById('foodSearchResults');
+    if (input && !input.value && results && document.getElementById('foodSelectedInfo')?.hidden !== false) _renderRecent(results);
+    if (focus && input) setTimeout(() => input.focus(), 50);
+  }
+
+  function closeFoodSearch() {
+    const sheet = document.getElementById('foodSearchSheet');
+    if (!sheet || sheet.hidden) return;
+    sheet.hidden = true;
+    document.body.classList.remove('food-search-open');
+    window.clearFoodSelection?.();
+    _updateDock();
+  }
+  window.openFoodSearch = openFoodSearch;
+  window.closeFoodSearch = closeFoodSearch;
+
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'foodSearchSheet') closeFoodSearch(); // tap on the backdrop
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('foodSheet')) closeFoodSearch();
+  });
+
+  // The dock shows on the Macros tab's main view, for a signed-in user.
+  function _updateDock() {
+    const dock = document.getElementById('foodDock');
+    if (!dock) return;
+    const tab = document.getElementById('macroTab');
+    const targets = document.getElementById('macrosTargetsView');
+    const sheetOpen = !document.getElementById('foodSearchSheet')?.hidden;
+    const on = !!(_user() && tab && tab.classList.contains('active')
+      && (!targets || !targets.classList.contains('is-hidden')) && !sheetOpen);
+    dock.hidden = !on;
+    document.body.classList.toggle('food-dock-on', on);
+  }
+  window.updateFoodDock = _updateDock;
+
+  function _watchDock() {
+    const watch = ['macroTab', 'macrosTargetsView'].map(id => document.getElementById(id)).filter(Boolean);
+    if (!watch.length || typeof MutationObserver !== 'function') return;
+    const mo = new MutationObserver(_updateDock);
+    watch.forEach(el => mo.observe(el, { attributes: true, attributeFilter: ['class'] }));
+    _updateDock();
+  }
 
   function _renderResults(el, { foods, offline, error }) {
     _lastResults = foods;
@@ -320,6 +408,8 @@
     } catch { /* storage full; the recent list is only a convenience */ }
     addEntry(entry);
     clearFoodSelection();
+    const results = document.getElementById('foodSearchResults');
+    if (results && document.getElementById('foodSearchSheet') && !document.getElementById('foodSearchSheet').hidden) _renderRecent(results);
     _toast(`✅ ${entry.name.slice(0, 30)} — ${entry.kcal} kcal added`);
   };
 
@@ -390,6 +480,7 @@
     }
     renderShareAsk();
     const items = Core.entriesFor(loadLog(), _today());
+    _updateMicrosButton(items);
     const toolbar = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
     if (!items.length) { host.innerHTML = toolbar ? `<div class="food-diary-empty">${toolbar}</div>` : ''; return; }
     const tot = Core.totals(items);
@@ -413,10 +504,7 @@
             <button type="button" class="food-diary-del" data-remove-entry="${_esc(e.id)}" aria-label="Remove ${_esc(e.name)}">✕</button>
           </div>`).join('')}`;
       }).join('')}
-      ${microsHtml(items)}
     `;
-    const det = host.querySelector('.food-micros');
-    if (det) det.addEventListener('toggle', () => { _microsOpen = det.open; });
   }
   window.renderFoodLog = renderFoodLog;
 
@@ -447,22 +535,40 @@
     applyLogOnly(on);
   };
 
-  /* ── Fibre & micros (secondary view) ─────────────────────── */
-  // Collapsed under today's log so the macro screen stays about macros.
-  // A nutrient no logged food lists says "No data" instead of 0; when only
-  // some foods list it, the total is shown as a minimum.
+  /* ── Fibre & micros (sheet behind the macro card's button) ─ */
+  // Kept off the main screen so it stays about macros: the small "Micros"
+  // button on the macro card opens it, with a dot when something is over
+  // its limit. A nutrient no logged food lists says "No data" instead of 0;
+  // when only some foods list it, the total is shown as a minimum.
 
-  let _microsOpen = false;
+  function _microRows(items) {
+    // Limits that depend on calories follow the day's target (not what's
+    // been eaten so far); without a target, the EU reference of 2000 kcal.
+    const target = _readJSON(`macroTargets_${_user()}`, null) || _readJSON('macroTargets', null);
+    return Core.microSummary(items, Number(target && target.calories) > 0 ? Number(target.calories) : 2000);
+  }
+
+  function _updateMicrosButton(items) {
+    const dot = document.getElementById('macroMicrosDot');
+    if (dot) dot.hidden = !_microRows(items).some(r => r.status === 'high');
+  }
+
+  function openMicrosSheet() {
+    if (!window.FoodSheet) return;
+    const items = Core.entriesFor(loadLog(), _today());
+    window.FoodSheet.open(`
+      <div class="food-sheet-hdr"><h3>Fibre and micros</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
+      ${microsHtml(items)}`, { label: 'Fibre and micros' });
+    document.querySelector('#foodSheet [data-close]')?.addEventListener('click', () => window.FoodSheet.close());
+  }
+  window.openMicrosSheet = openMicrosSheet;
 
   function _fmtMicro(v, unit) {
     return `${v >= 100 ? Math.round(v) : Math.round(v * 10) / 10} ${unit}`;
   }
 
   function microsHtml(items) {
-    // Limits that depend on calories follow the day's target (not what's
-    // been eaten so far); without a target, the EU reference of 2000 kcal.
-    const target = _readJSON(`macroTargets_${_user()}`, null) || _readJSON('macroTargets', null);
-    const rows = Core.microSummary(items, Number(target && target.calories) > 0 ? Number(target.calories) : 2000);
+    const rows = _microRows(items);
     const withData = rows.filter(r => r.status !== 'nodata').length;
     const row = r => {
       const target = r.ref ? `${r.kind === 'max' ? 'limit' : 'aim'} ${_fmtMicro(r.ref, r.unit)}` : '';
@@ -481,11 +587,11 @@
         </div>`;
     };
     return `
-      <details class="food-micros"${_microsOpen ? ' open' : ''}>
-        <summary>Fibre &amp; micros <small>${withData ? `${withData} of ${rows.length} with data` : 'no data in today’s foods'}</small></summary>
+      <div class="food-micros">
+        <p class="food-sheet-sub">Today · ${withData ? `${withData} of ${rows.length} with data` : 'no data in today’s foods yet'}</p>
         ${rows.map(row).join('')}
         <p class="food-micro-foot">Totals of the foods logged today, against the EU label reference intakes (fibre: Dutch Health Council). Quick-added macros have no micronutrients.</p>
-      </details>`;
+      </div>`;
   }
 
   document.addEventListener('click', (e) => {
@@ -573,6 +679,7 @@
       migrateOldDiary();
       injectFoodSearchWidget();
       renderFoodLog();
+      _watchDock();
     }, 1400);
 
     // Re-inject if user navigates to macro tab
