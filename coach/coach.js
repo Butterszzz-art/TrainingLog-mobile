@@ -1130,7 +1130,113 @@ function renderNutrition(c) {
     + '<p class="ws-empty-note">' + escapeHtml(c.clientName) + ' reviews and applies them from Settings → Your Coach.</p>'
     + '</div>'
     + '<div class="d-card"><div class="d-card-title">Current</div>'
-    + '<p style="color:var(--text-sec);">' + escapeHtml(c.currentNutritionSummary || 'No nutrition plan set.') + '</p></div>';
+    + '<p style="color:var(--text-sec);">' + escapeHtml(c.currentNutritionSummary || 'No nutrition plan set.') + '</p></div>'
+    + '<div id="coachFoodLog"><div class="d-card"><div class="d-card-title">Food log</div><p class="ws-empty-note">Loading…</p></div></div>';
+  loadFoodLog(c);
+}
+
+// ── Food log (GET /api/coach/nutrition/:clientId) ─────────────
+// Food-level entries the client logged, with daily totals vs target and
+// 7/28-day averages. The server only answers while the client shares
+// their food log with you (Settings → Your Coach → Food log).
+let _foodLogCache = {}; // clientId -> { nutrition } | { code, message }
+
+async function loadFoodLog(c, { force = false } = {}) {
+  if (!force && _foodLogCache[c.id]) return renderFoodLog(c);
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/nutrition/' + encodeURIComponent(c.id) + '?days=28', { headers: authHeaders() });
+    const data = await res.json().catch(() => null);
+    _foodLogCache[c.id] = res.ok && data && data.success
+      ? { nutrition: data.nutrition }
+      : { code: data?.error?.code || 'error', message: data?.error?.message || 'Could not load the food log.' };
+  } catch {
+    _foodLogCache[c.id] = { code: 'network', message: 'Could not reach the server.' };
+  }
+  if (_selectedClientId === c.id) renderFoodLog(c);
+}
+
+const MEAL_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
+const ADHERENCE = {
+  green: ['On track', 'mx-chip--green'], amber: ['Partly on track', 'mx-chip--brass'], red: ['Off track', 'mx-chip--red'],
+  logging: ['Logging well (no target)', 'mx-chip--green'], partial: ['Logging some days', 'mx-chip--brass'], low: ['Rarely logs', 'mx-chip--red'],
+  unknown: ['No data', ''],
+};
+
+function pctText(p) {
+  if (p === null || p === undefined) return '';
+  return (p > 0 ? '+' : '') + p + '% vs target';
+}
+
+function macroLine(t) {
+  if (!t) return '—';
+  return fmt(t.kcal) + ' kcal · ' + fmt(t.protein) + 'P / ' + fmt(t.carbs) + 'C / ' + fmt(t.fat) + 'F';
+}
+
+function renderFoodLog(c) {
+  const el = document.getElementById('coachFoodLog');
+  if (!el) return;
+  const cached = _foodLogCache[c.id];
+  const first = (c.clientName || 'This client').split(' ')[0];
+  if (!cached || cached.code) {
+    const notShared = cached && cached.code === 'coach.nutrition_not_shared';
+    el.innerHTML = '<div class="d-card"><div class="d-card-title">Food log</div><p class="ws-empty-note">'
+      + (notShared
+        ? escapeHtml(first) + ' hasn’t shared their food log with you. They can turn it on in the app: Settings → Your Coach → Food log.'
+        : escapeHtml(cached ? cached.message : 'Loading…'))
+      + '</p>' + (cached && !notShared ? '<button class="bulk-action-btn" onclick="retryFoodLog()">Try again</button>' : '') + '</div>';
+    return;
+  }
+  const n = cached.nutrition;
+  const t = n.target;
+  const s7 = n.last7, s28 = n.last28;
+  const [adhLabel, adhCls] = ADHERENCE[s28.adherence] || ADHERENCE.unknown;
+  const avgRow = (label, k, unit) => '<tr><td>' + label + '</td><td>' + (t && t[k] ? fmt(t[k]) + unit : '—') + '</td>'
+    + '<td>' + (s7.average[k] == null ? '—' : fmt(s7.average[k]) + unit) + '<small> ' + escapeHtml(s7.vsTargetPercent ? pctText(s7.vsTargetPercent[k]) : '') + '</small></td>'
+    + '<td>' + (s28.average[k] == null ? '—' : fmt(s28.average[k]) + unit) + '<small> ' + escapeHtml(s28.vsTargetPercent ? pctText(s28.vsTargetPercent[k]) : '') + '</small></td></tr>';
+
+  const days = n.days.map(d => {
+    const intake = d.intake;
+    const dot = d.onTarget === true ? 'is-on' : d.onTarget === false ? 'is-off' : '';
+    const label = new Date(d.date + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) + (d.today ? ' (today)' : '');
+    const byMeal = {};
+    d.entries.forEach(e => { (byMeal[e.meal] = byMeal[e.meal] || []).push(e); });
+    const body = d.entries.length
+      ? Object.keys(MEAL_LABELS).filter(m => byMeal[m]).map(m => '<div class="fl-meal">' + MEAL_LABELS[m] + '</div>'
+        + byMeal[m].map(e => '<div class="fl-entry' + (e.flag ? ' is-flagged' : '') + '">'
+          + '<span class="fl-name">' + escapeHtml(e.name) + (e.brand ? ' <small>' + escapeHtml(e.brand) + '</small>' : '')
+          + (e.amount ? ' <small>· ' + escapeHtml(e.amount) + ' ' + escapeHtml(e.unit || 'g') + '</small>' : '')
+          + (e.flag ? ' <span class="fl-flag" title="Calories don’t match the macros (4P + 4C + 9F) — check this food">⚠ check</span>' : '') + '</span>'
+          + '<span class="fl-src">' + escapeHtml(String(e.source || '').toUpperCase()) + '</span>'
+          + '<span class="fl-macros">' + fmt(e.kcal) + ' kcal · ' + fmt(e.protein, 1) + 'P ' + fmt(e.carbs, 1) + 'C ' + fmt(e.fat, 1) + 'F</span></div>').join('')).join('')
+      : '';
+    const extra = d.notFromFoodsKcal > 20 ? '<p class="fl-note">+' + fmt(d.notFromFoodsKcal) + ' kcal logged as quick macros, not as foods.</p>' : '';
+    return '<details class="fl-day"' + (d.today ? ' open' : '') + '><summary>'
+      + '<span class="fl-dot ' + dot + '" aria-hidden="true"></span>'
+      + '<span class="fl-date">' + escapeHtml(label) + '</span>'
+      + '<span class="fl-total">' + (d.logged ? escapeHtml(macroLine(intake)) : 'Not logged') + '</span></summary>'
+      + (body || extra ? body + extra : '<p class="fl-note">Nothing logged.</p>') + '</details>';
+  }).join('');
+
+  el.innerHTML = '<div class="d-card"><div class="d-card-title">Food log · last 28 days'
+    + ' <span class="mx-chip mx-chip--sm ' + adhCls + '" style="margin-left:6px;">' + escapeHtml(adhLabel) + '</span>'
+    + ' <button class="capsule-chip" style="float:right;" onclick="retryFoodLog()">Refresh</button></div>'
+    + '<div class="d-stat-grid">'
+    + stat('Days logged (7d)', s7.daysLogged + '/' + s7.days)
+    + stat('Days logged (28d)', s28.daysLogged + '/' + s28.days)
+    + stat('On target (28d)', s28.onTargetDays == null ? '—' : s28.onTargetDays + '/' + s28.daysLogged)
+    + stat('Avg kcal (7d)', s7.average.kcal == null ? '—' : fmt(s7.average.kcal))
+    + '</div>'
+    + '<table class="fl-avg"><thead><tr><th></th><th>Target</th><th>7-day avg</th><th>28-day avg</th></tr></thead><tbody>'
+    + avgRow('Calories', 'kcal', '') + avgRow('Protein', 'protein', 'g') + avgRow('Carbs', 'carbs', 'g') + avgRow('Fat', 'fat', 'g')
+    + '</tbody></table>'
+    + '<p class="ws-empty-note">Averages cover logged days only and leave out today. “On target” = calories within ±10% and protein at least 90% of target.'
+    + (t ? '' : ' No macro target set yet, so adherence is based on logging only.') + '</p>'
+    + '</div><div class="d-card"><div class="d-card-title">Days</div>' + days + '</div>';
+}
+
+function retryFoodLog() {
+  const c = _clients.find(x => x.id === _selectedClientId);
+  if (c) { delete _foodLogCache[c.id]; loadFoodLog(c, { force: true }); }
 }
 
 function macroField(label, id, value) {

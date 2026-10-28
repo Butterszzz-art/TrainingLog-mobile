@@ -126,6 +126,20 @@
     _downloadCSV(`readiness_log_${_dateStamp()}.csv`, rows);
   };
 
+  /* ── Export: Food log ───────────────────────────────────── */
+
+  window.exportFoodLogCSV = function () {
+    const username = _user();
+    if (!username) { alert('Log in first.'); return; }
+    const log = _parse('foodLog_' + username) || [];
+    if (!log.length || !window.FoodCore) { alert('No foods logged yet.'); return; }
+    const blob = new Blob([window.FoodCore.toCsv(window.FoodCore.foodLogRows(log))], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `food_log_${username}_${_dateStamp()}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   /* ── Export: Full JSON dump ─────────────────────────────── */
 
   window.exportAllJSON = async function () {
@@ -145,6 +159,8 @@
       measurements: _parse('bodyMeasurements_' + username)   || [],
       readiness:    _parse('dailyReadiness_v1')               || {},
       macroTargets: _parse('macroTargets_' + username)        || {},
+      macroHistory: _parse('macroHistory_' + username)        || [],
+      foodLog:      _parse('foodLog_' + username)             || [],
       programs:     _parse('programs')                        || [],
       prBoard:      _parse('prBoard_' + username)             || {},
     };

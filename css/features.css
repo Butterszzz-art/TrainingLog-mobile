@@ -224,6 +224,38 @@ button.food-search-item {
   text-align: right;
 }
 .food-attrib a { color: inherit; text-decoration: underline; }
+.food-meal-row { margin-top: 8px; }
+.food-meal-hdr {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.food-diary-amt { color: var(--text-muted); font-weight: 400; }
+.food-share-ask {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: var(--bg-color);
+}
+.food-share-q { margin: 0 0 4px; font-size: 0.85rem; font-weight: 600; color: var(--text-color); }
+.food-share-sub { margin: 0 0 8px; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+.food-share-actions { display: flex; gap: 8px; align-items: center; }
+.food-share-actions .food-add-btn { margin-left: 0; }
+.food-share-no {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
 .food-serving-unit-select {
   max-width: 46%;
   min-width: 0;
