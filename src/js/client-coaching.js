@@ -335,6 +335,10 @@
     const linked = state.invites.some(i => i.status === 'active');
     root.localStorage.setItem(linkKey(), linked ? 'true' : 'false');
     doc.dispatchEvent(new CustomEvent('pc:coach-sharing-changed'));
+    // "Log only": a coach can hide calorie/macro numbers from this client.
+    const activeUids = new Set(state.invites.filter(i => i.status === 'active').map(i => i.coachUid));
+    const logOnly = state.assignments.some(a => a.hideNutritionNumbers === true && activeUids.has(a.coachUid));
+    if (typeof root.setNutritionLogOnly === 'function') root.setNutritionLogOnly(logOnly);
     return true;
   }
 

@@ -581,7 +581,34 @@
     return rows;
   }
 
+  // Weekly averages for the coach's export, from the server's day rows
+  // ({ date, logged, intake, onTarget }). Weeks start on Monday; averages
+  // cover logged days only.
+  function weeklyAverages(days, target) {
+    const weeks = new Map();
+    (days || []).forEach(d => {
+      if (!d || !d.date) return;
+      const t = Date.parse(d.date + 'T00:00:00Z');
+      const dow = (new Date(t).getUTCDay() + 6) % 7;
+      const start = new Date(t - dow * 864e5).toISOString().slice(0, 10);
+      if (!weeks.has(start)) weeks.set(start, []);
+      weeks.get(start).push(d);
+    });
+    const rows = [['Week starting', 'Days logged', 'Avg kcal', 'Avg protein (g)', 'Avg carbs (g)', 'Avg fat (g)', 'Days on target',
+      'Target kcal', 'Target protein (g)', 'Target carbs (g)', 'Target fat (g)']];
+    [...weeks.keys()].sort().forEach(start => {
+      const list = weeks.get(start);
+      const logged = list.filter(d => d.logged && d.intake);
+      const avg = k => (logged.length ? Math.round(logged.reduce((s, d) => s + (Number(d.intake[k]) || 0), 0) / logged.length) : '');
+      rows.push([start, `${logged.length}/${list.length}`, avg('kcal'), avg('protein'), avg('carbs'), avg('fat'),
+        target ? list.filter(d => d.onTarget === true).length : '',
+        target ? target.kcal : '', target ? target.protein : '', target ? target.carbs : '', target ? target.fat : '']);
+    });
+    return rows;
+  }
+
   const api = {
+    weeklyAverages,
     csvCell, toCsv, foodLogRows,
     normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
     amountLabel, editEntry, copyEntries, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,

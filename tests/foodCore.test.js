@@ -320,3 +320,20 @@ describe('fibre & micros', () => {
     expect(r.sodiumMg.status).toBe('high');
   });
 });
+
+describe('weekly averages (coach export)', () => {
+  const day = (date, kcal, onTarget) => ({ date, logged: kcal > 0, intake: kcal > 0 ? { kcal, protein: 150, carbs: 200, fat: 60 } : null, onTarget });
+  test('groups by Monday-start week, averages logged days only', () => {
+    // 2026-10-26 is a Monday.
+    const rows = Core.weeklyAverages([day('2026-10-28', 2000, true), day('2026-10-27', 0, null), day('2026-10-26', 3000, false), day('2026-10-25', 2500, true)],
+      { kcal: 2500, protein: 180, carbs: 280, fat: 70 });
+    expect(rows[0][0]).toBe('Week starting');
+    expect(rows.slice(1).map(r => r.slice(0, 3))).toEqual([['2026-10-19', '1/1', 2500], ['2026-10-26', '2/3', 2500]]);
+    expect(rows[2][6]).toBe(1);
+    expect(rows[2][7]).toBe(2500);
+  });
+  test('no target leaves the target columns empty', () => {
+    const rows = Core.weeklyAverages([day('2026-10-28', 2000, null)], null);
+    expect(rows[1].slice(6)).toEqual(['', '', '', '', '']);
+  });
+});

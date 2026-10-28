@@ -1220,7 +1220,10 @@ function renderFoodLog(c) {
 
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Food log · last 28 days'
     + ' <span class="fl-adh ' + adhCls + '">' + escapeHtml(adhLabel) + '</span>'
-    + ' <button class="capsule-chip" style="float:right;" onclick="retryFoodLog()">Refresh</button></div>'
+    + ' <span class="fl-actions"><button class="capsule-chip" onclick="exportFoodLogCsv()">Export CSV</button>'
+    + ' <button class="capsule-chip" onclick="retryFoodLog()">Refresh</button></span></div>'
+    + '<label class="fl-hide"><input type="checkbox" id="flHideNumbers"' + (c.hideNutritionNumbers ? ' checked' : '') + '> '
+    + 'Log only: hide calorie and macro numbers in ' + escapeHtml(first) + '’s app (they still log foods; you still see everything)</label>'
     + '<div class="d-stat-grid">'
     + stat('Days logged (7d)', s7.daysLogged + '/' + s7.days)
     + stat('Days logged (28d)', s28.daysLogged + '/' + s28.days)
@@ -1235,6 +1238,13 @@ function renderFoodLog(c) {
     + '</div><div class="d-card"><div class="d-card-title">Days</div>' + days + '</div>'
     + '<div id="coachFoodsCard"></div>';
   el.querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', () => approveEntry(c, b.dataset.approve)));
+  document.getElementById('flHideNumbers')?.addEventListener('change', async e => {
+    const on = e.target.checked;
+    e.target.disabled = true;
+    if (await patchClient(c.id, { hideNutritionNumbers: on })) c.hideNutritionNumbers = on;
+    else e.target.checked = !on;
+    e.target.disabled = false;
+  });
   loadCoachFoods(c);
 }
 
@@ -1327,6 +1337,39 @@ async function loadCoachFoods(c) {
     const servings = v('cfServing') && Number(v('cfServingG')) > 0 ? [{ label: v('cfServing'), grams: Number(v('cfServingG')) }] : [];
     saveCoachFood(slugId(v('cfName')), { name: v('cfName'), brand: v('cfBrand'), per100, servings, audience: forAll ? 'all' : 'selected', clientUids: forAll ? [] : [c.id] }, c);
   });
+}
+
+// CSV of the client's food log (last 90 days) and weekly averages, built
+// in the browser from the same endpoint (same access checks).
+async function exportFoodLogCsv() {
+  const c = _clients.find(x => x.id === _selectedClientId);
+  if (!c || !window.FoodCore) return;
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/nutrition/' + encodeURIComponent(c.id) + '?days=90', { headers: authHeaders() });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not load the food log.');
+    const n = data.nutrition;
+    const entries = n.days.flatMap(d => d.entries);
+    const rows = [
+      ...window.FoodCore.foodLogRows(entries),
+      [],
+      ['Daily totals'],
+      ['Date', 'Logged', 'kcal', 'Protein (g)', 'Carbs (g)', 'Fat (g)', 'Not from foods (kcal)', 'On target'],
+      ...n.days.slice().reverse().map(d => [d.date, d.logged ? 'yes' : 'no', d.intake?.kcal ?? '', d.intake?.protein ?? '', d.intake?.carbs ?? '', d.intake?.fat ?? '',
+        d.notFromFoodsKcal || '', d.onTarget === null ? '' : (d.onTarget ? 'yes' : 'no')]),
+      [],
+      ['Weekly averages'],
+      ...window.FoodCore.weeklyAverages(n.days, n.target),
+    ];
+    const blob = new Blob(['\ufeff' + window.FoodCore.toCsv(rows)], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'food-log_' + String(c.clientName || c.id).replace(/[^A-Za-z0-9_-]+/g, '-') + '_' + n.today + '.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch (err) {
+    alert(err.message);
+  }
 }
 
 function retryFoodLog() {

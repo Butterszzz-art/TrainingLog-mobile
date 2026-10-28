@@ -405,7 +405,7 @@
         const mt = Core.totals(groups[m]);
         return `
         <div class="food-meal-hdr"><span>${Core.MEAL_LABELS[m]}</span>
-          <span><button type="button" class="food-mini-btn" data-save-meal="${m}">Save as meal</button> ${mt.kcal} kcal</span></div>
+          <span><button type="button" class="food-mini-btn" data-save-meal="${m}">Save as meal</button> <span class="food-meal-kcal">${mt.kcal} kcal</span></span></div>
         ${groups[m].map(e => `
           <div class="food-diary-row" data-entry-id="${_esc(e.id)}">
             <button type="button" class="food-diary-nm" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">${_esc(e.name)}${e.amount ? `<small class="food-diary-amt"> · ${_esc(Core.amountLabel(e))}</small>` : ''}</button>
@@ -419,6 +419,33 @@
     if (det) det.addEventListener('toggle', () => { _microsOpen = det.open; });
   }
   window.renderFoodLog = renderFoodLog;
+
+  /* ── Log-only mode ───────────────────────────────────────── */
+  // A coach can switch a client to "log only": calorie and macro numbers
+  // are hidden (CSS on html.pc-log-only) and the client just logs foods.
+  // The flag comes from the coach assignment (client-coaching.js) and is
+  // kept per user, so it also holds offline and before that loads.
+
+  const LOG_ONLY_KEY = u => `nutritionLogOnly_${u}`;
+
+  function applyLogOnly(on) {
+    document.documentElement.classList.toggle('pc-log-only', !!on);
+    const hero = document.querySelector('#macrosTargetsView .macro-hero');
+    let note = document.getElementById('logOnlyNote');
+    if (on && hero && !note) {
+      note = document.createElement('p');
+      note.id = 'logOnlyNote';
+      note.className = 'pc-log-only-note';
+      note.textContent = 'Your coach set your food log to "log only": just log what you eat — they look at the numbers for you.';
+      hero.before(note);
+    }
+    if (note) note.hidden = !on;
+  }
+
+  window.setNutritionLogOnly = function (on) {
+    if (_user()) localStorage.setItem(LOG_ONLY_KEY(_user()), on ? '1' : '0');
+    applyLogOnly(on);
+  };
 
   /* ── Fibre & micros (secondary view) ─────────────────────── */
   // Collapsed under today's log so the macro screen stays about macros.
@@ -540,6 +567,7 @@
   /* ── Boot ─────────────────────────────────────────────────── */
 
   document.addEventListener('DOMContentLoaded', () => {
+    applyLogOnly(_user() && localStorage.getItem(LOG_ONLY_KEY(_user())) === '1');
     setTimeout(() => {
       refreshCoachFoods();
       migrateOldDiary();
