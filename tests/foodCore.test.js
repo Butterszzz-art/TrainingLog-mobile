@@ -264,3 +264,28 @@ describe('recipes', () => {
     expect(Core.parseRecipeJsonLd('<script type="application/ld+json">{bad json</script>')).toBeNull();
   });
 });
+
+describe('data quality', () => {
+  test('kcalCheck: matching label passes', () => {
+    expect(Core.kcalCheck({ kcal: 435, protein: 5, carbs: 67, fat: 15 }).ok).toBe(true);
+  });
+  test('kcalCheck: EU fibre at 2 kcal/g passes', () => {
+    expect(Core.kcalCheck({ kcal: 370, protein: 13, carbs: 59, fat: 7, fiber: 10 }).ok).toBe(true);
+  });
+  test('kcalCheck: more than 15 % off fails, with the expected value', () => {
+    expect(Core.kcalCheck({ kcal: 467, protein: 3.3, carbs: 20, fat: 2 })).toEqual({ ok: false, expected: 111 });
+  });
+  test('kcalCheck: small values get a 10 kcal margin', () => {
+    expect(Core.kcalCheck({ kcal: 12, protein: 0, carbs: 1, fat: 0 }).ok).toBe(true);
+  });
+  test('entries from a bad label are flagged; good ones are not', () => {
+    const bad = { ...kwark, per100: { kcal: 300, protein: 9, carbs: 4, fat: 0.1 } };
+    expect(Core.makeEntry(bad, { grams: 100, date: '2026-10-28', now: 1 }).flag).toBe('kcal_mismatch');
+    expect(Core.makeEntry(kwark, { grams: 100, date: '2026-10-28', now: 1 }).flag).toBeUndefined();
+  });
+  test('coach foods keep their note and coach name, other sources do not', () => {
+    const c = Core.normalizeFood({ ...kwark, id: 'coach:c1:x', source: 'coach', note: 'Mijn favoriet', coachUsername: 'arman' });
+    expect(c).toMatchObject({ source: 'coach', note: 'Mijn favoriet', coachUsername: 'arman' });
+    expect(Core.normalizeFood({ ...kwark, note: 'x', coachUsername: 'y' }).note).toBeUndefined();
+  });
+});

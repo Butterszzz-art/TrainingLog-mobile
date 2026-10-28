@@ -171,6 +171,7 @@
   function openLibrary() {
     const tpls = loadTemplates();
     const own = FL().customFoods();
+    const fromCoach = FL().coachFoods ? FL().coachFoods() : [];
     const recipes = own.filter(f => f.source === 'recipe');
     const foods = own.filter(f => f.source !== 'recipe');
     const defaultMeal = Core.mealForHour(new Date().getHours());
@@ -184,6 +185,10 @@
         <button type="button" class="food-mini-btn" data-new-recipe>＋ New recipe</button>
         <button type="button" class="food-mini-btn" data-import-recipe>Import recipe from a link</button>
       </div>
+      ${fromCoach.length ? `<h4 class="food-lib-h">From your coach</h4>
+      ${fromCoach.map(f => `<div class="food-lib-row"><span class="food-lib-name">${esc(f.name)}<small>${esc(f.brand ? f.brand + ' · ' : '')}${kcalOf(f)}${f.note ? ' · ' + esc(f.note) : ''}</small></span>
+        <button type="button" class="food-add-btn" data-log-coach="${esc(f.id)}">Log</button>
+        <button type="button" class="food-mini-btn" data-copy-coach="${esc(f.id)}">Copy to my foods</button></div>`).join('')}` : ''}
       <h4 class="food-lib-h">Saved meals <span class="food-lib-to">log to ${mealSelect}</span></h4>
       ${tpls.length ? tpls.map(t => `<div class="food-lib-row"><span class="food-lib-name">${esc(t.name)}<small>${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'} · ${tplKcal(t)} kcal</small></span>
         <button type="button" class="food-add-btn" data-log-tpl="${esc(t.id)}">Log</button>
@@ -211,7 +216,15 @@
       else if (t.matches('[data-new-food]')) window.openCustomFoodForm({ onSaved: () => openLibrary() });
       else if (t.matches('[data-new-recipe]')) openRecipeBuilder();
       else if (t.matches('[data-import-recipe]')) openRecipeImport();
-      else if (t.dataset.logTpl) { logTemplate(t.dataset.logTpl, root.querySelector('[data-lib-meal]').value); Sheet().close(); }
+      else if (t.dataset.logCoach) {
+        const f = fromCoach.find(x => x.id === t.dataset.logCoach);
+        Sheet().close();
+        if (f) window.selectFoodForLogging?.(f);
+      } else if (t.dataset.copyCoach) {
+        // A copy you can change; the coach's original stays as it is.
+        const f = fromCoach.find(x => x.id === t.dataset.copyCoach);
+        if (f) window.openCustomFoodForm({ food: { ...f, id: undefined, source: 'custom' }, note: 'Your own copy of your coach’s food — changes here don’t touch the original.', onSaved: () => openLibrary() });
+      } else if (t.dataset.logTpl) { logTemplate(t.dataset.logTpl, root.querySelector('[data-lib-meal]').value); Sheet().close(); }
       else if (t.dataset.delTpl) {
         if (!confirm('Delete this saved meal?')) return;
         saveTemplates(loadTemplates().filter(x => x.id !== t.dataset.delTpl)); openLibrary();

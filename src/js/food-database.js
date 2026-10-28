@@ -16,6 +16,7 @@
   const Core = window.FoodCore;
   const RECENT_KEY = u => `recentFoods_${u}`;
   const CUSTOM_KEY = u => `customFoods_${u}`; // synced (cloud-sync.js)
+  const COACH_KEY = u => `coachFoods_${u}`;    // copy of the coach's list (server owns it)
   const _searchCache = new Map(); // query -> server foods, for this session
 
   /* ── Helpers ─────────────────────────────────────────────── */
@@ -50,9 +51,29 @@
   // Foods on this device that match the query: your own foods first,
   // then recently logged ones.
   function _localMatches(q) {
+    const coach = loadCoachFoods();
     const custom = loadCustomFoods().map(Core.normalizeFood).filter(Boolean);
     const recent = _readJSON(RECENT_KEY(_user()), []);
-    return [custom.filter(f => Core.matchesQuery(f, q)), recent.filter(f => Core.matchesQuery(f, q))];
+    return [coach, custom, recent].map(list => list.filter(f => Core.matchesQuery(f, q)));
+  }
+
+  /* ── Coach-approved foods ────────────────────────────────── */
+  // Foods your coach approved for you. They rank first in search and can't
+  // be edited here (copy one into your own foods to change it).
+
+  function loadCoachFoods() {
+    const list = _readJSON(COACH_KEY(_user()), []);
+    return (Array.isArray(list) ? list : []).map(Core.normalizeFood).filter(Boolean);
+  }
+
+  async function refreshCoachFoods() {
+    if (!_user() || !window.SERVER_URL || !localStorage.getItem('token') || !navigator.onLine) return;
+    try {
+      const res = await fetch(`${window.SERVER_URL}/api/client/coach-foods`, { headers: _authHeaders(), signal: AbortSignal.timeout(9000) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !data.success) return;
+      localStorage.setItem(COACH_KEY(_user()), JSON.stringify((data.foods || []).map(Core.normalizeFood).filter(Boolean)));
+    } catch { /* keep the last copy */ }
   }
 
   /* ── Custom foods ────────────────────────────────────────── */
@@ -77,7 +98,7 @@
 
   // A food with this barcode already on the device (your own first).
   function localFoodByBarcode(code) {
-    const hit = Core.findByBarcode([loadCustomFoods(), _readJSON(RECENT_KEY(_user()), [])], code);
+    const hit = Core.findByBarcode([loadCoachFoods(), loadCustomFoods(), _readJSON(RECENT_KEY(_user()), [])], code);
     return hit ? Core.normalizeFood(hit) : null;
   }
 
@@ -129,6 +150,7 @@
           <span class="food-selected-name" id="foodSelectedName"></span>
           <button type="button" class="food-selected-clear" onclick="clearFoodSelection()" aria-label="Clear selected food">✕</button>
         </div>
+        <p id="foodSelectedWarn" class="food-selected-warn" hidden></p>
         <div class="food-macro-badges">
           <span class="food-macro-badge kcal-badge" id="fsbKcal">0 kcal</span>
           <span class="food-macro-badge protein-badge" id="fsbProtein">0g P</span>
@@ -204,7 +226,9 @@
             <span class="fim carbs-badge">${p.carbs}C</span>
             <span class="fim fat-badge">${p.fat}F</span>
             <span class="fim unit-badge">per 100${_esc(f.basis)}</span>
+            ${Core.kcalCheck(p).ok ? '' : `<span class="fim food-flag-badge" title="Calories don't match the macros (4P + 4C + 9F = ${Core.kcalCheck(p).expected} kcal) — check the label">⚠ kcal ≠ macros</span>`}
           </span>
+          ${f.source === 'coach' && f.note ? `<span class="food-item-brand">${_esc(f.coachUsername || 'Coach')}: ${_esc(f.note)}</span>` : ''}
         </button>`;
     }).join('') + (hasOff ? '<div class="food-attrib">Product data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL)</div>' : '');
   }
@@ -219,6 +243,12 @@
     document.getElementById('foodSearchResults').hidden = true;
     document.getElementById('foodSelectedInfo').hidden  = false;
     document.getElementById('foodSelectedName').textContent = food.name + (food.brand ? ` · ${food.brand}` : '');
+    const warn = document.getElementById('foodSelectedWarn');
+    const check = Core.kcalCheck(food.per100);
+    if (warn) {
+      warn.hidden = check.ok;
+      warn.textContent = check.ok ? '' : `⚠ The calories (${food.per100.kcal} per 100${food.basis}) don't match the macros (${check.expected} kcal). The label data may be wrong — check it if you can.`;
+    }
     const unitSel = document.getElementById('foodServingUnit');
     unitSel.innerHTML = `<option value="${_esc(food.basis)}">${_esc(food.basis)}</option>`
       + food.servings.map(s => `<option value="${_esc(s.label)}">${_esc(s.label)}</option>`).join('');
@@ -379,7 +409,7 @@
         ${groups[m].map(e => `
           <div class="food-diary-row" data-entry-id="${_esc(e.id)}">
             <button type="button" class="food-diary-nm" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">${_esc(e.name)}${e.amount ? `<small class="food-diary-amt"> · ${_esc(Core.amountLabel(e))}</small>` : ''}</button>
-            <span class="food-diary-kcal">${e.kcal} kcal</span>
+            <span class="food-diary-kcal">${e.flag ? '<span class="food-flag-dot" title="Calories do not match the macros — check this food">⚠</span> ' : ''}${e.kcal} kcal</span>
             <button type="button" class="food-diary-del" data-remove-entry="${_esc(e.id)}" aria-label="Remove ${_esc(e.name)}">✕</button>
           </div>`).join('')}`;
       }).join('')}
@@ -399,6 +429,7 @@
   window.FoodLog = {
     load: loadLog, save: saveLog, add: addEntry, remove: removeEntry, today: _today,
     customFoods: loadCustomFoods, saveCustomFood, deleteCustomFood, localFoodByBarcode,
+    coachFoods: loadCoachFoods, refreshCoachFoods,
     authHeaders: _authHeaders, toast: (m) => _toast(m),
   };
 
@@ -466,6 +497,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
+      refreshCoachFoods();
       migrateOldDiary();
       injectFoodSearchWidget();
       renderFoodLog();
