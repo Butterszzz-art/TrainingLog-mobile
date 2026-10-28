@@ -138,3 +138,118 @@ describe('session-context alt gym / alt machine', () => {
     expect(bar().querySelector('.scb-note')).toBeNull();
   });
 });
+
+describe('ask which gym when a workout starts', () => {
+  let ctx;
+  let store;
+  const today = () => { const d = new Date(); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+
+  beforeEach(() => {
+    const dom = new JSDOM('<!DOCTYPE html><body><div id="sessionContextBar"></div></body>');
+    store = {};
+    ctx = {
+      document: dom.window.document,
+      CustomEvent: dom.window.CustomEvent,
+      localStorage: {
+        getItem: k => (k in store ? store[k] : null),
+        setItem: (k, v) => { store[k] = String(v); },
+        removeItem: k => { delete store[k]; }
+      },
+      currentUser: 'u1',
+    };
+    ctx.window = ctx;
+    vm.createContext(ctx);
+    vm.runInContext(fs.readFileSync('progressiveOverload.js', 'utf8'), ctx);
+    vm.runInContext(fs.readFileSync('src/js/session-context.js', 'utf8'), ctx);
+  });
+
+  const sheet = () => ctx.document.getElementById('gymAskSheet');
+
+  test('asks before the first workout action, then runs it once a gym is picked', () => {
+    let ran = 0;
+    expect(ctx.askGymThen(() => ran++)).toBe(true);
+    expect(sheet()).not.toBeNull();
+    expect(ran).toBe(0);
+    sheet().querySelector('[data-gym-choice="usual"]').click();
+    expect(ran).toBe(1);
+    expect(sheet()).toBeNull();
+    expect(ctx.getSessionContext()).toMatchObject({ altGym: false, askedDate: today() });
+    // Not asked again during the same workout.
+    expect(ctx.askGymThen(() => ran++)).toBe(false);
+    expect(ran).toBe(2);
+  });
+
+  test('picking a saved gym or typing a new one sets Alt Gym', () => {
+    ctx.localStorage.setItem('workouts_u1', JSON.stringify([{ date: '2026-10-01', log: [{ exercise: 'Bench', sessionCtx: { altGym: true, gymName: 'PureGym Soho' } }] }]));
+    ctx.askGymThen(() => {});
+    sheet().querySelector('[data-gym-choice="saved"]').click();
+    expect(ctx.getSessionContext()).toMatchObject({ altGym: true, gymName: 'PureGym Soho' });
+
+    ctx.clearSessionContextAfterSave();
+    let ran = false;
+    ctx.askGymThen(() => { ran = true; });
+    sheet().querySelector('#gymAskNewName').value = '  Hotel gym ';
+    sheet().querySelector('form').dispatchEvent(new ctx.document.defaultView.Event('submit', { cancelable: true }));
+    expect(ran).toBe(true);
+    expect(ctx.getSessionContext()).toMatchObject({ altGym: true, gymName: 'Hotel gym' });
+  });
+
+  test('an empty new-gym name does nothing', () => {
+    let ran = false;
+    ctx.askGymThen(() => { ran = true; });
+    sheet().querySelector('form').dispatchEvent(new ctx.document.defaultView.Event('submit', { cancelable: true }));
+    expect(ran).toBe(false);
+    expect(sheet()).not.toBeNull();
+  });
+
+  test('tapping outside cancels without running or marking as asked', () => {
+    let ran = false;
+    ctx.askGymThen(() => { ran = true; });
+    sheet().click();
+    expect(sheet()).toBeNull();
+    expect(ran).toBe(false);
+    expect(ctx.shouldAskGym()).toBe(true);
+  });
+
+  test('"don\'t ask again" turns the question off and starts at the usual gym', () => {
+    let ran = false;
+    ctx.askGymThen(() => { ran = true; });
+    sheet().querySelector('[data-gym-choice="never"]').click();
+    expect(ran).toBe(true);
+    expect(ctx.isGymPromptEnabled()).toBe(false);
+    ctx.clearSessionContextAfterSave();
+    expect(ctx.shouldAskGym()).toBe(false);
+    ctx.setGymPromptEnabled(true);
+    expect(ctx.shouldAskGym()).toBe(true);
+  });
+
+  test('not asked mid-workout, when coaching a client, or after setting the gym by hand', () => {
+    ctx.localStorage.setItem('tl_workout_timer_v1', JSON.stringify({ startTimeMs: Date.now() }));
+    expect(ctx.shouldAskGym()).toBe(false);
+    ctx.localStorage.removeItem('tl_workout_timer_v1');
+
+    ctx.coachLoggingClient = 'client1';
+    expect(ctx.shouldAskGym()).toBe(false);
+    delete ctx.coachLoggingClient;
+
+    expect(ctx.shouldAskGym()).toBe(true);
+    ctx.toggleAltGym();
+    expect(ctx.shouldAskGym()).toBe(false);
+  });
+
+  test('asked again for the next workout after one is ended', () => {
+    ctx.askGymThen(() => {});
+    sheet().querySelector('[data-gym-choice="usual"]').click();
+    expect(ctx.shouldAskGym()).toBe(false);
+    ctx.clearSessionContextAfterSave();
+    expect(ctx.shouldAskGym()).toBe(true);
+  });
+
+  test('saved gym names in the sheet are escaped', () => {
+    const evil = '"><img src=x onerror=alert(1)>';
+    ctx.localStorage.setItem('workouts_u1', JSON.stringify([{ date: '2026-10-01', log: [{ exercise: 'Bench', sessionCtx: { altGym: true, gymName: evil } }] }]));
+    ctx.askGymThen(() => {});
+    expect(sheet().querySelector('img')).toBeNull();
+    expect(sheet().querySelector('[data-gym-choice="saved"]').dataset.gymName).toBe(evil);
+  });
+});
