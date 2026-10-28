@@ -289,3 +289,34 @@ describe('data quality', () => {
     expect(Core.normalizeFood({ ...kwark, note: 'x', coachUsername: 'y' }).note).toBeUndefined();
   });
 });
+
+describe('fibre & micros', () => {
+  const byKey = rows => Object.fromEntries(rows.map(r => [r.key, r]));
+  test('no data is "nodata", never 0', () => {
+    const r = byKey(Core.microSummary([{ kcal: 100, protein: 1, carbs: 1, fat: 1 }], 2000));
+    expect(r.ironMg).toMatchObject({ status: 'nodata', total: null });
+    expect(Core.microSummary([], 0).every(x => x.status === 'nodata')).toBe(true);
+  });
+  test('partial data is a minimum with a count', () => {
+    const r = byKey(Core.microSummary([{ ironMg: 3 }, { kcal: 1 }, { ironMg: 2 }], 2000));
+    expect(r.ironMg).toMatchObject({ status: 'partial', total: 5, missing: 1, of: 3, ref: 14 });
+  });
+  test('low / ok against an aim, high against a limit', () => {
+    const r = byKey(Core.microSummary([{ fiber: 12, calciumMg: 900, sodiumMg: 3000 }], 2000));
+    expect(r.fiber.status).toBe('low');
+    expect(r.calciumMg.status).toBe('ok');
+    expect(r.sodiumMg).toMatchObject({ status: 'high', percent: 125 });
+  });
+  test('sugar and sat fat limits follow the day\'s calories', () => {
+    const r = byKey(Core.microSummary([{ sugar: 60, satFat: 10 }], 2000));
+    expect(r.sugar).toMatchObject({ ref: 50, status: 'high' });
+    expect(r.satFat).toMatchObject({ ref: 22, status: 'ok' });
+  });
+  test('without a target the limits use 2000 kcal', () => {
+    expect(byKey(Core.microSummary([{ sugar: 10 }])).sugar.ref).toBe(50);
+  });
+  test('over a limit wins over missing data', () => {
+    const r = byKey(Core.microSummary([{ sodiumMg: 2500 }, { kcal: 5 }], 2000));
+    expect(r.sodiumMg.status).toBe('high');
+  });
+});
