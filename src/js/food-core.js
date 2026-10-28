@@ -123,10 +123,189 @@
     return out.slice(0, limit || 25);
   }
 
+  // ── Food log entries ─────────────────────────────────────────────────
+  // The food log is a flat list in localStorage (`foodLog_<user>`), one
+  // entry per food logged. Cloud sync copies each entry to the server on
+  // its own (by id), and a coach the client shares it with can read it.
+  //   { id, date, meal, name, brand, amount, unit, grams, source, ref,
+  //     kcal, protein, carbs, fat, fiber?, ..., per100, basis, servings, t }
+  // per100/basis/servings are kept so the amount can be changed later.
+  const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'];
+  const MEAL_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
+  const KEEP_DAYS = 90;
+
+  // A sensible default meal for the time of day (local clock).
+  function mealForHour(hour) {
+    const h = Number(hour);
+    if (h >= 4 && h < 11) return 'breakfast';
+    if (h >= 11 && h < 15) return 'lunch';
+    if (h >= 17 && h < 22) return 'dinner';
+    return 'snacks';
+  }
+
+  // Date first so ids sort by day; the random part keeps two devices from
+  // ever picking the same id.
+  function newEntryId(date, rand) {
+    const r = typeof rand === 'string' ? rand : Math.random().toString(36).slice(2, 10);
+    return `${date}-${r}`;
+  }
+
+  function makeEntry(food, { grams, amount, unit, date, meal, now, rand }) {
+    const n = scaleNutrients(food.per100, grams);
+    return {
+      id: newEntryId(date, rand),
+      date,
+      meal: MEALS.includes(meal) ? meal : 'snacks',
+      name: String(food.name || '').slice(0, 160),
+      brand: String(food.brand || '').slice(0, 80),
+      amount: num(amount) ?? round1(grams),
+      unit: unit || food.basis || 'g',
+      grams: round1(grams),
+      source: food.source || 'custom',
+      ref: food.id || null,
+      ...n,
+      kcal: n.kcal || 0, protein: n.protein || 0, carbs: n.carbs || 0, fat: n.fat || 0,
+      per100: { ...food.per100 },
+      basis: food.basis === 'ml' ? 'ml' : 'g',
+      servings: Array.isArray(food.servings) ? food.servings.slice(0, 10) : [],
+      t: now,
+    };
+  }
+
+  // What an entry adds to the day's running totals (the Macros tab's
+  // dailyMacroProgress): whole-gram macros, plus whatever the food's kcal
+  // differs from those by as direct calories. Removing an entry subtracts
+  // exactly this, so add + remove leaves the day where it was.
+  function progressDelta(e, sign) {
+    const s = sign === -1 ? -1 : 1;
+    const protein = Math.round(num(e && e.protein) || 0);
+    const carbs = Math.round(num(e && e.carbs) || 0);
+    const fats = Math.round(num(e && e.fat) || 0);
+    const cals = Math.round(num(e && e.kcal) || 0) - (protein * 4 + carbs * 4 + fats * 9);
+    return { protein: s * protein, carbs: s * carbs, fats: s * fats, cals: s * cals };
+  }
+
+  // The food an entry was made from, so it can be logged or edited again.
+  function foodFromEntry(e) {
+    if (!e) return null;
+    const per100 = e.per100 && num(e.per100.kcal) !== null ? e.per100
+      : (num(e.grams) > 0 ? Object.fromEntries(NUTRIENT_KEYS.filter(k => num(e[k]) !== null).map(k => [k, round1((e[k] * 100) / e.grams)])) : null);
+    if (!per100) return null;
+    return normalizeFood({
+      id: e.ref || `entry:${e.id}`, source: e.source === 'quick' ? 'custom' : e.source,
+      name: e.name, brand: e.brand, basis: e.basis, per100, servings: e.servings || [],
+    });
+  }
+
+  // Sum of the nutrients in a list of entries. Core macros always present;
+  // others only when at least one entry has them, with `missing` counting
+  // entries that don't (so a screen can say "3 foods without iron data").
+  function totals(entries) {
+    const t = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+    const missing = {};
+    (entries || []).forEach(e => {
+      NUTRIENT_KEYS.forEach(k => {
+        const v = num(e[k]);
+        if (v === null) { missing[k] = (missing[k] || 0) + 1; return; }
+        t[k] = (t[k] || 0) + v;
+      });
+    });
+    Object.keys(t).forEach(k => { t[k] = k === 'kcal' ? Math.round(t[k]) : round1(t[k]); });
+    return { ...t, missing };
+  }
+
+  function entriesFor(log, date) {
+    return (Array.isArray(log) ? log : []).filter(e => e && e.date === date);
+  }
+
+  function groupByMeal(entries) {
+    const out = {};
+    MEALS.forEach(m => { out[m] = []; });
+    (entries || []).forEach(e => out[MEALS.includes(e.meal) ? e.meal : 'snacks'].push(e));
+    MEALS.forEach(m => out[m].sort((a, b) => (a.t || 0) - (b.t || 0)));
+    return out;
+  }
+
+  // Drops entries older than KEEP_DAYS before `today`.
+  function trimLog(log, today, keepDays) {
+    const days = keepDays || KEEP_DAYS;
+    const cutoff = new Date(Date.parse(today + 'T00:00:00Z') - days * 864e5).toISOString().slice(0, 10);
+    return (Array.isArray(log) ? log : []).filter(e => e && typeof e.date === 'string' && e.date >= cutoff);
+  }
+
+  // The old diary ({ 'YYYY-MM-DD': [{ name, kcal, protein, carbs, fat, t }] })
+  // → food log entries. Meal comes from the time it was logged.
+  function shortHash(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return (h >>> 0).toString(36);
+  }
+
+  // Ids come from the entry's content, so migrating the same old diary on
+  // two devices gives the same ids (synced once), not duplicates.
+  function migrateOldDiary(diary) {
+    if (!diary || typeof diary !== 'object' || Array.isArray(diary)) return [];
+    const out = [];
+    Object.keys(diary).sort().forEach(date => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(diary[date])) return;
+      diary[date].forEach((e, i) => {
+        if (!e || !e.name) return;
+        const t = num(e.t) || Date.parse(date + 'T12:00:00Z');
+        out.push({
+          id: `${date}-old${shortHash(`${e.name}|${e.t}|${e.kcal}|${i}`)}`,
+          date,
+          meal: mealForHour(new Date(t).getHours()),
+          name: String(e.name).slice(0, 160),
+          brand: '',
+          source: 'usda',
+          ref: null,
+          kcal: num(e.kcal) || 0, protein: num(e.protein) || 0, carbs: num(e.carbs) || 0, fat: num(e.fat) || 0,
+          t,
+        });
+      });
+    });
+    return out;
+  }
+
+  // ── CSV ──────────────────────────────────────────────────────────────
+  // Quotes cells that need it, and defuses cells a spreadsheet would run
+  // as a formula (food names from Open Food Facts are user-contributed).
+  function csvCell(v) {
+    let s = v === null || v === undefined ? '' : String(v);
+    if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = "'" + s;
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function toCsv(rows) {
+    return rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  }
+
+  const CSV_NUTRIENTS = [
+    ['kcal', 'kcal'], ['protein', 'Protein (g)'], ['carbs', 'Carbs (g)'], ['fat', 'Fat (g)'],
+    ['fiber', 'Fiber (g)'], ['sugar', 'Sugar (g)'], ['satFat', 'Sat fat (g)'], ['sodiumMg', 'Sodium (mg)'],
+    ['ironMg', 'Iron (mg)'], ['calciumMg', 'Calcium (mg)'], ['potassiumMg', 'Potassium (mg)'],
+    ['magnesiumMg', 'Magnesium (mg)'], ['vitDUg', 'Vitamin D (µg)'], ['b12Ug', 'B12 (µg)'],
+  ];
+
+  // One row per entry, oldest first. A nutrient the food has no data for
+  // is left empty (not 0).
+  function foodLogRows(entries) {
+    const rows = [['Date', 'Meal', 'Food', 'Brand', 'Amount', 'Unit', 'Grams', 'Source', ...CSV_NUTRIENTS.map(c => c[1])]];
+    (entries || []).slice()
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)) || MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal) || (a.t || 0) - (b.t || 0))
+      .forEach(e => rows.push([
+        e.date, MEAL_LABELS[e.meal] || e.meal || '', e.name, e.brand || '', e.amount ?? '', e.unit || '', e.grams ?? '', sourceLabel(e.source),
+        ...CSV_NUTRIENTS.map(([k]) => (num(e[k]) === null ? '' : e[k])),
+      ]));
+    return rows;
+  }
+
   const api = {
-    NUTRIENT_KEYS, SOURCE_LABELS,
+    csvCell, toCsv, foodLogRows,
+    NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
     scaleNutrients, gramsFor, sourceLabel, normalizeFood,
     matchesQuery, addRecent, mergeResults,
+    mealForHour, newEntryId, makeEntry, progressDelta, foodFromEntry, totals, entriesFor, groupByMeal, trimLog, migrateOldDiary,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.FoodCore = api;
