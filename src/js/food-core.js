@@ -267,6 +267,78 @@
     return out;
   }
 
+  // ── Barcodes ─────────────────────────────────────────────────────────
+  // EAN-8, UPC-A (padded to 13 like Open Food Facts), EAN-13, GTIN-14.
+  function normalizeBarcode(v) {
+    const s = String(v == null ? '' : v).replace(/\D/g, '');
+    if (![8, 12, 13, 14].includes(s.length)) return null;
+    return s.length === 12 ? '0' + s : s;
+  }
+
+  // GS1 check digit, so a misread scan is caught on the phone.
+  function validBarcode(v) {
+    const s = normalizeBarcode(v);
+    if (!s) return false;
+    const d = s.split('').map(Number);
+    const check = d.pop();
+    const sum = d.reverse().reduce((acc, x, i) => acc + x * (i % 2 === 0 ? 3 : 1), 0);
+    return (10 - (sum % 10)) % 10 === check;
+  }
+
+  // First food with this barcode in any of the lists (custom foods first).
+  function findByBarcode(lists, code) {
+    const c = normalizeBarcode(code);
+    if (!c) return null;
+    for (const list of lists || []) {
+      const hit = (list || []).find(f => f && normalizeBarcode(f.barcode) === c);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  // ── Custom foods ─────────────────────────────────────────────────────
+  // Made by the client, per 100 g (or ml) with optional servings and
+  // optional extra nutrients (left out when blank, never 0).
+  // fields: { name, brand, barcode, basis, kcal, protein, carbs, fat,
+  //           fiber, sugar, ..., servings: [{ label, grams }] }
+  // → { food } or { error }
+  function customFoodFromForm(fields, { id, now, rand } = {}) {
+    const f = fields || {};
+    const name = String(f.name || '').trim().slice(0, 120);
+    if (!name) return { error: 'Give the food a name.' };
+    const per100 = {};
+    for (const k of NUTRIENT_KEYS) {
+      const v = num(f[k]);
+      if (v === null) continue;
+      if (v < 0) return { error: 'Amounts can’t be negative.' };
+      per100[k] = k === 'kcal' ? Math.round(v) : round1(v);
+    }
+    for (const k of ['protein', 'carbs', 'fat']) if (per100[k] === undefined) per100[k] = 0;
+    if (per100.kcal === undefined) per100.kcal = Math.round(per100.protein * 4 + per100.carbs * 4 + per100.fat * 9);
+    if (per100.protein + per100.carbs + per100.fat > 100) return { error: 'Protein, carbs and fat add up to more than 100 g per 100 g.' };
+    if (per100.kcal > 950) return { error: 'More than 950 kcal per 100 g isn’t possible — check the label.' };
+    const barcode = f.barcode ? normalizeBarcode(f.barcode) : null;
+    if (f.barcode && !barcode) return { error: 'That barcode doesn’t look right.' };
+    const servings = (Array.isArray(f.servings) ? f.servings : [])
+      .map(s => ({ label: String(s && s.label || '').trim().slice(0, 60), grams: num(s && s.grams) }))
+      .filter(s => s.label && s.grams > 0 && s.grams <= 5000)
+      .slice(0, 10);
+    const r = typeof rand === 'string' ? rand : Math.random().toString(36).slice(2, 10);
+    return {
+      food: {
+        id: id || `custom:${r}`,
+        source: 'custom',
+        name,
+        brand: String(f.brand || '').trim().slice(0, 80),
+        ...(barcode ? { barcode } : {}),
+        basis: f.basis === 'ml' ? 'ml' : 'g',
+        per100,
+        servings,
+        updatedAt: now || 0,
+      },
+    };
+  }
+
   // ── CSV ──────────────────────────────────────────────────────────────
   // Quotes cells that need it, and defuses cells a spreadsheet would run
   // as a formula (food names from Open Food Facts are user-contributed).
@@ -302,6 +374,7 @@
 
   const api = {
     csvCell, toCsv, foodLogRows,
+    normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
     scaleNutrients, gramsFor, sourceLabel, normalizeFood,
     matchesQuery, addRecent, mergeResults,

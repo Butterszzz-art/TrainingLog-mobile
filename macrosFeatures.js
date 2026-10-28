@@ -1,25 +1,8 @@
+// The Meals card's camera button. Scanning, product lookup and the
+// "not found → add it yourself" fallback live in src/js/food-barcode.js.
 export async function scanBarcode() {
-  if (!navigator.mediaDevices) {
-    alert('Camera not available');
-    return;
-  }
-  // simplified placeholder using barcode detector if available
-  if ('BarcodeDetector' in window) {
-    const detector = new BarcodeDetector({ formats: ['ean_13'] });
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    await video.play();
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    const barcodes = await detector.detect(canvas);
-    stream.getTracks().forEach(t => t.stop());
-    if (barcodes[0]) return barcodes[0].rawValue;
-  }
-  alert('Barcode scanning not supported');
+  if (typeof window.scanFoodBarcode === 'function') return window.scanFoodBarcode();
+  alert('Barcode scanning is still loading — try again in a moment.');
 }
 
 export async function importRecipe(url) {

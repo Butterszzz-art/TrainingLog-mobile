@@ -62,6 +62,8 @@
     // The food log, one item per food logged (food-database.js). A coach
     // the client shares it with reads these on the server.
     { name: 'foodLog',          key: u => `foodLog_${u}`,          mode: 'list', idField: 'id' },
+    // The client's own foods (food-database.js / food-barcode.js).
+    { name: 'customFoods',      key: u => `customFoods_${u}`,      mode: 'list', idField: 'id' },
     { name: 'programs',         key: u => `programs_${u}`,         mode: 'list', idField: 'id' },
     { name: 'activeProgram',    key: u => `activeProgram_${u}`,    mode: 'value' },
     { name: 'managedTemplates', key: u => `managedTemplates_${u}`, mode: 'list', idField: 'id' },

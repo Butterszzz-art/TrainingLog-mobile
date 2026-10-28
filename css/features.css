@@ -187,6 +187,9 @@
 button.food-search-item {
   display: block;
   width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
   text-align: left;
   background: none;
   border: none;
@@ -3199,3 +3202,79 @@ button.food-search-item {
 .wt-estimate-table td { border-left: 0; border-right: 0; }
 .wt-estimate-table { border: 0; }
 .measurements-metric-pill { min-height: 0; margin: 0; }
+
+/* ── Barcode scan + custom food sheet (food-barcode.js) ───── */
+.food-scan-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.food-own-link {
+  display: inline-block;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  color: var(--primary-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.food-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1700;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.food-sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px 16px 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  animation: foodSheetUp 0.2s ease-out;
+}
+@keyframes foodSheetUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .food-sheet { animation: none; } }
+@media (min-width: 700px) { .food-sheet-backdrop { align-items: center; } .food-sheet { border-radius: 16px; } }
+.food-sheet-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.food-sheet-hdr h3 { margin: 0; font-size: 1rem; color: var(--text-color); }
+.food-sheet-x { background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 4px; }
+.food-sheet-sub { font-size: 0.78rem; color: var(--text-muted); margin: 0 0 10px; line-height: 1.4; }
+.food-scan-video { width: 100%; border-radius: 10px; background: #000; aspect-ratio: 4 / 3; object-fit: cover; margin-bottom: 8px; }
+.food-form { display: flex; flex-direction: column; gap: 8px; }
+.food-field { display: flex; flex-direction: column; gap: 3px; font-size: 0.74rem; color: var(--text-muted); font-weight: 600; min-width: 0; }
+.food-field input, .food-fieldset select {
+  padding: 7px 9px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-size: 0.88rem;
+  min-width: 0;
+}
+.food-field-in { display: flex; align-items: center; gap: 4px; }
+.food-field-in input { flex: 1; width: 100%; }
+.food-field-in small { color: var(--text-muted); min-width: 18px; }
+.food-fieldset { border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 10px 10px; margin: 0; }
+.food-fieldset legend { font-size: 0.74rem; font-weight: 700; color: var(--text-color); padding: 0 4px; }
+.food-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.food-grid--serving { grid-template-columns: 2fr 1fr; margin-top: 6px; }
+.food-more { margin-top: 8px; }
+.food-more summary { font-size: 0.74rem; color: var(--text-muted); cursor: pointer; margin-bottom: 6px; }
+.food-form-err { color: var(--danger-text, #e5484d); font-size: 0.78rem; margin: 0; }
+
+.food-basis-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; }
+.food-basis-row select { width: auto; display: inline-block; padding: 4px 8px; }

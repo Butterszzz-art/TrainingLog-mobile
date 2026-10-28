@@ -164,3 +164,46 @@ describe('CSV', () => {
     expect(rows[1][rows[0].indexOf('Iron (mg)')]).toBe('');
   });
 });
+
+describe('barcodes', () => {
+  test('check digit', () => {
+    expect(Core.validBarcode('8710400002970')).toBe(true);
+    expect(Core.validBarcode('8710400002971')).toBe(false);
+    expect(Core.validBarcode('012345678905')).toBe(true); // UPC-A
+    expect(Core.validBarcode('96385074')).toBe(true);     // EAN-8
+    expect(Core.validBarcode('123')).toBe(false);
+  });
+  test('UPC-A padded, spaces stripped', () => {
+    expect(Core.normalizeBarcode('0 12345 67890 5')).toBe('0012345678905');
+  });
+  test('findByBarcode prefers the first list', () => {
+    const mine = { id: 'custom:1', barcode: '8710400002970' };
+    const recent = { id: 'off:8710400002970', barcode: '8710400002970' };
+    expect(Core.findByBarcode([[mine], [recent]], '8710400002970').id).toBe('custom:1');
+    expect(Core.findByBarcode([[], [recent]], '8710400002970').id).toBe('off:8710400002970');
+    expect(Core.findByBarcode([[mine]], 'nope')).toBeNull();
+  });
+});
+
+describe('custom foods', () => {
+  test('per 100 g with optional nutrients left out when blank', () => {
+    const { food } = Core.customFoodFromForm({ name: ' Oma’s stamppot ', kcal: '', protein: '4', carbs: '12', fat: '5', fiber: '', ironMg: '1.2',
+      servings: [{ label: '1 bord', grams: '350' }, { label: '', grams: '10' }] }, { now: 5, rand: 'r1' });
+    expect(food).toMatchObject({ id: 'custom:r1', source: 'custom', name: 'Oma’s stamppot', basis: 'g', updatedAt: 5 });
+    expect(food.per100).toEqual({ kcal: 109, protein: 4, carbs: 12, fat: 5, ironMg: 1.2 });
+    expect(food.servings).toEqual([{ label: '1 bord', grams: 350 }]);
+  });
+  test('editing keeps the id', () => {
+    expect(Core.customFoodFromForm({ name: 'x', protein: 1 }, { id: 'custom:keep' }).food.id).toBe('custom:keep');
+  });
+  test('validation errors', () => {
+    expect(Core.customFoodFromForm({ name: '' }).error).toMatch(/name/);
+    expect(Core.customFoodFromForm({ name: 'x', protein: 60, carbs: 60 }).error).toMatch(/100 g/);
+    expect(Core.customFoodFromForm({ name: 'x', protein: -1 }).error).toMatch(/negative/);
+    expect(Core.customFoodFromForm({ name: 'x', kcal: 2000 }).error).toMatch(/950/);
+    expect(Core.customFoodFromForm({ name: 'x', barcode: '12' }).error).toMatch(/barcode/);
+  });
+  test('barcode stored normalized', () => {
+    expect(Core.customFoodFromForm({ name: 'x', barcode: '012345678905' }).food.barcode).toBe('0012345678905');
+  });
+});
