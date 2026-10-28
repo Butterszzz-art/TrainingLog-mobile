@@ -102,27 +102,31 @@
     return hit ? Core.normalizeFood(hit) : null;
   }
 
-  // → { foods, offline?, error? }
+  // One database's results for a search: 'off' (Open Food Facts, fast) or
+  // 'usda' (slower). Cached for the session. Throws on failure.
+  async function fetchSource(q, source, signal) {
+    const key = `${source}:${q}`;
+    if (_searchCache.has(key)) return _searchCache.get(key);
+    const res = await fetch(`${window.SERVER_URL}/api/food/search?q=${encodeURIComponent(q)}&limit=20&source=${source}`, {
+      headers: _authHeaders(), signal: signal || AbortSignal.timeout(9000),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || !data.success) throw new Error((data && data.error && data.error.message) || 'Search failed');
+    const foods = (data.foods || []).map(Core.normalizeFood).filter(Boolean);
+    _searchCache.set(key, foods);
+    return foods;
+  }
+
+  // Both databases at once (recipe builder etc.) → { foods, offline?, error? }
   async function searchFoods(query) {
     const q = String(query || '').trim().toLowerCase();
     if (q.length < 2) return { foods: [] };
     const local = _localMatches(q);
-    if (_searchCache.has(q)) return { foods: Core.mergeResults(local, _searchCache.get(q), 25) };
-    if (!navigator.onLine || !window.SERVER_URL) {
-      return { foods: Core.mergeResults(local, [], 25), offline: true };
-    }
-    try {
-      const res = await fetch(`${window.SERVER_URL}/api/food/search?q=${encodeURIComponent(q)}&limit=20`, {
-        headers: _authHeaders(), signal: AbortSignal.timeout(9000),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data || !data.success) throw new Error((data && data.error && data.error.message) || 'Search failed');
-      const foods = (data.foods || []).map(Core.normalizeFood).filter(Boolean);
-      _searchCache.set(q, foods);
-      return { foods: Core.mergeResults(local, foods, 25) };
-    } catch (err) {
-      return { foods: Core.mergeResults(local, [], 25), error: err.message || 'Search failed' };
-    }
+    if (!navigator.onLine || !window.SERVER_URL) return { foods: Core.mergeResults(local, [], 25), offline: true };
+    const [off, usda] = await Promise.allSettled([fetchSource(q, 'off'), fetchSource(q, 'usda')]);
+    const ok = r => (r.status === 'fulfilled' ? r.value : []);
+    const failed = off.status === 'rejected' && usda.status === 'rejected';
+    return { foods: Core.combineSourceResults(local, ok(off), ok(usda), 25), ...(failed ? { error: 'Search failed' } : {}) };
   }
   window.searchFoods = searchFoods;
 
@@ -183,20 +187,17 @@
 
     const input     = widget.querySelector('#foodSearchInput');
     const resultsEl = widget.querySelector('#foodSearchResults');
-    let seq = 0;
+    const doSearch = _debounce((q) => runSearch(q, resultsEl), 250);
 
-    const doSearch = _debounce(async (q) => {
-      if (q.length < 2) { _renderRecent(resultsEl); return; }
-      const mine = ++seq;
-      resultsEl.hidden = false;
-      resultsEl.innerHTML = '<div class="food-search-msg">Searching…</div>';
-      const result = await searchFoods(q);
-      if (mine !== seq) return; // a newer search is on its way
-      _renderResults(resultsEl, result);
-    }, 400);
-
-    input.addEventListener('input', () => doSearch(input.value.trim()));
+    input.addEventListener('input', () => doSearch(input.value.trim().toLowerCase()));
     resultsEl.addEventListener('click', (e) => {
+      const alt = e.target.closest('[data-food-alt]');
+      if (alt) {
+        input.value = alt.dataset.foodAlt;
+        runSearch(alt.dataset.foodAlt.toLowerCase(), resultsEl);
+        return;
+      }
+      if (e.target.closest('[data-food-ai]')) { runAiSearch(resultsEl, { asked: true }); return; }
       const item = e.target.closest('[data-food-idx]');
       if (item) _selectFood(_lastResults[Number(item.dataset.foodIdx)]);
     });
@@ -207,6 +208,91 @@
   }
 
   let _lastResults = [];
+
+  /* ── Progressive search ──────────────────────────────────── */
+  // Your own, coach and recent foods show at once; Open Food Facts (Dutch
+  // products, ~0.1-0.3 s) and USDA (~0.6-1.6 s) are asked in parallel and
+  // shown as each answers. Typing again cancels the searches in flight.
+  // When nothing good comes back, AI search rewrites the words (Pro).
+  let _search = null; // { q, seq, local, off, usda, offErr, usdaErr, ai, aiState }
+  let _searchSeq = 0;
+  let _searchAbort = null;
+  const _aiCache = new Map(); // q -> assist answer, for this session
+
+  function _aiAllowed() {
+    const consent = window.pocketCoachAIConsent && window.pocketCoachAIConsent.get && window.pocketCoachAIConsent.get();
+    const paid = typeof window.hasPaidAccess === 'function' && window.hasPaidAccess();
+    return { auto: consent === 'granted' && paid };
+  }
+
+  function _paintSearch(el) {
+    const st = _search;
+    if (!st) return;
+    const loading = st.off === null || st.usda === null;
+    let foods;
+    if (st.ai && st.ai.foods && st.ai.foods.length) foods = Core.mergeResults(st.local, st.ai.foods, 25);
+    else foods = Core.combineSourceResults(st.local, st.off, st.usda, 25);
+    const offline = !navigator.onLine || !window.SERVER_URL;
+    const error = !offline && !loading && st.offErr && st.usdaErr;
+    _renderResults(el, { foods, offline, error: error ? 'Search failed' : '', loading, ai: st.ai, aiState: st.aiState, query: st.q });
+  }
+
+  async function runSearch(q, el) {
+    if (_searchAbort) _searchAbort.abort();
+    if (q.length < 2) { _search = null; _renderRecent(el); return; }
+    const seq = ++_searchSeq;
+    const ctrl = new AbortController();
+    _searchAbort = ctrl;
+    _search = { q, seq, local: _localMatches(q), off: null, usda: null, offErr: false, usdaErr: false, ai: _aiCache.get(q) || null, aiState: _aiCache.has(q) ? 'done' : '' };
+    el.hidden = false;
+    if (!navigator.onLine || !window.SERVER_URL) {
+      _search.off = []; _search.usda = [];
+      _paintSearch(el);
+      return;
+    }
+    _paintSearch(el);
+    const timer = setTimeout(() => ctrl.abort(), 9000);
+    const one = (source) => fetchSource(q, source, ctrl.signal)
+      .then(list => { if (_search && _search.seq === seq) { _search[source] = list; _paintSearch(el); } })
+      .catch(() => { if (_search && _search.seq === seq) { _search[source] = []; _search[`${source}Err`] = true; _paintSearch(el); } });
+    await Promise.all([one('off'), one('usda')]);
+    clearTimeout(timer);
+    if (!_search || _search.seq !== seq || _search.ai) return;
+    const shown = Core.combineSourceResults(_search.local, _search.off, _search.usda, 25);
+    if (Core.isWeakSearch(q, shown)) {
+      if (_aiAllowed().auto) runAiSearch(el, {});
+      else { _search.aiState = 'offer'; _paintSearch(el); }
+    }
+  }
+
+  // POST /api/ai/food-search-assist. Pro and AI consent are checked by the
+  // app's AI fetch wrapper (ai-consent.js): tapping "Try AI search" without
+  // them shows the consent sheet or the upgrade screen.
+  async function runAiSearch(el, { asked }) {
+    const st = _search;
+    if (!st || st.aiState === 'loading') return;
+    const seq = st.seq;
+    st.aiState = 'loading';
+    _paintSearch(el);
+    try {
+      const res = await fetch(`${window.SERVER_URL}/api/ai/food-search-assist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ..._authHeaders() },
+        body: JSON.stringify({ q: st.q }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!_search || _search.seq !== seq) return;
+      if (!res.ok || !data || !data.success) throw new Error('AI search failed');
+      const ai = { rewrite: data.rewrite || null, foods: (data.foods || []).map(Core.normalizeFood).filter(Boolean) };
+      _aiCache.set(st.q, ai);
+      _search.ai = ai;
+      _search.aiState = 'done';
+    } catch {
+      if (!_search || _search.seq !== seq) return;
+      _search.aiState = asked ? 'failed' : '';
+    }
+    _paintSearch(el);
+  }
 
   // The app's icon set (index.html's top-level ICONS).
   function _icon(name) {
@@ -229,6 +315,7 @@
     }
     _renderResults(el, { foods });
     el.insertAdjacentHTML('afterbegin', '<div class="food-search-msg food-search-recent-hdr">Recent and your foods</div>');
+    el.querySelector('.food-attrib')?.remove();
     el.hidden = false;
   }
 
@@ -336,35 +423,53 @@
     _updateDock();
   }
 
-  function _renderResults(el, { foods, offline, error }) {
+  const SOURCE_DOT = { off: 'off', usda: 'usda', custom: 'own', recipe: 'own', coach: 'coach' };
+
+  function _row(f, i) {
+    const p = f.per100;
+    const check = Core.kcalCheck(p);
+    const serving = f.servings && f.servings[0] ? f.servings[0].label : '';
+    const sub = [f.source === 'usda' ? 'USDA' : f.brand, serving].filter(Boolean).join(' · ');
+    return `
+      <button type="button" class="food-result" data-food-idx="${i}">
+        <span class="food-result-dot food-dot-${SOURCE_DOT[f.source] || 'off'}" aria-label="${_esc(Core.sourceLabel(f.source))}"></span>
+        <span class="food-result-main">
+          <span class="food-result-name">${_esc(f.name)}${check.ok ? '' : ' <span class="food-flag-dot" title="Calories don’t match the macros — check the label">⚠</span>'}</span>
+          ${sub ? `<span class="food-result-sub">${_esc(sub)}</span>` : ''}
+          ${f.source === 'coach' && f.note ? `<span class="food-result-sub">${_esc(f.coachUsername || 'Coach')}: ${_esc(f.note)}</span>` : ''}
+        </span>
+        <span class="food-result-kcal">${p.kcal} kcal<small>${Math.round(p.protein)} P</small></span>
+        <span class="food-result-add ui-icon" aria-hidden="true">${_icon('plus')}</span>
+      </button>`;
+  }
+
+  // st: { foods, offline, error, loading, ai, aiState, query }
+  function _renderResults(el, st) {
+    const foods = st.foods || [];
     _lastResults = foods;
-    const note = offline ? 'Offline — showing foods you logged before.'
-      : error ? 'Search is unavailable right now — showing foods you logged before.' : '';
+    const note = st.offline ? 'Offline — showing foods you logged before.'
+      : st.error ? 'Search is unavailable right now — showing foods you logged before.' : '';
+    const rw = st.ai && st.ai.rewrite;
+    const aiBanner = st.aiState === 'loading'
+      ? `<div class="food-ai-note"><span class="ui-icon">${_icon('sparkles')}</span>Searching smarter…</div>`
+      : rw && rw.corrected && rw.corrected.toLowerCase() !== String(st.query || '').toLowerCase()
+        ? `<div class="food-ai-note"><span class="ui-icon">${_icon('sparkles')}</span>Showing results for <b>${_esc(rw.corrected)}</b></div>`
+        : st.aiState === 'failed' ? '<div class="food-search-msg">AI search didn’t find anything better.</div>' : '';
+    const alts = rw && rw.alternatives && rw.alternatives.length
+      ? `<div class="food-alts"><span>Also try</span>${rw.alternatives.map(a => `<button type="button" class="food-alt" data-food-alt="${_esc(a)}">${_esc(a)}</button>`).join('')}</div>` : '';
+    const offer = st.aiState === 'offer' && !st.loading
+      ? `<button type="button" class="food-ai-offer" data-food-ai><span class="ui-icon">${_icon('sparkles')}</span>Not what you meant? Try AI search</button>` : '';
+    const loadingRow = st.loading ? '<div class="food-search-msg food-search-loading">Searching…</div>' : '';
     if (!foods.length) {
-      el.innerHTML = `<div class="food-search-msg">${_esc(note || 'No results — try another word (Dutch or English both work).')}</div>`;
+      el.innerHTML = aiBanner + (note ? `<div class="food-search-msg">${_esc(note)}</div>` : '')
+        + (st.loading ? loadingRow : (st.aiState === 'loading' ? '' : `<div class="food-search-msg">No results — try another word (Dutch or English both work).</div>`))
+        + offer + alts;
       return;
     }
     const hasOff = foods.some(f => f.source === 'off');
-    el.innerHTML = (note ? `<div class="food-search-msg">${_esc(note)}</div>` : '') + foods.map((f, i) => {
-      const p = f.per100;
-      return `
-        <button type="button" class="food-search-item" data-food-idx="${i}">
-          <span class="food-item-top">
-            <span class="food-item-name">${_esc(f.name)}</span>
-            <span class="food-src-badge food-src-${_esc(f.source)}">${_esc(Core.sourceLabel(f.source))}</span>
-          </span>
-          ${f.brand ? `<span class="food-item-brand">${_esc(f.brand)}</span>` : ''}
-          <span class="food-item-macros">
-            <span class="fim kcal-badge">${p.kcal} kcal</span>
-            <span class="fim protein-badge">${p.protein}P</span>
-            <span class="fim carbs-badge">${p.carbs}C</span>
-            <span class="fim fat-badge">${p.fat}F</span>
-            <span class="fim unit-badge">per 100${_esc(f.basis)}</span>
-            ${Core.kcalCheck(p).ok ? '' : `<span class="fim food-flag-badge" title="Calories don't match the macros (4P + 4C + 9F = ${Core.kcalCheck(p).expected} kcal) — check the label">⚠ kcal ≠ macros</span>`}
-          </span>
-          ${f.source === 'coach' && f.note ? `<span class="food-item-brand">${_esc(f.coachUsername || 'Coach')}: ${_esc(f.note)}</span>` : ''}
-        </button>`;
-    }).join('') + (hasOff ? '<div class="food-attrib">Product data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL)</div>' : '');
+    el.innerHTML = aiBanner + (note ? `<div class="food-search-msg">${_esc(note)}</div>` : '')
+      + foods.map(_row).join('') + loadingRow + offer + alts
+      + `<div class="food-attrib"><span class="food-result-dot food-dot-own"></span>yours/coach <span class="food-result-dot food-dot-off"></span>Open Food Facts <span class="food-result-dot food-dot-usda"></span>USDA · per 100 g${hasOff ? ' · Product data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL)' : ''}</div>`;
   }
 
   /* ── Selected food state ─────────────────────────────────── */

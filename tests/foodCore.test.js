@@ -337,3 +337,23 @@ describe('weekly averages (coach export)', () => {
     expect(rows[1].slice(6)).toEqual(['', '', '', '', '']);
   });
 });
+
+describe('progressive search helpers', () => {
+  const f = (id, name, extra = {}) => ({ id, name, brand: '', source: 'off', per100: { kcal: 1, protein: 0, carbs: 0, fat: 0 }, servings: [], ...extra });
+  test('combineSourceResults: local first, then OFF top, USDA top, rest', () => {
+    const off = Array.from({ length: 14 }, (_, i) => f(`off:${i}`, `O${i}`));
+    const usda = [f('usda:1', 'U1', { source: 'usda' })];
+    const out = Core.combineSourceResults([[f('custom:1', 'Mine', { source: 'custom' })]], off, usda, 25);
+    expect(out[0].id).toBe('custom:1');
+    expect(out[13].id).toBe('usda:1');
+    expect(out[14].id).toBe('off:12');
+  });
+  test('combineSourceResults: a source still loading (null) is skipped', () => {
+    expect(Core.combineSourceResults([[]], null, [f('usda:1', 'U')], 25).map(x => x.id)).toEqual(['usda:1']);
+  });
+  test('isWeakSearch: no result containing every word → weak', () => {
+    expect(Core.isWeakSearch('yoghurd', [f('off:1', 'Yoghurt')])).toBe(true);
+    expect(Core.isWeakSearch('griekse yoghurt', [f('off:1', 'Griekse yoghurt 0%')])).toBe(false);
+    expect(Core.isWeakSearch('kwark', [])).toBe(true);
+  });
+});
