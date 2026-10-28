@@ -8201,6 +8201,11 @@ function toggleAltMachineEntry(workoutIndex, entryIndex) {
   delete entry.nextSessionRecommendation;
 
   localStorage.setItem(`workouts_${_logUser}`, JSON.stringify(workouts));
+  // A set that now counts (or no longer counts) may change this exercise's PRs.
+  if (typeof window.recalculatePRs === 'function' && window.recalculatePRs(_logUser, [entry.exercise])) {
+    if (typeof renderPRs === 'function') renderPRs();
+    if (typeof window.renderPRBoard === 'function') window.renderPRBoard();
+  }
   renderWorkouts();
 }
 window.toggleAltMachineEntry = toggleAltMachineEntry;

@@ -842,10 +842,14 @@ async function handleTagAction(containerEl, log, button) {
   if (!src) return;
   const tags = workoutTags(src.list[src.index]);
 
+  // Exercises whose PRs may change: one for a machine toggle, all for a gym change.
+  let affected = (src.list[src.index].log || []).map(e => e?.exercise).filter(Boolean);
+
   if (action === 'machine') {
     const ex = (log.exercises || [])[Number(button.dataset.exIndex)];
     const name = String(ex?.name || '').trim().toLowerCase();
     if (!name) return;
+    affected = [ex.name];
     const turnOn = !tags.machine.has(name);
     editSourceWorkout(user, log, (ctx, e) => {
       if (String(e.exercise || '').trim().toLowerCase() === name) ctx.altMachine = turnOn;
@@ -859,6 +863,10 @@ async function handleTagAction(containerEl, log, button) {
     editSourceWorkout(user, log, ctx => { ctx.altGym = false; ctx.gymName = ''; });
   } else {
     return;
+  }
+  if (typeof window.recalculatePRs === 'function' && window.recalculatePRs(user, affected)) {
+    if (typeof window.renderPRs === 'function') window.renderPRs();
+    if (typeof window.renderPRBoard === 'function') window.renderPRBoard();
   }
   renderHistoryDetail(containerEl, log);
 }

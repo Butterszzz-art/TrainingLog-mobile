@@ -105,6 +105,16 @@ function notifyPR(message) {
   }
 }
 
+/**
+ * True for a set logged at another gym or on a different machine (Alt Gym /
+ * Alt Machine). Those never count for PRs. Mirrors isAltSessionEntry() in
+ * progressiveOverload.js, kept inline so this file works on its own.
+ */
+function isTaggedEntry(entry, workout) {
+  const ctx = (entry && entry.sessionCtx) || (workout && workout._sessionCtx);
+  return !!(ctx && (ctx.altMachine || ctx.altGym));
+}
+
 function updatePRs(user, workout, volumeCalc) {
   if (!workout || !Array.isArray(workout.log)) return null;
   const prs = loadPRs(user);
@@ -116,6 +126,7 @@ function updatePRs(user, workout, volumeCalc) {
   workout.log.forEach(entry => {
     const name = entry?.exercise;
     if (!name) return;
+    if (isTaggedEntry(entry, workout)) return;
     if (!groupedByExercise[name]) groupedByExercise[name] = [];
     groupedByExercise[name].push(entry);
   });
@@ -195,6 +206,224 @@ function updatePRs(user, workout, volumeCalc) {
   return updated ? prs : null;
 }
 
+/* ── Recalculate PRs after an Alt Gym / Alt Machine tag changes ────────────
+   Rebuilds the affected exercises in both PR stores — `prBoard_<user>`
+   (pr-tracker.js: best weight, e1RM and single-set volume) and
+   `prs_<user>` (updatePRs above: heaviest set, reps per weight, session
+   volume) — from the workouts kept on this device (`workouts_<user>` and
+   `workoutHistory_<user>`), counting untagged sets only.
+
+   A record that no local set accounts for came from a workout that only
+   lives on the server now (purged after 4 weeks); it can't be re-checked,
+   so it's kept, and only replaced if a local set beats it. */
+
+function _normName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+function _readList(key) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+function _readObject(key) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key));
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Same rounding as pr-tracker.js's _e1rm(). */
+function _boardE1rm(weight, reps) {
+  if (!weight || !reps || reps <= 0) return 0;
+  if (reps === 1) return weight;
+  return Math.round(weight * (1 + reps / 30) * 10) / 10;
+}
+
+/** Same sum as calculateWorkoutVolume({ log: entries }). */
+function _entriesVolume(entries) {
+  let total = 0;
+  entries.forEach(entry => {
+    const reps = entry.repsArray || [];
+    const weights = entry.weightsArray || [];
+    for (let i = 0; i < reps.length; i++) total += reps[i] * (weights[i] || 0);
+  });
+  return total;
+}
+
+function _collectExerciseStats(workouts, targets) {
+  const stats = new Map();
+  const statFor = (key, name) => {
+    if (!stats.has(key)) {
+      stats.set(key, {
+        name,
+        seen: { weights: new Set(), e1rms: new Set(), setVols: new Set(), repPairs: new Set(), sessionVols: new Set() },
+        board: { weight: null, e1rm: null, volume: null },
+        heaviest: null,
+        repByWeight: {},
+        sessionVol: null,
+      });
+    }
+    return stats.get(key);
+  };
+
+  workouts.forEach(workout => {
+    const date = String(workout?.date || '').slice(0, 10);
+    const stamp = getSessionDateStamp(workout, 0);
+    const byName = {};
+    (Array.isArray(workout?.log) ? workout.log : []).forEach(entry => {
+      const key = _normName(entry?.exercise || entry?.name);
+      if (!targets.has(key)) return;
+      (byName[key] = byName[key] || []).push(entry);
+    });
+
+    Object.entries(byName).forEach(([key, entries]) => {
+      const s = statFor(key, String(entries[0].exercise || entries[0].name || '').trim());
+      const counted = entries.filter(e => !isTaggedEntry(e, workout));
+      // Session volume as updatePRs computes it now (untagged) and did
+      // before tags were skipped (all entries) — either may be on record.
+      s.seen.sessionVols.add(_entriesVolume(entries));
+      s.seen.sessionVols.add(_entriesVolume(counted));
+      if (counted.length) {
+        const v = _entriesVolume(counted);
+        if (!s.sessionVol || v > s.sessionVol.volume) s.sessionVol = { volume: v, date: stamp };
+      }
+
+      entries.forEach(entry => {
+        const tagged = isTaggedEntry(entry, workout);
+        const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+        const weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+        const types = Array.isArray(entry.setTypeArray) ? entry.setTypeArray : [];
+        const size = Math.max(reps.length, weights.length);
+        for (let i = 0; i < size; i++) {
+          if (types[i] === 'backoff') continue;
+          const r = Number(reps[i]) || 0;
+          const w = Number(weights[i]) || 0;
+          if (r <= 0 || w <= 0) continue;
+          const e1rm = _boardE1rm(w, r);
+          const vol = w * r;
+          s.seen.weights.add(w);
+          s.seen.e1rms.add(e1rm);
+          s.seen.setVols.add(vol);
+          s.seen.repPairs.add(`${w}|${r}`);
+          if (tagged) continue;
+
+          if (!s.board.weight || w > s.board.weight.value) s.board.weight = { value: w, reps: r, date };
+          if (!s.board.e1rm || e1rm > s.board.e1rm.value) s.board.e1rm = { value: e1rm, reps: r, weight: w, date };
+          if (!s.board.volume || vol > s.board.volume.value) s.board.volume = { value: vol, date };
+          if (!s.heaviest || w > s.heaviest.weight) s.heaviest = { weight: w, reps: r, date: stamp };
+          const at = s.repByWeight[String(w)];
+          if (!at || r > at.reps) s.repByWeight[String(w)] = { reps: r, date: stamp };
+        }
+      });
+    });
+  });
+  return stats;
+}
+
+/**
+ * Keep `current` only if no local set accounts for it (`seen` lacks it) and
+ * no counted local set beats it; otherwise use the best counted local value.
+ * → 'keep' | 'replace' | 'clear'
+ */
+function _decide(current, seen, best) {
+  const cur = Number(current) || 0;
+  const bestValue = best ? best.value : 0;
+  if (cur > 0 && !seen.has(cur) && cur >= bestValue) return 'keep';
+  return bestValue > 0 ? 'replace' : 'clear';
+}
+
+function _recalcBoardEntry(rec, s) {
+  const out = { ...rec };
+  const w = _decide(rec.weight, s.seen.weights, s.board.weight);
+  if (w === 'replace') Object.assign(out, { weight: s.board.weight.value, weightReps: s.board.weight.reps, weightDate: s.board.weight.date });
+  if (w === 'clear') { out.weight = 0; delete out.weightReps; delete out.weightDate; }
+  const e = _decide(rec.e1rm, s.seen.e1rms, s.board.e1rm);
+  if (e === 'replace') Object.assign(out, { e1rm: s.board.e1rm.value, e1rmReps: s.board.e1rm.reps, e1rmWeight: s.board.e1rm.weight, e1rmDate: s.board.e1rm.date });
+  if (e === 'clear') { out.e1rm = 0; delete out.e1rmReps; delete out.e1rmWeight; delete out.e1rmDate; }
+  const v = _decide(rec.volume, s.seen.setVols, s.board.volume);
+  if (v === 'replace') Object.assign(out, { volume: s.board.volume.value, volumeDate: s.board.volume.date });
+  if (v === 'clear') { out.volume = 0; delete out.volumeDate; }
+  return out;
+}
+
+function _recalcPrsEntry(rec, s) {
+  const out = { ...rec };
+  const heavy = rec.heaviestSet || null;
+  const h = _decide(heavy && heavy.weight, s.seen.weights, s.heaviest && { value: s.heaviest.weight });
+  if (h === 'replace') out.heaviestSet = { ...s.heaviest };
+  if (h === 'clear') out.heaviestSet = null;
+
+  // Reps per weight: keep records no local set explains, then let counted
+  // local sets set or beat each weight.
+  const repByWeight = {};
+  Object.entries(rec.repPRsByWeight || {}).forEach(([w, val]) => {
+    if (!s.seen.repPairs.has(`${Number(w)}|${Number(val && val.reps)}`)) repByWeight[w] = val;
+  });
+  Object.entries(s.repByWeight).forEach(([w, val]) => {
+    if (!repByWeight[w] || val.reps > Number(repByWeight[w].reps || 0)) repByWeight[w] = { ...val };
+  });
+  out.repPRsByWeight = repByWeight;
+
+  const vol = rec.highestVolumeSession || null;
+  const v = _decide(vol && vol.volume, s.seen.sessionVols, s.sessionVol && { value: s.sessionVol.volume });
+  if (v === 'replace') out.highestVolumeSession = { ...s.sessionVol };
+  if (v === 'clear') out.highestVolumeSession = null;
+  return out;
+}
+
+/**
+ * Recalculate PRs for the given exercise names after their Alt Gym /
+ * Alt Machine tags changed. Returns true if either store changed.
+ */
+function recalculatePRs(user, exerciseNames) {
+  if (!user || typeof localStorage === 'undefined') return false;
+  const targets = new Set((exerciseNames || []).map(_normName).filter(Boolean));
+  if (!targets.size) return false;
+
+  const workouts = [..._readList(`workoutHistory_${user}`), ..._readList(`workouts_${user}`)];
+  const stats = _collectExerciseStats(workouts, targets);
+
+  const board = _readObject(`prBoard_${user}`);
+  const prs = _readObject(`prs_${user}`);
+  const boardBefore = JSON.stringify(board);
+  const prsBefore = JSON.stringify(prs);
+
+  targets.forEach(key => {
+    const s = stats.get(key);
+    if (!s) return; // nothing local to recalculate from
+
+    const boardKeys = Object.keys(board).filter(k => _normName(k) === key);
+    if (!boardKeys.length && s.board.weight) boardKeys.push(s.name);
+    boardKeys.forEach(k => {
+      const next = _recalcBoardEntry(board[k] || { weight: 0, e1rm: 0, volume: 0 }, s);
+      if (!next.weight && !next.e1rm && !next.volume) delete board[k];
+      else board[k] = next;
+    });
+
+    const prsKeys = Object.keys(prs).filter(k => _normName(k) === key);
+    if (!prsKeys.length && s.heaviest) prsKeys.push(s.name);
+    prsKeys.forEach(k => {
+      const next = _recalcPrsEntry(prs[k] || { heaviestSet: null, repPRsByWeight: {}, highestVolumeSession: null, history: [] }, s);
+      const empty = !next.heaviestSet && !next.highestVolumeSession && !Object.keys(next.repPRsByWeight || {}).length;
+      if (empty) delete prs[k];
+      else prs[k] = next;
+    });
+  });
+
+  const boardChanged = JSON.stringify(board) !== boardBefore;
+  const prsChanged = JSON.stringify(prs) !== prsBefore;
+  if (boardChanged) localStorage.setItem(`prBoard_${user}`, JSON.stringify(board));
+  if (prsChanged) localStorage.setItem(`prs_${user}`, JSON.stringify(prs));
+  return boardChanged || prsChanged;
+}
+
 function calculateMonotony(dailyLoads) {
   if (!Array.isArray(dailyLoads) || dailyLoads.length === 0) return 0;
   const loads = dailyLoads
@@ -223,6 +452,8 @@ if (typeof module !== 'undefined') {
     loadPRs,
     savePRs,
     updatePRs,
+    recalculatePRs,
+    isTaggedEntry,
     calculateMonotony,
     calculateStrain
   };
@@ -234,6 +465,7 @@ if (typeof window !== 'undefined') {
   window.loadPRs = loadPRs;
   window.savePRs = savePRs;
   window.updatePRs = updatePRs;
+  window.recalculatePRs = recalculatePRs;
   window.calculateMonotony = calculateMonotony;
   window.calculateStrain = calculateStrain;
 }
