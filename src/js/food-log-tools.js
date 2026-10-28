@@ -58,12 +58,14 @@
 
   /* ── Toolbar above today's log ───────────────────────────── */
 
-  window.foodLogToolbar = function (todayItems) {
+  // Two small icon buttons in the food log's header.
+  window.foodLogToolbar = function () {
     const y = Core.entriesFor(FL().load(), yesterday());
-    return `<div class="food-log-toolbar">
-      ${y.length ? `<button type="button" class="food-mini-btn" data-copy-yesterday>Copy yesterday's foods (${y.length})</button>` : ''}
-      <button type="button" class="food-mini-btn" data-open-library>Meals, recipes &amp; my foods</button>
-    </div>`;
+    const icon = name => (typeof ICONS !== 'undefined' && ICONS[name]) || ''; // eslint-disable-line no-undef
+    return `<span class="food-log-icons">
+      ${y.length ? `<button type="button" class="food-icon-btn" data-copy-yesterday aria-label="Copy yesterday's ${y.length} foods to today" title="Copy yesterday's foods"><span class="ui-icon">${icon('copy') || icon('refresh')}</span></button>` : ''}
+      <button type="button" class="food-icon-btn" data-open-library aria-label="Saved meals, recipes and my foods" title="Saved meals, recipes and my foods"><span class="ui-icon">${icon('bookmark') || icon('clipboard')}</span></button>
+    </span>`;
   };
 
   function copyYesterday() {
@@ -168,18 +170,22 @@
 
   /* ── Library: saved meals, recipes, my foods ─────────────── */
 
-  function openLibrary() {
+  // opts.host: render into this element (the Log food sheet's "My foods"
+  // tab) instead of a sheet of its own. opts.meal: the meal to log to.
+  function openLibrary(opts = {}) {
+    const host = opts.host || null;
+    const again = () => openLibrary(opts);
     const tpls = loadTemplates();
     const own = FL().customFoods();
     const fromCoach = FL().coachFoods ? FL().coachFoods() : [];
     const recipes = own.filter(f => f.source === 'recipe');
     const foods = own.filter(f => f.source !== 'recipe');
-    const defaultMeal = Core.mealForHour(new Date().getHours());
+    const defaultMeal = opts.meal || Core.mealForHour(new Date().getHours());
     const mealSelect = `<select data-lib-meal aria-label="Log saved meals to">${Core.MEALS.map(m => `<option value="${m}"${m === defaultMeal ? ' selected' : ''}>${Core.MEAL_LABELS[m]}</option>`).join('')}</select>`;
     const kcalOf = f => `${f.per100.kcal} kcal / 100${esc(f.basis || 'g')}`;
     const tplKcal = t => Core.totals(Core.entriesFromTemplate(t, { date: '2000-01-01', meal: 'snacks', now: 0 })).kcal;
-    Sheet().open(`
-      <div class="food-sheet-hdr"><h3>Meals, recipes &amp; my foods</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
+    const html = `
+      ${host ? '' : '<div class="food-sheet-hdr"><h3>Meals, recipes &amp; my foods</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>'}
       <div class="food-lib-actions">
         <button type="button" class="food-mini-btn" data-new-food>＋ New food</button>
         <button type="button" class="food-mini-btn" data-new-recipe>＋ New recipe</button>
@@ -193,7 +199,7 @@
       ${tpls.length ? tpls.map(t => `<div class="food-lib-row"><span class="food-lib-name">${esc(t.name)}<small>${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'} · ${tplKcal(t)} kcal</small></span>
         <button type="button" class="food-add-btn" data-log-tpl="${esc(t.id)}">Log</button>
         <button type="button" class="food-diary-del" data-del-tpl="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">✕</button></div>`).join('')
-        : '<p class="food-sheet-sub">None yet — use "Save as meal" on a meal in today\'s log.</p>'}
+        : '<p class="food-sheet-sub">None yet — use the bookmark on a meal in today\'s log to save it.</p>'}
       <h4 class="food-lib-h">Recipes</h4>
       ${recipes.length ? recipes.map(f => `<div class="food-lib-row"><span class="food-lib-name">${esc(f.name)}<small>${esc(f.recipe ? f.recipe.servings + ' servings · ' : '')}${kcalOf(f)}</small></span>
         <button type="button" class="food-add-btn" data-log-food="${esc(f.id)}">Log</button>
@@ -205,49 +211,62 @@
         <button type="button" class="food-add-btn" data-log-food="${esc(f.id)}">Log</button>
         <button type="button" class="food-mini-btn" data-edit-food="${esc(f.id)}">Edit</button>
         <button type="button" class="food-diary-del" data-del-food="${esc(f.id)}" aria-label="Delete ${esc(f.name)}">✕</button></div>`).join('')
-        : '<p class="food-sheet-sub">None yet.</p>'}`, { label: 'Meals, recipes and my foods' });
+        : '<p class="food-sheet-sub">None yet.</p>'}`;
 
-    const root = document.getElementById('foodSheet');
-    root.addEventListener('click', e => {
+    let root;
+    if (host) {
+      host.innerHTML = html;
+      root = host;
+    } else {
+      Sheet().open(html, { label: 'Meals, recipes and my foods' });
+      root = document.getElementById('foodSheet');
+    }
+    // Picking a food to log: in the tab, go back to Search with it selected;
+    // in the sheet, close it first.
+    const pick = f => {
+      if (!f) return;
+      if (host) window.showFoodSheetTab?.('search');
+      else Sheet().close();
+      window.selectFoodForLogging?.(f);
+    };
+    root.onclick = e => {
       const t = e.target.closest('button');
-      if (!t) return;
+      if (!t || !root.contains(t)) return;
       const own2 = FL().customFoods();
       if (t.matches('[data-close]')) Sheet().close();
-      else if (t.matches('[data-new-food]')) window.openCustomFoodForm({ onSaved: () => openLibrary() });
-      else if (t.matches('[data-new-recipe]')) openRecipeBuilder();
+      else if (t.matches('[data-new-food]')) window.openCustomFoodForm({ onSaved: again });
+      else if (t.matches('[data-new-recipe]')) openRecipeBuilder(undefined, again);
       else if (t.matches('[data-import-recipe]')) openRecipeImport();
       else if (t.dataset.logCoach) {
-        const f = fromCoach.find(x => x.id === t.dataset.logCoach);
-        Sheet().close();
-        if (f) window.selectFoodForLogging?.(f);
+        pick(fromCoach.find(x => x.id === t.dataset.logCoach));
       } else if (t.dataset.copyCoach) {
         // A copy you can change; the coach's original stays as it is.
         const f = fromCoach.find(x => x.id === t.dataset.copyCoach);
-        if (f) window.openCustomFoodForm({ food: { ...f, id: undefined, source: 'custom' }, note: 'Your own copy of your coach’s food — changes here don’t touch the original.', onSaved: () => openLibrary() });
-      } else if (t.dataset.logTpl) { logTemplate(t.dataset.logTpl, root.querySelector('[data-lib-meal]').value); Sheet().close(); }
-      else if (t.dataset.delTpl) {
+        if (f) window.openCustomFoodForm({ food: { ...f, id: undefined, source: 'custom' }, note: 'Your own copy of your coach’s food — changes here don’t touch the original.', onSaved: again });
+      } else if (t.dataset.logTpl) {
+        logTemplate(t.dataset.logTpl, root.querySelector('[data-lib-meal]').value);
+        if (!host) Sheet().close();
+      } else if (t.dataset.delTpl) {
         if (!confirm('Delete this saved meal?')) return;
-        saveTemplates(loadTemplates().filter(x => x.id !== t.dataset.delTpl)); openLibrary();
+        saveTemplates(loadTemplates().filter(x => x.id !== t.dataset.delTpl)); again();
       } else if (t.dataset.logFood) {
-        const f = Core.normalizeFood(own2.find(x => x.id === t.dataset.logFood));
-        Sheet().close();
-        if (f) window.selectFoodForLogging?.(f);
+        pick(Core.normalizeFood(own2.find(x => x.id === t.dataset.logFood)));
       } else if (t.dataset.editFood) {
         const f = own2.find(x => x.id === t.dataset.editFood);
-        if (f) window.openCustomFoodForm({ food: f, onSaved: () => openLibrary() });
+        if (f) window.openCustomFoodForm({ food: f, onSaved: again });
       } else if (t.dataset.editRecipe) {
-        openRecipeBuilder(own2.find(x => x.id === t.dataset.editRecipe));
+        openRecipeBuilder(own2.find(x => x.id === t.dataset.editRecipe), again);
       } else if (t.dataset.delFood) {
         if (!confirm('Delete this food? Foods you already logged with it stay in your log.')) return;
-        FL().deleteCustomFood(t.dataset.delFood); openLibrary();
+        FL().deleteCustomFood(t.dataset.delFood); again();
       }
-    });
+    };
   }
   window.openFoodLibrary = openLibrary;
 
   /* ── Recipe builder ──────────────────────────────────────── */
 
-  function openRecipeBuilder(existing) {
+  function openRecipeBuilder(existing, onSaved) {
     const state = {
       name: existing ? existing.name : '',
       servings: existing && existing.recipe ? existing.recipe.servings : 2,
@@ -329,6 +348,7 @@
       FL().saveCustomFood(r.food);
       Sheet().close();
       toast(`✅ Recipe saved — ${r.perServing.kcal} kcal per serving`);
+      if (typeof onSaved === 'function') onSaved(r.food);
     };
     renderItems();
   }

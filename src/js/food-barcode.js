@@ -149,8 +149,82 @@
     });
   }
 
+  // Live camera scanner for browsers and WebViews without a native scanner
+  // (iPhone Safari, the iOS app's WebView, desktop Chrome on Windows):
+  // html5-qrcode (vendor/, Apache-2.0), loaded only when needed. It uses the
+  // browser's own BarcodeDetector where there is one.
+  const SCANNER_SRC = 'vendor/html5-qrcode-2.3.8.min.js';
+  let scannerLoading = null;
+
+  function loadScanner() {
+    if (window.__Html5QrcodeLibrary__) return Promise.resolve(window.__Html5QrcodeLibrary__);
+    if (!scannerLoading) {
+      scannerLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = SCANNER_SRC;
+        s.async = true;
+        s.onload = () => (window.__Html5QrcodeLibrary__ ? resolve(window.__Html5QrcodeLibrary__) : reject(new Error('Scanner missing')));
+        s.onerror = () => { scannerLoading = null; reject(new Error('Scanner failed to load')); };
+        document.head.appendChild(s);
+      });
+    }
+    return scannerLoading;
+  }
+
+  // → code string, '' when cancelled, 'manual', or null when it can't run.
+  async function readWithCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
+    let lib;
+    try { lib = await loadScanner(); } catch { return null; }
+    const F = lib.Html5QrcodeSupportedFormats;
+    return new Promise(resolve => {
+      let done = false;
+      let scanner = null;
+      const finish = v => {
+        if (done) return;
+        done = true;
+        const stop = scanner && scanner.isScanning ? scanner.stop().catch(() => {}) : Promise.resolve();
+        stop.finally(() => { stopCamera = null; closeSheet(); resolve(v); });
+      };
+      openSheet(`
+        <div class="food-sheet-hdr"><h3>Scan barcode</h3><button type="button" class="food-sheet-x" aria-label="Close" data-scan-cancel>✕</button></div>
+        <div id="foodScanReader" class="food-scan-reader"></div>
+        <p class="food-sheet-sub" data-scan-msg>Starting the camera…</p>
+        <button type="button" class="food-share-no" data-scan-manual>Type the numbers instead</button>`, { label: 'Scan barcode' });
+      const sheet = document.getElementById('foodSheet');
+      sheet.querySelector('[data-scan-cancel]').onclick = () => finish('');
+      sheet.querySelector('[data-scan-manual]').onclick = () => finish('manual');
+      // Closing the sheet another way (backdrop, Escape) also stops the camera.
+      stopCamera = () => { if (!done) { done = true; if (scanner && scanner.isScanning) scanner.stop().catch(() => {}); resolve(''); } };
+      try {
+        scanner = new lib.Html5Qrcode('foodScanReader', {
+          formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E],
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          verbose: false,
+        });
+      } catch {
+        finish('manual');
+        return;
+      }
+      const box = (w, h) => ({ width: Math.round(Math.min(w * 0.85, 320)), height: Math.round(Math.min(h * 0.5, 160)) });
+      scanner.start({ facingMode: 'environment' }, { fps: 12, qrbox: box, aspectRatio: 1.333 },
+        text => { if (Core.validBarcode(text)) finish(text); },
+        () => { /* no code in this frame */ })
+        .then(() => {
+          const msg = sheet.querySelector('[data-scan-msg]');
+          if (msg) msg.textContent = 'Hold the barcode inside the frame.';
+        })
+        .catch(err => {
+          console.warn('[Barcode] camera unavailable:', err && (err.message || err));
+          const msg = sheet.querySelector('[data-scan-msg]');
+          if (msg) msg.textContent = 'The camera isn’t available (no permission, or no camera). Type the numbers instead.';
+        });
+    });
+  }
+
   async function readBarcode() {
     let code = await readNative();
+    if (code === null) code = await readWithCamera();
     if (code === null) code = await readWithDetector();
     if (code === null || code === 'manual') code = await readTyped();
     return code;

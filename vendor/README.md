@@ -12,6 +12,7 @@ Third-party files served from our own origin instead of a CDN, so:
 | `confetti-1.9.3.browser.js` | npm `canvas-confetti@1.9.3` `dist/confetti.browser.js` | ISC |
 | `litepicker-2.0.12.js` / `.css` | npm `litepicker@2.0.12` `dist/` | MIT |
 | `firebase-app-compat-10.14.1.js`, `firebase-auth-compat-10.14.1.js` | npm `firebase@10.14.1` | Apache-2.0 |
+| `html5-qrcode-2.3.8.min.js` | npm `html5-qrcode@2.3.8` `html5-qrcode.min.js` (barcode scanning in browsers/WebViews without a native scanner; loaded only when Scan is tapped, see `src/js/food-barcode.js`) | Apache-2.0 |
 | `fonts/` | Google Fonts: Anton, Archivo, Barlow Condensed, JetBrains Mono, Oswald, Poppins (Latin + Latin Extended, woff2) | SIL Open Font License 1.1 |
 
 To upgrade: `npm pack <pkg>@<version>`, copy the file from the tarball, rename
