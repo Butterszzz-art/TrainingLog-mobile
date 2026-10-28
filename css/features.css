@@ -3859,3 +3859,69 @@ html.pc-log-only .food-sheet-tab[data-food-tab="quick"] { display: none; }
   cursor: pointer;
 }
 html.pc-log-only .food-result-kcal { display: none !important; }
+
+/* ══ Nutrition and performance (nutrition-review.js) ════════════════ */
+.nr-section { margin: 4px 0 16px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--card-bg); }
+.nr-title { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.nr-title .ui-icon, .nr-note .ui-icon { width: 14px; height: 14px; display: inline-flex; color: var(--primary-text); }
+.nr-title .ui-icon svg, .nr-note .ui-icon svg { width: 14px; height: 14px; }
+.nr-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.nr-stats > div { background: var(--bg-color); border-radius: 10px; padding: 8px 6px; text-align: center; min-width: 0; }
+.nr-stats b { display: block; font-size: 1rem; color: var(--text-color); }
+.nr-stats span { display: block; font-size: 0.66rem; color: var(--text-muted); line-height: 1.3; margin-top: 2px; }
+.nr-headline { margin: 0 0 8px; font-size: 0.9rem; font-weight: 600; color: var(--text-color); line-height: 1.4; }
+.nr-list { list-style: none; margin: 0; padding: 0; }
+.nr-item { display: flex; gap: 8px; align-items: flex-start; padding: 7px 0; border-top: 1px solid var(--border-color); font-size: 0.82rem; line-height: 1.4; color: var(--text-color); }
+.nr-tag { flex-shrink: 0; font-size: 0.64rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap; margin-top: 1px; }
+.nr-tag.is-work { background: rgba(240, 160, 64, 0.16); color: #f0c27a; }
+.nr-tag.is-keep { background: rgba(66, 166, 121, 0.18); color: #9fd8b8; }
+.nr-tag.is-think { background: rgba(77, 168, 218, 0.16); color: #9cc8e6; }
+.nr-tag.is-sup { background: rgba(167, 139, 250, 0.16); color: #c3b3ef; }
+.nr-note { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; font-size: 0.75rem; color: var(--text-muted); }
+.nr-foot, .nr-empty { margin: 8px 0 0; font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; }
+.nr-empty { font-size: 0.8rem; }
+
+/* Macros tab row (replaces the AI Macro Advisor button) */
+.macro-nr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--primary);
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  text-align: left;
+  box-shadow: none;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.macro-nr-ico { width: 18px; height: 18px; display: inline-flex; color: var(--primary-text); flex-shrink: 0; }
+.macro-nr-ico svg, .macro-nr-chev svg { width: 18px; height: 18px; }
+.macro-nr-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.macro-nr-text b { font-size: 0.88rem; }
+.macro-nr-text small { font-size: 0.74rem; color: var(--text-muted); }
+.macro-nr-chev { width: 18px; height: 18px; display: inline-flex; color: var(--text-muted); }
+
+/* Insights: nutrition vs training */
+.ni-card { padding: 14px; }
+.ni-title { margin: 0 0 8px; font-size: 1rem; }
+.ni-block { padding: 10px 0; border-top: 1px solid var(--border-color); }
+.ni-block:first-of-type { border-top: none; }
+.ni-lbl { display: block; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.ni-big { font-size: 1.3rem; }
+.ni-sub { margin: 4px 0 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; }
+.ni-bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-top: 6px; }
+.ni-bar { flex: 1; min-width: 4px; border-radius: 4px 4px 0 0; background: rgba(127, 148, 134, 0.55); }
+.ni-bar.is-high { background: var(--primary); }
+.ni-key { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: rgba(127, 148, 134, 0.55); margin: 0 4px 0 8px; vertical-align: middle; }
+.ni-key.is-high { background: var(--primary); margin-left: 0; }
+.ni-micros { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 0; font-size: 0.8rem; color: var(--text-color); }
+.ni-nodata { color: var(--text-muted); font-style: italic; }
+.ni-low { color: #f0a040; font-size: 0.72rem; }
+.ni-ok { color: var(--primary-text); }
+.ni-empty { margin: 0; font-size: 0.82rem; color: var(--text-muted); }
+html.pc-log-only .macro-nr-row, html.pc-log-only #nutritionInsightsCard, html.pc-log-only .wr-nutrition-review { display: none !important; }
