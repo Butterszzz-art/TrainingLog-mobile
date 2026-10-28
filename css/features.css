@@ -3350,3 +3350,29 @@ button.food-diary-nm { border-radius: 0; font-size: 0.85rem; display: block; }
 .food-micro-row.is-high .food-micro-val { color: #f0a040; }
 .food-micro-nodata { color: var(--text-muted); font-style: italic; }
 .food-micro-foot { margin: 6px 0 0; font-size: 0.66rem; color: var(--text-muted); line-height: 1.4; }
+
+/* ── Log-only mode (coach setting, food-database.js) ───────── */
+html.pc-log-only #macrosTargetsView .macro-hero,
+html.pc-log-only #macrosTargetsView .macro-quick-chips,
+html.pc-log-only #macroCustomAdd,
+html.pc-log-only #assignedNutritionPlanCard,
+html.pc-log-only .macro-trends-accordion,
+html.pc-log-only .macro-heatmap-accordion,
+html.pc-log-only .food-macro-badges,
+html.pc-log-only .food-item-macros,
+html.pc-log-only .food-diary-kcal,
+html.pc-log-only .food-diary-tot,
+html.pc-log-only .food-meal-kcal,
+html.pc-log-only .food-micros,
+html.pc-log-only .food-selected-warn,
+html.pc-log-only [data-edit-preview],
+html.pc-log-only .food-lib-name small { display: none !important; }
+.pc-log-only-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
