@@ -81,6 +81,8 @@
       basis: f.basis === 'ml' ? 'ml' : 'g',
       per100,
       servings,
+      ...(f.source === 'coach' && f.coachUsername ? { coachUsername: String(f.coachUsername).slice(0, 40) } : {}),
+      ...(f.source === 'coach' && f.note ? { note: String(f.note).slice(0, 300) } : {}),
     };
   }
 
@@ -166,10 +168,26 @@
       ...n,
       kcal: n.kcal || 0, protein: n.protein || 0, carbs: n.carbs || 0, fat: n.fat || 0,
       per100: { ...food.per100 },
+      ...(kcalCheck(food.per100).ok ? {} : { flag: 'kcal_mismatch' }),
       basis: food.basis === 'ml' ? 'ml' : 'g',
       servings: Array.isArray(food.servings) ? food.servings.slice(0, 10) : [],
       t: now,
     };
+  }
+
+  // ── Data quality ─────────────────────────────────────────────────────
+  // Calories vs. what the macros add up to (4P + 4C + 9F). Labels can
+  // legitimately differ by fibre (2 kcal/g on EU labels), polyols, alcohol
+  // and rounding, so it only fails when more than 15 % off both with and
+  // without fibre, with a 10 kcal margin for small amounts. Same rule as the
+  // backend's diary.js kcalMismatch.
+  // → { ok, expected } (expected = 4P + 4C + 9F, rounded)
+  function kcalCheck(n) {
+    const k = num(n && n.kcal) || 0;
+    const base = (num(n && n.protein) || 0) * 4 + (num(n && n.carbs) || 0) * 4 + (num(n && n.fat) || 0) * 9;
+    const withFiber = base + (num(n && n.fiber) || 0) * 2;
+    const off = e => { const d = Math.abs(k - e); return d > 10 && d > Math.max(k, e) * 0.15; };
+    return { ok: !(off(base) && off(withFiber)), expected: Math.round(base) };
   }
 
   // What an entry adds to the day's running totals (the Macros tab's
@@ -522,7 +540,7 @@
     normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
     amountLabel, editEntry, copyEntries, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
-    scaleNutrients, gramsFor, sourceLabel, normalizeFood,
+    scaleNutrients, gramsFor, sourceLabel, normalizeFood, kcalCheck,
     matchesQuery, addRecent, mergeResults,
     mealForHour, newEntryId, makeEntry, progressDelta, foodFromEntry, totals, entriesFor, groupByMeal, trimLog, migrateOldDiary,
   };

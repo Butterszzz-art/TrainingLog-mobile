@@ -1157,8 +1157,8 @@ async function loadFoodLog(c, { force = false } = {}) {
 
 const MEAL_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
 const ADHERENCE = {
-  green: ['On track', 'mx-chip--green'], amber: ['Partly on track', 'mx-chip--brass'], red: ['Off track', 'mx-chip--red'],
-  logging: ['Logging well (no target)', 'mx-chip--green'], partial: ['Logging some days', 'mx-chip--brass'], low: ['Rarely logs', 'mx-chip--red'],
+  green: ['On track', 'fl-adh--green'], amber: ['Partly on track', 'fl-adh--amber'], red: ['Off track', 'fl-adh--red'],
+  logging: ['Logging well (no target)', 'fl-adh--green'], partial: ['Logging some days', 'fl-adh--amber'], low: ['Rarely logs', 'fl-adh--red'],
   unknown: ['No data', ''],
 };
 
@@ -1207,6 +1207,7 @@ function renderFoodLog(c) {
           + (e.amount ? ' <small>· ' + escapeHtml(e.amount) + ' ' + escapeHtml(e.unit || 'g') + '</small>' : '')
           + (e.flag ? ' <span class="fl-flag" title="Calories don’t match the macros (4P + 4C + 9F) — check this food">⚠ check</span>' : '') + '</span>'
           + '<span class="fl-src">' + escapeHtml(String(e.source || '').toUpperCase()) + '</span>'
+          + (e.grams > 0 && e.source !== 'coach' ? '<button class="fl-approve" data-approve="' + escapeHtml(d.date + '|' + e.id) + '" title="Add to the foods you approve for clients">Approve</button>' : '<span></span>')
           + '<span class="fl-macros">' + fmt(e.kcal) + ' kcal · ' + fmt(e.protein, 1) + 'P ' + fmt(e.carbs, 1) + 'C ' + fmt(e.fat, 1) + 'F</span></div>').join('')).join('')
       : '';
     const extra = d.notFromFoodsKcal > 20 ? '<p class="fl-note">+' + fmt(d.notFromFoodsKcal) + ' kcal logged as quick macros, not as foods.</p>' : '';
@@ -1218,7 +1219,7 @@ function renderFoodLog(c) {
   }).join('');
 
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Food log · last 28 days'
-    + ' <span class="mx-chip mx-chip--sm ' + adhCls + '" style="margin-left:6px;">' + escapeHtml(adhLabel) + '</span>'
+    + ' <span class="fl-adh ' + adhCls + '">' + escapeHtml(adhLabel) + '</span>'
     + ' <button class="capsule-chip" style="float:right;" onclick="retryFoodLog()">Refresh</button></div>'
     + '<div class="d-stat-grid">'
     + stat('Days logged (7d)', s7.daysLogged + '/' + s7.days)
@@ -1231,7 +1232,101 @@ function renderFoodLog(c) {
     + '</tbody></table>'
     + '<p class="ws-empty-note">Averages cover logged days only and leave out today. “On target” = calories within ±10% and protein at least 90% of target.'
     + (t ? '' : ' No macro target set yet, so adherence is based on logging only.') + '</p>'
-    + '</div><div class="d-card"><div class="d-card-title">Days</div>' + days + '</div>';
+    + '</div><div class="d-card"><div class="d-card-title">Days</div>' + days + '</div>'
+    + '<div id="coachFoodsCard"></div>';
+  el.querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', () => approveEntry(c, b.dataset.approve)));
+  loadCoachFoods(c);
+}
+
+// ── Coach-approved foods (/api/coach/foods) ───────────────────
+// Foods you checked and recommend. They rank first in the client's food
+// search, marked "Coach". Approving a logged food copies its per-100 g
+// numbers (worked out from the amount logged).
+let _coachFoods = null;
+
+const COACH_FOOD_NUTRIENTS = ['kcal', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'satFat', 'sodiumMg', 'ironMg', 'calciumMg', 'potassiumMg', 'magnesiumMg', 'vitDUg', 'b12Ug'];
+
+function entryToCoachFood(e) {
+  const per100 = {};
+  COACH_FOOD_NUTRIENTS.forEach(k => { if (typeof e[k] === 'number') per100[k] = Math.round((e[k] * 100 / e.grams) * 10) / 10; });
+  per100.kcal = Math.round(per100.kcal || 0);
+  const servings = e.unit && e.unit !== 'g' && e.unit !== 'ml' && e.amount > 0
+    ? [{ label: e.unit, grams: Math.round((e.grams / e.amount) * 10) / 10 }] : [];
+  return { name: e.name, brand: e.brand || '', per100, servings };
+}
+
+async function approveEntry(c, key) {
+  const [date, id] = key.split('|');
+  const day = (_foodLogCache[c.id]?.nutrition?.days || []).find(d => d.date === date);
+  const e = day && day.entries.find(x => x.id === id);
+  if (!e) return;
+  const food = entryToCoachFood(e);
+  const first = (c.clientName || 'this client').split(' ')[0];
+  const forAll = confirm('Approve "' + e.name + '" (' + food.per100.kcal + ' kcal · ' + food.per100.protein + 'P / ' + food.per100.carbs + 'C / ' + food.per100.fat + 'F per 100 g)?\n\nOK = share with all your clients\nCancel = only ' + first);
+  await saveCoachFood(slugId(e.name), { ...food, audience: forAll ? 'all' : 'selected', clientUids: forAll ? [] : [c.id] }, c);
+}
+
+function slugId(name) {
+  const base = String(name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'food';
+  return base + '-' + Math.random().toString(36).slice(2, 6);
+}
+
+async function saveCoachFood(id, body, c) {
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/foods/' + encodeURIComponent(id), { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not save the food.');
+    _coachFoods = null;
+    loadCoachFoods(c);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function loadCoachFoods(c) {
+  const el = document.getElementById('coachFoodsCard');
+  if (!el) return;
+  if (!_coachFoods) {
+    try {
+      const res = await coachFetch(SERVER_URL + '/api/coach/foods', { headers: authHeaders() });
+      const data = await res.json().catch(() => null);
+      _coachFoods = res.ok && data?.success ? data.foods : [];
+    } catch { _coachFoods = []; }
+  }
+  if (_selectedClientId !== c.id) return;
+  const mine = _coachFoods.filter(f => f.audience !== 'selected' || (f.clientUids || []).includes(c.id));
+  el.innerHTML = '<div class="d-card"><div class="d-card-title">Approved foods ' + escapeHtml((c.clientName || '').split(' ')[0]) + ' sees first</div>'
+    + (mine.length ? mine.map(f => '<div class="fl-entry"><span class="fl-name">' + escapeHtml(f.name) + (f.brand ? ' <small>' + escapeHtml(f.brand) + '</small>' : '') + '</span>'
+      + '<span class="fl-src">' + (f.audience === 'all' ? 'ALL' : 'THIS CLIENT') + '</span>'
+      + '<span class="fl-macros">' + fmt(f.per100.kcal) + ' kcal · ' + fmt(f.per100.protein, 1) + 'P ' + fmt(f.per100.carbs, 1) + 'C ' + fmt(f.per100.fat, 1) + 'F /100' + escapeHtml(f.basis || 'g') + '</span>'
+      + '<button class="fl-approve" data-remove-food="' + escapeHtml(f.id) + '">Remove</button></div>').join('')
+      : '<p class="ws-empty-note">None yet. Use "Approve" on a logged food, or add one below.</p>')
+    + '<details class="fl-add"><summary>Add a food</summary>'
+    + '<div class="fl-add-grid fl-add-grid--2">'
+    + '<input id="cfName" class="coach-input" placeholder="Name, e.g. Skyr naturel" maxlength="120">'
+    + '<input id="cfBrand" class="coach-input" placeholder="Brand (optional)" maxlength="80"></div>'
+    + '<div class="fl-add-grid fl-add-grid--4">'
+    + ['kcal', 'protein', 'carbs', 'fat'].map(k => '<input id="cf_' + k + '" class="coach-input" type="number" min="0" step="any" placeholder="' + k + ' / 100 g">').join('')
+    + '</div><div class="fl-add-grid fl-add-grid--2">'
+    + '<input id="cfServing" class="coach-input" placeholder="Serving (optional), e.g. 1 beker">'
+    + '<input id="cfServingG" class="coach-input" type="number" min="0" step="any" placeholder="grams"></div>'
+    + '<label class="fl-add-all"><input type="checkbox" id="cfAll"> Share with all clients (otherwise only this client)</label>'
+    + '<button class="bulk-action-btn" id="cfSave">Save food</button></details></div>';
+  el.querySelectorAll('[data-remove-food]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Remove this food from your approved list? Clients stop seeing it.')) return;
+    await coachFetch(SERVER_URL + '/api/coach/foods/' + encodeURIComponent(b.dataset.removeFood), { method: 'DELETE', headers: authHeaders() });
+    _coachFoods = null;
+    loadCoachFoods(c);
+  }));
+  document.getElementById('cfSave')?.addEventListener('click', () => {
+    const v = id => document.getElementById(id)?.value?.trim() || '';
+    const per100 = {};
+    ['kcal', 'protein', 'carbs', 'fat'].forEach(k => { if (v('cf_' + k) !== '') per100[k] = Number(v('cf_' + k)); });
+    const forAll = document.getElementById('cfAll')?.checked;
+    const servings = v('cfServing') && Number(v('cfServingG')) > 0 ? [{ label: v('cfServing'), grams: Number(v('cfServingG')) }] : [];
+    saveCoachFood(slugId(v('cfName')), { name: v('cfName'), brand: v('cfBrand'), per100, servings, audience: forAll ? 'all' : 'selected', clientUids: forAll ? [] : [c.id] }, c);
+  });
 }
 
 function retryFoodLog() {

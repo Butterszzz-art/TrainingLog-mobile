@@ -3330,3 +3330,6 @@ button.food-diary-nm { border-radius: 0; font-size: 0.85rem; display: block; }
 .food-sheet .food-diary-del,
 .food-diary-list .food-diary-del { display: inline-flex; margin: 0; width: auto; }
 .food-sheet .food-add-btn, .food-diary-list .food-add-btn, .food-search-widget .food-add-btn { width: auto; margin-top: 0; margin-bottom: 0; }
+.food-flag-badge { background: rgba(240,160,64,0.15); color: #f0a040; }
+.food-flag-dot { color: #f0a040; font-size: 0.75rem; }
+.food-selected-warn { margin: 0 0 8px; font-size: 0.75rem; color: #f0a040; line-height: 1.4; }

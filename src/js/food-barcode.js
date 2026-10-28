@@ -265,7 +265,16 @@
       const fields = { name: form.name.value, brand: form.brand.value, barcode: form.barcode.value.trim(), basis: form.basis.value, servings: [] };
       ['kcal', 'protein', 'carbs', 'fat', ...EXTRA.map(x => x[0])].forEach(k => { fields[k] = form[k].value.trim(); });
       servings.forEach((_, i) => fields.servings.push({ label: form['servingLabel' + i].value, grams: form['servingGrams' + i].value }));
-      const { food, error } = Core.customFoodFromForm(fields, { id: f.id, now: Date.now() });
+      // Never overwrite one of your foods without asking: a new food with a
+      // barcode you already saved a food for asks first.
+      let id = f.id;
+      if (!id && fields.barcode) {
+        const same = FL().customFoods().find(x => x.barcode && Core.normalizeBarcode(x.barcode) === Core.normalizeBarcode(fields.barcode));
+        if (same) {
+          if (confirm(`You already saved "${same.name}" with this barcode. Replace it with this one? (Cancel keeps both.)`)) id = same.id;
+        }
+      }
+      const { food, error } = Core.customFoodFromForm(fields, { id, now: Date.now() });
       const errEl = form.querySelector('.food-form-err');
       if (error) { errEl.hidden = false; errEl.textContent = error; return; }
       FL().saveCustomFood(food);
