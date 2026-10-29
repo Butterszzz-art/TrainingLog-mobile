@@ -3153,12 +3153,12 @@
               <div class="macro-setup-row">
                 <div class="macro-setup-day">
                   <div class="macro-daytype">
-              <label class="macro-toggle-card" id="trainingDayCard" onclick="document.getElementById('trainingDayToggle').click()">
+              <label class="macro-toggle-card" id="trainingDayCard">
                 <input type="checkbox" id="trainingDayToggle" style="display:none;">
                 <span class="macro-toggle-icon" data-icon="dumbbell"></span>
                 <span class="macro-toggle-label">Training day</span>
               </label>
-              <label class="macro-toggle-card" id="refeedDayCard" onclick="document.getElementById('refeedDayToggle').click()">
+              <label class="macro-toggle-card" id="refeedDayCard">
                 <input type="checkbox" id="refeedDayToggle" style="display:none;">
                 <span class="macro-toggle-icon" data-icon="flame"></span>
                 <span class="macro-toggle-label">Refeed day</span>
@@ -9767,7 +9767,8 @@ function getMacroCyclingSettings() {
   const carbCycleSelect = document.getElementById("carbCycleSelect");
   const refeedToggle = document.getElementById("refeedDayToggle");
   return {
-    dayType: trainingToggle?.checked ? "training" : "rest",
+    // Unticked = a normal day: the saved (slider) targets as they are.
+    dayType: trainingToggle?.checked ? "training" : "base",
     carbCycle: carbCycleSelect?.value || "normal",
     isRefeedDay: Boolean(refeedToggle?.checked),
   };
@@ -9928,9 +9929,9 @@ function getAdaptiveMacroTargets() {
     ? window.cardioTab.applyCardioMacroAdjustment(splitTargets, cardioCalories)
     : { ...splitTargets, cardioCalories: 0 };
 
-  const weightAdjusted = window.weightTab?.applyWeightTrendAdjustment
-    ? window.weightTab.applyWeightTrendAdjustment(cardioAdjusted, trendSuggestion)
-    : { ...cardioAdjusted, caloriesDelta: 0 };
+  // The weight-trend suggestion is kept as information only. Applying it
+  // silently moved the targets away from what was set with the sliders.
+  const weightAdjusted = { ...cardioAdjusted };
 
   return {
     ...weightAdjusted,
