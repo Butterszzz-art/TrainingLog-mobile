@@ -181,8 +181,15 @@
       return;
     }
     const score = saveEntry(sleep, soreness, motivation);
+    // The morning check-in counts as today's recovery log, so Home's
+    // consistency score sees it.
+    try {
+      const user = window.currentUser || localStorage.getItem('currentUser');
+      if (user) window.dailyMissionEngine?.markMissionItemComplete?.(user, undefined, 'recoveryLogged');
+    } catch (_err) { /* mission tracking is optional */ }
     dismissReadiness();
     renderReadinessHomeCard();
+    if (typeof window.renderHomeDashboard === 'function') window.renderHomeDashboard();
 
     // Show tip if low readiness
     const tier = _tier(score);
@@ -220,29 +227,27 @@
     const host = document.getElementById('readinessHomeCard');
     if (!host) return;
 
+    // Lives in Home's "Do this now" zone: a to-do row until logged, then a
+    // one-line done row. The low-readiness tip stays visible because it
+    // changes what you should do today.
     const entry = getTodayEntry();
     if (!entry || entry.skipped) {
       host.innerHTML = `
-        <div role="button" tabindex="0" class="readiness-home-card" onclick="retakeReadiness()">
-          <span class="readiness-home-score medium">?</span>
-          <div class="readiness-home-info">
-            <p class="readiness-home-label">Readiness not logged</p>
-            <p class="readiness-home-detail">Tap to do your morning check-in</p>
-          </div>
-        </div>
+        <button type="button" class="htd-row htd-row--todo is-today" onclick="retakeReadiness()">
+          <span class="htd-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>
+          <span class="htd-text"><strong>Morning check-in</strong><span>Readiness not logged yet</span></span>
+          <span class="htd-cta">Start</span>
+        </button>
       `;
       return;
     }
 
     const tier = _tier(entry.score);
     host.innerHTML = `
-      <div class="readiness-home-card">
-        <span class="readiness-home-score ${tier.cls}">${entry.score}%</span>
-        <div class="readiness-home-info">
-          <p class="readiness-home-label">Today's readiness — ${tier.label}</p>
-          <p class="readiness-home-detail">${tier.tip}</p>
-        </div>
-        <button class="readiness-home-retake" onclick="retakeReadiness()">Redo</button>
+      <div class="htd-row htd-row--done">
+        <span class="htd-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="htd-done-text">Readiness <b class="htd-score ${tier.cls}">${entry.score}%</b> · ${tier.label}${tier.cls === 'low' ? `<small>${tier.tip}</small>` : ''}</span>
+        <button type="button" class="htd-link" onclick="retakeReadiness()">Redo</button>
       </div>
     `;
   }

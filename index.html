@@ -843,91 +843,94 @@
       <span class="sm-since"></span>
     </div>
 
-    <!-- ── Greeting row: "Morning, {name}" + date/streak, search+avatar ── -->
+    <!-- Home reads top to bottom as a story: where you stand (greeting +
+         one context line), what's waiting on you (Now), the plan (Today),
+         how the week is going (This week), then progress and extras.
+         Section labels hide with their section (css/home.css). -->
+
+    <!-- ── Greeting: "Morning, {name}", date, streak and one line of
+         context (days out / phase / status / next check-in) ── -->
     <div class="home-greeting-row" id="homeGreetingRow"></div>
 
-    <!-- ── Up today: the active program's session, swipeable across the
-         week; offers saved programs when none is started (today-program.js) ── -->
-    <div class="home-zone home-zone--up-today">
-      <div id="todayProgramCard"></div>
-    </div>
+    <!-- ── Now: everything waiting on you (morning check-in, due
+         check-ins / weigh-ins, Daily Pulse, today's habit ticks). Done items
+         shrink to one-line rows; the zone hides when it has nothing to show. ── -->
+    <section class="home-zone home-todo" id="homeTodoZone" aria-label="Do this now">
+      <div class="home-section-label home-todo-label">
+        <span class="home-todo-label-open">Do this now</span>
+        <span class="home-todo-label-done">Done today</span>
+      </div>
+      <div class="home-todo-list">
+        <div id="readinessHomeCard"></div>
+        <div id="dueNowRail"></div>
+        <div id="dailyPulseCard"></div>
+        <div id="homeMissionTicks"></div>
+      </div>
+    </section>
 
-    <!-- ── Hero: days out / phase / status — the first thing you see (renderHomeDashboard) ── -->
-    <div class="home-zone home-zone--top-hero" id="homeHeroSlot"></div>
-
-    <!-- ── Your Coach: invite / coach messages and plan (src/js/client-coaching.js) ── -->
+    <!-- ── Your Coach: invite / coach messages (src/js/client-coaching.js) ── -->
     <div class="home-zone" id="yourCoachHomeCard" hidden></div>
 
-    <!-- ── Coach: Today's brief (src/js/coach-brief.js) ────────── -->
-    <div class="home-zone" id="coachBriefCard"></div>
-
-    <!-- ── Guide: goal path / next step (src/js/guide-ui.js) ──── -->
+    <!-- ── Guide: goal path / next step, until you're set up (src/js/guide-ui.js) ── -->
     <div class="home-zone" id="guidePathCard"></div>
 
-    <!-- ── Zone 3: Weekly glance — scoreboard + steps in one card ─ -->
-    <div class="home-zone home-zone--weekly">
+    <!-- ── Today: the coach's read on the day, the session, food ── -->
+    <section class="home-group" aria-label="Today">
+      <div class="home-section-label">Today</div>
+      <div class="home-zone" id="coachBriefCard"></div>
+      <div class="home-zone home-zone--up-today">
+        <div id="todayProgramCard"></div>
+      </div>
+      <div class="home-zone" id="homeFuelCard"></div>
+    </section>
+
+    <!-- ── This week: scoreboard + consistency + steps, body, last week ── -->
+    <section class="home-group" aria-label="This week">
       <div class="home-section-label">This week</div>
-      <div class="wk-card">
-        <div id="weeklySummaryCard"></div>
-        <div id="stepWidgetCard" class="wk-steps">
-          <div class="wk-steps-row">
-            <span class="wk-steps-icon ui-icon" data-icon="footprints" aria-hidden="true"></span>
-            <div class="wk-steps-main">
-              <div class="wk-steps-head">
-                <span class="wk-cap">Steps</span>
-                <span class="wk-cap"><b id="stepTodayCount" class="wk-steps-count">0</b> / <span id="stepGoalLabel">10,000</span></span>
+      <div class="home-zone home-zone--weekly">
+        <div class="wk-card">
+          <div id="weeklySummaryCard"></div>
+          <div id="homeConsistencyRow"></div>
+          <div id="stepWidgetCard" class="wk-steps">
+            <div class="wk-steps-row">
+              <span class="wk-steps-icon ui-icon" data-icon="footprints" aria-hidden="true"></span>
+              <div class="wk-steps-main">
+                <div class="wk-steps-head">
+                  <span class="wk-cap">Steps</span>
+                  <span class="wk-cap"><b id="stepTodayCount" class="wk-steps-count">0</b> / <span id="stepGoalLabel">10,000</span></span>
+                </div>
+                <div class="mx-meter mx-meter--thin" role="progressbar" aria-label="Steps towards today's goal"
+                     aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="stepMeterFill" style="width:0%"></i></div>
               </div>
-              <div class="mx-meter mx-meter--thin" role="progressbar" aria-label="Steps towards today's goal"
-                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="stepMeterFill" style="width:0%"></i></div>
+              <button id="stepAddBtn" type="button" class="wk-steps-add" aria-expanded="false" aria-controls="stepInputRow">+ Add</button>
             </div>
-            <button id="stepAddBtn" type="button" class="wk-steps-add" aria-expanded="false" aria-controls="stepInputRow">+ Add</button>
-          </div>
-          <div id="stepWidgetSyncInfo" class="wk-steps-note" style="display:none;"></div>
-          <div id="stepSyncedLabel" class="wk-steps-note" style="display:none;">Synced from your device</div>
-          <div id="stepInputRow" class="wk-steps-input" hidden>
-            <input id="stepCountInput" type="number" class="wk-steps-field"
-                   placeholder="6500" min="0" inputmode="numeric" aria-label="Steps today"/>
-            <button id="stepSaveBtn" type="button" class="wk-steps-save">Save</button>
+            <div id="stepWidgetSyncInfo" class="wk-steps-note" style="display:none;"></div>
+            <div id="stepSyncedLabel" class="wk-steps-note" style="display:none;">Synced from your device</div>
+            <div id="stepInputRow" class="wk-steps-input" hidden>
+              <input id="stepCountInput" type="number" class="wk-steps-field"
+                     placeholder="6500" min="0" inputmode="numeric" aria-label="Steps today"/>
+              <button id="stepSaveBtn" type="button" class="wk-steps-save">Save</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <div class="home-zone" id="homeBodyCard"></div>
+      <!-- Last week recap: Monday and Tuesday only (weekly-recap.js) -->
+      <div class="home-zone home-zone--recap">
+        <div id="weeklyRecapCard"></div>
+      </div>
+    </section>
 
-    <!-- ── Training profile (archetype card) — sits with the weekly calendar ── -->
-    <div class="home-zone home-zone--action">
-      <div id="archetypeProfileCard"></div>
-    </div>
-
-    <!-- ── Zone 2b: Last week recap (hidden until there is something to recap) ── -->
-    <div class="home-zone home-zone--recap">
-      <div id="weeklyRecapCard"></div>
-    </div>
-
-    <!-- ── Guide: milestone suggestions + weekly tip (src/js/guide-ui.js) ── -->
-    <div class="home-zone" id="guideDiscoverCard"></div>
-
-    <!-- ── Tasks: readiness, due items, pulse, today's session, dashboard ── -->
-    <div class="home-zone home-zone--action">
-      <div id="readinessHomeCard"></div>
-    </div>
-
-    <!-- ── Due Now Rail: overdue check-in / today's workout / weigh-in ── -->
-    <div class="home-zone" id="dueNowRail"></div>
-
-    <!-- ── Daily Pulse: one-tap rotating check-in question ───────── -->
-    <div class="home-zone" id="dailyPulseCard"></div>
-
-
-    <!-- ── Zone 4: Dashboard (JS-rendered cards, archetype-ordered;
-         the 'hero' card is pulled out into #homeHeroSlot at the top) ── -->
-    <div id="homeDashboardContent" class="home-dashboard"></div>
-
-    <!-- ── Zone 5: Status modes (demoted — utility, not training) ── -->
-    <div class="home-zone home-zone--modes">
-      <div class="home-section-label">Status</div>
-      <div id="vacationModeCard"></div>
-      <div id="sickModeCard"></div>
-    </div>
+    <!-- ── Progress and more: level, mobility, tips, status modes ── -->
+    <section class="home-group" aria-label="Progress and more">
+      <div class="home-section-label">Progress and more</div>
+      <div id="homeDashboardContent" class="home-dashboard"></div>
+      <div class="home-zone" id="guideDiscoverCard"></div>
+      <div class="home-zone home-zone--modes">
+        <div id="vacationModeCard"></div>
+        <div id="sickModeCard"></div>
+      </div>
+    </section>
 
   </div>
 
@@ -3786,6 +3789,10 @@
        top-of-screen summary, wired to the same real prefs. -->
   <div id="settingsHero" style="padding:0 6px;"></div>
 
+  <!-- Training profile (archetype: rep ranges, rest, focus, AI summary).
+       Lived on Home; it's reference info, so it sits with your settings. -->
+  <div id="archetypeProfileCard" class="settings-profile-card"></div>
+
   <div id="settingsFormContainer" class="panel"></div>
 
   <!-- Your Coach: pending invite (Accept), linked coach + whatever they've
@@ -5370,12 +5377,10 @@ function showTab(tabName) {
 
   switch (tabName) {
     case 'homeTab':
-      if (typeof renderHomeGreeting === 'function') renderHomeGreeting();
       renderHomeDashboard();
       if (typeof renderDailyPulseCard === 'function') renderDailyPulseCard();
       if (typeof renderDueNowRail === 'function') renderDueNowRail();
       if (typeof window.renderWeeklyRecapCard === "function") window.renderWeeklyRecapCard();
-      if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
       if (typeof window.initAiCoach === 'function' && currentUser) window.initAiCoach(currentUser);
       break;
     case 'clientsTab':
@@ -5493,6 +5498,7 @@ function showTab(tabName) {
       ensureProfileTabRendered();
       break;
     case 'settingsTab': {
+      if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
       if (!document.getElementById('settingsFormContainer')) {
         console.warn('[Tabs:showTab] Missing #settingsFormContainer container.');
         break;
@@ -11395,106 +11401,7 @@ function getTimelineHeaderLabel(profile, username, referenceDate) {
   return window.prepModeApi?.getImprovementSeasonLabel?.(payload) || 'Improvement Season Week 1';
 }
 
-function renderHeroPhaseHeader(profile, username) {
-  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
-  const archetype = getHomeAthleteArchetype(profile, username);
-  const heroToplineByArchetype = {
-    bodybuilder: 'Your prep',
-    powerlifter: 'Your strength block',
-    hybrid: 'Your season',
-    recreational: 'Your habits'
-  };
-  const athleteName = getSafeDisplayValue(phaseState.athleteName || profile.athleteName || username, 'Athlete');
-  const phase = getSafeDisplayValue(window.prepModeApi?.getCurrentPhaseLabel?.(phaseState) || phaseState.currentPhase || profile.currentPhase, 'Build Phase');
-  const weekLabel = getSafeDisplayValue(
-    getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10))
-      || profile.weeksOutLabel
-      || profile.seasonWeekLabel,
-    'Week label TBD'
-  );
-  const showDateLike = phaseState.showDate || profile.showDate;
-  const showCountdown = formatCountdownDays(showDateLike);
-  const showDate = formatHomeDate(showDateLike, 'Not set');
-  const weeksOut = getWeeksOutLabel(showDateLike);
-  const snapshot = getComplianceSnapshot(profile, username, archetype);
-  const currentStatus = formatComplianceStatus(snapshot.dailyStatus);
-  const nextReview = formatHomeDate(getNextScheduledCheckIn(profile, username), 'Not scheduled');
-  // Week labels already carry the phase ("Improvement Season Week 1"), so
-  // don't print the phase twice in the subtitle.
-  const heroMeta = weekLabel.toLowerCase().startsWith(phase.toLowerCase()) ? weekLabel : `${phase} &middot; ${weekLabel}`;
-  const statusPill = getHomeStatusPillClass(currentStatus);
-  const todayLabel = formatExactDate(new Date().toISOString());
 
-  // Recreational hero: habit-centric, skip show-day / peak-week content
-  if (archetype === 'recreational') {
-    const stepsToday = (() => {
-      const userId2 = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-      const todayKey = new Date().toISOString().slice(0,10);
-      const data = JSON.parse(localStorage.getItem('dailySteps') || '{}');
-      return parseInt(data[todayKey] || 0);
-    })();
-    const settings2 = (() => {
-      const userId2 = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-      return JSON.parse(localStorage.getItem(`settings_${userId2}`) || '{}');
-    })();
-    const stepsGoal = settings2?.profile?.goals?.stepsTarget || 10000;
-    const stepsPct  = Math.round(Math.min(stepsToday / stepsGoal, 1) * 100);
-    const gamification = getHomeGamificationSummary(profile, username);
-    const streakCount  = gamification?.habitStreak || gamification?.currentStreak || 0;
-    return `
-      <section class="pod pod--hero home-dashboard-card home-hero-card">
-        <div class="pod-row">
-          <span class="pod-kicker">${heroToplineByArchetype.recreational}</span>
-          <span class="home-status-pill ${statusPill}">${currentStatus}</span>
-        </div>
-        <div class="home-hero-num-row">
-          <span class="home-hero-num">${streakCount}</span>
-          <div><div class="home-hero-num-label">day streak</div><div class="home-hero-num-sub">${todayLabel}</div></div>
-        </div>
-        <div class="home-hero-statgrid">
-          <div><div class="home-hero-stat-lbl">Steps</div><div class="home-hero-stat-val">${stepsToday.toLocaleString()}</div></div>
-          <div><div class="home-hero-stat-lbl">Goal</div><div class="home-hero-stat-val">${stepsPct}%</div></div>
-          <div><div class="home-hero-stat-lbl">Status</div><div class="home-hero-stat-val">${currentStatus}</div></div>
-          <div><div class="home-hero-stat-lbl">Next check-in</div><div class="home-hero-stat-val">${nextReview}</div></div>
-        </div>
-      </section>
-    `;
-  }
-
-  const countdownNum = getCountdownDaysNumber(showDateLike);
-  return `
-    <section class="pod pod--hero home-dashboard-card home-hero-card">
-      <div class="pod-row">
-        <span class="pod-kicker">${heroToplineByArchetype[archetype] || 'Your training'}</span>
-        <span class="home-status-pill ${statusPill}">${currentStatus}</span>
-      </div>
-      ${countdownNum != null ? `
-      <div class="home-hero-num-row">
-        <span class="home-hero-num">${countdownNum}</span>
-        <div><div class="home-hero-num-label">days out</div><div class="home-hero-num-sub">${weeksOut}</div></div>
-      </div>` : `
-      <h2 class="home-hero-athlete">${athleteName}</h2>
-      <p class="home-hero-meta">${heroMeta}</p>`}
-      <div class="home-hero-statgrid">
-        <div><div class="home-hero-stat-lbl">Phase</div><div class="home-hero-stat-val">${phase}</div></div>
-        <div><div class="home-hero-stat-lbl">Show date</div><div class="home-hero-stat-val">${showDate}</div></div>
-        <div><div class="home-hero-stat-lbl">Today</div><div class="home-hero-stat-val">${currentStatus}</div></div>
-        <div><div class="home-hero-stat-lbl">Next check-in</div><div class="home-hero-stat-val">${nextReview}</div></div>
-      </div>
-    </section>
-  `;
-}
-
-/** Big-digit days-out for the hero card; null when there's no usable show date. */
-function getCountdownDaysNumber(dateLike) {
-  if (!dateLike) return null;
-  const showDate = new Date(dateLike);
-  if (Number.isNaN(showDate.getTime())) return null;
-  const now = new Date();
-  const ms = showDate.setHours(0, 0, 0, 0) - now.setHours(0, 0, 0, 0);
-  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
-  return days < 0 ? null : days;
-}
 
 function formatComplianceStatus(statusKey) {
   const labels = {
@@ -11515,7 +11422,7 @@ function getComplianceSnapshot(profile, username, archetype) {
   const rolling7 = window.complianceEngine?.calculateRolling7DayCompliance?.(username, new Date().toISOString().slice(0, 10), archetype)
     || { percent: weekly.averagePercent || 0, status: weekly.status || 'off_track' };
   const trend = window.complianceEngine?.getComplianceTrend?.(username, archetype)
-    || { trend: 'steady', delta: 0, insight: 'Behind this week. Start with today’s checklist' };
+    || { trend: 'steady', delta: 0, insight: 'Behind this week. Start with what’s in Do this now' };
   const insightsPayload = window.complianceEngine?.getComplianceInsights?.(username, new Date().toISOString().slice(0, 10), archetype)
     || { insights: [trend.insight], missed: { byTask: {}, topMissedTask: null } };
   return { dailyPercent, dailyStatus, weekly, rolling7, trend, insightsPayload };
@@ -11533,19 +11440,6 @@ function getHomeAthleteArchetype(profile, username) {
   return normalizeArchetype(profileArchetype || localStorage.getItem('athleteArchetype'));
 }
 
-function getArchetypeStatusLabelMap(archetype) {
-  const base = {
-    daily: 'Today',
-    weekly: 'This week',
-    rolling: 'Last 7 days',
-    streak: 'Streak',
-    onTrack: 'Phase week'
-  };
-  if (archetype === 'bodybuilder') return { ...base, streak: 'Prep streak', onTrack: 'Prep week' };
-  if (archetype === 'powerlifter') return { ...base, onTrack: 'Block week' };
-  if (archetype === 'recreational') return { ...base, streak: 'Habit streak' };
-  return base;
-}
 
 function getHomeStatusPillClass(status) {
   const normalized = String(status || '').toLowerCase();
@@ -11555,102 +11449,9 @@ function getHomeStatusPillClass(status) {
   return 'is-warn';
 }
 
-function getMacroSnapshot(profile, username) {
-  const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  const fallback = profile?.macroTargets || profile?.nutritionTargets || {};
-  const rawSources = [
-    localStorage.getItem(`nutritionTargets_${userId}`),
-    localStorage.getItem(`macroTargets_${userId}`),
-    localStorage.getItem('nutritionTargets')
-  ].filter(Boolean);
-  const merged = { ...fallback };
-  rawSources.forEach((raw) => {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') Object.assign(merged, parsed);
-    } catch (err) {
-      console.warn('Macro snapshot parse failed', err);
-    }
-  });
-  const proteinTarget = Number(merged.proteinTarget ?? merged.protein ?? 0);
-  const carbsTarget = Number(merged.carbTarget ?? merged.carbs ?? 0);
-  const fatTarget = Number(merged.fatTarget ?? merged.fat ?? 0);
-  const caloriesTarget = Number(merged.caloriesTarget ?? merged.calories ?? 0);
-  const proteinCurrent = Number(merged.proteinCurrent ?? merged.proteinConsumed ?? 0);
-  const carbsCurrent = Number(merged.carbsCurrent ?? merged.carbsConsumed ?? 0);
-  const fatCurrent = Number(merged.fatCurrent ?? merged.fatConsumed ?? 0);
-  const caloriesCurrent = Number(merged.caloriesCurrent ?? merged.caloriesConsumed ?? (proteinCurrent * 4 + carbsCurrent * 4 + fatCurrent * 9));
-  return {
-    dayType: getSafeDisplayValue(merged.dayType || merged.macroDayType, ''),
-    proteinCurrent, proteinTarget, carbsCurrent, carbsTarget, fatCurrent, fatTarget, caloriesCurrent, caloriesTarget
-  };
-}
 
-function renderProgressRow(label, current, target) {
-  const safeCurrent = Number.isFinite(current) ? current : 0;
-  const safeTarget = Number.isFinite(target) && target > 0 ? target : 0;
-  const percent = safeTarget ? Math.min(100, Math.max(0, Math.round((safeCurrent / safeTarget) * 100))) : 0;
-  const displayTarget = safeTarget || '—';
-  return `
-    <div class="home-progress-row">
-      <div class="home-progress-row-head">
-        <span>${label}</span>
-        <strong>${safeCurrent} / ${displayTarget}</strong>
-      </div>
-      <div class="home-progress-track">
-        <div class="home-progress-fill" style="--fill-target:${percent}%;width:${percent}%"></div>
-      </div>
-    </div>
-  `;
-}
 
-function renderStatusSummary(profile, username, archetype) {
-  const snapshot = getComplianceSnapshot(profile, username, archetype);
-  const labels = getArchetypeStatusLabelMap(archetype);
-  const daily = Number.isFinite(snapshot.dailyPercent) ? `${snapshot.dailyPercent}%` : '—';
-  const weekly = Number.isFinite(snapshot.weekly?.averagePercent) ? `${snapshot.weekly.averagePercent}%` : '—';
-  const rolling = Number.isFinite(snapshot.rolling7?.percent) ? `${snapshot.rolling7.percent}%` : '—';
-  const streakValue = Number(profile.currentStreak ?? profile.prepStreak ?? 0) || 0;
-  const streak = `${streakValue} day${streakValue === 1 ? '' : 's'}`;
-  const onTrack = formatComplianceStatus(snapshot.dailyStatus);
-  const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
-  const pillClass = getHomeStatusPillClass(onTrack);
-  return `
-    <section class="home-dashboard-card">
-      <div class="home-card-header">
-        <h3 class="home-card-title">How you're tracking</h3>
-        <span class="home-status-pill ${pillClass}">${onTrack}</span>
-      </div>
-      <div class="home-stat-grid">
-        <div class="home-stat-chip"><p class="home-stat-label">${labels.daily}</p><p class="home-stat-value">${daily}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">${labels.weekly}</p><p class="home-stat-value">${weekly}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">${labels.rolling}</p><p class="home-stat-value">${rolling}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">${labels.streak}</p><p class="home-stat-value">${streak}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">${labels.onTrack}</p><p class="home-stat-value">${timelineLabel}</p></div>
-      </div>
-    </section>
-  `;
-}
 
-function renderCheckInInsightSummary(profile, username) {
-  const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
-  const insightPayload = window.checkinEngine?.getCheckInInsights?.(checkIns) || null;
-  const timelineLabel = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
-  const lines = insightPayload?.summaryFull?.length ? insightPayload.summaryFull.slice(0, 3) : [];
-  const body = lines.length
-    ? `<ul class="home-upcoming-list">
-        ${lines.map(line => `<li class="home-upcoming-item"><span>${line}</span></li>`).join('')}
-      </ul>`
-    : `<p class="home-placeholder-note">Log two check-ins and we'll show you what's changing.</p>`;
-  return `
-    <section class="home-dashboard-card">
-      <h3 class="home-card-title">Check-in trends</h3>
-      <p class="home-mission-progress">${timelineLabel}</p>
-      ${body}
-    </section>
-  `;
-}
 
 const MISSION_ITEM_META = {
   workoutComplete: 'Workout',
@@ -11671,58 +11472,7 @@ function getTodayMissionState(profile, username) {
     || engine.generateDefaultMissionFromPhase(username, phaseState, date);
 }
 
-function renderMissionItem(itemKey, state, labelOverride = '') {
-  const label = labelOverride || MISSION_ITEM_META[itemKey] || itemKey;
-  const checked = Boolean(state?.[itemKey]);
-  return `
-    <li class="home-mission-item ${checked ? 'is-complete' : ''}">
-      <label class="home-mission-checkbox">
-        <input
-          type="checkbox"
-          ${checked ? 'checked' : ''}
-          onchange="toggleMissionItem('${itemKey}', this.checked)"
-        />
-        <span class="home-mission-label">${label}</span>
-        <span class="home-mission-status">${checked ? 'Done' : 'To do'}</span>
-      </label>
-    </li>
-  `;
-}
 
-function getMissionLabelForArchetype(itemKey, archetype) {
-  const overrides = {
-    bodybuilder: {
-      bodyweightLogged: 'Weigh in',
-      macrosComplete: 'Hit your macros',
-      cardioComplete: 'Cardio',
-      posingComplete: 'Posing practice',
-      recoveryLogged: 'Recovery check-in'
-    },
-    powerlifter: {
-      workoutComplete: 'Lift session',
-      bodyweightLogged: 'Weight class check',
-      recoveryLogged: 'Recovery check-in',
-      cardioComplete: 'GPP / cardio',
-      macrosComplete: 'Fueling'
-    },
-    hybrid: {
-      workoutComplete: 'Workout',
-      cardioComplete: 'Cardio',
-      bodyweightLogged: 'Bodyweight',
-      macrosComplete: 'Macros',
-      recoveryLogged: 'Recovery'
-    },
-    recreational: {
-      workoutComplete: 'Workout',
-      cardioComplete: 'Move / cardio',
-      bodyweightLogged: 'Weigh in',
-      macrosComplete: 'Eat to plan',
-      stepsComplete: 'Steps goal',
-      recoveryLogged: 'Recovery'
-    }
-  };
-  return overrides[archetype]?.[itemKey] || MISSION_ITEM_META[itemKey] || itemKey;
-}
 
 function toggleMissionItem(itemKey, checked) {
   const engine = window.dailyMissionEngine;
@@ -11784,130 +11534,15 @@ function togglePosingComplete(isComplete) {
 
 window.togglePosingComplete = togglePosingComplete;
 
-function renderTodaysMission(profile, username, archetype) {
-  const missionState = getTodayMissionState(profile, username);
-  const requiredItems = missionState?.requiredItems?.length
-    ? missionState.requiredItems
-    : ['workoutComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'recoveryLogged'];
-  const compliance = window.dailyMissionEngine?.calculateDailyCompliance?.(missionState) || {
-    completed: 0,
-    total: requiredItems.length,
-    percent: 0,
-    isComplete: false
-  };
-  const checklist = requiredItems
-    .map(itemKey => renderMissionItem(itemKey, missionState, getMissionLabelForArchetype(itemKey, archetype)))
-    .join('');
-  const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  const posingOverdue = window.posingEngine?.getOverdueStatus?.(userId, new Date().toISOString().slice(0, 10));
-  const completionLabel = compliance.isComplete
-    ? 'All done. Great work today.'
-    : `${compliance.completed} of ${compliance.total} done today`;
-  // Only nag about posing when posing is on today's checklist.
-  const overdueRow = posingOverdue?.overdue && requiredItems.includes('posingComplete')
-    ? `<div class="home-warning-row">${posingOverdue.message || 'Posing is overdue.'}</div>`
-    : '';
-  return `
-    <section class="home-dashboard-card">
-      <h3 class="home-card-title">${archetype === 'recreational' ? 'Daily habits' : "Today's checklist"}</h3>
-      <p class="home-mission-progress ${compliance.isComplete ? 'is-complete' : ''}">${completionLabel}</p>
-      <div class="home-progress-track" style="margin-bottom:10px;">
-        <div class="home-progress-fill" style="--fill-target:${compliance.percent}%;width:${compliance.percent}%"></div>
-      </div>
-      <ul class="home-mission-list">
-        ${checklist}
-      </ul>
-      ${overdueRow}
-    </section>
-  `;
-}
 
 function getLatestCheckIn(userId) {
   const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
   return checkIns[0] || null;
 }
 
-function buildWeightSparkline(weights) {
-  if (!weights.length) return '<p class="home-placeholder-note">Log two check-ins to see your trend.</p>';
-  const min = Math.min(...weights);
-  const max = Math.max(...weights);
-  const span = max - min;
-  return `<div class="home-sparkline">${weights.map((value) => {
-    // Flat series sit at mid-height instead of collapsing to stubs.
-    const pct = span > 0 ? 30 + Math.round(((value - min) / span) * 70) : 60;
-    return `<span class="home-sparkline-bar" style="height:${pct}%" title="${value}"></span>`;
-  }).join('')}</div>`;
-}
 
-function renderArchetypeFocusCard(profile, username) {
-  const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
-  const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
-  const latestCheckIn = checkIns[0] || {};
-  const weightSeries = checkIns
-    .map(entry => Number(entry?.bodyweight ?? entry?.weight))
-    .filter(Number.isFinite)
-    .slice(0, 7)
-    .reverse();
-  const avgWeight = weightSeries.length ? (weightSeries.reduce((sum, n) => sum + n, 0) / weightSeries.length).toFixed(1) : '—';
-  const latestWeight = getSafeDisplayValue(
-    latestCheckIn?.bodyweight || latestCheckIn?.weight || phaseState?.athleteInfo?.currentWeight || profile?.athleteInfo?.currentWeight || profile?.currentWeight,
-    'Not logged'
-  );
-  const trendDelta = weightSeries.length >= 2 ? (weightSeries[weightSeries.length - 1] - weightSeries[0]).toFixed(1) : null;
-  const trendText = trendDelta === null ? 'Needs 2 check-ins' : `${trendDelta > 0 ? '+' : ''}${trendDelta} over the last week`;
-  return `
-    <section class="home-dashboard-card">
-      <h3 class="home-card-title">Bodyweight</h3>
-      <ul class="home-upcoming-list">
-        <li class="home-upcoming-item"><span>Latest</span><strong>${latestWeight}</strong></li>
-        <li class="home-upcoming-item"><span>7-day average</span><strong>${avgWeight}</strong></li>
-        <li class="home-upcoming-item"><span>Trend</span><strong>${trendText}</strong></li>
-      </ul>
-      ${buildWeightSparkline(weightSeries)}
-    </section>
-  `;
-}
 
-function renderMacroProgressCard(profile, username) {
-  const macro = getMacroSnapshot(profile, username);
-  return `
-    <section class="home-dashboard-card">
-      <div class="home-card-header">
-        <h3 class="home-card-title">Macros today</h3>
-        ${macro.dayType ? `<span class="home-status-pill is-good">${macro.dayType}</span>` : ''}
-      </div>
-      ${renderProgressRow('Protein (g)', macro.proteinCurrent, macro.proteinTarget)}
-      ${renderProgressRow('Carbs (g)', macro.carbsCurrent, macro.carbsTarget)}
-      ${renderProgressRow('Fat (g)', macro.fatCurrent, macro.fatTarget)}
-      ${renderProgressRow('Calories', macro.caloriesCurrent, macro.caloriesTarget)}
-    </section>
-  `;
-}
 
-function renderWeeklyComplianceCard(profile, username) {
-  const snapshot = getComplianceSnapshot(profile, username);
-  const trendDirection = snapshot.trend.trend === 'improving'
-    ? 'Improving'
-    : snapshot.trend.trend === 'declining'
-      ? 'Declining'
-      : 'Steady';
-
-  const deltaPrefix = snapshot.trend.delta > 0 ? '+' : '';
-
-  return `
-    <section class="home-dashboard-card">
-      <h3 class="home-card-title">Consistency</h3>
-      <div class="home-stat-grid">
-        <div class="home-stat-chip"><p class="home-stat-label">Weekly average</p><p class="home-stat-value">${snapshot.weekly.averagePercent}%</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Last 7 days</p><p class="home-stat-value">${snapshot.rolling7.percent}%</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Full days</p><p class="home-stat-value">${snapshot.weekly.completedDays} of 7</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">vs last week</p><p class="home-stat-value">${trendDirection} · ${deltaPrefix}${snapshot.trend.delta}%</p></div>
-      </div>
-      <p class="home-mission-progress">${snapshot.insightsPayload.insights.join(' · ') || snapshot.trend.insight}</p>
-    </section>
-  `;
-}
 
 function renderPosingDashboardCard(userId) {
   const posingApi = window.posingEngine;
@@ -12177,33 +11812,6 @@ function getNextScheduledCheckIn(profile, username) {
   return profile?.nextCheckIn || 'Not scheduled';
 }
 
-function renderUpcomingPrepEvents(profile, username) {
-  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
-  const checkIn = getSafeDisplayValue(getNextScheduledCheckIn(profile, username), 'Not scheduled');
-  const nextCheckInPhaseWeek = window.checkinEngine?.getWeekLabelForCheckIn
-    ? window.checkinEngine.getWeekLabelForCheckIn({ date: checkIn, phase: phaseState.mode || 'improvement' }, phaseState)
-    : '';
-  const showDateLike = phaseState.showDate || profile.showDate;
-  // Peak week and show day only mean something once a show is on the calendar.
-  const peakWeekRow = showDateLike && profile.peakWeekStart
-    ? `<li class="home-upcoming-item"><span>Peak week</span><strong>${formatHomeDate(profile.peakWeekStart)}</strong></li>`
-    : '';
-  const showRow = showDateLike
-    ? `<li class="home-upcoming-item"><span>Show day</span><strong>${formatCountdownDays(showDateLike)}</strong></li>`
-    : '';
-
-  return `
-    <section class="home-dashboard-card">
-      <h3 class="home-card-title">Coming up</h3>
-      <ul class="home-upcoming-list">
-        <li class="home-upcoming-item"><span>Next check-in</span><strong>${formatHomeDate(checkIn, 'Not scheduled')}</strong></li>
-        ${nextCheckInPhaseWeek ? `<li class="home-upcoming-item"><span>Phase week</span><strong>${nextCheckInPhaseWeek}</strong></li>` : ''}
-        ${peakWeekRow}
-        ${showRow}
-      </ul>
-    </section>
-  `;
-}
 
 function getHomeGamificationSummary(profile, username) {
   const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
@@ -12233,34 +11841,6 @@ function getHomeGamificationSummary(profile, username) {
   };
 }
 
-function renderCompactProgressionSummary(profile, username) {
-  const summary = getHomeGamificationSummary(profile, username);
-  const safeProgress = Math.min(100, Math.max(0, Number(summary.progressPercent) || 0));
-  const latestBadge = summary.latestBadge?.title || summary.badges?.slice?.(-1)?.[0]?.title || 'No badges yet';
-  const recentProgressText = summary.recentEvents?.length
-    ? summary.recentEvents.slice().reverse()[0]?.message
-    : getSafeDisplayValue(profile.recentProgressSummary, 'Log a session to start earning XP.');
-
-  return `
-    <section class="home-dashboard-card">
-      <div class="home-card-header">
-        <h3 class="home-card-title">Level &amp; XP</h3>
-        <span class="home-status-pill is-good">Level ${summary.level}</span>
-      </div>
-      <div class="home-progress-track" style="margin-bottom:10px;">
-        <div class="home-progress-fill" style="--fill-target:${safeProgress}%;width:${safeProgress}%"></div>
-      </div>
-      <p class="home-mission-progress">${summary.currentLevelXp} / ${summary.nextLevelXp} XP</p>
-      <div class="home-stat-grid">
-        <div class="home-stat-chip"><p class="home-stat-label">Total XP</p><p class="home-stat-value">${summary.totalXp}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Streak</p><p class="home-stat-value">${summary.streak} day${summary.streak === 1 ? '' : 's'}</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Earned today</p><p class="home-stat-value">${summary.todaysXp?.amount || 0} XP</p></div>
-        <div class="home-stat-chip"><p class="home-stat-label">Latest badge</p><p class="home-stat-value">${latestBadge}</p></div>
-      </div>
-      <p class="home-mission-progress"><strong>Recent:</strong> ${recentProgressText}</p>
-    </section>
-  `;
-}
 
 function renderHomeGreeting() {
   const el = document.getElementById('homeGreetingRow');
@@ -12272,6 +11852,7 @@ function renderHomeGreeting() {
   const dateStr = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const gamification = getHomeGamificationSummary(profile, username);
   const streakCount = gamification?.habitStreak || gamification?.currentStreak || 0;
+  const contextLine = getHomeContextLine(profile, username, getHomeAthleteArchetype(profile, username));
   const initials = (displayName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   el.innerHTML = `
@@ -12282,7 +11863,8 @@ function renderHomeGreeting() {
     <div class="home-greeting-icons">
       <button class="home-greeting-icon-btn" onclick="showTab('allTab')" aria-label="Search / everything"><span class="ui-icon" data-icon="search"></span></button>
       <span class="home-greeting-avatar"${/^[a-zA-Z0-9_.-]{2,64}$/.test(username || '') ? ` data-avatar-user="${username}"` : ''}>${initials}</span>
-    </div>`;
+    </div>
+    ${contextLine}`;
 }
 
 // ── Daily Pulse: one-tap rotating check-in question ────────────────────
@@ -12302,26 +11884,27 @@ function renderDailyPulseCard() {
     ? `<span class="pulse-streak-chip"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-2 4-2 7a3 3 0 006 0c1.5 1.5 2 3.5 2 5a6 6 0 11-12 0c0-4 3-6 6-12z"/></svg>${streak}</span>`
     : '';
 
-  const body = answeredToday
-    ? `<div class="pulse-confirm">
-         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-         <span>Logged for today. New question tomorrow.</span>
-       </div>`
-    : `<p class="pulse-question">${escapeCoachText(question.label)}</p>
-       <div class="pulse-level-row">
-         ${[1, 2, 3, 4, 5].map(v => `<div role="button" tabindex="0" class="pulse-level-dot" data-v="${v}" onclick="submitDailyPulse('${question.key}', ${v})">${v}</div>`).join('')}
-       </div>`;
+  // Lives in Home's "Do this now" zone: the question with 1-5 taps until
+  // answered, then a one-line done row.
+  if (answeredToday) {
+    container.innerHTML = `
+      <div class="htd-row htd-row--done">
+        <span class="htd-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="htd-done-text">Daily Pulse logged · back tomorrow</span>
+        ${streakChip}
+      </div>`;
+    return;
+  }
 
   container.innerHTML = `
-    <div class="ov-pod is-maintain">
-      <div class="ov-accent"></div>
-      <div class="ov-top">
-        <span class="ov-live"></span>
-        <span class="ov-eyebrow">Daily Pulse</span>
+    <div class="htd-row htd-row--todo htd-row--pulse is-upcoming">
+      <div class="htd-pulse-head">
+        <span class="htd-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+        <span class="htd-text"><strong>${escapeCoachText(question.label)}</strong><span>Daily Pulse · tap 1–5</span></span>
         ${streakChip}
       </div>
-      <div class="ov-body">
-        ${body}
+      <div class="pulse-level-row htd-pulse-row">
+        ${[1, 2, 3, 4, 5].map(v => `<button type="button" class="pulse-level-dot" data-v="${v}" aria-label="${v} of 5" onclick="submitDailyPulse('${question.key}', ${v})">${v}</button>`).join('')}
       </div>
     </div>
   `;
@@ -12337,15 +11920,15 @@ window.submitDailyPulse = submitDailyPulse;
 
 // ── Due Now Rail: overdue check-in / today's workout / weigh-in ────────
 
+// One to-do row in Home's "Do this now" zone; the whole row is the button.
 function buildDueNowCard(opts) {
   const stateClass = opts.state === 'overdue' ? 'is-overdue' : opts.state === 'today' ? 'is-today' : 'is-upcoming';
   return `
-    <div class="due-now-card ${stateClass}">
-      <div class="due-now-icon">${opts.icon}</div>
-      <p class="due-now-title">${escapeCoachText(opts.title)}</p>
-      <p class="due-now-sub">${escapeCoachText(opts.sub)}</p>
-      <button class="due-now-btn" onclick="${opts.onClick}">${escapeCoachText(opts.btnLabel)}</button>
-    </div>
+    <button type="button" class="htd-row htd-row--todo ${stateClass}" onclick="${opts.onClick}">
+      <span class="htd-icon" aria-hidden="true">${opts.icon}</span>
+      <span class="htd-text"><strong>${escapeCoachText(opts.title)}</strong><span>${escapeCoachText(opts.sub)}</span></span>
+      <span class="htd-cta">${escapeCoachText(opts.btnLabel)}</span>
+    </button>
   `;
 }
 
@@ -12371,11 +11954,11 @@ function renderDueNowRail() {
     if (!Number.isNaN(due.getTime())) {
       const days = Math.round((due - new Date(new Date().toDateString())) / 86400000);
       if (days < 0) {
-        cards.push(buildDueNowCard({ state: 'overdue', icon: DUE_NOW_ICONS.clock, title: 'Weekly Check-In', sub: `${-days} day${days === -1 ? '' : 's'} overdue`, btnLabel: 'Start check-in', onClick: "showTab('checkInTab')" }));
+        cards.push(buildDueNowCard({ state: 'overdue', icon: DUE_NOW_ICONS.clock, title: 'Weekly check-in', sub: `${-days} day${days === -1 ? '' : 's'} overdue`, btnLabel: 'Start', onClick: "showTab('checkInTab')" }));
       } else if (days === 0) {
-        cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.clock, title: 'Weekly Check-In', sub: 'Due today', btnLabel: 'Start check-in', onClick: "showTab('checkInTab')" }));
+        cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.clock, title: 'Weekly check-in', sub: 'Due today', btnLabel: 'Start', onClick: "showTab('checkInTab')" }));
       } else if (days <= 2) {
-        cards.push(buildDueNowCard({ state: 'upcoming', icon: DUE_NOW_ICONS.clock, title: 'Weekly Check-In', sub: `Due in ${days} day${days === 1 ? '' : 's'}`, btnLabel: 'Start check-in', onClick: "showTab('checkInTab')" }));
+        cards.push(buildDueNowCard({ state: 'upcoming', icon: DUE_NOW_ICONS.clock, title: 'Weekly check-in', sub: `Due in ${days} day${days === 1 ? '' : 's'}`, btnLabel: 'Start', onClick: "showTab('checkInTab')" }));
       }
     }
   } catch (_error) { /* check-in engine unavailable — skip this card */ }
@@ -12384,7 +11967,7 @@ function renderDueNowRail() {
   try {
     const missionState = getTodayMissionState(profile, username);
     if (missionState && !missionState.workoutComplete) {
-      cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.dumbbell, title: "Log Today's Workout", sub: 'Planned for today', btnLabel: 'Go to Train', onClick: "showTab('logTab')" }));
+      cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.dumbbell, title: "Log today's workout", sub: 'Planned for today', btnLabel: 'Train', onClick: "showTab('logTab')" }));
     }
   } catch (_error) { /* mission engine unavailable — skip this card */ }
 
@@ -12394,67 +11977,227 @@ function renderDueNowRail() {
     if (weighIn.hasEntries) {
       if (weighIn.overdue) {
         const daysOver = Math.abs(weighIn.daysUntilDue);
-        cards.push(buildDueNowCard({ state: 'overdue', icon: DUE_NOW_ICONS.scale, title: 'Weigh-In', sub: `${daysOver} day${daysOver === 1 ? '' : 's'} overdue`, btnLabel: 'Log weight', onClick: "showTab('weightTab')" }));
+        cards.push(buildDueNowCard({ state: 'overdue', icon: DUE_NOW_ICONS.scale, title: 'Weigh-in', sub: `${daysOver} day${daysOver === 1 ? '' : 's'} overdue`, btnLabel: 'Log', onClick: "showTab('weightTab')" }));
       } else if (weighIn.daysUntilDue === 0) {
-        cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.scale, title: 'Weigh-In', sub: 'Due today', btnLabel: 'Log weight', onClick: "showTab('weightTab')" }));
+        cards.push(buildDueNowCard({ state: 'today', icon: DUE_NOW_ICONS.scale, title: 'Weigh-in', sub: 'Due today', btnLabel: 'Log', onClick: "showTab('weightTab')" }));
       } else if (weighIn.daysUntilDue === 1) {
-        cards.push(buildDueNowCard({ state: 'upcoming', icon: DUE_NOW_ICONS.scale, title: 'Weigh-In', sub: 'Due tomorrow', btnLabel: 'Log weight', onClick: "showTab('weightTab')" }));
+        cards.push(buildDueNowCard({ state: 'upcoming', icon: DUE_NOW_ICONS.scale, title: 'Weigh-in', sub: 'Due tomorrow', btnLabel: 'Log', onClick: "showTab('weightTab')" }));
       }
     }
   } catch (_error) { /* skip this card */ }
 
   if (!cards.length) { container.innerHTML = ''; return; }
 
-  container.innerHTML = `
-    <p class="home-section-label">Due now</p>
-    <div class="due-now-rail">${cards.join('')}</div>
-  `;
+  container.innerHTML = cards.join('');
 }
 
+// Home is laid out in index.html (#homeTab) as a story: greeting + context,
+// Now, Today, This week, Progress. This fills the JS-rendered pieces.
 function renderHomeDashboard() {
-  const container = document.getElementById('homeDashboardContent');
-  if (!container) return;
   const { username, profile } = getHomeDashboardSourceData();
   const archetype = getHomeAthleteArchetype(profile, username);
-  const cardRenderers = getHomeDashboardCardRenderers(profile, username, archetype);
-  // The hero (days out / phase / status) sits at the very top of Home, above
-  // the coach brief and weekly glance, so it renders into its own slot.
-  const heroSlot = document.getElementById('homeHeroSlot');
-  if (heroSlot) heroSlot.innerHTML = cardRenderers.hero() || '';
-  const orderedCards = getHomeDashboardCardOrder(archetype)
-    .filter(cardId => !(heroSlot && cardId === 'hero'))
-    .map(cardId => cardRenderers[cardId]?.())
-    .filter(Boolean);
-  container.innerHTML = `<div class="home-command-grid">${orderedCards.join('')}</div>`;
+  const put = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html || ''; };
+  renderHomeGreeting();
+  put('homeMissionTicks', renderHomeMissionTicks(profile, username));
+  put('homeFuelCard', renderHomeFuelCard());
+  put('homeConsistencyRow', renderHomeConsistencyRow(profile, username, archetype));
+  put('homeBodyCard', renderHomeBodyCard(profile, username));
+  put('homeDashboardContent', [
+    renderHomeLevelRow(profile, username),
+    window.renderMobilityDashboardCard?.(profile, username),
+  ].filter(Boolean).join(''));
   if (typeof window.renderCoachBrief === 'function') window.renderCoachBrief();
   if (typeof window.refreshYourCoach === 'function') window.refreshYourCoach();
 }
 
-function getHomeDashboardCardOrder(archetype) {
-  const baseOrder = ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'];
-  const orders = {
-    bodybuilder: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
-    powerlifter: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
-    hybrid: ['hero', 'progression', 'mission', 'focus', 'macro', 'status', 'weekly', 'mobility', 'upcoming', 'insights'],
-    recreational: ['hero', 'mission', 'status', 'progression', 'weekly', 'mobility', 'focus', 'macro', 'insights']
-  };
-  return orders[archetype] || baseOrder;
+// One line under the greeting: how the last 7 days went, days out, phase
+// week, peak week when it's coming, next check-in. Replaces the old hero
+// card and the "Coming up" card.
+function getHomeContextLine(profile, username, archetype) {
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  const showDateLike = phaseState.showDate || profile.showDate;
+  const parts = [];
+  if (archetype !== 'recreational') {
+    const days = getCountdownDaysNumber(showDateLike);
+    if (days === 0) parts.push('Show day');
+    else if (days != null) parts.push(`${days} days out`);
+    const week = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
+    if (week) parts.push(escapeCoachText(week));
+    const peak = showDateLike && profile.peakWeekStart ? new Date(profile.peakWeekStart) : null;
+    if (peak && !Number.isNaN(peak.getTime()) && peak >= new Date(new Date().toDateString())) {
+      parts.push(`Peak week ${formatHomeDate(profile.peakWeekStart)}`);
+    }
+  }
+  const next = getNextScheduledCheckIn(profile, username);
+  if (next) parts.push(`Check-in ${formatHomeDate(next)}`);
+  // The last 7 days, not today: first thing in the morning nothing is
+  // done yet, and "Off track" at 7am isn't useful.
+  const snapshot = getComplianceSnapshot(profile, username, archetype);
+  const status = formatComplianceStatus(snapshot.rolling7?.status || snapshot.dailyStatus);
+  return `<div class="home-context">
+    <span class="home-status-pill ${getHomeStatusPillClass(status)}">${status}</span>
+    <span class="home-context-text">${parts.join(' &middot; ')}</span>
+  </div>`;
 }
 
-function getHomeDashboardCardRenderers(profile, username, archetype) {
-  return {
-    hero: () => renderHeroPhaseHeader(profile, username),
-    progression: () => renderCompactProgressionSummary(profile, username),
-    focus: () => renderArchetypeFocusCard(profile, username),
-    macro: () => renderMacroProgressCard(profile, username),
-    status: () => renderStatusSummary(profile, username, archetype),
-    mission: () => renderTodaysMission(profile, username, archetype),
-    weekly: () => renderWeeklyComplianceCard(profile, username),
-    mobility: () => window.renderMobilityDashboardCard?.(profile, username),
-    upcoming: () => renderUpcomingPrepEvents(profile, username),
-    insights: () => renderCheckInInsightSummary(profile, username)
-  };
+/** Whole days until the show; null when there's no usable show date. */
+function getCountdownDaysNumber(dateLike) {
+  if (!dateLike) return null;
+  const showDate = new Date(dateLike);
+  if (Number.isNaN(showDate.getTime())) return null;
+  const now = new Date();
+  const ms = showDate.setHours(0, 0, 0, 0) - now.setHours(0, 0, 0, 0);
+  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+  return days < 0 ? null : days;
 }
+
+// Daily habits nothing else logs for you, as tap-to-tick chips in "Do this
+// now". Workout, weigh-in, macros and recovery tick themselves when you log
+// them. Replaces the old "Today's checklist" card.
+const HOME_TICK_ITEMS = ['cardioComplete', 'posingComplete', 'stepsComplete'];
+const HOME_TICK_LABELS = { cardioComplete: 'Cardio', posingComplete: 'Posing', stepsComplete: 'Steps goal' };
+
+function renderHomeMissionTicks(profile, username) {
+  const state = getTodayMissionState(profile, username);
+  if (!state) return '';
+  const required = state.requiredItems?.length
+    ? state.requiredItems
+    : ['workoutComplete', 'cardioComplete', 'macrosComplete', 'bodyweightLogged', 'recoveryLogged'];
+  const items = required.filter(k => HOME_TICK_ITEMS.includes(k));
+  if (!items.length) return '';
+  const userId = username || currentUser || localStorage.getItem('currentUser');
+  const posingOverdue = items.includes('posingComplete') && !state.posingComplete
+    && window.posingEngine?.getOverdueStatus?.(userId, new Date().toISOString().slice(0, 10))?.overdue;
+  const allDone = items.every(k => state[k]);
+  const check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  const chips = items.map(k => {
+    const on = Boolean(state[k]);
+    const late = k === 'posingComplete' && posingOverdue ? ' is-late' : '';
+    return `<button type="button" class="htd-tick${on ? ' is-on' : ''}${late}" aria-pressed="${on}" onclick="toggleMissionItem('${k}', ${!on})">${on ? check : ''}${HOME_TICK_LABELS[k] || k}</button>`;
+  }).join('');
+  const label = allDone ? 'Habits done' : posingOverdue ? 'Tick off today · posing is overdue' : 'Tick off today';
+  return `<div class="htd-row ${allDone ? 'htd-row--done' : 'htd-row--todo'} htd-row--ticks">
+    <span class="htd-ticks-label">${label}</span>
+    <div class="htd-ticks">${chips}</div>
+  </div>`;
+}
+
+// Today's food against today's targets: the same numbers the Macros tab
+// shows (dailyMacroProgress, fed by the food log). Replaces the old
+// "Macros today" card, which read fields nothing ever wrote.
+function renderHomeFuelCard() {
+  if (typeof loadDailyMacroProgress !== 'function' || typeof getAdaptiveMacroTargets !== 'function') return '';
+  let target = null;
+  let eaten = null;
+  try { target = getAdaptiveMacroTargets(); eaten = loadDailyMacroProgress(); } catch (_err) { return ''; }
+  const kcalTarget = Math.round(Number(target?.calories) || 0);
+  if (!kcalTarget) {
+    return `<button type="button" class="home-fuel home-fuel--empty" onclick="showTab('macroTab')">
+      <span class="home-fuel-kicker">Fuel today</span>
+      <span class="home-fuel-empty">Set your calorie and macro targets</span>
+      <span class="htd-cta">Set up</span>
+    </button>`;
+  }
+  const kcal = Math.round(Number(eaten?.calories) || 0);
+  const pct = (v, t) => (t > 0 ? Math.min(100, Math.round((v / t) * 100)) : 0);
+  const left = kcalTarget - kcal;
+  const macro = (key, label, value, goal) => `
+      <div class="home-fuel-macro home-fuel-macro--${key}">
+        <div class="home-fuel-macro-head"><span>${label}</span><b>${Math.round(value)}<small>/${Math.round(goal)}g</small></b></div>
+        <div class="home-fuel-bar"><i style="width:${pct(value, goal)}%"></i></div>
+      </div>`;
+  return `<button type="button" class="home-fuel" onclick="showTab('macroTab')" aria-label="Fuel today: ${kcal} of ${kcalTarget} calories. Open Macros">
+    <div class="home-fuel-top">
+      <span class="home-fuel-kicker">Fuel today</span>
+      <span class="home-fuel-left">${left >= 0 ? `${left.toLocaleString()} kcal left` : `${(-left).toLocaleString()} kcal over`}</span>
+    </div>
+    <div class="home-fuel-kcal"><b>${kcal.toLocaleString()}</b><span>/ ${kcalTarget.toLocaleString()} kcal</span></div>
+    <div class="home-fuel-bar home-fuel-bar--kcal${left < 0 ? ' is-over' : ''}"><i style="width:${pct(kcal, kcalTarget)}%"></i></div>
+    <div class="home-fuel-macros">
+      ${macro('p', 'Protein', Number(eaten?.protein) || 0, Number(target.protein) || 0)}
+      ${macro('c', 'Carbs', Number(eaten?.carbs) || 0, Number(target.carbs) || 0)}
+      ${macro('f', 'Fat', Number(eaten?.fats) || 0, Number(target.fat) || 0)}
+    </div>
+  </button>`;
+}
+
+// One slim line inside the "This week" card. Replaces the old
+// "Consistency" and "How you're tracking" cards.
+function renderHomeConsistencyRow(profile, username, archetype) {
+  const snapshot = getComplianceSnapshot(profile, username, archetype);
+  const weekly = Number(snapshot.weekly?.averagePercent);
+  if (!Number.isFinite(weekly)) return '';
+  const trend = snapshot.trend?.trend === 'improving' ? 'up' : snapshot.trend?.trend === 'declining' ? 'down' : 'steady';
+  const delta = Number(snapshot.trend?.delta) || 0;
+  const insight = (snapshot.insightsPayload?.insights || []).filter(Boolean)[0] || '';
+  return `<div class="wk-consistency">
+    <div class="wk-consistency-main">
+      <span class="wk-cap">Consistency</span>
+      <b>${Math.round(weekly)}%</b>
+      <span class="wk-cap">${snapshot.weekly?.completedDays || 0}/7 full days</span>
+      <span class="wk-cap wk-trend wk-trend--${trend}">${trend === 'steady' ? 'Steady' : `${delta > 0 ? '+' : ''}${delta}% vs last week`}</span>
+    </div>
+    ${insight ? `<p class="wk-consistency-note">${escapeCoachText(insight)}</p>` : ''}
+  </div>`;
+}
+
+// Bodyweight trend and check-in trends in one card. Replaces the old
+// "Bodyweight" and "Check-in trends" cards.
+function renderHomeBodyCard(profile, username) {
+  const userId = username || currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
+  const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
+  const series = checkIns
+    .map(entry => Number(entry?.bodyweight ?? entry?.weight))
+    .filter(Number.isFinite)
+    .slice(0, 7)
+    .reverse();
+  const fallback = Number(phaseState?.athleteInfo?.currentWeight || profile?.athleteInfo?.currentWeight || profile?.currentWeight) || null;
+  const latest = series.length ? series[series.length - 1] : fallback;
+  const avg = series.length ? (series.reduce((a, b) => a + b, 0) / series.length).toFixed(1) : null;
+  const delta = series.length >= 2 ? series[series.length - 1] - series[0] : null;
+  const insights = (window.checkinEngine?.getCheckInInsights?.(checkIns)?.summaryFull || []).slice(0, 2);
+  let spark = '';
+  if (series.length >= 2) {
+    const min = Math.min(...series);
+    const span = Math.max(...series) - min;
+    // Flat series sit at mid-height instead of collapsing to stubs.
+    spark = `<div class="home-sparkline" aria-hidden="true">${series.map(v =>
+      `<span class="home-sparkline-bar" style="height:${span > 0 ? 30 + Math.round(((v - min) / span) * 70) : 60}%"></span>`).join('')}</div>`;
+  }
+  const notes = insights.length
+    ? `<ul class="home-body-notes">${insights.map(line => `<li>${line}</li>`).join('')}</ul>`
+    : (series.length < 2 ? '<p class="home-placeholder-note">Log two check-ins to see your trend.</p>' : '');
+  return `<section class="home-dashboard-card home-body">
+    <div class="home-card-header">
+      <h3 class="home-card-title">Body</h3>
+      ${delta === null ? '' : `<span class="home-status-pill is-good">${delta > 0 ? '+' : ''}${delta.toFixed(1)} over ${series.length} check-ins</span>`}
+    </div>
+    <div class="home-body-top">
+      <div class="home-body-stat"><b>${latest ?? '—'}</b><span>Latest</span></div>
+      <div class="home-body-stat"><b>${avg ?? '—'}</b><span>Average</span></div>
+      ${spark}
+    </div>
+    ${notes}
+  </section>`;
+}
+
+// Level and XP as one slim bar. The streak lives in the greeting only.
+function renderHomeLevelRow(profile, username) {
+  const summary = getHomeGamificationSummary(profile, username);
+  const progress = Math.min(100, Math.max(0, Number(summary.progressPercent) || 0));
+  const badge = summary.latestBadge?.title || summary.badges?.slice?.(-1)?.[0]?.title || '';
+  return `<section class="home-level" aria-label="Level ${summary.level}, ${summary.currentLevelXp} of ${summary.nextLevelXp} XP">
+    <span class="home-level-badge">Lv ${summary.level}</span>
+    <div class="home-level-main">
+      <div class="home-level-head"><span>${summary.currentLevelXp} / ${summary.nextLevelXp} XP</span>${summary.todaysXp?.amount ? `<span>+${summary.todaysXp.amount} today</span>` : ''}</div>
+      <div class="home-fuel-bar"><i style="width:${progress}%"></i></div>
+    </div>
+    ${badge ? `<span class="home-level-last" title="Latest badge">${escapeCoachText(badge)}</span>` : ''}
+  </section>`;
+}
+
+
 
 
 function escapeCoachText(value, fallback = '—') {
@@ -19105,10 +18848,6 @@ window.updateProgressBar = updateProgressBar;
 window.updateStreakCounter = updateStreakCounter;
 window.renderDashboardPRSummary = renderDashboardPRSummary;
 window.renderHomeDashboard = renderHomeDashboard;
-window.renderHeroPhaseHeader = renderHeroPhaseHeader;
-window.renderStatusSummary = renderStatusSummary;
-window.renderTodaysMission = renderTodaysMission;
-window.renderUpcomingPrepEvents = renderUpcomingPrepEvents;
 window.renderRewardSummary = typeof renderRewardSummary === 'function' ? renderRewardSummary : function() {};
 
   // NOTE: a local `function showToast(msg)` used to live here and build its

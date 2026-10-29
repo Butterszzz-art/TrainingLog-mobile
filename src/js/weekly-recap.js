@@ -540,8 +540,15 @@
            ${_countDelta(Math.round(r.cardio.minutes), Math.round(r.prevCardio.minutes)) || '<span class="wr-sub">&nbsp;</span>'}
          </div>`;
 
+    // Home stays short: headline clamped to 2 lines and muscle chips folded
+    // away; "Details" opens both in place (the full sheet is still one tap).
+    const chips = topMuscles.length ? `<div class="wr-chips">${topMuscles.map(m =>
+      `<span class="mx-tag${m.target && m.sets >= m.target ? ' mx-tag--hi' : ''}">${_esc(_muscleName(m.muscle))} ${m.sets}<em>·${m.frequency}×</em></span>`
+    ).join('')}${r.missedMuscles.length && !r.inProgress
+      ? `<span class="mx-tag mx-tag--brass">${r.missedMuscles.length} missed</span>` : ''}</div>` : '';
+
     return `
-      <section class="pod mx-pod wr-card" aria-label="${_esc(_weekLabel(r))} recap">
+      <section class="pod mx-pod wr-card is-compact" aria-label="${_esc(_weekLabel(r))} recap">
         <div class="pod-row wr-head">
           <span class="mx-kicker">${_esc(_weekLabel(r))}</span>
           <span class="mx-meta">${_range(r)}</span>
@@ -559,11 +566,11 @@
           </div>
           ${bwTile}
         </div>
-        ${topMuscles.length ? `<div class="wr-chips">${topMuscles.map(m =>
-          `<span class="mx-tag${m.target && m.sets >= m.target ? ' mx-tag--hi' : ''}">${_esc(_muscleName(m.muscle))} ${m.sets}<em>·${m.frequency}×</em></span>`
-        ).join('')}${r.missedMuscles.length && !r.inProgress
-          ? `<span class="mx-tag mx-tag--brass">${r.missedMuscles.length} missed</span>` : ''}</div>` : ''}
-        <button type="button" class="mx-link wr-open" data-wr-open="${r.start}">${typeof window.renderCoachReview === 'function' ? 'Coach review &amp; full recap ›' : 'See full recap ›'}</button>
+        ${chips}
+        <div class="wr-card-foot">
+          <button type="button" class="mx-link wr-open" data-wr-open="${r.start}">${typeof window.renderCoachReview === 'function' ? 'Coach review &amp; full recap ›' : 'See full recap ›'}</button>
+          <button type="button" class="mx-link wr-toggle" data-wr-toggle aria-expanded="false">Details</button>
+        </div>
       </section>`;
   }
 
@@ -769,12 +776,26 @@
     if (!username) { host.innerHTML = ''; return; }
     const r = _recapFor(username, addDays(mondayOf(new Date()), -7));
     // Nothing to recap (new user, or took the week off with no logs at all).
-    host.innerHTML = r.hasData ? _cardHtml(r) : '';
+    if (!r.hasData) { host.innerHTML = ''; return; }
+    // The full card on Monday and Tuesday, when last week is fresh; after
+    // that a one-line link so it's still a tap away.
+    const day = new Date().getDay();
+    host.innerHTML = day === 1 || day === 2
+      ? _cardHtml(r)
+      : `<button type="button" class="wr-link-row" data-wr-open="${r.start}">
+          <span>Last week's recap</span><span class="wr-link-row-go" aria-hidden="true">›</span>
+        </button>`;
   }
 
   document.addEventListener('click', e => {
     const btn = e.target.closest && e.target.closest('[data-wr-open]');
     if (btn) openWeeklyRecap(btn.dataset.wrOpen);
+    const toggle = e.target.closest && e.target.closest('[data-wr-toggle]');
+    if (toggle) {
+      const open = !toggle.closest('.wr-card').classList.toggle('is-compact');
+      toggle.textContent = open ? 'Less' : 'Details';
+      toggle.setAttribute('aria-expanded', String(open));
+    }
   });
 
   document.addEventListener('DOMContentLoaded', () => {

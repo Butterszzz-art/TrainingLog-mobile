@@ -244,7 +244,6 @@
               <span class="wk-hero-val">${d.workoutCount}</span>${target ? `<span class="wk-hero-of">/${target}</span>` : ''}
             </div>
             <span class="wk-cap">${d.workoutCount === 1 ? 'Session' : 'Sessions'}</span>
-            ${d.streak > 0 ? `<span class="wk-cap wk-streak">${d.streak}-day streak</span>` : ''}
           </div>
           <div class="wk-week">
             <span class="wk-cap wk-range">${fmt(mon)} – ${fmt(sun)}</span>
