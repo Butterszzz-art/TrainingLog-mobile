@@ -221,7 +221,9 @@ function getDefaultSettings() {
   };
 }
 
-function saveSettings(event) {
+// `options.quiet` is used by autosave: no toast, the open page shows a small
+// "Saved" mark instead (see flashSettingsSaved).
+function saveSettings(event, options = {}) {
   if (event) event.preventDefault();
 
   const container = document.getElementById('settingsFormContainer');
@@ -279,10 +281,10 @@ function saveSettings(event) {
   renderProfileGamificationSummary(container);
   syncProfilePhaseSettings(settings.profile);
 
-  if (typeof showToast === 'function') {
+  if (options.quiet) {
+    flashSettingsSaved();
+  } else if (typeof showToast === 'function') {
     showToast('Settings saved');
-  } else if (typeof console !== 'undefined') {
-    console.log('Settings saved');
   }
 
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
@@ -1034,6 +1036,162 @@ function bindPhaseSetup(container = document) {
   });
 }
 
+// ── Settings pages ──────────────────────────────────────────────
+// The Settings home is the profile pod + tiles (settings-hero.js). Each tile
+// opens one page from settings.html; while a page is open, #settingsTab gets
+// `st-detail-open` and CSS hides the home.
+
+const TRAINING_MODE_DESCRIPTIONS = {
+  bodybuilding: 'Shows the posing tracker, contest prep timeline and physique tools.',
+  powerlifting: 'Shows the plate calculator, 1RM tracker and meet prep timeline.',
+  athlete: 'Shows the CrossFit tracker and general fitness tools.'
+};
+
+let pendingSettingsPage = null;
+
+function refreshTrainingModeDescription() {
+  const mode = typeof getTrainingMode === 'function' ? getTrainingMode() : 'bodybuilding';
+  if (typeof applyTrainingModeClasses === 'function') applyTrainingModeClasses(mode);
+  const desc = document.getElementById('modeDescription');
+  if (desc) desc.textContent = TRAINING_MODE_DESCRIPTIONS[mode] || '';
+}
+
+function getPlanLabel() {
+  const plan = window.currentUserPlan || 'free';
+  return plan === 'coach' ? 'Coach' : plan === 'pro' ? 'Pro' : 'Free';
+}
+
+// Fill the values that live outside the settings form (plan, logbook,
+// pause modes, custom exercise count) each time a page opens.
+function refreshSettingsPageValues(container = document) {
+  const planLabel = container.querySelector('#stPlanLabel');
+  if (planLabel) planLabel.textContent = getPlanLabel();
+
+  const user = getActiveUsername();
+  const logbookVal = container.querySelector('#stLogbookVal');
+  if (logbookVal && window.LogbookCover && user) {
+    const cover = window.LogbookCover.getCover(user);
+    const bg = window.LogbookCover.colorById(cover.color).bg;
+    logbookVal.innerHTML = `${escapeHtml(cover.displayName || '')} <span class="lb-dot" style="background:${escapeHtmlAttribute(bg)}"></span>`;
+  }
+
+  const vacation = container.querySelector('#stVacationMode');
+  if (vacation && typeof window.getVacationMode === 'function') vacation.checked = !!window.getVacationMode().active;
+  const sick = container.querySelector('#stSickMode');
+  if (sick && typeof window.getSickMode === 'function') sick.checked = !!window.getSickMode().active;
+
+  const countEl = container.querySelector('#stCustomExerciseCount');
+  if (countEl && typeof window.loadCustomExercises === 'function') {
+    const count = window.loadCustomExercises(user).length;
+    countEl.textContent = count ? String(count) : '';
+  }
+}
+
+function openSettingsPage(key) {
+  const container = document.getElementById('settingsFormContainer');
+  const tab = document.getElementById('settingsTab');
+  if (!container || !tab) return;
+  // settings.html loads async on first open; open the page once it lands.
+  if (container.dataset.loaded !== 'true') {
+    pendingSettingsPage = key;
+    injectSettingsMarkup();
+    return;
+  }
+  const page = container.querySelector(`.st-page[data-st-page="${key}"]`);
+  if (!page) return;
+  container.querySelectorAll('.st-page').forEach((p) => { p.hidden = p !== page; });
+  tab.classList.add('st-detail-open');
+  refreshSettingsPageValues(container);
+
+  if (key === 'training') {
+    refreshTrainingModeDescription();
+    if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
+  } else if (key === 'profile') {
+    renderProfileGamificationSummary(container);
+  } else if (key === 'devices') {
+    refreshActivitySyncStatus(container);
+  }
+
+  window.scrollTo?.(0, 0);
+  const back = page.querySelector('[data-st-back]');
+  if (back) back.focus({ preventScroll: true });
+}
+
+function closeSettingsPage() {
+  const container = document.getElementById('settingsFormContainer');
+  const tab = document.getElementById('settingsTab');
+  if (tab) tab.classList.remove('st-detail-open');
+  if (container) container.querySelectorAll('.st-page').forEach((p) => { p.hidden = true; });
+  if (typeof window.renderSettingsHero === 'function') window.renderSettingsHero();
+  window.scrollTo?.(0, 0);
+}
+
+let settingsSavedTimer = null;
+function flashSettingsSaved() {
+  const page = document.querySelector('#settingsFormContainer .st-page:not([hidden])');
+  const mark = page?.querySelector('.st-saved');
+  if (!mark) return;
+  mark.textContent = 'Saved';
+  mark.classList.add('is-on');
+  clearTimeout(settingsSavedTimer);
+  settingsSavedTimer = setTimeout(() => mark.classList.remove('is-on'), 1400);
+}
+
+// Every field in the settings form saves as soon as it changes. Text fields
+// fire `change` on blur, so typing doesn't save on each keystroke.
+function bindSettingsAutosave(form) {
+  if (!form || form.dataset.autosave === 'true') return;
+  form.dataset.autosave = 'true';
+  form.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!target || target.hasAttribute('data-no-autosave')) return;
+    // These have their own handlers and don't live in the saved settings.
+    if (['aiConsentToggle', 'coachModeToggle', 'appModeSelect', 'gymPromptSetting'].includes(target.id)) return;
+    saveSettings(null, { quiet: true });
+  });
+}
+
+function bindSettingsPages(container) {
+  if (!container || container.dataset.pagesBound === 'true') return;
+  container.dataset.pagesBound = 'true';
+
+  container.addEventListener('click', (event) => {
+    const back = event.target.closest('[data-st-back]');
+    if (back) {
+      const parent = back.closest('.st-page')?.dataset.stParent;
+      if (parent) openSettingsPage(parent); else closeSettingsPage();
+      return;
+    }
+    const opener = event.target.closest('[data-st-open]');
+    if (opener) { openSettingsPage(opener.dataset.stOpen); return; }
+    if (event.target.closest('[data-profile-edit]')) { window.Profiles?.openEditor?.(); return; }
+    if (event.target.closest('[data-logbook-edit]')) { window.openLogbookCoverEditor?.(); return; }
+    if (event.target.closest('#stPlanRow')) {
+      const plan = window.currentUserPlan || 'free';
+      if (plan === 'free') window.openUpgradeModal?.();
+      else window.openManageBilling?.();
+      return;
+    }
+    // Mode buttons call setTrainingMode inline; refresh the text after it.
+    if (event.target.closest('.mode-btn')) setTimeout(refreshTrainingModeDescription, 0);
+  });
+
+  const vacation = container.querySelector('#stVacationMode');
+  if (vacation) {
+    vacation.addEventListener('change', () => {
+      window.setVacationMode?.(vacation.checked);
+      if (typeof showToast === 'function') showToast(vacation.checked ? 'Vacation mode on. Your streak is paused.' : 'Vacation mode off');
+    });
+  }
+  const sick = container.querySelector('#stSickMode');
+  if (sick) {
+    sick.addEventListener('change', () => {
+      window.setSickMode?.(sick.checked);
+      if (typeof showToast === 'function') showToast(sick.checked ? 'Sick mode on. Progression is paused.' : 'Sick mode off');
+    });
+  }
+}
+
 function injectSettingsMarkup() {
   const container = document.getElementById('settingsFormContainer');
   if (!container) {
@@ -1048,6 +1206,7 @@ function injectSettingsMarkup() {
       bindActivitySyncControls(container);
       bindDeleteAccountAction(container);
       window.pocketCoachAIConsent?.bindSettings(container);
+      closeSettingsPage();
     }
     return;
   }
@@ -1071,8 +1230,11 @@ function injectSettingsMarkup() {
       container.dataset.loaded = 'true';
       const form = container.querySelector('#settingsForm');
       if (form) {
-        form.addEventListener('submit', saveSettings);
+        // Enter in a text field submits the form; save quietly like autosave.
+        form.addEventListener('submit', (event) => saveSettings(event, { quiet: true }));
+        bindSettingsAutosave(form);
       }
+      bindSettingsPages(container);
       bindReminderToggle(container);
       bindLogoutAction(container);
       bindDeleteAccountAction(container);
@@ -1132,6 +1294,12 @@ function injectSettingsMarkup() {
           }
         });
       }
+
+      if (pendingSettingsPage) {
+        const key = pendingSettingsPage;
+        pendingSettingsPage = null;
+        openSettingsPage(key);
+      }
     })
     .catch(error => {
       console.error('Failed to load settings page', error);
@@ -1151,6 +1319,8 @@ document.addEventListener('DOMContentLoaded', initializeSettingsFeature);
 window.addEventListener('traininglog:settings-saved', renderProfileTab);
 
 window.initSettingsPage = injectSettingsMarkup;
+window.openSettingsPage = openSettingsPage;
+window.closeSettingsPage = closeSettingsPage;
 window.saveSettings = saveSettings;
 window.getStoredUserSettings = readStoredSettings;
 window.getDefaultUserSettings = getDefaultSettings;

@@ -49,51 +49,6 @@
   transform: scale(0.9);
 }
 
-/* ── Settings sub-tabs ──────────────────────────────────────── */
-
-.settings-subtabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
-}
-
-.settings-subtabs::-webkit-scrollbar {
-  display: none;
-}
-
-.settings-subtab {
-  flex-shrink: 0;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border-color);
-  background: var(--surface-bg);
-  color: var(--secondary-text);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  box-shadow: none;
-  margin: 0;
-  white-space: nowrap;
-}
-
-.settings-subtab.active {
-  background: var(--primary);
-  color: var(--text-color);
-  border-color: var(--primary);
-}
-
-.settings-subview {
-  display: block;
-}
-
-.settings-subview.hidden {
-  display: none;
-}
-
 /* ── Powerlifting sub-tabs ──────────────────────────────────── */
 
 .pl-subtabs {
