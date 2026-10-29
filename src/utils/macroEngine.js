@@ -249,7 +249,9 @@ function applyDailyMacroAdjustment({
 
 function buildBodybuildingDayTargets(baseTargets = {}, strategy = {}) {
   const base = roundMacroTargets(baseTargets);
-  const dayType = strategy?.dayType === 'rest' ? 'rest' : 'training';
+  // 'base' (no day type picked) keeps the saved targets exactly; the
+  // training/rest split only applies when that day type is chosen.
+  const dayType = ['training', 'rest'].includes(strategy?.dayType) ? strategy.dayType : 'base';
   const carbCycle = ['high', 'low'].includes(strategy?.carbCycle) ? strategy.carbCycle : 'normal';
   const isRefeedDay = Boolean(strategy?.isRefeedDay);
 
@@ -263,7 +265,7 @@ function buildBodybuildingDayTargets(baseTargets = {}, strategy = {}) {
     protein = Math.round(protein * 1.05);
     fat = Math.round(fat * 0.92);
     notes.push('Training day split: carbs up, fat slightly lower to bias peri-workout fuel.');
-  } else {
+  } else if (dayType === 'rest') {
     carbs = Math.round(carbs * 0.82);
     fat = Math.round(fat * 1.10);
     notes.push('Rest day split: carbs reduced and fats raised for lower output demand.');
@@ -292,7 +294,7 @@ function buildBodybuildingDayTargets(baseTargets = {}, strategy = {}) {
       dayType,
       carbCycle,
       isRefeedDay,
-      label: `${dayType === 'training' ? 'Training' : 'Rest'} · ${carbCycle === 'normal' ? 'Normal' : carbCycle === 'high' ? 'High' : 'Low'}${isRefeedDay ? ' · Refeed' : ''}`,
+      label: `${dayType === 'training' ? 'Training' : dayType === 'rest' ? 'Rest' : 'Your targets'} · ${carbCycle === 'normal' ? 'Normal' : carbCycle === 'high' ? 'High' : 'Low'}${isRefeedDay ? ' · Refeed' : ''}`,
     },
     notes,
   };
@@ -328,8 +330,7 @@ function estimateHydrationAndSodiumTargets({ weightKg, dayType = 'training', isR
   };
 }
 
-if (typeof window !== 'undefined') {
-  window.macroEngine = {
+const macroEngineApi = {
     calculateLeanMass,
     katchMcardleBMR,
     mifflinStJeorBMR,
@@ -344,4 +345,10 @@ if (typeof window !== 'undefined') {
     suggestMealTimingSlots,
     estimateHydrationAndSodiumTargets,
   };
+
+if (typeof window !== 'undefined') {
+  window.macroEngine = macroEngineApi;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = macroEngineApi;
 }
