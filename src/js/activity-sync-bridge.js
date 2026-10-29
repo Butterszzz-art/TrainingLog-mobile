@@ -26,9 +26,19 @@
   let inFlight = null;
   let lastSleepFetchedAt = 0;
   let sleepInFlight = null;
+  let lastCardioFetchedAt = 0;
+  let cardioInFlight = null;
+  const CARDIO_SYNC_DAYS = 7; // how far back tracker workouts are merged
+
+  // The user's own calendar date (YYYY-MM-DD). Synced data is requested and
+  // stored by local date so the day rolls over at the user's midnight, not UTC's.
+  function localDateKey(date = new Date()) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
 
   function getTodayKey() {
-    return new Date().toISOString().split('T')[0];
+    return localDateKey();
   }
 
   function getActiveUsername() {
@@ -213,7 +223,7 @@
       try {
         const goalMinutes = getSleepGoalMinutes();
         const res = await globalScope.fetchWithTimeout(
-          `${globalScope.ensureServerUrl()}/api/activity-sync/sleep?goalMinutes=${goalMinutes}`,
+          `${globalScope.ensureServerUrl()}/api/activity-sync/sleep?goalMinutes=${goalMinutes}&date=${getTodayKey()}`,
           { headers: authHeaders },
           8000
         );
@@ -287,7 +297,7 @@
     inFlight = (async () => {
       try {
         const res = await globalScope.fetchWithTimeout(
-          `${globalScope.ensureServerUrl()}/api/activity-sync/activity`,
+          `${globalScope.ensureServerUrl()}/api/activity-sync/activity?date=${getTodayKey()}`,
           { headers: authHeaders },
           8000
         );
@@ -323,10 +333,209 @@
     return inFlight;
   }
 
+  // ── Cardio: tracker workouts → cardio log ──────────────────────────────
+  // Workouts from the tracker are merged into cardioLog_<user> as entries
+  // marked source: 'activity-sync'. They replace a manual entry of the same
+  // type, day and roughly the same length (the tracker's numbers win), and
+  // are re-synced each time so edits/deletions on the tracker carry over.
+  // Removing one in the app records its syncId so it isn't added back.
+  const CARDIO_SOURCE = 'activity-sync';
+
+  const EXERCISE_TYPE_MAP = {
+    run: ['RUNNING', 'TRAIL_RUN', 'TREADMILL', 'INCLINE_RUN', 'TRACK_AND_FIELD', 'WATER_JOGGING'],
+    walk: ['WALKING', 'POWER_WALKING', 'TREADMILL_WALK', 'INCLINE_WALK', 'NORDIC_WALKING',
+      'STROLLER_WALK', 'WALK_WITH_WEIGHTS', 'RUCKING'],
+    cycle: ['BIKING', 'OUTDOOR_BIKE', 'MOUNTAIN_BIKE', 'STATIONARY_BIKE', 'SPINNING',
+      'ASSAULT_BIKE', 'HAND_CYCLING', 'ELECTRIC_BIKE'],
+    swim: ['SWIMMING', 'SWIMMING_POOL', 'SWIMMING_OPEN_WATER'],
+    row: ['ROWING', 'ROWING_MACHINE'],
+    hiit: ['HIIT', 'INTERVAL_WORKOUT', 'TABATA_WORKOUT', 'CIRCUIT_TRAINING', 'BOOTCAMP', 'CROSSFIT'],
+    hike: ['HIKING', 'BACKPACKING'],
+    yoga: ['YOGA', 'YOGA_BIKRAM', 'YOGA_HATHA', 'YOGA_POWER', 'YOGA_VINYASA'],
+    elliptical: ['ELLIPTICAL']
+  };
+  const EXERCISE_TO_CARDIO = Object.entries(EXERCISE_TYPE_MAP).reduce((acc, [type, list]) => {
+    list.forEach((g) => { acc[g] = type; });
+    return acc;
+  }, {});
+  // Lifting and non-cardio sessions belong in the workout log, not cardio.
+  const NON_CARDIO_TYPES = new Set([
+    'STRENGTH_TRAINING', 'WEIGHTLIFTING', 'WEIGHTS', 'FREE_WEIGHTS', 'WEIGHT_MACHINES',
+    'POWERLIFTING', 'FUNCTIONAL_STRENGTH_TRAINING', 'BODY_WEIGHT', 'CALISTHENICS',
+    'CORE_TRAINING', 'RESISTANCE_BANDS', 'TRX', 'STRETCHING', 'MEDITATE'
+  ]);
+
+  function prettyExerciseType(googleType) {
+    const words = String(googleType || '').toLowerCase().split('_').filter(Boolean);
+    if (!words.length || googleType === 'EXERCISE_TYPE_UNSPECIFIED') return 'other';
+    const text = words.join(' ');
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  // App cardio type for a Google exercise type, or null when it isn't cardio.
+  function cardioTypeFor(googleType) {
+    if (NON_CARDIO_TYPES.has(googleType)) return null;
+    return EXERCISE_TO_CARDIO[googleType] || prettyExerciseType(googleType);
+  }
+
+  function toCardioEntry(exercise) {
+    const type = cardioTypeFor(exercise?.exerciseType);
+    if (!type || !exercise?.date || !(exercise.durationMinutes > 0)) return null;
+    const tab = globalScope.cardioTab;
+    const distance = exercise.distanceKm > 0 ? exercise.distanceKm : null;
+    return {
+      date: exercise.date,
+      type,
+      duration: exercise.durationMinutes,
+      distance,
+      calories: exercise.calories > 0 ? exercise.calories : 0,
+      estimatedCalories: null,
+      met: tab?.resolveMET ? tab.resolveMET(type) : null,
+      paceOrSpeed: distance && tab?.computePaceOrSpeed
+        ? tab.computePaceOrSpeed({ type, durationMinutes: exercise.durationMinutes, distanceKm: distance })
+        : null,
+      notes: exercise.displayName || '',
+      intensity: 'moderate',
+      heartRate: exercise.avgHeartRate > 0 ? exercise.avgHeartRate : null,
+      source: CARDIO_SOURCE,
+      syncId: exercise.syncId,
+      startTime: exercise.startTime || null
+    };
+  }
+
+  // Same session logged by hand: same day and type, similar length.
+  function isLikelySameSession(manual, synced) {
+    if (manual.date !== synced.date) return false;
+    if (String(manual.type || '').toLowerCase() !== String(synced.type).toLowerCase()) return false;
+    const a = Number(manual.duration) || 0;
+    const b = Number(synced.duration) || 0;
+    return Math.abs(a - b) <= Math.max(10, 0.5 * Math.max(a, b));
+  }
+
+  // Returns the new cardio log after merging tracker workouts for local
+  // dates start..end. Pure: no storage access, so it's unit-testable.
+  function mergeSyncedCardio(log, exercises, { start, end, dismissed = [] }) {
+    const inRange = (d) => typeof d === 'string' && d >= start && d <= end;
+    const dismissedIds = new Set(dismissed);
+    // Drop previous synced entries in range; the fresh list replaces them.
+    const result = (Array.isArray(log) ? log : [])
+      .filter((e) => !(e && e.source === CARDIO_SOURCE && inRange(e.date)));
+
+    (Array.isArray(exercises) ? exercises : []).forEach((exercise) => {
+      const entry = toCardioEntry(exercise);
+      if (!entry || !inRange(entry.date) || dismissedIds.has(entry.syncId)) return;
+      const dupIdx = result.findIndex((e) => e && e.source !== CARDIO_SOURCE && isLikelySameSession(e, entry));
+      if (dupIdx >= 0) {
+        if (!entry.notes && result[dupIdx].notes) entry.notes = result[dupIdx].notes;
+        result.splice(dupIdx, 1);
+      }
+      result.push(entry);
+    });
+    return result;
+  }
+
+  function readJson(key, fallback) {
+    try {
+      const value = JSON.parse(globalScope.localStorage.getItem(key) || 'null');
+      return value == null ? fallback : value;
+    } catch (_error) {
+      return fallback;
+    }
+  }
+
+  // Called by removeCardioEntry (index.html) so a synced workout the user
+  // deleted stays deleted on the next sync.
+  function dismissSyncedCardio(entry) {
+    if (!entry || entry.source !== CARDIO_SOURCE || !entry.syncId) return;
+    try {
+      const key = `cardioSyncDismissed_${getActiveUsername()}`;
+      const ids = readJson(key, []);
+      if (!ids.includes(entry.syncId)) {
+        ids.push(entry.syncId);
+        globalScope.localStorage.setItem(key, JSON.stringify(ids.slice(-500)));
+      }
+    } catch (_error) { /* non-fatal */ }
+  }
+
+  function rerenderCardioConsumers() {
+    try {
+      if (globalScope.document?.getElementById('cardioTab')?.classList.contains('active')) {
+        globalScope.renderCardio?.();
+      }
+    } catch (_error) { /* ignore */ }
+    try { globalScope.updateMacroUI?.(); } catch (_error) { /* ignore */ }
+  }
+
+  async function fetchAndApplyCardio(options = {}) {
+    const force = Boolean(options.force);
+    if (!force && !isConnected()) return null;
+    if (!force && Date.now() - lastCardioFetchedAt < THROTTLE_MS) return null;
+    if (cardioInFlight) return cardioInFlight;
+
+    if (typeof globalScope.getAuthHeaders !== 'function'
+      || typeof globalScope.ensureServerUrl !== 'function'
+      || typeof globalScope.fetchWithTimeout !== 'function') {
+      return null;
+    }
+    const authHeaders = globalScope.getAuthHeaders();
+    if (!authHeaders.Authorization) return null;
+
+    cardioInFlight = (async () => {
+      try {
+        const end = getTodayKey();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - (CARDIO_SYNC_DAYS - 1));
+        const start = localDateKey(startDate);
+        const res = await globalScope.fetchWithTimeout(
+          `${globalScope.ensureServerUrl()}/api/activity-sync/exercises?start=${start}&end=${end}`,
+          { headers: authHeaders },
+          10000
+        );
+        const data = await res.json();
+        lastCardioFetchedAt = Date.now();
+
+        if (!res.ok || !data.success) {
+          const code = data?.error?.code;
+          if (code && code !== 'activity_sync.disabled' && code !== 'activity_sync.not_connected') {
+            console.warn('[ActivitySyncBridge] workout fetch failed', code);
+          }
+          return null;
+        }
+
+        const user = getActiveUsername();
+        const logKey = `cardioLog_${user}`;
+        const before = readJson(logKey, []);
+        const merged = mergeSyncedCardio(before, data.exercises, {
+          start,
+          end,
+          dismissed: readJson(`cardioSyncDismissed_${user}`, [])
+        });
+        if (JSON.stringify(merged) !== JSON.stringify(before)) {
+          globalScope.localStorage.setItem(logKey, JSON.stringify(merged));
+          merged
+            .filter((e) => e.source === CARDIO_SOURCE && e.date === end)
+            .forEach((e) => {
+              try { globalScope.dailyMissionEngine?.syncMissionFromCardioEntry?.(e, user); } catch (_error) { /* ignore */ }
+            });
+          rerenderCardioConsumers();
+        }
+        return merged;
+      } catch (error) {
+        console.warn('[ActivitySyncBridge] workout fetch failed', error);
+        return null;
+      } finally {
+        cardioInFlight = null;
+      }
+    })();
+
+    return cardioInFlight;
+  }
+
   if (typeof globalScope.document !== 'undefined') {
     globalScope.document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
-        fetchAndApplyTodayActivity();
+        // Workouts only after the activity fetch has confirmed a connection.
+        Promise.resolve(fetchAndApplyTodayActivity()).then(() => fetchAndApplyCardio());
         fetchAndApplyTodaySleep();
       }, 1000);
     });
@@ -336,6 +545,8 @@
         fetchAndApplyTodayActivity();
       } else if (e.detail?.tab === 'sleepTab') {
         fetchAndApplyTodaySleep();
+      } else if (e.detail?.tab === 'cardioTab') {
+        fetchAndApplyCardio();
       }
     });
   }
@@ -352,7 +563,13 @@
   globalScope.activitySyncBridge = {
     fetchAndApplyTodayActivity,
     fetchAndApplyTodaySleep,
+    fetchAndApplyCardio,
+    dismissSyncedCardio,
     isConnected,
     resetConnectionState
   };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { localDateKey, cardioTypeFor, toCardioEntry, mergeSyncedCardio };
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

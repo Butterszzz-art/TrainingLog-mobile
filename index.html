@@ -15032,7 +15032,8 @@ function renderCardio() {
         dist ? `<span class="mx-tag"><span class="ui-icon">${ICONS.mapPin}</span> ${dist} km</span>` : '',
         parseFloat(entry.calories) > 0 ? `<span class="mx-tag"><span class="ui-icon">${ICONS.flame}</span> ${Math.round(entry.calories)} kcal</span>` : '',
         parseFloat(entry.heartRate) > 0 ? `<span class="mx-tag"><span class="ui-icon">${ICONS.heart}</span> ${Math.round(entry.heartRate)} bpm</span>` : '',
-        entry.intensity && entry.intensity !== 'moderate' ? (_intensityTag[entry.intensity] || '') : ''
+        entry.intensity && entry.intensity !== 'moderate' ? (_intensityTag[entry.intensity] || '') : '',
+        entry.source === 'activity-sync' ? '<span class="mx-tag" title="Synced from your tracker">Synced</span>' : ''
       ].filter(Boolean).join('');
       const label = _esc(cfg.label);
 
@@ -15075,6 +15076,9 @@ function renderCardio() {
 
 function removeCardioEntry(index) {
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
+  // A workout synced from the user's tracker is remembered as removed, so the
+  // next sync doesn't add it back.
+  window.activitySyncBridge?.dismissSyncedCardio?.(log[index]);
   log.splice(index, 1);
   localStorage.setItem(`cardioLog_${currentUser}`, JSON.stringify(log));
   renderCardio();

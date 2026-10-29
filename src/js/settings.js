@@ -875,6 +875,7 @@ function handleActivitySyncOAuthRedirect() {
   if (status === 'connected') {
     window.activitySyncBridge?.fetchAndApplyTodayActivity?.({ force: true });
     window.activitySyncBridge?.fetchAndApplyTodaySleep?.({ force: true });
+    window.activitySyncBridge?.fetchAndApplyCardio?.({ force: true });
   }
 }
 

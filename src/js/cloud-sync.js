@@ -54,6 +54,8 @@
     { name: 'bodyweightLog',    key: u => `bodyweightLog_${u}`,    mode: 'list', idField: 'date' },
     { name: 'bodyMeasurements', key: u => `bodyMeasurements_${u}`, mode: 'list', idField: 'date' },
     { name: 'cardioLog',        key: u => `cardioLog_${u}`,        mode: 'list' },
+    // syncIds of tracker workouts the user removed (activity-sync-bridge.js).
+    { name: 'cardioSyncDismissed', key: u => `cardioSyncDismissed_${u}`, mode: 'value' },
     { name: 'crossfitLog',      key: u => `crossfitLog_${u}`,      mode: 'list' },
     { name: 'crossfitWorkouts', key: u => `crossfitWorkouts_${u}`, mode: 'list' },
     { name: 'hyroxLog',         key: u => `hyroxLog_${u}`,         mode: 'list', idField: 'ts' },
