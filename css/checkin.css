@@ -731,9 +731,8 @@
   flex-shrink: 0;
 }
 
-.ci-ai-card--locked { border-color: var(--border-default); opacity: 0.9; }
-.ci-ai-card--locked p { font-size: 14px; color: var(--text-tertiary); margin: 0 0 10px; }
-.ci-ai-upgrade-btn {
+/* Free accounts: tap to spend one free AI use on this check-in. */
+.ci-ai-offer-btn {
   background: var(--fill-btn-primary-mobile);
   color: var(--label-on-green);
   border: none;
@@ -749,7 +748,7 @@
   margin: 0;
   box-shadow: none;
 }
-.ci-ai-upgrade-btn:hover { background: var(--fill-btn-primary-mobile); transform: none; box-shadow: none; }
+.ci-ai-offer-btn:hover { background: var(--fill-btn-primary-mobile); transform: none; box-shadow: none; }
 
 .ci-ai-card--error { border-color: var(--border-alert); }
 .ci-ai-card--error p { font-size: 14px; color: var(--text-tertiary); margin: 0; }

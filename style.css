@@ -2548,3 +2548,7 @@ body.theme-dark .set-row {
   margin-bottom: 10px;
   color: var(--text-color);
 }
+
+/* "3 of 5 free AI uses left this month" under AI buttons (src/js/ai-usage.js). */
+.ai-usage-note { margin: 6px 0 0; font-size: 0.75rem; line-height: 1.4; color: var(--text-muted, var(--secondary-text)); }
+.ai-usage-note[hidden] { display: none; }
