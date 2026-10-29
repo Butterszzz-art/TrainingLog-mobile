@@ -4253,6 +4253,7 @@
 <script src="progressMilestones.js"></script>
 <script src="progressAnalytics.js"></script>
 <script src="bodybuildingProgress.js"></script>
+<script src="regionalVolume.js"></script>
 <script src="goals.js"></script>
 <script src="progressAI.js"></script>
 <script src="gamification.js"></script>
@@ -15645,6 +15646,79 @@ function renderExerciseProgress() {
   renderExerciseSummaryCards(map, container, currentMetric);
 }
 
+// Pro: hard sets per muscle region (upper chest, side delts, long head…) for
+// the latest week in range. Logic lives in regionalVolume.js.
+function renderRegionalVolumeSection(workouts) {
+  if (typeof computeRegionalVolume !== 'function') return '';
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const heading = '<h4>Regional Volume <span class="chip rv-pro-chip">Pro</span></h4>';
+
+  if (!(typeof hasPaidAccess === 'function' && hasPaidAccess())) {
+    return heading + (typeof renderLockedCard === 'function'
+      ? renderLockedCard('Regional muscle volume', 'pro',
+        'See sets for upper vs mid chest, side vs rear delts, biceps long vs short head — and which regions are lagging.')
+      : '');
+  }
+
+  const rv = computeRegionalVolume(workouts || []);
+  if (!rv.latest || !rv.latest.muscles.length) {
+    return heading + '<p class="progress-empty">Log some sets to see volume per muscle region.</p>';
+  }
+
+  const fmt = (n) => (Math.round(n * 10) / 10).toString();
+  const weekLabel = new Date(rv.latest.weekStart + 'T00:00:00Z')
+    .toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+  const gapItems = rv.gaps.slice(0, 4).map((g) => `<li class="rv-gap">
+      <strong>${esc(g.label)}</strong>: ${fmt(g.sets)} sets vs ${fmt(g.topSets)} for ${esc(g.topLabel.toLowerCase())}.
+      <span class="rv-gap-tip">${esc(g.tip)}</span>
+    </li>`).join('');
+
+  const muscleBlocks = rv.latest.muscles.map((m) => {
+    const maxRegion = Math.max(...m.regions.map((r) => r.sets), 0.0001);
+    const rows = m.regions.map((r) => `<div class="rv-region">
+        <span class="rv-region-name">${esc(r.label)}</span>
+        <div class="ratio-track rv-track"><div class="ratio-fill" style="width:${Math.round((r.sets / maxRegion) * 100)}%"></div></div>
+        <span class="rv-region-sets">${fmt(r.sets)}</span>
+      </div>`).join('');
+    return `<details class="bb-row rv-muscle">
+        <summary class="bb-row-top">
+          <span class="bb-row-name">${esc(m.label)}</span>
+          <span class="chip">${fmt(m.sets)} sets</span>
+        </summary>
+        <div class="rv-regions">${rows}</div>
+      </details>`;
+  }).join('');
+
+  const evidenceLabel = { strong: 'Strong evidence', moderate: 'Moderate evidence', theoretical: 'Theory', estimated: 'Estimated' };
+  const exerciseRows = rv.exercises.map((ex) => {
+    const regionText = ex.regions.filter((r) => r.credit >= 0.5).slice(0, 3)
+      .map((r) => `${esc(r.label)}${r.credit < 1 ? ` ×${r.credit}` : ''}`).join(', ');
+    return `<li class="rv-ex">
+        <div class="rv-ex-top">
+          <span class="rv-ex-name">${esc(ex.exercise)}</span>
+          <span class="chip rv-ev rv-ev--${esc(ex.evidence)}">${esc(evidenceLabel[ex.evidence] || '')}</span>
+        </div>
+        <div class="rv-ex-regions">${fmt(ex.sets)} sets → ${regionText}</div>
+        ${ex.note ? `<div class="rv-ex-note">${esc(ex.note)}</div>` : ''}
+      </li>`;
+  }).join('');
+
+  const unmappedNote = rv.unmapped.length
+    ? `<p class="rv-foot">Not counted (unknown movement): ${rv.unmapped.slice(0, 5).map(esc).join(', ')}${rv.unmapped.length > 5 ? '…' : ''}</p>`
+    : '';
+
+  return `${heading}
+    <p class="rv-sub">Hard sets per muscle region, week of ${esc(weekLabel)}. A set counts 1 for regions it fully trains and less for regions it trains partly.</p>
+    ${gapItems ? `<div class="rv-gaps"><strong>Lagging regions</strong><ul>${gapItems}</ul></div>` : ''}
+    <div class="bb-list">${muscleBlocks}</div>
+    <details class="rv-why">
+      <summary>How each exercise was counted</summary>
+      <ul class="rv-ex-list">${exerciseRows}</ul>
+      ${unmappedNote}
+    </details>`;
+}
+
 function renderBodybuildingProgressPanel(workouts) {
   const panel = document.getElementById('bodybuildingProgressPanel');
   if (!panel) return;
@@ -15708,6 +15782,7 @@ function renderBodybuildingProgressPanel(workouts) {
     <div class="bb-list">
       ${volumeRows || '<p class="progress-empty">No resistance log data in selected range.</p>'}
     </div>
+    ${renderRegionalVolumeSection(workouts)}
     <h4>Exercise Consistency</h4>
     <div class="bb-list">
       ${consistencyRows || '<p class="progress-empty">No consistency data yet.</p>'}
