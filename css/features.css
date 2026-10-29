@@ -3790,8 +3790,7 @@ html.pc-log-only .food-sheet-tab[data-food-tab="quick"] { display: none; }
 .food-result-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .food-result-name { font-size: 0.88rem; font-weight: 600; color: var(--text-color); line-height: 1.25; }
 .food-result-sub { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.food-result-kcal { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.78rem; color: var(--text-color); white-space: nowrap; }
-.food-result-kcal small { font-size: 0.68rem; color: var(--text-muted); }
+.food-result-macros { margin-top: 4px; }
 .food-result-add {
   display: inline-flex;
   align-items: center;
@@ -3858,7 +3857,6 @@ html.pc-log-only .food-sheet-tab[data-food-tab="quick"] { display: none; }
   text-transform: none;
   cursor: pointer;
 }
-html.pc-log-only .food-result-kcal { display: none !important; }
 
 /* ══ Nutrition and performance (nutrition-review.js) ════════════════ */
 .nr-section { margin: 4px 0 16px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--card-bg); }

@@ -425,6 +425,8 @@
 
   const SOURCE_DOT = { off: 'off', usda: 'usda', custom: 'own', recipe: 'own', coach: 'coach' };
 
+  const _r1 = v => Math.round((Number(v) || 0) * 10) / 10;
+
   function _row(f, i) {
     const p = f.per100;
     const check = Core.kcalCheck(p);
@@ -437,8 +439,14 @@
           <span class="food-result-name">${_esc(f.name)}${check.ok ? '' : ' <span class="food-flag-dot" title="Calories don’t match the macros — check the label">⚠</span>'}</span>
           ${sub ? `<span class="food-result-sub">${_esc(sub)}</span>` : ''}
           ${f.source === 'coach' && f.note ? `<span class="food-result-sub">${_esc(f.coachUsername || 'Coach')}: ${_esc(f.note)}</span>` : ''}
+          <span class="food-item-macros food-result-macros">
+            <span class="fim kcal-badge">${p.kcal} kcal</span>
+            <span class="fim protein-badge">${_r1(p.protein)}P</span>
+            <span class="fim carbs-badge">${_r1(p.carbs)}C</span>
+            <span class="fim fat-badge">${_r1(p.fat)}F</span>
+            <span class="fim unit-badge">per 100${_esc(f.basis || 'g')}</span>
+          </span>
         </span>
-        <span class="food-result-kcal">${p.kcal} kcal<small>${Math.round(p.protein)} P</small></span>
         <span class="food-result-add ui-icon" aria-hidden="true">${_icon('plus')}</span>
       </button>`;
   }
