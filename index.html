@@ -4165,6 +4165,7 @@
 <script src="src/js/settings.js"></script>
 <script src="src/js/plan-source.js"></script>
 <script src="src/js/ai-usage.js"></script>
+<script src="src/js/client-pro.js"></script>
 <script src="src/js/payments.js"></script>
 <script type="module" src="history.js"></script>
 <!-- Optional runtime configuration -->
@@ -4677,6 +4678,10 @@ async function loadUserPlan() {
     window.currentAiUsage = data.ai || null;
     try { localStorage.setItem('userAiUsage', data.ai ? JSON.stringify(data.ai) : ''); } catch (e) { /* quota */ }
     if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
+    // Pro included by the user's coach (PAY2-9); null when not coached.
+    window.currentClientPro = data.clientPro || null;
+    try { localStorage.setItem('userClientPro', data.clientPro ? JSON.stringify(data.clientPro) : ''); } catch (e) { /* quota */ }
+    if (window.PocketCoachClientPro) setTimeout(window.PocketCoachClientPro.check, 1500);
     // Coach Mode depends on the plan — re-apply now that we know it.
     if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
   } catch {
@@ -4686,6 +4691,7 @@ async function loadUserPlan() {
     window.currentPlanExpiresAt = localStorage.getItem('userPlanExpiresAt') || null;
     try { window.currentAiUsage = JSON.parse(localStorage.getItem('userAiUsage') || 'null'); } catch (e) { window.currentAiUsage = null; }
     if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
+    try { window.currentClientPro = JSON.parse(localStorage.getItem('userClientPro') || 'null'); } catch (e) { window.currentClientPro = null; }
   }
 }
 
@@ -4853,9 +4859,10 @@ var UPGRADE_PLANS = {
   coach: {
     name: 'Coach', badge: 'For coaches', chip: 'mx-chip--brass', cardCls: 'pod--warn',
     monthly: 16, annual: 13, annualNote: 'Billed £156/year · save £36',
-    sub: 'Everything in Pro, plus:',
+    sub: 'Everything in Pro, plus your coaching dashboard. Unlimited clients, one flat price. Your clients get Pocket Coach Pro included.',
     features: [
       ['users', 'Full coaching dashboard'],
+      ['sparkles', 'Pro included for your clients'],
       ['clipboard', 'Client roster'],
       ['pencil', 'AI draft messages'],
       ['barChart', 'Compliance tracking'],
@@ -4901,8 +4908,11 @@ function openUpgradeModal(defaultPlan, opts) {
     ? String(opts.heading).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; })
     : 'Upgrade';
   var billing = localStorage.getItem('billingCycle') || 'annual';
-  var isAnnual = billing === 'annual';
+  var isAnnual = (opts && opts.annual) ? true : billing === 'annual';
   var apple = usesAppleIAP();
+  var sub = opts && opts.sub
+    ? String(opts.sub).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; })
+    : 'Unlock AI features and coaching tools';
 
   var overlay = document.createElement('div');
   overlay.className = 'payment-method-modal';
@@ -4912,7 +4922,7 @@ function openUpgradeModal(defaultPlan, opts) {
     + '<div class="upg-head">'
     +   '<span class="mx-kicker">Pocket Coach</span>'
     +   '<h3 class="upg-title">' + heading + '</h3>'
-    +   '<p class="mx-sub">Unlock AI features and coaching tools</p>'
+    +   '<p class="mx-sub">' + sub + '</p>'
     + '</div>'
     + '<div class="upg-billing">'
     +   '<span id="modalBillMonthly" class="' + (!isAnnual ? 'is-on' : '') + '">Monthly</span>'
@@ -4924,6 +4934,8 @@ function openUpgradeModal(defaultPlan, opts) {
     + '</div>'
     + upgradePlanCard('pro', isAnnual)
     + upgradePlanCard('coach', isAnnual)
+    // opts.continueFree: an equal-weight way out (e.g. Client Pro ended).
+    + (opts && opts.continueFree ? '<button type="button" class="mx-outline mx-outline--block upg-continue-free" onclick="this.closest(\'.payment-method-modal\').remove()">Continue with Free</button>' : '')
     + (apple ? '<button type="button" class="payment-restore" onclick="this.closest(\'.payment-method-modal\').remove();pocketCoachPayments.restore()">Restore Purchases</button>' : '')
     + '<p class="payment-note payment-terms"><a href="terms.html">Terms of Use</a> · <a href="privacy.html">Privacy Policy</a></p>'
     + '</div>';
@@ -4987,6 +4999,7 @@ function renderSubscriptionPanel() {
     ? window.PlanSource.describePlanSource({
         plan: plan, source: window.currentPlanSource, expiresAt: window.currentPlanExpiresAt,
         subStatus: window.currentSubStatus,
+        coachName: window.currentClientPro && window.currentClientPro.coachName,
       })
     : { status: '', isSubscription: plan !== 'free' };
   if (status) status.textContent = desc.status;
@@ -12270,6 +12283,7 @@ function normalizeCoachClientRecord(client = {}) {
     currentProgram: client.currentProgram || '',
     currentProgramId: client.currentProgramId || '',
     activeProgramName: client.activeProgramName || '',
+    clientPro: client.clientPro || null, // 'active' | 'paused_inactive' | 'off'
     lastCheckInDate: client.lastCheckInDate || client.lastCheckIn || '',
     compliancePercent: pct === null ? null : Math.max(0, Math.min(100, Math.round(pct))),
     workoutsLoggedThisWeek: numOrNull(client.workoutsLoggedThisWeek),
@@ -12555,6 +12569,14 @@ function coachPct(value) {
   return value === null || value === undefined ? '—' : `${value}<small>%</small>`;
 }
 
+// Client Pro (PAY2-9): clients you coach get Pro included while you're
+// actively coaching them.
+function coachClientProBadge(state) {
+  if (state === 'active') return '<span class="mx-tag mx-tag--hi coach-client-pro">Pro</span>';
+  if (state === 'paused_inactive') return '<span class="coach-client-pro-paused">Pro paused, no activity in 30 days</span>';
+  return '';
+}
+
 function renderCoachClientCard(client) {
   const c = normalizeCoachClientRecord(client);
   const initials = String(c.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -12591,6 +12613,7 @@ function renderCoachClientCard(client) {
         <div class="coach-client-id">
           <h3 class="coach-client-name">${escapeCoachText(c.name)}</h3>
           <p class="coach-client-meta">${escapeCoachText(c.archetype)} · ${escapeCoachText(c.currentPhase)}</p>
+          ${coachClientProBadge(c.clientPro)}
         </div>
         <span class="coach-alert-pill mx-chip mx-chip--sm ${chipCls} ${alertMeta.className}">${alertMeta.label}</span>
       </header>

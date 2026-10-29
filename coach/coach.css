@@ -1353,3 +1353,7 @@ select.mp-input { appearance: none; padding-right: 32px; cursor: pointer;
 .fl-actions { float: right; display: inline-flex; gap: 6px; }
 .fl-hide { display: block; margin: 0 0 12px; font-size: 0.8rem; color: var(--text-sec); text-transform: none; letter-spacing: 0; font-weight: 400; }
 .fl-hide input { margin-right: 6px; vertical-align: middle; }
+
+/* Client Pro (PAY2-9) */
+.client-pro-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; vertical-align: middle; background: rgba(47, 143, 78, 0.18); color: var(--green, #7fdc9b); }
+.client-pro-paused { font-size: 0.72rem; color: var(--text-muted, #9aa59d); margin-top: 2px; }

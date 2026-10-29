@@ -242,3 +242,16 @@
   cursor: pointer;
 }
 .upgrade-cta-btn:hover { filter: brightness(1.08); transform: none; }
+
+/* Client Pro (PAY2-9): roster badge, "Continue with Free", double-pay notice */
+.coach-client-pro { margin-top: 4px; }
+.coach-client-pro-paused { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-tertiary); }
+.upg-continue-free {
+  margin-top: 12px;
+  min-height: 56px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-chip);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.cp-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
