@@ -374,7 +374,9 @@
 
     const rules = { headline: body.headline, bullets: body.takeaways, hasData: body.hasData, source: 'rules' };
     const calls = sameDay ? cache.calls || 0 : 0;
-    const canAsk = body.hasData && navigator.onLine !== false && calls < MAX_AI_CALLS_PER_DAY && !coachInflight;
+    // Auto-loading AI: only for accounts with AI access (see coach-brief.js).
+    const aiAccess = typeof window.hasPaidAccess === 'function' && window.hasPaidAccess();
+    const canAsk = body.hasData && aiAccess && navigator.onLine !== false && calls < MAX_AI_CALLS_PER_DAY && !coachInflight;
     _renderCoach(el, { ...rules, loading: canAsk });
     if (!canAsk) return;
 

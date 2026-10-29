@@ -141,71 +141,6 @@
     return getSessions().some(s => s.routineId === routineId && s.completedAt.startsWith(today));
   }
 
-  // ─── Airtable sync ────────────────────────────────────────────
-  async function atSyncRoutine(routine) {
-    const baseId = window.airtableBaseId, token = window.airtableToken;
-    if (!baseId || !token) return;
-    try {
-      const fields = {
-        Username: routine.username, RoutineId: routine.id, Name: routine.name,
-        Type: routine.type, TargetArea: routine.targetArea,
-        FrequencyPerWeek: routine.frequencyPerWeek,
-        Exercises: JSON.stringify(routine.exercises),
-        AssignedByCoach: !!routine.assignedByCoach,
-        CoachNotes: routine.coachNotes || '', CreatedAt: routine.createdAt
-      };
-      const method = routine._airtableId ? 'PATCH' : 'POST';
-      const url = routine._airtableId
-        ? `/airtable/${baseId}/MobilityRoutines/${routine._airtableId}`
-        : `/airtable/${baseId}/MobilityRoutines`;
-      const body = method === 'POST'
-        ? JSON.stringify({ records: [{ fields }] })
-        : JSON.stringify({ records: [{ id: routine._airtableId, fields }] });
-      const res = await fetch(url, { method, credentials:'include', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body });
-      if (res.ok && !routine._airtableId) {
-        const data = await res.json();
-        const recId = data.records?.[0]?.id;
-        if (recId) {
-          const list = getRoutines();
-          const idx = list.findIndex(r => r.id === routine.id);
-          if (idx !== -1) { list[idx]._airtableId = recId; saveRoutines(list); }
-        }
-      }
-    } catch(e) { console.warn('[Mobility] Airtable routine sync failed:', e.message); }
-  }
-
-  async function atSyncSession(session) {
-    const baseId = window.airtableBaseId, token = window.airtableToken;
-    if (!baseId || !token) return;
-    try {
-      await fetch(`/airtable/${baseId}/MobilitySessions`, {
-        method: 'POST', credentials:'include',
-        headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' },
-        body: JSON.stringify({ records: [{ fields:{ Username:session.username, SessionId:session.id, RoutineId:session.routineId, CompletedAt:session.completedAt, Notes:session.notes||'' } }] })
-      });
-    } catch(e) { console.warn('[Mobility] Airtable session sync failed:', e.message); }
-  }
-
-  async function atFetchRoutines() {
-    const baseId = window.airtableBaseId, token = window.airtableToken, u = getUser();
-    if (!baseId || !token || !u) return;
-    try {
-      const res = await fetch(`/airtable/${baseId}/MobilityRoutines?filterByFormula={Username}='${encodeURIComponent(u)}'`, { credentials:'include', headers:{ Authorization:`Bearer ${token}` } });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data.records?.length) return;
-      const local = getRoutines();
-      const localIds = new Set(local.map(r => r.id));
-      data.records.forEach(rec => {
-        const f = rec.fields;
-        if (!localIds.has(f.RoutineId)) {
-          local.push({ id:f.RoutineId, username:f.Username, name:f.Name, type:f.Type, targetArea:f.TargetArea, frequencyPerWeek:f.FrequencyPerWeek, exercises:JSON.parse(f.Exercises||'[]'), assignedByCoach:!!f.AssignedByCoach, coachNotes:f.CoachNotes||'', createdAt:f.CreatedAt, _airtableId:rec.id });
-        }
-      });
-      saveRoutines(local);
-    } catch(e) { console.warn('[Mobility] Airtable fetch failed:', e.message); }
-  }
-
   // ─── State ────────────────────────────────────────────────────
   let _tab = 'myRoutines';
   let _editing = null;
@@ -639,7 +574,6 @@
     const idx  = list.findIndex(r => r.id === _editing.id);
     if (idx !== -1) list[idx] = _editing; else list.push(_editing);
     saveRoutines(list);
-    atSyncRoutine(_editing);
     toast('Routine saved');
     overlay.remove();
     render();
@@ -655,7 +589,6 @@
   function copyFromLibrary(lib) {
     const copy = { ...JSON.parse(JSON.stringify(lib)), id: genId(), username: getUser(), _libId: lib.id, assignedByCoach: false, coachNotes: '', createdAt: new Date().toISOString() };
     const list = getRoutines(); list.push(copy); saveRoutines(list);
-    atSyncRoutine(copy);
     toast(`"${lib.name}" added to your routines`);
     _tab = 'myRoutines'; render();
   }
@@ -665,7 +598,6 @@
     const completedAt = dateStr ? new Date(dateStr).toISOString() : new Date().toISOString();
     const session = { id: genId(), routineId, username: u, completedAt, notes: notes||'' };
     const sList = getSessions(); sList.push(session); saveSessions(sList);
-    atSyncSession(session);
 
     // ── Streak tracking on the routine ────────────────────────────
     const rList = getRoutines();
@@ -745,6 +677,5 @@
   // ─── Public init (called from showTab) ───────────────────────
   window.initMobilityTab = function() {
     render();
-    atFetchRoutines().then(() => render()).catch(() => {});
   };
 })();

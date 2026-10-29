@@ -112,6 +112,7 @@
   }
 
   async function upload(file) {
+    if (typeof window.markAiUserAction === 'function') window.markAiUserAction('program-import');
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) { renderPick('That file is over 8 MB. Import one month at a time.'); return; }
     state.fileName = file.name;

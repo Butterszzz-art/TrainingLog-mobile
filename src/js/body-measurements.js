@@ -79,9 +79,9 @@
     renderMeasurementsHistory();
     renderMeasurementsChart(document.getElementById('_activeMetric') || 'waist');
     showMeasurementToast('📏 Measurements saved!');
-    // Silently sync to Airtable if 4+ weeks of unsynced entries exist
-    if (typeof window.syncMeasurementsToAirtable === 'function') {
-      window.syncMeasurementsToAirtable(username).catch(() => {});
+    // Silently sync to the backend if 4+ weeks of unsynced entries exist
+    if (typeof window.syncMeasurementsToBackend === 'function') {
+      window.syncMeasurementsToBackend(username).catch(() => {});
     }
   };
 

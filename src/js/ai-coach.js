@@ -104,6 +104,7 @@
 
   // Calls onEvent(type, payload) for each server-sent event.
   async function streamCoach(u, message, history, signal, onEvent) {
+    if (typeof window.markAiUserAction === 'function') window.markAiUserAction('coach-chat');
     const cd = CD();
     const settings = cd.loadCoachSettings(localStorage, u);
     const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
