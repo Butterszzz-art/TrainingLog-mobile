@@ -648,24 +648,42 @@
     if (!routines.length) return '';
 
     const pending = routines.filter(r => !loggedToday(r.id));
-    const done    = routines.length - pending.length;
-    const pillCls = done === routines.length ? 'home-pill-green' : 'home-pill-amber';
+    const doneList = routines.filter(r => loggedToday(r.id));
+    const done = doneList.length;
+    const allDone = done === routines.length;
+    const pct = Math.round((done / routines.length) * 100);
 
-    const items = pending.slice(0, 3).map(r => `
-      <li class="home-upcoming-item">
-        <span>${esc(r.name)}</span>
-        <button onclick="event.stopPropagation();window._mobQuickLog('${r.id}')" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:0.74rem;cursor:pointer;font-family:Poppins,sans-serif;">Log</button>
-      </li>`).join('');
+    const figure = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v6M6 10l6 3 6-3M9 21l3-8 3 8"/></svg>';
+    const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+    const meta = r => {
+      const n = r.exercises?.length || 0;
+      return n ? `${n} move${n === 1 ? '' : 's'}` : '';
+    };
+
+    // To-do first, then what's already done today; four rows max.
+    const rows = [...pending.map(r => [r, false]), ...doneList.map(r => [r, true])].slice(0, 4).map(([r, isDone]) => `
+      <div class="hm-mob-row${isDone ? ' is-done' : ''}">
+        <span class="hm-mob-ic">${figure}</span>
+        <span class="hm-mob-l">
+          <span class="hm-mob-name">${esc(r.name)}</span>
+          ${isDone ? '<span class="hm-mob-sub">Done today</span>' : (meta(r) ? `<span class="hm-mob-sub">${meta(r)}</span>` : '')}
+        </span>
+        ${isDone
+          ? `<span class="hm-mob-tick" aria-label="Done">${tick}</span>`
+          : `<button type="button" class="hm-mob-log" onclick="event.stopPropagation();window._mobQuickLog('${esc(r.id)}')" aria-label="Log ${esc(r.name)}">Log</button>`}
+      </div>`).join('');
 
     return `
-      <section class="home-dashboard-card" onclick="if(typeof showTab==='function')showTab('mobilityTab')" style="cursor:pointer;">
-        <div class="home-card-header">
-          <h3 class="home-card-title">🧘 Flexibility & Mobility</h3>
-          <span class="home-status-pill ${pillCls}">${done} / ${routines.length} done</span>
+      <section class="pod mx-pod hm-mob" onclick="if(typeof showTab==='function')showTab('mobilityTab')" role="link" tabindex="0" aria-label="Open mobility">
+        <div class="hm-mob-head">
+          <div>
+            <div class="mx-kicker">Mobility</div>
+            <h3 class="pod-title hm-mob-title">${allDone ? 'All done today' : "Today's routines"}</h3>
+          </div>
+          <span class="mx-chip mx-chip--sm ${allDone ? 'mx-chip--green' : 'mx-chip--brass'}">${done} / ${routines.length} done</span>
         </div>
-        ${pending.length === 0
-          ? '<p class="home-mission-progress" style="color:var(--primary-text);font-weight:600;">All routines completed today 🎉</p>'
-          : `<ul class="home-upcoming-list">${items}</ul>`}
+        <div class="mx-meter mx-meter--thin"><i style="width:${pct}%"></i></div>
+        <div class="hm-mob-list">${rows}</div>
       </section>`;
   };
 

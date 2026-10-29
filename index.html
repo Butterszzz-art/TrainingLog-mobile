@@ -927,8 +927,11 @@
       <div id="homeDashboardContent" class="home-dashboard"></div>
       <div class="home-zone" id="guideDiscoverCard"></div>
       <div class="home-zone home-zone--modes">
-        <div id="vacationModeCard"></div>
-        <div id="sickModeCard"></div>
+        <div class="mx-kicker hm-break-kicker">Take a break</div>
+        <div class="pod hm-break">
+          <div id="vacationModeCard"></div>
+          <div id="sickModeCard"></div>
+        </div>
       </div>
     </section>
 
@@ -1440,16 +1443,20 @@
 
     <!-- ══ Sub-view: Streaks ══════════════════════════════════════ -->
     <div id="logSub_streaks" class="log-subview">
-      <div style="padding:10px;">
-        <div id="training-calendar" class="slide-up"></div>
+      <div class="sk-page">
+        <!-- Workout streak hero (updateStreakCounter) -->
+        <div id="streakCounter" class="pod pod--hero mx-pod sk-hero"></div>
 
-        <div id="progressComponents" style="margin-top:10px;">
+        <div id="training-calendar" class="pod mx-pod sk-cal"></div>
+
+        <!-- updateProgressBar() still writes "% of PR" here while you log; it
+             was never useful on this page, so it stays mounted but hidden. -->
+        <div id="progressComponents" hidden>
           <div id="progressBar" class="progress-bar"><div id="progressFill" class="progress-bar-fill"></div></div>
           <div id="progressText" class="progress-text"></div>
-          <div id="streakCounter" class="streak-counter"></div>
         </div>
 
-        <div id="gamificationCard" class="gamification-panel gamification-card-shell" style="margin-top:12px;"></div>
+        <div id="gamificationCard" class="gamification-panel gamification-card-shell sk-level"></div>
         <div id="gamificationLogMiniSummary" class="gamification-mini-summary" style="margin-top:10px;"></div>
 
         <!-- PR Board — populated by pr-tracker.js -->
@@ -3830,21 +3837,37 @@
       <button class="pill active" onclick="showTab('sleepTab')">Sleep</button>
       <button class="pill" onclick="showTab('cardioTab')">Cardio</button>
     </div>
-  <h2>Sleep</h2>
   <div id="sleepTabContent">
 
+    <!-- Stats summary -->
+    <div class="sleep-stats" id="sleepStats">
+      <div class="pod sleep-stat-card">
+        <div class="mx-lbl">Avg sleep</div>
+        <div class="sleep-stat-value sleep-stat-value--accent" id="sleepAvgDuration">—</div>
+      </div>
+      <div class="pod sleep-stat-card">
+        <div class="mx-lbl">Quality</div>
+        <div class="sleep-stat-value" id="sleepAvgQuality">—</div>
+      </div>
+      <div class="pod sleep-stat-card">
+        <div class="mx-lbl">Streak</div>
+        <div class="sleep-stat-value"><span id="sleepStreak">0</span><small>days</small></div>
+      </div>
+    </div>
+
     <!-- AI insight (populated after enough data) -->
-    <div id="sleepAiCard" class="sleep-ai-card" style="display:none;">
+    <div id="sleepAiCard" class="pod mx-pod sleep-ai-card" style="display:none;">
       <div class="sleep-ai-header">
-        <span class="ui-icon" data-icon="brain"></span><span>AI Sleep Insight</span>
+        <span class="ui-icon" data-icon="brain"></span><span class="mx-kicker">AI sleep insight</span>
       </div>
       <div class="sleep-ai-body" id="sleepAiBody">Analysing your sleep patterns…</div>
       <button class="sleep-ai-btn" id="sleepAiBtn" onclick="requestSleepInsight()">Analyse My Sleep</button>
     </div>
 
     <!-- Sleep score (Activity Sync only — hidden entirely for manual-only users) -->
-    <div id="sleepScoreCard" class="sleep-score-card" style="display:none;">
+    <div id="sleepScoreCard" class="pod mx-pod sleep-score-card" style="display:none;">
       <div class="sleep-score-badge">
+        <span class="mx-kicker">Sleep score</span>
         <span id="sleepScoreValue" class="sleep-score-value">—</span>
         <span id="sleepScoreLabel" class="sleep-score-label">—</span>
       </div>
@@ -3852,85 +3875,81 @@
       <div class="sleep-score-disclaimer">Estimated from your synced sleep stages — not an official score.</div>
     </div>
 
-    <!-- Stats summary -->
-    <div class="sleep-stats" id="sleepStats">
-      <div class="sleep-stat-card">
-        <div class="sleep-stat-value" id="sleepAvgDuration">—</div>
-        <div class="sleep-stat-label">Avg Duration</div>
-      </div>
-      <div class="sleep-stat-card">
-        <div class="sleep-stat-value" id="sleepAvgQuality">—</div>
-        <div class="sleep-stat-label">Avg Quality</div>
-      </div>
-      <div class="sleep-stat-card">
-        <div class="sleep-stat-value" id="sleepStreak">0</div>
-        <div class="sleep-stat-label">Day Streak</div>
-      </div>
-    </div>
-
     <!-- Log form -->
-    <div class="sleep-log-card">
-      <h3>Log Sleep</h3>
-      <div class="sleep-form-row">
-        <label>
-          Date
-          <input type="date" id="sleepDate">
+    <div class="pod mx-pod sleep-log-card">
+      <div class="sleep-log-head">
+        <h3 class="pod-title">Log sleep</h3>
+        <label class="sleep-date-chip" for="sleepDate">
+          <span class="ui-icon" data-icon="calendar"></span>
+          <input type="date" id="sleepDate" aria-label="Night of" onclick="this.showPicker?.()">
         </label>
-        <label>&nbsp;</label>
       </div>
-      <div class="sleep-form-row" id="sleepTimesEditableRow">
-        <label>
-          Bedtime
-          <input type="time" id="sleepBedtime" value="22:30">
-        </label>
-        <label>
-          Wake time
-          <input type="time" id="sleepWakeTime" value="06:30">
-        </label>
+
+      <div class="mx-grid2" id="sleepTimesEditableRow">
+        <div class="mx-field">
+          <label class="mx-lbl" for="sleepBedtime">Bedtime</label>
+          <div class="mx-well mx-well--num sleep-time-well"><input type="time" id="sleepBedtime" value="22:30" onclick="this.showPicker?.()"></div>
+        </div>
+        <div class="mx-field">
+          <label class="mx-lbl" for="sleepWakeTime">Wake</label>
+          <div class="mx-well mx-well--num sleep-time-well"><input type="time" id="sleepWakeTime" value="06:30" onclick="this.showPicker?.()"></div>
+        </div>
+      </div>
+      <div class="sleep-duration-preview" id="sleepDurationRow" aria-live="polite">
+        <span class="mx-lbl">Time asleep</span>
+        <span class="sleep-duration-value" id="sleepDurationPreview">8h 00m</span>
       </div>
       <div id="sleepTimesSyncedRow" class="sleep-synced-times" style="display:none;">
         <span id="sleepSyncedTimesText"></span>
-        <span class="sleep-synced-badge">Synced from your device</span>
+        <span class="mx-tag mx-tag--hi sleep-synced-badge">Synced from your device</span>
       </div>
 
-      <div class="sleep-quality-row">
-        <span class="sleep-quality-label">Quality</span>
-        <div class="sleep-quality-stars" id="sleepQualityStars">
-          <button class="sleep-star" data-val="1">1</button>
-          <button class="sleep-star" data-val="2">2</button>
-          <button class="sleep-star active" data-val="3">3</button>
-          <button class="sleep-star" data-val="4">4</button>
-          <button class="sleep-star" data-val="5">5</button>
+      <div class="mx-field">
+        <span class="mx-lbl" id="sleepQualityLbl">Quality</span>
+        <div class="mx-tabs sleep-quality-stars" id="sleepQualityStars" role="radiogroup" aria-labelledby="sleepQualityLbl">
+          <button type="button" class="sleep-star" data-val="1" role="radio" aria-checked="false">1</button>
+          <button type="button" class="sleep-star" data-val="2" role="radio" aria-checked="false">2</button>
+          <button type="button" class="sleep-star active" data-val="3" role="radio" aria-checked="true">3</button>
+          <button type="button" class="sleep-star" data-val="4" role="radio" aria-checked="false">4</button>
+          <button type="button" class="sleep-star" data-val="5" role="radio" aria-checked="false">5</button>
         </div>
       </div>
 
-      <div class="sleep-tags" id="sleepTags">
-        <button class="sleep-tag" data-tag="caffeine"><span class="ui-icon" data-icon="coffee"></span> Caffeine</button>
-        <button class="sleep-tag" data-tag="stress"><span class="ui-icon" data-icon="brain"></span> Stress</button>
-        <button class="sleep-tag" data-tag="nap"><span class="ui-icon" data-icon="moon"></span> Nap</button>
-        <button class="sleep-tag" data-tag="alcohol"><span class="ui-icon" data-icon="wine"></span> Alcohol</button>
-        <button class="sleep-tag" data-tag="screens"><span class="ui-icon" data-icon="smartphone"></span> Screens</button>
-        <button class="sleep-tag" data-tag="exercise"><span class="ui-icon" data-icon="dumbbell"></span> Late Exercise</button>
+      <div class="mx-field">
+        <span class="mx-lbl">Factors <em>optional</em></span>
+        <div class="mx-tags sleep-tags" id="sleepTags">
+          <button type="button" class="mx-tag sleep-tag" data-tag="caffeine"><span class="ui-icon" data-icon="coffee"></span>Caffeine</button>
+          <button type="button" class="mx-tag sleep-tag" data-tag="stress"><span class="ui-icon" data-icon="brain"></span>Stress</button>
+          <button type="button" class="mx-tag sleep-tag" data-tag="nap"><span class="ui-icon" data-icon="moon"></span>Nap</button>
+          <button type="button" class="mx-tag sleep-tag" data-tag="alcohol"><span class="ui-icon" data-icon="wine"></span>Alcohol</button>
+          <button type="button" class="mx-tag sleep-tag" data-tag="screens"><span class="ui-icon" data-icon="smartphone"></span>Screens</button>
+          <button type="button" class="mx-tag sleep-tag" data-tag="exercise"><span class="ui-icon" data-icon="dumbbell"></span>Late training</button>
+        </div>
       </div>
 
-      <textarea class="sleep-notes" id="sleepNotes" placeholder="Optional notes…"></textarea>
-      <button class="sleep-save-btn" id="sleepSaveBtn" onclick="saveSleepEntry()">Save Sleep Log</button>
+      <div class="mx-well mx-well--area"><textarea id="sleepNotes" placeholder="Notes…" aria-label="Notes"></textarea></div>
+      <button type="button" class="cta-capsule sleep-save-btn" id="sleepSaveBtn" onclick="saveSleepEntry()">
+        <span>Save sleep</span>
+        <span class="cta-capsule-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></span>
+      </button>
     </div>
 
     <!-- Trend chart -->
-    <div class="sleep-chart-card">
-      <h3>Sleep Trend</h3>
-      <div class="sleep-chart-period" id="sleepChartPeriod">
-        <button class="sleep-period-btn active" data-days="7">7d</button>
-        <button class="sleep-period-btn" data-days="14">14d</button>
-        <button class="sleep-period-btn" data-days="30">30d</button>
+    <div class="pod mx-pod sleep-chart-card">
+      <div class="sleep-card-head">
+        <h3 class="pod-title">Trend</h3>
+        <div class="mx-segs sleep-chart-period" id="sleepChartPeriod">
+          <button type="button" class="sleep-period-btn active" data-days="7">7D</button>
+          <button type="button" class="sleep-period-btn" data-days="14">14D</button>
+          <button type="button" class="sleep-period-btn" data-days="30">30D</button>
+        </div>
       </div>
       <div class="sleep-bars" id="sleepBars"></div>
     </div>
 
     <!-- History -->
-    <div class="sleep-history-card">
-      <h3>Recent Logs</h3>
+    <div class="pod mx-pod sleep-history-card">
+      <h3 class="pod-title">Recent nights</h3>
       <div id="sleepHistoryList">
         <div class="sleep-empty">No sleep data yet — log your first night above.</div>
       </div>
@@ -16835,7 +16854,28 @@ function updateStreakCounter() {
   if (!el) return;
   const dates = JSON.parse(localStorage.getItem(`workoutDates_${currentUser}`)) || [];
   const streak = calculateStreak(dates);
-  el.textContent = `Current streak: ${streak} day${streak === 1 ? '' : 's'}`;
+  const best = Math.max(streak, longestDayRun(dates));
+  el.innerHTML = `
+    <div class="sk-hero-l">
+      <div class="mx-kicker">Workout streak</div>
+      <div class="sk-big">${streak}<small>${streak === 1 ? 'day' : 'days'}</small></div>
+      ${best > 0 ? `<div class="mx-tags"><span class="mx-tag mx-tag--hi">Best ${best}</span></div>` : ''}
+    </div>
+    <div class="sk-flame" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.3 1.6 1.2 2.5 2 2.5 0-3-1-5 1-8z"/></svg></div>`;
+}
+
+// Longest run of consecutive calendar days in a list of YYYY-MM-DD strings.
+function longestDayRun(dates) {
+  const days = [...new Set(dates.filter(d => typeof d === 'string'))].sort();
+  let best = 0, run = 0, prev = null;
+  days.forEach(d => {
+    const t = Date.parse(d + 'T00:00:00Z');
+    if (Number.isNaN(t)) return;
+    run = prev !== null && t - prev === 86400000 ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = t;
+  });
+  return best;
 }
 
 // ===== Training Progress Calendar =====
@@ -16946,92 +16986,66 @@ function renderTrainingCalendar(month, year) {
     if (w && typeof w.date === 'string' && isWorkoutCompleted(w)) completedDates.add(w.date);
   });
 
+  const monthDone = [...completedDates].filter(d => d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}-`)).length;
+  const go = (delta) => {
+    const d = new Date(year, month + delta, 1);
+    calendarMonth = d.getMonth();
+    calendarYear = d.getFullYear();
+    renderTrainingCalendar(calendarMonth, calendarYear);
+  };
+  const chev = (path) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+
   const header = document.createElement('div');
-  header.className = 'calendar-header';
-  header.style.display = 'flex';
-  header.style.justifyContent = 'space-between';
-  header.style.alignItems = 'center';
-  header.style.padding = '10px';
-
-  const prev = document.createElement('button');
-  prev.textContent = '<';
-  prev.onclick = () => {
-    const m = month === 0 ? 11 : month - 1;
-    const y = month === 0 ? year - 1 : year;
-    calendarMonth = m;
-    calendarYear = y;
-    renderTrainingCalendar(m, y);
-  };
-
-  const next = document.createElement('button');
-  next.textContent = '>';
-  next.onclick = () => {
-    const m = month === 11 ? 0 : month + 1;
-    const y = month === 11 ? year + 1 : year;
-    calendarMonth = m;
-    calendarYear = y;
-    renderTrainingCalendar(m, y);
-  };
-
-  const title = document.createElement('div');
-  title.textContent = firstDay.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  header.appendChild(prev);
-  header.appendChild(title);
-  header.appendChild(next);
+  header.className = 'sk-cal-head';
+  header.innerHTML = `
+    <div class="sk-cal-title">
+      <span class="sk-cal-month">${firstDay.toLocaleString('default', { month: 'long' })} <span>${year}</span></span>
+      <span class="mx-meta">${monthDone} session${monthDone === 1 ? '' : 's'}</span>
+    </div>
+    <div class="sk-cal-nav">
+      <button type="button" class="sk-cal-btn" data-cal-step="-1" aria-label="Previous month">${chev('M15 6l-6 6 6 6')}</button>
+      <button type="button" class="sk-cal-btn" data-cal-step="1" aria-label="Next month">${chev('M9 6l6 6-6 6')}</button>
+    </div>`;
+  header.querySelectorAll('[data-cal-step]').forEach(b => {
+    b.onclick = () => go(Number(b.dataset.calStep));
+  });
   cal.appendChild(header);
 
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-  const trHead = document.createElement('tr');
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
-    const th = document.createElement('th');
-    th.textContent = d;
-    trHead.appendChild(th);
+  const grid = document.createElement('div');
+  grid.className = 'sk-cal-grid';
+  ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(d => {
+    grid.insertAdjacentHTML('beforeend', `<div class="sk-cal-dow" aria-hidden="true">${d}</div>`);
   });
-  thead.appendChild(trHead);
-  table.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
-  let row = document.createElement('tr');
   for (let i = 0; i < firstDay.getDay(); i++) {
-    row.appendChild(document.createElement('td'));
+    grid.insertAdjacentHTML('beforeend', '<div class="sk-cal-day sk-cal-day--empty"></div>');
   }
 
   for (let day = 1; day <= lastDay.getDate(); day++) {
-    const current = new Date(year, month, day);
-    const str = current.toISOString().split('T')[0];
-    const td = document.createElement('td');
-    td.textContent = day;
+    // Local date, not toISOString(): that shifted every cell back a day in
+    // time zones ahead of UTC, so workouts showed on the following day.
+    const str = normalizeIsoDate(new Date(year, month, day));
     const isCompleted = completedDates.has(str);
     const isPlanned = plannedDates.has(str);
     const isMissed = isPlanned && !isCompleted && str < todayIso;
+    const state = isCompleted ? 'done' : isMissed ? 'missed' : isPlanned ? 'planned' : '';
+    const isToday = str === todayIso;
 
-    if (isCompleted) td.classList.add('calendar-completed');
-    if (isMissed) td.classList.add('calendar-missed');
-    if (isPlanned && !isMissed && !isCompleted) td.classList.add('calendar-planned');
-
-    if (str === todayIso) td.style.border = '2px solid var(--primary)';
-    td.onclick = () => goToDate(str);
-    row.appendChild(td);
-    if (current.getDay() === 6) {
-      tbody.appendChild(row);
-      row = document.createElement('tr');
-    }
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'sk-cal-day' + (state ? ` sk-cal-day--${state}` : '') + (isToday ? ' sk-cal-day--today' : '');
+    cell.textContent = day;
+    cell.setAttribute('aria-label', `${day}${state ? ', ' + (state === 'done' ? 'completed' : state) : ''}${isToday ? ', today' : ''}`);
+    cell.onclick = () => goToDate(str);
+    grid.appendChild(cell);
   }
-  if (row.children.length) {
-    while (row.children.length < 7) row.appendChild(document.createElement('td'));
-    tbody.appendChild(row);
-  }
-  table.appendChild(tbody);
-  cal.appendChild(table);
+  cal.appendChild(grid);
 
   const legend = document.createElement('div');
-  legend.className = 'calendar-legend';
+  legend.className = 'mx-tags sk-cal-legend';
   legend.innerHTML = `
-    <span class="calendar-legend-item"><span class="calendar-legend-swatch" style="background: rgba(46, 160, 67, 0.75);"></span>Completed</span>
-    <span class="calendar-legend-item"><span class="calendar-legend-swatch" style="background: rgba(119, 119, 119, 0.35);"></span>Missed planned</span>
-    <span class="calendar-legend-item"><span class="calendar-legend-swatch" style="border:2px solid rgba(255, 167, 38, 0.75);"></span>Planned upcoming</span>
+    <span class="mx-tag"><i class="sk-sw sk-sw--done"></i>Done</span>
+    <span class="mx-tag"><i class="sk-sw sk-sw--missed"></i>Missed</span>
+    <span class="mx-tag"><i class="sk-sw sk-sw--planned"></i>Planned</span>
   `;
   cal.appendChild(legend);
 }
@@ -19726,9 +19740,19 @@ window.renderSessionHistory = renderSessionHistory;
   }
 
   function fmtDuration(hours) {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
+    // Round total minutes first so 7.999h reads "8h 00m", not "7h 60m".
+    const total = Math.round(hours * 60);
+    const h = Math.floor(total / 60);
+    const m = total % 60;
     return h + 'h ' + (m < 10 ? '0' : '') + m + 'm';
+  }
+
+  // Local YYYY-MM-DD. toISOString() is UTC, which is the previous day for
+  // anyone ahead of UTC between midnight and their offset.
+  function localIso(d) {
+    const c = new Date(d);
+    c.setMinutes(c.getMinutes() - c.getTimezoneOffset());
+    return c.toISOString().slice(0, 10);
   }
 
   function fmtDateShort(dateStr) {
@@ -19745,10 +19769,22 @@ window.renderSessionHistory = renderSessionHistory;
   document.getElementById('sleepQualityStars')?.addEventListener('click', (e) => {
     const star = e.target.closest('.sleep-star');
     if (!star) return;
-    const val = Number(star.dataset.val);
     document.querySelectorAll('#sleepQualityStars .sleep-star').forEach(s => {
-      s.classList.toggle('active', Number(s.dataset.val) <= val);
+      const on = s === star;
+      s.classList.toggle('active', on);
+      s.setAttribute('aria-checked', on ? 'true' : 'false');
     });
+  });
+
+  // Live "time asleep" readout under the bedtime / wake inputs
+  function updateDurationPreview() {
+    const out = document.getElementById('sleepDurationPreview');
+    const bed = document.getElementById('sleepBedtime')?.value;
+    const wake = document.getElementById('sleepWakeTime')?.value;
+    if (out) out.textContent = bed && wake ? fmtDuration(calcDurationHours(bed, wake)) : '—';
+  }
+  ['sleepBedtime', 'sleepWakeTime'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateDurationPreview);
   });
 
   // Tags toggle
@@ -19770,7 +19806,7 @@ window.renderSessionHistory = renderSessionHistory;
   function initDateField() {
     const dateEl = document.getElementById('sleepDate');
     if (dateEl && !dateEl.value) {
-      dateEl.value = new Date().toISOString().slice(0, 10);
+      dateEl.value = localIso(new Date());
     }
   }
 
@@ -19785,6 +19821,8 @@ window.renderSessionHistory = renderSessionHistory;
     if (!editableRow || !syncedRow) return;
 
     const entry = getSleepLog().find(e => e.date === date);
+    const durationRow = document.getElementById('sleepDurationRow');
+    if (durationRow) durationRow.style.display = entry?.synced ? 'none' : '';
     if (entry?.synced) {
       editableRow.style.display = 'none';
       syncedRow.style.display = '';
@@ -19804,8 +19842,7 @@ window.renderSessionHistory = renderSessionHistory;
       return;
     }
 
-    const activeStars = document.querySelectorAll('#sleepQualityStars .sleep-star.active');
-    const quality = activeStars.length;
+    const quality = Number(document.querySelector('#sleepQualityStars .sleep-star.active')?.dataset.val) || 3;
     const tags = [...document.querySelectorAll('#sleepTags .sleep-tag.active')].map(t => t.dataset.tag);
     const notes = document.getElementById('sleepNotes')?.value?.trim() || '';
 
@@ -19868,8 +19905,11 @@ window.renderSessionHistory = renderSessionHistory;
 
     const avgDur = recent.reduce((s, e) => s + e.duration, 0) / recent.length;
     const avgQual = recent.reduce((s, e) => s + (e.quality || 3), 0) / recent.length;
-    if (avgDurEl) avgDurEl.textContent = fmtDuration(avgDur);
-    if (avgQualEl) avgQualEl.textContent = avgQual.toFixed(1) + '/5';
+    if (avgDurEl) {
+      const mins = Math.round(avgDur * 60);
+      avgDurEl.innerHTML = Math.floor(mins / 60) + '<small>h</small> ' + String(mins % 60).padStart(2, '0') + '<small>m</small>';
+    }
+    if (avgQualEl) avgQualEl.innerHTML = avgQual.toFixed(1) + '<small>/5</small>';
 
     // Streak: consecutive days logged backwards from today
     let streak = 0;
@@ -19877,7 +19917,7 @@ window.renderSessionHistory = renderSessionHistory;
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const ds = d.toISOString().slice(0, 10);
+      const ds = localIso(d);
       if (log.find(e => e.date === ds)) streak++;
       else break;
     }
@@ -19896,7 +19936,7 @@ window.renderSessionHistory = renderSessionHistory;
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const ds = d.toISOString().slice(0, 10);
+      const ds = localIso(d);
       const entry = log.find(e => e.date === ds);
       bars.push({ date: ds, duration: entry?.duration || 0, quality: entry?.quality || 0 });
     }
@@ -19964,7 +20004,7 @@ window.renderSessionHistory = renderSessionHistory;
   function renderSleepScoreCard() {
     const card = document.getElementById('sleepScoreCard');
     if (!card) return;
-    const date = document.getElementById('sleepDate')?.value || new Date().toISOString().slice(0, 10);
+    const date = document.getElementById('sleepDate')?.value || localIso(new Date());
     const detail = getSyncedSleepDetail(date);
     if (!detail) {
       card.style.display = 'none';
@@ -20040,6 +20080,7 @@ window.renderSessionHistory = renderSessionHistory;
   function renderSleepTab() {
     initDateField();
     updateSyncedTimesDisplay();
+    updateDurationPreview();
     renderSleepScoreCard();
     renderSleepStats();
     renderSleepChart(7);

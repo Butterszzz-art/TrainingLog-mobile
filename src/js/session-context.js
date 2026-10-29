@@ -76,22 +76,33 @@
     const el = document.getElementById('vacationModeCard');
     if (!el) return;
     const v = getVacationMode();
-    el.innerHTML = `
-      <div class="vm-card ${v.active ? 'vm-card--active' : ''}">
-        <div class="vm-card-left">
-          <span class="vm-icon">${v.active ? '🏖️' : '🏋️'}</span>
-          <div>
-            <span class="vm-title">${v.active ? 'Vacation mode on' : 'Vacation mode'}</span>
-            ${v.active
-              ? `<span class="vm-sub">Streak &amp; program paused since ${v.since}</span>`
-              : `<span class="vm-sub">Pause streak &amp; program tracking</span>`}
-          </div>
-        </div>
-        <button class="vm-toggle ${v.active ? 'vm-toggle--on' : ''}"
-                onclick="window.toggleVacationMode()">
-          ${v.active ? 'Resume' : 'Go on vacation'}
-        </button>
+    el.innerHTML = breakRow({
+      cls: 'vm-card' + (v.active ? ' vm-card--active' : ''),
+      icon: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+      title: 'Vacation mode',
+      sub: v.active ? `Streak and program paused since ${fmtSince(v.since)}` : 'Pauses your streak and program',
+      on: v.active,
+      action: 'window.toggleVacationMode()'
+    });
+  }
+
+  // Shared row for the Home "Take a break" pod: icon, label, on/off switch.
+  function breakRow({ cls, icon, title, sub, on, action }) {
+    return `
+      <div class="${cls} hm-break-row">
+        <span class="hm-break-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icon}"/></svg></span>
+        <span class="hm-break-l">
+          <span class="vm-title">${title}</span>
+          <span class="vm-sub">${sub}</span>
+        </span>
+        <button type="button" class="mx-switch" role="switch" aria-checked="${on ? 'true' : 'false'}" aria-label="${title}" onclick="${action}"></button>
       </div>`;
+  }
+
+  function fmtSince(iso) {
+    if (!iso) return 'today';
+    const d = new Date(iso + 'T00:00:00');
+    return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
   function toggleVacationMode() {
@@ -145,19 +156,20 @@
     const el = document.getElementById('sickModeCard');
     if (!el) return;
     const s = getSickMode();
-    const days = s.active && s.since ? Math.floor((Date.now() - new Date(s.since).getTime()) / 86400000) : 0;
-    el.innerHTML = '<div class="sm-card ' + (s.active ? 'sm-card--active' : '') + '">'
-      + '<div class="vm-card-left">'
-      + '<span class="vm-icon">' + (s.active ? '🤒' : '💪') + '</span>'
-      + '<div>'
-      + '<span class="vm-title">' + (s.active ? 'Sick Mode — Day ' + days : 'Feeling unwell?') + '</span>'
-      + '<span class="vm-sub">' + (s.active
-        ? 'Streaks, XP & missions paused. Bodyweight & macros still tracked.'
-        : 'Pause progress tracking while you recover') + '</span>'
-      + '</div></div>'
-      + '<button class="vm-toggle ' + (s.active ? 'sm-toggle--on' : '') + '" onclick="window.toggleSickMode()">'
-      + (s.active ? 'I\'m better!' : 'I\'m sick') + '</button>'
-      + '</div>';
+    // Day 1 is the day you switched it on.
+    const days = s.active && s.since
+      ? Math.floor((Date.now() - new Date(s.since + 'T00:00:00').getTime()) / 86400000) + 1
+      : 0;
+    el.innerHTML = breakRow({
+      cls: 'sm-card' + (s.active ? ' sm-card--active' : ''),
+      icon: 'M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0zM12 9v7',
+      title: s.active ? `Sick mode · day ${days}` : 'Sick mode',
+      sub: s.active
+        ? 'Streak, XP and missions paused. Bodyweight and macros still tracked.'
+        : 'Pauses progress while you recover',
+      on: s.active,
+      action: 'window.toggleSickMode()'
+    });
   }
 
   function toggleSickMode() {
