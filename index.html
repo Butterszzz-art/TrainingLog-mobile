@@ -3570,10 +3570,83 @@
             </div>
             <p class="recovery-hint">Tap a muscle to isolate it below</p>
             <div class="recovery-list" id="recoveryTableBody"></div>
+
+            <!-- Weekly set targets used by the map above (moved from Settings). -->
+            <details class="mx-disclosure" id="muscleTargetsDetails">
+              <summary>Weekly set targets</summary>
+              <p class="mx-disclosure-note">Sets per week for each muscle. Leave the defaults if you're not sure.</p>
+              <div class="profile-field-grid mx-field-grid" id="muscleTargetsGrid">
+                <label>Chest<input type="number" id="muscleTarget_chest" min="0" max="24" step="1"></label>
+                <label>Back<input type="number" id="muscleTarget_back" min="0" max="28" step="1"></label>
+                <label>Shoulders<input type="number" id="muscleTarget_shoulders" min="0" max="24" step="1"></label>
+                <label>Traps<input type="number" id="muscleTarget_traps" min="0" max="18" step="1"></label>
+                <label>Biceps<input type="number" id="muscleTarget_biceps" min="0" max="22" step="1"></label>
+                <label>Triceps<input type="number" id="muscleTarget_triceps" min="0" max="20" step="1"></label>
+                <label>Forearms<input type="number" id="muscleTarget_forearms" min="0" max="18" step="1"></label>
+                <label>Quads<input type="number" id="muscleTarget_quads" min="0" max="24" step="1"></label>
+                <label>Hamstrings<input type="number" id="muscleTarget_hamstrings" min="0" max="20" step="1"></label>
+                <label>Glutes<input type="number" id="muscleTarget_glutes" min="0" max="20" step="1"></label>
+                <label>Calves<input type="number" id="muscleTarget_calves" min="0" max="22" step="1"></label>
+                <label>Adductors<input type="number" id="muscleTarget_adductors" min="0" max="14" step="1"></label>
+                <label>Abductors<input type="number" id="muscleTarget_abductors" min="0" max="14" step="1"></label>
+                <label>Abs<input type="number" id="muscleTarget_abs" min="0" max="22" step="1"></label>
+              </div>
+              <div class="mx-disclosure-actions">
+                <button type="button" id="saveMuscleTargetsButton">Save targets</button>
+                <button type="button" id="resetMuscleTargetsButton" class="secondary">Reset to defaults</button>
+              </div>
+              <div id="muscleTargetsFeedback" class="mx-disclosure-note"></div>
+            </details>
           </div>
           <div id="bodybuildingProgressPanel"></div>
           <div id="goalBar" style="margin-top:10px;"></div>
           <div id="goalProgressList" style="margin-top:10px;"></div>
+
+          <!-- Add a SMART goal (moved from Settings). Submit handler:
+               submitSmartGoalForm, bound by initSmartGoalForm(). -->
+          <details class="mx-disclosure" id="smartGoalDetails">
+            <summary>Add a goal</summary>
+            <form id="smartGoalForm">
+              <label for="goalTitle">Goal</label>
+              <input id="goalTitle" type="text" placeholder="Squat 150 kg by 1 June" required>
+
+              <label for="goalExercise">Exercise</label>
+              <input id="goalExercise" type="text" placeholder="Squat" required>
+
+              <div class="mx-field-grid mx-field-grid--3">
+                <div>
+                  <label for="goalStartValue">Now</label>
+                  <input id="goalStartValue" type="number" min="0" step="0.1" placeholder="120" required>
+                </div>
+                <div>
+                  <label for="goalTargetValue">Target</label>
+                  <input id="goalTargetValue" type="number" min="0" step="0.1" placeholder="150" required>
+                </div>
+                <div>
+                  <label for="goalDueDate">By</label>
+                  <input id="goalDueDate" type="date" required>
+                </div>
+              </div>
+
+              <details class="mx-disclosure mx-disclosure--inner">
+                <summary>Plan it out (optional)</summary>
+                <label for="goalSpecific">What exactly will you achieve?</label>
+                <textarea id="goalSpecific" rows="2"></textarea>
+                <label for="goalMeasurable">How will you track it?</label>
+                <textarea id="goalMeasurable" rows="2"></textarea>
+                <label for="goalAchievable">Why is it realistic?</label>
+                <textarea id="goalAchievable" rows="2"></textarea>
+                <label for="goalRelevant">Why does it matter?</label>
+                <textarea id="goalRelevant" rows="2"></textarea>
+                <label for="goalTimeBound">What's the deadline plan?</label>
+                <textarea id="goalTimeBound" rows="2"></textarea>
+              </details>
+
+              <label class="mx-check"><input id="goalSyncBackend" type="checkbox"> Sync to your account</label>
+              <button type="submit">Save goal</button>
+            </form>
+            <div id="smartGoalFeedback" class="mx-disclosure-note"></div>
+          </details>
           <div id="coachCorner" style="margin-top:10px;"></div>
         </section>
       </div>
@@ -3783,17 +3856,13 @@
 <div id="settingsTab" class="tab-content">
   <h2 class="pod-title" style="font-size:20px;padding:0 6px;">Settings</h2>
 
-  <!-- Profile hero + real preference summary (renderSettingsHero()).
-       The full settings form below (#settingsFormContainer) is where
-       everything actually gets changed — this is just the mockup's
-       top-of-screen summary, wired to the same real prefs. -->
+  <!-- Settings home: profile pod + six tiles (renderSettingsHero()). Each tile
+       opens a page from src/html/settings.html inside #settingsFormContainer;
+       while one is open, #settingsTab has .st-detail-open and the home hides.
+       The training profile card now lives on the Training page. -->
   <div id="settingsHero" style="padding:0 6px;"></div>
 
-  <!-- Training profile (archetype: rep ranges, rest, focus, AI summary).
-       Lived on Home; it's reference info, so it sits with your settings. -->
-  <div id="archetypeProfileCard" class="settings-profile-card"></div>
-
-  <div id="settingsFormContainer" class="panel"></div>
+  <div id="settingsFormContainer"></div>
 
   <!-- Your Coach: pending invite (Accept), linked coach + whatever they've
        assigned (program/macro summary), and their notes to you. Populated
@@ -5471,6 +5540,9 @@ function showTab(tabName) {
       if (typeof renderGoalProgressList === 'function') {
         renderGoalProgressList();
       }
+      // Goal form and weekly set targets live on this tab (moved from Settings).
+      if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
+      if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
       if (typeof window.renderGamificationUI === 'function' && currentUser) {
         window.renderGamificationUI(currentUser);
       }
@@ -5485,7 +5557,6 @@ function showTab(tabName) {
       ensureProfileTabRendered();
       break;
     case 'settingsTab': {
-      if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
       if (!document.getElementById('settingsFormContainer')) {
         console.warn('[Tabs:showTab] Missing #settingsFormContainer container.');
         break;
@@ -5528,34 +5599,7 @@ function showTab(tabName) {
       renderSubscriptionPanel();
       loadReferralPanel();
       if (typeof renderSettingsHero === 'function') renderSettingsHero();
-
-      // Wire settings sub-tabs via delegation (idempotent)
-      const stc = document.getElementById('settingsFormContainer');
-      if (stc && !stc._subtabsWired) {
-        stc._subtabsWired = true;
-        stc.addEventListener('click', e => {
-          const btn = e.target.closest('.settings-subtab');
-          if (!btn) return;
-          stc.querySelectorAll('.settings-subtab').forEach(b => b.classList.remove('active'));
-          stc.querySelectorAll('.settings-subview').forEach(v => v.classList.add('hidden'));
-          btn.classList.add('active');
-          const key = btn.dataset.settingsSubtab;
-          const targetEl = document.getElementById('settingsSub' + key.charAt(0).toUpperCase() + key.slice(1));
-          if (targetEl) targetEl.classList.remove('hidden');
-          if (key === 'app') {
-            applyTrainingModeClasses(getTrainingMode());
-            const modeDesc = document.getElementById('modeDescription');
-            if (modeDesc) {
-              const modeDescMap = {
-                bodybuilding: 'Shows posing tracker, contest prep timeline, and physique-focused tools.',
-                powerlifting: 'Shows plate calculator, 1RM tracker, and meet prep timeline.',
-                athlete: 'Shows CrossFit tracker and general fitness tools.',
-              };
-              modeDesc.textContent = modeDescMap[getTrainingMode()] || '';
-            }
-          }
-        });
-      }
+      // Tile → page navigation lives in src/js/settings.js (openSettingsPage).
       break;
     }
   }
@@ -6141,24 +6185,21 @@ function removeSet(indexToRemove) {
   if (typeof refreshLogButtonLabel === 'function') refreshLogButtonLabel();
 }
 
-// Shortcut from the Log tab straight to Settings → Advanced → custom exercise
-// form, with whatever was typed in the exercise field prefilled.
+// Shortcut from the Log tab straight to Settings → Training → Custom
+// exercises, with whatever was typed in the exercise field prefilled.
 function openCustomExerciseCreator(prefillName) {
   const name = String(prefillName || '').trim();
   showTab('settingsTab');
   let tries = 0;
-  (function openAdvanced() {
+  (function openExercises() {
     // settings.html is fetched async on first open — wait for it.
-    const subtab = document.querySelector('.settings-subtab[data-settings-subtab="advanced"]');
     const nameInput = document.getElementById('customExerciseName');
-    if (!subtab || !nameInput) {
-      if (++tries < 40) setTimeout(openAdvanced, 100);
+    if (!nameInput || typeof window.openSettingsPage !== 'function') {
+      if (++tries < 40) setTimeout(openExercises, 100);
       return;
     }
-    subtab.click();
+    window.openSettingsPage('exercises');
     if (name) nameInput.value = name;
-    const section = nameInput.closest('section') || nameInput;
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     // Name typed already → jump to the muscle group; otherwise to the name.
     const groupSelect = document.getElementById('customExerciseMuscleGroup');
     (name && groupSelect ? groupSelect : nameInput).focus({ preventScroll: true });
@@ -16500,7 +16541,7 @@ function renderGoalBar() {
   const bar = document.getElementById('goalBar');
   if (!bar) return;
   if (!Array.isArray(goals) || goals.length === 0) {
-    bar.innerHTML = '<small style="color:var(--text-muted);">No SMART goals yet. Add one in Settings → SMART Goals.</small>';
+    bar.innerHTML = '<small style="color:var(--text-muted);">No goals yet. Add one under Goal progress below.</small>';
     return;
   }
   const topGoal = goals[0];
@@ -16658,7 +16699,7 @@ function renderGoalProgressList() {
   const workouts = getProgressWorkoutsSync();
 
   if (!Array.isArray(goals) || goals.length === 0) {
-    list.innerHTML = '<h3>Goal Progress</h3><p style="color:var(--text-muted);">No SMART goals yet. Add one in Settings.</p>';
+    list.innerHTML = '<h3>Goal Progress</h3><p style="color:var(--text-muted);">No goals yet. Add one below.</p>';
     return;
   }
 
@@ -16681,10 +16722,17 @@ function renderGoalProgressList() {
   list.innerHTML = `<h3>Goal Progress</h3><div class="goal-card-list">${cards}</div>`;
 }
 
+// The goal form lives on Insights → Charts, under Goal progress.
 function promptGoal() {
-  showTab('settingsTab');
+  showTab('progressTab');
+  document.querySelector('#progressSubNav [data-psub="charts"]')?.click();
+  const details = document.getElementById('smartGoalDetails');
+  if (details) {
+    details.open = true;
+    details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   const firstInput = document.getElementById('goalTitle');
-  if (firstInput) firstInput.focus();
+  if (firstInput) firstInput.focus({ preventScroll: true });
 }
 
 function showCoachInsights() {

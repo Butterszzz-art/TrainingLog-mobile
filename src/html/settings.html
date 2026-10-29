@@ -1,431 +1,293 @@
-<div id="settingsPage" class="settings-page profile-hub-page">
-  <!-- 4 compact scrollable mini-tabs -->
-  <div class="settings-subtabs">
-    <button type="button" class="settings-subtab active" data-settings-subtab="profile">Profile</button>
-    <button type="button" class="settings-subtab" data-settings-subtab="goals">Goals</button>
-    <button type="button" class="settings-subtab" data-settings-subtab="nutrition">Nutrition</button>
-    <button type="button" class="settings-subtab" data-settings-subtab="app">App</button>
-    <button type="button" class="settings-subtab" data-settings-subtab="advanced">Advanced</button>
-  </div>
-
-  <!-- ── PROFILE + APP share one form so saveSettings() can read all fields ── -->
-  <form id="settingsForm" class="profile-hub-form">
+<!--
+  Settings detail pages. The Settings home (profile pod + tiles) is drawn by
+  settings-hero.js; each tile opens one of the pages below via
+  openSettingsPage(). Field IDs are unchanged from the old sub-tab layout so
+  saveSettings(), coach mode, AI consent, activity sync etc. keep working.
+  Every field in #settingsForm saves on change (see bindSettingsAutosave).
+-->
+<div id="settingsPage" class="settings-page">
+  <form id="settingsForm" class="st-form" novalidate>
 
     <!-- ── PROFILE ── -->
-    <div id="settingsSubProfile" class="settings-subview">
+    <section class="st-page" data-st-page="profile" aria-labelledby="stProfileTitle" hidden>
+      <header class="st-head">
+        <button type="button" class="st-back" data-st-back aria-label="Back to settings"></button>
+        <h3 id="stProfileTitle" class="st-title">Profile</h3>
+        <span class="st-saved" aria-live="polite"></span>
+      </header>
 
-      <section class="panel profile-section" aria-labelledby="sAthleteInfoHeading">
-        <h3 id="sAthleteInfoHeading">Athlete Info</h3>
+      <div class="mx-kicker st-kicker">About you</div>
+      <div class="pod st-group">
+        <button type="button" class="st-row st-row--btn" data-profile-edit>
+          <span class="st-label">Photo and bio</span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+        <label class="st-row" for="athleteInfoName"><span class="st-label">Name</span>
+          <input id="athleteInfoName" name="athleteInfoName" type="text" placeholder="Your name" autocomplete="name"></label>
+        <label class="st-row" for="profileAthleteArchetype"><span class="st-label">Archetype</span>
+          <select id="profileAthleteArchetype" name="profileAthleteArchetype">
+            <option value="bodybuilder">Bodybuilder</option>
+            <option value="powerlifter">Powerlifter</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="recreational">Recreational</option>
+          </select></label>
+        <label class="st-row" for="athleteInfoDivision"><span class="st-label">Division</span>
+          <input id="athleteInfoDivision" name="athleteInfoDivision" type="text" placeholder="Classic physique"></label>
+      </div>
 
-        <label for="profileAthleteArchetype">Archetype</label>
-        <select id="profileAthleteArchetype" name="profileAthleteArchetype">
-          <option value="bodybuilder">Bodybuilder</option>
-          <option value="powerlifter">Powerlifter</option>
-          <option value="hybrid">Hybrid</option>
-          <option value="recreational">Recreational</option>
-        </select>
+      <div class="mx-kicker st-kicker">Body</div>
+      <div class="pod st-group">
+        <label class="st-row" for="athleteInfoCurrentWeight"><span class="st-label">Weight</span>
+          <input id="athleteInfoCurrentWeight" name="athleteInfoCurrentWeight" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0.0"></label>
+        <label class="st-row" for="athleteInfoHeight"><span class="st-label">Height</span>
+          <input id="athleteInfoHeight" name="athleteInfoHeight" type="text" placeholder="178 cm"></label>
+      </div>
 
-        <label for="athleteInfoName">Name</label>
-        <input id="athleteInfoName" name="athleteInfoName" type="text" placeholder="Athlete name">
-
-        <label for="athleteInfoCurrentWeight">Weight</label>
-        <input id="athleteInfoCurrentWeight" name="athleteInfoCurrentWeight" type="number" min="0" step="0.1" placeholder="0.0">
-
-        <label for="athleteInfoHeight">Height</label>
-        <input id="athleteInfoHeight" name="athleteInfoHeight" type="text" placeholder="e.g. 5'10&quot; or 178 cm">
-
-        <label for="athleteInfoDivision">Division / Class</label>
-        <input id="athleteInfoDivision" name="athleteInfoDivision" type="text" placeholder="Classic Physique, 83kg, etc.">
-      </section>
-
-      <section class="panel profile-section" aria-labelledby="sPhasePrepHeading">
-        <h3 id="sPhasePrepHeading">Phase / Prep</h3>
-
-        <label for="profileCurrentPhase">Current phase</label>
-        <select id="profileCurrentPhase" name="profileCurrentPhase">
-          <option value="improvement">Improvement Season</option>
-          <option value="mini_cut">Mini Cut</option>
-          <option value="contest_prep">Contest Prep</option>
-          <option value="peak_week">Peak Week</option>
-          <option value="show_day">Show Day</option>
-          <option value="post_show">Post-Show</option>
-          <option value="meet_prep">Meet Prep</option>
-          <option value="off_season">Off Season</option>
-        </select>
-
-        <label for="profileStartDate">Phase start</label>
-        <input id="profileStartDate" name="profileStartDate" type="date">
-
-        <label for="profileShowDate">Show / Meet date</label>
-        <input id="profileShowDate" name="profileShowDate" type="date">
-
-        <label for="profileTargetStageWeight">Target competition weight</label>
-        <input id="profileTargetStageWeight" name="profileTargetStageWeight" type="number" min="0" step="0.1" placeholder="0.0">
-
-        <label for="profileCheckInDay">Check-in day</label>
-        <select id="profileCheckInDay" name="profileCheckInDay">
-          <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
-          <option>Thursday</option><option>Friday</option><option>Saturday</option>
-          <option selected>Sunday</option>
-        </select>
-
-        <label for="profileCardioBaseline">Cardio baseline</label>
-        <input id="profileCardioBaseline" name="profileCardioBaseline" type="text" placeholder="e.g. 4×25 min LISS">
-
-        <label for="profilePosingFrequency">Posing frequency</label>
-        <input id="profilePosingFrequency" name="profilePosingFrequency" type="text" placeholder="e.g. 5 sessions/week">
-      </section>
-
-      <section class="panel profile-section" aria-labelledby="sGoalsTargetsHeading">
-        <h3 id="sGoalsTargetsHeading">Targets</h3>
-
-        <label for="profileMacroTargets">Macro targets</label>
-        <input id="profileMacroTargets" name="profileMacroTargets" type="text" placeholder="e.g. 220P / 260C / 55F">
-
-        <label for="profileStepsTarget">Steps target</label>
-        <input id="profileStepsTarget" name="profileStepsTarget" type="number" min="0" step="100" placeholder="10000">
-
-        <label for="profileCardioTarget">Cardio target</label>
-        <input id="profileCardioTarget" name="profileCardioTarget" type="text" placeholder="e.g. 5×30 min/week">
-
-        <label for="profileSleepTarget">Sleep target (hrs)</label>
-        <input id="profileSleepTarget" name="profileSleepTarget" type="number" min="0" step="0.5" placeholder="8.0">
-      </section>
-
-      <section class="panel profile-section" aria-labelledby="sGamificationHeading">
-        <h3 id="sGamificationHeading">Gamification</h3>
+      <div class="mx-kicker st-kicker">Progress</div>
+      <div class="pod st-group">
         <div class="profile-summary-grid">
           <div><span>Level</span><strong id="profileGamificationLevel">—</strong></div>
           <div><span>XP</span><strong id="profileGamificationXp">—</strong></div>
           <div><span>Streak</span><strong id="profileGamificationStreak">—</strong></div>
           <div><span>Badges</span><strong id="profileGamificationBadges">—</strong></div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <button type="submit" id="saveSettingsButton">Save Profile</button>
-    </div>
+    <!-- ── TRAINING ── -->
+    <section class="st-page" data-st-page="training" aria-labelledby="stTrainingTitle" hidden>
+      <header class="st-head">
+        <button type="button" class="st-back" data-st-back aria-label="Back to settings"></button>
+        <h3 id="stTrainingTitle" class="st-title">Training</h3>
+        <span class="st-saved" aria-live="polite"></span>
+      </header>
 
-    <!-- ── APP ── -->
-    <div id="settingsSubApp" class="settings-subview hidden">
-
-      <section class="panel profile-section" aria-labelledby="sTrainingModeHeading">
-        <h3 id="sTrainingModeHeading">Training Mode</h3>
-        <p class="settings-note">Switching modes never deletes data — it only changes which features are visible.</p>
-        <div class="mode-switcher">
-          <button type="button" class="mode-btn" data-mode="bodybuilding" onclick="setTrainingMode('bodybuilding')">Bodybuilding</button>
-          <button type="button" class="mode-btn" data-mode="powerlifting" onclick="setTrainingMode('powerlifting')">Powerlifting</button>
-          <button type="button" class="mode-btn" data-mode="athlete" onclick="setTrainingMode('athlete')">Athlete</button>
+      <div class="mx-kicker st-kicker">Style</div>
+      <div class="pod st-group">
+        <div class="st-block">
+          <div class="mode-switcher">
+            <button type="button" class="mode-btn" data-mode="bodybuilding" onclick="setTrainingMode('bodybuilding')">Bodybuilding</button>
+            <button type="button" class="mode-btn" data-mode="powerlifting" onclick="setTrainingMode('powerlifting')">Powerlifting</button>
+            <button type="button" class="mode-btn" data-mode="athlete" onclick="setTrainingMode('athlete')">Athlete</button>
+          </div>
+          <p id="modeDescription" class="st-note"></p>
+          <p class="st-note">Switching never deletes data. It only changes which features you see.</p>
         </div>
-        <p id="modeDescription" class="settings-note" style="margin:10px 0 0;min-height:32px;"></p>
-      </section>
+        <label class="st-row" for="defaultUnit"><span class="st-label">Units</span>
+          <select id="defaultUnit" name="defaultUnit">
+            <option value="kg">kg</option>
+            <option value="lbs">lbs</option>
+          </select></label>
+      </div>
 
-      <section class="panel profile-section" aria-labelledby="sAppSettingsHeading">
-        <h3 id="sAppSettingsHeading">App Settings</h3>
+      <div class="mx-kicker st-kicker">Season</div>
+      <div class="pod st-group">
+        <label class="st-row" for="profileCurrentPhase"><span class="st-label">Phase</span>
+          <select id="profileCurrentPhase" name="profileCurrentPhase">
+            <option value="improvement">Improvement season</option>
+            <option value="mini_cut">Mini cut</option>
+            <option value="contest_prep">Contest prep</option>
+            <option value="peak_week">Peak week</option>
+            <option value="show_day">Show day</option>
+            <option value="post_show">Post-show</option>
+            <option value="meet_prep">Meet prep</option>
+            <option value="off_season">Off season</option>
+          </select></label>
+        <label class="st-row" for="profileStartDate"><span class="st-label">Phase start</span>
+          <input id="profileStartDate" name="profileStartDate" type="date"></label>
+        <label class="st-row" for="profileShowDate"><span class="st-label">Show or meet date</span>
+          <input id="profileShowDate" name="profileShowDate" type="date"></label>
+        <label class="st-row" for="profileTargetStageWeight"><span class="st-label">Target weight</span>
+          <input id="profileTargetStageWeight" name="profileTargetStageWeight" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0.0"></label>
+        <label class="st-row" for="profileCheckInDay"><span class="st-label">Check-in day</span>
+          <select id="profileCheckInDay" name="profileCheckInDay">
+            <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+            <option>Thursday</option><option>Friday</option><option>Saturday</option>
+            <option selected>Sunday</option>
+          </select></label>
+        <label class="st-row" for="profileCardioBaseline"><span class="st-label">Cardio baseline</span>
+          <input id="profileCardioBaseline" name="profileCardioBaseline" type="text" placeholder="4 × 25 min LISS"></label>
+        <label class="st-row" for="profilePosingFrequency"><span class="st-label">Posing</span>
+          <input id="profilePosingFrequency" name="profilePosingFrequency" type="text" placeholder="5 sessions a week"></label>
+      </div>
 
-        <label for="defaultUnit">Units</label>
-        <select id="defaultUnit" name="defaultUnit">
-          <option value="kg">Kilograms (kg)</option>
-          <option value="lbs">Pounds (lbs)</option>
-        </select>
+      <div class="mx-kicker st-kicker">Logging</div>
+      <div class="pod st-group">
+        <label class="st-row" for="autoIncrementSetting"><span class="st-label">Weight suggestions<small>Suggest the next weight to lift</small></span>
+          <input type="checkbox" class="st-switch" id="autoIncrementSetting" name="autoIncrementSetting" checked></label>
+        <label class="st-row" for="gymPromptSetting"><span class="st-label">Ask which gym<small>When a workout starts</small></span>
+          <input type="checkbox" class="st-switch" id="gymPromptSetting" name="gymPromptSetting" checked
+                 onchange="if (typeof window.setGymPromptEnabled === 'function') window.setGymPromptEnabled(this.checked)"></label>
+        <button type="button" class="st-row st-row--btn" data-st-open="exercises">
+          <span class="st-label">Custom exercises<small>Choose which muscle an exercise counts toward</small></span>
+          <span class="st-val" id="stCustomExerciseCount"></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+      </div>
 
-        <label for="theme">Theme</label>
-        <select id="theme" name="theme" onchange="applyTheme(this.value)">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-          <option value="neon">Neon</option>
-        </select>
+      <div class="mx-kicker st-kicker">Your training profile</div>
+      <!-- renderArchetypeProfileCard() fills this when the page opens -->
+      <div id="archetypeProfileCard" class="settings-profile-card"></div>
+    </section>
 
-        <label for="streakReminderEnabled" style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" id="streakReminderEnabled" name="streakReminderEnabled">
-          Notifications enabled
-        </label>
+    <!-- ── TARGETS ── -->
+    <section class="st-page" data-st-page="targets" aria-labelledby="stTargetsTitle" hidden>
+      <header class="st-head">
+        <button type="button" class="st-back" data-st-back aria-label="Back to settings"></button>
+        <h3 id="stTargetsTitle" class="st-title">Targets</h3>
+        <span class="st-saved" aria-live="polite"></span>
+      </header>
 
-        <label for="streakReminderTime">Notification time</label>
-        <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00">
+      <div class="mx-kicker st-kicker">Daily</div>
+      <div class="pod st-group">
+        <label class="st-row" for="profileStepsTarget"><span class="st-label">Steps</span>
+          <input id="profileStepsTarget" name="profileStepsTarget" type="number" inputmode="numeric" min="0" step="100" placeholder="10000"></label>
+        <label class="st-row" for="profileSleepTarget"><span class="st-label">Sleep (hours)</span>
+          <input id="profileSleepTarget" name="profileSleepTarget" type="number" inputmode="decimal" min="0" step="0.5" placeholder="8"></label>
+      </div>
 
-        <label for="autoIncrementSetting" style="display:flex;align-items:center;gap:8px;margin-top:12px;">
-          <input type="checkbox" id="autoIncrementSetting" name="autoIncrementSetting" checked>
-          Auto-increment weight suggestions
-        </label>
+      <div class="mx-kicker st-kicker">Weekly</div>
+      <div class="pod st-group">
+        <label class="st-row" for="profileCardioTarget"><span class="st-label">Cardio</span>
+          <input id="profileCardioTarget" name="profileCardioTarget" type="text" placeholder="5 × 30 min"></label>
+      </div>
 
-        <label for="gymPromptSetting" style="display:flex;align-items:center;gap:8px;margin-top:12px;">
-          <input type="checkbox" id="gymPromptSetting" name="gymPromptSetting" checked
-                 onchange="if (typeof window.setGymPromptEnabled === 'function') window.setGymPromptEnabled(this.checked)">
-          Ask which gym I'm at when a workout starts
-        </label>
-      </section>
+      <div class="mx-kicker st-kicker">Nutrition</div>
+      <div class="pod st-group">
+        <label class="st-row" for="profileMacroTargets"><span class="st-label">Macro note<small>For your coach</small></span>
+          <input id="profileMacroTargets" name="profileMacroTargets" type="text" placeholder="220P / 260C / 55F"></label>
+        <button type="button" class="st-row st-row--btn" onclick="showTab('macroTab')">
+          <span class="st-label">Calorie and macro targets<small>Set in the Macros tab</small></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
 
-      <section class="panel profile-section" aria-labelledby="sActivitySyncHeading">
-        <h3 id="sActivitySyncHeading">Activity Sync</h3>
-        <p id="activitySyncStatus" style="margin:0 0 10px;font-size:0.85rem;color:var(--secondary-text);">Checking connection…</p>
-        <p id="activitySyncActivitySummary" style="display:none;margin:0 0 10px;font-size:0.85rem;"></p>
-        <button type="button" id="activitySyncConnectButton" class="secondary" style="display:none;">Connect Device</button>
-        <button type="button" id="activitySyncDisconnectButton" class="secondary" style="display:none;">Disconnect</button>
-      </section>
+    <!-- ── REMINDERS ── -->
+    <section class="st-page" data-st-page="reminders" aria-labelledby="stRemindersTitle" hidden>
+      <header class="st-head">
+        <button type="button" class="st-back" data-st-back aria-label="Back to settings"></button>
+        <h3 id="stRemindersTitle" class="st-title">Reminders</h3>
+        <span class="st-saved" aria-live="polite"></span>
+      </header>
 
-      <section class="panel profile-section" aria-labelledby="sAppModeHeading">
-        <h3 id="sAppModeHeading">Account Mode</h3>
+      <div class="mx-kicker st-kicker">Daily reminder</div>
+      <div class="pod st-group">
+        <label class="st-row" for="streakReminderEnabled"><span class="st-label">Notifications</span>
+          <input type="checkbox" class="st-switch" id="streakReminderEnabled" name="streakReminderEnabled"></label>
+        <label class="st-row" for="streakReminderTime"><span class="st-label">Time</span>
+          <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00"></label>
+      </div>
 
-        <label for="appModeSelect">Mode</label>
-        <select id="appModeSelect">
-          <option value="athlete">Athlete only</option>
-          <option value="coach">Coach only</option>
-          <option value="both">Athlete + Coach</option>
-        </select>
+      <div class="mx-kicker st-kicker">Take a break</div>
+      <div class="pod st-group">
+        <label class="st-row" for="stVacationMode"><span class="st-label">Vacation mode<small>Pauses your streak</small></span>
+          <input type="checkbox" class="st-switch" id="stVacationMode" data-no-autosave></label>
+        <label class="st-row" for="stSickMode"><span class="st-label">Sick mode<small>Pauses progression</small></span>
+          <input type="checkbox" class="st-switch" id="stSickMode" data-no-autosave></label>
+      </div>
+    </section>
 
-        <label for="coachModeToggle" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
-          <input type="checkbox" id="coachModeToggle">
-          Enable Coach Mode
-        </label>
-        <p style="margin:6px 0 0;font-size:0.83rem;color:var(--secondary-text);">Athlete experience is the default unless Coach Mode is enabled.</p>
+    <!-- ── DEVICES ── -->
+    <section class="st-page" data-st-page="devices" aria-labelledby="stDevicesTitle" hidden>
+      <header class="st-head">
+        <button type="button" class="st-back" data-st-back aria-label="Back to settings"></button>
+        <h3 id="stDevicesTitle" class="st-title">Devices</h3>
+      </header>
 
-        <button type="button" id="logoutBtn" class="secondary" style="margin-top:16px;">Logout</button>
-      </section>
+      <div class="mx-kicker st-kicker">Activity sync</div>
+      <div class="pod st-group">
+        <div class="st-row"><span class="st-label">Status</span><span class="st-val" id="activitySyncStatus">Checking…</span></div>
+        <p id="activitySyncActivitySummary" class="st-note" style="display:none;"></p>
+        <div class="st-block">
+          <button type="button" id="activitySyncConnectButton" class="st-btn" style="display:none;">Connect device</button>
+          <button type="button" id="activitySyncDisconnectButton" class="st-btn st-btn--quiet" style="display:none;">Disconnect</button>
+        </div>
+      </div>
+      <p class="st-note st-note--page">Steps, activity and sleep from your watch or phone fill in automatically.</p>
+    </section>
 
-      <section class="panel profile-section" aria-labelledby="sPrivacyLegalHeading">
-        <h3 id="sPrivacyLegalHeading">Privacy &amp; Legal</h3>
-        <label for="aiConsentToggle" style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" id="aiConsentToggle">
-          Allow AI features
-        </label>
-        <p class="settings-note">AI features send the workout, nutrition, sleep and goal data they need to OpenRouter and the AI model providers it uses (currently Google, NVIDIA, Alibaba and Nex AGI) to generate responses. Providers of free models may store it and use it to improve their models. Turn this off to keep your data out of AI processing — the rest of the app still works.</p>
+    <!-- ── ACCOUNT ── -->
+    <section class="st-page" data-st-page="account" aria-labelledby="stAccountTitle" hidden>
+      <header class="st-head">
+        <button type="button" class="st-back" data-st-back aria-label="Back to settings"></button>
+        <h3 id="stAccountTitle" class="st-title">Account</h3>
+        <span class="st-saved" aria-live="polite"></span>
+      </header>
+
+      <div class="mx-kicker st-kicker">Plan</div>
+      <div class="pod st-group">
+        <button type="button" class="st-row st-row--btn" id="stPlanRow">
+          <span class="st-label">Pocket Coach</span><span class="st-val" id="stPlanLabel">Free</span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+        <label class="st-row" for="appModeSelect"><span class="st-label">Use the app as</span>
+          <select id="appModeSelect">
+            <option value="athlete">Athlete</option>
+            <option value="coach">Coach</option>
+            <option value="both">Athlete and coach</option>
+          </select></label>
+        <label class="st-row" for="coachModeToggle"><span class="st-label">Coach mode<small>Needs "Athlete and coach"</small></span>
+          <input type="checkbox" class="st-switch" id="coachModeToggle"></label>
+      </div>
+
+      <div class="mx-kicker st-kicker">Display</div>
+      <div class="pod st-group">
+        <label class="st-row" for="theme"><span class="st-label">Theme</span>
+          <select id="theme" name="theme" onchange="applyTheme(this.value)">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="neon">Neon</option>
+          </select></label>
+        <button type="button" class="st-row st-row--btn" data-logbook-edit>
+          <span class="st-label">Logbook name and colour</span><span class="st-val" id="stLogbookVal"></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <div class="mx-kicker st-kicker">Privacy</div>
+      <div class="pod st-group">
+        <label class="st-row" for="aiConsentToggle"><span class="st-label">Allow AI features</span>
+          <input type="checkbox" class="st-switch" id="aiConsentToggle"></label>
+        <p class="st-note">AI features send the workout, nutrition, sleep and goal data they need to OpenRouter and the AI model providers it uses (currently Google, NVIDIA, Alibaba and Nex AGI) to generate responses. Providers of free models may store it and use it to improve their models. Turn this off to keep your data out of AI processing. The rest of the app still works.</p>
         <p class="settings-legal-links">
-          <a href="terms.html">Terms of Use</a> ·
-          <a href="privacy.html">Privacy Policy</a> ·
+          <a href="terms.html">Terms of use</a> ·
+          <a href="privacy.html">Privacy policy</a> ·
           <a href="mailto:armanbahali@gmail.com?subject=Pocket%20Coach%20support">Contact support</a>
         </p>
-      </section>
+      </div>
 
-      <section class="panel profile-section profile-section--danger" aria-labelledby="sDangerZoneHeading">
-        <h3 id="sDangerZoneHeading">Danger Zone</h3>
-        <p class="settings-note">
-          Permanently deletes your account and all associated data — workouts, programs, macros, logs, and any coach/client links. This cannot be undone. Export a backup first from Progress → Tools if you want to keep a copy.
-        </p>
-        <button type="button" id="deleteAccountBtn" class="btn-danger">Delete Account</button>
-      </section>
-
-      <button type="submit" id="saveAppSettingsButton">Save App Settings</button>
-    </div>
+      <div class="mx-kicker st-kicker">Session</div>
+      <div class="pod st-group">
+        <button type="button" id="logoutBtn" class="st-row st-row--btn st-row--accent"><span class="st-label">Log out</span></button>
+        <button type="button" id="deleteAccountBtn" class="st-row st-row--btn st-row--danger"><span class="st-label">Delete account</span></button>
+      </div>
+      <p class="st-note st-note--page">Deleting your account permanently removes your workouts, programs, macros, logs and any coach or client links. It can't be undone. Export a backup first from Insights → Tools.</p>
+    </section>
 
   </form><!-- end #settingsForm -->
 
-  <!-- ── GOALS (own form — cannot nest inside #settingsForm) ── -->
-  <div id="settingsSubGoals" class="settings-subview hidden">
+  <!-- ── CUSTOM EXERCISES (opened from Training). Outside the form so its
+       fields don't trigger a settings autosave. Exercise entry in the log
+       form only accepts names the app can group by muscle; this is the
+       escape hatch for adding or reassigning one by hand. ── -->
+  <section class="st-page" data-st-page="exercises" data-st-parent="training" aria-labelledby="stExercisesTitle" hidden>
+    <header class="st-head">
+      <button type="button" class="st-back" data-st-back aria-label="Back to training"></button>
+      <h3 id="stExercisesTitle" class="st-title">Custom exercises</h3>
+    </header>
 
-    <section class="panel profile-section" aria-labelledby="sSmartGoalsHeading">
-      <h3 id="sSmartGoalsHeading">SMART Goals</h3>
-      <form id="smartGoalForm">
-        <label for="goalTitle">Goal title</label>
-        <input id="goalTitle" type="text" placeholder="e.g. Squat 150 kg by 1 June 2026" required>
-
-        <label for="goalExercise">Exercise</label>
-        <input id="goalExercise" type="text" placeholder="e.g. Squat" required>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:110px;">
-            <label for="goalTargetValue">Target value</label>
-            <input id="goalTargetValue" type="number" min="0" step="0.1" placeholder="Target" required>
-          </div>
-          <div style="flex:1;min-width:110px;">
-            <label for="goalStartValue">Current value</label>
-            <input id="goalStartValue" type="number" min="0" step="0.1" placeholder="Current" required>
-          </div>
-          <div style="flex:1;min-width:120px;">
-            <label for="goalDueDate">Due date</label>
-            <input id="goalDueDate" type="date" required>
-          </div>
-        </div>
-
-        <label for="goalSpecific">Specific — what exactly?</label>
-        <textarea id="goalSpecific" rows="2" placeholder="What exactly will you achieve?"></textarea>
-
-        <label for="goalMeasurable">Measurable — how tracked?</label>
-        <textarea id="goalMeasurable" rows="2" placeholder="How will progress be measured?"></textarea>
-
-        <label for="goalAchievable">Achievable — why realistic?</label>
-        <textarea id="goalAchievable" rows="2" placeholder="Why is this realistic?"></textarea>
-
-        <label for="goalRelevant">Relevant — why it matters</label>
-        <textarea id="goalRelevant" rows="2" placeholder="Why does this matter to you?"></textarea>
-
-        <label for="goalTimeBound">Time-bound — deadline</label>
-        <textarea id="goalTimeBound" rows="2" placeholder="When will this be completed?"></textarea>
-
-        <label style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-          <input id="goalSyncBackend" type="checkbox">
-          Sync to backend (if available)
-        </label>
-
-        <button type="submit" style="width:100%;margin-top:8px;">Save SMART Goal</button>
-      </form>
-      <div id="smartGoalFeedback" style="font-size:0.9rem;margin-top:8px;"></div>
-    </section>
-
-    <section class="panel profile-section" aria-labelledby="sMuscleTargetsHeading">
-      <h3 id="sMuscleTargetsHeading">Weekly Muscle Set Targets</h3>
-      <p style="font-size:0.83rem;color:var(--secondary-text);margin:0 0 10px;">Sets per week used by the Recovery Map on the Progress tab. Leave the defaults if you're not sure.</p>
-      <div class="profile-field-grid" id="muscleTargetsGrid">
-        <label>Chest<input type="number" id="muscleTarget_chest" min="0" max="24" step="1"></label>
-        <label>Back<input type="number" id="muscleTarget_back" min="0" max="28" step="1"></label>
-        <label>Shoulders<input type="number" id="muscleTarget_shoulders" min="0" max="24" step="1"></label>
-        <label>Traps<input type="number" id="muscleTarget_traps" min="0" max="18" step="1"></label>
-        <label>Biceps<input type="number" id="muscleTarget_biceps" min="0" max="22" step="1"></label>
-        <label>Triceps<input type="number" id="muscleTarget_triceps" min="0" max="20" step="1"></label>
-        <label>Forearms<input type="number" id="muscleTarget_forearms" min="0" max="18" step="1"></label>
-        <label>Quads<input type="number" id="muscleTarget_quads" min="0" max="24" step="1"></label>
-        <label>Hamstrings<input type="number" id="muscleTarget_hamstrings" min="0" max="20" step="1"></label>
-        <label>Glutes<input type="number" id="muscleTarget_glutes" min="0" max="20" step="1"></label>
-        <label>Calves<input type="number" id="muscleTarget_calves" min="0" max="22" step="1"></label>
-        <label>Adductors<input type="number" id="muscleTarget_adductors" min="0" max="14" step="1"></label>
-        <label>Abductors<input type="number" id="muscleTarget_abductors" min="0" max="14" step="1"></label>
-        <label>Abs<input type="number" id="muscleTarget_abs" min="0" max="22" step="1"></label>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
-        <button type="button" id="saveMuscleTargetsButton">Save Weekly Targets</button>
-        <button type="button" id="resetMuscleTargetsButton" class="secondary">Reset to Defaults</button>
-      </div>
-      <div id="muscleTargetsFeedback" style="font-size:0.85rem;margin-top:8px;"></div>
-    </section>
-
-  </div><!-- end #settingsSubGoals -->
-
-  <!-- ── NUTRITION (no nested form — uses onclick buttons) ── -->
-  <div id="settingsSubNutrition" class="settings-subview hidden">
-
-    <section class="panel profile-section" aria-labelledby="sCalorieCalcHeading">
-      <h3 id="sCalorieCalcHeading">Calorie Calculator</h3>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:110px;">
-          <label for="calcWeight">Weight (lbs)</label>
-          <input type="number" id="calcWeight" placeholder="e.g. 185">
-        </div>
-        <div style="flex:1;min-width:110px;">
-          <label for="calcHeight">Height (in)</label>
-          <input type="number" id="calcHeight" placeholder="e.g. 70">
-        </div>
-      </div>
-      <label for="calcActivity">Activity level</label>
-      <select id="calcActivity">
-        <option value="1.2">Sedentary</option>
-        <option value="1.375">Lightly Active</option>
-        <option value="1.55" selected>Moderately Active</option>
-        <option value="1.725">Very Active</option>
-        <option value="1.9">Extremely Active</option>
-      </select>
-      <button type="button" onclick="calculateCaloriesEquation()" style="width:100%;margin-top:4px;">Calculate Calories</button>
-      <p id="calorieCalcResult" style="margin-top:8px;font-size:0.92rem;"></p>
-    </section>
-
-    <section class="panel profile-section" aria-labelledby="sMacroCalcHeading">
-      <h3 id="sMacroCalcHeading">Macro Calculator</h3>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:110px;">
-          <label for="macroWeight">Bodyweight</label>
-          <input type="number" id="macroWeight" placeholder="lbs">
-        </div>
-        <div style="flex:1;min-width:110px;">
-          <label for="macroHeight">Height</label>
-          <input type="number" id="macroHeight" placeholder="height">
-        </div>
-        <div style="flex:0 0 80px;">
-          <label for="heightUnit">Unit</label>
-          <select id="heightUnit">
-            <option value="in">in</option>
-            <option value="cm">cm</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:80px;">
-          <label for="macroAge">Age</label>
-          <input type="number" id="macroAge" placeholder="Age">
-        </div>
-        <div style="flex:1;min-width:90px;">
-          <label for="macroSex">Sex</label>
-          <select id="macroSex">
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-        </div>
-        <div style="flex:1;min-width:90px;">
-          <label for="macroBodyFat">Body-fat %</label>
-          <input type="number" id="macroBodyFat" name="macroBodyFat" step="0.1" min="0" max="60" placeholder="e.g. 15">
-        </div>
-      </div>
-
-      <label for="macroBmrFormula">BMR formula</label>
-      <select id="macroBmrFormula">
-        <option value="mifflin">Mifflin-St Jeor</option>
-        <option value="katch">Katch-McArdle</option>
-      </select>
-
-      <label for="macroActivity">Activity level</label>
-      <select id="macroActivity">
-        <option value="1.2">Sedentary</option>
-        <option value="1.375">Lightly Active</option>
-        <option value="1.55" selected>Moderately Active</option>
-        <option value="1.725">Very Active</option>
-        <option value="1.9">Extremely Active</option>
-      </select>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:110px;">
-          <label for="macroGoal">Goal</label>
-          <select id="macroGoal">
-            <option value="cut">Cut</option>
-            <option value="maintain">Maintain</option>
-            <option value="bulk">Bulk</option>
-          </select>
-        </div>
-        <div style="flex:1;min-width:110px;">
-          <label for="macroRate">Rate</label>
-          <select id="macroRate">
-            <option value="slow">Slow</option>
-            <option value="moderate" selected>Moderate</option>
-            <option value="aggressive">Aggressive</option>
-          </select>
-        </div>
-      </div>
-
-      <button type="button" onclick="calculateMacroTargets()" style="width:100%;margin-top:4px;">Calculate Macro Targets</button>
-    </section>
-
-  </div><!-- end #settingsSubNutrition -->
-
-  <!-- ── ADVANCED (no nested form — uses onclick buttons). Exercise entry
-       in the log form is constrained to a known catalog (~1,000 built-in
-       names) so it always resolves to a muscle group for the volume block.
-       This is the escape hatch: create a custom exercise, or reassign an
-       existing one, by hand. Deliberately tucked away here rather than on
-       the main log screen. ── -->
-  <div id="settingsSubAdvanced" class="settings-subview hidden">
-
-    <section class="panel profile-section" aria-labelledby="sCustomExerciseHeading">
-      <h3 id="sCustomExerciseHeading">Custom Exercise Muscle Groups</h3>
-      <p style="font-size:0.83rem;color:var(--secondary-text);margin:0 0 10px;">
-        For advanced lifters. Exercise entry only accepts names the app can group by muscle.
-        Add a new exercise here, or type one you already log to change which muscle group it counts toward —
-        your assignment always overrides the app's default.
-      </p>
-
-      <label for="customExerciseName">Exercise name</label>
-      <input type="text" id="customExerciseName" list="customExerciseNameSuggestions" placeholder="e.g. Zercher Squat">
+    <p class="st-note st-note--page">Add a new exercise, or type one you already log to change which muscle group it counts toward. Your choice always overrides the app's default.</p>
+    <div class="pod st-group">
+      <label class="st-row st-row--stack" for="customExerciseName"><span class="st-label">Exercise name</span>
+        <input type="text" id="customExerciseName" list="customExerciseNameSuggestions" placeholder="Zercher squat"></label>
       <datalist id="customExerciseNameSuggestions"></datalist>
+      <label class="st-row st-row--stack" for="customExerciseMuscleGroup"><span class="st-label">Muscle group</span>
+        <select id="customExerciseMuscleGroup"></select></label>
+      <div class="st-block">
+        <button type="button" id="customExerciseSaveBtn" class="st-btn">Save</button>
+        <p id="customExerciseFeedback" class="st-note" style="min-height:1.2em;"></p>
+      </div>
+    </div>
 
-      <label for="customExerciseMuscleGroup">Muscle group</label>
-      <select id="customExerciseMuscleGroup"></select>
-
-      <button type="button" id="customExerciseSaveBtn" style="width:100%;margin-top:8px;">Save Assignment</button>
-      <p id="customExerciseFeedback" style="font-size:0.85rem;margin:8px 0 0;min-height:1.2em;"></p>
-    </section>
-
-    <section class="panel profile-section" aria-labelledby="sCustomExerciseListHeading">
-      <h3 id="sCustomExerciseListHeading">Your Custom Assignments</h3>
+    <div class="mx-kicker st-kicker">Your exercises</div>
+    <div class="pod st-group">
       <div id="customExerciseList"></div>
-    </section>
-
-  </div><!-- end #settingsSubAdvanced -->
-
+    </div>
+  </section>
 </div><!-- end #settingsPage -->
