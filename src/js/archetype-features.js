@@ -573,7 +573,13 @@ function _fmt(totalSeconds) {
     return s?.profile?.goals?.stepsTarget || 10000;
   }
 
-  function _getTodayKey() { return new Date().toISOString().split('T')[0]; }
+  // Local calendar date, matching activity-sync-bridge.js, which writes the
+  // synced step count under the same key.
+  function _getTodayKey() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
 
   function _getCount() {
     const data = JSON.parse(localStorage.getItem('dailySteps') || '{}');
