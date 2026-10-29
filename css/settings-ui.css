@@ -107,7 +107,8 @@
 /* ── Pages ─────────────────────────────────────────────────── */
 
 .settings-page { padding: 0 6px; }
-.st-page[hidden] { display: none; }
+.st-page[hidden],
+.st-row[hidden] { display: none; }
 
 .st-head {
   display: flex;

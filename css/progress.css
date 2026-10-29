@@ -5,15 +5,11 @@
    Depends on: tokens.css
    ============================================================= */
 
-/* ── Shared section heading — every h3 inside the Insights subviews
-   (PR summary, goal progress, bodybuilding panel) uses this instead
-   of the browser-default bold serif-ish h3. ── */
+/* ── Shared section heading — goal progress and personal records use
+   this instead of the browser-default bold serif-ish h3. ── */
 
-#pSub_prs h3,
-#pSub_tools h3,
 #goalProgressList h3,
-#dashboardPRSummary h3,
-#prPanel h3 {
+.pr-section h3 {
   margin: 0 0 10px;
   font-family: var(--font-label);
   font-size: 0.78rem;
@@ -353,29 +349,6 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-/* PR card grid */
-#bodybuildingProgressPanel .bb-pr-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-#bodybuildingProgressPanel .bb-pr-card {
-  background: var(--pod-bg-alt);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-}
-
-#bodybuildingProgressPanel .bb-pr-card strong {
-  font-family: var(--font-label);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-label);
 }
 
 #bodybuildingProgressPanel ul {
@@ -919,4 +892,58 @@
 
 .rv-muscle[open] > summary .chip::after {
   transform: rotate(180deg);
+}
+
+/* ── Insights header: title + share ── */
+.insights-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.insights-head .pod-title { margin-bottom: 0; }
+.insights-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+.insights-share-btn .ui-icon svg { width: 14px; height: 14px; }
+
+/* ── Personal records (one list, newest first) ── */
+.pr-section { margin-top: 16px; }
+.pr-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.pr-section-head h3 { margin: 0; }
+.pr-section-head select {
+  width: auto;
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+.pr-toggle-btn {
+  display: block;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 10px);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: none;
 }
