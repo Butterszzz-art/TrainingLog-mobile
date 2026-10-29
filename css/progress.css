@@ -778,3 +778,145 @@
   font-size: 0.74rem;
   font-weight: 700;
 }
+
+/* ── Regional volume (Pro) ─────────────────────────────────── */
+
+.rv-pro-chip {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.rv-sub,
+.rv-foot {
+  margin: 0 0 10px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.rv-gaps {
+  margin-bottom: 10px;
+  padding: 10px 13px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--pod-border);
+  background: var(--pod-bg-alt);
+  font-size: 0.82rem;
+}
+
+.rv-gaps ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.rv-gap + .rv-gap {
+  margin-top: 6px;
+}
+
+.rv-gap-tip {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.rv-muscle > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.rv-muscle > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rv-regions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rv-region {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(60px, 1fr) 2.5em;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+}
+
+.rv-region-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-color);
+}
+
+.rv-track {
+  width: auto;
+}
+
+.rv-region-sets {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.rv-why {
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
+
+.rv-why > summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.rv-ex-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-ex-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rv-ex-name {
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-ex-regions,
+.rv-ex-note {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.rv-ev {
+  flex: none;
+  font-size: 0.66rem;
+}
+
+.rv-ev--strong {
+  color: var(--success, var(--primary));
+}
+
+.rv-ev--estimated {
+  opacity: 0.7;
+}
+
+.rv-muscle > summary .chip::after {
+  content: '▾';
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.rv-muscle[open] > summary .chip::after {
+  transform: rotate(180deg);
+}

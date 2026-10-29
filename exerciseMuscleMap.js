@@ -1318,4 +1318,5 @@ if (typeof window !== 'undefined') {
   window.resolveExerciseMuscle = resolveExerciseMuscle;
   window.setCustomExerciseMuscleMap = setCustomExerciseMuscleMap;
   window.getAllExerciseNames = getAllExerciseNames;
+  window.normalizeExerciseKey = exerciseNameResolver.normalize;
 }
