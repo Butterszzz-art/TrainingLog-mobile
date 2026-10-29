@@ -3595,6 +3595,28 @@ html.pc-log-only #macroMicrosBtn { display: none !important; }
 .food-meal-name { font-size: 0.9rem; font-weight: 600; color: var(--text-color); }
 .food-meal-right { display: inline-flex; align-items: center; gap: 6px; }
 .food-meal-right .food-meal-kcal { font-size: 0.75rem; color: var(--text-muted); margin-right: 2px; }
+/* Meal photo (src/js/meal-photos.js): a wide thumbnail under the header. */
+.food-meal-photo-slot:empty { display: none; }
+.food-meal-photo {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 4px 0 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  background: transparent;
+  cursor: pointer;
+}
+.food-meal-photo img { display: block; width: 100%; height: 140px; object-fit: cover; }
+.food-meal-photo-full {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
 .food-diary-list .food-meal-add {
   display: inline-flex;
   align-items: center;

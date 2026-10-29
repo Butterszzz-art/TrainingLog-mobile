@@ -578,6 +578,9 @@
   // with reads it there. Entries older than 90 days are dropped.
 
   const LOG_KEY = u => `foodLog_${u}`;
+  // Today's meal photos, kept in memory (see "Meal photos" below).
+  const _photoCache = { key: '', map: {} };
+  let _photoPruned = false;
 
   // Same day boundary as the Macros tab's running totals.
   function _today() {
@@ -665,10 +668,12 @@
             <span class="food-meal-name">${label}</span>
             <span class="food-meal-right">
               <span class="food-meal-kcal">${mt.kcal} kcal</span>
+              <button type="button" class="food-icon-btn" data-meal-photo="${m}" aria-label="Add a photo of ${label.toLowerCase()}" title="Meal photo"><span class="ui-icon">${_icon('camera')}</span></button>
               <button type="button" class="food-icon-btn" data-save-meal="${m}" aria-label="Save ${label.toLowerCase()} as a meal" title="Save as a meal"><span class="ui-icon">${_icon('bookmark')}</span></button>
               ${add}
             </span>
           </div>
+          <div class="food-meal-photo-slot" data-photo-slot="${m}">${_mealPhotoHtml(m, label, _photoCacheFor()[m])}</div>
           ${list.map(e => `
           <button type="button" class="food-entry" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">
             <span class="food-entry-main">
@@ -684,8 +689,100 @@
         </div>`;
       }).join('')}
     `;
+    _loadMealPhotos();
   }
   window.renderFoodLog = renderFoodLog;
+
+  /* ── Meal photos (src/js/meal-photos.js) ─────────────────── */
+  // Photos are read from IndexedDB after the log is drawn. The last day's
+  // photos stay in memory so a re-render shows them straight away.
+
+  function _mealPhotoHtml(meal, label, src) {
+    if (!src) return '';
+    return `<button type="button" class="food-meal-photo" data-view-meal-photo="${meal}" aria-label="View the photo of ${label.toLowerCase()}"><img src="${_esc(src)}" alt="" loading="lazy"></button>`;
+  }
+
+  async function _loadMealPhotos() {
+    const store = window.mealPhotos;
+    const user = _user();
+    if (!store || !store.isAvailable() || !user) return;
+    const date = _today();
+    try {
+      if (!_photoPruned) { _photoPruned = true; store.pruneOld(user, date).catch(() => {}); }
+      const map = await store.photosForDay(user, date);
+      _photoCache.key = `${user}|${date}`;
+      _photoCache.map = map;
+      document.querySelectorAll('#foodDiaryList [data-photo-slot]').forEach(slot => {
+        const m = slot.dataset.photoSlot;
+        const html = _mealPhotoHtml(m, Core.MEAL_LABELS[m] || m, map[m]);
+        if (slot.innerHTML !== html) slot.innerHTML = html;
+      });
+    } catch (err) {
+      console.warn('[mealPhotos] could not load photos', err);
+    }
+  }
+
+  function _photoCacheFor() {
+    return _photoCache.key === `${_user()}|${_today()}` ? _photoCache.map : {};
+  }
+
+  async function addMealPhoto(meal) {
+    const store = window.mealPhotos;
+    if (!store || !store.isAvailable()) { _toast('Photos aren’t available on this device'); return; }
+    let image;
+    try {
+      image = await store.pickPhoto();
+    } catch (err) {
+      _toast(err.message || 'Could not use that photo');
+      return;
+    }
+    if (!image) return;
+    try {
+      await store.savePhoto(_user(), _today(), meal, image);
+      window.FoodSheet?.close?.();
+      _loadMealPhotos();
+    } catch (err) {
+      console.warn('[mealPhotos] save failed', err);
+      _toast('Could not save the photo');
+    }
+  }
+
+  async function removeMealPhoto(meal) {
+    try {
+      await window.mealPhotos.deletePhoto(_user(), _today(), meal);
+      delete _photoCache.map[meal];
+      window.FoodSheet?.close?.();
+      _loadMealPhotos();
+    } catch (err) {
+      console.warn('[mealPhotos] delete failed', err);
+      _toast('Could not remove the photo');
+    }
+  }
+
+  function openMealPhoto(meal) {
+    const src = _photoCacheFor()[meal];
+    if (!src || !window.FoodSheet) return;
+    const label = Core.MEAL_LABELS[meal] || meal;
+    window.FoodSheet.open(`
+      <div class="food-sheet-hdr"><h3>${_esc(label)}</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
+      <img class="food-meal-photo-full" src="${_esc(src)}" alt="Photo of ${_esc(label.toLowerCase())}">
+      <div class="food-share-actions">
+        <button type="button" class="food-add-btn" data-meal-photo="${meal}">Replace photo</button>
+        <button type="button" class="food-share-no" data-remove-meal-photo="${meal}">Remove photo</button>
+      </div>`, { label: `Photo of ${label.toLowerCase()}` });
+    document.querySelector('#foodSheet [data-close]')?.addEventListener('click', () => window.FoodSheet.close());
+  }
+
+  // The camera button, the thumbnail and the sheet's buttons (the sheet
+  // lives outside the food log, so this listens on the whole document).
+  document.addEventListener('click', (e) => {
+    const add = e.target.closest('[data-meal-photo]');
+    if (add) { addMealPhoto(add.dataset.mealPhoto); return; }
+    const view = e.target.closest('[data-view-meal-photo]');
+    if (view) { openMealPhoto(view.dataset.viewMealPhoto); return; }
+    const rm = e.target.closest('[data-remove-meal-photo]');
+    if (rm) removeMealPhoto(rm.dataset.removeMealPhoto);
+  });
 
   /* ── Log-only mode ───────────────────────────────────────── */
   // A coach can switch a client to "log only": calorie and macro numbers
