@@ -82,30 +82,6 @@ const getTodayString = () => {
   return new Date().toISOString().split('T')[0];
 };
 
-const hasMacroInputs = () => {
-  const stored = localStorage.getItem('personalDetails');
-  if (stored) {
-    try {
-      const details = JSON.parse(stored);
-      if (
-        Number.isFinite(details.weightKg) &&
-        Number.isFinite(details.heightCm) &&
-        Number.isFinite(details.ageYears) &&
-        (details.sex === 'male' || details.sex === 'female') &&
-        Number.isFinite(details.activityFactor)
-      ) {
-        return true;
-      }
-    } catch (e) {
-      console.warn('Unable to parse saved personal details', e);
-    }
-  }
-  const weight = parseFloat(document.getElementById("macroWeight")?.value);
-  const height = parseFloat(document.getElementById("macroHeight")?.value);
-  const age = parseFloat(document.getElementById("macroAge")?.value);
-  return Number.isFinite(weight) && Number.isFinite(height) && Number.isFinite(age);
-};
-
 export function updateWeeklyTrend(progressOverride) {
   if (!window.Chart) return;
   const canvas = document.getElementById('weeklyTrend');
@@ -149,34 +125,21 @@ export function updateWeeklyTrend(progressOverride) {
   });
 }
 
-const applyDayPreset = (isTraining) => {
-  const presetKey = isTraining
-    ? (localStorage.getItem('trainingPreset') || 'bulk-moderate')
-    : (localStorage.getItem('restPreset') || 'maintain');
-  const preset = window.presetMap?.[presetKey];
-  if (!preset) return;
-  const presetSelect = document.getElementById('macroPreset');
-  if (presetSelect) presetSelect.value = presetKey;
-  if (hasMacroInputs() && typeof window.calculateMacroTargets === 'function') {
-    window.calculateMacroTargets(preset.goal, preset.rate);
-  }
-};
-
+// The "Training day" chip only changes today's split (see
+// buildBodybuildingDayTargets). It used to re-run the macro calculator from a
+// day preset on every load and toggle, which saved over the targets set with
+// the Adjust Macros sliders (locally and on the server). Off by default = the
+// saved targets as they are. The old value "training" was set for everyone
+// automatically, so only the new "training-day" value turns the chip on.
+const DAY_TYPE_KEY = 'macroDayType'; // per user + synced (cloud-sync.js)
 const initTrainingToggle = () => {
   const toggle = document.getElementById('trainingDayToggle');
   if (!toggle) return;
-  const savedType = localStorage.getItem('macroDayType');
-  if (savedType) {
-    toggle.checked = savedType === 'training';
-  } else {
-    toggle.checked = true;
-    localStorage.setItem('macroDayType', 'training');
-  }
-  applyDayPreset(toggle.checked);
+  let saved = null;
+  try { saved = localStorage.getItem(DAY_TYPE_KEY); } catch { /* storage blocked */ }
+  toggle.checked = saved === 'training-day';
   toggle.addEventListener('change', (e) => {
-    const isTraining = e.target.checked;
-    localStorage.setItem('macroDayType', isTraining ? 'training' : 'rest');
-    applyDayPreset(isTraining);
+    try { localStorage.setItem(DAY_TYPE_KEY, e.target.checked ? 'training-day' : 'normal'); } catch { /* storage blocked */ }
   });
 };
 
