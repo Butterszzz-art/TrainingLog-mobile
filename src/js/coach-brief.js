@@ -73,20 +73,23 @@
           <h2 id="cbrTitle" class="cbr-kicker">Today's brief</h2>
           <span class="cbr-stamp">${esc(stamp)}</span>
         </div>
-        <div class="cbr-main">
-          ${ring(digest.readiness)}
-          <p class="cbr-headline">${esc(headline)}</p>
+        <div class="cbr-body is-clamped">
+          <div class="cbr-main">
+            ${ring(digest.readiness)}
+            <p class="cbr-headline">${esc(headline)}</p>
+          </div>
+          ${bullets.length ? `<ul class="cbr-bullets">${bullets.map(b =>
+            `<li><span class="cbr-dot cbr-dot--${esc(b.tone)}" aria-hidden="true"></span><span class="cbr-bullet-text">${esc(b.text)}</span></li>`).join('')}</ul>` : ''}
+          <button type="button" class="cbr-more" data-cbr="more" aria-expanded="false" hidden>Read more</button>
         </div>
-        ${bullets.length ? `<ul class="cbr-bullets">${bullets.map(b =>
-          `<li><span class="cbr-dot cbr-dot--${esc(b.tone)}" aria-hidden="true"></span>${esc(b.text)}</li>`).join('')}</ul>` : ''}
+        ${digest.flag ? `
+          <button type="button" class="cbr-flag" data-cbr="flag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            <span class="cbr-flag-text"><strong>${esc(digest.flag.text)}</strong><span>Ask your coach why</span></span>
+            <svg class="cbr-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+          </button>` : ''}
         ${digest.hasData ? `<div class="cbr-actions">${primary}</div>` : ''}
       </section>
-      ${digest.flag ? `
-        <button type="button" class="cbr-flag" data-cbr="flag">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-          <span class="cbr-flag-text"><strong>${esc(digest.flag.text)}</strong><span>Ask your coach why</span></span>
-          <svg class="cbr-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-        </button>` : ''}
       <form class="cbr-ask" data-cbr="ask-form">
         <label class="cbr-sr" for="cbrAskInput">Ask your coach</label>
         <input id="cbrAskInput" class="cbr-ask-input" placeholder="Ask your coach anything…" autocomplete="off">
@@ -110,12 +113,39 @@
         return;
       }
       node.addEventListener('click', () => {
+        if (kind === 'more') {
+          const open = !el.querySelector('.cbr-body').classList.toggle('is-clamped');
+          node.textContent = open ? 'Show less' : 'Read more';
+          node.setAttribute('aria-expanded', String(open));
+          return;
+        }
         if (kind === 'start' && typeof window.showTab === 'function') window.showTab('logTab');
         if (kind === 'adjust') ask(`Adjust today's ${session} for how I'm doing today.`);
         if (kind === 'ask-day') ask(digest.restDay ? "It's a rest day. What should I do today?" : 'What should I train today?');
         if (kind === 'flag') ask(digest.flag.question);
       });
     });
+    showMoreIfClamped(el);
+  }
+
+  // Long briefs are clamped (headline 3 lines, bullets 1 line each); offer
+  // "Read more" only when something is actually cut off.
+  function showMoreIfClamped(el) {
+    const check = () => {
+      const btn = el.querySelector('.cbr-more');
+      const body = el.querySelector('.cbr-body');
+      if (!btn || !body || !body.classList.contains('is-clamped')) return;
+      const cut = [...body.querySelectorAll('.cbr-headline, .cbr-bullet-text')]
+        .some(n => n.scrollHeight > n.clientHeight + 1 || n.scrollWidth > n.clientWidth + 1);
+      btn.hidden = !cut;
+    };
+    // Measure now, and again whenever the card's size changes (Home may be
+    // hidden behind another tab while rendering, which measures as 0).
+    check();
+    if (typeof ResizeObserver === 'function' && !el._cbrResize) {
+      el._cbrResize = new ResizeObserver(check);
+      el._cbrResize.observe(el);
+    }
   }
 
   async function fetchAiBrief(u, pack, plan) {

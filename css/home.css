@@ -105,6 +105,305 @@
   border-top: 1px solid rgba(var(--acc-5fa87e), 0.1);
 }
 
+/* ── Do this now (#homeTodoZone): to-dos first, done items as one line ──
+   Rows come from readiness-checkin.js, renderDueNowRail() and
+   renderDailyPulseCard(). The zone hides when nothing rendered, and its
+   label reads "Done today" once no to-do rows are left. */
+
+.home-todo:not(:has(.htd-row)) { display: none; }
+.home-todo-label-done { display: none; }
+.home-todo:not(:has(.htd-row--todo)) .home-todo-label-open { display: none; }
+.home-todo:not(:has(.htd-row--todo)) .home-todo-label-done { display: inline; }
+.home-todo-list { display: flex; flex-direction: column; gap: 6px; }
+.home-todo-list > div:empty { display: none; }
+/* Finished items sink below what is still left to do. */
+.home-todo-list > div:has(> .htd-row--done) { order: 2; }
+#dueNowRail { display: flex; flex-direction: column; gap: 6px; }
+
+.htd-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border-featured);
+  background: var(--pod-bg-alt);
+  box-shadow: none;
+  color: var(--text-primary);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.htd-row:hover { transform: none; box-shadow: none; }
+.htd-row:active { transform: scale(0.99); }
+.htd-row.is-overdue { background: var(--danger-bg); border-color: var(--border-alert); }
+.htd-row.is-today   { background: var(--warning-bg); border-color: var(--border-brass); }
+
+.htd-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--green-90);
+}
+.htd-icon svg { width: 16px; height: 16px; }
+.htd-row.is-overdue .htd-icon { color: var(--danger-text-mobile, var(--danger-text)); }
+.htd-row.is-today .htd-icon   { color: var(--brass-light); }
+
+.htd-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.htd-text strong { font-size: 14px; font-weight: 700; line-height: 1.25; color: var(--text-primary); }
+.htd-text span {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--green-90);
+}
+.htd-row.is-overdue .htd-text span { color: var(--danger-text-mobile, var(--danger-text)); }
+.htd-row.is-today .htd-text span   { color: var(--brass-light); }
+
+.htd-cta {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--fill-btn-primary-mobile);
+  color: var(--label-on-green);
+}
+.htd-row.is-overdue .htd-cta { background: var(--danger-strong); color: #fdeef0; }
+.htd-row.is-today .htd-cta   { background: var(--brass-base); color: var(--label-on-green); }
+
+/* Daily Pulse: question on top, 1-5 under it. Not a button itself. */
+.htd-row--pulse { flex-direction: column; align-items: stretch; gap: 10px; cursor: default; }
+.htd-row--pulse:active { transform: none; }
+.htd-pulse-head { display: flex; align-items: center; gap: 12px; }
+.htd-pulse-row .pulse-level-dot { height: 34px; margin: 0; padding: 0; box-shadow: none; }
+
+/* Done: one quiet line. */
+.htd-row--done {
+  padding: 7px 12px;
+  border-color: var(--border-default);
+  background: transparent;
+  cursor: default;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.htd-row--done:active { transform: none; }
+.htd-check { width: 16px; height: 16px; flex-shrink: 0; color: var(--green-90); }
+.htd-check svg { width: 16px; height: 16px; display: block; }
+.htd-done-text { flex: 1; min-width: 0; line-height: 1.35; }
+.htd-done-text small { display: block; font-size: 12px; color: var(--brass-light); }
+.htd-score { font-weight: 800; color: var(--text-primary); }
+.htd-score.high { color: var(--green-90); }
+.htd-score.low  { color: var(--brass-light); }
+.htd-link {
+  width: auto;
+  margin: 0;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green-100);
+  cursor: pointer;
+}
+.htd-link:hover { transform: none; box-shadow: none; }
+.htd-row--done .pulse-streak-chip { margin-left: 0; }
+
+/* ── Story layout: greeting → Now → Today → This week → Progress ──
+   Each group is a labelled column of zones (index.html #homeTab). */
+
+.home-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+.home-group > .home-section-label { margin: 0; padding: 0 14px; }
+.home-group .home-zone:empty,
+.home-group .home-zone:has(> div:only-child:empty) { display: none; }
+.home-zone:empty { display: none; }
+.home-zone--modes { margin-top: 0; }
+.home-zone--modes:not(:has(.vm-card, .sm-card)) { display: none; }
+
+/* Greeting context line (replaces the old hero card) */
+.home-greeting-row { flex-wrap: wrap; row-gap: 8px; }
+.home-context {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.home-context .home-status-pill { flex-shrink: 0; }
+.home-context-text {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+/* Tap-to-tick habits in "Do this now" */
+.htd-row--ticks { flex-wrap: wrap; gap: 8px 10px; cursor: default; }
+.htd-row--ticks:active { transform: none; }
+.htd-ticks-label {
+  flex: 1 0 100%;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--green-90);
+}
+.htd-row--done .htd-ticks-label { flex: 0 0 auto; color: var(--text-secondary); }
+.htd-ticks { display: flex; flex-wrap: wrap; gap: 6px; }
+.htd-tick {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: auto;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-featured);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.htd-tick:hover { transform: none; box-shadow: none; }
+.htd-tick svg { width: 13px; height: 13px; }
+.htd-tick.is-on { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
+.htd-tick.is-late:not(.is-on) { border-color: var(--border-brass); color: var(--brass-light); }
+.htd-row--done .htd-tick { padding: 3px 9px; font-size: 12px; }
+
+/* Fuel today (replaces "Macros today") */
+.home-fuel {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-pod);
+  border: 1px solid var(--pod-border);
+  background: var(--pod-bg);
+  box-shadow: var(--pod-bevel);
+  color: var(--text-primary);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.home-fuel:hover { transform: none; }
+.home-fuel:active { transform: scale(0.99); }
+.home-fuel-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.home-fuel-kicker {
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+.home-fuel-left { font-size: 12px; color: var(--text-secondary); }
+.home-fuel-kcal { display: flex; align-items: baseline; gap: 6px; margin: 4px 0 8px; }
+.home-fuel-kcal b { font-family: var(--font-display); font-size: 28px; font-weight: 400; line-height: 1; }
+.home-fuel-kcal span { font-size: 13px; color: var(--text-secondary); }
+.home-fuel-bar {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
+  overflow: hidden;
+}
+.home-fuel-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--fill-meter-a); }
+.home-fuel-bar--kcal { height: 8px; }
+.home-fuel-bar--kcal.is-over > i { background: var(--fill-meter-brass); }
+.home-fuel-macro--f .home-fuel-bar > i { background: var(--fill-meter-brass); }
+.home-fuel-macros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.home-fuel-macro { min-width: 0; }
+.home-fuel-macro-head { display: flex; flex-direction: column; gap: 1px; margin-bottom: 5px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
+.home-fuel-macro-head b { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--text-primary); }
+.home-fuel-macro-head small { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
+.home-fuel--empty { display: flex; align-items: center; gap: 10px; }
+.home-fuel--empty .home-fuel-kicker { display: none; }
+.home-fuel-empty { flex: 1; font-size: 14px; font-weight: 700; }
+
+/* Consistency line inside the "This week" card */
+.wk-consistency {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-row);
+}
+.wk-consistency-main { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.wk-consistency-main b { font-family: var(--font-display); font-size: 20px; font-weight: 400; color: var(--text-primary); }
+.wk-trend--up { color: var(--green-90); }
+.wk-trend--down { color: var(--brass-light); }
+.wk-consistency-note { margin: 6px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary); }
+#homeConsistencyRow:empty { display: none; }
+
+/* Body: weight trend + check-in trends */
+.home-body .home-card-header { margin-bottom: 6px; }
+.home-body .home-card-title { margin: 0; }
+.home-body-top { display: flex; align-items: flex-end; gap: 18px; }
+.home-body-stat { display: flex; flex-direction: column; }
+.home-body-stat b { font-family: var(--font-display); font-size: 24px; font-weight: 400; line-height: 1.1; color: var(--text-primary); }
+.home-body-stat span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); }
+.home-body-top .home-sparkline { flex: 1; min-width: 0; margin: 0; }
+.home-body-notes { margin: 10px 0 0; padding: 0 0 0 16px; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
+.home-body-notes li + li { margin-top: 3px; }
+.home-body .home-placeholder-note { margin: 8px 0 0; }
+
+/* Level and XP as one slim row */
+.home-level {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 12px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border-default);
+}
+.home-level-badge {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--pod-bg-alt);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--green-90);
+}
+.home-level-main { flex: 1; min-width: 0; }
+.home-level-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px; font-size: 12px; color: var(--text-secondary); }
+.home-level-last { flex-shrink: 1; min-width: 0; max-width: 34%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-secondary); }
+#homeDashboardContent { gap: 10px; }
+#homeDashboardContent > .home-dashboard-card { margin: 0 12px; }
+
 /* ── Section labels ─────────────────────────────────────────── */
 
 .home-section-label {
@@ -144,7 +443,6 @@
 }
 
 .wk-hero { flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
-.wk-card .wk-streak { color: var(--green-90); }
 
 .wk-hero-num {
   font-family: var(--font-display);
@@ -373,10 +671,6 @@
 .home-command-grid > .home-dashboard-card {
   animation: homeCardEnter 0.4s ease both;
 }
-.home-zone--top-hero > .home-hero-card {
-  animation: homeCardEnter 0.4s ease both;
-}
-.home-zone--top-hero:empty { display: none; }
 .home-command-grid > .home-dashboard-card:nth-child(2) { animation-delay: 0.05s; }
 .home-command-grid > .home-dashboard-card:nth-child(3) { animation-delay: 0.09s; }
 .home-command-grid > .home-dashboard-card:nth-child(4) { animation-delay: 0.13s; }

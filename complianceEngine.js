@@ -386,7 +386,7 @@
 
     if (weekly.averagePercent >= 75) return 'Just a little behind this week';
     if (weekly.averagePercent >= 50) return 'Slipping this week. A couple of full days will turn it around';
-    return 'Behind this week. Start with today’s checklist';
+    return 'Behind this week. Start with what’s in Do this now';
   }
 
   function getComplianceTrend(userId, archetype) {

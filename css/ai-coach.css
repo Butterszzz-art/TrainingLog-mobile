@@ -549,11 +549,12 @@
   text-transform: uppercase;
   color: var(--mx-faint, #7b8981);
 }
-.cbr-main { display: flex; align-items: center; gap: 16px; }
+.cbr-body { display: flex; flex-direction: column; gap: 10px; }
+.cbr-main { display: flex; align-items: center; gap: 14px; }
 .cbr-headline {
   margin: 0;
   font-family: var(--font-label, 'Barlow Condensed', sans-serif);
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: 0.01em;
@@ -561,14 +562,14 @@
   text-wrap: pretty;
 }
 
-.cbr-ring { position: relative; width: 84px; height: 84px; flex-shrink: 0; }
-.cbr-ring svg { width: 84px; height: 84px; display: block; }
+.cbr-ring { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+.cbr-ring svg { width: 72px; height: 72px; display: block; }
 .cbr-ring-track { fill: none; stroke: var(--green-30, var(--green-30)); stroke-width: 8; }
 .cbr-ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
 .cbr-ring-fill--ok { stroke: var(--green-70, #3d9d73); }
 .cbr-ring-fill--low { stroke: var(--highlight, #c79a54); }
 .cbr-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.cbr-ring-num { font-family: var(--font-display, 'Anton', sans-serif); font-size: 30px; line-height: 1; color: var(--text-color, #f4f7f5); }
+.cbr-ring-num { font-family: var(--font-display, 'Anton', sans-serif); font-size: 26px; line-height: 1; color: var(--text-color, #f4f7f5); }
 .cbr-ring-word {
   font-family: var(--font-label, 'Barlow Condensed', sans-serif);
   font-size: 10px;
@@ -578,11 +579,41 @@
   color: var(--mx-label, #86998e);
 }
 
-.cbr-bullets { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.cbr-bullets li { display: flex; gap: 10px; font-family: var(--font-label, 'Barlow Condensed', sans-serif); font-size: 16px; font-weight: 600; letter-spacing: 0.02em; line-height: 1.3; color: var(--text-secondary, #c9d2cc); }
+.cbr-bullets { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.cbr-bullets li { display: flex; gap: 10px; min-width: 0; font-family: var(--font-label, 'Barlow Condensed', sans-serif); font-size: 15px; font-weight: 600; letter-spacing: 0.02em; line-height: 1.3; color: var(--text-secondary, #c9d2cc); }
 .cbr-dot { width: 6px; height: 6px; margin-top: 7px; border-radius: 99px; flex-shrink: 0; background: var(--mx-faint, #7b8981); }
 .cbr-dot--good { background: var(--green-70, #3d9d73); }
 .cbr-dot--watch { background: var(--highlight, #c79a54); }
+.cbr-bullet-text { min-width: 0; }
+
+/* Long briefs: headline capped at 3 lines and each bullet at 1 until
+   "Read more" (coach-brief.js shows it only when text is cut off). */
+.cbr-body.is-clamped .cbr-headline {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+.cbr-body.is-clamped .cbr-bullet-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cbr-more {
+  align-self: flex-start;
+  width: auto;
+  margin: -2px 0 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green-100, var(--green-100));
+  cursor: pointer;
+}
+.cbr-more[hidden] { display: none; }
+.cbr-more:hover { transform: none; box-shadow: none; }
 
 .cbr-actions { display: flex; gap: 8px; }
 .cbr-btn {
@@ -613,8 +644,8 @@
   gap: 12px;
   width: 100%;
   margin: 0;
-  padding: 14px 16px;
-  border-radius: var(--radius-pod, 22px);
+  padding: 10px 12px;
+  border-radius: 14px;
   background: var(--surface-well, #120d05);
   border: 1px solid rgba(199, 154, 84, 0.35);
   color: var(--highlight, #c79a54);
@@ -622,9 +653,9 @@
   box-shadow: none;
   cursor: pointer;
 }
-.cbr-flag > svg { width: 22px; height: 22px; flex-shrink: 0; }
+.cbr-flag > svg { width: 18px; height: 18px; flex-shrink: 0; }
 .cbr-flag .cbr-chev { width: 16px; height: 16px; color: var(--text-tertiary, #a3b0a8); }
-.cbr-flag-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cbr-flag-text { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .cbr-flag-text strong { font-size: 14px; font-weight: 600; color: var(--text-color, #f4f7f5); }
 .cbr-flag-text span { font-size: 12.5px; color: var(--text-tertiary, #a3b0a8); }
 .cbr-flag:hover { transform: none; box-shadow: none; }
