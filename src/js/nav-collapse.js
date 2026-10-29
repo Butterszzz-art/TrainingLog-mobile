@@ -2,10 +2,11 @@
  * nav-collapse.js
  * Lets the user slide the bottom nav down out of the way and back up.
  *
- * A small handle tab sits on the nav's top edge. Tapping it (or swiping
- * down on the nav) slides the capsule off the bottom of the screen, leaving
- * only the handle peeking up; tapping the handle again (or swiping up on
- * it) slides the nav back. The state lives on <body> as `.nav-collapsed`
+ * Swiping down on the nav slides the capsule fully off the bottom of the
+ * screen, leaving only a slim grab line; tapping that line (or swiping up
+ * on it) slides the nav back. While the nav is shown, the handle is
+ * invisible on touch screens and only appears on hover / keyboard focus
+ * on desktop, so nothing sits between the nav and the content. The state lives on <body> as `.nav-collapsed`
  * so other fixed elements (workout focus bar, content padding) can follow
  * it in CSS — see css/nav.css.
  *
