@@ -5,20 +5,6 @@
    Depends on: tokens.css
    ============================================================= */
 
-/* ── Shared section heading — goal progress and personal records use
-   this instead of the browser-default bold serif-ish h3. ── */
-
-#goalProgressList h3,
-.pr-section h3 {
-  margin: 0 0 10px;
-  font-family: var(--font-label);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-label);
-}
-
 /* ── Layout: horizontal mini-tab nav on top, chart panel below ── */
 
 .progress-layout {
@@ -947,3 +933,112 @@
   font-weight: 700;
   box-shadow: none;
 }
+
+/* ── Collapsible Insights sections ─────────────────────────────── */
+.ins-section {
+  margin: 10px 0 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface-bg, transparent);
+}
+.ins-section[hidden] { display: none; }
+.ins-section > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  cursor: pointer;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ins-section > summary::-webkit-details-marker { display: none; }
+.ins-section > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-left: 4px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform .15s ease;
+  flex-shrink: 0;
+}
+.ins-section[open] > summary::after { transform: rotate(-135deg) translateY(-1px); }
+.ins-title {
+  font-family: var(--font-label);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-label, var(--text-color));
+}
+.ins-sum {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ins-body { padding: 0 12px 12px; }
+.ins-body > * + * { margin-top: 10px; }
+.ins-note { margin: 0 0 6px; font-size: 0.8rem; color: var(--text-muted); }
+
+/* Compact type scale inside Insights (headings were 22px). */
+#progressTab .progress-chart h3 { font-size: 0.95rem; margin: 0 0 6px; }
+#progressTab .progress-chart h4 {
+  font-size: 0.72rem;
+  margin: 12px 0 6px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+#progressTab .ins-body h4:first-child { margin-top: 0; }
+#progressTab .bb-row { padding: 8px 10px; }
+#progressTab .goal-card-meta { font-size: 0.76rem; }
+
+/* All-modalities trend tiles: 2 across on phones. */
+.ins-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.ins-tile {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .03);
+  min-width: 0;
+}
+.ins-tile-label {
+  display: block;
+  font-family: var(--font-label);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ins-tile-detail { margin-top: 3px; font-size: 0.82rem; line-height: 1.35; overflow-wrap: anywhere; }
+.ins-tile-detail ul { margin: 4px 0 0 16px; padding: 0; }
+
+/* PR card no longer needs its own heading or top margin. */
+.ins-body .pr-section { margin-top: 0; }
+.ins-body .pr-section-head { justify-content: flex-end; }
+
+/* Fewer nested boxes: cards inside a section lose their extra chrome. */
+.ins-body .pod,
+.ins-body .insight-box,
+.ins-body .gamification-panel {
+  margin: 0;
+  padding: 10px 12px;
+  box-shadow: none;
+}
+.ins-body .ni-title { font-size: 0.9rem; }
+@media (max-width: 600px) {
+  #progressTab .progress-chart { padding: 10px; }
+  .ins-body { padding: 0 10px 10px; }
+  .ins-section > summary { padding: 0 10px; }
+}
+.ins-body #progressArchetypeSpotlight { padding: 0; border: 0; background: none; }
