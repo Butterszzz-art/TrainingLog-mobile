@@ -257,7 +257,11 @@ function renderClientList() {
     return '<div role="button" tabindex="0" class="client-row' + (isActive ? ' active' : '') + (pending ? ' is-pending' : '') + '" data-id="' + id + '" onclick="selectClient(\'' + id + '\')">'
       + (pending ? '<span class="client-checkbox"></span>' : '<input type="checkbox" class="client-checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleBulk(\'' + id + '\')" aria-label="Select ' + escapeHtml(c.clientName) + '">')
       + '<div class="client-avatar" data-avatar-user="' + escapeHtml(c.clientName || '') + '">' + initials + '</div>'
-      + '<div class="client-info"><div class="client-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
+      + '<div class="client-info"><div class="client-name">' + escapeHtml(c.clientName || 'Unknown')
+      // Client Pro (PAY2-9): Pro included while you're actively coaching them.
+      + (c.clientPro === 'active' ? ' <span class="client-pro-badge">Pro</span>' : '')
+      + '</div>'
+      + (c.clientPro === 'paused_inactive' ? '<div class="client-pro-paused">Pro paused, no activity in 30 days</div>' : '')
       + '<div class="client-meta">' + meta + '</div></div>'
       + '<div class="client-alert ' + (pending ? 'pending' : escapeHtml(c.alertStatus || 'ok')) + '"></div></div>';
   }).join('');
