@@ -4162,6 +4162,7 @@
 <script type="module" src="progressUtils.js"></script>
 <script src="src/js/local-account-data.js"></script>
 <script src="src/js/settings.js"></script>
+<script src="src/js/plan-source.js"></script>
 <script src="src/js/payments.js"></script>
 <script type="module" src="history.js"></script>
 <!-- Optional runtime configuration -->
@@ -4661,13 +4662,22 @@ async function loadUserPlan() {
     window.currentReferralCode = data.referralCode || '';
     window.currentReferralCredits = data.referralCredits || 0;
     window.currentIsAdmin = data.admin === true;
+    // Where the plan comes from (subscription, pass, trial, lifetime, …) and
+    // when it ends — see src/js/plan-source.js. Old servers omit these.
+    window.currentPlanSource = data.planSource || null;
+    window.currentPlanExpiresAt = data.planExpiresAt || null;
     window.currentUserPlanLoaded = true;
     localStorage.setItem('userPlan', window.currentUserPlan);
     localStorage.setItem('userIsAdmin', window.currentIsAdmin ? '1' : '');
+    localStorage.setItem('userPlanSource', window.currentPlanSource || '');
+    localStorage.setItem('userPlanExpiresAt', window.currentPlanExpiresAt || '');
     // Coach Mode depends on the plan — re-apply now that we know it.
     if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
   } catch {
+    // Keep the cached plan; never fall back to blocking anything.
     window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
+    window.currentPlanSource = localStorage.getItem('userPlanSource') || null;
+    window.currentPlanExpiresAt = localStorage.getItem('userPlanExpiresAt') || null;
   }
 }
 
@@ -4960,17 +4970,24 @@ function renderSubscriptionPanel() {
   var status = document.getElementById('subStatusLabel');
   var btn = document.getElementById('subActionBtn');
   if (label) label.textContent = plan === 'coach' ? 'Coach Plan' : plan === 'pro' ? 'Pro Plan' : 'Free Plan';
-  if (status) {
-    var s = window.currentSubStatus || 'none';
-    status.textContent = s === 'active' ? 'Active subscription' : s === 'trialing' ? 'Free trial active' : s === 'past_due' ? 'Payment issue' : 'No active subscription';
-  }
+  var desc = window.PlanSource
+    ? window.PlanSource.describePlanSource({
+        plan: plan, source: window.currentPlanSource, expiresAt: window.currentPlanExpiresAt,
+        subStatus: window.currentSubStatus,
+      })
+    : { status: '', isSubscription: plan !== 'free' };
+  if (status) status.textContent = desc.status;
   var restore = document.getElementById('subRestoreBtn');
   if (restore) restore.hidden = !usesAppleIAP();
   if (btn) {
-    btn.textContent = (plan === 'pro' || plan === 'coach') ? 'Manage Subscription' : 'Upgrade';
-    btn.style.background = (plan === 'pro' || plan === 'coach') ? 'transparent' : '';
-    btn.style.border = (plan === 'pro' || plan === 'coach') ? '1px solid var(--border-color)' : '';
-    btn.style.color = (plan === 'pro' || plan === 'coach') ? 'var(--secondary-text)' : '';
+    // Subscriptions are managed in Stripe/App Store. Pass, trial and lifetime
+    // holders have nothing to manage, so the button shows the plans instead.
+    var manages = plan !== 'free' && desc.isSubscription;
+    btn.textContent = manages ? 'Manage Subscription' : plan === 'free' ? 'Upgrade' : 'See plans';
+    btn.onclick = manages ? function () { openManageBilling(); } : function () { openUpgradeModal('pro'); };
+    btn.style.background = manages ? 'transparent' : '';
+    btn.style.border = manages ? '1px solid var(--border-color)' : '';
+    btn.style.color = manages ? 'var(--secondary-text)' : '';
   }
 }
 
