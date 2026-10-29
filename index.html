@@ -3477,23 +3477,12 @@
         </div>
         <div id="progressChartsPanel" class="panel">
         <section class="progress-chart">
-          <div id="aiPlateauCard" style="display:none;margin-bottom:12px;"></div>
-          <!-- Nutrition vs training (src/js/nutrition-review.js) -->
-          <div id="nutritionInsightsCard" style="margin-bottom:12px;"></div>
-          <div id="progressArchetypeSpotlight" class="gamification-panel" style="margin-bottom:12px;"></div>
+          <!-- Main view for the chosen mode stays visible; everything else
+               sits in collapsible sections (initInsightSections remembers
+               which are open and hides ones with nothing to show). -->
+          <div id="aiPlateauCard" style="display:none;margin-bottom:10px;"></div>
           <canvas id="progressCanvas" height="220"></canvas>
           <div id="exerciseProgress" style="display:none;"></div>
-          <div id="trainingLoadPanel" style="margin-top:14px;">
-            <h3 style="margin-bottom:6px;">Training Stress
-              <span title="Monotony = mean daily load / standard deviation of daily load. Strain = monotony × weekly load." style="cursor:help;">ⓘ</span>
-            </h3>
-            <p style="margin:0 0 8px; font-size:.9rem;">
-              <strong>Monotony</strong> and <strong>Strain</strong> are calculated from weekly volume and intensity load.
-            </p>
-            <canvas id="monotonyCanvas" height="180" style="max-height:180px; margin-bottom:10px;"></canvas>
-            <canvas id="strainCanvas" height="180" style="max-height:180px;"></canvas>
-            <div id="loadAlerts" style="margin-top:8px;"></div>
-          </div>
           <div id="recoveryPanel" class="recovery-panel" style="display:none;">
             <h3 style="margin-bottom:6px;">Recovery Map</h3>
             <p class="recovery-sub">Trailing 7-day set volume and estimated fatigue per muscle group.</p>
@@ -3604,7 +3593,43 @@
               <div id="muscleTargetsFeedback" class="mx-disclosure-note"></div>
             </details>
           </div>
+          <details class="ins-section" data-ins="notes" open>
+            <summary><span class="ins-title">Coach notes</span><span class="ins-sum"></span></summary>
+            <div class="ins-body">
+          <!-- Nutrition vs training (src/js/nutrition-review.js) -->
+          <div id="nutritionInsightsCard"></div>
+          <div id="coachCorner" style="margin-top:10px;"></div>
+            </div>
+          </details>
+          <details class="ins-section" data-ins="modalities">
+            <summary><span class="ins-title">All modalities</span><span class="ins-sum"></span></summary>
+            <div class="ins-body">
+          <div id="progressArchetypeSpotlight" class="gamification-panel"></div>
+            </div>
+          </details>
+          <details class="ins-section" data-ins="stress">
+            <summary><span class="ins-title">Training stress</span><span class="ins-sum"></span></summary>
+            <div class="ins-body">
+          <div id="trainingLoadPanel" >
+            <p class="ins-note">
+              <strong>Monotony</strong> and <strong>strain</strong> from weekly volume and intensity.
+              <span title="Monotony = mean daily load / standard deviation of daily load. Strain = monotony × weekly load." style="cursor:help;">ⓘ</span>
+            </p>
+            <canvas id="monotonyCanvas" height="130" style="max-height:130px; margin-bottom:8px;"></canvas>
+            <canvas id="strainCanvas" height="130" style="max-height:130px;"></canvas>
+            <div id="loadAlerts" style="margin-top:8px;"></div>
+          </div>
+            </div>
+          </details>
+          <details class="ins-section" data-ins="volume">
+            <summary><span class="ins-title">Muscle volume</span><span class="ins-sum"></span></summary>
+            <div class="ins-body">
           <div id="bodybuildingProgressPanel"></div>
+            </div>
+          </details>
+          <details class="ins-section" data-ins="goals">
+            <summary><span class="ins-title">Goals</span><span class="ins-sum"></span></summary>
+            <div class="ins-body">
           <div id="goalBar" style="margin-top:10px;"></div>
           <div id="goalProgressList" style="margin-top:10px;"></div>
 
@@ -3653,13 +3678,15 @@
             </form>
             <div id="smartGoalFeedback" class="mx-disclosure-note"></div>
           </details>
-          <div id="coachCorner" style="margin-top:10px;"></div>
-
+            </div>
+          </details>
+          <details class="ins-section" data-ins="prs">
+            <summary><span class="ins-title">Personal records</span><span class="ins-sum"></span></summary>
+            <div class="ins-body">
           <!-- The one PR list (renderPRs). Replaces the old PRs mini-tab,
                the "PR Summary" card and the bodybuilding "PR Snapshot". -->
           <div id="prSection" class="pr-section">
             <div class="pr-section-head">
-              <h3>Personal records</h3>
               <select id="prTimeframe" onchange="renderPRs()" aria-label="PR timeframe">
                 <option value="all">All time</option>
                 <option value="year">Last year</option>
@@ -3667,6 +3694,8 @@
             </div>
             <div id="prPanel"></div>
           </div>
+            </div>
+          </details>
         </section>
       </div>
     </div>
@@ -5483,6 +5512,7 @@ function showTab(tabName) {
       // Goal form and weekly set targets live on this tab (moved from Settings).
       if (typeof initSmartGoalForm === 'function') initSmartGoalForm();
       if (typeof initMuscleTargetsForm === 'function') initMuscleTargetsForm();
+      initInsightSections();
       runPlateauCheck(currentUser);
       if (typeof window.renderNutritionInsightsCard === 'function') window.renderNutritionInsightsCard();
       break;
@@ -15661,7 +15691,11 @@ function renderBodybuildingProgressPanel(workouts) {
     return;
   }
 
-  const summary = computeBodybuildingProgressSummary(workouts || []);
+  if (!Array.isArray(workouts) || workouts.length === 0) {
+    panel.innerHTML = '';
+    return;
+  }
+  const summary = computeBodybuildingProgressSummary(workouts);
   const volumeRows = (summary.muscleGroupVolume || [])
     .map(group => {
       const plannedLabel = group.planned > 0 ? group.planned.toFixed(0) : '—';
@@ -15701,7 +15735,6 @@ function renderBodybuildingProgressPanel(workouts) {
     .join('');
 
   panel.innerHTML = `
-    <h3>Bodybuilding Progress</h3>
     <h4>Muscle Group Weekly Volume (actual vs planned)</h4>
     <div class="bb-list">
       ${volumeRows || '<p class="progress-empty">No resistance log data in selected range.</p>'}
@@ -15945,13 +15978,14 @@ function renderProgressArchetypeSpotlight(context = {}) {
   };
 
   const cards = progressCardsByArchetype[archetype] || progressCardsByArchetype.hybrid;
+  const archetypeLabel = archetype.charAt(0).toUpperCase() + archetype.slice(1);
+  setInsightSummary('modalities', archetypeLabel);
   panel.innerHTML = `
-    <h3 style="margin:0 0 8px;">Archetype Progress Focus · ${archetype.charAt(0).toUpperCase() + archetype.slice(1)}</h3>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
+    <div class="ins-tiles">
       ${cards.map((item) => `
-        <article style="border:1px solid var(--border);border-radius:10px;padding:8px;background:rgba(255,255,255,.03);min-height:72px;">
-          <strong>${item.title}</strong>
-          <div style="margin-top:4px;font-size:.9rem;opacity:.95;">${item.detail || 'No data yet.'}</div>
+        <article class="ins-tile">
+          <span class="ins-tile-label">${item.title}</span>
+          <div class="ins-tile-detail">${item.detail || 'No data yet.'}</div>
         </article>
       `).join('')}
     </div>
@@ -16416,6 +16450,58 @@ function refreshProgress() {
   }
 }
 
+// ── Insights sections ──────────────────────────────────────────────
+// Collapsible <details class="ins-section"> blocks. Open/closed state is a
+// per-device convenience; sections with nothing to show are hidden.
+const INSIGHT_SECTIONS_KEY = 'insightsSectionsOpen_v1';
+
+function readInsightSectionState() {
+  try { return JSON.parse(localStorage.getItem(INSIGHT_SECTIONS_KEY)) || {}; } catch { return {}; }
+}
+
+function setInsightSummary(key, text) {
+  const el = document.querySelector(`.ins-section[data-ins="${key}"] .ins-sum`);
+  if (el) el.textContent = text || '';
+}
+
+function insightBlockHasContent(el) {
+  if (el.style.display === 'none' || el.hidden) return false;
+  if (el.tagName === 'CANVAS' || el.tagName === 'DETAILS') return true;
+  return !!(el.textContent.trim() || el.querySelector('canvas, svg, img'));
+}
+
+function syncInsightSections() {
+  document.querySelectorAll('#progressTab .ins-section').forEach((section) => {
+    const body = section.querySelector('.ins-body');
+    const show = !!body && [...body.children].some(insightBlockHasContent);
+    // Only write on change: the observer below watches `hidden` too.
+    if (section.hidden === show) section.hidden = !show;
+  });
+}
+
+function initInsightSections() {
+  const tab = document.getElementById('progressTab');
+  if (!tab) return;
+  if (!tab.dataset.insWired) {
+    tab.dataset.insWired = '1';
+    const saved = readInsightSectionState();
+    tab.querySelectorAll('.ins-section').forEach((section) => {
+      const key = section.dataset.ins;
+      if (key in saved) section.open = !!saved[key];
+      section.addEventListener('toggle', () => {
+        const state = readInsightSectionState();
+        state[key] = section.open;
+        try { localStorage.setItem(INSIGHT_SECTIONS_KEY, JSON.stringify(state)); } catch {}
+      });
+    });
+    // Mode switches re-render and show/hide panels; keep sections in step.
+    new MutationObserver(syncInsightSections).observe(tab.querySelector('.progress-chart') || tab, {
+      childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'hidden']
+    });
+  }
+  syncInsightSections();
+}
+
 // Shows the 5 most recently set PRs; "Show all" expands to every exercise.
 let prListExpanded = false;
 const PR_PREVIEW_COUNT = 5;
@@ -16468,6 +16554,7 @@ function renderPRs() {
     });
   });
 
+  setInsightSummary('prs', rows.length ? `${rows.length} lift${rows.length === 1 ? '' : 's'}` : '');
   if (!rows.length) {
     panel.innerHTML = '<p class="progress-empty">No PRs yet. Log workouts to start tracking personal records.</p>';
     return;
@@ -16503,7 +16590,7 @@ function renderGoalBar() {
   const bar = document.getElementById('goalBar');
   if (!bar) return;
   if (!Array.isArray(goals) || goals.length === 0) {
-    bar.innerHTML = '<small style="color:var(--text-muted);">No goals yet. Add one under Goal progress below.</small>';
+    bar.innerHTML = '';
     return;
   }
   const topGoal = goals[0];
@@ -16660,8 +16747,9 @@ function renderGoalProgressList() {
   const goals = loadGoals(currentUser);
   const workouts = getProgressWorkoutsSync();
 
+  setInsightSummary('goals', Array.isArray(goals) && goals.length ? `${goals.length} active` : 'None yet');
   if (!Array.isArray(goals) || goals.length === 0) {
-    list.innerHTML = '<h3>Goal Progress</h3><p style="color:var(--text-muted);">No goals yet. Add one below.</p>';
+    list.innerHTML = '<p style="color:var(--text-muted);margin:0;">No goals yet. Add one below.</p>';
     return;
   }
 
@@ -16681,7 +16769,7 @@ function renderGoalProgressList() {
     </div>`;
   }).join('');
 
-  list.innerHTML = `<h3>Goal Progress</h3><div class="goal-card-list">${cards}</div>`;
+  list.innerHTML = `<div class="goal-card-list">${cards}</div>`;
 }
 
 // The goal form lives on Insights, under Goal progress.
