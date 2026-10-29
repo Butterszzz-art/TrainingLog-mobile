@@ -3394,7 +3394,6 @@ html.pc-log-only .food-lib-name small { display: none !important; }
   transition: bottom 0.25s ease;
 }
 .food-dock[hidden] { display: none; }
-body.nav-collapsed .food-dock { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 .food-dock .food-dock-btn {
   display: flex;
   align-items: center;
