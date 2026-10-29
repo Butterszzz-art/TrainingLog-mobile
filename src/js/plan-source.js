@@ -19,7 +19,7 @@
     return Math.max(0, Math.ceil((expires.getTime() - now.getTime()) / 86400000));
   }
 
-  // opts: { plan, source, expiresAt (ISO|null), subStatus, now?, locale? }
+  // opts: { plan, source, expiresAt (ISO|null), subStatus, coachName?, coachUsername?, now?, locale? }
   // Returns { status: string, isSubscription: boolean }.
   function describePlanSource(opts) {
     var o = opts || {};
@@ -52,7 +52,11 @@
         return { status: name + ' trial, ' + n + (n === 1 ? ' day' : ' days') + ' left', isSubscription: false };
       }
       case 'referral': return { status: name + ' from referrals' + until, isSubscription: false };
-      case 'coach_client': return { status: name + ', included by your coach', isSubscription: false };
+      case 'coach_client':
+        return { status: name + ', included by your coach' + (o.coachName ? ' ' + o.coachName : ''), isSubscription: false };
+      // Pro from a coach's code (src/js/coach-code.js).
+      case 'coach_code':
+        return { status: o.coachUsername ? 'Included by @' + o.coachUsername : name + ', included by your coach', isSubscription: false };
       default: return { status: name + until, isSubscription: false };
     }
   }

@@ -273,3 +273,16 @@
 .hist-pill.is-locked { opacity: 0.6; }
 .hist-pill.is-locked .ui-icon { width: 11px; height: 11px; margin-left: 3px; vertical-align: -1px; }
 .hist-pill.is-locked .ui-icon svg { width: 11px; height: 11px; }
+
+/* Client Pro (PAY2-9): roster badge, "Continue with Free", double-pay notice */
+.coach-client-pro { margin-top: 4px; }
+.coach-client-pro-paused { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-tertiary); }
+.upg-continue-free {
+  margin-top: 12px;
+  min-height: 56px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-chip);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.cp-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }

@@ -32,6 +32,11 @@ describe('describePlanSource', () => {
     expect(d({ plan: 'pro', source: 'coach_client' }).status).toBe('Pro, included by your coach');
   });
 
+  test('coach code names the coach', () => {
+    expect(d({ plan: 'pro', source: 'coach_code', coachUsername: 'gael' }).status).toBe('Included by @gael');
+    expect(d({ plan: 'pro', source: 'coach_code' }).status).toBe('Pro, included by your coach');
+  });
+
   test('a bad date is ignored rather than shown as "Invalid Date"', () => {
     expect(d({ plan: 'pro', source: 'prep_pass', expiresAt: 'nope' }).status).toBe('Pro via Prep Pass');
   });

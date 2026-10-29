@@ -1525,3 +1525,7 @@ mark.pi-suggested { background: var(--warning-bg, rgba(168,124,56,.25)); color: 
 .mp2-result small { color: var(--text-muted); }
 .fl-plan { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-family: var(--font-label); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--highlight); border: 1px solid var(--highlight); }
 .fl-plan.is-eaten { color: var(--primary-text, var(--primary)); border-color: var(--primary); }
+
+/* Client Pro (PAY2-9) */
+.client-pro-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; vertical-align: middle; background: rgba(47, 143, 78, 0.18); color: var(--green, #7fdc9b); }
+.client-pro-paused { font-size: 0.72rem; color: var(--text-muted, #9aa59d); margin-top: 2px; }
