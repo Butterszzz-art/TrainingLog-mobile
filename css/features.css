@@ -3628,7 +3628,9 @@ html.pc-log-only #macroMicrosBtn { display: none !important; }
   text-align: left;
   cursor: pointer;
 }
+.food-entry-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .food-entry-name { font-size: 0.85rem; color: var(--text-color); min-width: 0; }
+.food-entry-macros .fim { font-size: 0.66rem; padding: 1px 6px; }
 .food-entry-name small { color: var(--text-muted); font-size: 0.75rem; }
 .food-entry .food-diary-kcal { font-size: 0.82rem; flex-shrink: 0; }
 .food-diary-list .food-share-ask { margin: 0 0 10px; }

@@ -671,7 +671,14 @@
           </div>
           ${list.map(e => `
           <button type="button" class="food-entry" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">
-            <span class="food-entry-name">${_esc(e.name)}${e.amount ? `<small> · ${_esc(Core.amountLabel(e))}</small>` : ''}</span>
+            <span class="food-entry-main">
+              <span class="food-entry-name">${_esc(e.name)}${e.amount ? `<small> · ${_esc(Core.amountLabel(e))}</small>` : ''}</span>
+              <span class="food-item-macros food-entry-macros">
+                <span class="fim protein-badge">${_r1(e.protein)}P</span>
+                <span class="fim carbs-badge">${_r1(e.carbs)}C</span>
+                <span class="fim fat-badge">${_r1(e.fat)}F</span>
+              </span>
+            </span>
             <span class="food-diary-kcal">${e.flag ? '<span class="food-flag-dot" title="Calories do not match the macros — check this food">⚠</span> ' : ''}${e.kcal}</span>
           </button>`).join('')}
         </div>`;
