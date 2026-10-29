@@ -669,6 +669,7 @@
             <span class="food-meal-right">
               <span class="food-meal-kcal">${mt.kcal} kcal</span>
               <button type="button" class="food-icon-btn" data-meal-photo="${m}" aria-label="Add a photo of ${label.toLowerCase()}" title="Meal photo"><span class="ui-icon">${_icon('camera')}</span></button>
+              <button type="button" class="food-icon-btn" data-share-meal="${m}" aria-label="Send ${label.toLowerCase()} to friends or a group" title="Send to friends or a group"><span class="ui-icon">${_icon('share')}</span></button>
               <button type="button" class="food-icon-btn" data-save-meal="${m}" aria-label="Save ${label.toLowerCase()} as a meal" title="Save as a meal"><span class="ui-icon">${_icon('bookmark')}</span></button>
               ${add}
             </span>

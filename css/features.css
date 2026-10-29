@@ -3947,3 +3947,38 @@ html.pc-log-only .food-sheet-tab[data-food-tab="quick"] { display: none; }
 .ni-ok { color: var(--primary-text); }
 .ni-empty { margin: 0; font-size: 0.82rem; color: var(--text-muted); }
 html.pc-log-only .macro-nr-row, html.pc-log-only #nutritionInsightsCard, html.pc-log-only .wr-nutrition-review { display: none !important; }
+
+/* Sending and receiving meals (src/js/meal-share.js) */
+.meal-share-pills { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 6px; }
+.meal-share-foods { margin: 0 0 8px; font-size: 0.78rem; line-height: 1.4; color: var(--text-muted); }
+.meal-share-photo:empty { display: none; }
+.meal-share-photo img {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 6px;
+}
+.meal-share-photo-opt { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; font-size: 0.85rem; color: var(--text-color); }
+.food-form .meal-share-photo-opt input { flex: none; width: 18px; height: 18px; margin: 0; padding: 0; }
+.meal-share-photo-opt img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; }
+.meal-share-h { margin: 12px 0 6px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.meal-share-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.meal-share-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.meal-share-chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+.meal-share-none { font-size: 0.8rem; color: var(--text-muted); }
+.meal-share-privacy { margin: 14px 0 10px; font-size: 0.75rem; line-height: 1.4; color: var(--text-muted); }
+.sx-gshare--meal { flex-direction: column; align-items: stretch; }
+.sx-gshare-meal-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sx-gshare-meal-h > .ui-icon { flex: none; width: 20px; height: 20px; color: var(--text-tertiary); }
+.sx-gshare-meal-h .sx-join + .sx-join { margin-left: 2px; }

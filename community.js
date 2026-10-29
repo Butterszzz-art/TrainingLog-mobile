@@ -185,6 +185,16 @@ async function shareProgramToGroup(groupId, programData) {
   }
 }
 
+// Posts a meal from the food log (src/js/meal-share.js) into a group, with
+// an optional photo. Throws on failure so the share sheet can say so.
+async function shareMealToGroup(groupId, item, { text = '', photo = null } = {}) {
+  const body = { text, share: { type: 'meal', name: item.name, data: item.data } };
+  if (photo) body.photo = photo;
+  const { post } = await groupsApi('POST', `/${encodeURIComponent(groupId)}/posts`, body);
+  if (_groupSheet.id === groupId) _groupSheet.posts.unshift(post);
+  return post;
+}
+
 let _groupsLoadError = '';
 
 function loadGroups() {
@@ -452,10 +462,25 @@ function closeGroup() {
   _groupSheet = { id: null, posts: [], timer: null, loading: false };
 }
 
+function _mealPostHtml(p) {
+  const MS = typeof window !== 'undefined' && window.MealShare;
+  const body = MS ? MS.receivedMealHtml(p.share, { photoKey: p.hasPhoto ? `post:${p.id}` : '' }) : '';
+  return `
+    <div class="sx-gshare sx-gshare--meal">
+      <div class="sx-gshare-meal-h">
+        <span class="ui-icon" data-icon="leaf">${typeof ICONS !== 'undefined' && ICONS.leaf ? ICONS.leaf : ''}</span>
+        <div style="min-width:0;flex:1"><b>${_escGroup(p.share.name)}</b><small>Meal</small></div>
+        ${p.mine ? '' : `<button type="button" class="sx-join" data-post-log="${_escGroup(p.id)}">Log it</button>
+        <button type="button" class="sx-join" data-post-save="${_escGroup(p.id)}">Save</button>`}
+      </div>
+      ${body}
+    </div>`;
+}
+
 function _postHtml(p) {
   const author = _escGroup(p.author);
   const icon = p.share && p.share.type === 'template' ? 'clipboard' : 'calendar';
-  const share = p.share ? `
+  const share = p.share && p.share.type === 'meal' ? _mealPostHtml(p) : p.share ? `
     <div class="sx-gshare">
       <span class="ui-icon" data-icon="${icon}">${typeof ICONS !== 'undefined' && ICONS[icon] ? ICONS[icon] : ''}</span>
       <div style="min-width:0"><b>${_escGroup(p.share.name)}</b><small>${p.share.type === 'template' ? 'Template' : 'Program'}</small></div>
@@ -586,6 +611,23 @@ function _wireGroupSheet(group) {
       }
     });
   });
+  overlay.querySelectorAll('[data-post-log]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const post = _groupSheet.posts.find(p => p.id === btn.dataset.postLog);
+      if (post && window.MealShare?.logSharedMeal(post.share.data, post.share.name)) {
+        btn.disabled = true;
+        btn.textContent = 'Logged';
+      }
+    });
+  });
+  // Meal photos load after the posts are drawn (one request per photo).
+  if (window.MealShare) {
+    const fetchers = {};
+    _groupSheet.posts.filter(p => p.hasPhoto).forEach(p => {
+      fetchers[`post:${p.id}`] = () => groupsApi('GET', `/${encodeURIComponent(group.id)}/posts/${encodeURIComponent(p.id)}/photo`).then(r => r.photo);
+    });
+    window.MealShare.loadPhotos(overlay, fetchers);
+  }
 }
 
 async function _loadGroupPosts(group, { older = false } = {}) {
@@ -752,8 +794,8 @@ function _groupMenu(group) {
   _actionSheet(group.name, actions);
 }
 
-// Saves a program/template someone shared in a group into your own library
-// (same stores the Share inbox uses, see src/js/shares.js).
+// Saves a program, template or meal someone shared in a group into your own
+// library (same stores the Share inbox uses, see src/js/shares.js).
 function _saveSharedItem(share, from) {
   if (!share || typeof window === 'undefined' || !window.Shares) return false;
   return window.Shares.saveToLibrary(share, from);
@@ -887,6 +929,10 @@ if (typeof window !== 'undefined') {
   window.openGroup = openGroup;
   window.closeGroup = closeGroup;
   window.shareProgramToGroup = shareProgramToGroup;
+  window.shareMealToGroup = shareMealToGroup;
+  window.getGroups = getGroups;
+  window.isMemberOf = isMemberOf;
+  window.getCurrentUserId = getCurrentUserId;
   window.doGroupSearch = doGroupSearch;
   window.clearGroupFilters = clearGroupFilters;
   window.joinGroup = joinGroup;
