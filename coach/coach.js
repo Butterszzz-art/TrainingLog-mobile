@@ -1574,6 +1574,7 @@ function aiBox(title, body, color) {
 }
 
 async function aiAnalyse() {
+  if (typeof window.markAiUserAction === 'function') window.markAiUserAction('checkin-summary');
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
   const { checkIns, ci, bw } = aiClientContext(client);
@@ -1631,6 +1632,7 @@ function draftPayload(client) {
 let _lastDraft = '';
 
 async function aiDraft() {
+  if (typeof window.markAiUserAction === 'function') window.markAiUserAction('coach-draft-message');
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
   const box = document.getElementById('aiResultBox');

@@ -178,6 +178,10 @@
     }
   }
 
+  function aiAccess() {
+    return typeof window.hasPaidAccess === 'function' && window.hasPaidAccess();
+  }
+
   function renderCoachBrief() {
     const el = document.getElementById('coachBriefCard');
     const u = user();
@@ -199,7 +203,10 @@
     }
 
     const calls = sameDay ? cache.calls || 0 : 0;
-    const canAsk = digest.hasData && navigator.onLine !== false && calls < MAX_AI_CALLS_PER_DAY && !inflight;
+    // Auto-loading AI: only for accounts with AI access, so a free account
+    // never sends a request (or sees a consent/upgrade sheet) from just
+    // opening Home. Free accounts keep the rules version.
+    const canAsk = digest.hasData && aiAccess() && navigator.onLine !== false && calls < MAX_AI_CALLS_PER_DAY && !inflight;
     render(el, { digest, headline: digest.headline, bullets: digest.bullets, source: 'rules', loading: canAsk });
     if (!canAsk) return;
 

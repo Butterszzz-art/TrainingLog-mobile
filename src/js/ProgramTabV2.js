@@ -1073,6 +1073,7 @@
   }
 
   async function analyseProgram(prog, panelEl) {
+    if (typeof window.markAiUserAction === 'function') window.markAiUserAction('program-analyser');
     const cacheKey = prog.programId || prog.id || (prog.name || 'prog').replace(/\s+/g, '_');
     const storageKey = `aiProgramAnalysis_${cacheKey}`;
 

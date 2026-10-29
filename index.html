@@ -4320,9 +4320,6 @@ let savedUser = currentUser;
 let activeSection = null;
 let activeTab = null;
 
-let airtableToken = '';
-let airtableBaseId = '';
-
 // ── Remember me ──────────────────────────────────────────────────────────────
 // On (default): stay signed in across launches and prefill the username after
 // logout. Off: the session lives only until the app/tab is closed —
@@ -4456,54 +4453,33 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function fetchAirtableConfig() {
+async function fetchServerConfig() {
   ensureServerUrl();
 
-  const applyAirtableConfig = cfg => {
-    if (!cfg) return;
-
-    if (typeof cfg.serverUrl === 'string' && cfg.serverUrl.length) {
+  const applyServerConfig = cfg => {
+    if (cfg && typeof cfg.serverUrl === 'string' && cfg.serverUrl.length) {
       window.SERVER_URL = cfg.serverUrl;
-    }
-
-    if (cfg.airtableBaseId) {
-      airtableBaseId = cfg.airtableBaseId;
-      if (typeof window !== 'undefined') {
-        window.airtableBaseId = airtableBaseId;
-      }
-    }
-
-    if (cfg.airtableToken) {
-      airtableToken = cfg.airtableToken;
-      if (typeof window !== 'undefined') {
-        window.airtableToken = airtableToken;
-      }
     }
   };
 
   if (window.appConfig) {
-    applyAirtableConfig(window.appConfig);
+    applyServerConfig(window.appConfig);
     return window.appConfig;
   }
 
   if (typeof window.loadConfig === 'function') {
     try {
       const cfg = await window.loadConfig();
-      applyAirtableConfig(cfg);
+      applyServerConfig(cfg);
       return cfg;
     } catch (err) {
-      console.warn('Unable to fetch Airtable config from server, falling back to local config', err);
+      console.warn('Unable to fetch server config, using defaults', err);
     }
   }
 
-  const fallback = window.airtableConfig || {};
-  window.appConfig = fallback;
-  applyAirtableConfig(fallback);
-  return fallback;
+  window.appConfig = {};
+  return window.appConfig;
 }
-const usersTableName = 'Users';
-const templatesTableName = 'Templates';
-const MacroTargetsApiUrl = 'https://api.airtable.com/v0/appmjr4IgnEH72K1b/MacroTargets';
 let macroMeals = [];
 
 let macroTargetCalories = 0;
@@ -4675,7 +4651,10 @@ async function loadUserPlan() {
     const res = await fetch(`${window.SERVER_URL}/api/user/plan`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    // A failed lookup must never downgrade a cached paid plan.
+    if (!res.ok) throw new Error('plan lookup failed: ' + res.status);
     const data = await res.json();
+    if (!data || typeof data.plan !== 'string') throw new Error('plan lookup returned no plan');
     window.currentUserPlan = data.plan || 'free';
     window.currentSubStatus = data.status || 'none';
     window.currentSubSource = data.source || ''; // 'stripe' | 'apple'
@@ -4722,14 +4701,22 @@ window.isPro = isPro;
 window.isCoach = isCoach;
 window.isActiveSub = isActiveSub;
 
-function renderLockedCard(featureName, requiredPlan) {
+// teaser (optional): one line computed from the user's own data, e.g.
+// "2 stalled lifts found this month" — shown above the button.
+function renderLockedCard(featureName, requiredPlan, teaser) {
   requiredPlan = requiredPlan || 'pro';
   var planLabel = requiredPlan === 'coach' ? 'Coach' : 'Pro';
   var monthly = planPrice(requiredPlan, 'monthly');
+  var teaserHtml = teaser
+    ? '<div class="locked-teaser">' + String(teaser).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      }) + '</div>'
+    : '';
   return '<div class="locked-feature-card">'
     + '<div class="locked-icon">' + ICONS.lock + '</div>'
     + '<div class="locked-title">' + featureName + '</div>'
     + '<div class="locked-desc">Available on ' + planLabel + (monthly ? ' (from ' + monthly.billed + ')' : '') + '</div>'
+    + teaserHtml
     + '<button class="upgrade-cta-btn" onclick="openUpgradeModal(\'' + requiredPlan + '\')">Unlock with ' + planLabel + '</button>'
     + '</div>';
 }
@@ -5274,12 +5261,12 @@ async function startLogin() {
           // Fetch fresh macro targets and re-render if they differ from cache
           const fetchedTargets = await fetchUserMacroTargets(username);
           if (fetchedTargets) renderMacroTargets({ useFallback: false });
-          // Non-critical Airtable syncs
+          // Non-critical background syncs to the backend
           loadProgramsFromBackend(username);
-          archiveBodyweightToAirtable(username);
-          syncMeasurementsToAirtable(username);
-          syncCardioToAirtable(username);
-          syncCrossfitToAirtable(username);
+          archiveBodyweightToBackend(username);
+          syncMeasurementsToBackend(username);
+          syncCardioToBackend(username);
+          syncCrossfitToBackend(username);
         } catch (syncErr) {
           console.warn('[Login] Background sync error:', syncErr);
         }
@@ -8371,7 +8358,7 @@ function logRestBreak(mins) {
 }
 
 
-// Save a workout template to Airtable
+// Save a workout template to the backend
 async function saveTemplate(username, templateName, templateData) {
   // NOTE: errors are re-thrown (not swallowed) so callers — persistTemplateRecord
   // in particular — can tell the user whether the save reached the server or is
@@ -8991,7 +8978,7 @@ async function deleteSelectedTemplate() {
     saveLocalManagedTemplates(localTemplates);
     loadTemplateDropdown();
   } else {
-    // Airtable-backed template — delete via backend
+    // Backend-stored template — delete via backend
     try {
       const response = await fetch(`${window.SERVER_URL}/templates/${encodeURIComponent(selected.id)}`, {
         method: 'DELETE',
@@ -9734,7 +9721,7 @@ function calculateMacroTargets(goalOverride, rateOverride) {
     saveMacroTargetsToTop(autoTargets);
     // Keep the server copy in step too — otherwise the next sign-in pulls the
     // old targets back down over this calculation.
-    saveToAirtable(currentUser, autoTargets, { silent: true });
+    saveMacroTargetsToBackend(currentUser, autoTargets, { silent: true });
   }
 
   // Refresh the Targets tab (rings, bars, per-macro rows) so a freshly-picked
@@ -10253,7 +10240,7 @@ function saveMacroTargets() {
 
   saveMacroTargetsToTop(targets);
   renderMacroTargets(); // optional: live refresh UI
-  saveToAirtable(currentUser, targets, { silent: true }).then(ok => {
+  saveMacroTargetsToBackend(currentUser, targets, { silent: true }).then(ok => {
     window.showToast?.(ok ? "Targets saved!" : "Saved on this device, but syncing to your account failed.", ok ? 'success' : 'error');
   });
 }
@@ -10430,7 +10417,7 @@ function saveSliderMacros() {
       // fails, then only report success once the server accepted them.
       saveMacroTargetsToTop(target);
       updateMacroUI();
-      saveToAirtable(currentUser, target, { silent: true }).then(ok => {
+      saveMacroTargetsToBackend(currentUser, target, { silent: true }).then(ok => {
         if (ok) window.showToast?.("Macro targets saved!", 'success');
         else window.showToast?.("Saved on this device, but syncing to your account failed.", 'error');
       });
@@ -10443,7 +10430,7 @@ function updateSliderMacros() {
 
 
 // Resolves true only when the server accepted the targets.
-async function saveToAirtable(username, target, { silent = false } = {}) {
+async function saveMacroTargetsToBackend(username, target, { silent = false } = {}) {
   if (!username) return false;
   try {
     const r = await fetch(`${window.SERVER_URL}/macrotargets`, {
@@ -10552,7 +10539,7 @@ function applyCustomCalories() {
   if (currentUser) {
     const customTargets = { calories: customCal, protein, fat, carbs };
     saveMacroTargetsToTop(customTargets);
-    saveToAirtable(currentUser, customTargets, { silent: true });
+    saveMacroTargetsToBackend(currentUser, customTargets, { silent: true });
   }
 
   macroRanges = {
@@ -12784,6 +12771,7 @@ function renderCoachClientRoster(clients = []) {
 }
 
 async function requestCoachDraftMessage(clientId) {
+  if (typeof window.markAiUserAction === 'function') window.markAiUserAction('coach-draft-message');
   const draftSection = document.getElementById('coachAiDraftSection');
   if (!draftSection) return;
   const coachNotes = (document.getElementById('coachAiDraftNotes')?.value || '').trim();
@@ -13821,14 +13809,11 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
   const card = document.getElementById('checkInAiSummaryCard');
   if (!card) return;
 
+  // No upgrade prompt right after a basic task: free accounts just don't get
+  // the automatic summary.
   if (!isProUser()) {
-    card.style.display = '';
-    card.innerHTML = `
-      <div class="ci-ai-card ci-ai-card--locked">
-        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
-        <p>Upgrade to Pro to get an AI-generated summary of every check-in.</p>
-        <button class="ci-ai-upgrade-btn" onclick="openUpgradeModal('pro')">Upgrade</button>
-      </div>`;
+    card.style.display = 'none';
+    card.innerHTML = '';
     return;
   }
 
@@ -13903,14 +13888,6 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
       entries[idx].aiSummary = summary;
       localStorage.setItem(`checkIns_${userId}`, JSON.stringify(entries));
 
-      // Airtable: patch the record if it has an id
-      if (entries[idx].airtableId && airtableBaseId && airtableToken) {
-        fetchWithTimeout(`${window.SERVER_URL}/airtable/${airtableBaseId}/CheckIns`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${airtableToken}` },
-          body: JSON.stringify({ records: [{ id: entries[idx].airtableId, fields: { AISummary: summary } }] }),
-        }, 8000).catch(() => {}); // fire-and-forget, non-blocking
-      }
     }
 
     card.innerHTML = `
@@ -14331,9 +14308,9 @@ function addWeightEntry() {
   if (dateField) dateField.value = '';
   renderWeights();
   updateMacroUI();
-  // Silently archive to Airtable if 4+ weeks have elapsed since last archive
-  if (typeof archiveBodyweightToAirtable === 'function') {
-    archiveBodyweightToAirtable(currentUser).catch(() => {});
+  // Silently archive to the backend if 4+ weeks have elapsed since last archive
+  if (typeof archiveBodyweightToBackend === 'function') {
+    archiveBodyweightToBackend(currentUser).catch(() => {});
   }
 }
 
@@ -14825,9 +14802,9 @@ function addCardioEntry() {
 
   renderCardio();
   updateMacroUI();
-  // Silently sync to Airtable if 4+ weeks of unsynced entries exist
-  if (typeof window.syncCardioToAirtable === 'function') {
-    window.syncCardioToAirtable(currentUser).catch(() => {});
+  // Silently sync to the backend if 4+ weeks of unsynced entries exist
+  if (typeof window.syncCardioToBackend === 'function') {
+    window.syncCardioToBackend(currentUser).catch(() => {});
   }
 }
 
@@ -17190,9 +17167,9 @@ function saveCrossfitWorkout() {
   crossfitExercises = [];
   
   renderCrossfitWorkouts();
-  // Silently sync to Airtable if 4+ weeks of unsynced entries exist
-  if (typeof window.syncCrossfitToAirtable === 'function') {
-    window.syncCrossfitToAirtable(currentUser).catch(() => {});
+  // Silently sync to the backend if 4+ weeks of unsynced entries exist
+  if (typeof window.syncCrossfitToBackend === 'function') {
+    window.syncCrossfitToBackend(currentUser).catch(() => {});
   }
 }
 
@@ -17760,7 +17737,7 @@ function showHistoryMiniTab(type) {
 
     initBodyweightPreferenceUI();
 
-    await fetchAirtableConfig();
+    await fetchServerConfig();
 
     updateExerciseSuggestions();
 
@@ -18068,19 +18045,6 @@ function showHistoryMiniTab(type) {
 
     // showTab is defined above
 
-// === Airtable Functions ===
-
-async function findUser(username) {
-  const url = `/airtable/${airtableBaseId}/${usersTableName}?filterByFormula={Username}='${username}'`;
-  const response = await fetch(url, {
-    credentials: "include",
-    headers: { Authorization: `Bearer ${airtableToken}` }
-  });
-  const data = await response.json();
-  return data.records[0];
-}
-
-// createUser removed — registration now handled via POST /register on the backend
 
 async function fetchDailyLogs(username) {
   const params = new URLSearchParams({ username });
@@ -18613,7 +18577,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
       localStorage.setItem(`programs_${username}`, JSON.stringify(local));
       localStorage.setItem('programs', JSON.stringify(local));
 
-      // Restore active program if one is flagged in Airtable
+      // Restore active program if one is flagged on the backend
       const activeItem = data.items.find(i => i.isActive);
       if (activeItem?.programData && !localStorage.getItem(`activeProgram_${username}`)) {
         localStorage.setItem(`activeProgram_${username}`, JSON.stringify(activeItem.programData));
@@ -18626,12 +18590,12 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
     }
   }
 
-  // Delete a program from Airtable by its _airtableId, then remove from localStorage
-  async function deleteProgramFromBackend(airtableId, username) {
-    if (!airtableId || !window.SERVER_URL) return;
+  // Delete a program on the backend by its stored record id (_airtableId), then remove from localStorage
+  async function deleteProgramFromBackend(recordId, username) {
+    if (!recordId || !window.SERVER_URL) return;
     try {
       const res = await fetch(
-        `${window.SERVER_URL}/programs/${encodeURIComponent(airtableId)}`,
+        `${window.SERVER_URL}/programs/${encodeURIComponent(recordId)}`,
         { method: 'DELETE', headers: getAuthHeaders() }
       );
       if (!res.ok) console.warn('[Programs] Delete failed:', await res.json());
@@ -18640,12 +18604,12 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
     }
   }
 
-  // Set a program as active in Airtable
-  async function setActiveProgramInBackend(airtableId, username) {
-    if (!airtableId || !window.SERVER_URL) return;
+  // Set a program as active on the backend
+  async function setActiveProgramInBackend(recordId, username) {
+    if (!recordId || !window.SERVER_URL) return;
     try {
       await fetch(
-        `${window.SERVER_URL}/programs/${encodeURIComponent(airtableId)}/active?username=${encodeURIComponent(username)}`,
+        `${window.SERVER_URL}/programs/${encodeURIComponent(recordId)}/active?username=${encodeURIComponent(username)}`,
         { method: 'PATCH', headers: getAuthHeaders() }
       );
     } catch (err) {
@@ -18662,7 +18626,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   const MEAS_SYNC_KEY  = 'measLastSynced_';
   const FOUR_WEEKS_MS  = 28 * 24 * 60 * 60 * 1000;
 
-  async function archiveBodyweightToAirtable(username) {
+  async function archiveBodyweightToBackend(username) {
     if (!username || !window.SERVER_URL) return;
 
     const lastArchived = localStorage.getItem(BW_ARCHIVE_KEY + username);
@@ -18702,7 +18666,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   }
 
   // ── Body measurements sync (individual entries, not archived in bulk) ──────
-  async function syncMeasurementsToAirtable(username) {
+  async function syncMeasurementsToBackend(username) {
     if (!username || !window.SERVER_URL) return;
 
     const lastSynced = localStorage.getItem(MEAS_SYNC_KEY + username);
@@ -18730,7 +18694,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
       });
       if (res.ok) {
         localStorage.setItem(MEAS_SYNC_KEY + username, String(now));
-        console.info(`[Measurements] Synced ${toSync.length} entries to Airtable`);
+        console.info(`[Measurements] Synced ${toSync.length} entries to the backend`);
       } else {
         console.warn('[Measurements] Sync failed:', await res.json().catch(() => ({})));
       }
@@ -18742,7 +18706,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
   const CARDIO_SYNC_KEY   = 'cardioLastSynced_';
   const CROSSFIT_SYNC_KEY = 'crossfitLastSynced_';
 
-  async function syncCardioToAirtable(username) {
+  async function syncCardioToBackend(username) {
     if (!username || !window.SERVER_URL) return;
 
     const lastSynced = localStorage.getItem(CARDIO_SYNC_KEY + username);
@@ -18766,7 +18730,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
       });
       if (res.ok) {
         localStorage.setItem(CARDIO_SYNC_KEY + username, String(now));
-        console.info(`[Cardio] Synced ${toSync.length} entries to Airtable`);
+        console.info(`[Cardio] Synced ${toSync.length} entries to the backend`);
       } else {
         console.warn('[Cardio] Sync failed:', await res.json().catch(() => ({})));
       }
@@ -18775,7 +18739,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
     }
   }
 
-  async function syncCrossfitToAirtable(username) {
+  async function syncCrossfitToBackend(username) {
     if (!username || !window.SERVER_URL) return;
 
     const lastSynced = localStorage.getItem(CROSSFIT_SYNC_KEY + username);
@@ -18799,7 +18763,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
       });
       if (res.ok) {
         localStorage.setItem(CROSSFIT_SYNC_KEY + username, String(now));
-        console.info(`[CrossFit] Synced ${toSync.length} entries to Airtable`);
+        console.info(`[CrossFit] Synced ${toSync.length} entries to the backend`);
       } else {
         console.warn('[CrossFit] Sync failed:', await res.json().catch(() => ({})));
       }
@@ -18808,10 +18772,10 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
     }
   }
 
-  window.archiveBodyweightToAirtable  = archiveBodyweightToAirtable;
-  window.syncMeasurementsToAirtable   = syncMeasurementsToAirtable;
-  window.syncCardioToAirtable         = syncCardioToAirtable;
-  window.syncCrossfitToAirtable       = syncCrossfitToAirtable;
+  window.archiveBodyweightToBackend  = archiveBodyweightToBackend;
+  window.syncMeasurementsToBackend   = syncMeasurementsToBackend;
+  window.syncCardioToBackend         = syncCardioToBackend;
+  window.syncCrossfitToBackend       = syncCrossfitToBackend;
 
   // Legacy exports kept only for backwards compatibility
   if (!window.FEATURES?.PROGRAM_BUILDER_V2) {
@@ -19496,6 +19460,7 @@ function renderArchetypeProfileCard() {
 }
 
 async function generateAiProfileSummary() {
+  if (typeof window.markAiUserAction === 'function') window.markAiUserAction('profile-summary');
   const btn = document.getElementById('generateProfileBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
 
@@ -19991,6 +19956,7 @@ window.renderSessionHistory = renderSessionHistory;
 
   // AI Sleep Insight
   window.requestSleepInsight = async function () {
+    if (typeof window.markAiUserAction === 'function') window.markAiUserAction('sleep-insight');
     const log = getSleepLog().slice(0, 14);
     if (log.length < 3) {
       if (typeof nativeToast === 'function') nativeToast('Need at least 3 nights of data', 'warn');
@@ -20937,6 +20903,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   }
 
   window.openMacroAiAdvisor = async function () {
+    if (typeof window.markAiUserAction === 'function') window.markAiUserAction('macro-advisor');
     if (!isProUser()) {
       const btn = document.getElementById('macroAiAdvisorBtn');
       const locked = document.getElementById('macroAiAdvisorLocked');
@@ -21228,6 +21195,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   };
 
   window.submitProgAiGen = function () {
+    if (typeof window.markAiUserAction === 'function') window.markAiUserAction('program-generator');
     var goal   = (document.getElementById('pagGoal')?.value || '').trim();
     var days   = Number(document.getElementById('pagDays')?.value || 4);
     var length = Number(document.getElementById('pagLength')?.value || 60);

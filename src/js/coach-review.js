@@ -249,7 +249,9 @@
     };
 
     const calls = all.calls && all.calls.date === today() ? all.calls.n : 0;
-    const wantAi = ctx.review.source !== 'ai' && !recap.inProgress && navigator.onLine !== false &&
+    // Auto-loading AI: only for accounts with AI access (see coach-brief.js).
+    const aiAccess = typeof window.hasPaidAccess === 'function' && window.hasPaidAccess();
+    const wantAi = ctx.review.source !== 'ai' && aiAccess && !recap.inProgress && navigator.onLine !== false &&
       calls < MAX_AI_CALLS_PER_DAY && !inflight[recap.start];
 
     render(host, { ...ctx, loading: wantAi });

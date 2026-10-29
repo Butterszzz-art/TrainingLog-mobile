@@ -313,6 +313,7 @@
   // ── AI Rehab generation ─────────────────────────────────────
 
   async function generateAiRehab(injuryId, container) {
+    if (typeof window.markAiUserAction === 'function') window.markAiUserAction('rehab-plan');
     const injuries = getInjuries();
     const inj = injuries.find(i => i.id === injuryId);
     if (!inj) return;

@@ -71,7 +71,7 @@ describe('AI consent guard', () => {
   });
 });
 
-describe('Pro gate', () => {
+describe('Plan gate', () => {
   // Like setup(), but lets the fake server answer with a chosen status/body.
   function gated({ plan = null, paid = false, server = { status: 200, body: {} } } = {}) {
     const dom = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', url: 'https://app.test/' });
@@ -92,48 +92,52 @@ describe('Pro gate', () => {
     w.eval(SRC);
     return { w, doc: w.document, sent };
   }
+  const upgrade = { status: 403, body: { success: false, error: { code: 'plan.upgrade_required' } } };
+  const quota = { status: 403, body: { success: false, error: { code: 'ai.quota_exceeded', resetsAt: '2026-11-01T00:00:00Z' } } };
 
-  test('known-free accounts are stopped before any request or consent prompt', async () => {
-    const { w, doc, sent } = gated({ plan: 'free' });
-    w.localStorage.removeItem('pc.aiConsent.v2');
+  test('free accounts are never blocked on the client — the server decides', async () => {
+    const { w, sent } = gated({ plan: 'free' });
     const res = await w.fetch('https://api.test/api/ai/coach');
-    expect(res.status).toBe(403);
-    expect(res.body.error.code).toBe('plan.upgrade_required');
-    expect(sent).toEqual([]);
-    expect(doc.querySelector('.ai-consent-overlay')).toBeNull();
-  });
-
-  test('background AI stays quiet; a tap opens the upgrade sheet', async () => {
-    const { w, doc } = gated({ plan: 'free' });
-    await w.fetch('https://api.test/api/ai/coach/brief');
-    expect(w.openUpgradeModal).not.toHaveBeenCalled();
-    doc.dispatchEvent(new w.Event('pointerdown'));
-    await w.fetch('https://api.test/api/ai/generate-program');
-    expect(w.openUpgradeModal).toHaveBeenCalledWith('pro');
-    expect(w.showToast).toHaveBeenCalledWith('AI features are part of Pocket Coach Pro.');
-  });
-
-  test('paid accounts and admins go through', async () => {
-    const { w, sent } = gated({ plan: 'free', paid: true });
-    expect((await w.fetch('https://api.test/api/ai/coach')).status).toBe(200);
+    expect(res.status).toBe(200);
     expect(sent).toEqual(['https://api.test/api/ai/coach']);
   });
 
-  test('an unknown plan lets the server decide', async () => {
-    const { w, sent } = gated({ plan: null });
-    await w.fetch('https://api.test/api/ai/coach');
-    expect(sent).toHaveLength(1);
+  test('auto-loading AI gets the 403 back quietly: no modal, no toast', async () => {
+    const { w, doc } = gated({ plan: 'free', server: upgrade });
+    doc.dispatchEvent(new w.Event('pointerdown')); // e.g. a tab switch or a save tap
+    const res = await w.fetch('https://api.test/api/ai/coach/brief');
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('plan.upgrade_required');
+    expect(w.openUpgradeModal).not.toHaveBeenCalled();
+    expect(w.showToast).not.toHaveBeenCalled();
   });
 
-  test('a server upgrade_required answer prompts the same way', async () => {
-    const { w, doc } = gated({
-      plan: 'pro',
-      server: { status: 403, body: { success: false, error: { code: 'plan.upgrade_required' } } },
-    });
-    doc.dispatchEvent(new w.Event('keydown'));
-    const res = await w.fetch('https://api.test/ai/chat');
-    expect(res.status).toBe(403);
+  test('a tap on an AI control opens the upgrade sheet on upgrade_required', async () => {
+    const { w } = gated({ plan: 'free', server: upgrade });
+    w.markAiUserAction('program-generator');
+    await w.fetch('https://api.test/api/ai/generate-program');
     expect(w.openUpgradeModal).toHaveBeenCalledWith('pro');
+  });
+
+  test('quota_exceeded after a tap: free → upgrade sheet, paid → toast only', async () => {
+    const free = gated({ plan: 'free', server: quota });
+    free.w.markAiUserAction('sleep-insight');
+    await free.w.fetch('https://api.test/api/ai/sleep-insight');
+    expect(free.w.openUpgradeModal).toHaveBeenCalledWith('pro');
+
+    const paid = gated({ plan: 'pro', paid: true, server: quota });
+    paid.w.markAiUserAction('sleep-insight');
+    await paid.w.fetch('https://api.test/api/ai/sleep-insight');
+    expect(paid.w.openUpgradeModal).not.toHaveBeenCalled();
+    expect(paid.w.showToast).toHaveBeenCalledWith(expect.stringMatching(/^Monthly AI limit reached/));
+  });
+
+  test('one tap gives at most one prompt', async () => {
+    const { w } = gated({ plan: 'free', server: upgrade });
+    w.markAiUserAction('coach-chat');
+    await w.fetch('https://api.test/api/ai/coach');
+    await w.fetch('https://api.test/api/ai/coach/brief');
+    expect(w.openUpgradeModal).toHaveBeenCalledTimes(1);
   });
 
   test('other 403s pass through untouched', async () => {
@@ -141,9 +145,48 @@ describe('Pro gate', () => {
       plan: 'pro',
       server: { status: 403, body: { success: false, error: { code: 'auth.forbidden' } } },
     });
+    w.markAiUserAction('coach-chat');
     const res = await w.fetch('https://api.test/api/ai/coach');
     expect(await res.json()).toEqual({ success: false, error: { code: 'auth.forbidden' } });
     expect(w.openUpgradeModal).not.toHaveBeenCalled();
+  });
+});
+
+describe('isUserInitiatedAi timing', () => {
+  afterEach(() => jest.useRealTimers());
+
+  function load() {
+    const dom = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', url: 'https://app.test/' });
+    const w = dom.window;
+    w.fetch = async () => ({ ok: true, status: 200 });
+    w.eval(SRC);
+    return w;
+  }
+
+  test('false until an AI control is tapped', () => {
+    const w = load();
+    expect(w.pocketCoachAIConsent.isUserInitiatedAi()).toBe(false);
+  });
+
+  test('true within 4 s of markAiUserAction, false after', () => {
+    jest.useFakeTimers({ now: new Date('2026-10-29T10:00:00Z') });
+    const w = load();
+    const realNow = Date.now;
+    let now = realNow();
+    w.Date.now = () => now;
+    w.markAiUserAction('macro-advisor');
+    expect(w.__pcAiAction.feature).toBe('macro-advisor');
+    now += 3999;
+    expect(w.pocketCoachAIConsent.isUserInitiatedAi()).toBe(true);
+    now += 1;
+    expect(w.pocketCoachAIConsent.isUserInitiatedAi()).toBe(false);
+  });
+
+  test('ordinary taps (pointerdown/keydown) do not count', () => {
+    const w = load();
+    w.document.dispatchEvent(new w.Event('pointerdown'));
+    w.document.dispatchEvent(new w.Event('keydown'));
+    expect(w.pocketCoachAIConsent.isUserInitiatedAi()).toBe(false);
   });
 });
 

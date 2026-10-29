@@ -837,7 +837,7 @@
       const target = { calories: m.calories, protein: m.protein, fat: m.fat, carbs: m.carbs };
       // Same path as saving targets in the Macros tab: server first, then
       // local storage + on-screen refresh.
-      if (typeof root.saveToAirtable === 'function') await root.saveToAirtable(user(), target);
+      if (typeof root.saveMacroTargetsToBackend === 'function') await root.saveMacroTargetsToBackend(user(), target);
       if (typeof root.saveMacroTargetsToTop === 'function') root.saveMacroTargetsToTop(target);
       else root.localStorage.setItem(`macroTargets_${user()}`, JSON.stringify(target));
       toast('Macro targets updated.');
