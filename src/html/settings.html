@@ -51,6 +51,23 @@
           <div><span>Badges</span><strong id="profileGamificationBadges">—</strong></div>
         </div>
       </div>
+
+      <!-- Moved from Insights → XP. Filled by renderGamificationUI() and
+           renderChallenges() when this page opens. -->
+      <div class="mx-kicker st-kicker">Badges and challenges</div>
+      <div class="pod st-group">
+        <div class="st-block">
+          <div id="gamificationBadgeGallery" class="gamification-badge-grid"></div>
+          <div id="milestoneBadges"></div>
+        </div>
+      </div>
+
+      <div class="mx-kicker st-kicker">Recent XP</div>
+      <div class="pod st-group">
+        <div class="st-block">
+          <div id="gamificationEventsFeed" class="gamification-events-feed"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ── TRAINING ── -->
@@ -176,6 +193,13 @@
           <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00"></label>
       </div>
 
+      <div class="mx-kicker st-kicker">Workout reminders</div>
+      <!-- renderRemindersPanel() (src/js/reminders.js) fills this; it saves
+           its own changes, so it's kept out of the settings autosave. -->
+      <div class="pod st-group">
+        <div class="st-block" id="remindersPanel" data-no-autosave></div>
+      </div>
+
       <div class="mx-kicker st-kicker">Take a break</div>
       <div class="pod st-group">
         <label class="st-row" for="stVacationMode"><span class="st-label">Vacation mode<small>Pauses your streak</small></span>
@@ -215,7 +239,10 @@
       <div class="mx-kicker st-kicker">Plan</div>
       <div class="pod st-group">
         <button type="button" class="st-row st-row--btn" id="stPlanRow">
-          <span class="st-label">Pocket Coach</span><span class="st-val" id="stPlanLabel">Free</span><span class="st-chev" aria-hidden="true"></span>
+          <span class="st-label">Pocket Coach<small id="subStatusLabel"></small></span><span class="st-val" id="stPlanLabel">Free</span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="st-row st-row--btn" id="subRestoreBtn" hidden onclick="pocketCoachPayments.restore()">
+          <span class="st-label">Restore purchases</span>
         </button>
         <label class="st-row" for="appModeSelect"><span class="st-label">Use the app as</span>
           <select id="appModeSelect">
@@ -225,6 +252,41 @@
           </select></label>
         <label class="st-row" for="coachModeToggle"><span class="st-label">Coach mode<small>Needs "Athlete and coach"</small></span>
           <input type="checkbox" class="st-switch" id="coachModeToggle"></label>
+      </div>
+
+      <div class="mx-kicker st-kicker">Refer a friend</div>
+      <div class="pod st-group">
+        <div class="st-block">
+          <p class="st-note">Share your link. When a friend upgrades, you both get 1 month free.</p>
+          <div class="referral-link-row">
+            <input class="referral-link-input" id="referralLinkInput" value="" readonly data-no-autosave aria-label="Your referral link">
+            <button type="button" class="referral-copy-btn" onclick="copyReferralLink()">Copy</button>
+          </div>
+          <div id="referralCreditBadge" style="display:none;" class="referral-credit-badge"></div>
+          <p id="referralStats" class="st-note"></p>
+        </div>
+      </div>
+
+      <div class="mx-kicker st-kicker">Your data</div>
+      <div class="pod st-group">
+        <button type="button" class="st-row st-row--btn" onclick="exportAllJSON()">
+          <span class="st-label">Full backup<small>Everything, as one JSON file</small></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="st-row st-row--btn" onclick="exportWorkoutsCSV()">
+          <span class="st-label">Workout log<small>CSV</small></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="st-row st-row--btn" onclick="exportWeightCSV()">
+          <span class="st-label">Weight log<small>CSV</small></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="st-row st-row--btn" onclick="exportMeasurementsCSV()">
+          <span class="st-label">Measurements<small>CSV</small></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="st-row st-row--btn" onclick="exportReadinessCSV()">
+          <span class="st-label">Readiness log<small>CSV</small></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="st-row st-row--btn" onclick="exportFoodLogCSV()">
+          <span class="st-label">Food log<small>CSV</small></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
       </div>
 
       <div class="mx-kicker st-kicker">Display</div>
@@ -257,7 +319,7 @@
         <button type="button" id="logoutBtn" class="st-row st-row--btn st-row--accent"><span class="st-label">Log out</span></button>
         <button type="button" id="deleteAccountBtn" class="st-row st-row--btn st-row--danger"><span class="st-label">Delete account</span></button>
       </div>
-      <p class="st-note st-note--page">Deleting your account permanently removes your workouts, programs, macros, logs and any coach or client links. It can't be undone. Export a backup first from Insights → Tools.</p>
+      <p class="st-note st-note--page">Deleting your account permanently removes your workouts, programs, macros, logs and any coach or client links. It can't be undone. Export a backup first under Your data above.</p>
     </section>
 
   </form><!-- end #settingsForm -->

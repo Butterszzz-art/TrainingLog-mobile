@@ -539,9 +539,6 @@
     const cardEl = document.getElementById('gamificationCard');
     if (cardEl) cardEl.innerHTML = renderGamificationSummary(summary);
 
-    const progressCardEl = document.getElementById('progressGamificationCard');
-    if (progressCardEl) progressCardEl.innerHTML = renderGamificationSummary(summary);
-
     const galleryEl = document.getElementById('gamificationBadgeGallery');
     if (galleryEl) galleryEl.innerHTML = renderBadgeGallery(state);
 

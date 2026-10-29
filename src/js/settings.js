@@ -1108,6 +1108,14 @@ function openSettingsPage(key) {
     if (typeof renderArchetypeProfileCard === 'function') renderArchetypeProfileCard();
   } else if (key === 'profile') {
     renderProfileGamificationSummary(container);
+    const user = getActiveUsername();
+    if (user) window.renderGamificationUI?.(user);
+    window.renderChallenges?.();
+  } else if (key === 'reminders') {
+    window.renderRemindersPanel?.();
+  } else if (key === 'account') {
+    window.renderSubscriptionPanel?.();
+    window.loadReferralPanel?.();
   } else if (key === 'devices') {
     refreshActivitySyncStatus(container);
   }
@@ -1144,7 +1152,10 @@ function bindSettingsAutosave(form) {
   form.dataset.autosave = 'true';
   form.addEventListener('change', (event) => {
     const target = event.target;
-    if (!target || target.hasAttribute('data-no-autosave')) return;
+    if (!target) return;
+    // composedPath() is fixed at dispatch, so this still works when a panel
+    // (e.g. reminders) re-renders and detaches the input before we run.
+    if (event.composedPath().some((node) => node.hasAttribute?.('data-no-autosave'))) return;
     // These have their own handlers and don't live in the saved settings.
     if (['aiConsentToggle', 'coachModeToggle', 'appModeSelect', 'gymPromptSetting'].includes(target.id)) return;
     saveSettings(null, { quiet: true });

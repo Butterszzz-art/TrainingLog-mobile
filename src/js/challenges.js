@@ -190,8 +190,9 @@
   /* ── Render ──────────────────────────────────────────────── */
 
   async function renderChallenges() {
+    // The badge grid lives in Settings → Profile, which loads late. Award
+    // and celebrate new milestones even when it isn't on the page.
     const host = document.getElementById('milestoneBadges');
-    if (!host) return;
 
     const username = _user();
     const stats = await _computeStats(username);
@@ -210,6 +211,11 @@
     }
     if (newlyEarned.length) {
       localStorage.setItem(MILESTONE_KEY, JSON.stringify(earned));
+    }
+
+    if (!host) {
+      if (newlyEarned.length) setTimeout(() => _celebrateMilestone(newlyEarned[0]), 400);
+      return;
     }
 
     // Challenge progress bars

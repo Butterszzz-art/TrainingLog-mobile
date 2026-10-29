@@ -6,7 +6,7 @@
 
 /* Pill-style segmented nav (Modernist redesign) — shared by every
    sub-tab strip built on this markup pattern: logSubtabNav, funcSubNav,
-   progressSubNav, historySubNav. */
+   historySubNav. */
 .log-subtabs {
   display: flex;
   gap: 6px;

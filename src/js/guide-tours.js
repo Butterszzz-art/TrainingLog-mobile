@@ -51,7 +51,7 @@
         { title: 'See your progress', text: 'Every set you log feeds your charts, PRs and weekly recap. Here’s where to find them.', next: 'Start' },
         { target: nav('allTab'), tap: true, title: 'Tap All', text: 'Insights live in the All tab.' },
         { target: tile('progressTab'), tap: true, title: 'Open Insights', text: 'Your trends and records.' },
-        { target: ['#progressTogglePanel', '#progressSubNav'], title: 'Pick what to chart', text: 'Workouts, cardio, bodyweight, recovery, or a single exercise.' },
+        { target: ['#progressTogglePanel'], title: 'Pick what to chart', text: 'Workouts, cardio, bodyweight, recovery, or a single exercise.' },
         { target: ['#progressChartsPanel'], title: 'Your charts', text: 'Estimated 1RM, volume and more over any date range.' },
         { target: '#aiPlateauCard', title: 'Plateau spotting', text: 'If a lift stalls, you’ll get a heads-up here with ideas to break through.' },
         // The recap card stays empty until there's a finished week to recap.
