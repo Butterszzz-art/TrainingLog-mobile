@@ -1113,88 +1113,213 @@
   display: block;
 }
 
-/* ── Training calendar ──────────────────────────────────────── */
+/* ── Streaks sub-view (Log › Streaks) ───────────────────────── */
 
-#training-calendar {
-  width: 100%;
-  max-width: 500px;
-  height: auto;
-  margin: 20px auto 0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+.sk-page { display: flex; flex-direction: column; padding: 4px 6px 10px; }
+.sk-page > .pod { margin-bottom: 12px; }
+
+/* Workout streak hero */
+.sk-hero { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.sk-hero-l { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-big {
+  font-family: var(--font-display);
+  font-size: 54px;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
-
-#training-calendar table {
-  width: 100%;
-  border-collapse: collapse;
+.sk-big small {
+  font-family: var(--font-label);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-90);
+  margin-left: 6px;
 }
-
-#training-calendar th,
-#training-calendar td {
-  padding: 6px;
-  text-align: center;
-  border: 1px solid var(--border-color);
+.sk-flame {
+  width: 58px;
+  height: 58px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(var(--acc-2f8a63), 0.16);
+  border: 1px solid var(--border-featured);
+  color: var(--green-90);
 }
+.sk-flame svg { width: 28px; height: 28px; }
 
-#training-calendar td {
+/* Calendar */
+.sk-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sk-cal-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sk-cal-month {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.sk-cal-month span { color: var(--text-tertiary); }
+.sk-cal-nav { display: flex; gap: 6px; flex: none; }
+.sk-cal-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border-chip);
+  background: var(--pod-bg-alt);
+  box-shadow: none;
+  color: var(--text-tertiary);
+  display: grid;
+  place-items: center;
   cursor: pointer;
 }
+.sk-cal-btn::before { content: ""; position: absolute; inset: -3px; }
+.sk-cal-btn svg { width: 18px; height: 18px; }
 
-#training-calendar .calendar-container {
-  transform: translateY(-20px);
-  transition: transform 0.3s ease;
+.sk-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.sk-cal-dow {
+  text-align: center;
+  font-family: var(--font-label);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--mx-label);
+  padding-bottom: 2px;
 }
-
-#training-calendar:hover {
-  transform: translateY(-10px);
+.sk-cal-day {
+  aspect-ratio: 1;
+  min-width: 0;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
+  box-shadow: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-label);
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-
-/* Calendar day state colouring */
-.highlight-past  { background-color: #FFE0B2; }
-.highlight-today { background-color: #FF7043; }
-
-#training-calendar td.calendar-completed {
-  background-color: rgba(var(--acc-2ea043), 0.75);
-  color: #fff;
+.sk-cal-day:active { transform: scale(0.94); }
+.sk-cal-day--empty { background: none; border: 0; cursor: default; }
+.sk-cal-day--done {
+  background: var(--fill-btn-primary-mobile);
+  border-color: transparent;
+  color: var(--label-on-green);
+  font-weight: 800;
 }
-
-#training-calendar td.calendar-missed {
-  background-color: rgba(119, 119, 119, 0.35);
-  color: var(--text-color);
+.sk-cal-day--missed { background: var(--surface-hatch); color: var(--text-faint); }
+.sk-cal-day--planned {
+  border: 1.5px dashed var(--border-brass);
+  background: var(--warning-bg);
+  color: var(--brass-light);
 }
+.sk-cal-day--today { box-shadow: 0 0 0 2px var(--ground), 0 0 0 4px var(--green-90); }
 
-#training-calendar td.calendar-planned {
-  box-shadow: inset 0 0 0 2px rgba(255, 167, 38, 0.75);
+.sk-sw { display: inline-block; width: 11px; height: 11px; border-radius: 4px; }
+.sk-sw--done { background: var(--fill-btn-primary-mobile); }
+.sk-sw--missed { background: var(--surface-hatch); border: 1px solid var(--border-chip); }
+.sk-sw--planned { border: 1.5px dashed var(--border-brass); }
+
+/* Level card. Its markup comes from gamification.js and is shared with
+   Insights, so it's restyled here only for this page. Children are:
+   head, xp track, "x / y XP", meta row (streak, today), meta row (week, badge). */
+.sk-page .sk-level {
+  border-radius: var(--radius-pod);
+  background: var(--pod-bg);
+  border: 1px solid var(--pod-border);
+  box-shadow: var(--pod-bevel);
+  padding: 16px 17px;
+  margin-bottom: 12px;
 }
-
-/* Calendar legend */
-.calendar-widget {
-  margin: 20px auto;
-  width: 60%;
+.sk-level .gamification-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 8px;
 }
-
-.calendar-legend {
+.sk-level .gamification-card-head,
+.sk-level .gamification-xp-track,
+.sk-level .gamification-muted-row { grid-column: 1 / -1; }
+.sk-level .gamification-card-head { align-items: flex-end; }
+.sk-level .gamification-label {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--mx-label);
+}
+.sk-level .gamification-level {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.sk-level .gamification-xp-track {
+  height: 9px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
+}
+.sk-level .gamification-xp-fill { border-radius: var(--radius-pill); background: var(--fill-meter-a); }
+.sk-level .gamification-muted-row {
+  margin-top: -4px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mx-faint);
+}
+.sk-level .gamification-meta-row { display: contents; }
+.sk-level .gamification-meta-row > span {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-  font-size: 0.85rem;
-  margin-top: 8px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
+  padding: 9px 11px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mx-label);
+}
+.sk-level .gamification-meta-row > span strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 21px;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The hero above already shows the workout streak; this one counts any
+   XP activity, so showing both with the same label just disagrees. */
+.sk-level .gamification-card > :nth-child(4) > span:first-child { display: none; }
+.sk-level .gamification-card > :nth-child(5) > span:last-child { grid-column: 1 / -1; }
+.sk-level .gamification-card > :nth-child(5) > span:last-child strong {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: normal;
 }
 
-.calendar-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.calendar-legend-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  display: inline-block;
-}
+.sk-page .gamification-mini-summary:empty { display: none; }
 
 /* ── Responsive: single-column below 600 px ─────────────────── */
 

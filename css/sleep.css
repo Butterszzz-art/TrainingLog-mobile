@@ -1,513 +1,413 @@
 /* =============================================================
    SLEEP TAB
    Manual sleep logging, quality rating, trend chart, and
-   AI sleep analysis integration.
-   Depends on: tokens.css
+   AI sleep analysis integration. Built on the Modernist kit
+   (pods, mx-wells, mx-tabs, mx-tags, cta-capsule) so it matches
+   Cardio and the other moved tabs.
+   Depends on: tokens.css, design-system.css, modernist-kit.css
    ============================================================= */
 
-/* ── Tab layout ────────────────────────────────────────────── */
-
 #sleepTabContent {
-  padding: 0 12px 24px;
+  padding: 0 6px 24px;
 }
 
-/* ── Log form card ─────────────────────────────────────────── */
-
-.sleep-log-card {
-  background: var(--pod-bg-hero);
-  border: 1px solid rgba(var(--acc-4a8466), 0.3);
-  border-radius: var(--radius-pod);
-  box-shadow: var(--pod-shadow-hero);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.sleep-log-card h3 {
-  margin: 0 0 14px;
-  font-size: 1rem;
-  color: var(--text-color);
-}
-
-.sleep-form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.sleep-form-row label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.8rem;
-  color: var(--secondary-text);
-  font-weight: 600;
-}
-
-.sleep-form-row input[type="time"],
-.sleep-form-row input[type="date"] {
+#sleepTabContent .pod-title {
   margin: 0;
-  padding: 10px 12px;
-  font-size: 0.95rem;
+  font-size: 22px;
+  color: var(--text-primary);
 }
 
-/* ── Quality rating stars ──────────────────────────────────── */
-
-.sleep-quality-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.sleep-quality-label {
-  font-size: 0.8rem;
-  color: var(--secondary-text);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.sleep-quality-stars {
-  display: flex;
-  gap: 6px;
-}
-
-.sleep-star {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: var(--surface-bg);
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-  padding: 0;
-  margin: 0;
-  box-shadow: none;
-}
-
-.sleep-star.active {
-  background: rgba(var(--acc-2d7d5b), 0.15);
-  border-color: var(--primary);
-  color: var(--primary-text);
-}
-
-/* ── Tags row ──────────────────────────────────────────────── */
-
-.sleep-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.sleep-tag {
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--pill-border);
-  background: var(--pill-bg);
-  color: var(--secondary-text);
-  font-family: var(--font-label);
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  margin: 0;
-  box-shadow: none;
-}
-
-.sleep-tag.active {
-  background: rgba(var(--acc-2d7d5b), 0.15);
-  border-color: var(--primary);
-  color: var(--primary-text);
-}
-
-/* ── Notes ─────────────────────────────────────────────────── */
-
-.sleep-notes {
-  width: 100%;
-  min-height: 44px;
-  margin: 0 0 12px;
-  font-size: 0.88rem;
-  resize: vertical;
-}
-
-/* ── Save button ───────────────────────────────────────────── */
-
-.sleep-save-btn {
-  width: 100%;
-  padding: 13px;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  font-size: 0.95rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-/* ── Stats summary cards ───────────────────────────────────── */
+/* ── Stat tiles ────────────────────────────────────────────── */
 
 .sleep-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.sleep-stat-card {
-  background: var(--pod-bg);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--pod-bevel);
-  padding: 12px 10px;
-  text-align: center;
-}
-
-.sleep-stat-value {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--primary-text);
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.sleep-stat-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* ── Trend chart ───────────────────────────────────────────── */
-
-.sleep-chart-card {
-  background: var(--pod-bg);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--radius-pod);
-  box-shadow: var(--pod-bevel);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.sleep-chart-card h3 {
-  margin: 0 0 12px;
-  font-size: 1rem;
-  color: var(--text-color);
-}
-
-.sleep-chart-period {
-  display: flex;
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   margin-bottom: 12px;
 }
 
-.sleep-period-btn {
-  padding: 5px 14px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--pill-border);
-  background: var(--pill-bg);
-  color: var(--secondary-text);
+.sleep-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 12px 11px;
+  border-radius: var(--radius-md);
+}
+
+.sleep-stat-card .mx-lbl { font-size: 11.5px; }
+
+.sleep-stat-value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sleep-stat-value--accent { color: var(--green-90); }
+
+.sleep-stat-value small {
   font-family: var(--font-label);
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  margin: 0;
-  box-shadow: none;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-left: 2px;
 }
 
-.sleep-period-btn.active {
-  background: var(--pill-bg-active);
-  border-color: transparent;
-  color: var(--pill-text-active);
-}
+.sleep-stat-value--accent small { color: var(--green-80); margin-left: 1px; }
 
-/* Bar chart */
-.sleep-bars {
+/* ── Log form ──────────────────────────────────────────────── */
+
+.sleep-log-head,
+.sleep-card-head {
   display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 120px;
-  padding: 0 2px;
-}
-
-.sleep-bar-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  height: 100%;
-  justify-content: flex-end;
-}
-
-.sleep-bar {
-  width: 100%;
-  max-width: 28px;
-  border-radius: 4px 4px 0 0;
-  background: var(--primary);
-  opacity: 0.7;
-  transition: height 0.3s ease;
-  min-height: 2px;
-}
-
-.sleep-bar.good { opacity: 1; }
-.sleep-bar.poor { background: var(--danger-strong); opacity: 0.8; }
-.sleep-bar.fair { background: var(--highlight); opacity: 0.8; }
-
-.sleep-bar-label {
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-/* ── History list ──────────────────────────────────────────── */
-
-.sleep-history-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.sleep-history-card h3 {
-  margin: 0 0 12px;
-  font-size: 1rem;
-  color: var(--text-color);
-}
-
-.sleep-entry {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.sleep-entry:last-child {
-  border-bottom: none;
-}
-
-.sleep-entry-left {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sleep-entry-date {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-.sleep-entry-times {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.sleep-entry-right {
-  display: flex;
-  align-items: center;
   gap: 10px;
 }
 
-.sleep-entry-duration {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--primary-text);
-}
-
-.sleep-entry-quality {
-  font-size: 0.75rem;
-  color: var(--secondary-text);
-}
-
-.sleep-entry-tags {
-  display: flex;
-  gap: 4px;
-}
-
-.sleep-entry-tag {
-  font-size: 0.65rem;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(var(--acc-2d7d5b), 0.1);
-  color: var(--text-muted);
-}
-
-.sleep-entry-delete {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: 4px;
-  margin: 0;
-  box-shadow: none;
-  opacity: 0.5;
-}
-
-.sleep-entry-delete:hover {
-  opacity: 1;
-  color: var(--danger-text);
-}
-
-.sleep-empty {
-  text-align: center;
-  padding: 24px 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-/* ── AI insight card ───────────────────────────────────────── */
-
-.sleep-ai-card {
-  background: var(--card-bg);
-  border: 1px solid rgba(var(--acc-2d7d5b), 0.25);
-  border-left: 3px solid var(--primary);
-  border-radius: 0 12px 12px 0;
-  padding: 14px;
-  margin-bottom: 16px;
-}
-
-.sleep-ai-header {
-  display: flex;
+.sleep-date-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip);
+  background: var(--pod-bg-alt);
+  padding: 4px 6px 4px 11px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  margin: 0;
 }
 
-.sleep-ai-header span {
-  font-size: 0.8rem;
+.sleep-date-chip .ui-icon { width: 14px; height: 14px; flex: none; }
+
+.sleep-date-chip input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: 0;
+  margin: 0;
+  padding: 2px 0;
+  width: auto;
+  min-width: 0;
+  max-width: 132px;
+  color: var(--text-secondary, var(--secondary-text));
+  color-scheme: dark;
+  font-family: var(--font-label);
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--primary-text);
 }
 
-.sleep-ai-body {
-  font-size: 0.88rem;
-  color: var(--secondary-text);
-  line-height: 1.5;
+.sleep-time-well {
+  box-sizing: border-box;
+  align-items: center;
 }
 
-.sleep-ai-btn {
-  margin-top: 10px;
-  padding: 10px 18px;
-  font-size: 0.82rem;
-  border-radius: 10px;
+.sleep-time-well input[type="time"] {
+  font-size: 26px;
+  min-width: 0;
   width: 100%;
 }
 
-/* ── Synced times (Activity Sync — read-only once wearable-authoritative) ── */
+/* The native clock / calendar icons crowd the Anton digits; tapping the
+   field still opens the picker (and showPicker() covers desktop). */
+.sleep-time-well input[type="time"]::-webkit-calendar-picker-indicator,
+.sleep-date-chip input[type="date"]::-webkit-calendar-picker-indicator { display: none; }
+
+.sleep-duration-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-featured);
+  background: rgba(var(--acc-2f8a63), 0.08);
+  padding: 10px 14px;
+}
+
+.sleep-duration-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--green-90);
+  font-variant-numeric: tabular-nums;
+}
 
 .sleep-synced-times {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  background: var(--surface-bg);
-  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  color: var(--text-color);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-soft);
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text-primary);
 }
 
-.sleep-synced-badge {
-  font-size: 0.68rem;
-  font-style: italic;
-  color: var(--secondary-text);
-  white-space: nowrap;
+.sleep-synced-badge { font-family: var(--font-label); }
+
+/* Quality 1-5: one selected segment (mx-tabs handles the look) */
+.sleep-quality-stars > button { font-size: 15px; }
+
+/* Factor tags: mx-tag look, toggled with .active */
+.sleep-tags { gap: 7px; }
+
+.sleep-tag {
+  position: relative;
+  margin: 0;
+  width: auto;
+  box-shadow: none;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* ── Sleep score card (Activity Sync — hidden for manual-only users) ──── */
+.sleep-tag::before { content: ""; position: absolute; inset: -5px -2px; }
+.sleep-tag .ui-icon { width: 14px; height: 14px; }
 
-.sleep-score-card {
-  background: var(--pod-bg-hero);
-  border: 1px solid rgba(var(--acc-4a8466), 0.3);
-  border-radius: var(--radius-pod);
-  box-shadow: var(--pod-shadow-hero);
-  padding: 16px;
-  margin-bottom: 16px;
+.sleep-tag.active {
+  border-color: var(--border-featured);
+  background: rgba(var(--acc-2f8a63), 0.16);
+  color: var(--green-90);
 }
 
-.sleep-score-badge {
+.sleep-save-btn { margin: 2px 0 0; }
+
+/* ── Trend chart ───────────────────────────────────────────── */
+
+.sleep-chart-period > button { min-height: 34px; padding: 0 13px; font-size: 12.5px; }
+
+.sleep-bars {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 12px;
+  align-items: flex-end;
+  gap: 6px;
+  height: 130px;
+  padding-top: 6px;
 }
 
-.sleep-score-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--primary-text);
-  line-height: 1;
-}
-
-.sleep-score-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--secondary-text);
-}
-
-.sleep-stage-breakdown {
+.sleep-bar-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
   gap: 6px;
 }
 
+.sleep-bar {
+  width: 100%;
+  max-width: 34px;
+  min-height: 3px;
+  border-radius: var(--radius-bar-mobile);
+  background: var(--surface-recessed);
+}
+
+.sleep-bar.good { background: var(--fill-bar-b); }
+.sleep-bar.fair { background: var(--fill-bar-a); opacity: 0.75; }
+.sleep-bar.poor { background: var(--fill-meter-brass); }
+
+.sleep-bar-label {
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mx-label);
+  white-space: nowrap;
+}
+
+/* ── History ───────────────────────────────────────────────── */
+
+.sleep-history-card { gap: 4px; }
+
+.sleep-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border-row);
+}
+
+.sleep-entry:first-child { border-top: 0; }
+
+.sleep-entry-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.sleep-entry-date {
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.sleep-entry-times { font-size: 13px; color: var(--text-tertiary); }
+
+.sleep-entry-right { display: flex; align-items: center; gap: 10px; flex: none; text-align: right; }
+
+.sleep-entry-duration {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.sleep-entry-quality { font-size: 11px; letter-spacing: 1px; color: var(--brass-light); }
+
+.sleep-entry-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+
+.sleep-entry-tag {
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip);
+  background: var(--pod-bg-alt);
+  padding: 1px 7px;
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.sleep-entry-delete {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border-chip);
+  background: var(--pod-bg-alt);
+  box-shadow: none;
+  color: var(--text-tertiary);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.sleep-entry-delete::before { content: ""; position: absolute; inset: -6px; }
+.sleep-entry-delete .ui-icon { width: 14px; height: 14px; }
+.sleep-entry-delete:hover { color: var(--danger-text-mobile); border-color: var(--border-alert); }
+
+.sleep-entry-score-chip {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green-90);
+}
+
+.sleep-empty {
+  padding: 18px 4px 6px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-tertiary);
+}
+
+/* ── AI insight ────────────────────────────────────────────── */
+
+.sleep-ai-card { border-color: var(--border-featured); }
+
+.sleep-ai-header { display: flex; align-items: center; gap: 8px; color: var(--green-90); }
+.sleep-ai-header .ui-icon { width: 18px; height: 18px; }
+
+.sleep-ai-body { font-size: 14px; line-height: 1.5; color: var(--text-secondary, var(--secondary-text)); }
+
+.sleep-ai-btn {
+  margin: 0;
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-featured);
+  background: rgba(var(--acc-2f8a63), 0.13);
+  box-shadow: none;
+  color: var(--green-90);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* ── Sleep score (Activity Sync only) ──────────────────────── */
+
+.sleep-score-card {
+  background: var(--pod-bg-hero);
+  border-color: var(--border-featured);
+  box-shadow: var(--pod-shadow-hero);
+}
+
+.sleep-score-badge { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.sleep-score-badge .mx-kicker { flex-basis: 100%; }
+
+.sleep-score-value {
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 1;
+  color: var(--green-90);
+}
+
+.sleep-score-label {
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.sleep-stage-breakdown { display: flex; flex-direction: column; gap: 8px; }
+
 .sleep-stage-row {
   display: grid;
-  grid-template-columns: 44px 1fr 40px;
+  grid-template-columns: 52px 1fr 44px;
   align-items: center;
   gap: 8px;
 }
 
-.sleep-stage-name {
-  font-size: 0.72rem;
-  color: var(--secondary-text);
+.sleep-stage-name,
+.sleep-stage-mins {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mx-label);
 }
 
+.sleep-stage-mins { text-align: right; color: var(--text-tertiary); }
+
 .sleep-stage-bar-track {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--surface-bg);
+  height: 9px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
   overflow: hidden;
 }
 
-.sleep-stage-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-}
+.sleep-stage-bar-fill { height: 100%; border-radius: var(--radius-pill); }
+.sleep-stage-bar-fill.deep  { background: var(--fill-meter-a); }
+.sleep-stage-bar-fill.rem   { background: var(--fill-meter-brass); }
+.sleep-stage-bar-fill.light { background: rgba(var(--acc-6fae8b), 0.4); }
+.sleep-stage-bar-fill.awake { background: var(--danger-text-mobile); }
 
-.sleep-stage-bar-fill.deep  { background: var(--primary); }
-.sleep-stage-bar-fill.rem   { background: var(--highlight); }
-.sleep-stage-bar-fill.light { background: rgba(var(--acc-2d7d5b), 0.4); }
-.sleep-stage-bar-fill.awake { background: var(--danger-strong); }
-
-.sleep-stage-mins {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-align: right;
-}
-
-.sleep-score-disclaimer {
-  margin-top: 10px;
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.sleep-entry-score-chip {
-  margin-left: 6px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--primary-text);
-}
+.sleep-score-disclaimer { font-size: 12px; color: var(--mx-faint); }

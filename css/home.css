@@ -629,31 +629,6 @@
   .wk-stat-v { font-size: 19px; }
 }
 
-/* Shrink the mode cards when they're in the demoted zone */
-.home-zone--modes .vm-card,
-.home-zone--modes .sm-card {
-  padding: 10px 14px;
-  border-radius: 12px;
-  margin-bottom: 8px;
-}
-
-.home-zone--modes .vm-icon {
-  font-size: 1.15rem;
-}
-
-.home-zone--modes .vm-title {
-  font-size: 0.82rem;
-}
-
-.home-zone--modes .vm-sub {
-  font-size: 0.68rem;
-}
-
-.home-zone--modes .vm-toggle {
-  font-size: 0.72rem;
-  padding: 5px 12px;
-}
-
 /* ── Dashboard grid ─────────────────────────────────────────── */
 
 .home-dashboard {
@@ -1576,93 +1551,55 @@
   .tpc-viewport { transition: none; }
 }
 
-/* ── Vacation Mode card (session-context.js) ──────────────────── */
+/* ── Take a break: vacation + sick mode rows (session-context.js) ── */
 
-.vm-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: var(--pod-bg);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--radius-pod);
-  box-shadow: var(--pod-bevel);
-  padding: 14px 16px;
-  margin: 0 0 10px;
-  transition: border-color 0.2s;
-}
+.home-zone--modes { padding: 0 12px; border-top: 0; }
+.hm-break-kicker { margin: 4px 4px 7px; }
+.hm-break { padding: 2px 17px; }
+.hm-break > div:empty { display: none; }
+.hm-break > div + div .hm-break-row { border-top: 1px solid var(--border-row); }
 
-.vm-card--active {
-  border-color: #e6a817;
-  background: rgba(230, 168, 23, 0.06);
-}
-
-.vm-card-left {
+.hm-break-row {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 60px;
+  padding: 8px 0;
 }
 
-.vm-icon { font-size: 1.5rem; }
-
-.vm-title {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-color);
+.hm-break-ic {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-chip);
+  color: var(--text-tertiary);
 }
+.hm-break-ic svg { width: 18px; height: 18px; }
 
-.vm-sub {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  margin-top: 2px;
+.hm-break-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-break-row .vm-title { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+.hm-break-row .vm-sub { font-size: 12.5px; line-height: 1.35; color: var(--text-tertiary); }
+
+.vm-card--active .hm-break-ic {
+  color: var(--brass-light);
+  border-color: var(--border-brass);
+  background: var(--warning-bg);
 }
+.vm-card--active .mx-switch[aria-checked="true"] { background: var(--fill-meter-brass); }
 
-.vm-toggle {
-  flex-shrink: 0;
-  padding: 7px 16px;
-  border-radius: 20px;
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--text-color);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+.sm-card--active .hm-break-ic {
+  color: var(--danger-text-mobile);
+  border-color: var(--border-alert);
+  background: var(--danger-bg);
 }
+.sm-card--active .vm-title { color: var(--danger-text-mobile); }
+.sm-card--active .mx-switch[aria-checked="true"] { background: var(--danger-grad, #9e3241); }
 
-.vm-toggle--on {
-  background: rgba(230, 168, 23, 0.15);
-  border-color: #e6a817;
-  color: #e6a817;
-}
-
-/* ── Sick mode card ────────────────────────────────────────── */
-
-.sm-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 14px 16px;
-  margin: 0 0 10px;
-  transition: border-color 0.2s;
-}
-
-.sm-card--active {
-  border-color: var(--danger-strong);
-  background: rgba(158, 50, 65, 0.06);
-}
-
-.sm-toggle--on {
-  background: rgba(var(--acc-2d7d5b), 0.15);
-  border-color: var(--primary);
-  color: var(--primary-text);
-}
+.hm-break .mx-switch { cursor: pointer; }
 
 #sickModeBanner {
   display: flex;
@@ -1771,3 +1708,75 @@
 .wfb-timer {
   text-shadow: 0 0 10px rgba(var(--acc-5fa87e), 0.5);
 }
+
+/* ── Mobility routines card (mobility.js renderMobilityDashboardCard) ── */
+
+#homeDashboardContent > .hm-mob { margin: 0 12px; cursor: pointer; }
+.hm-mob-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hm-mob-title { margin: 2px 0 0; font-size: 22px; color: var(--text-primary); }
+.hm-mob-list { display: flex; flex-direction: column; margin-top: -4px; }
+
+.hm-mob-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border-row);
+}
+.hm-mob-row:first-child { border-top: 0; }
+
+.hm-mob-ic {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-chip);
+  color: var(--text-tertiary);
+}
+.hm-mob-ic svg { width: 18px; height: 18px; }
+.hm-mob-row.is-done .hm-mob-ic {
+  color: var(--green-90);
+  border-color: var(--border-featured);
+  background: rgba(var(--acc-2f8a63), 0.12);
+}
+
+.hm-mob-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-mob-name { font-size: 15px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-mob-row.is-done .hm-mob-name { color: var(--text-tertiary); }
+.hm-mob-sub { font-size: 12.5px; color: var(--text-tertiary); }
+
+.hm-mob-log {
+  position: relative;
+  flex: none;
+  width: auto;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--fill-btn-primary-mobile);
+  box-shadow: var(--shadow-button-sm);
+  color: var(--label-on-green);
+  padding: 8px 16px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.hm-mob-log::before { content: ""; position: absolute; inset: -6px -4px; }
+
+.hm-mob-tick {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(var(--acc-2f8a63), 0.16);
+  color: var(--green-90);
+}
+.hm-mob-tick svg { width: 16px; height: 16px; }
