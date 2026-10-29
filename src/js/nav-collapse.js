@@ -1,36 +1,25 @@
 /**
  * nav-collapse.js
- * Lets the user slide the bottom nav down out of the way and back up.
+ * Tucks the bottom nav into a round button in the bottom-right corner
+ * while the user scrolls down a page, and rolls it back out on tap.
  *
- * Swiping down on the nav slides the capsule fully off the bottom of the
- * screen, leaving only a slim grab line; tapping that line (or swiping up
- * on it) slides the nav back. While the nav is shown, the handle is
- * invisible on touch screens and only appears on hover / keyboard focus
- * on desktop, so nothing sits between the nav and the content. The state lives on <body> as `.nav-collapsed`
- * so other fixed elements (workout focus bar, content padding) can follow
- * it in CSS — see css/nav.css.
- *
- * The choice is a per-device preference, kept in localStorage as
- * `bottomNavCollapsed` = '1'.
+ * - Scrolling down past the top of the page (by more than SCROLL_MIN px)
+ *   collapses the capsule into a 52px bubble showing the current tab's
+ *   icon. Scrolling up does NOT bring it back; tapping the bubble does,
+ *   and so does returning to the very top of the page.
+ * - The state lives on <body> as `.nav-collapsed` so CSS can animate the
+ *   capsule into the bubble (css/nav.css).
+ * - Not persisted: every launch starts with the full nav.
  */
 (function (global) {
   'use strict';
 
-  const STORAGE_KEY = 'bottomNavCollapsed';
-  const SWIPE_MIN = 24; // px of vertical travel before a drag counts
+  const OLD_STORAGE_KEY = 'bottomNavCollapsed'; // from the swipe-to-hide version
+  const SCROLL_MIN = 24;   // px of continuous downward scroll before tucking
+  const TOP_ZONE = 8;      // within this many px of the top, the nav comes back
+  const START_ZONE = 80;   // never tuck while still near the top of the page
 
-  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
-
-  function _load() {
-    try { return global.localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
-  }
-
-  function _save(collapsed) {
-    try {
-      if (collapsed) global.localStorage.setItem(STORAGE_KEY, '1');
-      else global.localStorage.removeItem(STORAGE_KEY);
-    } catch { /* private mode / blocked storage — state just won't persist */ }
-  }
+  const MENU_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>';
 
   function _nav() { return document.getElementById('bottomNav'); }
 
@@ -38,72 +27,89 @@
     return document.body.classList.contains('nav-collapsed');
   }
 
-  function setCollapsed(collapsed, { persist = true } = {}) {
+  // Copy the active tab's icon into the bubble so it shows where you are.
+  function _syncBubbleIcon(nav) {
+    const slot = nav.querySelector('.bn-bubble-icon');
+    if (!slot) return;
+    const icon = nav.querySelector('.bn-item.active .bn-icon');
+    slot.innerHTML = icon ? icon.innerHTML : MENU_ICON;
+  }
+
+  function setCollapsed(collapsed) {
     const nav = _nav();
     if (!nav) return;
     collapsed = !!collapsed;
+    if (collapsed === isCollapsed()) return;
+    if (collapsed) _syncBubbleIcon(nav);
     document.body.classList.toggle('nav-collapsed', collapsed);
 
-    const handle = nav.querySelector('.bn-collapse-handle');
-    if (handle) {
-      handle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      handle.setAttribute('aria-label', collapsed ? 'Show navigation' : 'Hide navigation');
+    const bubble = nav.querySelector('.bn-bubble');
+    if (bubble) {
+      bubble.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      if (collapsed) bubble.removeAttribute('tabindex');
+      else bubble.setAttribute('tabindex', '-1');
     }
-    // Keep keyboard / screen-reader focus off buttons that are off-screen.
+    // Keep keyboard / screen-reader focus off buttons that are tucked away.
     nav.querySelectorAll('.bn-item, .bn-fab').forEach(btn => {
       if (collapsed) btn.setAttribute('tabindex', '-1');
       else btn.removeAttribute('tabindex');
     });
-    if (persist) _save(collapsed);
   }
 
   function collapse() { setCollapsed(true); }
   function expand() { setCollapsed(false); }
   function toggle() { setCollapsed(!isCollapsed()); }
 
-  // Vertical swipe detection: down on the nav collapses, up on the handle
-  // (all that's visible while collapsed) expands.
-  function _bindSwipe(nav) {
-    let startX = 0, startY = 0, tracking = false;
-    nav.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) { tracking = false; return; }
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      tracking = true;
+  function _bindScroll() {
+    let lastY = global.scrollY || 0;
+    let downRun = 0;
+    let ticking = false;
+
+    function onFrame() {
+      ticking = false;
+      const y = Math.max(0, global.scrollY || 0);
+      const dy = y - lastY;
+      lastY = y;
+
+      if (y <= TOP_ZONE) { downRun = 0; expand(); return; }
+      if (dy > 0) {
+        downRun += dy;
+        if (downRun > SCROLL_MIN && y > START_ZONE) collapse();
+      } else if (dy < 0) {
+        downRun = 0;
+      }
+    }
+
+    global.addEventListener('scroll', () => {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(onFrame);
     }, { passive: true });
-    nav.addEventListener('touchend', (e) => {
-      if (!tracking) return;
-      tracking = false;
-      const t = e.changedTouches && e.changedTouches[0];
-      if (!t) return;
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      if (Math.abs(dy) < SWIPE_MIN || Math.abs(dy) < Math.abs(dx)) return;
-      if (dy > 0 && !isCollapsed()) collapse();
-      else if (dy < 0 && isCollapsed()) expand();
-    }, { passive: true });
-    nav.addEventListener('touchcancel', () => { tracking = false; }, { passive: true });
   }
 
   function init() {
     const nav = _nav();
-    if (!nav || nav.querySelector('.bn-collapse-handle')) return;
+    if (!nav || nav.querySelector('.bn-bubble')) return;
 
-    const handle = document.createElement('button');
-    handle.type = 'button';
-    handle.className = 'bn-collapse-handle';
-    handle.innerHTML = '<span class="bn-collapse-tab">' + CHEVRON + '</span>';
-    handle.addEventListener('click', (e) => {
+    try { global.localStorage.removeItem(OLD_STORAGE_KEY); } catch { /* storage blocked */ }
+
+    const bubble = document.createElement('button');
+    bubble.type = 'button';
+    bubble.className = 'bn-bubble';
+    bubble.setAttribute('aria-label', 'Show navigation');
+    bubble.setAttribute('aria-expanded', 'true');
+    bubble.setAttribute('tabindex', '-1');
+    bubble.innerHTML = '<span class="bn-bubble-icon"></span>';
+    bubble.addEventListener('click', (e) => {
       e.stopPropagation();
-      toggle();
+      expand();
     });
-    nav.appendChild(handle);
+    nav.appendChild(bubble);
 
-    _bindSwipe(nav);
-    setCollapsed(_load(), { persist: false });
+    _bindScroll();
   }
 
-  global.NavCollapse = { init, collapse, expand, toggle, isCollapsed, setCollapsed, STORAGE_KEY };
+  global.NavCollapse = { init, collapse, expand, toggle, isCollapsed, setCollapsed };
 
   if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -25,7 +25,6 @@
   padding: 0 6px;
   z-index: 1000;
   box-shadow: var(--shadow-nav-bar);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Nav items ──────────────────────────────────────────────── */
@@ -105,120 +104,88 @@
   margin: 0 2px;
 }
 
-/* ── Collapse handle (src/js/nav-collapse.js) ─────────────────── */
+/* ── Corner bubble (src/js/nav-collapse.js) ───────────────────── */
 
-/* Two states, nothing in between:
-   - Shown: the capsule is fully on screen and the handle is invisible,
-     so nothing pokes up into the content. Swipe down on the nav to hide
-     it (mouse users get the handle back on hover / keyboard focus).
-   - Hidden: the capsule slides fully off screen and the handle becomes a
-     slim grab line at the bottom edge. Tap it or swipe up to bring the
-     nav back. */
-#bottomNav .bn-collapse-handle {
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  width: 96px;
-  height: 28px;
-  margin: 0 0 0 -48px;
-  padding: 0;
-  background: none;
-  border: none;
-  box-shadow: none;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
+/* Scrolling down tucks the capsule into a round button in the bottom-
+   right corner: the left edge slides over to the right and the height
+   drops to a circle while the tab icons fade out, then the current
+   tab's icon rolls in. Tapping the bubble reverses it. */
+#bottomNav {
+  transition:
+    left 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
-#bottomNav .bn-collapse-handle:hover {
+body.nav-collapsed #bottomNav {
+  left: calc(100% - 14px - 52px - env(safe-area-inset-right, 0px));
+  height: 52px;
+  padding: 0;
+  overflow: hidden;
+  background: var(--fill-nav-center);
+  border-width: 0;
+}
+
+body.nav-collapsed #bottomNav .bn-item,
+body.nav-collapsed #bottomNav .bn-fab {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Covers the whole bubble; only clickable while collapsed. */
+#bottomNav .bn-bubble {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: inherit;
+  background: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pill-text-active);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#bottomNav .bn-bubble:hover {
   background: none;
   transform: none;
 }
 
-/* Desktop / keyboard: reveal the hide tab only on hover or focus. */
-@media (hover: hover) and (pointer: fine) {
-  #bottomNav:hover .bn-collapse-handle {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-#bottomNav .bn-collapse-handle:focus-visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.bn-collapse-tab {
+.bn-bubble-icon {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 16px;
-  margin-bottom: -1px; /* sit on the capsule's border */
-  background: var(--surface-navbar);
-  border: 1px solid var(--border-nav);
-  border-bottom: none;
-  border-radius: 10px 10px 0 0;
-  color: var(--secondary-text);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  transform: rotate(-90deg);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.bn-collapse-tab svg {
+.bn-bubble-icon svg {
+  width: 22px;
+  height: 22px;
   display: block;
-  width: 14px;
-  height: 14px;
 }
 
-/* Hidden: the capsule drops fully below the screen (past its 14px float
-   gap); its top edge ends up at the safe-area line. */
-body.nav-collapsed #bottomNav {
-  transform: translateY(calc(100% + 14px));
-  box-shadow: none;
-  border-color: transparent;
-}
-
-/* ...and the handle becomes a thin grab line just above the safe area,
-   with a wider invisible tap target around it. */
-body.nav-collapsed #bottomNav .bn-collapse-handle {
+body.nav-collapsed #bottomNav .bn-bubble {
   opacity: 1;
   pointer-events: auto;
-  align-items: center;
+  transition-delay: 0.18s;
 }
 
-body.nav-collapsed .bn-collapse-tab {
-  width: 44px;
-  height: 5px;
-  margin: 0;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--secondary-text);
-  opacity: 0.45;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+body.nav-collapsed .bn-bubble-icon {
+  transform: none;
+  transition-delay: 0.18s;
 }
 
-body.nav-collapsed .bn-collapse-tab svg {
-  display: none;
-}
-
-/* Things that sit above the nav follow it down. */
-body.nav-collapsed #appContainer {
-  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
-}
-body.nav-collapsed.workout-active #appContainer {
-  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-}
-body.nav-collapsed #workoutFocusBar {
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-}
 @media (prefers-reduced-motion: reduce) {
   #bottomNav,
-  #bottomNav .bn-collapse-handle {
+  #bottomNav .bn-bubble,
+  .bn-bubble-icon {
     transition: none;
   }
 }
