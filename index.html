@@ -3822,6 +3822,7 @@
       </div>
       <div class="sleep-ai-body" id="sleepAiBody">Analysing your sleep patterns…</div>
       <button class="sleep-ai-btn" id="sleepAiBtn" onclick="requestSleepInsight()">Analyse My Sleep</button>
+      <p class="ai-usage-note" data-ai-usage hidden></p>
     </div>
 
     <!-- Sleep score (Activity Sync only — hidden entirely for manual-only users) -->
@@ -4163,6 +4164,7 @@
 <script src="src/js/local-account-data.js"></script>
 <script src="src/js/settings.js"></script>
 <script src="src/js/plan-source.js"></script>
+<script src="src/js/ai-usage.js"></script>
 <script src="src/js/payments.js"></script>
 <script type="module" src="history.js"></script>
 <!-- Optional runtime configuration -->
@@ -4671,6 +4673,10 @@ async function loadUserPlan() {
     localStorage.setItem('userIsAdmin', window.currentIsAdmin ? '1' : '');
     localStorage.setItem('userPlanSource', window.currentPlanSource || '');
     localStorage.setItem('userPlanExpiresAt', window.currentPlanExpiresAt || '');
+    // Monthly AI uses (PAY2-3); null on older servers.
+    window.currentAiUsage = data.ai || null;
+    try { localStorage.setItem('userAiUsage', data.ai ? JSON.stringify(data.ai) : ''); } catch (e) { /* quota */ }
+    if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
     // Coach Mode depends on the plan — re-apply now that we know it.
     if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
   } catch {
@@ -4678,6 +4684,8 @@ async function loadUserPlan() {
     window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
     window.currentPlanSource = localStorage.getItem('userPlanSource') || null;
     window.currentPlanExpiresAt = localStorage.getItem('userPlanExpiresAt') || null;
+    try { window.currentAiUsage = JSON.parse(localStorage.getItem('userAiUsage') || 'null'); } catch (e) { window.currentAiUsage = null; }
+    if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
   }
 }
 
@@ -4885,8 +4893,13 @@ function upgradePlanCard(key, isAnnual) {
     + '</section>';
 }
 
-function openUpgradeModal(defaultPlan) {
+// opts.heading: replaces the "Upgrade" title, e.g. "You've used your 5 free
+// AI uses this month" (ai-consent.js on ai.quota_exceeded).
+function openUpgradeModal(defaultPlan, opts) {
   defaultPlan = defaultPlan || 'pro';
+  var heading = opts && opts.heading
+    ? String(opts.heading).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; })
+    : 'Upgrade';
   var billing = localStorage.getItem('billingCycle') || 'annual';
   var isAnnual = billing === 'annual';
   var apple = usesAppleIAP();
@@ -4898,7 +4911,7 @@ function openUpgradeModal(defaultPlan) {
     + '<button type="button" class="close-payment-modal" aria-label="Close" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
     + '<div class="upg-head">'
     +   '<span class="mx-kicker">Pocket Coach</span>'
-    +   '<h3 class="upg-title">Upgrade</h3>'
+    +   '<h3 class="upg-title">' + heading + '</h3>'
     +   '<p class="mx-sub">Unlock AI features and coaching tools</p>'
     + '</div>'
     + '<div class="upg-billing">'
@@ -13822,15 +13835,33 @@ function isProUser() {
 }
 
 // ── AI check-in summary ───────────────────────────────────────────────────────
-async function requestAiCheckInSummary(draft, compliancePercent) {
+async function requestAiCheckInSummary(draft, compliancePercent, opts) {
   const card = document.getElementById('checkInAiSummaryCard');
   if (!card) return;
 
-  // No upgrade prompt right after a basic task: free accounts just don't get
-  // the automatic summary.
-  if (!isProUser()) {
-    card.style.display = 'none';
-    card.innerHTML = '';
+  // Free accounts: no automatic summary and never an upgrade prompt right
+  // after a basic task. While they have free AI uses left, offer a button
+  // that spends one; with none left, show nothing.
+  if (!isProUser() && !(opts && opts.tapped)) {
+    const usage = window.PocketCoachAiUsage;
+    const left = usage ? usage.remaining() : null;
+    if (!left) {
+      card.style.display = 'none';
+      card.innerHTML = '';
+      return;
+    }
+    card.style.display = '';
+    card.innerHTML = `
+      <div class="ci-ai-card">
+        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
+        <button type="button" class="ci-ai-offer-btn">Summarise this check-in</button>
+        <p class="ai-usage-note" data-ai-usage hidden></p>
+      </div>`;
+    usage.render();
+    card.querySelector('.ci-ai-offer-btn').addEventListener('click', () => {
+      if (typeof window.markAiUserAction === 'function') window.markAiUserAction('checkin-summary');
+      requestAiCheckInSummary(draft, compliancePercent, { tapped: true });
+    });
     return;
   }
 
@@ -20921,13 +20952,6 @@ window.renderCaffeinePod = renderCaffeinePod;
 
   window.openMacroAiAdvisor = async function () {
     if (typeof window.markAiUserAction === 'function') window.markAiUserAction('macro-advisor');
-    if (!isProUser()) {
-      const btn = document.getElementById('macroAiAdvisorBtn');
-      const locked = document.getElementById('macroAiAdvisorLocked');
-      if (btn) { btn.style.opacity = '0.45'; btn.disabled = true; }
-      if (locked) locked.style.display = '';
-      return;
-    }
 
     const backdrop = document.getElementById('macroAiBackdrop');
     const panel    = document.getElementById('macroAiPanel');
