@@ -18456,11 +18456,12 @@ function _commEsc(v) {
 
 function _renderCommInboxItems(el, items) {
   if (!items?.length) {
-    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When a friend shares a program or template with you, it appears here. <span class="ui-icon">${ICONS.download}</span></div>`;
+    el.innerHTML = `<div class="comm-share-empty">Nothing received yet.<br>When a friend shares a program, template or meal with you, it appears here. <span class="ui-icon">${ICONS.download}</span></div>`;
     return;
   }
-  const typeColors = { template: '#5295e0', program: '#9070d8' };
-  const typeLabels = { template: `<span class="ui-icon">${ICONS.clipboard}</span> Template`, program: `<span class="ui-icon">${ICONS.calendar}</span> Program` };
+  const typeColors = { template: '#5295e0', program: '#9070d8', meal: '#4caf7d' };
+  const typeLabels = { template: `<span class="ui-icon">${ICONS.clipboard}</span> Template`, program: `<span class="ui-icon">${ICONS.calendar}</span> Program`, meal: `<span class="ui-icon">${ICONS.leaf}</span> Meal` };
+  const isMeal = item => item.type === 'meal' && window.MealShare;
   el.innerHTML = items.map(item => `
     <div class="comm-inbox-item" data-share-id="${_commEsc(item.id)}">
       <div class="comm-inbox-header">
@@ -18472,17 +18473,33 @@ function _renderCommInboxItems(el, items) {
         <span class="comm-inbox-date">${_commEsc((item.sentAt || '').slice(0, 10))}</span>
       </div>
       <div class="comm-inbox-item-name">${_commEsc(item.name)}</div>
+      ${isMeal(item) ? window.MealShare.receivedMealHtml(item, { photoKey: item.hasPhoto ? `share:${item.id}` : '' }) : ''}
       ${item.note ? `<div class="comm-inbox-message">"${_commEsc(item.note)}"</div>` : ''}
       <div class="comm-inbox-actions">
-        <button class="comm-inbox-accept-btn" data-share-accept><span class="ui-icon">${ICONS.check}</span> Accept &amp; Save</button>
+        ${isMeal(item) ? `<button class="comm-inbox-accept-btn" data-share-log><span class="ui-icon">${ICONS.plus}</span> Log it</button>` : ''}
+        <button class="comm-inbox-accept-btn" data-share-accept><span class="ui-icon">${ICONS.check}</span> ${isMeal(item) ? 'Save meal' : 'Accept &amp; Save'}</button>
         <button class="comm-inbox-dismiss-btn" data-share-dismiss>Dismiss</button>
       </div>
     </div>`).join('');
   el.querySelectorAll('[data-share-id]').forEach(row => {
     const id = row.dataset.shareId;
+    row.querySelector('[data-share-log]')?.addEventListener('click', () => commLogSharedMeal(id));
     row.querySelector('[data-share-accept]').addEventListener('click', () => commAcceptShare(id));
     row.querySelector('[data-share-dismiss]').addEventListener('click', () => commDismissShare(id));
   });
+  // Meal photos load after the rows are drawn (src/js/meal-share.js).
+  if (window.MealShare) {
+    const fetchers = {};
+    items.filter(i => i.type === 'meal' && i.hasPhoto).forEach(i => { fetchers[`share:${i.id}`] = () => window.Shares.photo(i.id); });
+    window.MealShare.loadPhotos(el, fetchers);
+  }
+}
+
+/* Log a received meal to today, then clear it from the inbox */
+async function commLogSharedMeal(shareId) {
+  if (!(await window.Shares?.logMeal(shareId))) return;
+  document.querySelector(`[data-share-id="${CSS.escape(shareId)}"]`)?.remove();
+  renderCommShareInbox();
 }
 
 /* Render outbox (sent history) */
@@ -20676,6 +20693,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/progress-story.js"></script>
   <script src="src/js/community-feed.js"></script>
   <script src="src/js/shares.js"></script>
+  <script src="src/js/meal-share.js"></script>
   <script src="src/js/friends.js"></script>
   <script src="src/js/notifications.js"></script>
   <script src="src/js/rehab.js"></script>

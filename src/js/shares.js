@@ -1,5 +1,5 @@
 /* =============================================================
-   SHARES — send a program or template to a friend
+   SHARES — send a program, template or meal to a friend
    Server inbox at /api/shares (backend src/routes/shares.js). Used by
    the Community → Share panel and the Friends quick-share sheet.
 
@@ -93,9 +93,12 @@
   function getInbox() { return _cache.inbox; }
   function getSent() { return _cache.sent; }
 
-  // item: { type: 'program'|'template', name, data }
-  async function send(to, item, note) {
-    const res = await api('POST', '', { to, type: item.type, name: item.name, data: item.data, note: note || '' });
+  // item: { type: 'program'|'template'|'meal', name, data }
+  // opts.photo: a meal photo (JPEG data URL, src/js/meal-photos.js)
+  async function send(to, item, note, opts = {}) {
+    const body = { to, type: item.type, name: item.name, data: item.data, note: note || '' };
+    if (item.type === 'meal' && opts.photo) body.photo = opts.photo;
+    const res = await api('POST', '', body);
     _cache.sent = [res.share, ..._cache.sent];
     _changed();
     return res.share;
@@ -108,11 +111,19 @@
     _changed();
   }
 
+  // A meal photo from the inbox (sender or recipient only).
+  async function photo(id) {
+    const res = await api('GET', '/' + encodeURIComponent(id) + '/photo');
+    return res.photo;
+  }
+
   // Adds a shared program/template to this device's library (the same
-  // stores the Programs tab and the template picker read).
+  // stores the Programs tab and the template picker read). A meal becomes
+  // one of your saved meals (src/js/meal-share.js).
   function saveToLibrary(item, from) {
     const user = _user();
     if (!item || !user) return false;
+    if (item.type === 'meal') return !!global.MealShare?.saveSharedMeal(item.data, item.name, from);
     const read = key => { try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; } };
     const label = from ? `${item.name} (from @${from})` : item.name;
     if (item.type === 'template') {
@@ -157,7 +168,15 @@
     else setTimeout(_poll, 3000);
   }
 
-  const Shares = { refresh, getInbox, getSent, send, remove, accept, dismiss, saveToLibrary };
+  // A received meal → today's food log, then off the inbox.
+  async function logMeal(id) {
+    const item = _cache.inbox.find(i => i.id === id);
+    if (!item || item.type !== 'meal' || !global.MealShare?.logSharedMeal(item.data, item.name)) return false;
+    try { await remove(id); } catch (err) { _toast(err.message, 'error'); }
+    return true;
+  }
+
+  const Shares = { refresh, getInbox, getSent, send, remove, accept, dismiss, saveToLibrary, photo, logMeal };
   global.Shares = Shares;
   if (typeof module !== 'undefined' && module.exports) module.exports = Shares;
 })(typeof window !== 'undefined' ? window : globalThis);
