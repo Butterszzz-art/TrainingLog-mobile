@@ -81,7 +81,11 @@ describe('Plan gate', () => {
     const sent = [];
     w.fetch = async url => {
       sent.push(url);
-      const res = { ok: server.status < 400, status: server.status, json: async () => server.body };
+      const headers = server.headers || {};
+      const res = {
+        ok: server.status < 400, status: server.status, json: async () => server.body,
+        headers: { get: k => (k in headers ? headers[k] : null) },
+      };
       res.clone = () => res;
       return res;
     };
@@ -123,13 +127,29 @@ describe('Plan gate', () => {
     const free = gated({ plan: 'free', server: quota });
     free.w.markAiUserAction('sleep-insight');
     await free.w.fetch('https://api.test/api/ai/sleep-insight');
-    expect(free.w.openUpgradeModal).toHaveBeenCalledWith('pro');
+    expect(free.w.openUpgradeModal).toHaveBeenCalledWith('pro', { heading: 'You’ve used your 5 free AI uses this month' });
 
     const paid = gated({ plan: 'pro', paid: true, server: quota });
     paid.w.markAiUserAction('sleep-insight');
     await paid.w.fetch('https://api.test/api/ai/sleep-insight');
     expect(paid.w.openUpgradeModal).not.toHaveBeenCalled();
     expect(paid.w.showToast).toHaveBeenCalledWith(expect.stringMatching(/^Monthly AI limit reached/));
+  });
+
+  test('X-AI-Remaining is forwarded as a pc:ai-remaining event', async () => {
+    const { w, doc } = gated({ plan: 'free', server: { status: 200, body: {}, headers: { 'X-AI-Remaining': '3' } } });
+    const seen = [];
+    doc.addEventListener('pc:ai-remaining', e => seen.push(e.detail.remaining));
+    await w.fetch('https://api.test/api/ai/sleep-insight');
+    expect(seen).toEqual([3]);
+  });
+
+  test('no header, no event', async () => {
+    const { w, doc } = gated({ plan: 'pro' });
+    const seen = [];
+    doc.addEventListener('pc:ai-remaining', e => seen.push(e.detail.remaining));
+    await w.fetch('https://api.test/api/ai/coach/brief');
+    expect(seen).toEqual([]);
   });
 
   test('one tap gives at most one prompt', async () => {

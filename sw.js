@@ -100,6 +100,7 @@ const APP_SHELL = [
   '/src/js/native-ui.js',
   '/src/js/ai-consent.js',
   '/src/js/plan-source.js',
+  '/src/js/ai-usage.js',
   '/src/js/coaching-enhanced.js',
   '/src/js/coach-videos.js',
   '/src/js/client-coaching.js',

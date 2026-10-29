@@ -1279,6 +1279,7 @@
           <button type="button" class="prog-card-del" data-idx="${origIdx}">Delete</button>
         </div>
         <button type="button" class="prog-card-analyse">${ico('sparkles')}<span>Analyse with AI</span></button>
+        <p class="ai-usage-note" data-ai-usage hidden></p>
       `;
 
       card.querySelector('.prog-card-export').addEventListener('click', () => exportProgramPDF(prog));
@@ -1331,6 +1332,7 @@
       });
 
       container.appendChild(card);
+      if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.render();
       container.appendChild(analysisPanel);
     });
   }
