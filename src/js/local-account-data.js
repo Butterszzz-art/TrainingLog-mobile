@@ -1,6 +1,6 @@
 /* Removes one account's data from this device. Used when the account is
    deleted: the server copy is gone at that point, but check-ins, phase
-   state, weigh-ins, macros and progress photos also live in localStorage and
+   state, weigh-ins, macros, progress photos and meal photos also live in localStorage and
    IndexedDB, and delete-account.html promises those go too.
 
    Logging out does NOT call this: entries logged offline may not have
@@ -59,6 +59,15 @@
         removedPhotos = await media.deleteUserPhotos(username);
       } catch (error) {
         console.warn('[clearLocalAccountData] could not delete progress photos', error);
+      }
+    }
+    // Meal photos in the food log (src/js/meal-photos.js).
+    const meals = globalScope.mealPhotos;
+    if (username && meals?.isAvailable?.() && typeof meals.deleteUserPhotos === 'function') {
+      try {
+        removedPhotos += await meals.deleteUserPhotos(username);
+      } catch (error) {
+        console.warn('[clearLocalAccountData] could not delete meal photos', error);
       }
     }
     return { removedKeys, removedPhotos };
