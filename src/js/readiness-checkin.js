@@ -77,6 +77,12 @@
     overlay.id = 'readinessOverlay';
 
     const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    // Last night's sleep, resting HR and HRV from a connected tracker, as
+    // context for the three ratings (activity-sync-bridge.js).
+    const trackerLine = window.activitySyncBridge?.getRecoverySummaryText?.() || '';
+    const trackerHtml = trackerLine
+      ? `<p class="tl-sheet-sub readiness-tracker">${trackerLine.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))}</p>`
+      : '';
 
     overlay.innerHTML = `
       <div class="tl-sheet readiness-modal" role="dialog" aria-modal="true" aria-labelledby="readinessTitle" tabindex="-1">
@@ -90,6 +96,7 @@
         </header>
 
         <div class="tl-sheet-body">
+          ${trackerHtml}
           ${QUESTIONS.map(q => `
             <div class="tl-q" data-q="${q.key}">
               <div class="tl-q-head">

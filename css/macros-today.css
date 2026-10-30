@@ -67,6 +67,10 @@
 }
 .macro-hero-sub b { color: var(--green-90); font-weight: 600; }
 .macro-hero-sub b.is-over { color: var(--danger-text-mobile); }
+/* Synced calories burned (activity-sync-bridge.js). Without this rule the
+   flex display above would override the [hidden] attribute. */
+.macro-tracker-burn { margin-top: -6px; }
+.macro-tracker-burn[hidden] { display: none; }
 
 /* Meter track; the fill is the existing .macro-card-bar-fill
    (width driven by archetype-features.js syncVisBar) */
