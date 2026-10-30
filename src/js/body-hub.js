@@ -392,6 +392,123 @@
     });
   }
 
+  /* ── Body analysis (tracker vitals + smart scale) ────────────
+     Data and analysis come from activity-sync-bridge.js
+     (getBodyAnalysis): each vital is compared with the user's own last
+     30 days. Shown above the summary cards only when there's synced
+     data or scale body fat to show. */
+
+  function _fmtNum(v, decimals, signed) {
+    if (v == null || !Number.isFinite(v)) return '&mdash;';
+    const s = v.toFixed(decimals);
+    return signed && v > 0 ? `+${s}` : s;
+  }
+
+  function _dayLabel(date) {
+    const d = new Date(`${date}T12:00:00`);
+    return d.toLocaleDateString(undefined, { weekday: 'short' });
+  }
+
+  // Open/close a vital tile, then let the last closed tile span the row when
+  // the closed ones are odd in number, so the panel never shows a hole.
+  function _balanceVitals(panel) {
+    if (!panel) return;
+    const closed = [...panel.querySelectorAll('.body-hub-vital')].filter(t => !t.classList.contains('is-open'));
+    panel.querySelectorAll('.body-hub-vital.is-filler').forEach(t => t.classList.remove('is-filler'));
+    if (closed.length % 2 === 1) closed[closed.length - 1].classList.add('is-filler');
+  }
+
+  window.toggleBodyVital = function (tile) {
+    tile.classList.toggle('is-open');
+    tile.setAttribute('aria-expanded', String(tile.classList.contains('is-open')));
+    _balanceVitals(tile.closest('.body-hub-analysis'));
+  };
+
+  function _vitalTile(m, filler) {
+    const unit = m.unit ? ` <span class="body-hub-unit">${_esc(m.unit)}</span>` : '';
+    let sub;
+    if (m.key === 'vo2Max') {
+      sub = m.change30 != null && Math.abs(m.change30) >= 0.1
+        ? `${_fmtNum(m.change30, 1, true)} in 30 days` : 'Steady over 30 days';
+    } else if (m.usualLow != null) {
+      sub = m.signed
+        ? `usual &plusmn;${_fmtNum(m.usualHigh, 1)}`
+        : `usual ${_fmtNum(m.usualLow, m.decimals)}&ndash;${_fmtNum(m.usualHigh, m.decimals)}`;
+    } else {
+      sub = `Learning your normal (${m.baselineDays} of 5 nights)`;
+    }
+    const flagLabel = m.flag === 'high' ? 'High' : m.flag === 'low' ? 'Low' : '';
+    const aside = flagLabel
+      ? `<span class="body-hub-flag">${flagLabel}</span>`
+      : (!m.fresh ? _esc(_dayLabel(m.date)) : '');
+    const range = m.month.length ? `${_fmtNum(Math.min(...m.month), m.decimals, m.signed)}&ndash;${_fmtNum(Math.max(...m.month), m.decimals, m.signed)}` : '';
+    return `
+      <button type="button" class="body-hub-card body-hub-vital${m.flag ? ' is-flagged' : ''}${filler ? ' is-filler' : ''}"
+        aria-expanded="false" onclick="toggleBodyVital(this)">
+        <span class="body-hub-head">
+          <span class="body-hub-kicker">${_esc(m.label)}</span>
+          ${aside ? `<span class="body-hub-aside">${aside}</span>` : ''}
+        </span>
+        <span class="body-hub-value">${_fmtNum(m.value, m.decimals, m.signed)}${unit}</span>
+        <span class="body-hub-sub">${sub}</span>
+        <span class="body-hub-preview">${_sparkline(m.spark)}</span>
+        <span class="body-hub-vital-more">
+          <span class="body-hub-sub">${_esc(m.about)}</span>
+          ${range ? `<span class="body-hub-sub">Last 30 days: ${range} ${_esc(m.unit)}</span>` : ''}
+          ${_sparkline(m.month)}
+        </span>
+      </button>`;
+  }
+
+  function _compositionCard(c) {
+    const pref = typeof window.getBodyweightPreference === 'function'
+      ? window.getBodyweightPreference() : { unit: 'kg' };
+    const unit = pref.unit === 'lb' ? 'lb' : 'kg';
+    const toDisp = typeof window.convertWeightValue === 'function'
+      ? (kg) => window.convertWeightValue(kg, 'kg', unit, 1)
+      : (kg) => Math.round((unit === 'lb' ? kg * 2.20462 : kg) * 10) / 10;
+    const signed = (kg) => {
+      const v = toDisp(Math.abs(kg));
+      if (!(v > 0)) return 'unchanged';
+      return `${kg >= 0 ? '+' : '&minus;'}${v} ${unit}`;
+    };
+    const value = `${toDisp(c.weightKg)} <span class="body-hub-unit">${unit}</span> &middot; ${c.bodyFatPercent.toFixed(1)}<span class="body-hub-unit">% fat</span>`;
+    let sub = `Lean ${toDisp(c.leanKg)} ${unit} &middot; Fat ${toDisp(c.fatKg)} ${unit}`;
+    if (c.change) {
+      sub += `<br>${c.change.days} days: fat ${signed(c.change.fatKg)} &middot; lean ${signed(c.change.leanKg)}`;
+    }
+    const aside = c.bodyFatFrom === 'profile' ? 'Body fat from your profile' : 'Smart scale';
+    const series = c.fatSeries.length >= 2 ? c.fatSeries : c.weightSeries;
+    return _card('Body composition', value, sub, 'weightTab', { wide: true, aside, preview: _sparkline(series) });
+  }
+
+  function _analysisCards() {
+    const api = window.activitySyncBridge;
+    if (!api || typeof api.getBodyAnalysis !== 'function') return [];
+    let analysis;
+    try { analysis = api.getBodyAnalysis(); } catch { return []; }
+    const out = [];
+    const { status, metrics } = analysis.vitals || {};
+    if (status) {
+      out.push(`
+        <div class="body-hub-card body-hub-card--wide body-hub-status body-hub-status--${status.level}" role="status">
+          <span class="body-hub-head">
+            <span class="body-hub-kicker">Body analysis</span>
+            <span class="body-hub-aside">vs your last 30 days</span>
+          </span>
+          <span class="body-hub-value">${_esc(status.title)}</span>
+          <span class="body-hub-sub">${_esc(status.text)}</span>
+          <span class="body-hub-note">From your tracker. A trend check, not a medical diagnosis.</span>
+        </div>`);
+    }
+    // An odd last tile spans the row so the panel has no hole (see _balanceVitals).
+    const list = metrics || [];
+    list.forEach((m, i) => out.push(_vitalTile(m, list.length % 2 === 1 && i === list.length - 1)));
+    const c = analysis.composition;
+    if (c && c.bodyFatPercent) out.push(_compositionCard(c));
+    return out.length ? [`<div class="body-hub-analysis">${out.join('')}</div>`] : [];
+  }
+
   /* ── Render ──────────────────────────────────────────────── */
 
   function renderBodyHub() {
@@ -406,6 +523,7 @@
     }
 
     host.innerHTML = [
+      ..._analysisCards(),
       _weightCard(username),
       _macroCard(),
       _sleepCard(username),

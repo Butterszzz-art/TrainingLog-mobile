@@ -6,6 +6,9 @@ const {
   computeBurnSummary,
   computeRecoverySummary,
   recoverySummaryText,
+  mergeScaleWeighIns,
+  analyzeVitals,
+  analyzeComposition,
 } = require('../src/js/activity-sync-bridge.js');
 
 const range = { start: '2026-10-23', end: '2026-10-29' };
@@ -143,5 +146,87 @@ describe('activity sync bridge — recovery', () => {
     const summary = computeRecoverySummary({ '2026-10-30': rec('2026-10-30', 55, null) }, {}, '2026-10-30');
     expect(recoverySummaryText(summary)).toBe('From your tracker: resting HR 55 bpm');
     expect(recoverySummaryText(computeRecoverySummary({}, {}, '2026-10-30'))).toBe('');
+  });
+});
+
+describe('activity sync bridge — smart scale', () => {
+  const opts = { start: '2026-10-01', end: '2026-10-30', unit: 'kg' };
+
+  test('fills days without an app weigh-in and never overwrites app weights', () => {
+    const log = [{ date: '2026-10-28', weight: 80, unit: 'kg', weightKg: 80 }];
+    const merged = mergeScaleWeighIns(log, [
+      { date: '2026-10-28', weightKg: 82.4, bodyFatPercent: 16.8 },
+      { date: '2026-10-29', weightKg: 82.1, bodyFatPercent: 16.6 },
+    ], opts);
+    expect(merged).toHaveLength(2);
+    expect(merged[0]).toMatchObject({ date: '2026-10-28', weightKg: 80, bodyFatPercent: 16.8, bodyFatSource: 'activity-sync' });
+    expect(merged[0].source).toBeUndefined();
+    expect(merged[1]).toMatchObject({ date: '2026-10-29', weightKg: 82.1, weight: 82.1, source: 'activity-sync', bodyFatPercent: 16.6 });
+  });
+
+  test('keeps body fat the user entered, re-syncs scale entries and honours removals', () => {
+    const log = [
+      { date: '2026-10-27', weightKg: 81, bodyFatPercent: 15 },
+      { date: '2026-10-29', weightKg: 82.1, source: 'activity-sync' },
+    ];
+    const merged = mergeScaleWeighIns(log, [
+      { date: '2026-10-27', weightKg: 81.5, bodyFatPercent: 17 },
+      { date: '2026-10-30', weightKg: 81.9, bodyFatPercent: null },
+    ], { ...opts, dismissed: ['2026-10-30'] });
+    expect(merged).toEqual([{ date: '2026-10-27', weightKg: 81, bodyFatPercent: 15 }]);
+  });
+
+  test('converts scale weight to the user\'s unit', () => {
+    const [entry] = mergeScaleWeighIns([], [{ date: '2026-10-29', weightKg: 80 }], { ...opts, unit: 'lb' });
+    expect(entry).toMatchObject({ unit: 'lb', weight: 176.4, weightKg: 80 });
+  });
+});
+
+describe('activity sync bridge — body analysis', () => {
+  const day = (date, v) => ({ date, restingHeartRate: null, hrvMs: null, spo2: null, respiratoryRate: null, skinTempDelta: null, vo2Max: null, ...v });
+  const history = (n, v) => Array.from({ length: n }, (_, i) => {
+    const d = new Date('2026-10-29T12:00:00'); d.setDate(d.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return day(key, typeof v === 'function' ? v(i) : v);
+  });
+  const store = (rows) => Object.fromEntries(rows.map((r) => [r.date, r]));
+
+  test('everything normal → "In your usual range"', () => {
+    const rows = [...history(10, (i) => ({ restingHeartRate: 52 + (i % 3), hrvMs: 50 + (i % 4), spo2: 96 })),
+      day('2026-10-30', { restingHeartRate: 53, hrvMs: 51, spo2: 96.5 })];
+    const { status, metrics } = analyzeVitals(store(rows), '2026-10-30');
+    expect(status.level).toBe('good');
+    expect(metrics.find((m) => m.key === 'restingHeartRate')).toMatchObject({ value: 53, flag: null, baselineDays: 10 });
+  });
+
+  test('two vitals off → "Signs of strain" naming both', () => {
+    const rows = [...history(10, () => ({ restingHeartRate: 52, hrvMs: 50, respiratoryRate: 14 })),
+      day('2026-10-30', { restingHeartRate: 60, hrvMs: 35, respiratoryRate: 14.2 })];
+    const { status, metrics } = analyzeVitals(store(rows), '2026-10-30');
+    expect(status.level).toBe('strained');
+    expect(status.text).toBe('Resting heart rate and HRV are outside your usual range. Consider an easier day and extra sleep.');
+    expect(metrics.find((m) => m.key === 'hrvMs').flag).toBe('low');
+  });
+
+  test('low blood oxygen is flagged even without a baseline; few nights → still learning', () => {
+    const { status, metrics } = analyzeVitals(store([day('2026-10-30', { spo2: 92.5 })]), '2026-10-30');
+    expect(metrics[0]).toMatchObject({ key: 'spo2', flag: 'low' });
+    expect(status).toMatchObject({ level: 'watch', text: 'Blood oxygen is below the usual 95–100% today.' });
+    const learning = analyzeVitals(store([day('2026-10-29', { restingHeartRate: 55 }), day('2026-10-30', { restingHeartRate: 54 })]), '2026-10-30');
+    expect(learning.status).toMatchObject({ level: 'building', text: '4 more nights of data before your usual ranges are ready.' });
+  });
+
+  test('body composition: lean/fat split and 30-day change; profile body fat wins', () => {
+    const log = [
+      { date: '2026-10-05', weightKg: 84, bodyFatPercent: 18, source: 'activity-sync' },
+      { date: '2026-10-29', weightKg: 82, bodyFatPercent: 16, source: 'activity-sync' },
+    ];
+    const c = analyzeComposition(log, '2026-10-30', null);
+    expect(c).toMatchObject({ weightKg: 82, bodyFatPercent: 16, bodyFatFrom: 'scale' });
+    expect(c.fatKg).toBeCloseTo(13.12);
+    expect(c.change.fatKg).toBeCloseTo(13.12 - 15.12);
+    expect(c.change.leanKg).toBeCloseTo(68.88 - 68.88);
+    const own = analyzeComposition(log, '2026-10-30', { value: 20 });
+    expect(own).toMatchObject({ bodyFatPercent: 20, bodyFatFrom: 'profile', change: null });
   });
 });
