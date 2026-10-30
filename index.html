@@ -3126,6 +3126,8 @@
                 <span aria-hidden="true">·</span>
                 <span><span id="macroCalsNet">0</span> net</span>
               </p>
+              <!-- Synced calories burned (activity-sync-bridge.js renderTrackerBurn) -->
+              <p id="macroTrackerBurn" class="macro-hero-sub macro-tracker-burn" hidden></p>
               <div class="macro-hero-meter"><div class="macro-card-bar-fill macro-bar-cal" id="calsVisBar"></div></div>
 
               <div class="macro-hero-grid">
@@ -10090,6 +10092,7 @@ window.addMacroFavorite = addMacroFavorite;
 
 function updateMacroUI() {
   renderAssignedNutritionPlanForAthlete();
+  window.activitySyncBridge?.renderTrackerBurn?.();
   // Today's saved intake is the one source of truth: meals, favorites,
   // quick-add and food search all write to it.
   const progress = loadDailyMacroProgress();

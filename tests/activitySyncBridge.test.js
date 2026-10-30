@@ -3,6 +3,7 @@ const {
   cardioTypeFor,
   toCardioEntry,
   mergeSyncedCardio,
+  computeBurnSummary,
 } = require('../src/js/activity-sync-bridge.js');
 
 const range = { start: '2026-10-23', end: '2026-10-29' };
@@ -86,5 +87,32 @@ describe('activity sync bridge — cardio', () => {
       dismissed: ['users/u/dataTypes/exercise/dataPoints/a1'],
     });
     expect(merged).toEqual([]);
+  });
+});
+
+describe('activity sync bridge — calories burned', () => {
+  const day = (date, caloriesOut) => ({ date, caloriesOut });
+
+  test('averages the last 7 complete days and reports today separately', () => {
+    const store = {
+      '2026-10-20': day('2026-10-20', 9000), // older than 7 days: ignored
+      '2026-10-24': day('2026-10-24', 2400),
+      '2026-10-27': day('2026-10-27', 2600),
+      '2026-10-29': day('2026-10-29', 2500),
+      '2026-10-30': day('2026-10-30', 1200), // today, still in progress
+    };
+    expect(computeBurnSummary(store, '2026-10-30')).toEqual({
+      todayBurn: 1200, averageBurn: 2500, averageDays: 3,
+    });
+  });
+
+  test('needs at least 3 days of data for an average', () => {
+    const store = {
+      '2026-10-28': day('2026-10-28', 2500),
+      '2026-10-29': day('2026-10-29', 0),
+    };
+    expect(computeBurnSummary(store, '2026-10-30')).toEqual({
+      todayBurn: 0, averageBurn: 0, averageDays: 1,
+    });
   });
 });

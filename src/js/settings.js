@@ -876,6 +876,7 @@ function handleActivitySyncOAuthRedirect() {
     window.activitySyncBridge?.fetchAndApplyTodayActivity?.({ force: true });
     window.activitySyncBridge?.fetchAndApplyTodaySleep?.({ force: true });
     window.activitySyncBridge?.fetchAndApplyCardio?.({ force: true });
+    window.activitySyncBridge?.fetchAndApplyHistory?.({ force: true });
   }
 }
 

@@ -28,6 +28,11 @@
   let sleepInFlight = null;
   let lastCardioFetchedAt = 0;
   let cardioInFlight = null;
+  let lastHistoryFetchedAt = 0;
+  let historyInFlight = null;
+  const HISTORY_THROTTLE_MS = 30 * 60 * 1000; // past days rarely change
+  const BURN_AVERAGE_DAYS = 7;
+  const BURN_AVERAGE_MIN_DAYS = 3;
   const CARDIO_SYNC_DAYS = 7; // how far back tracker workouts are merged
 
   // The user's own calendar date (YYYY-MM-DD). Synced data is requested and
@@ -121,7 +126,7 @@
     }
   }
 
-  // Renders the compact "4.2 km · 312 kcal active · 38 active min" line in
+  // Renders the compact "4.2 km · 2,310 kcal burned · 38 active min" line in
   // the step-widget pod, same format Settings already uses for its summary.
   // Re-run from cache on every homeTab visit (not just after a fresh fetch)
   // so the line survives a throttled/skipped refetch.
@@ -136,7 +141,8 @@
     const km = Number(activity.distanceKm || 0).toFixed(1);
     const kcal = Math.round(Number(activity.caloriesOut) || 0);
     const activeMin = Math.round(Number(activity.activeMinutes) || 0);
-    el.textContent = `${km} km · ${kcal} kcal active · ${activeMin} active min`;
+    // caloriesOut is the tracker's total burn for the day (resting + active).
+    el.textContent = `${km} km · ${kcal.toLocaleString()} kcal burned · ${activeMin} active min`;
     el.style.display = '';
   }
 
@@ -269,6 +275,7 @@
   function rerenderConsumers() {
     try { globalScope.refreshStepWidget?.(); } catch (_error) { /* ignore */ }
     try { renderSyncInfoLine(); } catch (_error) { /* ignore */ }
+    try { renderTrackerBurn(); } catch (_error) { /* ignore */ }
     try {
       const homeTab = globalScope.document?.getElementById('homeTab');
       if (homeTab?.classList.contains('active')) {
@@ -531,11 +538,113 @@
     return cardioInFlight;
   }
 
+  // ── Calories burned: tracker history → nutrition ───────────────────────
+  // Past days' totals are cached in activitySync_<user> next to today's, so
+  // the Macros screen can show today's burn and a 7-day average burn (a
+  // measured maintenance figure) beside the calorie target.
+
+  // Today's burn so far plus the average over recent complete days. Pure, so
+  // it's unit-testable. The average needs BURN_AVERAGE_MIN_DAYS days of data.
+  function computeBurnSummary(store, today) {
+    const todayBurn = Number(store?.[today]?.caloriesOut) || 0;
+    const start = new Date(`${today}T12:00:00`);
+    start.setDate(start.getDate() - BURN_AVERAGE_DAYS);
+    const from = localDateKey(start);
+    const past = Object.values(store || {})
+      .filter((d) => d && d.date >= from && d.date < today && Number(d.caloriesOut) > 0)
+      .map((d) => Number(d.caloriesOut));
+    const averageBurn = past.length >= BURN_AVERAGE_MIN_DAYS
+      ? Math.round(past.reduce((a, b) => a + b, 0) / past.length)
+      : 0;
+    return { todayBurn: Math.round(todayBurn), averageBurn, averageDays: past.length };
+  }
+
+  function getBurnSummary() {
+    return computeBurnSummary(readJson(`activitySync_${getActiveUsername()}`, {}), getTodayKey());
+  }
+
+  // Fills #macroTrackerBurn on the Macros screen; hidden without synced data.
+  function renderTrackerBurn() {
+    const el = globalScope.document?.getElementById('macroTrackerBurn');
+    if (!el) return;
+    const { todayBurn, averageBurn, averageDays } = isConnected()
+      ? getBurnSummary()
+      : { todayBurn: 0, averageBurn: 0, averageDays: 0 };
+    const parts = [];
+    if (todayBurn > 0) parts.push(`${todayBurn.toLocaleString()} kcal burned so far today`);
+    if (averageBurn > 0) parts.push(`${averageBurn.toLocaleString()}/day average (last ${averageDays} days)`);
+    if (!parts.length) {
+      el.hidden = true;
+      return;
+    }
+    el.textContent = `Tracker: ${parts.join(' · ')}`;
+    el.hidden = false;
+  }
+
+  async function fetchAndApplyHistory(options = {}) {
+    const force = Boolean(options.force);
+    if (!force && !isConnected()) return null;
+    if (!force && Date.now() - lastHistoryFetchedAt < HISTORY_THROTTLE_MS) return null;
+    if (historyInFlight) return historyInFlight;
+
+    if (typeof globalScope.getAuthHeaders !== 'function'
+      || typeof globalScope.ensureServerUrl !== 'function'
+      || typeof globalScope.fetchWithTimeout !== 'function') {
+      return null;
+    }
+    const authHeaders = globalScope.getAuthHeaders();
+    if (!authHeaders.Authorization) return null;
+
+    historyInFlight = (async () => {
+      try {
+        const end = getTodayKey();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - BURN_AVERAGE_DAYS);
+        const start = localDateKey(startDate);
+        const res = await globalScope.fetchWithTimeout(
+          `${globalScope.ensureServerUrl()}/api/activity-sync/daily?start=${start}&end=${end}`,
+          { headers: authHeaders },
+          10000
+        );
+        const data = await res.json();
+        lastHistoryFetchedAt = Date.now();
+        if (!res.ok || !data.success) {
+          const code = data?.error?.code;
+          if (code && code !== 'activity_sync.disabled' && code !== 'activity_sync.not_connected') {
+            console.warn('[ActivitySyncBridge] history fetch failed', code);
+          }
+          return null;
+        }
+
+        const key = `activitySync_${getActiveUsername()}`;
+        const store = readJson(key, {});
+        (data.days || []).forEach((day) => {
+          if (!day?.date || !day.hasData) return;
+          const { hasData, ...values } = day;
+          store[day.date] = { ...(store[day.date] || {}), ...values };
+        });
+        globalScope.localStorage.setItem(key, JSON.stringify(store));
+        renderTrackerBurn();
+        return store;
+      } catch (error) {
+        console.warn('[ActivitySyncBridge] history fetch failed', error);
+        return null;
+      } finally {
+        historyInFlight = null;
+      }
+    })();
+
+    return historyInFlight;
+  }
+
   if (typeof globalScope.document !== 'undefined') {
     globalScope.document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         // Workouts only after the activity fetch has confirmed a connection.
-        Promise.resolve(fetchAndApplyTodayActivity()).then(() => fetchAndApplyCardio());
+        Promise.resolve(fetchAndApplyTodayActivity()).then(() => {
+          fetchAndApplyCardio();
+          fetchAndApplyHistory();
+        });
         fetchAndApplyTodaySleep();
       }, 1000);
     });
@@ -547,6 +656,10 @@
         fetchAndApplyTodaySleep();
       } else if (e.detail?.tab === 'cardioTab') {
         fetchAndApplyCardio();
+      } else if (e.detail?.tab === 'macroTab') {
+        renderTrackerBurn();
+        fetchAndApplyTodayActivity();
+        fetchAndApplyHistory();
       }
     });
   }
@@ -558,18 +671,22 @@
     setConnectedFlag(false);
     rerenderConsumers();
     rerenderSleepConsumers();
+    renderTrackerBurn();
   }
 
   globalScope.activitySyncBridge = {
     fetchAndApplyTodayActivity,
     fetchAndApplyTodaySleep,
     fetchAndApplyCardio,
+    fetchAndApplyHistory,
     dismissSyncedCardio,
+    getBurnSummary,
+    renderTrackerBurn,
     isConnected,
     resetConnectionState
   };
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { localDateKey, cardioTypeFor, toCardioEntry, mergeSyncedCardio };
+    module.exports = { localDateKey, cardioTypeFor, toCardioEntry, mergeSyncedCardio, computeBurnSummary };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
