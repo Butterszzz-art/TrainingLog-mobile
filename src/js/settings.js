@@ -790,14 +790,26 @@ async function refreshActivitySyncStatus(container = document) {
     }
 
     if (data.connected) {
-      statusEl.textContent = 'Connected';
-      if (connectBtn) connectBtn.style.display = 'none';
+      // Connected before heart rate/HRV were added: one reconnect grants them.
+      if (data.needsReconnect) {
+        statusEl.textContent = 'Connected. Reconnect once to also sync resting heart rate and HRV.';
+        if (connectBtn) {
+          connectBtn.textContent = 'Reconnect';
+          connectBtn.style.display = 'inline-flex';
+        }
+      } else {
+        statusEl.textContent = 'Connected: steps, workouts, sleep, calories burned, resting heart rate and HRV. Synced values replace manual entries.';
+        if (connectBtn) connectBtn.style.display = 'none';
+      }
       if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
       loadTodayActivitySyncActivity(container);
     } else {
       statusEl.textContent = 'Not connected';
       if (summaryEl) summaryEl.style.display = 'none';
-      if (connectBtn) connectBtn.style.display = 'inline-flex';
+      if (connectBtn) {
+        connectBtn.textContent = 'Connect Device';
+        connectBtn.style.display = 'inline-flex';
+      }
       if (disconnectBtn) disconnectBtn.style.display = 'none';
     }
   } catch (error) {
@@ -877,6 +889,7 @@ function handleActivitySyncOAuthRedirect() {
     window.activitySyncBridge?.fetchAndApplyTodaySleep?.({ force: true });
     window.activitySyncBridge?.fetchAndApplyCardio?.({ force: true });
     window.activitySyncBridge?.fetchAndApplyHistory?.({ force: true });
+    window.activitySyncBridge?.fetchAndApplyRecovery?.({ force: true });
   }
 }
 

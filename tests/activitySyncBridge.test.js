@@ -4,6 +4,8 @@ const {
   toCardioEntry,
   mergeSyncedCardio,
   computeBurnSummary,
+  computeRecoverySummary,
+  recoverySummaryText,
 } = require('../src/js/activity-sync-bridge.js');
 
 const range = { start: '2026-10-23', end: '2026-10-29' };
@@ -114,5 +116,32 @@ describe('activity sync bridge — calories burned', () => {
     expect(computeBurnSummary(store, '2026-10-30')).toEqual({
       todayBurn: 0, averageBurn: 0, averageDays: 1,
     });
+  });
+});
+
+describe('activity sync bridge — recovery', () => {
+  const rec = (date, restingHeartRate, hrvMs) => ({ date, restingHeartRate, hrvMs });
+
+  test('compares today with a 7-day baseline and includes synced sleep', () => {
+    const recovery = {
+      '2026-10-26': rec('2026-10-26', 52, 50),
+      '2026-10-27': rec('2026-10-27', 53, 46),
+      '2026-10-28': rec('2026-10-28', 54, 48),
+      '2026-10-30': rec('2026-10-30', 57, 39),
+    };
+    const sleep = { '2026-10-30': { sleepMinutes: 432 } };
+    const summary = computeRecoverySummary(recovery, sleep, '2026-10-30');
+    expect(summary).toMatchObject({
+      restingHeartRate: 57, restingHeartRateBaseline: 53,
+      hrvMs: 39, hrvBaseline: 48, sleepMinutes: 432,
+    });
+    expect(recoverySummaryText(summary)).toBe(
+      'From your tracker: slept 7h 12m · resting HR 57 bpm (usual 53) · HRV 39 ms (usual 48)');
+  });
+
+  test('leaves out the baseline with fewer than 3 earlier days, and is empty with no data', () => {
+    const summary = computeRecoverySummary({ '2026-10-30': rec('2026-10-30', 55, null) }, {}, '2026-10-30');
+    expect(recoverySummaryText(summary)).toBe('From your tracker: resting HR 55 bpm');
+    expect(recoverySummaryText(computeRecoverySummary({}, {}, '2026-10-30'))).toBe('');
   });
 });

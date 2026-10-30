@@ -33,6 +33,10 @@
   const HISTORY_THROTTLE_MS = 30 * 60 * 1000; // past days rarely change
   const BURN_AVERAGE_DAYS = 7;
   const BURN_AVERAGE_MIN_DAYS = 3;
+  let lastRecoveryFetchedAt = 0;
+  let recoveryInFlight = null;
+  const RECOVERY_BASELINE_DAYS = 7;
+  const NEEDS_RECONNECT_KEY = 'activitySyncNeedsReconnect';
   const CARDIO_SYNC_DAYS = 7; // how far back tracker workouts are merged
 
   // The user's own calendar date (YYYY-MM-DD). Synced data is requested and
@@ -637,6 +641,164 @@
     return historyInFlight;
   }
 
+  // ── Recovery: resting heart rate + HRV ─────────────────────────────────
+  // Daily values from the tracker, cached in activitySyncRecovery_<user>.
+  // Shown on the readiness check-in next to last night's synced sleep,
+  // compared with the user's own 7-day baseline, and used to complete the
+  // daily "Recovery" mission and fill HRV on the weekly check-in.
+
+  function average(values) {
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+  }
+
+  // Pure: today's values plus 7-day baselines from earlier days.
+  function computeRecoverySummary(recoveryStore, sleepStore, today) {
+    const todayRow = recoveryStore?.[today] || {};
+    const start = new Date(`${today}T12:00:00`);
+    start.setDate(start.getDate() - RECOVERY_BASELINE_DAYS);
+    const from = localDateKey(start);
+    const past = Object.values(recoveryStore || {}).filter((r) => r && r.date >= from && r.date < today);
+    const baseline = (key) => {
+      const vals = past.map((r) => Number(r[key])).filter((n) => n > 0);
+      return vals.length >= 3 ? Math.round(average(vals) * 10) / 10 : null;
+    };
+    const sleepMinutes = Number(sleepStore?.[today]?.sleepMinutes) || null;
+    return {
+      date: today,
+      restingHeartRate: Number(todayRow.restingHeartRate) > 0 ? Number(todayRow.restingHeartRate) : null,
+      restingHeartRateBaseline: baseline('restingHeartRate'),
+      hrvMs: Number(todayRow.hrvMs) > 0 ? Number(todayRow.hrvMs) : null,
+      hrvBaseline: baseline('hrvMs'),
+      sleepMinutes
+    };
+  }
+
+  // One line for the readiness check-in, e.g. "From your tracker: slept
+  // 7h 12m · resting HR 56 bpm (usual 53) · HRV 41 ms (usual 48)". Empty
+  // when there's nothing synced for today.
+  function recoverySummaryText(summary) {
+    if (!summary) return '';
+    const parts = [];
+    if (summary.sleepMinutes) {
+      const h = Math.floor(summary.sleepMinutes / 60);
+      const m = Math.round(summary.sleepMinutes % 60);
+      parts.push(`slept ${h}h ${String(m).padStart(2, '0')}m`);
+    }
+    if (summary.restingHeartRate) {
+      const usual = summary.restingHeartRateBaseline ? ` (usual ${Math.round(summary.restingHeartRateBaseline)})` : '';
+      parts.push(`resting HR ${Math.round(summary.restingHeartRate)} bpm${usual}`);
+    }
+    if (summary.hrvMs) {
+      const usual = summary.hrvBaseline ? ` (usual ${Math.round(summary.hrvBaseline)})` : '';
+      parts.push(`HRV ${Math.round(summary.hrvMs)} ms${usual}`);
+    }
+    return parts.length ? `From your tracker: ${parts.join(' · ')}` : '';
+  }
+
+  function getRecoverySummary() {
+    const user = getActiveUsername();
+    return computeRecoverySummary(
+      readJson(`activitySyncRecovery_${user}`, {}),
+      readJson(`activitySyncSleep_${user}`, {}),
+      getTodayKey()
+    );
+  }
+
+  function getRecoverySummaryText() {
+    return isConnected() ? recoverySummaryText(getRecoverySummary()) : '';
+  }
+
+  // Today's HRV for the weekly check-in (0 when not synced).
+  function getTodayHrv() {
+    return isConnected() ? (getRecoverySummary().hrvMs || 0) : 0;
+  }
+
+  function needsReconnect() {
+    try {
+      return globalScope.localStorage.getItem(NEEDS_RECONNECT_KEY) === '1';
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function setNeedsReconnect(value) {
+    try {
+      globalScope.localStorage.setItem(NEEDS_RECONNECT_KEY, value ? '1' : '0');
+    } catch (_error) { /* non-fatal */ }
+  }
+
+  // Ticks today's "Recovery" mission once the tracker has synced sleep or
+  // heart data for today, so it doesn't wait for a manual entry.
+  function applyRecoveryMission() {
+    try {
+      const summary = getRecoverySummary();
+      if (!summary.sleepMinutes && !summary.hrvMs && !summary.restingHeartRate) return;
+      globalScope.dailyMissionEngine?.syncMissionFromRecoveryEntry?.({
+        sleepHours: summary.sleepMinutes ? summary.sleepMinutes / 60 : 0,
+        hrv: summary.hrvMs || 0,
+        // No date: the mission engine files it under its own "today".
+      }, getActiveUsername());
+    } catch (_error) { /* non-fatal */ }
+  }
+
+  async function fetchAndApplyRecovery(options = {}) {
+    const force = Boolean(options.force);
+    if (!force && !isConnected()) return null;
+    if (!force && Date.now() - lastRecoveryFetchedAt < HISTORY_THROTTLE_MS) return null;
+    if (recoveryInFlight) return recoveryInFlight;
+
+    if (typeof globalScope.getAuthHeaders !== 'function'
+      || typeof globalScope.ensureServerUrl !== 'function'
+      || typeof globalScope.fetchWithTimeout !== 'function') {
+      return null;
+    }
+    const authHeaders = globalScope.getAuthHeaders();
+    if (!authHeaders.Authorization) return null;
+
+    recoveryInFlight = (async () => {
+      try {
+        const end = getTodayKey();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - RECOVERY_BASELINE_DAYS);
+        const start = localDateKey(startDate);
+        const res = await globalScope.fetchWithTimeout(
+          `${globalScope.ensureServerUrl()}/api/activity-sync/recovery?start=${start}&end=${end}`,
+          { headers: authHeaders },
+          10000
+        );
+        const data = await res.json();
+        lastRecoveryFetchedAt = Date.now();
+        if (!res.ok || !data.success) {
+          const code = data?.error?.code;
+          if (code === 'activity_sync.needs_reconnect') setNeedsReconnect(true);
+          else if (code && code !== 'activity_sync.disabled' && code !== 'activity_sync.not_connected') {
+            console.warn('[ActivitySyncBridge] recovery fetch failed', code);
+          }
+          applyRecoveryMission(); // synced sleep alone still counts
+          return null;
+        }
+        setNeedsReconnect(false);
+
+        const key = `activitySyncRecovery_${getActiveUsername()}`;
+        const store = readJson(key, {});
+        (data.days || []).forEach((day) => {
+          if (!day?.date) return;
+          store[day.date] = { ...(store[day.date] || {}), ...day };
+        });
+        globalScope.localStorage.setItem(key, JSON.stringify(store));
+        applyRecoveryMission();
+        return store;
+      } catch (error) {
+        console.warn('[ActivitySyncBridge] recovery fetch failed', error);
+        return null;
+      } finally {
+        recoveryInFlight = null;
+      }
+    })();
+
+    return recoveryInFlight;
+  }
+
   if (typeof globalScope.document !== 'undefined') {
     globalScope.document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
@@ -644,6 +806,8 @@
         Promise.resolve(fetchAndApplyTodayActivity()).then(() => {
           fetchAndApplyCardio();
           fetchAndApplyHistory();
+          // After sleep, so the Recovery mission sees last night's sleep too.
+          Promise.resolve(sleepInFlight).then(() => fetchAndApplyRecovery());
         });
         fetchAndApplyTodaySleep();
       }, 1000);
@@ -669,6 +833,7 @@
   // throttled fetch to notice the connection is gone.
   function resetConnectionState() {
     setConnectedFlag(false);
+    setNeedsReconnect(false);
     rerenderConsumers();
     rerenderSleepConsumers();
     renderTrackerBurn();
@@ -682,11 +847,17 @@
     dismissSyncedCardio,
     getBurnSummary,
     renderTrackerBurn,
+    fetchAndApplyRecovery,
+    getRecoverySummary,
+    getRecoverySummaryText,
+    getTodayHrv,
+    needsReconnect,
     isConnected,
     resetConnectionState
   };
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { localDateKey, cardioTypeFor, toCardioEntry, mergeSyncedCardio, computeBurnSummary };
+    module.exports = { localDateKey, cardioTypeFor, toCardioEntry, mergeSyncedCardio, computeBurnSummary,
+      computeRecoverySummary, recoverySummaryText };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

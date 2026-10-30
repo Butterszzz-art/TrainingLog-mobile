@@ -13976,7 +13976,8 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     window.onRecoveryLogged({
       date: draft.date,
       sleepHours: Number(draft.sleep) || 0,
-      hrv: 0
+      // Synced from the user's tracker when connected (activity-sync-bridge.js).
+      hrv: window.activitySyncBridge?.getTodayHrv?.() || 0
     });
   }
 

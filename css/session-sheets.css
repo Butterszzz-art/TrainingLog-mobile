@@ -93,6 +93,10 @@
   line-height: 1.45;
   color: var(--text-tertiary);
 }
+/* Synced sleep / resting HR / HRV line on the readiness check-in */
+.readiness-tracker {
+  margin: 0 0 14px;
+}
 .tl-sheet-close {
   flex: none;
   position: relative;
