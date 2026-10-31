@@ -3338,7 +3338,9 @@
               <option value="bulk-moderate">Bulk – Moderate</option>
               <option value="bulk-aggressive">Bulk – Aggressive</option>
             </select>
-            <p class="macro-helper">Pick a goal (and rate) to auto-calculate targets. We'll prompt for your details if needed.</p>
+            <p class="macro-helper">Pick a goal and rate, then calculate. It uses your body stats from Profile (weight, height, age, sex, activity) and replaces your current targets.</p>
+            <button type="button" id="macroCalcBtn" class="macro-save-btn" onclick="calculateTargetsNow()">Calculate targets</button>
+            <p id="macroCalcResult" class="macro-calc-result" aria-live="polite" hidden></p>
             <label for="customCalories" style="margin-top:16px;">Or set exact calories</label>
             <div style="display:flex;gap:8px;">
               <input id="customCalories" type="number" placeholder="Custom calorie target" style="width: 100%;"/>
@@ -3412,8 +3414,10 @@
 
             <div class="macro-savebar">
               <button id="savePersonalDetailsBtn" type="button" class="macro-save-btn">Save Details</button>
+              <button type="button" class="macro-save-btn macro-calc-secondary" onclick="calculateTargetsNow()">Save &amp; calculate targets</button>
               <div id="personalDetailsSavedMsg" class="macro-saved-chip" style="display:none;"><span class="ui-icon" data-icon="check"></span> Saved</div>
             </div>
+            <p id="profileCalcResult" class="macro-calc-result" aria-live="polite" hidden></p>
           </div>
         </div>
 
@@ -9717,11 +9721,12 @@ function calculateMacroTargets(goalOverride, rateOverride) {
     fat: macros.fatGrams,
     carbs: macros.carbGrams,
   };
+  let synced = null;
   if (currentUser) {
     saveMacroTargetsToTop(autoTargets);
     // Keep the server copy in step too — otherwise the next sign-in pulls the
     // old targets back down over this calculation.
-    saveMacroTargetsToBackend(currentUser, autoTargets, { silent: true });
+    synced = saveMacroTargetsToBackend(currentUser, autoTargets, { silent: true });
   }
 
   // Refresh the Targets tab (rings, bars, per-macro rows) so a freshly-picked
@@ -9731,6 +9736,58 @@ function calculateMacroTargets(goalOverride, rateOverride) {
   // state rather than the Targets-tab elements updateMacroUI() refreshes.
   updateMacroUI();
   adjustMacros();
+  // { targets, synced } — synced: a promise of whether the server took them
+  // (null when signed out, then they're only on this device).
+  return { targets: autoTargets, synced };
+}
+
+// The "Calculate targets" buttons (Adjust → Macro Preset, and Profile →
+// Save & calculate). Uses the body stats on the Profile page (saving them
+// first, so new numbers count without a separate Save), the goal and rate
+// picked on the Adjust page, works the targets out, saves them on the
+// device and the account, and shows the result. Runs every time it's
+// pressed, even when nothing was changed.
+function calculateTargetsNow() {
+  const typed = readPersonalDetailsFromDOM();
+  if (isValidPersonalDetails(typed)) {
+    localStorage.setItem('personalDetails', JSON.stringify(typed));
+    applyPersonalDetailsToMacroForm(typed);
+  }
+  let details = null;
+  try { details = JSON.parse(localStorage.getItem('personalDetails') || 'null'); } catch (e) { details = null; }
+  if (!isValidPersonalDetails(details)) {
+    window.showToast?.('Add your weight, height, age, sex and activity level in Profile first.', 'warn');
+    document.querySelector('[data-macro-subtab="personal"]')?.click();
+    document.getElementById('weight')?.focus();
+    return null;
+  }
+  const key = (window.currentMacroPresetKey && window.currentMacroPresetKey()) || 'maintain';
+  const preset = presetMap[key] || presetMap.maintain;
+  const presetSelect = document.getElementById('macroPreset');
+  if (presetSelect) presetSelect.value = key;
+  // Same keys the preset picker always stored (training vs rest day preset).
+  const isTrainingDay = document.getElementById('trainingDayToggle')?.checked ?? true;
+  localStorage.setItem(isTrainingDay ? 'trainingPreset' : 'restPreset', key);
+
+  const result = calculateMacroTargets(preset.goal, preset.rate);
+  if (!result) return null;
+  const t = result.targets;
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const label = preset.goal === 'maintain' ? 'Maintain' : `${cap(preset.goal)} – ${cap(preset.rate)}`;
+  const line = `${label}: ${t.calories} kcal · ${t.protein} g protein · ${t.fat} g fat · ${t.carbs} g carbs`;
+  ['macroCalcResult', 'profileCalcResult'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = line; el.hidden = false; }
+  });
+  document.getElementById('macroCalcBtn')?.classList.remove('is-ready');
+  if (result.synced) {
+    result.synced.then(ok => window.showToast?.(
+      ok ? 'Targets calculated and saved' : 'Targets saved on this device, but syncing to your account failed.',
+      ok ? 'success' : 'error'));
+  } else {
+    window.showToast?.('Targets calculated', 'success');
+  }
+  return t;
 }
 
 function getMacroTargetValues() {
