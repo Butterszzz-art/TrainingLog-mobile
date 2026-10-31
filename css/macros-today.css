@@ -423,6 +423,33 @@
   line-height: 1;
   color: var(--text-primary);
 }
+/* The number is a box you can type in (typeMacro in index.html). */
+.macro-card .macro-slider-val .macro-num-input {
+  width: 4.2ch;
+  min-width: 0;
+  margin: 0;
+  padding: 2px 4px;
+  text-align: right;
+  font-family: var(--font-display, 'Anton', sans-serif);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom-color: var(--border-row, rgba(255, 255, 255, 0.18));
+  border-radius: 6px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.macro-card .macro-slider-val .macro-num-input::-webkit-outer-spin-button,
+.macro-card .macro-slider-val .macro-num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.macro-card .macro-slider-val .macro-num-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--surface-recessed, rgba(255, 255, 255, 0.04));
+}
+.macro-card .macro-type-hint { margin: 2px 0 4px; }
 .macro-slider-val small,
 .macro-total-val small {
   margin-left: 2px;
