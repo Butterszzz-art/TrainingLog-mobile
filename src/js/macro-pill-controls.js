@@ -2,7 +2,7 @@
 // MACRO PILL CONTROLS
 // Progressive-enhancement layer for the Macros tab redesign: turns
 // a handful of native <select>/checkbox-driven bits of UI (Carb
-// Day, Macro Preset, Sex, Activity Level, and per-macro quick-add)
+// Day, Macro Preset, Sex and Activity Level)
 // into tappable segmented pills / chips, while the real <select> or
 // <input> stays in the DOM (visually hidden via .macro-seg-hidden)
 // so every existing read/save/validation code path — presetMap,
@@ -12,19 +12,7 @@
 // =============================================================
 
 (function () {
-  // ── Quick-add chips (Targets tab) ───────────────────────────
-  // Reuses the exact same addMacro()/subtractMacro() the manual
-  // qty input + ± buttons already call, just pre-filling the qty.
-  window.quickAddMacro = function quickAddMacro(type, amount) {
-    const inputMap = { cal: 'qaCals', protein: 'qaProtein', carbs: 'qaCarbs', fat: 'qaFat' };
-    const input = document.getElementById(inputMap[type]);
-    if (input) input.value = Math.abs(amount);
-    if (amount < 0) {
-      window.subtractMacro?.(type);
-    } else {
-      window.addMacro?.(type);
-    }
-  };
+  // Quick-add chips live in macro-quick-add.js.
 
   // ── Generic segmented-pill <-> <select> sync ────────────────
   // Sets the real select's value, fires a real "change" event (so

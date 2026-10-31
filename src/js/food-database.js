@@ -325,7 +325,7 @@
   // last meal used, else one for the time of day).
   let _sheetMeal = null;
 
-  // Search / Quick add / My foods tabs in the Log food sheet.
+  // Search / My foods tabs in the Log food sheet (quick add is on the Macros card).
   function showFoodSheetTab(name) {
     const sheet = document.getElementById('foodSearchSheet');
     if (!sheet) return;

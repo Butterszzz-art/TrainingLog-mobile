@@ -774,50 +774,9 @@
       </div>
       <div class="food-sheet-tabs" role="tablist" aria-label="How to log">
         <button type="button" role="tab" class="food-sheet-tab is-active" data-food-tab="search" aria-selected="true">Search</button>
-        <button type="button" role="tab" class="food-sheet-tab" data-food-tab="quick" aria-selected="false">Quick add</button>
         <button type="button" role="tab" class="food-sheet-tab" data-food-tab="mine" aria-selected="false">My foods</button>
       </div>
       <div id="foodSearchHost" class="food-sheet-panel" data-food-panel="search"></div>
-      <div id="foodQuickAddPanel" class="food-sheet-panel" data-food-panel="quick" hidden>
-        <p class="food-sheet-sub">Add calories or macros without picking a food (they count for today, not for a meal).</p>
-        <div class="macro-quick-chips">
-          <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 25)"><span class="macro-card-dot macro-dot-protein"></span>+25g P</button>
-          <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 100)"><span class="macro-card-dot macro-dot-cal"></span>+100 kcal</button>
-          <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 25)"><span class="macro-card-dot macro-dot-carbs"></span>+25g C</button>
-          <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 10)"><span class="macro-card-dot macro-dot-fat"></span>+10g F</button>
-          <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 10)"><span class="macro-card-dot macro-dot-protein"></span>+10g P</button>
-          <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 250)"><span class="macro-card-dot macro-dot-cal"></span>+250 kcal</button>
-          <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 10)"><span class="macro-card-dot macro-dot-carbs"></span>+10g C</button>
-          <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 5)"><span class="macro-card-dot macro-dot-fat"></span>+5g F</button>
-        </div>
-        <div id="macroCustomAdd" class="pod macro-custom">
-          <div class="macro-custom-row">
-            <span class="macro-custom-name"><span class="macro-card-dot macro-dot-cal"></span>Kcal</span>
-            <input id="qaCals" type="number" value="100" class="macro-qa-input" aria-label="Calories amount">
-            <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('cal')" aria-label="Remove calories">–</button>
-            <button class="macro-qa-btn" onclick="addMacro('cal')" aria-label="Add calories">+</button>
-          </div>
-          <div class="macro-custom-row">
-            <span class="macro-custom-name"><span class="macro-card-dot macro-dot-protein"></span>Protein</span>
-            <input id="qaProtein" type="number" value="10" class="macro-qa-input" aria-label="Protein grams">
-            <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('protein')" aria-label="Remove protein">–</button>
-            <button class="macro-qa-btn" onclick="addMacro('protein')" aria-label="Add protein">+</button>
-          </div>
-          <div class="macro-custom-row">
-            <span class="macro-custom-name"><span class="macro-card-dot macro-dot-carbs"></span>Carbs</span>
-            <input id="qaCarbs" type="number" value="10" class="macro-qa-input" aria-label="Carb grams">
-            <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('carbs')" aria-label="Remove carbs">–</button>
-            <button class="macro-qa-btn" onclick="addMacro('carbs')" aria-label="Add carbs">+</button>
-          </div>
-          <div class="macro-custom-row">
-            <span class="macro-custom-name"><span class="macro-card-dot macro-dot-fat"></span>Fat</span>
-            <input id="qaFat" type="number" value="5" class="macro-qa-input" aria-label="Fat grams">
-            <button class="macro-qa-btn macro-qa-btn--minus" onclick="subtractMacro('fat')" aria-label="Remove fat">–</button>
-            <button class="macro-qa-btn" onclick="addMacro('fat')" aria-label="Add fat">+</button>
-          </div>
-        </div>
-        <div id="macroFavoritesContainer"></div>
-      </div>
       <div id="foodMyFoodsPanel" class="food-sheet-panel" data-food-panel="mine" hidden></div>
     </div>
   </div>
@@ -3130,6 +3089,35 @@
               <p id="macroTrackerBurn" class="macro-hero-sub macro-tracker-burn" hidden></p>
               <div class="macro-hero-meter"><div class="macro-card-bar-fill macro-bar-cal" id="calsVisBar"></div></div>
 
+              <!-- Quick add (src/js/macro-quick-add.js): calories or macros for
+                   the day without picking a food or a meal. -->
+              <div id="macroQuickAdd" class="macro-qa-box" role="group" aria-labelledby="macroQuickAddLbl">
+                <div class="macro-qa-head">
+                  <span class="mx-lbl" id="macroQuickAddLbl">Quick add</span>
+                  <button type="button" id="macroQuickUndo" class="mx-link macro-qa-undo" onclick="undoQuickAdd()" hidden>Undo</button>
+                </div>
+                <div class="macro-quick-chips">
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 10)"><span class="macro-card-dot macro-dot-protein"></span>+10g P</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('protein', 25)"><span class="macro-card-dot macro-dot-protein"></span>+25g P</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('carbs', 25)"><span class="macro-card-dot macro-dot-carbs"></span>+25g C</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('fat', 10)"><span class="macro-card-dot macro-dot-fat"></span>+10g F</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 100)"><span class="macro-card-dot macro-dot-cal"></span>+100 kcal</button>
+                  <button type="button" class="macro-chip" onclick="quickAddMacro('cal', 250)"><span class="macro-card-dot macro-dot-cal"></span>+250 kcal</button>
+                  <button type="button" id="macroQuickCustomBtn" class="macro-chip macro-chip--custom" onclick="toggleQuickAddCustom()" aria-expanded="false" aria-controls="macroQuickCustom"><span class="ui-icon" data-icon="pencil"></span>Custom</button>
+                </div>
+                <div id="macroQuickCustom" class="macro-qa-custom" hidden>
+                  <div class="macro-qa-types" role="group" aria-label="What to add">
+                    <button type="button" class="macro-seg-btn active" data-qa-type="protein" aria-pressed="true" onclick="setQuickAddType(this)">P</button>
+                    <button type="button" class="macro-seg-btn" data-qa-type="carbs" aria-pressed="false" onclick="setQuickAddType(this)">C</button>
+                    <button type="button" class="macro-seg-btn" data-qa-type="fat" aria-pressed="false" onclick="setQuickAddType(this)">F</button>
+                    <button type="button" class="macro-seg-btn" data-qa-type="cal" aria-pressed="false" onclick="setQuickAddType(this)">kcal</button>
+                  </div>
+                  <input id="macroQuickAmount" type="number" inputmode="decimal" min="0" step="any" class="macro-qa-amount" placeholder="grams" aria-label="Amount" onkeydown="if (event.key === 'Enter') quickAddCustom()">
+                  <button type="button" class="macro-qa-add" onclick="quickAddCustom()">Add</button>
+                </div>
+                <p id="macroQuickToday" class="macro-qa-today">Counts for the day, not a meal.</p>
+              </div>
+
               <div class="macro-hero-grid">
                 <div class="macro-hero-stat">
                   <span class="mx-lbl">Protein</span>
@@ -3156,6 +3144,9 @@
               <progress id="carbBar" value="0" max="100"></progress>
               <progress id="fatBar" value="0" max="100"></progress>
             </section>
+
+            <!-- Saved favourites: one tap adds to today (renderMacroNudge) -->
+            <div id="macroFavoritesContainer"></div>
 
             <!-- ── Today's setup: day type, carb day and water in one card ── -->
             <section class="pod macro-setup" aria-label="Today's setup">
@@ -9939,7 +9930,8 @@ function getAdaptiveMacroTargets() {
   };
 }
 
-// Quick-add chips, the ± buttons and food search all land here. They used to
+// The ± steps and food search land here (the quick-add chips go through
+// macro-quick-add.js, which calls logMacroAmounts directly). They used to
 // bump an in-memory counter for just that one row: protein/carbs/fat never
 // added calories, nothing was saved, and the next updateMacroUI() (or a
 // reload) wiped it. Now every change goes into today's saved progress, which
@@ -10096,6 +10088,7 @@ function updateMacroUI() {
   // Today's saved intake is the one source of truth: meals, favorites,
   // quick-add and food search all write to it.
   const progress = loadDailyMacroProgress();
+  window.renderQuickAddToday?.();
   const totalProtein = progress.protein;
   const totalCarbs = progress.carbs;
   const totalFats = progress.fats;
@@ -10742,6 +10735,8 @@ function copyPreviousMacroDay() {
   );
   const meals = Array.isArray(previous.meals) ? previous.meals : [];
   localStorage.setItem("dailyMacroMeals", JSON.stringify(meals));
+  // Today's totals were replaced, so the quick-add list no longer adds up.
+  window.clearQuickAdds?.();
   updateMacroUI();
   window.showToast?.(`Copied ${label}'s log.`, "success");
 }
@@ -20741,6 +20736,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/archetype-config.js"></script>
   <script src="src/js/archetype-features.js"></script>
   <script src="src/js/macro-pill-controls.js"></script>
+  <script src="src/js/macro-quick-add.js"></script>
   <script src="src/js/activity-sync-bridge.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/coach-videos.js"></script>
