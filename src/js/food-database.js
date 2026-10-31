@@ -50,11 +50,18 @@
 
   // Foods on this device that match the query: your own foods first,
   // then recently logged ones.
+  // Your recent foods, the ones you log most (at this meal) first.
+  function _rankedRecent() {
+    const meal = _sheetMeal || Core.mealForHour(new Date().getHours());
+    return Core.rankRecent(_readJSON(RECENT_KEY(_user()), []), { meal, now: Date.now() });
+  }
+
   function _localMatches(q) {
     const coach = loadCoachFoods();
     const custom = loadCustomFoods().map(Core.normalizeFood).filter(Boolean);
-    const recent = _readJSON(RECENT_KEY(_user()), []);
-    return [coach, custom, recent].map(list => list.filter(f => Core.matchesQuery(f, q)));
+    const recent = _rankedRecent();
+    // Foods you log often come before your coach's list and your own foods.
+    return [recent, coach, custom].map(list => list.filter(f => Core.matchesQuery(f, q)));
   }
 
   /* ── Coach-approved foods ────────────────────────────────── */
@@ -103,7 +110,9 @@
   }
 
   // One database's results for a search: 'off' (Open Food Facts, fast) or
-  // 'usda' (slower). Cached for the session. Throws on failure.
+  // 'usda' (slower). -> { foods, corrected? } (corrected: the words the
+  // server searched instead of a misspelt search). Cached for the session.
+  // Throws on failure.
   async function fetchSource(q, source, signal) {
     const key = `${source}:${q}`;
     if (_searchCache.has(key)) return _searchCache.get(key);
@@ -112,9 +121,9 @@
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data || !data.success) throw new Error((data && data.error && data.error.message) || 'Search failed');
-    const foods = (data.foods || []).map(Core.normalizeFood).filter(Boolean);
-    _searchCache.set(key, foods);
-    return foods;
+    const out = { foods: (data.foods || []).map(Core.normalizeFood).filter(Boolean), corrected: data.corrected || null };
+    _searchCache.set(key, out);
+    return out;
   }
 
   // Both databases at once (recipe builder etc.) → { foods, offline?, error? }
@@ -124,7 +133,7 @@
     const local = _localMatches(q);
     if (!navigator.onLine || !window.SERVER_URL) return { foods: Core.mergeResults(local, [], 25), offline: true };
     const [off, usda] = await Promise.allSettled([fetchSource(q, 'off'), fetchSource(q, 'usda')]);
-    const ok = r => (r.status === 'fulfilled' ? r.value : []);
+    const ok = r => (r.status === 'fulfilled' ? r.value.foods : []);
     const failed = off.status === 'rejected' && usda.status === 'rejected';
     return { foods: Core.combineSourceResults(local, ok(off), ok(usda), 25), ...(failed ? { error: 'Search failed' } : {}) };
   }
@@ -189,7 +198,13 @@
     const resultsEl = widget.querySelector('#foodSearchResults');
     const doSearch = _debounce((q) => runSearch(q, resultsEl), 250);
 
-    input.addEventListener('input', () => doSearch(input.value.trim().toLowerCase()));
+    // "200g kipfilet" / "2 eggs": search the food words, keep the amount
+    // for when a food is picked (Core.parseFoodQuery).
+    input.addEventListener('input', () => {
+      const parsed = Core.parseFoodQuery(input.value);
+      _typedQty = parsed.grams || parsed.ml || parsed.count ? parsed : null;
+      doSearch(parsed.q);
+    });
     resultsEl.addEventListener('click', (e) => {
       const alt = e.target.closest('[data-food-alt]');
       if (alt) {
@@ -208,6 +223,7 @@
   }
 
   let _lastResults = [];
+  let _typedQty = null; // amount typed with the food, see the input handler
 
   /* ── Progressive search ──────────────────────────────────── */
   // Your own, coach and recent foods show at once; Open Food Facts (Dutch
@@ -234,7 +250,7 @@
     else foods = Core.combineSourceResults(st.local, st.off, st.usda, 25);
     const offline = !navigator.onLine || !window.SERVER_URL;
     const error = !offline && !loading && st.offErr && st.usdaErr;
-    _renderResults(el, { foods, offline, error: error ? 'Search failed' : '', loading, ai: st.ai, aiState: st.aiState, query: st.q });
+    _renderResults(el, { foods, offline, error: error ? 'Search failed' : '', loading, ai: st.ai, aiState: st.aiState, query: st.q, corrected: st.corrected });
   }
 
   async function runSearch(q, el) {
@@ -243,7 +259,7 @@
     const seq = ++_searchSeq;
     const ctrl = new AbortController();
     _searchAbort = ctrl;
-    _search = { q, seq, local: _localMatches(q), off: null, usda: null, offErr: false, usdaErr: false, ai: _aiCache.get(q) || null, aiState: _aiCache.has(q) ? 'done' : '' };
+    _search = { q, seq, local: _localMatches(q), off: null, usda: null, offErr: false, usdaErr: false, corrected: null, ai: _aiCache.get(q) || null, aiState: _aiCache.has(q) ? 'done' : '' };
     el.hidden = false;
     if (!navigator.onLine || !window.SERVER_URL) {
       _search.off = []; _search.usda = [];
@@ -253,13 +269,18 @@
     _paintSearch(el);
     const timer = setTimeout(() => ctrl.abort(), 9000);
     const one = (source) => fetchSource(q, source, ctrl.signal)
-      .then(list => { if (_search && _search.seq === seq) { _search[source] = list; _paintSearch(el); } })
+      .then(r => {
+        if (!_search || _search.seq !== seq) return;
+        _search[source] = r.foods;
+        if (r.corrected) _search.corrected = r.corrected;
+        _paintSearch(el);
+      })
       .catch(() => { if (_search && _search.seq === seq) { _search[source] = []; _search[`${source}Err`] = true; _paintSearch(el); } });
     await Promise.all([one('off'), one('usda')]);
     clearTimeout(timer);
     if (!_search || _search.seq !== seq || _search.ai) return;
     const shown = Core.combineSourceResults(_search.local, _search.off, _search.usda, 25);
-    if (Core.isWeakSearch(q, shown)) {
+    if (Core.isWeakSearch(_search.corrected || q, shown)) {
       if (_aiAllowed().auto) runAiSearch(el, {});
       else { _search.aiState = 'offer'; _paintSearch(el); }
     }
@@ -305,7 +326,7 @@
   function _renderRecent(el) {
     const coach = loadCoachFoods();
     const custom = loadCustomFoods().map(Core.normalizeFood).filter(Boolean);
-    const recent = _readJSON(RECENT_KEY(_user()), []).map(Core.normalizeFood).filter(Boolean);
+    const recent = _rankedRecent().map(Core.normalizeFood).filter(Boolean);
     const foods = Core.mergeResults([recent, coach, custom], [], 12);
     if (!foods.length) {
       el.hidden = false;
@@ -462,7 +483,11 @@
       ? `<div class="food-ai-note"><span class="ui-icon">${_icon('sparkles')}</span>Searching smarter…</div>`
       : rw && rw.corrected && rw.corrected.toLowerCase() !== String(st.query || '').toLowerCase()
         ? `<div class="food-ai-note"><span class="ui-icon">${_icon('sparkles')}</span>Showing results for <b>${_esc(rw.corrected)}</b></div>`
-        : st.aiState === 'failed' ? '<div class="food-search-msg">AI search didn’t find anything better.</div>' : '';
+        : st.aiState === 'failed' ? '<div class="food-search-msg">AI search didn’t find anything better.</div>'
+          : st.corrected && st.corrected !== st.query
+            ? `<div class="food-ai-note food-corrected-note"><span class="ui-icon">${_icon('search')}</span>Showing results for <b>${_esc(st.corrected)}</b></div>` : '';
+    const qty = _typedQty && st.query ? _qtyLabel(_typedQty) : '';
+    const qtyNote = qty ? `<div class="food-search-msg food-qty-note">Amount: <b>${_esc(qty)}</b> — pick a food</div>` : '';
     const alts = rw && rw.alternatives && rw.alternatives.length
       ? `<div class="food-alts"><span>Also try</span>${rw.alternatives.map(a => `<button type="button" class="food-alt" data-food-alt="${_esc(a)}">${_esc(a)}</button>`).join('')}</div>` : '';
     const offer = st.aiState === 'offer' && !st.loading
@@ -475,9 +500,34 @@
       return;
     }
     const hasOff = foods.some(f => f.source === 'off');
-    el.innerHTML = aiBanner + (note ? `<div class="food-search-msg">${_esc(note)}</div>` : '')
+    el.innerHTML = aiBanner + qtyNote + (note ? `<div class="food-search-msg">${_esc(note)}</div>` : '')
       + foods.map(_row).join('') + loadingRow + offer + alts
       + `<div class="food-attrib"><span class="food-result-dot food-dot-own"></span>yours/coach <span class="food-result-dot food-dot-off"></span>Open Food Facts <span class="food-result-dot food-dot-usda"></span>USDA · per 100 g${hasOff ? ' · Product data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL)' : ''}</div>`;
+  }
+
+  function _qtyLabel(t) {
+    if (t.grams) return `${t.grams} g`;
+    if (t.ml) return `${t.ml} ml`;
+    if (t.count) return `${t.count}${t.servingHint ? ` ${t.servingHint}` : '×'}`;
+    return '';
+  }
+
+  // Puts an amount typed with the search into the amount fields: grams or
+  // ml as they are; a count as that many of the food's matching serving
+  // ("2 eggs" -> 2 x "1 large"). A count with no serving to use is skipped.
+  function _applyTypedQty(food, t) {
+    const unitSel = document.getElementById('foodServingUnit');
+    const input = document.getElementById('foodServingInput');
+    if (t.grams || t.ml) {
+      unitSel.value = food.basis;
+      input.value = t.grams || t.ml;
+      return;
+    }
+    if (!t.count || !food.servings.length) return;
+    const hint = t.servingHint;
+    const s = (hint && food.servings.find(x => x.label.toLowerCase().includes(hint))) || food.servings[0];
+    unitSel.value = s.label;
+    input.value = t.count;
   }
 
   /* ── Selected food state ─────────────────────────────────── */
@@ -507,6 +557,8 @@
       unitSel.value = food.basis;
       document.getElementById('foodServingInput').value = 100;
     }
+    if (_typedQty) _applyTypedQty(food, _typedQty);
+    _typedQty = null;
     document.getElementById('foodSearchInput').value = '';
     const mealSel = document.getElementById('foodMealSelect');
     if (mealSel) mealSel.value = _sheetMeal || _lastMeal || Core.mealForHour(new Date().getHours());
@@ -563,7 +615,7 @@
       now: Date.now(),
     });
     try {
-      localStorage.setItem(RECENT_KEY(_user()), JSON.stringify(Core.addRecent(_readJSON(RECENT_KEY(_user()), []), _sel, Date.now())));
+      localStorage.setItem(RECENT_KEY(_user()), JSON.stringify(Core.addRecent(_readJSON(RECENT_KEY(_user()), []), _sel, Date.now(), meal)));
     } catch { /* storage full; the recent list is only a convenience */ }
     addEntry(entry);
     clearFoodSelection();
