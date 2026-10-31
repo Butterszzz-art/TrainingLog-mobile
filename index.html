@@ -3289,13 +3289,14 @@
         <div id="adjustMacroSection" class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card">
             <h3>Daily Tracking</h3>
-            <div class="macro-slider-head"><label for="proteinSlider">Protein</label><span class="macro-slider-val"><b class="mx-num" id="proteinVal">0</b><small>g</small></span></div>
+            <p class="macro-slider-caption macro-type-hint">Drag a slider, or tap a number to type it. Calories are worked out from your macros.</p>
+            <div class="macro-slider-head"><label for="proteinSlider">Protein</label><span class="macro-slider-val"><input type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="1500" class="mx-num macro-num-input" id="proteinVal" value="0" aria-label="Protein, grams" oninput="typeMacro('proteinSlider')" onblur="_updateSliderDisplay()"><small>g</small></span></div>
             <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" title="Default: 2 g/kg when cutting, 1.8 g/kg when maintaining/bulking">
             <p class="macro-slider-caption">Defaults to 2 g/kg while cutting, 1.8 g/kg while maintaining or bulking — drag to override.</p>
-            <div class="macro-slider-head"><label for="fatSlider">Fat</label><span class="macro-slider-val"><b class="mx-num" id="fatVal">0</b><small>g</small></span></div>
+            <div class="macro-slider-head"><label for="fatSlider">Fat</label><span class="macro-slider-val"><input type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="1500" class="mx-num macro-num-input" id="fatVal" value="0" aria-label="Fat, grams" oninput="typeMacro('fatSlider')" onblur="_updateSliderDisplay()"><small>g</small></span></div>
             <input type="range" id="fatSlider" min="0" max="0" oninput="adjustMacros('fatSlider')" title="Default: 25 % of calories when cutting, 30 % when maintaining/bulking; min 0.6 g/kg">
             <p class="macro-slider-caption">Defaults to 25% of calories while cutting, 30% while maintaining or bulking (0.6 g/kg floor).</p>
-            <div class="macro-slider-head"><label for="carbSlider">Carbs</label><span class="macro-slider-val"><b class="mx-num" id="carbVal">0</b><small>g</small></span></div>
+            <div class="macro-slider-head"><label for="carbSlider">Carbs</label><span class="macro-slider-val"><input type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="1500" class="mx-num macro-num-input" id="carbVal" value="0" aria-label="Carbs, grams" oninput="typeMacro('carbSlider')" onblur="_updateSliderDisplay()"><small>g</small></span></div>
             <input type="range" id="carbSlider" min="0" max="0" oninput="adjustMacros('carbSlider')" title="Carbs get the remaining calories after protein and fat">
             <p class="macro-slider-caption">Fills whatever calories are left after protein and fat.</p>
             <textarea id="coachNotes" rows="3" placeholder="Trainer notes (optional)"></textarea>
@@ -10137,10 +10138,14 @@ function updateMacroUI() {
   // is "<macroTotalCals> / <calTarget> kcal") — writing a
   // compound "X / Y kcal" string into just macroTotalCals, as this used to,
   // produced "Total Calories: 1450 / 2400 kcal / 2400 kcal".
-  macroTotalCalsEl.textContent = totalCals;
-  const calTargetElForTotal = document.getElementById("calTarget");
-  if (calTargetElForTotal) calTargetElForTotal.textContent = adaptiveTargets.calories;
-  macroTotalCalsEl.textContent = totalCals;
+  // This is the Adjust card's total: the calories of the macros on its
+  // sliders, not what was eaten today (writing today's eaten calories here
+  // showed "0 / 2350 kcal" right after saving new targets).
+  const _sl = id => Number(document.getElementById(id)?.value) || 0;
+  const sliderCals = document.getElementById("proteinSlider")
+    ? _sl("proteinSlider") * 4 + _sl("fatSlider") * 9 + _sl("carbSlider") * 4
+    : totalCals;
+  macroTotalCalsEl.textContent = sliderCals;
   const calTargetEl = document.getElementById("calTarget");
   if (calTargetEl) calTargetEl.textContent = adaptiveTargets.calories;
   updateMacroSummary(
@@ -10398,15 +10403,42 @@ function _updateSliderDisplay() {
   const cEl = document.getElementById("carbVal");
   const tEl = document.getElementById("macroTotalCals");
   const calTargetEl = document.getElementById("calTarget");
-  if (pEl) pEl.textContent = p;
-  if (fEl) fEl.textContent = f;
-  if (cEl) cEl.textContent = c;
+  // The values are number boxes you can type in (typeMacro); leave the one
+  // being typed in alone so the cursor doesn't jump.
+  const show = (el, v) => {
+    if (!el) return;
+    if (el.tagName === 'INPUT') { if (document.activeElement !== el) el.value = v; } else el.textContent = v;
+  };
+  show(pEl, p);
+  show(fEl, f);
+  show(cEl, c);
   // #calTarget is a plain number everywhere else — the static markup already
   // supplies "<macroTotalCals> / <calTarget> kcal" around
   // these two spans, so writing a combined "X / Y kcal" string into just
   // macroTotalCals doubled up the unit ("... / 2400 kcal / 2400 kcal").
   if (tEl) tEl.textContent = totalCals;
   if (calTargetEl) calTargetEl.textContent = limit;
+}
+
+// A macro typed into its number box (Adjust tab). Unlike dragging, typing
+// doesn't take grams from the other macros: it sets this macro, and the
+// calories become 4 × protein + 9 × fat + 4 × carbs. Dragging afterwards
+// trades between the macros at that new calorie total.
+function typeMacro(sliderId) {
+  const boxes = { proteinSlider: 'proteinVal', fatSlider: 'fatVal', carbSlider: 'carbVal' };
+  const slider = document.getElementById(sliderId);
+  const box = document.getElementById(boxes[sliderId]);
+  if (!slider || !box) return;
+  if (box.value === '') return; // still typing; keep the last value
+  const grams = Math.round(Number(box.value));
+  if (!Number.isFinite(grams) || grams < 0) return;
+  const v = Math.min(grams, 1500);
+  if (v > Number(slider.max)) slider.max = v;
+  slider.value = v;
+  const total = ['proteinSlider', 'fatSlider', 'carbSlider']
+    .reduce((sum, id) => sum + Number(document.getElementById(id).value) * (id === 'fatSlider' ? 9 : 4), 0);
+  macroRanges = { ...(macroRanges || {}), tdee: total };
+  _updateSliderDisplay();
 }
   
 function saveSliderMacros() {
@@ -18187,7 +18219,7 @@ async function fetchDailyLogs(username) {
       const display = document.getElementById(label);
       if (slider && display) {
         slider.value = 0;
-        display.textContent = "0";
+        if (display.tagName === "INPUT") display.value = "0"; else display.textContent = "0";
       }
     });
     document.getElementById("macroTotalCals").textContent = "0";
