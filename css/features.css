@@ -3567,6 +3567,47 @@ html.pc-log-only #macroMicrosBtn { display: none !important; }
 .food-log-hdr .mx-lbl { flex: 1; }
 .food-log-tot { font-size: 0.75rem; color: var(--text-muted); }
 .food-log-icons { display: inline-flex; gap: 4px; }
+
+/* Copy foods from a previous day (food-log-tools.js) */
+.food-copy-days { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; scrollbar-width: none; }
+.food-copy-day {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.food-copy-day small { font-size: 0.7rem; color: var(--text-muted); }
+.food-copy-day.is-on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.food-copy-day.is-on small { color: rgba(255, 255, 255, 0.8); }
+.food-copy-meal { border: 1px solid var(--border-color); border-radius: 12px; padding: 6px 10px; margin-bottom: 8px; }
+.food-copy-meal-h { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: var(--text-color); padding: 4px 0; }
+.food-copy-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.85rem; color: var(--text-color); border-top: 1px solid var(--border-color); }
+.food-copy-name { flex: 1; min-width: 0; }
+.food-copy-name small { color: var(--text-muted); }
+.food-copy-kcal { font-size: 0.78rem; color: var(--text-muted); }
+.food-form .food-copy-meal input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--primary); }
+.food-copy-total { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 10px; min-height: 22px; }
+.food-copy-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  font-size: 0.82rem;
+  color: var(--text-color);
+}
 .food-diary-list .food-icon-btn,
 .food-search-sheet .food-icon-btn {
   display: inline-flex;

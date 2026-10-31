@@ -369,6 +369,46 @@
     return (Array.isArray(log) ? log : []).filter(e => e && e.date === date);
   }
 
+  // ── Copying a previous day ───────────────────────────────────────────
+  // Days before `today` (YYYY-MM-DD) in the last `lookback` days that have
+  // foods, newest first, at most `max`. → [{ date, count, kcal }]
+  function copySourceDays(log, today, { max = 7, lookback = 14 } = {}) {
+    const t = Date.parse(`${today}T00:00:00Z`);
+    if (!Number.isFinite(t)) return [];
+    const from = new Date(t - lookback * 864e5).toISOString().slice(0, 10);
+    const byDay = {};
+    (Array.isArray(log) ? log : []).forEach(e => {
+      if (!e || typeof e.date !== 'string' || e.date >= today || e.date < from) return;
+      const d = byDay[e.date] || (byDay[e.date] = { date: e.date, count: 0, kcal: 0 });
+      d.count += 1;
+      d.kcal += Number(e.kcal) || 0;
+    });
+    return Object.values(byDay).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, max)
+      .map(d => ({ ...d, kcal: Math.round(d.kcal) }));
+  }
+
+  // "Yesterday", or "Thu 29 Oct". Dates are read as calendar days (UTC), so
+  // the label never shifts with the phone's time zone.
+  function dayLabel(date, today) {
+    const d = Date.parse(`${date}T00:00:00Z`);
+    const t = Date.parse(`${today}T00:00:00Z`);
+    if (!Number.isFinite(d)) return String(date || '');
+    if (Number.isFinite(t) && t - d === 864e5) return 'Yesterday';
+    const x = new Date(d);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[x.getUTCDay()]} ${x.getUTCDate()} ${months[x.getUTCMonth()]}`;
+  }
+
+  // The picked entries copied to `toDate`. meal: 'same' keeps each food's
+  // meal, a meal name puts them all there.
+  function copyPicked(entries, pickedIds, toDate, { meal = 'same', now, rand } = {}) {
+    const ids = new Set(pickedIds || []);
+    const picked = (entries || []).filter(e => e && ids.has(e.id));
+    return copyEntries(picked, toDate, { now, rand })
+      .map(e => (MEALS.includes(meal) ? { ...e, meal } : e));
+  }
+
   function groupByMeal(entries) {
     const out = {};
     MEALS.forEach(m => { out[m] = []; });
@@ -698,7 +738,7 @@
     weeklyAverages,
     csvCell, toCsv, foodLogRows,
     normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
-    amountLabel, editEntry, copyEntries, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
+    amountLabel, editEntry, copyEntries, copySourceDays, dayLabel, copyPicked, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
     scaleNutrients, gramsFor, sourceLabel, normalizeFood, kcalCheck, MICROS, microSummary,
     matchesQuery, addRecent, parseFoodQuery, rankRecent, mergeResults, combineSourceResults, isWeakSearch,

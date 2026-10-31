@@ -1,7 +1,8 @@
 /* =============================================================
    FOOD LOG TOOLS — what Cronometer users expect around the log
    - Tap a logged food to change its amount or meal (or remove it).
-   - Copy yesterday's foods into today.
+   - Copy foods from yesterday or another recent day into today (pick
+     meals or single foods, Undo afterwards).
    - "Save as meal" on a meal → a saved meal you can log again in one tap
      (mealTemplates_<user>, synced).
    - Library sheet: saved meals, recipes and your own foods.
@@ -28,10 +29,6 @@
     try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch { return fallback; }
   }
 
-  function yesterday() {
-    const t = Date.parse(FL().today() + 'T00:00:00Z') - 864e5;
-    return new Date(t).toISOString().slice(0, 10);
-  }
 
   // Applies a list of { before, after } entry changes to the log and the
   // day's running totals (only today's entries count towards those).
@@ -60,22 +57,119 @@
 
   // Two small icon buttons in the food log's header.
   window.foodLogToolbar = function () {
-    const y = Core.entriesFor(FL().load(), yesterday());
+    const days = Core.copySourceDays(FL().load(), FL().today());
     const icon = name => (typeof ICONS !== 'undefined' && ICONS[name]) || ''; // eslint-disable-line no-undef
+    // The log was just redrawn: put a live Undo bar back under its header.
+    if (_copyUndo) setTimeout(drawCopyUndo, 0);
     return `<span class="food-log-icons">
-      ${y.length ? `<button type="button" class="food-icon-btn" data-copy-yesterday aria-label="Copy yesterday's ${y.length} foods to today" title="Copy yesterday's foods"><span class="ui-icon">${icon('copy') || icon('refresh')}</span></button>` : ''}
+      ${days.length ? `<button type="button" class="food-icon-btn" data-copy-yesterday aria-label="Copy foods from a previous day" title="Copy from a previous day"><span class="ui-icon">${icon('copy') || icon('refresh')}</span></button>` : ''}
       <button type="button" class="food-icon-btn" data-open-library aria-label="Saved meals, recipes and my foods" title="Saved meals, recipes and my foods"><span class="ui-icon">${icon('bookmark') || icon('clipboard')}</span></button>
     </span>`;
   };
 
-  function copyYesterday() {
+  /* ── Copy foods from a previous day ──────────────────────── */
+  // A sheet: pick yesterday or another day from the last week, tick the
+  // meals or single foods to copy (all ticked to start), and copy them into
+  // the same meals or all into one. An Undo bar under the log's header
+  // takes the copy back.
+
+  let _copyUndo = null; // { ids, label, timer }
+
+  function copyYesterday(date) {
     if (locked()) return;
-    const y = Core.entriesFor(FL().load(), yesterday());
-    if (!y.length) return;
-    const today = Core.entriesFor(FL().load(), FL().today());
-    if (today.length && !confirm(`Add yesterday's ${y.length} foods to today's log? Today's ${today.length} foods stay.`)) return;
-    applyChanges(Core.copyEntries(y, FL().today(), { now: Date.now() }).map(after => ({ after })));
-    toast(`✅ Copied ${y.length} foods from yesterday`);
+    const days = Core.copySourceDays(FL().load(), FL().today());
+    if (!days.length) return;
+    const day = days.find(d => d.date === date) || days[0];
+    const entries = Core.entriesFor(FL().load(), day.date);
+    const groups = Core.groupByMeal(entries);
+    const r1 = v => Math.round((Number(v) || 0) * 10) / 10;
+    const foodRow = e => `
+      <label class="food-copy-item">
+        <input type="checkbox" data-copy-id="${esc(e.id)}" data-copy-meal="${esc(e.meal)}" checked>
+        <span class="food-copy-name">${esc(e.name)}${e.amount ? `<small> · ${esc(Core.amountLabel(e))}</small>` : ''}</span>
+        <span class="food-copy-kcal">${Math.round(e.kcal || 0)}</span>
+      </label>`;
+    Sheet().open(`
+      <form class="food-form food-copy" data-copy-form>
+        <div class="food-sheet-hdr"><h3>Copy foods to today</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
+        <div class="food-copy-days" role="group" aria-label="Copy from">
+          ${days.map(d => `<button type="button" class="food-copy-day${d.date === day.date ? ' is-on' : ''}" data-copy-day="${d.date}" aria-pressed="${d.date === day.date}">${esc(Core.dayLabel(d.date, FL().today()))}<small>${d.kcal} kcal</small></button>`).join('')}
+        </div>
+        ${Core.MEALS.filter(m => groups[m].length).map(m => `
+          <div class="food-copy-meal">
+            <label class="food-copy-meal-h"><input type="checkbox" data-copy-all="${m}" checked> ${esc(Core.MEAL_LABELS[m])}</label>
+            ${groups[m].map(foodRow).join('')}
+          </div>`).join('')}
+        <label class="food-field"><span>Copy into</span>
+          <select name="meal">
+            <option value="same">The same meals</option>
+            ${Core.MEALS.map(m => `<option value="${m}">${Core.MEAL_LABELS[m]}</option>`).join('')}
+          </select>
+        </label>
+        <div class="food-item-macros food-copy-total" data-copy-total></div>
+        <button type="submit" class="food-add-btn" data-copy-go>Copy</button>
+      </form>`, { label: 'Copy foods to today' });
+
+    const form = document.querySelector('[data-copy-form]');
+    form.querySelector('[data-close]').onclick = Sheet().close;
+    const boxes = () => [...form.querySelectorAll('[data-copy-id]')];
+    const refresh = () => {
+      const ids = new Set(boxes().filter(b => b.checked).map(b => b.dataset.copyId));
+      const t = Core.totals(entries.filter(e => ids.has(e.id)));
+      form.querySelector('[data-copy-total]').innerHTML = ids.size
+        ? `<span class="fim kcal-badge">${Math.round(t.kcal)} kcal</span><span class="fim protein-badge">${r1(t.protein)}P</span><span class="fim carbs-badge">${r1(t.carbs)}C</span><span class="fim fat-badge">${r1(t.fat)}F</span>` : '';
+      const go = form.querySelector('[data-copy-go]');
+      go.disabled = !ids.size;
+      go.textContent = ids.size ? `Copy ${ids.size} food${ids.size === 1 ? '' : 's'}` : 'Pick foods to copy';
+      form.querySelectorAll('[data-copy-all]').forEach(all => {
+        const inMeal = boxes().filter(b => b.dataset.copyMeal === all.dataset.copyAll);
+        const on = inMeal.filter(b => b.checked).length;
+        all.checked = on === inMeal.length;
+        all.indeterminate = on > 0 && on < inMeal.length;
+      });
+    };
+    form.querySelectorAll('[data-copy-day]').forEach(b => b.addEventListener('click', () => copyYesterday(b.dataset.copyDay)));
+    form.querySelectorAll('[data-copy-all]').forEach(all => all.addEventListener('change', () => {
+      boxes().filter(b => b.dataset.copyMeal === all.dataset.copyAll).forEach(b => { b.checked = all.checked; });
+      refresh();
+    }));
+    boxes().forEach(b => b.addEventListener('change', refresh));
+    refresh();
+    form.onsubmit = e => {
+      e.preventDefault();
+      if (locked()) return;
+      const ids = boxes().filter(b => b.checked).map(b => b.dataset.copyId);
+      const copies = Core.copyPicked(entries, ids, FL().today(), { meal: form.meal.value, now: Date.now() });
+      if (!copies.length) return;
+      applyChanges(copies.map(after => ({ after })));
+      Sheet().close();
+      const from = Core.dayLabel(day.date, FL().today());
+      showCopyUndo(copies.map(c => c.id), `Copied ${copies.length} food${copies.length === 1 ? '' : 's'} from ${from === 'Yesterday' ? 'yesterday' : from}`);
+    };
+  }
+
+  // The Undo bar under the food log's header (gone after 30 s, or when it
+  // is used). Undo removes exactly the copied foods.
+  function showCopyUndo(ids, label) {
+    if (_copyUndo) clearTimeout(_copyUndo.timer);
+    _copyUndo = { ids, label, timer: setTimeout(() => { _copyUndo = null; drawCopyUndo(); }, 30000) };
+    drawCopyUndo();
+  }
+
+  function drawCopyUndo() {
+    document.querySelector('#foodDiaryList .food-copy-undo')?.remove();
+    if (!_copyUndo) return;
+    const hdr = document.querySelector('#foodDiaryList .food-log-hdr');
+    hdr?.insertAdjacentHTML('afterend', `<div class="food-copy-undo" role="status"><span>${esc(_copyUndo.label)}</span><button type="button" class="mx-link" data-copy-undo>Undo</button></div>`);
+  }
+
+  function undoCopy() {
+    if (!_copyUndo || locked()) return;
+    const ids = new Set(_copyUndo.ids);
+    clearTimeout(_copyUndo.timer);
+    _copyUndo = null;
+    applyChanges(FL().load().filter(e => ids.has(e.id)).map(before => ({ before })));
+    toast('Copy undone');
   }
 
   /* ── Edit a logged food ──────────────────────────────────── */
@@ -415,10 +509,11 @@
   /* ── Wiring ──────────────────────────────────────────────── */
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-edit-entry],[data-copy-yesterday],[data-open-library],[data-save-meal]');
+    const t = e.target.closest('[data-edit-entry],[data-copy-yesterday],[data-copy-undo],[data-open-library],[data-save-meal]');
     if (!t || t.closest('#foodSheet')) return;
     if (t.dataset.editEntry) openEdit(t.dataset.editEntry);
     else if (t.matches('[data-copy-yesterday]')) copyYesterday();
+    else if (t.matches('[data-copy-undo]')) undoCopy();
     else if (t.matches('[data-open-library]')) openLibrary();
     else if (t.dataset.saveMeal) saveMealAsTemplate(t.dataset.saveMeal);
   });
