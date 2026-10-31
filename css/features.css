@@ -2285,113 +2285,6 @@ button.food-search-item {
   background: color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
-/* ── Calorie estimator ── */
-.wt-estimator-section {
-  background: var(--pod-bg);
-  border: 1px solid var(--pod-border);
-  border-radius: var(--radius-pod);
-  box-shadow: var(--pod-bevel);
-  overflow: hidden;
-}
-
-.wt-estimator-summary {
-  cursor: pointer;
-  padding: 14px;
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 1.05rem;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-  color: var(--text-primary, var(--text-color));
-  list-style: none;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.wt-estimator-summary::marker,
-.wt-estimator-summary::-webkit-details-marker { display: none; }
-.wt-estimator-summary .ui-icon { width: 16px; height: 16px; }
-.wt-estimator-summary::after {
-  content: '+';
-  margin-left: auto;
-  font-family: var(--font-body);
-  font-size: 18px;
-  color: var(--green-90);
-}
-.wt-estimator-section[open] .wt-estimator-summary::after { content: '−'; }
-
-.wt-estimator-body {
-  padding: 0 14px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.wt-estimator-hint {
-  font-size: 12.5px;
-  color: var(--text-muted);
-  line-height: 1.45;
-  margin: 0;
-}
-
-.wt-estimator-row {
-  display: flex;
-  gap: 8px;
-}
-
-.wt-estimate-btn {
-  flex: none;
-  padding: 10px 18px;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--fill-btn-primary-mobile);
-  color: var(--nav-label-active-desktop, var(--label-on-green));
-  box-shadow: var(--shadow-button-sm);
-  font-family: var(--font-label);
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity 0.2s;
-}
-.wt-estimate-btn:hover { opacity: 0.85; }
-
-.wt-estimate-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.wt-estimate-table thead th:last-child { text-align: right; }
-.wt-estimate-table thead th {
-  font-family: var(--font-label);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-label);
-  padding: 6px 2px;
-  text-align: left;
-  border-bottom: 1px solid var(--border-row, var(--border-color));
-}
-.wt-estimate-table tbody td {
-  padding: 10px 2px;
-  text-align: left;
-  color: var(--text-primary, var(--text-color));
-  border-bottom: 1px solid var(--border-row, var(--border-color));
-}
-.wt-estimate-table tbody tr:last-child td { border-bottom: none; }
-.wt-estimate-table tbody td:last-child {
-  text-align: right;
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 15px;
-  color: var(--green-90, var(--primary-text));
-}
 
 /* =============================================================
    LEADERBOARD IMPROVEMENTS
@@ -3209,10 +3102,6 @@ button.food-search-item {
 }
 .wt-add-btn .ui-icon { width: 14px; height: 14px; }
 
-.wt-estimate-table,
-.wt-estimate-table th,
-.wt-estimate-table td { border-left: 0; border-right: 0; }
-.wt-estimate-table { border: 0; }
 .measurements-metric-pill { min-height: 0; margin: 0; }
 
 /* ── Barcode scan + custom food sheet (food-barcode.js) ───── */
@@ -3983,6 +3872,17 @@ html.pc-log-only .food-meal-right .food-meal-kcal { display: none !important; }
 .ni-lbl { display: block; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
 .ni-big { font-size: 1.3rem; }
 .ni-sub { margin: 4px 0 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; }
+.mm-card { padding: 14px; margin: 0 auto 20px; max-width: 1100px; }
+.mm-card[hidden] { display: none; }
+.mm-big { display: block; }
+.mm-empty { margin: 4px 0 0; font-size: 0.85rem; line-height: 1.45; }
+.mm-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.mm-chip { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; margin: 0; min-height: 0;
+  border: 1px solid var(--border, rgba(127,127,127,.25)); border-radius: 12px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.mm-chip span { font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.mm-chip b { font-size: 0.95rem; }
+.mm-chip:active { transform: scale(0.97); }
+.mm-hint { margin-top: 8px; }
 .ni-bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-top: 6px; }
 .ni-bar { flex: 1; min-width: 4px; border-radius: 4px 4px 0 0; background: rgba(127, 148, 134, 0.55); }
 .ni-bar.is-high { background: var(--primary); }
