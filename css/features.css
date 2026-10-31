@@ -3365,8 +3365,7 @@ button.food-diary-nm { border-radius: 0; font-size: 0.85rem; display: block; }
 
 /* ── Log-only mode (coach setting, food-database.js) ───────── */
 html.pc-log-only #macrosTargetsView .macro-hero,
-html.pc-log-only #macrosTargetsView .macro-quick-chips,
-html.pc-log-only #macroCustomAdd,
+html.pc-log-only #macroQuickAdd,
 html.pc-log-only #assignedNutritionPlanCard,
 html.pc-log-only .macro-trends-accordion,
 html.pc-log-only .macro-heatmap-accordion,
@@ -3695,8 +3694,6 @@ html.pc-log-only #macroMicrosBtn { display: none !important; }
 }
 .food-sheet-tabs .food-sheet-tab.is-active { background: var(--primary); color: var(--label-on-green, #fff); }
 .food-sheet-panel[hidden] { display: none; }
-#foodQuickAddPanel .macro-quick-chips { flex-wrap: wrap; overflow: visible; margin: 4px 0 12px; }
-#foodQuickAddPanel .macro-custom { margin-bottom: 12px; }
 .food-quick-favs-lbl { margin: 6px 2px 4px; }
 #foodMyFoodsPanel .food-lib-actions { margin-top: 0; }
 
@@ -3747,9 +3744,7 @@ body.food-dock-mini #macroTab { padding-bottom: 150px !important; }
 
 /* Log only: these show numbers too */
 html.pc-log-only .food-log-tot,
-html.pc-log-only .food-meal-right .food-meal-kcal,
-html.pc-log-only #foodQuickAddPanel { display: none !important; }
-html.pc-log-only .food-sheet-tab[data-food-tab="quick"] { display: none; }
+html.pc-log-only .food-meal-right .food-meal-kcal { display: none !important; }
 
 /* ══ Log food sheet: pinned header, scrolling results, compact rows ══
    The panel is a column: title + close and tabs stay at the top, only the

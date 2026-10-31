@@ -160,38 +160,72 @@
 .macro-quick-chips .macro-card-dot { width: 6px; height: 6px; box-shadow: none; }
 .macro-quick-chips .macro-chip:active { transform: scale(0.96); }
 
-/* Custom amounts (qa* inputs + ± buttons) */
-.macro-custom {
-  margin-top: 10px;
-  padding: 4px 16px;
+/* Quick add box in the hero, under the calorie bar (macro-quick-add.js) */
+.macro-qa-box {
+  margin: 14px 0 4px;
+  padding: 10px 12px 12px;
+  border-radius: 16px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-default);
 }
-.macro-custom.is-hidden { display: none !important; }
-.macro-custom-row {
+.macro-qa-head {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 22px;
+  margin-bottom: 8px;
+}
+.macro-qa-undo { font-size: 12px; padding: 2px 0; background: none; border: 0; }
+.macro-qa-undo[hidden] { display: none; }
+.macro-qa-box .macro-quick-chips { flex-wrap: wrap; overflow: visible; }
+.macro-qa-box .macro-chip--custom .ui-icon { width: 12px; height: 12px; display: inline-flex; }
+.macro-qa-box .macro-chip--custom .ui-icon svg { width: 12px; height: 12px; }
+.macro-qa-box .macro-chip--custom[aria-expanded="true"] { color: var(--green-90); }
+.macro-qa-custom {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 9px 0;
-  border-top: 1px solid var(--border-row);
+  margin-top: 10px;
 }
-.macro-custom-row:first-child { border-top: 0; }
-.macro-custom-name {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.macro-custom .macro-qa-input {
-  width: 72px !important;
-  flex-shrink: 0;
+.macro-qa-custom[hidden] { display: none; }
+.macro-qa-types {
+  flex: 1 1 100%;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-pill);
 }
-.macro-qa-btn--minus {
-  background: var(--surface-recessed);
-  border: 1px solid var(--border-chip);
-  color: var(--text-secondary);
+.macro-today .macro-qa-types .macro-seg-btn { flex: 1; padding: 6px 9px; font-size: 11.5px; letter-spacing: 0.06em; }
+.macro-qa-amount {
+  flex: 1;
+  min-width: 0;
+  width: auto !important;
+  height: 34px;
+  margin: 0;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+}
+.macro-qa-add {
+  flex: none;
+  width: auto;
+  height: 34px;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--fill-btn-primary-mobile);
+  color: var(--label-on-green);
+  font-weight: 700;
+  font-size: 13px;
+}
+.macro-qa-today {
+  margin: 8px 2px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
 }
 
 /* ── Favorites ──────────────────────────────────────────────── */
@@ -660,8 +694,7 @@
 
 /* Completed day: everything that logs intake is visibly off. The JS guard
    (guardMacroDayLocked) is what actually blocks changes. */
-#macrosTargetsView.is-day-complete .macro-quick-chips,
-#macrosTargetsView.is-day-complete #macroCustomAdd,
+#macrosTargetsView.is-day-complete #macroQuickAdd,
 #macrosTargetsView.is-day-complete #macroFavoritesContainer,
 #macrosTargetsView.is-day-complete #macroMealsPanel {
   opacity: 0.45;
