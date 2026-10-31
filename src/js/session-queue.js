@@ -513,12 +513,40 @@
     if (typeof document === 'undefined') return;
     const w = document.getElementById('qlWeightVal');
     const r = document.getElementById('qlRepsVal');
-    if (w) w.textContent = _qlWeight != null ? _qlWeight : '—';
-    if (r) r.textContent = _qlReps != null ? _qlReps : '—';
     const rl = document.getElementById('qlRepsLeftVal');
     const rr = document.getElementById('qlRepsRightVal');
-    if (rl) rl.textContent = _qlRepsLeft != null ? _qlRepsLeft : '—';
-    if (rr) rr.textContent = _qlRepsRight != null ? _qlRepsRight : '—';
+    _showQuickLogVal(w, _qlWeight);
+    _showQuickLogVal(r, _qlReps);
+    _showQuickLogVal(rl, _qlRepsLeft);
+    _showQuickLogVal(rr, _qlRepsRight);
+  }
+
+  // Stepper values are inputs (tap to type on the number keyboard) — the
+  // one being typed in is left alone so the caret doesn't jump.
+  function _showQuickLogVal(el, v) {
+    if (!el) return;
+    if (el.tagName === 'INPUT') {
+      if (document.activeElement !== el) el.value = v != null ? v : '';
+    } else {
+      el.textContent = v != null ? v : '—';
+    }
+  }
+
+  /** Typed straight into a stepper value. Empty/invalid input leaves the
+   * last good value in place (restored on blur by quickLogTypedDone). */
+  function quickLogTyped(field, raw) {
+    const n = parseFloat(String(raw).replace(',', '.'));
+    if (!Number.isFinite(n) || n < 0) return;
+    if (field === 'weight') _qlWeight = _round1(n);
+    else if (field === 'repsLeft') _qlRepsLeft = Math.round(n);
+    else if (field === 'repsRight') _qlRepsRight = Math.round(n);
+    else _qlReps = Math.round(n);
+    _writeQuickLogToForm();
+  }
+
+  function quickLogTypedDone() {
+    // Runs on blur, after focus has left — repaints every value cleanly.
+    setTimeout(_syncQuickLogDisplay, 0);
   }
 
   function _qlSidesUneven() {
@@ -990,13 +1018,15 @@
   }
 
   const api = { getTodaysPlannedDay, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
-    initQuickLog, quickLogStep, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
+    initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
     refreshLogButtonLabel: _updateQuickLogButtonLabel };
   global.renderVolumeLandmarks = renderVolumeLandmarks;
   global.initQuickLog = initQuickLog;
   global.quickLogStep = quickLogStep;
+  global.quickLogTyped = quickLogTyped;
+  global.quickLogTypedDone = quickLogTypedDone;
   global.toggleQuickLogUnilateral = toggleQuickLogUnilateral;
   global.toggleQuickLogSameSides = toggleQuickLogSameSides;
   global.quickLogSet = quickLogSet;
