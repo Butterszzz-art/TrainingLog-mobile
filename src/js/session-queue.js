@@ -876,6 +876,7 @@
     if (!exerciseEl) return;
     exerciseEl.value = name;
     initQuickLog(name);
+    if (typeof global.renderOverloadHint === 'function') global.renderOverloadHint();
     if (plannedFirstSet) {
       if (plannedFirstSet.weight != null) _qlWeight = plannedFirstSet.weight;
       if (plannedFirstSet.reps != null) _qlReps = plannedFirstSet.reps;
@@ -967,8 +968,8 @@
     });
     const hint = document.getElementById('exerciseNameHint');
     if (hint) hint.style.display = 'none';
-    const overload = document.getElementById('overloadHint');
-    if (overload) overload.innerHTML = '';
+    // Empty name clears the progression tip and its silver bubble.
+    if (typeof global.renderOverloadHint === 'function') global.renderOverloadHint();
     // Drop any extra set rows so the next exercise starts from one set.
     const setsInput = document.getElementById('sets');
     if (setsInput) setsInput.value = '1';
