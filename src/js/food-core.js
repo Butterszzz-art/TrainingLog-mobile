@@ -87,9 +87,73 @@
   }
 
   // ── Local search (offline, and to rank your own foods first) ─────────
+  // Plurals folded so "eggs" matches "Egg" (same rule as the backend's
+  // src/nutrition/searchTerms.js).
+  function stem(w) {
+    if (w.length <= 3) return w;
+    if (/ies$/.test(w) && w.length > 4) return w.slice(0, -3) + 'y';
+    if (/(oes|ches|shes|xes|sses)$/.test(w)) return w.slice(0, -2);
+    if (/[^su]s$/.test(w)) return w.slice(0, -1);
+    return w;
+  }
+
   function words(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .split(/[^a-z0-9%]+/).filter(Boolean);
+      .split(/[^a-z0-9%]+/).filter(Boolean).map(stem);
+  }
+
+  // An amount typed with the food: "200g chicken breast", "chicken 200 g",
+  // "2 eggs", "2x banana", "1 cup rice", "1,5 l milk".
+  // → { q, grams?, ml?, count?, servingHint? } — q is the food words left.
+  // "2% milk" and "0% kwark" are left alone (a % is part of the food).
+  const QTY_UNITS = {
+    g: ['g', 1], gr: ['g', 1], gram: ['g', 1], grams: ['g', 1], gramm: ['g', 1], kg: ['g', 1000], oz: ['g', 28.35],
+    lb: ['g', 453.6], lbs: ['g', 453.6], ml: ['ml', 1], cl: ['ml', 10], dl: ['ml', 100], l: ['ml', 1000], liter: ['ml', 1000], litre: ['ml', 1000],
+  };
+  const QTY_SERVINGS = { cup: 'cup', cups: 'cup', tbsp: 'tbsp', tbs: 'tbsp', tsp: 'tsp', slice: 'slice', slices: 'slice', plakje: 'slice', plakjes: 'slice', piece: 'piece', pieces: 'piece', stuk: 'piece', stuks: 'piece' };
+  const UNIT_WORDS = [...Object.keys(QTY_UNITS), ...Object.keys(QTY_SERVINGS), 'x', '×'].sort((a, b) => b.length - a.length).join('|');
+  const MASS_WORDS = Object.keys(QTY_UNITS).sort((a, b) => b.length - a.length).join('|');
+  const LEAD_RE = new RegExp('^(\\d+(?:[.,]\\d+)?)\\s*(' + UNIT_WORDS + ')?\\s+(.{2,})$', 'i');
+  const TRAIL_RE = new RegExp('^(.{2,}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*(' + MASS_WORDS + ')$', 'i');
+
+  function parseFoodQuery(text) {
+    const raw = String(text || '').trim().replace(/\s+/g, ' ');
+    const out = { q: raw.toLowerCase() };
+    let n; let unit; let rest;
+    let m = LEAD_RE.exec(raw);
+    if (m) { [, n, unit, rest] = m; } else if ((m = TRAIL_RE.exec(raw))) { [, rest, n, unit] = m; } else return out;
+    const value = Number(String(n).replace(',', '.'));
+    if (!(value > 0)) return out;
+    const u = (unit || '').toLowerCase();
+    if (QTY_UNITS[u]) {
+      const [kind, factor] = QTY_UNITS[u];
+      const amount = Math.round(value * factor * 10) / 10;
+      if (amount > 5000) return out;
+      out[kind === 'ml' ? 'ml' : 'grams'] = amount;
+    } else {
+      if (value > 50) return out; // "100 chicken"? not a count
+      out.count = value;
+      if (QTY_SERVINGS[u]) out.servingHint = QTY_SERVINGS[u];
+    }
+    out.q = rest.trim().toLowerCase();
+    return out;
+  }
+
+  // Your recent foods in the order you're most likely to want them: how
+  // often you log them, whether you usually have them at this meal, and how
+  // recently. `list` is the stored recent list (with uses/meals counts).
+  function rankRecent(list, { meal, now } = {}) {
+    const t = Number(now) || 0;
+    const score = f => {
+      const uses = Math.max(1, Number(f && f.uses) || 1);
+      const atMeal = meal && f && f.meals ? (Number(f.meals[meal]) || 0) / uses : 0;
+      const days = t && f && f.usedAt ? Math.max(0, (t - f.usedAt) / 864e5) : 30;
+      return Math.log2(1 + uses) * 2 + atMeal * 3 + 2 * Math.exp(-days / 14);
+    };
+    return (Array.isArray(list) ? list : []).filter(Boolean)
+      .map((f, i) => ({ f, i, s: score(f) }))
+      .sort((a, b) => b.s - a.s || a.i - b.i)
+      .map(x => x.f);
   }
 
   // True when every word typed starts some word of the food's name/brand.
@@ -100,12 +164,18 @@
     return q.every(x => w.some(y => y.startsWith(x)));
   }
 
-  // Recently logged foods, newest first, one per id.
-  function addRecent(list, food, now) {
+  // Recently logged foods, newest first, one per id. Each keeps how often
+  // it was logged (`uses`) and at which meals, for rankRecent.
+  function addRecent(list, food, now, meal) {
     const f = normalizeFood(food);
     if (!f) return Array.isArray(list) ? list : [];
-    const rest = (Array.isArray(list) ? list : []).filter(x => x && x.id !== f.id);
-    return [{ ...f, usedAt: now }, ...rest].slice(0, RECENT_MAX);
+    const all = Array.isArray(list) ? list : [];
+    const prev = all.find(x => x && x.id === f.id);
+    const uses = (prev ? Math.max(1, Number(prev.uses) || 1) : 0) + 1;
+    const meals = { ...(prev && prev.meals && typeof prev.meals === 'object' ? prev.meals : {}) };
+    if (MEALS.includes(meal)) meals[meal] = (Number(meals[meal]) || 0) + 1;
+    const rest = all.filter(x => x && x.id !== f.id);
+    return [{ ...f, usedAt: now, uses, meals }, ...rest].slice(0, RECENT_MAX);
   }
 
   // Local foods first (your own and your coach's, then recent ones), then
@@ -631,7 +701,7 @@
     amountLabel, editEntry, copyEntries, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
     scaleNutrients, gramsFor, sourceLabel, normalizeFood, kcalCheck, MICROS, microSummary,
-    matchesQuery, addRecent, mergeResults, combineSourceResults, isWeakSearch,
+    matchesQuery, addRecent, parseFoodQuery, rankRecent, mergeResults, combineSourceResults, isWeakSearch,
     mealForHour, newEntryId, makeEntry, progressDelta, foodFromEntry, totals, entriesFor, groupByMeal, trimLog, migrateOldDiary,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
