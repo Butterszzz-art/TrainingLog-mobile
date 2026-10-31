@@ -37,6 +37,10 @@
   let recoveryInFlight = null;
   const RECOVERY_BASELINE_DAYS = 7;
   const NEEDS_RECONNECT_KEY = 'activitySyncNeedsReconnect';
+  let lastBodyFetchedAt = 0;
+  let bodyInFlight = null;
+  const BODY_SYNC_DAYS = 30;
+  const BASELINE_MIN_DAYS = 5;
   const CARDIO_SYNC_DAYS = 7; // how far back tracker workouts are merged
 
   // The user's own calendar date (YYYY-MM-DD). Synced data is requested and
@@ -799,6 +803,334 @@
     return recoveryInFlight;
   }
 
+  // ── Body: smart-scale weigh-ins + vitals analysis ──────────────────────
+  // Weigh-ins fill the weight log only on days the user didn't log weight in
+  // the app (the app always wins), and add body fat to an app entry that has
+  // none. Vitals are compared with the user's own last 30 days for the Body
+  // tab's analysis panel (body-hub.js).
+  const SCALE_SOURCE = 'activity-sync';
+
+  function kgTo(unit, kg) {
+    if (typeof globalScope.convertWeightValue === 'function') {
+      return globalScope.convertWeightValue(kg, 'kg', unit, 1);
+    }
+    return unit === 'lb' ? Math.round(kg * 2.20462 * 10) / 10 : Math.round(kg * 10) / 10;
+  }
+
+  // Pure: the weight log after applying weigh-ins for local dates start..end.
+  function mergeScaleWeighIns(log, weighIns, { start, end, unit = 'kg', dismissed = [] }) {
+    const inRange = (d) => typeof d === 'string' && d >= start && d <= end;
+    const dismissedDates = new Set(dismissed);
+    const result = (Array.isArray(log) ? log : [])
+      .filter((e) => !(e && e.source === SCALE_SOURCE && inRange(e.date)))
+      .map((e) => ({ ...e }));
+
+    (Array.isArray(weighIns) ? weighIns : []).forEach((w) => {
+      if (!w || !inRange(w.date)) return;
+      const appEntry = result.find((e) => e.date === w.date);
+      if (appEntry) {
+        // App-logged weight wins; only fill in body fat it doesn't have.
+        const canFillFat = appEntry.bodyFatPercent == null || appEntry.bodyFatSource === SCALE_SOURCE;
+        if (canFillFat && w.bodyFatPercent > 0) {
+          appEntry.bodyFatPercent = w.bodyFatPercent;
+          appEntry.bodyFatSource = SCALE_SOURCE;
+        }
+        return;
+      }
+      if (!(w.weightKg > 0) || dismissedDates.has(w.date)) return;
+      const entry = {
+        weight: kgTo(unit, w.weightKg),
+        unit,
+        weightKg: w.weightKg,
+        date: w.date,
+        calories: null,
+        cardio: null,
+        source: SCALE_SOURCE
+      };
+      if (w.bodyFatPercent > 0) entry.bodyFatPercent = w.bodyFatPercent;
+      result.push(entry);
+    });
+    return result.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  }
+
+  // Called by removeWeightEntry (index.html): a scale weigh-in the user
+  // deleted stays deleted on the next sync.
+  function dismissSyncedWeight(entry) {
+    if (!entry || entry.source !== SCALE_SOURCE || !entry.date) return;
+    try {
+      const key = `weightSyncDismissed_${getActiveUsername()}`;
+      const dates = readJson(key, []);
+      if (!dates.includes(entry.date)) {
+        dates.push(entry.date);
+        globalScope.localStorage.setItem(key, JSON.stringify(dates.slice(-400)));
+      }
+    } catch (_error) { /* non-fatal */ }
+  }
+
+  // Profile body fat (used by the macro calculator) comes from the scale only
+  // while the user hasn't entered their own.
+  function applyProfileBodyFat(weighIns) {
+    try {
+      const latest = [...(weighIns || [])].reverse().find((w) => w?.bodyFatPercent > 0);
+      if (!latest) return;
+      const details = readJson('personalDetails', null);
+      if (!details || typeof details !== 'object') return;
+      const own = details.bodyFatPercent != null && details.bodyFatSource !== SCALE_SOURCE;
+      if (own || details.bodyFatPercent === latest.bodyFatPercent) return;
+      details.bodyFatPercent = latest.bodyFatPercent;
+      details.bodyFatSource = SCALE_SOURCE;
+      globalScope.localStorage.setItem('personalDetails', JSON.stringify(details));
+    } catch (_error) { /* non-fatal */ }
+  }
+
+  const VITALS = [
+    { key: 'restingHeartRate', phrase: 'resting heart rate', label: 'Resting HR', unit: 'bpm', decimals: 0, bad: 'up', minBand: 3,
+      about: 'Beats per minute at rest, measured overnight. A few beats above your usual can point to fatigue, stress, illness or alcohol.' },
+    { key: 'hrvMs', phrase: 'HRV', label: 'HRV', unit: 'ms', decimals: 0, bad: 'down', relBand: 0.15,
+      about: 'Variation between heartbeats during sleep. Lower than your usual often means your body is under more stress.' },
+    { key: 'spo2', phrase: 'blood oxygen', label: 'Blood oxygen', unit: '%', decimals: 1, bad: 'down', minBand: 1.5, floor: 94,
+      about: 'Average oxygen saturation while you slept. It usually sits around 95–100%.' },
+    { key: 'respiratoryRate', phrase: 'breathing rate', label: 'Breathing rate', unit: '/min', decimals: 1, bad: 'up', minBand: 1,
+      about: 'Breaths per minute during sleep. It is very steady day to day, so a jump stands out.' },
+    { key: 'skinTempDelta', phrase: 'skin temperature', label: 'Skin temp', unit: '°C', decimals: 1, bad: 'both', fixedBand: 0.5, signed: true,
+      about: 'Overnight skin temperature compared with your own baseline. A rise can come with illness, a hard training block or a warm room.' },
+    { key: 'vo2Max', phrase: 'cardio fitness', label: 'Cardio fitness', unit: 'VO₂ max', decimals: 1, bad: null,
+      about: 'Estimated maximum oxygen use during exercise. Higher means fitter; it changes slowly over weeks.' }
+  ];
+
+  function stats(values) {
+    const mean = average(values);
+    const sd = Math.sqrt(average(values.map((v) => (v - mean) ** 2)));
+    return { mean, sd };
+  }
+
+  function shiftDate(dateStr, days) {
+    const d = new Date(`${dateStr}T12:00:00`);
+    d.setDate(d.getDate() + days);
+    return localDateKey(d);
+  }
+
+  // Pure: per-metric latest value, usual range and flag, plus an overall
+  // status. daysStore is { 'YYYY-MM-DD': { restingHeartRate, hrvMs, ... } }.
+  function analyzeVitals(daysStore, today) {
+    const rows = Object.values(daysStore || {})
+      .filter((r) => r && typeof r.date === 'string' && r.date <= today)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const freshFrom = shiftDate(today, -2);
+    const sparkFrom = shiftDate(today, -13);
+
+    const metrics = VITALS.map((def) => {
+      const series = rows.filter((r) => typeof r[def.key] === 'number');
+      if (!series.length) return null;
+      const latest = series[series.length - 1];
+      const value = latest[def.key];
+      const baseFrom = shiftDate(latest.date, -30);
+      const base = series.filter((r) => r.date < latest.date && r.date >= baseFrom).map((r) => r[def.key]);
+      let low = null;
+      let high = null;
+      if (def.fixedBand != null) {
+        low = -def.fixedBand;
+        high = def.fixedBand;
+      } else if (base.length >= BASELINE_MIN_DAYS) {
+        const { mean, sd } = stats(base);
+        const band = Math.max(1.5 * sd, def.minBand || 0, (def.relBand || 0) * mean);
+        low = mean - band;
+        high = mean + band;
+      }
+      const fresh = latest.date >= freshFrom;
+      let flag = null;
+      if (fresh && def.bad) {
+        if (def.floor != null && value < def.floor) flag = 'low';
+        else if (low != null && (def.bad === 'down' || def.bad === 'both') && value < low) flag = 'low';
+        else if (high != null && (def.bad === 'up' || def.bad === 'both') && value > high) flag = 'high';
+      }
+      const monthAgo = series.find((r) => r.date >= baseFrom);
+      return {
+        key: def.key,
+        label: def.label,
+        phrase: def.phrase,
+        unit: def.unit,
+        decimals: def.decimals,
+        signed: Boolean(def.signed),
+        about: def.about,
+        value,
+        date: latest.date,
+        fresh,
+        usualLow: low,
+        usualHigh: high,
+        baselineDays: base.length,
+        flag,
+        change30: monthAgo && monthAgo !== latest ? value - monthAgo[def.key] : null,
+        spark: series.filter((r) => r.date >= sparkFrom).map((r) => r[def.key]),
+        month: series.filter((r) => r.date >= baseFrom).map((r) => r[def.key])
+      };
+    }).filter(Boolean);
+
+    const scored = metrics.filter((m) => m.fresh && m.key !== 'vo2Max');
+    const flagged = scored.filter((m) => m.flag);
+    let status = null;
+    if (flagged.length >= 2) {
+      const names = flagged.map((m) => m.phrase);
+      const list = names.length > 2 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join(' and ');
+      status = { level: 'strained', title: 'Signs of strain', text: `${list.charAt(0).toUpperCase()}${list.slice(1)} are outside your usual range. Consider an easier day and extra sleep.` };
+    } else if (flagged.length === 1) {
+      const m = flagged[0];
+      const what = `${m.phrase.charAt(0).toUpperCase()}${m.phrase.slice(1)}`;
+      const where = m.key === 'spo2' && m.usualLow == null ? 'below the usual 95–100%' : `${m.flag === 'high' ? 'above' : 'below'} your usual range`;
+      status = { level: 'watch', title: 'Worth watching', text: `${what} is ${where} today.` };
+    } else if (scored.length) {
+      const withRange = scored.filter((m) => m.usualLow != null && m.key !== 'skinTempDelta');
+      if (withRange.length) {
+        status = { level: 'good', title: 'In your usual range', text: 'Your overnight vitals look normal for you.' };
+      } else {
+        const have = Math.max(0, ...scored.map((m) => m.baselineDays));
+        const left = Math.max(1, BASELINE_MIN_DAYS - have);
+        status = { level: 'building', title: 'Learning your normal', text: `${left} more night${left === 1 ? '' : 's'} of data before your usual ranges are ready.` };
+      }
+    }
+    return { status, metrics };
+  }
+
+  // Pure: weight + body-fat picture from the (merged) weight log. Body fat the
+  // user entered in their profile wins over the scale's.
+  function analyzeComposition(log, today, profileBodyFat) {
+    const getKg = (e) => {
+      if (typeof globalScope.getEntryWeightKg === 'function') return globalScope.getEntryWeightKg(e);
+      const n = Number(e?.weightKg ?? e?.weight);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const from = shiftDate(today, -30);
+    const recent = (Array.isArray(log) ? log : [])
+      .filter((e) => e && e.date >= from && e.date <= today && getKg(e))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (!recent.length) return null;
+    const latest = recent[recent.length - 1];
+    const weightKg = getKg(latest);
+    const withFat = recent.filter((e) => e.bodyFatPercent > 0);
+    const ownFat = profileBodyFat && profileBodyFat.value > 0 && profileBodyFat.source !== SCALE_SOURCE
+      ? profileBodyFat.value : null;
+    const scaleFat = withFat.length ? withFat[withFat.length - 1].bodyFatPercent : null;
+    const bodyFatPercent = ownFat || scaleFat || null;
+    const parts = (kg, pct) => ({ fatKg: kg * pct / 100, leanKg: kg * (1 - pct / 100) });
+    const now = bodyFatPercent ? parts(weightKg, bodyFatPercent) : null;
+    let change = null;
+    const first = withFat[0];
+    const last = withFat[withFat.length - 1];
+    if (!ownFat && first && last && first !== last && shiftDate(first.date, 7) <= last.date) {
+      const a = parts(getKg(first), first.bodyFatPercent);
+      const b = parts(getKg(last), last.bodyFatPercent);
+      change = { days: Math.round((new Date(last.date) - new Date(first.date)) / 86400000), fatKg: b.fatKg - a.fatKg, leanKg: b.leanKg - a.leanKg };
+    }
+    return {
+      date: latest.date,
+      weightKg,
+      fromScale: latest.source === SCALE_SOURCE,
+      bodyFatPercent,
+      bodyFatFrom: ownFat ? 'profile' : (scaleFat ? 'scale' : null),
+      fatKg: now ? now.fatKg : null,
+      leanKg: now ? now.leanKg : null,
+      change,
+      weightKgChange30: recent.length > 1 ? weightKg - getKg(recent[0]) : null,
+      fatSeries: withFat.map((e) => e.bodyFatPercent),
+      weightSeries: recent.map(getKg)
+    };
+  }
+
+  function getBodyAnalysis() {
+    const user = getActiveUsername();
+    const today = getTodayKey();
+    const body = readJson(`activitySyncBody_${user}`, {});
+    const details = readJson('personalDetails', null);
+    return {
+      connected: isConnected(),
+      vitals: isConnected() ? analyzeVitals(body.days || {}, today) : { status: null, metrics: [] },
+      composition: analyzeComposition(
+        readJson(`bodyweightLog_${user}`, []),
+        today,
+        details ? { value: Number(details.bodyFatPercent), source: details.bodyFatSource } : null
+      )
+    };
+  }
+
+  function rerenderBodyConsumers() {
+    try {
+      const doc = globalScope.document;
+      if (doc?.getElementById('bodyTab')?.classList.contains('active')) globalScope.renderBodyHub?.();
+      if (doc?.getElementById('weightTab')?.classList.contains('active')) globalScope.renderWeights?.();
+    } catch (_error) { /* ignore */ }
+  }
+
+  async function fetchAndApplyBody(options = {}) {
+    const force = Boolean(options.force);
+    if (!force && !isConnected()) return null;
+    if (!force && Date.now() - lastBodyFetchedAt < HISTORY_THROTTLE_MS) return null;
+    if (bodyInFlight) return bodyInFlight;
+
+    if (typeof globalScope.getAuthHeaders !== 'function'
+      || typeof globalScope.ensureServerUrl !== 'function'
+      || typeof globalScope.fetchWithTimeout !== 'function') {
+      return null;
+    }
+    const authHeaders = globalScope.getAuthHeaders();
+    if (!authHeaders.Authorization) return null;
+
+    bodyInFlight = (async () => {
+      try {
+        const end = getTodayKey();
+        const start = shiftDate(end, -(BODY_SYNC_DAYS - 1));
+        const res = await globalScope.fetchWithTimeout(
+          `${globalScope.ensureServerUrl()}/api/activity-sync/body?start=${start}&end=${end}`,
+          { headers: authHeaders },
+          12000
+        );
+        const data = await res.json();
+        lastBodyFetchedAt = Date.now();
+        if (!res.ok || !data.success) {
+          const code = data?.error?.code;
+          if (code && code !== 'activity_sync.disabled' && code !== 'activity_sync.not_connected') {
+            console.warn('[ActivitySyncBridge] body fetch failed', code);
+          }
+          return null;
+        }
+        if (data.needsReconnect) setNeedsReconnect(true);
+
+        const user = getActiveUsername();
+        const key = `activitySyncBody_${user}`;
+        const store = readJson(key, {});
+        store.days = store.days || {};
+        (data.days || []).forEach((d) => { if (d?.date) store.days[d.date] = d; });
+        // Keep ~60 days so the 30-day baselines have history to draw on.
+        const keepFrom = shiftDate(end, -60);
+        Object.keys(store.days).forEach((d) => { if (d < keepFrom) delete store.days[d]; });
+        globalScope.localStorage.setItem(key, JSON.stringify(store));
+
+        const pref = typeof globalScope.getBodyweightPreference === 'function'
+          ? globalScope.getBodyweightPreference() : { unit: 'kg' };
+        const logKey = `bodyweightLog_${user}`;
+        const before = readJson(logKey, []);
+        const merged = mergeScaleWeighIns(before, data.weighIns, {
+          start,
+          end,
+          unit: pref?.unit === 'lb' ? 'lb' : 'kg',
+          dismissed: readJson(`weightSyncDismissed_${user}`, [])
+        });
+        if (JSON.stringify(merged) !== JSON.stringify(before)) {
+          globalScope.localStorage.setItem(logKey, JSON.stringify(merged));
+        }
+        applyProfileBodyFat(data.weighIns);
+        rerenderBodyConsumers();
+        return store;
+      } catch (error) {
+        console.warn('[ActivitySyncBridge] body fetch failed', error);
+        return null;
+      } finally {
+        bodyInFlight = null;
+      }
+    })();
+
+    return bodyInFlight;
+  }
+
   if (typeof globalScope.document !== 'undefined') {
     globalScope.document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
@@ -808,6 +1140,7 @@
           fetchAndApplyHistory();
           // After sleep, so the Recovery mission sees last night's sleep too.
           Promise.resolve(sleepInFlight).then(() => fetchAndApplyRecovery());
+          fetchAndApplyBody();
         });
         fetchAndApplyTodaySleep();
       }, 1000);
@@ -820,6 +1153,8 @@
         fetchAndApplyTodaySleep();
       } else if (e.detail?.tab === 'cardioTab') {
         fetchAndApplyCardio();
+      } else if (e.detail?.tab === 'bodyTab' || e.detail?.tab === 'weightTab') {
+        fetchAndApplyBody();
       } else if (e.detail?.tab === 'macroTab') {
         renderTrackerBurn();
         fetchAndApplyTodayActivity();
@@ -852,12 +1187,16 @@
     getRecoverySummaryText,
     getTodayHrv,
     needsReconnect,
+    fetchAndApplyBody,
+    dismissSyncedWeight,
+    getBodyAnalysis,
     isConnected,
     resetConnectionState
   };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { localDateKey, cardioTypeFor, toCardioEntry, mergeSyncedCardio, computeBurnSummary,
-      computeRecoverySummary, recoverySummaryText };
+      computeRecoverySummary, recoverySummaryText,
+      mergeScaleWeighIns, analyzeVitals, analyzeComposition };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

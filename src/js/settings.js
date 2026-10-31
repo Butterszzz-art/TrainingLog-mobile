@@ -890,6 +890,7 @@ function handleActivitySyncOAuthRedirect() {
     window.activitySyncBridge?.fetchAndApplyCardio?.({ force: true });
     window.activitySyncBridge?.fetchAndApplyHistory?.({ force: true });
     window.activitySyncBridge?.fetchAndApplyRecovery?.({ force: true });
+    window.activitySyncBridge?.fetchAndApplyBody?.({ force: true });
   }
 }
 

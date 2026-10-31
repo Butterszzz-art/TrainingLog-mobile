@@ -53,6 +53,8 @@
   const STORES = [
     { name: 'bodyweightLog',    key: u => `bodyweightLog_${u}`,    mode: 'list', idField: 'date' },
     { name: 'bodyMeasurements', key: u => `bodyMeasurements_${u}`, mode: 'list', idField: 'date' },
+    // Dates of smart-scale weigh-ins the user removed (activity-sync-bridge.js).
+    { name: 'weightSyncDismissed', key: u => `weightSyncDismissed_${u}`, mode: 'value' },
     { name: 'cardioLog',        key: u => `cardioLog_${u}`,        mode: 'list' },
     // syncIds of tracker workouts the user removed (activity-sync-bridge.js).
     { name: 'cardioSyncDismissed', key: u => `cardioSyncDismissed_${u}`, mode: 'value' },

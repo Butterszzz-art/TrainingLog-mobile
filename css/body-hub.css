@@ -291,3 +291,59 @@
     border-color: var(--border-hover);
   }
 }
+
+/* ── Body analysis (tracker vitals + smart scale) ───────────
+   Rendered by body-hub.js _analysisCards() from
+   activitySyncBridge.getBodyAnalysis(). */
+
+/* Own grid so an opened tile's gap is filled by the next vital, never by
+   the summary cards below. */
+.body-hub-analysis {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: dense;
+  gap: 10px;
+}
+
+.body-hub-status {
+  cursor: default;
+  border-left: 3px solid var(--primary);
+}
+.body-hub-status--watch { border-left-color: var(--warning-gold, #e0a43a); }
+.body-hub-status--strained { border-left-color: var(--danger-text); }
+.body-hub-status--building { border-left-color: var(--text-faint); }
+.body-hub-status .body-hub-value { font-size: 20px; }
+
+.body-hub-note {
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+.body-hub-vital .body-hub-value { font-size: 21px; }
+
+.body-hub-flag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--danger-text);
+  background: var(--danger-bg, color-mix(in srgb, var(--danger-text) 14%, transparent));
+}
+.body-hub-vital.is-flagged { border-color: color-mix(in srgb, var(--danger-text) 45%, var(--pod-border)); }
+.body-hub-vital.is-flagged .body-hub-spark polyline { stroke: var(--danger-text); }
+.body-hub-vital.is-flagged .body-hub-spark-area { fill: var(--danger-text); }
+
+/* Tap a vital to open its 30-day view and explanation (full width). */
+.body-hub-vital-more { display: none; }
+.body-hub-vital.is-open,
+.body-hub-vital.is-filler { grid-column: 1 / -1; }
+.body-hub-vital.is-open .body-hub-preview { display: none; }
+.body-hub-vital.is-open .body-hub-vital-more {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}

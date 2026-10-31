@@ -14397,7 +14397,11 @@ function renderWeights() {
     const weightDisplay = converted !== null && converted !== undefined
       ? `${converted} ${displayUnit}`
       : '-';
-    body.innerHTML += `<tr><td title="${entry.date}">${formatWeightLogDate(entry.date)}</td><td><strong>${weightDisplay}</strong></td><td>${entry.calories ?? '—'}</td><td>${entry.cardio != null ? entry.cardio + ' min' : '—'}</td><td><button onclick="removeWeightEntry(${index})" class="wt-del-btn" title="Remove"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`;
+    // Smart-scale weigh-ins (activity-sync-bridge.js) carry a small tag, plus
+    // body fat when the scale measured it.
+    const fatNote = Number(entry.bodyFatPercent) > 0 ? ` <small class="wt-bf">${Number(entry.bodyFatPercent).toFixed(1)}%</small>` : '';
+    const syncNote = entry.source === 'activity-sync' ? ' <small class="wt-synced" title="From your smart scale">Synced</small>' : '';
+    body.innerHTML += `<tr><td title="${entry.date}">${formatWeightLogDate(entry.date)}</td><td><strong>${weightDisplay}</strong>${fatNote}${syncNote}</td><td>${entry.calories ?? '—'}</td><td>${entry.cardio != null ? entry.cardio + ' min' : '—'}</td><td><button onclick="removeWeightEntry(${index})" class="wt-del-btn" title="Remove"><span class="ui-icon">${ICONS.x}</span></button></td></tr>`;
   });
   if (document.getElementById('progressTab').classList.contains('active')) {
     const isBodyweightActive = document.getElementById('bodyweightProgressBtn')?.classList.contains('active');
@@ -14640,6 +14644,8 @@ window.renderBwMonthlyHistory = renderBwMonthlyHistory;
 
 function removeWeightEntry(index) {
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
+  // A smart-scale weigh-in the user removed isn't added back on the next sync.
+  window.activitySyncBridge?.dismissSyncedWeight?.(log[index]);
   log.splice(index, 1);
   localStorage.setItem(`bodyweightLog_${currentUser}`, JSON.stringify(log));
   renderWeights();

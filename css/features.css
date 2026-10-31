@@ -2272,6 +2272,18 @@ button.food-search-item {
   transition: color 0.15s, background 0.15s;
 }
 .wt-del-btn:hover { color: var(--danger-text); background: var(--danger-bg); }
+/* Weight log: body fat and "Synced" tag for smart-scale weigh-ins */
+.wt-bf { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.wt-synced {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--primary-text);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
 
 /* ── Calorie estimator ── */
 .wt-estimator-section {
