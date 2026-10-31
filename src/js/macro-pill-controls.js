@@ -2,7 +2,8 @@
 // MACRO PILL CONTROLS
 // Progressive-enhancement layer for the Macros tab redesign: turns
 // a handful of native <select>/checkbox-driven bits of UI (Carb
-// Day, Macro Preset, Sex and Activity Level)
+// Day, Macro Preset (goal + rate; applied by the Calculate button), Sex and
+// Activity Level)
 // into tappable segmented pills / chips, while the real <select> or
 // <input> stays in the DOM (visually hidden via .macro-seg-hidden)
 // so every existing read/save/validation code path — presetMap,
@@ -51,13 +52,24 @@
     return `${goal}-${rate}`;
   }
 
+  // Picking a goal/rate only chooses it; the "Calculate targets" button
+  // (calculateTargetsNow in index.html) works the targets out and saves
+  // them. Picking used to calculate straight away, but only when the
+  // choice changed, so new body stats with the same goal never applied.
   function applyMacroPresetFromForm() {
     const key = currentPresetKeyFromForm();
     const select = document.getElementById('macroPreset');
     if (!key || !select) return;
     select.value = key;
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    const btn = document.getElementById('macroCalcBtn');
+    if (btn) btn.classList.add('is-ready');
   }
+
+  // The preset the Calculate button should use: the picked pills, else the
+  // last one used, else Maintain.
+  window.currentMacroPresetKey = function currentMacroPresetKey() {
+    return currentPresetKeyFromForm() || document.getElementById('macroPreset')?.value || 'maintain';
+  };
 
   window.selectMacroGoal = function selectMacroGoal(btn) {
     document.querySelectorAll('#macroGoalSegRow .macro-seg-btn').forEach((b) => b.classList.toggle('active', b === btn));

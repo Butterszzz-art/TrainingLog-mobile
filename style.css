@@ -1358,6 +1358,28 @@ body.theme-dark .set-row {
 }
 
 .macro-savebar .macro-save-btn { width: auto; flex: none; margin-top: 0; padding: 10px 20px; }
+.macro-savebar { flex-wrap: wrap; }
+
+/* "Calculate targets" (calculateTargetsNow in index.html) */
+.macro-save-btn.macro-calc-secondary {
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  box-shadow: none;
+}
+#macroCalcBtn { margin-top: 12px; }
+/* A goal or rate was picked but not calculated yet. */
+#macroCalcBtn.is-ready { box-shadow: 0 0 0 2px var(--primary); }
+.macro-calc-result {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-row, rgba(255, 255, 255, 0.12));
+  background: var(--surface-recessed, rgba(255, 255, 255, 0.04));
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text-primary, #f4f7f5);
+}
 
 .macro-saved-chip {
   font-family: var(--font-label);
