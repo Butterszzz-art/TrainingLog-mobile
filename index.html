@@ -1062,10 +1062,11 @@
                 <div class="ql-label">
                   Weight
                   <button type="button" class="ql-unit-toggle" id="qlUnitLabel" onclick="if(typeof toggleQuickLogUnit==='function') toggleQuickLogUnit();" aria-label="Switch weight unit between kg and lbs">kg</button>
+                  <button type="button" class="ql-plates-btn" onclick="if(typeof openQuickLogWeightSheet==='function') openQuickLogWeightSheet();" aria-label="Add plates">Plates</button>
                 </div>
                 <div class="ql-stepper">
                   <button type="button" class="ql-step" onclick="quickLogStep('weight',-1)" aria-label="Decrease weight">−</button>
-                  <span class="ql-val ql-val--tap" id="qlWeightVal" role="button" tabindex="0" title="Tap to enter weight or add plates" onclick="if(typeof openQuickLogWeightSheet==='function') openQuickLogWeightSheet();" onkeydown="if((event.key==='Enter'||event.key===' ')&&typeof openQuickLogWeightSheet==='function'){event.preventDefault();openQuickLogWeightSheet();}">—</span>
+                  <input type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" class="ql-val ql-val-input" id="qlWeightVal" placeholder="—" aria-label="Weight" onfocus="this.select()" oninput="if(typeof quickLogTyped==='function') quickLogTyped('weight', this.value);" onblur="if(typeof quickLogTypedDone==='function') quickLogTypedDone();" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
                   <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('weight',1)" aria-label="Increase weight">+</button>
                 </div>
               </div>
@@ -1073,7 +1074,7 @@
                 <div class="ql-label">Reps</div>
                 <div class="ql-stepper">
                   <button type="button" class="ql-step" onclick="quickLogStep('reps',-1)" aria-label="Decrease reps">−</button>
-                  <span class="ql-val" id="qlRepsVal">—</span>
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" class="ql-val ql-val-input" id="qlRepsVal" placeholder="—" aria-label="Reps" onfocus="this.select()" oninput="if(typeof quickLogTyped==='function') quickLogTyped('reps', this.value);" onblur="if(typeof quickLogTypedDone==='function') quickLogTypedDone();" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
                   <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('reps',1)" aria-label="Increase reps">+</button>
                 </div>
               </div>
@@ -1107,7 +1108,7 @@
                   <div class="ql-label">Left reps</div>
                   <div class="ql-stepper">
                     <button type="button" class="ql-step" onclick="quickLogStep('repsLeft',-1)" aria-label="Decrease left reps">−</button>
-                    <span class="ql-val" id="qlRepsLeftVal">—</span>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" class="ql-val ql-val-input" id="qlRepsLeftVal" placeholder="—" aria-label="Left reps" onfocus="this.select()" oninput="if(typeof quickLogTyped==='function') quickLogTyped('repsLeft', this.value);" onblur="if(typeof quickLogTypedDone==='function') quickLogTypedDone();" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
                     <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('repsLeft',1)" aria-label="Increase left reps">+</button>
                   </div>
                 </div>
@@ -1115,7 +1116,7 @@
                   <div class="ql-label">Right reps</div>
                   <div class="ql-stepper">
                     <button type="button" class="ql-step" onclick="quickLogStep('repsRight',-1)" aria-label="Decrease right reps">−</button>
-                    <span class="ql-val" id="qlRepsRightVal">—</span>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" class="ql-val ql-val-input" id="qlRepsRightVal" placeholder="—" aria-label="Right reps" onfocus="this.select()" oninput="if(typeof quickLogTyped==='function') quickLogTyped('repsRight', this.value);" onblur="if(typeof quickLogTypedDone==='function') quickLogTypedDone();" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
                     <button type="button" class="ql-step ql-step--plus" onclick="quickLogStep('repsRight',1)" aria-label="Increase right reps">+</button>
                   </div>
                 </div>
@@ -5974,15 +5975,36 @@ function addNewSet() {
   if (typeof refreshLogButtonLabel === 'function') refreshLogButtonLabel();
 }
 
+// −/+ on an extra set row: reps by 1, weight by 2.5 (5 from 100 up),
+// same steps as the single-set steppers. Typing still works directly.
+function stepSetField(id, delta) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isWeight = id.startsWith('weight_');
+  const cur = parseFloat(el.value);
+  const base = Number.isFinite(cur) ? cur : 0;
+  const step = isWeight ? (base >= 100 ? 5 : 2.5) : 1;
+  el.value = Math.max(0, Math.round((base + delta * step) * 10) / 10);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 function getSetInputHTML(i) {
   return `
     <div class="set-input-row">
       <label class="set-input-label">Set ${i + 1}</label>
       <div class="set-input-reps-wrap">
-        <input type="number" id="reps_${i}" placeholder="Reps" class="set-input-reps" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
+        <div class="set-mini-stepper">
+          <button type="button" class="set-mini-step" onclick="stepSetField('reps_${i}', -1)" aria-label="Decrease reps">−</button>
+          <input type="number" inputmode="numeric" id="reps_${i}" placeholder="Reps" class="set-input-reps" onfocus="this.select()" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
+          <button type="button" class="set-mini-step set-mini-step--plus" onclick="stepSetField('reps_${i}', 1)" aria-label="Increase reps">+</button>
+        </div>
         <span id="repsLabel_${i}" class="set-input-reps-note"></span>
       </div>
-      <input type="number" id="weight_${i}" placeholder="Weight" class="set-input-weight" oninput="updateAddButtonState()" />
+      <div class="set-mini-stepper">
+        <button type="button" class="set-mini-step" onclick="stepSetField('weight_${i}', -1)" aria-label="Decrease weight">−</button>
+        <input type="number" inputmode="decimal" step="0.5" id="weight_${i}" placeholder="Weight" class="set-input-weight" onfocus="this.select()" oninput="updateAddButtonState()" />
+        <button type="button" class="set-mini-step set-mini-step--plus" onclick="stepSetField('weight_${i}', 1)" aria-label="Increase weight">+</button>
+      </div>
       <button type="button" onclick="openPlateCalculator(${i})" class="set-plate-btn" title="Plate calculator"><span class="ui-icon">${ICONS.dumbbell}</span></button>
       <div class="role-segment" role="group" aria-label="Set role">
         <label class="role-segment-opt" title="Top Set — your main set for this exercise, used for PR/progress tracking"><input type="checkbox" id="topSet_${i}" onchange="toggleSetRole(${i}, 'top')" /><span>Top</span></label>

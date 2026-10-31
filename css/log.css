@@ -242,6 +242,51 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Stepper value is a real input: tap it to type on the number keyboard,
+   or use −/+ either side. */
+.ql-field { min-width: 0; }
+/* Weight and reps stack as two full-width steppers so the typed value
+   (e.g. "102.5") has room next to the −/+ buttons on a phone. The L/R
+   left/right reps row stays side by side. */
+.ql-row:not(.ql-sides-row) { flex-direction: column; gap: 8px; }
+.ql-label { display: flex; align-items: center; white-space: nowrap; min-height: 20px; }
+.ql-val-input {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 0;
+  text-align: center;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  border-radius: 10px;
+  -webkit-appearance: none;
+  appearance: none;
+  caret-color: var(--green-50, #5fa87e);
+}
+.ql-val-input::placeholder { color: var(--text-muted); opacity: 1; }
+.ql-val-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* "Plates" chip next to the Weight label — opens the plate quick-add sheet */
+.ql-plates-btn {
+  border: 1px solid rgba(var(--acc-4a8466), 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-label);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  margin-left: 4px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
 /* Weight value is tappable — opens the plate/keypad entry sheet */
 .ql-val--tap {
   cursor: pointer;
@@ -898,8 +943,54 @@
   gap: 4px;
 }
 
-.set-input-reps { width: 72px; }
-.set-input-weight { width: 90px; }
+.set-input-reps { width: 52px; }
+.set-input-weight { width: 64px; }
+
+/* −/+ around each extra set row's reps/weight — typing still works */
+.set-mini-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+#setInputsContainer .set-mini-stepper input {
+  flex: none;
+  width: 52px;
+  min-width: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+#setInputsContainer .set-mini-stepper .set-input-weight { width: 66px; }
+.set-mini-stepper input::-webkit-outer-spin-button,
+.set-mini-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.set-mini-step {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--secondary-text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+}
+/* 40px touch target around the 32px circle */
+.set-mini-step::before { content: ''; position: absolute; inset: -4px; }
+.set-mini-step--plus {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--green-60), var(--green-50));
+  color: var(--pill-text-active);
+}
 
 .set-input-reps-note {
   font-size: 0.72rem;
