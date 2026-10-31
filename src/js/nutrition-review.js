@@ -275,6 +275,53 @@
   }
   window.renderNutritionInsightsCard = renderInsightsCard;
 
-  document.addEventListener('DOMContentLoaded', () => setTimeout(renderMacrosRow, 1800));
-  window.addEventListener('cloudsync:applied', () => { renderMacrosRow(); });
+  /* ── Macros > Adjust: advised maintenance (everyone) ─────── */
+  // 4-week average of logged calories, corrected for the weight trend
+  // over the same 4 weeks. Replaces the old Body tab calorie estimator.
+
+  function renderMaintenanceCard() {
+    const el = document.getElementById('macroMaintenanceCard');
+    if (!el || !NI()) return;
+    const u = user();
+    if (!u) { el.innerHTML = ''; el.hidden = true; return; }
+    el.hidden = false;
+    const i = inputs(u);
+    const end = today();
+    const m = NI().estimateMaintenance({ days: i.days, weights: i.weights, end });
+    const head = '<span class="ni-lbl">Advised maintenance · last 4 weeks</span>';
+    if (!m) {
+      const from = NI().addDays(end, -27);
+      const logged = i.days.filter(d => d.date >= from && d.date <= end && d.kcal > 0).length;
+      const weighIns = i.weights.filter(w => w.date >= from && w.date <= end).length;
+      el.innerHTML = `${head}
+        <p class="mm-empty">Log your food and weigh in over a couple of weeks and we'll work out your maintenance from what you ate and what the scale did.</p>
+        <p class="ni-sub">So far (last 4 weeks): ${Math.min(logged, 10)}/10 days of calories · ${Math.min(weighIns, 3)}/3 weigh-ins, spread over 10+ days.</p>`;
+      return;
+    }
+    const tgt = i.target && Number(i.target.calories);
+    const trend = m.kgPerWeek === 0 ? 'steady weight' : `${m.kgPerWeek > 0 ? '+' : ''}${m.kgPerWeek} kg/week`;
+    const vsTarget = tgt
+      ? ` Your ${fmt(tgt)} kcal target is ${Math.abs(m.kcal - tgt) < 60 ? 'right at it' : `${fmt(Math.abs(m.kcal - tgt))} kcal ${m.kcal > tgt ? 'below' : 'above'} it`}.`
+      : '';
+    const chip = (label, kcal) => `<button type="button" class="mm-chip" data-mm-kcal="${kcal}"><span>${esc(label)}</span><b class="mx-num">${fmt(kcal)}</b></button>`;
+    el.innerHTML = `${head}
+      <b class="ni-big mm-big">~${fmt(m.kcal)} kcal/day</b>
+      <p class="ni-sub">You averaged ${fmt(m.avgIntake)} kcal over ${m.loggedDays} logged days with ${trend} (${m.weighIns} weigh-ins)${m.confidence === 'rough' ? '. Rough estimate, gets sharper with more data' : ''}.${vsTarget}</p>
+      <div class="mm-chips">${chip('Cut', m.kcal - 500)}${chip('Maintain', m.kcal)}${chip('Bulk', m.kcal + 300)}</div>
+      <p class="ni-sub mm-hint">Tap one to put it in "Or set exact calories" below.</p>`;
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('#macroMaintenanceCard [data-mm-kcal]');
+    if (!btn) return;
+    const input = document.getElementById('customCalories');
+    if (!input) return;
+    input.value = btn.dataset.mmKcal;
+    input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    input.focus({ preventScroll: true });
+  });
+  window.renderMacroMaintenanceCard = renderMaintenanceCard;
+
+  document.addEventListener('DOMContentLoaded', () => setTimeout(() => { renderMacrosRow(); renderMaintenanceCard(); }, 1800));
+  window.addEventListener('cloudsync:applied', () => { renderMacrosRow(); renderMaintenanceCard(); });
 })();

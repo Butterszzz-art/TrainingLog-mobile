@@ -1543,22 +1543,6 @@
         </div>
       </div>
 
-      <!-- ── Calorie estimator (collapsible) ── -->
-      <details class="wt-estimator-section">
-        <summary class="wt-estimator-summary"><span class="ui-icon" data-icon="gauge"></span> Calorie estimator</summary>
-        <div class="wt-estimator-body">
-          <p class="wt-estimator-hint">Enter your average daily calories to estimate your maintenance based on your logged weight trend. Requires 7+ days of data.</p>
-          <div class="wt-estimator-row">
-            <input type="number" id="avgCalories" class="wt-input"
-              placeholder="Avg daily calories" min="500" max="10000" />
-            <button class="wt-estimate-btn" onclick="estimateCalories()">Estimate</button>
-          </div>
-          <table class="wt-estimate-table">
-            <thead><tr><th>Scenario</th><th>Calories</th></tr></thead>
-            <tbody id="calorieEstimateTable"></tbody>
-          </table>
-        </div>
-      </details>
 
     </div><!-- /#weightLogPanel -->
 
@@ -3285,6 +3269,8 @@
         <div class="macros-adjust-header">
           <h2 class="macros-adjust-title">Adjust Macros</h2>
         </div>
+
+        <div id="macroMaintenanceCard" class="pod mm-card" aria-live="polite"></div>
 
         <div id="adjustMacroSection" class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card">
@@ -11024,6 +11010,10 @@ function showMacroSubTab(key) {
     view.classList.toggle('is-hidden', view.dataset.macroView !== targetKey);
   });
 
+  if (targetKey === 'adjust' && typeof window.renderMacroMaintenanceCard === 'function') {
+    window.renderMacroMaintenanceCard();
+  }
+
   try {
     localStorage.setItem('macros:lastSubTab', targetKey);
   } catch (e) {
@@ -14678,25 +14668,6 @@ function removeWeightEntry(index) {
   renderWeights();
 }
 
-function estimateCalories() {
-  const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  const avgCals = +document.getElementById("avgCalories").value;
-  if (log.length < 7) return alert("Need at least 7 days of weight entries.");
-  const startWeight = getEntryWeightKg(log[0]);
-  const endWeight = getEntryWeightKg(log[log.length - 1]);
-  if (startWeight === null || endWeight === null) {
-    return alert("Unable to calculate because some entries are missing weight values.");
-  }
-  const weightDiff = startWeight - endWeight;
-  const caloriesBurned = weightDiff * 7700;
-  const maintenance = Math.round(avgCals + (caloriesBurned / log.length));
-  document.getElementById("calorieEstimateTable").innerHTML = `
-    <tr><td>Maintenance</td><td>${maintenance} kcal</td></tr>
-    <tr><td>Lose (−500)</td><td>${maintenance - 500} kcal</td></tr>
-    <tr><td>Gain (+500)</td><td>${maintenance + 500} kcal</td></tr>
-  `;
-}
-
 function calculateCaloriesEquation() {
   const weight = +document.getElementById('calcWeight').value;
   const height = +document.getElementById('calcHeight').value;
@@ -18331,7 +18302,6 @@ window.addLogEntry = addLogEntry;
 window.completeWorkout = completeWorkout;
 window.addWeightEntry = addWeightEntry;
 window.toggleBodyweightUnit = toggleBodyweightUnit;
-window.estimateCalories = estimateCalories;
 window.addCardioEntry = addCardioEntry;
 window.completeCardioSession = completeCardioSession;
 window.loadSelectedTemplate = loadSelectedTemplate;
