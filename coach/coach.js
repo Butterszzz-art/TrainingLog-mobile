@@ -864,18 +864,69 @@ function defaultLeadFor(c, planLeadId) {
   return matches.length === 1 ? matches[0].id : '';
 }
 
+// An intake that never became a lead (e.g. a ClientIntake export such as
+// gael-intake.json) can be loaded from a file. It's sent with the plan
+// request (the plans API takes `intake` instead of `leadId`) and kept in
+// memory only: it holds health data, so it isn't written to localStorage.
+const INTAKE_FILE = '__file';
+const CHOOSE_INTAKE_FILE = '__choose_file';
+let _planIntakeFile = null; // { clientId, name, intake, instellingen }
+
+/** A ClientIntake export ({ client: { intake, instellingen } }), { intake, instellingen }, or a bare intake. */
+function parseIntakeFile(text) {
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error('That file isn’t JSON. Export the intake from ClientIntake as .json.'); }
+  const src = data && data.client && data.client.intake ? data.client : data;
+  const intake = src && src.intake ? src.intake : src;
+  const p = intake && intake.persoonsgegevens;
+  if (!p || typeof p.gewicht !== 'number' || typeof p.vetpercentage !== 'number') {
+    throw new Error('No intake found in that file (it needs persoonsgegevens with gewicht and vetpercentage).');
+  }
+  const instellingen = src && src.instellingen && typeof src.instellingen === 'object' ? src.instellingen : {};
+  return { intake, instellingen, naam: p.naam || (src && src.naam) || '' };
+}
+
 function leadOptionsHtml(c, selected) {
   const shown = _leads.filter(l => l.status !== 'dismissed' || l.id === selected)
     .sort((a, b) => (leadMatchesClient(b, c) - leadMatchesClient(a, c)) || String(a.naam || '').localeCompare(String(b.naam || '')));
-  if (!shown.length) return '<option value="">No intake leads</option>';
+  const file = _planIntakeFile && _planIntakeFile.clientId === c.id ? _planIntakeFile : null;
   return '<option value="">— Choose ' + escapeHtml(c.clientName || 'the client') + '’s intake —</option>'
+    + (file ? '<option value="' + INTAKE_FILE + '"' + (selected === INTAKE_FILE ? ' selected' : '') + '>From file: ' + escapeHtml(file.name) + '</option>' : '')
     + shown.map(l => '<option value="' + escapeHtml(l.id) + '"' + (l.id === selected ? ' selected' : '') + '>'
       + escapeHtml(l.naam || 'Unnamed') + (l.intake?.persoonsgegevens?.email ? ' · ' + escapeHtml(l.intake.persoonsgegevens.email) : '')
-      + (l.status === 'converted' ? ' (converted)' : '') + '</option>').join('');
+      + (l.status === 'converted' ? ' (converted)' : '') + '</option>').join('')
+    + '<option value="' + CHOOSE_INTAKE_FILE + '">Use intake file (.json)…</option>';
 }
 
 function rememberPlanLead(sel) {
+  if (sel.value === CHOOSE_INTAKE_FILE) {
+    sel.value = _planIntakeFile && _planIntakeFile.clientId === _planState.clientId ? INTAKE_FILE : '';
+    chooseIntakeFile();
+    return;
+  }
+  if (sel.value === INTAKE_FILE) return;
   try { if (_planState.clientId) localStorage.setItem(planLeadKey(_planState.clientId), sel.value); } catch { /* storage blocked */ }
+}
+
+function chooseIntakeFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      const parsed = parseIntakeFile(await file.text());
+      _planIntakeFile = { clientId: _planState.clientId, name: parsed.naam ? parsed.naam + ' (' + file.name + ')' : file.name, intake: parsed.intake, instellingen: parsed.instellingen };
+      const client = _clients.find(x => x.id === _planState.clientId);
+      const sel = document.getElementById('planLead');
+      if (sel && client) sel.innerHTML = leadOptionsHtml(client, INTAKE_FILE);
+      planMsg('Intake loaded from ' + file.name + '. Preview or Save as draft builds the plan from it.');
+    } catch (err) {
+      planMsg(err.message);
+    }
+  });
+  input.click();
 }
 
 function masterPlanCard(c) {
@@ -910,9 +961,12 @@ function planMsg(text) {
 }
 
 function planFormBody(clientId) {
+  const lead = document.getElementById('planLead')?.value || '';
+  const file = lead === INTAKE_FILE && _planIntakeFile && _planIntakeFile.clientId === clientId ? _planIntakeFile : null;
   return {
     clientUid: clientId,
-    leadId: document.getElementById('planLead')?.value || undefined,
+    leadId: file || lead === CHOOSE_INTAKE_FILE ? undefined : (lead || undefined),
+    ...(file ? { intake: file.intake, instellingen: file.instellingen } : {}),
     packageId: document.getElementById('planPackage')?.value,
     startDate: document.getElementById('planStart')?.value,
     tier: document.getElementById('planTier')?.value,
@@ -998,8 +1052,9 @@ async function openMasterPlan(planId) {
 }
 
 function needsLead() {
-  if (document.getElementById('planLead')?.value) return false;
-  planMsg('Choose the client’s intake first, or use Start blank (no intake).');
+  const v = document.getElementById('planLead')?.value;
+  if (v && v !== CHOOSE_INTAKE_FILE && (v !== INTAKE_FILE || _planIntakeFile)) return false;
+  planMsg('Choose the client’s intake (a lead, or Use intake file…) first, or use Start blank (no intake).');
   document.getElementById('planLead')?.focus();
   return true;
 }
