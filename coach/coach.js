@@ -776,20 +776,21 @@ async function loadPrograms() {
   return _programs;
 }
 
-function formatExercise(ex) {
-  if (typeof ex === 'string') return ex + ' 3x10';
-  return ex.name + ' ' + ex.sets + 'x' + ex.reps + (ex.repsMax ? '-' + ex.repsMax : '');
+// Library entry → "X-frame (4 wk · 4 days)". Programs come back from the
+// server as pocketcoach.program/2 (src/js/program-model.js).
+function programLabel(p) {
+  const s = window.ProgramModel.stats(window.ProgramModel.readProgram(p) || { weeks: [] });
+  return p.name + ' (' + s.weekCount + ' wk · ' + s.dayCount + ' day' + (s.dayCount === 1 ? '' : 's') + ')';
 }
 
-// One exercise per line: "Squat 4x6-8" (sets×reps optional, defaults 3x10).
-function parseDayLines(text) {
-  return String(text || '').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
-    const m = line.match(/^(.*?)\s+(\d{1,2})\s*[x×]\s*(\d{1,3})(?:\s*-\s*(\d{1,3}))?$/i);
-    if (!m) return { name: line.slice(0, 80), sets: 3, reps: 10 };
-    const ex = { name: m[1].trim().slice(0, 80), sets: Number(m[2]), reps: Number(m[3]) };
-    if (m[4] && Number(m[4]) > ex.reps) ex.repsMax = Number(m[4]);
-    return ex;
-  });
+// One week of a program as weekday rows: "Mon · Lower A — Hack squat 2×6–10 · RIR 3 …".
+function programWeekPreview(program, week) {
+  const M = window.ProgramModel;
+  const p = M.readProgram(program);
+  if (!p) return '';
+  return M.weekDays(p, week).map(d =>
+    '<div class="checkin-score-row"><span class="checkin-score-label">' + escapeHtml((d.weekday ? M.WEEKDAYS[d.weekday - 1] : '—') + ' · ' + d.label) + '</span>'
+    + '<span class="checkin-score-val" style="text-align:left;flex:1;">' + escapeHtml(d.exercises.map(M.formatRow).join(' · ')) + '</span></div>').join('');
 }
 
 function renderProgram(c) {
@@ -800,13 +801,12 @@ function renderProgram(c) {
   }
   const current = _programs.find(p => p.id === c.currentProgramId);
   const options = '<option value="">— Choose a program —</option>' + _programs.map(p =>
-    '<option value="' + escapeHtml(p.id) + '"' + (p.id === c.currentProgramId ? ' selected' : '') + '>' + escapeHtml(p.name) + ' (' + (p.exerciseCount || 0) + ' exercises)</option>'
+    '<option value="' + escapeHtml(p.id) + '"' + (p.id === c.currentProgramId ? ' selected' : '') + '>' + escapeHtml(programLabel(p)) + '</option>'
   ).join('');
 
+  const weeks = current ? window.ProgramModel.stats(window.ProgramModel.readProgram(current) || { weeks: [] }).weekCount : 0;
   const preview = current
-    ? WEEKDAYS.filter(d => (current.days?.[d] || []).length).map(d =>
-        '<div class="checkin-score-row"><span class="checkin-score-label">' + d + '</span><span class="checkin-score-val" style="text-align:left;flex:1;">'
-        + escapeHtml((current.days[d] || []).map(formatExercise).join(' · ')) + '</span></div>').join('')
+    ? (weeks > 1 ? '<p class="ws-empty-note">' + weeks + ' weeks · week 1 shown</p>' : '') + programWeekPreview(current, 1)
     : '<p class="ws-empty-note">' + (c.currentProgram ? escapeHtml(c.currentProgram) + ' (no longer in your library)' : 'No program assigned.') + '</p>';
 
   el.innerHTML = masterPlanCard(c)
@@ -815,6 +815,7 @@ function renderProgram(c) {
     + '<div class="detail-breadcrumb-actions" style="margin-top:10px;">'
     + '<button class="bulk-action-btn" onclick="assignProgram()">Assign</button>'
     + (c.currentProgramId ? '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="unassignProgram()">Remove</button>' : '')
+    + '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="editSelectedProgram()">Edit selected</button>'
     + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="showProgramBuilder()">+ New program</button>'
     + '</div>'
     + '<div id="programBuilderArea" style="margin-top:12px;"></div></div>'
@@ -1074,43 +1075,44 @@ async function unassignProgram() {
   renderProgram(client);
 }
 
+// Builder (coach/program-builder.js): week tabs, day cards, row fields,
+// copy week → next, quick entry. `program` is a library entry to edit, or
+// none for a new one (one empty Monday to start from).
 function showProgramBuilder(program) {
   const area = document.getElementById('programBuilderArea');
-  if (!area) return;
-  const p = program || { name: '', days: {} };
-  area.innerHTML = '<div class="coach-builder">'
-    + '<input type="text" id="newProgName" class="coach-input" placeholder="Program name" maxlength="80" value="' + escapeHtml(p.name) + '">'
-    + '<p class="ws-empty-note">One exercise per line, e.g. <code>Squat 4x6-8</code>. Leave a day empty for rest.</p>'
-    + '<div class="coach-builder-days">'
-    + WEEKDAYS.map(d => '<label class="coach-builder-day"><span>' + d + '</span><textarea id="newProgDay_' + d + '" rows="4" class="coach-input">'
-      + escapeHtml((p.days?.[d] || []).map(formatExercise).join('\n')) + '</textarea></label>').join('')
-    + '</div>'
-    + '<button class="bulk-action-btn" onclick="saveCoachProgram()">Save to library</button>'
-    + '</div>';
-  document.getElementById('newProgName')?.focus();
+  if (!area || !window.ProgramBuilder) return;
+  const id = program?.id || ('prog_' + Date.now().toString(36));
+  const start = program || { schema: 'pocketcoach.program/2', name: 'New program', weeks: [{ days: [{ dayId: 'd1', weekday: 1, label: 'Day 1', exercises: [] }] }] };
+  window.ProgramBuilder.mount(area, start, {
+    onSave: v2 => saveCoachProgram(id, v2),
+    onCancel: () => { area.innerHTML = ''; },
+  });
+  area.querySelector('[data-pf="name"]')?.focus();
 }
 
-async function saveCoachProgram() {
-  const name = document.getElementById('newProgName')?.value?.trim();
-  if (!name) { alert('Enter a program name.'); return; }
-  const days = {};
-  let total = 0;
-  WEEKDAYS.forEach(d => { days[d] = parseDayLines(document.getElementById('newProgDay_' + d)?.value); total += days[d].length; });
-  if (!total) { alert('Add at least one exercise.'); return; }
-  const id = 'prog_' + Date.now().toString(36);
+function editSelectedProgram() {
+  const id = document.getElementById('coachProgramSelect')?.value;
+  const program = _programs.find(p => p.id === id);
+  if (!program) { alert('Choose a program to edit first.'); return; }
+  showProgramBuilder(program);
+}
+
+// Saves a program/2 to the library. Throws on failure (the builder shows it).
+async function saveCoachProgram(id, program) {
+  let data;
   try {
-    const res = await coachFetch(SERVER_URL + '/api/coach/programs/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ name, days }) });
-    const data = await res.json();
-    if (!res.ok || !data.success) { alert(data?.error?.message || 'Could not save.'); return; }
-  } catch {
-    alert('Connection error — try again.');
-    return;
+    const res = await coachFetch(SERVER_URL + '/api/coach/programs/' + encodeURIComponent(id), { method: 'PUT', headers: authHeaders(), body: JSON.stringify(program) });
+    data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Could not save.');
+  } catch (err) {
+    throw new Error(err.message && err.message !== 'Failed to fetch' ? err.message : 'Connection error — try again.');
   }
   await loadPrograms();
-  const client = _clients.find(c => c.id === _selectedClientId);
-  if (client) renderProgram(client);
   const sel = document.getElementById('coachProgramSelect');
-  if (sel) sel.value = id;
+  if (sel) {
+    sel.innerHTML = '<option value="">— Choose a program —</option>' + _programs.map(p => '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(programLabel(p)) + '</option>').join('');
+    sel.value = id;
+  }
   renderWorkspace();
 }
 
