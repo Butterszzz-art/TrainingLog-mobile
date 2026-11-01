@@ -50,6 +50,16 @@
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
+  // On iPhone with Apple Health connected (apple-health.js), the same
+  // requests are answered on the phone from HealthKit, in the same shapes.
+  function syncFetch(url, options, timeoutMs) {
+    const appleHealth = globalScope.AppleHealth;
+    if (appleHealth && typeof appleHealth.handles === 'function' && appleHealth.handles(url)) {
+      return appleHealth.respond(url);
+    }
+    return globalScope.fetchWithTimeout(url, options, timeoutMs);
+  }
+
   function getTodayKey() {
     return localDateKey();
   }
@@ -236,7 +246,7 @@
     sleepInFlight = (async () => {
       try {
         const goalMinutes = getSleepGoalMinutes();
-        const res = await globalScope.fetchWithTimeout(
+        const res = await syncFetch(
           `${globalScope.ensureServerUrl()}/api/activity-sync/sleep?goalMinutes=${goalMinutes}&date=${getTodayKey()}`,
           { headers: authHeaders },
           8000
@@ -311,7 +321,7 @@
 
     inFlight = (async () => {
       try {
-        const res = await globalScope.fetchWithTimeout(
+        const res = await syncFetch(
           `${globalScope.ensureServerUrl()}/api/activity-sync/activity?date=${getTodayKey()}`,
           { headers: authHeaders },
           8000
@@ -501,7 +511,7 @@
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - (CARDIO_SYNC_DAYS - 1));
         const start = localDateKey(startDate);
-        const res = await globalScope.fetchWithTimeout(
+        const res = await syncFetch(
           `${globalScope.ensureServerUrl()}/api/activity-sync/exercises?start=${start}&end=${end}`,
           { headers: authHeaders },
           10000
@@ -609,7 +619,7 @@
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - BURN_AVERAGE_DAYS);
         const start = localDateKey(startDate);
-        const res = await globalScope.fetchWithTimeout(
+        const res = await syncFetch(
           `${globalScope.ensureServerUrl()}/api/activity-sync/daily?start=${start}&end=${end}`,
           { headers: authHeaders },
           10000
@@ -765,7 +775,7 @@
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - RECOVERY_BASELINE_DAYS);
         const start = localDateKey(startDate);
-        const res = await globalScope.fetchWithTimeout(
+        const res = await syncFetch(
           `${globalScope.ensureServerUrl()}/api/activity-sync/recovery?start=${start}&end=${end}`,
           { headers: authHeaders },
           10000
@@ -1078,7 +1088,7 @@
       try {
         const end = getTodayKey();
         const start = shiftDate(end, -(BODY_SYNC_DAYS - 1));
-        const res = await globalScope.fetchWithTimeout(
+        const res = await syncFetch(
           `${globalScope.ensureServerUrl()}/api/activity-sync/body?start=${start}&end=${end}`,
           { headers: authHeaders },
           12000

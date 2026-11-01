@@ -1,0 +1,12 @@
+{
+  "name": "capacitor-health-kit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Capacitor plugin: reads steps, energy, sleep, heart-rate vitals, weigh-ins, workouts and food totals from Apple Health, and saves lifting workouts and bodyweight to it.",
+  "license": "UNLICENSED",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  }
+}

@@ -76,6 +76,12 @@ export async function stopWorkoutTimerAndSave(optionalMeta = {}) {
   }
 
   const timing = { startTimeISO, endTimeISO, durationMin };
+  // Lets Apple Health (src/js/apple-health.js) save the session.
+  if (typeof document !== 'undefined' && typeof CustomEvent === 'function' && !optionalMeta.autoReason) {
+    document.dispatchEvent(new CustomEvent('tl:workout-finished', {
+      detail: { startTimeMs: active.startTimeMs, endTimeMs, date, durationMin, title: optionalMeta.title || '' }
+    }));
+  }
   const cleanedMeta = _cleanMeta(optionalMeta);
   const payload = {
     date,

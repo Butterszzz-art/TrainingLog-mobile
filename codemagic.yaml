@@ -75,9 +75,17 @@ definitions:
         # (plugins/workout-activity). ActivityKit refuses to start one
         # without this key.
         set_plist NSSupportsLiveActivities bool true
+        # Apple Health (plugins/health-kit). iOS shows these on the permission
+        # sheet and kills the app if they're missing.
+        set_plist NSHealthShareUsageDescription string "Pocket Coach reads your steps, sleep, resting heart rate, HRV, weight, workouts and food from Apple Health to fill in your training log and recovery."
+        set_plist NSHealthUpdateUsageDescription string "Pocket Coach saves your lifting workouts and bodyweight to Apple Health."
         # cap sync can't add an app extension, so this adds the
         # PocketCoachLiveActivity widget target to the generated project.
         ruby scripts/ios/add-live-activity.rb
+        # Entitlements (push, HealthKit, Sign in with Apple) and the
+        # AppDelegate hooks they need.
+        # The App ID must have the same capabilities ticked.
+        ruby scripts/ios/add-capabilities.rb
 
     - &ios_icons
       name: Generate app icon and splash

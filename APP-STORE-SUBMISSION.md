@@ -114,6 +114,43 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     Dynamic Island shows it on iPhone 14 Pro and later. "Rest over" appears when it runs out,
     and ending the workout removes it.
 
+### Push notifications (iPhone/iPad)
+25. Apple Developer → Identifiers → `org.pocketcoachcoms.app`: tick **Push Notifications**, Save.
+    Then fetch the App Store provisioning profile again in Codemagic.
+26. Apple Developer → **Keys** → +: tick **Apple Push Notifications service (APNs)**,
+    download the `.p8` (only once!) and note the Key ID. Backend steps are in
+    `traininglog-backend/PUSH-SETUP.md` (set the `APNS_KEY` secret before deploying).
+27. TestFlight check: open the bell → allow notifications, then have a friend send
+    you a friend request with the app closed. Tapping the banner opens the inbox.
+
+### Apple Health (HealthKit)
+28. Apple Developer → Identifiers → `org.pocketcoachcoms.app`: tick **HealthKit** (no
+    clinical records), Save, then fetch the provisioning profile again in Codemagic.
+29. App Privacy form: add **Health & Fitness → Health** and **Fitness** (linked to the
+    user, not used for tracking). The privacy policy already covers Apple Health.
+30. Review notes: say that Apple Health is optional and lives in Settings → Devices
+    (and the Macros screen for food), and that health data is never used for ads.
+31. TestFlight check: Settings → Devices → Connect Apple Health, allow everything.
+    The step ring, Sleep tab, recovery and weigh-ins should fill in; finish a workout
+    of 5+ minutes and check it shows in the Health app under Workouts.
+
+### Sign in with Apple
+32. Apple Developer → Identifiers → `org.pocketcoachcoms.app`: tick **Sign In with Apple**
+    (Configure → *Enable as a primary App ID*), Save, then fetch the provisioning
+    profile again in Codemagic.
+33. Firebase console → Authentication → Sign-in method → **Add new provider → Apple** →
+    Enable. For the native iPhone sign-in nothing else is needed.
+34. So account deletion can revoke Apple sign-in (Apple requires it), fill in Firebase's
+    Apple provider **OAuth code flow** section:
+    - a **Services ID** (Apple Developer → Identifiers → + → Services IDs, e.g.
+      `org.pocketcoachcoms.app.signin`), with Sign In with Apple enabled;
+    - Team ID `WD37WHSYG7`;
+    - a **Key** with Sign In with Apple ticked (Apple Developer → Keys → +): its Key ID
+      and the `.p8` contents.
+35. TestFlight check: log out → Continue with Apple → pick a username → onboarding.
+    Log out, Continue with Apple again → straight in. Delete the account → in iPhone
+    Settings → Apple Account → Sign in with Apple, Pocket Coach should be gone.
+
 ### Worth fixing before or soon after launch
 - **Reports:** the Terms promise action within 24 hours. Watch the moderation inbox.
 - **`pricing.html`** doesn't match the app's plans (hidden in the native app).
