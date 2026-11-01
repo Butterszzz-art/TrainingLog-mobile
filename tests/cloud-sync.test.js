@@ -314,3 +314,15 @@ describe('check-ins and phase state', () => {
     expect(store('tl_phase_state_v1').key('ana')).toBe('tl_phase_state_v1_ana');
   });
 });
+
+describe('bodyweightLog stays oldest-first after a sync', () => {
+  test('entries arriving out of order are sorted by date', () => {
+    const s = store('bodyweightLog');
+    const raw = JSON.stringify([{ date: '2026-10-30', weight: 80 }]);
+    const next = JSON.parse(applyToStore(s, raw, [
+      { id: '2026-07-26', data: { date: '2026-07-26', weight: 84 } },
+      { id: '2026-11-01', data: { date: '2026-11-01', weight: 79 } },
+    ]));
+    expect(next.map(e => e.date)).toEqual(['2026-07-26', '2026-10-30', '2026-11-01']);
+  });
+});
