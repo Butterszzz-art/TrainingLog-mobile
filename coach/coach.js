@@ -840,14 +840,50 @@ function nextMondayIso() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+// Which intake a client's plan is built from. Leads aren't linked to clients
+// when converted, so pick: the lead this client's plan already came from, the
+// coach's last pick for this client, then a lead whose email or name matches
+// the client. Otherwise nothing is preselected (it used to silently take the
+// first lead in the list).
+const planLeadKey = clientId => 'coachPlanLead_' + clientId;
+
+function leadMatchesClient(l, c) {
+  const norm = s => String(s || '').trim().toLowerCase();
+  const email = norm(l.intake?.persoonsgegevens?.email);
+  const name = norm(l.naam || l.intake?.persoonsgegevens?.naam);
+  return (email && email === norm(c.email)) || (name && name === norm(c.clientName));
+}
+
+function defaultLeadFor(c, planLeadId) {
+  const exists = id => id && _leads.some(l => l.id === id);
+  if (exists(planLeadId)) return planLeadId;
+  let saved = null;
+  try { saved = localStorage.getItem(planLeadKey(c.id)); } catch { /* storage blocked */ }
+  if (exists(saved)) return saved;
+  const matches = _leads.filter(l => l.status !== 'dismissed' && leadMatchesClient(l, c));
+  return matches.length === 1 ? matches[0].id : '';
+}
+
+function leadOptionsHtml(c, selected) {
+  const shown = _leads.filter(l => l.status !== 'dismissed' || l.id === selected)
+    .sort((a, b) => (leadMatchesClient(b, c) - leadMatchesClient(a, c)) || String(a.naam || '').localeCompare(String(b.naam || '')));
+  if (!shown.length) return '<option value="">No intake leads</option>';
+  return '<option value="">— Choose ' + escapeHtml(c.clientName || 'the client') + '’s intake —</option>'
+    + shown.map(l => '<option value="' + escapeHtml(l.id) + '"' + (l.id === selected ? ' selected' : '') + '>'
+      + escapeHtml(l.naam || 'Unnamed') + (l.intake?.persoonsgegevens?.email ? ' · ' + escapeHtml(l.intake.persoonsgegevens.email) : '')
+      + (l.status === 'converted' ? ' (converted)' : '') + '</option>').join('');
+}
+
+function rememberPlanLead(sel) {
+  try { if (_planState.clientId) localStorage.setItem(planLeadKey(_planState.clientId), sel.value); } catch { /* storage blocked */ }
+}
+
 function masterPlanCard(c) {
-  const leadOptions = _leads.length
-    ? _leads.map(l => '<option value="' + escapeHtml(l.id) + '">' + escapeHtml(l.naam || 'Unnamed') + (l.status === 'converted' ? ' (converted)' : '') + '</option>').join('')
-    : '<option value="">No intake leads</option>';
+  const leadOptions = leadOptionsHtml(c, defaultLeadFor(c));
   return '<div class="d-card"><div class="d-card-title">Master Plan</div>'
     + '<div id="planCurrent"><p class="ws-empty-note">Loading plans…</p></div>'
     + '<div class="mp-form">'
-    + '<label class="mp-field"><span class="mp-field-label">Intake</span><select id="planLead" class="mp-input">' + leadOptions + '</select></label>'
+    + '<label class="mp-field"><span class="mp-field-label">Intake</span><select id="planLead" class="mp-input" onchange="rememberPlanLead(this)">' + leadOptions + '</select></label>'
     + '<label class="mp-field"><span class="mp-field-label">Package</span><select id="planPackage" class="mp-input"></select></label>'
     + '<label class="mp-field"><span class="mp-field-label">Start date</span><input id="planStart" type="date" class="mp-input" value="' + nextMondayIso() + '"></label>'
     + '<label class="mp-field"><span class="mp-field-label">Tier</span><select id="planTier" class="mp-input"><option value="basis">Basis</option><option value="medium" selected>Medium</option><option value="premium">Premium</option></select></label>'
@@ -926,6 +962,11 @@ function renderPlanActions(plan) {
 // training/rest-day nutrition, saved as one logged batch with your reason.
 function showPlan(plan) {
   _planState.plan = plan;
+  const leadSel = document.getElementById('planLead');
+  const client = _clients.find(x => x.id === _planState.clientId);
+  if (leadSel && client && plan.client?.leadId && _leads.some(l => l.id === plan.client.leadId)) {
+    leadSel.innerHTML = leadOptionsHtml(client, plan.client.leadId);
+  }
   const area = document.getElementById('planPreviewArea');
   if (!area || !window.PlanPreview) return;
   const saved = plan._saved !== false;
@@ -956,7 +997,15 @@ async function openMasterPlan(planId) {
   showPlan(plan);
 }
 
+function needsLead() {
+  if (document.getElementById('planLead')?.value) return false;
+  planMsg('Choose the client’s intake first, or use Start blank (no intake).');
+  document.getElementById('planLead')?.focus();
+  return true;
+}
+
 async function previewMasterPlan() {
+  if (needsLead()) return;
   planMsg('Generating preview…');
   try {
     const { plan } = await planApi('/preview', { method: 'POST', body: JSON.stringify(planFormBody(_planState.clientId)) });
@@ -966,6 +1015,7 @@ async function previewMasterPlan() {
 }
 
 async function saveMasterPlanDraft(blank) {
+  if (blank !== true && needsLead()) return;
   planMsg('Saving draft…');
   try {
     const body = planFormBody(_planState.clientId);
