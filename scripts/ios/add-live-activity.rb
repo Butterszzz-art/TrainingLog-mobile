@@ -28,7 +28,7 @@ EXT_DIR = File.join(APP_DIR, EXT_NAME)
 SOURCE_DIR = File.join(ROOT, 'native', 'ios', EXT_NAME)
 SHARED_ATTRIBUTES = File.join(ROOT, 'plugins', 'workout-activity', 'ios', 'Sources',
                               'WorkoutActivityPlugin', 'WorkoutActivityAttributes.swift')
-APP_BUNDLE_ID = ENV.fetch('BUNDLE_ID', 'com.pocketcoach.app')
+APP_BUNDLE_ID = ENV.fetch('BUNDLE_ID', 'org.pocketcoachcoms.app')
 EXT_BUNDLE_ID = "#{APP_BUNDLE_ID}.LiveActivity"
 # Activity.request(attributes:content:pushType:) needs iOS 16.2.
 DEPLOYMENT_TARGET = '16.2'
