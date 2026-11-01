@@ -1374,3 +1374,49 @@ select.mp-input { appearance: none; padding-right: 32px; cursor: pointer;
   .mt-week { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .mt-row { grid-template-columns: minmax(70px, 1fr) repeat(3, minmax(48px, 1fr)) 48px; }
 }
+
+/* ── Program builder (coach/program-builder.js) ───────────────────────────
+   Week tabs, day cards and one row per exercise. Sized for a laptop: the row
+   table scrolls sideways inside its card below ~1100px instead of squashing. */
+.pb { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md, 16px); background: var(--surface); }
+.pb-top { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.pb-name { flex: 1 1 280px; }
+.pb-stats, .pb-msg { font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-muted); }
+.pb-notes summary { cursor: pointer; font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-sec); }
+.pb-notes[open] { display: flex; flex-direction: column; gap: 8px; }
+.pb-weekbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.pb-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.pb-tab { min-width: 40px; height: 32px; padding: 0 10px; border-radius: var(--radius-pill, 999px); border: 1px solid var(--border); background: transparent; color: var(--text-sec); cursor: pointer;
+  font-family: var(--font-label); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; }
+.pb-tab.is-active { background: var(--primary); border-color: var(--primary); color: var(--label-on-green, #050c08); }
+.pb-tab.has-warn:not(.is-active) { border-color: var(--highlight); color: var(--highlight); }
+.pb-weekacts { display: flex; gap: 12px; flex-wrap: wrap; }
+.pb-link { background: none; border: 0; padding: 4px 0; cursor: pointer; color: var(--primary-text, var(--primary)); font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; }
+.pb-link--danger { color: var(--danger-text, #e0707f); }
+.pb-warn { padding: 10px 12px; border-radius: var(--radius-sm, 12px); background: var(--warning-bg, rgba(168,124,56,.16)); border: 1px solid var(--warning-border, rgba(168,124,56,.4)); font-size: 0.82rem; color: var(--text); }
+.pb-warn ul { margin: 4px 0 0; padding-left: 18px; }
+.pb-days { display: flex; flex-direction: column; gap: 10px; }
+.pb-day { border: 1px solid var(--border); border-radius: var(--radius-sm, 12px); background: var(--elevated-bg, var(--surface)); padding: 10px; overflow-x: auto; }
+.pb-day.is-warned { border-color: var(--highlight); }
+.pb-day-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.pb-table { width: 100%; min-width: 980px; border-collapse: collapse; }
+.pb-table th { text-align: left; padding: 2px 4px; font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.pb-table td { padding: 2px 4px; vertical-align: middle; }
+.pb-row.is-warned td:first-child { box-shadow: inset 3px 0 0 var(--highlight); }
+.pb-in { box-sizing: border-box; height: 32px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 0.84rem; }
+.pb-in:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(47, 138, 99, 0.25); }
+.pb-in--name { width: 100%; min-width: 280px; }
+.pb-in--num { width: 56px; }
+.pb-in--rest { width: 92px; }
+.pb-in--notes { width: 100%; min-width: 160px; }
+.pb-in--weekday { width: 76px; }
+.pb-in--label { width: 160px; font-weight: 700; }
+.pb-in--focus { width: 200px; }
+.pb-range { white-space: nowrap; }
+.pb-range span { margin: 0 3px; color: var(--text-muted); }
+.pb-row-act { white-space: nowrap; }
+.pb-icon { width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.pb-icon:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+.pb-icon:disabled { opacity: 0.3; cursor: default; }
+.pb-quick { width: 100%; margin-top: 6px; border-style: dashed; }
+.pb-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
