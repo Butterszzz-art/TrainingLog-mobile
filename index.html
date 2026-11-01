@@ -4919,9 +4919,16 @@ var UPGRADE_PLANS = {
   }
 };
 
+// Set once StoreKit has answered (with or without products), so a missing
+// product shows "unavailable" instead of "Loading price…" forever.
+var appleProductsSettled = false;
+
 function upgradePriceHtml(key, billing) {
   var price = planPrice(key, billing);
-  if (!price) return { price: '<span class="upg-per">Loading price…</span>', note: '' };
+  if (!price) {
+    var msg = appleProductsSettled ? 'Price unavailable right now' : 'Loading price…';
+    return { price: '<span class="upg-per">' + msg + '</span>', note: '' };
+  }
   return { price: price.headline + '<span class="upg-per">' + price.per + '</span>', note: price.note };
 }
 
@@ -4953,6 +4960,7 @@ function openUpgradeModal(defaultPlan) {
   var billing = localStorage.getItem('billingCycle') || 'annual';
   var isAnnual = billing === 'annual';
   var apple = usesAppleIAP();
+  appleProductsSettled = false; // a failed load is retried below
 
   var overlay = document.createElement('div');
   overlay.className = 'payment-method-modal';
@@ -4978,7 +4986,10 @@ function openUpgradeModal(defaultPlan) {
     + '<p class="payment-note payment-terms"><a href="terms.html">Terms of Use</a> · <a href="privacy.html">Privacy Policy</a></p>'
     + '</div>';
   document.body.appendChild(overlay);
-  if (apple) window.pocketCoachPayments.loadAppleProducts().then(refreshModalPrices);
+  if (apple) window.pocketCoachPayments.loadAppleProducts().then(function () {
+    appleProductsSettled = true;
+    refreshModalPrices();
+  });
 }
 
 function refreshModalPrices() {
@@ -14487,8 +14498,12 @@ function formatWeightLogDate(isoDate) {
 
 function renderWeights() {
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
-  // Ensure sorted by date ascending
+  // Ensure sorted by date ascending, and store that order: the row indexes
+  // below (used by removeWeightEntry) and every "last entry = latest"
+  // reader rely on it.
+  const storedOrder = JSON.stringify(log);
   log.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (JSON.stringify(log) !== storedOrder) localStorage.setItem(`bodyweightLog_${currentUser}`, JSON.stringify(log));
   const body = document.getElementById("weightBody");
   body.innerHTML = '';
   const pref = getBodyweightPreference();

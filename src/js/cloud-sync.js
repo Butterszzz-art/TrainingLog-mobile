@@ -51,7 +51,9 @@
   //                 the entry's content when missing or not unique).
   //       'value' — the whole stored string syncs as one item.
   const STORES = [
-    { name: 'bodyweightLog',    key: u => `bodyweightLog_${u}`,    mode: 'list', idField: 'date' },
+    // sortByDate: the app reads the last entry as the newest weigh-in, so
+    // keep this list oldest-first whatever order synced entries arrive in.
+    { name: 'bodyweightLog',    key: u => `bodyweightLog_${u}`,    mode: 'list', idField: 'date', sortByDate: true },
     { name: 'bodyMeasurements', key: u => `bodyMeasurements_${u}`, mode: 'list', idField: 'date' },
     // Dates of smart-scale weigh-ins the user removed (activity-sync-bridge.js).
     { name: 'weightSyncDismissed', key: u => `weightSyncDismissed_${u}`, mode: 'value' },
@@ -206,6 +208,7 @@
     });
     const kept = list.filter((_, i) => !removed.has(i));
     additions.forEach(entry => insertByDate(kept, entry));
+    if (store.sortByDate) kept.sort((a, b) => String(_dateOf(a) || '').localeCompare(String(_dateOf(b) || '')));
     return JSON.stringify(kept);
   }
 

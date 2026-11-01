@@ -117,8 +117,12 @@
     if (!Array.isArray(log) || !log.length) {
       return { hasEntries: false, lastDate: null, daysSince: null, cadence, daysUntilDue: 0, overdue: false };
     }
-    const lastEntry = log[log.length - 1];
-    const lastDate = lastEntry?.date || null;
+    // Use the newest date, not the last entry: synced entries aren't
+    // always stored in date order.
+    const lastDate = log.reduce((latest, entry) => {
+      const d = typeof entry?.date === 'string' ? entry.date.slice(0, 10) : '';
+      return d > latest ? d : latest;
+    }, '') || null;
     if (!lastDate) {
       return { hasEntries: false, lastDate: null, daysSince: null, cadence, daysUntilDue: 0, overdue: false };
     }
