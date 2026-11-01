@@ -43,7 +43,10 @@
       ? (first.repsMax > first.reps ? `${first.reps}-${first.repsMax}` : first.reps)
       : '?';
     const weight = first.weight != null ? `${first.weight}` : null;
-    return weight ? `${sets.length}×${reps} · ${weight}` : `${sets.length}×${reps}`;
+    // The coach's target effort: RIR, and the last set's when it differs.
+    const last = sets[sets.length - 1].rir;
+    const rir = first.rir != null ? ` · RIR ${first.rir}${sets.length > 1 && last != null && last !== first.rir ? `/${last}` : ''}` : '';
+    return (weight ? `${sets.length}×${reps} · ${weight}` : `${sets.length}×${reps}`) + rir;
   }
 
   /** Sum of reps*weight across every planned set, in kg. */

@@ -1,0 +1,3297 @@
+{
+  "schema": "pocketcoach.plan/2",
+  "planId": "pln_00000000-0000-4000-8000-0000000000a2",
+  "status": "published",
+  "version": 1,
+  "supersedes": null,
+  "client": {
+    "uid": "u1",
+    "coachUid": "c1",
+    "leadId": null
+  },
+  "package": {
+    "id": "cut_cycle_32",
+    "name": "Cut Cycle",
+    "tier": "medium",
+    "totalWeeks": 16,
+    "billing": {
+      "blockWeeks": 4,
+      "blocks": 4,
+      "startDate": "2026-11-09"
+    }
+  },
+  "startDate": "2026-11-09",
+  "ruleVersion": "pocketcoach-rules@0.4.0",
+  "phases": [
+    {
+      "phaseId": "ph1",
+      "type": "cut",
+      "goal": "vetverlies",
+      "goalText": "",
+      "weeks": 12,
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 12
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "timeCap",
+            "weeks": 12,
+            "ruleId": "coach"
+          }
+        ]
+      },
+      "nutrition": {
+        "source": "coach",
+        "trainingDay": {
+          "kcal": 2350,
+          "proteinG": 165,
+          "carbG": 275,
+          "fatG": 65
+        },
+        "restDay": {
+          "kcal": 2000,
+          "proteinG": 165,
+          "carbG": 190,
+          "fatG": 65
+        }
+      },
+      "training": {
+        "programRef": {
+          "programId": "prog_a",
+          "name": "X-frame",
+          "rev": "2026-11-01T09:00:00Z",
+          "weekOffset": 0
+        }
+      },
+      "recovery": {},
+      "order": 1,
+      "startWeek": 1,
+      "plannedStart": "2026-11-09",
+      "plannedEnd": "2027-01-31"
+    },
+    {
+      "phaseId": "ph2",
+      "type": "maintain",
+      "goal": "onderhoud",
+      "goalText": "",
+      "weeks": 3,
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 3
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "timeCap",
+            "weeks": 3,
+            "ruleId": "coach"
+          }
+        ]
+      },
+      "nutrition": {
+        "source": "coach",
+        "trainingDay": {
+          "kcal": 2700,
+          "proteinG": 165,
+          "carbG": 364,
+          "fatG": 65
+        },
+        "restDay": {
+          "kcal": 2700,
+          "proteinG": 165,
+          "carbG": 364,
+          "fatG": 65
+        }
+      },
+      "training": {
+        "programRef": {
+          "programId": "prog_a",
+          "name": "X-frame",
+          "rev": "2026-11-01T09:00:00Z",
+          "weekOffset": 12
+        }
+      },
+      "recovery": {},
+      "order": 2,
+      "startWeek": 13,
+      "plannedStart": "2027-02-01",
+      "plannedEnd": "2027-02-21"
+    },
+    {
+      "phaseId": "ph3",
+      "type": "deload",
+      "goal": "onderhoud",
+      "goalText": "",
+      "weeks": 1,
+      "actualStart": null,
+      "actualEnd": null,
+      "caps": {
+        "maxWeeks": 1
+      },
+      "endCriteria": {
+        "any": [
+          {
+            "kind": "timeCap",
+            "weeks": 1,
+            "ruleId": "coach"
+          }
+        ]
+      },
+      "nutrition": {
+        "source": "coach",
+        "trainingDay": {
+          "kcal": 2700,
+          "proteinG": 165,
+          "carbG": 364,
+          "fatG": 65
+        },
+        "restDay": {
+          "kcal": 2700,
+          "proteinG": 165,
+          "carbG": 364,
+          "fatG": 65
+        }
+      },
+      "training": {
+        "programRef": {
+          "programId": "prog_a",
+          "name": "X-frame",
+          "rev": "2026-11-01T09:00:00Z",
+          "weekOffset": 15
+        }
+      },
+      "recovery": {},
+      "order": 3,
+      "startWeek": 16,
+      "plannedStart": "2027-02-22",
+      "plannedEnd": "2027-02-28"
+    }
+  ],
+  "adjustments": [],
+  "approval": {
+    "generatedAt": "2026-11-01T10:00:00.000Z",
+    "generatedBy": "blank",
+    "approvedAt": "2026-11-01T10:00:00.000Z",
+    "approvedBy": "coach",
+    "publishedAt": "2026-11-01T10:00:00.000Z"
+  },
+  "programs": {
+    "prog_a": {
+      "id": "coach-coach-prog-a",
+      "authoredAs": "pocketcoach.program/2",
+      "title": "X-frame",
+      "summary": "X-frame, phase 1, weeks 1-4 of 16 (cut phase). Lower-body sets reduced by one per exercise in weeks 1-4 while legs adapt.",
+      "progressionNotes": "Double progression: when every set hits the top of the rep range at the target RIR, add ~2.5-5% load next session.\nSchedule: Mon Lower A, Tue Upper A, Thu Lower B, Fri Upper B. Wed, Sat, Sun rest.\nRIR: Leg compounds never below 2 RIR. No failure and no intensifiers in weeks 1-4.\nRecovery gate: Move to the next week only if key lifts held or rose, no joint pain above 3/10, and sleep/motivation are OK.\nNot trained directly: Calves and traps (client preference).",
+      "frequency": [
+        "Mon",
+        "Tue",
+        "Thu",
+        "Fri"
+      ],
+      "schedule": {
+        "startDate": "",
+        "weekdays": [
+          1,
+          2,
+          4,
+          5
+        ]
+      },
+      "split": {
+        "type": "custom",
+        "name": "X-frame",
+        "daysPerWeek": 4
+      },
+      "progressionType": "double-progression",
+      "days": [
+        {
+          "dayId": "d1",
+          "name": "Lower A",
+          "weekday": 1,
+          "focus": "quads",
+          "notes": "",
+          "exercises": [
+            {
+              "exerciseId": "w1-d1-e1",
+              "name": "Hack squat (or Smith squat), deep",
+              "type": "compound",
+              "notes": "Full depth, controlled 2-3 s lowering",
+              "sets": [
+                {
+                  "reps": 6,
+                  "repsMax": 10,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                },
+                {
+                  "reps": 6,
+                  "repsMax": 10,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d1-e2",
+              "name": "Leg press, feet mid-low, deep",
+              "type": "compound",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d1-e3",
+              "name": "Leg extension, seat reclined",
+              "type": "isolation",
+              "notes": "Pause briefly at the bottom",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d1-e4",
+              "name": "Romanian deadlift (dumbbells while learning the hinge)",
+              "type": "compound",
+              "notes": "Stop where the back starts to round",
+              "sets": [
+                {
+                  "reps": 6,
+                  "repsMax": 10,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                },
+                {
+                  "reps": 6,
+                  "repsMax": 10,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d1-e5",
+              "name": "Seated leg curl",
+              "type": "isolation",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d1-e6",
+              "name": "Ab-wheel roll-out",
+              "type": "core",
+              "notes": "Ribs down, no lower-back sag",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 15,
+                  "rir": null,
+                  "restSec": 60
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 15,
+                  "rir": null,
+                  "restSec": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "dayId": "d2",
+          "name": "Upper A",
+          "weekday": 2,
+          "focus": "lats and delts",
+          "notes": "",
+          "exercises": [
+            {
+              "exerciseId": "w1-d2-e1",
+              "name": "Chin-up or neutral-grip lat pulldown",
+              "type": "compound",
+              "notes": "Full stretch at the top",
+              "sets": [
+                {
+                  "reps": 6,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                },
+                {
+                  "reps": 6,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                },
+                {
+                  "reps": 6,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d2-e2",
+              "name": "Chest-supported row, elbows ~45 deg",
+              "type": "compound",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d2-e3",
+              "name": "Incline dumbbell press, ~30 deg",
+              "type": "compound",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d2-e4",
+              "name": "Cable lateral raise, cable behind the body",
+              "type": "isolation",
+              "notes": "Shoulders down, lead with the elbow (keeps traps out)",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d2-e5",
+              "name": "Reverse pec-deck or cable rear-delt fly",
+              "type": "isolation",
+              "sets": [
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d2-e6",
+              "name": "Overhead cable triceps extension",
+              "type": "isolation",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d2-e7",
+              "name": "Incline dumbbell curl",
+              "type": "isolation",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "dayId": "d3",
+          "name": "Lower B",
+          "weekday": 4,
+          "focus": "hamstrings and hips",
+          "notes": "",
+          "exercises": [
+            {
+              "exerciseId": "w1-d3-e1",
+              "name": "Wide-stance Smith or pendulum squat, deep",
+              "type": "compound",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d3-e2",
+              "name": "Bulgarian split squat",
+              "type": "compound",
+              "notes": "Per leg",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d3-e3",
+              "name": "Lying leg curl",
+              "type": "isolation",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d3-e4",
+              "name": "Hip thrust or 45 deg back extension",
+              "type": "compound",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 120
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "dayId": "d4",
+          "name": "Upper B",
+          "weekday": 5,
+          "focus": "width and delts",
+          "notes": "",
+          "exercises": [
+            {
+              "exerciseId": "w1-d4-e1",
+              "name": "Lat pulldown, different grip from Tuesday",
+              "type": "compound",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 120
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 120
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d4-e2",
+              "name": "One-arm cable row",
+              "type": "compound",
+              "notes": "Per arm",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d4-e3",
+              "name": "Seated dumbbell shoulder press, scapular plane",
+              "type": "compound",
+              "notes": "Start light: no pressing baseline yet",
+              "sets": [
+                {
+                  "reps": 6,
+                  "repsMax": 10,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                },
+                {
+                  "reps": 6,
+                  "repsMax": 10,
+                  "rir": 3,
+                  "restSec": 120,
+                  "restSecMax": 180
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d4-e4",
+              "name": "Machine lateral raise",
+              "type": "isolation",
+              "notes": "Shoulders down, no shrugging",
+              "sets": [
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d4-e5",
+              "name": "Reverse pec-deck",
+              "type": "isolation",
+              "sets": [
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 12,
+                  "repsMax": 20,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d4-e6",
+              "name": "Machine chest press",
+              "type": "compound",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 12,
+                  "rir": 3,
+                  "restSec": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d4-e7",
+              "name": "Cable curl",
+              "type": "isolation",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d4-e8",
+              "name": "Triceps rope pressdown",
+              "type": "isolation",
+              "sets": [
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                },
+                {
+                  "reps": 10,
+                  "repsMax": 15,
+                  "rir": 3,
+                  "restSec": 60,
+                  "restSecMax": 120
+                }
+              ]
+            },
+            {
+              "exerciseId": "w1-d4-e9",
+              "name": "Ab-wheel roll-out",
+              "type": "core",
+              "sets": [
+                {
+                  "reps": 8,
+                  "repsMax": 15,
+                  "rir": null,
+                  "restSec": 60
+                },
+                {
+                  "reps": 8,
+                  "repsMax": 15,
+                  "rir": null,
+                  "restSec": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "assignedBy": "coach",
+      "rev": "2026-11-01T09:00:00Z",
+      "weeks": [
+        {
+          "week": 1,
+          "label": "Week 1",
+          "phase": "",
+          "days": [
+            {
+              "dayId": "d1",
+              "name": "Lower A",
+              "weekday": 1,
+              "focus": "quads",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w1-d1-e1",
+                  "name": "Hack squat (or Smith squat), deep",
+                  "type": "compound",
+                  "notes": "Full depth, controlled 2-3 s lowering",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d1-e2",
+                  "name": "Leg press, feet mid-low, deep",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d1-e3",
+                  "name": "Leg extension, seat reclined",
+                  "type": "isolation",
+                  "notes": "Pause briefly at the bottom",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d1-e4",
+                  "name": "Romanian deadlift (dumbbells while learning the hinge)",
+                  "type": "compound",
+                  "notes": "Stop where the back starts to round",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d1-e5",
+                  "name": "Seated leg curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d1-e6",
+                  "name": "Ab-wheel roll-out",
+                  "type": "core",
+                  "notes": "Ribs down, no lower-back sag",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d2",
+              "name": "Upper A",
+              "weekday": 2,
+              "focus": "lats and delts",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w1-d2-e1",
+                  "name": "Chin-up or neutral-grip lat pulldown",
+                  "type": "compound",
+                  "notes": "Full stretch at the top",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d2-e2",
+                  "name": "Chest-supported row, elbows ~45 deg",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d2-e3",
+                  "name": "Incline dumbbell press, ~30 deg",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d2-e4",
+                  "name": "Cable lateral raise, cable behind the body",
+                  "type": "isolation",
+                  "notes": "Shoulders down, lead with the elbow (keeps traps out)",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d2-e5",
+                  "name": "Reverse pec-deck or cable rear-delt fly",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d2-e6",
+                  "name": "Overhead cable triceps extension",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d2-e7",
+                  "name": "Incline dumbbell curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d3",
+              "name": "Lower B",
+              "weekday": 4,
+              "focus": "hamstrings and hips",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w1-d3-e1",
+                  "name": "Wide-stance Smith or pendulum squat, deep",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d3-e2",
+                  "name": "Bulgarian split squat",
+                  "type": "compound",
+                  "notes": "Per leg",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d3-e3",
+                  "name": "Lying leg curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d3-e4",
+                  "name": "Hip thrust or 45 deg back extension",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d4",
+              "name": "Upper B",
+              "weekday": 5,
+              "focus": "width and delts",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w1-d4-e1",
+                  "name": "Lat pulldown, different grip from Tuesday",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d4-e2",
+                  "name": "One-arm cable row",
+                  "type": "compound",
+                  "notes": "Per arm",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d4-e3",
+                  "name": "Seated dumbbell shoulder press, scapular plane",
+                  "type": "compound",
+                  "notes": "Start light: no pressing baseline yet",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d4-e4",
+                  "name": "Machine lateral raise",
+                  "type": "isolation",
+                  "notes": "Shoulders down, no shrugging",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d4-e5",
+                  "name": "Reverse pec-deck",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d4-e6",
+                  "name": "Machine chest press",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d4-e7",
+                  "name": "Cable curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d4-e8",
+                  "name": "Triceps rope pressdown",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w1-d4-e9",
+                  "name": "Ab-wheel roll-out",
+                  "type": "core",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "week": 2,
+          "label": "Week 2",
+          "phase": "",
+          "days": [
+            {
+              "dayId": "d1",
+              "name": "Lower A",
+              "weekday": 1,
+              "focus": "quads",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w2-d1-e1",
+                  "name": "Hack squat (or Smith squat), deep",
+                  "type": "compound",
+                  "notes": "Full depth, controlled 2-3 s lowering",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d1-e2",
+                  "name": "Leg press, feet mid-low, deep",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d1-e3",
+                  "name": "Leg extension, seat reclined",
+                  "type": "isolation",
+                  "notes": "Pause briefly at the bottom",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d1-e4",
+                  "name": "Romanian deadlift (dumbbells while learning the hinge)",
+                  "type": "compound",
+                  "notes": "Stop where the back starts to round",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d1-e5",
+                  "name": "Seated leg curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d1-e6",
+                  "name": "Ab-wheel roll-out",
+                  "type": "core",
+                  "notes": "Ribs down, no lower-back sag",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d2",
+              "name": "Upper A",
+              "weekday": 2,
+              "focus": "lats and delts",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w2-d2-e1",
+                  "name": "Chin-up or neutral-grip lat pulldown",
+                  "type": "compound",
+                  "notes": "Full stretch at the top",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d2-e2",
+                  "name": "Chest-supported row, elbows ~45 deg",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d2-e3",
+                  "name": "Incline dumbbell press, ~30 deg",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d2-e4",
+                  "name": "Cable lateral raise, cable behind the body",
+                  "type": "isolation",
+                  "notes": "Shoulders down, lead with the elbow (keeps traps out)",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d2-e5",
+                  "name": "Reverse pec-deck or cable rear-delt fly",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d2-e6",
+                  "name": "Overhead cable triceps extension",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d2-e7",
+                  "name": "Incline dumbbell curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d3",
+              "name": "Lower B",
+              "weekday": 4,
+              "focus": "hamstrings and hips",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w2-d3-e1",
+                  "name": "Wide-stance Smith or pendulum squat, deep",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d3-e2",
+                  "name": "Bulgarian split squat",
+                  "type": "compound",
+                  "notes": "Per leg",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d3-e3",
+                  "name": "Lying leg curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d3-e4",
+                  "name": "Hip thrust or 45 deg back extension",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d4",
+              "name": "Upper B",
+              "weekday": 5,
+              "focus": "width and delts",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w2-d4-e1",
+                  "name": "Lat pulldown, different grip from Tuesday",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d4-e2",
+                  "name": "One-arm cable row",
+                  "type": "compound",
+                  "notes": "Per arm",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d4-e3",
+                  "name": "Seated dumbbell shoulder press, scapular plane",
+                  "type": "compound",
+                  "notes": "Start light: no pressing baseline yet",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 3,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d4-e4",
+                  "name": "Machine lateral raise",
+                  "type": "isolation",
+                  "notes": "Shoulders down, no shrugging",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d4-e5",
+                  "name": "Reverse pec-deck",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d4-e6",
+                  "name": "Machine chest press",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 3,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d4-e7",
+                  "name": "Cable curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d4-e8",
+                  "name": "Triceps rope pressdown",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 3,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w2-d4-e9",
+                  "name": "Ab-wheel roll-out",
+                  "type": "core",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "week": 3,
+          "label": "Week 3",
+          "phase": "",
+          "days": [
+            {
+              "dayId": "d1",
+              "name": "Lower A",
+              "weekday": 1,
+              "focus": "quads",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w3-d1-e1",
+                  "name": "Hack squat (or Smith squat), deep",
+                  "type": "compound",
+                  "notes": "Full depth, controlled 2-3 s lowering",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d1-e2",
+                  "name": "Leg press, feet mid-low, deep",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d1-e3",
+                  "name": "Leg extension, seat reclined",
+                  "type": "isolation",
+                  "notes": "Pause briefly at the bottom",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d1-e4",
+                  "name": "Romanian deadlift (dumbbells while learning the hinge)",
+                  "type": "compound",
+                  "notes": "Stop where the back starts to round",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d1-e5",
+                  "name": "Seated leg curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d1-e6",
+                  "name": "Ab-wheel roll-out",
+                  "type": "core",
+                  "notes": "Ribs down, no lower-back sag",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d2",
+              "name": "Upper A",
+              "weekday": 2,
+              "focus": "lats and delts",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w3-d2-e1",
+                  "name": "Chin-up or neutral-grip lat pulldown",
+                  "type": "compound",
+                  "notes": "Full stretch at the top",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d2-e2",
+                  "name": "Chest-supported row, elbows ~45 deg",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d2-e3",
+                  "name": "Incline dumbbell press, ~30 deg",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d2-e4",
+                  "name": "Cable lateral raise, cable behind the body",
+                  "type": "isolation",
+                  "notes": "Shoulders down, lead with the elbow (keeps traps out)",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d2-e5",
+                  "name": "Reverse pec-deck or cable rear-delt fly",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d2-e6",
+                  "name": "Overhead cable triceps extension",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d2-e7",
+                  "name": "Incline dumbbell curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d3",
+              "name": "Lower B",
+              "weekday": 4,
+              "focus": "hamstrings and hips",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w3-d3-e1",
+                  "name": "Wide-stance Smith or pendulum squat, deep",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d3-e2",
+                  "name": "Bulgarian split squat",
+                  "type": "compound",
+                  "notes": "Per leg",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d3-e3",
+                  "name": "Lying leg curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d3-e4",
+                  "name": "Hip thrust or 45 deg back extension",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d4",
+              "name": "Upper B",
+              "weekday": 5,
+              "focus": "width and delts",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w3-d4-e1",
+                  "name": "Lat pulldown, different grip from Tuesday",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d4-e2",
+                  "name": "One-arm cable row",
+                  "type": "compound",
+                  "notes": "Per arm",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d4-e3",
+                  "name": "Seated dumbbell shoulder press, scapular plane",
+                  "type": "compound",
+                  "notes": "Start light: no pressing baseline yet",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d4-e4",
+                  "name": "Machine lateral raise",
+                  "type": "isolation",
+                  "notes": "Shoulders down, no shrugging",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d4-e5",
+                  "name": "Reverse pec-deck",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d4-e6",
+                  "name": "Machine chest press",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d4-e7",
+                  "name": "Cable curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d4-e8",
+                  "name": "Triceps rope pressdown",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w3-d4-e9",
+                  "name": "Ab-wheel roll-out",
+                  "type": "core",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "week": 4,
+          "label": "Week 4",
+          "phase": "",
+          "days": [
+            {
+              "dayId": "d1",
+              "name": "Lower A",
+              "weekday": 1,
+              "focus": "quads",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w4-d1-e1",
+                  "name": "Hack squat (or Smith squat), deep",
+                  "type": "compound",
+                  "notes": "Full depth, controlled 2-3 s lowering",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d1-e2",
+                  "name": "Leg press, feet mid-low, deep",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d1-e3",
+                  "name": "Leg extension, seat reclined",
+                  "type": "isolation",
+                  "notes": "Pause briefly at the bottom",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d1-e4",
+                  "name": "Romanian deadlift (dumbbells while learning the hinge)",
+                  "type": "compound",
+                  "notes": "Stop where the back starts to round",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d1-e5",
+                  "name": "Seated leg curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d1-e6",
+                  "name": "Ab-wheel roll-out",
+                  "type": "core",
+                  "notes": "Ribs down, no lower-back sag",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d2",
+              "name": "Upper A",
+              "weekday": 2,
+              "focus": "lats and delts",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w4-d2-e1",
+                  "name": "Chin-up or neutral-grip lat pulldown",
+                  "type": "compound",
+                  "notes": "Full stretch at the top",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d2-e2",
+                  "name": "Chest-supported row, elbows ~45 deg",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d2-e3",
+                  "name": "Incline dumbbell press, ~30 deg",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d2-e4",
+                  "name": "Cable lateral raise, cable behind the body",
+                  "type": "isolation",
+                  "notes": "Shoulders down, lead with the elbow (keeps traps out)",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 20,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d2-e5",
+                  "name": "Reverse pec-deck or cable rear-delt fly",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d2-e6",
+                  "name": "Overhead cable triceps extension",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d2-e7",
+                  "name": "Incline dumbbell curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d3",
+              "name": "Lower B",
+              "weekday": 4,
+              "focus": "hamstrings and hips",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w4-d3-e1",
+                  "name": "Wide-stance Smith or pendulum squat, deep",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d3-e2",
+                  "name": "Bulgarian split squat",
+                  "type": "compound",
+                  "notes": "Per leg",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d3-e3",
+                  "name": "Lying leg curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d3-e4",
+                  "name": "Hip thrust or 45 deg back extension",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "dayId": "d4",
+              "name": "Upper B",
+              "weekday": 5,
+              "focus": "width and delts",
+              "notes": "",
+              "exercises": [
+                {
+                  "exerciseId": "w4-d4-e1",
+                  "name": "Lat pulldown, different grip from Tuesday",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d4-e2",
+                  "name": "One-arm cable row",
+                  "type": "compound",
+                  "notes": "Per arm",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d4-e3",
+                  "name": "Seated dumbbell shoulder press, scapular plane",
+                  "type": "compound",
+                  "notes": "Start light: no pressing baseline yet",
+                  "sets": [
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    },
+                    {
+                      "reps": 6,
+                      "repsMax": 10,
+                      "rir": 2,
+                      "restSec": 120,
+                      "restSecMax": 180
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d4-e4",
+                  "name": "Machine lateral raise",
+                  "type": "isolation",
+                  "notes": "Shoulders down, no shrugging",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d4-e5",
+                  "name": "Reverse pec-deck",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 12,
+                      "repsMax": 20,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d4-e6",
+                  "name": "Machine chest press",
+                  "type": "compound",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 12,
+                      "rir": 2,
+                      "restSec": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d4-e7",
+                  "name": "Cable curl",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d4-e8",
+                  "name": "Triceps rope pressdown",
+                  "type": "isolation",
+                  "sets": [
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 2,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    },
+                    {
+                      "reps": 10,
+                      "repsMax": 15,
+                      "rir": 1,
+                      "restSec": 60,
+                      "restSecMax": 120
+                    }
+                  ]
+                },
+                {
+                  "exerciseId": "w4-d4-e9",
+                  "name": "Ab-wheel roll-out",
+                  "type": "core",
+                  "sets": [
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    },
+                    {
+                      "reps": 8,
+                      "repsMax": 15,
+                      "rir": null,
+                      "restSec": 60
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "durationWeeks": 4
+    }
+  }
+}

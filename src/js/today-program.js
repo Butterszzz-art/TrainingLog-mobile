@@ -38,6 +38,14 @@
     return first.repsMax > first.reps ? `${first.reps}–${first.repsMax}` : String(first.reps);
   }
 
+  // The coach's target effort: "RIR 2" or "RIR 2/1" (last set 1). '' when none.
+  function _rirLabel(ex) {
+    const sets = Array.isArray(ex.sets) ? ex.sets : [];
+    if (!sets.length || sets[0].rir == null) return '';
+    const last = sets[sets.length - 1].rir;
+    return `RIR ${sets[0].rir}${sets.length > 1 && last != null && last !== sets[0].rir ? `/${last}` : ''}`;
+  }
+
   /** Last time's top-set weight for a lift, else the planned weight, else ''. */
   function _weightHint(ex) {
     if (typeof window.getExerciseStats === 'function') {
@@ -102,11 +110,12 @@
       const lift = progress ? progress.lifts[i] : null;
       const done = !!(lift && lift.complete);
       const reps = _repsLabel(ex);
+      const rir = _rirLabel(ex);
       const hint = options.hints === false ? '' : _weightHint(ex);
       return `
         <div class="tpc-ex${done ? ' is-done' : ''}">
           <span class="tpc-ex-name">${_esc(ex.name)}</span>
-          <span class="tpc-ex-sets">${_setCount(ex)}${reps ? ` × ${_esc(reps)}` : ' sets'}${hint ? `<span class="tpc-ex-last">${_esc(hint)}</span>` : ''}${done ? '<span class="tpc-ex-tick" aria-label="done">✓</span>' : ''}</span>
+          <span class="tpc-ex-sets">${_setCount(ex)}${reps ? ` × ${_esc(reps)}` : ' sets'}${rir ? `<span class="tpc-ex-rir" title="Reps in reserve${rir.includes('/') ? '; the second number is for the last set' : ''}">${_esc(rir)}</span>` : ''}${hint ? `<span class="tpc-ex-last">${_esc(hint)}</span>` : ''}${done ? '<span class="tpc-ex-tick" aria-label="done">✓</span>' : ''}</span>
         </div>`;
     }).join('');
   }
