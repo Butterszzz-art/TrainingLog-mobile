@@ -115,7 +115,7 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     and ending the workout removes it.
 
 ### Push notifications (iPhone/iPad)
-25. Apple Developer → Identifiers → `com.pocketcoach.app`: tick **Push Notifications**, Save.
+25. Apple Developer → Identifiers → `org.pocketcoachcoms.app`: tick **Push Notifications**, Save.
     Then fetch the App Store provisioning profile again in Codemagic.
 26. Apple Developer → **Keys** → +: tick **Apple Push Notifications service (APNs)**,
     download the `.p8` (only once!) and note the Key ID. Backend steps are in
@@ -124,7 +124,7 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     you a friend request with the app closed. Tapping the banner opens the inbox.
 
 ### Apple Health (HealthKit)
-28. Apple Developer → Identifiers → `com.pocketcoach.app`: tick **HealthKit** (no
+28. Apple Developer → Identifiers → `org.pocketcoachcoms.app`: tick **HealthKit** (no
     clinical records), Save, then fetch the provisioning profile again in Codemagic.
 29. App Privacy form: add **Health & Fitness → Health** and **Fitness** (linked to the
     user, not used for tracking). The privacy policy already covers Apple Health.
@@ -135,7 +135,7 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     of 5+ minutes and check it shows in the Health app under Workouts.
 
 ### Sign in with Apple
-32. Apple Developer → Identifiers → `com.pocketcoach.app`: tick **Sign In with Apple**
+32. Apple Developer → Identifiers → `org.pocketcoachcoms.app`: tick **Sign In with Apple**
     (Configure → *Enable as a primary App ID*), Save, then fetch the provisioning
     profile again in Codemagic.
 33. Firebase console → Authentication → Sign-in method → **Add new provider → Apple** →
@@ -143,7 +143,7 @@ What's done in code, and what still has to happen outside it. Work top to bottom
 34. So account deletion can revoke Apple sign-in (Apple requires it), fill in Firebase's
     Apple provider **OAuth code flow** section:
     - a **Services ID** (Apple Developer → Identifiers → + → Services IDs, e.g.
-      `com.pocketcoach.app.signin`), with Sign In with Apple enabled;
+      `org.pocketcoachcoms.app.signin`), with Sign In with Apple enabled;
     - Team ID `WD37WHSYG7`;
     - a **Key** with Sign In with Apple ticked (Apple Developer → Keys → +): its Key ID
       and the `.p8` contents.

@@ -9,7 +9,7 @@
 #   ruby scripts/ios/add-capabilities.rb
 #
 # The same capabilities must be ticked on the App ID at developer.apple.com
-# (Certificates, IDs & Profiles → Identifiers → com.pocketcoach.app), and the
+# (Certificates, IDs & Profiles → Identifiers → org.pocketcoachcoms.app), and the
 # App Store provisioning profile fetched again after ticking them, or signing
 # fails with "Provisioning profile doesn't include the ... entitlement".
 
