@@ -32,6 +32,45 @@
     return { ok: true, plan: body.plan || null };
   }
 
+  /** The coach's plan PDF attached to the published plan: { fileName, mime, data (base64) }. */
+  async function fetchPlanFile(fileId, { fetchFn = globalScope.fetch, serverUrl = globalScope.SERVER_URL, token = globalScope.localStorage?.getItem('token') } = {}) {
+    if (!serverUrl || !token) throw new Error('Sign in to open your plan document.');
+    const res = await fetchFn(`${serverUrl}/api/client/plan/file/${encodeURIComponent(fileId)}`, { headers: { Authorization: `Bearer ${token}` } });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.file) throw new Error(body?.error?.message || 'Could not open your plan document.');
+    return body.file;
+  }
+
+  function isNative() {
+    const cap = globalScope.Capacitor;
+    return !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+  }
+
+  // In the app: the share sheet (Quick Look preview, save to Files/Books).
+  // In a browser: a new tab with the PDF.
+  async function openPlanFile(fileId, deps = {}) {
+    const toast = (m, t) => { if (typeof globalScope.showToast === 'function') globalScope.showToast(m, t || 'info'); };
+    let win = null;
+    if (!isNative() && globalScope.open) win = globalScope.open('', '_blank'); // before the await, or pop-up blockers object
+    try {
+      const f = await fetchPlanFile(fileId, deps);
+      const bytes = Uint8Array.from(globalScope.atob(f.data), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: f.mime || 'application/pdf' });
+      if (isNative() && globalScope.navigator?.share) {
+        const file = new File([blob], f.fileName || 'plan.pdf', { type: blob.type });
+        if (!globalScope.navigator.canShare || globalScope.navigator.canShare({ files: [file] })) {
+          await globalScope.navigator.share({ files: [file], title: f.fileName || 'Your plan' }).catch((e) => { if (e.name !== 'AbortError') throw e; });
+          return;
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      if (win) win.location.href = url; else globalScope.location.href = url;
+    } catch (err) {
+      if (win) win.close();
+      toast(err.message || 'Could not open your plan document.', 'warn');
+    }
+  }
+
   const EMPTY = `<div class="pp-empty">
       <p><strong>No plan yet.</strong></p>
       <p>When your coach publishes your plan, its phases, nutrition targets and weekly training volume show up here.</p>
@@ -85,6 +124,13 @@
     if (!preview) { container.innerHTML = '<div class="pp-empty">Plan preview not loaded.</div>'; return; }
     preview.ensureStyles();
     ensureTodayStyles();
+    if (!container.__planFileHooked && typeof container.addEventListener === 'function') {
+      container.__planFileHooked = true;
+      container.addEventListener('click', (e) => {
+        const btn = e.target.closest && e.target.closest('[data-plan-file]');
+        if (btn) openPlanFile(btn.getAttribute('data-plan-file'), deps);
+      });
+    }
     const user = currentUser();
     const cached = user ? readCache(user) : null;
     const view = (plan) => todayHtml(plan, deps.today) + preview.render(plan, deps.today ? { today: deps.today } : {});
@@ -102,7 +148,7 @@
     }
   }
 
-  const api = { showMyPlan, fetchPlan, todayHtml };
+  const api = { showMyPlan, fetchPlan, fetchPlanFile, openPlanFile, todayHtml };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   globalScope.MyPlan = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1456,3 +1456,15 @@ select.mp-input { appearance: none; padding-right: 32px; cursor: pointer;
 .pe-save { border-top: 1px solid var(--border); padding-top: 10px; }
 .pb-link:disabled { opacity: 0.4; cursor: default; }
 .pe-copy { margin-left: 14px; }
+
+/* Master plan file import (coach/plan-import.js) */
+.pi-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.84rem; }
+.pi-table th { text-align: left; padding: 4px 8px; font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.pi-table td { padding: 6px 8px; border-top: 1px solid var(--border); vertical-align: top; color: var(--text); }
+.pi-table small { color: var(--text-sec); }
+.pi-phase { display: inline-block; padding: 2px 8px; border-radius: 999px; color: #050c08; font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.pi-phase.pp-phase--cut { background: #c4664a; } .pi-phase.pp-phase--maintain { background: #d4ab68; }
+.pi-phase.pp-phase--build { background: #2f8a63; } .pi-phase.pp-phase--deload { background: #8fa3b0; }
+mark.pi-suggested { background: var(--warning-bg, rgba(168,124,56,.25)); color: var(--highlight, #c79a54); border-radius: 4px; padding: 0 3px; }
+.pi-attach { display: flex; gap: 8px; align-items: center; font-size: 0.84rem; color: var(--text-sec); margin: 8px 0; }
+.pe-macro.is-suggested { border-color: var(--highlight); background: var(--warning-bg, rgba(168,124,56,.16)); }

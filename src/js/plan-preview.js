@@ -209,13 +209,19 @@
     const overrides = coachView && (plan.overrides || []).length
       ? `<p class="pp-note">${esc(plan.overrides.length)} coach adjustment${plan.overrides.length === 1 ? '' : 's'} recorded.</p>`
       : '';
+    const notes = plan.notes ? `<p class="pp-note pp-coach-notes"><strong>${coachView ? 'Notes' : 'From your coach'}:</strong> ${esc(plan.notes)}</p>` : '';
+    // The coach's own plan document (an imported PDF), shown to the client once published.
+    const att = plan.attachment;
+    const file = !att ? ''
+      : coachView ? `<p class="pp-note">Attached for the client: <strong>${esc(att.fileName)}</strong></p>`
+        : `<button type="button" class="pp-file" data-plan-file="${esc(att.fileId)}">Open your plan document (PDF)</button>`;
     return `<div class="pp-root">
       <header class="pp-head">
         <div class="pp-title">${esc(pkg.name || 'Your plan')}</div>
         <div class="pp-meta">${esc(pkg.totalWeeks)} weeks · ${esc(fmtDate(phaseStart(first)))} – ${esc(fmtDate(phaseEnd(last)))}${coachView && pkg.tier ? ` · ${esc(pkg.tier)}` : ''}</div>
         ${status}
       </header>
-      ${review}${buConflicts}${overrides}${intakeFlags}
+      ${file}${notes}${review}${buConflicts}${overrides}${intakeFlags}
       ${renderTimeline(plan, today)}
       ${plan.phases.map((p) => renderPhase(p, { today, coachView, commonFlags: common, programs })).join('')}
       ${coachView && plan.ruleVersion ? `<p class="pp-footer">Rules: ${esc(plan.ruleVersion)}</p>` : ''}
@@ -268,6 +274,7 @@
 .pp-bu{margin:6px 0 0;padding-left:18px;font-size:13px}
 .pp-bu li{margin:4px 0}
 .pp-flag--rood{color:#e0796a}.pp-flag--oranje{color:var(--highlight,#c79a54)}.pp-flag--info{color:var(--secondary-text,inherit)}
+.pp-file{align-self:flex-start;min-height:44px;padding:0 18px;border-radius:var(--radius-pill,999px);border:1px solid var(--primary,#2f8a63);background:transparent;color:var(--primary-text,#42a679);font-family:var(--font-label,inherit);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 .pp-empty{padding:24px 16px;text-align:center;color:var(--secondary-text,#888);border:1px dashed var(--border-color,rgba(127,127,127,.3));border-radius:var(--radius-md,16px)}
 .pp-empty strong{display:block;font-family:var(--font-display,inherit);font-size:22px;text-transform:uppercase;color:var(--text-color,inherit);margin-bottom:6px}
 @media (max-width:420px){.pp-seg-name{display:none}.pp-kcal{font-size:26px}}`;

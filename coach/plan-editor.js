@@ -183,13 +183,24 @@
         '<option value="' + esc(pr.id) + '"' + (pr.id === selected ? ' selected' : '') + '>' + esc(pr.name) + ' (' + programWeeks(pr) + ' wk)</option>').join('');
     }
 
+    // Values an imported plan filled in (not in the coach's file), until changed.
+    function isSuggested(p, dt, k) {
+      const saved = (plan.phases || []).find(x => x.phaseId === p.phaseId);
+      const list = saved && saved.nutrition && saved.nutrition.suggested;
+      if (!Array.isArray(list) || !list.includes(dt + '.' + k)) return false;
+      return num(saved.nutrition[dt] && saved.nutrition[dt][k]) === num(p.nutrition[dt][k]);
+    }
+
     function nutritionTable(p, i) {
       const head = '<tr><th></th>' + MACROS.map(([, l]) => '<th>' + esc(l) + '</th>').join('') + '<th>From grams</th><th></th></tr>';
       const rows = DAY_TYPES.map(([dt, label]) => {
         const d = p.nutrition[dt];
         const g = kcalFromGrams(d);
         return '<tr><th scope="row">' + label + '</th>'
-          + MACROS.map(([k]) => '<td><input class="pb-in pb-in--num pe-macro" type="number" inputmode="numeric" data-i="' + i + '" data-dt="' + dt + '" data-k="' + k + '" value="' + esc(d[k] == null ? '' : d[k]) + '"' + (editable ? '' : ' disabled') + ' aria-label="' + esc(label + ' ' + k) + '"></td>').join('')
+          + MACROS.map(([k]) => {
+            const sug = isSuggested(p, dt, k);
+            return '<td><input class="pb-in pb-in--num pe-macro' + (sug ? ' is-suggested' : '') + '" type="number" inputmode="numeric" data-i="' + i + '" data-dt="' + dt + '" data-k="' + k + '" value="' + esc(d[k] == null ? '' : d[k]) + '"' + (editable ? '' : ' disabled') + ' aria-label="' + esc(label + ' ' + k) + '"' + (sug ? ' title="Suggested: not in your file. Change it, or keep it if it’s right."' : '') + '></td>';
+          }).join('')
           + '<td class="pe-derived">' + (g == null ? '—' : g + ' kcal') + '</td>'
           + '<td>' + (editable ? '<button type="button" class="pb-link" data-act="carbs" data-i="' + i + '" data-dt="' + dt + '" title="Carbs fill the kcal left after protein and fat">Suggest carbs</button>'
             + (dt === 'restDay' ? '<button type="button" class="pb-link pe-copy" data-act="same" data-i="' + i + '">Copy training day</button>' : '') : '') + '</td></tr>';
