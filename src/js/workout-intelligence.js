@@ -90,26 +90,37 @@
     return null;
   }
 
-  // Strategy → visual treatment. Colour carries meaning here: green shades
-  // for "add more", brass for "ease off / pay attention", neutral for "hold".
-  const OVERLOAD_STRATEGY_META = {
-    'increase':      { cls: 'is-increase', metric: 'weight', arrow: 'up' },
-    'increase-reps': { cls: 'is-reps',     metric: 'reps',   arrow: 'up' },
-    'maxed-out':     { cls: 'is-deload',   metric: 'reps',   arrow: 'up' },
-    'reduce':        { cls: 'is-deload',   metric: 'weight', arrow: 'down' },
-    'maintain':      { cls: 'is-maintain', metric: 'weight', arrow: 'flat' }
-  };
-
-  const ARROW_UP_SVG   = '<svg viewBox="0 0 12 12" fill="none"><path d="M6 10V2M6 2L2.5 5.5M6 2l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const ARROW_DOWN_SVG = '<svg viewBox="0 0 12 12" fill="none"><path d="M6 2V10M6 10L2.5 6.5M6 10l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
   function _fmtNum(v) {
     const n = Math.round((Number(v) || 0) * 100) / 100;
     return String(n);
   }
 
+  // Latest recommendation the bubble is showing, so "Use" applies exactly
+  // what the lifter saw. ✕ hides the tip for that exercise until the name
+  // changes.
+  let _shownRec = null;
+  let _dismissedFor = '';
+
+  function _weightSuggestionsOn() {
+    try { return localStorage.getItem('autoIncrementEnabled') !== 'false'; }
+    catch { return true; }
+  }
+
+  function _setBubbleLive(on) {
+    const wrap = document.getElementById('exerciseBubble');
+    if (wrap) wrap.classList.toggle('is-live', !!on);
+  }
+
+  function _clearHint(hintEl) {
+    hintEl.innerHTML = '';
+    _shownRec = null;
+    _setBubbleLive(false);
+  }
+
   /**
-   * Render (or clear) the overload hint below the exercise input.
+   * Render (or clear) the progression tip inside the silver bubble around
+   * the exercise name. The weight/reps fields start at last time's numbers;
+   * this only suggests what to add, and "Use" applies it.
    */
   function renderOverloadHint() {
     const hintEl   = document.getElementById('overloadHint');
@@ -117,13 +128,15 @@
     if (!hintEl || !inputEl) return;
 
     const exerciseName = (inputEl.value || '').trim();
-    if (exerciseName.length < 3) { hintEl.innerHTML = ''; return; }
+    if (_dismissedFor && _dismissedFor !== exerciseName.toLowerCase()) _dismissedFor = '';
+    if (exerciseName.length < 3 || !_weightSuggestionsOn()) { _clearHint(hintEl); return; }
+    if (_dismissedFor === exerciseName.toLowerCase()) { _clearHint(hintEl); return; }
 
     const username = _user();
-    if (!username) { hintEl.innerHTML = ''; return; }
+    if (!username) { _clearHint(hintEl); return; }
 
     const session = getLastExerciseSession(exerciseName, username);
-    if (!session || !session.bestSet) { hintEl.innerHTML = ''; return; }
+    if (!session || !session.bestSet) { _clearHint(hintEl); return; }
 
     const workouts = _loadWorkouts(username);
     const recommendation = typeof window.suggestNextSession === 'function'
@@ -131,63 +144,98 @@
       : null;
 
     if (!recommendation || !Array.isArray(recommendation.sets) || !recommendation.sets.length) {
-      hintEl.innerHTML = '';
+      _clearHint(hintEl);
       return;
     }
 
-    hintEl.innerHTML = renderOverloadPod(recommendation, session);
+    _shownRec = recommendation;
+    hintEl.innerHTML = renderOverloadTip(recommendation, session);
+    _setBubbleLive(true);
   }
 
-  function renderOverloadPod(recommendation, session) {
+  function _plural(n, word) { return `${_fmtNum(n)} ${word}${Number(n) === 1 ? '' : 's'}`; }
+
+  function renderOverloadTip(recommendation, session) {
     const { bestSet, setCount, date, unit: sessionUnit } = session;
-    const meta = OVERLOAD_STRATEGY_META[recommendation.strategy] || OVERLOAD_STRATEGY_META.maintain;
-
-    const suggestedSet = recommendation.sets[0] || {};
-    const previousSet   = (recommendation.previousSets && recommendation.previousSets[0]) || {};
     const unit = recommendation.unit || sessionUnit || 'kg';
+    const next = recommendation.sets[0] || {};
+    const prev = (recommendation.previousSets && recommendation.previousSets[0]) || {};
+    const dW = (Number(next.weight) || 0) - (Number(prev.weight) || 0);
+    const dR = (Number(next.reps) || 0) - (Number(prev.reps) || 0);
+    const sessions = Math.max(0, Number(recommendation.basedOnSessions) || 0);
+    const basis = _plural(sessions, 'session');
 
-    const isReps = meta.metric === 'reps';
-    const number  = isReps ? suggestedSet.reps : suggestedSet.weight;
-    const before  = isReps ? previousSet.reps  : previousSet.weight;
-    const delta   = (Number(number) || 0) - (Number(before) || 0);
-    const numberUnit = isReps ? 'reps' : unit;
-
-    let deltaHtml = '';
-    if (meta.arrow === 'up' && delta > 0) {
-      deltaHtml = `<span class="ov-delta">${ARROW_UP_SVG}+${_fmtNum(delta)}${isReps ? ' / set' : ''}</span>`;
-    } else if (meta.arrow === 'down' && delta < 0) {
-      deltaHtml = `<span class="ov-delta">${ARROW_DOWN_SVG}−${_fmtNum(Math.abs(delta))}</span>`;
+    let main, label, why, warn = false;
+    switch (recommendation.strategy) {
+      case 'increase':
+        main = `+${_fmtNum(dW)} ${_esc(unit)} <span class="exb-or">or</span> +1 rep`;
+        label = 'Linear progression';
+        why = basis;
+        break;
+      case 'increase-reps':
+        main = `+${_plural(Math.max(1, dR), 'rep')} per set`;
+        label = 'Double progression';
+        why = 'add weight once reps are up';
+        break;
+      case 'maxed-out':
+        main = `+${_plural(Math.max(1, dR), 'rep')} per set`;
+        label = 'Maxed out';
+        why = 'no more weight on this machine';
+        break;
+      case 'reduce':
+        main = `−${_fmtNum(Math.abs(dW))} ${_esc(unit)} <span class="exb-or">or</span> keep ${_fmtNum(prev.weight)}`;
+        label = 'Ease off';
+        why = 'high effort or missed reps last time';
+        warn = true;
+        break;
+      default:
+        main = `Keep ${_fmtNum(prev.weight)} ${_esc(unit)} × ${_fmtNum(prev.reps)}`;
+        label = 'Hold steady';
+        why = basis;
     }
 
-    const sessions = Math.max(0, Number(recommendation.basedOnSessions) || 0);
-    const meterPct = Math.min(96, 20 + sessions * 6);
-    const relDate = _relativeDate(date);
     const ctx = typeof window.getSessionContext === 'function' ? window.getSessionContext() : null;
     const gymLabel = ctx && ctx.altGym ? String(ctx.gymName || '').trim() : '';
+    const last = `${setCount}×${_esc(bestSet.reps)} @ ${_esc(bestSet.weight)} ${_esc(sessionUnit || unit)} · ${_esc(_relativeDate(date))}${gymLabel ? ' · ' + _esc(gymLabel) : ''}`;
+    const canUse = recommendation.strategy !== 'maintain';
 
     return `
-      <div class="ov-pod ${meta.cls}">
-        <div class="ov-accent"></div>
-        <div class="ov-top">
-          <span class="ov-live"></span>
-          <span class="ov-eyebrow">${gymLabel ? 'At ' + _esc(gymLabel) : 'Progressive overload'}</span>
-          <span class="ov-sessions">${sessions} session${sessions === 1 ? '' : 's'}</span>
+      <div class="exb-last">Last: ${last}</div>
+      <div class="exb-rule"></div>
+      <div class="exb-tip${warn ? ' is-warn' : ''}">
+        <div class="exb-txt">
+          <div class="exb-main">${main}</div>
+          <div class="exb-why"><b>${_esc(label)}</b> · ${_esc(why)}</div>
         </div>
-        <div class="ov-body">
-          <p class="ov-last">${relDate} you logged <b>${setCount}×${_esc(bestSet.reps)} @ ${_esc(bestSet.weight)} ${_esc(unit)}</b></p>
-          <div class="ov-main">
-            <span class="ov-number">${_fmtNum(number)}</span><span class="ov-unit">${_esc(numberUnit)}</span>
-            ${deltaHtml}
-          </div>
-          <p class="ov-msg">${_esc(recommendation.message)}</p>
-          <div class="ov-meter" style="--ov-fill:${meterPct}%"><i></i></div>
-          <div class="ov-foot">
-            <span class="ov-basis">Based on ${sessions} logged session${sessions === 1 ? '' : 's'}</span>
-            <button class="ov-cta" type="button" onclick="if(typeof applySuggestedSetValuesForExercise==='function') applySuggestedSetValuesForExercise(true);">Use ${_fmtNum(number)}${isReps ? ' reps' : ''}</button>
-          </div>
-        </div>
+        ${canUse ? '<button class="exb-use" type="button" onclick="applyOverloadSuggestion()">Use</button>' : ''}
+        <button class="exb-x" type="button" aria-label="Hide suggestion" onclick="dismissOverloadHint()">✕</button>
       </div>
     `;
+  }
+
+  /** "Use": put the suggested weight/reps into the set rows (and Quick Log). */
+  function applyOverloadSuggestion() {
+    const rec = _shownRec;
+    if (!rec || !Array.isArray(rec.sets) || !rec.sets.length) return;
+    const rows = document.querySelectorAll('#setInputsContainer .set-input-row').length || 1;
+    for (let i = 0; i < rows; i++) {
+      const set = rec.sets[i] || rec.sets[rec.sets.length - 1];
+      const w = document.getElementById(`weight_${i}`);
+      const r = document.getElementById(`reps_${i}`);
+      if (w && set.weight != null) w.value = set.weight;
+      if (r && set.reps != null) r.value = set.reps;
+    }
+    if (typeof window.syncQuickLogFromRow0 === 'function') window.syncQuickLogFromRow0();
+    if (typeof window.updateAddButtonState === 'function') window.updateAddButtonState();
+    dismissOverloadHint();
+  }
+
+  /** ✕: hide the tip for this exercise; the silver bubble goes back to a plain field. */
+  function dismissOverloadHint() {
+    const inputEl = document.getElementById('exercise');
+    _dismissedFor = ((inputEl && inputEl.value) || '').trim().toLowerCase();
+    const hintEl = document.getElementById('overloadHint');
+    if (hintEl) _clearHint(hintEl);
   }
 
   function _relativeDate(dateStr) {
@@ -431,6 +479,8 @@
 
   window.getLastExerciseSession  = getLastExerciseSession;
   window.renderOverloadHint      = renderOverloadHint;
+  window.applyOverloadSuggestion = applyOverloadSuggestion;
+  window.dismissOverloadHint     = dismissOverloadHint;
   window.searchWorkoutHistory    = searchWorkoutHistory;
   window.renderHistoryResults    = renderHistoryResults;
 

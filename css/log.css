@@ -2177,3 +2177,102 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ── Silver progression bubble around the exercise name ──────────
+   #exerciseBubble wraps #exercise + #overloadHint. It looks like a plain
+   field until workout-intelligence.js adds .is-live with a progression
+   tip, then it becomes a silver-edged bubble with the tip inside. */
+
+@property --exb-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+.ex-bubble { position: relative; margin-bottom: 8px; }
+.ex-bubble .overload-hint { margin: 0; }
+.ex-bubble .overload-hint:empty { display: none; }
+
+.ex-bubble.is-live {
+  padding: 1.5px;
+  border-radius: 20px;
+  background: conic-gradient(from var(--exb-angle),
+    #5d6268, #e9edf0 12%, #8b9096 25%, #f7f9fa 40%, #6c7177 55%, #d5dade 72%, #5d6268);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 8px 22px rgba(0, 0, 0, 0.55), 0 0 18px rgba(210, 220, 228, 0.08);
+  animation: exb-spin 6s linear infinite;
+}
+@keyframes exb-spin { to { --exb-angle: 360deg; } }
+
+.ex-bubble.is-live .ex-bubble-in {
+  border-radius: 18.5px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #141c19 0%, #0b100e 100%);
+  animation: exb-in 0.25s ease both;
+}
+@keyframes exb-in { from { opacity: 0.6; } to { opacity: 1; } }
+
+.ex-bubble.is-live #exercise {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  margin: 0;
+  font-weight: 600;
+}
+.ex-bubble.is-live #exercise:focus { outline: none; }
+
+.exb-last {
+  padding: 0 14px 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exb-rule {
+  height: 1px;
+  margin: 0 12px;
+  background: linear-gradient(90deg, transparent, rgba(220, 226, 230, 0.35), transparent);
+}
+.exb-tip { display: flex; align-items: center; gap: 10px; padding: 9px 10px 10px 14px; }
+.exb-txt { flex: 1; min-width: 0; line-height: 1.25; }
+.exb-main { font-size: 14px; font-weight: 800; color: var(--primary-text, #42a679); }
+.exb-or { color: var(--text-muted); font-weight: 500; }
+.exb-tip.is-warn .exb-main { color: var(--brass-light, #e0bd82); }
+.exb-why { font-size: 11px; color: #a9b2ad; margin-top: 1px; }
+.exb-why b {
+  font-weight: 700;
+  background: linear-gradient(90deg, #cfd5d9, #ffffff, #aab0b5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.exb-tip .exb-use {
+  flex: none;
+  width: auto;
+  margin: 0;
+  border: 1px solid rgba(235, 240, 243, 0.55);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, #eef1f3, #b9bfc4);
+  color: #0b100e;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 14px;
+  min-height: 32px;
+  box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+.exb-tip .exb-x {
+  flex: none;
+  width: auto;
+  margin: 0;
+  padding: 0 4px;
+  box-shadow: none;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  min-width: 32px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-bubble.is-live, .ex-bubble.is-live .ex-bubble-in { animation: none; }
+}

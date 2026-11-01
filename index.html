@@ -1033,7 +1033,14 @@
 
           <div class="log-exercise-title" id="exerciseLiveTitle" hidden></div>
           <div class="log-exercise-stats-line" id="exerciseStatsLine" hidden></div>
-          <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
+          <!-- Silver bubble around the exercise name; lights up with the
+               progression tip from workout-intelligence.js (#overloadHint). -->
+          <div class="ex-bubble" id="exerciseBubble">
+            <div class="ex-bubble-in">
+              <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
+              <div id="overloadHint" class="overload-hint"></div>
+            </div>
+          </div>
           <datalist id="exerciseSuggestions"></datalist>
           <!-- Constrains entry to the known catalog (built-in + custom
                exercises) — populated/validated by updateAddButtonState().
@@ -1043,8 +1050,6 @@
           <div id="exerciseNameHint" class="form-error" style="display:none;"></div>
           <button type="button" id="quickNewExerciseBtn" class="log-quick-new-exercise" onclick="openCustomExerciseCreator(document.getElementById('exercise').value)">+ New custom exercise</button>
 
-          <!-- Progressive overload hint -->
-          <div id="overloadHint" class="overload-hint"></div>
 
           <!-- Coach technique video hint -->
           <div id="exerciseVideoHint" class="exercise-video-hint" style="display:none;"></div>
@@ -9081,13 +9086,7 @@ async function loadWorkoutsFromBackend() {
   }
 }
   
-const AUTO_INCREMENT_SETTING_KEY = 'autoIncrementEnabled';
 let lastAutoFilledExercise = '';
-
-function isAutoIncrementEnabled() {
-  const saved = localStorage.getItem(AUTO_INCREMENT_SETTING_KEY);
-  return saved === null ? true : saved === 'true';
-}
 
 function getLastExerciseEntry(exerciseName) {
   const normalizedName = String(exerciseName || '').trim().toLowerCase();
@@ -9121,94 +9120,11 @@ function getLastWorkoutForExercise(exerciseName) {
   }));
 }
 
-function resolveLastSetRpe(entry) {
-  if (!entry || typeof entry !== 'object') return { target: null, actual: null };
-
-  const rawTarget = entry.targetRPE ?? entry.targetRpe ?? entry.rpeTarget ?? entry.goalRPE;
-  const target = Number(rawTarget);
-
-  let actualValue = entry.actualRPE ?? entry.actualRpe ?? entry.lastSetRPE ?? entry.lastSetRpe ?? entry.rpe;
-  if (Array.isArray(entry.rpeArray) && entry.rpeArray.length) {
-    actualValue = entry.rpeArray[entry.rpeArray.length - 1];
-  }
-  const actual = Number(actualValue);
-
-  return {
-    target: Number.isFinite(target) ? target : null,
-    actual: Number.isFinite(actual) ? actual : null
-  };
-}
-
-function shouldAutoIncrementSuggestion(entry) {
-  if (!isAutoIncrementEnabled() || !entry) return false;
-
-  const completed = Array.isArray(entry.completedArray) && entry.completedArray.length
-    ? Boolean(entry.completedArray[entry.completedArray.length - 1])
-    : true;
-
-  if (!completed) return false;
-
-  const { target, actual } = resolveLastSetRpe(entry);
-  if (target === null || actual === null) return false;
-
-  return actual <= target;
-}
-
-function getSuggestedSetsForExercise(exerciseName) {
+/** Last logged sets for an exercise, unchanged (no progression added). */
+function getLastTimeSetsForExercise(exerciseName) {
   const sets = getLastWorkoutForExercise(exerciseName);
   const lastEntry = getLastExerciseEntry(exerciseName);
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-
-  if (!sets.length) {
-    return { sets: [], unit: 'kg', autoIncrementApplied: false };
-  }
-
-  const storedRecommendation = lastEntry?.nextSessionRecommendation;
-  if (storedRecommendation && Array.isArray(storedRecommendation.sets) && storedRecommendation.sets.length) {
-    return {
-      sets: storedRecommendation.sets,
-      unit: storedRecommendation.unit || lastEntry?.unit || 'kg',
-      autoIncrementApplied: storedRecommendation.strategy === 'increase',
-      recommendationMessage: storedRecommendation.message || ''
-    };
-  }
-
-  const computedRecommendation = typeof suggestNextSession === 'function'
-    ? suggestNextSession(lastEntry || exerciseName, workouts)
-    : null;
-  if (computedRecommendation && Array.isArray(computedRecommendation.sets) && computedRecommendation.sets.length) {
-    return {
-      sets: computedRecommendation.sets,
-      unit: computedRecommendation.unit || lastEntry?.unit || 'kg',
-      autoIncrementApplied: computedRecommendation.strategy === 'increase',
-      recommendationMessage: computedRecommendation.message || ''
-    };
-  }
-
-  const suggestedSets = sets.map(set => ({ ...set }));
-  const shouldIncrement = shouldAutoIncrementSuggestion(lastEntry);
-
-  if (shouldIncrement) {
-    const shouldIncreaseWeight = Number.isFinite(Number(lastEntry?.repGoal))
-      ? suggestedSets.every(set => set.reps >= Number(lastEntry.repGoal))
-      : false;
-
-    if (shouldIncreaseWeight) {
-      suggestedSets.forEach(set => {
-        set.weight = Number((set.weight + 2.5).toFixed(2));
-      });
-    } else {
-      const finalIndex = suggestedSets.length - 1;
-      suggestedSets[finalIndex].reps += 1;
-    }
-  }
-
-  return {
-    sets: suggestedSets,
-    unit: lastEntry?.unit || 'kg',
-    autoIncrementApplied: shouldIncrement,
-    recommendationMessage: ''
-  };
+  return { sets, unit: lastEntry?.unit || 'kg' };
 }
 
 function applySuggestedSetValuesForExercise(force = false) {
@@ -9219,7 +9135,10 @@ function applySuggestedSetValuesForExercise(force = false) {
   const shouldSkipForManualEdits = !force && lastAutoFilledExercise.toLowerCase() === name.toLowerCase();
   if (shouldSkipForManualEdits) return false;
 
-  const suggestion = getSuggestedSetsForExercise(name);
+  // Start from what was actually lifted last time. The progression tip in
+  // the silver bubble (workout-intelligence.js) says what to add; its "Use"
+  // button applies it — nothing gets added on its own.
+  const suggestion = getLastTimeSetsForExercise(name);
   if (!suggestion.sets.length) return false;
 
   for (let i = 0; i < currentSetCount; i++) {
@@ -9236,8 +9155,8 @@ function applySuggestedSetValuesForExercise(force = false) {
       weightInput.value = setSuggestion.weight;
     }
 
-    repsInput.placeholder = 'Suggested from your last workout';
-    weightInput.placeholder = 'Suggested from your last workout';
+    repsInput.placeholder = 'From your last workout';
+    weightInput.placeholder = 'From your last workout';
     repsInput.classList.add('suggested-input');
     weightInput.classList.add('suggested-input');
   }
@@ -9249,7 +9168,7 @@ function applySuggestedSetValuesForExercise(force = false) {
 
   lastAutoFilledExercise = name;
   updateAddButtonState();
-  return suggestion.autoIncrementApplied;
+  return false;
 }
 
 function handleExerciseBlur() {
@@ -9257,7 +9176,7 @@ function handleExerciseBlur() {
   const name = exerciseInput ? exerciseInput.value.trim() : '';
   if (!name) return;
 
-  const suggestion = getSuggestedSetsForExercise(name);
+  const suggestion = getLastTimeSetsForExercise(name);
 
   if (!suggestion.sets.length) return;
 
@@ -11320,7 +11239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoIncrementToggle.checked = localStorage.getItem('autoIncrementEnabled') !== 'false';
     autoIncrementToggle.addEventListener('change', (event) => {
       localStorage.setItem('autoIncrementEnabled', String(Boolean(event.target.checked)));
-      window.showToast(`Auto-increment suggestions ${event.target.checked ? 'enabled' : 'disabled'}`);
+      window.showToast(`Weight suggestions ${event.target.checked ? 'on' : 'off'}`);
     });
   }
 });
