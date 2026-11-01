@@ -9936,7 +9936,9 @@ function getAssignedNutritionTargetsForCurrentDay(userId) {
   const assigned = getAssignedNutritionPlan(userId);
   if (!assigned) return null;
   const settings = getMacroCyclingSettings();
-  const isTrainingDay = settings.dayType !== 'rest';
+  // For a coach plan the Training day chip is the training/rest switch:
+  // unticked means a rest day.
+  const isTrainingDay = assigned.source === 'coach' ? settings.dayType === 'training' : settings.dayType !== 'rest';
   const useHigh = settings.carbCycle === 'high';
   const useLow = settings.carbCycle === 'low';
   const useRefeed = settings.isRefeedDay && assigned.days?.refeed;
@@ -9948,8 +9950,21 @@ function getAssignedNutritionTargetsForCurrentDay(userId) {
       : useLow
         ? assigned.days?.low
         : fallback;
-  if (!selected) return null;
-  return normalizePlanDayTargets(selected);
+  // A coach plan only requires the training day; any day type the coach
+  // left empty falls back to it.
+  const picked = selected || (assigned.source === 'coach' ? assigned.days?.training : null);
+  if (!picked) return null;
+  return normalizePlanDayTargets(picked);
+}
+
+const COACH_MACRO_DAY_LABELS = { training: 'Training day', rest: 'Rest day', high: 'High carb day', low: 'Low carb day' };
+
+// The day type the Macros tab is on right now, in the coach plan's terms.
+function currentCoachMacroDayType(assigned) {
+  const s = getMacroCyclingSettings();
+  if (s.carbCycle === 'high' && assigned.days?.high) return 'high';
+  if (s.carbCycle === 'low' && assigned.days?.low) return 'low';
+  return s.dayType !== 'training' && assigned.days?.rest ? 'rest' : 'training';
 }
 
 function renderAssignedNutritionPlanForAthlete() {
@@ -9966,6 +9981,15 @@ function renderAssignedNutritionPlanForAthlete() {
   const dayLabel = selected
     ? `${selected.calories} kcal · ${selected.protein}P / ${selected.carbs}C / ${selected.fat}F`
     : 'No day target selected';
+  if (assigned.source === 'coach') {
+    const type = currentCoachMacroDayType(assigned);
+    if (summary) {
+      summary.textContent = `${COACH_MACRO_DAY_LABELS[type]}: ${dayLabel}${assigned.note ? ` — ${assigned.note}` : ''}`;
+    }
+    if (meta) meta.textContent = assigned.coachUsername ? `From ${assigned.coachUsername}` : '';
+    card.style.display = 'block';
+    return;
+  }
   if (summary) {
     summary.textContent = `${assigned.planName || 'Macro plan'} (${assigned.structure?.type || 'macro-based'}) — active target: ${dayLabel}`;
   }
@@ -9976,16 +10000,50 @@ function renderAssignedNutritionPlanForAthlete() {
   card.style.display = 'block';
 }
 
+// Sets the day-type controls to what the coach's weekly pattern says for
+// today, unless the athlete already picked a day type by hand today.
+function applyCoachMacroScheduleForToday() {
+  const assigned = getAssignedNutritionPlan(currentUser);
+  if (!assigned || assigned.source !== 'coach' || !assigned.schedule) return false;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(getMacroDayContextKey()) || 'null'); } catch (_err) { /* ignore */ }
+  if (saved && saved.date === getTodayDateString() && saved.dayTypeSetByHand) return false;
+  const weekday = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date().getDay()];
+  const type = assigned.schedule[weekday];
+  if (!type || !assigned.days?.[type]) return false;
+  const trainingToggle = document.getElementById('trainingDayToggle');
+  const carbSelect = document.getElementById('carbCycleSelect');
+  if (trainingToggle) trainingToggle.checked = type !== 'rest' && type !== 'low';
+  if (carbSelect) carbSelect.value = type === 'high' || type === 'low' ? type : 'normal';
+  document.querySelectorAll('.macro-seg-row[data-macro-seg-for="carbCycleSelect"] .macro-seg-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.val === (carbSelect ? carbSelect.value : 'normal'));
+  });
+  return true;
+}
+
+// Called by client-coaching.js after the coach's plan is stored or cleared.
+function onCoachMacroPlanChanged() {
+  applyCoachMacroScheduleForToday();
+  if (typeof updateMacroUI === 'function') updateMacroUI();
+}
+window.onCoachMacroPlanChanged = onCoachMacroPlanChanged;
+
 function getMacroDayContextKey() {
   return `macroDayContext_${currentUser || 'guest'}`;
 }
 
-function persistMacroDayContext() {
+// { dayTypeSetByHand: true } when the athlete changed the day type themselves,
+// so a coach's weekly pattern doesn't override it for the rest of the day.
+function persistMacroDayContext(opts = {}) {
   const hydrationMl = Number(document.getElementById("hydrationMlInput")?.value || 0);
   const sodiumMg = Number(document.getElementById("sodiumMgInput")?.value || 0);
   const digestionNotes = document.getElementById("digestionNotesInput")?.value || "";
+  let previous = null;
+  try { previous = JSON.parse(localStorage.getItem(getMacroDayContextKey()) || 'null'); } catch (_err) { /* ignore */ }
+  const today = getTodayDateString();
   const payload = {
-    date: getTodayDateString(),
+    date: today,
+    dayTypeSetByHand: Boolean(opts.dayTypeSetByHand || (previous && previous.date === today && previous.dayTypeSetByHand)),
     ...getMacroCyclingSettings(),
     hydrationMl: hydrationMl > 0 ? hydrationMl : null,
     sodiumMg: sodiumMg > 0 ? sodiumMg : null,
@@ -10005,6 +10063,10 @@ function loadMacroDayContext() {
     }
     const refeedToggle = document.getElementById("refeedDayToggle");
     if (refeedToggle) refeedToggle.checked = Boolean(saved.isRefeedDay);
+    const trainingToggle = document.getElementById("trainingDayToggle");
+    if (trainingToggle && saved.dayTypeSetByHand && typeof saved.dayType === 'string') {
+      trainingToggle.checked = saved.dayType === 'training';
+    }
     const hydrationInput = document.getElementById("hydrationMlInput");
     if (hydrationInput && saved.hydrationMl) hydrationInput.value = saved.hydrationMl;
     const sodiumInput = document.getElementById("sodiumMgInput");
@@ -10025,7 +10087,11 @@ function getBodybuildingMacroTargets(baseTargets) {
 
 function getAdaptiveMacroTargets() {
   const baseTargets = getMacroTargetValues();
-  const daySplit = getBodybuildingMacroTargets(baseTargets);
+  // A coach plan already sets each day type's numbers, so the automatic
+  // high/low/rest-day split would adjust them a second time.
+  const daySplit = getAssignedNutritionTargetsForCurrentDay(currentUser)
+    ? { adjusted: baseTargets, profile: null, notes: [] }
+    : getBodybuildingMacroTargets(baseTargets);
   const splitTargets = daySplit.adjusted || baseTargets;
   const today = getTodayDateString();
   const log = JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
@@ -10484,12 +10550,15 @@ function renderMacroTargets(options = {}) {
   if (!saved) return;
   renderAssignedNutritionPlanForAthlete();
 
-  document.getElementById("macroProteinTarget").textContent = saved.protein;
-  document.getElementById("macroFatTarget").textContent = saved.fat;
-  document.getElementById("macroCarbsTarget").textContent = saved.carbs;
-  document.getElementById("macroCalsTarget").textContent = saved.calories;
+  // The headline numbers follow today's coach target when there is one; the
+  // sliders below stay on the athlete's own saved targets.
+  const shown = getAssignedNutritionTargetsForCurrentDay(currentUser) || saved;
+  document.getElementById("macroProteinTarget").textContent = shown.protein;
+  document.getElementById("macroFatTarget").textContent = shown.fat;
+  document.getElementById("macroCarbsTarget").textContent = shown.carbs;
+  document.getElementById("macroCalsTarget").textContent = shown.calories;
   const calTargetEl = document.getElementById("calTarget");
-  if (calTargetEl) calTargetEl.textContent = saved.calories;
+  if (calTargetEl) calTargetEl.textContent = shown.calories;
 
   document.getElementById("macroProteinProgress").textContent = 0;
   document.getElementById("macroFatProgress").textContent = 0;
@@ -10632,6 +10701,10 @@ function saveMacroTargetsToTop(target) {
     macroTargetProtein  = Number(target.protein) || 0;
     macroTargetFat      = Number(target.fat) || 0;
     macroTargetCarbs    = Number(target.carbs) || 0;
+    // The athlete's own targets are saved either way, but while a coach plan
+    // is active the screen shows today's coach target instead.
+    const coachDay = getAssignedNutritionTargetsForCurrentDay(currentUser);
+    if (coachDay) target = coachDay;
     document.getElementById("macroCalsTarget").textContent    = target.calories;
     document.getElementById("macroProteinTarget").textContent = target.protein;
     document.getElementById("macroFatTarget").textContent     = target.fat;
@@ -10997,13 +11070,15 @@ function loadAndRenderDailyProgress() {
 // Call on page/app start
 loadAndRenderDailyProgress();
 loadMacroDayContext();
+if (applyCoachMacroScheduleForToday()) updateMacroUI();
 
 ["carbCycleSelect", "refeedDayToggle", "hydrationMlInput", "sodiumMgInput", "digestionNotesInput", "trainingDayToggle"].forEach((id) => {
   const node = document.getElementById(id);
   if (!node) return;
   const eventName = node.tagName === 'SELECT' ? 'change' : (node.type === 'checkbox' ? 'change' : 'input');
+  const isDayType = id === 'carbCycleSelect' || id === 'trainingDayToggle';
   node.addEventListener(eventName, () => {
-    persistMacroDayContext();
+    persistMacroDayContext({ dayTypeSetByHand: isDayType });
     updateMacroUI();
   });
 });

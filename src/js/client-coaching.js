@@ -339,7 +339,54 @@
     const activeUids = new Set(state.invites.filter(i => i.status === 'active').map(i => i.coachUid));
     const logOnly = state.assignments.some(a => a.hideNutritionNumbers === true && activeUids.has(a.coachUid));
     if (typeof root.setNutritionLogOnly === 'function') root.setNutritionLogOnly(logOnly);
+    syncCoachMacroPlan(activeUids);
     return true;
+  }
+
+  // ── Coach macro plan by day type → Macros tab ────────────────────
+  // The Macros tab reads a per-day plan from coachNutritionAssignments_v1
+  // (index.html getAssignedNutritionPlan). Keep it in step with the active
+  // coach's macroPlan: store it when there is one, drop it when the coach
+  // cleared it or the athlete left. Plans that didn't come from a coach
+  // (source !== 'coach') are left alone.
+  const MACRO_PLAN_STORE = 'coachNutritionAssignments_v1';
+  const MACRO_DAY_NAMES = { training: 'Training', rest: 'Rest', high: 'High', low: 'Low' };
+
+  function macroPlanLine(plan) {
+    return Object.keys(MACRO_DAY_NAMES).filter(k => plan.days[k])
+      .map(k => `${MACRO_DAY_NAMES[k]} ${plan.days[k].calories}`).join(' · ') + ' kcal';
+  }
+
+  function syncCoachMacroPlan(activeUids) {
+    const username = user();
+    if (!username) return;
+    const withPlan = state.assignments
+      .filter(a => a && activeUids.has(a.coachUid) && a.macroPlan && a.macroPlan.days && a.macroPlan.days.training)
+      .sort((a, b) => tsMs(b.updatedAt) - tsMs(a.updatedAt));
+    const store = readJSON(root.localStorage, MACRO_PLAN_STORE, {}) || {};
+    const current = store[username];
+    let next;
+    if (withPlan.length) {
+      const a = withPlan[0];
+      next = {
+        source: 'coach',
+        coachUid: a.coachUid,
+        coachUsername: a.coachUsername || '',
+        days: a.macroPlan.days,
+        schedule: a.macroPlan.schedule || {},
+        note: a.macroPlan.note || '',
+        assignedAt: tsMs(a.updatedAt) || Date.now(),
+      };
+    } else if (current && current.source === 'coach') {
+      next = null;
+    } else {
+      return;
+    }
+    if (JSON.stringify(current || null) === JSON.stringify(next)) return;
+    if (next) store[username] = next;
+    else delete store[username];
+    root.localStorage.setItem(MACRO_PLAN_STORE, JSON.stringify(store));
+    if (typeof root.onCoachMacroPlanChanged === 'function') root.onCoachMacroPlanChanged();
   }
 
   // ── Food log sharing (asked once) ────────────────────────────────
@@ -470,7 +517,12 @@
               ${program ? `<span class="mx-row-sub">${program.days.length} day${program.days.length === 1 ? '' : 's'} a week · ${esc(arr(program.frequency).join(', '))}</span>` : ''}</div>
             ${program ? `<button type="button" class="mx-outline" data-yc-import="${esc(inv.coachUid)}" data-yc-rev="${esc(programRev)}">${startedRev === programRev ? 'Restart' : 'Start'}</button>` : ''}
           </div>` : ''}
-        ${m ? `
+        ${asn.macroPlan && asn.macroPlan.days ? `
+          <div class="mx-row">
+            <div class="mx-row-main"><span class="mx-lbl">Macro targets</span><span class="mx-row-title">${esc(macroPlanLine(asn.macroPlan))}</span>
+              <span class="mx-row-sub">Your Macros tab follows these, picking today's day type from your coach's weekly pattern.</span></div>
+            <button type="button" class="mx-outline" data-yc-open-macros="1">View</button>
+          </div>` : m ? `
           <div class="mx-row">
             <div class="mx-row-main"><span class="mx-lbl">Macro targets</span><span class="mx-row-title">${m.calories} kcal · ${m.protein}P / ${m.carbs}C / ${m.fat}F</span></div>
             <button type="button" class="mx-outline" data-yc-macros="${esc(inv.coachUid)}">Apply</button>
@@ -756,7 +808,7 @@
   }
 
   async function onClick(e) {
-    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-macros],[data-yc-share],[data-yc-video],[data-yc-refresh],[data-yc-open],[data-yc-plan],[data-yc-more]');
+    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-macros],[data-yc-open-macros],[data-yc-share],[data-yc-video],[data-yc-refresh],[data-yc-open],[data-yc-plan],[data-yc-more]');
     if (!t) return;
 
     if (t.dataset.ycOpen) { openYourCoach(t.dataset.ycOpen === '1' ? '' : t.dataset.ycOpen); return; }
@@ -825,6 +877,11 @@
       toast(`${asn.program.title} is now your active program.`);
       if (typeof root.renderTodayProgramCard === 'function') root.renderTodayProgramCard();
       pushShare({ force: true });
+      return;
+    }
+
+    if (t.dataset.ycOpenMacros) {
+      if (typeof root.showTab === 'function') root.showTab('macroTab');
       return;
     }
 
