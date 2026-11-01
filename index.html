@@ -4296,9 +4296,11 @@
 
 <!-- Then V2 UI -->
 <script src="src/js/plan-preview.js"></script>
+<script src="src/js/plan-today.js"></script>
 <script src="src/js/my-plan.js"></script>
 <script src="src/js/ProgramTabV2.js"></script>
 <script src="src/js/premium-library.js"></script>
+<script src="src/js/program-import-core.js"></script>
 <script src="src/js/program-import.js"></script>
 <script>
   // Shared inline-SVG icon set (Feather/Lucide style: stroke=currentColor,
@@ -9919,18 +9921,32 @@ function normalizePlanDayTargets(targets = {}) {
   const protein = roundMacroNumber(targets.protein);
   const carbs = roundMacroNumber(targets.carbs);
   const fat = roundMacroNumber(targets.fat);
+  // A coach's master plan states kcal itself (it can differ a few kcal from 4/4/9).
+  const stated = Number(targets.calories);
   return {
     protein,
     carbs,
     fat,
-    calories: protein * 4 + carbs * 4 + fat * 9,
+    calories: Number.isFinite(stated) && stated > 0 ? Math.round(stated) : protein * 4 + carbs * 4 + fat * 9,
   };
 }
 
-function getAssignedNutritionPlan(userId) {
+// A coach entry may carry `phases` from a published master plan: date ranges
+// with their own training/rest days and weekly pattern (src/js/plan-today.js
+// macroPhases). The range holding today (local date) wins; outside the plan's
+// dates the coach's stand-alone day-type plan (`fallback`) applies, if any.
+function getAssignedNutritionPlan(userId, isoDate) {
   if (!userId) return null;
   const store = getCoachNutritionPlanStore();
-  return store[userId] || null;
+  const entry = store[userId] || null;
+  if (!entry || !Array.isArray(entry.phases) || !entry.phases.length) return entry;
+  const now = new Date();
+  const day = isoDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const phase = entry.phases.find(p => p.from <= day && day <= p.to);
+  if (phase) {
+    return { ...entry, days: phase.days, schedule: phase.schedule || (entry.fallback && entry.fallback.schedule) || null, phaseType: phase.type, fromPlan: true };
+  }
+  return entry.fallback ? { ...entry, ...entry.fallback, fromPlan: false } : null;
 }
 
 function getAssignedNutritionTargetsForCurrentDay(userId) {

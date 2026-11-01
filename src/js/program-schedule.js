@@ -126,7 +126,11 @@
       return (list && list[trainingIndex % nDays]) || program.days[trainingIndex % nDays];
     }
 
+    // A coach's master plan (program.planId, see plan-today.js composeProgram)
+    // runs on calendar weeks from the plan's start Monday: a rest day after
+    // the week's last session still belongs to that week.
     function weekNumFor(trainingIndex, date) {
+      if (program.planId) return Math.min(weekCount, Math.max(1, Math.floor((date - startDate) / (7 * DAY_MS)) + 1));
       if (weekCount > 1) return (Math.floor(trainingIndex / nDays) % weekCount) + 1;
       return Math.max(1, Math.floor((date - startDate) / (7 * DAY_MS)) + 1);
     }

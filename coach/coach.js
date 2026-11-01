@@ -816,6 +816,7 @@ function renderProgram(c) {
     + '<button class="bulk-action-btn" onclick="assignProgram()">Assign</button>'
     + (c.currentProgramId ? '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="unassignProgram()">Remove</button>' : '')
     + '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="editSelectedProgram()">Edit selected</button>'
+    + '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="chooseProgramFile()">Import file</button>'
     + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="showProgramBuilder()">+ New program</button>'
     + '</div>'
     + '<div id="programBuilderArea" style="margin-top:12px;"></div></div>'
@@ -839,14 +840,50 @@ function nextMondayIso() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+// Which intake a client's plan is built from. Leads aren't linked to clients
+// when converted, so pick: the lead this client's plan already came from, the
+// coach's last pick for this client, then a lead whose email or name matches
+// the client. Otherwise nothing is preselected (it used to silently take the
+// first lead in the list).
+const planLeadKey = clientId => 'coachPlanLead_' + clientId;
+
+function leadMatchesClient(l, c) {
+  const norm = s => String(s || '').trim().toLowerCase();
+  const email = norm(l.intake?.persoonsgegevens?.email);
+  const name = norm(l.naam || l.intake?.persoonsgegevens?.naam);
+  return (email && email === norm(c.email)) || (name && name === norm(c.clientName));
+}
+
+function defaultLeadFor(c, planLeadId) {
+  const exists = id => id && _leads.some(l => l.id === id);
+  if (exists(planLeadId)) return planLeadId;
+  let saved = null;
+  try { saved = localStorage.getItem(planLeadKey(c.id)); } catch { /* storage blocked */ }
+  if (exists(saved)) return saved;
+  const matches = _leads.filter(l => l.status !== 'dismissed' && leadMatchesClient(l, c));
+  return matches.length === 1 ? matches[0].id : '';
+}
+
+function leadOptionsHtml(c, selected) {
+  const shown = _leads.filter(l => l.status !== 'dismissed' || l.id === selected)
+    .sort((a, b) => (leadMatchesClient(b, c) - leadMatchesClient(a, c)) || String(a.naam || '').localeCompare(String(b.naam || '')));
+  if (!shown.length) return '<option value="">No intake leads</option>';
+  return '<option value="">— Choose ' + escapeHtml(c.clientName || 'the client') + '’s intake —</option>'
+    + shown.map(l => '<option value="' + escapeHtml(l.id) + '"' + (l.id === selected ? ' selected' : '') + '>'
+      + escapeHtml(l.naam || 'Unnamed') + (l.intake?.persoonsgegevens?.email ? ' · ' + escapeHtml(l.intake.persoonsgegevens.email) : '')
+      + (l.status === 'converted' ? ' (converted)' : '') + '</option>').join('');
+}
+
+function rememberPlanLead(sel) {
+  try { if (_planState.clientId) localStorage.setItem(planLeadKey(_planState.clientId), sel.value); } catch { /* storage blocked */ }
+}
+
 function masterPlanCard(c) {
-  const leadOptions = _leads.length
-    ? _leads.map(l => '<option value="' + escapeHtml(l.id) + '">' + escapeHtml(l.naam || 'Unnamed') + (l.status === 'converted' ? ' (converted)' : '') + '</option>').join('')
-    : '<option value="">No intake leads</option>';
+  const leadOptions = leadOptionsHtml(c, defaultLeadFor(c));
   return '<div class="d-card"><div class="d-card-title">Master Plan</div>'
     + '<div id="planCurrent"><p class="ws-empty-note">Loading plans…</p></div>'
     + '<div class="mp-form">'
-    + '<label class="mp-field"><span class="mp-field-label">Intake</span><select id="planLead" class="mp-input">' + leadOptions + '</select></label>'
+    + '<label class="mp-field"><span class="mp-field-label">Intake</span><select id="planLead" class="mp-input" onchange="rememberPlanLead(this)">' + leadOptions + '</select></label>'
     + '<label class="mp-field"><span class="mp-field-label">Package</span><select id="planPackage" class="mp-input"></select></label>'
     + '<label class="mp-field"><span class="mp-field-label">Start date</span><input id="planStart" type="date" class="mp-input" value="' + nextMondayIso() + '"></label>'
     + '<label class="mp-field"><span class="mp-field-label">Tier</span><select id="planTier" class="mp-input"><option value="basis">Basis</option><option value="medium" selected>Medium</option><option value="premium">Premium</option></select></label>'
@@ -854,6 +891,7 @@ function masterPlanCard(c) {
     + '<div class="mp-adjust-actions">'
     + '<button type="button" class="mp-btn" onclick="previewMasterPlan()">Preview</button>'
     + '<button type="button" class="mp-btn mp-btn--gold" onclick="saveMasterPlanDraft()">Save as draft</button>'
+    + '<button type="button" class="pb-link" onclick="saveMasterPlanDraft(true)" title="Phases from the package; you fill in nutrition">Start blank (no intake)</button>'
     + '</div>'
     + '<div id="planMsg" class="ws-empty-note" style="margin-top:8px;"></div>'
     + '<div id="planPreviewArea" style="margin-top:12px;"></div></div>';
@@ -909,71 +947,49 @@ function renderPlanActions(plan) {
     ? '<button type="button" class="mp-btn" onclick="approveMasterPlan()">Approve</button>'
     : plan.status === 'approved'
       ? '<button type="button" class="mp-btn mp-btn--gold" onclick="publishMasterPlan()">Publish to client</button>'
-      : '';
+      : plan.status === 'published'
+        ? '<button type="button" class="mp-btn" onclick="reviseMasterPlan()">Make new version</button>'
+        : '';
   const statusText = plan.status === 'published' && plan.approval?.publishedAt
     ? 'published ' + plan.approval.publishedAt.slice(0, 10)
     : plan.status;
-  cur.innerHTML = '<p style="margin:0 0 6px;"><strong>' + escapeHtml(plan.package.name) + '</strong> · '
-    + escapeHtml(statusText) + '</p>'
+  cur.innerHTML = '<p style="margin:0 0 6px;"><strong>' + escapeHtml(plan.package.name) + '</strong> · v' + escapeHtml(plan.version || 1) + ' · '
+    + escapeHtml(statusText) + (plan.supersedes && plan.status !== 'published' ? ' · replaces the current version once published' : '') + '</p>'
     + (actions ? '<div class="mp-adjust-actions">' + actions + '</div>' : '');
 }
 
-// Inline adjustments for an unpublished plan: rest/training-day kcal and
-// protein per phase, and the cut target. Each change is logged server-side
-// with the reason given here.
-function planAdjustField(label, path, value, unit, step) {
-  return '<label class="mp-field"><span class="mp-field-label">' + escapeHtml(label) + '</span>'
-    + '<span class="mp-input-wrap"><input class="mp-input" type="number" inputmode="decimal"' + (step ? ' step="' + step + '"' : '')
-    + ' data-path="' + escapeHtml(path) + '" data-original="' + escapeHtml(value ?? '') + '" value="' + escapeHtml(value ?? '') + '"'
-    + (value == null ? ' placeholder="Set"' : '') + ' oninput="planAdjustChanged()">'
-    + '<span class="mp-unit">' + escapeHtml(unit) + '</span></span></label>';
-}
-
-function planAdjustForm(plan) {
-  if (plan.status === 'published' || plan.status === 'superseded') return '';
-  const fmtDate = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
-  const phases = plan.phases.map((p, i) => {
-    const target = (p.endCriteria?.any || []).findIndex(c => c.kind === 'target');
-    const label = { cut: 'Cut', maintain: 'Maintain', build: 'Build' }[p.type] || p.type;
-    return '<div class="mp-adjust-phase pp-phase--' + escapeHtml(p.type) + '">'
-      + '<div class="mp-adjust-head"><span class="pp-phase-name">' + escapeHtml(label) + '</span>'
-      + '<span class="mp-adjust-dates">' + escapeHtml(fmtDate(p.plannedStart)) + ' – ' + escapeHtml(fmtDate(p.plannedEnd)) + ' · ' + escapeHtml(p.caps?.maxWeeks) + ' wk</span></div>'
-      + '<div class="mp-adjust-grid">'
-      + planAdjustField('Rest day', 'phases[' + i + '].nutrition.restDay.kcal', p.nutrition.restDay.kcal, 'kcal')
-      + planAdjustField('Training day', 'phases[' + i + '].nutrition.trainingDay.kcal', p.nutrition.trainingDay.kcal, 'kcal')
-      + planAdjustField('Protein', 'phases[' + i + '].nutrition.restDay.proteinG', p.nutrition.restDay.proteinG, 'g', '0.1')
-      + (target >= 0 ? planAdjustField('Target weight', 'phases[' + i + '].endCriteria.any[' + target + '].value', p.endCriteria.any[target].value, 'kg', '0.1') : '')
-      + '</div></div>';
-  }).join('');
-  return '<details class="mp-adjust"><summary class="mp-adjust-summary"><span class="mp-adjust-title">Adjust targets</span>'
-    + '<span class="mp-adjust-hint">Every change is logged with your reason</span></summary>'
-    + '<div class="mp-adjust-body">' + phases
-    + '<label class="mp-field mp-field--wide"><span class="mp-field-label">Reason</span>'
-    + '<input id="planAdjustReason" class="mp-input mp-input--text" placeholder="Why — kept in the plan\'s change log"></label>'
-    + '<div class="mp-adjust-actions"><button type="button" class="mp-btn" onclick="saveMasterPlanAdjustments()">Save adjustments</button>'
-    + '<span id="planAdjustCount" class="mp-adjust-count">No changes yet</span></div>'
-    + '</div></details>';
-}
-
-// Marks edited fields and keeps the "N changes" counter current.
-function planAdjustChanged() {
-  const inputs = [...document.querySelectorAll('#planPreviewArea .mp-input[data-path]')];
-  let changed = 0;
-  inputs.forEach(inp => {
-    const dirty = inp.value !== '' && String(Number(inp.value)) !== String(Number(inp.dataset.original || NaN));
-    inp.closest('.mp-field').classList.toggle('is-changed', dirty);
-    if (dirty) changed++;
-  });
-  const count = document.getElementById('planAdjustCount');
-  if (count) count.textContent = changed ? changed + ' change' + (changed === 1 ? '' : 's') + ' to save' : 'No changes yet';
-}
-
+// Plan editor (coach/plan-editor.js): phases, programs per phase and
+// training/rest-day nutrition, saved as one logged batch with your reason.
 function showPlan(plan) {
   _planState.plan = plan;
+  const leadSel = document.getElementById('planLead');
+  const client = _clients.find(x => x.id === _planState.clientId);
+  if (leadSel && client && plan.client?.leadId && _leads.some(l => l.id === plan.client.leadId)) {
+    leadSel.innerHTML = leadOptionsHtml(client, plan.client.leadId);
+  }
   const area = document.getElementById('planPreviewArea');
   if (!area || !window.PlanPreview) return;
-  area.innerHTML = window.PlanPreview.render(plan, { coachView: true }) + (plan._saved === false ? '' : planAdjustForm(plan));
-  if (plan.status && plan._saved !== false) renderPlanActions(plan);
+  const saved = plan._saved !== false;
+  area.innerHTML = window.PlanPreview.render(plan, { coachView: true, programs: _programs })
+    + (saved && window.PlanEditor ? '<details class="mp-adjust" open><summary class="mp-adjust-summary"><span class="mp-adjust-title">Edit plan</span>'
+      + '<span class="mp-adjust-hint">Phases, programs and nutrition · every change is logged with your reason</span></summary>'
+      + '<div class="mp-adjust-body" id="planEditorArea"></div></details>' : '');
+  const editorArea = document.getElementById('planEditorArea');
+  if (editorArea) {
+    window.PlanEditor.mount(editorArea, plan, {
+      programs: _programs,
+      onSave: async ({ ops, changes }, reason) => {
+        const body = { reason };
+        if (ops.length) body.ops = ops;
+        if (changes.length) body.changes = changes;
+        const { plan: updated } = await planApi('/' + encodeURIComponent(plan.planId), { method: 'PATCH', body: JSON.stringify(body) });
+        const n = ops.length + changes.length;
+        planMsg(n + ' change' + (n === 1 ? '' : 's') + ' saved' + (plan.status === 'approved' ? ' — approve again before publishing.' : '.'));
+        showPlan(updated);
+      },
+    });
+  }
+  if (plan.status && saved) renderPlanActions(plan);
 }
 
 async function openMasterPlan(planId) {
@@ -981,7 +997,15 @@ async function openMasterPlan(planId) {
   showPlan(plan);
 }
 
+function needsLead() {
+  if (document.getElementById('planLead')?.value) return false;
+  planMsg('Choose the client’s intake first, or use Start blank (no intake).');
+  document.getElementById('planLead')?.focus();
+  return true;
+}
+
 async function previewMasterPlan() {
+  if (needsLead()) return;
   planMsg('Generating preview…');
   try {
     const { plan } = await planApi('/preview', { method: 'POST', body: JSON.stringify(planFormBody(_planState.clientId)) });
@@ -990,28 +1014,15 @@ async function previewMasterPlan() {
   } catch (err) { planMsg('Could not generate: ' + err.message); }
 }
 
-async function saveMasterPlanDraft() {
+async function saveMasterPlanDraft(blank) {
+  if (blank !== true && needsLead()) return;
   planMsg('Saving draft…');
   try {
-    const { plan } = await planApi('/', { method: 'POST', body: JSON.stringify(planFormBody(_planState.clientId)) });
-    planMsg('Draft saved. Review it, then approve and publish.');
+    const body = planFormBody(_planState.clientId);
+    if (blank === true) { body.blank = true; delete body.leadId; }
+    const { plan } = await planApi('/', { method: 'POST', body: JSON.stringify(body) });
+    planMsg(blank === true ? 'Blank draft saved. Fill in nutrition per phase, then approve and publish.' : 'Draft saved. Review it, then approve and publish.');
     showPlan(plan);
-  } catch (err) { planMsg('Could not save: ' + err.message); }
-}
-
-async function saveMasterPlanAdjustments() {
-  const plan = _planState.plan;
-  if (!plan?.planId) return;
-  const reason = document.getElementById('planAdjustReason')?.value || '';
-  const get = (obj, path) => path.split(/\.|\[|\]/).filter(Boolean).reduce((o, k) => (o == null ? undefined : o[/^\d+$/.test(k) ? Number(k) : k]), obj);
-  const changes = [...document.querySelectorAll('#planPreviewArea [data-path]')]
-    .filter(inp => inp.value !== '' && Number(inp.value) !== get(plan, inp.dataset.path))
-    .map(inp => ({ path: inp.dataset.path, value: Number(inp.value), reason }));
-  if (!changes.length) { planMsg('Nothing changed.'); return; }
-  try {
-    const { plan: updated } = await planApi('/' + encodeURIComponent(plan.planId), { method: 'PATCH', body: JSON.stringify({ changes }) });
-    planMsg(changes.length + ' change' + (changes.length === 1 ? '' : 's') + ' saved' + (plan.status === 'approved' ? ' — approve again before publishing.' : '.'));
-    showPlan(updated);
   } catch (err) { planMsg('Could not save: ' + err.message); }
 }
 
@@ -1021,6 +1032,16 @@ async function approveMasterPlan() {
     planMsg('Approved. Publish it to send it to the client.');
     showPlan(plan);
   } catch (err) { planMsg('Could not approve: ' + err.message); }
+}
+
+// A new draft version of the published plan; publishing it replaces the
+// current one for the client (the old version is kept as superseded).
+async function reviseMasterPlan() {
+  try {
+    const { plan } = await planApi('/' + encodeURIComponent(_planState.plan.planId) + '/revise', { method: 'POST' });
+    planMsg('Version ' + plan.version + ' created as a draft. Edit it, approve it and publish it; the client keeps the current version until then.');
+    showPlan(plan);
+  } catch (err) { planMsg('Could not make a new version: ' + err.message); }
 }
 
 async function publishMasterPlan() {
@@ -1088,6 +1109,70 @@ function showProgramBuilder(program) {
     onCancel: () => { area.innerHTML = ''; },
   });
   area.querySelector('[data-pf="name"]')?.focus();
+}
+
+// ── Import a program file into the library ────────────────────────────────
+// Same upload as the athlete app's Import sheet (src/js/program-import-core.js).
+// A Week | Day | Exercise | Sets | Reps | RIR | Rest | Notes sheet is read
+// exactly; other files go through the AI. Either way the result opens in the
+// builder to check and fix before it's saved.
+function chooseProgramFile() {
+  let input = document.getElementById('coachProgramFile');
+  if (!input) {
+    input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'coachProgramFile';
+    input.hidden = true;
+    input.accept = window.ProgramImportCore.ACCEPT;
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      input.value = '';
+      if (file) importProgramFile(file);
+    });
+    document.body.appendChild(input);
+  }
+  input.click();
+}
+
+let _importJob = null;
+
+async function importProgramFile(file) {
+  const area = document.getElementById('programBuilderArea');
+  if (!area) return;
+  const IC = window.ProgramImportCore;
+  const problem = IC.checkFile(file);
+  if (problem) { area.innerHTML = '<div class="pi-banner pi-banner--error">' + escapeHtml(problem) + '</div>'; return; }
+  if (_importJob) _importJob.abort();
+  area.innerHTML = '<div class="pi-banner">Reading <strong>' + escapeHtml(file.name) + '</strong>… A sheet with Week / Day / Exercise columns takes a second; other files go through the AI and can take a few minutes.</div>';
+  const job = IC.start(file, { serverUrl: SERVER_URL, headers: authHeaders(), target: 'coach', fetchFn: coachFetch });
+  _importJob = job;
+  let result;
+  try {
+    result = await job.promise;
+  } catch (err) {
+    if (_importJob === job) area.innerHTML = '<div class="pi-banner pi-banner--error">' + escapeHtml(IC.friendlyError(err, navigator.onLine)) + '</div>';
+    return;
+  } finally {
+    if (_importJob === job) _importJob = null;
+  }
+  showImportedProgram(area, file.name, result);
+}
+
+function showImportedProgram(area, fileName, result) {
+  const rows = (result.rowWarnings || []).filter(w => w.row);
+  const notes = (result.warnings || []).concat(rows.map(w => 'Sheet row ' + w.row + ': ' + w.message));
+  const source = result.source === 'table'
+    ? 'Read directly from the sheet.'
+    : 'Converted by the AI. Check every week before saving.';
+  area.innerHTML = '<div class="pi-banner"><strong>Imported from ' + escapeHtml(fileName) + '.</strong> ' + source
+    + ' Fix anything below, then Save to library.'
+    + (notes.length ? '<ul>' + notes.slice(0, 30).map(n => '<li>' + escapeHtml(n) + '</li>').join('') + (notes.length > 30 ? '<li>…and ' + (notes.length - 30) + ' more</li>' : '') + '</ul>' : '')
+    + '</div><div id="programImportBuilder"></div>';
+  const id = 'prog_' + Date.now().toString(36);
+  window.ProgramBuilder.mount(document.getElementById('programImportBuilder'), result.program, {
+    onSave: v2 => saveCoachProgram(id, v2),
+    onCancel: () => { area.innerHTML = ''; },
+  });
 }
 
 function editSelectedProgram() {
