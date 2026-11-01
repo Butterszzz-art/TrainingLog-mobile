@@ -277,6 +277,20 @@
   background: rgba(255, 255, 255, 0.038); box-shadow: none; color: var(--green-90);
   font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
 }
+#programTab .prog-list-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+#programTab .prog-list-cal-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin: 0; padding: 0 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.038); box-shadow: none; color: var(--text-secondary); cursor: pointer;
+  font-family: var(--font-label); font-size: 13px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+}
+#programTab .prog-list-cal-btn .ui-icon { width: 16px; height: 16px; }
+@media (max-width: 520px) {
+  #programTab .prog-list-header { flex-wrap: wrap; row-gap: 10px; }
+  #programTab .prog-list-header-actions { flex-wrap: nowrap; margin-left: auto; }
+  #programTab .prog-list-new-btn { white-space: nowrap; padding: 0 12px; }
+  #programTab .prog-list-cal-btn { width: 40px; padding: 0; justify-content: center; }
+  #programTab .prog-list-cal-btn span:not(.ui-icon) { display: none; }
+}
 #programTab .prog-list-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 20px; border-radius: var(--radius-pod); border: 1px dashed var(--border-default); text-align: center; }
 #programTab .prog-list-empty-icon {
   width: 56px; height: 56px; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin: 0;

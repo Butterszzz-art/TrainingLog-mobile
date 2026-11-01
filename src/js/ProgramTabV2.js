@@ -1202,7 +1202,10 @@
     header.className = 'prog-list-header';
     header.innerHTML = `
       <h2>My Programs</h2>
-      <button type="button" class="prog-list-new-btn" onclick="showProgramView('build')">${ico('plus')}<span>New Program</span></button>
+      <div class="prog-list-header-actions">
+        <button type="button" class="prog-list-cal-btn" data-calendar-sync aria-label="Add your program to your calendar">${ico('calendar')}<span>Calendar</span></button>
+        <button type="button" class="prog-list-new-btn" onclick="showProgramView('build')">${ico('plus')}<span>New Program</span></button>
+      </div>
     `;
 
     container.innerHTML = '';

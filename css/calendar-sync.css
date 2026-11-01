@@ -1,0 +1,52 @@
+/* Calendar sync (calendar-sync.js): Home card link + the bottom sheet. */
+
+/* "Add to calendar" row under the Up today week strip */
+.tpc-cal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  margin: 8px 0 0;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-row, rgba(255, 255, 255, 0.08));
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-secondary);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tpc-cal .ui-icon { width: 15px; height: 15px; flex: none; }
+.tpc-cal span:nth-child(2) { flex: 1; }
+.tpc-cal-go { font-size: 16px; color: var(--text-tertiary); }
+.tpc-cal.is-on { color: var(--green-90, #8fd1ab); }
+
+/* Sheet */
+.cal-sheet-body { display: flex; flex-direction: column; gap: 14px; }
+.cal-actions { display: flex; flex-direction: column; gap: 10px; }
+.cal-actions .mx-cta:disabled,
+.cal-sheet-body .mx-cta:disabled { opacity: 0.6; }
+.cal-footer { display: flex; justify-content: space-between; gap: 12px; }
+.cal-textbtn {
+  min-height: 40px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.cal-textbtn--danger { color: var(--danger-text-mobile, #e38b8b); }
