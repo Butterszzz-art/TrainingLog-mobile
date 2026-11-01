@@ -855,6 +855,7 @@ function masterPlanCard(c) {
     + '<div class="mp-adjust-actions">'
     + '<button type="button" class="mp-btn" onclick="previewMasterPlan()">Preview</button>'
     + '<button type="button" class="mp-btn mp-btn--gold" onclick="saveMasterPlanDraft()">Save as draft</button>'
+    + '<button type="button" class="pb-link" onclick="saveMasterPlanDraft(true)" title="Phases from the package; you fill in nutrition">Start blank (no intake)</button>'
     + '</div>'
     + '<div id="planMsg" class="ws-empty-note" style="margin-top:8px;"></div>'
     + '<div id="planPreviewArea" style="margin-top:12px;"></div></div>';
@@ -910,71 +911,44 @@ function renderPlanActions(plan) {
     ? '<button type="button" class="mp-btn" onclick="approveMasterPlan()">Approve</button>'
     : plan.status === 'approved'
       ? '<button type="button" class="mp-btn mp-btn--gold" onclick="publishMasterPlan()">Publish to client</button>'
-      : '';
+      : plan.status === 'published'
+        ? '<button type="button" class="mp-btn" onclick="reviseMasterPlan()">Make new version</button>'
+        : '';
   const statusText = plan.status === 'published' && plan.approval?.publishedAt
     ? 'published ' + plan.approval.publishedAt.slice(0, 10)
     : plan.status;
-  cur.innerHTML = '<p style="margin:0 0 6px;"><strong>' + escapeHtml(plan.package.name) + '</strong> · '
-    + escapeHtml(statusText) + '</p>'
+  cur.innerHTML = '<p style="margin:0 0 6px;"><strong>' + escapeHtml(plan.package.name) + '</strong> · v' + escapeHtml(plan.version || 1) + ' · '
+    + escapeHtml(statusText) + (plan.supersedes && plan.status !== 'published' ? ' · replaces the current version once published' : '') + '</p>'
     + (actions ? '<div class="mp-adjust-actions">' + actions + '</div>' : '');
 }
 
-// Inline adjustments for an unpublished plan: rest/training-day kcal and
-// protein per phase, and the cut target. Each change is logged server-side
-// with the reason given here.
-function planAdjustField(label, path, value, unit, step) {
-  return '<label class="mp-field"><span class="mp-field-label">' + escapeHtml(label) + '</span>'
-    + '<span class="mp-input-wrap"><input class="mp-input" type="number" inputmode="decimal"' + (step ? ' step="' + step + '"' : '')
-    + ' data-path="' + escapeHtml(path) + '" data-original="' + escapeHtml(value ?? '') + '" value="' + escapeHtml(value ?? '') + '"'
-    + (value == null ? ' placeholder="Set"' : '') + ' oninput="planAdjustChanged()">'
-    + '<span class="mp-unit">' + escapeHtml(unit) + '</span></span></label>';
-}
-
-function planAdjustForm(plan) {
-  if (plan.status === 'published' || plan.status === 'superseded') return '';
-  const fmtDate = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
-  const phases = plan.phases.map((p, i) => {
-    const target = (p.endCriteria?.any || []).findIndex(c => c.kind === 'target');
-    const label = { cut: 'Cut', maintain: 'Maintain', build: 'Build' }[p.type] || p.type;
-    return '<div class="mp-adjust-phase pp-phase--' + escapeHtml(p.type) + '">'
-      + '<div class="mp-adjust-head"><span class="pp-phase-name">' + escapeHtml(label) + '</span>'
-      + '<span class="mp-adjust-dates">' + escapeHtml(fmtDate(p.plannedStart)) + ' – ' + escapeHtml(fmtDate(p.plannedEnd)) + ' · ' + escapeHtml(p.caps?.maxWeeks) + ' wk</span></div>'
-      + '<div class="mp-adjust-grid">'
-      + planAdjustField('Rest day', 'phases[' + i + '].nutrition.restDay.kcal', p.nutrition.restDay.kcal, 'kcal')
-      + planAdjustField('Training day', 'phases[' + i + '].nutrition.trainingDay.kcal', p.nutrition.trainingDay.kcal, 'kcal')
-      + planAdjustField('Protein', 'phases[' + i + '].nutrition.restDay.proteinG', p.nutrition.restDay.proteinG, 'g', '0.1')
-      + (target >= 0 ? planAdjustField('Target weight', 'phases[' + i + '].endCriteria.any[' + target + '].value', p.endCriteria.any[target].value, 'kg', '0.1') : '')
-      + '</div></div>';
-  }).join('');
-  return '<details class="mp-adjust"><summary class="mp-adjust-summary"><span class="mp-adjust-title">Adjust targets</span>'
-    + '<span class="mp-adjust-hint">Every change is logged with your reason</span></summary>'
-    + '<div class="mp-adjust-body">' + phases
-    + '<label class="mp-field mp-field--wide"><span class="mp-field-label">Reason</span>'
-    + '<input id="planAdjustReason" class="mp-input mp-input--text" placeholder="Why — kept in the plan\'s change log"></label>'
-    + '<div class="mp-adjust-actions"><button type="button" class="mp-btn" onclick="saveMasterPlanAdjustments()">Save adjustments</button>'
-    + '<span id="planAdjustCount" class="mp-adjust-count">No changes yet</span></div>'
-    + '</div></details>';
-}
-
-// Marks edited fields and keeps the "N changes" counter current.
-function planAdjustChanged() {
-  const inputs = [...document.querySelectorAll('#planPreviewArea .mp-input[data-path]')];
-  let changed = 0;
-  inputs.forEach(inp => {
-    const dirty = inp.value !== '' && String(Number(inp.value)) !== String(Number(inp.dataset.original || NaN));
-    inp.closest('.mp-field').classList.toggle('is-changed', dirty);
-    if (dirty) changed++;
-  });
-  const count = document.getElementById('planAdjustCount');
-  if (count) count.textContent = changed ? changed + ' change' + (changed === 1 ? '' : 's') + ' to save' : 'No changes yet';
-}
-
+// Plan editor (coach/plan-editor.js): phases, programs per phase and
+// training/rest-day nutrition, saved as one logged batch with your reason.
 function showPlan(plan) {
   _planState.plan = plan;
   const area = document.getElementById('planPreviewArea');
   if (!area || !window.PlanPreview) return;
-  area.innerHTML = window.PlanPreview.render(plan, { coachView: true }) + (plan._saved === false ? '' : planAdjustForm(plan));
-  if (plan.status && plan._saved !== false) renderPlanActions(plan);
+  const saved = plan._saved !== false;
+  area.innerHTML = window.PlanPreview.render(plan, { coachView: true, programs: _programs })
+    + (saved && window.PlanEditor ? '<details class="mp-adjust" open><summary class="mp-adjust-summary"><span class="mp-adjust-title">Edit plan</span>'
+      + '<span class="mp-adjust-hint">Phases, programs and nutrition · every change is logged with your reason</span></summary>'
+      + '<div class="mp-adjust-body" id="planEditorArea"></div></details>' : '');
+  const editorArea = document.getElementById('planEditorArea');
+  if (editorArea) {
+    window.PlanEditor.mount(editorArea, plan, {
+      programs: _programs,
+      onSave: async ({ ops, changes }, reason) => {
+        const body = { reason };
+        if (ops.length) body.ops = ops;
+        if (changes.length) body.changes = changes;
+        const { plan: updated } = await planApi('/' + encodeURIComponent(plan.planId), { method: 'PATCH', body: JSON.stringify(body) });
+        const n = ops.length + changes.length;
+        planMsg(n + ' change' + (n === 1 ? '' : 's') + ' saved' + (plan.status === 'approved' ? ' — approve again before publishing.' : '.'));
+        showPlan(updated);
+      },
+    });
+  }
+  if (plan.status && saved) renderPlanActions(plan);
 }
 
 async function openMasterPlan(planId) {
@@ -991,28 +965,14 @@ async function previewMasterPlan() {
   } catch (err) { planMsg('Could not generate: ' + err.message); }
 }
 
-async function saveMasterPlanDraft() {
+async function saveMasterPlanDraft(blank) {
   planMsg('Saving draft…');
   try {
-    const { plan } = await planApi('/', { method: 'POST', body: JSON.stringify(planFormBody(_planState.clientId)) });
-    planMsg('Draft saved. Review it, then approve and publish.');
+    const body = planFormBody(_planState.clientId);
+    if (blank === true) { body.blank = true; delete body.leadId; }
+    const { plan } = await planApi('/', { method: 'POST', body: JSON.stringify(body) });
+    planMsg(blank === true ? 'Blank draft saved. Fill in nutrition per phase, then approve and publish.' : 'Draft saved. Review it, then approve and publish.');
     showPlan(plan);
-  } catch (err) { planMsg('Could not save: ' + err.message); }
-}
-
-async function saveMasterPlanAdjustments() {
-  const plan = _planState.plan;
-  if (!plan?.planId) return;
-  const reason = document.getElementById('planAdjustReason')?.value || '';
-  const get = (obj, path) => path.split(/\.|\[|\]/).filter(Boolean).reduce((o, k) => (o == null ? undefined : o[/^\d+$/.test(k) ? Number(k) : k]), obj);
-  const changes = [...document.querySelectorAll('#planPreviewArea [data-path]')]
-    .filter(inp => inp.value !== '' && Number(inp.value) !== get(plan, inp.dataset.path))
-    .map(inp => ({ path: inp.dataset.path, value: Number(inp.value), reason }));
-  if (!changes.length) { planMsg('Nothing changed.'); return; }
-  try {
-    const { plan: updated } = await planApi('/' + encodeURIComponent(plan.planId), { method: 'PATCH', body: JSON.stringify({ changes }) });
-    planMsg(changes.length + ' change' + (changes.length === 1 ? '' : 's') + ' saved' + (plan.status === 'approved' ? ' — approve again before publishing.' : '.'));
-    showPlan(updated);
   } catch (err) { planMsg('Could not save: ' + err.message); }
 }
 
@@ -1022,6 +982,16 @@ async function approveMasterPlan() {
     planMsg('Approved. Publish it to send it to the client.');
     showPlan(plan);
   } catch (err) { planMsg('Could not approve: ' + err.message); }
+}
+
+// A new draft version of the published plan; publishing it replaces the
+// current one for the client (the old version is kept as superseded).
+async function reviseMasterPlan() {
+  try {
+    const { plan } = await planApi('/' + encodeURIComponent(_planState.plan.planId) + '/revise', { method: 'POST' });
+    planMsg('Version ' + plan.version + ' created as a draft. Edit it, approve it and publish it; the client keeps the current version until then.');
+    showPlan(plan);
+  } catch (err) { planMsg('Could not make a new version: ' + err.message); }
 }
 
 async function publishMasterPlan() {

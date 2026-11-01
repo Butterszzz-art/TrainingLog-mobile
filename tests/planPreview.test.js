@@ -107,3 +107,44 @@ describe('MyPlan.showMyPlan', () => {
     expect(el.innerHTML).toContain('Physique Plan');
   });
 });
+
+describe('PlanPreview with plan/2', () => {
+  const n = (kcal, p, c, f) => ({ kcal, proteinG: p, carbG: c, fatG: f });
+  const v2 = {
+    schema: 'pocketcoach.plan/2', status: 'published', startDate: '2026-11-09', package: { name: 'Cut Cycle' },
+    programs: { prog_x: { title: 'Block', weeks: [{}, {}, {}, {}] } },
+    phases: [
+      { phaseId: 'ph1', type: 'cut', weeks: 12, startWeek: 1, plannedStart: '2026-11-09', plannedEnd: '2027-01-31', goalText: 'Lose ~0.5% a week',
+        endCriteria: { any: [{ kind: 'timeCap', weeks: 12 }] }, nutrition: { trainingDay: n(2350, 165, 275, 65), restDay: n(2000, 165, 190, 65) },
+        training: { programRef: { programId: 'prog_x', name: 'Block', weekOffset: 0 } } },
+      { phaseId: 'ph2', type: 'deload', weeks: 1, startWeek: 13, plannedStart: '2027-02-01', plannedEnd: '2027-02-07',
+        endCriteria: { any: [{ kind: 'timeCap', weeks: 1 }] }, nutrition: { trainingDay: n(null, null, null, null), restDay: n(2700, 165, 364, 65) },
+        training: { programRef: { programId: 'prog_x', name: 'Block', weekOffset: 12 } } },
+    ],
+  };
+
+  test('deload phase, goal, both day types with all macros, program weeks', () => {
+    const html = PlanPreview.render(v2, { today: '2026-11-20' });
+    expect(html).toContain('pp-phase--deload');
+    expect(html).toContain('Deload');
+    expect(html).toContain('Lose ~0.5% a week');
+    expect(html).toMatch(/Training day[\s\S]*2350[\s\S]*P 165 g[\s\S]*C 275 g[\s\S]*F 65 g[\s\S]*Rest day[\s\S]*2000/);
+    expect(html).toContain('Not set yet');
+    expect(html).toMatch(/Block<\/strong> · program weeks 1–12/);
+    expect(html).toMatch(/program week 13</);
+    expect(html).toContain('weeks 1–12');
+    expect(html).toContain('Now · week 2');
+  });
+
+  test('coach view warns when the program is shorter than the phase', () => {
+    expect(PlanPreview.render(v2, { coachView: true, today: '2026-11-20' })).toContain('has 4 weeks; week 4 repeats after that');
+    expect(PlanPreview.render(v2, { today: '2026-11-20' })).not.toContain('repeats after that');
+  });
+
+  test('upgrade reads /1 as /2', () => {
+    const up = PlanPreview.upgrade(published);
+    expect(up.schema).toBe('pocketcoach.plan/2');
+    expect(up.phases.map(p => p.startWeek)).toEqual([1, 17, 21]);
+    expect(up.phases[0].weeks).toBe(published.phases[0].caps.maxWeeks);
+  });
+});
