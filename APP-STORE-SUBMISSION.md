@@ -123,6 +123,17 @@ What's done in code, and what still has to happen outside it. Work top to bottom
 27. TestFlight check: open the bell → allow notifications, then have a friend send
     you a friend request with the app closed. Tapping the banner opens the inbox.
 
+### Apple Health (HealthKit)
+28. Apple Developer → Identifiers → `com.pocketcoach.app`: tick **HealthKit** (no
+    clinical records), Save, then fetch the provisioning profile again in Codemagic.
+29. App Privacy form: add **Health & Fitness → Health** and **Fitness** (linked to the
+    user, not used for tracking). The privacy policy already covers Apple Health.
+30. Review notes: say that Apple Health is optional and lives in Settings → Devices
+    (and the Macros screen for food), and that health data is never used for ads.
+31. TestFlight check: Settings → Devices → Connect Apple Health, allow everything.
+    The step ring, Sleep tab, recovery and weigh-ins should fill in; finish a workout
+    of 5+ minutes and check it shows in the Health app under Workouts.
+
 ### Worth fixing before or soon after launch
 - **Reports:** the Terms promise action within 24 hours. Watch the moderation inbox.
 - **`pricing.html`** doesn't match the app's plans (hidden in the native app).

@@ -818,6 +818,48 @@ async function refreshActivitySyncStatus(container = document) {
   }
 }
 
+// Apple Health (iPhone only, src/js/apple-health.js). Reads happen on the
+// phone; the Activity sync section below is the Google Health connection.
+function renderAppleHealthSection(container = document) {
+  const section = container.querySelector('#appleHealthSection');
+  const ah = window.AppleHealth;
+  if (!section) return;
+  if (!ah || !ah.isAvailable()) { section.hidden = true; return; }
+  section.hidden = false;
+  const connected = ah.isConnected();
+  const status = container.querySelector('#appleHealthStatus');
+  if (status) status.textContent = connected ? 'Connected' : 'Not connected';
+  const connectBtn = container.querySelector('#appleHealthConnectButton');
+  const openBtn = container.querySelector('#appleHealthOpenButton');
+  const offBtn = container.querySelector('#appleHealthDisconnectButton');
+  if (connectBtn) connectBtn.hidden = connected;
+  if (openBtn) openBtn.hidden = !connected;
+  if (offBtn) offBtn.hidden = !connected;
+}
+
+function bindAppleHealthControls(container = document) {
+  const section = container.querySelector('#appleHealthSection');
+  if (!section || section.dataset.bound === 'true') { renderAppleHealthSection(container); return; }
+  section.dataset.bound = 'true';
+  container.querySelector('#appleHealthConnectButton')?.addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true;
+    const ok = await window.AppleHealth?.connect?.();
+    e.currentTarget.disabled = false;
+    if (typeof showToast === 'function') {
+      showToast(ok ? 'Apple Health connected' : 'Could not connect Apple Health', ok ? 'success' : 'error');
+    }
+    renderAppleHealthSection(container);
+  });
+  // iOS only shows the permission sheet once; after that, Health owns it.
+  container.querySelector('#appleHealthOpenButton')?.addEventListener('click', () => window.AppleHealth?.openHealthApp?.());
+  container.querySelector('#appleHealthDisconnectButton')?.addEventListener('click', () => {
+    window.AppleHealth?.disconnect?.();
+    if (typeof showToast === 'function') showToast('Apple Health sync stopped. To remove access, use the Health app.');
+    renderAppleHealthSection(container);
+  });
+  renderAppleHealthSection(container);
+}
+
 function bindActivitySyncControls(container = document) {
   const { connectBtn, disconnectBtn } = getActivitySyncElements(container);
 
@@ -865,6 +907,7 @@ function bindActivitySyncControls(container = document) {
   }
 
   refreshActivitySyncStatus(container);
+  bindAppleHealthControls(container);
 }
 
 // The Activity Sync OAuth callback redirects the browser back with ?activitySync=connected|error.

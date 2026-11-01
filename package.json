@@ -22,6 +22,7 @@
     "@capgo/native-purchases": "^8.8.1",
     "bcrypt": "^6.0.0",
     "capacitor-health-connect": "file:plugins/health-connect",
+    "capacitor-health-kit": "file:plugins/health-kit",
     "capacitor-instagram-stories": "file:plugins/instagram-stories",
     "capacitor-workout-activity": "file:plugins/workout-activity",
     "chart.js": "^4.5.0",

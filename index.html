@@ -3223,11 +3223,11 @@
               </button>
             </div>
 
-            <!-- Health Connect import (Android app only; health-nutrition.js
-                 shows it). Brings in food logged in Cronometer etc. -->
+            <!-- Health Connect (Android) / Apple Health (iOS) import, shown by
+                 health-nutrition.js. Brings in food logged in Cronometer etc. -->
             <div id="healthNutritionCard" class="pod macro-health-sync" hidden>
               <div class="macro-health-sync-text">
-                <span class="mx-lbl">Health Connect</span>
+                <span class="mx-lbl" id="healthNutritionLabel">Health Connect</span>
                 <small id="healthNutritionStatus" class="mx-meta"></small>
                 <button type="button" id="healthNutritionOff" class="mx-link macro-health-sync-off" onclick="HealthNutrition.turnOff()" hidden>Turn off</button>
               </div>
@@ -14312,6 +14312,7 @@ function addWeightEntry() {
   // Sort by date ascending so oldest is first, newest is last
   log.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   localStorage.setItem(`bodyweightLog_${currentUser}`, JSON.stringify(log));
+  window.AppleHealth?.saveWeighIn?.(weightKg, date);
   try {
     if (window.dailyMissionEngine?.syncMissionFromBodyweightEntry) {
       window.dailyMissionEngine.syncMissionFromBodyweightEntry({ weight, weightKg, date }, currentUser);
@@ -20775,6 +20776,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/friends.js"></script>
   <script src="src/js/notifications.js"></script>
   <script src="src/js/push-notifications.js"></script>
+  <script src="src/js/apple-health.js"></script>
   <script src="src/js/rehab.js"></script>
   <script src="src/js/reminders.js"></script>
   <script src="src/js/program-schedule.js"></script>

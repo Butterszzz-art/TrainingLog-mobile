@@ -216,6 +216,20 @@
         <h3 id="stDevicesTitle" class="st-title">Devices</h3>
       </header>
 
+      <!-- iPhone only: shown by settings.js when Apple Health is available -->
+      <div id="appleHealthSection" hidden>
+        <div class="mx-kicker st-kicker">Apple Health</div>
+        <div class="pod st-group">
+          <div class="st-row"><span class="st-label">Status</span><span class="st-val" id="appleHealthStatus">Not connected</span></div>
+          <p class="st-note" id="appleHealthNote">Steps, sleep, resting heart rate, HRV, weigh-ins and workouts from your iPhone and Apple Watch. Your lifting sessions and bodyweight are saved to Health too.</p>
+          <div class="st-block">
+            <button type="button" id="appleHealthConnectButton" class="st-btn">Connect Apple Health</button>
+            <button type="button" id="appleHealthOpenButton" class="st-btn st-btn--quiet" hidden>Choose what to share</button>
+            <button type="button" id="appleHealthDisconnectButton" class="st-btn st-btn--quiet" hidden>Stop syncing</button>
+          </div>
+        </div>
+      </div>
+
       <div class="mx-kicker st-kicker">Activity sync</div>
       <div class="pod st-group">
         <div class="st-row"><span class="st-label">Status</span><span class="st-val" id="activitySyncStatus">Checking…</span></div>

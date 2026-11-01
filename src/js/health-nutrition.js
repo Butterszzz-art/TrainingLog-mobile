@@ -1,6 +1,7 @@
-// Imports today's food from Health Connect (Android) into the Macros tab.
-// Cronometer and other food apps save what you eat to Health Connect; the
-// native HealthConnect plugin (plugins/health-connect) reads the day's totals.
+// Imports today's food from Health Connect (Android) or Apple Health (iOS)
+// into the Macros tab. Cronometer and other food apps save what you eat there;
+// the native HealthConnect plugin (plugins/health-connect) or HealthKit plugin
+// (plugins/health-kit, same method names) reads the day's totals.
 //
 // We remember what we imported last time and only log the difference, so
 // manual entries in the app stay untouched and re-syncing never double counts.
@@ -85,12 +86,24 @@
   // ── App wiring (Android app only) ──────────────────────────────────
   var state = { status: null, granted: false, syncing: false, lastAutoSync: 0, message: '', pendingEnable: false };
 
+  function isIOS() {
+    var cap = window.Capacitor;
+    return !!(cap && cap.getPlatform && cap.getPlatform() === 'ios');
+  }
+
   function plugin() {
     var cap = window.Capacitor;
     if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return null;
+    if (isIOS()) {
+      if (cap.isPluginAvailable && !cap.isPluginAvailable('HealthKit')) return null;
+      return (cap.Plugins && cap.Plugins.HealthKit) || null;
+    }
     if (cap.getPlatform && cap.getPlatform() !== 'android') return null;
     return (cap.Plugins && cap.Plugins.HealthConnect) || (cap.registerPlugin && cap.registerPlugin('HealthConnect')) || null;
   }
+
+  // Where the food comes from, for the card and messages.
+  function storeName() { return isIOS() ? 'Apple Health' : 'Health Connect'; }
 
   function user() { return window.currentUser || null; }
   function enabledKey() { return 'healthNutritionEnabled_' + user(); }
@@ -142,11 +155,16 @@
         var from = describeSources(last.sources);
         text = 'Synced ' + formatTime(last.syncedAt) + (from ? ' · from ' + from : '');
       } else {
-        text = 'Connected. Nothing logged in your food app today yet.';
+        // iOS never says whether reading food was allowed, so say where to check.
+        text = isIOS()
+          ? 'Connected. Nothing from your food app today yet. If that’s wrong, allow Nutrition for Pocket Coach in the Health app.'
+          : 'Connected. Nothing logged in your food app today yet.';
       }
       action = state.syncing ? 'Syncing…' : 'Sync now';
     }
 
+    var labelEl = document.getElementById('healthNutritionLabel');
+    if (labelEl) labelEl.textContent = storeName();
     if (statusEl) statusEl.textContent = text;
     if (label) label.textContent = action;
     if (btn) btn.disabled = state.syncing;
@@ -198,13 +216,13 @@
         syncedAt: Date.now(),
       }));
       if (opts.manual && window.showToast) {
-        window.showToast(isZeroDelta(delta) ? 'Already up to date' : 'Imported from Health Connect', 'success');
+        window.showToast(isZeroDelta(delta) ? 'Already up to date' : 'Imported from ' + storeName(), 'success');
       }
     } catch (err) {
       console.warn('[HealthNutrition] sync failed', err);
       if (err && err.code === 'PERMISSION_DENIED') {
         state.granted = false;
-        state.message = 'Access was turned off. Allow nutrition for Pocket Coach in Health Connect.';
+        state.message = 'Access was turned off. Allow nutrition for Pocket Coach in ' + storeName() + '.';
       } else {
         state.message = 'Couldn’t sync just now. Try again in a moment.';
       }
@@ -231,7 +249,7 @@
     } else {
       // After two refusals Android stops showing the dialog, so point the
       // user to Health Connect itself.
-      state.message = 'Permission not granted. Allow nutrition for Pocket Coach in Health Connect.';
+      state.message = 'Permission not granted. Allow nutrition for Pocket Coach in ' + storeName() + '.';
       state.pendingEnable = true;
       render();
     }

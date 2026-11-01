@@ -108,6 +108,7 @@ const APP_SHELL = [
   '/src/js/meal-share.js',
   '/src/js/notifications.js',
   '/src/js/push-notifications.js',
+  '/src/js/apple-health.js',
   '/src/js/friends.js',
   '/src/js/rehab.js',
   '/css/friends.css',

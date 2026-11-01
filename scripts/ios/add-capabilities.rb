@@ -36,6 +36,10 @@ ENTITLEMENTS = {
   # Push notifications (@capacitor/push-notifications, src/js/push-notifications.js).
   # App Store and TestFlight builds always use the production APNs server.
   'aps-environment' => '<string>production</string>',
+  # Apple Health (plugins/health-kit, src/js/apple-health.js). No clinical
+  # records, so the access list stays empty.
+  'com.apple.developer.healthkit' => '<true/>',
+  'com.apple.developer.healthkit.access' => '<array/>',
 }
 
 File.write(ENTITLEMENTS_PATH, <<~PLIST)
