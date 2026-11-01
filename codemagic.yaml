@@ -26,6 +26,7 @@ definitions:
                  --exclude='.env*' \
                  --exclude='scripts' \
                  --exclude='/plugins' \
+                 --exclude='/native' \
                  --exclude='tests' \
                  --exclude='src/routes' \
                  --exclude='*.md' \
@@ -70,6 +71,13 @@ definitions:
         # Connect doesn't hold every build for the encryption questionnaire.
         set_plist ITSAppUsesNonExemptEncryption bool false
         set_plist CFBundleDisplayName string "Pocket Coach"
+        # Workout + rest timer on the Lock Screen / Dynamic Island
+        # (plugins/workout-activity). ActivityKit refuses to start one
+        # without this key.
+        set_plist NSSupportsLiveActivities bool true
+        # cap sync can't add an app extension, so this adds the
+        # PocketCoachLiveActivity widget target to the generated project.
+        ruby scripts/ios/add-live-activity.rb
 
     - &ios_icons
       name: Generate app icon and splash
@@ -213,6 +221,11 @@ workflows:
           cd ios/App
           agvtool new-marketing-version "$APP_VERSION"
           agvtool new-version -all "$BUILD_NUMBER"
+          # The Live Activity extension must carry the same version and
+          # build as the app, or App Store Connect rejects the upload.
+          EXT_PLIST=PocketCoachLiveActivity/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$EXT_PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$EXT_PLIST"
 
       - name: Apply signing profiles
         script: |
@@ -285,6 +298,7 @@ workflows:
                    --exclude='.env*' \
                    --exclude='scripts' \
                    --exclude='/plugins' \
+                   --exclude='/native' \
                    --exclude='tests' \
                    --exclude='src/routes' \
                    --exclude='*.md' \

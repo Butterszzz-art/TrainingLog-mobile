@@ -1,0 +1,12 @@
+{
+  "name": "capacitor-workout-activity",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Capacitor plugin: shows the workout in progress and the rest countdown as an iOS Live Activity (Lock Screen + Dynamic Island).",
+  "license": "UNLICENSED",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  }
+}
