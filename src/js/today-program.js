@@ -277,10 +277,26 @@
           <div class="tpc-track">${week.map(d => _slideFor(d, ctx)).join('')}</div>
         </div>
         <div class="tpc-strip" aria-label="${_esc(schedule.program.name)}, this week">${strip}</div>
+        ${_calendarRow()}
       </div>`;
 
     el._tpcDay = today.key;
     _go(el, keepIdx, false);
+    // Plan may have changed (start, swap, new day): refresh the calendar feed.
+    if (window.calendarSync) window.calendarSync.scheduleSync();
+  }
+
+  /** "Add to calendar" link under the week strip (calendar-sync.js). */
+  function _calendarRow() {
+    const cs = window.calendarSync;
+    if (!cs) return '';
+    const on = cs.isEnabled();
+    const icon = (typeof ICONS !== 'undefined' && ICONS.calendar) || '';
+    return `<button type="button" class="tpc-cal${on ? ' is-on' : ''}" data-calendar-sync>
+        <span class="ui-icon">${icon}</span>
+        <span>${on ? 'In your calendar' : 'Add to calendar'}</span>
+        <span class="tpc-cal-go" aria-hidden="true">›</span>
+      </button>`;
   }
 
   function _go(el, index, animate) {
