@@ -102,6 +102,18 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     block/report (check the moderation email), a group post and a group report, a Feed post seen by a friend, sharing a program with a friend, account deletion, camera/photo
     prompts.
 
+### Live Activity (workout + rest timer on the Lock Screen)
+22. Apple Developer → Identifiers: register the App ID **`com.pocketcoach.app.LiveActivity`**
+    (no capabilities needed).
+23. Codemagic → Team settings → Code signing identities → iOS provisioning profiles:
+    fetch an **App Store** profile for `com.pocketcoach.app.LiveActivity` from the Developer
+    Portal, the same way as the app's own profile. Codemagic picks up profiles whose bundle ID
+    starts with `com.pocketcoach.app`, so no YAML change is needed.
+24. TestFlight check on an iPhone with iOS 16.2+: start a workout, log a set, start a rest,
+    lock the phone. The Lock Screen shows the exercise, sets and the rest countdown; the
+    Dynamic Island shows it on iPhone 14 Pro and later. "Rest over" appears when it runs out,
+    and ending the workout removes it.
+
 ### Worth fixing before or soon after launch
 - **Reports:** the Terms promise action within 24 hours. Watch the moderation inbox.
 - **`pricing.html`** doesn't match the app's plans (hidden in the native app).
