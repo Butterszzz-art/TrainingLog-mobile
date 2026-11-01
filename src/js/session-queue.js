@@ -159,8 +159,10 @@
     try { workouts = u ? JSON.parse(localStorage.getItem('workouts_' + u)) || [] : []; } catch { workouts = []; }
     const today = workouts.find(w => w.date === todayStr);
     const log = today && Array.isArray(today.log) ? today.log : [];
+    // Warm-ups (warmup-sets.js) sit beside the log so no stat counts them.
+    const warmups = today && Array.isArray(today.warmups) ? today.warmups : [];
 
-    if (!log.length) { el.innerHTML = ''; return; }
+    if (!log.length && !warmups.length) { el.innerHTML = ''; return; }
 
     let totalSets = 0, totalVolumeKg = 0;
     log.forEach(entry => {
@@ -186,7 +188,9 @@
     const rows = Array.from(byExercise.entries()).map(([name, e]) => {
       const summary = e.setCount ? `${e.setCount}×${e.lastReps ?? '?'}${e.lastWeight != null ? ' · ' + e.lastWeight + ' kg' : ''}` : '';
       return `<div class="sq-row"><span class="sq-name">${name}</span><span class="sq-summary">${summary}</span></div>`;
-    }).join('');
+    }).join('') + (warmups.length
+      ? `<div class="sq-row sq-row--warmup"><span class="sq-name">Warm-ups</span><span class="sq-summary">${warmups.length} set${warmups.length === 1 ? '' : 's'} · not counted</span></div>`
+      : '');
 
     el.innerHTML = `
       <div class="pod sq-card">
@@ -905,6 +909,7 @@
     exerciseEl.value = name;
     initQuickLog(name);
     if (typeof global.renderOverloadHint === 'function') global.renderOverloadHint();
+    if (typeof global.renderWarmupHint === 'function') global.renderWarmupHint();
     if (plannedFirstSet) {
       if (plannedFirstSet.weight != null) _qlWeight = plannedFirstSet.weight;
       if (plannedFirstSet.reps != null) _qlReps = plannedFirstSet.reps;
@@ -980,6 +985,7 @@
       _updateQuickLogButtonLabel(name);
       _updateExerciseStatsLine(name);
       if (typeof global.renderSessionQueue === 'function') global.renderSessionQueue(); // refresh %1RM/Δ vs the set just logged
+      if (typeof global.renderWarmupHint === 'function') global.renderWarmupHint(); // work sets started: warm-up card goes
     }
   }
 
@@ -998,6 +1004,7 @@
     if (hint) hint.style.display = 'none';
     // Empty name clears the progression tip and its silver bubble.
     if (typeof global.renderOverloadHint === 'function') global.renderOverloadHint();
+    if (typeof global.renderWarmupHint === 'function') global.renderWarmupHint();
     // Drop any extra set rows so the next exercise starts from one set.
     const setsInput = document.getElementById('sets');
     if (setsInput) setsInput.value = '1';

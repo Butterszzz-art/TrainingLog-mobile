@@ -1042,6 +1042,8 @@
             </div>
           </div>
           <datalist id="exerciseSuggestions"></datalist>
+          <!-- Warm-up sets ramping to today's work weight (warmup-sets.js) -->
+          <div id="warmupHint" class="warmup-hint" hidden></div>
           <!-- Constrains entry to the known catalog (built-in + custom
                exercises) — populated/validated by updateAddButtonState().
                Unrecognized names disable the Log button and point here at
@@ -6261,6 +6263,7 @@ function submitLogEntry() {
     if (exerciseEl && exerciseEl.value === '' && typeof initQuickLog === 'function') {
       initQuickLog(''); // hide the panel now that the exercise field is empty
     }
+    if (typeof renderWarmupHint === 'function') renderWarmupHint();
   } else if (typeof quickLogSet === 'function') {
     quickLogSet();
   }
@@ -20746,6 +20749,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/ui-declutter.js"></script>
   <script src="src/js/pr-tracker.js"></script>
   <script src="src/js/workout-intelligence.js"></script>
+  <script src="src/js/warmup-sets.js"></script>
   <script src="src/js/body-measurements.js"></script>
   <script src="src/js/readiness-checkin.js"></script>
   <script src="src/js/data-export.js"></script>
