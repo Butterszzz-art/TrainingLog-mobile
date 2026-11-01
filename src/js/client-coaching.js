@@ -240,7 +240,55 @@
     };
   }
 
-  const api = { buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview };
+  /**
+   * The Macros tab's coach entry (coachNutritionAssignments_v1[user]) for this
+   * refresh. Returns undefined to leave the stored entry alone, null to clear
+   * it, or the entry to store.
+   *  - A published master plan from an active coach adds `phases` (date
+   *    ranges with their own training/rest days and weekly pattern,
+   *    PlanToday.macroPhases); the stand-alone macroPlan stays as `fallback`
+   *    for dates outside the plan.
+   *  - A plan that didn't load this time (offline) keeps the stored phases.
+   */
+  function coachMacroEntry({ assignments, plan, planLoaded, activeUids, current, PlanToday, now = Date.now() }) {
+    const withPlan = (assignments || [])
+      .filter(a => a && activeUids.has(a.coachUid) && a.macroPlan && a.macroPlan.days && a.macroPlan.days.training)
+      .sort((a, b) => tsMs(b.updatedAt) - tsMs(a.updatedAt));
+    const planCoach = plan && plan.client && plan.client.coachUid;
+    const phases = plan && activeUids.has(planCoach) && PlanToday ? PlanToday.macroPhases(plan) : [];
+    if (phases.length) {
+      const a = (assignments || []).find(x => x && x.coachUid === planCoach) || {};
+      const m = withPlan.find(x => x.coachUid === planCoach) || withPlan[0];
+      return {
+        source: 'coach',
+        coachUid: planCoach,
+        coachUsername: a.coachUsername || '',
+        planId: plan.planId,
+        days: phases[0].days,
+        schedule: phases[0].schedule || {},
+        phases,
+        fallback: m ? { days: m.macroPlan.days, schedule: m.macroPlan.schedule || {}, note: m.macroPlan.note || '' } : null,
+        note: '',
+        assignedAt: tsMs(a.updatedAt) || now,
+      };
+    }
+    if (!planLoaded && current && current.source === 'coach' && Array.isArray(current.phases) && activeUids.has(current.coachUid)) return undefined;
+    if (withPlan.length) {
+      const a = withPlan[0];
+      return {
+        source: 'coach',
+        coachUid: a.coachUid,
+        coachUsername: a.coachUsername || '',
+        days: a.macroPlan.days,
+        schedule: a.macroPlan.schedule || {},
+        note: a.macroPlan.note || '',
+        assignedAt: tsMs(a.updatedAt) || now,
+      };
+    }
+    return current && current.source === 'coach' ? null : undefined;
+  }
+
+  const api = { buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (!root || !root.document) return;
   root.ClientCoaching = api;
@@ -330,7 +378,7 @@
     state.videos = (videos && videos.videos) || [];
     state.sharing = (sharing && sharing.sharing) || state.sharing || { checkIns: true, bodyweight: true, workouts: true, nutrition: false };
     state.decided = (sharing && sharing.decided) || state.decided;
-    if (planRes && planRes.ok) state.plan = planRes.plan || null;
+    if (planRes && planRes.ok) { state.plan = planRes.plan || null; state.planLoaded = true; }
     state.loadedAt = Date.now();
     const linked = state.invites.some(i => i.status === 'active');
     root.localStorage.setItem(linkKey(), linked ? 'true' : 'false');
@@ -340,6 +388,7 @@
     const logOnly = state.assignments.some(a => a.hideNutritionNumbers === true && activeUids.has(a.coachUid));
     if (typeof root.setNutritionLogOnly === 'function') root.setNutritionLogOnly(logOnly);
     syncCoachMacroPlan(activeUids);
+    syncPlanProgram(activeUids);
     return true;
   }
 
@@ -357,36 +406,87 @@
       .map(k => `${MACRO_DAY_NAMES[k]} ${plan.days[k].calories}`).join(' · ') + ' kcal';
   }
 
+  // Keeps the Macros tab's coach entry in step (coachMacroEntry above): a
+  // published master plan's phases, else the stand-alone macroPlan.
   function syncCoachMacroPlan(activeUids) {
     const username = user();
     if (!username) return;
-    const withPlan = state.assignments
-      .filter(a => a && activeUids.has(a.coachUid) && a.macroPlan && a.macroPlan.days && a.macroPlan.days.training)
-      .sort((a, b) => tsMs(b.updatedAt) - tsMs(a.updatedAt));
     const store = readJSON(root.localStorage, MACRO_PLAN_STORE, {}) || {};
     const current = store[username];
-    let next;
-    if (withPlan.length) {
-      const a = withPlan[0];
-      next = {
-        source: 'coach',
-        coachUid: a.coachUid,
-        coachUsername: a.coachUsername || '',
-        days: a.macroPlan.days,
-        schedule: a.macroPlan.schedule || {},
-        note: a.macroPlan.note || '',
-        assignedAt: tsMs(a.updatedAt) || Date.now(),
-      };
-    } else if (current && current.source === 'coach') {
-      next = null;
-    } else {
-      return;
-    }
+    const next = coachMacroEntry({
+      assignments: state.assignments, plan: state.plan, planLoaded: !!state.planLoaded,
+      activeUids, current, PlanToday: root.PlanToday,
+    });
+    if (next === undefined) return;
     if (JSON.stringify(current || null) === JSON.stringify(next)) return;
     if (next) store[username] = next;
     else delete store[username];
     root.localStorage.setItem(MACRO_PLAN_STORE, JSON.stringify(store));
     if (typeof root.onCoachMacroPlanChanged === 'function') root.onCoachMacroPlanChanged();
+  }
+
+  // ── Program from the published master plan ───────────────────────
+  // A published plan carries a snapshot of each phase's program. Composed
+  // into one program over every plan week (PlanToday.composeProgram) and
+  // started on the plan's start date, Today's session and the Log follow
+  // the plan through every phase. Once the athlete follows it, a newly
+  // published version replaces it without another tap.
+  function planProgramFor(coachUid) {
+    const plan = state.plan;
+    if (!plan || !plan.client || plan.client.coachUid !== coachUid || !root.PlanToday) return null;
+    return root.PlanToday.composeProgram(plan);
+  }
+
+  function activePlanSource() {
+    const u = user();
+    if (!u) return null;
+    const active = readJSON(root.localStorage, `activeProgram_${u}`, null);
+    if (!active || !active.programId) return null;
+    const prog = arr(readJSON(root.localStorage, `programs_${u}`, [])).find(p => p && p.id === active.programId);
+    return prog && prog.source && prog.source.type === 'coach-plan' ? prog.source : null;
+  }
+
+  function startPlanProgram(composed) {
+    const core = root.programBuilderV2Core;
+    if (!core || !composed) return false;
+    const imported = core.importLibraryProgram(root, composed, { userId: user(), source: { type: 'coach-plan', planId: composed.planId, version: composed.planVersion } });
+    if (!imported) return false;
+    core.startProgram(root, imported.id, { userId: user(), startDate: composed.schedule.startDate });
+    if (typeof root.renderTodayProgramCard === 'function') root.renderTodayProgramCard();
+    return true;
+  }
+
+  function todayIso() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  // Your Coach row for the plan's program: where the plan is today, and Start
+  // (dated to the plan's start) until the athlete follows it.
+  function planProgramRow(coachUid) {
+    const composed = planProgramFor(coachUid);
+    const now = root.PlanToday.resolve(state.plan, todayIso());
+    const where = now && now.phase
+      ? `Week ${now.planWeek} of ${now.totalWeeks} · ${({ cut: 'Cut', maintain: 'Maintain', build: 'Build', deload: 'Deload' })[now.phase.type] || now.phase.type}`
+      : now && now.before ? `Starts ${new Date(`${state.plan.startDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}` : 'Plan finished';
+    const following = (activePlanSource() || {}).planId === state.plan.planId;
+    return `
+      <div class="mx-row">
+        <div class="mx-row-main"><span class="mx-lbl">Program ${following ? '<span class="mx-chip mx-chip--sm">Following</span>' : NEW_CHIP}</span>
+          <span class="mx-row-title">${esc(composed.title)}</span>
+          <span class="mx-row-sub">${esc(where)} · ${esc(arr(composed.frequency).join(', '))}</span></div>
+        ${following ? '' : `<button type="button" class="mx-outline" data-yc-plan-start="${esc(coachUid)}">Start</button>`}
+      </div>`;
+  }
+
+  function syncPlanProgram(activeUids) {
+    const plan = state.plan;
+    if (!plan || !plan.client || !activeUids.has(plan.client.coachUid)) return;
+    const src = activePlanSource();
+    if (!src || src.planId === plan.planId) return;
+    if (startPlanProgram(root.PlanToday && root.PlanToday.composeProgram(plan))) {
+      toast('Your coach published a new version of your plan. Today follows it now.');
+    }
   }
 
   // ── Food log sharing (asked once) ────────────────────────────────
@@ -511,7 +611,7 @@
           <div class="mx-row-main"><span class="mx-kicker">Coached by</span><span class="mx-row-title">${esc(inv.coachUsername)}</span></div>
           <button type="button" class="mx-outline mx-outline--danger" data-yc-leave="${esc(inv.coachUid)}" data-yc-name="${esc(inv.coachUsername)}">Leave</button>
         </div>
-        ${asn.currentProgram ? `
+        ${planProgramFor(inv.coachUid) ? planProgramRow(inv.coachUid) : asn.currentProgram ? `
           <div class="mx-row">
             <div class="mx-row-main"><span class="mx-lbl">Program ${programState}</span><span class="mx-row-title">${esc(asn.currentProgram)}</span>
               ${program ? `<span class="mx-row-sub">${program.days.length} day${program.days.length === 1 ? '' : 's'} a week · ${esc(arr(program.frequency).join(', '))}</span>` : ''}</div>
@@ -808,7 +908,7 @@
   }
 
   async function onClick(e) {
-    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-macros],[data-yc-open-macros],[data-yc-share],[data-yc-video],[data-yc-refresh],[data-yc-open],[data-yc-plan],[data-yc-more]');
+    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-plan-start],[data-yc-macros],[data-yc-open-macros],[data-yc-share],[data-yc-video],[data-yc-refresh],[data-yc-open],[data-yc-plan],[data-yc-more]');
     if (!t) return;
 
     if (t.dataset.ycOpen) { openYourCoach(t.dataset.ycOpen === '1' ? '' : t.dataset.ycOpen); return; }
@@ -857,6 +957,19 @@
         renderYourCoachSection();
         if (root.Notifications) root.Notifications.refresh().catch(() => {});
       } catch (err) { toast(err.message || 'Something went wrong. Try again.', 'error'); }
+      return;
+    }
+
+    if (t.dataset.ycPlanStart) {
+      const composed = planProgramFor(t.dataset.ycPlanStart);
+      if (!composed) return;
+      const ok = await root.showConfirm(`Follow "${composed.title}" from your coach's plan? It becomes your active program and Today's session follows the plan's weeks and phases.`, { confirmText: 'Start program' });
+      if (!ok) return;
+      if (startPlanProgram(composed)) {
+        render();
+        toast(`${composed.title} is now your active program.`);
+        pushShare({ force: true });
+      }
       return;
     }
 

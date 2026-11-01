@@ -1475,6 +1475,7 @@
   font-variant-numeric: tabular-nums;
 }
 .tpc-ex-last { margin-left: 7px; color: var(--positive-text, #6fae8b); }
+.tpc-ex-rir { margin-left: 7px; color: var(--highlight, #c79a54); font-weight: 700; }
 .tpc-ex-tick { margin-left: 7px; color: var(--positive-text, #6fae8b); font-weight: 800; }
 .tpc-ex.is-done .tpc-ex-name { color: var(--text-muted); }
 
