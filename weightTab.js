@@ -92,6 +92,66 @@
     return 'Weight, training volume, and calorie intake are moving in a balanced range.';
   }
 
+  // ── Weight goal ────────────────────────────────────────────────────────
+  // Within this much of the target counts as "at goal" / maintaining.
+  const GOAL_HOLD_KG = 0.5;
+
+  /** 'lose' | 'gain' | 'maintain', from where the goal started to the target. */
+  function weightGoalDirection(startKg, targetKg) {
+    const s = Number(startKg);
+    const t = Number(targetKg);
+    if (!Number.isFinite(s) || !Number.isFinite(t)) return 'maintain';
+    if (t < s - GOAL_HOLD_KG) return 'lose';
+    if (t > s + GOAL_HOLD_KG) return 'gain';
+    return 'maintain';
+  }
+
+  /**
+   * How a weight change reads against the goal: 'good' (towards it),
+   * 'bad' (away from it) or 'flat' (too small to call). For a maintain goal
+   * any change within `holdKg` is good, anything bigger is bad.
+   */
+  function weightTrendTone(deltaKg, direction, { flatKg = 0.05, holdKg = 0.25 } = {}) {
+    const d = Number(deltaKg);
+    if (!Number.isFinite(d)) return 'flat';
+    if (direction === 'maintain') return Math.abs(d) <= holdKg ? 'good' : 'bad';
+    if (Math.abs(d) < flatKg) return 'flat';
+    const towards = direction === 'lose' ? d < 0 : d > 0;
+    return towards ? 'good' : 'bad';
+  }
+
+  /** Progress from the start weight to the target, 0–100. */
+  function weightGoalProgress({ startKg, currentKg, targetKg }) {
+    const s = Number(startKg);
+    const c = Number(currentKg);
+    const t = Number(targetKg);
+    const direction = weightGoalDirection(s, t);
+    if (!Number.isFinite(c) || !Number.isFinite(t)) {
+      return { direction, percent: 0, remainingKg: null, reached: false };
+    }
+    const remainingKg = t - c;
+    if (direction === 'maintain') {
+      const reached = Math.abs(remainingKg) <= GOAL_HOLD_KG;
+      return { direction, percent: reached ? 100 : 0, remainingKg, reached };
+    }
+    const span = t - s;
+    const percent = Math.max(0, Math.min(100, ((c - s) / span) * 100));
+    const reached = direction === 'lose' ? c <= t : c >= t;
+    return { direction, percent: reached ? 100 : percent, remainingKg, reached };
+  }
+
+  /**
+   * Weeks to the target at the current rate, or null when the trend is
+   * flat or heading the wrong way.
+   */
+  function weeksToGoal({ currentKg, targetKg, kgPerWeek }) {
+    const remaining = Number(targetKg) - Number(currentKg);
+    const rate = Number(kgPerWeek);
+    if (!Number.isFinite(remaining) || !Number.isFinite(rate) || Math.abs(rate) < 0.02) return null;
+    if (Math.sign(remaining) !== Math.sign(rate)) return null;
+    return Math.abs(remaining / rate);
+  }
+
   const api = {
     RATE_TARGETS,
     computeWeightChangeRate,
@@ -99,6 +159,10 @@
     suggestCalorieAdjustment,
     applyWeightTrendAdjustment,
     buildWeightVolumeIntakeInsight,
+    weightGoalDirection,
+    weightTrendTone,
+    weightGoalProgress,
+    weeksToGoal,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

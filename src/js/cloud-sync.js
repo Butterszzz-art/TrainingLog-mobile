@@ -57,6 +57,9 @@
     { name: 'bodyMeasurements', key: u => `bodyMeasurements_${u}`, mode: 'list', idField: 'date' },
     // Dates of smart-scale weigh-ins the user removed (activity-sync-bridge.js).
     { name: 'weightSyncDismissed', key: u => `weightSyncDismissed_${u}`, mode: 'value' },
+    // Target bodyweight the Weight tab's trend colours follow (weight-goal.js).
+    { name: 'weightGoal',       key: u => `weightGoal_${u}`,       mode: 'value' },
+    { name: 'weightGoalPrompted', key: u => `weightGoalPrompted_${u}`, mode: 'value' },
     { name: 'cardioLog',        key: u => `cardioLog_${u}`,        mode: 'list' },
     // syncIds of tracker workouts the user removed (activity-sync-bridge.js).
     { name: 'cardioSyncDismissed', key: u => `cardioSyncDismissed_${u}`, mode: 'value' },

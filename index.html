@@ -1506,6 +1506,9 @@
         <svg class="wt-hero-spark" id="wtHeroSparkline" viewBox="0 0 330 60" preserveAspectRatio="none"></svg>
       </div>
 
+      <!-- ── Weight goal (src/js/weight-goal.js); trend colours follow it ── -->
+      <div id="wtGoalCard" class="wg-card"></div>
+
       <!-- ── Stat strip (populated by renderWeights) ── -->
       <div class="wt-stat-strip" id="wtStatStrip" style="display:none;">
         <div class="wt-stat-item">
@@ -5497,6 +5500,7 @@ function showTab(tabName) {
       break;
     case 'weightTab':
       renderWeights();
+      if (typeof window.maybePromptWeightGoal === 'function') window.maybePromptWeightGoal();
       break;
     case 'bodyTab':
       if (typeof window.renderBodyHub === 'function') window.renderBodyHub();
@@ -14496,6 +14500,14 @@ function formatWeightLogDate(isoDate) {
   return d.toLocaleDateString(undefined, opts);
 }
 
+/** 'wt-tone-good' | 'wt-tone-bad' | 'wt-tone-flat' for a weight change
+ * against the user's weight goal, else their macro goal (src/js/weight-goal.js),
+ * or '' with neither set. */
+function weightToneClass(deltaKg, opts) {
+  const tone = typeof window.weightGoalTone === 'function' ? window.weightGoalTone(deltaKg, opts) : null;
+  return tone ? 'wt-tone-' + tone : '';
+}
+
 function renderWeights() {
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   // Ensure sorted by date ascending, and store that order: the row indexes
@@ -14536,11 +14548,16 @@ function renderWeights() {
     const ent = document.getElementById('wtStatEntries');
     if (cur) cur.textContent = toDisp(lastKg);
     if (sta) sta.textContent = toDisp(firstKg);
-    if (chg) { chg.textContent = changeDisp; chg.className = 'wt-stat-val ' + (changeKg > 0 ? 'wt-up' : changeKg < 0 ? 'wt-down' : ''); }
+    if (chg) {
+      chg.textContent = changeDisp;
+      const tone = weightToneClass(changeKg, { holdKg: 1 });
+      chg.className = 'wt-stat-val ' + (tone || (changeKg > 0 ? 'wt-up' : changeKg < 0 ? 'wt-down' : ''));
+    }
     if (ent) ent.textContent = log.length;
 
     // ── Hero readout + sparkline ──
     renderWeightHero(log, lastKg, displayUnit);
+    if (typeof window.renderWeightGoalCard === 'function') window.renderWeightGoalCard();
 
     // ── Weekly averages & rate ──
     renderWeeklyBreakdown(log, displayUnit);
@@ -14552,6 +14569,7 @@ function renderWeights() {
     if (wkCard) wkCard.style.display = 'none';
     const heroEl = document.getElementById('wtHero');
     if (heroEl) heroEl.style.display = 'none';
+    if (typeof window.renderWeightGoalCard === 'function') window.renderWeightGoalCard();
   }
 
   log.slice().reverse().forEach((entry, revIdx) => {
@@ -14613,15 +14631,27 @@ function renderWeightHero(log, lastKg, displayUnit) {
   if (sparkEl) {
     const points = log.slice(-14).map(e => getEntryWeightKg(e)).filter(v => v != null);
     if (points.length >= 2) {
-      const min = Math.min(...points), max = Math.max(...points);
+      // Show the goal as a dashed line when it's near enough not to squash the trend.
+      const goal = typeof window.getWeightGoal === 'function' ? window.getWeightGoal() : null;
+      let min = Math.min(...points), max = Math.max(...points);
+      const span = Math.max(max - min, 3);
+      const showGoal = goal && goal.targetKg >= min - span && goal.targetKg <= max + span;
+      if (showGoal) { min = Math.min(min, goal.targetKg); max = Math.max(max, goal.targetKg); }
       const range = max - min || 1;
       const w = 330, h = 60, pad = 6;
+      const yOf = (v) => pad + (1 - (v - min) / range) * (h - pad * 2);
       const coords = points.map((v, i) => {
         const x = (i / (points.length - 1)) * w;
-        const y = pad + (1 - (v - min) / range) * (h - pad * 2);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
+        return `${x.toFixed(1)},${yOf(v).toFixed(1)}`;
       });
-      sparkEl.innerHTML = `<polyline points="${coords.join(' ')}" fill="none" style="stroke: var(--green-90)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const tone = typeof window.weightGoalTone === 'function'
+        ? window.weightGoalTone(points[points.length - 1] - points[0], { holdKg: 0.5, flatKg: 0.1 })
+        : null;
+      const stroke = tone === 'bad' ? 'var(--danger-text)' : tone === 'flat' ? 'var(--highlight)' : 'var(--green-90)';
+      const goalLine = showGoal
+        ? `<line x1="0" x2="${w}" y1="${yOf(goal.targetKg).toFixed(1)}" y2="${yOf(goal.targetKg).toFixed(1)}" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>`
+        : '';
+      sparkEl.innerHTML = `${goalLine}<polyline points="${coords.join(' ')}" fill="none" style="stroke: ${stroke}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
       sparkEl.style.display = '';
     } else {
       sparkEl.style.display = 'none';
@@ -14673,7 +14703,8 @@ function renderWeeklyBreakdown(log, displayUnit) {
     if (i > 0) {
       const delta = wk.avg - weekData[i - 1].avg;
       const deltaDisp = convertWeightValue(Math.abs(delta), 'kg', displayUnit, 1);
-      const cls = Math.abs(delta) < 0.05 ? 'flat' : delta > 0 ? 'up' : 'down';
+      const cls = weightToneClass(delta, { holdKg: 0.3 })
+        || (Math.abs(delta) < 0.05 ? 'flat' : delta > 0 ? 'up' : 'down');
       const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
       changeHtml = '<span class="wt-week-change ' + cls + '">' + sign + deltaDisp + '</span>';
     } else {
@@ -14706,8 +14737,9 @@ function renderWeeklyBreakdown(log, displayUnit) {
     const monthDisp = convertWeightValue(Math.abs(ratePerMonth), 'kg', displayUnit, 1);
     const sign = rateKgPerWeek > 0 ? '+' : rateKgPerWeek < 0 ? '−' : '';
 
-    const cls = Math.abs(rateKgPerWeek) < 0.05 ? 'wt-stable'
-      : rateKgPerWeek > 0 ? 'wt-gaining' : 'wt-losing';
+    const cls = weightToneClass(rateKgPerWeek, { holdKg: 0.15 })
+      || (Math.abs(rateKgPerWeek) < 0.05 ? 'wt-stable'
+        : rateKgPerWeek > 0 ? 'wt-gaining' : 'wt-losing');
 
     if (rateWeeklyEl) {
       rateWeeklyEl.textContent = sign + rateDisp + ' ' + displayUnit;
@@ -16908,9 +16940,13 @@ function renderGoalProgressList() {
   const goals = loadGoals(currentUser);
   const workouts = getProgressWorkoutsSync();
 
-  setInsightSummary('goals', Array.isArray(goals) && goals.length ? `${goals.length} active` : 'None yet');
+  const weightGoalHtml = typeof window.weightGoalInsightHtml === 'function' ? window.weightGoalInsightHtml() : '';
+  const hasWeightGoal = typeof window.getWeightGoal === 'function' && !!window.getWeightGoal();
+  const activeCount = (Array.isArray(goals) ? goals.length : 0) + (hasWeightGoal ? 1 : 0);
+  setInsightSummary('goals', activeCount ? `${activeCount} active` : 'None yet');
   if (!Array.isArray(goals) || goals.length === 0) {
-    list.innerHTML = '<p style="color:var(--text-muted);margin:0;">No goals yet. Add one below.</p>';
+    list.innerHTML = `<div class="goal-card-list">${weightGoalHtml}</div>`
+      + '<p style="color:var(--text-muted);margin:10px 0 0;">No lift goals yet. Add one below.</p>';
     return;
   }
 
@@ -16930,7 +16966,7 @@ function renderGoalProgressList() {
     </div>`;
   }).join('');
 
-  list.innerHTML = `<div class="goal-card-list">${cards}</div>`;
+  list.innerHTML = `<div class="goal-card-list">${weightGoalHtml}${cards}</div>`;
 }
 
 // The goal form lives on Insights, under Goal progress.
@@ -21019,6 +21055,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/workout-story.js"></script>
   <script src="src/js/weight-sticker.js"></script>
   <script src="src/js/weight-story.js"></script>
+  <script src="src/js/weight-goal.js"></script>
   <script src="src/js/mobility.js"></script>
   <script src="src/js/coach-data.js"></script>
   <script src="src/js/ai-coach.js"></script>
