@@ -11256,6 +11256,8 @@ function logout(options = {}) {
   if (window.PremiumLibrary && window.PremiumLibrary.clearCache) window.PremiumLibrary.clearCache();
   // cached profiles reflect what this account was allowed to see
   if (window.Profiles && window.Profiles.clearCache) window.Profiles.clearCache();
+  // this phone stops getting the account's pushes (needs the token, so first)
+  if (window.PushNotify && window.PushNotify.unregister) window.PushNotify.unregister();
   localStorage.removeItem("fitnessAppUser");
   localStorage.removeItem('token');
   localStorage.removeItem('authToken');
@@ -20772,6 +20774,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/meal-share.js"></script>
   <script src="src/js/friends.js"></script>
   <script src="src/js/notifications.js"></script>
+  <script src="src/js/push-notifications.js"></script>
   <script src="src/js/rehab.js"></script>
   <script src="src/js/reminders.js"></script>
   <script src="src/js/program-schedule.js"></script>

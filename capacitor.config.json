@@ -24,6 +24,9 @@
       "resize": "body",
       "style": "DARK",
       "resizeOnFullScreen": true
+    },
+    "PushNotifications": {
+      "presentationOptions": []
     }
   },
   "ios": {

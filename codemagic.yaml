@@ -78,6 +78,9 @@ definitions:
         # cap sync can't add an app extension, so this adds the
         # PocketCoachLiveActivity widget target to the generated project.
         ruby scripts/ios/add-live-activity.rb
+        # Entitlements (push, ...) and the AppDelegate hooks they need.
+        # The App ID must have the same capabilities ticked.
+        ruby scripts/ios/add-capabilities.rb
 
     - &ios_icons
       name: Generate app icon and splash

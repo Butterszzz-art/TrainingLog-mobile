@@ -396,15 +396,34 @@
       body.innerHTML = `<div class="nt-empty"><p>${_esc(err.message)}</p></div>`;
       return;
     }
+    const push = global.PushNotify && global.PushNotify.isAvailable() ? global.PushNotify : null;
+    const pushState = push ? await push.permission() : 'unavailable';
+    const pushRow = push ? `
+        <div class="mx-srow" id="ntPushRow">
+          <div class="mx-srow-l"><span class="mx-srow-t">Phone notifications</span><span class="mx-srow-s">${pushState === 'denied'
+            ? 'Off in iPhone Settings. Tap to open Settings.'
+            : 'Get these on your Lock Screen too'}</span></div>
+          <button type="button" class="mx-switch" role="switch" id="ntPushSwitch" aria-checked="${pushState === 'granted'}" aria-label="Phone notifications"></button>
+        </div>` : '';
     body.innerHTML = `
       <p class="nt-note">Choose what shows up here. Muted kinds aren’t saved at all.</p>
-      <div class="nt-prefs">${CATEGORIES.map(c => `
+      <div class="nt-prefs">${pushRow}${CATEGORIES.map(c => `
         <div class="mx-srow">
           <div class="mx-srow-l"><span class="mx-srow-t">${c.label}</span><span class="mx-srow-s">${c.sub}</span></div>
           <button type="button" class="mx-switch" role="switch" data-cat="${c.id}" aria-checked="${_prefs[c.id] !== false}" aria-label="${c.label}"></button>
         </div>`).join('')}
       </div>`;
-    body.querySelectorAll('.mx-switch').forEach(sw => sw.addEventListener('click', async () => {
+    const pushSwitch = body.querySelector('#ntPushSwitch');
+    if (pushSwitch) {
+      // iOS owns this switch: we can ask once, after that only Settings can change it.
+      pushSwitch.addEventListener('click', async () => {
+        const now = await push.permission();
+        if (now === 'granted' || now === 'denied') return push.openSystemSettings();
+        const state = await push.enable();
+        pushSwitch.setAttribute('aria-checked', String(state === 'granted'));
+      });
+    }
+    body.querySelectorAll('.mx-switch[data-cat]').forEach(sw => sw.addEventListener('click', async () => {
       const on = sw.getAttribute('aria-checked') !== 'true';
       sw.setAttribute('aria-checked', String(on));
       try {
@@ -457,6 +476,8 @@
     });
 
     showList();
+    // Someone checking their inbox is the moment to offer pushes (asked once).
+    if (global.PushNotify && global.PushNotify.isAvailable()) setTimeout(() => global.PushNotify.askOnce(), 800);
     // Opening the sheet counts as reading everything in it.
     const hadUnread = _unread > 0;
     refresh().then(() => {

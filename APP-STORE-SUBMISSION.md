@@ -114,6 +114,15 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     Dynamic Island shows it on iPhone 14 Pro and later. "Rest over" appears when it runs out,
     and ending the workout removes it.
 
+### Push notifications (iPhone/iPad)
+25. Apple Developer → Identifiers → `com.pocketcoach.app`: tick **Push Notifications**, Save.
+    Then fetch the App Store provisioning profile again in Codemagic.
+26. Apple Developer → **Keys** → +: tick **Apple Push Notifications service (APNs)**,
+    download the `.p8` (only once!) and note the Key ID. Backend steps are in
+    `traininglog-backend/PUSH-SETUP.md` (set the `APNS_KEY` secret before deploying).
+27. TestFlight check: open the bell → allow notifications, then have a friend send
+    you a friend request with the app closed. Tapping the banner opens the inbox.
+
 ### Worth fixing before or soon after launch
 - **Reports:** the Terms promise action within 24 hours. Watch the moderation inbox.
 - **`pricing.html`** doesn't match the app's plans (hidden in the native app).
