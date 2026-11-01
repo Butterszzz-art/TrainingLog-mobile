@@ -99,6 +99,10 @@ definitions:
           --iconBackgroundColor '#0b130d' \
           --splashBackgroundColor '#0b130d' \
           --logoSplashScale 0.3
+        # iOS 26 Liquid Glass icon (native/ios/AppIcon.icon). Xcode renders the
+        # older-iOS and App Store icons from it too, so it replaces the flat
+        # icon generated above; the splash still comes from @capacitor/assets.
+        ruby scripts/ios/add-app-icon.rb
 
     - &ios_sync
       name: Sync web assets into ios/
