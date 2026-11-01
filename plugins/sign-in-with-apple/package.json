@@ -1,0 +1,12 @@
+{
+  "name": "capacitor-sign-in-with-apple",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Capacitor plugin: shows Apple's native Sign in with Apple sheet and returns the identity token and authorization code for Firebase.",
+  "license": "UNLICENSED",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  }
+}

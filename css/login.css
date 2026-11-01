@@ -693,3 +693,51 @@ html.pc-booting .pc-spinner { animation: pc-plate-pop 0.55s cubic-bezier(0.2, 0.
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Sign in with Apple (iPhone/iPad app only) ─────────────────
+   Apple's guidelines: black button on a light background, the Apple logo
+   and "Continue with Apple", at least as large as the other buttons. */
+
+.login-apple[hidden] { display: none; }
+
+.login-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 4px;
+  color: #33403a;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.login-or::before,
+.login-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(27, 36, 32, 0.25);
+}
+
+.login-apple-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  margin: 8px 0 0;
+  padding: 13px;
+  border: none;
+  border-radius: 999px;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.login-apple-btn:active { opacity: 0.85; }
+.login-apple-btn:disabled { opacity: 0.6; cursor: default; }
+.login-apple-logo { flex: none; margin-top: -2px; }

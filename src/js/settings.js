@@ -697,6 +697,9 @@ async function deleteAccountFlow(button) {
   button.textContent = 'Deleting…';
 
   try {
+    // Apple requires that deleting an account also revokes Sign in with
+    // Apple. Must run before the server deletes the Firebase user.
+    if (window.AppleSignIn?.revokeBeforeDelete) await window.AppleSignIn.revokeBeforeDelete();
     const res = await fetchWithTimeout(`${ensureServerUrl()}/account`, {
       method: 'DELETE',
       headers: authHeaders

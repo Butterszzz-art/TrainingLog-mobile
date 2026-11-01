@@ -40,6 +40,8 @@ ENTITLEMENTS = {
   # records, so the access list stays empty.
   'com.apple.developer.healthkit' => '<true/>',
   'com.apple.developer.healthkit.access' => '<array/>',
+  # Sign in with Apple (plugins/sign-in-with-apple, src/js/apple-sign-in.js).
+  'com.apple.developer.applesignin' => '<array><string>Default</string></array>',
 }
 
 File.write(ENTITLEMENTS_PATH, <<~PLIST)
