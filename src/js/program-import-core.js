@@ -50,8 +50,9 @@
 
   /**
    * Upload one file. opts: { serverUrl, headers, target ('coach'), signal,
-   * fetchFn, data (base64, skips reading the file) }.
-   * Resolves with the server's { program, warnings, rowWarnings?, source };
+   * fetchFn, data (base64, skips reading the file), path (default the program
+   * import; '/api/ai/coach/import-plan' reads a master plan) }.
+   * Resolves with the server's { program | plan, warnings, … };
    * rejects with an Error whose message is ready to show.
    */
   async function upload(file, opts) {
@@ -60,7 +61,7 @@
     if (problem) throw new Error(problem);
     const data = o.data || await readAsBase64(file);
     const fetchFn = o.fetchFn || globalScope.fetch;
-    const res = await fetchFn(String(o.serverUrl || '').replace(/\/$/, '') + '/api/ai/coach/import-program', {
+    const res = await fetchFn(String(o.serverUrl || '').replace(/\/$/, '') + (o.path || '/api/ai/coach/import-program'), {
       method: 'POST',
       headers: Object.assign({ 'Content-Type': 'application/json' }, o.headers || {}),
       body: JSON.stringify(Object.assign({ fileName: file.name, data }, o.target ? { target: o.target } : {})),
@@ -68,7 +69,7 @@
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(errorFor(res.status, json));
-    if (!json.program) throw new Error("Couldn't import the program. Try again.");
+    if (!json.program && !json.plan) throw new Error("Couldn't import that file. Try again.");
     return json;
   }
 

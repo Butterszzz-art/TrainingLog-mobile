@@ -865,7 +865,7 @@ function defaultLeadFor(c, planLeadId) {
 }
 
 // An intake that never became a lead (e.g. a ClientIntake export such as
-// gael-intake.json) can be loaded from a file. It's sent with the plan
+// <client>-intake.json) can be loaded from a file. It's sent with the plan
 // request (the plans API takes `intake` instead of `leadId`) and kept in
 // memory only: it holds health data, so it isn't written to localStorage.
 const INTAKE_FILE = '__file';
@@ -943,9 +943,72 @@ function masterPlanCard(c) {
     + '<button type="button" class="mp-btn" onclick="previewMasterPlan()">Preview</button>'
     + '<button type="button" class="mp-btn mp-btn--gold" onclick="saveMasterPlanDraft()">Save as draft</button>'
     + '<button type="button" class="pb-link" onclick="saveMasterPlanDraft(true)" title="Phases from the package; you fill in nutrition">Start blank (no intake)</button>'
+    + '<button type="button" class="mp-btn" onclick="choosePlanFile()" title="Your own plan document: PDF, Word, Excel or a photo">Import plan file</button>'
     + '</div>'
     + '<div id="planMsg" class="ws-empty-note" style="margin-top:8px;"></div>'
     + '<div id="planPreviewArea" style="margin-top:12px;"></div></div>';
+}
+
+// ── Import the coach's own master plan file (coach/plan-import.js) ─────────
+// Read → review (suggested values marked) → Create draft → the normal editor.
+// Package, intake and tier above are not used for an imported plan except the
+// start date and tier.
+let _planImport = null; // { clientId, fileName, data, result }
+
+function choosePlanFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = window.PlanImport.ACCEPT;
+  input.addEventListener('change', () => { const f = input.files && input.files[0]; if (f) importPlanFile(f); });
+  input.click();
+}
+
+async function importPlanFile(file) {
+  const IC = window.ProgramImportCore;
+  const problem = IC.checkFile(file);
+  if (problem) { planMsg(problem); return; }
+  const clientId = _planState.clientId;
+  planMsg('Reading ' + file.name + '… this can take a minute.');
+  try {
+    const data = await IC.readAsBase64(file);
+    const job = IC.start(file, { serverUrl: SERVER_URL, headers: authHeaders(), fetchFn: coachFetch, path: '/api/ai/coach/import-plan', data });
+    const result = await job.promise;
+    if (_planState.clientId !== clientId) return; // switched client meanwhile
+    _planImport = { clientId, fileName: file.name, data, result };
+    if (result.plan.startDate) { const s = document.getElementById('planStart'); if (s) s.value = result.plan.startDate; }
+    const client = _clients.find(x => x.id === clientId);
+    const area = document.getElementById('planPreviewArea');
+    if (area) area.innerHTML = window.PlanImport.reviewHtml(result, { fileName: file.name, clientName: client?.clientName });
+    planMsg('Check what was read, set the start date above, then Create draft. Nothing is saved yet.');
+  } catch (err) {
+    planMsg(IC.friendlyError(err, navigator.onLine));
+  }
+}
+
+function cancelPlanImport() {
+  _planImport = null;
+  const area = document.getElementById('planPreviewArea');
+  if (area) area.innerHTML = '';
+  planMsg('');
+  if (_planState.plan) showPlan(_planState.plan);
+}
+
+async function createDraftFromImport() {
+  const imp = _planImport;
+  if (!imp || imp.clientId !== _planState.clientId) return;
+  const body = window.PlanImport.draftBody({
+    result: imp.result, fileName: imp.fileName, data: imp.data, clientUid: imp.clientId,
+    startDate: document.getElementById('planStart')?.value,
+    tier: document.getElementById('planTier')?.value,
+    attach: !!document.getElementById('planImportAttach')?.checked,
+  });
+  planMsg('Creating draft…');
+  try {
+    const { plan } = await planApi('/', { method: 'POST', body: JSON.stringify(body) });
+    _planImport = null;
+    planMsg('Draft created from ' + imp.fileName + '. Marked values were filled in; check them in Edit plan, link the program, then approve and publish.');
+    showPlan(plan);
+  } catch (err) { planMsg('Could not create the draft: ' + err.message); }
 }
 
 async function planApi(path, options = {}) {
