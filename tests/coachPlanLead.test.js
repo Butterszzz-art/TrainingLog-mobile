@@ -6,6 +6,7 @@ const vm = require('vm');
 const src = fs.readFileSync('coach/coach.js', 'utf8');
 const start = src.indexOf('const planLeadKey');
 const end = src.indexOf('function masterPlanCard(', start);
+const body = src.slice(src.indexOf('function planFormBody('), src.indexOf('async function initMasterPlan('));
 
 function setup(leads, stored = {}) {
   const store = { ...stored };
@@ -14,10 +15,11 @@ function setup(leads, stored = {}) {
     _planState: { clientId: 'u1' },
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } },
     escapeHtml: s => String(s),
+    document: { getElementById: id => (ctx.fields || {})[id] || null },
   };
   vm.createContext(ctx);
-  vm.runInContext(src.slice(start, end) + '\nthis.api = { defaultLeadFor, leadOptionsHtml, rememberPlanLead };', ctx);
-  return { api: ctx.api, store };
+  vm.runInContext(src.slice(start, end) + body + '\nthis.api = { defaultLeadFor, leadOptionsHtml, rememberPlanLead, parseIntakeFile, planFormBody, setFile: v => { _planIntakeFile = v; } };', ctx);
+  return { api: ctx.api, store, ctx };
 }
 
 const lead = (id, naam, extra = {}) => ({ id, naam, status: 'new', intake: { persoonsgegevens: { naam, email: extra.email || '' } }, ...extra });
@@ -54,4 +56,27 @@ test('the matching lead is listed first and selected; the pick is remembered', (
   expect(html).toContain('<option value="L2" selected>');
   api.rememberPlanLead({ value: 'L1' });
   expect(store.coachPlanLead_u1).toBe('L1');
+});
+
+describe('intake from a file (no lead)', () => {
+  const exported = { client: { id: 'x', naam: 'Client A', intake: { persoonsgegevens: { naam: 'Client A', gewicht: 84, vetpercentage: 18 } }, instellingen: { eiwitFactor: 2 }, calculations: {} } };
+
+  test('reads a ClientIntake export, { intake } or a bare intake', () => {
+    const { api } = setup(leads);
+    expect(api.parseIntakeFile(JSON.stringify(exported))).toEqual({ intake: exported.client.intake, instellingen: { eiwitFactor: 2 }, naam: 'Client A' });
+    expect(api.parseIntakeFile(JSON.stringify({ intake: exported.client.intake })).instellingen).toEqual({});
+    expect(api.parseIntakeFile(JSON.stringify(exported.client.intake)).intake.persoonsgegevens.gewicht).toBe(84);
+    expect(() => api.parseIntakeFile('nope')).toThrow(/isn’t JSON/);
+    expect(() => api.parseIntakeFile('{"client":{}}')).toThrow(/No intake found/);
+  });
+
+  test('the dropdown offers the file, and the plan request sends the intake instead of a lead', () => {
+    const { api, ctx } = setup(leads);
+    expect(api.leadOptionsHtml(client, '')).toContain('Use intake file (.json)…');
+    api.setFile({ clientId: 'u1', name: 'Client A (a.json)', intake: exported.client.intake, instellingen: { eiwitFactor: 2 } });
+    expect(api.leadOptionsHtml(client, '__file')).toContain('<option value="__file" selected>From file: Client A (a.json)</option>');
+    ctx.fields = { planLead: { value: '__file' }, planPackage: { value: 'cut_cycle_32' }, planStart: { value: '2026-11-09' }, planTier: { value: 'medium' } };
+    const body = api.planFormBody('u1');
+    expect(body).toMatchObject({ clientUid: 'u1', leadId: undefined, intake: exported.client.intake, instellingen: { eiwitFactor: 2 }, packageId: 'cut_cycle_32' });
+  });
 });
