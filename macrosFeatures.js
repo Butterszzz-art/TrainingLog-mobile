@@ -141,6 +141,9 @@ const initTrainingToggle = () => {
   toggle.addEventListener('change', (e) => {
     try { localStorage.setItem(DAY_TYPE_KEY, e.target.checked ? 'training-day' : 'normal'); } catch { /* storage blocked */ }
   });
+  // A coach's weekly pattern decides today's day type over the saved chip
+  // (index.html applyCoachMacroScheduleForToday); this runs after it did.
+  if (window.applyCoachMacroScheduleForToday?.()) window.updateMacroUI?.();
 };
 
 export function renderHeatmap() {

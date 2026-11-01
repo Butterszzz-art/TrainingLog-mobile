@@ -47,6 +47,7 @@ describe('saveSliderMacros', () => {
       fetch: fetchImpl,
       getAuthHeaders: () => ({}),
       updateMacroUI: () => {},
+      getAssignedNutritionTargetsForCurrentDay: () => null, // no coach plan
       alert: () => {},
       console: { error: () => {} },
       macroRanges: null,

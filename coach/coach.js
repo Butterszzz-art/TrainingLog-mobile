@@ -708,7 +708,12 @@ function renderOverview(c) {
       : empty('No workouts shared yet.'))
     + '</div>'
     + '<div class="d-card"><div class="d-card-title">Macro targets</div>'
-    + (m.calories ? '<div class="d-stat-grid">' + stat('Calories', m.calories) + stat('Protein', m.protein + 'g') + stat('Carbs', m.carbs + 'g') + stat('Fat', m.fat + 'g') + '</div>'
+    + (c.macroPlan?.days
+      ? '<div class="d-stat-grid">' + MACRO_DAY_TYPES.filter(t => c.macroPlan.days[t.key]).map(t => {
+        const d = c.macroPlan.days[t.key];
+        return stat(t.label, macroKcal(d.protein, d.carbs, d.fat) + ' kcal');
+      }).join('') + '</div>'
+      : m.calories ? '<div class="d-stat-grid">' + stat('Calories', m.calories) + stat('Protein', m.protein + 'g') + stat('Carbs', m.carbs + 'g') + stat('Fat', m.fat + 'g') + '</div>'
       : '<p class="ws-empty-note">No targets sent yet — see the Nutrition tab.</p>')
     + '</div>'
     + '<div class="d-card"><div class="d-card-title">Latest Check-In</div>'
@@ -1118,16 +1123,25 @@ function renderNutrition(c) {
     return;
   }
   const m = c.macroTargets || {};
+  const mode = _macroModeByClient[c.id] || (c.macroPlan ? 'days' : 'single');
+  const note = c.macroPlan ? (c.macroPlan.note || '') : noteFromSummary(c.currentNutritionSummary);
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Macro targets</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
-    + macroField('Calories', 'macroCalories', m.calories)
-    + macroField('Protein (g)', 'macroProtein', m.protein)
-    + macroField('Carbs (g)', 'macroCarbs', m.carbs)
-    + macroField('Fat (g)', 'macroFat', m.fat)
+    + '<div class="mt-mode" role="radiogroup" aria-label="How targets are set">'
+    + '<button type="button" role="radio" aria-checked="' + (mode === 'single') + '" class="mt-mode-btn' + (mode === 'single' ? ' is-on' : '') + '" onclick="setMacroMode(\'single\')">Same every day</button>'
+    + '<button type="button" role="radio" aria-checked="' + (mode === 'days') + '" class="mt-mode-btn' + (mode === 'days' ? ' is-on' : '') + '" onclick="setMacroMode(\'days\')">By day type</button>'
     + '</div>'
-    + '<textarea id="macroNotes" class="coach-input" placeholder="Short note shown with the targets (optional), e.g. training days +50g carbs">' + escapeHtml(noteFromSummary(c.currentNutritionSummary)) + '</textarea>'
-    + '<button class="bulk-action-btn" style="margin-top:10px;" onclick="saveClientMacros()">Send targets</button>'
-    + '<p class="ws-empty-note">' + escapeHtml(c.clientName) + ' reviews and applies them from Settings → Your Coach.</p>'
+    + (mode === 'days' ? macroPlanEditor(c.macroPlan, m) : (
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
+      + macroField('Calories', 'macroCalories', m.calories)
+      + macroField('Protein (g)', 'macroProtein', m.protein)
+      + macroField('Carbs (g)', 'macroCarbs', m.carbs)
+      + macroField('Fat (g)', 'macroFat', m.fat)
+      + '</div>'))
+    + '<textarea id="macroNotes" class="coach-input" placeholder="Short note shown with the targets (optional), e.g. refeed on Saturdays">' + escapeHtml(note) + '</textarea>'
+    + '<button class="bulk-action-btn" style="margin-top:10px;" onclick="' + (mode === 'days' ? 'saveClientMacroPlan()' : 'saveClientMacros()') + '">Send targets</button>'
+    + '<p class="ws-empty-note">' + (mode === 'days'
+      ? escapeHtml(c.clientName) + '’s Macros tab switches to these right away and picks today’s target from the weekly pattern. They can still switch the day type by hand.'
+      : escapeHtml(c.clientName) + ' reviews and applies them from Settings → Your Coach.') + '</p>'
     + '</div>'
     + '<div class="d-card"><div class="d-card-title">Current</div>'
     + '<p style="color:var(--text-sec);">' + escapeHtml(c.currentNutritionSummary || 'No nutrition plan set.') + '</p></div>'
@@ -1397,10 +1411,120 @@ async function saveClientMacros() {
   if (!Object.values(targets).every(v => Number.isFinite(v) && v > 0)) { alert('Fill in calories, protein, carbs and fat.'); return; }
   const note = document.getElementById('macroNotes')?.value?.trim() || '';
   const summary = targets.calories + ' kcal · ' + targets.protein + 'P / ' + targets.carbs + 'C / ' + targets.fat + 'F' + (note ? ' — ' + note : '');
-  if (!(await patchClient(client.id, { macroTargets: targets, nutritionSummary: summary }))) return;
+  // Sending one set of targets replaces any day-type plan, so the client's
+  // Macros tab stops following the old one.
+  if (!(await patchClient(client.id, { macroTargets: targets, macroPlan: null, nutritionSummary: summary }))) return;
   client.macroTargets = targets;
+  client.macroPlan = null;
   client.currentNutritionSummary = summary;
   alert('Targets sent to ' + client.clientName + '.');
+  renderNutrition(client);
+  renderOverview(client);
+}
+
+// ── Macro targets by day type ─────────────────────────────────
+// Grams per day type (calories follow from them) plus a weekly pattern of
+// which day type each weekday is. Stored as macroPlan on the client's
+// assignment; the client's Macros tab uses it straight away.
+const MACRO_DAY_TYPES = [
+  { key: 'training', label: 'Training', hint: 'required' },
+  { key: 'rest', label: 'Rest' },
+  { key: 'high', label: 'High carb' },
+  { key: 'low', label: 'Low carb' },
+];
+const MACRO_WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+let _macroModeByClient = {}; // clientId -> 'single' | 'days' (unsent choice)
+
+function setMacroMode(mode) {
+  const client = _clients.find(c => c.id === _selectedClientId);
+  if (!client) return;
+  _macroModeByClient[client.id] = mode;
+  renderNutrition(client);
+}
+
+function macroKcal(p, c, f) {
+  return (Number(p) || 0) * 4 + (Number(c) || 0) * 4 + (Number(f) || 0) * 9;
+}
+
+function macroPlanEditor(plan, single) {
+  // Starting point: the saved plan, else the single targets as the training day.
+  const days = plan?.days || (single?.protein ? { training: single } : {});
+  const schedule = plan?.schedule || {};
+  const cell = (type, macro) => '<input type="number" min="0" inputmode="numeric" class="coach-input mt-num" id="mp_' + type + '_' + macro + '"'
+    + ' value="' + (days[type]?.[macro] ?? '') + '" aria-label="' + type + ' ' + macro + ' (g)" oninput="updateMacroPlanKcal(\'' + type + '\')">';
+  const rows = MACRO_DAY_TYPES.map(t => {
+    const d = days[t.key] || {};
+    const kcal = d.protein != null ? macroKcal(d.protein, d.carbs, d.fat) : '';
+    return '<div class="mt-row"><span class="mt-day">' + t.label + (t.hint ? '<small>' + t.hint + '</small>' : '') + '</span>'
+      + cell(t.key, 'protein') + cell(t.key, 'carbs') + cell(t.key, 'fat')
+      + '<span class="mt-kcal" id="mp_' + t.key + '_kcal">' + (kcal ? kcal + '' : '—') + '</span></div>';
+  }).join('');
+  const options = sel => '<option value="">Client picks</option>' + MACRO_DAY_TYPES.map(t =>
+    '<option value="' + t.key + '"' + (sel === t.key ? ' selected' : '') + '>' + t.label + '</option>').join('');
+  const week = MACRO_WEEKDAY_KEYS.map((k, i) => '<label class="mt-wd"><span>' + WEEKDAYS[i] + '</span>'
+    + '<select class="coach-input" id="mp_wd_' + k + '">' + options(schedule[k] || '') + '</select></label>').join('');
+  return '<div class="mt-grid" role="group" aria-label="Grams per day type">'
+    + '<div class="mt-row mt-head"><span></span><span>Protein g</span><span>Carbs g</span><span>Fat g</span><span>kcal</span></div>'
+    + rows + '</div>'
+    + '<p class="ws-empty-note">Leave a row empty if you don’t use that day type.</p>'
+    + '<div class="d-card-subtitle">Weekly pattern</div>'
+    + '<div class="mt-week">' + week + '</div>';
+}
+
+function updateMacroPlanKcal(type) {
+  const v = m => document.getElementById('mp_' + type + '_' + m)?.value;
+  const out = document.getElementById('mp_' + type + '_kcal');
+  const any = ['protein', 'carbs', 'fat'].some(m => v(m) !== '');
+  if (out) out.textContent = any ? String(Math.round(macroKcal(v('protein'), v('carbs'), v('fat')))) : '—';
+}
+
+// Reads the editor. Returns { plan } or { error }.
+function readMacroPlanEditor() {
+  const days = {};
+  for (const t of MACRO_DAY_TYPES) {
+    const raw = ['protein', 'carbs', 'fat'].map(m => document.getElementById('mp_' + t.key + '_' + m)?.value.trim() ?? '');
+    if (raw.every(x => x === '')) continue;
+    const [protein, carbs, fat] = raw.map(Number);
+    if (raw.some(x => x === '') || ![protein, carbs, fat].every(n => Number.isFinite(n) && n >= 0) || !macroKcal(protein, carbs, fat)) {
+      return { error: 'Fill in protein, carbs and fat for ' + t.label.toLowerCase() + ' days (or leave the whole row empty).' };
+    }
+    days[t.key] = { protein: Math.round(protein), carbs: Math.round(carbs), fat: Math.round(fat) };
+  }
+  if (!days.training) return { error: 'Fill in the training day — it’s the fallback for any day type you leave empty.' };
+  const schedule = {};
+  for (const k of MACRO_WEEKDAY_KEYS) {
+    const type = document.getElementById('mp_wd_' + k)?.value || '';
+    if (type && !days[type]) {
+      const label = MACRO_DAY_TYPES.find(t => t.key === type).label;
+      return { error: WEEKDAYS[MACRO_WEEKDAY_KEYS.indexOf(k)] + ' is set to ' + label.toLowerCase() + ', but that row is empty.' };
+    }
+    schedule[k] = type || null;
+  }
+  return { plan: { days, schedule, note: document.getElementById('macroNotes')?.value?.trim() || '' } };
+}
+
+function macroPlanSummary(plan) {
+  const parts = MACRO_DAY_TYPES.filter(t => plan.days[t.key]).map(t => {
+    const d = plan.days[t.key];
+    return t.label + ' ' + macroKcal(d.protein, d.carbs, d.fat) + ' kcal (' + d.protein + 'P / ' + d.carbs + 'C / ' + d.fat + 'F)';
+  });
+  return parts.join(' · ') + (plan.note ? ' — ' + plan.note : '');
+}
+
+async function saveClientMacroPlan() {
+  const client = _clients.find(c => c.id === _selectedClientId);
+  if (!client) return;
+  const { plan, error } = readMacroPlanEditor();
+  if (error) { alert(error); return; }
+  const summary = macroPlanSummary(plan);
+  if (!(await patchClient(client.id, { macroPlan: plan, nutritionSummary: summary }))) return;
+  // Mirror what the server stores (calories derived, training as the single target).
+  for (const d of Object.values(plan.days)) d.calories = macroKcal(d.protein, d.carbs, d.fat);
+  client.macroPlan = plan;
+  client.macroTargets = { ...plan.days.training };
+  client.currentNutritionSummary = summary;
+  delete _macroModeByClient[client.id];
+  alert('Day targets sent to ' + client.clientName + '.');
   renderNutrition(client);
   renderOverview(client);
 }
