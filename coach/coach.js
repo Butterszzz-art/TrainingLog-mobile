@@ -816,6 +816,7 @@ function renderProgram(c) {
     + '<button class="bulk-action-btn" onclick="assignProgram()">Assign</button>'
     + (c.currentProgramId ? '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="unassignProgram()">Remove</button>' : '')
     + '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="editSelectedProgram()">Edit selected</button>'
+    + '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="chooseProgramFile()">Import file</button>'
     + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="showProgramBuilder()">+ New program</button>'
     + '</div>'
     + '<div id="programBuilderArea" style="margin-top:12px;"></div></div>'
@@ -1088,6 +1089,70 @@ function showProgramBuilder(program) {
     onCancel: () => { area.innerHTML = ''; },
   });
   area.querySelector('[data-pf="name"]')?.focus();
+}
+
+// ── Import a program file into the library ────────────────────────────────
+// Same upload as the athlete app's Import sheet (src/js/program-import-core.js).
+// A Week | Day | Exercise | Sets | Reps | RIR | Rest | Notes sheet is read
+// exactly; other files go through the AI. Either way the result opens in the
+// builder to check and fix before it's saved.
+function chooseProgramFile() {
+  let input = document.getElementById('coachProgramFile');
+  if (!input) {
+    input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'coachProgramFile';
+    input.hidden = true;
+    input.accept = window.ProgramImportCore.ACCEPT;
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      input.value = '';
+      if (file) importProgramFile(file);
+    });
+    document.body.appendChild(input);
+  }
+  input.click();
+}
+
+let _importJob = null;
+
+async function importProgramFile(file) {
+  const area = document.getElementById('programBuilderArea');
+  if (!area) return;
+  const IC = window.ProgramImportCore;
+  const problem = IC.checkFile(file);
+  if (problem) { area.innerHTML = '<div class="pi-banner pi-banner--error">' + escapeHtml(problem) + '</div>'; return; }
+  if (_importJob) _importJob.abort();
+  area.innerHTML = '<div class="pi-banner">Reading <strong>' + escapeHtml(file.name) + '</strong>… A sheet with Week / Day / Exercise columns takes a second; other files go through the AI and can take a few minutes.</div>';
+  const job = IC.start(file, { serverUrl: SERVER_URL, headers: authHeaders(), target: 'coach', fetchFn: coachFetch });
+  _importJob = job;
+  let result;
+  try {
+    result = await job.promise;
+  } catch (err) {
+    if (_importJob === job) area.innerHTML = '<div class="pi-banner pi-banner--error">' + escapeHtml(IC.friendlyError(err, navigator.onLine)) + '</div>';
+    return;
+  } finally {
+    if (_importJob === job) _importJob = null;
+  }
+  showImportedProgram(area, file.name, result);
+}
+
+function showImportedProgram(area, fileName, result) {
+  const rows = (result.rowWarnings || []).filter(w => w.row);
+  const notes = (result.warnings || []).concat(rows.map(w => 'Sheet row ' + w.row + ': ' + w.message));
+  const source = result.source === 'table'
+    ? 'Read directly from the sheet.'
+    : 'Converted by the AI. Check every week before saving.';
+  area.innerHTML = '<div class="pi-banner"><strong>Imported from ' + escapeHtml(fileName) + '.</strong> ' + source
+    + ' Fix anything below, then Save to library.'
+    + (notes.length ? '<ul>' + notes.slice(0, 30).map(n => '<li>' + escapeHtml(n) + '</li>').join('') + (notes.length > 30 ? '<li>…and ' + (notes.length - 30) + ' more</li>' : '') + '</ul>' : '')
+    + '</div><div id="programImportBuilder"></div>';
+  const id = 'prog_' + Date.now().toString(36);
+  window.ProgramBuilder.mount(document.getElementById('programImportBuilder'), result.program, {
+    onSave: v2 => saveCoachProgram(id, v2),
+    onCancel: () => { area.innerHTML = ''; },
+  });
 }
 
 function editSelectedProgram() {

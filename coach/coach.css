@@ -1420,3 +1420,9 @@ select.mp-input { appearance: none; padding-right: 32px; cursor: pointer;
 .pb-icon:disabled { opacity: 0.3; cursor: default; }
 .pb-quick { width: 100%; margin-top: 6px; border-style: dashed; }
 .pb-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+/* Program file import (coach.js importProgramFile) */
+.pi-banner { margin-bottom: 10px; padding: 10px 12px; border-radius: var(--radius-sm, 12px); border: 1px solid var(--border); background: var(--elevated-bg, var(--surface)); font-size: 0.84rem; color: var(--text-sec); }
+.pi-banner strong { color: var(--text); }
+.pi-banner ul { margin: 6px 0 0; padding-left: 18px; color: var(--text); }
+.pi-banner--error { border-color: var(--danger-text, #e0707f); color: var(--danger-text, #e0707f); }
