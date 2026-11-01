@@ -4,8 +4,9 @@
  *   { targetKg, startKg, startDate, dueDate|null, setAt }
  *
  * With a goal set, moving towards it reads green and drifting away reads
- * red (for a maintain goal: staying close is green). Without one, the Weight
- * tab keeps its old colours (down = green, up = red).
+ * red (for a maintain goal: staying close is green). Without one, the
+ * colours follow the macro goal (Cut / Maintain / Bulk) instead, and only
+ * with neither does the Weight tab keep its old colours (down = green).
  *
  * The first time someone opens the Weight tab with no goal, they're asked
  * to set one (weightGoalPrompted_<user> records that we asked).
@@ -93,9 +94,31 @@
     return wt().weightGoalDirection(goal.startKg, goal.targetKg);
   }
 
-  /** 'good' | 'bad' | 'flat' for a change against the goal, or null with no goal. */
+  // Macro goal → weight direction. Recomp holds weight, so it reads as maintain.
+  const MACRO_DIRECTION = { cut: 'lose', bulk: 'gain', maintain: 'maintain', recomp: 'maintain' };
+
+  /**
+   * The macro goal as a weight direction, or null when none is set. Uses the
+   * Macros tab's picked preset (e.g. "cut-moderate"), else the last preset
+   * targets were calculated with, else the goal picked in onboarding.
+   */
+  function macroGoalDirection() {
+    const fromKey = (key) => MACRO_DIRECTION[String(key || '').split('-')[0]] || null;
+    const picked = fromKey(document.getElementById('macroPreset')?.value);
+    if (picked) return picked;
+    const lastUsed = fromKey(localStorage.getItem('trainingPreset'));
+    if (lastUsed) return lastUsed;
+    const u = user();
+    const onboarding = u ? readJSON(`macroSettings_${u}`, null) : null;
+    return fromKey(onboarding?.macroGoal);
+  }
+
+  /**
+   * 'good' | 'bad' | 'flat' for a change against the weight goal, falling
+   * back to the macro goal; null when neither is set.
+   */
   function weightGoalTone(deltaKg, opts) {
-    const dir = goalDirection();
+    const dir = goalDirection() || macroGoalDirection();
     if (!dir || !wt().weightTrendTone) return null;
     return wt().weightTrendTone(deltaKg, dir, opts);
   }
@@ -161,8 +184,12 @@
     const s = summary();
     if (!s) {
       el.className = 'wg-card wg-card--empty';
+      const macroDir = macroGoalDirection();
+      const sub = macroDir
+        ? `Colours follow your ${{ lose: 'Cut', gain: 'Bulk', maintain: 'Maintain' }[macroDir]} macro goal for now. Set a target weight to track progress.`
+        : 'Set a target so your trend colours mean something.';
       el.innerHTML = `<div class="wg-empty-text"><span class="pod-kicker">Weight goal</span>
-          <span class="wg-empty-sub">Set a target so your trend colours mean something.</span></div>
+          <span class="wg-empty-sub">${sub}</span></div>
         <button type="button" class="mx-outline wg-edit-btn" onclick="openWeightGoalSheet()">Set goal</button>`;
       return;
     }
@@ -357,6 +384,7 @@
     saveWeightGoal,
     clearWeightGoal,
     weightGoalTone,
+    macroGoalDirection,
     renderWeightGoalCard,
     weightGoalInsightHtml,
     openWeightGoalSheet,

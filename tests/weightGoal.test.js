@@ -42,3 +42,50 @@ describe('weight goal helpers', () => {
     expect(weeksToGoal({ currentKg: 84, targetKg: 80, kgPerWeek: 0 })).toBeNull();
   });
 });
+
+describe('trend colours fall back to the macro goal', () => {
+  const { JSDOM } = require('jsdom');
+  const fs = require('fs');
+  const path = require('path');
+  const WT = fs.readFileSync(path.join(__dirname, '../weightTab.js'), 'utf8');
+  const WG = fs.readFileSync(path.join(__dirname, '../src/js/weight-goal.js'), 'utf8');
+
+  function setup({ preset = '', stored = {} } = {}) {
+    const dom = new JSDOM(`<!doctype html><body><select id="macroPreset"><option value=""></option>
+      <option value="cut-moderate"></option><option value="bulk-slow"></option><option value="maintain"></option></select></body>`,
+      { runScripts: 'outside-only', url: 'https://app.test/' });
+    const w = dom.window;
+    w.currentUser = 'ana';
+    Object.entries(stored).forEach(([k, v]) => w.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)));
+    w.document.getElementById('macroPreset').value = preset;
+    w.eval(WT);
+    w.eval(WG);
+    return w;
+  }
+
+  test('no weight goal and no macro goal keeps the old colours', () => {
+    const w = setup();
+    expect(w.macroGoalDirection()).toBeNull();
+    expect(w.weightGoalTone(-0.5)).toBeNull();
+  });
+
+  test('picked bulk preset makes losing weight read red', () => {
+    const w = setup({ preset: 'bulk-slow' });
+    expect(w.macroGoalDirection()).toBe('gain');
+    expect(w.weightGoalTone(-0.5)).toBe('bad');
+    expect(w.weightGoalTone(0.5)).toBe('good');
+  });
+
+  test('falls back to the last calculated preset, then onboarding', () => {
+    expect(setup({ stored: { trainingPreset: 'cut-moderate' } }).macroGoalDirection()).toBe('lose');
+    expect(setup({ stored: { macroSettings_ana: { macroGoal: 'recomp' } } }).macroGoalDirection()).toBe('maintain');
+  });
+
+  test('a weight goal wins over the macro goal', () => {
+    const w = setup({
+      preset: 'bulk-slow',
+      stored: { weightGoal_ana: { targetKg: 78, startKg: 85, startDate: '2026-10-01', dueDate: null } },
+    });
+    expect(w.weightGoalTone(-0.5)).toBe('good');
+  });
+});

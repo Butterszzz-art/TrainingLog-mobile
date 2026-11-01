@@ -14490,7 +14490,8 @@ function formatWeightLogDate(isoDate) {
 }
 
 /** 'wt-tone-good' | 'wt-tone-bad' | 'wt-tone-flat' for a weight change
- * against the user's weight goal (src/js/weight-goal.js), or '' with no goal. */
+ * against the user's weight goal, else their macro goal (src/js/weight-goal.js),
+ * or '' with neither set. */
 function weightToneClass(deltaKg, opts) {
   const tone = typeof window.weightGoalTone === 'function' ? window.weightGoalTone(deltaKg, opts) : null;
   return tone ? 'wt-tone-' + tone : '';
