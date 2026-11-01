@@ -135,7 +135,7 @@ workflows:
 
     environment:
       vars:
-        BUNDLE_ID: com.pocketcoach.app
+        BUNDLE_ID: org.pocketcoachcoms.app
       node: 22
       xcode: latest
 
@@ -194,7 +194,7 @@ workflows:
   # Start it manually from the Codemagic UI. Needs, in Codemagic:
   #   1. Team settings → Integrations → Developer Portal: an App Store
   #      Connect API key saved under the name used below.
-  #   2. The app record (bundle ID com.pocketcoach.app) created in
+  #   2. The app record (bundle ID org.pocketcoachcoms.app) created in
   #      App Store Connect.
   # Codemagic then creates/fetches the distribution certificate and
   # provisioning profile itself.
@@ -210,9 +210,9 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.pocketcoach.app
+        bundle_identifier: org.pocketcoachcoms.app
       vars:
-        BUNDLE_ID: com.pocketcoach.app
+        BUNDLE_ID: org.pocketcoachcoms.app
         APP_VERSION: "1.0.0"
       node: 22
       xcode: latest
@@ -285,7 +285,7 @@ workflows:
 
     environment:
       vars:
-        PACKAGE_NAME: com.pocketcoach.app
+        PACKAGE_NAME: org.pocketcoachcoms.app
       node: 22
 
     scripts:

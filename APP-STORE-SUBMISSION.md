@@ -78,7 +78,7 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     `node scripts/backfill-exercise-bests.js`.
 
 ### App Store Connect — listing
-12. Create the app record: bundle ID `com.pocketcoach.app`, name "Pocket Coach".
+12. Create the app record: bundle ID `org.pocketcoachcoms.app`, name "Pocket Coach".
 13. **Availability:** all countries (or EU + chosen others).
 14. **Privacy Policy URL:** your live `privacy.html`. Add a **Terms of Use (EULA)**
     link in the description or as a custom EULA (required for subscriptions).
@@ -103,12 +103,12 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     prompts.
 
 ### Live Activity (workout + rest timer on the Lock Screen)
-22. Apple Developer → Identifiers: register the App ID **`com.pocketcoach.app.LiveActivity`**
+22. Apple Developer → Identifiers: register the App ID **`org.pocketcoachcoms.app.LiveActivity`**
     (no capabilities needed).
 23. Codemagic → Team settings → Code signing identities → iOS provisioning profiles:
-    fetch an **App Store** profile for `com.pocketcoach.app.LiveActivity` from the Developer
+    fetch an **App Store** profile for `org.pocketcoachcoms.app.LiveActivity` from the Developer
     Portal, the same way as the app's own profile. Codemagic picks up profiles whose bundle ID
-    starts with `com.pocketcoach.app`, so no YAML change is needed.
+    starts with `org.pocketcoachcoms.app`, so no YAML change is needed.
 24. TestFlight check on an iPhone with iOS 16.2+: start a workout, log a set, start a rest,
     lock the phone. The Lock Screen shows the exercise, sets and the rest countdown; the
     Dynamic Island shows it on iPhone 14 Pro and later. "Rest over" appears when it runs out,
