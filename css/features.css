@@ -3929,3 +3929,113 @@ html.pc-log-only .macro-nr-row, html.pc-log-only #nutritionInsightsCard, html.pc
 .sx-gshare-meal-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .sx-gshare-meal-h > .ui-icon { flex: none; width: 20px; height: 20px; color: var(--text-tertiary); }
 .sx-gshare-meal-h .sx-join + .sx-join { margin-left: 2px; }
+
+/* ── Weight goal (src/js/weight-goal.js) ──────────────────────────────────
+   Trend colours follow the goal: towards it = good, away = bad. */
+.wt-stat-val.wt-tone-good,
+.wt-rate-val.wt-tone-good,
+.wt-week-change.wt-tone-good { color: var(--primary-text); }
+.wt-stat-val.wt-tone-bad,
+.wt-rate-val.wt-tone-bad,
+.wt-week-change.wt-tone-bad  { color: var(--danger-text); }
+.wt-stat-val.wt-tone-flat,
+.wt-rate-val.wt-tone-flat    { color: var(--highlight); }
+.wt-week-change.wt-tone-flat { color: var(--text-muted); }
+
+.wg-card { margin-bottom: 10px; }
+.wg-card:empty { display: none; }
+.wg-card--empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 15px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-pod, 14px);
+}
+.wg-empty-text { display: flex; flex-direction: column; gap: 3px; }
+.wg-empty-sub { font-size: 0.8rem; color: var(--text-muted); }
+.wg-edit-btn { width: auto; min-height: 34px; padding: 0 14px; flex-shrink: 0; }
+
+.wg-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wg-link {
+  background: none; border: 0; padding: 4px 0; width: auto; min-height: 0;
+  color: var(--text-muted); font-size: 0.8rem; font-weight: 700; cursor: pointer;
+  box-shadow: none; border-radius: 0;
+}
+.wg-headline {
+  font-family: var(--font-display, inherit);
+  font-size: 1.45rem;
+  letter-spacing: 0.01em;
+  margin: 4px 0 8px;
+  color: var(--wg-tone, var(--text-color));
+}
+.wg-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.18);
+  overflow: hidden;
+}
+.wg-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--wg-tone, var(--primary));
+  transition: width 0.4s ease;
+}
+.wg-ends {
+  display: flex; justify-content: space-between;
+  font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;
+}
+.wg-pace { font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; }
+.wg-due { display: block; margin-top: 2px; color: var(--text-faint, var(--text-muted)); }
+.wg-tone-good { --wg-tone: var(--primary-text); }
+.wg-tone-bad  { --wg-tone: var(--danger-text); }
+.wg-tone-flat { --wg-tone: var(--highlight); }
+
+.wg-insight-empty .wg-edit-btn { margin-top: 8px; align-self: flex-start; }
+
+/* Sheet */
+.wg-sheet-backdrop {
+  position: fixed; inset: 0; z-index: 1200;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  animation: wgFade 0.18s ease;
+}
+.wg-sheet {
+  width: min(100%, 460px);
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-radius: 18px 18px 0 0;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+  animation: wgUp 0.22s ease;
+}
+@media (min-width: 700px) {
+  .wg-sheet-backdrop { align-items: center; }
+  .wg-sheet { border-radius: 18px; }
+}
+.wg-sheet-title { margin: 4px 0 6px; font-size: 1.2rem; }
+.wg-sheet-copy { margin: 0 0 14px; font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+.wg-sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wg-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.wg-input-wrap { display: flex; align-items: center; gap: 6px; }
+.wg-input-wrap .wt-input { flex: 1; min-width: 0; }
+.wg-unit { font-size: 0.8rem; color: var(--text-muted); }
+.wg-now { font-size: 1.35rem; font-weight: 700; padding: 6px 0; }
+.wg-now small { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+.wg-preview {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  min-height: 28px; font-size: 0.85rem; margin: 2px 0 6px;
+}
+.wg-preview strong { margin-right: 4px; }
+.wg-swatch { padding: 2px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+.wg-swatch--good { color: var(--primary-text); background: rgba(66, 166, 121, 0.14); }
+.wg-swatch--bad  { color: var(--danger-text); background: rgba(224, 112, 127, 0.14); }
+.wg-error { color: var(--danger-text); font-size: 0.8rem; min-height: 1em; margin: 0 0 6px; }
+.wg-sheet-actions { display: flex; flex-direction: column; gap: 8px; }
+.wg-sheet-actions button { width: 100%; }
+@keyframes wgFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wgUp { from { transform: translateY(24px); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .wg-sheet-backdrop, .wg-sheet { animation: none; }
+}
