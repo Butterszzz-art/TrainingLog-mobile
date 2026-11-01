@@ -13,9 +13,9 @@
 (function (global) {
   'use strict';
 
-  const MAX_FILE_BYTES = 8 * 1024 * 1024;
-  const TIMEOUT_MS = 500000; // the server gives up at 480 s
-  const ACCEPT = '.xlsx,.docx,.pdf,.csv,.tsv,.txt,image/jpeg,image/png,image/webp';
+  // Upload, timeout and error messages are shared with the coach dashboard.
+  const IC = global.ProgramImportCore;
+  const ACCEPT = IC.ACCEPT;
   const TAG_LABELS = { RP: 'Rest-pause', P: 'Partials', S: 'Intra-set stretch', TUT: 'Time under tension' };
 
   const state = { fileName: '', result: null, week: 1, controller: null };
@@ -102,19 +102,11 @@
     );
   }
 
-  function readAsBase64(file) {
-    return new Promise(function (resolve, reject) {
-      const reader = new FileReader();
-      reader.onload = function () { resolve(String(reader.result).replace(/^data:[^,]*,/, '')); };
-      reader.onerror = function () { reject(new Error('Could not read that file.')); };
-      reader.readAsDataURL(file);
-    });
-  }
-
   async function upload(file) {
     if (typeof window.markAiUserAction === 'function') window.markAiUserAction('program-import');
     if (!file) return;
-    if (file.size > MAX_FILE_BYTES) { renderPick('That file is over 8 MB. Import one month at a time.'); return; }
+    const problem = IC.checkFile(file);
+    if (problem) { renderPick(problem); return; }
     state.fileName = file.name;
     setStatus('Reading your program…');
     render(
@@ -122,56 +114,30 @@
       '</strong> and converting it. This can take a few minutes for a long program.</span></div>'
     );
 
-    const controller = new AbortController();
-    state.controller = controller;
-    const timer = setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
+    const job = IC.start(file, {
+      serverUrl: serverUrl(),
+      headers: typeof global.getAuthHeaders === 'function' ? global.getAuthHeaders() : {},
+    });
+    state.controller = job;
     try {
-      const data = await readAsBase64(file);
-      const headers = typeof global.getAuthHeaders === 'function' ? global.getAuthHeaders() : {};
-      const res = await fetch(serverUrl() + '/api/ai/coach/import-program', {
-        method: 'POST',
-        headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
-        body: JSON.stringify({ fileName: file.name, data: data }),
-        signal: controller.signal,
-      });
-      const json = await res.json().catch(function () { return {}; });
-      if (!res.ok) {
-        if (res.status === 401) throw new Error('Please log in again to import a program.');
-        if (res.status === 402 || res.status === 403) throw new Error('Importing programs is a Pro feature.');
-        if (res.status === 404 && json.error === 'AI_NOT_CONFIGURED') throw new Error('The AI is not switched on for this server yet.');
-        throw new Error(json.message || (json.error && json.error.message) || "Couldn't import the program. Try again.");
-      }
-      if (!json.program) throw new Error("Couldn't import the program. Try again.");
+      const json = await job.promise;
+      if (state.controller !== job) return; // sheet closed or another upload started
       state.result = json;
       state.week = 1;
       renderPreview();
     } catch (err) {
-      if (state.controller !== controller) return; // sheet closed or another upload started
-      const message = err.name === 'AbortError'
-        ? 'That took too long. Try again, or import a shorter part of the program.'
-        : (!navigator.onLine ? 'You are offline.' : err.message);
-      renderPick(message);
+      if (state.controller !== job) return;
+      renderPick(IC.friendlyError(err, navigator.onLine));
     } finally {
-      clearTimeout(timer);
-      if (state.controller === controller) state.controller = null;
+      if (state.controller === job) state.controller = null;
     }
   }
 
   // ── step 2: check and save ─────────────────────────────────────────────────
 
   function setsSummary(sets) {
-    const groups = [];
-    (sets || []).forEach(function (set) {
-      const c = core();
-      let reps = c && c.formatReps ? c.formatReps(set) : String(set.reps == null ? '?' : set.reps);
-      if (set.weight != null) reps += ' @ ' + set.weight + ' kg';
-      if (set.rpe != null) reps += ' RPE ' + set.rpe;
-      else if (set.rir != null) reps += ' RIR ' + set.rir;
-      if (set.setType && set.setType !== 'straight') reps += ' ' + set.setType;
-      const last = groups[groups.length - 1];
-      if (last && last.label === reps) last.n += 1; else groups.push({ n: 1, label: reps });
-    });
-    return groups.map(function (g) { return g.n + ' × ' + g.label; }).join(', ');
+    const c = core();
+    return IC.setsSummary(sets, c && c.formatReps ? c.formatReps : null);
   }
 
   function weekDays(program, number) {
