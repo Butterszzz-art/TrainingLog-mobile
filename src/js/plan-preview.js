@@ -10,7 +10,37 @@
 (function (globalScope) {
   'use strict';
 
-  const PHASE_LABELS = { cut: 'Cut', maintain: 'Maintain', build: 'Build' };
+  const PHASE_LABELS = { cut: 'Cut', maintain: 'Maintain', build: 'Build', deload: 'Deload' };
+
+  function addDays(iso, days) {
+    const d = new Date(`${iso}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  /**
+   * Read a plan as "pocketcoach.plan/2" (the backend's src/plan/schema.js
+   * upgradePlan): /1 plans get weeks, startWeek and startDate from their
+   * dates. Returns a copy; /2 plans come back unchanged in content.
+   */
+  function upgrade(plan) {
+    if (!plan || !Array.isArray(plan.phases)) return plan;
+    const out = JSON.parse(JSON.stringify(plan));
+    let week = 1;
+    out.phases.forEach((p) => {
+      if (!p.weeks) {
+        p.weeks = p.caps?.maxWeeks
+          || Math.max(1, Math.round((Date.parse(`${addDays(p.plannedEnd, 1)}T00:00:00Z`) - Date.parse(`${p.plannedStart}T00:00:00Z`)) / (7 * 86400000)));
+      }
+      p.startWeek = week;
+      week += p.weeks;
+      p.training = p.training || {};
+      if (p.training.programRef === undefined) p.training.programRef = null;
+    });
+    out.startDate = out.startDate || out.package?.billing?.startDate || out.phases[0]?.plannedStart || null;
+    if (out.schema !== 'pocketcoach.plan/2') out.schema = 'pocketcoach.plan/2';
+    return out;
+  }
   const MUSCLE_LABELS = {
     chest: 'Chest', back: 'Back', shoulders: 'Shoulders', biceps: 'Biceps', triceps: 'Triceps',
     quads: 'Quads', hamstrings: 'Hamstrings', glutes: 'Glutes', calves: 'Calves',
@@ -63,9 +93,26 @@
 
   function dayTargets(label, t) {
     if (!t) return '';
+    const g = (v) => (v == null ? '–' : Math.round(v));
+    if (t.kcal == null) {
+      return `<div class="pp-day pp-day--unset"><div class="pp-day-label">${esc(label)}</div><div class="pp-macros">Not set yet</div></div>`;
+    }
     return `<div class="pp-day"><div class="pp-day-label">${esc(label)}</div>
       <div class="pp-kcal">${esc(Math.round(t.kcal))} <span>kcal</span></div>
-      <div class="pp-macros"><span>P ${esc(Math.round(t.proteinG))} g</span> · <span>F ${esc(Math.round(t.fatG))} g</span> · <span>C ${esc(Math.round(t.carbG))} g</span></div></div>`;
+      <div class="pp-macros"><span>P ${esc(g(t.proteinG))} g</span> · <span>C ${esc(g(t.carbG))} g</span> · <span>F ${esc(g(t.fatG))} g</span></div></div>`;
+  }
+
+  // "X-frame · program weeks 13–15" (+ a coach-only note when the program is shorter).
+  function programLine(phase, programs, coachView) {
+    const ref = phase.training?.programRef;
+    if (!ref) return '';
+    const from = (ref.weekOffset || 0) + 1;
+    const to = (ref.weekOffset || 0) + phase.weeks;
+    let note = '';
+    const lib = (programs || []).find((p) => p.id === ref.programId);
+    const total = lib && Array.isArray(lib.weeks) ? lib.weeks.length : null;
+    if (coachView && total && to > total) note = ` <span class="pp-warn">· has ${total} week${total === 1 ? '' : 's'}; week ${total} repeats after that</span>`;
+    return `<p class="pp-note pp-program"><strong>${esc(ref.name || 'Program')}</strong> · program week${from === to ? '' : 's'} ${from}${from === to ? '' : `–${to}`}${note}</p>`;
   }
 
   function ruleTag(prov) {
@@ -88,7 +135,7 @@
     return flags.length ? `<ul class="pp-flags">${flags.map((f) => `<li class="pp-flag pp-flag--${esc(f.niveau)}">${esc(f.bericht)}</li>`).join('')}</ul>` : '';
   }
 
-  function renderPhase(phase, { today, coachView, commonFlags }) {
+  function renderPhase(phase, { today, coachView, commonFlags, programs }) {
     const isCurrent = phaseStart(phase) <= today && today <= phaseEnd(phase);
     const n = phase.nutrition || {};
     const t = phase.training || {};
@@ -111,14 +158,16 @@
     return `<section class="pp-phase pp-phase--${esc(phase.type)}${isCurrent ? ' pp-phase--current' : ''}">
       <header class="pp-phase-head">
         <span class="pp-phase-name">${esc(PHASE_LABELS[phase.type] || phase.type)}</span>
-        <span class="pp-phase-dates">${esc(fmtDate(phaseStart(phase)))} – ${esc(fmtDate(phaseEnd(phase)))} · ${esc(phase.caps?.maxWeeks)} wk</span>
+        <span class="pp-phase-dates">${esc(fmtDate(phaseStart(phase)))} – ${esc(fmtDate(phaseEnd(phase)))} · ${phase.weeks === 1 ? `week ${esc(phase.startWeek)}` : `weeks ${esc(phase.startWeek)}–${esc(phase.startWeek + phase.weeks - 1)}`}</span>
         ${isCurrent ? `<span class="pp-now">Now · week ${esc(weekOfPhase(phase, today))}</span>` : ''}
       </header>
+      ${phase.goalText ? `<p class="pp-goal">${esc(phase.goalText)}</p>` : ''}
       <p class="pp-ends">${esc(endCriteriaText(phase))}</p>
-      <div class="pp-days">${dayTargets('Rest day', n.restDay)}${dayTargets('Training day', n.trainingDay)}</div>
+      <div class="pp-days">${dayTargets('Training day', n.trainingDay)}${dayTargets('Rest day', n.restDay)}</div>
       <div class="pp-training">
-        <div class="pp-sub">${esc(t.split?.naam || '')}${t.split?.sessionsPerWeek ? ` · ${esc(t.split.sessionsPerWeek)}×/week` : ''} · weekly sets per muscle</div>
-        <div class="pp-chips">${sets}</div>
+        ${programLine(phase, programs, coachView)}
+        ${sets ? `<div class="pp-sub">${esc(t.split?.naam || '')}${t.split?.sessionsPerWeek ? ` · ${esc(t.split.sessionsPerWeek)}×/week` : ''} · weekly sets per muscle</div>
+        <div class="pp-chips">${sets}</div>` : ''}
         ${progression ? `<p class="pp-note">${progression}</p>` : ''}
         ${deload ? `<p class="pp-note">${deload}</p>` : ''}
       </div>
@@ -127,16 +176,19 @@
   }
 
   function renderTimeline(plan, today) {
-    const total = plan.phases.reduce((s, p) => s + (p.caps?.maxWeeks || 0), 0) || 1;
+    const total = plan.phases.reduce((s, p) => s + (p.weeks || 0), 0) || 1;
     const segs = plan.phases.map((p) => {
       const current = phaseStart(p) <= today && today <= phaseEnd(p);
-      return `<div class="pp-seg pp-seg--${esc(p.type)}${current ? ' pp-seg--current' : ''}" style="flex:${(p.caps?.maxWeeks || 0) / total}" title="${esc(PHASE_LABELS[p.type] || p.type)} · ${esc(p.caps?.maxWeeks)} weeks"><span class="pp-seg-name">${esc(PHASE_LABELS[p.type] || p.type)}&nbsp;</span>${esc(p.caps?.maxWeeks)}w</div>`;
+      return `<div class="pp-seg pp-seg--${esc(p.type)}${current ? ' pp-seg--current' : ''}" style="flex:${(p.weeks || 0) / total}" title="${esc(PHASE_LABELS[p.type] || p.type)} · ${esc(p.weeks)} weeks"><span class="pp-seg-name">${esc(PHASE_LABELS[p.type] || p.type)}&nbsp;</span>${esc(p.weeks)}w</div>`;
     }).join('');
     return `<div class="pp-timeline">${segs}</div>`;
   }
 
-  function render(plan, options = {}) {
-    if (!plan || !Array.isArray(plan.phases) || !plan.phases.length) return '<div class="pp-empty">No plan to show.</div>';
+  function render(input, options = {}) {
+    if (!input || !Array.isArray(input.phases) || !input.phases.length) return '<div class="pp-empty">No plan to show.</div>';
+    const plan = upgrade(input);
+    // Program lengths: the coach's library on the dashboard, the published snapshots in the app.
+    const programs = options.programs || Object.entries(plan.programs || {}).map(([id, p]) => ({ id, ...p }));
     const today = options.today || todayIso();
     const coachView = !!options.coachView;
     const pkg = plan.package || {};
@@ -165,7 +217,7 @@
       </header>
       ${review}${buConflicts}${overrides}${intakeFlags}
       ${renderTimeline(plan, today)}
-      ${plan.phases.map((p) => renderPhase(p, { today, coachView, commonFlags: common })).join('')}
+      ${plan.phases.map((p) => renderPhase(p, { today, coachView, commonFlags: common, programs })).join('')}
       ${coachView && plan.ruleVersion ? `<p class="pp-footer">Rules: ${esc(plan.ruleVersion)}</p>` : ''}
     </div>`;
   }
@@ -188,6 +240,10 @@
 .pp-seg--build,.pp-phase--build .pp-phase-name{background:linear-gradient(135deg,#2f8a63,#236b4e)}
 .pp-seg--maintain,.pp-phase--maintain .pp-phase-name{background:linear-gradient(135deg,#d4ab68,#b3843f)}
 .pp-seg--cut,.pp-phase--cut .pp-phase-name{background:linear-gradient(135deg,#c4664a,#9b4632)}
+.pp-seg--deload,.pp-phase--deload .pp-phase-name{background:linear-gradient(135deg,#8fa3b0,#62737f)}
+.pp-goal{margin:0;font-size:15px;color:var(--text-color,inherit)}
+.pp-warn{color:var(--highlight,#c79a54)}
+.pp-day--unset .pp-macros{color:var(--highlight,#c79a54)}
 .pp-phase{background:var(--card-bg,rgba(127,127,127,.06));border:1px solid var(--border-color,rgba(127,127,127,.25));border-radius:var(--radius-md,16px);padding:var(--space-4,16px);display:flex;flex-direction:column;gap:var(--space-3,12px)}
 .pp-phase--current{border-color:var(--primary,#2f8a63);box-shadow:0 0 0 1px var(--primary,#2f8a63)}
 .pp-phase-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -224,7 +280,7 @@
     doc.head.appendChild(style);
   }
 
-  const api = { render, currentPhase, weekOfPhase, endCriteriaText, ensureStyles };
+  const api = { render, upgrade, currentPhase, weekOfPhase, endCriteriaText, ensureStyles };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   globalScope.PlanPreview = api;
 })(typeof window !== 'undefined' ? window : globalThis);
