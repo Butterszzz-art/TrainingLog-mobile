@@ -443,7 +443,14 @@
       }
     };
 
+    // In the app, <a download> does nothing (WKWebView ignores it), so
+    // saving and sharing go through the story composer's native helpers
+    // (src/js/workout-story.js). The code below them is the web fallback.
+    const name = `progress-report-${d.range.end || 'today'}`;
+    const composer = window.StoryComposer;
+
     downloadBtn.onclick = () => {
+      if (composer?.saveCanvas) return composer.saveCanvas(canvas, `${name}.png`, 'image/png');
       const link = document.createElement('a');
       link.download = `progress-report-${d.range.end || 'today'}.png`;
       link.href = canvas.toDataURL('image/png');
@@ -451,6 +458,7 @@
     };
 
     shareBtn.onclick = async () => {
+      if (composer?.shareCanvas) return composer.shareCanvas(canvas, `${name}.png`, 'image/png');
       try {
         if (navigator.share && navigator.canShare) {
           const blob = await getBlob();

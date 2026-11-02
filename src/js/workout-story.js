@@ -309,18 +309,23 @@
     return saveCanvas(composeStory(), fileName('.jpg'), 'image/jpeg');
   }
 
-  async function onShare() {
-    const canvas = composeStory();
+  function onShare() {
+    return shareCanvas(composeStory(), fileName('.jpg'), 'image/jpeg');
+  }
+
+  // Native share sheet in the app, Web Share elsewhere, then clipboard or
+  // a download. Also used by the progress report (progress-story.js).
+  async function shareCanvas(canvas, name, type) {
     try {
-      if (await nativeImage('shareImage', canvas, fileName('.jpg'), 'image/jpeg')) return;
-      if (await shareFile(canvas, fileName('.jpg'), 'image/jpeg')) return;
+      if (await nativeImage('shareImage', canvas, name, type)) return;
+      if (await shareFile(canvas, name, type)) return;
       if (navigator.clipboard?.write && window.ClipboardItem) {
         const blob = await toBlob(canvas, 'image/png');
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         toast('Image copied', 'success');
         return;
       }
-      download(canvas, fileName('.png'));
+      download(canvas, name.replace(/\.jpg$/, '.png'));
     } catch (e) {
       console.warn('[story] share failed', e);
       toast('Sharing didn\'t work. Use Save image instead.', 'warn');
@@ -383,5 +388,10 @@
 
   window.openWorkoutStoryModal = openWorkoutStoryModal;
   window.closeWorkoutStoryModal = closeWorkoutStoryModal;
-  window.StoryComposer = { open: openStoryComposer, redraw, close: closeWorkoutStoryModal, facebookAppId: FACEBOOK_APP_ID };
+  window.StoryComposer = {
+    open: openStoryComposer, redraw, close: closeWorkoutStoryModal,
+    facebookAppId: FACEBOOK_APP_ID,
+    // For screens with their own finished image (the progress report).
+    saveCanvas, shareCanvas,
+  };
 })();

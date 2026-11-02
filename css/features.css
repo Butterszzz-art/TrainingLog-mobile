@@ -3388,6 +3388,8 @@ body.food-search-open { overflow: hidden; }
   box-shadow: none;
   cursor: pointer;
 }
+/* Share sits first and takes the push to the right; Micros follows it. */
+.macro-hero-top #macroShareStoryBtn + .macro-micros-btn { margin-left: 6px; }
 .macro-micros-btn .ui-icon { width: 13px; height: 13px; display: inline-flex; }
 .macro-micros-btn .ui-icon svg { width: 13px; height: 13px; }
 .macro-micros-dot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; border-radius: 50%; background: #f0a040; }

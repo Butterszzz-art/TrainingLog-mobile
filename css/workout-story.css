@@ -98,3 +98,26 @@ body.wstory-open { overflow: hidden; }
   font-size: 13.5px;
   cursor: pointer;
 }
+
+/* Macro story: the pre-workout meal picker (src/js/macro-story.js). The
+   meals can outnumber what fits on a phone, so the row scrolls. */
+.mcstory-controls {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.mcstory-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13.5px;
+}
+.mcstory-hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+.mcstory-segs {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mcstory-segs::-webkit-scrollbar { display: none; }
+.mcstory-segs > button { flex: none; white-space: nowrap; }
