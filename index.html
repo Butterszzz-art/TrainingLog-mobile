@@ -3110,6 +3110,10 @@
                 <span class="mx-lbl" id="macroHeroDayLabel">Today</span>
                 <span id="offlineBadge" class="mx-chip mx-chip--sm mx-chip--brass" style="display:none;"><span class="ui-icon" data-icon="clock"></span> Offline</span>
                 <span id="macroDayCompleteBadge" class="mx-chip mx-chip--sm macro-day-complete-badge" hidden><span class="ui-icon" data-icon="check"></span> Complete</span>
+                <!-- Today's macros as a story sticker (src/js/macro-story.js) -->
+                <button type="button" id="macroShareStoryBtn" class="macro-micros-btn" onclick="openMacroStoryModal()" aria-label="Share today's macros as a story">
+                  <span class="ui-icon" data-icon="share"></span><span>Share</span>
+                </button>
                 <!-- Fibre and micros for today (openMicrosSheet in food-database.js) -->
                 <button type="button" id="macroMicrosBtn" class="macro-micros-btn" onclick="openMicrosSheet()" aria-label="Fibre and micros for today">
                   <span class="ui-icon" data-icon="leaf"></span><span>Micros</span><span class="macro-micros-dot" id="macroMicrosDot" hidden></span>
@@ -21169,6 +21173,8 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/workout-story.js"></script>
   <script src="src/js/weight-sticker.js"></script>
   <script src="src/js/weight-story.js"></script>
+  <script src="src/js/macro-sticker.js"></script>
+  <script src="src/js/macro-story.js"></script>
   <script src="src/js/weight-goal.js"></script>
   <script src="src/js/mobility.js"></script>
   <script src="src/js/coach-data.js"></script>
