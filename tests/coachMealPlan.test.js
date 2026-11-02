@@ -217,4 +217,24 @@ describe('dashboard meal planner', () => {
     expect(t.q('.mp2-total').textContent).toMatch(/Target 2000 kcal/);
     expect(t.q('[data-mp="clear"]')).not.toBeNull();
   });
+
+  test('after Send the coach is told whether the plan was saved and the client notified', () => {
+    const dom = new JSDOM('', { runScripts: 'outside-only' });
+    dom.window.eval(read('coach/meal-planner.js'));
+    const msg = dom.window.MealPlanner.deliveryMessage;
+    const plan = { key: 'meals:x' };
+    expect(msg('Client A', { mealPlan: plan, delivery: 'notified' })).toMatchObject({ saved: true, text: expect.stringMatching(/^Sent. Client A got a notification/) });
+    expect(msg('Client A', { mealPlan: plan, delivery: 'not_linked' }).text).toMatch(/hasn't accepted your coaching invite/);
+    expect(msg('Client A', { mealPlan: plan, delivery: 'muted' }).text).toMatch(/notifications turned off/);
+    // An out-of-date server answers 200 but drops the meal plan.
+    expect(msg('Client A', { clientUid: 'c1' })).toMatchObject({ saved: false });
+    expect(msg('Client A', undefined).saved).toBe(true);
+  });
+
+  test('Send shows the delivery result', async () => {
+    const t = planner({ plan: { ...mealPlan } });
+    t.click(t.q('[data-mp="send"]'));
+    await t.flush(); await t.flush();
+    expect(t.area.textContent).toMatch(/Sent./);
+  });
 });
