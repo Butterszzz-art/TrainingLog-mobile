@@ -355,11 +355,14 @@
 
   // ── All tab: search, path, tours, connections, new dots ──────
 
+  // A tour can limit itself to some users (e.g. the coaching tour needs a coach plan).
+  const tourAvailable = t => !t || typeof t.available !== 'function' || !!t.available();
+
   const EXTRA_RESULTS = () => [
     { name: 'Your goal path', blurb: 'A short checklist for what you’re training for.', keywords: 'goal path start begin help guide what next checklist', action: openPathSheet },
     { name: 'How it all connects', blurb: 'How each part of the app feeds the others.', keywords: 'connect connects how works help explain overview', action: openConnections },
     { name: 'App tour', blurb: 'The full hands-on walkthrough.', keywords: 'tour help tutorial walkthrough guide learn', action: () => global.showTutorial?.({ force: true }) },
-    ...Object.keys(global.GuideTours || {}).map(id => {
+    ...Object.keys(global.GuideTours || {}).filter(id => tourAvailable(global.GuideTours[id])).map(id => {
       const t = global.GuideTours[id];
       return { name: `Tour: ${t.title}`, blurb: t.blurb, keywords: `tour help how ${t.title} ${t.blurb}`, action: () => global.startGuideTour(id) };
     }),
@@ -431,7 +434,7 @@
             </button>
           </div>
           <div class="gd-tours-label">Show me how</div>
-          <div class="gd-tours">${Object.keys(tours).map(id => `<button type="button" class="mx-chip gd-tour-chip" data-gd-tour="${id}">${esc(tours[id].title)}</button>`).join('')}</div>
+          <div class="gd-tours">${Object.keys(tours).filter(id => tourAvailable(tours[id])).map(id => `<button type="button" class="mx-chip gd-tour-chip" data-gd-tour="${id}">${esc(tours[id].title)}</button>`).join('')}</div>
         </div>`;
       const input = host.querySelector('#gdSearchInput');
       input.addEventListener('input', () => renderSearchResults(input.value));

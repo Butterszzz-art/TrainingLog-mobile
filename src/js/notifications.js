@@ -273,8 +273,11 @@
       case 'volume_passed':
         if (typeof global.showTab === 'function') global.showTab('leaderboardTab');
         return;
-      case 'coach_invite':
       case 'coach_plan':
+        // A plan or program arrived: the "New from your coach" sheet explains it.
+        if (n.data && n.data.kind && global.CoachAnnounce && global.CoachAnnounce.open(n.data)) return undefined;
+        return _yourCoach();
+      case 'coach_invite':
         return _yourCoach();
       case 'coach_note':
         return _yourCoach('ycNotes');
