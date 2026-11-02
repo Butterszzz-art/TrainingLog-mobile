@@ -1427,8 +1427,54 @@ function renderNutrition(c) {
     + '</div>'
     + '<div class="d-card"><div class="d-card-title">Current</div>'
     + '<p style="color:var(--text-sec);">' + escapeHtml(c.currentNutritionSummary || 'No nutrition plan set.') + '</p></div>'
+    + '<div class="d-card"><div class="d-card-title">Meal plan</div><div id="mealPlanArea"><p class="ws-empty-note">Loading…</p></div></div>'
     + '<div id="coachFoodLog"><div class="d-card"><div class="d-card-title">Food log</div><p class="ws-empty-note">Loading…</p></div></div>';
   loadFoodLog(c);
+  mountMealPlanner(c);
+}
+
+// ── Meal plans (coach/meal-planner.js) ─────────────────────────
+// Meals live in your library (/api/coach/meals); the plan goes to the client
+// with PATCH /api/coach/clients/:id { mealPlan, message }.
+async function coachJson(path, options = {}) {
+  const res = await coachFetch(SERVER_URL + path, { ...options, headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.success === false) throw new Error(data?.error?.message || 'Something went wrong. Try again.');
+  return data;
+}
+
+// Targets per day type for the totals line: the day-type macro plan, else the single targets.
+function mealPlanTargets(c) {
+  const t = d => d && { kcal: d.calories, protein: d.protein, carbs: d.carbs, fat: d.fat };
+  const days = c.macroPlan?.days;
+  if (days?.training) return { training: t(days.training), rest: t(days.rest || days.training) };
+  return c.macroTargets?.calories ? { training: t(c.macroTargets), rest: t(c.macroTargets) } : null;
+}
+
+async function mountMealPlanner(c) {
+  const area = document.getElementById('mealPlanArea');
+  if (!area || !window.MealPlanner) return;
+  const detail = _clientDetails[c.id] === undefined ? await loadClientDetail(c.id) : _clientDetails[c.id];
+  if (_selectedClientId !== c.id || !document.getElementById('mealPlanArea')) return;
+  window.MealPlanner.mount(area, {
+    clientName: c.clientName,
+    plan: detail?.mealPlan || null,
+    targets: mealPlanTargets(c),
+    api: {
+      meals: () => coachJson('/api/coach/meals').then(d => d.meals || []),
+      coachFoods: () => coachJson('/api/coach/foods').then(d => d.foods || []).catch(() => []),
+      search: q => coachJson('/api/food/search?q=' + encodeURIComponent(q) + '&limit=20').then(d => d.foods || []),
+      saveMeal: meal => coachJson('/api/coach/meals/' + encodeURIComponent(meal.id), { method: 'PUT', body: JSON.stringify(meal) }).then(d => d.meal),
+      send: async (plan, message) => {
+        await coachJson('/api/coach/clients/' + encodeURIComponent(c.id), { method: 'PATCH', body: JSON.stringify({ mealPlan: plan, message }) });
+        if (_clientDetails[c.id]) _clientDetails[c.id].mealPlan = { ...plan, note: message, sentAt: new Date().toISOString() };
+      },
+      clear: async () => {
+        await coachJson('/api/coach/clients/' + encodeURIComponent(c.id), { method: 'PATCH', body: JSON.stringify({ mealPlan: null }) });
+        if (_clientDetails[c.id]) _clientDetails[c.id].mealPlan = null;
+      },
+    },
+  });
 }
 
 // ── Food log (GET /api/coach/nutrition/:clientId) ─────────────
@@ -1500,6 +1546,9 @@ function renderFoodLog(c) {
       ? Object.keys(MEAL_LABELS).filter(m => byMeal[m]).map(m => '<div class="fl-meal">' + MEAL_LABELS[m] + '</div>'
         + byMeal[m].map(e => '<div class="fl-entry' + (e.flag ? ' is-flagged' : '') + '">'
           + '<span class="fl-name">' + escapeHtml(e.name) + (e.brand ? ' <small>' + escapeHtml(e.brand) + '</small>' : '')
+          + (e.fromCoach ? ' <span class="fl-plan' + (e.confirmed ? ' is-eaten' : '') + '" title="From your meal plan: ' + escapeHtml(e.fromCoach.meal) + '">'
+            + (e.fromCoach.plannedGrams != null && Math.abs((e.grams || 0) - e.fromCoach.plannedGrams) > 0.5 ? 'plan · changed from ' + Math.round(e.fromCoach.plannedGrams) + ' g' : e.confirmed ? 'plan · eaten' : 'plan · not confirmed')
+            + '</span>' : '')
           + (e.amount ? ' <small>· ' + escapeHtml(e.amount) + ' ' + escapeHtml(e.unit || 'g') + '</small>' : '')
           + (e.flag ? ' <span class="fl-flag" title="Calories don’t match the macros (4P + 4C + 9F) — check this food">⚠ check</span>' : '') + '</span>'
           + '<span class="fl-src">' + escapeHtml(String(e.source || '').toUpperCase()) + '</span>'

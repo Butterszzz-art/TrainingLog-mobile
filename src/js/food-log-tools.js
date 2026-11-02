@@ -357,6 +357,9 @@
     };
   }
   window.openFoodLibrary = openLibrary;
+  // Shared with coach-meals.js: add/remove/replace entries and keep today's
+  // running totals in step, the same way every other log change does.
+  window.applyFoodLogChanges = applyChanges;
 
   /* ── Recipe builder ──────────────────────────────────────── */
 

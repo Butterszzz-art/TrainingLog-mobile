@@ -693,6 +693,9 @@
       widget.after(host);
     }
     renderShareAsk();
+    // The coach's meal plan fills today's log once (src/js/coach-meals.js).
+    const CM = window.CoachMeals;
+    if (CM && CM.ensureToday && CM.ensureToday()) return; // it redrew the log
     const items = Core.entriesFor(loadLog(), _today());
     _updateMicrosButton(items);
     const icons = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
@@ -706,6 +709,7 @@
         ${items.length ? `<span class="food-log-tot">${tot.kcal} kcal</span>` : ''}
         ${icons}
       </div>
+      ${CM && CM.headerHtml ? CM.headerHtml() : ''}
       ${Core.MEALS.map(m => {
         const list = groups[m];
         const label = Core.MEAL_LABELS[m];
@@ -726,6 +730,7 @@
               ${add}
             </span>
           </div>
+          ${CM && CM.slotBar ? CM.slotBar(m) : ''}
           <div class="food-meal-photo-slot" data-photo-slot="${m}">${_mealPhotoHtml(m, label, _photoCacheFor()[m])}</div>
           ${list.map(e => `
           <button type="button" class="food-entry" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">
