@@ -203,7 +203,27 @@ describe('POST /api/ai/coach', () => {
     expect(body.bullets).toEqual([{ text: 'Get to bed 30 min earlier', tone: 'watch' }]);
     const sent = JSON.parse(mockCalls[0].messages[0].content);
     expect(sent.facts.sleep).toMatchObject({ nights7d: 2, avgHours: 6.2 });
-    expect(sent.draft[0].tone).toBe('watch');
+    expect(sent.draft.bullets[0].tone).toBe('watch');
+    expect(body.recovery).toEqual([]);
+  });
+
+  test('body: tracker vitals reach the AI and come back as recovery lines', async () => {
+    mockScript = [{ message: { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({
+      headline: 'Recovery is the lever today.',
+      bullets: [{ text: 'Get to bed 30 min earlier', tone: 'watch' }],
+      recovery: [{ text: 'HRV 34 ms is under your usual 45–55. Cap top sets at RPE 7 today.', tone: 'watch' }],
+    }) }] } }];
+    const vitals = { status: { level: 'watch', title: 'Worth watching' }, metrics: [
+      { key: 'hrvMs', label: 'HRV', unit: 'ms', value: 34, date: '2026-09-23', fresh: true, usualLow: 45, usualHigh: 55, baselineDays: 12, flag: 'low', change30: null },
+    ] };
+    const body = await (await fetch(base + '/body', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: { ...bodyPack, vitals } }),
+    })).json();
+    expect(body.recovery).toEqual([{ text: 'HRV 34 ms is under your usual 45–55. Cap top sets at RPE 7 today.', tone: 'watch' }]);
+    const sent = JSON.parse(mockCalls[0].messages[0].content);
+    expect(sent.facts.vitals.metrics[0]).toMatchObject({ name: 'HRV', value: 34, usualRange: '45–55', flag: 'low' });
+    expect(sent.draft.recovery[0].text).toMatch(/^HRV 34 ms, below your usual 45–55/);
+    expect(mockCalls[0].output_config.format.schema.required).toContain('recovery');
   });
 
   test('body: no data or a failed AI call returns the rules takeaways', async () => {
