@@ -95,7 +95,7 @@
     const day = r.day;
     const label = r.dayType === 'training' ? `Training day${day ? ` · ${day.name}` : ''}` : r.dayType === 'rest' ? 'Rest day' : '';
     const lifts = day ? `<ul class="pp-today-lifts">${(day.exercises || []).map((ex) =>
-      `<li><span>${esc(ex.name)}</span><span>${esc(T.exerciseTarget(ex))}</span></li>`).join('')}</ul>` : '';
+      `<li><span>${esc(ex.name)}${globalScope.ExerciseVideos ? globalScope.ExerciseVideos.button(ex.name) : ''}</span><span>${esc(T.exerciseTarget(ex))}</span></li>`).join('')}</ul>` : '';
     return `<section class="pp-today">
       <div class="pp-sub">Today · week ${esc(r.planWeek)} of ${esc(r.totalWeeks)} · ${esc(PHASE[r.phase.type] || r.phase.type)}${r.programWeek ? ` · program week ${esc(r.programWeek)}${r.repeatsLastWeek ? ' (repeated)' : ''}` : ''}</div>
       ${label ? `<div class="pp-today-title">${esc(label)}</div>` : ''}

@@ -114,7 +114,7 @@
       const hint = options.hints === false ? '' : _weightHint(ex);
       return `
         <div class="tpc-ex${done ? ' is-done' : ''}">
-          <span class="tpc-ex-name">${_esc(ex.name)}</span>
+          <span class="tpc-ex-name">${_esc(ex.name)}${window.ExerciseVideos ? window.ExerciseVideos.button(ex.name) : ''}</span>
           <span class="tpc-ex-sets">${_setCount(ex)}${reps ? ` × ${_esc(reps)}` : ' sets'}${rir ? `<span class="tpc-ex-rir" title="Reps in reserve${rir.includes('/') ? '; the second number is for the last set' : ''}">${_esc(rir)}</span>` : ''}${hint ? `<span class="tpc-ex-last">${_esc(hint)}</span>` : ''}${done ? '<span class="tpc-ex-tick" aria-label="done">✓</span>' : ''}</span>
         </div>`;
     }).join('');

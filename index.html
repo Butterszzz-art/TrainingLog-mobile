@@ -4297,6 +4297,7 @@
 <!-- Then V2 UI -->
 <script src="src/js/plan-preview.js"></script>
 <script src="src/js/plan-today.js"></script>
+<script src="src/js/exercise-videos.js"></script>
 <script src="src/js/my-plan.js"></script>
 <script src="src/js/ProgramTabV2.js"></script>
 <script src="src/js/premium-library.js"></script>
@@ -12713,28 +12714,44 @@ async function deleteCoachExerciseVideo(id) {
 window.deleteCoachExerciseVideo = deleteCoachExerciseVideo;
 
 // Client side: fetch videos shared by my coach(es)
+// The coach's technique videos: kept per account so the ▶ buttons show at
+// once (and offline), refreshed from the server, then the program views
+// redraw with their ▶ buttons (src/js/exercise-videos.js).
 async function loadExerciseVideosForClient() {
+  const key = `exerciseVideos_${currentUser || 'guest'}`;
+  try {
+    const stored = JSON.parse(localStorage.getItem(key) || 'null');
+    if (Array.isArray(stored) && !(window.exerciseVideosCache || []).length) window.exerciseVideosCache = stored;
+  } catch (_err) { /* ignore */ }
   try {
     const res = await fetch(`${window.SERVER_URL}/exercise-videos`, {
       headers: getAuthHeaders(),
       credentials: 'include'
     });
     const data = await res.json().catch(() => null);
-    window.exerciseVideosCache = Array.isArray(data?.items) ? data.items : [];
+    if (res.ok && Array.isArray(data?.items)) {
+      window.exerciseVideosCache = data.items;
+      try { localStorage.setItem(key, JSON.stringify(data.items)); } catch (_err) { /* storage full */ }
+    }
   } catch (err) {
     console.info('[Videos] client fetch skipped', err?.message);
   }
+  if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+  if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
+  const ex = document.getElementById('exercise');
+  if (ex && ex.value) renderExerciseVideoHint(ex.value);
 }
 window.loadExerciseVideosForClient = loadExerciseVideosForClient;
 
 // Show a ▶ Watch technique hint under the exercise input when a video exists
+// (typed, or picked from the program in the Log).
 function renderExerciseVideoHint(exerciseName) {
   const hint = document.getElementById('exerciseVideoHint');
   if (!hint) return;
-  const name = String(exerciseName || '').trim().toLowerCase();
-  const match = name && (window.exerciseVideosCache || []).find(
-    v => String(v.exerciseName || '').trim().toLowerCase() === name
-  );
+  const name = String(exerciseName || '').trim();
+  const match = name && window.ExerciseVideos
+    ? window.ExerciseVideos.find(name, window.exerciseVideosCache || [])
+    : null;
   if (!match) {
     hint.style.display = 'none';
     hint.innerHTML = '';

@@ -448,7 +448,7 @@
       return `
       <div class="sq-row sq-row--tap${done ? ' is-done' : ''}${i === currentIdx ? ' is-current' : ''}" data-ex-name="${_esc(ex.name)}" data-ex-weight="${first.weight ?? ''}" data-ex-reps="${first.reps ?? ''}">
         <span class="sq-index">${done ? '✓' : i + 1}</span>
-        <span class="sq-name">${ex.name}</span>
+        <span class="sq-name">${_escHTML(ex.name)}${global.ExerciseVideos ? global.ExerciseVideos.button(ex.name) : ''}</span>
         <span class="sq-summary">${_setSummary(ex)}</span>
         ${tail}
       </div>`;
@@ -913,6 +913,8 @@
     initQuickLog(name);
     if (typeof global.renderOverloadHint === 'function') global.renderOverloadHint();
     if (typeof global.renderWarmupHint === 'function') global.renderWarmupHint();
+    // Setting .value doesn't fire the input's oninput, which is what used to show this.
+    if (typeof global.renderExerciseVideoHint === 'function') global.renderExerciseVideoHint(name);
     if (plannedFirstSet) {
       if (plannedFirstSet.weight != null) _qlWeight = plannedFirstSet.weight;
       if (plannedFirstSet.reps != null) _qlReps = plannedFirstSet.reps;

@@ -1468,3 +1468,25 @@ select.mp-input { appearance: none; padding-right: 32px; cursor: pointer;
 mark.pi-suggested { background: var(--warning-bg, rgba(168,124,56,.25)); color: var(--highlight, #c79a54); border-radius: 4px; padding: 0 3px; }
 .pi-attach { display: flex; gap: 8px; align-items: center; font-size: 0.84rem; color: var(--text-sec); margin: 8px 0; }
 .pe-macro.is-suggested { border-color: var(--highlight); background: var(--warning-bg, rgba(168,124,56,.16)); }
+
+/* Technique videos (coach/technique-videos.js) and the ▶ in builder rows */
+.ev-watch { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-left: 6px; padding: 0; border-radius: 50%; border: 1px solid var(--primary); background: transparent; color: var(--primary-text, var(--primary)); font-size: 9px; line-height: 1; cursor: pointer; vertical-align: middle; flex: none; }
+.ev-watch:hover, .ev-watch:focus-visible { background: var(--primary); color: var(--label-on-green, #050c08); }
+.pb-name-cell { white-space: nowrap; }
+.pb-name-cell .pb-in--name { width: calc(100% - 30px); }
+.tv-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 0; }
+.tv-filter { display: inline-flex; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-sec); }
+.tv-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.tv-table th { text-align: left; padding: 4px 6px; font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.tv-table td { padding: 4px 6px; border-top: 1px solid var(--border); vertical-align: middle; }
+.tv-name { color: var(--text); min-width: 220px; }
+.tv-programs { display: block; font-size: 0.72rem; color: var(--text-muted); }
+.tv-status { font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.tv-status--ok { color: var(--primary-text, var(--primary)); }
+.tv-status--missing { color: var(--highlight); }
+.tv-url { width: 100%; min-width: 220px; }
+.tv-cue { width: 100%; min-width: 160px; }
+.tv-acts { white-space: nowrap; }
+.tv-acts .pb-link { margin-right: 8px; }
+.tv-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.tv-add .pb-in { flex: 1 1 180px; }

@@ -822,8 +822,80 @@ function renderProgram(c) {
     + '<div id="programBuilderArea" style="margin-top:12px;"></div></div>'
     + '<div class="d-card"><div class="d-card-title">Assigned: ' + escapeHtml(c.currentProgram || 'none') + '</div>' + preview
     + (c.activeProgramName && c.activeProgramName !== c.currentProgram ? '<p class="ws-empty-note">Client is currently following: ' + escapeHtml(c.activeProgramName) + '</p>' : '')
-    + '</div>';
+    + '</div>'
+    + '<div class="d-card"><div class="d-card-title">Technique videos</div><div id="techniqueVideosArea"><p class="ws-empty-note">Loading videos…</p></div></div>';
   initMasterPlan(c);
+  loadCoachExerciseVideos().then(renderTechniqueVideos);
+}
+
+// ── Technique videos per exercise (coach/technique-videos.js) ─────────────
+// Saved per exercise name with the same endpoints the phone's Coach Ops →
+// Videos screen uses, so both stay in step. The list covers every exercise
+// in your program library; clients get a ▶ next to the exercise.
+window.coachExerciseVideos = [];
+let _tvState = { filter: 'missing', message: '', rows: [] };
+
+async function loadCoachExerciseVideos() {
+  try {
+    const res = await coachFetch(SERVER_URL + '/coach/exercise-videos', { headers: authHeaders() });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && Array.isArray(data.items)) window.coachExerciseVideos = data.items;
+  } catch { /* keep the last list */ }
+  return window.coachExerciseVideos;
+}
+
+function renderTechniqueVideos() {
+  const area = document.getElementById('techniqueVideosArea');
+  if (!area || !window.TechniqueVideos) return;
+  _tvState.rows = window.TechniqueVideos.rows(_programs, window.coachExerciseVideos);
+  area.innerHTML = window.TechniqueVideos.html(_tvState.rows, _tvState)
+    + '<datalist id="tvExerciseNames">' + _tvState.rows.map(r => '<option value="' + escapeHtml(r.name) + '">').join('') + '</datalist>';
+  if (!area.__tvHooked) {
+    area.__tvHooked = true;
+    area.addEventListener('change', e => {
+      if (e.target.matches('[data-tv-filter]')) { _tvState.filter = e.target.checked ? 'all' : 'missing'; _tvState.message = ''; renderTechniqueVideos(); }
+    });
+    area.addEventListener('click', e => {
+      const btn = e.target.closest('[data-tv-act]');
+      if (btn) techniqueVideoAction(btn.dataset.tvAct, Number(btn.dataset.tv), area);
+    });
+  }
+}
+
+async function techniqueVideoAction(act, i, area) {
+  const row = _tvState.rows[i];
+  const say = msg => { _tvState.message = msg; renderTechniqueVideos(); };
+  if (act === 'watch' && row) { window.ExerciseVideos.play(row.name, window.coachExerciseVideos); return; }
+  let exerciseName, videoUrl, notes;
+  if (act === 'add') {
+    exerciseName = area.querySelector('.tv-add-name')?.value.trim();
+    videoUrl = area.querySelector('.tv-add-url')?.value.trim();
+    notes = area.querySelector('.tv-add-cue')?.value.trim();
+    if (!exerciseName) { say('Type the exercise name.'); return; }
+  } else if (act === 'save' && row) {
+    const tr = area.querySelector('tr[data-tv="' + i + '"]');
+    exerciseName = row.name;
+    videoUrl = tr?.querySelector('.tv-url')?.value.trim();
+    notes = tr?.querySelector('.tv-cue')?.value.trim();
+  }
+  try {
+    if (act === 'delete' && row?.own && row.video?.id) {
+      if (!confirm('Remove the video for ' + row.name + '? Clients stop seeing it.')) return;
+      const res = await coachFetch(SERVER_URL + '/coach/exercise-videos/' + encodeURIComponent(row.video.id), { method: 'DELETE', headers: authHeaders() });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error?.message || 'Could not remove it.');
+      await loadCoachExerciseVideos();
+      say('Removed the video for ' + row.name + '.');
+      return;
+    }
+    if (act !== 'save' && act !== 'add') return;
+    if (!/^https?:\/\//i.test(videoUrl || '')) { say('Paste the full video link (starting with https://).'); return; }
+    const res = await coachFetch(SERVER_URL + '/coach/exercise-videos', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ exerciseName, videoUrl, notes: notes || '' }) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error?.message || 'Could not save it.');
+    await loadCoachExerciseVideos();
+    say('Saved. Clients see ▶ next to ' + exerciseName + '.');
+  } catch (err) {
+    say(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message);
+  }
 }
 
 // ── Master plan (generate → preview → draft → approve → publish) ───────────
