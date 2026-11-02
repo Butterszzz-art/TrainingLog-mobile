@@ -1466,8 +1466,9 @@ async function mountMealPlanner(c) {
       search: q => coachJson('/api/food/search?q=' + encodeURIComponent(q) + '&limit=20').then(d => d.foods || []),
       saveMeal: meal => coachJson('/api/coach/meals/' + encodeURIComponent(meal.id), { method: 'PUT', body: JSON.stringify(meal) }).then(d => d.meal),
       send: async (plan, message) => {
-        await coachJson('/api/coach/clients/' + encodeURIComponent(c.id), { method: 'PATCH', body: JSON.stringify({ mealPlan: plan, message }) });
-        if (_clientDetails[c.id]) _clientDetails[c.id].mealPlan = { ...plan, note: message, sentAt: new Date().toISOString() };
+        const res = await coachJson('/api/coach/clients/' + encodeURIComponent(c.id), { method: 'PATCH', body: JSON.stringify({ mealPlan: plan, message }) });
+        if (res.mealPlan && _clientDetails[c.id]) _clientDetails[c.id].mealPlan = { ...plan, note: message, sentAt: new Date().toISOString() };
+        return res;
       },
       clear: async () => {
         await coachJson('/api/coach/clients/' + encodeURIComponent(c.id), { method: 'PATCH', body: JSON.stringify({ mealPlan: null }) });

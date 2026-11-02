@@ -242,9 +242,11 @@
         if (!Object.keys(state.plan.training).length && !Object.keys(state.plan.rest).length) { state.message = 'Add at least one meal first.'; render(); return; }
         state.busy = true; state.message = ''; render();
         try {
-          await api.send({ days: state.plan }, state.note.trim());
+          const res = await api.send({ days: state.plan }, state.note.trim());
+          const msg = deliveryMessage(o.clientName, res);
+          if (!msg.saved) throw new Error(msg.text);
           o.plan = { days: clone(state.plan), note: state.note.trim(), sentAt: new Date().toISOString() };
-          state.message = 'Sent. ' + (o.clientName || 'The client') + ' gets a notification, and their food log fills with these meals.';
+          state.message = msg.text;
         } catch (err) { state.message = err.message || 'Could not send.'; }
         state.busy = false;
       } else if (act === 'clear') {
@@ -258,5 +260,21 @@
     return { state: () => state };
   }
 
-  root.MealPlanner = { mount, mealTotals, dayTotals, SLOTS };
+  // What the coach is told after Send, from the PATCH response: whether the
+  // server kept the plan (an out-of-date server drops it without an error)
+  // and whether the client was notified.
+  function deliveryMessage(name, res) {
+    const who = name || 'Your client';
+    if (res && typeof res === 'object' && !res.mealPlan) {
+      return { saved: false, text: "The server didn't save the meal plan (it may still be updating). Try again in a few minutes." };
+    }
+    const app = ' Their food log fills with these meals the next time they open the app (on iPhone, from the latest app update).';
+    const d = res && res.delivery;
+    if (d === 'not_linked') return { saved: true, text: `Saved, but ${who} hasn't accepted your coaching invite yet, so they weren't notified. They'll get the meals once they accept.` };
+    if (d === 'muted') return { saved: true, text: `Saved. ${who} has coaching notifications turned off, so no notification went out.` + app };
+    if (d === 'notified') return { saved: true, text: `Sent. ${who} got a notification.` + app };
+    return { saved: true, text: 'Sent.' + app };
+  }
+
+  root.MealPlanner = { mount, mealTotals, dayTotals, deliveryMessage, SLOTS };
 })(typeof window !== 'undefined' ? window : globalThis);
