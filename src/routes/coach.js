@@ -464,21 +464,41 @@ router.post('/review', async (req, res) => {
 // targets may be the phone's adaptive ones, so the advice matches what the
 // Macros card shows). Facts come from the same rules the phone runs offline;
 // Claude only rewrites them as practical takeaways.
-// Returns { headline, bullets, source: 'ai' | 'rules' }.
+// Returns { headline, bullets, recovery, source: 'ai' | 'rules' }. `recovery` reads
+// the tracker vitals (resting HR, HRV, ...) and scale body composition.
 
 const { buildBodyFacts } = require('../js/coach-data');
 
 const BODY_MODEL = process.env.COACH_BODY_MODEL || BRIEF_MODEL;
 
-const BODY_INSTRUCTIONS = `You write the "Coach takeaways" box on the Body tab of Pocket Coach, a training app. It sits under the athlete's weight, macros, sleep and cardio cards and tells them what to actually do this week.
+const BODY_INSTRUCTIONS = `You write the "Coach takeaways" box on the Body tab of Pocket Coach, a training app. It sits under the athlete's weight, macros, sleep, cardio and tracker-vitals cards and tells them what to actually do this week.
 
 You get a JSON object with "facts" computed from their log and a rules-based "draft" of takeaways. Write:
-- headline: one sentence (max 25 words) — the overall read of their body data and the single most important lever this week.
-- bullets: up to 3 takeaways (max 90 characters each), most important first. Each one is practical: say what to change or keep doing, concretely (a food swap, a kcal amount, a bedtime, a walk). Use tone "watch" for something to fix, "good" for something to keep, "info" for neutral.
+- headline: one sentence (max 25 words) — the overall read of their body data and the single most important lever this week. If facts.vitals.status is "strained", lead with recovery.
+- bullets: up to 3 takeaways (max 90 characters each) on weight, nutrition, sleep and cardio, most important first. Each one is practical: say what to change or keep doing, concretely (a food swap, a kcal amount, a bedtime, a walk). Use tone "watch" for something to fix, "good" for something to keep, "info" for neutral.
+- recovery: up to 2 lines (max 120 characters each) reading facts.vitals (resting HR, HRV, blood oxygen, breathing rate, skin temperature, VO₂ max from their watch or ring) and facts.composition (smart-scale body fat, fat and lean mass). Say what the numbers mean for training today and what to do: push, cap the effort (RPE, a set fewer), sleep earlier, an easy day. Each vital is judged against the athlete's own "usualRange"; "flag" high/low means outside it. Tie it to sleep or the phase when the facts support it (short sleep, a hard cut). Mention VO₂ max only when it has a change30d. Scale body fat swings day to day, so read composition as a trend only. Empty array when there are no vitals or composition facts. Don't repeat a recovery point in bullets.
 
-Base every takeaway on the facts; keep numbers exactly as given and don't add numbers or facts that aren't there. Coaching safety: never suggest eating below ~1,200 kcal or losing faster than ~1% bodyweight a week. No greetings, no emoji, no exclamation marks, no medical advice.
+Base every takeaway on the facts; keep numbers exactly as given and don't add numbers or facts that aren't there. Coaching safety: never suggest eating below ~1,200 kcal or losing faster than ~1% bodyweight a week. No greetings, no emoji, no exclamation marks. Don't diagnose: vitals are a trend check, and if blood oxygen is flagged low, suggest checking with a doctor if it stays low.
 
-Reply with only a JSON object, no other text: {"headline": string, "bullets": [{"text": string, "tone": "good" | "watch" | "info"}]}`;
+Reply with only a JSON object, no other text: {"headline": string, "bullets": [{"text": string, "tone": "good" | "watch" | "info"}], "recovery": [{"text": string, "tone": "good" | "watch" | "info"}]}`;
+
+const BODY_SCHEMA = {
+  ...BRIEF_SCHEMA,
+  properties: { ...BRIEF_SCHEMA.properties, recovery: BRIEF_SCHEMA.properties.bullets },
+  required: ['headline', 'bullets', 'recovery'],
+};
+
+// parseBrief plus the recovery lines.
+function parseBody(text) {
+  const brief = parseBrief(text);
+  if (!brief) return null;
+  const obj = parseJsonObject(text) || {};
+  const recovery = (Array.isArray(obj.recovery) ? obj.recovery : [])
+    .filter(b => b && typeof b.text === 'string' && b.text.trim())
+    .slice(0, 2)
+    .map(b => ({ text: b.text.trim().slice(0, 140), tone: ['good', 'watch', 'info'].includes(b.tone) ? b.tone : 'info' }));
+  return { ...brief, recovery };
+}
 
 router.post('/body', async (req, res) => {
   if (!isConfigured()) {
@@ -487,25 +507,31 @@ router.post('/body', async (req, res) => {
   const { data, memory, style } = req.body || {};
   const pack = data && typeof data === 'object' ? data : {};
   const body = buildBodyFacts(pack);
-  const rules = { headline: body.headline, bullets: body.takeaways.map(({ text, tone }) => ({ text, tone })), source: 'rules' };
+  const pick = list => list.map(({ text, tone }) => ({ text, tone }));
+  const rules = { headline: body.headline, bullets: pick(body.takeaways), recovery: pick(body.recovery || []), source: 'rules' };
   if (!body.hasData) return res.json(rules);
 
   try {
     const reply = await createMessage(BODY_MODEL, {
       max_tokens: 2000,
       output_config: provider() === 'anthropic'
-        ? { effort: 'low', format: { type: 'json_schema', schema: BRIEF_SCHEMA } }
+        ? { effort: 'low', format: { type: 'json_schema', schema: BODY_SCHEMA } }
         : { effort: 'low' },
       system: [
         { type: 'text', text: BODY_INSTRUCTIONS },
         { type: 'text', text: athleteContext({ profile: pack.profile || {}, memory, style, today: body.facts.date }) },
       ],
-      messages: [{ role: 'user', content: JSON.stringify({ facts: body.facts, draft: rules.bullets }) }],
+      messages: [{ role: 'user', content: JSON.stringify({ facts: body.facts, draft: { bullets: rules.bullets, recovery: rules.recovery } }) }],
     }, { timeoutMs: perModelTimeoutMs(20000) });
     if (reply.stop_reason === 'refusal') return res.json(rules);
-    const parsed = parseBrief(reply.content.filter(b => b.type === 'text').map(b => b.text).join(''));
+    const parsed = parseBody(reply.content.filter(b => b.type === 'text').map(b => b.text).join(''));
     if (!parsed) return res.json(rules);
-    return res.json({ headline: parsed.headline, bullets: parsed.bullets.length ? parsed.bullets : rules.bullets, source: 'ai' });
+    return res.json({
+      headline: parsed.headline,
+      bullets: parsed.bullets.length ? parsed.bullets : rules.bullets,
+      recovery: parsed.recovery.length || !rules.recovery.length ? parsed.recovery : rules.recovery,
+      source: 'ai',
+    });
   } catch (err) {
     console.error('[AI body]', err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err.message);
     return res.json({ ...rules, aiError: err instanceof Anthropic.APIError ? err.status : 'failed' });

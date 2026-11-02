@@ -53,7 +53,7 @@ const TOOL_DEFS = [
   },
   {
     name: 'get_body_metrics',
-    description: 'Bodyweight entries, 7-day-average trend and weekly rate of change, plus weekly check-in answers (hunger, energy, digestion, performance, notes).',
+    description: 'Bodyweight entries, 7-day-average trend and weekly rate of change, smart-scale body fat with fat / lean mass and their change, plus weekly check-in answers (hunger, energy, digestion, performance, notes).',
     input_schema: {
       type: 'object',
       properties: { days: { type: 'integer', minimum: 7, maximum: 180, description: 'Default 60.' } },
@@ -62,7 +62,7 @@ const TOOL_DEFS = [
   },
   {
     name: 'get_recovery',
-    description: 'Sleep log (hours, quality, tags like caffeine or stress) and check-in sleep, energy and stress scores.',
+    description: 'Sleep log (hours, quality, tags like caffeine or stress), check-in sleep, energy and stress scores, and tracker vitals from their watch or ring (resting heart rate, HRV, blood oxygen, breathing rate, skin temperature, VO2 max), each against the athlete’s own usual range and a high/low flag when outside it.',
     input_schema: {
       type: 'object',
       properties: { days: { type: 'integer', minimum: 3, maximum: 60, description: 'Default 21.' } },
@@ -328,6 +328,10 @@ function getBodyMetrics(input, pack) {
     out.checkIns = inWindow(pack.checkIns, pack, days).slice(-8);
     if (out.checkIns.length) trace += ` · ${out.checkIns.length} check-ins`;
   }
+  if (pack.composition && typeof pack.composition === 'object') {
+    out.composition = pack.composition;
+    trace += ' · body fat';
+  }
   return { result: out, trace };
 }
 
@@ -348,8 +352,16 @@ function getRecovery(input, pack) {
     out.checkInScores = inWindow(pack.checkIns, pack, Math.max(days, 28))
       .map(c => ({ date: c.date, sleep: c.sleep, energy: c.energy, stress: c.stress }));
   }
+  // Already compared with the athlete's own last 30 days on the phone.
+  if (pack.vitals && Array.isArray(pack.vitals.metrics)) {
+    out.vitals = {
+      status: pack.vitals.status || null,
+      metrics: pack.vitals.metrics.slice(0, 8),
+      note: 'usualLow/usualHigh is this athlete’s own normal over 30 days; flag says the latest reading is outside it. fresh=false means no reading in the last 2 days.',
+    };
+  }
   const n = Array.isArray(out.sleep) ? out.sleep.length : 0;
-  return { result: out, trace: `Sleep · ${n} nights` };
+  return { result: out, trace: `Sleep · ${n} nights${out.vitals ? ' · vitals' : ''}` };
 }
 
 function getNutrition(_input, pack) {

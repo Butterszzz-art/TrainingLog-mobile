@@ -253,7 +253,84 @@ describe('buildBodyFacts', () => {
 
   test('no data at all', () => {
     const out = CoachData.buildBodyFacts({ generatedAt: at, profile: {} });
-    expect(out).toMatchObject({ hasData: false, takeaways: [] });
+    expect(out).toMatchObject({ hasData: false, takeaways: [], recovery: [] });
+  });
+});
+
+describe('tracker vitals in the Body takeaways', () => {
+  const { analyzeVitals } = require('../src/js/activity-sync-bridge.js');
+  const today = '2026-10-30';
+  const at = '2026-10-30T08:00:00.000Z';
+  const row = (date, v) => ({ date, restingHeartRate: null, hrvMs: null, spo2: null, respiratoryRate: null, skinTempDelta: null, vo2Max: null, ...v });
+  const history = v => Array.from({ length: 12 }, (_, i) => {
+    const d = new Date('2026-10-29T12:00:00'); d.setDate(d.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return row(key, v(i));
+  });
+  const analysis = (rows, composition = null) => ({
+    vitals: analyzeVitals(Object.fromEntries(rows.map(r => [r.date, r])), today), composition,
+  });
+  const packFor = (a, access) => CoachData.buildCoachDataPack(memoryStore(), u, access, new Date(at), a);
+
+  test('vitals and composition land in the pack, gated by coach access', () => {
+    const a = analysis([...history(() => ({ restingHeartRate: 52, hrvMs: 50 })), row(today, { restingHeartRate: 53, hrvMs: 49.6 })],
+      { date: today, bodyFatPercent: 18.04, fatKg: 14.43, leanKg: 65.57, bodyFatFrom: 'scale', change: { days: 21, fatKg: -0.84, leanKg: 0.12 } });
+    const pack = packFor(a);
+    expect(pack.vitals.status.level).toBe('good');
+    expect(pack.vitals.metrics.find(m => m.key === 'hrvMs')).toMatchObject({ value: 50, flag: null, fresh: true, unit: 'ms' });
+    expect(pack.composition).toEqual({ date: today, bodyFatPercent: 18, from: 'scale', fatKg: 14.4, leanKg: 65.6, change: { days: 21, fatKg: -0.8, leanKg: 0.1 } });
+
+    const off = packFor(a, { recovery: false, body: false });
+    expect(off).not.toHaveProperty('vitals');
+    expect(off).not.toHaveProperty('composition');
+  });
+
+  test('high resting HR and low HRV together give an ease-off recovery line and lead the headline', () => {
+    const a = analysis([...history(i => ({ restingHeartRate: 52 + (i % 2), hrvMs: 50 + (i % 3) })), row(today, { restingHeartRate: 61, hrvMs: 34 })]);
+    const pack = { ...packFor(a), sleep: [{ date: '2026-10-29', hours: 5.8 }] };
+    const out = CoachData.buildBodyFacts(pack);
+    expect(out.facts.vitals.status).toBe('strained');
+    expect(out.facts.vitals.metrics.find(m => m.name === 'Resting HR')).toMatchObject({ value: 61, flag: 'high' });
+    expect(out.recovery[0]).toMatchObject({ key: 'vitals', tone: 'watch' });
+    expect(out.recovery[0].text).toMatch(/^Resting HR 61 bpm and HRV 34 ms are off your usual\. .*RPE 7 max, and get to bed earlier\.$/);
+    expect(out.headline).toMatch(/recovery signals are off/);
+    expect(out.takeaways.map(t => t.key)).not.toContain('vitals');
+  });
+
+  test('only HRV low gives a reps-in-reserve line with the usual range', () => {
+    const a = analysis([...history(i => ({ restingHeartRate: 52, hrvMs: 50 + (i % 3) })), row(today, { restingHeartRate: 52, hrvMs: 38 })]);
+    const out = CoachData.buildBodyFacts(packFor(a));
+    expect(out.recovery[0].text).toMatch(/^HRV 38 ms, below your usual \d+–\d+\. .*reps in reserve/);
+  });
+
+  test('normal vitals say push; VO2 max gains and a lean-sparing cut are good news', () => {
+    const rows = [...history(i => ({ restingHeartRate: 52, hrvMs: 50, vo2Max: i >= 10 ? 44 : null })), row(today, { restingHeartRate: 52, hrvMs: 51, vo2Max: 45.2 })];
+    const a = analysis(rows, { date: today, bodyFatPercent: 17, fatKg: 13.6, leanKg: 66.4, bodyFatFrom: 'scale', change: { days: 21, fatKg: -1.1, leanKg: -0.1 } });
+    const out = CoachData.buildBodyFacts({ ...packFor(a), profile: { phase: 'Cut', unit: 'kg' } });
+    const keys = out.recovery.map(r => r.key);
+    expect(out.recovery).toHaveLength(2);
+    expect(out.recovery.every(r => r.tone === 'good')).toBe(true);
+    expect(keys[0]).toBe('vitals');
+    expect(out.recovery[0].text).toMatch(/Resting HR 52 bpm and HRV 51 ms are in your usual range/);
+    expect(out.facts.composition.change).toEqual({ days: 21, fat: -1.1, lean: -0.1 });
+    // The third (composition) line is ranked out of the 2 slots but stays in facts for the AI.
+    const all = CoachData.buildBodyFacts({ ...packFor(analysis(rows.slice(0, -1).concat(row(today, { vo2Max: 45.2 })),
+      { date: today, bodyFatPercent: 17, change: { days: 21, fatKg: -1.1, leanKg: -0.1 } })), profile: { phase: 'Cut' } });
+    expect(all.recovery.map(r => r.text).join(' ')).toMatch(/VO₂ max up 1\.2 in 30 days/);
+  });
+
+  test('losing more lean than fat on a cut is a watch', () => {
+    const a = analysis([], { date: today, bodyFatPercent: 18, change: { days: 28, fatKg: -0.3, leanKg: -1.2 } });
+    const out = CoachData.buildBodyFacts({ ...packFor(a), profile: { phase: 'cut', unit: 'kg' } });
+    expect(out.hasData).toBe(true);
+    expect(out.recovery[0]).toMatchObject({ key: 'composition', tone: 'watch' });
+    expect(out.recovery[0].text).toMatch(/fat −0\.3 kg, lean −1\.2 kg over 28 days\. Keep protein high/);
+  });
+
+  test('stale tracker data asks to wear the watch to bed', () => {
+    const a = analysis(history(() => ({ restingHeartRate: 52 })).filter(r => r.date <= '2026-10-25'));
+    const out = CoachData.buildBodyFacts(packFor(a));
+    expect(out.recovery[0].text).toMatch(/No overnight vitals since 2026-10-25/);
   });
 });
 

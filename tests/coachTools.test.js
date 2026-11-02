@@ -56,6 +56,16 @@ describe('coach tools', () => {
   test('missing sections come back as unavailable, not as empty data', () => {
     const out = runTool('get_recovery', {}, { generatedAt: pack.generatedAt });
     expect(out.result.sleep).toMatch(/turned off/);
+    expect(out.result).not.toHaveProperty('vitals');
+  });
+
+  test('tracker vitals and scale composition reach the recovery and body tools', () => {
+    const vitals = { status: { level: 'watch', title: 'Worth watching' }, metrics: [{ key: 'hrvMs', label: 'HRV', value: 34, usualLow: 45, usualHigh: 55, flag: 'low', fresh: true }] };
+    const composition = { bodyFatPercent: 18, change: { days: 21, fatKg: -0.8, leanKg: 0.1 } };
+    const rec = runTool('get_recovery', {}, { ...pack, vitals });
+    expect(rec.result.vitals.metrics[0]).toMatchObject({ label: 'HRV', flag: 'low' });
+    expect(rec.trace).toMatch(/vitals/);
+    expect(runTool('get_body_metrics', {}, { ...pack, composition }).result.composition).toEqual(composition);
   });
 
   test('program change is validated against the real program', () => {

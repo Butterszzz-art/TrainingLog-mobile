@@ -308,18 +308,27 @@
           <span class="body-hub-coach-stamp">${_esc(stamp)}</span>
         </div>
         <p class="body-hub-coach-headline">${_esc(view.headline)}</p>
-        ${view.bullets.length ? `<ul class="body-hub-coach-list">${view.bullets.map(b =>
-          `<li><span class="cbr-dot cbr-dot--${_esc(b.tone)}" aria-hidden="true"></span><span>${_esc(b.text)}</span></li>`).join('')}</ul>` : ''}
+        ${_coachList(view.bullets)}
+        ${view.recovery && view.recovery.length ? `
+          <h3 class="body-hub-coach-sub">Recovery &amp; vitals</h3>
+          ${_coachList(view.recovery)}` : ''}
         ${view.hasData ? `<button type="button" class="body-hub-coach-ask">Ask your coach about this</button>` : ''}
       </section>`;
     const ask = el.querySelector('.body-hub-coach-ask');
     if (ask) {
       ask.addEventListener('click', () => {
         if (typeof window.openAiCoach === 'function') {
-          window.openAiCoach('Look at my weight, nutrition, sleep and cardio this week. What should I change?');
+          window.openAiCoach(view.recovery && view.recovery.length
+            ? 'Look at my weight, nutrition, sleep, cardio and recovery vitals (resting HR, HRV) this week. What should I change?'
+            : 'Look at my weight, nutrition, sleep and cardio this week. What should I change?');
         }
       });
     }
+  }
+
+  function _coachList(items) {
+    return items && items.length ? `<ul class="body-hub-coach-list">${items.map(b =>
+      `<li><span class="cbr-dot cbr-dot--${_esc(b.tone)}" aria-hidden="true"></span><span>${_esc(b.text)}</span></li>`).join('')}</ul>` : '';
   }
 
   async function _fetchCoachBody(username, pack, settings) {
@@ -367,12 +376,14 @@
     const sameDay = cache.date === date;
     const writeCache = v => { try { localStorage.setItem(COACH_CACHE_KEY(username), JSON.stringify(v)); } catch { /* quota */ } };
 
+    // An older server (or cache) without a recovery section falls back to the rules one.
+    const rulesRecovery = body.recovery || [];
     if (sameDay && cache.fp === fp && cache.ai) {
-      _renderCoach(el, { ...cache.ai, hasData: body.hasData, source: 'ai', updatedAt: cache.at });
+      _renderCoach(el, { recovery: rulesRecovery, ...cache.ai, hasData: body.hasData, source: 'ai', updatedAt: cache.at });
       return;
     }
 
-    const rules = { headline: body.headline, bullets: body.takeaways, hasData: body.hasData, source: 'rules' };
+    const rules = { headline: body.headline, bullets: body.takeaways, recovery: rulesRecovery, hasData: body.hasData, source: 'rules' };
     const calls = sameDay ? cache.calls || 0 : 0;
     // Auto-loading AI: only for accounts with AI access (see coach-brief.js).
     const aiAccess = typeof window.hasPaidAccess === 'function' && window.hasPaidAccess();
@@ -384,10 +395,11 @@
     coachInflight = _fetchCoachBody(username, pack, settings).then(ai => {
       coachInflight = null;
       const now = new Date().toISOString();
-      if (ai) writeCache({ date, fp, ai: { headline: ai.headline, bullets: ai.bullets }, at: now, calls: calls + 1 });
+      const recovery = ai && Array.isArray(ai.recovery) ? ai.recovery : rulesRecovery;
+      if (ai) writeCache({ date, fp, ai: { headline: ai.headline, bullets: ai.bullets, recovery }, at: now, calls: calls + 1 });
       // Only repaint if this box is still showing this user's takeaways.
       if (document.getElementById('bodyHubCoach') !== el || _user() !== username) return;
-      if (ai) _renderCoach(el, { headline: ai.headline, bullets: ai.bullets, hasData: true, source: 'ai', updatedAt: now });
+      if (ai) _renderCoach(el, { headline: ai.headline, bullets: ai.bullets, recovery, hasData: true, source: 'ai', updatedAt: now });
       else _renderCoach(el, rules);
     });
   }
