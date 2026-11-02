@@ -195,7 +195,11 @@ workflows:
 
   # ─────────────────────────────────────────────────────────────────
   # iOS – signed App Store build → TestFlight / App Store Connect.
-  # Start it manually from the Codemagic UI. Needs, in Codemagic:
+  # Runs on every merge to main that changes something the phone app
+  # ships (the iPhone runs the web code bundled into its build, so web
+  # changes only reach phones through a new build). Coach-portal, test
+  # and doc-only merges are skipped; it can still be started by hand from
+  # the Codemagic UI. Needs, in Codemagic:
   #   1. Team settings → Integrations → Developer Portal: an App Store
   #      Connect API key saved under the name used below.
   #   2. The app record (bundle ID org.pocketcoachcoms.app) created in
@@ -207,6 +211,28 @@ workflows:
     name: Pocket Coach – iOS (App Store)
     max_build_duration: 60
     instance_type: mac_mini_m2
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      # A newer merge replaces a build still in progress.
+      cancel_previous_builds: true
+
+    # Skip merges that change nothing bundled into the app (see ios_bundle).
+    when:
+      changeset:
+        excludes:
+          - 'coach/**'
+          - 'tests/**'
+          - '**/*.md'
+          - 'intake/**'
+          - 'pricing.html'
+          - 'payment-success.html'
+          - '.github/**'
 
     integrations:
       app_store_connect: Pocket Coach ASC key
