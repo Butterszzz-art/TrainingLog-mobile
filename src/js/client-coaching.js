@@ -389,6 +389,20 @@
     if (typeof root.setNutritionLogOnly === 'function') root.setNutritionLogOnly(logOnly);
     syncCoachMacroPlan(activeUids);
     syncPlanProgram(activeUids);
+    // "New from your coach": opens once per new plan version / program (src/js/coach-announce.js).
+    if (root.CoachAnnounce) {
+      const planCoach = state.plan && state.plan.client && state.plan.client.coachUid;
+      const composed = planCoach ? planProgramFor(planCoach) : null;
+      root.CoachAnnounce.sync({ plan: state.plan, assignments: state.assignments, activeUids }, {
+        composed,
+        following: !!state.plan && (activePlanSource() || {}).planId === state.plan.planId,
+        startPlanProgram: () => {
+          const ok = startPlanProgram(composed);
+          if (ok && doc.getElementById('yourCoachSection')) render();
+          return ok;
+        },
+      });
+    }
     return true;
   }
 

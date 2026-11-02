@@ -931,3 +931,20 @@
   border-radius: 12px;
   margin: 8px 0;
 }
+
+/* ── "New from your coach" (src/js/coach-announce.js) ───────────────────
+   Sheet on the shared mx-sheet; a card on Home until it's been seen. */
+.ca-sheet { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.ca-note { margin: 0; padding: 10px 14px; border-left: 3px solid var(--highlight, #c79a54); border-radius: 8px; background: rgba(199, 154, 84, 0.10); color: var(--text-color); font-size: 15px; line-height: 1.45; }
+.ca-lead, .ca-today { margin: 0; font-size: 14px; line-height: 1.45; color: var(--secondary-text); }
+.ca-today b { color: var(--text-color); }
+.ca-where-title { margin-top: 4px; }
+.ca-where { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ca-where li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--elevated-bg, rgba(127,127,127,.08)); font-size: 14px; line-height: 1.4; color: var(--secondary-text); }
+.ca-where li > b { font-family: var(--font-label, inherit); font-size: 12px; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-color); }
+.ca-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.ca-link { align-self: center; min-height: 44px; padding: 0 16px; border: 0; background: none; color: var(--secondary-text); font: inherit; cursor: pointer; }
+.ca-card { display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 10px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--highlight, #c79a54); background: rgba(199, 154, 84, 0.10); color: var(--text-color); text-align: left; cursor: pointer; font: inherit; }
+.ca-card-dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--highlight, #c79a54); box-shadow: 0 0 0 4px rgba(199, 154, 84, 0.25); }
+.ca-card-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.ca-card-go { font-family: var(--font-label, inherit); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--highlight, #c79a54); white-space: nowrap; }

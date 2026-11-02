@@ -1490,3 +1490,4 @@ mark.pi-suggested { background: var(--warning-bg, rgba(168,124,56,.25)); color: 
 .tv-acts .pb-link { margin-right: 8px; }
 .tv-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
 .tv-add .pb-in { flex: 1 1 180px; }
+.ann-note { flex: 1 1 100%; }

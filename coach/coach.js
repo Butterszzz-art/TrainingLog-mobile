@@ -812,6 +812,7 @@ function renderProgram(c) {
   el.innerHTML = masterPlanCard(c)
     + '<div class="d-card"><div class="d-card-title">Assign Program</div>'
     + '<select id="coachProgramSelect" class="coach-input">' + options + '</select>'
+    + '<textarea id="coachProgramNote" class="coach-input" rows="2" maxlength="500" style="margin-top:8px;" placeholder="Note with this program (optional), e.g. Start with the lower days."></textarea>'
     + '<div class="detail-breadcrumb-actions" style="margin-top:10px;">'
     + '<button class="bulk-action-btn" onclick="assignProgram()">Assign</button>'
     + (c.currentProgramId ? '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="unassignProgram()">Remove</button>' : '')
@@ -1135,7 +1136,9 @@ function renderPlanActions(plan) {
   const actions = plan.status === 'draft'
     ? '<button type="button" class="mp-btn" onclick="approveMasterPlan()">Approve</button>'
     : plan.status === 'approved'
-      ? '<button type="button" class="mp-btn mp-btn--gold" onclick="publishMasterPlan()">Publish to client</button>'
+      ? '<label class="mp-field mp-field--wide ann-note"><span class="mp-field-label">Note for the client (optional)</span>'
+        + '<textarea id="planPublishNote" class="coach-input" rows="2" maxlength="500" placeholder="e.g. Start Monday. Weigh in every morning; message me if anything hurts."></textarea></label>'
+        + '<button type="button" class="mp-btn mp-btn--gold" onclick="publishMasterPlan()">Publish to client</button>'
       : plan.status === 'published'
         ? '<button type="button" class="mp-btn" onclick="reviseMasterPlan()">Make new version</button>'
         : '';
@@ -1236,9 +1239,10 @@ async function reviseMasterPlan() {
 
 async function publishMasterPlan() {
   if (!confirm('Publish this plan? The client will see it in their app and be notified.')) return;
+  const message = document.getElementById('planPublishNote')?.value.trim() || '';
   try {
-    const { plan } = await planApi('/' + encodeURIComponent(_planState.plan.planId) + '/publish', { method: 'POST' });
-    planMsg('Published. The client can see it under Program → My Plan.');
+    const { plan } = await planApi('/' + encodeURIComponent(_planState.plan.planId) + '/publish', { method: 'POST', body: JSON.stringify({ message }) });
+    planMsg('Published. The client gets a notification' + (message ? ' with your note' : '') + ', and the app walks them through where everything is.');
     showPlan(plan);
   } catch (err) { planMsg('Could not publish: ' + err.message); }
 }
@@ -1269,7 +1273,8 @@ async function assignProgram() {
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!sel || !client) return;
   if (!sel.value) { alert('Choose a program first.'); return; }
-  if (!(await patchClient(client.id, { programId: sel.value }))) return;
+  const message = document.getElementById('coachProgramNote')?.value.trim() || '';
+  if (!(await patchClient(client.id, { programId: sel.value, ...(message ? { message } : {}) }))) return;
   const prog = _programs.find(p => p.id === sel.value);
   client.currentProgramId = sel.value;
   client.currentProgram = prog ? prog.name : client.currentProgram;

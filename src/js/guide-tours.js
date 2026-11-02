@@ -15,7 +15,37 @@
   const tile = tab => `#allTab .all-hub-tile[data-tab="${tab}"]`;
   const show = tab => () => { if (typeof global.showTab === 'function') global.showTab(tab); };
 
+  const showMyPlan = () => {
+    show('programTab')();
+    if (typeof global.showProgramView === 'function') global.showProgramView('plan');
+  };
+
+  // Someone with a plan from their coach (cached by src/js/my-plan.js).
+  const hasCoachPlan = () => {
+    try {
+      const user = global.currentUser || global.localStorage.getItem('fitnessAppUser');
+      return !!(user && JSON.parse(global.localStorage.getItem(`coachPlan_${user}`) || 'null'));
+    } catch { return false; }
+  };
+
+  // A tour may have available(): it's only listed in All when that's true.
   const TOURS = {
+    // Opened from "New from your coach" (src/js/coach-announce.js) → Show me around.
+    coach: {
+      title: 'Your coaching plan',
+      blurb: 'Where your coach’s plan shows up, day to day.',
+      available: hasCoachPlan,
+      steps: [
+        { title: 'How your plan works', text: 'Your coach set your training and nutrition. The app follows the plan by date, so each day shows exactly what’s due. Here’s where.', next: 'Start' },
+        { target: nav('homeTab'), tap: true, title: 'Tap Home', text: 'Start each day here.' },
+        { target: ['#todayProgramCard', '.home-zone--up-today'], title: 'Today’s session', text: 'The session for today, or the next one on a rest day. Each exercise shows sets × reps and <b>RIR</b>. Tap <b>▶</b> to watch how it’s done.' },
+        { target: nav('logTab'), tap: true, title: 'Tap Log', text: 'This is where you train.' },
+        { target: ['#sessionQueueCard', '#logTab'], title: 'Your plan in the Log', text: 'Tap an exercise to log it; the plan’s sets and reps are filled in. <b>RIR 2</b> means stop with about 2 reps left; <b>RIR 2/1</b> means 1 on the last set.' },
+        { target: '#assignedNutritionPlanCard', before: show('macroTab'), title: 'Your macros', text: 'Training-day and rest-day targets switch by themselves, and change on the date a new phase starts. Just log your food.' },
+        { target: ['#progPlanView .pp-today', '#progPlanView'], before: showMyPlan, title: 'My Plan', text: 'Your phases, where you are now, today’s targets, and your coach’s plan document if they added one.' },
+        { title: 'That’s your plan', text: 'Home → Log → done. Your logs and check-ins reach your coach by themselves.', next: 'Done', finale: true },
+      ],
+    },
     plan: {
       title: 'Plan your training',
       blurb: 'Programs, and how they fill your Home screen.',
