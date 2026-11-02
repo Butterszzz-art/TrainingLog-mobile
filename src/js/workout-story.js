@@ -383,5 +383,5 @@
 
   window.openWorkoutStoryModal = openWorkoutStoryModal;
   window.closeWorkoutStoryModal = closeWorkoutStoryModal;
-  window.StoryComposer = { open: openStoryComposer, redraw, close: closeWorkoutStoryModal };
+  window.StoryComposer = { open: openStoryComposer, redraw, close: closeWorkoutStoryModal, facebookAppId: FACEBOOK_APP_ID };
 })();

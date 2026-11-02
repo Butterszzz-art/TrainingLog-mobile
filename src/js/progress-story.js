@@ -55,6 +55,30 @@
     if (modal) modal.style.display = 'none';
   }
 
+  // Instagram Stories goes through the native plugin
+  // (plugins/instagram-stories), so it only exists in the app builds.
+  function _instagramPlugin() {
+    const cap = window.Capacitor;
+    if (!cap?.isNativePlatform?.() || !cap.isPluginAvailable?.('InstagramStories')) return null;
+    return cap.Plugins?.InstagramStories || cap.registerPlugin?.('InstagramStories') || null;
+  }
+
+  // Shows the Instagram button only when Instagram is installed. It then
+  // takes the filled style, so Save Image steps back to an outline.
+  async function _refreshInstagramButton() {
+    const btn = document.getElementById('progressStoryIgBtn');
+    const save = document.getElementById('progressStoryDownloadBtn');
+    let ok = false;
+    const plugin = _instagramPlugin();
+    if (plugin) {
+      try { ok = !!(await plugin.isAvailable()).available; } catch (_e) { ok = false; }
+    }
+    btn.hidden = !ok;
+    btn.style.display = ok ? 'flex' : 'none';
+    save.style.background = ok ? 'transparent' : T.green60;
+    save.style.border = ok ? '1px solid rgba(255,255,255,0.3)' : 'none';
+  }
+
   function _ensureModal() {
     if (document.getElementById('progressStoryModal')) return;
     const wrap = document.createElement('div');
@@ -64,6 +88,9 @@
           <div style="border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.6);margin-bottom:20px;">
             <canvas id="progressStoryCanvas" style="display:block;width:100%;height:auto;"></canvas>
           </div>
+          <button id="progressStoryIgBtn" hidden style="width:100%;margin-bottom:10px;padding:14px;border-radius:12px;border:none;background:${T.green60};color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg> Instagram Stories
+          </button>
           <div style="display:flex;gap:10px;">
             <button id="progressStoryDownloadBtn" style="flex:1;padding:14px;border-radius:12px;border:none;background:${T.green60};color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
               <span class="ui-icon" data-icon="download"></span> Save Image
@@ -99,6 +126,7 @@
     _ensureModal();
     const modal = document.getElementById('progressStoryModal');
     modal.style.display = 'block';
+    _refreshInstagramButton();
 
     // Force the webfonts used on the canvas to be ready first — canvas
     // text draws synchronously and silently falls back to a system font
@@ -393,7 +421,27 @@
     /* ── 6. Wire up actions ── */
     const downloadBtn = document.getElementById('progressStoryDownloadBtn');
     const shareBtn = document.getElementById('progressStoryShareBtn');
+    const igBtn = document.getElementById('progressStoryIgBtn');
     const getBlob = () => new Promise((res) => canvas.toBlob(res, 'image/png'));
+
+    // The report is already story-sized (1080×1920), so it goes to
+    // Instagram as the story background.
+    igBtn.onclick = async () => {
+      const plugin = _instagramPlugin();
+      if (!plugin) return;
+      igBtn.disabled = true;
+      try {
+        await plugin.share({
+          appId: window.StoryComposer?.facebookAppId,
+          backgroundImage: canvas.toDataURL('image/jpeg', 0.92).split(',')[1],
+        });
+      } catch (e) {
+        console.warn('[progress-story] Instagram share failed', e);
+        window.showToast?.('Couldn\'t open Instagram. Use Save Image instead.', 'warn');
+      } finally {
+        igBtn.disabled = false;
+      }
+    };
 
     downloadBtn.onclick = () => {
       const link = document.createElement('a');
