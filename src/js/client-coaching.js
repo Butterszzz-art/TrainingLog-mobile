@@ -389,6 +389,13 @@
     if (typeof root.setNutritionLogOnly === 'function') root.setNutritionLogOnly(logOnly);
     syncCoachMacroPlan(activeUids);
     syncPlanProgram(activeUids);
+    // The active coach's meal plan fills the food log each day (src/js/coach-meals.js).
+    if (root.CoachMeals && root.CoachMeals.sync) {
+      const withMeals = state.assignments
+        .filter(a => a && activeUids.has(a.coachUid) && a.mealPlan && a.mealPlan.days)
+        .sort((a, b) => tsMs(b.updatedAt) - tsMs(a.updatedAt))[0];
+      root.CoachMeals.sync(withMeals ? withMeals.mealPlan : null);
+    }
     // "New from your coach": opens once per new plan version / program (src/js/coach-announce.js).
     if (root.CoachAnnounce) {
       const planCoach = state.plan && state.plan.client && state.plan.client.coachUid;

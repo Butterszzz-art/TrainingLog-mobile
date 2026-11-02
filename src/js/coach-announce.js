@@ -52,6 +52,11 @@
       if (!a || !a.key || !active.has(asn.coachUid)) return;
       out.push({ kind: 'program', key: a.key, name: a.title || 'New program', version: 1, message: a.message || '', coach: asn.coachUsername || '', at: tsMs(a.at) });
     });
+    (assignments || []).forEach(asn => {
+      const m = asn && asn.mealPlan;
+      if (!m || !m.key || !active.has(asn.coachUid)) return;
+      out.push({ kind: 'meals', key: m.key, name: 'Your meal plan', version: 1, message: m.note || '', coach: asn.coachUsername || '', at: tsMs(m.sentAt) });
+    });
     out.sort((x, y) => y.at - x.at);
     return out[0] || null;
   }
@@ -85,6 +90,25 @@
     const isPlan = a.kind === 'plan';
     const title = isPlan ? (a.version > 1 ? `Your plan, version ${a.version}` : a.name) : a.name;
     const from = a.coach ? `From ${esc(a.coach)}` : 'From your coach';
+    if (a.kind === 'meals') {
+      return `<div class="mx-sheet ca-sheet" role="dialog" aria-modal="true" aria-labelledby="caTitle">
+      <div class="mx-sheet-head">
+        <div><span class="mx-kicker">New from your coach · ${from}</span>
+          <h3 class="pod-title mx-h3" id="caTitle">Your meal plan</h3></div>
+        <button type="button" class="mx-iconbtn mx-iconbtn--ghost ca-close" data-ca-act="close" aria-label="Close">✕</button>
+      </div>
+      ${a.message ? `<blockquote class="ca-note">“${esc(a.message)}”</blockquote>` : ''}
+      <p class="ca-lead">Your coach planned your meals. Every day your food log fills with that day’s meals, for a training day or a rest day, already counted.</p>
+      <div class="ca-where-title mx-kicker">How it works</div>
+      <ul class="ca-where">
+        <li><b>Macros → Food log</b><span>Your meals are in today’s log. Tap <b>✓ Ate this</b> when you’ve eaten one.</span></li>
+        <li><b>Something different?</b><span>Tap a food to change the amount, remove it, or add what you had extra. Use <b>Swap</b> for another option your coach gave you.</span></li>
+        <li><b>End of the day</b><span>Tap <b>Complete day</b>. Meals still in the log count as eaten.</span></li>
+      </ul>
+      <div class="ca-actions"><button type="button" class="mx-cta" data-ca-act="food"><span>Open my food log</span><span class="mx-cta-icon">→</span></button>
+        <button type="button" class="ca-link" data-ca-act="close">Got it</button></div>
+    </div>`;
+    }
     const lead = isPlan
       ? (a.version > 1 ? 'Your coach updated your plan. The app already follows the new version.' : 'Your coach made your plan: your training, your nutrition and how they change over the weeks. The app follows it for you.')
       : 'Your coach sent you a new program.';
@@ -121,7 +145,7 @@
     return `<button type="button" class="ca-card" data-ca-act="open">
       <span class="ca-card-dot" aria-hidden="true"></span>
       <span class="ca-card-text"><span class="mx-kicker">New from your coach</span>
-      <b>${esc(a.kind === 'plan' ? (a.version > 1 ? `Plan updated (version ${a.version})` : a.name) : `New program: ${a.name}`)}</b></span>
+      <b>${esc(a.kind === 'plan' ? (a.version > 1 ? `Plan updated (version ${a.version})` : a.name) : a.kind === 'meals' ? 'Your meal plan' : `New program: ${a.name}`)}</b></span>
       <span class="ca-card-go">See what’s new →</span></button>`;
   }
 
@@ -208,6 +232,11 @@
       close();
       if (typeof globalScope.showTab === 'function') globalScope.showTab('programTab');
       if (typeof globalScope.showProgramView === 'function') globalScope.showProgramView(current && current.kind === 'program' ? 'list' : 'plan');
+      return;
+    }
+    if (act === 'food') {
+      close();
+      if (typeof globalScope.showTab === 'function') globalScope.showTab('macroTab');
       return;
     }
     if (act === 'tour') {

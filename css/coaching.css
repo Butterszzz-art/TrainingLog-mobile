@@ -948,3 +948,15 @@
 .ca-card-dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--highlight, #c79a54); box-shadow: 0 0 0 4px rgba(199, 154, 84, 0.25); }
 .ca-card-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .ca-card-go { font-family: var(--font-label, inherit); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--highlight, #c79a54); white-space: nowrap; }
+
+/* ── Coach meal plan in the food log (src/js/coach-meals.js) ── */
+.cm-head { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(199, 154, 84, 0.35); background: rgba(199, 154, 84, 0.08); font-size: 13px; line-height: 1.4; color: var(--secondary-text); }
+.cm-note { color: var(--text-color); font-style: italic; }
+.cm-link { align-self: flex-start; min-height: 32px; padding: 0; border: 0; background: none; color: var(--highlight, #c79a54); font: inherit; font-weight: 700; cursor: pointer; }
+.cm-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; font-size: 13px; color: var(--secondary-text); }
+.cm-from b { color: var(--text-color); }
+.cm-edited { color: var(--highlight, #c79a54); }
+.cm-confirm { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--primary, #2f8a63); background: transparent; color: var(--primary-text, #42a679); font: inherit; font-weight: 700; cursor: pointer; }
+.cm-ok { color: var(--primary-text, #42a679); font-weight: 700; }
+.cm-swap { min-height: 32px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--border-color, rgba(127,127,127,.3)); background: transparent; color: var(--text-color); font: inherit; }
+.cm-bar.is-done { opacity: 0.85; }

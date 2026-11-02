@@ -4298,6 +4298,7 @@
 <script src="src/js/plan-preview.js"></script>
 <script src="src/js/plan-today.js"></script>
 <script src="src/js/coach-announce.js"></script>
+<script src="src/js/coach-meals.js"></script>
 <script src="src/js/exercise-videos.js"></script>
 <script src="src/js/my-plan.js"></script>
 <script src="src/js/ProgramTabV2.js"></script>
@@ -10944,6 +10945,8 @@ function toggleMacroDayComplete() {
     localStorage.setItem(macroDayCompleteKey(), "");
     window.showToast?.("Day reopened.", "success");
   } else {
+    // Coach meals still in today's log count as eaten (src/js/coach-meals.js).
+    window.CoachMeals?.confirmAll?.();
     localStorage.setItem(macroDayCompleteKey(), getTodayDateString());
     window.showToast?.("Day marked complete.", "success");
   }
