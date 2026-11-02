@@ -73,7 +73,8 @@
     function rowHtml(e, di, ei, warnedIds) {
       const warned = warnedIds.has(e.id);
       return '<tr class="pb-row' + (warned ? ' is-warned' : '') + '" data-d="' + di + '" data-e="' + ei + '">'
-        + '<td><input class="pb-in pb-in--name" data-f="name" value="' + esc(e.name) + '" placeholder="Exercise" maxlength="80" aria-label="Exercise"></td>'
+        + '<td class="pb-name-cell"><input class="pb-in pb-in--name" data-f="name" value="' + esc(e.name) + '" placeholder="Exercise" maxlength="80" aria-label="Exercise">'
+        + (root.ExerciseVideos ? root.ExerciseVideos.button(e.name, root.coachExerciseVideos || []) : '') + '</td>'
         + '<td><select class="pb-in" data-f="type" aria-label="Type">' + options(TYPE_OPTIONS, e.type) + '</select></td>'
         + '<td>' + numberCell('sets', e.sets, ' min="1" max="20" aria-label="Sets"') + '</td>'
         + '<td class="pb-range">' + numberCell('repsMin', e.repsMin, ' min="1" max="100" aria-label="Reps from"') + '<span>–</span>' + numberCell('repsMax', e.repsMax, ' min="1" max="100" aria-label="Reps to"') + '</td>'
