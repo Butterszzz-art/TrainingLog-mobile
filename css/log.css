@@ -922,74 +922,90 @@
 }
 .log-exercise-stats-line[hidden] { display: none; }
 
-/* ── Set input row (per-set reps/weight/plate-calc/modifiers) ─── */
+/* ── Set input row (2+ sets on screen) ─────────────────────────
+   Matches a loaded program's set rows (exercise-card.css .set-row):
+   one recessed line per set — number · weight unit × reps · ⋮ — with big
+   tap-to-type numbers. Flags, plates and remove live in the ⋮ tray; the
+   row border + small tags show which flags are on. */
+
+#setInputsContainer { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 
 .set-input-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.set-input-main {
+  display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 52px;
+  padding: 6px 4px 6px 12px;
+  border-radius: var(--radius-tight, 14px);
+  background: var(--surface-recessed, #0b100e);
+  border: 1px solid var(--border-row, rgba(116, 138, 126, 0.09));
 }
 
 .set-input-label {
-  min-width: 52px;
-  font-size: 0.85rem;
-}
-
-.set-input-reps-wrap {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.set-input-reps { width: 52px; }
-.set-input-weight { width: 64px; }
-
-/* −/+ around each extra set row's reps/weight — typing still works */
-.set-mini-stepper {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-#setInputsContainer .set-mini-stepper input {
   flex: none;
-  width: 52px;
+  min-width: 18px;
+  font-family: var(--font-label);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--mx-label, #86998e);
+}
+
+.set-input-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  flex: none;
+  cursor: text;
+}
+
+#setInputsContainer .set-input-field input {
+  flex: none;
+  width: 2.6em;
   min-width: 0;
-  padding-left: 4px;
-  padding-right: 4px;
-  text-align: center;
+  margin: 0;
+  padding: 4px 2px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: right;
+  color: var(--text-primary, #fff);
+  font-family: var(--font-display);
+  font-size: 22px; /* ≥16px so iOS doesn't zoom */
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
   -moz-appearance: textfield;
 }
-#setInputsContainer .set-mini-stepper .set-input-weight { width: 66px; }
-.set-mini-stepper input::-webkit-outer-spin-button,
-.set-mini-stepper input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+#setInputsContainer .set-input-field .set-input-reps { width: 1.7em; }
+#setInputsContainer .set-input-field input::placeholder { color: var(--mx-faint, #55645c); }
+#setInputsContainer .set-input-field input:focus {
+  outline: none;
+  border-bottom-color: var(--green-70, #5fa87e);
 }
-.set-mini-step {
-  width: 32px;
-  height: 32px;
+.set-input-field input::-webkit-outer-spin-button,
+.set-input-field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.set-input-unit {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, #7d8c84);
+}
+.set-input-x {
   flex: none;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.09);
-  color: var(--secondary-text);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  position: relative;
-}
-/* 40px touch target around the 32px circle */
-.set-mini-step::before { content: ''; position: absolute; inset: -4px; }
-.set-mini-step--plus {
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--green-60), var(--green-50));
-  color: var(--pill-text-active);
+  margin: 0 2px;
+  color: var(--mx-faint, #55645c);
+  font-size: 15px;
 }
 
 .set-input-reps-note {
@@ -997,6 +1013,63 @@
   color: var(--text-muted);
   white-space: nowrap;
 }
+.set-input-reps-note:empty { display: none; }
+
+/* Flags that are on, shown as small tags on the row itself. */
+.set-input-tags { display: inline-flex; gap: 4px; margin-left: auto; min-width: 0; }
+.set-input-tags i {
+  display: none;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-chip, rgba(116, 138, 126, 0.24));
+  font-family: var(--font-label);
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brass-light, #e0bd82);
+}
+.set-input-row:has(input[id^="topSet_"]:checked) .set-input-tags [data-f="top"],
+.set-input-row:has(input[id^="backoff_"]:checked) .set-input-tags [data-f="bo"],
+.set-input-row:has(input[id^="dropset_"]:checked) .set-input-tags [data-f="drop"],
+.set-input-row:has(input[id^="restPause_"]:checked) .set-input-tags [data-f="rp"],
+.set-input-row:has(input[id^="unilateral_"]:checked) .set-input-tags [data-f="lr"] { display: inline-block; }
+
+/* Same border cues as program rows: top/RP strong, drop brass, back-off dashed. */
+.set-input-row:has(input[id^="topSet_"]:checked) .set-input-main,
+.set-input-row:has(input[id^="restPause_"]:checked) .set-input-main { border-color: var(--border-featured-strong); }
+.set-input-row:has(input[id^="dropset_"]:checked) .set-input-main { border-color: var(--border-brass); }
+.set-input-row:has(input[id^="backoff_"]:checked) .set-input-main { border-style: dashed; border-color: var(--border-chip); }
+.set-input-row:has(.set-input-tray input:checked) .set-input-label { color: var(--brass-light, #e0bd82); }
+
+.set-input-more {
+  flex: none;
+  width: 34px;
+  height: 40px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: var(--mx-faint, #55645c);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.set-input-tags + .set-input-more { margin-left: 0; }
+.set-input-more[aria-expanded="true"] { color: var(--primary, #5fa87e); }
+
+.set-input-tray {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0 4px;
+}
+.set-input-tray[hidden] { display: none; }
+.set-input-tray .set-remove-btn { margin-left: auto; }
 
 .set-plate-btn {
   padding: 4px 8px;
@@ -2023,12 +2096,11 @@
 
 /* Per-row version (2+ sets on screen) — wraps onto its own line. */
 .set-sides-panel {
-  flex-basis: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 14px;
-  padding-left: 60px;
+  padding-left: 30px;
 }
 .set-sides-inputs { display: flex; gap: 10px; }
 .set-side-field {
@@ -2040,7 +2112,7 @@
 }
 .set-side-field input { width: 64px; }
 /* Sides differ: the Left/Right fields drive the row's reps. */
-.set-input-row.sides-uneven .set-input-reps { display: none; }
+.set-input-row.sides-uneven .set-input-reps-wrap { display: none; }
 
 @media (max-width: 420px) {
   .set-sides-panel { padding-left: 0; }
