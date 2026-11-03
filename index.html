@@ -1353,9 +1353,9 @@
         <div class="hist-filters" id="histFilters">
           <div class="hist-period-pills" id="histPeriodPills">
             <button class="hist-pill active" data-period="7">7d</button>
-            <button class="hist-pill" data-period="30">30d</button>
-            <button class="hist-pill" data-period="90">90d</button>
-            <button class="hist-pill" data-period="0">All</button>
+            <button class="hist-pill" data-period="28">4w</button>
+            <button class="hist-pill" data-period="90" data-pro>90d</button>
+            <button class="hist-pill" data-period="0" data-pro>All</button>
           </div>
           <select id="histMuscleFilter" class="hist-muscle-select" onchange="renderSessionHistory()">
             <option value="">All muscles</option>
@@ -4256,6 +4256,7 @@
 <script src="src/js/local-account-data.js"></script>
 <script src="src/js/settings.js"></script>
 <script src="src/js/payments.js"></script>
+<script src="src/js/plan-limits.js"></script>
 <script type="module" src="history.js"></script>
 <!-- Optional runtime configuration -->
 <script src="config.js"></script>
@@ -4906,7 +4907,9 @@ async function checkoutWithStripe(plan, billing, opts) {
   try {
     var res = await fetch(window.SERVER_URL + '/api/stripe/create-checkout-session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // The route requires a signed-in user (authenticateToken) — without the
+      // token every web/Android checkout fails with a 401.
+      headers: Object.assign({ 'Content-Type': 'application/json' }, typeof getAuthHeaders === 'function' ? getAuthHeaders() : {}),
       body: JSON.stringify({ username: username, plan: plan, billing: billing, withdrawalWaiver: !!(opts && opts.withdrawalWaiver) })
     });
     var data = await res.json();
@@ -4928,6 +4931,8 @@ var UPGRADE_PLANS = {
       ['sparkles', 'AI macro, sleep & check-in insights'],
       ['sparkles', 'AI rehab plans'],
       ['bookOpen', 'Premium e-books & training programs'],
+      ['clipboard', 'Unlimited custom programs'],
+      ['barChart', 'Full history & trends beyond 4 weeks'],
       ['sparkles', 'Priority support']
     ]
   },
@@ -15696,7 +15701,12 @@ function renderWorkoutMetricsChart(labels, volumes, intensities, estimated1RMs) 
 let _exChart = null; // Chart.js instance for exercise chart
 
 function _buildExerciseMap() {
-  const workouts = getProgressWorkoutsSync().filter(w => w && w.date);
+  let workouts = getProgressWorkoutsSync().filter(w => w && w.date);
+  if (window.PlanLimits) {
+    const clipped = window.PlanLimits.clipHistory(workouts, w => w.date);
+    workouts = clipped.items;
+    _noteProgressHidden(clipped.hidden);
+  }
   const map = {}; // exercise name → [{date, entry}]
   workouts.sort((a, b) => String(a.date).localeCompare(String(b.date)));
   workouts.forEach(w => {
@@ -16150,9 +16160,33 @@ async function fetchWorkoutHistory() {
   });
 }
 
+// Free accounts see the last 4 weeks (plan-limits.js). One render calls this
+// several times, so the hidden counts add up and the note is drawn once
+// after the render's synchronous work.
+let _progressHiddenTotal = 0;
+let _progressNoteQueued = false;
+function _noteProgressHidden(hidden) {
+  _progressHiddenTotal += hidden;
+  if (_progressNoteQueued) return;
+  _progressNoteQueued = true;
+  setTimeout(() => {
+    _progressNoteQueued = false;
+    window.PlanLimits?.setHistoryNote(document.getElementById('progressChartsPanel'), 'progressHistoryNote', _progressHiddenTotal);
+    _progressHiddenTotal = 0;
+  }, 0);
+}
+
 function applyDateRange(history) {
-  const start = document.getElementById('startRange').value;
+  let start = document.getElementById('startRange').value;
   const end = document.getElementById('endRange').value;
+  const cutoff = window.PlanLimits ? window.PlanLimits.historyCutoff() : null;
+  const startEl = document.getElementById('startRange');
+  if (startEl) startEl.min = cutoff || '';
+  if (cutoff) {
+    const before = (history || []).filter(h => h && h.date && String(h.date).slice(0, 10) < cutoff).length;
+    _noteProgressHidden(before);
+    if (!start || start < cutoff) start = cutoff;
+  }
   if (!start && !end) return history;
   return history.filter(h => {
     const d = h.date;
@@ -19970,15 +20004,23 @@ function renderSessionHistory() {
   const user = window.currentUser || localStorage.getItem('fitnessAppUser');
   if (!user) { container.innerHTML = '<div class="hist-empty">Log in to see history.</div>'; return; }
 
-  const workouts = JSON.parse(localStorage.getItem('workouts_' + user) || '[]');
+  // workouts_<user> only holds the last ~7 days (older ones are archived), so
+  // read the merged history or the 4w / 90d / All pills show nothing extra.
+  const workouts = typeof window.getFullWorkoutHistory === 'function'
+    ? window.getFullWorkoutHistory(user)
+    : JSON.parse(localStorage.getItem('workouts_' + user) || '[]');
   if (!workouts.length) {
     container.innerHTML = '<div class="hist-empty">No workout sessions logged yet.</div>';
     return;
   }
 
   // Get filter values
+  syncHistPillLocks();
   const activePill = document.querySelector('#histPeriodPills .hist-pill.active');
-  const periodDays = activePill ? Number(activePill.dataset.period) : 7;
+  let periodDays = activePill ? Number(activePill.dataset.period) : 7;
+  // Free accounts see the last 4 weeks (plan-limits.js).
+  const freeDays = window.PlanLimits && !window.PlanLimits.isPaid() ? window.PlanLimits.FREE_HISTORY_DAYS : 0;
+  if (freeDays && (periodDays === 0 || periodDays > freeDays)) periodDays = freeDays;
   const muscleFilter = document.getElementById('histMuscleFilter')?.value || '';
 
   // Filter by date
@@ -20075,11 +20117,37 @@ function renderSessionHistory() {
   }).join('');
 }
 
+// 90d and All are Pro: free accounts get a lock on them, and a Pro range
+// left selected after a plan ends falls back to 4w.
+function syncHistPillLocks() {
+  const paid = !window.PlanLimits || window.PlanLimits.isPaid();
+  document.querySelectorAll('#histPeriodPills .hist-pill[data-pro]').forEach(p => {
+    const locked = !paid;
+    if (p.classList.contains('is-locked') === locked) return;
+    p.classList.toggle('is-locked', locked);
+    p.querySelector('.ui-icon')?.remove();
+    if (locked) {
+      p.insertAdjacentHTML('beforeend', '<span class="ui-icon" aria-hidden="true">' + ICONS.lock + '</span>');
+      p.setAttribute('aria-label', p.textContent.trim() + ' (Pro)');
+      if (p.classList.contains('active')) {
+        p.classList.remove('active');
+        document.querySelector('#histPeriodPills .hist-pill[data-period="28"]')?.classList.add('active');
+      }
+    } else {
+      p.removeAttribute('aria-label');
+    }
+  });
+}
+
 // Wire up period filter pills
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('histPeriodPills')?.addEventListener('click', e => {
     const pill = e.target.closest('.hist-pill');
     if (!pill) return;
+    if (pill.hasAttribute('data-pro') && window.PlanLimits && !window.PlanLimits.isPaid()) {
+      window.PlanLimits.upgrade();
+      return;
+    }
     document.querySelectorAll('#histPeriodPills .hist-pill').forEach(p => p.classList.remove('active'));
     pill.classList.add('active');
     renderSessionHistory();
@@ -20778,12 +20846,19 @@ let oneRMChartInstance = null;
 
 function renderOneRMChart() {
   const lift = document.getElementById('oneRMExercise')?.value || 'Squat';
-  const entries = JSON.parse(localStorage.getItem(ONE_RM_KEY()) || '[]')
+  let entries = JSON.parse(localStorage.getItem(ONE_RM_KEY()) || '[]')
     .filter(e => e.lift === lift)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const canvas = document.getElementById('oneRMChart');
   if (!canvas || typeof Chart === 'undefined') return;
+
+  // Free accounts chart the last 4 weeks (plan-limits.js).
+  if (window.PlanLimits) {
+    const clipped = window.PlanLimits.clipHistory(entries, e => e.date);
+    entries = clipped.items;
+    window.PlanLimits.setHistoryNote(canvas, 'oneRMHistoryNote', clipped.hidden);
+  }
 
   const labels = entries.map(e => e.date);
   const data = entries.map(e => e.estimated);

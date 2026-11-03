@@ -12,6 +12,11 @@
 
   const state = { range: '12w', showWeight: false, data: null };
 
+  // Free accounts get the 4-week range only (plan-limits.js).
+  function isLockedRange(key) {
+    return key !== '4w' && !!window.PlanLimits && !window.PlanLimits.isPaid();
+  }
+
   function loadPrefs() {
     try {
       const p = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
@@ -62,10 +67,17 @@
       b.type = 'button';
       b.textContent = text;
       b.dataset.range = key;
-      b.disabled = !build(key);
+      const locked = isLockedRange(key);
+      if (locked) {
+        b.classList.add('is-locked');
+        b.insertAdjacentHTML('beforeend', ' <span class="ui-icon" aria-hidden="true">' + ((window.ICONS && window.ICONS.lock) || (typeof ICONS !== 'undefined' && ICONS.lock) || '') + '</span>');
+        b.setAttribute('aria-label', text + ' (Pro)');
+      }
+      b.disabled = !locked && !build(key);
       b.classList.toggle('active', key === state.range);
       b.setAttribute('aria-pressed', String(key === state.range));
       b.addEventListener('click', () => {
+        if (locked) { window.PlanLimits.upgrade(); return; }
         state.range = key;
         state.data = build(key);
         segs.querySelectorAll('button').forEach((x) => {
@@ -102,14 +114,19 @@
   async function openWeightStoryModal() {
     if (!window.StoryComposer || !window.WeightSticker) return;
     loadPrefs();
+    // 12 wk and All are Pro (plan-limits.js).
+    if (isLockedRange(state.range)) state.range = '4w';
     // Fall back to a range that has enough weigh-ins to draw a line.
     state.data = build(state.range);
     if (!state.data) {
-      state.range = ['12w', 'all', '4w'].find((r) => build(r)) || state.range;
+      state.range = ['12w', 'all', '4w'].find((r) => !isLockedRange(r) && build(r)) || state.range;
       state.data = build(state.range);
     }
     if (!state.data) {
-      if (typeof window.showToast === 'function') window.showToast('Log at least two weigh-ins to share your progress.', 'warn');
+      const msg = isLockedRange('12w')
+        ? 'Log at least two weigh-ins in the last 4 weeks to share your progress.'
+        : 'Log at least two weigh-ins to share your progress.';
+      if (typeof window.showToast === 'function') window.showToast(msg, 'warn');
       return;
     }
     // The headline uses the app's display face; wait for it so the first

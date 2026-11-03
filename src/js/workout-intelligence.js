@@ -23,6 +23,16 @@
     catch { return []; }
   }
 
+  // Everything logged, oldest first: workouts_<user> only keeps the last ~7
+  // days, the rest is archived (workout-data.js merges both).
+  function _loadAllWorkouts(username) {
+    const all = typeof window.getFullWorkoutHistory === 'function'
+      ? window.getFullWorkoutHistory(username)
+      : _loadWorkouts(username);
+    return (Array.isArray(all) ? all.slice() : [])
+      .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  }
+
   function _e1rm(weight, reps) {
     if (!weight || reps <= 0) return 0;
     if (reps === 1) return weight;
@@ -328,7 +338,7 @@
   function searchWorkoutHistory(query, username) {
     if (!query || !username) return [];
     const q        = query.toLowerCase().trim();
-    const workouts = _loadWorkouts(username);
+    const workouts = _loadAllWorkouts(username);
     const results  = [];
 
     for (let i = workouts.length - 1; i >= 0; i--) {
@@ -379,14 +389,22 @@
       return;
     }
 
-    const results = searchWorkoutHistory(query, username);
+    let results = searchWorkoutHistory(query, username);
+    // Free accounts search the last 4 weeks (plan-limits.js).
+    let hidden = 0;
+    if (window.PlanLimits) {
+      const clipped = window.PlanLimits.clipHistory(results, r => r.date);
+      results = clipped.items;
+      hidden = clipped.hidden;
+    }
+    const note = window.PlanLimits ? window.PlanLimits.historyNoteHtml(hidden) : '';
 
     if (!results.length) {
-      host.innerHTML = `<div class="history-empty">No results for "<strong>${_esc(query)}</strong>".</div>`;
+      host.innerHTML = `<div class="history-empty">No results for "<strong>${_esc(query)}</strong>"${hidden ? ' in the last 4 weeks' : ''}.</div>${note}`;
       return;
     }
 
-    host.innerHTML = '';
+    host.innerHTML = note;
     const list = document.createElement('div');
     list.className = 'history-results';
 

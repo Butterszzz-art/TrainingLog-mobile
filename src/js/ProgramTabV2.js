@@ -413,7 +413,21 @@
       draft.name = title;
       draft.programId = draft.programId || `prog-${Date.now()}`;
       draft.coachId = draft.coachId || userId;
-      core.upsertProgram(window, core.normalizeDraft(draft));
+      const saved = core.loadPrograms(window);
+      // Free accounts get one custom program; updating it is always fine.
+      const limits = window.PlanLimits;
+      if (limits && !limits.canSaveProgram(saved, draft)) {
+        persistDraft();
+        window.showConfirm(
+          'Free includes ' + limits.FREE_CUSTOM_PROGRAMS + ' custom program. Upgrade to Pro to save more — your draft is kept.',
+          { confirmText: 'See Pro', cancelText: 'Not now' }
+        ).then(ok => { if (ok) limits.upgrade(); });
+        return;
+      }
+      // Re-saving a program loaded from My Programs replaces it instead of
+      // adding a copy.
+      const idx = saved.findIndex(p => (p.programId || p.id) === draft.programId);
+      core.upsertProgram(window, core.normalizeDraft(draft), idx);
       persistDraft();
       showToast('Program saved');
     }
@@ -1198,18 +1212,32 @@
 
     const programs = core.loadPrograms(window);
 
+    // Free accounts: one custom program (see plan-limits.js).
+    const limits = window.PlanLimits;
+    const free = !!limits && !limits.isPaid();
+    const used = free ? limits.customProgramCount(programs) : 0;
+    const atLimit = free && used >= limits.FREE_CUSTOM_PROGRAMS;
+
     const header = document.createElement('div');
     header.className = 'prog-list-header';
     header.innerHTML = `
       <h2>My Programs</h2>
       <div class="prog-list-header-actions">
         <button type="button" class="prog-list-cal-btn" data-calendar-sync aria-label="Add your program to your calendar">${ico('calendar')}<span>Calendar</span></button>
-        <button type="button" class="prog-list-new-btn" onclick="showProgramView('build')">${ico('plus')}<span>New Program</span></button>
+        <button type="button" class="prog-list-new-btn" onclick="${atLimit ? 'PlanLimits.upgrade()' : "showProgramView('build')"}">${ico(atLimit ? 'lock' : 'plus')}<span>New Program</span></button>
       </div>
     `;
 
     container.innerHTML = '';
     container.appendChild(header);
+
+    if (free) {
+      const planLine = document.createElement('div');
+      planLine.className = 'prog-list-plan';
+      planLine.innerHTML = `<span>Free plan · ${Math.min(used, limits.FREE_CUSTOM_PROGRAMS)} of ${limits.FREE_CUSTOM_PROGRAMS} custom program used</span>`
+        + `<button type="button" class="plan-history-link" onclick="PlanLimits.upgrade()">Unlimited with Pro</button>`;
+      container.appendChild(planLine);
+    }
 
     if (!programs.length) {
       const empty = document.createElement('div');
