@@ -655,11 +655,20 @@
     _writeQuickLogToForm();
   }
 
+  /** Reps-left chips: one choice at most (tap again to clear). */
+  function setQuickLogRIR(el) {
+    if (typeof document === 'undefined' || !el) return;
+    if (el.checked) {
+      document.querySelectorAll('input[name="qlRir"]').forEach((other) => { if (other !== el) other.checked = false; });
+    }
+  }
+
   /** Top/BO/Drop/RP/L-R are per-set flags, not sticky like weight/reps —
    * clear them back to unchecked (new exercise, or after a set was just
    * logged). */
   function _resetQuickLogSetOpts() {
     if (typeof document === 'undefined') return;
+    document.querySelectorAll('input[name="qlRir"]').forEach((el) => { el.checked = false; });
     ['qlTopSet', 'qlBackoff', 'qlDropset', 'qlRestPause', 'qlUnilateral'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.checked = false;
@@ -991,6 +1000,7 @@
       _updateExerciseStatsLine(name);
       if (typeof global.renderSessionQueue === 'function') global.renderSessionQueue(); // refresh %1RM/Δ vs the set just logged
       if (typeof global.renderWarmupHint === 'function') global.renderWarmupHint(); // work sets started: warm-up card goes
+      if (typeof global.renderOverloadHint === 'function') global.renderOverloadHint(); // tip switches to next-set advice
     }
   }
 
@@ -1056,6 +1066,7 @@
   global.qlWeightSheetClear = qlWeightSheetClear;
   global.confirmQuickLogWeightSheet = confirmQuickLogWeightSheet;
   global.toggleQuickLogSetRole = toggleQuickLogSetRole;
+  global.setQuickLogRIR = setQuickLogRIR;
   // addNewSet()/removeSet() (index.html) call this after changing row
   // count so the button label ("Log set N" vs "Log N sets") stays current.
   global.refreshLogButtonLabel = _updateQuickLogButtonLabel;

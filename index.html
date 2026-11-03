@@ -1145,6 +1145,19 @@
               <label class="set-opt-pill" title="Unilateral — each side done separately"><input type="checkbox" id="qlUnilateral" onchange="if(typeof toggleQuickLogUnilateral==='function') toggleQuickLogUnilateral();" /><span>L/R</span></label>
             </div>
 
+            <!-- Reps left in reserve on the set being logged (Butters
+                 University effort scale; drives next-set and next-session
+                 advice in progressiveOverload.js). Optional, one choice,
+                 reset after each log. -->
+            <div class="ql-setopts-row ql-rir-row" role="group" aria-label="Reps left in reserve">
+              <span class="ql-rir-label">Reps left</span>
+              <label class="set-opt-pill ql-rir-pill" title="No reps left — failure"><input type="checkbox" name="qlRir" value="0" onchange="if(typeof setQuickLogRIR==='function') setQuickLogRIR(this);" /><span>0</span></label>
+              <label class="set-opt-pill ql-rir-pill" title="1 rep left"><input type="checkbox" name="qlRir" value="1" onchange="if(typeof setQuickLogRIR==='function') setQuickLogRIR(this);" /><span>1</span></label>
+              <label class="set-opt-pill ql-rir-pill" title="2 reps left"><input type="checkbox" name="qlRir" value="2" onchange="if(typeof setQuickLogRIR==='function') setQuickLogRIR(this);" /><span>2</span></label>
+              <label class="set-opt-pill ql-rir-pill" title="3 reps left"><input type="checkbox" name="qlRir" value="3" onchange="if(typeof setQuickLogRIR==='function') setQuickLogRIR(this);" /><span>3</span></label>
+              <label class="set-opt-pill ql-rir-pill" title="4 or more reps left"><input type="checkbox" name="qlRir" value="4" onchange="if(typeof setQuickLogRIR==='function') setQuickLogRIR(this);" /><span>4+</span></label>
+            </div>
+
             <!-- L/R on: left/right reps. "Same reps both sides" (on by
                  default) keeps the single Reps stepper above; switching it
                  off swaps that stepper for separate Left/Right steppers. -->
@@ -6455,6 +6468,10 @@ function addLogEntry() {
   // Per set: { left, right } when an L/R set had different reps per side,
   // else null (same both sides, or not unilateral).
   const sideRepsArray = [];
+  // Reps-left chip: the set being logged (the last row when several).
+  const rirChip = document.querySelector('input[name="qlRir"]:checked');
+  const chipRir = rirChip ? parseInt(rirChip.value, 10) : null;
+  const rirArray = [];
 
   for (let i = 0; i < sets; i++) {
     const reps = +document.getElementById(`reps_${i}`).value;
@@ -6483,6 +6500,7 @@ function addLogEntry() {
     repsArray.push(reps);
     weightsArray.push(weight);
     rpeArray.push(Number.isFinite(rpe) ? rpe : null);
+    rirArray.push(i === sets - 1 && Number.isFinite(chipRir) ? chipRir : null);
     dropsetArray.push(ds);
     restPauseArray.push(rp);
     unilateralArray.push(uni);
@@ -6529,6 +6547,7 @@ function addLogEntry() {
     repsArray,
     weightsArray,
     rpeArray,
+    rirArray,
     dropsetArray,
     restPauseArray,
     unilateralArray,
@@ -6554,12 +6573,18 @@ function addLogEntry() {
   const activeWorkoutIndex = workouts.findIndex(w => w.date === date);
   workouts[activeWorkoutIndex].log.push(newEntry);
 
+  let _deloadFor = null;
   if (typeof suggestNextSession === 'function') {
     const recommendation = suggestNextSession(newEntry, workouts);
     if (recommendation) {
       newEntry.nextSessionRecommendation = recommendation;
-      window.showToast(`Next session suggestion for ${exercise}: ${recommendation.message}`);
+      if (recommendation.strategy === 'deload') _deloadFor = exercise;
     }
+  }
+  // In-session advice for the next set (Butters University autoregulation).
+  if (typeof suggestNextSet === 'function') {
+    const nextSet = suggestNextSet(exercise, workouts, { date, gymKey: typeof entryGymKey === 'function' ? entryGymKey(newEntry) : '' });
+    if (nextSet) window.showToast(`${exercise}: ${nextSet.message} Rest ${nextSet.restLabel}.`);
   }
 
   const activeWorkout = workouts[activeWorkoutIndex];
@@ -6594,10 +6619,9 @@ function addLogEntry() {
   updatePRs(_activeUser, activeWorkout, calculateWorkoutVolume);
   updateGoalProgress(_activeUser, 'volume', calculateWorkoutVolume({ log: [{ weightsArray, repsArray }] }));
   renderPRs();
-  const prog = analyzeProgress ? analyzeProgress(currentUser) : [];
-  const deload = prog.find(p => p.type === 'deload');
-  if (deload) {
-    window.showToast(`Deload recommended for ${deload.exercise}`);
+  // Deload only when the lift has stalled for 2+ sessions with high effort.
+  if (_deloadFor) {
+    window.showToast(`Deload recommended for ${_deloadFor}: 2 sessions without progress and effort is high.`);
   }
   renderGoalBar();
   if (typeof renderGoalProgressList === 'function') {
@@ -6625,6 +6649,9 @@ function addLogEntry() {
   document.getElementById("sets").value = '';
   document.getElementById("goal").value = '';
   document.getElementById("repGoal").value = '';
+  // Effort is per set: don't carry it onto the next one.
+  ['targetRPE', 'targetRIR'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.querySelectorAll('input[name="qlRir"]').forEach(el => { el.checked = false; });
   document.getElementById("setInputsContainer").innerHTML = '';
   const maxedOutToggleEl = document.getElementById("maxedOutToggle");
   if (maxedOutToggleEl) maxedOutToggleEl.checked = false;
@@ -6730,8 +6757,37 @@ function renderFlowCaptureModal() {
   `;
 }
 
+// "How did that feel?" → reps in reserve, used when no RPE/RIR was logged.
+const FLOW_CAPTURE_RIR = { easy: 4, moderate: 2, hard: 1, max: 0 };
+
+function applyFeltEffortToToday(exercise, key) {
+  const user = window.coachLoggingClient || (typeof getActiveUsername === 'function' && getActiveUsername()) || currentUser;
+  if (!user || !exercise) return;
+  try {
+    const store = `workouts_${user}`;
+    const workouts = JSON.parse(localStorage.getItem(store)) || [];
+    const today = typeof resolveEntryDate === 'function' ? resolveEntryDate(document.getElementById('entryDate')) : null;
+    const w = workouts.filter(x => x && (!today || x.date === today)).pop();
+    if (!w || !Array.isArray(w.log)) return;
+    const name = String(exercise).trim().toLowerCase();
+    const rir = key in FLOW_CAPTURE_RIR ? FLOW_CAPTURE_RIR[key] : null;
+    let changed = false;
+    w.log.forEach(e => {
+      if (String(e.exercise || '').trim().toLowerCase() !== name) return;
+      if (rir === null) { if ('feltRIR' in e) { delete e.feltRIR; changed = true; } return; }
+      e.feltRIR = rir;
+      changed = true;
+    });
+    if (changed) {
+      localStorage.setItem(store, JSON.stringify(workouts));
+      if (typeof window.renderOverloadHint === 'function') window.renderOverloadHint();
+    }
+  } catch (_err) { /* check-in is optional */ }
+}
+
 function setFlowCaptureAnswer(group, value) {
   _flowCaptureState[group] = _flowCaptureState[group] === value ? null : value;
+  if (group === 'rpe') applyFeltEffortToToday(_flowCaptureState.exercise, _flowCaptureState.rpe);
   renderFlowCaptureModal();
   if (_flowCaptureState.rpe && _flowCaptureState.sore) {
     saveFlowCaptureAndClose();

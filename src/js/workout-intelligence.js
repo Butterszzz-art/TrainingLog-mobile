@@ -135,10 +135,22 @@
     const username = _user();
     if (!username) { _clearHint(hintEl); return; }
 
+    const workouts = _loadWorkouts(username);
+
+    // Already into this exercise today → advise the next set.
+    const nextSet = typeof window.suggestNextSet === 'function'
+      ? window.suggestNextSet(exerciseName, workouts, { date: _todayKey() })
+      : null;
+    if (nextSet) {
+      _shownRec = { kind: 'next-set', sets: [{ weight: nextSet.weight, reps: nextSet.reps }], setType: nextSet.setType };
+      hintEl.innerHTML = renderNextSetTip(nextSet, exerciseName, workouts);
+      _setBubbleLive(true);
+      return;
+    }
+
     const session = getLastExerciseSession(exerciseName, username);
     if (!session || !session.bestSet) { _clearHint(hintEl); return; }
 
-    const workouts = _loadWorkouts(username);
     const recommendation = typeof window.suggestNextSession === 'function'
       ? window.suggestNextSession(exerciseName, workouts)
       : null;
@@ -148,7 +160,12 @@
       return;
     }
 
-    _shownRec = recommendation;
+    _shownRec = {
+      kind: 'next-session',
+      sets: recommendation.sets,
+      setType: recommendation.hasTaggedTop ? 'top-set' : null,
+      strategy: recommendation.strategy
+    };
     hintEl.innerHTML = renderOverloadTip(recommendation, session);
     _setBubbleLive(true);
   }
@@ -158,46 +175,54 @@
   function renderOverloadTip(recommendation, session) {
     const { bestSet, setCount, date, unit: sessionUnit } = session;
     const unit = recommendation.unit || sessionUnit || 'kg';
-    const next = recommendation.sets[0] || {};
-    const prev = (recommendation.previousSets && recommendation.previousSets[0]) || {};
-    const dW = (Number(next.weight) || 0) - (Number(prev.weight) || 0);
-    const dR = (Number(next.reps) || 0) - (Number(prev.reps) || 0);
-    const sessions = Math.max(0, Number(recommendation.basedOnSessions) || 0);
-    const basis = _plural(sessions, 'session');
+    const next = recommendation.topSet || recommendation.sets[0] || {};
+    const range = Array.isArray(recommendation.repRange) ? recommendation.repRange : null;
+    const rangeTxt = range ? (range[0] === range[1] ? `${range[0]}` : `${range[0]}–${range[1]}`) : '';
+    const sets = `${_fmtNum(next.weight)} ${_esc(unit)} × ${_fmtNum(next.reps)}`;
+    const topWord = recommendation.hasTaggedTop ? 'Top set ' : '';
 
     let main, label, why, warn = false;
     switch (recommendation.strategy) {
       case 'increase':
-        main = `+${_fmtNum(dW)} ${_esc(unit)} <span class="exb-or">or</span> +1 rep`;
-        label = 'Linear progression';
-        why = basis;
+        main = `${topWord}${sets}`;
+        label = 'Add weight';
+        why = recommendation.effort === 'way-easier' ? 'last time was too easy' : `top of ${rangeTxt} reps hit`;
         break;
       case 'increase-reps':
-        main = `+${_plural(Math.max(1, dR), 'rep')} per set`;
-        label = 'Double progression';
-        why = 'add weight once reps are up';
+        main = `${topWord}${sets}`;
+        label = 'Add a rep';
+        why = `add weight at ${range ? range[1] : 'the top of the range'} reps`;
         break;
       case 'maxed-out':
-        main = `+${_plural(Math.max(1, dR), 'rep')} per set`;
+        main = `${topWord}${sets}`;
         label = 'Maxed out';
         why = 'no more weight on this machine';
         break;
-      case 'reduce':
-        main = `−${_fmtNum(Math.abs(dW))} ${_esc(unit)} <span class="exb-or">or</span> keep ${_fmtNum(prev.weight)}`;
-        label = 'Ease off';
-        why = 'high effort or missed reps last time';
+      case 'repeat':
+        main = `Repeat ${sets}`;
+        label = 'Repeat';
+        why = 'harder than planned or reps missed';
+        warn = true;
+        break;
+      case 'deload':
+        main = `Deload ~${_fmtNum(next.weight)} ${_esc(unit)}`;
+        label = 'Stalled';
+        why = '2 sessions without progress · 5–7 days lighter';
         warn = true;
         break;
       default:
-        main = `Keep ${_fmtNum(prev.weight)} ${_esc(unit)} × ${_fmtNum(prev.reps)}`;
+        main = `Keep ${sets}`;
         label = 'Hold steady';
-        why = basis;
+        why = _plural(Math.max(0, Number(recommendation.basedOnSessions) || 0), 'session');
     }
+    const boSet = (recommendation.sets || []).find(s => s.setType === 'backoff');
+    if (boSet && recommendation.strategy !== 'deload') why += ` · back-offs ~${_fmtNum(boSet.weight)} ${_esc(unit)}`;
+    if (recommendation.effort === 'unknown') why += ' · log reps left';
 
     const ctx = typeof window.getSessionContext === 'function' ? window.getSessionContext() : null;
     const gymLabel = ctx && ctx.altGym ? String(ctx.gymName || '').trim() : '';
     const last = `${setCount}×${_esc(bestSet.reps)} @ ${_esc(bestSet.weight)} ${_esc(sessionUnit || unit)} · ${_esc(_relativeDate(date))}${gymLabel ? ' · ' + _esc(gymLabel) : ''}`;
-    const canUse = recommendation.strategy !== 'maintain';
+    const canUse = true;
 
     return `
       <div class="exb-last">Last: ${last}</div>
@@ -208,6 +233,39 @@
           <div class="exb-why"><b>${_esc(label)}</b> · ${_esc(why)}</div>
         </div>
         ${canUse ? '<button class="exb-use" type="button" onclick="applyOverloadSuggestion()">Use</button>' : ''}
+        <button class="exb-x" type="button" aria-label="Hide suggestion" onclick="dismissOverloadHint()">✕</button>
+      </div>
+    `;
+  }
+
+  function _todayKey() {
+    const input = document.getElementById('entryDate');
+    if (typeof window.resolveEntryDate === 'function') return window.resolveEntryDate(input);
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  /** Between-set tip: what to load on the next set of today's exercise. */
+  function renderNextSetTip(rec, exerciseName, workouts) {
+    const unit = rec.unit || 'kg';
+    const range = rec.repRange || [rec.reps, rec.reps];
+    const rangeTxt = range[0] === range[1] ? `${range[0]}` : `${range[0]}–${range[1]}`;
+    const label = rec.kind === 'backoff' ? 'Back-off' : 'Next set';
+    const today = workouts.find(w => w && w.date === _todayKey());
+    const done = today && Array.isArray(today.log)
+      ? today.log.filter(e => (e.exercise || '').trim().toLowerCase() === exerciseName.toLowerCase())
+        .reduce((n, e) => n + (Array.isArray(e.repsArray) ? e.repsArray.length : 0), 0)
+      : 0;
+    return `
+      <div class="exb-last">This session: ${_plural(done, 'set')} · rest ${_esc(rec.restLabel || '')}</div>
+      <div class="exb-rule"></div>
+      <div class="exb-tip${rec.warn ? ' is-warn' : ''}">
+        <div class="exb-txt">
+          <div class="exb-main">${_fmtNum(rec.weight)} ${_esc(unit)} × ${_esc(rangeTxt)}</div>
+          <div class="exb-why"><b>${_esc(label)}</b> · ${_esc(rec.message)}</div>
+        </div>
+        <button class="exb-use" type="button" onclick="applyOverloadSuggestion()">Use</button>
         <button class="exb-x" type="button" aria-label="Hide suggestion" onclick="dismissOverloadHint()">✕</button>
       </div>
     `;
@@ -226,6 +284,13 @@
       if (r && set.reps != null) r.value = set.reps;
     }
     if (typeof window.syncQuickLogFromRow0 === 'function') window.syncQuickLogFromRow0();
+    // Carry the set's role (Top / Back-off) onto the Quick Log pills.
+    const role = rec.kind === 'next-set' ? rec.setType : (rec.setType === 'top-set' ? 'top-set' : null);
+    const pill = role === 'backoff' ? document.getElementById('qlBackoff') : role === 'top-set' ? document.getElementById('qlTopSet') : null;
+    if (pill && !pill.checked && typeof window.toggleQuickLogSetRole === 'function') {
+      pill.checked = true;
+      window.toggleQuickLogSetRole(role === 'backoff' ? 'backoff' : 'top');
+    }
     if (typeof window.updateAddButtonState === 'function') window.updateAddButtonState();
     dismissOverloadHint();
   }
