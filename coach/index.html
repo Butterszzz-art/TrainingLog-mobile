@@ -9,13 +9,15 @@
   <link rel="stylesheet" href="../css/design-system.css">
   <link rel="stylesheet" href="coach.css">
   <link rel="stylesheet" href="../css/profiles.css">
+  <link rel="stylesheet" href="coach-app.css">
 </head>
 <body>
 
   <!-- Mobile warning -->
   <div id="mobileWarning" class="mobile-warning">
     <div class="mobile-warning-card">
-      <h2>🖥️ Desktop Required</h2>
+      <span class="ca-well ca-well--lg ui-icon" data-icon="monitor" aria-hidden="true"></span>
+      <h2>Open this on a computer</h2>
       <p>The Coach Dashboard is designed for desktop screens. Open this page on a laptop or desktop for the best experience.</p>
       <a href="../index.html" class="mobile-warning-link">← Back to Pocket Coach</a>
     </div>
@@ -24,8 +26,9 @@
   <!-- Login gate -->
   <div id="loginGate" class="login-gate">
     <div class="login-card">
-      <div class="login-logo">🏋️ Pocket Coach</div>
-      <h2>Coach Login</h2>
+      <img class="login-logo" src="../assets/icon-only.png" alt="" width="56" height="56">
+      <div class="login-kicker">Coach dashboard</div>
+      <h2>Welcome back</h2>
       <input type="text" id="loginUsername" placeholder="Username" autocomplete="username">
       <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
       <button id="loginBtn" onclick="doCoachLogin()">Sign In</button>
@@ -40,7 +43,7 @@
     <!-- Header -->
     <header class="top-header">
       <div class="header-left">
-        <span class="header-logo">🏋️</span>
+        <img class="header-logo" src="../assets/icon-only.png" alt="" width="28" height="28">
         <span class="header-title">Pocket Coach</span>
         <span class="header-badge">COACH</span>
         <span class="header-roster-summary" id="headerRosterSummary"></span>
@@ -51,15 +54,16 @@
            renderWorkspace()'s side panels for the same caveat) so they're
            disabled rather than faked. -->
       <div class="header-center">
+        <label class="header-search-wrap"><span class="ui-icon" data-icon="search"></span>
         <input class="header-search" type="text" placeholder="Search clients, programs…" disabled
-               title="Coming soon — global search isn't wired up yet">
+               title="Coming soon — global search isn't wired up yet"></label>
       </div>
       <div class="header-right">
         <button class="capsule-chip capsule-chip--primary" disabled
                 title="Coming soon — program creation happens in the mobile app for now">+ New program</button>
-        <button class="header-icon-btn" disabled title="Coming soon — messaging isn't wired up yet">💬</button>
+        <button class="header-icon-btn" disabled title="Coming soon — messaging isn't wired up yet" aria-label="Messages"><span class="ui-icon" data-icon="message"></span></button>
         <span class="header-user" id="headerUser">—</span>
-        <button class="header-logout" onclick="doLogout()">Sign Out</button>
+        <button class="header-logout" onclick="doLogout()" title="Sign out" aria-label="Sign out"><span class="ui-icon" data-icon="logOut"></span></button>
       </div>
     </header>
 
@@ -79,30 +83,25 @@
            panel — a dedicated tab with identical always-visible content
            would be redundant, not a real page. Settings has no desktop
            view at all yet — flagged rather than faked. -->
-      <!-- rail-nav-icon spans are this app's existing emoji-glyph icon
-           convention (see header-logo/header-icon-btn etc.) rather than
-           the spec's Lucide stroke set, which isn't wired up anywhere in
-           this codebase yet — flagging that as a gap for a real icon
-           pass rather than hand-drawing SVG paths blind. The collapse
-           mechanic itself (72px, icon-only, active-as-square) is real. -->
+      <!-- Icons come from coach-icons.js (same line set as the phone app). -->
       <nav class="rail-nav" id="railNav">
         <button class="rail-nav-item active" data-rail="queue" onclick="railNavGo('queue')">
-          <span class="rail-nav-icon" aria-hidden="true">📥</span><span class="rail-nav-label">Queue</span><span class="rail-nav-count" id="railCountQueue">0</span>
+          <span class="rail-nav-icon ui-icon" data-icon="inbox" aria-hidden="true"></span><span class="rail-nav-label">Today</span><span class="rail-nav-count" id="railCountQueue">0</span>
         </button>
         <button class="rail-nav-item" data-rail="clients" onclick="railNavGo('clients')">
-          <span class="rail-nav-icon" aria-hidden="true">👥</span><span class="rail-nav-label">Clients</span><span class="rail-nav-count" id="railCountClients">0</span>
+          <span class="rail-nav-icon ui-icon" data-icon="users" aria-hidden="true"></span><span class="rail-nav-label">Clients</span><span class="rail-nav-count" id="railCountClients">0</span>
         </button>
         <button class="rail-nav-item" data-rail="templates" onclick="railNavGo('templates')">
-          <span class="rail-nav-icon" aria-hidden="true">📑</span><span class="rail-nav-label">Templates</span><span class="rail-nav-count" id="railCountTemplates">0</span>
+          <span class="rail-nav-icon ui-icon" data-icon="layers" aria-hidden="true"></span><span class="rail-nav-label">Templates</span><span class="rail-nav-count" id="railCountTemplates">0</span>
         </button>
         <button class="rail-nav-item rail-nav-item--messages" data-rail="messages" onclick="railNavGo('messages')">
-          <span class="rail-nav-icon" aria-hidden="true">💬</span><span class="rail-nav-label">Messages</span>
+          <span class="rail-nav-icon ui-icon" data-icon="message" aria-hidden="true"></span><span class="rail-nav-label">Messages</span>
         </button>
         <button class="rail-nav-item" data-rail="checkins" onclick="railNavGo('checkins')">
-          <span class="rail-nav-icon" aria-hidden="true">✅</span><span class="rail-nav-label">Check-ins</span><span class="rail-nav-count" id="railCountCheckins">0</span>
+          <span class="rail-nav-icon ui-icon" data-icon="checkCircle" aria-hidden="true"></span><span class="rail-nav-label">Check-ins</span><span class="rail-nav-count" id="railCountCheckins">0</span>
         </button>
         <button class="rail-nav-item" data-rail="settings" onclick="railNavGo('settings')" title="Not available in the coach console yet">
-          <span class="rail-nav-icon" aria-hidden="true">⚙️</span><span class="rail-nav-label">Settings</span>
+          <span class="rail-nav-icon ui-icon" data-icon="settings" aria-hidden="true"></span><span class="rail-nav-label">Settings</span>
         </button>
       </nav>
 
@@ -114,6 +113,7 @@
 
       <!-- Search -->
       <div class="sidebar-search">
+        <span class="ui-icon" data-icon="search"></span>
         <input type="text" id="clientSearch" placeholder="Search clients…" oninput="filterClients()">
       </div>
 
@@ -134,7 +134,7 @@
       <!-- Bulk actions -->
       <div class="sidebar-bulk" id="bulkBar" style="display:none;">
         <span id="bulkCount">0 selected</span>
-        <button class="bulk-action-btn" onclick="bulkMessage()">📤 Message All</button>
+        <button class="bulk-action-btn" onclick="bulkMessage()"><span class="ui-icon" data-icon="send"></span> Message all</button>
       </div>
     </aside>
 
@@ -152,7 +152,7 @@
            Templates). -->
       <div class="workspace-view" id="workspaceView">
         <div class="ws-header">
-          <span class="pod-title" style="font-size:22px;">Coaching</span>
+          <div class="ws-greeting" id="wsGreeting">Coaching</div>
           <span class="ws-header-sub" id="wsHeaderSub"></span>
         </div>
 
@@ -210,7 +210,7 @@
       </div>
 
       <div class="empty-state" id="emptyState" style="display:none;">
-        <div class="empty-icon">👈</div>
+        <div class="empty-icon ca-well ca-well--lg ui-icon" data-icon="users"></div>
         <h2>Select a client</h2>
         <p>Choose a client from the roster to view their details, check-ins, and program.</p>
       </div>
@@ -226,7 +226,7 @@
              they render disabled with a title tooltip rather than pretend
              to do something. -->
         <div class="detail-breadcrumb-bar">
-          <button class="ws-breadcrumb" onclick="backToWorkspace()">&larr; Clients</button>
+          <button class="ws-breadcrumb" onclick="backToWorkspace()"><span class="ui-icon" data-icon="arrowLeft"></span> All clients</button>
           <div class="detail-breadcrumb-actions">
             <button class="capsule-chip capsule-chip--neutral" onclick="switchDetailTab('program')">Assign template</button>
             <button class="capsule-chip capsule-chip--warn" disabled title="Coming soon &mdash; check-in requests aren't wired up yet">Request check-in</button>
@@ -266,6 +266,7 @@
   <!-- Firebase Auth (Phase 1 migration) — compat SDK for this script-tag codebase -->
   <script src="../vendor/firebase-app-compat-10.14.1.js"></script>
   <script src="../vendor/firebase-auth-compat-10.14.1.js"></script>
+  <script src="coach-icons.js"></script>
   <script src="../src/js/a11y-keyboard.js"></script>
   <script src="../src/js/firebase-config.js"></script>
   <script src="../src/js/firebase-auth.js"></script>
