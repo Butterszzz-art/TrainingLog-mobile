@@ -1,84 +1,209 @@
-const { getProgressiveOverloadSuggestion, suggestNextSession } = require('../progressiveOverload');
+const {
+  getProgressiveOverloadSuggestion, suggestNextSession, suggestNextSet,
+  setRir, liftType, weightStep
+} = require('../progressiveOverload');
 
-describe('getProgressiveOverloadSuggestion', () => {
-  test('suggests weight and rep increase when goals met', () => {
-    const workouts = [
-      {
-        log: [
-          {
-            exercise: 'Bench',
-            weightsArray: [100, 100],
-            repsArray: [8, 8],
-            goal: 100,
-            repGoal: 8,
-            unit: 'kg',
-            targetRPE: 8,
-            rpeArray: [7.5, 8]
-          }
-        ]
-      }
-    ];
-    const msg = getProgressiveOverloadSuggestion('Bench', workouts);
-    expect(msg).toMatch(/target RPE/i);
-    expect(msg).toMatch(/linear progression/i);
+// One workout holding one exercise. sets: [[weight, reps, type?, rir?], ...]
+const day = (exercise, sets, extra = {}, date) => ({
+  date,
+  log: [{
+    exercise,
+    unit: 'kg',
+    weightsArray: sets.map(s => s[0]),
+    repsArray: sets.map(s => s[1]),
+    setTypeArray: sets.map(s => s[2] || 'standard'),
+    rirArray: sets.map(s => (s[3] === undefined ? null : s[3])),
+    ...extra
+  }]
+});
+
+describe('effort and lift helpers', () => {
+  test('RIR comes from chips, then per-set RPE, then entry fields, then the check-in', () => {
+    expect(setRir({ rirArray: [1], targetRPE: 6 }, 0)).toBe(1);
+    expect(setRir({ rpeArray: [8.5] }, 0)).toBe(1.5);
+    expect(setRir({ rpeArray: [null], targetRIR: 3 }, 0)).toBe(3);
+    expect(setRir({ targetRPE: 9 }, 0)).toBe(1);
+    expect(setRir({ feltRIR: 4 }, 0)).toBe(4);
+    expect(setRir({}, 0)).toBeNull();
   });
 
-  test('returns maintain/reduce signal when sets are failed', () => {
-    const workouts = [
-      {
-        log: [
-          {
-            exercise: 'Squat',
-            weightsArray: [100, 100],
-            repsArray: [5, 5],
-            completedArray: [true, false],
-            unit: 'kg',
-            targetRPE: 8,
-            rpeArray: [8.5, 9]
-          }
-        ]
-      }
-    ];
+  test('lift type and weight step', () => {
+    expect(liftType('Bench Press')).toBe('compound');
+    expect(liftType('Lateral Raise')).toBe('isolation');
+    expect(weightStep('Bench Press', 'kg')).toBe(2.5);
+    expect(weightStep('Bench Press', 'lbs')).toBe(5);
+    expect(weightStep('Dumbbell Press', 'kg')).toBe(1);
+    expect(weightStep('Lateral Raise', 'lbs')).toBe(2.5);
+  });
+});
 
-    const recommendation = suggestNextSession('Squat', workouts);
-    expect(recommendation.strategy).toBe('reduce');
-    expect(recommendation.sets[0].weight).toBeLessThan(100);
+describe('suggestNextSession (top set drives progression)', () => {
+  test('in range and on target → one more rep at the same weight', () => {
+    const rec = suggestNextSession('Bench Press', [day('Bench Press', [[100, 8, 'standard', 2], [100, 8, 'standard', 2]], { repRange: '6-10' })]);
+    expect(rec.strategy).toBe('increase-reps');
+    expect(rec.topSet).toEqual({ weight: 100, reps: 9 });
+    expect(rec.sets.map(s => s.reps)).toEqual([9, 9]);
   });
 
-  test('uses average historical trend for progression rate', () => {
-    const workouts = [
-      { log: [{ exercise: 'Press', weightsArray: [50], repsArray: [8], unit: 'kg' }] },
-      { log: [{ exercise: 'Press', weightsArray: [52.5], repsArray: [8], unit: 'kg' }] },
-      { log: [{ exercise: 'Press', weightsArray: [55], repsArray: [8], unit: 'kg' }] }
-    ];
-
-    const recommendation = suggestNextSession('Press', workouts);
-    expect(recommendation.averageRate.weightDelta).toBeGreaterThan(2);
-    expect(recommendation.sets[0].weight).toBeGreaterThan(55);
+  test('top of the range at target effort → add weight and reset reps', () => {
+    const rec = suggestNextSession('Bench Press', [day('Bench Press', [[100, 10, 'top-set', 2], [90, 8, 'backoff', 2]], { repRange: '6-10' })]);
+    expect(rec.strategy).toBe('increase');
+    expect(rec.topSet).toEqual({ weight: 102.5, reps: 6 });
+    // Back-offs follow the next top set (−10%), not last week's back-off.
+    expect(rec.sets[1]).toEqual({ weight: 92.5, reps: 8, setType: 'backoff' });
   });
 
-  test('suggests more reps instead of more weight when marked maxed out', () => {
-    const workouts = [
-      {
-        log: [
-          {
-            exercise: 'Leg Press',
-            weightsArray: [200, 200],
-            repsArray: [10, 10],
-            unit: 'kg',
-            targetRPE: 8,
-            rpeArray: [7, 7],
-            maxedOut: true
-          }
-        ]
-      }
-    ];
+  test('far easier than target → add weight now, keep reps', () => {
+    const rec = suggestNextSession('Bench Press', [day('Bench Press', [[100, 7, 'standard', 5]], { repRange: '6-10' })]);
+    expect(rec.strategy).toBe('increase');
+    expect(rec.topSet).toEqual({ weight: 102.5, reps: 7 });
+  });
 
-    const recommendation = suggestNextSession('Leg Press', workouts);
-    expect(recommendation.strategy).toBe('maxed-out');
-    expect(recommendation.sets[0].weight).toBe(200);
-    expect(recommendation.sets[0].reps).toBeGreaterThan(10);
-    expect(recommendation.message).toMatch(/maxed out/i);
+  test('harder than planned or reps missed → repeat, never cut on one session', () => {
+    const hard = suggestNextSession('Squat', [day('Squat', [[140, 6, 'standard', 0]], { repRange: '5-8' })]);
+    expect(hard.strategy).toBe('repeat');
+    expect(hard.topSet).toEqual({ weight: 140, reps: 6 });
+    const missed = suggestNextSession('Squat', [day('Squat', [[140, 4, 'standard', 1]], { repRange: '5-8' })]);
+    expect(missed.strategy).toBe('repeat');
+    expect(missed.topSet.weight).toBe(140);
+  });
+
+  test('isolation lifts target ~1 rep left and use the small step', () => {
+    const rec = suggestNextSession('Lateral Raise', [day('Lateral Raise', [[10, 15, 'standard', 0]], { repRange: '10-15' })]);
+    expect(rec.liftType).toBe('isolation');
+    expect(rec.strategy).toBe('increase');
+    expect(rec.topSet).toEqual({ weight: 11, reps: 10 });
+  });
+
+  test('the top set is judged, not the back-offs', () => {
+    const rec = suggestNextSession('Bench Press', [day('Bench Press', [[90, 4, 'backoff', 0], [100, 8, 'top-set', 2]], { repRange: '6-10' })]);
+    expect(rec.strategy).toBe('increase-reps');
+    expect(rec.topSet).toEqual({ weight: 100, reps: 9 });
+  });
+
+  test('Quick Log sets (one entry each) are merged into one session', () => {
+    const w = {
+      log: [
+        { exercise: 'Bench Press', unit: 'kg', weightsArray: [100], repsArray: [10], setTypeArray: ['top-set'], rirArray: [2], repRange: '6-10' },
+        { exercise: 'Bench Press', unit: 'kg', weightsArray: [90], repsArray: [8], setTypeArray: ['backoff'], rirArray: [2] },
+        { exercise: 'Bench Press', unit: 'kg', weightsArray: [90], repsArray: [8], setTypeArray: ['backoff'], rirArray: [2] }
+      ]
+    };
+    const rec = suggestNextSession('Bench Press', [w]);
+    expect(rec.basedOnSessions).toBe(1);
+    expect(rec.previousSets).toHaveLength(3);
+    expect(rec.strategy).toBe('increase');
+  });
+
+  test('no range set → reps first hit at this weight, up to 2 more', () => {
+    const workouts = [
+      day('Row', [[60, 8, 'standard', 2]]),
+      day('Row', [[60, 9, 'standard', 2]]),
+      day('Row', [[60, 10, 'standard', 2]])
+    ];
+    const rec = suggestNextSession('Row', workouts);
+    expect(rec.repRange).toEqual([8, 10]);
+    expect(rec.strategy).toBe('increase');
+    expect(rec.topSet).toEqual({ weight: 62.5, reps: 8 });
+  });
+
+  test('single rep target counts as both ends of the range', () => {
+    const rec = suggestNextSession('Bench', [day('Bench', [[100, 8], [100, 8]], { repGoal: 8, targetRPE: 8 })]);
+    expect(rec.strategy).toBe('increase');
+    expect(rec.topSet).toEqual({ weight: 102.5, reps: 8 });
+    expect(getProgressiveOverloadSuggestion('Bench', [day('Bench', [[100, 8]], { repGoal: 8, targetRPE: 8 })])).toMatch(/add weight/i);
+  });
+
+  test('stalled for 2 sessions with high effort → deload', () => {
+    const workouts = [
+      day('Squat', [[140, 6, 'standard', 2], [140, 6], [140, 6]], { repRange: '5-8' }),
+      day('Squat', [[140, 6, 'standard', 1], [140, 6], [140, 6]], { repRange: '5-8' }),
+      day('Squat', [[140, 5, 'standard', 0], [140, 5], [140, 5]], { repRange: '5-8' })
+    ];
+    const rec = suggestNextSession('Squat', workouts);
+    expect(rec.strategy).toBe('deload');
+    expect(rec.stalled).toBe(true);
+    expect(rec.topSet.weight).toBe(125);
+    expect(rec.sets).toHaveLength(2);
+  });
+
+  test('stalled but effort fine → keep progressing with a note, no deload', () => {
+    const workouts = [
+      day('Squat', [[140, 6, 'standard', 2]], { repRange: '5-8' }),
+      day('Squat', [[140, 6, 'standard', 2]], { repRange: '5-8' }),
+      day('Squat', [[140, 6, 'standard', 2]], { repRange: '5-8' })
+    ];
+    const rec = suggestNextSession('Squat', workouts);
+    expect(rec.strategy).toBe('increase-reps');
+    expect(rec.message).toMatch(/no progress for 2 sessions/i);
+  });
+
+  test('no effort logged → reps-only double progression with a nudge', () => {
+    const rec = suggestNextSession('Press', [day('Press', [[50, 8]], { repRange: '6-10' })]);
+    expect(rec.effort).toBe('unknown');
+    expect(rec.strategy).toBe('increase-reps');
+    expect(rec.message).toMatch(/reps left/i);
+  });
+
+  test('marked maxed out → more reps instead of more weight', () => {
+    const rec = suggestNextSession('Leg Press', [day('Leg Press', [[200, 10, 'standard', 3], [200, 10]], { maxedOut: true })]);
+    expect(rec.strategy).toBe('maxed-out');
+    expect(rec.sets[0].weight).toBe(200);
+    expect(rec.sets[0].reps).toBe(11);
+    expect(rec.message).toMatch(/maxed out/i);
+  });
+
+  test('lbs use 5 lb steps', () => {
+    const w = day('Bench Press', [[225, 10, 'standard', 2]], { repRange: '6-10', unit: 'lbs' });
+    expect(suggestNextSession('Bench Press', [w]).topSet).toEqual({ weight: 230, reps: 6 });
+  });
+});
+
+describe('suggestNextSet (in-session advice)', () => {
+  const D = '2026-11-03';
+  const today = (...entries) => [{ date: D, log: entries }];
+  const set = (weight, reps, type, rir, extra = {}) => ({
+    exercise: 'Bench Press', unit: 'kg', weightsArray: [weight], repsArray: [reps], setTypeArray: [type], rirArray: [rir], ...extra
+  });
+
+  test('nothing logged today → no next-set advice', () => {
+    expect(suggestNextSet('Bench Press', [{ date: '2026-11-01', log: [set(100, 6, 'top-set', 2)] }], { date: D })).toBeNull();
+  });
+
+  test('after the top set, back-off weight depends on how it went', () => {
+    const on = suggestNextSet('Bench Press', today(set(100, 6, 'top-set', 2)), { date: D });
+    expect(on).toMatchObject({ kind: 'backoff', setType: 'backoff', weight: 90, reps: 6, repRange: [6, 8], restLabel: '2–3 min' });
+    expect(suggestNextSet('Bench Press', today(set(100, 6, 'top-set', 0)), { date: D }).weight).toBe(85);
+    expect(suggestNextSet('Bench Press', today(set(100, 6, 'top-set', 3)), { date: D }).weight).toBe(95);
+  });
+
+  test('back-off far too easy → add a step; on target → keep', () => {
+    const easy = suggestNextSet('Bench Press', today(set(100, 6, 'top-set', 2), set(90, 8, 'backoff', 4)), { date: D });
+    expect(easy.weight).toBe(92.5);
+    const on = suggestNextSet('Bench Press', today(set(100, 6, 'top-set', 2), set(90, 7, 'backoff', 2)), { date: D });
+    expect(on.weight).toBe(90);
+    expect(on.reps).toBe(7);
+  });
+
+  test('reps below the range or harder than planned → drop ~5% or stop', () => {
+    const rec = suggestNextSet('Bench Press', today(set(100, 6, 'top-set', 2), set(90, 4, 'backoff', 1)), { date: D });
+    expect(rec.weight).toBe(85);
+    expect(rec.warn).toBe(true);
+    expect(rec.message).toMatch(/stop here/i);
+  });
+
+  test('failure on a compound gets a nudge; isolation rest is shorter', () => {
+    const rec = suggestNextSet('Bench Press', today(set(100, 8, 'standard', 0, { repRange: '6-10' })), { date: D });
+    expect(rec.message).toMatch(/leave 1–3 reps/i);
+    const iso = suggestNextSet('Cable Fly', today({ ...set(20, 12, 'standard', 1), exercise: 'Cable Fly' }), { date: D });
+    expect(iso.restLabel).toBe('~90 s');
+    expect(iso.message).not.toMatch(/leave 1–3 reps/i);
+  });
+
+  test('no effort logged → keep, with a nudge', () => {
+    const rec = suggestNextSet('Bench Press', today(set(100, 8, 'standard', null)), { date: D });
+    expect(rec.weight).toBe(100);
+    expect(rec.message).toMatch(/log reps left/i);
   });
 });
 

@@ -2324,3 +2324,18 @@
 .wu-note, .wu-msg { margin: 7px 0 0; font-size: 11px; line-height: 1.35; color: var(--text-muted); }
 .wu-card.is-quiet { padding: 8px 12px; }
 .wu-card.is-quiet .wu-msg { margin-top: 3px; font-size: 12px; }
+
+/* Reps-left-in-reserve chips under the set flags (Quick Log). */
+.ql-rir-row {
+  align-items: center;
+}
+.ql-rir-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+.ql-rir-pill {
+  min-width: 40px;
+  justify-content: center;
+  padding: 6px 10px;
+}
