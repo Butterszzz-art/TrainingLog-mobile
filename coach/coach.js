@@ -329,53 +329,64 @@ function renderWorkspace() {
     linked.length + ' client' + (linked.length === 1 ? '' : 's') +
     (pendingCount ? ' · ' + pendingCount + ' pending' : '') +
     (counts.action ? ' · ' + counts.action + ' need attention' : '');
-  document.getElementById('wsHeaderSub').textContent = rosterSummaryText;
+  const greetEl = document.getElementById('wsGreeting');
+  if (greetEl) greetEl.textContent = timeOfDayGreeting() + ', ' + (_username || 'coach');
+  document.getElementById('wsHeaderSub').textContent =
+    new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + rosterSummaryText;
   const headerSummaryEl = document.getElementById('headerRosterSummary');
-  if (headerSummaryEl) {
-    headerSummaryEl.textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + rosterSummaryText;
-  }
+  if (headerSummaryEl) headerSummaryEl.textContent = rosterSummaryText;
 
-  document.getElementById('wsStatRow').innerHTML = [
-    ['Total clients', counts.all, ''],
-    ['Needs action', counts.action, counts.action ? 'ws-stat-danger' : ''],
-    ['Watch', counts.watch, counts.watch ? 'ws-stat-warn' : ''],
-    ['Stable', counts.ok, ''],
-  ].map(([label, val, cls]) =>
-    '<div class="pod ws-stat-tile ' + cls + '"><div class="stat-tile-label">' + label + '</div>' +
-    '<div class="stat-tile-value">' + val + '</div></div>'
-  ).join('');
+  const comp = linked.map(c => c.compliancePercent).filter(v => v != null);
+  const avgComp = comp.length ? Math.round(comp.reduce((a, b) => a + b, 0) / comp.length) : null;
+  const share = n => (linked.length ? (n / linked.length) * 100 : 0);
+  document.getElementById('wsStatRow').innerHTML =
+    bigTile({ label: 'Active clients', value: counts.all, icon: 'users',
+      sub: counts.ok + ' on track' + (pendingCount ? ' · ' + pendingCount + ' pending' : '') })
+    + bigTile({ label: 'Needs action', value: counts.action, icon: 'alertTriangle', tone: counts.action ? 'red' : '',
+      meterPct: share(counts.action), meterTone: 'red', sub: counts.action ? 'Open these first' : 'Nothing urgent' })
+    + bigTile({ label: 'Watch', value: counts.watch, icon: 'eye', tone: counts.watch ? 'brass' : '',
+      meterPct: share(counts.watch), meterTone: 'brass', sub: counts.watch ? 'Keep an eye on them' : 'All clear' })
+    + bigTile({ label: 'Avg compliance', value: avgComp ?? '—', unit: avgComp != null ? '%' : '', icon: 'target',
+      meterPct: avgComp, meterTone: complianceTone(avgComp),
+      sub: comp.length ? 'Across ' + comp.length + ' client' + (comp.length === 1 ? '' : 's') + ' on a program' : 'No programs running yet' });
 
-  // Priority client: first "needs action", else first "watch", else none.
-  const priority = linked.find(c => c.alertStatus === 'action') || linked.find(c => c.alertStatus === 'watch');
-  const priorityEl = document.getElementById('wsPriorityCard');
-  if (priority) {
-    const ci = priority.latestCheckInData || {};
-    const days = daysSinceIso(priority.lastCheckIn);
-    const reason = (priority.alerts || [])[0];
-    priorityEl.innerHTML =
-      '<div class="pod pod--hero ws-priority-card">' +
-      '<div class="pod-row"><span class="pod-kicker">Needs attention</span>' +
-      '<span class="ws-priority-tag ' + escapeHtml(priority.alertStatus) + '">' + escapeHtml(priority.alertStatus) + '</span></div>' +
-      '<div class="ws-priority-main">' +
-      '<span class="ws-priority-name">' + escapeHtml(priority.clientName || 'Unknown') + '</span>' +
-      '<span class="ws-priority-meta">' + (reason ? escapeHtml(reason.label + ': ' + reason.reason) : escapeHtml(priority.currentProgram || 'No program')) +
-      ' &middot; last check-in ' + (days === null ? 'never' : days + 'd ago') + '</span>' +
-      '</div>' +
-      '<div class="ws-priority-stats">' +
-      stat('Sleep', ci.sleep != null ? ci.sleep + '/10' : '—') +
-      stat('Energy', ci.energy != null ? ci.energy + '/10' : '—') +
-      stat('Compliance', priority.compliancePercent != null ? priority.compliancePercent + '%' : '—') +
-      stat('Bodyweight', priority.currentBodyweight != null ? priority.currentBodyweight + ' kg' : '—') +
-      '</div>' +
-      '<button class="cta-capsule ws-priority-cta" onclick="selectClient(\'' + escapeHtml(priority.id) + '\')">Open client file</button>' +
-      '</div>';
-  } else {
-    priorityEl.innerHTML = '<div class="pod pod--hero ws-priority-card"><p class="ws-empty-note">'
-      + (_clientsLoadError ? 'Couldn\'t load your clients — check your connection and try again.'
-        : linked.length ? 'Everyone\'s on track — no flagged clients right now.'
-        : 'No clients yet.')
-      + '</p></div>';
-  }
+  // "Do this now": every flagged client, most urgent first — the same
+  // to-do row pattern as the phone app's Home.
+  const flagged = linked
+    .filter(c => c.alertStatus === 'action' || c.alertStatus === 'watch')
+    .sort((a, b) => (a.alertStatus === 'action' ? 0 : 1) - (b.alertStatus === 'action' ? 0 : 1)
+      || (a.clientName || '').localeCompare(b.clientName || ''));
+  const todoRow = c => {
+    const ci = c.latestCheckInData || {};
+    const days = daysSinceIso(c.lastCheckIn);
+    const alerts = c.alerts || [];
+    const why = alerts.slice(0, 2).map(a => escapeHtml(a.label)).join(' · ') || STATUS_LABEL[c.alertStatus];
+    const facts = [
+      ['Sleep', ci.sleep != null ? ci.sleep + '/10' : null],
+      ['Energy', ci.energy != null ? ci.energy + '/10' : null],
+      ['Compliance', c.compliancePercent != null ? c.compliancePercent + '%' : null],
+      ['Check-in', days === null ? 'Never' : days === 0 ? 'Today' : days + 'd ago'],
+    ].filter(([, v]) => v != null);
+    return '<button type="button" class="ca-todo is-' + escapeHtml(c.alertStatus) + '" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">'
+      + '<span class="ca-avatar">' + initialsOf(c.clientName) + '</span>'
+      + '<span class="ca-todo-text"><strong>' + escapeHtml(c.clientName || 'Unknown') + '</strong>'
+      + '<span class="ca-todo-why">' + why + '</span>'
+      + (alerts[0] ? '<span class="ca-todo-detail">' + escapeHtml(alerts[0].reason) + '</span>' : '') + '</span>'
+      + '<span class="ca-todo-facts">' + facts.map(([l, v]) => '<span><b>' + v + '</b>' + l + '</span>').join('') + '</span>'
+      + '<span class="ca-todo-cta">Open</span></button>';
+  };
+  const doneText = _clientsLoadError ? ['Couldn\'t load your clients', 'Check your connection and try again.']
+    : linked.length ? ['Everyone\'s on track', 'No flagged clients right now.']
+    : ['No clients yet', 'Use + Invite, or convert a lead.'];
+  document.getElementById('wsPriorityCard').innerHTML =
+    '<section class="ca-zone"><div class="ca-zone-head"><span class="ca-kicker">' + (flagged.length ? 'Do this now' : 'Done for today') + '</span>'
+    + (flagged.length ? '<span class="ca-zone-note">' + flagged.length + ' client' + (flagged.length === 1 ? '' : 's') + ' · most urgent first</span>' : '')
+    + '</div>'
+    + (flagged.length
+      ? '<div class="ca-todo-list">' + flagged.map(todoRow).join('') + '</div>'
+      : '<div class="ca-todo ca-todo--done"><span class="ca-well">' + ic(_clientsLoadError ? 'alertTriangle' : 'check') + '</span>'
+        + '<span class="ca-todo-text"><strong>' + doneText[0] + '</strong><span class="ca-todo-detail">' + doneText[1] + '</span></span></div>')
+    + '</section>';
 
   // Roster table — every linked client, sorted by alert severity then name.
   const severity = { action: 0, watch: 1, ok: 2 };
@@ -397,11 +408,11 @@ function renderWorkspace() {
     const rate = c.weeklyWeightChangePercent;
     const next = (c.alerts || [])[0];
     return '<div role="button" tabindex="0" class="ws-roster-row" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">' +
-      '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>' +
+      '<span class="ws-roster-name"><span class="ca-avatar ca-avatar--sm">' + initialsOf(c.clientName) + '</span>' + escapeHtml(c.clientName || 'Unknown') + '</span>' +
       '<span class="ws-roster-cell">' + escapeHtml(c.currentProgram || c.activeProgramName || '—') + '</span>' +
       '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (c.currentBodyweight != null ? c.currentBodyweight + ' kg' : '—') + '</span>' +
       '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (rate != null ? (rate > 0 ? '+' : '') + Number(rate).toFixed(2) + '%' : '—') + '</span>' +
-      '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (c.compliancePercent != null ? c.compliancePercent + '%' : '—') + '</span>' +
+      '<span class="ws-roster-cell ws-roster-cell--right ws-roster-comp tabular-nums">' + (c.compliancePercent != null ? '<b>' + c.compliancePercent + '%</b>' + meter(c.compliancePercent, complianceTone(c.compliancePercent)) : '—') + '</span>' +
       '<span class="ws-roster-cell ws-roster-cell--right tabular-nums">' + (days === null ? '—' : days + 'd') + '</span>' +
       '<span class="ws-roster-alert ' + escapeHtml(c.alertStatus || 'ok') + '">' + escapeHtml(next ? next.label : 'On track') + '</span>' +
       '</div>';
@@ -525,6 +536,7 @@ function backToWorkspace() {
   _selectedClientId = null;
   renderClientList();
   document.getElementById('clientDetail').style.display = 'none';
+  document.getElementById('leadDetail').style.display = 'none';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('workspaceView').style.display = '';
   document.querySelector('.app-shell')?.classList.remove('is-rail-collapsed');
@@ -594,16 +606,74 @@ function stat(label, value) {
   return '<div class="d-stat"><div class="d-stat-val">' + value + '</div><div class="d-stat-lbl">' + label + '</div></div>';
 }
 
-function scoreBar(label, value, max, inverse) {
-  const v = Number(value) || 0;
-  const pct = Math.round((v / max) * 100);
-  const color = inverse
-    ? (v <= 3 ? 'var(--fill-meter-a)' : v <= 6 ? 'var(--fill-meter-brass)' : 'var(--danger-grad)')
-    : (v >= 7 ? 'var(--fill-meter-a)' : v >= 4 ? 'var(--fill-meter-brass)' : 'var(--danger-grad)');
+// ── Visual helpers (same building blocks as the phone app) ─────
+const ic = name => (window.coachIcon ? window.coachIcon(name) : '');
+const STATUS_TONE = { action: 'red', watch: 'brass', ok: 'green', pending: 'brass' };
+const STATUS_LABEL = { action: 'Needs action', watch: 'Watch', ok: 'On track', pending: 'Pending' };
+
+function initialsOf(name) {
+  return escapeHtml((name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase());
+}
+
+function statusChip(status) {
+  const s = STATUS_TONE[status] ? status : 'ok';
+  return '<span class="ca-chip ca-chip--' + STATUS_TONE[s] + '">' + STATUS_LABEL[s] + '</span>';
+}
+
+function meter(pct, tone) {
+  const w = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+  return '<span class="ca-meter' + (tone ? ' ca-meter--' + tone : '') + '"><i style="width:' + w + '%"></i></span>';
+}
+
+function complianceTone(p) {
+  return p == null ? '' : p >= 85 ? 'green' : p >= 65 ? 'brass' : 'red';
+}
+
+function signed(n, digits) {
+  const v = Number(n);
+  return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(digits);
+}
+
+function timeOfDayGreeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening';
+}
+
+function shortDate(iso) {
+  const t = Date.parse(String(iso || '').slice(0, 10) + 'T00:00:00');
+  return Number.isNaN(t) ? '' : new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// Big-number tile: kicker label, icon well, Anton value, optional meter + sub line.
+function bigTile(o) {
+  return '<div class="ca-tile' + (o.tone ? ' ca-tile--' + o.tone : '') + '">'
+    + '<div class="ca-tile-top"><span class="ca-kicker">' + o.label + '</span>'
+    + (o.icon ? '<span class="ca-well">' + ic(o.icon) + '</span>' : '') + '</div>'
+    + '<div class="ca-num">' + o.value + (o.unit ? '<small>' + o.unit + '</small>' : '') + '</div>'
+    + (o.meterPct != null ? meter(o.meterPct, o.meterTone) : '')
+    + (o.sub ? '<div class="ca-sub">' + o.sub + '</div>' : '')
+    + '</div>';
+}
+
+// One 1–10 check-in score: meter coloured good/ok/low, plus the change
+// since the previous check-in when there is one.
+function scoreBar(label, value, max, inverse, prev) {
+  const v = Math.round((Number(value) || 0) * 10) / 10;
+  const good = inverse ? v <= 3 : v >= 7;
+  const okay = inverse ? v <= 6 : v >= 4;
+  let delta = '';
+  if (prev != null && Number.isFinite(Number(prev))) {
+    const d = Math.round((v - Number(prev)) * 10) / 10;
+    const better = inverse ? d < 0 : d > 0;
+    delta = d
+      ? '<span class="ca-delta ' + (better ? 'is-better' : 'is-worse') + '" title="Since previous check-in">' + (d > 0 ? '▲' : '▼') + Math.abs(d) + '</span>'
+      : '<span class="ca-delta" title="Same as previous check-in">=</span>';
+  }
   return '<div class="checkin-score-row">'
     + '<span class="checkin-score-label">' + label + '</span>'
-    + '<div class="checkin-score-bar"><div class="checkin-score-fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
-    + '<span class="checkin-score-val">' + v + '/' + max + '</span></div>';
+    + meter((v / max) * 100, good ? 'green' : okay ? 'brass' : 'red')
+    + '<span class="checkin-score-val"><b>' + v + '</b>/' + max + '</span>'
+    + '<span class="ca-delta-slot">' + delta + '</span></div>';
 }
 
 // ── Detail: Header ────────────────────────────────────────────
@@ -614,17 +684,20 @@ function renderDetailHeader(c) {
   const days = daysSinceIso(c.lastCheckIn);
   const sharingOff = c.sharing ? Object.entries({ checkIns: 'check-ins', bodyweight: 'bodyweight', workouts: 'workouts' })
     .filter(([k]) => c.sharing[k] === false).map(([, label]) => label) : [];
-  const meta = pending
+
+  const kicker = pending ? 'Invite pending'
+    : escapeHtml(c.trainingMode || 'Client') + ' · ' + (days === null ? 'No check-in yet' : days === 0 ? 'Checked in today' : 'Checked in ' + days + 'd ago');
+  const sub = pending
     ? 'Invite sent — waiting for them to accept in the app (Settings → Your Coach)'
-    : escapeHtml(c.trainingMode || '—') + ' · Last check-in: ' + (days === null ? 'never' : days + ' days ago')
-      + (c.email ? ' · ' + escapeHtml(c.email) : '')
-      + (sharingOff.length ? ' · Not sharing: ' + escapeHtml(sharingOff.join(', ')) : '');
+    : [c.currentProgram ? 'On ' + escapeHtml(c.currentProgram) : '', c.email ? escapeHtml(c.email) : '',
+      sharingOff.length ? 'Not sharing: ' + escapeHtml(sharingOff.join(', ')) : ''].filter(Boolean).join(' · ');
 
   document.getElementById('detailHeader').innerHTML =
     '<div class="detail-avatar" data-avatar-user="' + escapeHtml(c.clientName || '') + '">' + initials + '</div>'
-    + '<div class="detail-info"><div class="detail-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
-    + '<div class="detail-meta">' + meta + '</div></div>'
-    + '<span class="detail-status ' + (pending ? 'watch' : escapeHtml(c.alertStatus || 'ok')) + '">' + (pending ? 'pending' : escapeHtml(c.alertStatus || 'ok')) + '</span>'
+    + '<div class="detail-info"><div class="ca-kicker">' + kicker + '</div>'
+    + '<div class="detail-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
+    + (sub ? '<div class="detail-meta">' + sub + '</div>' : '') + '</div>'
+    + statusChip(pending ? 'pending' : c.alertStatus)
     + '<button class="capsule-chip capsule-chip--warn" onclick="removeClient()">' + (pending ? 'Cancel invite' : 'Remove client') + '</button>';
 }
 
@@ -650,26 +723,49 @@ async function removeClient() {
 
 // ── Detail: Overview ──────────────────────────────────────────
 
-function sparkline(points) {
+// Bodyweight trend: gradient area + line, three labelled guides and the
+// latest weigh-in marked. Labels are HTML so the stretched SVG never
+// distorts the text.
+function weightChart(points) {
   if (!Array.isArray(points) || points.length < 2) return '';
-  const w = 320, h = 80, pad = 4;
-  const ys = points.map(p => p.weight);
-  const min = Math.min(...ys), max = Math.max(...ys), span = max - min || 1;
-  const d = points.map((p, i) => {
-    const x = pad + (i / (points.length - 1)) * (w - pad * 2);
-    const y = pad + (1 - (p.weight - min) / span) * (h - pad * 2);
-    return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
-  }).join(' ');
-  return '<svg class="coach-spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" role="img" aria-label="Bodyweight ' + min + ' to ' + max + ' kg">'
-    + '<path d="' + d + '" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+  const W = 600, H = 160;
+  const ys = points.map(p => Number(p.weight));
+  const lo = Math.min(...ys), hi = Math.max(...ys);
+  const pad = Math.max(0.4, (hi - lo) * 0.18);
+  const min = lo - pad, span = (hi + pad) - min;
+  const X = i => (i / (points.length - 1)) * W;
+  const Y = v => (1 - (v - min) / span) * H;
+  const line = points.map((p, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.weight).toFixed(1)).join(' ');
+  const guides = [hi, (hi + lo) / 2, lo];
+  const last = points[points.length - 1];
+  return '<div class="ca-chart">'
+    + '<svg class="ca-chart-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Bodyweight ' + lo + ' to ' + hi + ' kg">'
+    + '<defs><linearGradient id="caWeightFill" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" style="stop-color:var(--green-70);stop-opacity:.34"/><stop offset="1" style="stop-color:var(--green-70);stop-opacity:0"/></linearGradient></defs>'
+    + guides.map(g => '<line class="ca-chart-guide" x1="0" x2="' + W + '" y1="' + Y(g).toFixed(1) + '" y2="' + Y(g).toFixed(1) + '" vector-effect="non-scaling-stroke"/>').join('')
+    + '<path d="' + line + ' L' + W + ' ' + H + ' L0 ' + H + ' Z" fill="url(#caWeightFill)"/>'
+    + '<path class="ca-chart-line" d="' + line + '" vector-effect="non-scaling-stroke"/></svg>'
+    + guides.map(g => '<span class="ca-chart-y" style="top:' + (Y(g) / H * 100).toFixed(1) + '%">' + g.toFixed(1) + '</span>').join('')
+    + '<span class="ca-chart-dot" style="top:' + (Y(last.weight) / H * 100).toFixed(1) + '%"></span>'
+    + '</div>'
+    + '<div class="ca-chart-x"><span>' + shortDate(points[0].date) + '</span><span>' + shortDate(points[Math.floor((points.length - 1) / 2)].date) + '</span><span>' + shortDate(last.date) + '</span></div>';
 }
 
 function weekBars(weeks) {
   if (!Array.isArray(weeks) || !weeks.length) return '';
   const max = Math.max(1, ...weeks.map(w => w.count));
-  return '<div class="chart-empty-shell chart-empty-shell--bars coach-week-bars">'
-    + weeks.map(w => '<span class="chart-empty-bar is-real" style="height:' + Math.max(4, Math.round((w.count / max) * 100)) + '%" title="Week of ' + escapeHtml(w.weekStart) + ': ' + w.count + ' sessions"></span>').join('')
-    + '</div>';
+  return '<div class="ca-bars">' + weeks.map((w, i) => {
+    const now = i === weeks.length - 1;
+    return '<div class="ca-bar' + (now ? ' is-now' : '') + '" title="Week of ' + escapeHtml(w.weekStart) + ': ' + w.count + ' sessions">'
+      + '<b>' + w.count + '</b><span class="ca-bar-track"><i style="height:' + Math.max(4, Math.round((w.count / max) * 100)) + '%"></i></span>'
+      + '<small>' + (now ? 'This wk' : shortDate(w.weekStart)) + '</small></div>';
+  }).join('') + '</div>';
+}
+
+function cardHead(kicker, value, unit, chip) {
+  return '<div class="ca-card-head"><div><div class="d-card-title">' + kicker + '</div>'
+    + (value != null ? '<div class="ca-num ca-num--md">' + value + (unit ? '<small>' + unit + '</small>' : '') + '</div>' : '') + '</div>'
+    + (chip || '') + '</div>';
 }
 
 function renderOverview(c) {
@@ -680,58 +776,75 @@ function renderOverview(c) {
   }
   const d = _clientDetails[c.id];
   const loading = d === undefined;
-  const ci = (d?.checkIns || [])[0] || c.latestCheckInData || {};
+  const checkIns = d?.checkIns || [];
+  const ci = checkIns[0] || c.latestCheckInData || {};
   const bw = d?.bodyweight || [];
   const weeks = d?.weeklyWorkouts || [];
   const m = c.macroTargets || {};
   const rate = c.weeklyWeightChangePercent;
+  const days = daysSinceIso(c.lastCheckIn);
   const empty = (text) => '<p class="ws-empty-note">' + (loading ? 'Loading…' : text) + '</p>';
+  const avgSessions = weeks.length ? Math.round((weeks.reduce((a, w) => a + w.count, 0) / weeks.length) * 10) / 10 : null;
+  const alertTone = c.alertStatus === 'action' ? 'red' : 'brass';
+
+  let weightCard = cardHead('Bodyweight trend') + empty('Not enough weigh-ins shared for a trend.');
+  if (bw.length >= 2) {
+    const first = bw[0], last = bw[bw.length - 1];
+    const wk = Math.max(1, Math.round((Date.parse(last.date) - Date.parse(first.date)) / 604800000));
+    weightCard = cardHead('Bodyweight trend', last.weight, 'kg',
+      '<span class="ca-chip">' + signed(last.weight - first.weight, 1) + ' kg · ' + wk + ' wk</span>') + weightChart(bw);
+  }
 
   el.innerHTML =
-    '<div class="d-card"><div class="d-card-title">Quick Stats</div><div class="d-stat-grid">'
-    + stat('Bodyweight', c.currentBodyweight != null ? c.currentBodyweight + ' kg' : '—')
-    + stat('Rate / wk', rate != null ? (rate > 0 ? '+' : '') + Number(rate).toFixed(2) + '%' : '—')
-    + stat('Compliance', c.compliancePercent != null ? c.compliancePercent + '%' : '—')
-    + stat('Sessions this wk', c.workoutsLoggedThisWeek != null ? c.workoutsLoggedThisWeek : '—')
-    + '</div></div>'
-    + '<div class="d-card"><div class="d-card-title">Alerts</div>'
+    '<div class="ca-tiles">'
+    + bigTile({ label: 'Bodyweight', value: c.currentBodyweight ?? '—', unit: c.currentBodyweight != null ? 'kg' : '', icon: 'scale',
+      sub: rate != null ? signed(rate, 2) + '% per week' : 'No rate yet' })
+    + bigTile({ label: 'Compliance', value: c.compliancePercent ?? '—', unit: c.compliancePercent != null ? '%' : '', icon: 'target',
+      meterPct: c.compliancePercent, meterTone: complianceTone(c.compliancePercent),
+      sub: c.compliancePercent != null ? 'Sessions vs. planned days' : 'No program running' })
+    + bigTile({ label: 'Sessions this week', value: c.workoutsLoggedThisWeek ?? '—', icon: 'dumbbell',
+      sub: avgSessions != null ? avgSessions + ' a week on average' : (loading ? 'Loading…' : 'No workouts shared') })
+    + bigTile({ label: 'Last check-in', value: days === null ? '—' : days, unit: days === null ? '' : 'd ago', icon: 'calendar',
+      tone: days !== null && days >= 7 ? 'brass' : '', sub: ci.date ? shortDate(ci.date) : 'None shared yet' })
+    + '</div>'
+    + '<div class="ov-grid">'
+    + '<div class="d-card d-card--wide">' + weightCard + '</div>'
+    + '<div class="d-card">' + cardHead('Alerts', (c.alerts || []).length ? c.alerts.length : null)
     + ((c.alerts || []).length
-      ? c.alerts.map(a => '<div class="checkin-score-row"><span class="checkin-score-label">' + escapeHtml(a.label) + '</span><span class="checkin-score-val" style="width:auto;flex:1;text-align:right;">' + escapeHtml(a.reason) + '</span></div>').join('')
-      : '<p class="ws-empty-note">' + (c.lastSharedAt ? 'No alerts — on track.' : 'No data shared yet. It appears after the client next opens the app.') + '</p>')
+      ? c.alerts.map(a => '<div class="ca-alert"><span class="ca-well ca-well--' + alertTone + '">' + ic('alertTriangle') + '</span>'
+        + '<span class="ca-alert-text"><strong>' + escapeHtml(a.label) + '</strong><span>' + escapeHtml(a.reason) + '</span></span></div>').join('')
+      : '<div class="ca-alert"><span class="ca-well">' + ic('check') + '</span><span class="ca-alert-text"><strong>'
+        + (c.lastSharedAt ? 'On track' : 'Nothing shared yet') + '</strong><span>'
+        + (c.lastSharedAt ? 'No alerts right now.' : 'It appears after the client next opens the app.') + '</span></span></div>')
     + '</div>'
-    + '<div class="d-card"><div class="d-card-title">Weight &middot; trend</div>'
-    + (bw.length >= 2 ? sparkline(bw) + '<p class="ws-empty-note">' + bw[0].weight + ' → ' + bw[bw.length - 1].weight + ' kg · ' + escapeHtml(bw[0].date) + ' to ' + escapeHtml(bw[bw.length - 1].date) + '</p>'
-      : empty('Not enough weigh-ins shared for a trend.'))
-    + '</div>'
-    + '<div class="d-card"><div class="d-card-title">Sessions per week</div>'
+    + '<div class="d-card">' + cardHead('Sessions per week', avgSessions, avgSessions != null ? 'avg' : '')
     + (weeks.length ? weekBars(weeks) + '<p class="ws-empty-note">Last ' + weeks.length + ' weeks' + (c.activeProgramName ? ' · following ' + escapeHtml(c.activeProgramName) : '') + '</p>'
       : empty('No workouts shared yet.'))
     + '</div>'
-    + '<div class="d-card"><div class="d-card-title">Macro targets</div>'
+    + '<div class="d-card">' + cardHead('Latest check-in', null, null, ci.date ? '<span class="ca-chip">' + escapeHtml(shortDate(ci.date)) + '</span>' : '')
+    + (ci.date ? scoreRows(ci, checkIns[1]) : empty('No check-ins shared yet.'))
+    + '</div>'
+    + '<div class="d-card">' + cardHead('Macro targets')
     + (c.macroPlan?.days
       ? '<div class="d-stat-grid">' + MACRO_DAY_TYPES.filter(t => c.macroPlan.days[t.key]).map(t => {
-        const d = c.macroPlan.days[t.key];
-        return stat(t.label, macroKcal(d.protein, d.carbs, d.fat) + ' kcal');
+        const dd = c.macroPlan.days[t.key];
+        return stat(t.label, macroKcal(dd.protein, dd.carbs, dd.fat) + '<small>kcal</small>');
       }).join('') + '</div>'
-      : m.calories ? '<div class="d-stat-grid">' + stat('Calories', m.calories) + stat('Protein', m.protein + 'g') + stat('Carbs', m.carbs + 'g') + stat('Fat', m.fat + 'g') + '</div>'
+      : m.calories ? '<div class="d-stat-grid">' + stat('Calories', m.calories) + stat('Protein', m.protein + '<small>g</small>') + stat('Carbs', m.carbs + '<small>g</small>') + stat('Fat', m.fat + '<small>g</small>') + '</div>'
       : '<p class="ws-empty-note">No targets sent yet — see the Nutrition tab.</p>')
     + '</div>'
-    + '<div class="d-card"><div class="d-card-title">Latest Check-In</div>'
-    + (ci.date
-      ? '<p class="ws-empty-note">' + escapeHtml(ci.date) + '</p>' + scoreRows(ci)
-      : empty('No check-ins shared yet.'))
-    + '</div>'
-    + '<div class="d-card"><div class="d-card-title">AI Coach Actions</div>'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-    + '<button class="bulk-action-btn" onclick="aiAnalyse()"' + (ci.date ? '' : ' disabled title="Needs a shared check-in"') + '>🧠 Analyse Check-In</button>'
-    + '<button class="bulk-action-btn" onclick="aiDraft()">✍️ Draft Message</button>'
-    + '</div><div id="aiResultBox" style="margin-top:10px;"></div></div>';
+    + '<div class="d-card d-card--wide ca-ai">' + cardHead('AI coach')
+    + '<div class="ca-actions">'
+    + '<button class="bulk-action-btn" onclick="aiAnalyse()"' + (ci.date ? '' : ' disabled title="Needs a shared check-in"') + '>' + ic('brain') + ' Analyse check-in</button>'
+    + '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="aiDraft()">' + ic('pencil') + ' Draft message</button>'
+    + '</div><div id="aiResultBox" style="margin-top:10px;"></div></div>'
+    + '</div>';
 }
 
-function scoreRows(ci) {
+function scoreRows(ci, prev) {
   return [['Sleep', 'sleep'], ['Energy', 'energy'], ['Stress', 'stress', true], ['Hunger', 'hunger'], ['Training', 'trainingPerformance'], ['Cardio', 'cardioAdherence']]
     .filter(([, k]) => ci[k] != null)
-    .map(([label, k, inverse]) => scoreBar(label, ci[k], 10, inverse))
+    .map(([label, k, inverse]) => scoreBar(label, ci[k], 10, inverse, prev ? prev[k] : null))
     .join('');
 }
 
@@ -742,19 +855,20 @@ function renderCheckIn(c) {
   const d = _clientDetails[c.id];
   const list = d?.checkIns || [];
   if (c.status === 'pending' || !list.length) {
-    el.innerHTML = '<div class="d-card"><p style="color:var(--text-muted);text-align:center;padding:24px 0;">'
+    el.innerHTML = '<div class="d-card"><p class="ws-empty-note" style="text-align:center;padding:24px 0;">'
       + (d === undefined && c.status !== 'pending' ? 'Loading…' : 'No check-ins shared yet.') + '</p></div>';
     return;
   }
   // Progress photos stay on the client's phone; they aren't shared with coaches.
-  el.innerHTML = list.map((ci, i) =>
-    '<div class="d-card"><div class="d-card-title">' + (i === 0 ? 'Latest check-in · ' : '') + escapeHtml(ci.date) + '</div>'
-    + scoreRows(ci)
-    + (ci.bodyweight ? '<p class="ws-empty-note">Bodyweight ' + ci.bodyweight + ' kg</p>' : '')
+  el.innerHTML = '<div class="ov-grid">' + list.map((ci, i) =>
+    '<div class="d-card' + (i === 0 ? ' d-card--wide' : '') + '">'
+    + cardHead(i === 0 ? 'Latest check-in' : 'Check-in', null, null,
+      '<span class="ca-chip' + (i === 0 ? ' ca-chip--green' : '') + '">' + escapeHtml(shortDate(ci.date) || ci.date) + (ci.bodyweight ? ' · ' + ci.bodyweight + ' kg' : '') + '</span>')
+    + scoreRows(ci, list[i + 1])
     + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
     + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
     + '</div>'
-  ).join('');
+  ).join('') + '</div>';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -815,10 +929,10 @@ function renderProgram(c) {
     + '<textarea id="coachProgramNote" class="coach-input" rows="2" maxlength="500" style="margin-top:8px;" placeholder="Note with this program (optional), e.g. Start with the lower days."></textarea>'
     + '<div class="detail-breadcrumb-actions" style="margin-top:10px;">'
     + '<button class="bulk-action-btn" onclick="assignProgram()">Assign</button>'
-    + (c.currentProgramId ? '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="unassignProgram()">Remove</button>' : '')
-    + '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="editSelectedProgram()">Edit selected</button>'
-    + '<button class="bulk-action-btn" style="background:var(--surface);color:var(--text-sec);" onclick="chooseProgramFile()">Import file</button>'
-    + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="showProgramBuilder()">+ New program</button>'
+    + (c.currentProgramId ? '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="unassignProgram()">Remove</button>' : '')
+    + '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="editSelectedProgram()">Edit selected</button>'
+    + '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="chooseProgramFile()">Import file</button>'
+    + '<button class="bulk-action-btn bulk-action-btn--brass" onclick="showProgramBuilder()">+ New program</button>'
     + '</div>'
     + '<div id="programBuilderArea" style="margin-top:12px;"></div></div>'
     + '<div class="d-card"><div class="d-card-title">Assigned: ' + escapeHtml(c.currentProgram || 'none') + '</div>' + preview
@@ -1877,8 +1991,8 @@ function renderNotes(c) {
   el.innerHTML = '<div class="d-card"><div class="d-card-title">Send Note to ' + (c.clientName?.split(' ')[0] || 'Client') + '</div>'
     + '<textarea id="coachNoteInput" style="width:100%;min-height:100px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:0.88rem;resize:vertical;margin-bottom:10px;" placeholder="Write a note — the athlete will see this in their app…"></textarea>'
     + '<div style="display:flex;gap:8px;align-items:center;">'
-    + '<button class="bulk-action-btn" onclick="saveNote()">💬 Send Note</button>'
-    + '<button class="bulk-action-btn" style="background:var(--highlight);" onclick="aiDraftIntoNotes()">✍️ AI Draft</button>'
+    + '<button class="bulk-action-btn" onclick="saveNote()">' + ic('send') + ' Send note</button>'
+    + '<button class="bulk-action-btn bulk-action-btn--brass" onclick="aiDraftIntoNotes()">' + ic('sparkles') + ' AI draft</button>'
     + '<span class="checkin-photo-label" style="margin-left:auto;">&#8984;&crarr; to send</span>'
     + '</div></div>'
     + '<div class="d-card"><div class="d-card-title">Note History</div><div id="noteHistoryBody">'
@@ -2045,7 +2159,7 @@ async function aiAnalyse() {
     return;
   }
   const lastWeekEntry = bw.length >= 2 ? bw[bw.length - 2] : null;
-  if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">🧠 Analysing check-in…</p>';
+  if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">Analysing check-in…</p>';
 
   try {
     const res = await coachFetch(SERVER_URL + '/api/ai/checkin-summary', {
@@ -2092,7 +2206,7 @@ async function aiDraft() {
   const client = _clients.find(c => c.id === _selectedClientId);
   if (!client) return;
   const box = document.getElementById('aiResultBox');
-  if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">✍️ Drafting message…</p>';
+  if (box) box.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">Drafting message…</p>';
   try {
     const res = await coachFetch(SERVER_URL + '/api/ai/coach-draft-message', { method: 'POST', headers: authHeaders(), body: JSON.stringify(draftPayload(client)) });
     const data = await res.json();
@@ -2170,9 +2284,11 @@ function switchSidebarMode(mode) {
 
   // Reset the main panel to the empty state — whatever was selected in the
   // other list doesn't make sense to keep showing here.
+  // Clients mode lands on the Today workspace; Leads mode on the empty state.
   _selectedClientId = null;
   _selectedLeadId = null;
-  document.getElementById('emptyState').style.display = '';
+  document.getElementById('workspaceView').style.display = mode === 'clients' ? '' : 'none';
+  document.getElementById('emptyState').style.display = mode === 'clients' ? 'none' : '';
   document.getElementById('clientDetail').style.display = 'none';
   document.getElementById('leadDetail').style.display = 'none';
 }
@@ -2210,6 +2326,7 @@ function selectLead(id) {
   const lead = _leads.find(l => l.id === id);
   if (!lead) return;
 
+  document.getElementById('workspaceView').style.display = 'none';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('clientDetail').style.display = 'none';
   document.getElementById('leadDetail').style.display = '';
