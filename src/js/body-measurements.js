@@ -135,9 +135,15 @@
     if (!canvas) return;
 
     const username = _user();
-    const all = username ? loadMeasurements(username) : [];
+    let all = username ? loadMeasurements(username) : [];
 
     if (_chart) { _chart.destroy(); _chart = null; }
+    // Free accounts chart the last 4 weeks (plan-limits.js).
+    if (window.PlanLimits) {
+      const clipped = window.PlanLimits.clipHistory(all, e => e.date);
+      all = clipped.items;
+      window.PlanLimits.setHistoryNote(canvas.closest('.measurements-chart-wrap') || canvas, 'measurementsHistoryNote', clipped.hidden);
+    }
     if (!all.length) return;
 
     const labels = all.map(e => e.date);

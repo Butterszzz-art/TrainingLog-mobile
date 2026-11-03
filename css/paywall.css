@@ -242,3 +242,34 @@
   cursor: pointer;
 }
 .upgrade-cta-btn:hover { filter: brightness(1.08); transform: none; }
+
+/* Free-plan limits (src/js/plan-limits.js): history window note and the
+   "1 of 1 custom program" line in My Programs. */
+.plan-history-note,
+.prog-list-plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-chip);
+  border-radius: var(--radius-tight);
+  background: var(--pod-bg-alt);
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.plan-history-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brass-light);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.plan-history-link:hover { text-decoration: underline; }
+.hist-pill.is-locked { opacity: 0.6; }
+.hist-pill.is-locked .ui-icon { width: 11px; height: 11px; margin-left: 3px; vertical-align: -1px; }
+.hist-pill.is-locked .ui-icon svg { width: 11px; height: 11px; }
