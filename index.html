@@ -1192,7 +1192,7 @@
                  kicks in) covers it; log.css reveals this instead once
                  #quickLogPanel.ql-multi-mode is active, so switching units
                  stays possible with 2+ rows on screen. -->
-            <select id="weightUnit" hidden onchange="if(typeof syncQuickLogUnit==='function') syncQuickLogUnit(this.value);">
+            <select id="weightUnit" hidden onchange="if(typeof syncQuickLogUnit==='function') syncQuickLogUnit(this.value); document.querySelectorAll('.set-input-wunit').forEach(function(el){ el.textContent = this.value; }, this);">
               <option value="kg">kg</option>
               <option value="lbs">lbs</option>
             </select>
@@ -6150,45 +6150,41 @@ function addNewSet() {
   if (typeof refreshLogButtonLabel === 'function') refreshLogButtonLabel();
 }
 
-// −/+ on an extra set row: reps by 1, weight by 2.5 (5 from 100 up),
-// same steps as the single-set steppers. Typing still works directly.
-function stepSetField(id, delta) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const isWeight = id.startsWith('weight_');
-  const cur = parseFloat(el.value);
-  const base = Number.isFinite(cur) ? cur : 0;
-  const step = isWeight ? (base >= 100 ? 5 : 2.5) : 1;
-  el.value = Math.max(0, Math.round((base + delta * step) * 10) / 10);
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
 function getSetInputHTML(i) {
+  const unitSel = document.getElementById('weightUnit');
+  const unit = (unitSel && unitSel.value) || 'kg';
+  // Same one-line look as a loaded program's set rows (createSetRow):
+  // number · weight unit × reps · ⋮. Tap a number to type it. The set's
+  // flags, plate calculator and remove sit in a tray behind ⋮; the row's
+  // border and the little tags show which flags are on (log.css :has()).
   return `
     <div class="set-input-row">
-      <label class="set-input-label">Set ${i + 1}</label>
-      <div class="set-input-reps-wrap">
-        <div class="set-mini-stepper">
-          <button type="button" class="set-mini-step" onclick="stepSetField('reps_${i}', -1)" aria-label="Decrease reps">−</button>
-          <input type="number" inputmode="numeric" id="reps_${i}" placeholder="Reps" class="set-input-reps" onfocus="this.select()" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
-          <button type="button" class="set-mini-step set-mini-step--plus" onclick="stepSetField('reps_${i}', 1)" aria-label="Increase reps">+</button>
-        </div>
+      <div class="set-input-main">
+        <span class="set-input-label" aria-label="Set ${i + 1}">${i + 1}</span>
+        <label class="set-input-field">
+          <input type="number" inputmode="decimal" step="0.5" id="weight_${i}" placeholder="—" class="set-input-weight" aria-label="Set ${i + 1} weight" onfocus="this.select()" oninput="updateAddButtonState()" />
+          <span class="set-input-unit set-input-wunit">${unit}</span>
+        </label>
+        <span class="set-input-x" aria-hidden="true">×</span>
+        <label class="set-input-field set-input-reps-wrap">
+          <input type="number" inputmode="numeric" id="reps_${i}" placeholder="—" class="set-input-reps" aria-label="Set ${i + 1} reps" onfocus="this.select()" oninput="updateAddButtonState(); updateRepsLabel(${i})" />
+          <span class="set-input-unit">reps</span>
+        </label>
         <span id="repsLabel_${i}" class="set-input-reps-note"></span>
+        <span class="set-input-tags" aria-hidden="true"><i data-f="top">Top</i><i data-f="bo">BO</i><i data-f="drop">Drop</i><i data-f="rp">RP</i><i data-f="lr">L/R</i></span>
+        <button type="button" class="set-input-more" onclick="toggleSetOptions(this)" aria-expanded="false" aria-label="Set ${i + 1} options">&#8942;</button>
       </div>
-      <div class="set-mini-stepper">
-        <button type="button" class="set-mini-step" onclick="stepSetField('weight_${i}', -1)" aria-label="Decrease weight">−</button>
-        <input type="number" inputmode="decimal" step="0.5" id="weight_${i}" placeholder="Weight" class="set-input-weight" onfocus="this.select()" oninput="updateAddButtonState()" />
-        <button type="button" class="set-mini-step set-mini-step--plus" onclick="stepSetField('weight_${i}', 1)" aria-label="Increase weight">+</button>
+      <div class="set-input-tray" hidden>
+        <div class="role-segment" role="group" aria-label="Set role">
+          <label class="role-segment-opt" title="Top Set — your main set for this exercise, used for PR/progress tracking"><input type="checkbox" id="topSet_${i}" onchange="toggleSetRole(${i}, 'top')" /><span>Top</span></label>
+          <label class="role-segment-opt" title="Back-off Set — reduced-load set after the top set, excluded from PRs"><input type="checkbox" id="backoff_${i}" onchange="toggleSetRole(${i}, 'backoff')" /><span>BO</span></label>
+        </div>
+        <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
+        <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
+        <label class="set-opt-pill" title="Unilateral — each side done separately"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
+        <button type="button" onclick="openPlateCalculator(${i})" class="set-plate-btn" title="Plate calculator" aria-label="Plate calculator"><span class="ui-icon">${ICONS.dumbbell}</span></button>
+        <button type="button" class="set-remove-btn" onclick="removeSet(${i})" title="Remove set" aria-label="Remove set ${i + 1}"><span class="ui-icon">${ICONS.x}</span></button>
       </div>
-      <button type="button" onclick="openPlateCalculator(${i})" class="set-plate-btn" title="Plate calculator"><span class="ui-icon">${ICONS.dumbbell}</span></button>
-      <div class="role-segment" role="group" aria-label="Set role">
-        <label class="role-segment-opt" title="Top Set — your main set for this exercise, used for PR/progress tracking"><input type="checkbox" id="topSet_${i}" onchange="toggleSetRole(${i}, 'top')" /><span>Top</span></label>
-        <label class="role-segment-opt" title="Back-off Set — reduced-load set after the top set, excluded from PRs"><input type="checkbox" id="backoff_${i}" onchange="toggleSetRole(${i}, 'backoff')" /><span>BO</span></label>
-      </div>
-      <label class="set-opt-pill" title="Dropset"><input type="checkbox" id="dropset_${i}" /><span>Drop</span></label>
-      <label class="set-opt-pill" title="Rest-pause"><input type="checkbox" id="restPause_${i}" /><span>RP</span></label>
-      <label class="set-opt-pill" title="Unilateral — each side done separately"><input type="checkbox" id="unilateral_${i}" onchange="updateRepsLabel(${i})" /><span>L/R</span></label>
-      <button class="set-remove-btn" onclick="removeSet(${i})" title="Remove set"><span class="ui-icon">${ICONS.x}</span></button>
       <div class="set-sides-panel" id="sidesPanel_${i}" hidden>
         <label class="same-sides-toggle">
           <input type="checkbox" id="sameSides_${i}" checked onchange="updateRepsLabel(${i})" />
@@ -6202,6 +6198,14 @@ function getSetInputHTML(i) {
       </div>
     </div>
   `;
+}
+
+// ⋮ on a set row: show/hide that set's Top/BO/Drop/RP/L-R, plates, remove.
+function toggleSetOptions(btn) {
+  const tray = btn.closest('.set-input-row')?.querySelector('.set-input-tray');
+  if (!tray) return;
+  tray.hidden = !tray.hidden;
+  btn.setAttribute('aria-expanded', String(!tray.hidden));
 }
 
 // L/R sets: "Same reps both sides" (default) uses the row's one reps
