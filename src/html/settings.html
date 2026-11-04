@@ -268,6 +268,36 @@
           <input type="checkbox" class="st-switch" id="coachModeToggle"></label>
       </div>
 
+      <!-- Coach Pro codes (src/js/coach-code.js). Athletes enter a coach's
+           code for Pro; coaches see and share their own code below. -->
+      <div class="mx-kicker st-kicker">Coach code</div>
+      <div class="pod st-group">
+        <div class="st-block" id="coachCodeRedeem">
+          <p class="st-note" id="coachCodeStatus">Got a code from your coach? Enter it to get Pro, included by them.</p>
+          <div class="referral-link-row">
+            <input class="referral-link-input coach-code-input" id="coachCodeInput" type="text" placeholder="ABCD-EFGH" maxlength="11"
+              autocomplete="off" autocapitalize="characters" spellcheck="false" data-no-autosave aria-label="Coach code">
+            <button type="button" class="referral-copy-btn" id="coachCodeRedeemBtn">Use code</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="coachCodeOwnGroup" hidden>
+        <div class="mx-kicker st-kicker">Your coach code</div>
+        <div class="pod st-group">
+          <div class="st-block">
+            <p class="st-note">Clients who enter this code under Account join your roster and get Pro while you're on the Coach plan.</p>
+            <div class="referral-link-row">
+              <input class="referral-link-input coach-code-input" id="coachCodeOwn" value="" readonly data-no-autosave aria-label="Your coach code">
+              <button type="button" class="referral-copy-btn" id="coachCodeCopyBtn">Copy</button>
+            </div>
+          </div>
+          <button type="button" class="st-row st-row--btn" id="coachCodeNewBtn">
+            <span class="st-label">Make a new code<small>The old code stops working. Clients who already joined keep Pro.</small></span>
+          </button>
+        </div>
+      </div>
+
       <div class="mx-kicker st-kicker">Refer a friend</div>
       <div class="pod st-group">
         <div class="st-block">
