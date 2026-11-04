@@ -10,7 +10,8 @@ const {
   buildSeasonArchive,
   getCheckInInsights,
   getCheckInInsightTimeline,
-  getStorageKey
+  getStorageKey,
+  posingPhotoChoices
 } = require('../checkinEngine');
 
 describe('checkinEngine', () => {
@@ -310,5 +311,37 @@ describe('checkinEngine weigh-in integration', () => {
     engine.saveCheckIn('athleteW', { date: '2026-03-08', bodyweight: 79 });
     engine.saveCheckIn('athleteW', { date: '2026-03-15', bodyweight: 80 });
     expect(getWeighIns('athleteW')).toEqual(original);
+  });
+
+  test('saveCheckIn keeps attached posing photo sets', () => {
+    saveCheckIn('athleteP', { date: '2026-03-24', posingSessionIds: ['a', 'a', '', 7, 'b'] });
+    expect(loadCheckIns('athleteP')[0].posingSessionIds).toEqual(['a', 'b']);
+  });
+
+  describe('posingPhotoChoices', () => {
+    const sessions = [
+      { id: 'old', date: '2026-03-01', photoCount: 4 },
+      { id: 'before', date: '2026-03-14', photoCount: 2 },
+      { id: 'since', date: '2026-03-20', photoCount: 3 },
+      { id: 'plain', date: '2026-03-21', minutes: 20 },
+      { id: 'later', date: '2026-03-30', photoCount: 1 }
+    ];
+
+    test('offers the last two weeks of photo sets and ticks those since the previous check-in', () => {
+      const { sets, picked } = posingPhotoChoices(sessions, [{ date: '2026-03-17' }], '2026-03-24');
+      expect(sets.map(s => s.id)).toEqual(['since', 'before']);
+      expect(picked).toEqual(['since']);
+    });
+
+    test('a saved check-in keeps its own ticks, including older sets', () => {
+      const checkIns = [{ date: '2026-03-24', posingSessionIds: ['old'] }];
+      const { sets, picked } = posingPhotoChoices(sessions, checkIns, '2026-03-24');
+      expect(sets.map(s => s.id)).toEqual(['since', 'before', 'old']);
+      expect(picked).toEqual(['old']);
+    });
+
+    test('nothing to offer without photos', () => {
+      expect(posingPhotoChoices([{ id: 'x', date: '2026-03-24', minutes: 10 }], [], '2026-03-24')).toEqual({ sets: [], picked: [] });
+    });
   });
 });

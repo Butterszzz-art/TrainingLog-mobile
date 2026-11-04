@@ -1,7 +1,7 @@
 // Both modules are browser scripts; a bare `window` is enough for their
 // pure helpers (neither touches the DOM until it's rendered).
 global.window = global;
-const { buildShareSnapshot, weeklySessionCounts, compliancePercent } = require('../src/js/client-coaching.js');
+const { buildShareSnapshot, weeklySessionCounts, compliancePercent, checkInPhotoPlan } = require('../src/js/client-coaching.js');
 const { _parseScheme, _formatScheme, _toExercise } = require('../src/js/coaching-enhanced.js');
 
 function memoryStore(data) {
@@ -168,5 +168,34 @@ describe('buildCoachOverview', () => {
     expect(ov.macros).toBeNull();
     expect(ov.compliance).toBeNull();
     expect(ov.daysSinceCheckIn).toBeNull();
+  });
+});
+
+describe('checkInPhotoPlan', () => {
+  test('sends new or changed photo sets once', () => {
+    const checkIns = [
+      { date: '2026-09-20', posingSessionIds: ['a', 'b'] },
+      { date: '2026-09-13', posingSessionIds: ['c'] },
+      { date: '2026-09-06', posingSessionIds: [] }
+    ];
+    expect(checkInPhotoPlan(checkIns, { '2026-09-13': 'c' })).toEqual([
+      { action: 'put', date: '2026-09-20', ids: ['a', 'b'], sig: 'a,b' }
+    ]);
+    expect(checkInPhotoPlan(checkIns, { '2026-09-20': 'a,b', '2026-09-13': 'c' })).toEqual([]);
+  });
+
+  test('removes photos this device sent when they are unticked or the check-in is gone', () => {
+    const checkIns = [{ date: '2026-09-20', posingSessionIds: [] }];
+    expect(checkInPhotoPlan(checkIns, { '2026-09-20': 'a', '2026-09-01': 'z' })).toEqual([
+      { action: 'delete', date: '2026-09-20' },
+      { action: 'delete', date: '2026-09-01' }
+    ]);
+  });
+
+  test('only the newest 12 check-ins count', () => {
+    const checkIns = Array.from({ length: 14 }, (_v, i) => ({ date: `2026-08-${String(i + 1).padStart(2, '0')}`, posingSessionIds: ['p' + i] }));
+    const plan = checkInPhotoPlan(checkIns, {});
+    expect(plan).toHaveLength(12);
+    expect(plan.some(s => s.date === '2026-08-01')).toBe(false);
   });
 });

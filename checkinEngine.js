@@ -55,6 +55,8 @@
     return globalScope.__checkInMemoryStore;
   }
 
+  const MAX_POSING_SETS = 10;
+
   function getStorageKey(userId) {
     return `${STORAGE_PREFIX}${resolveUserId(userId)}`;
   }
@@ -141,8 +143,42 @@
       frontPhoto: safe.frontPhoto ?? '',
       sidePhoto: safe.sidePhoto ?? '',
       backPhoto: safe.backPhoto ?? '',
+      // Posing photo sets (posingEngine session ids) attached to this
+      // check-in; the photos themselves stay in posingMediaStore.
+      posingSessionIds: cleanSessionIds(safe.posingSessionIds),
       archetypeMetrics
     };
+  }
+
+  function cleanSessionIds(value) {
+    if (!Array.isArray(value)) return [];
+    return [...new Set(value.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim()))].slice(0, MAX_POSING_SETS);
+  }
+
+  /**
+   * Posing photo sets to offer on the check-in for `date`, newest first:
+   * those from the 14 days up to that date, plus any already attached.
+   * `picked` is what starts ticked: what the saved check-in for that date
+   * has, or else every set since the check-in before it.
+   */
+  function posingPhotoChoices(posingSessions, checkIns, date) {
+    const day = String(date || '').slice(0, 10);
+    const from = new Date(Date.parse(`${day}T00:00:00Z`) - 13 * 86400000).toISOString().slice(0, 10);
+    const entries = Array.isArray(checkIns) ? checkIns : [];
+    const existing = entries.find((c) => c && c.date === day);
+    const attached = new Set(cleanSessionIds(existing?.posingSessionIds));
+    const sets = (Array.isArray(posingSessions) ? posingSessions : [])
+      .filter((s) => s && s.id && Number(s.photoCount) > 0)
+      .filter((s) => attached.has(s.id) || (s.date >= from && s.date <= day))
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : String(b.createdAt || '').localeCompare(String(a.createdAt || ''))));
+    let picked;
+    if (existing && Array.isArray(existing.posingSessionIds)) {
+      picked = sets.filter((s) => attached.has(s.id)).map((s) => s.id);
+    } else {
+      const previous = entries.map((c) => c && c.date).filter((d) => d && d < day).sort().pop() || '';
+      picked = sets.filter((s) => s.date > previous).map((s) => s.id).slice(0, MAX_POSING_SETS);
+    }
+    return { sets, picked };
   }
 
   function dayNameToIndex(dayName) {
@@ -626,6 +662,7 @@
   }
 
   const api = {
+    posingPhotoChoices,
     saveCheckIn,
     loadCheckIns,
     saveCheckInState,

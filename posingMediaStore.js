@@ -161,7 +161,48 @@
     return URL.createObjectURL(new Blob([photo.thumb], { type: photo.type || 'image/jpeg' }));
   }
 
-  const api = { isAvailable, savePhotos, listSessionPhotos, getPhotoBlob, deleteSessionPhotos, deleteUserPhotos, thumbUrl };
+  function loadImage(blob) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image could not be read')); };
+      img.src = url;
+    });
+  }
+
+  function dataUrlBytes(url) {
+    const b64 = String(url).slice(String(url).indexOf(',') + 1);
+    return Math.floor(b64.length * 3 / 4);
+  }
+
+  /**
+   * A full-size photo shrunk to a JPEG data URL for sending to a coach:
+   * long edge at most maxEdge and under maxBytes (lower quality first, then
+   * a smaller size, until it fits). Null when the photo is missing.
+   */
+  async function exportPhotoDataUrl(photo, { maxEdge = 1440, maxBytes = 400 * 1024 } = {}) {
+    const blob = await getPhotoBlob(photo);
+    if (!blob) return null;
+    const img = await loadImage(blob);
+    const longEdge = Math.max(img.naturalWidth, img.naturalHeight) || 1;
+    let edge = Math.min(maxEdge, longEdge);
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const scale = edge / longEdge;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.82, 0.7, 0.6]) {
+        const url = canvas.toDataURL('image/jpeg', quality);
+        if (dataUrlBytes(url) <= maxBytes) return url;
+      }
+      edge = Math.round(edge * 0.8);
+    }
+    return null;
+  }
+
+  const api = { isAvailable, savePhotos, listSessionPhotos, getPhotoBlob, deleteSessionPhotos, deleteUserPhotos, thumbUrl, exportPhotoDataUrl };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
