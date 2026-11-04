@@ -158,6 +158,7 @@
   <script src="vendor/firebase-auth-compat-10.14.1.js"></script>
   <script src="src/js/firebase-config.js"></script>
   <script src="src/js/firebase-auth.js"></script>
+  <script src="src/js/app-links.js"></script>
   <script src="src/js/apple-sign-in.js"></script>
 
 </head>
@@ -3797,6 +3798,11 @@
     <h2 class="pod-title" style="font-size:20px;">Coach</h2>
     <div class="coach-stats-bar" id="coachStatsBar"></div>
   </div>
+  <!-- The full coach dashboard is web-only (coach/); in the iOS app this opens Safari. -->
+  <button type="button" class="coach-desktop-link" onclick="window.AppLinks && window.AppLinks.openCoachDashboard()">
+    <span class="ui-icon" data-icon="share"></span>
+    <span><strong>Coach dashboard</strong><small>Plans, programs and check-ins on a bigger screen · pocketcoachcoms.org/coach</small></span>
+  </button>
 
   <!-- Triage: priority client + review queue + templates, all real
        data from coachDashboardState.clients (renderCoachQueue()) -->
@@ -5112,7 +5118,7 @@ async function loadReferralPanel() {
   var statsEl = document.getElementById('referralStats');
 
   if (window.currentReferralCode) {
-    var url = 'https://pocketcoachcoms.org/#signup?ref=' + window.currentReferralCode;
+    var url = window.AppLinks ? window.AppLinks.inviteUrl(window.currentReferralCode) : 'https://pocketcoachcoms.org/#signup?ref=' + window.currentReferralCode;
     if (linkInput) linkInput.value = url;
   }
 
@@ -5122,7 +5128,7 @@ async function loadReferralPanel() {
     });
     var data = await res.json();
     if (linkInput && data.referralCode) {
-      linkInput.value = 'https://pocketcoachcoms.org/#signup?ref=' + data.referralCode;
+      linkInput.value = window.AppLinks ? window.AppLinks.inviteUrl(data.referralCode) : 'https://pocketcoachcoms.org/#signup?ref=' + data.referralCode;
     }
     if (badge && data.referralCredits > 0) {
       badge.style.display = '';
@@ -5868,9 +5874,12 @@ async function startSignup() {
       // again — it would fail as "already in use". completeSignup reuses the
       // signed-in session instead.
       const alreadyCreated = typeof firebase !== 'undefined' && firebase.auth?.().currentUser;
+      // Code from an invite link (src/js/app-links.js), if they came from one.
+      const referredBy = window.AppLinks?.pendingReferral() || undefined;
       const result = alreadyCreated
-        ? await window.firebaseAuth.completeSignup({ username, consents })
-        : await window.firebaseAuth.signup({ username, email, password, consents });
+        ? await window.firebaseAuth.completeSignup({ username, referredBy, consents })
+        : await window.firebaseAuth.signup({ username, email, password, referredBy, consents });
+      window.AppLinks?.clearReferral();
       // Identity is stored, but the app stays locked until email verification —
       // the server rejects every protected route for unverified accounts.
       persistLoginIdentity(username, null);
@@ -6047,7 +6056,9 @@ async function finishAppleSignup() {
   }
   setLoading(btn, true);
   try {
-    const res = await window.AppleSignIn.completeSignup({ username, consents });
+    const referredBy = window.AppLinks?.pendingReferral() || undefined;
+    const res = await window.AppleSignIn.completeSignup({ username, referredBy, consents });
+    window.AppLinks?.clearReferral();
     persistLoginIdentity(res.username, res.token);
     setCurrentUser(res.username);
     localStorage.setItem('fitnessAppUser', res.username);

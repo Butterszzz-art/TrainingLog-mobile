@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["WD37WHSYG7.org.pocketcoachcoms.app"],
+        "components": [
+          { "/": "/coach/*", "exclude": true, "comment": "Coach dashboard is web-only" },
+          { "/": "/intake/*", "exclude": true, "comment": "Coaching intake form is web-only" },
+          { "/": "/pricing.html", "exclude": true },
+          { "/": "/payment-success.html", "exclude": true },
+          { "/": "/invite/*", "comment": "Invite / referral links" },
+          { "/": "/", "#": "signup*", "comment": "Older referral links: /#signup?ref=CODE" }
+        ]
+      }
+    ]
+  }
+}
