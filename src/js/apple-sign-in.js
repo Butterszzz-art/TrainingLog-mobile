@@ -104,8 +104,8 @@
   }
 
   /** Claims a username for the Apple account just signed in. Resolves { username, token }. */
-  async function completeSignup({ username, consents }) {
-    await global.firebaseAuth.completeSignup({ username, consents });
+  async function completeSignup({ username, referredBy, consents }) {
+    await global.firebaseAuth.completeSignup({ username, referredBy, consents });
     const user = global.firebase.auth().currentUser;
     if (!user) throw new Error('Not signed in.');
     const token = await user.getIdToken(true);

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Join Pocket Coach</title>
+  <meta name="robots" content="noindex">
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #050807; color: #f4f7f5; font-family: system-ui, sans-serif; text-align: center; padding: 24px; }
+    a { color: #6fae8b; }
+  </style>
+  <!-- Invite links: https://pocketcoachcoms.org/invite/?ref=CODE
+       With the iOS app installed these open the app (Universal Links,
+       see /.well-known/apple-app-site-association). Otherwise this page
+       sends the visitor to the web app's sign-up with the code kept. -->
+  <script>
+    (function () {
+      var ref = new URLSearchParams(location.search).get('ref') || '';
+      ref = /^[A-Za-z0-9_-]{1,40}$/.test(ref) ? ref : '';
+      location.replace('/' + (ref ? '#signup?ref=' + encodeURIComponent(ref) : '#signup'));
+    })();
+  </script>
+</head>
+<body>
+  <p>Opening Pocket Coach… <a href="/#signup">Continue</a></p>
+</body>
+</html>

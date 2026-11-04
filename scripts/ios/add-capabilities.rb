@@ -42,6 +42,9 @@ ENTITLEMENTS = {
   'com.apple.developer.healthkit.access' => '<array/>',
   # Sign in with Apple (plugins/sign-in-with-apple, src/js/apple-sign-in.js).
   'com.apple.developer.applesignin' => '<array><string>Default</string></array>',
+  # Universal Links: pocketcoachcoms.org invite links open the app
+  # (.well-known/apple-app-site-association, src/js/app-links.js).
+  'com.apple.developer.associated-domains' => '<array><string>applinks:pocketcoachcoms.org</string></array>',
 }
 
 File.write(ENTITLEMENTS_PATH, <<~PLIST)

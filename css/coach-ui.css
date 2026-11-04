@@ -492,3 +492,14 @@
 .ycv-dot { fill: var(--green-90); }
 .ycv-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .ycv-foot .mx-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Link to the web-only coach dashboard (src/js/app-links.js). */
+#clientsTab .coach-desktop-link {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 12px; padding: 12px 14px;
+  border-radius: 16px; border: 1px solid var(--border-featured); background: var(--pod-bg-alt);
+  color: var(--text-primary); font: inherit; text-align: left; cursor: pointer;
+}
+#clientsTab .coach-desktop-link .ui-icon { width: 18px; height: 18px; flex: none; color: var(--green-90); }
+#clientsTab .coach-desktop-link .ui-icon svg { width: 100%; height: 100%; }
+#clientsTab .coach-desktop-link strong { display: block; font-size: 14px; font-weight: 700; }
+#clientsTab .coach-desktop-link small { display: block; margin-top: 2px; font-size: 12px; color: var(--text-tertiary); }
