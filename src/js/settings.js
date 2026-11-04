@@ -1178,6 +1178,7 @@ function openSettingsPage(key) {
   } else if (key === 'account') {
     window.renderSubscriptionPanel?.();
     window.loadReferralPanel?.();
+    window.renderCoachCodePanel?.();
   } else if (key === 'devices') {
     refreshActivitySyncStatus(container);
   }

@@ -4255,6 +4255,7 @@
 <script type="module" src="progressUtils.js"></script>
 <script src="src/js/local-account-data.js"></script>
 <script src="src/js/settings.js"></script>
+<script src="src/js/coach-code.js"></script>
 <script src="src/js/payments.js"></script>
 <script src="src/js/plan-limits.js"></script>
 <script type="module" src="history.js"></script>
@@ -4762,6 +4763,8 @@ async function loadUserPlan() {
     window.currentReferralCode = data.referralCode || '';
     window.currentReferralCredits = data.referralCredits || 0;
     window.currentIsAdmin = data.admin === true;
+    window.currentPlanSource = data.planSource || null;
+    window.currentCoachPro = data.coachPro || null; // Pro from a coach's code (src/js/coach-code.js)
     window.currentUserPlanLoaded = true;
     localStorage.setItem('userPlan', window.currentUserPlan);
     localStorage.setItem('userIsAdmin', window.currentIsAdmin ? '1' : '');
@@ -5078,7 +5081,9 @@ function renderSubscriptionPanel() {
   if (label) label.textContent = plan === 'coach' ? 'Coach Plan' : plan === 'pro' ? 'Pro Plan' : 'Free Plan';
   if (status) {
     var s = window.currentSubStatus || 'none';
-    status.textContent = s === 'active' ? 'Active subscription' : s === 'trialing' ? 'Free trial active' : s === 'past_due' ? 'Payment issue' : 'No active subscription';
+    var coachPro = window.currentCoachPro;
+    if (window.currentPlanSource === 'coach_code' && coachPro && coachPro.coachUsername) status.textContent = 'Included by @' + coachPro.coachUsername;
+    else status.textContent = s === 'active' ? 'Active subscription' : s === 'trialing' ? 'Free trial active' : s === 'past_due' ? 'Payment issue' : 'No active subscription';
   }
   var restore = document.getElementById('subRestoreBtn');
   if (restore) restore.hidden = !usesAppleIAP();
