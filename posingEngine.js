@@ -121,27 +121,45 @@
     return normalized;
   }
 
+  // Photos uploaded from the gallery are kept in the posing history next to
+  // practice sessions, but they are not practice: no minutes, and they don't
+  // count towards the weekly target, streak or overdue warning.
+  function isUpload(entry) {
+    return entry?.source === 'upload';
+  }
+
+  function practiceSessions(sessions) {
+    return sessions.filter(entry => !isUpload(entry));
+  }
+
   function normalizeSession(entry = {}) {
     const date = resolveDate(entry.date || entry.recordedAt || entry.createdAt);
-    const minutes = Math.max(1, Math.round(Number(entry.minutes || entry.durationMinutes || 0)));
+    const upload = isUpload(entry);
+    const minutes = upload ? 0 : Math.max(1, Math.round(Number(entry.minutes || entry.durationMinutes || 0)));
     return {
       id: entry.id || `posing_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       date,
       minutes,
       notes: typeof entry.notes === 'string' ? entry.notes.trim() : '',
       ...(Number(entry.photoCount) > 0 ? { photoCount: Math.round(Number(entry.photoCount)) } : {}),
+      ...(upload ? { source: 'upload' } : {}),
       createdAt: entry.createdAt || new Date().toISOString()
     };
   }
 
   function logPosingSession(userId, entry) {
     const normalized = normalizeSession(entry);
-    if (!Number.isFinite(normalized.minutes) || normalized.minutes <= 0) return null;
+    if (isUpload(normalized)) {
+      if (!normalized.photoCount) return null;
+    } else if (!Number.isFinite(normalized.minutes) || normalized.minutes <= 0) {
+      return null;
+    }
 
     const sessions = loadSessions(userId);
     sessions.push(normalized);
     sessions.sort((a, b) => new Date(a.date) - new Date(b.date));
     saveSessions(userId, sessions);
+    if (isUpload(normalized)) return normalized;
 
     try {
       globalScope.dailyMissionEngine?.syncMissionFromPosingEntry?.({ date: normalized.date, complete: true }, userId);
@@ -179,7 +197,7 @@
 
   function calculateStreak(userId, referenceDate) {
     const dateKey = resolveDate(referenceDate);
-    const sessions = loadSessions(userId);
+    const sessions = practiceSessions(loadSessions(userId));
     const daySet = new Set(sessions.map(s => resolveDate(s.date)));
     let streak = 0;
     let cursor = toDateObj(dateKey);
@@ -194,8 +212,7 @@
 
   function getOverdueStatus(userId, referenceDate) {
     const dateKey = resolveDate(referenceDate);
-    const sessions = loadSessions(userId)
-      .slice()
+    const sessions = practiceSessions(loadSessions(userId))
       .sort((a, b) => new Date(b.date) - new Date(a.date));
     const latest = sessions[0] || null;
     if (!latest) {
@@ -216,7 +233,7 @@
     const dayIndex = day.getUTCDay();
     const start = addDays(day, -dayIndex);
     const end = addDays(start, 6);
-    const sessions = loadSessions(userId).filter((entry) => {
+    const sessions = practiceSessions(loadSessions(userId)).filter((entry) => {
       const d = toDateObj(resolveDate(entry.date));
       return d >= start && d <= end;
     });
@@ -247,7 +264,8 @@
     setWeeklyTarget,
     getWeeklySummary,
     calculateStreak,
-    getOverdueStatus
+    getOverdueStatus,
+    isUpload
   };
 
   if (typeof module !== 'undefined' && module.exports) {

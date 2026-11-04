@@ -623,3 +623,53 @@ span.client-checkbox { border-color: transparent; background: none; cursor: defa
 @media (max-width: 1100px) {
   .ca-tiles, .ws-stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Check-in photos (renderCheckIn / openCheckInPhoto in coach.js) */
+.ci-photo-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.ci-photo-thumb {
+  position: relative;
+  width: 84px;
+  height: 112px;
+  padding: 0;
+  border: 1px solid var(--border-row);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-recessed);
+  cursor: zoom-in;
+}
+.ci-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ci-photo-thumb span {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 3px 5px;
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: #fff;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+  text-align: left;
+}
+.ci-photo-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 6000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.9);
+}
+.ci-photo-viewer img { max-width: 100%; max-height: calc(100vh - 110px); object-fit: contain; border-radius: 8px; }
+.ci-photo-viewer-bar { display: flex; align-items: center; gap: 16px; color: #fff; font-size: 14px; }
+.ci-photo-viewer button {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ci-photo-viewer-close { position: absolute; top: 16px; right: 16px; }

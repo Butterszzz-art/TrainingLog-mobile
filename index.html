@@ -1823,6 +1823,12 @@
          PANEL 3 · PROGRESS PHOTOS
     ═══════════════════════════════════════════════════════════ -->
     <div id="ciPanel_photos" class="ci-panel" style="display:none">
+      <div class="ci-card" id="ciPosingPhotosCard">
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="camera"></span> Posing Photos</h3>
+        <p class="ci-card-desc" id="ciPosingPhotosDesc">Add photo sets from the Posing tab to this check-in.</p>
+        <div id="ciPosingPhotosList" class="ci-posing-list"></div>
+      </div>
+
       <div class="ci-card">
         <h3 class="ci-card-title"><span class="ui-icon" data-icon="camera"></span> Progress Photos</h3>
         <p class="ci-card-desc">Tap a slot to upload. Photos are stored locally on your device.</p>
@@ -3005,11 +3011,15 @@
         <h3 class="pod-title mx-h3">Photo Check-In</h3>
         <span class="mx-meta">Hands-free</span>
       </div>
-      <p class="mx-para">Prop your phone up, step back and hit start. It counts you down out loud and takes a photo every few seconds.</p>
+      <p class="mx-para">Prop your phone up, step back and hit start. It counts you down out loud and takes a photo every few seconds. Already have photos? Upload them instead. Add either to your weekly check-in to send them to your coach.</p>
       <button type="button" class="mx-cta" onclick="openPosingCapture()">
         <span>Start photo check-in</span>
         <span class="mx-cta-icon"><span class="ui-icon" data-icon="camera"></span></span>
       </button>
+      <button type="button" class="mx-outline mx-outline--block posing-upload-btn" onclick="document.getElementById('posingUploadInput').click()">
+        <span class="ui-icon" data-icon="plus"></span> Upload photos
+      </button>
+      <input type="file" id="posingUploadInput" accept="image/*" multiple hidden onchange="openPosingUpload(this)">
     </section>
 
     <section class="pod mx-pod" aria-label="Log a posing session">
@@ -12001,6 +12011,25 @@ function openPosingCapture() {
   });
 }
 
+// Photos picked from the gallery: reviewed in the capture overlay, then saved
+// to the posing history like a photo check-in (but not as practice minutes).
+function openPosingUpload(input) {
+  const files = Array.from(input?.files || []);
+  if (input) input.value = '';
+  if (!files.length || !window.posingCapture?.openUpload) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  window.posingCapture.openUpload({
+    userId,
+    files,
+    onSaved: (session) => {
+      if (!session) return;
+      window.showToast?.(`${session.photoCount} photo${session.photoCount === 1 ? '' : 's'} saved. Add them to your check-in to send them to your coach.`, 'success', 4000);
+      renderPosingTab();
+    }
+  });
+}
+window.openPosingUpload = openPosingUpload;
+
 /** Highlight the quick-minute preset that matches the minutes field. */
 function syncPosingPresets() {
   const v = Number(document.getElementById('posingMinutesInput')?.value) || 0;
@@ -12131,6 +12160,7 @@ function renderPosingTab() {
         const mon = valid ? d.toLocaleDateString(undefined, { month: 'short' }) : '';
         const dow = valid ? d.toLocaleDateString(undefined, { weekday: 'long' }) : _esc(entry.date);
         const pct = Math.round(((Number(entry.minutes) || 0) / maxMin) * 100);
+        const upload = window.posingEngine?.isUpload?.(entry);
         const tags = String(entry.notes || '').split(/[,;|·]+/).map(s => s.trim()).filter(Boolean)
           .map(t => `<span class="mx-tag">${_esc(t)}</span>`).join('');
         return `
@@ -12139,9 +12169,11 @@ function renderPosingTab() {
             <div class="mx-row-main">
               <div class="posing-row-top">
                 <span class="mx-row-title">${dow}</span>
-                <span class="mx-row-big">${_esc(entry.minutes)}<span class="mx-unit"> min</span></span>
+                ${upload
+                  ? `<span class="mx-row-big">${_esc(entry.photoCount)}<span class="mx-unit"> photo${entry.photoCount === 1 ? '' : 's'}</span></span>`
+                  : `<span class="mx-row-big">${_esc(entry.minutes)}<span class="mx-unit"> min</span></span>`}
               </div>
-              <div class="mx-meter mx-meter--thin" role="img" aria-label="${_esc(entry.minutes)} minutes"><i style="width:${pct}%"></i></div>
+              ${upload ? '' : `<div class="mx-meter mx-meter--thin" role="img" aria-label="${_esc(entry.minutes)} minutes"><i style="width:${pct}%"></i></div>`}
               ${tags ? `<div class="mx-tags">${tags}</div>` : ''}
               ${entry.photoCount ? `<div class="posing-thumbs" data-posing-photos="${_esc(entry.id)}" aria-label="${_esc(entry.photoCount)} check-in photos"></div>` : ''}
             </div>
@@ -13504,6 +13536,7 @@ function switchCheckInTab(panel) {
   // Populate photo compare picker when switching to photos
   if (panel === 'photos') {
     populatePhotoCompareSelect?.();
+    renderCheckInPosingPhotos();
   }
 }
 window.switchCheckInTab = switchCheckInTab;
@@ -13787,6 +13820,7 @@ function renderCheckInTab() {
   bindCheckInWeighInPrefill(userId);
   prefillCheckInBodyweightFromWeighIns(userId);
   hydrateCheckInFormFromLatestEntry(checkIns);
+  renderCheckInPosingPhotos();
   bindCheckInSliderDisplays();
   autoFillCardioAdherenceSlider(userId);
   enhanceCheckInScales();
@@ -14310,6 +14344,72 @@ async function requestAiCheckInSummary(draft, compliancePercent) {
   }
 }
 
+// ── Posing photos on a check-in ────────────────────────────────────────────
+// Photo sets from the Posing tab (camera check-ins and uploads) can be ticked
+// onto a check-in. Linked coaches get them with the check-in
+// (src/js/client-coaching.js pushCheckInPhotos); the photos stay on this
+// device otherwise. Ticks are kept per check-in date until it is saved.
+const _ciPosingPicks = { date: '', ids: null };
+
+function checkInPosingChoices(userId, date) {
+  const sessions = window.posingEngine?.getPosingHistory?.(userId, { limit: 200 }) || [];
+  const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
+  return window.checkinEngine?.posingPhotoChoices?.(sessions, checkIns, date) || { sets: [], picked: [] };
+}
+
+function getCheckInPosingPicks(userId, date) {
+  if (_ciPosingPicks.date === date && Array.isArray(_ciPosingPicks.ids)) return _ciPosingPicks.ids.slice();
+  return checkInPosingChoices(userId, date).picked;
+}
+
+function renderCheckInPosingPhotos() {
+  const list = document.getElementById('ciPosingPhotosList');
+  const desc = document.getElementById('ciPosingPhotosDesc');
+  if (!list) return;
+  const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
+  const date = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const { sets } = checkInPosingChoices(userId, date);
+  const picked = new Set(getCheckInPosingPicks(userId, date));
+  _ciPosingPicks.date = date;
+  _ciPosingPicks.ids = sets.filter(s => picked.has(s.id)).map(s => s.id);
+
+  const coached = localStorage.getItem(`coachLinked_${currentUser || localStorage.getItem('fitnessAppUser') || localStorage.getItem('username')}`) === 'true';
+  if (desc) {
+    desc.textContent = !sets.length
+      ? 'No posing photos from the last two weeks. Take or upload some in the Posing tab, then add them here.'
+      : coached
+        ? 'Ticked photos are sent to your coach with this check-in (up to 10 photos).'
+        : 'Ticked photos are saved with this check-in. Link a coach in Settings to send them.';
+  }
+  if (!sets.length) {
+    list.innerHTML = `<button type="button" class="mx-outline mx-outline--block" onclick="showTab('posingTab')">Go to Posing</button>`;
+    return;
+  }
+  list.innerHTML = sets.map(s => {
+    const d = new Date(`${s.date}T00:00:00`);
+    const label = isNaN(d.getTime()) ? s.date : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    const kind = window.posingEngine?.isUpload?.(s) ? 'Uploaded' : 'Photo check-in';
+    return `
+      <label class="ci-posing-set">
+        <input type="checkbox" value="${mxEsc(s.id)}" ${picked.has(s.id) ? 'checked' : ''} onchange="toggleCheckInPosingSet(this)">
+        <span class="ci-posing-main">
+          <span class="ci-posing-top"><b>${mxEsc(label)}</b><span class="mx-meta">${kind} · ${mxEsc(s.photoCount)} photo${s.photoCount === 1 ? '' : 's'}</span></span>
+          <span class="posing-thumbs" data-posing-photos="${mxEsc(s.id)}"></span>
+        </span>
+      </label>`;
+  }).join('');
+  window.posingCapture?.hydrateHistoryThumbs?.(list, userId, 'checkin');
+}
+
+function toggleCheckInPosingSet(input) {
+  const ids = new Set(_ciPosingPicks.ids || []);
+  if (input.checked) ids.add(input.value); else ids.delete(input.value);
+  _ciPosingPicks.ids = Array.from(document.querySelectorAll('#ciPosingPhotosList input[type="checkbox"]'))
+    .map(el => el.value).filter(id => ids.has(id));
+}
+window.renderCheckInPosingPhotos = renderCheckInPosingPhotos;
+window.toggleCheckInPosingSet = toggleCheckInPosingSet;
+
 function saveWeeklyCheckIn(actor = 'athlete') {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
@@ -14346,7 +14446,8 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     },
     frontPhoto: document.getElementById('checkInFrontPhotoInput')?.value || '',
     sidePhoto: document.getElementById('checkInSidePhotoInput')?.value || '',
-    backPhoto: document.getElementById('checkInBackPhotoInput')?.value || ''
+    backPhoto: document.getElementById('checkInBackPhotoInput')?.value || '',
+    posingSessionIds: getCheckInPosingPicks(userId, dateValue)
   };
 
   const currentEntries = window.checkinEngine.loadCheckIns(userId);

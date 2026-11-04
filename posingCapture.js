@@ -34,6 +34,7 @@
     interval: { min: 3, max: 15, fallback: 5 }
   };
   const START_DELAYS = [3, 5, 10, 15];
+  const MAX_UPLOADS = 20;
   const CUE_MODES = ['voice', 'beep', 'off'];
 
   function clampInt(value, { min, max, fallback }) {
@@ -235,14 +236,11 @@
     });
   }
 
-  async function grabFrame(video) {
-    const width = video.videoWidth;
-    const height = video.videoHeight;
-    if (!width || !height) return null;
+  async function encodeShot(source, width, height) {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
-    canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+    canvas.getContext('2d').drawImage(source, 0, 0, width, height);
 
     const thumbW = Math.min(360, width);
     const thumbH = Math.round((height / width) * thumbW);
@@ -254,6 +252,38 @@
     const [blob, thumbBlob] = await Promise.all([canvasToBlob(canvas, 0.9), canvasToBlob(thumbCanvas, 0.75)]);
     if (!blob) return null;
     return { blob, thumbBlob, width, height };
+  }
+
+  async function grabFrame(video) {
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height) return null;
+    return encodeShot(video, width, height);
+  }
+
+  function decodeImageFile(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('unreadable')); };
+      img.src = url;
+    });
+  }
+
+  /**
+   * A gallery photo as a shot: re-encoded to JPEG with the long edge at most
+   * 2048 px. Re-encoding also drops EXIF data such as location; browsers
+   * apply the EXIF rotation when drawing, so the photo keeps its orientation.
+   */
+  async function fileToShot(file) {
+    if (!file || (file.type && !/^image\//.test(file.type))) return null;
+    const img = await decodeImageFile(file);
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    if (!w || !h) return null;
+    const scale = Math.min(1, 2048 / Math.max(w, h));
+    return encodeShot(img, Math.round(w * scale), Math.round(h * scale));
   }
 
   function escapeHtml(value) {
@@ -292,12 +322,14 @@
     userId: null,
     onSaved: null,
     wakeLock: null,
-    pendingGrabs: []
+    pendingGrabs: [],
+    // 'camera' (hands-free check-in) or 'upload' (photos picked from the gallery)
+    mode: 'camera'
   };
 
   function q(sel) { return ui.root?.querySelector(sel); }
 
-  const STATE_TITLES = { setup: 'Check-in', running: 'Check-in', finishing: 'Check-in', review: 'Review', error: 'Check-in' };
+  const STATE_TITLES = { loading: 'Upload', setup: 'Check-in', running: 'Check-in', finishing: 'Check-in', review: 'Review', error: 'Check-in' };
 
   function setState(state) {
     ui.state = state;
@@ -460,10 +492,13 @@
         </div>
         <div class="pcap-grid-photos" data-el="reviewGrid"></div>
         <div class="pcap-review-actions">
-          <button type="button" class="pcap-btn pcap-btn--ghost" data-act="retake">Retake</button>
+          <button type="button" class="pcap-btn pcap-btn--ghost" data-act="retake" data-el="retakeLbl">Retake</button>
           <button type="button" class="pcap-btn pcap-btn--primary" data-act="save">${icon('check')}<span>Save check-in</span></button>
         </div>
       </section>
+
+      <input type="file" accept="image/*" multiple hidden data-el="filePick">
+      <p class="pcap-loading pcap-only-loading" role="status">Reading photos…</p>
 
       <section class="pcap-error pcap-only-error" role="alert">
         <span class="pcap-error-ico">${icon('cameraOff')}</span>
@@ -472,6 +507,11 @@
       </section>
     `;
     root.addEventListener('click', onClick);
+    root.querySelector('[data-el="filePick"]').addEventListener('change', (event) => {
+      const files = Array.from(event.target.files || []);
+      event.target.value = '';
+      if (files.length) loadUploads(files);
+    });
     return root;
   }
 
@@ -615,6 +655,8 @@
         <span class="pcap-photo-check">${icon('check')}</span>
         ${s.pose ? `<span class="pcap-photo-pose">${escapeHtml(s.pose)}</span>` : ''}
       </button>`).join('');
+    q('[data-el="retakeLbl"]').textContent = ui.mode === 'upload' ? 'Change' : 'Retake';
+    q('[data-act="save"] span').textContent = ui.mode === 'upload' ? 'Save photos' : 'Save check-in';
     updateReviewCount();
   }
 
@@ -644,15 +686,15 @@
       globalScope.alert?.('Your photos could not be saved on this device. Free up some storage and try again.');
       return;
     }
-    const minutes = Math.max(1, Math.round((ui.endedAt - ui.startedAt) / 60000));
-    const guide = ui.settings.guide !== 'free' ? ` · ${POSE_GUIDES[ui.settings.guide].label}` : '';
-    const session = globalScope.posingEngine?.logPosingSession?.(ui.userId, {
-      id: sessionId,
-      date: localDateKey(),
-      minutes,
-      notes: `Photo check-in${guide}`,
-      photoCount: kept.length
-    });
+    let entry;
+    if (ui.mode === 'upload') {
+      entry = { id: sessionId, date: localDateKey(), source: 'upload', notes: 'Uploaded photos', photoCount: kept.length };
+    } else {
+      const minutes = Math.max(1, Math.round((ui.endedAt - ui.startedAt) / 60000));
+      const guide = ui.settings.guide !== 'free' ? ` · ${POSE_GUIDES[ui.settings.guide].label}` : '';
+      entry = { id: sessionId, date: localDateKey(), minutes, notes: `Photo check-in${guide}`, photoCount: kept.length };
+    }
+    const session = globalScope.posingEngine?.logPosingSession?.(ui.userId, entry);
     const onSaved = ui.onSaved;
     close({ force: true });
     try { onSaved?.(session); } catch (error) { console.warn(error); }
@@ -684,6 +726,7 @@
     } else if (act === 'start') startRun();
     else if (act === 'stop') finishRun();
     else if (act === 'retake') {
+      if (ui.mode === 'upload') { q('[data-el="filePick"]').click(); return; }
       if (globalScope.confirm?.('Discard these photos and start again?') === false) return;
       enterSetup();
     } else if (act === 'save') saveCheckIn();
@@ -708,10 +751,10 @@
     if (document.hidden && ui.state === 'running') finishRun();
   }
 
-  function open({ userId, onSaved } = {}) {
-    if (ui.root) return;
+  function mount({ userId, onSaved, mode }) {
     ui.userId = userId;
     ui.onSaved = onSaved || null;
+    ui.mode = mode;
     ui.settings = loadSettings();
     ui.root = buildOverlay();
     ui.video = q('.pcap-video');
@@ -719,13 +762,46 @@
     document.body.classList.add('pcap-open');
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('visibilitychange', onVisibilityChange);
+    if (globalScope.posingMediaStore?.isAvailable?.()) return true;
+    q('[data-el="errorMsg"]').textContent = 'Photo storage is not available on this device.';
+    setState('error');
+    return false;
+  }
 
-    if (!globalScope.posingMediaStore?.isAvailable?.()) {
-      q('[data-el="errorMsg"]').textContent = 'Photo storage is not available on this device.';
+  function open({ userId, onSaved } = {}) {
+    if (ui.root) return;
+    if (mount({ userId, onSaved, mode: 'camera' })) enterSetup();
+  }
+
+  // Photos picked from the gallery go straight to the review screen.
+  async function loadUploads(files) {
+    setState('loading');
+    const picked = files.slice(0, MAX_UPLOADS);
+    const shots = [];
+    for (const file of picked) {
+      try {
+        const frame = await fileToShot(file);
+        if (frame) shots.push({ ...frame, index: shots.length, pose: '', takenAt: new Date(file.lastModified || Date.now()).toISOString() });
+      } catch (error) {
+        console.warn('Reading an uploaded photo failed', error);
+      }
+    }
+    if (!ui.root) return; // closed while reading
+    if (!shots.length) {
+      q('[data-el="errorMsg"]').textContent = 'Those photos could not be read. Try JPEG or PNG photos.';
       setState('error');
       return;
     }
-    enterSetup();
+    if (files.length > MAX_UPLOADS) globalScope.showToast?.(`Only the first ${MAX_UPLOADS} photos were added.`, 'info');
+    ui.shots = shots;
+    renderReview();
+    setState('review');
+  }
+
+  /** Review and save photos the user picked from their gallery (File objects). */
+  function openUpload({ userId, files, onSaved } = {}) {
+    if (ui.root || !files || !files.length) return;
+    if (mount({ userId, onSaved, mode: 'upload' })) loadUploads(Array.from(files));
   }
 
   function close({ force = false } = {}) {
@@ -751,26 +827,28 @@
 
   // ── Thumbnails in the posing history ─────────────────────────────────────
 
-  let historyUrls = [];
-  let historyGen = 0;
+  // Per list (the posing history, the check-in photo picker), so one list
+  // rendering never revokes the other's thumbnails.
+  const thumbScopes = {};
 
-  async function hydrateHistoryThumbs(container, userId) {
-    // Each history render supersedes the last; a slower earlier pass must not
-    // write into the new rows or leak its object URLs.
-    const gen = ++historyGen;
-    historyUrls.forEach((u) => URL.revokeObjectURL(u));
-    historyUrls = [];
+  async function hydrateHistoryThumbs(container, userId, scope = 'history') {
+    // Each render of a list supersedes the last; a slower earlier pass must
+    // not write into the new rows or leak its object URLs.
+    const state = thumbScopes[scope] || (thumbScopes[scope] = { gen: 0, urls: [] });
+    const gen = ++state.gen;
+    state.urls.forEach((u) => URL.revokeObjectURL(u));
+    state.urls = [];
     const store = globalScope.posingMediaStore;
     if (!container || !store?.isAvailable?.()) return;
     const slots = Array.from(container.querySelectorAll('[data-posing-photos]'));
     await Promise.all(slots.map(async (slot) => {
       try {
         const photos = await store.listSessionPhotos(userId, slot.dataset.posingPhotos);
-        if (gen !== historyGen || !slot.isConnected || !photos.length) return;
+        if (gen !== state.gen || !slot.isConnected || !photos.length) return;
         const shown = photos.slice(0, 5);
         slot.innerHTML = shown.map((p, i) => {
           const url = store.thumbUrl(p);
-          historyUrls.push(url);
+          state.urls.push(url);
           return `<button type="button" class="posing-thumb" data-photo-index="${i}" aria-label="View photo ${i + 1}${p.pose ? `, ${escapeHtml(p.pose)}` : ''}"><img src="${url}" alt="" loading="lazy" decoding="async"></button>`;
         }).join('') + (photos.length > shown.length ? `<span class="posing-thumb-more">+${photos.length - shown.length}</span>` : '');
         slot.onclick = (event) => {
@@ -855,6 +933,7 @@
     createScheduleRunner,
     localDateKey,
     open,
+    openUpload,
     close,
     hydrateHistoryThumbs
   };

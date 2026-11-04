@@ -52,4 +52,23 @@ describe('posingEngine', () => {
     expect(withPhotos).toMatchObject({ id: 'ps1', photoCount: 8 });
     expect(plain).not.toHaveProperty('photoCount');
   });
+
+  test('uploaded photos are kept but are not practice', () => {
+    posingEngine.setWeeklyTarget(userId, { sessions: 4, minutes: 80 });
+    posingEngine.logPosingSession(userId, { date: '2026-03-25', minutes: 15 });
+    const upload = posingEngine.logPosingSession(userId, { id: 'up1', date: '2026-03-26', source: 'upload', minutes: 30, photoCount: 3 });
+    expect(upload).toMatchObject({ id: 'up1', source: 'upload', minutes: 0, photoCount: 3 });
+    expect(posingEngine.isUpload(upload)).toBe(true);
+    expect(posingEngine.getPosingHistory(userId).map(e => e.id)).toContain('up1');
+
+    const weekly = posingEngine.getWeeklySummary(userId, '2026-03-26');
+    expect(weekly.sessions).toBe(1);
+    expect(weekly.totalMinutes).toBe(15);
+    expect(posingEngine.calculateStreak(userId, '2026-03-26')).toBe(0);
+    expect(posingEngine.getOverdueStatus(userId, '2026-03-26').daysSinceLastSession).toBe(1);
+  });
+
+  test('an upload without photos is not logged', () => {
+    expect(posingEngine.logPosingSession(userId, { date: '2026-03-26', source: 'upload' })).toBeNull();
+  });
 });

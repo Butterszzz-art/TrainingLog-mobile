@@ -859,7 +859,8 @@ function renderCheckIn(c) {
       + (d === undefined && c.status !== 'pending' ? 'Loading…' : 'No check-ins shared yet.') + '</p></div>';
     return;
   }
-  // Progress photos stay on the client's phone; they aren't shared with coaches.
+  // Photos only come with a check-in when the client ticked them onto it
+  // (usually posing photos); they load when shown.
   el.innerHTML = '<div class="ov-grid">' + list.map((ci, i) =>
     '<div class="d-card' + (i === 0 ? ' d-card--wide' : '') + '">'
     + cardHead(i === 0 ? 'Latest check-in' : 'Check-in', null, null,
@@ -867,8 +868,77 @@ function renderCheckIn(c) {
     + scoreRows(ci, list[i + 1])
     + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
     + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
+    + (ci.photoCount ? '<div class="ci-photo-strip" data-ci-photos="' + escapeHtml(ci.date) + '" aria-label="' + ci.photoCount + ' check-in photos">'
+      + '<span class="ws-empty-note">Loading ' + ci.photoCount + ' photo' + (ci.photoCount === 1 ? '' : 's') + '…</span></div>' : '')
     + '</div>'
   ).join('') + '</div>';
+  el.querySelectorAll('[data-ci-photos]').forEach(strip => loadCheckInPhotos(c.id, strip));
+}
+
+// Check-in photos: GET /api/coach/clients/:id/checkin-photos/:date, cached
+// per client and date while the portal is open.
+const _checkInPhotos = {};
+
+async function loadCheckInPhotos(clientId, strip) {
+  const date = strip.dataset.ciPhotos;
+  const key = clientId + '|' + date;
+  try {
+    if (!_checkInPhotos[key]) {
+      _checkInPhotos[key] = coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkin-photos/' + encodeURIComponent(date), { headers: authHeaders() })
+        .then(res => res.json().then(data => {
+          if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+          return data.photos || [];
+        }));
+    }
+    const photos = await _checkInPhotos[key];
+    if (!strip.isConnected) return;
+    if (!photos.length) { strip.innerHTML = '<span class="ws-empty-note">Photos are no longer shared.</span>'; return; }
+    strip.innerHTML = photos.map((p, i) =>
+      '<button type="button" class="ci-photo-thumb" data-photo="' + i + '" aria-label="Open photo ' + (i + 1) + (p.pose ? ', ' + escapeHtml(p.pose) : '') + '">'
+      + '<img src="' + escapeHtml(p.image) + '" alt="" loading="lazy">'
+      + (p.pose ? '<span>' + escapeHtml(p.pose) + '</span>' : '') + '</button>').join('');
+    strip.onclick = e => {
+      const btn = e.target.closest('[data-photo]');
+      if (btn) openCheckInPhoto(photos, Number(btn.dataset.photo), date);
+    };
+  } catch {
+    delete _checkInPhotos[key];
+    if (strip.isConnected) strip.innerHTML = '<span class="ws-empty-note">Photos could not be loaded.</span>';
+  }
+}
+
+function openCheckInPhoto(photos, start, date) {
+  let i = start;
+  const box = document.createElement('div');
+  box.className = 'ci-photo-viewer';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.innerHTML = '<img alt=""><div class="ci-photo-viewer-bar">'
+    + '<button type="button" data-v="prev" aria-label="Previous photo">&lsaquo;</button>'
+    + '<span data-v="label"></span>'
+    + '<button type="button" data-v="next" aria-label="Next photo">&rsaquo;</button></div>'
+    + '<button type="button" class="ci-photo-viewer-close" data-v="close" aria-label="Close">&times;</button>';
+  const show = () => {
+    const p = photos[i];
+    box.querySelector('img').src = p.image;
+    box.querySelector('[data-v="label"]').textContent = (shortDate(date) || date) + ' · ' + (i + 1) + ' / ' + photos.length + (p.pose ? ' · ' + p.pose : '');
+  };
+  const step = d => { i = (i + d + photos.length) % photos.length; show(); };
+  const shut = () => { document.removeEventListener('keydown', onKey); box.remove(); };
+  const onKey = e => {
+    if (e.key === 'Escape') shut();
+    else if (e.key === 'ArrowLeft') step(-1);
+    else if (e.key === 'ArrowRight') step(1);
+  };
+  box.addEventListener('click', e => {
+    const v = e.target.closest('[data-v]')?.dataset.v;
+    if (v === 'prev') step(-1);
+    else if (v === 'next') step(1);
+    else if (v === 'close' || e.target === box) shut();
+  });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(box);
+  show();
 }
 
 // ══════════════════════════════════════════════════════════════

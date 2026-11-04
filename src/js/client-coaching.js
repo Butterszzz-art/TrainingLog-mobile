@@ -12,6 +12,9 @@
      weekly workout counts, compliance) to POST /api/client/coach-share
      when you have a coach. The server filters it by your sharing
      switches, so switching something off here stops it reaching them.
+   - Check-in photos: posing photo sets ticked on a check-in are shrunk
+     and sent with PUT /api/client/checkin-photos/:date after a share
+     (pushCheckInPhotos). Each device remembers what it sent.
    Pure helpers are exported for tests (tests/clientCoaching.test.js).
    ============================================================= */
 
@@ -288,7 +291,34 @@
     return current && current.source === 'coach' ? null : undefined;
   }
 
-  const api = { buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
+  // What to send or remove for check-in photos. checkIns: stored check-ins;
+  // sent: { date: 'id1,id2' } of what this device uploaded. Only the newest
+  // 12 check-ins (what the coach sees) are considered. A check-in whose sets
+  // were all unticked has its photos removed, but only when this device sent
+  // them: check-ins sync between devices and the photos don't.
+  const PHOTO_CHECKINS = 12;
+  function checkInPhotoPlan(checkIns, sent) {
+    const done = sent && typeof sent === 'object' ? sent : {};
+    const recent = arr(checkIns).filter(c => c && /^\d{4}-\d{2}-\d{2}$/.test(String(c.date || '').slice(0, 10)))
+      .map(c => ({ date: String(c.date).slice(0, 10), ids: arr(c.posingSessionIds).filter(id => typeof id === 'string' && id) }))
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+      .slice(0, PHOTO_CHECKINS);
+    const steps = [];
+    const seen = new Set();
+    recent.forEach(c => {
+      if (seen.has(c.date)) return;
+      seen.add(c.date);
+      const sig = c.ids.join(',');
+      if (c.ids.length && done[c.date] !== sig) steps.push({ action: 'put', date: c.date, ids: c.ids, sig });
+      else if (!c.ids.length && done[c.date]) steps.push({ action: 'delete', date: c.date });
+    });
+    Object.keys(done).forEach(date => {
+      if (!seen.has(date) && !arr(checkIns).some(c => c && String(c.date || '').slice(0, 10) === date)) steps.push({ action: 'delete', date });
+    });
+    return steps;
+  }
+
+  const api = { checkInPhotoPlan, buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (!root || !root.document) return;
   root.ClientCoaching = api;
@@ -340,8 +370,57 @@
       const data = await api$('POST', '/api/client/coach-share', snapshot);
       root.localStorage.setItem(shareKey(), String(Date.now()));
       if (data.coaches === 0) root.localStorage.setItem(linkKey(), 'false');
+      else await pushCheckInPhotos();
     } catch (err) {
       console.info('[CoachShare] skipped:', err.message);
+    }
+  }
+
+  const MAX_CHECKIN_PHOTOS = 10;
+  let photoPushRunning = false;
+
+  async function pushCheckInPhotos() {
+    const media = root.posingMediaStore;
+    if (photoPushRunning || !media || !media.isAvailable || !media.isAvailable() || !media.exportPhotoDataUrl) return;
+    if (state.sharing && state.sharing.checkIns === false) return;
+    const u = user();
+    if (!u) return;
+    photoPushRunning = true;
+    const sentKey = `coachCheckInPhotosSent_${u}`;
+    const sent = readJSON(root.localStorage, sentKey, {}) || {};
+    // The Posing tab files photos under the same name the rest of index.html
+    // uses; try both spellings of the current user.
+    const owners = [...new Set([u, root.localStorage.getItem('currentUser')].filter(Boolean))];
+    try {
+      for (const step of checkInPhotoPlan(readJSON(root.localStorage, CHECKIN_PREFIX + u, []), sent)) {
+        if (step.action === 'delete') {
+          await api$('DELETE', `/api/client/checkin-photos/${step.date}`);
+          delete sent[step.date];
+        } else {
+          const photos = [];
+          for (const id of step.ids) {
+            let rows = [];
+            for (const owner of owners) {
+              rows = await media.listSessionPhotos(owner, id).catch(() => []);
+              if (rows.length) break;
+            }
+            for (const row of rows) {
+              if (photos.length >= MAX_CHECKIN_PHOTOS) break;
+              const image = await media.exportPhotoDataUrl(row).catch(() => null);
+              if (image) photos.push({ image, pose: row.pose || '' });
+            }
+          }
+          // Sets saved on another device have no photos here: leave them.
+          if (!photos.length) continue;
+          await api$('PUT', `/api/client/checkin-photos/${step.date}`, { photos });
+          sent[step.date] = step.sig;
+        }
+        root.localStorage.setItem(sentKey, JSON.stringify(sent));
+      }
+    } catch (err) {
+      console.info('[CoachShare] check-in photos skipped:', err.message);
+    } finally {
+      photoPushRunning = false;
     }
   }
 

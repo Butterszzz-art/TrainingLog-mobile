@@ -753,3 +753,26 @@
 
 .ci-ai-card--error { border-color: var(--border-alert); }
 .ci-ai-card--error p { font-size: 14px; color: var(--text-tertiary); margin: 0; }
+
+/* ── Posing photos on a check-in ─────────────────────────────── */
+.ci-posing-list { display: flex; flex-direction: column; gap: 8px; }
+.ci-posing-set {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-row);
+  border-radius: 14px;
+  background: var(--surface-recessed);
+  cursor: pointer;
+}
+.ci-posing-set input[type="checkbox"] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--green-60);
+}
+.ci-posing-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
+.ci-posing-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ci-posing-top b { font-size: 14px; color: var(--text-primary); }
