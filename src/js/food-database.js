@@ -601,7 +601,7 @@
 
   window.addFoodMacrosToDaily = function () {
     if (!_sel) return;
-    if (window.guardMacroDayLocked?.()) return;
+    if (_locked()) return;
     const grams = _selGrams();
     if (!grams) return;
     const meal = document.getElementById('foodMealSelect')?.value || Core.mealForHour(new Date().getHours());
@@ -610,7 +610,7 @@
       grams,
       amount: document.getElementById('foodServingInput').value,
       unit: document.getElementById('foodServingUnit').value,
-      date: _today(),
+      date: _day(),
       meal,
       now: Date.now(),
     });
@@ -621,7 +621,7 @@
     clearFoodSelection();
     const results = document.getElementById('foodSearchResults');
     if (results && document.getElementById('foodSearchSheet') && !document.getElementById('foodSearchSheet').hidden) _renderRecent(results);
-    _toast(`✅ ${entry.name.slice(0, 30)} — ${entry.kcal} kcal added`);
+    _toast(`✅ ${entry.name.slice(0, 30)} — ${entry.kcal} kcal added${entry.date === _today() ? '' : ` to ${Core.dayLabel(entry.date, _today())}`}`);
   };
 
   /* ── Food log ────────────────────────────────────────────── */
@@ -639,6 +639,38 @@
     return (typeof window.getTodayDateString === 'function' && window.getTodayDateString()) || new Date().toISOString().slice(0, 10);
   }
 
+  // The day the food log shows and adds to: today, unless the user stepped
+  // back (the arrows in the log's header) to fill in a day they missed.
+  // Only the last KEEP_DAYS are kept, so that's as far back as it goes.
+  let _viewDate = null;
+  function _shiftDate(iso, days) {
+    return new Date(Date.parse(`${iso}T12:00:00Z`) + days * 864e5).toISOString().slice(0, 10);
+  }
+  function _oldestDay() { return _shiftDate(_today(), -(Core.KEEP_DAYS - 1)); }
+  function _day() {
+    const t = _today();
+    if (!_viewDate || _viewDate >= t) return t;
+    return _viewDate < _oldestDay() ? _oldestDay() : _viewDate;
+  }
+  function setDay(iso) {
+    _viewDate = (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso) || iso >= _today()) ? null : iso;
+    window.clearFoodSelection?.();
+    renderFoodLog();
+  }
+
+  // "Mark complete" locks today only; an earlier day can always be changed.
+  function _locked() {
+    return _day() === _today() && !!window.guardMacroDayLocked?.();
+  }
+
+  // Counts a change towards its day's totals: today's running totals, or
+  // that day's saved totals in the macro history (index.html).
+  function _count(date, delta) {
+    if (!delta || !Object.values(delta).some(Boolean)) return;
+    if (date === _today()) { window.logMacroAmounts?.(delta); return; }
+    window.adjustMacroHistoryDay?.(date, delta);
+  }
+
   function loadLog() {
     const log = _readJSON(LOG_KEY(_user()), []);
     return Array.isArray(log) ? log : [];
@@ -649,22 +681,22 @@
     localStorage.setItem(LOG_KEY(_user()), JSON.stringify(Core.trimLog(log, _today())));
   }
 
-  // Adds an entry and, for today, its macros to the day's running totals.
+  // Adds an entry and its macros to its day's totals.
   function addEntry(entry) {
     const log = loadLog();
     log.push(entry);
     saveLog(log);
-    if (entry.date === _today() && window.logMacroAmounts) window.logMacroAmounts(Core.progressDelta(entry, 1));
+    _count(entry.date, Core.progressDelta(entry, 1));
     renderFoodLog();
   }
 
   function removeEntry(id) {
-    if (window.guardMacroDayLocked?.()) return;
+    if (_locked()) return;
     const log = loadLog();
     const entry = log.find(e => e.id === id);
     if (!entry) return;
     saveLog(log.filter(e => e.id !== id));
-    if (entry.date === _today() && window.logMacroAmounts) window.logMacroAmounts(Core.progressDelta(entry, -1));
+    _count(entry.date, Core.progressDelta(entry, -1));
     renderFoodLog();
   }
 
@@ -696,7 +728,11 @@
     // The coach's meal plan fills today's log once (src/js/coach-meals.js).
     const CM = window.CoachMeals;
     if (CM && CM.ensureToday && CM.ensureToday()) return; // it redrew the log
-    const items = Core.entriesFor(loadLog(), _today());
+    const day = _day();
+    // Today-only controls (Copy previous day, Mark complete) hide while an
+    // earlier day is shown.
+    document.getElementById('macrosTargetsView')?.classList.toggle('is-past-day', day !== _today());
+    const items = Core.entriesFor(loadLog(), day);
     _updateMicrosButton(items);
     const icons = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
     const tot = Core.totals(items);
@@ -709,6 +745,7 @@
         ${items.length ? `<span class="food-log-tot">${tot.kcal} kcal</span>` : ''}
         ${icons}
       </div>
+      ${_dayNavHtml(day)}
       ${CM && CM.headerHtml ? CM.headerHtml() : ''}
       ${Core.MEALS.map(m => {
         const list = groups[m];
@@ -751,6 +788,36 @@
   }
   window.renderFoodLog = renderFoodLog;
 
+  // ‹ Today › under the header. The date is a native date picker, so any
+  // day in the last KEEP_DAYS is two taps away.
+  function _dayNavHtml(day) {
+    const t = _today();
+    const past = day !== t;
+    const label = past ? Core.dayLabel(day, t) : 'Today';
+    return `
+      <div class="food-day-nav${past ? ' is-past' : ''}">
+        <button type="button" class="food-day-step" data-food-day-step="-1" aria-label="Previous day"${day <= _oldestDay() ? ' disabled' : ''}><span class="ui-icon">${_icon('chevronLeft') || '‹'}</span></button>
+        <label class="food-day-label">
+          <span>${_esc(label)}</span>
+          <input type="date" class="food-day-pick" data-food-day-pick value="${day}" min="${_oldestDay()}" max="${t}" aria-label="Pick a day to log">
+        </label>
+        <button type="button" class="food-day-step" data-food-day-step="1" aria-label="Next day"${past ? '' : ' disabled'}><span class="ui-icon">${_icon('chevronRight') || '›'}</span></button>
+      </div>
+      ${past ? `<div class="food-day-note" role="status"><span>Logging for ${_esc(label === 'Yesterday' ? 'yesterday' : label)}. It counts towards that day, not today.</span><button type="button" class="mx-link" data-food-day-today>Back to today</button></div>` : ''}`;
+  }
+
+  document.addEventListener('click', (e) => {
+    const step = e.target.closest('[data-food-day-step]');
+    if (step && !step.disabled) setDay(_shiftDate(_day(), Number(step.dataset.foodDayStep)));
+    else if (e.target.closest('[data-food-day-today]')) setDay(null);
+    else if (e.target.matches && e.target.matches('[data-food-day-pick]')) {
+      try { e.target.showPicker?.(); } catch { /* the browser opens it itself */ }
+    }
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.matches && e.target.matches('[data-food-day-pick]')) setDay(e.target.value || null);
+  });
+
   /* ── Meal photos (src/js/meal-photos.js) ─────────────────── */
   // Photos are read from IndexedDB after the log is drawn. The last day's
   // photos stay in memory so a re-render shows them straight away.
@@ -764,7 +831,7 @@
     const store = window.mealPhotos;
     const user = _user();
     if (!store || !store.isAvailable() || !user) return;
-    const date = _today();
+    const date = _day();
     try {
       if (!_photoPruned) { _photoPruned = true; store.pruneOld(user, date).catch(() => {}); }
       const map = await store.photosForDay(user, date);
@@ -781,7 +848,7 @@
   }
 
   function _photoCacheFor() {
-    return _photoCache.key === `${_user()}|${_today()}` ? _photoCache.map : {};
+    return _photoCache.key === `${_user()}|${_day()}` ? _photoCache.map : {};
   }
 
   async function addMealPhoto(meal) {
@@ -796,7 +863,7 @@
     }
     if (!image) return;
     try {
-      await store.savePhoto(_user(), _today(), meal, image);
+      await store.savePhoto(_user(), _day(), meal, image);
       window.FoodSheet?.close?.();
       _loadMealPhotos();
     } catch (err) {
@@ -807,7 +874,7 @@
 
   async function removeMealPhoto(meal) {
     try {
-      await window.mealPhotos.deletePhoto(_user(), _today(), meal);
+      await window.mealPhotos.deletePhoto(_user(), _day(), meal);
       delete _photoCache.map[meal];
       window.FoodSheet?.close?.();
       _loadMealPhotos();
@@ -941,6 +1008,8 @@
   };
   window.FoodLog = {
     load: loadLog, save: saveLog, add: addEntry, remove: removeEntry, today: _today,
+    // The day the log shows (today or an earlier day being filled in).
+    day: _day, setDay, locked: _locked, count: _count,
     customFoods: loadCustomFoods, saveCustomFood, deleteCustomFood, localFoodByBarcode,
     coachFoods: loadCoachFoods, refreshCoachFoods,
     authHeaders: _authHeaders, toast: (m) => _toast(m),
@@ -1021,6 +1090,7 @@
     // Re-inject if user navigates to macro tab
     document.addEventListener('click', (e) => {
       if (e.target.closest('[data-tab="macroTab"]') || e.target.closest('.macros-subtab[data-macro-subtab="targets"]')) {
+        if (e.target.closest('[data-tab="macroTab"]')) _viewDate = null;
         setTimeout(() => { injectFoodSearchWidget(); renderFoodLog(); }, 350);
       }
     });

@@ -109,11 +109,11 @@
     const Sheet = root.FoodSheet;
     if (!Sheet || !Core) return;
     const label = Core.MEAL_LABELS[meal] || 'Meal';
-    const entries = Core.groupByMeal(Core.entriesFor(FL().load(), FL().today()))[meal] || [];
+    const entries = Core.groupByMeal(Core.entriesFor(FL().load(), (FL().day ? FL().day() : FL().today())))[meal] || [];
     const item = mealShareItem(entries, meal, label);
     if (!item) return;
     let photo = null;
-    try { photo = await root.mealPhotos?.getPhoto?.(user(), FL().today(), meal); } catch { /* no photo */ }
+    try { photo = await root.mealPhotos?.getPhoto?.(user(), (FL().day ? FL().day() : FL().today()), meal); } catch { /* no photo */ }
 
     const friends = (typeof root.getFriends === 'function' ? root.getFriends() : []).filter(f => f && f.username);
     const groups = (typeof root.getGroups === 'function' ? root.getGroups() : [])

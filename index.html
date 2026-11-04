@@ -4391,6 +4391,7 @@
     save: ICON_SVG_OPEN + '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
     zap: ICON_SVG_OPEN + '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
     chevronDown: ICON_SVG_OPEN + '<polyline points="6 9 12 15 18 9"/></svg>',
+    chevronLeft: ICON_SVG_OPEN + '<polyline points="15 6 9 12 15 18"/></svg>',
     lightbulb: ICON_SVG_OPEN + '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A5.5 5.5 0 1 0 6 8.5c0 1.61.71 2.9 1.5 3.99C8.27 13.26 8.74 14 8.91 14z"/></svg>',
     alertTriangle: ICON_SVG_OPEN + '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
     minus: ICON_SVG_OPEN + '<line x1="5" y1="12" x2="19" y2="12"/></svg>',
@@ -11114,6 +11115,45 @@ function logMacroAmounts({ protein = 0, carbs = 0, fats = 0, cals = 0 } = {}) {
   return saved;
 }
 window.logMacroAmounts = logMacroAmounts;
+
+// The same for an earlier day, filled in afterwards from the food log
+// (src/js/food-database.js): adds the amounts to that day's saved totals in
+// macroHistory, which the weekly review, recap and coach read. Today goes
+// to logMacroAmounts.
+function adjustMacroHistoryDay(date, { protein = 0, carbs = 0, fats = 0, cals = 0 } = {}) {
+  if (!currentUser || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return null;
+  if (date >= getTodayDateString()) return logMacroAmounts({ protein, carbs, fats, cals });
+  // Archive the last open day first, so it can't overwrite this change later.
+  rolloverMacroDay();
+  const key = `macroHistory_${currentUser}`;
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(key)) || []; } catch (_err) { history = []; }
+  const prev = history.find(h => h && h.date === date) || { date, meals: [], totals: {} };
+  const t = prev.totals || {};
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const next = {
+    protein: Math.max(0, round1((Number(t.protein) || 0) + (Number(protein) || 0))),
+    carbs: Math.max(0, round1((Number(t.carbs) || 0) + (Number(carbs) || 0))),
+    fats: Math.max(0, round1((Number(t.fats ?? t.fat) || 0) + (Number(fats) || 0))),
+  };
+  const fromMacros = next.protein * 4 + next.carbs * 4 + next.fats * 9;
+  next.cals = Math.max(-fromMacros, Math.round((Number(t.cals) || 0) + (Number(cals) || 0)));
+  next.calories = macroProgressCalories(next);
+  const { date: _d, meals, totals: _t, ...extra } = prev;
+  addMacroHistoryEntry(date, Array.isArray(meals) ? meals : [], next, extra);
+
+  // The weigh-in of that day carries the day's calories (see rolloverMacroDay).
+  const wKey = `bodyweightLog_${currentUser}`;
+  let wLog = [];
+  try { wLog = JSON.parse(localStorage.getItem(wKey)) || []; } catch (_err) { wLog = []; }
+  const wEntry = wLog.find(e => e && e.date === date);
+  if (wEntry) {
+    wEntry.calories = next.calories;
+    localStorage.setItem(wKey, JSON.stringify(wLog));
+  }
+  return next;
+}
+window.adjustMacroHistoryDay = adjustMacroHistoryDay;
 
 function renderDailyMacroProgress() {
   const progress = loadDailyMacroProgress();
