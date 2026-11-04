@@ -23,33 +23,44 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const user = () => window.currentUser || localStorage.getItem('fitnessAppUser') || '';
   const toast = m => (FL().toast ? FL().toast(m) : window.showToast && window.showToast(m));
-  const locked = () => !!window.guardMacroDayLocked?.();
+  // Today when it's marked complete; an earlier day being filled in never is.
+  const locked = () => (FL().locked ? FL().locked() : !!window.guardMacroDayLocked?.());
+  // The day the food log shows (food-database.js): today or an earlier day.
+  const day = () => (FL().day ? FL().day() : FL().today());
+  const dayName = d => (d === FL().today() ? 'today' : Core.dayLabel(d, FL().today()).replace(/^Yesterday$/, 'yesterday'));
 
   function readJSON(key, fallback) {
     try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch { return fallback; }
   }
 
 
-  // Applies a list of { before, after } entry changes to the log and the
-  // day's running totals (only today's entries count towards those).
+  // Applies a list of { before, after } entry changes to the log and to
+  // each day's totals (today's running totals, or an earlier day's saved
+  // totals when that day is being filled in).
   function applyChanges(changes) {
     const log = FL().load();
-    const today = FL().today();
-    const total = { protein: 0, carbs: 0, fats: 0, cals: 0 };
-    const add = d => Object.keys(total).forEach(k => { total[k] += d[k]; });
+    const byDay = {};
+    const add = (date, d) => {
+      const total = byDay[date] || (byDay[date] = { protein: 0, carbs: 0, fats: 0, cals: 0 });
+      Object.keys(total).forEach(k => { total[k] += d[k]; });
+    };
     changes.forEach(({ before, after }) => {
       if (before) {
         const i = log.findIndex(e => e.id === before.id);
         if (i >= 0) log.splice(i, 1);
-        if (before.date === today) add(Core.progressDelta(before, -1));
+        add(before.date, Core.progressDelta(before, -1));
       }
       if (after) {
         log.push(after);
-        if (after.date === today) add(Core.progressDelta(after, 1));
+        add(after.date, Core.progressDelta(after, 1));
       }
     });
     FL().save(log);
-    if (Object.values(total).some(Boolean) && window.logMacroAmounts) window.logMacroAmounts(total);
+    Object.entries(byDay).forEach(([date, total]) => {
+      if (!Object.values(total).some(Boolean)) return;
+      if (FL().count) FL().count(date, total);
+      else if (date === FL().today() && window.logMacroAmounts) window.logMacroAmounts(total);
+    });
     window.renderFoodLog?.();
   }
 
@@ -57,7 +68,7 @@
 
   // Two small icon buttons in the food log's header.
   window.foodLogToolbar = function () {
-    const days = Core.copySourceDays(FL().load(), FL().today());
+    const days = Core.copySourceDays(FL().load(), day());
     const icon = name => (typeof ICONS !== 'undefined' && ICONS[name]) || ''; // eslint-disable-line no-undef
     // The log was just redrawn: put a live Undo bar back under its header.
     if (_copyUndo) setTimeout(drawCopyUndo, 0);
@@ -77,10 +88,11 @@
 
   function copyYesterday(date) {
     if (locked()) return;
-    const days = Core.copySourceDays(FL().load(), FL().today());
+    const target = day();
+    const days = Core.copySourceDays(FL().load(), target);
     if (!days.length) return;
-    const day = days.find(d => d.date === date) || days[0];
-    const entries = Core.entriesFor(FL().load(), day.date);
+    const src = days.find(d => d.date === date) || days[0];
+    const entries = Core.entriesFor(FL().load(), src.date);
     const groups = Core.groupByMeal(entries);
     const r1 = v => Math.round((Number(v) || 0) * 10) / 10;
     const foodRow = e => `
@@ -91,9 +103,9 @@
       </label>`;
     Sheet().open(`
       <form class="food-form food-copy" data-copy-form>
-        <div class="food-sheet-hdr"><h3>Copy foods to today</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
+        <div class="food-sheet-hdr"><h3>Copy foods to ${esc(dayName(target))}</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
         <div class="food-copy-days" role="group" aria-label="Copy from">
-          ${days.map(d => `<button type="button" class="food-copy-day${d.date === day.date ? ' is-on' : ''}" data-copy-day="${d.date}" aria-pressed="${d.date === day.date}">${esc(Core.dayLabel(d.date, FL().today()))}<small>${d.kcal} kcal</small></button>`).join('')}
+          ${days.map(d => `<button type="button" class="food-copy-day${d.date === src.date ? ' is-on' : ''}" data-copy-day="${d.date}" aria-pressed="${d.date === src.date}">${esc(Core.dayLabel(d.date, FL().today()))}<small>${d.kcal} kcal</small></button>`).join('')}
         </div>
         ${Core.MEALS.filter(m => groups[m].length).map(m => `
           <div class="food-copy-meal">
@@ -108,7 +120,7 @@
         </label>
         <div class="food-item-macros food-copy-total" data-copy-total></div>
         <button type="submit" class="food-add-btn" data-copy-go>Copy</button>
-      </form>`, { label: 'Copy foods to today' });
+      </form>`, { label: `Copy foods to ${dayName(target)}` });
 
     const form = document.querySelector('[data-copy-form]');
     form.querySelector('[data-close]').onclick = Sheet().close;
@@ -139,22 +151,31 @@
       e.preventDefault();
       if (locked()) return;
       const ids = boxes().filter(b => b.checked).map(b => b.dataset.copyId);
-      const copies = Core.copyPicked(entries, ids, FL().today(), { meal: form.meal.value, now: Date.now() });
+      const copies = Core.copyPicked(entries, ids, target, { meal: form.meal.value, now: Date.now() });
       if (!copies.length) return;
       applyChanges(copies.map(after => ({ after })));
       Sheet().close();
-      const from = Core.dayLabel(day.date, FL().today());
-      showCopyUndo(copies.map(c => c.id), `Copied ${copies.length} food${copies.length === 1 ? '' : 's'} from ${from === 'Yesterday' ? 'yesterday' : from}`);
+      showCopyUndo(copies.map(c => c.id), `Copied ${copies.length} food${copies.length === 1 ? '' : 's'} from ${dayName(src.date)}`);
     };
   }
 
   // The Undo bar under the food log's header (gone after 30 s, or when it
   // is used). Undo removes exactly the copied foods.
   function showCopyUndo(ids, label) {
+    const set = new Set(ids);
+    showUndo(label, () => {
+      applyChanges(FL().load().filter(e => set.has(e.id)).map(before => ({ before })));
+      toast('Copy undone');
+    });
+  }
+
+  // label: what was done; undo: puts it back.
+  function showUndo(label, undo) {
     if (_copyUndo) clearTimeout(_copyUndo.timer);
-    _copyUndo = { ids, label, timer: setTimeout(() => { _copyUndo = null; drawCopyUndo(); }, 30000) };
+    _copyUndo = { label, undo, timer: setTimeout(() => { _copyUndo = null; drawCopyUndo(); }, 30000) };
     drawCopyUndo();
   }
+  window.showFoodLogUndo = showUndo;
 
   function drawCopyUndo() {
     document.querySelector('#foodDiaryList .food-copy-undo')?.remove();
@@ -165,11 +186,10 @@
 
   function undoCopy() {
     if (!_copyUndo || locked()) return;
-    const ids = new Set(_copyUndo.ids);
+    const { undo } = _copyUndo;
     clearTimeout(_copyUndo.timer);
     _copyUndo = null;
-    applyChanges(FL().load().filter(e => ids.has(e.id)).map(before => ({ before })));
-    toast('Copy undone');
+    undo();
   }
 
   /* ── Edit a logged food ──────────────────────────────────── */
@@ -233,7 +253,7 @@
   }
 
   function saveMealAsTemplate(meal) {
-    const items = Core.groupByMeal(Core.entriesFor(FL().load(), FL().today()))[meal] || [];
+    const items = Core.groupByMeal(Core.entriesFor(FL().load(), day()))[meal] || [];
     if (!items.length) return;
     Sheet().open(`
       <form class="food-form" data-tpl-form>
@@ -258,7 +278,7 @@
     if (locked()) return;
     const tpl = loadTemplates().find(t => t.id === id);
     if (!tpl) return;
-    applyChanges(Core.entriesFromTemplate(tpl, { date: FL().today(), meal, now: Date.now() }).map(after => ({ after })));
+    applyChanges(Core.entriesFromTemplate(tpl, { date: day(), meal, now: Date.now() }).map(after => ({ after })));
     toast(`✅ Logged ${tpl.name}`);
   }
 

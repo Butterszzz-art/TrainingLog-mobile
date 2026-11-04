@@ -960,3 +960,9 @@
 .cm-ok { color: var(--primary-text, #42a679); font-weight: 700; }
 .cm-swap { min-height: 32px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--border-color, rgba(127,127,127,.3)); background: transparent; color: var(--text-color); font: inherit; }
 .cm-bar.is-done { opacity: 0.85; }
+.cm-bar .cm-swap, .cm-bar .cm-confirm, .cm-bar .cm-remove { margin: 0; }
+.cm-head .cm-link { margin: 0; }
+.cm-remove { min-height: 32px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--text-muted, var(--secondary-text)); font: inherit; font-size: 12px; cursor: pointer; }
+.cm-remove:hover, .cm-remove:focus-visible { color: var(--danger, #d0605e); }
+.cm-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.cm-link--quiet { color: var(--text-muted, var(--secondary-text)); font-weight: 600; }
