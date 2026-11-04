@@ -79,6 +79,8 @@
     // (coach-meals.js), so meals the client removed don't come back on
     // another device.
     { name: 'coachMealsFilled', key: u => `coachMealsFilled_${u}`, mode: 'value' },
+    // How many meals the food log has and their names (food-database.js).
+    { name: 'mealSetup',        key: u => `mealSetup_${u}`,        mode: 'value' },
     { name: 'programs',         key: u => `programs_${u}`,         mode: 'list', idField: 'id' },
     { name: 'activeProgram',    key: u => `activeProgram_${u}`,    mode: 'value' },
     { name: 'managedTemplates', key: u => `managedTemplates_${u}`, mode: 'list', idField: 'id' },

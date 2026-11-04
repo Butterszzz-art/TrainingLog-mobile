@@ -13,8 +13,11 @@
 (function (root) {
   'use strict';
 
-  const MEAL_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
-  const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snacks'];
+  // The user's meal names (food-core.js) when loaded, else Meal 1, 2...
+  const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snacks', 'meal5', 'meal6'];
+  const MEAL_LABELS = new Proxy({}, {
+    get: (_t, k) => (root && root.FoodCore && root.FoodCore.MEAL_LABELS && root.FoodCore.MEAL_LABELS[k]) || (MEAL_ORDER.includes(k) ? `Meal ${MEAL_ORDER.indexOf(k) + 1}` : undefined),
+  });
   const MAX_FOODS = 3;
 
   function num(v) {

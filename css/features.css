@@ -3548,6 +3548,16 @@ html.pc-log-only #macroMicrosBtn { display: none !important; }
 .food-meal-card.is-empty .food-meal-name { color: var(--text-muted); font-weight: 500; }
 .food-meal-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .food-meal-name { font-size: 0.9rem; font-weight: 600; color: var(--text-color); }
+/* The meal's name is a button: tap it to rename or change the meals. */
+button.food-meal-name { margin: 0; padding: 4px 0; min-height: 0; border: 0; background: none; box-shadow: none; font-family: inherit; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.food-meal-slots { display: flex; align-items: center; justify-content: flex-start; gap: 16px; margin: 4px 2px 0; }
+.food-meal-slots .food-meal-slot-add { display: inline-flex; align-items: center; gap: 6px; margin: 0; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px dashed var(--border-color, rgba(127,127,127,.35)); background: transparent; color: var(--text-color); font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.food-meal-slot-add .ui-icon svg { width: 16px; height: 16px; }
+.food-meal-slot-max { font-size: 0.78rem; color: var(--text-muted); }
+.food-meal-slots .food-meal-slot-edit { margin: 0; }
+.food-meals-row { display: flex; align-items: flex-end; gap: 8px; }
+.food-meals-row .food-field { flex: 1; }
+.food-meals-row .food-meals-remove { margin: 0 0 4px; min-height: 40px; padding: 0 10px; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 0.8rem; cursor: pointer; }
 .food-meal-right { display: inline-flex; align-items: center; gap: 6px; }
 .food-meal-right .food-meal-kcal { font-size: 0.75rem; color: var(--text-muted); margin-right: 2px; }
 /* Meal photo (src/js/meal-photos.js): a wide thumbnail under the header. */

@@ -183,7 +183,7 @@
         <div class="food-serving-row food-meal-row">
           <label class="food-serving-label" for="foodMealSelect">Meal</label>
           <select id="foodMealSelect" class="food-serving-unit-select">
-            ${Core.MEALS.map(m => `<option value="${m}">${Core.MEAL_LABELS[m]}</option>`).join('')}
+            ${Core.MEALS.map(m => `<option value="${m}">${_esc(Core.MEAL_LABELS[m])}</option>`).join('')}
           </select>
           <button type="button" class="food-add-btn" onclick="addFoodMacrosToDaily()">＋ Add</button>
         </div>
@@ -375,10 +375,12 @@
       document.getElementById('foodSearchWidget')?.scrollIntoView({ block: 'center' });
       return;
     }
-    _sheetMeal = Core.MEALS.includes(meal) ? meal : null;
+    applyMeals();
+    _sheetMeal = Core.ALL_MEALS.includes(meal) ? meal : null;
     const title = document.getElementById('foodSearchSheetTitle');
     if (title) title.textContent = _sheetMeal ? `Log food · ${Core.MEAL_LABELS[_sheetMeal]}` : 'Log food';
     const mealSel = document.getElementById('foodMealSelect');
+    _fillMealSelect(mealSel);
     if (mealSel && _sheetMeal) mealSel.value = _sheetMeal;
     sheet.hidden = false;
     document.body.classList.add('food-search-open');
@@ -561,7 +563,9 @@
     _typedQty = null;
     document.getElementById('foodSearchInput').value = '';
     const mealSel = document.getElementById('foodMealSelect');
-    if (mealSel) mealSel.value = _sheetMeal || _lastMeal || Core.mealForHour(new Date().getHours());
+    _fillMealSelect(mealSel);
+    const want = _sheetMeal || _lastMeal;
+    if (mealSel) mealSel.value = want && [...mealSel.options].some(o => o.value === want) ? want : Core.mealForHour(new Date().getHours());
     _refreshBadges();
   }
   window.selectFoodForLogging = _selectFood;
@@ -725,6 +729,7 @@
       widget.after(host);
     }
     renderShareAsk();
+    applyMeals();
     // The coach's meal plan fills today's log once (src/js/coach-meals.js).
     const CM = window.CoachMeals;
     if (CM && CM.ensureToday && CM.ensureToday()) return; // it redrew the log
@@ -737,6 +742,7 @@
     const icons = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
     const tot = Core.totals(items);
     const groups = Core.groupByMeal(items);
+    const shownMeals = Core.mealsForDay(items);
 
     // Every meal gets a section; empty ones are a faint "+" placeholder.
     host.innerHTML = `
@@ -747,18 +753,19 @@
       </div>
       ${_dayNavHtml(day)}
       ${CM && CM.headerHtml ? CM.headerHtml() : ''}
-      ${Core.MEALS.map(m => {
+      ${shownMeals.map(m => {
         const list = groups[m];
         const label = Core.MEAL_LABELS[m];
+        const name = `<button type="button" class="food-meal-name" data-edit-meals aria-label="Rename or change meals (${_esc(label)})">${_esc(label)}</button>`;
         const add = `<button type="button" class="food-meal-add" data-add-meal="${m}" aria-label="Add food to ${label.toLowerCase()}"><span class="ui-icon">${_icon('plus')}</span></button>`;
         if (!list.length) {
-          return `<div class="food-meal-card is-empty"><span class="food-meal-name">${label}</span>${add}</div>`;
+          return `<div class="food-meal-card is-empty">${name}${add}</div>`;
         }
         const mt = Core.totals(list);
         return `
         <div class="food-meal-card">
           <div class="food-meal-top">
-            <span class="food-meal-name">${label}</span>
+            ${name}
             <span class="food-meal-right">
               <span class="food-meal-kcal">${mt.kcal} kcal</span>
               <button type="button" class="food-icon-btn" data-meal-photo="${m}" aria-label="Add a photo of ${label.toLowerCase()}" title="Meal photo"><span class="ui-icon">${_icon('camera')}</span></button>
@@ -783,10 +790,106 @@
           </button>`).join('')}
         </div>`;
       }).join('')}
+      <div class="food-meal-slots">
+        ${Core.MEALS.length < Core.MAX_MEALS ? `<button type="button" class="food-meal-slot-add" data-add-meal-slot><span class="ui-icon">${_icon('plus')}</span> Add meal</button>` : `<span class="food-meal-slot-max">${Core.MAX_MEALS} meals is the most</span>`}
+        <button type="button" class="mx-link food-meal-slot-edit" data-edit-meals>Edit meals</button>
+      </div>
     `;
     _loadMealPhotos();
   }
   window.renderFoodLog = renderFoodLog;
+
+  /* ── Meals: how many, and their names ────────────────────── */
+  // mealSetup_<user> = { count, names: { breakfast: 'Pre-workout', ... } }
+  // (synced). Keys are the stored meal keys; see food-core.js.
+
+  const MEAL_SETUP_KEY = u => `mealSetup_${u}`;
+
+  function loadMealSetup() {
+    const used = [...new Set(loadLog().map(e => e && e.meal))];
+    return Core.normalizeMealSetup(_readJSON(MEAL_SETUP_KEY(_user()), null), used);
+  }
+
+  function applyMeals() { return Core.applyMealSetup(loadMealSetup()); }
+
+  function saveMealSetup(setup) {
+    if (!_user()) return;
+    const s = Core.normalizeMealSetup(setup);
+    try { localStorage.setItem(MEAL_SETUP_KEY(_user()), JSON.stringify(s)); } catch { /* storage full */ }
+    Core.applyMealSetup(s);
+  }
+
+  function addMealSlot() {
+    const s = loadMealSetup();
+    if (s.count >= Core.MAX_MEALS) return;
+    saveMealSetup({ ...s, count: s.count + 1 });
+    renderFoodLog();
+  }
+
+  // The Log food sheet's meal list: the meals in use, with their names.
+  function _fillMealSelect(sel) {
+    if (!sel) return;
+    applyMeals();
+    // A meal no longer in use but opened from its card still has to be there.
+    const list = _sheetMeal && !Core.MEALS.includes(_sheetMeal) ? Core.ALL_MEALS.filter(k => Core.MEALS.includes(k) || k === _sheetMeal) : Core.MEALS;
+    const html = list.map(m => `<option value="${m}">${_esc(Core.MEAL_LABELS[m])}</option>`).join('');
+    if (sel.innerHTML !== html) sel.innerHTML = html;
+  }
+
+  function openMealSetup() {
+    if (!window.FoodSheet) return;
+    const draw = () => {
+      const s = loadMealSetup();
+      const keys = Core.ALL_MEALS.slice(0, s.count);
+      const hasFood = new Set(loadLog().map(e => e && e.meal));
+      window.FoodSheet.open(`
+        <form class="food-form food-meals-form" data-meals-form>
+          <div class="food-sheet-hdr"><h3>Your meals</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
+          <p class="food-sheet-sub">Name them whatever fits your day, e.g. Pre-workout or Late snack. Up to ${Core.MAX_MEALS} meals.</p>
+          ${keys.map((k, i) => `
+          <div class="food-meals-row">
+            <label class="food-field"><span>${_esc(Core.defaultMealLabel(k))}</span>
+              <input data-meal-name="${k}" maxlength="${Core.MEAL_NAME_MAX}" value="${_esc(s.names[k] || '')}" placeholder="${_esc(Core.defaultMealLabel(k))}" autocomplete="off" />
+            </label>
+            ${i === keys.length - 1 && keys.length > 1 ? `<button type="button" class="food-meals-remove" data-remove-meal-slot aria-label="Remove ${_esc(Core.MEAL_LABELS[k])}">Remove</button>` : ''}
+          </div>`).join('')}
+          ${hasFood.has(keys[keys.length - 1]) && keys.length > 1 ? `<p class="food-sheet-sub">Foods already logged in a meal you remove still show on their day.</p>` : ''}
+          ${s.count < Core.MAX_MEALS ? `<button type="button" class="food-share-no" data-meals-add>+ Add meal (${s.count} of ${Core.MAX_MEALS})</button>` : ''}
+          <button type="submit" class="food-add-btn">Done</button>
+        </form>`, { label: 'Your meals' });
+      const form = document.querySelector('[data-meals-form]');
+      if (!form) return;
+      const names = () => {
+        const out = { ...loadMealSetup().names };
+        form.querySelectorAll('[data-meal-name]').forEach(i => { out[i.dataset.mealName] = i.value; });
+        return out;
+      };
+      form.querySelector('[data-close]').onclick = () => { window.FoodSheet.close(); renderFoodLog(); };
+      form.querySelectorAll('[data-meal-name]').forEach(i => i.addEventListener('input', () => saveMealSetup({ ...loadMealSetup(), names: names() })));
+      form.querySelector('[data-meals-add]')?.addEventListener('click', () => {
+        saveMealSetup({ ...loadMealSetup(), names: names(), count: loadMealSetup().count + 1 });
+        draw();
+        const inputs = document.querySelectorAll('[data-meals-form] [data-meal-name]');
+        inputs[inputs.length - 1]?.focus();
+      });
+      form.querySelector('[data-remove-meal-slot]')?.addEventListener('click', () => {
+        const cur = loadMealSetup();
+        const gone = Core.ALL_MEALS[cur.count - 1];
+        const n = { ...names() };
+        delete n[gone];
+        saveMealSetup({ count: cur.count - 1, names: n });
+        draw();
+      });
+      form.onsubmit = (e) => { e.preventDefault(); window.FoodSheet.close(); renderFoodLog(); };
+    };
+    draw();
+  }
+  window.openMealSetup = openMealSetup;
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-add-meal-slot]')) addMealSlot();
+    else if (e.target.closest('#foodDiaryList [data-edit-meals]')) openMealSetup();
+  });
 
   // ‹ Today › under the header. The date is a native date picker, so any
   // day in the last KEEP_DAYS is two taps away.
@@ -1008,6 +1111,7 @@
   };
   window.FoodLog = {
     load: loadLog, save: saveLog, add: addEntry, remove: removeEntry, today: _today,
+    applyMeals, mealSetup: loadMealSetup, saveMealSetup,
     // The day the log shows (today or an earlier day being filled in).
     day: _day, setDay, locked: _locked, count: _count,
     customFoods: loadCustomFoods, saveCustomFood, deleteCustomFood, localFoodByBarcode,
