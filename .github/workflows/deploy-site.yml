@@ -1,0 +1,37 @@
+name: Deploy website
+
+# Publishes pocketcoachcoms.org (Firebase Hosting, site pocketcoach-280c4)
+# on every push to main — what GitHub Pages used to do. The site is built
+# by scripts/build-site.js into _site/ and served with firebase.json.
+#
+# Needs the repo secret FIREBASE_SERVICE_ACCOUNT_POCKETCOACH_280C4: the
+# JSON key of a Google Cloud service account with the "Firebase Hosting
+# Admin" role in project pocketcoach-280c4.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/build-site.js
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_POCKETCOACH_280C4 }}
+          projectId: pocketcoach-280c4
+          channelId: live
