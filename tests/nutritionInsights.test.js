@@ -136,7 +136,7 @@ describe('facts and rules review', () => {
     const r = NI.rulesReview(facts);
     const text = r.items.map(i => `${i.kind}: ${i.text}`).join('\n');
     expect(text).toMatch(/work_on: Protein averaged 160 g against your 180 g/);
-    expect(text).toMatch(/work_on: Breakfast has 10 g protein against 50 g at dinner/);
+    expect(text).toMatch(/work_on: Your first meal has 10 g protein against 50 g at meal 3/);
     expect(text).toMatch(/work_on: Training days under 200 g carbs averaged 10% less volume/);
     expect(text).toMatch(/think_about: Your real maintenance is about 2,950 kcal/);
     expect(r.items.length).toBeLessThanOrEqual(5);

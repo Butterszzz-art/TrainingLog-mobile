@@ -107,7 +107,7 @@
         <div class="food-copy-days" role="group" aria-label="Copy from">
           ${days.map(d => `<button type="button" class="food-copy-day${d.date === src.date ? ' is-on' : ''}" data-copy-day="${d.date}" aria-pressed="${d.date === src.date}">${esc(Core.dayLabel(d.date, FL().today()))}<small>${d.kcal} kcal</small></button>`).join('')}
         </div>
-        ${Core.MEALS.filter(m => groups[m].length).map(m => `
+        ${Core.ALL_MEALS.filter(m => groups[m].length).map(m => `
           <div class="food-copy-meal">
             <label class="food-copy-meal-h"><input type="checkbox" data-copy-all="${m}" checked> ${esc(Core.MEAL_LABELS[m])}</label>
             ${groups[m].map(foodRow).join('')}
@@ -115,7 +115,7 @@
         <label class="food-field"><span>Copy into</span>
           <select name="meal">
             <option value="same">The same meals</option>
-            ${Core.MEALS.map(m => `<option value="${m}">${Core.MEAL_LABELS[m]}</option>`).join('')}
+            ${Core.MEALS.map(m => `<option value="${m}">${esc(Core.MEAL_LABELS[m])}</option>`).join('')}
           </select>
         </label>
         <div class="food-item-macros food-copy-total" data-copy-total></div>
@@ -209,7 +209,7 @@
           <label class="food-field"><span>Amount</span><input name="amount" type="number" min="0" step="any" inputmode="decimal" value="${esc(amount ?? '')}" ${food ? '' : 'disabled'} /></label>
           <label class="food-field"><span>Unit</span><select name="unit" ${food ? '' : 'disabled'}>${units.map(u => `<option value="${esc(u)}"${u === unit ? ' selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
         </div>
-        <label class="food-field"><span>Meal</span><select name="meal">${Core.MEALS.map(m => `<option value="${m}"${m === entry.meal ? ' selected' : ''}>${Core.MEAL_LABELS[m]}</option>`).join('')}</select></label>
+        <label class="food-field"><span>Meal</span><select name="meal">${Core.mealsForDay([entry]).map(m => `<option value="${m}"${m === entry.meal ? ' selected' : ''}>${esc(Core.MEAL_LABELS[m])}</option>`).join('')}</select></label>
         <p class="food-sheet-sub" data-edit-preview></p>
         <div class="food-share-actions">
           <button type="submit" class="food-add-btn">Save</button>
@@ -257,9 +257,9 @@
     if (!items.length) return;
     Sheet().open(`
       <form class="food-form" data-tpl-form>
-        <div class="food-sheet-hdr"><h3>Save ${esc(Core.MEAL_LABELS[meal].toLowerCase())} as a meal</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
+        <div class="food-sheet-hdr"><h3>Save ${esc(Core.MEAL_LABELS[meal])} as a saved meal</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
         <p class="food-sheet-sub">${items.map(e => esc(e.name)).join(', ')}</p>
-        <label class="food-field"><span>Name</span><input name="name" maxlength="80" required value="My ${esc(Core.MEAL_LABELS[meal].toLowerCase())}" /></label>
+        <label class="food-field"><span>Name</span><input name="name" maxlength="80" required value="${esc(Core.MEAL_LABELS[meal])}" /></label>
         <button type="submit" class="food-add-btn">Save meal</button>
       </form>`, { label: 'Save as meal' });
     const form = document.querySelector('[data-tpl-form]');
@@ -295,7 +295,7 @@
     const recipes = own.filter(f => f.source === 'recipe');
     const foods = own.filter(f => f.source !== 'recipe');
     const defaultMeal = opts.meal || Core.mealForHour(new Date().getHours());
-    const mealSelect = `<select data-lib-meal aria-label="Log saved meals to">${Core.MEALS.map(m => `<option value="${m}"${m === defaultMeal ? ' selected' : ''}>${Core.MEAL_LABELS[m]}</option>`).join('')}</select>`;
+    const mealSelect = `<select data-lib-meal aria-label="Log saved meals to">${Core.MEALS.map(m => `<option value="${m}"${m === defaultMeal ? ' selected' : ''}>${esc(Core.MEAL_LABELS[m])}</option>`).join('')}</select>`;
     const kcalOf = f => `${f.per100.kcal} kcal / 100${esc(f.basis || 'g')}`;
     const tplKcal = t => Core.totals(Core.entriesFromTemplate(t, { date: '2000-01-01', meal: 'snacks', now: 0 })).kcal;
     const html = `

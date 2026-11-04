@@ -68,7 +68,7 @@ describe('preWorkoutOptions', () => {
     const opts = preWorkoutOptions(log, cards, '2026-11-02');
     expect(opts.map((o) => o.key)).toEqual(['card:0', 'log:breakfast', 'log:dinner']);
     expect(opts[0]).toMatchObject({ label: 'Pre-workout', foods: [], protein: 30, carbs: 60, fat: 5, kcal: 405 });
-    expect(opts[1]).toMatchObject({ label: 'Breakfast', foods: ['Oats', 'Whey'], protein: 40, carbs: 93, fat: 11, kcal: 625 });
+    expect(opts[1]).toMatchObject({ label: 'Meal 1', foods: ['Oats', 'Whey'], protein: 40, carbs: 93, fat: 11, kcal: 625 });
   });
 
   test('handles missing data', () => {

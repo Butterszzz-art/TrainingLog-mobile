@@ -134,8 +134,32 @@ describe('food log entries', () => {
     expect(Core.trimLog(log, '2026-10-28').map(e => e.date)).toEqual(['2026-07-30', '2026-10-28']);
   });
 
+  test('meal setup: numbered meals, user names, a cap, nothing logged hidden', () => {
+    expect(Core.normalizeMealSetup(null, [])).toEqual({ count: 3, names: {} });
+    expect(Core.normalizeMealSetup(null, ['breakfast', 'snacks']).count).toBe(4);
+    expect(Core.normalizeMealSetup({ count: 99 }).count).toBe(Core.MAX_MEALS);
+    expect(Core.normalizeMealSetup({ count: 0 }, []).count).toBe(3);
+    expect(Core.normalizeMealSetup({ count: 2, names: { breakfast: '  Pre-workout  ', lunch: '' } }))
+      .toEqual({ count: 2, names: { breakfast: 'Pre-workout' } });
+    try {
+      Core.applyMealSetup({ count: 2, names: { lunch: 'Post-workout' } });
+      expect(Core.MEALS).toEqual(['breakfast', 'lunch']);
+      expect(Core.MEAL_LABELS.breakfast).toBe('Meal 1');
+      expect(Core.MEAL_LABELS.lunch).toBe('Post-workout');
+      expect(Core.MEAL_LABELS.meal5).toBe('Meal 5');
+      // A day with food in a meal no longer in use still shows that meal.
+      expect(Core.mealsForDay([{ meal: 'dinner' }])).toEqual(['breakfast', 'lunch', 'dinner']);
+      expect(Core.mealForHour(19)).toBe('lunch');
+      expect(Core.mealForHour(19, 3)).toBe('dinner');
+      expect(Core.mealForHour(23, 3)).toBe('dinner');
+      expect(Core.mealForHour(7, 1)).toBe('breakfast');
+    } finally {
+      Core.applyMealSetup({ count: 4 });
+    }
+  });
+
   test('mealForHour', () => {
-    expect([7, 12, 16, 19, 23].map(Core.mealForHour)).toEqual(['breakfast', 'lunch', 'snacks', 'dinner', 'snacks']);
+    expect([7, 12, 16, 19, 23].map(h => Core.mealForHour(h))).toEqual(['breakfast', 'lunch', 'snacks', 'dinner', 'snacks']);
   });
 
   test('migrateOldDiary: same ids every time, distinct per entry', () => {
@@ -160,7 +184,7 @@ describe('CSV', () => {
   test('food log rows: header + one row per entry, missing nutrient empty', () => {
     const rows = Core.foodLogRows([{ date: '2026-10-28', meal: 'lunch', name: 'Kip', kcal: 100, protein: 20, carbs: 0, fat: 2, source: 'off' }]);
     expect(rows[0].slice(0, 3)).toEqual(['Date', 'Meal', 'Food']);
-    expect(rows[1].slice(0, 3)).toEqual(['2026-10-28', 'Lunch', 'Kip']);
+    expect(rows[1].slice(0, 3)).toEqual(['2026-10-28', 'Meal 2', 'Kip']);
     expect(rows[1][rows[0].indexOf('Iron (mg)')]).toBe('');
   });
 });

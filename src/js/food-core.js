@@ -219,17 +219,73 @@
   //   { id, date, meal, name, brand, amount, unit, grams, source, ref,
   //     kcal, protein, carbs, fat, fiber?, ..., per100, basis, servings, t }
   // per100/basis/servings are kept so the amount can be changed later.
-  const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'];
-  const MEAL_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
+  //
+  // Meals are numbered ("Meal 1", "Meal 2"...) and the user can name them
+  // and choose how many (1 to MAX_MEALS). The stored keys stay the old ones
+  // (breakfast = Meal 1 ... snacks = Meal 4, then meal5, meal6), so logs,
+  // saved meals and coach meal plans from before keep working.
+  const ALL_MEALS = ['breakfast', 'lunch', 'dinner', 'snacks', 'meal5', 'meal6'];
+  const MAX_MEALS = ALL_MEALS.length;
+  const DEFAULT_MEAL_COUNT = 3;
+  const MEAL_NAME_MAX = 30;
+  // The meals in use and their names. Live: applyMealSetup() refills them
+  // (the app does on every food log render), so readers see the user's.
+  const MEALS = ALL_MEALS.slice(0, 4);
+  const MEAL_LABELS = {};
   const KEEP_DAYS = 90;
 
-  // A sensible default meal for the time of day (local clock).
-  function mealForHour(hour) {
+  function mealNumber(key) { return ALL_MEALS.indexOf(key) + 1; }
+  function defaultMealLabel(key) { const n = mealNumber(key); return n > 0 ? `Meal ${n}` : String(key || ''); }
+
+  /**
+   * The stored setup ({ count, names }) cleaned up. With none stored yet,
+   * the count is DEFAULT_MEAL_COUNT, or more when `usedKeys` (meals the
+   * user already logged to) go further, so nothing logged disappears.
+   */
+  function normalizeMealSetup(raw, usedKeys) {
+    const r = raw && typeof raw === 'object' ? raw : {};
+    const used = (usedKeys || []).map(mealNumber).filter(n => n > 0);
+    const fallback = Math.max(DEFAULT_MEAL_COUNT, ...used);
+    const c = Math.round(Number(r.count));
+    const count = Math.min(MAX_MEALS, Math.max(1, Number.isFinite(c) && c > 0 ? c : fallback));
+    const names = {};
+    ALL_MEALS.forEach(k => {
+      const v = r.names && typeof r.names[k] === 'string' ? r.names[k].replace(/\s+/g, ' ').trim().slice(0, MEAL_NAME_MAX) : '';
+      if (v) names[k] = v;
+    });
+    return { count, names };
+  }
+
+  /** Puts a setup into MEALS / MEAL_LABELS. */
+  function applyMealSetup(setup) {
+    const s = normalizeMealSetup(setup, ['breakfast', 'lunch', 'dinner', 'snacks']);
+    MEALS.length = 0;
+    MEALS.push(...ALL_MEALS.slice(0, s.count));
+    ALL_MEALS.forEach(k => { MEAL_LABELS[k] = s.names[k] || defaultMealLabel(k); });
+    return s;
+  }
+  applyMealSetup({ count: 4 });
+
+  /** The meals to show for a day: those in use, plus any with foods in it. */
+  function mealsForDay(entries) {
+    const has = new Set((entries || []).map(e => e && e.meal));
+    return ALL_MEALS.filter(k => MEALS.includes(k) || has.has(k));
+  }
+
+  // A sensible default meal for the time of day (local clock), among the
+  // first `count` meals. With four or more it's the old breakfast / lunch /
+  // dinner / snacks split.
+  function mealForHour(hour, count = MEALS.length) {
     const h = Number(hour);
-    if (h >= 4 && h < 11) return 'breakfast';
-    if (h >= 11 && h < 15) return 'lunch';
-    if (h >= 17 && h < 22) return 'dinner';
-    return 'snacks';
+    let k = 'snacks';
+    if (h >= 4 && h < 11) k = 'breakfast';
+    else if (h >= 11 && h < 15) k = 'lunch';
+    else if (h >= 17 && h < 22) k = 'dinner';
+    const n = Math.max(1, Math.min(MAX_MEALS, Number(count) || 4));
+    if (n >= 4) return k;
+    if (n === 3) return k === 'snacks' ? (h >= 15 && h < 17 ? 'lunch' : 'dinner') : k;
+    if (n === 2) return k === 'breakfast' ? 'breakfast' : 'lunch';
+    return 'breakfast';
   }
 
   // Date first so ids sort by day; the random part keeps two devices from
@@ -406,14 +462,14 @@
     const ids = new Set(pickedIds || []);
     const picked = (entries || []).filter(e => e && ids.has(e.id));
     return copyEntries(picked, toDate, { now, rand })
-      .map(e => (MEALS.includes(meal) ? { ...e, meal } : e));
+      .map(e => (ALL_MEALS.includes(meal) ? { ...e, meal } : e));
   }
 
   function groupByMeal(entries) {
     const out = {};
-    MEALS.forEach(m => { out[m] = []; });
-    (entries || []).forEach(e => out[MEALS.includes(e.meal) ? e.meal : 'snacks'].push(e));
-    MEALS.forEach(m => out[m].sort((a, b) => (a.t || 0) - (b.t || 0)));
+    ALL_MEALS.forEach(m => { out[m] = []; });
+    (entries || []).forEach(e => out[ALL_MEALS.includes(e.meal) ? e.meal : 'snacks'].push(e));
+    ALL_MEALS.forEach(m => out[m].sort((a, b) => (a.t || 0) - (b.t || 0)));
     return out;
   }
 
@@ -740,6 +796,7 @@
     normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
     amountLabel, editEntry, copyEntries, copySourceDays, dayLabel, copyPicked, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
+    ALL_MEALS, MAX_MEALS, DEFAULT_MEAL_COUNT, MEAL_NAME_MAX, defaultMealLabel, normalizeMealSetup, applyMealSetup, mealsForDay,
     scaleNutrients, gramsFor, sourceLabel, normalizeFood, kcalCheck, MICROS, microSummary,
     matchesQuery, addRecent, parseFoodQuery, rankRecent, mergeResults, combineSourceResults, isWeakSearch,
     mealForHour, newEntryId, makeEntry, progressDelta, foodFromEntry, totals, entriesFor, groupByMeal, trimLog, migrateOldDiary,

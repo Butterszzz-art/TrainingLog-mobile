@@ -112,7 +112,8 @@
     const days = new Set(list.map(e => e.date));
     if (days.size < 3) return null;
     const out = {};
-    ['breakfast', 'lunch', 'dinner', 'snacks'].forEach(m => {
+    // Meals 5 and 6 only when used (see food-core.js).
+    ['breakfast', 'lunch', 'dinner', 'snacks', 'meal5', 'meal6'].filter((m, i) => i < 4 || list.some(e => e.meal === m)).forEach(m => {
       out[m] = r0(list.filter(e => e.meal === m).reduce((s, e) => s + (num(e.protein) || 0), 0) / days.size);
     });
     return { perMeal: out, days: days.size };
@@ -223,7 +224,8 @@
     const meals = f.proteinByMeal && f.proteinByMeal.perMeal;
     if (meals) {
       const [bigMeal, bigG] = [['lunch', meals.lunch], ['dinner', meals.dinner]].sort((a, b) => b[1] - a[1])[0];
-      if (meals.breakfast < 25 && bigG >= meals.breakfast + 20) add('work_on', `Breakfast has ${meals.breakfast} g protein against ${bigG} g at ${bigMeal}; spreading it out helps muscle growth.`);
+      const label = k => (f.mealLabels && f.mealLabels[k]) || `meal ${['breakfast', 'lunch', 'dinner', 'snacks'].indexOf(k) + 1}`;
+      if (meals.breakfast < 25 && bigG >= meals.breakfast + 20) add('work_on', `Your first meal has ${meals.breakfast} g protein against ${bigG} g at ${label(bigMeal)}; spreading it out helps muscle growth.`);
     }
     const c = f.carbsVsVolume;
     if (c && c.diffPct !== null && c.diffPct <= -5) add('work_on', `Training days under ${c.threshold} g carbs averaged ${Math.abs(c.diffPct)}% less volume.`);

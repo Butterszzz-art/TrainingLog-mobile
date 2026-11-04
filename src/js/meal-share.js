@@ -183,7 +183,7 @@
     const entries = entriesFromSharedMeal(data, { date: FL().today(), meal, now: Date.now() });
     if (!entries.length) return false;
     entries.forEach(e => FL().add(e));
-    toast(`✅ Logged ${name || 'the meal'} to ${Core.MEAL_LABELS[meal].toLowerCase()}`, 'success');
+    toast(`✅ Logged ${name || 'the meal'} to ${Core.MEAL_LABELS[meal] || 'your log'}`, 'success');
     return true;
   }
 
