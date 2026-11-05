@@ -403,7 +403,8 @@
       const day = (draft.days || []).find(d => d.dayId === dayId);
       const ex = (day?.exercises || []).find(e => e.exerciseId === exerciseId);
       if (!ex || !ex.sets?.[idx]) return;
-      ex.sets[idx][field] = raw === '' ? null : parseFloat(raw);
+      const n = parseFloat(String(raw).replace(',', '.'));
+      ex.sets[idx][field] = raw === '' || !Number.isFinite(n) ? null : n;
       persistDraft();
     }
 
@@ -890,7 +891,7 @@
         tr.innerHTML = `
           <td class="pbv2-set-n">${idx + 1}</td>
           <td><input type="number" min="1" max="100" step="1" value="${s.reps ?? ''}" placeholder="—"></td>
-          <td><input type="number" min="0" step="0.5" value="${s.weight ?? ''}" placeholder="—"></td>
+          <td><input type="text" inputmode="decimal" autocomplete="off" value="${s.weight ?? ''}" placeholder="—"></td>
           <td><input type="number" min="1" max="10" step="0.5" value="${s.rpe ?? ''}" placeholder="—"></td>
           <td><button type="button" class="pbv2-del-set-btn" title="Remove set" aria-label="Remove set">${ico('x')}</button></td>
         `;

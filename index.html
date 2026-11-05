@@ -342,6 +342,18 @@
   </div>
 </div>
 <script>
+  // Decimal keypads show "," in comma locales. Turn it into "." as it's
+  // typed in text weight fields so 82,5 is read as 82.5 everywhere.
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'text' || el.inputMode !== 'decimal') return;
+    if (el.value.indexOf(',') === -1) return;
+    var pos = el.selectionStart;
+    el.value = el.value.replace(/,/g, '.');
+    try { el.setSelectionRange(pos, pos); } catch (_) {}
+  }, true);
+</script>
+<script>
   // The native splash stays up (launchAutoHide: false in capacitor.config.json)
   // until the opening screen above has actually painted, then fades straight
   // into it, so there's no blank frame between the two.
@@ -6120,7 +6132,7 @@ function editSetValue(workoutIndex, entryIndex, type, value, setIndex) {
     entry.repsArray[setIndex] = +value;
     if (Array.isArray(entry.sideRepsArray)) entry.sideRepsArray[setIndex] = null;
   } else if (type === 'weight') {
-    entry.weightsArray[setIndex] = +value;
+    entry.weightsArray[setIndex] = parseFloat(String(value).replace(',', '.')) || 0;
   } else if (type === 'dropset') {
     if (!Array.isArray(entry.dropsetArray)) entry.dropsetArray = [];
     entry.dropsetArray[setIndex] = !!value;
@@ -6139,7 +6151,7 @@ function editGoalValue(workoutIndex, entryIndex, type, value) {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const entry = workouts[workoutIndex].log[entryIndex];
 
-  const parsed = value === '' ? null : +value;
+  const parsed = value === '' ? null : parseFloat(String(value).replace(',', '.'));
 
   if (type === 'goal') {
     entry.goal = parsed;
@@ -6194,7 +6206,7 @@ function getSetInputHTML(i) {
       <div class="set-input-main">
         <span class="set-input-label" aria-label="Set ${i + 1}">${i + 1}</span>
         <label class="set-input-field">
-          <input type="number" inputmode="decimal" step="0.5" id="weight_${i}" placeholder="—" class="set-input-weight" aria-label="Set ${i + 1} weight" onfocus="this.select()" oninput="updateAddButtonState()" />
+          <input type="text" inputmode="decimal" autocomplete="off" id="weight_${i}" placeholder="—" class="set-input-weight" aria-label="Set ${i + 1} weight" onfocus="this.select()" oninput="updateAddButtonState()" />
           <span class="set-input-unit set-input-wunit">${unit}</span>
         </label>
         <span class="set-input-x" aria-hidden="true">×</span>
@@ -7504,7 +7516,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   goalRow.hidden = true;
 
   const goalInput = document.createElement('input');
-  goalInput.type = 'number';
+  goalInput.type = 'text';
   goalInput.inputMode = 'decimal';
   goalInput.placeholder = `Target ${entry.unit || 'kg'}`;
   goalInput.setAttribute('aria-label', 'Weight goal');
@@ -7552,7 +7564,7 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   weightLabel.className = 'set-field-label';
   weightLabel.textContent = 'Weight';
   const weightInput = document.createElement('input');
-  weightInput.type = 'number';
+  weightInput.type = 'text';
   weightInput.inputMode = 'decimal';
   weightInput.setAttribute('aria-label', `Set ${setIndex + 1} weight`);
   weightInput.value = entry.weightsArray?.[setIndex] ?? '';

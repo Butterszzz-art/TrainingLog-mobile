@@ -546,7 +546,7 @@
   text-align: center;
 }
 
-.pbv2-sets-table input[type="number"] {
+.pbv2-sets-table input {
   width: 52px;
   background: var(--bg-color);
   border: 1px solid var(--border-color);
@@ -558,7 +558,7 @@
   font-family: 'Poppins', sans-serif;
 }
 
-.pbv2-sets-table input[type="number"]:focus {
+.pbv2-sets-table input:focus {
   outline: none;
   border-color: var(--primary);
 }
@@ -1162,7 +1162,7 @@
     white-space: nowrap;
   }
 
-  .pbv2-sets-table input[type="number"] { width: 44px; padding: 4px 2px; }
+  .pbv2-sets-table input { width: 44px; padding: 4px 2px; }
 
   .pbv2-step-label { display: none; } /* too cramped on small screens */
 }
