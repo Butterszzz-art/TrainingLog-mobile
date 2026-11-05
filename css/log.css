@@ -2400,14 +2400,23 @@
 /* Reps-left-in-reserve chips under the set flags (Quick Log). */
 .ql-rir-row {
   align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 .ql-rir-label {
+  flex: 0 0 auto;
   font-size: 0.78rem;
+  line-height: 1.1;
   color: var(--text-muted);
   margin-right: 2px;
 }
+/* Five pills share the leftover width so the row never runs off screen. */
 .ql-rir-pill {
-  min-width: 40px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 56px;
   justify-content: center;
-  padding: 6px 10px;
+  padding: 6px 4px;
 }
