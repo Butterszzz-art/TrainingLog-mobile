@@ -20417,14 +20417,19 @@ window.renderSessionHistory = renderSessionHistory;
   }
 
   // Quality stars interaction
-  document.getElementById('sleepQualityStars')?.addEventListener('click', (e) => {
-    const star = e.target.closest('.sleep-star');
-    if (!star) return;
+  let qualityTouched = false; // true once the user picks a rating for this date
+  function setQualityStars(val) {
     document.querySelectorAll('#sleepQualityStars .sleep-star').forEach(s => {
-      const on = s === star;
+      const on = Number(s.dataset.val) === Number(val);
       s.classList.toggle('active', on);
       s.setAttribute('aria-checked', on ? 'true' : 'false');
     });
+  }
+  document.getElementById('sleepQualityStars')?.addEventListener('click', (e) => {
+    const star = e.target.closest('.sleep-star');
+    if (!star) return;
+    qualityTouched = true;
+    setQualityStars(star.dataset.val);
   });
 
   // Live "time asleep" readout under the bedtime / wake inputs
@@ -20482,8 +20487,14 @@ window.renderSessionHistory = renderSessionHistory;
       editableRow.style.display = '';
       syncedRow.style.display = 'none';
     }
+    // Show the night's saved rating (synced nights get one automatically)
+    // until the user picks their own.
+    if (!qualityTouched && entry?.quality) setQualityStars(entry.quality);
   }
-  document.getElementById('sleepDate')?.addEventListener('change', updateSyncedTimesDisplay);
+  document.getElementById('sleepDate')?.addEventListener('change', () => {
+    qualityTouched = false;
+    updateSyncedTimesDisplay();
+  });
 
   // Save entry
   window.saveSleepEntry = function () {
@@ -20493,7 +20504,7 @@ window.renderSessionHistory = renderSessionHistory;
       return;
     }
 
-    const quality = Number(document.querySelector('#sleepQualityStars .sleep-star.active')?.dataset.val) || 3;
+    const picked = Number(document.querySelector('#sleepQualityStars .sleep-star.active')?.dataset.val) || 3;
     const tags = [...document.querySelectorAll('#sleepTags .sleep-tag.active')].map(t => t.dataset.tag);
     const notes = document.getElementById('sleepNotes')?.value?.trim() || '';
 
@@ -20506,7 +20517,11 @@ window.renderSessionHistory = renderSessionHistory;
       // Objective fields are wearable-authoritative — only the subjective
       // ones change here (see updateSyncedTimesDisplay: the time inputs are
       // hidden/read-only in this state, so there's nothing to read from them).
-      entry = { ...existing, quality, tags, notes, ts: Date.now() };
+      // The rating becomes the user's own only if they picked one; otherwise
+      // the automatic one from the sleep score stays (and keeps updating).
+      const quality = qualityTouched || !existing.quality ? picked : existing.quality;
+      const qualitySource = qualityTouched ? 'user' : (existing.qualitySource || 'user');
+      entry = { ...existing, quality, qualitySource, tags, notes, ts: Date.now() };
     } else {
       const bedtime = document.getElementById('sleepBedtime')?.value;
       const wakeTime = document.getElementById('sleepWakeTime')?.value;
@@ -20515,7 +20530,7 @@ window.renderSessionHistory = renderSessionHistory;
         return;
       }
       const duration = calcDurationHours(bedtime, wakeTime);
-      entry = { date, bedtime, wakeTime, duration: Math.round(duration * 100) / 100, quality, tags, notes, ts: Date.now() };
+      entry = { date, bedtime, wakeTime, duration: Math.round(duration * 100) / 100, quality: picked, qualitySource: 'user', tags, notes, ts: Date.now() };
     }
 
     if (idx >= 0) log[idx] = entry;
@@ -20524,6 +20539,7 @@ window.renderSessionHistory = renderSessionHistory;
     setSleepLog(log);
 
     // Reset form
+    qualityTouched = false;
     document.getElementById('sleepNotes').value = '';
     document.querySelectorAll('#sleepTags .sleep-tag.active').forEach(t => t.classList.remove('active'));
 

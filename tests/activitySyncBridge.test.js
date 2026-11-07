@@ -9,6 +9,10 @@ const {
   mergeScaleWeighIns,
   analyzeVitals,
   analyzeComposition,
+  qualityFromSleepScore,
+  mergeSyncedSleep,
+  sleepDatesToBackfill,
+  rateUnratedSyncedNights,
 } = require('../src/js/activity-sync-bridge.js');
 
 const range = { start: '2026-10-23', end: '2026-10-29' };
@@ -228,5 +232,71 @@ describe('activity sync bridge — body analysis', () => {
     expect(c.change.leanKg).toBeCloseTo(68.88 - 68.88);
     const own = analyzeComposition(log, '2026-10-30', { value: 20 });
     expect(own).toMatchObject({ bodyFatPercent: 20, bodyFatFrom: 'profile', change: null });
+  });
+});
+
+describe('activity sync bridge — sleep auto-logging', () => {
+  const night = {
+    date: '2026-11-06',
+    bedtime: new Date(2026, 10, 5, 23, 10).toISOString(),
+    wakeTime: new Date(2026, 10, 6, 7, 0).toISOString(),
+    sleepMinutes: 450,
+    score: 84,
+  };
+
+  test('maps the sleep score to a 1-5 rating', () => {
+    expect(qualityFromSleepScore(95)).toBe(5);
+    expect(qualityFromSleepScore(84)).toBe(4);
+    expect(qualityFromSleepScore(65)).toBe(3);
+    expect(qualityFromSleepScore(45)).toBe(2);
+    expect(qualityFromSleepScore(10)).toBe(1);
+    expect(qualityFromSleepScore(undefined)).toBe(3);
+  });
+
+  test('a synced night is logged with a rating, no Save needed', () => {
+    const log = mergeSyncedSleep([], night, 1);
+    expect(log).toEqual([{
+      date: '2026-11-06', bedtime: '23:10', wakeTime: '07:00', duration: 7.5,
+      quality: 4, qualitySource: 'auto', tags: [], notes: '', synced: true, ts: 1,
+    }]);
+  });
+
+  test("keeps the user's own rating, tags and notes", () => {
+    const existing = [{ date: '2026-11-06', bedtime: '23:00', wakeTime: '06:30', duration: 7.5,
+      quality: 2, qualitySource: 'user', tags: ['caffeine'], notes: 'late coffee' }];
+    const [entry] = mergeSyncedSleep(existing, night, 1);
+    expect(entry).toMatchObject({ quality: 2, qualitySource: 'user', tags: ['caffeine'], notes: 'late coffee',
+      bedtime: '23:10', synced: true });
+  });
+
+  test('older blank synced entries get a rating; older rated ones keep theirs', () => {
+    expect(mergeSyncedSleep([{ date: '2026-11-06', quality: 0, synced: true }], night)[0].quality).toBe(4);
+    expect(mergeSyncedSleep([{ date: '2026-11-06', quality: 5 }], night)[0]).toMatchObject({ quality: 5, qualitySource: 'user' });
+  });
+
+  test('an automatic rating follows the latest score', () => {
+    const first = mergeSyncedSleep([], night);
+    expect(mergeSyncedSleep(first, { ...night, score: 30 })[0].quality).toBe(1);
+  });
+
+  test('backfills past nights that are missing, skipping recent misses', () => {
+    const now = Date.now();
+    const log = [{ date: '2026-11-06', synced: true }, { date: '2026-11-05', synced: false }];
+    const misses = { '2026-11-04': now - 60 * 1000, '2026-11-03': now - 7 * 60 * 60 * 1000 };
+    expect(sleepDatesToBackfill(log, misses, '2026-11-07', 5, now))
+      .toEqual(['2026-11-05', '2026-11-03', '2026-11-02']);
+  });
+
+  test('rates nights synced before auto-rating from the cached score', () => {
+    const { log, changed } = rateUnratedSyncedNights(
+      [{ date: 'a', synced: true, quality: 0 }, { date: 'b', synced: true, quality: 0 }, { date: 'c', synced: true, quality: 2 }, { date: 'd', quality: 0 }],
+      { a: { score: 92 } });
+    expect(changed).toBe(true);
+    expect(log.map(e => e.quality)).toEqual([5, 3, 2, 0]);
+    expect(rateUnratedSyncedNights(log.slice(2, 3), {}).changed).toBe(false);
+  });
+
+  test('backfill dates cross month boundaries', () => {
+    expect(sleepDatesToBackfill([], {}, '2026-11-02', 3)).toEqual(['2026-11-01', '2026-10-31', '2026-10-30']);
   });
 });
