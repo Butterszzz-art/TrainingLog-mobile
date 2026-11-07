@@ -9369,24 +9369,53 @@ function getLastExerciseEntry(exerciseName) {
   return null;
 }
 
+/** Every working set of the exercise from the last day it was trained.
+ * Quick Log saves each set as its own entry, so the whole day is merged
+ * (reading only the first entry used to prefill the first, lightest set).
+ * Warm-up sets are skipped, same as progression and the warm-up card. */
 function getLastWorkoutForExercise(exerciseName) {
-  const lastMatch = getLastExerciseEntry(exerciseName);
-  if (!lastMatch) return [];
+  const normalizedName = String(exerciseName || '').trim().toLowerCase();
+  if (!normalizedName) return [];
 
-  const repsArray = Array.isArray(lastMatch.repsArray) ? lastMatch.repsArray : [];
-  const weightsArray = Array.isArray(lastMatch.weightsArray) ? lastMatch.weightsArray : [];
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const gymKey = typeof window.getCurrentGymKey === 'function' ? window.getCurrentGymKey() : '';
+  if (gymKey === null) return [];
 
-  return repsArray.map((reps, index) => ({
-    reps: Number(reps) || 0,
-    weight: Number(weightsArray[index]) || 0
-  }));
+  for (let i = workouts.length - 1; i >= 0; i--) {
+    const log = Array.isArray(workouts[i]?.log) ? workouts[i].log : [];
+    const entries = log.filter(entry => String(entry?.exercise || '').trim().toLowerCase() === normalizedName
+      && (typeof isComparableEntry !== 'function' || isComparableEntry(entry, workouts[i], gymKey)));
+    const sets = [];
+    entries.forEach(entry => {
+      const repsArray = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+      const weightsArray = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+      const types = Array.isArray(entry.setTypeArray) ? entry.setTypeArray : [];
+      repsArray.forEach((reps, index) => {
+        const type = types[index] || 'standard';
+        if (type === 'warmup' || type === 'warm-up') return;
+        sets.push({ reps: Number(reps) || 0, weight: Number(weightsArray[index]) || 0, type });
+      });
+    });
+    if (sets.length) return sets;
+  }
+
+  return [];
+}
+
+/** The set the warm-up card ramps to: a tagged Top Set, else the heaviest
+ * non-back-off set (same rule as progressiveOverload.js topSetOf). */
+function pickLastTopSet(sets) {
+  const tagged = sets.filter(s => s.type === 'top-set');
+  const work = sets.filter(s => s.type !== 'backoff');
+  const pool = tagged.length ? tagged : (work.length ? work : sets);
+  return pool.reduce((best, s) => (!best || s.weight > best.weight || (s.weight === best.weight && s.reps > best.reps) ? s : best), null);
 }
 
 /** Last logged sets for an exercise, unchanged (no progression added). */
 function getLastTimeSetsForExercise(exerciseName) {
   const sets = getLastWorkoutForExercise(exerciseName);
   const lastEntry = getLastExerciseEntry(exerciseName);
-  return { sets, unit: lastEntry?.unit || 'kg' };
+  return { sets, topSet: sets.length ? pickLastTopSet(sets) : null, unit: lastEntry?.unit || 'kg' };
 }
 
 function applySuggestedSetValuesForExercise(force = false) {
@@ -9406,7 +9435,9 @@ function applySuggestedSetValuesForExercise(force = false) {
   for (let i = 0; i < currentSetCount; i++) {
     const repsInput = document.getElementById(`reps_${i}`);
     const weightInput = document.getElementById(`weight_${i}`);
-    const setSuggestion = suggestion.sets[i];
+    // One row (Quick Log): start at last time's top set, the weight the
+    // warm-up card ramps to. Several rows: copy last time set by set.
+    const setSuggestion = currentSetCount === 1 && suggestion.topSet ? suggestion.topSet : suggestion.sets[i];
 
     if (!repsInput || !weightInput || !setSuggestion) continue;
 
