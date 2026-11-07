@@ -42,6 +42,10 @@
   const BODY_SYNC_DAYS = 30;
   const BASELINE_MIN_DAYS = 5;
   const CARDIO_SYNC_DAYS = 7; // how far back tracker workouts are merged
+  const SLEEP_BACKFILL_DAYS = 7; // past nights logged automatically if missing
+  const SLEEP_MISS_RETRY_MS = 6 * 60 * 60 * 1000; // re-ask about an empty night after 6h
+  let lastSleepBackfillAt = 0;
+  let sleepBackfillInFlight = null;
 
   // The user's own calendar date (YYYY-MM-DD). Synced data is requested and
   // stored by local date so the day rolls over at the user's midnight, not UTC's.
@@ -164,48 +168,89 @@
     el.style.display = '';
   }
 
-  // Merges synced bedtime/wakeTime/duration into the existing sleepLog entry
-  // for that date, preserving any manually-entered quality/tags/notes.
-  // Creates a blank (quality:0/tags:[]/notes:'') entry if none exists yet.
-  // Marks the entry `synced: true` so initSleepTab() knows to show those
-  // fields as read-only instead of editable (see index.html's saveSleepEntry).
+  // Synced nights are logged automatically: the entry lands in the sleep log
+  // with the tracker's bedtime/wake/duration and a 1-5 rating taken from the
+  // sleep score, so nothing waits on the user pressing Save. A rating the
+  // user picked themselves (set by index.html's saveSleepEntry) is kept;
+  // tags and notes are always kept.
+  function qualityFromSleepScore(score) {
+    const n = Number(score);
+    if (score == null || !Number.isFinite(n)) return 3;
+    if (n >= 90) return 5;
+    if (n >= 80) return 4;
+    if (n >= 60) return 3;
+    if (n >= 40) return 2;
+    return 1;
+  }
+
+  function mergeSyncedSleep(log, sleep, now = Date.now()) {
+    const out = Array.isArray(log) ? log.slice() : [];
+    if (!sleep || !sleep.date) return out;
+    const bedtime = new Date(sleep.bedtime).toTimeString().slice(0, 5);
+    const wakeTime = new Date(sleep.wakeTime).toTimeString().slice(0, 5);
+    const duration = Math.round((Number(sleep.sleepMinutes) / 60) * 100) / 100;
+
+    const idx = out.findIndex((e) => e.date === sleep.date);
+    const existing = idx >= 0 ? out[idx] : null;
+    // Older entries have no qualitySource; any rating on them was the user's.
+    const keepUserQuality = Boolean(existing && existing.qualitySource !== 'auto' && Number(existing.quality) > 0);
+    const entry = {
+      tags: [],
+      notes: '',
+      ...(existing || {}),
+      date: sleep.date,
+      bedtime,
+      wakeTime,
+      duration,
+      quality: keepUserQuality ? existing.quality : qualityFromSleepScore(sleep.score),
+      qualitySource: keepUserQuality ? 'user' : 'auto',
+      synced: true,
+      ts: now
+    };
+    if (idx >= 0) out[idx] = entry;
+    else out.push(entry);
+    out.sort((a, b) => b.date.localeCompare(a.date));
+    return out;
+  }
+
   function mergeSleepLogEntry(sleep) {
     try {
       const user = getActiveUsername();
       const key = `sleepLog_${user}`;
       const log = JSON.parse(globalScope.localStorage.getItem(key) || '[]');
-      const bedtimeLocal = new Date(sleep.bedtime).toTimeString().slice(0, 5);
-      const wakeTimeLocal = new Date(sleep.wakeTime).toTimeString().slice(0, 5);
-      const durationHours = Math.round((sleep.sleepMinutes / 60) * 100) / 100;
-
-      const idx = log.findIndex((e) => e.date === sleep.date);
-      if (idx >= 0) {
-        log[idx] = {
-          ...log[idx],
-          bedtime: bedtimeLocal,
-          wakeTime: wakeTimeLocal,
-          duration: durationHours,
-          synced: true,
-          ts: Date.now()
-        };
-      } else {
-        log.push({
-          date: sleep.date,
-          bedtime: bedtimeLocal,
-          wakeTime: wakeTimeLocal,
-          duration: durationHours,
-          quality: 0,
-          tags: [],
-          notes: '',
-          synced: true,
-          ts: Date.now()
-        });
-        log.sort((a, b) => b.date.localeCompare(a.date));
-      }
-      globalScope.localStorage.setItem(key, JSON.stringify(log));
+      globalScope.localStorage.setItem(key, JSON.stringify(mergeSyncedSleep(log, sleep)));
     } catch (_error) {
       // Non-fatal — the Sleep tab just won't show synced data this cycle.
     }
+  }
+
+  // Nights synced before auto-rating existed were saved with 0 stars. Rate
+  // them from the cached sleep score (details: activitySyncSleep_ store).
+  function rateUnratedSyncedNights(log, details) {
+    let changed = false;
+    const out = (log || []).map((e) => {
+      if (!e || !e.synced || Number(e.quality) > 0) return e;
+      changed = true;
+      return { ...e, quality: qualityFromSleepScore(details?.[e.date]?.score), qualitySource: 'auto' };
+    });
+    return { log: out, changed };
+  }
+
+  // Past nights still missing from the log, newest first. Nights already
+  // synced are skipped, and so are nights the tracker had nothing for in
+  // the last few hours (misses: { date: timestamp }).
+  function sleepDatesToBackfill(log, misses, today, days, now = Date.now()) {
+    const synced = new Set((log || []).filter((e) => e && e.synced).map((e) => e.date));
+    const dates = [];
+    const [y, m, d] = String(today).split('-').map(Number);
+    for (let i = 1; i <= days; i++) {
+      const date = localDateKey(new Date(y, m - 1, d - i));
+      if (synced.has(date)) continue;
+      const missedAt = Number(misses && misses[date]);
+      if (missedAt && now - missedAt < SLEEP_MISS_RETRY_MS) continue;
+      dates.push(date);
+    }
+    return dates;
   }
 
   function cacheSleepDetail(sleep) {
@@ -226,57 +271,126 @@
       if (sleepTab?.classList.contains('active')) {
         globalScope.renderSleepTab?.();
       }
+      // Body hub card etc. can refresh on this.
+      globalScope.document?.dispatchEvent(new CustomEvent('traininglog:sleep-synced'));
     } catch (_error) { /* ignore */ }
+  }
+
+  function canFetch() {
+    return typeof globalScope.getAuthHeaders === 'function'
+      && typeof globalScope.ensureServerUrl === 'function'
+      && typeof globalScope.fetchWithTimeout === 'function'
+      && Boolean(globalScope.getAuthHeaders().Authorization);
+  }
+
+  // One night's sleep → { sleep } on success, { missing: true } when the
+  // tracker has nothing for that night, { stop: true } for anything else
+  // (not connected, sync disabled, network error).
+  async function fetchSleepForDate(date) {
+    try {
+      const res = await syncFetch(
+        `${globalScope.ensureServerUrl()}/api/activity-sync/sleep?goalMinutes=${getSleepGoalMinutes()}&date=${date}`,
+        { headers: globalScope.getAuthHeaders() },
+        8000
+      );
+      const data = await res.json();
+      if (res.ok && data.success && data.sleep) {
+        mergeSleepLogEntry(data.sleep);
+        cacheSleepDetail(data.sleep);
+        return { sleep: data.sleep };
+      }
+      const code = data?.error?.code;
+      if (code === 'activity_sync.no_sleep_data') return { missing: true };
+      const expected = ['activity_sync.disabled', 'activity_sync.not_connected'];
+      if (code && !expected.includes(code)) {
+        console.warn('[ActivitySyncBridge] sleep fetch failed', code);
+      }
+      return { stop: true };
+    } catch (error) {
+      console.warn('[ActivitySyncBridge] sleep fetch failed', error);
+      return { stop: true };
+    }
   }
 
   async function fetchAndApplyTodaySleep(options = {}) {
     const force = Boolean(options.force);
     if (!force && Date.now() - lastSleepFetchedAt < THROTTLE_MS) return null;
     if (sleepInFlight) return sleepInFlight;
-
-    if (typeof globalScope.getAuthHeaders !== 'function'
-      || typeof globalScope.ensureServerUrl !== 'function'
-      || typeof globalScope.fetchWithTimeout !== 'function') {
-      return null;
-    }
-
-    const authHeaders = globalScope.getAuthHeaders();
-    if (!authHeaders.Authorization) return null;
+    if (!canFetch()) return null;
 
     sleepInFlight = (async () => {
       try {
-        const goalMinutes = getSleepGoalMinutes();
-        const res = await syncFetch(
-          `${globalScope.ensureServerUrl()}/api/activity-sync/sleep?goalMinutes=${goalMinutes}&date=${getTodayKey()}`,
-          { headers: authHeaders },
-          8000
-        );
-        const data = await res.json();
+        const result = await fetchSleepForDate(getTodayKey());
         lastSleepFetchedAt = Date.now();
-
-        if (!res.ok || !data.success) {
-          const code = data?.error?.code;
-          const expected = ['activity_sync.disabled', 'activity_sync.not_connected', 'activity_sync.no_sleep_data'];
-          if (code && !expected.includes(code)) {
-            console.warn('[ActivitySyncBridge] sleep fetch failed', code);
-          }
-          return null;
-        }
-
-        const sleep = data.sleep;
-        mergeSleepLogEntry(sleep);
-        cacheSleepDetail(sleep);
-        rerenderSleepConsumers();
-        return sleep;
-      } catch (error) {
-        console.warn('[ActivitySyncBridge] sleep fetch failed', error);
-        return null;
+        if (result.sleep) rerenderSleepConsumers();
+        return result.sleep || null;
       } finally {
         sleepInFlight = null;
       }
     })();
 
     return sleepInFlight;
+  }
+
+  function readSleepMisses(user) {
+    try {
+      return JSON.parse(globalScope.localStorage.getItem(`activitySyncSleepMisses_${user}`) || '{}') || {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  function writeSleepMisses(user, misses, today) {
+    try {
+      // Only the backfill window matters; drop older dates.
+      const [y, m, d] = today.split('-').map(Number);
+      const oldest = localDateKey(new Date(y, m - 1, d - SLEEP_BACKFILL_DAYS));
+      const kept = {};
+      Object.keys(misses).forEach((date) => { if (date >= oldest) kept[date] = misses[date]; });
+      globalScope.localStorage.setItem(`activitySyncSleepMisses_${user}`, JSON.stringify(kept));
+    } catch (_error) { /* storage blocked */ }
+  }
+
+  // Logs any of the last week's nights that never made it into the sleep
+  // log (e.g. days the app wasn't opened), one night at a time.
+  async function fetchAndApplyRecentSleep(options = {}) {
+    const force = Boolean(options.force);
+    if (!force && Date.now() - lastSleepBackfillAt < HISTORY_THROTTLE_MS) return 0;
+    if (sleepBackfillInFlight) return sleepBackfillInFlight;
+    if (!canFetch()) return 0;
+
+    sleepBackfillInFlight = (async () => {
+      try {
+        const user = getActiveUsername();
+        const today = getTodayKey();
+        let log = [];
+        try { log = JSON.parse(globalScope.localStorage.getItem(`sleepLog_${user}`) || '[]'); } catch (_error) { log = []; }
+        let details = {};
+        try { details = JSON.parse(globalScope.localStorage.getItem(`activitySyncSleep_${user}`) || '{}'); } catch (_error) { details = {}; }
+        const rated = rateUnratedSyncedNights(log, details);
+        if (rated.changed) {
+          log = rated.log;
+          try { globalScope.localStorage.setItem(`sleepLog_${user}`, JSON.stringify(log)); } catch (_error) { /* storage blocked */ }
+        }
+        const misses = readSleepMisses(user);
+        const dates = sleepDatesToBackfill(log, misses, today, SLEEP_BACKFILL_DAYS);
+        let added = 0;
+        for (const date of dates) {
+          const result = await fetchSleepForDate(date);
+          if (result.stop) break;
+          if (result.missing) misses[date] = Date.now();
+          else { added++; delete misses[date]; }
+        }
+        lastSleepBackfillAt = Date.now();
+        writeSleepMisses(user, misses, today);
+        if (added) rerenderSleepConsumers();
+        return added;
+      } finally {
+        sleepBackfillInFlight = null;
+      }
+    })();
+
+    return sleepBackfillInFlight;
   }
 
   function applyMissionSync(activity) {
@@ -1152,15 +1266,22 @@
           Promise.resolve(sleepInFlight).then(() => fetchAndApplyRecovery());
           fetchAndApplyBody();
         });
-        fetchAndApplyTodaySleep();
+        // Last night first, then any earlier nights still missing.
+        Promise.resolve(fetchAndApplyTodaySleep()).then(() => fetchAndApplyRecentSleep());
       }, 1000);
+    });
+    // Coming back to the app (e.g. first look after waking up) logs the
+    // night that just ended without needing a trip to the Sleep tab.
+    globalScope.document.addEventListener('visibilitychange', () => {
+      if (globalScope.document.visibilityState !== 'visible') return;
+      Promise.resolve(fetchAndApplyTodaySleep()).then(() => fetchAndApplyRecentSleep());
     });
     globalScope.document.addEventListener('traininglog:tab-changed', (e) => {
       if (e.detail?.tab === 'homeTab') {
         renderSyncInfoLine(); // reflect cache immediately, even if the fetch below is throttled
         fetchAndApplyTodayActivity();
       } else if (e.detail?.tab === 'sleepTab') {
-        fetchAndApplyTodaySleep();
+        Promise.resolve(fetchAndApplyTodaySleep()).then(() => fetchAndApplyRecentSleep());
       } else if (e.detail?.tab === 'cardioTab') {
         fetchAndApplyCardio();
       } else if (e.detail?.tab === 'bodyTab' || e.detail?.tab === 'weightTab') {
@@ -1187,6 +1308,7 @@
   globalScope.activitySyncBridge = {
     fetchAndApplyTodayActivity,
     fetchAndApplyTodaySleep,
+    fetchAndApplyRecentSleep,
     fetchAndApplyCardio,
     fetchAndApplyHistory,
     dismissSyncedCardio,
@@ -1205,7 +1327,7 @@
   };
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { localDateKey, cardioTypeFor, toCardioEntry, mergeSyncedCardio, computeBurnSummary,
+    module.exports = { localDateKey, qualityFromSleepScore, mergeSyncedSleep, rateUnratedSyncedNights, sleepDatesToBackfill, cardioTypeFor, toCardioEntry, mergeSyncedCardio, computeBurnSummary,
       computeRecoverySummary, recoverySummaryText,
       mergeScaleWeighIns, analyzeVitals, analyzeComposition };
   }
