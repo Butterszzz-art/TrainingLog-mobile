@@ -924,6 +924,7 @@
     if (typeof global.renderWarmupHint === 'function') global.renderWarmupHint();
     // Setting .value doesn't fire the input's oninput, which is what used to show this.
     if (typeof global.renderExerciseVideoHint === 'function') global.renderExerciseVideoHint(name);
+    if (typeof global.renderExerciseCues === 'function') global.renderExerciseCues(name);
     if (plannedFirstSet) {
       if (plannedFirstSet.weight != null) _qlWeight = plannedFirstSet.weight;
       if (plannedFirstSet.reps != null) _qlReps = plannedFirstSet.reps;
@@ -1032,6 +1033,7 @@
     _qlExerciseName = '';
     if (typeof global.renderInjuryWarning === 'function') global.renderInjuryWarning('');
     if (typeof global.renderExerciseVideoHint === 'function') global.renderExerciseVideoHint('');
+    if (typeof global.renderExerciseCues === 'function') global.renderExerciseCues('');
     initQuickLog(''); // hides the stepper panel until a name is typed
     if (typeof global.updateAddButtonState === 'function') global.updateAddButtonState();
     if (exerciseEl) {
