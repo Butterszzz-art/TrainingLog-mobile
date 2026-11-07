@@ -1094,9 +1094,18 @@
                progression tip from workout-intelligence.js (#overloadHint). -->
           <div class="ex-bubble" id="exerciseBubble">
             <div class="ex-bubble-in">
-              <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
+              <input type="text" id="exercise" placeholder="Exercise name…" list="exerciseSuggestions" oninput="updateAddButtonState(); if(typeof renderInjuryWarning==='function') renderInjuryWarning(this.value); if(typeof renderExerciseVideoHint==='function') renderExerciseVideoHint(this.value); if(typeof renderExerciseCues==='function') renderExerciseCues(this.value); (function(v){var t=document.getElementById('exerciseLiveTitle'); if(!t) return; t.hidden=!v; t.textContent=v;})(this.value); if(typeof initQuickLog==='function') initQuickLog(this.value);" />
               <div id="overloadHint" class="overload-hint"></div>
             </div>
+          </div>
+          <!-- Butters University form cues — performance mode only
+               (src/js/exercise-cues.js, css/performance-mode.css) -->
+          <div class="ex-cues" id="exerciseCues" hidden>
+            <button type="button" class="ex-cues-btn" id="exerciseCuesBtn" onclick="if(typeof toggleExerciseCues==='function') toggleExerciseCues();" aria-expanded="false" aria-controls="exerciseCuesPop">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/></svg>
+              Cues
+            </button>
+            <div class="ex-cues-pop" id="exerciseCuesPop" role="dialog" aria-label="Form cues" hidden></div>
           </div>
           <datalist id="exerciseSuggestions"></datalist>
           <!-- Warm-up sets ramping to today's work weight (warmup-sets.js) -->
@@ -4347,6 +4356,7 @@
 <script src="src/js/coach-announce.js"></script>
 <script src="src/js/coach-meals.js"></script>
 <script src="src/js/exercise-videos.js"></script>
+<script src="src/js/exercise-cues.js"></script>
 <script src="src/js/my-plan.js"></script>
 <script src="src/js/ProgramTabV2.js"></script>
 <script src="src/js/premium-library.js"></script>
