@@ -192,6 +192,30 @@ describe('checkInPhotoPlan', () => {
     ]);
   });
 
+  test('front, side and back photos on a check-in go too, and go again when changed', () => {
+    const front = 'data:image/jpeg;base64,' + 'A'.repeat(4000);
+    const checkIns = [{ date: '2026-09-20', frontPhoto: front, sidePhoto: '', backPhoto: 'data:image/png;base64,BBBB', posingSessionIds: [] }];
+    const [step] = checkInPhotoPlan(checkIns, {});
+    expect(step.action).toBe('put');
+    expect(step.views).toEqual(['front', 'back']);
+    expect(step.ids).toEqual([]);
+    expect(checkInPhotoPlan(checkIns, { '2026-09-20': step.sig })).toEqual([]);
+    const changed = [{ ...checkIns[0], frontPhoto: front.slice(0, -10) + 'C'.repeat(10) }];
+    expect(checkInPhotoPlan(changed, { '2026-09-20': step.sig })[0].action).toBe('put');
+  });
+
+  test('per-photo picks from Send to coach are part of the step and its signature', () => {
+    const checkIns = [{ date: '2026-09-20', posingSessionIds: ['a', 'b'], posingPhotoPicks: { a: ['p1', 'p3'], zzz: ['x'] } }];
+    const [step] = checkInPhotoPlan(checkIns, { '2026-09-20': 'a,b' });
+    expect(step.picks).toEqual({ a: ['p1', 'p3'] });
+    expect(step.sig).toBe('a,b|p:a=p1+p3');
+  });
+
+  test('removing the last photo deletes what this device sent', () => {
+    expect(checkInPhotoPlan([{ date: '2026-09-20', frontPhoto: '', posingSessionIds: [] }], { '2026-09-20': 'x' }))
+      .toEqual([{ action: 'delete', date: '2026-09-20' }]);
+  });
+
   test('only the newest 12 check-ins count', () => {
     const checkIns = Array.from({ length: 14 }, (_v, i) => ({ date: `2026-08-${String(i + 1).padStart(2, '0')}`, posingSessionIds: ['p' + i] }));
     const plan = checkInPhotoPlan(checkIns, {});

@@ -776,3 +776,40 @@
 .ci-posing-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
 .ci-posing-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .ci-posing-top b { font-size: 14px; color: var(--text-primary); }
+
+/* ── Coach comments under a check-in (src/js/coach-photos.js) ── */
+.ci-thread { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-row); display: flex; flex-direction: column; gap: 10px; }
+.ci-thread[hidden] { display: none; }
+.ci-thread.is-flash { animation: ci-thread-flash 1.6s ease-out; border-radius: 12px; }
+@keyframes ci-thread-flash { 0% { background: var(--surface-recessed); } 100% { background: transparent; } }
+.ci-thread-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ci-thread-head:empty { display: none; }
+.ci-thread-head .mx-chip .ui-icon, .ci-thread-head .mx-chip svg { width: 13px; height: 13px; }
+.ci-msgs { display: flex; flex-direction: column; gap: 8px; }
+.ci-msg { padding: 9px 12px; border-radius: 14px; background: var(--surface-recessed); border: 1px solid var(--border-row); max-width: 92%; }
+.ci-msg--me { align-self: flex-end; background: transparent; }
+.ci-msg.is-new { border-color: var(--green-60); }
+.ci-msg-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--text-tertiary); margin-bottom: 3px; }
+.ci-msg-meta b { color: var(--text-secondary); font-weight: 600; }
+.ci-msg-text { font-size: 14px; color: var(--text-primary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ci-reply { display: flex; flex-direction: column; gap: 8px; }
+.ci-reply-input { width: 100%; box-sizing: border-box; min-height: 64px; resize: vertical; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-row); background: var(--surface-recessed); color: var(--text-primary); font: inherit; font-size: 14px; }
+.ci-reply-actions { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+.ci-link { background: none; border: 0; padding: 6px 4px; color: var(--text-tertiary); font: inherit; font-size: 14px; cursor: pointer; }
+.ci-reply-open { align-self: flex-start; }
+.ci-reply-open .ui-icon, .ci-reply-open svg { width: 15px; height: 15px; }
+
+/* ── Progress photo sheets: ask once, send to coach ── */
+.cp-sheet { max-height: 88vh; overflow-y: auto; }
+.cp-lead { font-size: 15px; color: var(--text-secondary); margin: 10px 0; line-height: 1.45; }
+.cp-points { margin: 0 0 14px; padding-left: 18px; color: var(--text-secondary); font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.cp-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.cp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.cp-pick { position: relative; padding: 0; border: 2px solid transparent; border-radius: 12px; overflow: hidden; background: var(--surface-recessed); aspect-ratio: 3 / 4; cursor: pointer; }
+.cp-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cp-pick[aria-pressed="true"] { border-color: var(--green-60); }
+.cp-pick[aria-pressed="false"] img { opacity: .45; }
+.cp-pick-check { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--green-60); color: #fff; }
+.cp-pick[aria-pressed="false"] .cp-pick-check { background: rgba(0,0,0,.45); }
+.cp-pick-check svg, .cp-pick-check .ui-icon { width: 14px; height: 14px; }
+.cp-pick-pose { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 6px; font-size: 11px; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.6)); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

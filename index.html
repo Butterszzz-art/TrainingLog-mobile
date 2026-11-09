@@ -12216,6 +12216,8 @@ function renderPosingTab() {
   if (countEl) countEl.textContent = `${rows.length} session${rows.length === 1 ? '' : 's'}`;
 
   const maxMin = Math.max(...rows.map(r => Number(r.minutes) || 0), 1);
+  // Linked clients can send a session's photos to their coach (src/js/coach-photos.js).
+  const coached = localStorage.getItem(`coachLinked_${currentUser || localStorage.getItem('fitnessAppUser') || localStorage.getItem('username')}`) === 'true';
   body.innerHTML = rows.length
     ? rows.map(entry => {
         const d = new Date(String(entry.date).slice(0, 10) + 'T00:00:00');
@@ -12240,6 +12242,7 @@ function renderPosingTab() {
               ${upload ? '' : `<div class="mx-meter mx-meter--thin" role="img" aria-label="${_esc(entry.minutes)} minutes"><i style="width:${pct}%"></i></div>`}
               ${tags ? `<div class="mx-tags">${tags}</div>` : ''}
               ${entry.photoCount ? `<div class="posing-thumbs" data-posing-photos="${_esc(entry.id)}" aria-label="${_esc(entry.photoCount)} check-in photos"></div>` : ''}
+              ${entry.photoCount && coached ? `<button type="button" class="mx-outline posing-send" onclick="CoachPhotos.sendPosingSession('${_esc(entry.id)}')"><span class="ui-icon">${ICONS.send || ICONS.share || ''}</span> Send to coach</button>` : ''}
             </div>
             <button type="button" class="mx-iconbtn mx-iconbtn--ghost" onclick="removePosingSession('${_esc(entry.id)}')" title="Remove" aria-label="Remove ${dow} ${day} ${mon} session"><span class="ui-icon">${ICONS.x}</span></button>
           </div>`;
@@ -13969,6 +13972,7 @@ function renderCheckInTab() {
                 ${entry.coachNotes ? `<div><span class="mx-lbl">Coach</span> ${mxEsc(entry.coachNotes)}</div>` : ''}
                 ${entry.review?.coachActionItems ? `<div><span class="mx-lbl">Action</span> ${mxEsc(entry.review.coachActionItems)}</div>` : ''}
               </div>` : ''}
+            <div class="ci-thread" data-ci-thread="${mxEsc(entry.date)}" hidden></div>
           </article>`;
       })
     ).join('');
@@ -13979,6 +13983,8 @@ function renderCheckInTab() {
         ${cards}
       </div>`;
   }).join('');
+  // Coach comments and the reply box under each check-in (src/js/coach-photos.js).
+  window.CoachPhotos?.hydrateThreads?.(timeline);
   generateCheckInSummary();
 }
 
@@ -14519,6 +14525,11 @@ function saveWeeklyCheckIn(actor = 'athlete') {
   if (existingForDate) {
     draft.review.athleteSubmittedAt = draft.review.athleteSubmittedAt || existingForDate.review?.athleteSubmittedAt || '';
     draft.review.coachReviewedAt = draft.review.coachReviewedAt || existingForDate.review?.coachReviewedAt || '';
+    // Re-saving keeps the photos already on this check-in (the photo inputs
+    // only hold photos picked in this session) and the per-photo picks made
+    // with "Send to coach" in the Posing tab.
+    ['frontPhoto', 'sidePhoto', 'backPhoto'].forEach(k => { if (!draft[k] && existingForDate[k]) draft[k] = existingForDate[k]; });
+    if (existingForDate.posingPhotoPicks) draft.posingPhotoPicks = existingForDate.posingPhotoPicks;
   }
 
   draft.weekLabel = manualWeekLabel || window.checkinEngine.getWeekLabelForCheckIn(draft, phaseState);
@@ -21406,6 +21417,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/coach-videos.js"></script>
   <script src="src/js/client-coaching.js"></script>
+  <script src="src/js/coach-photos.js"></script>
   <script src="src/js/workout-archiver.js"></script>
   <script src="src/js/workout-sync.js"></script>
   <script src="src/js/ui-declutter.js"></script>

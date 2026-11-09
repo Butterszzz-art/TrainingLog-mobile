@@ -12,9 +12,13 @@
      weekly workout counts, compliance) to POST /api/client/coach-share
      when you have a coach. The server filters it by your sharing
      switches, so switching something off here stops it reaching them.
-   - Check-in photos: posing photo sets ticked on a check-in are shrunk
-     and sent with PUT /api/client/checkin-photos/:date after a share
-     (pushCheckInPhotos). Each device remembers what it sent.
+   - Check-in photos: the front/side/back progress photos on a check-in
+     and the posing photo sets ticked on it (or picked with "Send to
+     coach" in the Posing tab) are shrunk and sent with
+     PUT /api/client/checkin-photos/:date after a share
+     (pushCheckInPhotos), only once the client said yes to photo sharing
+     (asked once, src/js/coach-photos.js). Each device remembers what it
+     sent, so anything that failed offline is retried on the next share.
    Pure helpers are exported for tests (tests/clientCoaching.test.js).
    ============================================================= */
 
@@ -292,15 +296,40 @@
   }
 
   // What to send or remove for check-in photos. checkIns: stored check-ins;
-  // sent: { date: 'id1,id2' } of what this device uploaded. Only the newest
-  // 12 check-ins (what the coach sees) are considered. A check-in whose sets
-  // were all unticked has its photos removed, but only when this device sent
-  // them: check-ins sync between devices and the photos don't.
+  // sent: { date: signature } of what this device uploaded. Only the newest
+  // 12 check-ins (what the coach sees) are considered. A check-in with
+  // neither progress photos nor ticked sets has its photos removed, but only
+  // when this device sent them: check-ins sync between devices and the
+  // photos don't. Steps carry `views` (progress photos on the check-in) and
+  // `picks` ({ sessionId: [photoId] }) only when there are any.
   const PHOTO_CHECKINS = 12;
+  const PHOTO_VIEWS = ['front', 'side', 'back'];
+
+  // A cheap, stable fingerprint of a (possibly large) data URL, so a changed
+  // progress photo is sent again.
+  function fingerprint(value) {
+    const s = String(value || '');
+    const step = Math.max(1, Math.floor(s.length / 512));
+    let h = 5381;
+    for (let i = 0; i < s.length; i += step) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return s.length.toString(36) + '.' + h.toString(36);
+  }
+
   function checkInPhotoPlan(checkIns, sent) {
     const done = sent && typeof sent === 'object' ? sent : {};
     const recent = arr(checkIns).filter(c => c && /^\d{4}-\d{2}-\d{2}$/.test(String(c.date || '').slice(0, 10)))
-      .map(c => ({ date: String(c.date).slice(0, 10), ids: arr(c.posingSessionIds).filter(id => typeof id === 'string' && id) }))
+      .map(c => {
+        const ids = arr(c.posingSessionIds).filter(id => typeof id === 'string' && id);
+        const views = PHOTO_VIEWS.filter(v => /^data:image\//.test(String(c[v + 'Photo'] || '')));
+        const rawPicks = c.posingPhotoPicks && typeof c.posingPhotoPicks === 'object' ? c.posingPhotoPicks : {};
+        const picks = {};
+        ids.forEach(id => { if (arr(rawPicks[id]).length) picks[id] = arr(rawPicks[id]).filter(x => typeof x === 'string'); });
+        let sig = ids.join(',');
+        if (views.length) sig += '|' + views.map(v => `${v}:${fingerprint(c[v + 'Photo'])}`).join(',');
+        const pickSig = Object.keys(picks).map(id => `${id}=${picks[id].join('+')}`).join(',');
+        if (pickSig) sig += '|p:' + pickSig;
+        return { date: String(c.date).slice(0, 10), ids, views, picks, sig };
+      })
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
       .slice(0, PHOTO_CHECKINS);
     const steps = [];
@@ -308,9 +337,13 @@
     recent.forEach(c => {
       if (seen.has(c.date)) return;
       seen.add(c.date);
-      const sig = c.ids.join(',');
-      if (c.ids.length && done[c.date] !== sig) steps.push({ action: 'put', date: c.date, ids: c.ids, sig });
-      else if (!c.ids.length && done[c.date]) steps.push({ action: 'delete', date: c.date });
+      const has = c.ids.length || c.views.length;
+      if (has && done[c.date] !== c.sig) {
+        const step = { action: 'put', date: c.date, ids: c.ids, sig: c.sig };
+        if (c.views.length) step.views = c.views;
+        if (Object.keys(c.picks).length) step.picks = c.picks;
+        steps.push(step);
+      } else if (!has && done[c.date]) steps.push({ action: 'delete', date: c.date });
     });
     Object.keys(done).forEach(date => {
       if (!seen.has(date) && !arr(checkIns).some(c => c && String(c.date || '').slice(0, 10) === date)) steps.push({ action: 'delete', date });
@@ -318,7 +351,7 @@
     return steps;
   }
 
-  const api = { checkInPhotoPlan, buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
+  const api = { checkInPhotoPlan, fingerprint, buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (!root || !root.document) return;
   root.ClientCoaching = api;
@@ -379,31 +412,55 @@
   const MAX_CHECKIN_PHOTOS = 10;
   let photoPushRunning = false;
 
+  const VIEW_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
+  const photoSentKey = () => `coachCheckInPhotosSent_${user()}`;
+
+  // The client's sharing switches, loading them if Your Coach hasn't yet.
+  async function sharingNow() {
+    if (state.sharing) return state.sharing;
+    const data = await api$('GET', '/api/client/coach-sharing').catch(() => null);
+    if (data && data.sharing) { state.sharing = data.sharing; state.decided = data.decided || state.decided; }
+    return state.sharing;
+  }
+
   async function pushCheckInPhotos() {
     const media = root.posingMediaStore;
-    if (photoPushRunning || !media || !media.isAvailable || !media.isAvailable() || !media.exportPhotoDataUrl) return;
-    if (state.sharing && state.sharing.checkIns === false) return;
+    const shrink = root.CoachPhotos && root.CoachPhotos.shrinkDataUrl;
+    if (photoPushRunning || !shrink) return;
     const u = user();
-    if (!u) return;
+    if (!u || root.localStorage.getItem(linkKey()) !== 'true') return;
+    // Photos go only after the client said yes (asked once, coach-photos.js).
+    const sharing = await sharingNow();
+    if (!sharing || sharing.checkIns === false || sharing.photos !== true) return;
+    const hasMedia = !!(media && media.isAvailable && media.isAvailable() && media.exportPhotoDataUrl);
     photoPushRunning = true;
-    const sentKey = `coachCheckInPhotosSent_${u}`;
+    const sentKey = photoSentKey();
     const sent = readJSON(root.localStorage, sentKey, {}) || {};
+    const checkIns = readJSON(root.localStorage, CHECKIN_PREFIX + u, []);
     // The Posing tab files photos under the same name the rest of index.html
     // uses; try both spellings of the current user.
     const owners = [...new Set([u, root.localStorage.getItem('currentUser')].filter(Boolean))];
     try {
-      for (const step of checkInPhotoPlan(readJSON(root.localStorage, CHECKIN_PREFIX + u, []), sent)) {
+      for (const step of checkInPhotoPlan(checkIns, sent)) {
         if (step.action === 'delete') {
           await api$('DELETE', `/api/client/checkin-photos/${step.date}`);
           delete sent[step.date];
         } else {
           const photos = [];
-          for (const id of step.ids) {
+          // Front, side and back from the check-in itself come first.
+          const record = arr(checkIns).find(c => c && String(c.date || '').slice(0, 10) === step.date) || {};
+          for (const view of step.views || []) {
+            const image = await shrink(record[view + 'Photo']).catch(() => null);
+            if (image) photos.push({ image, pose: VIEW_LABEL[view] });
+          }
+          for (const id of hasMedia ? step.ids : []) {
             let rows = [];
             for (const owner of owners) {
               rows = await media.listSessionPhotos(owner, id).catch(() => []);
               if (rows.length) break;
             }
+            const picked = step.picks && step.picks[id];
+            if (picked) rows = rows.filter(r => picked.includes(r.id));
             for (const row of rows) {
               if (photos.length >= MAX_CHECKIN_PHOTOS) break;
               const image = await media.exportPhotoDataUrl(row).catch(() => null);
@@ -428,12 +485,67 @@
     const engine = root.checkinEngine;
     if (!engine || engine.__coachShareHooked || typeof engine.saveCheckIn !== 'function') return;
     const original = engine.saveCheckIn;
-    engine.saveCheckIn = function () {
+    engine.saveCheckIn = function (_userId, checkIn) {
       const out = original.apply(this, arguments);
-      setTimeout(() => pushShare({ force: true }), 0);
+      const c = checkIn || {};
+      const hasPhotos = PHOTO_VIEWS.some(v => /^data:image\//.test(String(c[v + 'Photo'] || ''))) || arr(c.posingSessionIds).length > 0;
+      setTimeout(async () => {
+        // First photos while undecided: ask once, then send (or don't).
+        if (hasPhotos) await askPhotoSharingOnce();
+        pushShare({ force: true });
+      }, 0);
       return out;
     };
     engine.__coachShareHooked = true;
+  }
+
+  // ── Photo sharing: asked once ────────────────────────────────────
+  // While a linked client hasn't answered, the first time they save photos
+  // they get one yes/no sheet (src/js/coach-photos.js). The answer is stored
+  // server-side (coachSharing.photos) and can be changed in Your Coach.
+  function photoSharingStatus() {
+    const active = state.invites.filter(i => i.status === 'active');
+    const linked = active.length > 0 || root.localStorage.getItem(linkKey()) === 'true';
+    const decided = !!(state.decided && state.decided.photos);
+    return {
+      linked,
+      decided,
+      on: !!(state.sharing && state.sharing.photos === true && state.sharing.checkIns !== false),
+      coachName: active.map(i => i.coachUsername).filter(Boolean).join(' & ') || 'your coach',
+    };
+  }
+
+  let asking = null;
+  async function askPhotoSharingOnce() {
+    if (!root.localStorage.getItem('token')) return null;
+    if (!state.decided || !state.invites.length) await load().catch(() => false);
+    const st = photoSharingStatus();
+    if (!st.linked || st.decided) return st.on;
+    if (!root.CoachPhotos || !root.CoachPhotos.askSharing) return null;
+    if (!asking) {
+      asking = root.CoachPhotos.askSharing({ coachName: st.coachName })
+        .then(answer => (answer === null ? null : answerPhotoSharing(answer)))
+        .finally(() => { asking = null; });
+    }
+    return asking;
+  }
+
+  async function answerPhotoSharing(yes) {
+    try {
+      const data = await api$('PUT', '/api/client/coach-sharing', { photos: !!yes });
+      state.sharing = data.sharing;
+      state.decided = data.decided || { ...(state.decided || {}), photos: true };
+      // Turning photos off deletes them on the server: forget what was sent.
+      if (!yes) root.localStorage.removeItem(photoSentKey());
+      doc.dispatchEvent(new CustomEvent('pc:coach-sharing-changed'));
+      if (doc.getElementById('yourCoachSection')) render();
+      toast(yes ? 'Your progress photos will go to your coach with your check-ins.' : 'Your photos stay on this phone. You can change this in Your Coach.', yes ? 'success' : undefined);
+      if (yes) pushShare({ force: true });
+      return !!yes;
+    } catch (err) {
+      toast(err.message || 'Could not update sharing.', 'error');
+      return null;
+    }
   }
 
   // ── Your Coach section ───────────────────────────────────────────
@@ -744,7 +856,8 @@
       ${switchRow('checkIns', 'Check-ins', 'Scores, notes and the date of your latest check-in')}
       ${switchRow('bodyweight', 'Bodyweight', 'Your weigh-ins from the last 4 months')}
       ${switchRow('workouts', 'Workouts', 'Sessions per week and how closely you follow your program')}
-      ${switchRow('nutrition', 'Food log', 'Foods, amounts and macros you log, day by day (off until you turn it on)')}` : '';
+      ${switchRow('nutrition', 'Food log', 'Foods, amounts and macros you log, day by day (off until you turn it on)')}
+      ${switchRow('photos', 'Progress photos', 'Front, side and back photos and posing photos on your check-ins. Kept for your last 12 check-ins; turning this off deletes them from your coach')}` : '';
 
     const cv = root.CoachVideos;
     const videosHtml = state.videos.length && cv ? `
@@ -1122,6 +1235,9 @@
         const data = await api$('PUT', '/api/client/coach-sharing', { [key]: next });
         state.sharing = data.sharing;
         if (data.decided) state.decided = data.decided;
+        // Photos (or check-ins) off deletes the photos on the server, so the
+        // next yes sends them all again.
+        if (!next && (key === 'photos' || key === 'checkIns')) root.localStorage.removeItem(photoSentKey());
         doc.dispatchEvent(new CustomEvent('pc:coach-sharing-changed'));
         if (next) pushShare({ force: true });
       } catch (err) {
@@ -1141,6 +1257,9 @@
       else renderYourCoachSection();
     });
     doc.addEventListener('pc:notifications-changed', onNotificationsChanged);
+    // Photos that failed to send offline go on the next share; nudge one
+    // when the connection comes back.
+    root.addEventListener('online', () => pushShare({ force: true }));
   }
 
   root.renderYourCoachSection = renderYourCoachSection;
@@ -1150,6 +1269,10 @@
   root.acceptCoachInvite = acceptCoachInvite;
   root.pushCoachShare = pushShare;
   root.coachFoodLogAsk = coachFoodLogAsk;
+  root.coachPhotoSharing = photoSharingStatus;
+  root.askCoachPhotoSharing = askPhotoSharingOnce;
+  root.answerCoachPhotoSharing = answerPhotoSharing;
+  root.pushCoachCheckInPhotos = pushCheckInPhotos;
   root.answerCoachFoodLogShare = answerCoachFoodLogShare;
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
   else init();
