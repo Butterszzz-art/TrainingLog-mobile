@@ -628,3 +628,7 @@ body.pcap-open { overflow: hidden; }
 .pcap-viewer-bar .pcap-icon-btn { width: 44px; height: 44px; }
 
 .posing-upload-btn { margin-top: 8px; }
+
+/* "Send to coach" on a session with photos (src/js/coach-photos.js). */
+.posing-send { margin-top: 8px; align-self: flex-start; padding: 6px 12px; font-size: 13px; }
+.posing-send .ui-icon, .posing-send svg { width: 14px; height: 14px; }

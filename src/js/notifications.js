@@ -97,6 +97,10 @@
         return count > 1 ? `${who} shared ${count} new posts` : `${who} ${_esc(n.text)}`;
       case 'coach_note':
         return count > 1 ? `${who} sent you ${count} notes` : `${who} ${_esc(n.text)}`;
+      case 'coach_checkin_comment':
+        return count > 1 ? `${who} left ${count} comments on your check-in` : `${who} ${_esc(n.text)}`;
+      case 'client_checkin_reply':
+        return count > 1 ? `${who} replied ${count} times on their check-in` : `${who} ${_esc(n.text)}`;
       case 'coach_video':
         return count > 1 ? `${who} sent you ${count} videos`
           : `${who} ${_esc(n.text)}${n.data?.title ? `: ${_esc(n.data.title)}` : ''}`;
@@ -283,6 +287,11 @@
         return _yourCoach('ycNotes');
       case 'coach_video':
         return _yourCoach('ycVideos');
+      case 'coach_checkin_comment':
+        // The thread under that check-in, in Check-in history.
+        if (global.CoachPhotos && typeof global.CoachPhotos.openThread === 'function') { global.CoachPhotos.openThread(n.data && n.data.date); return undefined; }
+        return _yourCoach();
+      case 'client_checkin_reply':
       case 'coach_accepted':
       case 'coach_left':
         if (typeof global.showTab === 'function') global.showTab('clientsTab');

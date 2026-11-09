@@ -352,26 +352,39 @@ function renderWorkspace() {
 
   // "Do this now": every flagged client, most urgent first — the same
   // to-do row pattern as the phone app's Home.
+  // Check-ins with new photos and no comment yet, and client replies, are
+  // on the list too (and open the Check-in tab).
+  const needsReview = c => { const r = photoReview(c); return r.newPhotos.length > 0 || r.replies.length > 0; };
+  const rank = c => (c.alertStatus === 'action' ? 0 : c.alertStatus === 'watch' ? 1 : 2);
   const flagged = linked
-    .filter(c => c.alertStatus === 'action' || c.alertStatus === 'watch')
-    .sort((a, b) => (a.alertStatus === 'action' ? 0 : 1) - (b.alertStatus === 'action' ? 0 : 1)
-      || (a.clientName || '').localeCompare(b.clientName || ''));
+    .filter(c => c.alertStatus === 'action' || c.alertStatus === 'watch' || needsReview(c))
+    .sort((a, b) => rank(a) - rank(b) || (a.clientName || '').localeCompare(b.clientName || ''));
   const todoRow = c => {
     const ci = c.latestCheckInData || {};
     const days = daysSinceIso(c.lastCheckIn);
     const alerts = c.alerts || [];
-    const why = alerts.slice(0, 2).map(a => escapeHtml(a.label)).join(' · ') || STATUS_LABEL[c.alertStatus];
+    const r = photoReview(c);
+    const reviewWhy = [
+      r.newPhotos.length ? (r.newPhotos.length === 1 ? 'New photos to review' : r.newPhotos.length + ' check-ins with new photos') : '',
+      r.replies.length ? 'Replied on their check-in' : '',
+    ].filter(Boolean);
+    const isAlert = c.alertStatus === 'action' || c.alertStatus === 'watch';
+    const why = [...alerts.slice(0, 2).map(a => escapeHtml(a.label)), ...reviewWhy].slice(0, 3).join(' · ') || STATUS_LABEL[c.alertStatus];
+    const open = isAlert ? 'selectClient(\'' + escapeHtml(c.id) + '\')'
+      : 'openClientTab(\'' + escapeHtml(c.id) + '\', \'checkin\')';
     const facts = [
       ['Sleep', ci.sleep != null ? ci.sleep + '/10' : null],
       ['Energy', ci.energy != null ? ci.energy + '/10' : null],
       ['Compliance', c.compliancePercent != null ? c.compliancePercent + '%' : null],
       ['Check-in', days === null ? 'Never' : days === 0 ? 'Today' : days + 'd ago'],
     ].filter(([, v]) => v != null);
-    return '<button type="button" class="ca-todo is-' + escapeHtml(c.alertStatus) + '" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">'
+    return '<button type="button" class="ca-todo is-' + (isAlert ? escapeHtml(c.alertStatus) : 'review') + '" onclick="' + open + '">'
       + '<span class="ca-avatar">' + initialsOf(c.clientName) + '</span>'
       + '<span class="ca-todo-text"><strong>' + escapeHtml(c.clientName || 'Unknown') + '</strong>'
       + '<span class="ca-todo-why">' + why + '</span>'
-      + (alerts[0] ? '<span class="ca-todo-detail">' + escapeHtml(alerts[0].reason) + '</span>' : '') + '</span>'
+      + (alerts[0] ? '<span class="ca-todo-detail">' + escapeHtml(alerts[0].reason) + '</span>'
+        : r.newPhotos.length ? '<span class="ca-todo-detail">Check-in of ' + escapeHtml(shortDate(r.newPhotos[0])) + ' · no comment from you yet</span>'
+        : r.replies.length ? '<span class="ca-todo-detail">On the check-in of ' + escapeHtml(shortDate(r.replies[0])) + '</span>' : '') + '</span>'
       + '<span class="ca-todo-facts">' + facts.map(([l, v]) => '<span><b>' + v + '</b>' + l + '</span>').join('') + '</span>'
       + '<span class="ca-todo-cta">Open</span></button>';
   };
@@ -566,6 +579,14 @@ function renderClientFile(client) {
   renderNutrition(client);
   if (client.status !== 'pending') renderNotes(client);
   else document.getElementById('dtab_notes').innerHTML = '<div class="d-card"><p class="ws-empty-note">You can send notes once they accept.</p></div>';
+}
+
+// From a Today row: the client's file, on a given tab.
+async function openClientTab(id, tab) {
+  const done = selectClient(id);
+  switchDetailTab(tab);
+  await done;
+  if (_selectedClientId === id) switchDetailTab(tab);
 }
 
 async function selectClient(id) {
@@ -795,8 +816,20 @@ function renderOverview(c) {
       '<span class="ca-chip">' + signed(last.weight - first.weight, 1) + ' kg · ' + wk + ' wk</span>') + weightChart(bw);
   }
 
-  el.innerHTML =
-    '<div class="ca-tiles">'
+  // New photos / a reply on a check-in: a chip that opens the Check-in tab.
+  const review = photoReview(c);
+  const toCheckIn = 'switchDetailTab(\'checkin\')';
+  const reviewBar = review.newPhotos.length || review.replies.length
+    ? '<div class="ca-review-bar">'
+      + (review.newPhotos.length ? '<button type="button" class="ca-chip ca-chip--green ca-chip--btn" onclick="' + toCheckIn + '">' + ic('camera') + ' New photos · '
+        + escapeHtml(shortDate(review.newPhotos[0])) + (review.newPhotos.length > 1 ? ' +' + (review.newPhotos.length - 1) : '') + '</button>' : '')
+      + (review.replies.length ? '<button type="button" class="ca-chip ca-chip--brass ca-chip--btn" onclick="' + toCheckIn + '">' + ic('message') + ' Replied on '
+        + escapeHtml(shortDate(review.replies[0])) + '</button>' : '')
+      + '</div>'
+    : '';
+
+  el.innerHTML = reviewBar
+    + '<div class="ca-tiles">'
     + bigTile({ label: 'Bodyweight', value: c.currentBodyweight ?? '—', unit: c.currentBodyweight != null ? 'kg' : '', icon: 'scale',
       sub: rate != null ? signed(rate, 2) + '% per week' : 'No rate yet' })
     + bigTile({ label: 'Compliance', value: c.compliancePercent ?? '—', unit: c.compliancePercent != null ? '%' : '', icon: 'target',
@@ -859,69 +892,158 @@ function renderCheckIn(c) {
       + (d === undefined && c.status !== 'pending' ? 'Loading…' : 'No check-ins shared yet.') + '</p></div>';
     return;
   }
-  // Photos only come with a check-in when the client ticked them onto it
-  // (usually posing photos); they load when shown.
-  el.innerHTML = '<div class="ov-grid">' + list.map((ci, i) =>
-    '<div class="d-card' + (i === 0 ? ' d-card--wide' : '') + '">'
-    + cardHead(i === 0 ? 'Latest check-in' : 'Check-in', null, null,
-      '<span class="ca-chip' + (i === 0 ? ' ca-chip--green' : '') + '">' + escapeHtml(shortDate(ci.date) || ci.date) + (ci.bodyweight ? ' · ' + ci.bodyweight + ' kg' : '') + '</span>')
-    + scoreRows(ci, list[i + 1])
-    + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
-    + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
-    + (ci.photoCount ? '<div class="ci-photo-strip" data-ci-photos="' + escapeHtml(ci.date) + '" aria-label="' + ci.photoCount + ' check-in photos">'
-      + '<span class="ws-empty-note">Loading ' + ci.photoCount + ' photo' + (ci.photoCount === 1 ? '' : 's') + '…</span></div>' : '')
-    + '</div>'
-  ).join('') + '</div>';
-  el.querySelectorAll('[data-ci-photos]').forEach(strip => loadCheckInPhotos(c.id, strip));
+  // Progress photos come with a check-in once the client switched on photo
+  // sharing in the app (front/side/back plus any posing photos they added).
+  // The strip and the comment thread load when the card scrolls into view.
+  const sharesPhotos = c.sharing ? c.sharing.photos === true : null;
+  const review = photoReview(c);
+  el.innerHTML = (sharesPhotos === false && !list.some(ci => ci.photoCount)
+    ? '<p class="ws-empty-note ci-photo-off">' + ic('camera') + ' ' + escapeHtml(c.clientName || 'This client') + ' hasn\'t switched on photo sharing, so check-ins arrive without photos.</p>' : '')
+    + '<div class="ov-grid">' + list.map((ci, i) => {
+      const prev = list.slice(i + 1).find(p => p.photoCount);
+      const flags = (review.newPhotos.includes(ci.date) ? '<span class="ca-chip ca-chip--green ci-flag">New photos</span>' : '')
+        + (review.replies.includes(ci.date) ? '<span class="ca-chip ca-chip--brass ci-flag">Client replied</span>' : '');
+      return '<div class="d-card ci-card' + (i === 0 ? ' d-card--wide' : '') + '" data-ci-card="' + escapeHtml(ci.date) + '"'
+        + (prev ? ' data-ci-prev="' + escapeHtml(prev.date) + '"' : '') + '>'
+        + cardHead(i === 0 ? 'Latest check-in' : 'Check-in', null, null,
+          '<span class="ci-card-chips">' + flags + '<span class="ca-chip' + (i === 0 ? ' ca-chip--green' : '') + '">' + escapeHtml(shortDate(ci.date) || ci.date) + (ci.bodyweight ? ' · ' + ci.bodyweight + ' kg' : '') + '</span></span>')
+        + scoreRows(ci, list[i + 1])
+        + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
+        + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
+        + (ci.photoCount ? '<div class="ci-photo-strip" data-ci-photos="' + escapeHtml(ci.date) + '" aria-label="' + ci.photoCount + ' check-in photos">'
+          + Array.from({ length: ci.photoCount }, () => '<span class="ci-photo-thumb ci-photo-thumb--skeleton" aria-hidden="true"></span>').join('') + '</div>' : '')
+        + '<div class="ci-thread" data-ci-thread="' + escapeHtml(ci.date) + '"><span class="ws-empty-note">Loading comments…</span></div>'
+        + '</div>';
+    }).join('') + '</div>';
+  watchCheckInCards(c.id, el);
+}
+
+// What the coach still has to look at, from the roster row: check-ins with
+// photos and no comment from the coach yet, and threads where the client
+// wrote last. Dates are YYYY-MM-DD, newest first.
+function photoReview(c) {
+  const commented = new Set(c.coachCommentDates || []);
+  return {
+    newPhotos: (c.photoDates || []).filter(d => !commented.has(d)),
+    replies: c.awaitingReplyDates || [],
+  };
+}
+
+// Photos and comments for a card load when it nears the viewport.
+let _ciObserver = null;
+function watchCheckInCards(clientId, root) {
+  if (_ciObserver) _ciObserver.disconnect();
+  const load = card => {
+    const strip = card.querySelector('[data-ci-photos]');
+    if (strip) loadCheckInPhotos(clientId, strip);
+    const thread = card.querySelector('[data-ci-thread]');
+    if (thread) loadThread(clientId, thread);
+  };
+  const cards = root.querySelectorAll('[data-ci-card]');
+  if (!('IntersectionObserver' in window)) { cards.forEach(load); return; }
+  _ciObserver = new IntersectionObserver(entries => entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    _ciObserver.unobserve(e.target);
+    load(e.target);
+  }), { rootMargin: '400px 0px' });
+  cards.forEach(card => _ciObserver.observe(card));
 }
 
 // Check-in photos: GET /api/coach/clients/:id/checkin-photos/:date, cached
-// per client and date while the portal is open.
+// per client and date while the portal is open. The response holds the
+// images; they're never put in a URL.
 const _checkInPhotos = {};
+
+function fetchCheckInPhotos(clientId, date) {
+  const key = clientId + '|' + date;
+  if (!_checkInPhotos[key]) {
+    _checkInPhotos[key] = coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkin-photos/' + encodeURIComponent(date), { headers: authHeaders() })
+      .then(res => res.json().then(data => {
+        if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+        return data.photos || [];
+      }))
+      .catch(err => { delete _checkInPhotos[key]; throw err; });
+  }
+  return _checkInPhotos[key];
+}
+
+function photoName(p, i) {
+  return p && p.pose ? p.pose : 'Photo ' + (i + 1);
+}
 
 async function loadCheckInPhotos(clientId, strip) {
   const date = strip.dataset.ciPhotos;
-  const key = clientId + '|' + date;
+  const card = strip.closest('[data-ci-card]');
   try {
-    if (!_checkInPhotos[key]) {
-      _checkInPhotos[key] = coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkin-photos/' + encodeURIComponent(date), { headers: authHeaders() })
-        .then(res => res.json().then(data => {
-          if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
-          return data.photos || [];
-        }));
-    }
-    const photos = await _checkInPhotos[key];
+    const photos = await fetchCheckInPhotos(clientId, date);
     if (!strip.isConnected) return;
     if (!photos.length) { strip.innerHTML = '<span class="ws-empty-note">Photos are no longer shared.</span>'; return; }
     strip.innerHTML = photos.map((p, i) =>
-      '<button type="button" class="ci-photo-thumb" data-photo="' + i + '" aria-label="Open photo ' + (i + 1) + (p.pose ? ', ' + escapeHtml(p.pose) : '') + '">'
+      '<button type="button" class="ci-photo-thumb" data-photo="' + i + '" aria-label="Open ' + escapeHtml(photoName(p, i)) + '">'
       + '<img src="' + escapeHtml(p.image) + '" alt="" loading="lazy">'
       + (p.pose ? '<span>' + escapeHtml(p.pose) + '</span>' : '') + '</button>').join('');
     strip.onclick = e => {
       const btn = e.target.closest('[data-photo]');
-      if (btn) openCheckInPhoto(photos, Number(btn.dataset.photo), date);
+      if (btn) openCheckInPhoto(photos, Number(btn.dataset.photo), date, { clientId, prevDate: card?.dataset.ciPrev || '' });
     };
+    // The composer can pin a comment to one of these photos.
+    const pin = card?.querySelector('[data-ci-pin]');
+    if (pin) fillPinSelect(pin, photos);
   } catch {
-    delete _checkInPhotos[key];
     if (strip.isConnected) strip.innerHTML = '<span class="ws-empty-note">Photos could not be loaded.</span>';
   }
 }
 
-function openCheckInPhoto(photos, start, date) {
+function fillPinSelect(select, photos) {
+  const keep = select.value;
+  select.innerHTML = '<option value="">Whole check-in</option>'
+    + photos.map((p, i) => '<option value="' + i + '">' + escapeHtml(photoName(p, i)) + ' photo</option>').join('');
+  select.hidden = false;
+  if (keep !== '' && Number(keep) < photos.length) select.value = keep;
+}
+
+// The previous check-in's photo to compare with: same pose label, else the
+// same position.
+function matchingPhoto(prevPhotos, photo, i) {
+  if (!prevPhotos || !prevPhotos.length) return null;
+  const pose = String(photo?.pose || '').trim().toLowerCase();
+  return (pose && prevPhotos.find(p => String(p.pose || '').trim().toLowerCase() === pose)) || prevPhotos[i] || null;
+}
+
+function openCheckInPhoto(photos, start, date, ctx = {}) {
   let i = start;
+  let compare = false;
+  let prevPhotos = null;
   const box = document.createElement('div');
   box.className = 'ci-photo-viewer';
   box.setAttribute('role', 'dialog');
   box.setAttribute('aria-modal', 'true');
-  box.innerHTML = '<img alt=""><div class="ci-photo-viewer-bar">'
+  box.innerHTML = '<div class="ci-photo-viewer-stage">'
+    + '<figure class="ci-photo-fig" data-v="prevfig" hidden><img alt="" data-v="previmg"><figcaption data-v="prevcap"></figcaption></figure>'
+    + '<figure class="ci-photo-fig"><img alt="" data-v="img"><figcaption data-v="cap"></figcaption></figure></div>'
+    + '<div class="ci-photo-viewer-bar">'
     + '<button type="button" data-v="prev" aria-label="Previous photo">&lsaquo;</button>'
     + '<span data-v="label"></span>'
-    + '<button type="button" data-v="next" aria-label="Next photo">&rsaquo;</button></div>'
+    + '<button type="button" data-v="next" aria-label="Next photo">&rsaquo;</button>'
+    + (ctx.prevDate ? '<button type="button" class="ci-photo-viewer-pill" data-v="compare" aria-pressed="false">Compare with ' + escapeHtml(shortDate(ctx.prevDate) || ctx.prevDate) + '</button>' : '')
+    + (ctx.clientId ? '<button type="button" class="ci-photo-viewer-pill" data-v="comment">Comment on this photo</button>' : '')
+    + '</div>'
     + '<button type="button" class="ci-photo-viewer-close" data-v="close" aria-label="Close">&times;</button>';
+  const q = sel => box.querySelector('[data-v="' + sel + '"]');
   const show = () => {
     const p = photos[i];
-    box.querySelector('img').src = p.image;
-    box.querySelector('[data-v="label"]').textContent = (shortDate(date) || date) + ' · ' + (i + 1) + ' / ' + photos.length + (p.pose ? ' · ' + p.pose : '');
+    q('img').src = p.image;
+    q('cap').textContent = compare ? (shortDate(date) || date) + ' · ' + photoName(p, i) : '';
+    q('label').textContent = (shortDate(date) || date) + ' · ' + (i + 1) + ' / ' + photos.length + (p.pose ? ' · ' + p.pose : '');
+    const fig = q('prevfig');
+    fig.hidden = !compare;
+    box.classList.toggle('is-compare', compare);
+    if (compare) {
+      const old = matchingPhoto(prevPhotos, p, i);
+      q('previmg').src = old ? old.image : '';
+      q('previmg').style.visibility = old ? '' : 'hidden';
+      q('prevcap').textContent = old ? (shortDate(ctx.prevDate) || ctx.prevDate) + ' · ' + photoName(old, prevPhotos.indexOf(old)) : (prevPhotos ? 'No matching photo' : 'Loading…');
+    }
   };
   const step = d => { i = (i + d + photos.length) % photos.length; show(); };
   const shut = () => { document.removeEventListener('keydown', onKey); box.remove(); };
@@ -930,15 +1052,142 @@ function openCheckInPhoto(photos, start, date) {
     else if (e.key === 'ArrowLeft') step(-1);
     else if (e.key === 'ArrowRight') step(1);
   };
-  box.addEventListener('click', e => {
+  box.addEventListener('click', async e => {
     const v = e.target.closest('[data-v]')?.dataset.v;
     if (v === 'prev') step(-1);
     else if (v === 'next') step(1);
-    else if (v === 'close' || e.target === box) shut();
+    else if (v === 'compare') {
+      compare = !compare;
+      e.target.closest('[data-v]').setAttribute('aria-pressed', String(compare));
+      show();
+      if (compare && !prevPhotos) {
+        try { prevPhotos = await fetchCheckInPhotos(ctx.clientId, ctx.prevDate); } catch { prevPhotos = []; }
+        if (box.isConnected) show();
+      }
+    } else if (v === 'comment') {
+      shut();
+      focusComposer(date, i);
+    } else if (v === 'close' || e.target === box) shut();
   });
   document.addEventListener('keydown', onKey);
   document.body.appendChild(box);
   show();
+}
+
+// ── Check-in comments ────────────────────────────────────────────
+// GET/POST /api/coach/clients/:id/checkins/:date/comments. The client is
+// notified of each comment and can reply from the app; their replies show
+// here and flag the client on Today.
+
+const _threads = {};
+
+async function loadThread(clientId, slot, force) {
+  const date = slot.dataset.ciThread;
+  const key = clientId + '|' + date;
+  try {
+    if (force || !_threads[key]) {
+      const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkins/' + encodeURIComponent(date) + '/comments', { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+      _threads[key] = data.comments || [];
+    }
+    if (slot.isConnected) renderThread(clientId, slot, _threads[key]);
+  } catch {
+    if (slot.isConnected) slot.innerHTML = '<span class="ws-empty-note">Comments could not be loaded.</span>';
+  }
+}
+
+function commentTime(iso) {
+  const t = Date.parse(iso || '');
+  return Number.isNaN(t) ? '' : new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderThread(clientId, slot, comments) {
+  const date = slot.dataset.ciThread;
+  const client = _clients.find(x => x.id === clientId) || {};
+  const card = slot.closest('[data-ci-card]');
+  const strip = card?.querySelector('[data-ci-photos]');
+  slot.innerHTML = '<div class="ci-thread-head"><span class="d-card-title">Comments</span>'
+    + (comments.length ? '<span class="ca-chip">' + comments.length + '</span>' : '') + '</div>'
+    + (comments.length
+      ? '<div class="ci-msgs">' + comments.map(m => '<div class="ci-msg ci-msg--' + (m.author === 'coach' ? 'coach' : 'client') + '">'
+        + '<div class="ci-msg-meta"><b>' + (m.author === 'coach' ? 'You' : escapeHtml(client.clientName || m.authorName || 'Client')) + '</b>'
+        + (Number.isInteger(m.photoIndex) ? '<button type="button" class="ca-chip ci-msg-pin" data-ci-open-photo="' + m.photoIndex + '">' + ic('camera') + ' ' + escapeHtml(m.photoLabel || 'Photo ' + (m.photoIndex + 1)) + '</button>' : '')
+        + '<span>' + escapeHtml(commentTime(m.createdAt)) + '</span></div>'
+        + '<div class="ci-msg-text">' + escapeHtml(m.text) + '</div></div>').join('') + '</div>'
+      : '<p class="ws-empty-note">No comments yet. ' + escapeHtml(client.clientName || 'Your client') + ' gets a notification when you write one and can reply in the app.</p>')
+    + '<form class="ci-compose" data-ci-compose="' + escapeHtml(date) + '">'
+    + '<textarea class="d-input ci-compose-input" rows="2" maxlength="1000" placeholder="Comment on this check-in…" aria-label="Comment on the check-in of ' + escapeHtml(shortDate(date) || date) + '"></textarea>'
+    + '<div class="ci-compose-row">'
+    + '<label class="ci-compose-pin"><span>On</span><select class="d-input" data-ci-pin hidden aria-label="Pin the comment to a photo"><option value="">Whole check-in</option></select></label>'
+    + '<button type="submit" class="bulk-action-btn">' + ic('send') + ' Send</button></div></form>';
+  // Photos already loaded for this card fill the pin list straight away.
+  const cached = _checkInPhotos[clientId + '|' + date];
+  if (strip && cached) cached.then(photos => { const pin = slot.querySelector('[data-ci-pin]'); if (pin && photos.length) fillPinSelect(pin, photos); }).catch(() => {});
+  slot.onsubmit = e => { e.preventDefault(); sendComment(clientId, slot); };
+  slot.onclick = e => {
+    const chip = e.target.closest('[data-ci-open-photo]');
+    if (!chip || !cached) return;
+    cached.then(photos => {
+      const idx = Number(chip.dataset.ciOpenPhoto);
+      if (photos[idx]) openCheckInPhoto(photos, idx, date, { clientId, prevDate: card?.dataset.ciPrev || '' });
+    }).catch(() => {});
+  };
+}
+
+function focusComposer(date, photoIndex) {
+  const slot = document.querySelector('#dtab_checkin [data-ci-thread="' + CSS.escape(date) + '"]');
+  if (!slot) return;
+  const pin = slot.querySelector('[data-ci-pin]');
+  if (pin && photoIndex != null && pin.querySelector('option[value="' + photoIndex + '"]')) pin.value = String(photoIndex);
+  slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  slot.querySelector('textarea')?.focus();
+}
+
+async function sendComment(clientId, slot) {
+  const date = slot.dataset.ciThread;
+  const form = slot.querySelector('[data-ci-compose]');
+  const input = form.querySelector('textarea');
+  const text = input.value.trim();
+  if (!text) { input.focus(); return; }
+  const btn = form.querySelector('[type="submit"]');
+  const pin = form.querySelector('[data-ci-pin]');
+  const body = { text };
+  if (pin && !pin.hidden && pin.value !== '') body.photoIndex = Number(pin.value);
+  btn.disabled = true;
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkins/' + encodeURIComponent(date) + '/comments', {
+      method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
+    const key = clientId + '|' + date;
+    _threads[key] = [...(_threads[key] || []), data.comment];
+    // The roster row's flags change too: this date is now commented on.
+    const c = _clients.find(x => x.id === clientId);
+    if (c) {
+      c.coachCommentDates = [date, ...(c.coachCommentDates || []).filter(x => x !== date)];
+      c.awaitingReplyDates = (c.awaitingReplyDates || []).filter(x => x !== date);
+      const chips = slot.closest('[data-ci-card]')?.querySelector('.ci-card-chips');
+      chips?.querySelectorAll('.ci-flag').forEach(ch => ch.remove());
+      renderWorkspace();
+      renderDetailHeader(c);
+    }
+    renderThread(clientId, slot, _threads[key]);
+    composeStatus(slot, 'Sent. ' + (c?.clientName || 'Your client') + ' gets a notification.');
+  } catch (err) {
+    btn.disabled = false;
+    composeStatus(slot, err.message || 'Could not send the comment. Try again.', true);
+  }
+}
+
+function composeStatus(slot, text, isError) {
+  const row = slot.querySelector('.ci-compose-row');
+  if (!row) return;
+  let el = row.querySelector('.ci-compose-status');
+  if (!el) { el = document.createElement('span'); el.className = 'ci-compose-status'; el.setAttribute('role', 'status'); row.insertBefore(el, row.lastElementChild); }
+  el.textContent = text;
+  el.classList.toggle('is-error', !!isError);
 }
 
 // ══════════════════════════════════════════════════════════════

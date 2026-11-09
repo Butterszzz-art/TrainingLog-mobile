@@ -673,3 +673,47 @@ span.client-checkbox { border-color: transparent; background: none; cursor: defa
   cursor: pointer;
 }
 .ci-photo-viewer-close { position: absolute; top: 16px; right: 16px; }
+.ci-photo-thumb--skeleton { cursor: default; animation: ci-skel 1.2s ease-in-out infinite alternate; }
+@keyframes ci-skel { from { opacity: .45; } to { opacity: .9; } }
+.ci-photo-viewer-stage { display: flex; gap: 16px; align-items: center; justify-content: center; max-width: 100%; }
+.ci-photo-fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.ci-photo-fig[hidden] { display: none; }
+.ci-photo-fig figcaption { color: rgba(255, 255, 255, 0.8); font-size: 13px; }
+.ci-photo-fig figcaption:empty { display: none; }
+.ci-photo-viewer.is-compare .ci-photo-fig { flex: 1 1 0; }
+.ci-photo-viewer.is-compare img { max-height: calc(100vh - 150px); max-width: 44vw; }
+.ci-photo-viewer .ci-photo-viewer-pill { width: auto; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.ci-photo-viewer .ci-photo-viewer-pill[aria-pressed="true"] { background: #fff; color: #111; }
+
+/* Check-in comment thread + composer (renderThread in coach.js) */
+.ci-card-chips { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.ci-photo-off { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+.ci-photo-off svg { width: 16px; height: 16px; }
+.ci-thread { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-row); display: flex; flex-direction: column; gap: 10px; }
+.ci-thread-head { display: flex; align-items: center; gap: 8px; }
+.ci-msgs { display: flex; flex-direction: column; gap: 8px; }
+.ci-msg { padding: 9px 12px; border-radius: 12px; border: 1px solid var(--border-row); max-width: 88%; }
+.ci-msg--coach { align-self: flex-end; background: var(--surface-recessed); }
+.ci-msg--client { align-self: flex-start; }
+.ci-msg-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-tertiary); margin-bottom: 3px; }
+.ci-msg-meta b { color: var(--text-secondary); }
+.ci-msg-text { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ci-msg-pin { cursor: pointer; font: inherit; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; }
+.ci-msg-pin svg { width: 12px; height: 12px; }
+.ci-compose { display: flex; flex-direction: column; gap: 8px; }
+.ci-compose-input { width: 100%; box-sizing: border-box; min-height: 60px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-row); background: var(--surface); color: inherit; font: inherit; font-size: 14px; }
+.ci-compose-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ci-compose-pin { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-tertiary); }
+.ci-compose-pin:has(select[hidden]) { display: none; }
+.ci-compose-pin select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border-row); background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+.ci-compose-status { margin-left: auto; font-size: 13px; color: var(--text-tertiary); }
+.ci-compose-status.is-error { color: var(--danger-text-mobile); }
+.ci-compose-row .bulk-action-btn { margin-left: auto; }
+.ci-compose-status + .bulk-action-btn { margin-left: 0; }
+
+/* New photos / client replied: Overview chips and Today rows */
+.ca-review-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.ca-chip--btn { cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
+.ca-chip--btn svg { width: 14px; height: 14px; }
+.ca-todo.is-review { border-color: var(--border-featured); }
+.ca-todo.is-review .ca-todo-why { color: var(--green-90); }

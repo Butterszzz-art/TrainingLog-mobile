@@ -146,8 +146,22 @@
       // Posing photo sets (posingEngine session ids) attached to this
       // check-in; the photos themselves stay in posingMediaStore.
       posingSessionIds: cleanSessionIds(safe.posingSessionIds),
+      // Which photos of an attached set go to the coach ("Send to coach" in
+      // the Posing tab): { sessionId: [photoId] }. A set without an entry
+      // sends all of its photos.
+      posingPhotoPicks: cleanPhotoPicks(safe.posingPhotoPicks, cleanSessionIds(safe.posingSessionIds)),
       archetypeMetrics
     };
+  }
+
+  function cleanPhotoPicks(value, sessionIds) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    const out = {};
+    sessionIds.forEach((id) => {
+      const ids = Array.isArray(value[id]) ? [...new Set(value[id].filter((x) => typeof x === 'string' && x))].slice(0, 30) : [];
+      if (ids.length) out[id] = ids;
+    });
+    return out;
   }
 
   function cleanSessionIds(value) {
