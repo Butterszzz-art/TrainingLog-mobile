@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v87';
+const CACHE_VERSION = 'pocket-coach-v88';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -21,6 +21,7 @@ const APP_SHELL = [
   '/css/nav.css',
   '/css/login.css',
   '/public/icons/login-logo.jpg',
+  '/public/icons/plate.jpg', // logbook cover on the opening screen
   '/css/onboarding.css',
   '/css/tutorial.css',
   '/css/next-step-chips.css',
@@ -134,6 +135,13 @@ const APP_SHELL = [
   '/css/session-sheets.css',
   // Self-hosted third-party libraries and fonts (vendor/README.md)
   '/vendor/fonts/fonts.css',
+  // The app's main typefaces (css/tokens.css), so an offline start isn't
+  // drawn in the system font. Other weights and scripts are cached on use.
+  '/vendor/fonts/anton-latin-a6f395c1.woff2',
+  '/vendor/fonts/archivo-latin-79dc5e10.woff2',
+  '/vendor/fonts/barlow-condensed-latin-b576192e.woff2',
+  '/vendor/fonts/barlow-condensed-latin-f60870fc.woff2',
+  '/vendor/fonts/barlow-condensed-latin-7f84396d.woff2',
   '/vendor/chart-4.5.1.umd.min.js',
   '/vendor/confetti-1.9.3.browser.js',
   '/vendor/firebase-app-compat-10.14.1.js',
@@ -241,10 +249,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Other static assets (images, icons, fonts): cache-first.
+  // Other static assets (images, icons, fonts): cache-first, and kept once
+  // fetched. Only .ico files used to be kept, so an offline start (or one
+  // after the HTTP cache expired) drew the cover with a broken logo and
+  // the system font while the page, CSS and scripts came from the cache.
   event.respondWith(
     caches.match(request).then((cached) => cached || fetch(request).then((response) => {
-      if (response.ok && url.pathname.endsWith('.ico')) {
+      if (response.ok && /\.(ico|png|jpe?g|webp|svg|gif|woff2?|ttf|otf)$/i.test(url.pathname)) {
         const clone = response.clone();
         caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
       }
