@@ -8838,6 +8838,7 @@ async function loadTemplateDropdown(username = currentUser) {
     // Populate the resistance template dropdown; CrossFit templates use a separate select
     populateTemplateSelect('resistanceTemplateSelect', merged);
     renderTemplateLibraryList();
+    if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
   } catch (err) {
     console.warn('Template loading failed:', err);
     resistanceTemplatesCache = [];
@@ -9013,15 +9014,21 @@ function loadSelectedTemplate() {
 function loadSelectedResistanceTemplate() {
   const select = document.getElementById('resistanceTemplateSelect');
   const selectedTemplateId = select ? select.value : '';
-  const selectedTemplate = resistanceTemplatesCache.find(tpl => tpl.id === selectedTemplateId);
-  const value = selectedTemplate?.data;
-  if (!value) return;
+  if (selectedTemplateId) loadResistanceTemplateById(selectedTemplateId);
+}
 
-  const template = value;
+// Load a saved template into today's log as a planned workout (sets tick off
+// as they're lifted) and make it today's session (today-session.js), so the
+// Log hero, plan list, Home card and performance mode follow it. Returns true
+// when it loaded. opts.quiet skips the toast (the caller shows its own).
+function loadResistanceTemplateById(templateId, opts = {}) {
+  const selectedTemplate = resistanceTemplatesCache.find(tpl => tpl.id === templateId);
+  const template = selectedTemplate?.data;
+  if (!template) return false;
 
-  if (!template || typeof template !== 'object') {
+  if (typeof template !== 'object') {
     window.showToast('Invalid template format.', 'warn');
-    return;
+    return false;
   }
 
   const templateLog = Array.isArray(template.log)
@@ -9056,20 +9063,28 @@ function loadSelectedResistanceTemplate() {
 
   if (!templateLog.length) {
     window.showToast('Template has no exercises to load.', 'warn');
-    return;
+    return false;
   }
 
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   workouts.push({
     title: template.title || selectedTemplate?.name || `Template Workout ${localDateKey()}`,
     date: localDateKey(),
-    metadata: template.metadata || {},
+    metadata: {
+      ...(template.metadata || {}),
+      source: 'template',
+      planned: true,
+      templateId: selectedTemplate.id,
+      templateName: selectedTemplate.name || template.title || ''
+    },
     log: templateLog,
     restBreaks: []
   });
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
+  if (window.todaySession) window.todaySession.pickTemplateForToday(selectedTemplate, { user: currentUser });
   renderWorkouts();
-  window.showToast('Template loaded!', 'success');
+  if (!opts.quiet) window.showToast('Template loaded!', 'success');
+  return true;
 }
 
 // SEND TEMPLATE TO ANOTHER USER
@@ -18940,6 +18955,7 @@ window.addCardioEntry = addCardioEntry;
 window.completeCardioSession = completeCardioSession;
 window.loadSelectedTemplate = loadSelectedTemplate;
 window.loadSelectedResistanceTemplate = loadSelectedResistanceTemplate;
+window.loadResistanceTemplateById = loadResistanceTemplateById;
 window.sendTemplate = sendTemplate;
 
 /* ══════════════════════════════════════════════════════════════
@@ -21468,6 +21484,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/rehab.js"></script>
   <script src="src/js/reminders.js"></script>
   <script src="src/js/program-schedule.js"></script>
+  <script src="src/js/today-session.js"></script>
   <script src="src/js/today-program.js"></script>
   <script src="src/js/calendar-sync.js"></script>
   <script src="src/js/session-queue.js"></script>

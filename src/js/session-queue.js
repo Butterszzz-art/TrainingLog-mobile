@@ -23,16 +23,17 @@
     try { return typeof require === 'function' ? require('./program-schedule') : null; } catch { return null; }
   }
 
-  /** Resolve today's program day object ({ name, exercises: [...] }), or null.
+  function _session() {
+    if (global.todaySession) return global.todaySession;
+    try { return typeof require === 'function' ? require('./today-session') : null; } catch { return null; }
+  }
+
+  /** Today's session ({ name, exercises: [...], source }), or null: the
+   * active program's day, else a template picked for today (today-session.js).
    * Follows program-schedule.js, so a "Do it today" swap on Home applies here. */
   function getTodaysPlannedDay() {
-    const ps = _schedule();
-    if (!ps) return null;
-    const schedule = ps.getActiveSchedule(_user());
-    if (!schedule) return null;
-    const today = schedule.dayFor(new Date());
-    if (!today.isTraining || !today.day) return null; // rest day
-    return { ...today.day, programName: schedule.program.name, programId: schedule.program.id, weekNum: today.weekNum, weekCount: schedule.weekCount };
+    const ts = _session();
+    return ts ? ts.getTodaysSession(_user()) : null;
   }
 
   function _setSummary(ex) {
@@ -96,7 +97,7 @@
       el.innerHTML = `
         <div class="pod pod--hero train-hero-card">
           <div class="pod-kicker">No session planned today</div>
-          <p class="ws-empty-note" style="margin-top:8px;">Rest day, or no active program is assigned — log manually below whenever you're ready.</p>
+          <p class="ws-empty-note" style="margin-top:8px;">Load a saved template below to plan today's session, or just log as you go.</p>
           <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="_askGymThen(function(){ if(typeof startPerformanceMode==='function') startPerformanceMode(); })"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>
         </div>`;
       return;
@@ -295,20 +296,22 @@
       </div>`;
   }
 
-  // ── Today's program in the log ──────────────────────────────────
-  // The program day loads into today's log the same way a saved template
-  // does (index.html loadSelectedResistanceTemplate): one workout whose sets
-  // carry the planned reps/weights and get ticked Done as they're lifted.
-  // metadata.source === 'program' marks it so it's loaded only once and so
-  // program-schedule.js dayProgress() counts its ticked sets.
+  // ── Today's session in the log ──────────────────────────────────
+  // Today's session (program day or template) loads into today's log as one
+  // workout whose sets carry the planned reps/weights and get ticked Done as
+  // they're lifted. metadata.source ('program' | 'template') marks it so it's
+  // loaded only once, and metadata.planned makes program-schedule.js
+  // dayProgress() count only its ticked sets.
 
   function _readWorkouts(u) {
     try { return JSON.parse(localStorage.getItem('workouts_' + u)) || []; } catch { return []; }
   }
 
-  /** Index of today's workout loaded from this program day, or -1. */
+  /** Index of today's workout loaded from this session, or -1. */
   function _loadedProgramWorkoutIndex(day, workouts) {
     const todayStr = _localDateKey();
+    const ts = _session();
+    if (ts) return workouts.findIndex(w => ts.isLoadedFrom(w, day, todayStr));
     return workouts.findIndex(w => w && w.date === todayStr && w.metadata && w.metadata.source === 'program'
       && w.metadata.programDay === day.name);
   }
@@ -356,31 +359,48 @@
     if (target && target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  /** Load today's program day into today's log like a template (once), then
-   * open it. Returns the workout index, or -1 when there's nothing to load. */
+  /** Workout metadata for a session loaded into the log. */
+  function sessionMetadata(day) {
+    if (day && day.source === 'template') {
+      return { source: 'template', planned: true, templateId: day.templateId || null, templateName: day.name };
+    }
+    return { source: 'program', planned: true, programId: day.programId || null, programDay: day.name, programName: day.programName || '' };
+  }
+
+  /** Load today's session into today's log (once), then open it. A template
+   * goes through the template loader (index.html loadResistanceTemplateById)
+   * so it keeps its set definitions. Returns the workout index, or -1 when
+   * there's nothing to load. */
   function loadTodayProgramIntoLog(opts) {
     const options = opts || {};
     const day = getTodaysPlannedDay();
     const u = _user();
     if (!day || !u || !Array.isArray(day.exercises) || !day.exercises.length) {
-      if (global.showToast) global.showToast('No program session planned today.', 'warn');
+      if (global.showToast) global.showToast('No session planned today.', 'warn');
       return -1;
     }
-    const workouts = _readWorkouts(u);
+    let workouts = _readWorkouts(u);
     let index = _loadedProgramWorkoutIndex(day, workouts);
+    if (index === -1 && day.source === 'template' && typeof global.loadResistanceTemplateById === 'function') {
+      if (global.loadResistanceTemplateById(day.templateId, { quiet: true })) {
+        workouts = _readWorkouts(u);
+        index = _loadedProgramWorkoutIndex(day, workouts);
+        if (index !== -1 && global.showToast) global.showToast(`${day.name} loaded`, 'success');
+      }
+    }
     if (index === -1) {
       const dateKey = _localDateKey();
       workouts.push({
         title: day.name,
         date: dateKey,
-        metadata: { source: 'program', programId: day.programId || null, programDay: day.name, programName: day.programName || '' },
+        metadata: sessionMetadata(day),
         log: buildProgramDayLog(day, dateKey, _lastWeightFor),
         restBreaks: [],
       });
       localStorage.setItem('workouts_' + u, JSON.stringify(workouts));
       index = workouts.length - 1;
       if (typeof global.renderWorkouts === 'function') global.renderWorkouts();
-      if (global.showToast) global.showToast(`${day.name} loaded from your program`, 'success');
+      if (global.showToast) global.showToast(day.source === 'template' ? `${day.name} loaded` : `${day.name} loaded from your program`, 'success');
     }
     renderSessionQueue();
     if (options.scroll !== false) setTimeout(() => _openAndScrollTo(index, null), 60);
@@ -400,13 +420,16 @@
     const exercises = day && Array.isArray(day.exercises) ? day.exercises : [];
     if (!day || !exercises.length) { el.innerHTML = ''; el.hidden = true; return; }
     const loaded = _loadedProgramWorkoutIndex(day, _readWorkouts(_user())) !== -1;
+    const fromTemplate = day.source === 'template';
     const week = day.weekCount > 1 ? ` · week ${day.weekNum}` : '';
+    const source = fromTemplate ? 'Your template' : `${_escHTML(day.programName || 'Your program')}${week}`;
+    const label = fromTemplate ? "Today's session" : "Today's program";
     el.hidden = false;
     el.innerHTML = `
       <button type="button" class="sq-program-load${loaded ? ' is-loaded' : ''}" onclick="loadTodayProgramIntoLog()">
         <span class="sq-program-load-text">
-          <span class="sq-program-load-name">${loaded ? `${_escHTML(day.name)} is in today's log` : `Today's program: ${_escHTML(day.name)}`}</span>
-          <span class="sq-program-load-sub">${_escHTML(day.programName || 'Your program')}${week} · ${exercises.length} lift${exercises.length === 1 ? '' : 's'}</span>
+          <span class="sq-program-load-name">${loaded ? `${_escHTML(day.name)} is in today's log` : `${label}: ${_escHTML(day.name)}`}</span>
+          <span class="sq-program-load-sub">${source} · ${exercises.length} lift${exercises.length === 1 ? '' : 's'}</span>
         </span>
         <span class="sq-program-load-cta">${loaded ? 'Show' : 'Load'}</span>
       </button>`;
@@ -1042,7 +1065,7 @@
     }
   }
 
-  const api = { getTodaysPlannedDay, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
+  const api = { getTodaysPlannedDay, sessionMetadata, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
     initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
