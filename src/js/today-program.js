@@ -7,7 +7,10 @@
  *  - Swipe (or tap the week strip) to look at the other days of this week:
  *    past days show what was logged, future days offer "Do it today".
  *  - With no active program, programs saved in My Programs / from the
- *    Library are offered with a Start button.
+ *    Library are offered with a Start button; with none saved, saved
+ *    templates are offered instead.
+ *  - A template picked for today (today-session.js) shows as today's
+ *    session when there's no program day today.
  *
  * Which day falls on which date comes from program-schedule.js, shared with
  * the Log tab plan (session-queue.js). Start loads the day into the log the
@@ -17,8 +20,10 @@
   'use strict';
 
   const PICK_DISMISS_KEY = 'tpcPickDismissed_';
+  const TPL_DISMISS_KEY = 'tpcTemplatePickDismissed_';
 
   function _ps() { return window.programSchedule || null; }
+  function _ts() { return window.todaySession || null; }
   function _core() { return window.programBuilderV2Core || null; }
   function _user() { return window.currentUser || localStorage.getItem('fitnessAppUser'); }
 
@@ -79,7 +84,7 @@
     const names = [];
     let sets = 0;
     workouts.forEach(w => (w.log || []).forEach(entry => {
-      const fromProgram = w.metadata && w.metadata.source === 'program';
+      const fromProgram = _ps() ? _ps().isPlannedWorkout(w) : !!(w.metadata && w.metadata.source === 'program');
       const n = fromProgram
         ? (entry.completedArray || []).filter(Boolean).length
         : (Array.isArray(entry.repsArray) ? entry.repsArray.length : 0);
@@ -139,6 +144,9 @@
 
     if (!d.isTraining) {
       const next = schedule.nextTrainingAfter(d.date);
+      if (isToday && ctx.templateDay) {
+        return _templateTodaySlide(ctx.templateDay, d.key, ps, user, _nextUpRow(next, today, ps));
+      }
       if (isToday) {
         const action = next ? `<button type="button" class="tpc-go tpc-go--ghost" data-tpc-swap="${next.key}">Train</button>` : '';
         return `<div class="tpc-slide">${_banner({
@@ -192,6 +200,76 @@
       tone: 'muted', kicker: `${d.abbr} · Coming up`, name: _esc(d.day.name), sub: subPlan,
       action: `<button type="button" class="tpc-go tpc-go--ghost" data-tpc-swap="${d.key}">Do it today</button>`,
     })}<div class="tpc-body">${_liftRows(stats.exercises, null)}</div></div>`;
+  }
+
+  /** Today's slide for a template picked for today (no program day today). */
+  function _templateTodaySlide(day, dateKey, ps, user, footer) {
+    const stats = _dayStats(day);
+    const progress = ps.dayProgress(day, ps.workoutsOn(dateKey, user));
+    if (progress.complete) {
+      return `<div class="tpc-slide tpc-slide--today">${_banner({
+        tone: 'muted', kicker: 'Done today', name: `${_esc(day.name)} ✓`,
+        sub: `${_plural(progress.totalLifts, 'lift')} · ${_plural(progress.doneSets, 'set')}`,
+      })}<div class="tpc-body">${footer || ''}</div></div>`;
+    }
+    const sub = progress.started
+      ? `${progress.doneLifts} of ${progress.totalLifts} lifts · ${progress.doneSets}/${progress.totalSets} sets`
+      : `${_plural(stats.lifts, 'lift')} · ${_plural(stats.sets, 'set')} · ~${stats.minutes} min`;
+    return `<div class="tpc-slide tpc-slide--today">${_banner({
+      tone: 'go',
+      kicker: 'Up today · Your template',
+      name: _esc(day.name),
+      sub,
+      action: `<button type="button" class="tpc-go" data-tpc-start>${progress.started ? 'Continue' : 'Start'}</button>`,
+    })}<div class="tpc-body">${_liftRows(stats.exercises, progress)}</div></div>`;
+  }
+
+  /** Card for a lifter with no program but a template picked for today. */
+  function _renderTemplateToday(el, day, user) {
+    const ps = _ps();
+    el.innerHTML = `
+      <div class="tpc-card">
+        <div class="tpc-viewport">
+          <div class="tpc-track">${_templateTodaySlide(day, ps.localDateKey(), ps, user)}</div>
+        </div>
+      </div>`;
+    el._tpcDay = null;
+    el._tpcIndex = 0;
+    _fitHeight(el);
+  }
+
+  /** Saved templates with at least one lift (index.html resistanceTemplatesCache). */
+  function _savedTemplates() {
+    const ts = _ts();
+    const list = Array.isArray(window.resistanceTemplatesCache) ? window.resistanceTemplatesCache : [];
+    return list.filter(t => t && t.id && ts && ts.templateToDay(t.data, { name: t.name, templateId: t.id }));
+  }
+
+  /** No program and nothing saved as one: offer saved templates for today. */
+  function _renderTemplatePick(el, user) {
+    const ts = _ts();
+    const templates = _savedTemplates();
+    let dismissed = '';
+    try { dismissed = localStorage.getItem(TPL_DISMISS_KEY + user) || ''; } catch { /* ignore */ }
+    if (!templates.length || dismissed === _ps().localDateKey()) { el.innerHTML = ''; return; }
+
+    const rows = templates.slice(0, 3).map((t, i) => {
+      const day = ts.templateToDay(t.data, { name: t.name, templateId: t.id });
+      const stats = _dayStats(day);
+      return `
+        <div class="tpc-pick">
+          <span class="tpc-pick-text"><b>${_esc(t.name)}</b><small>${_plural(stats.lifts, 'lift')} · ${_plural(stats.sets, 'set')} · ~${stats.minutes} min</small></span>
+          <button type="button" class="tpc-go tpc-go--sm${i ? ' tpc-go--ghost' : ''}" data-tpc-template="${_esc(t.id)}">Start</button>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="tpc-card">
+        <div class="tpc-slide">
+          ${_banner({ tone: 'muted', kicker: 'Your templates', name: "Pick today's session", sub: 'Start one to get a plan, targets and progress for today', action: '<button type="button" class="tpc-dismiss" data-tpc-template-dismiss>Not now</button>' })}
+          <div class="tpc-body">${rows}</div>
+        </div>
+      </div>`;
   }
 
   /** Shorten day names for the narrow strip cells: "Upper Body A" → "Upper A". */
@@ -253,8 +331,15 @@
     if (!ps || !user) { el.innerHTML = ''; return; }
     _wire(el);
 
+    const ts = _ts();
+    const templateDay = ts ? ts.readTemplatePick(user) : null;
     const schedule = ps.getActiveSchedule(user);
-    if (!schedule) { _renderPick(el, user); return; }
+    if (!schedule) {
+      if (templateDay) { _renderTemplateToday(el, templateDay, user); return; }
+      if (_savedPrograms().length) { _renderPick(el, user); return; }
+      _renderTemplatePick(el, user);
+      return;
+    }
 
     const now = new Date();
     const today = schedule.dayFor(now);
@@ -264,7 +349,7 @@
 
     const plannedThisWeek = week.filter(d => d.isTraining).length;
     const doneThisWeek = week.filter(d => d.isTraining && d.date <= today.date && loggedOn(d)).length;
-    const ctx = { schedule, today, ps, user, plannedThisWeek, doneThisWeek };
+    const ctx = { schedule, today, ps, user, plannedThisWeek, doneThisWeek, templateDay };
 
     // Keep the swiped-to day across re-renders within the same day.
     const keepIdx = el._tpcDay === today.key && Number.isInteger(el._tpcIndex) ? el._tpcIndex : todayIdx;
@@ -392,6 +477,18 @@
         }
         return;
       }
+      if (t.dataset.tpcTemplate) {
+        const ts = _ts();
+        const record = _savedTemplates().find(tpl => String(tpl.id) === t.dataset.tpcTemplate);
+        if (!ts || !record || !ts.pickTemplateForToday(record, { user: _user() })) return;
+        startTodayProgramSession();
+        return;
+      }
+      if (t.hasAttribute('data-tpc-template-dismiss')) {
+        try { localStorage.setItem(TPL_DISMISS_KEY + _user(), _ps().localDateKey()); } catch { /* ignore */ }
+        el.innerHTML = '';
+        return;
+      }
       if (t.dataset.tpcDismiss) {
         try { localStorage.setItem(PICK_DISMISS_KEY + _user(), t.dataset.tpcDismiss); } catch { /* ignore */ }
         el.innerHTML = '';
@@ -423,14 +520,13 @@
     });
   }
 
-  /** Today's program day name (e.g. "Push Day"), or null on a rest day / no active program. */
+  /** Today's session name (program day or template picked for today, e.g.
+   * "Push Day"), or null when nothing is planned today. */
   function getTodayWorkoutName() {
     try {
-      const ps = _ps();
-      const schedule = ps && ps.getActiveSchedule(_user());
-      if (!schedule) return null;
-      const today = schedule.dayFor(new Date());
-      return today.isTraining && today.day ? today.day.name : null;
+      const ts = _ts();
+      const day = ts ? ts.getTodaysSession(_user()) : null;
+      return day ? day.name : null;
     } catch {
       return null;
     }

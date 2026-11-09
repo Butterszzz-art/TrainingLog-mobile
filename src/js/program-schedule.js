@@ -7,9 +7,10 @@
  *    doesn't skip ahead; multi-week library programs pick that week's sets.
  *  - "Do it today" swaps are kept per program as date → training index
  *    overrides (null = rest) in programDayOverrides_<user>.
- *  - dayProgress() tallies today's log against the plan: sets in a workout
- *    loaded from the program count once ticked Done, sets logged any other
- *    way count as soon as they're logged.
+ *  - dayProgress() tallies today's log against the plan: sets in a planned
+ *    workout (loaded from a program day or a template, see today-session.js)
+ *    count once ticked Done, sets logged any other way count as soon as
+ *    they're logged.
  */
 (function (global) {
   'use strict';
@@ -233,6 +234,13 @@
 
   const _norm = s => String(s || '').trim().toLowerCase();
 
+  /** Loaded with its sets laid out ahead (program day or template, marked by
+   * today-session.js): those sets count once ticked Done. */
+  function isPlannedWorkout(w) {
+    const meta = w && w.metadata;
+    return !!(meta && (meta.planned === true || meta.source === 'program'));
+  }
+
   function _plannedSets(ex) {
     return Array.isArray(ex.sets) ? ex.sets.length : (Number(ex.sets) || 0);
   }
@@ -248,7 +256,7 @@
     const doneByName = new Map();
     const kgByName = new Map();
     list.forEach(w => {
-      const fromProgram = !!(w && w.metadata && w.metadata.source === 'program');
+      const fromProgram = isPlannedWorkout(w);
       (w && Array.isArray(w.log) ? w.log : []).forEach(entry => {
         const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
         const weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
@@ -313,6 +321,7 @@
     getActiveSchedule,
     swapIntoToday,
     dayProgress,
+    isPlannedWorkout,
     workoutsOn,
   };
 
