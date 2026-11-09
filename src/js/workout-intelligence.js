@@ -18,9 +18,13 @@
       null;
   }
 
+  // Full history (recent + archive + backend cache), oldest first.
+  // `workouts_{user}` alone only covers the last 7 days.
   function _loadWorkouts(username) {
-    try { return JSON.parse(localStorage.getItem('workouts_' + username)) || []; }
-    catch { return []; }
+    try {
+      if (typeof window.getOverloadWorkouts === 'function') return window.getOverloadWorkouts(username);
+      return JSON.parse(localStorage.getItem('workouts_' + username)) || [];
+    } catch { return []; }
   }
 
   // Everything logged, oldest first: workouts_<user> only keeps the last ~7
