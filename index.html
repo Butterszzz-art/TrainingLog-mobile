@@ -6633,7 +6633,7 @@ function addLogEntry() {
 
   let _deloadFor = null;
   if (typeof suggestNextSession === 'function') {
-    const recommendation = suggestNextSession(newEntry, workouts);
+    const recommendation = suggestNextSession(newEntry, getOverloadWorkouts(_activeUser, workouts));
     if (recommendation) {
       newEntry.nextSessionRecommendation = recommendation;
       if (recommendation.strategy === 'deload') _deloadFor = exercise;
@@ -7300,6 +7300,23 @@ async function refreshRemoteOverloadCache(username) {
 window.refreshRemoteOverloadCache = refreshRemoteOverloadCache;
 
 /**
+ * Full history for progressive overload: the 7-day `workouts_{user}` list,
+ * the `workoutHistory_{user}` archive and the backend cache, oldest first.
+ * Reading only `workouts_{user}` made the app "forget" any exercise not
+ * trained in the last week. Pass `active` to use an in-memory list.
+ */
+function getOverloadWorkouts(user = currentUser, active) {
+  if (typeof window.getOverloadHistory !== 'function') {
+    return Array.isArray(active) ? active : (JSON.parse(localStorage.getItem(`workouts_${user}`)) || []);
+  }
+  return window.getOverloadHistory(user, {
+    active,
+    remote: _remoteOverloadCacheUser === user ? _remoteOverloadCache : []
+  });
+}
+window.getOverloadWorkouts = getOverloadWorkouts;
+
+/**
  * Find the most recent logged entry of `exerciseName` strictly before
  * `workoutIndex`, so cards rendered for older workouts compare against
  * what was actually logged before them (not just the globally latest).
@@ -7507,7 +7524,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   card.appendChild(setList);
 
   const recommendation = entry.nextSessionRecommendation || (typeof suggestNextSession === 'function'
-    ? suggestNextSession(entry, workouts)
+    ? suggestNextSession(entry, getOverloadWorkouts())
     : null);
   if (recommendation?.message) {
     const recommendationBar = document.createElement('div');
@@ -9364,7 +9381,7 @@ function getLastExerciseEntry(exerciseName) {
   const normalizedName = String(exerciseName || '').trim().toLowerCase();
   if (!normalizedName) return null;
 
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workouts = getOverloadWorkouts();
   // "Last time" means last time at the gym you're at now.
   const gymKey = typeof window.getCurrentGymKey === 'function' ? window.getCurrentGymKey() : '';
   if (gymKey === null) return null;
@@ -9387,7 +9404,7 @@ function getLastWorkoutForExercise(exerciseName) {
   const normalizedName = String(exerciseName || '').trim().toLowerCase();
   if (!normalizedName) return [];
 
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
+  const workouts = getOverloadWorkouts();
   const gymKey = typeof window.getCurrentGymKey === 'function' ? window.getCurrentGymKey() : '';
   if (gymKey === null) return [];
 

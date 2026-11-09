@@ -53,6 +53,40 @@
     return _mergeUnique([archived, active]);
   }
 
+  function _dayOf(w) {
+    const d = new Date((w && w.date) || 0);
+    return isNaN(d) ? '' : d.toISOString().slice(0, 10);
+  }
+
+  /**
+   * Oldest-to-newest workout list for progressive overload lookups.
+   * `getAllWorkoutsForUser` plus, optionally, the backend copy of
+   * workouts already purged locally. Without the archive and backend,
+   * anything not trained in the last 7 days got no suggestion.
+   *
+   * opts.active — in-memory `workouts_{user}` list to use instead of
+   *               localStorage (e.g. while an entry is being added).
+   * opts.remote — backend workouts ({ date, title, log }). Only used for
+   *               days with no local workout, since backend items carry
+   *               no stable id to dedupe on.
+   */
+  function getOverloadHistory(username, opts) {
+    if (!username) return [];
+    const o = opts || {};
+    const active = Array.isArray(o.active) ? o.active : _parseArray(`workouts_${username}`);
+    const archived = _parseArray(`workoutHistory_${username}`);
+    // Active first so its (possibly fresher) copy wins on duplicate ids.
+    // The backend snapshot (see loadFullWorkoutHistory) also covers
+    // workouts already purged locally, offline included.
+    const local = _mergeUnique([active, archived, _remoteSnapshot.get(username) || []]);
+
+    const remote = Array.isArray(o.remote) ? o.remote : [];
+    if (!remote.length) return local;
+    const localDays = new Set(local.map(_dayOf));
+    const remoteOnly = remote.filter(w => w && Array.isArray(w.log) && !localDays.has(_dayOf(w)));
+    return _mergeUnique([local, remoteOnly]);
+  }
+
   /* ── Shared backend fetch ─────────────────────────────────
      Several screens want the backend's archived workouts (history,
      progressive overload, badges, exports, challenges). Each used to
@@ -273,6 +307,7 @@
   if (typeof module !== 'undefined') {
     module.exports = {
       getAllWorkoutsForUser,
+      getOverloadHistory,
       getAllWorkoutsForUserIncludingBackend,
       fetchBackendWorkouts,
       fetchBackendWorkoutItems,
@@ -284,6 +319,7 @@
   }
   if (typeof window !== 'undefined') {
     window.getAllWorkoutsForUser = getAllWorkoutsForUser;
+    window.getOverloadHistory = getOverloadHistory;
     window.getAllWorkoutsForUserIncludingBackend = getAllWorkoutsForUserIncludingBackend;
     window.fetchBackendWorkoutItems = fetchBackendWorkoutItems;
     window.invalidateBackendWorkouts = invalidateBackendWorkouts;
