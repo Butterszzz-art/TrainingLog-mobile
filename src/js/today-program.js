@@ -11,6 +11,10 @@
  *    templates are offered instead.
  *  - A template picked for today (today-session.js) shows as today's
  *    session when there's no program day today.
+ *  - With no active program, the lifter's history fills in: "your usual
+ *    next" before lifting, or the past session today matches once started
+ *    (usual-session.js via today-session.js). Under "your usual next",
+ *    the last four weeks can be turned into a program in one tap.
  *
  * Which day falls on which date comes from program-schedule.js, shared with
  * the Log tab plan (session-queue.js). Start loads the day into the log the
@@ -202,8 +206,16 @@
     })}<div class="tpc-body">${_liftRows(stats.exercises, null)}</div></div>`;
   }
 
-  /** Today's slide for a template picked for today (no program day today). */
-  function _templateTodaySlide(day, dateKey, ps, user, footer) {
+  /** Banner kicker for a session that isn't a program day. */
+  function _sessionKicker(day) {
+    if (day.source === 'rotation') return `Your usual next${day.lastDoneLabel ? ` · last done ${_esc(day.lastDoneLabel)}` : ''}`;
+    if (day.source === 'match') return `In progress · vs ${/^(yesterday|\d)/.test(day.lastDoneLabel || '') ? '' : 'last '}${_esc(day.lastDoneLabel || 'time')}`;
+    return 'Up today · Your template';
+  }
+
+  /** Today's slide for a session that isn't a program day (template picked
+   * for today, or from history). */
+  function _templateTodaySlide(day, dateKey, ps, user, footer, extra) {
     const stats = _dayStats(day);
     const progress = ps.dayProgress(day, ps.workoutsOn(dateKey, user));
     if (progress.complete) {
@@ -217,20 +229,87 @@
       : `${_plural(stats.lifts, 'lift')} · ${_plural(stats.sets, 'set')} · ~${stats.minutes} min`;
     return `<div class="tpc-slide tpc-slide--today">${_banner({
       tone: 'go',
-      kicker: 'Up today · Your template',
+      kicker: _sessionKicker(day),
       name: _esc(day.name),
       sub,
       action: `<button type="button" class="tpc-go" data-tpc-start>${progress.started ? 'Continue' : 'Start'}</button>`,
-    })}<div class="tpc-body">${_liftRows(stats.exercises, progress)}</div></div>`;
+    })}<div class="tpc-body">${_liftRows(stats.exercises, progress)}${progress.started ? '' : (extra || '')}</div></div>`;
+  }
+
+  // ── Program from history ───────────────────────────────────────────────────
+
+  /** The last four weeks as a program (usual-session.js), or null. */
+  function _historyProgram(user) {
+    const usual = window.usualSession;
+    if (!usual || typeof window.getOverloadWorkouts !== 'function') return null;
+    try {
+      return usual.buildProgramFromHistory(window.getOverloadWorkouts(user), {
+        muscleOf: typeof window.getMuscleGroup === 'function' ? window.getMuscleGroup : null,
+      });
+    } catch { return null; }
+  }
+
+  function _programOfferRow(user) {
+    const plan = _historyProgram(user);
+    if (!plan) return '';
+    // Not offered when a free account already has its one custom program.
+    const core = _core();
+    const limits = window.PlanLimits;
+    if (core && limits && !limits.canSaveProgram(core.loadPrograms(window), { name: plan.name })) return '';
+    return `
+      <div class="tpc-pick tpc-pick--offer">
+        <span class="tpc-pick-text"><b>Make this your program</b><small>${_plural(plan.days.length, 'day')} on ${_esc(plan.frequency.join(' '))} · from your last 4 weeks</small></span>
+        <button type="button" class="tpc-go tpc-go--sm tpc-go--ghost" data-tpc-make-program>Set up</button>
+      </div>`;
+  }
+
+  /** Save the last four weeks as a program and start it. Free accounts keep
+   * their one custom program (plan-limits.js), same as the builder. */
+  async function makeProgramFromHistory() {
+    const user = _user();
+    const core = _core();
+    const plan = _historyProgram(user);
+    if (!core || !plan) { _toast('Not enough recent training to build a program yet.', 'warn'); return false; }
+
+    const id = `hist-${Date.now()}`;
+    const program = {
+      id, programId: id, name: plan.name, title: plan.name,
+      frequency: plan.frequency,
+      days: typeof core.normalizeDays === 'function' ? core.normalizeDays(plan.days) : plan.days,
+      createdFrom: 'history', createdAt: new Date().toISOString(), userId: user,
+    };
+    const limits = window.PlanLimits;
+    if (limits && !limits.canSaveProgram(core.loadPrograms(window), program)) {
+      const msg = `Free includes ${limits.FREE_CUSTOM_PROGRAMS} custom program. Upgrade to Pro to save more.`;
+      const ok = typeof window.showConfirm === 'function'
+        ? await window.showConfirm(msg, { confirmText: 'See Pro', cancelText: 'Not now' })
+        : false;
+      if (ok) limits.upgrade();
+      return false;
+    }
+    if (typeof window.showConfirm === 'function') {
+      const ok = await window.showConfirm(
+        `Start “${plan.name}”? ${_plural(plan.days.length, 'day')}, ${plan.frequency.join(' ')}, with last time's weights. You can edit it in Programs.`,
+        { confirmText: 'Start program', cancelText: 'Not now' }
+      );
+      if (!ok) return false;
+    }
+    core.upsertProgram(window, program);
+    const started = core.startProgram(window, id, { userId: user });
+    if (!started) { _toast('Could not start the program.', 'warn'); return false; }
+    _toast(`Started ${plan.name}.`);
+    _refreshAll();
+    return true;
   }
 
   /** Card for a lifter with no program but a template picked for today. */
   function _renderTemplateToday(el, day, user) {
     const ps = _ps();
+    const extra = day.source === 'rotation' ? _programOfferRow(user) : '';
     el.innerHTML = `
       <div class="tpc-card">
         <div class="tpc-viewport">
-          <div class="tpc-track">${_templateTodaySlide(day, ps.localDateKey(), ps, user)}</div>
+          <div class="tpc-track">${_templateTodaySlide(day, ps.localDateKey(), ps, user, '', extra)}</div>
         </div>
       </div>`;
     el._tpcDay = null;
@@ -298,7 +377,7 @@
     // "Not now" hides the card until another program is saved.
     let dismissedAt = -1;
     try { dismissedAt = Number(localStorage.getItem(PICK_DISMISS_KEY + user) || -1); } catch { /* ignore */ }
-    if (!programs.length || programs.length <= dismissedAt) { el.innerHTML = ''; return; }
+    if (!programs.length || programs.length <= dismissedAt) { el.innerHTML = ''; return false; }
 
     const core = _core();
     const rows = programs.slice(0, 3).map((p, i) => {
@@ -319,6 +398,7 @@
           <div class="tpc-body">${rows}</div>
         </div>
       </div>`;
+    return true;
   }
 
   // ── Rendering ──────────────────────────────────────────────────────────────
@@ -335,8 +415,9 @@
     const templateDay = ts ? ts.readTemplatePick(user) : null;
     const schedule = ps.getActiveSchedule(user);
     if (!schedule) {
-      if (templateDay) { _renderTemplateToday(el, templateDay, user); return; }
-      if (_savedPrograms().length) { _renderPick(el, user); return; }
+      const fromHistory = templateDay || (ts && ts.historySessionToday ? ts.historySessionToday(user) : null);
+      if (fromHistory) { _renderTemplateToday(el, fromHistory, user); return; }
+      if (_renderPick(el, user)) return;
       _renderTemplatePick(el, user);
       return;
     }
@@ -477,6 +558,7 @@
         }
         return;
       }
+      if (t.hasAttribute('data-tpc-make-program')) { makeProgramFromHistory(); return; }
       if (t.dataset.tpcTemplate) {
         const ts = _ts();
         const record = _savedTemplates().find(tpl => String(tpl.id) === t.dataset.tpcTemplate);
@@ -491,7 +573,7 @@
       }
       if (t.dataset.tpcDismiss) {
         try { localStorage.setItem(PICK_DISMISS_KEY + _user(), t.dataset.tpcDismiss); } catch { /* ignore */ }
-        el.innerHTML = '';
+        renderTodayProgramCard(); // saved templates may be offered next
       }
     });
 
@@ -534,5 +616,6 @@
 
   window.renderTodayProgramCard = renderTodayProgramCard;
   window.startTodayProgramSession = startTodayProgramSession;
+  window.makeProgramFromHistory = makeProgramFromHistory;
   window.getTodayWorkoutName = getTodayWorkoutName;
 })();

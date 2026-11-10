@@ -4,12 +4,15 @@
  *
  * Sources, first match wins:
  *   1. The active program's day for today (program-schedule.js).
- *   2. A saved template picked for today: loading a template into the log
- *      (or tapping Start on one on Home) makes it today's session.
+ *   2. A session picked for today: loading a template into the log (or
+ *      tapping Start on one on Home), or starting "your usual next".
+ *   3. With no active program, the lifter's own history (usual-session.js):
+ *      once lifting has started, the past session most like today's
+ *      ('match'); before that, "your usual next" ('rotation').
  *
  * The answer has the program-day shape the Log hero, plan list, Home card and
  * performance mode already read: { name, exercises: [{ name, sets: [{ reps,
- * weight, ... }] }], source: 'program' | 'template', ... }.
+ * weight, ... }] }], source: 'program' | 'template' | 'rotation' | 'match', ... }.
  *
  * Workouts loaded from either source carry metadata.planned = true, so their
  * sets count as done once ticked rather than as soon as they're loaded
@@ -42,6 +45,11 @@
   function _schedule() {
     if (global.programSchedule) return global.programSchedule;
     try { return typeof require === 'function' ? require('./program-schedule') : null; } catch { return null; }
+  }
+
+  function _usual() {
+    if (global.usualSession) return global.usualSession;
+    try { return typeof require === 'function' ? require('./usual-session') : null; } catch { return null; }
   }
 
   // ── Templates → session shape ───────────────────────────────────────────
@@ -88,28 +96,34 @@
     };
   }
 
-  // ── Today's template pick ───────────────────────────────────────────────
+  // ── Today's pick ────────────────────────────────────────────────────────
 
-  /** Make a template today's session. The converted day is stored with the
-   * pick, so it works before the template list has loaded from the server. */
-  function pickTemplateForToday(templateRecord, opts) {
+  /** Make `day` (a template or "usual next" session) today's session. The day
+   * itself is stored, so it stays put while history and templates change. */
+  function pickSessionForToday(day, opts) {
     const options = opts || {};
     const u = _user(options.user);
-    if (!u || !templateRecord || !global.localStorage) return null;
-    const day = templateToDay(templateRecord.data, { name: templateRecord.name, templateId: templateRecord.id });
-    if (!day) return null;
-    const pick = { date: _localDateKey(options.now), templateId: templateRecord.id || null, day };
+    if (!u || !day || !global.localStorage) return null;
+    const pick = { date: _localDateKey(options.now), templateId: day.templateId || null, day };
     global.localStorage.setItem(PICK_KEY + u, JSON.stringify(pick));
     return day;
   }
 
-  /** Today's template pick as a session day, or null (none, or from another day). */
+  /** Make a saved template today's session. */
+  function pickTemplateForToday(templateRecord, opts) {
+    if (!templateRecord) return null;
+    const day = templateToDay(templateRecord.data, { name: templateRecord.name, templateId: templateRecord.id });
+    return day ? pickSessionForToday(day, opts) : null;
+  }
+
+  /** Today's pick as a session day, or null (none, or from another day). */
   function readTemplatePick(user, now) {
     const u = _user(user);
     if (!u) return null;
     const pick = _readJSON(PICK_KEY + u, null);
     if (!pick || pick.date !== _localDateKey(now) || !pick.day) return null;
-    return { ...pick.day, source: 'template', templateId: pick.templateId || pick.day.templateId || null };
+    const source = pick.day.source || 'template';
+    return { ...pick.day, source, templateId: pick.templateId || pick.day.templateId || null };
   }
 
   function clearTemplatePick(user) {
@@ -137,9 +151,49 @@
     };
   }
 
+  // ── From history ────────────────────────────────────────────────────────
+
+  /** Full workout history: live log, archive and backend copy. */
+  function _history(u) {
+    if (typeof global.getOverloadWorkouts === 'function') {
+      try { return global.getOverloadWorkouts(u) || []; } catch { /* fall back */ }
+    }
+    const active = _readJSON(`workouts_${u}`, []);
+    const archived = _readJSON(`workoutHistory_${u}`, []);
+    return [...(Array.isArray(archived) ? archived : []), ...(Array.isArray(active) ? active : [])];
+  }
+
+  // Every Log/Home render asks; reading years of history each time is wasteful.
+  let _memo = null;
+  const MEMO_MS = 30000;
+
+  /** "Usual next" or today's match from history, or null. Only for lifters
+   * with no active program: a program's rest day stays a rest day. */
+  function historySessionToday(user, now) {
+    const u = _user(user);
+    const usual = _usual();
+    if (!u || !usual) return null;
+    const ps = _schedule();
+    if (ps && ps.getActiveSchedule(u)) return null;
+    const todayKey = _localDateKey(now);
+    let stamp = '';
+    try {
+      const ls = global.localStorage;
+      stamp = `${(ls.getItem(`workouts_${u}`) || '').length}:${(ls.getItem(`workoutHistory_${u}`) || '').length}`;
+    } catch { /* no storage */ }
+    const key = `${u}|${todayKey}|${stamp}`;
+    const at = Date.now();
+    if (_memo && _memo.key === key && at - _memo.at < MEMO_MS) return _memo.day;
+    const history = _history(u);
+    const opts = { now, muscleOf: typeof global.getMuscleGroup === 'function' ? global.getMuscleGroup : null };
+    const day = usual.matchToday(history, opts) || usual.inferUsualNext(history, opts);
+    _memo = { key, at, day };
+    return day;
+  }
+
   /** Today's session from the first source that has one, or null. */
   function getTodaysSession(user, now) {
-    return programDayToday(user, now) || readTemplatePick(user, now);
+    return programDayToday(user, now) || readTemplatePick(user, now) || historySessionToday(user, now);
   }
 
   /** True when `w` is the workout loaded from `day` today (`dateKey`). */
@@ -149,15 +203,22 @@
     if (day.source === 'template') {
       return meta.source === 'template' && !!day.templateId && meta.templateId === day.templateId;
     }
+    if (day.source === 'rotation') {
+      return meta.source === 'rotation' && !!day.rotationKey && meta.rotationKey === day.rotationKey;
+    }
+    if (day.source === 'match') return false; // logged freeform, never loaded
     return meta.source === 'program' && meta.programDay === day.name;
   }
 
   const api = {
     templateToDay,
+    pickSessionForToday,
     pickTemplateForToday,
     readTemplatePick,
     clearTemplatePick,
     programDayToday,
+    historySessionToday,
+    clearHistoryMemo: () => { _memo = null; },
     getTodaysSession,
     isLoadedFrom,
   };
