@@ -134,8 +134,32 @@ describe('food log entries', () => {
     expect(Core.trimLog(log, '2026-10-28').map(e => e.date)).toEqual(['2026-07-30', '2026-10-28']);
   });
 
+  test('meal setup: numbered meals, user names, a cap, nothing logged hidden', () => {
+    expect(Core.normalizeMealSetup(null, [])).toEqual({ count: 3, names: {} });
+    expect(Core.normalizeMealSetup(null, ['breakfast', 'snacks']).count).toBe(4);
+    expect(Core.normalizeMealSetup({ count: 99 }).count).toBe(Core.MAX_MEALS);
+    expect(Core.normalizeMealSetup({ count: 0 }, []).count).toBe(3);
+    expect(Core.normalizeMealSetup({ count: 2, names: { breakfast: '  Pre-workout  ', lunch: '' } }))
+      .toEqual({ count: 2, names: { breakfast: 'Pre-workout' } });
+    try {
+      Core.applyMealSetup({ count: 2, names: { lunch: 'Post-workout' } });
+      expect(Core.MEALS).toEqual(['breakfast', 'lunch']);
+      expect(Core.MEAL_LABELS.breakfast).toBe('Meal 1');
+      expect(Core.MEAL_LABELS.lunch).toBe('Post-workout');
+      expect(Core.MEAL_LABELS.meal5).toBe('Meal 5');
+      // A day with food in a meal no longer in use still shows that meal.
+      expect(Core.mealsForDay([{ meal: 'dinner' }])).toEqual(['breakfast', 'lunch', 'dinner']);
+      expect(Core.mealForHour(19)).toBe('lunch');
+      expect(Core.mealForHour(19, 3)).toBe('dinner');
+      expect(Core.mealForHour(23, 3)).toBe('dinner');
+      expect(Core.mealForHour(7, 1)).toBe('breakfast');
+    } finally {
+      Core.applyMealSetup({ count: 4 });
+    }
+  });
+
   test('mealForHour', () => {
-    expect([7, 12, 16, 19, 23].map(Core.mealForHour)).toEqual(['breakfast', 'lunch', 'snacks', 'dinner', 'snacks']);
+    expect([7, 12, 16, 19, 23].map(h => Core.mealForHour(h))).toEqual(['breakfast', 'lunch', 'snacks', 'dinner', 'snacks']);
   });
 
   test('migrateOldDiary: same ids every time, distinct per entry', () => {
@@ -160,7 +184,7 @@ describe('CSV', () => {
   test('food log rows: header + one row per entry, missing nutrient empty', () => {
     const rows = Core.foodLogRows([{ date: '2026-10-28', meal: 'lunch', name: 'Kip', kcal: 100, protein: 20, carbs: 0, fat: 2, source: 'off' }]);
     expect(rows[0].slice(0, 3)).toEqual(['Date', 'Meal', 'Food']);
-    expect(rows[1].slice(0, 3)).toEqual(['2026-10-28', 'Lunch', 'Kip']);
+    expect(rows[1].slice(0, 3)).toEqual(['2026-10-28', 'Meal 2', 'Kip']);
     expect(rows[1][rows[0].indexOf('Iron (mg)')]).toBe('');
   });
 });
@@ -355,5 +379,46 @@ describe('progressive search helpers', () => {
     expect(Core.isWeakSearch('yoghurd', [f('off:1', 'Yoghurt')])).toBe(true);
     expect(Core.isWeakSearch('griekse yoghurt', [f('off:1', 'Griekse yoghurt 0%')])).toBe(false);
     expect(Core.isWeakSearch('kwark', [])).toBe(true);
+  });
+});
+
+describe('repeat items', () => {
+  const entry = Core.makeEntry(kwark, { grams: 250, amount: 250, unit: 'g', date: '2026-11-10', meal: 'breakfast', now: 5, rand: 'a' });
+
+  test('a repeat keeps the food and meal, not the day', () => {
+    const r = Core.repeatFromEntry(entry, { now: 1, rand: 'x' });
+    expect(r).toMatchObject({ id: 'rep:x', meal: 'breakfast', since: '2026-11-10', skip: [] });
+    expect(r.entry.id).toBeUndefined();
+    expect(r.entry.date).toBeUndefined();
+    expect(r.entry.kcal).toBe(entry.kcal);
+  });
+
+  test('pending until logged or skipped that day, and not before it started', () => {
+    const r = Core.repeatFromEntry(entry, { rand: 'x' });
+    expect(Core.pendingRepeats([r], [], '2026-11-11')).toHaveLength(1);
+    expect(Core.pendingRepeats([r], [], '2026-11-09')).toHaveLength(0);
+    const logged = Core.entryFromRepeat(r, { date: '2026-11-11', now: 9, rand: 'b' });
+    expect(logged).toMatchObject({ date: '2026-11-11', meal: 'breakfast', repeatId: 'rep:x', kcal: entry.kcal });
+    expect(logged.id).not.toBe(entry.id);
+    expect(Core.pendingRepeats([r], [logged], '2026-11-11')).toHaveLength(0);
+    const skipped = Core.skipRepeat(r, '2026-11-12');
+    expect(Core.pendingRepeats([skipped], [], '2026-11-12')).toHaveLength(0);
+    expect(Core.pendingRepeats([skipped], [], '2026-11-13')).toHaveLength(1);
+  });
+
+  test('skips keep only the last two weeks', () => {
+    let r = Core.repeatFromEntry(entry, { rand: 'x' });
+    for (let d = 1; d <= 20; d++) r = Core.skipRepeat(r, `2026-12-${String(d).padStart(2, '0')}`);
+    expect(r.skip).toHaveLength(14);
+    expect(r.skip[0]).toBe('2026-12-07');
+  });
+
+  test('updateRepeat follows an edited amount and meal', () => {
+    const r = Core.repeatFromEntry(entry, { rand: 'x' });
+    const edited = Core.editEntry(entry, { grams: 500, amount: 500, unit: 'g', meal: 'lunch' });
+    const u = Core.updateRepeat(r, edited, { now: 2 });
+    expect(u.meal).toBe('lunch');
+    expect(u.entry.grams).toBe(500);
+    expect(u.id).toBe('rep:x');
   });
 });

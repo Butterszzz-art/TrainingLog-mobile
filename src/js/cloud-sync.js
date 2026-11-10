@@ -75,10 +75,14 @@
     { name: 'customFoods',      key: u => `customFoods_${u}`,      mode: 'list', idField: 'id' },
     // Saved meals (food-log-tools.js).
     { name: 'mealTemplates',    key: u => `mealTemplates_${u}`,    mode: 'list', idField: 'id' },
+    // Foods set to repeat every day (food-log-tools.js).
+    { name: 'foodRepeats',      key: u => `foodRepeats_${u}`,      mode: 'list', idField: 'id' },
     // The day the coach's meal plan was last put in the food log
     // (coach-meals.js), so meals the client removed don't come back on
     // another device.
     { name: 'coachMealsFilled', key: u => `coachMealsFilled_${u}`, mode: 'value' },
+    // How many meals the food log has and their names (food-database.js).
+    { name: 'mealSetup',        key: u => `mealSetup_${u}`,        mode: 'value' },
     { name: 'programs',         key: u => `programs_${u}`,         mode: 'list', idField: 'id' },
     { name: 'activeProgram',    key: u => `activeProgram_${u}`,    mode: 'value' },
     { name: 'managedTemplates', key: u => `managedTemplates_${u}`, mode: 'list', idField: 'id' },
