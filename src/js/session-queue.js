@@ -51,6 +51,80 @@
     return /^(yesterday|\d)/.test(label) ? label : `last ${label}`;
   }
 
+  // ── Save today as a routine ─────────────────────────────────────
+
+  function _usual() {
+    if (global.usualSession) return global.usualSession;
+    try { return typeof require === 'function' ? require('./usual-session') : null; } catch { return null; }
+  }
+
+  function _muscleOf() { return typeof global.getMuscleGroup === 'function' ? global.getMuscleGroup : null; }
+
+  function _templates() {
+    return Array.isArray(global.resistanceTemplatesCache) ? global.resistanceTemplatesCache : [];
+  }
+
+  /** Today's lifted sets merged into one session (quick log saves a row per set), or null. */
+  function todaysLiftedSession(u) {
+    const usual = _usual();
+    const user = u || _user();
+    if (!usual || !user) return null;
+    return usual.sessionsByDay(_readWorkouts(user), { on: _localDateKey() })[0] || null;
+  }
+
+  /** The saved template with exactly today's lifts, or null. */
+  function _templateWithLifts(session) {
+    const usual = _usual();
+    const ts = _session();
+    if (!usual || !ts || !session) return null;
+    const names = session.lifts.map(l => l.name);
+    return _templates().find(t => {
+      const day = ts.templateToDay(t.data, { name: t.name, templateId: t.id });
+      return day && usual.sameLifts(names, day.exercises.map(e => e.name));
+    }) || null;
+  }
+
+  /** Offered once something's lifted today that isn't already a saved routine
+   * (program days and templates are routines already). */
+  function canSaveTodayAsRoutine(day) {
+    if (day && (day.source === 'program' || day.source === 'template')) return false;
+    const session = todaysLiftedSession();
+    return !!(session && typeof global.persistTemplateRecord === 'function' && !_templateWithLifts(session));
+  }
+
+  function _saveRoutineButton(day) {
+    if (!canSaveTodayAsRoutine(day)) return '';
+    return `<button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="saveTodayAsRoutine()"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12a1 1 0 0 1 1 1v19l-7-4-7 4V3a1 1 0 0 1 1-1z"/></svg>Save as routine</button>`;
+  }
+
+  /** Save today's lifts as a template in one tap, named after the session.
+   * Returns the template name, or null when nothing was saved. */
+  function saveTodayAsRoutine() {
+    const usual = _usual();
+    const session = todaysLiftedSession();
+    if (!usual || !session) {
+      if (global.showToast) global.showToast('Log a set first, then save it as a routine.', 'warn');
+      return null;
+    }
+    const existing = _templateWithLifts(session);
+    if (existing) {
+      if (global.showToast) global.showToast(`Already saved as “${existing.name}”.`, 'success');
+      return existing.name;
+    }
+    const day = getTodaysPlannedDay();
+    const base = day && (day.source === 'match' || day.source === 'rotation') ? day.name : usual.nameForSession(session, _muscleOf());
+    const taken = new Set(_templates().map(t => String(t.name || '').toLowerCase()));
+    let name = base;
+    for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${base} ${n}`;
+    const data = usual.sessionToTemplate(session, name);
+    if (typeof global.persistTemplateRecord !== 'function') return null;
+    const saving = global.persistTemplateRecord(name, data);
+    if (saving && typeof saving.catch === 'function') saving.catch(() => { /* kept locally; sync retries */ });
+    // persistTemplateRecord shows its own saved / saved-locally toast.
+    renderTrainHero();
+    return name;
+  }
+
   /** Plan-list kicker for a session. */
   function _planKicker(day) {
     if (day.source === 'rotation') return `Your usual next · ${_escHTML(day.name)}`;
@@ -120,7 +194,7 @@
         <div class="pod pod--hero train-hero-card">
           <div class="pod-kicker">No session planned today</div>
           <p class="ws-empty-note" style="margin-top:8px;">Load a saved template below to plan today's session, or just log as you go.</p>
-          <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="_askGymThen(function(){ if(typeof startPerformanceMode==='function') startPerformanceMode(); })"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>
+          <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="_askGymThen(function(){ if(typeof startPerformanceMode==='function') startPerformanceMode(); })"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>${_saveRoutineButton(day)}
         </div>`;
       return;
     }
@@ -154,7 +228,7 @@
         </div>
         <div class="train-hero-tonnage-track"><div class="train-hero-tonnage-fill" style="width:${pct}%"></div></div>
         <button class="cta-capsule train-hero-cta" onclick="_askGymThen(function(){ if(typeof loadTodayProgramIntoLog==='function') loadTodayProgramIntoLog(); else goToQuickLog(); })">${doneSets ? 'Continue session' : 'Start session'}</button>
-        <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="_askGymThen(function(){ if(typeof startPerformanceMode==='function') startPerformanceMode(); })"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>
+        <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="_askGymThen(function(){ if(typeof startPerformanceMode==='function') startPerformanceMode(); })"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>${_saveRoutineButton(day)}
       </div>`;
   }
 
@@ -1118,7 +1192,7 @@
     }
   }
 
-  const api = { getTodaysPlannedDay, sessionMetadata, sessionSourceLabel, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
+  const api = { getTodaysPlannedDay, sessionMetadata, sessionSourceLabel, todaysLiftedSession, canSaveTodayAsRoutine, saveTodayAsRoutine, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
     initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
@@ -1151,6 +1225,7 @@
   global.getTodaysPlannedDay = getTodaysPlannedDay;
   global.renderSessionQueue = renderSessionQueue;
   global.loadTodayProgramIntoLog = loadTodayProgramIntoLog;
+  global.saveTodayAsRoutine = saveTodayAsRoutine;
   global.renderProgramTemplateRow = renderProgramTemplateRow;
   global.renderTrainHero = renderTrainHero;
   global.renderTrainReadinessStrip = renderTrainReadinessStrip;

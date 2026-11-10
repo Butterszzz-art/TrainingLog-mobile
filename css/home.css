@@ -1501,6 +1501,8 @@
 .tpc-pick-text { min-width: 0; display: flex; flex-direction: column; }
 .tpc-pick-text b { font-weight: 700; }
 .tpc-pick-text small { color: var(--text-muted); font-size: 0.72rem; }
+/* "Make this your program" under the usual-next lifts (today-program.js) */
+.tpc-pick--offer { margin-top: 4px; border-style: dashed; }
 
 /* Week strip — doubles as the page dots */
 .tpc-strip {
