@@ -257,7 +257,99 @@
     };
   }
 
-  const api = { sessionsByDay, groupSessions, inferUsualNext, matchToday, lastDoneLabel };
+  // ── Saving what you do as a routine or a program ────────────────────────
+
+  /** A name for one day's session: its title, else its main muscles. */
+  function nameForSession(session, muscleOf) {
+    if (!session || !session.lifts || !session.lifts.length) return 'My routine';
+    return _groupName({ keys: _keys(session), sessions: [session] }, muscleOf);
+  }
+
+  /** Today's (or any day's) lifted sets as template data for the Templates
+   * tab ({ title, exercises: [{ name, sets: [{ targetReps, targetWeight }] }] }). */
+  function sessionToTemplate(session, name, opts) {
+    if (!session || !session.lifts || !session.lifts.length) return null;
+    const stamp = (opts && opts.stamp) || Date.now();
+    return {
+      title: name,
+      date: session.date,
+      metadata: { name, description: `Saved from your session on ${session.date}`, tags: [], createdFrom: 'session' },
+      exercises: session.lifts.map((l, i) => ({
+        id: `ex_${i}_${stamp}`,
+        name: l.name,
+        notes: '',
+        groupType: 'straight',
+        groupId: null,
+        sets: l.sets.map((s, j) => ({ order: j + 1, setType: 'standard', targetReps: s.reps, targetWeight: s.weight, groupId: null })),
+      })),
+    };
+  }
+
+  /** Same lifts, ignoring order and case. */
+  function sameLifts(namesA, namesB) {
+    const a = new Set((namesA || []).map(_norm));
+    const b = new Set((namesB || []).map(_norm));
+    return a.size > 0 && a.size === b.size && [...a].every(k => b.has(k));
+  }
+
+  const PROGRAM_DAYS = 28;
+  const WEEKDAYS_MON_FIRST = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  /**
+   * The last four weeks as a program: one day per routine trained at least
+   * twice, in the order they come round (usual next first), on the weekdays
+   * trained most. Returns { name, days, frequency, sessions } or null when
+   * there's no routine to build from.
+   */
+  function buildProgramFromHistory(workouts, opts) {
+    const options = opts || {};
+    const todayKey = _localDateKey(options.now);
+    const from = _localDateKey(new Date((_parseKey(todayKey) || new Date()).getTime() - PROGRAM_DAYS * DAY_MS));
+    const sessions = sessionsByDay(workouts, { before: todayKey, after: from });
+    const groups = groupSessions(sessions).filter(g => g.sessions.length >= 2);
+    if (!groups.length) return null;
+    groups.sort((a, b) => a.sessions[0].date.localeCompare(b.sessions[0].date));
+
+    const used = new Set();
+    const days = groups.map(g => {
+      let name = _groupName(g, options.muscleOf);
+      for (let n = 2; used.has(name); n++) name = `${_groupName(g, options.muscleOf)} ${n}`;
+      used.add(name);
+      return {
+        name,
+        exercises: _groupExercises(g).map(ex => ({
+          name: ex.name,
+          sets: ex.sets.map(s => ({ setType: 'straight', reps: s.reps, weight: s.weight || null, restSec: 120 })),
+        })),
+      };
+    }).filter(d => d.exercises.length);
+    if (!days.length) return null;
+
+    // Training days a week, from the sessions that make up the routines, over
+    // the time they actually span (someone three weeks in isn't averaged over four).
+    const counted = groups.reduce((n, g) => n + g.sessions.length, 0);
+    const oldest = groups.reduce((min, g) => (g.sessions[g.sessions.length - 1].date < min ? g.sessions[g.sessions.length - 1].date : min), todayKey);
+    const weeks = Math.max(1, Math.min(PROGRAM_DAYS, _daysBetween(oldest, todayKey)) / 7);
+    const perWeek = Math.max(1, Math.min(7, Math.round(counted / weeks)));
+    const byWeekday = new Map(WEEKDAYS_MON_FIRST.map(d => [d, 0]));
+    groups.forEach(g => g.sessions.forEach(s => {
+      const d = _parseKey(s.date);
+      if (d) { const abbr = WEEKDAYS[d.getDay()]; byWeekday.set(abbr, byWeekday.get(abbr) + 1); }
+    }));
+    const chosen = new Set(
+      WEEKDAYS_MON_FIRST.slice().sort((a, b) => byWeekday.get(b) - byWeekday.get(a) || WEEKDAYS_MON_FIRST.indexOf(a) - WEEKDAYS_MON_FIRST.indexOf(b)).slice(0, perWeek)
+    );
+    const frequency = WEEKDAYS_MON_FIRST.filter(d => chosen.has(d));
+
+    const joined = days.map(d => d.name).join(' / ');
+    const name = days.length <= 3 && joined.length <= 40 ? joined : 'My routine';
+    return { name, days, frequency, sessions: counted };
+  }
+
+  const api = {
+    sessionsByDay, groupSessions, inferUsualNext, matchToday, lastDoneLabel,
+    nameForSession, sessionToTemplate, sameLifts, buildProgramFromHistory,
+  };
 
   global.usualSession = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
