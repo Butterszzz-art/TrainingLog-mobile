@@ -36,6 +36,28 @@
     return ts ? ts.getTodaysSession(_user()) : null;
   }
 
+  /** Where a non-program session came from: '' for a program day. */
+  function sessionSourceLabel(day) {
+    if (!day) return '';
+    if (day.source === 'template') return 'Your template';
+    if (day.source === 'rotation') return `Your usual next${day.lastDoneLabel ? ` · last done ${day.lastDoneLabel}` : ''}`;
+    if (day.source === 'match') return `Compared with ${_whenLabel(day.lastDoneLabel)}`;
+    return '';
+  }
+
+  /** "last Thu" / "yesterday" / "12 days ago" for a past session. */
+  function _whenLabel(label) {
+    if (!label) return 'last time';
+    return /^(yesterday|\d)/.test(label) ? label : `last ${label}`;
+  }
+
+  /** Plan-list kicker for a session. */
+  function _planKicker(day) {
+    if (day.source === 'rotation') return `Your usual next · ${_escHTML(day.name)}`;
+    if (day.source === 'match') return `Last time · ${_escHTML(day.name)}`;
+    return `Today's plan · ${_escHTML(day.name)}`;
+  }
+
   function _setSummary(ex) {
     const sets = Array.isArray(ex.sets) ? ex.sets : [];
     if (!sets.length) return '';
@@ -120,8 +142,9 @@
       <div class="pod pod--hero train-hero-card">
         <div class="train-hero-top">
           <div>
-            <div class="train-hero-name">${day.name}</div>
+            <div class="train-hero-name">${_escHTML(day.name)}</div>
             <div class="train-hero-meta">${muscles ? muscles + ' &middot; ' : ''}${exercises.length} lift${exercises.length === 1 ? '' : 's'} &middot; ${totalSets} set${totalSets === 1 ? '' : 's'}</div>
+            ${sessionSourceLabel(day) ? `<div class="train-hero-meta train-hero-from">${_escHTML(sessionSourceLabel(day))}</div>` : ''}
           </div>
           ${rpeTarget ? `<div class="train-hero-rpe"><div class="home-hero-stat-lbl">Target RPE</div><div class="train-hero-rpe-val">${rpeTarget}</div></div>` : ''}
         </div>
@@ -361,6 +384,9 @@
 
   /** Workout metadata for a session loaded into the log. */
   function sessionMetadata(day) {
+    if (day && day.source === 'rotation') {
+      return { source: 'rotation', planned: true, rotationKey: day.rotationKey || null, sessionName: day.name };
+    }
     if (day && day.source === 'template') {
       return { source: 'template', planned: true, templateId: day.templateId || null, templateName: day.name };
     }
@@ -379,6 +405,15 @@
       if (global.showToast) global.showToast('No session planned today.', 'warn');
       return -1;
     }
+    const ts = _session();
+    // Matched to a past session while lifting freeform: nothing to load, so
+    // carry on with the next lift from last time.
+    if (day.source === 'match') {
+      _continueMatched(day, u);
+      return -1;
+    }
+    // "Usual next" is stored as today's pick, so it stays put once started.
+    if (day.source === 'rotation' && ts) ts.pickSessionForToday(day, { user: u });
     let workouts = _readWorkouts(u);
     let index = _loadedProgramWorkoutIndex(day, workouts);
     if (index === -1 && day.source === 'template' && typeof global.loadResistanceTemplateById === 'function') {
@@ -400,11 +435,28 @@
       localStorage.setItem('workouts_' + u, JSON.stringify(workouts));
       index = workouts.length - 1;
       if (typeof global.renderWorkouts === 'function') global.renderWorkouts();
-      if (global.showToast) global.showToast(day.source === 'template' ? `${day.name} loaded` : `${day.name} loaded from your program`, 'success');
+      if (global.showToast) global.showToast(day.source === 'program' ? `${day.name} loaded from your program` : `${day.name} loaded`, 'success');
     }
     renderSessionQueue();
     if (options.scroll !== false) setTimeout(() => _openAndScrollTo(index, null), 60);
     return index;
+  }
+
+  /** Open quick log on the first lift from last time not yet matched today. */
+  function _continueMatched(day, u) {
+    const ps = _schedule();
+    const progress = ps ? ps.dayProgress(day, ps.workoutsOn(_localDateKey(), u)) : null;
+    const i = progress ? progress.lifts.findIndex(l => !l.complete) : -1;
+    const ex = i === -1 ? null : day.exercises[i];
+    if (ex && typeof global.startQuickLogFor === 'function') {
+      const first = (ex.sets && ex.sets[0]) || {};
+      global.startQuickLogFor(ex.name, {
+        weight: first.weight != null ? Number(first.weight) : null,
+        reps: first.reps != null ? Number(first.reps) : null,
+      });
+    } else if (typeof global.goToQuickLog === 'function') {
+      global.goToQuickLog();
+    }
   }
 
   function _escHTML(s) {
@@ -418,12 +470,13 @@
     if (!el) return;
     const day = getTodaysPlannedDay();
     const exercises = day && Array.isArray(day.exercises) ? day.exercises : [];
-    if (!day || !exercises.length) { el.innerHTML = ''; el.hidden = true; return; }
+    if (!day || !exercises.length || day.source === 'match') { el.innerHTML = ''; el.hidden = true; return; }
     const loaded = _loadedProgramWorkoutIndex(day, _readWorkouts(_user())) !== -1;
-    const fromTemplate = day.source === 'template';
     const week = day.weekCount > 1 ? ` · week ${day.weekNum}` : '';
-    const source = fromTemplate ? 'Your template' : `${_escHTML(day.programName || 'Your program')}${week}`;
-    const label = fromTemplate ? "Today's session" : "Today's program";
+    const source = day.source === 'program'
+      ? `${_escHTML(day.programName || 'Your program')}${week}`
+      : _escHTML(day.source === 'rotation' ? `Last done ${day.lastDoneLabel || 'recently'}` : 'Your template');
+    const label = day.source === 'program' ? "Today's program" : day.source === 'rotation' ? 'Your usual next' : "Today's session";
     el.hidden = false;
     el.innerHTML = `
       <button type="button" class="sq-program-load${loaded ? ' is-loaded' : ''}" onclick="loadTodayProgramIntoLog()">
@@ -488,7 +541,7 @@
     el.innerHTML = `
       <div class="pod sq-card">
         <div class="pod-row">
-          <span class="pod-kicker">Today's plan · ${day.name}</span>
+          <span class="pod-kicker">${_planKicker(day)}</span>
           ${head}
         </div>
         ${bar}
@@ -1065,7 +1118,7 @@
     }
   }
 
-  const api = { getTodaysPlannedDay, sessionMetadata, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
+  const api = { getTodaysPlannedDay, sessionMetadata, sessionSourceLabel, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
     initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,

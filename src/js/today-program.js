@@ -11,6 +11,9 @@
  *    templates are offered instead.
  *  - A template picked for today (today-session.js) shows as today's
  *    session when there's no program day today.
+ *  - With no active program, the lifter's history fills in: "your usual
+ *    next" before lifting, or the past session today matches once started
+ *    (usual-session.js via today-session.js).
  *
  * Which day falls on which date comes from program-schedule.js, shared with
  * the Log tab plan (session-queue.js). Start loads the day into the log the
@@ -202,7 +205,15 @@
     })}<div class="tpc-body">${_liftRows(stats.exercises, null)}</div></div>`;
   }
 
-  /** Today's slide for a template picked for today (no program day today). */
+  /** Banner kicker for a session that isn't a program day. */
+  function _sessionKicker(day) {
+    if (day.source === 'rotation') return `Your usual next${day.lastDoneLabel ? ` · last done ${_esc(day.lastDoneLabel)}` : ''}`;
+    if (day.source === 'match') return `In progress · vs ${/^(yesterday|\d)/.test(day.lastDoneLabel || '') ? '' : 'last '}${_esc(day.lastDoneLabel || 'time')}`;
+    return 'Up today · Your template';
+  }
+
+  /** Today's slide for a session that isn't a program day (template picked
+   * for today, or from history). */
   function _templateTodaySlide(day, dateKey, ps, user, footer) {
     const stats = _dayStats(day);
     const progress = ps.dayProgress(day, ps.workoutsOn(dateKey, user));
@@ -217,7 +228,7 @@
       : `${_plural(stats.lifts, 'lift')} · ${_plural(stats.sets, 'set')} · ~${stats.minutes} min`;
     return `<div class="tpc-slide tpc-slide--today">${_banner({
       tone: 'go',
-      kicker: 'Up today · Your template',
+      kicker: _sessionKicker(day),
       name: _esc(day.name),
       sub,
       action: `<button type="button" class="tpc-go" data-tpc-start>${progress.started ? 'Continue' : 'Start'}</button>`,
@@ -298,7 +309,7 @@
     // "Not now" hides the card until another program is saved.
     let dismissedAt = -1;
     try { dismissedAt = Number(localStorage.getItem(PICK_DISMISS_KEY + user) || -1); } catch { /* ignore */ }
-    if (!programs.length || programs.length <= dismissedAt) { el.innerHTML = ''; return; }
+    if (!programs.length || programs.length <= dismissedAt) { el.innerHTML = ''; return false; }
 
     const core = _core();
     const rows = programs.slice(0, 3).map((p, i) => {
@@ -319,6 +330,7 @@
           <div class="tpc-body">${rows}</div>
         </div>
       </div>`;
+    return true;
   }
 
   // ── Rendering ──────────────────────────────────────────────────────────────
@@ -335,8 +347,9 @@
     const templateDay = ts ? ts.readTemplatePick(user) : null;
     const schedule = ps.getActiveSchedule(user);
     if (!schedule) {
-      if (templateDay) { _renderTemplateToday(el, templateDay, user); return; }
-      if (_savedPrograms().length) { _renderPick(el, user); return; }
+      const fromHistory = templateDay || (ts && ts.historySessionToday ? ts.historySessionToday(user) : null);
+      if (fromHistory) { _renderTemplateToday(el, fromHistory, user); return; }
+      if (_renderPick(el, user)) return;
       _renderTemplatePick(el, user);
       return;
     }
@@ -491,7 +504,7 @@
       }
       if (t.dataset.tpcDismiss) {
         try { localStorage.setItem(PICK_DISMISS_KEY + _user(), t.dataset.tpcDismiss); } catch { /* ignore */ }
-        el.innerHTML = '';
+        renderTodayProgramCard(); // saved templates may be offered next
       }
     });
 
