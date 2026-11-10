@@ -201,6 +201,7 @@
     const units = food ? [food.basis, ...food.servings.map(s => s.label)] : [entry.unit || 'g'];
     const unit = units.includes(entry.unit) ? entry.unit : units[0];
     const amount = units.includes(entry.unit) ? entry.amount : entry.grams;
+    const repeat = entry.repeatId ? loadRepeats().find(r => r.id === entry.repeatId) : null;
     Sheet().open(`
       <form class="food-form" data-edit-form>
         <div class="food-sheet-hdr"><h3>${esc(entry.name)}</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
@@ -211,6 +212,10 @@
         </div>
         <label class="food-field"><span>Meal</span><select name="meal">${Core.mealsForDay([entry]).map(m => `<option value="${m}"${m === entry.meal ? ' selected' : ''}>${esc(Core.MEAL_LABELS[m])}</option>`).join('')}</select></label>
         <p class="food-sheet-sub" data-edit-preview></p>
+        <label class="food-repeat-toggle">
+          <input type="checkbox" name="repeat"${repeat ? ' checked' : ''} />
+          <span><b>Repeat every day</b><small>Shows up in this meal each day, one tap to log it</small></span>
+        </label>
         <div class="food-share-actions">
           <button type="submit" class="food-add-btn">Save</button>
           <button type="button" class="food-share-no" data-delete>Remove</button>
@@ -237,10 +242,102 @@
       const g = grams();
       if (food && !(g > 0)) return;
       const after = Core.editEntry(entry, food ? { grams: g, amount: form.amount.value, unit: form.unit.value, meal: form.meal.value } : { meal: form.meal.value });
+      const wantRepeat = form.repeat.checked;
+      if (wantRepeat && repeat) {
+        saveRepeats(loadRepeats().map(r => (r.id === repeat.id ? Core.updateRepeat(r, after, { now: Date.now() }) : r)));
+      } else if (wantRepeat) {
+        const r = Core.repeatFromEntry(after, { now: Date.now() });
+        if (r) { saveRepeats([...loadRepeats(), r]); after.repeatId = r.id; }
+      } else if (repeat) {
+        saveRepeats(loadRepeats().filter(r => r.id !== repeat.id));
+      }
       Sheet().close();
       applyChanges([{ before: entry, after }]);
+      if (wantRepeat && !repeat) toast(`🔁 ${entry.name} now repeats every day`);
+      else if (!wantRepeat && repeat) toast(`Stopped repeating ${entry.name}`);
     };
   }
+
+  /* ── Repeat items ────────────────────────────────────────── */
+  // Foods set to repeat show in their meal each day until logged or
+  // skipped (pure logic: food-core.js "Repeat items").
+
+  const REP_KEY = u => `foodRepeats_${u}`;
+  function loadRepeats() {
+    const v = readJSON(REP_KEY(user()), []);
+    return Array.isArray(v) ? v : [];
+  }
+  function saveRepeats(list) {
+    if (user()) localStorage.setItem(REP_KEY(user()), JSON.stringify(list));
+  }
+
+  function logRepeats(ids) {
+    if (locked()) return;
+    const d = day();
+    const set = new Set(ids);
+    const reps = Core.pendingRepeats(loadRepeats(), Core.entriesFor(FL().load(), d), d).filter(r => set.has(r.id));
+    if (!reps.length) return;
+    const now = Date.now();
+    applyChanges(reps.map((r, i) => ({ after: Core.entryFromRepeat(r, { date: d, now: now + i }) })));
+    toast(reps.length === 1 ? `✅ Logged ${reps[0].entry.name}` : `✅ Logged ${reps.length} repeating foods`);
+  }
+
+  function skipRepeatToday(id) {
+    if (locked()) return;
+    const d = day();
+    saveRepeats(loadRepeats().map(r => (r.id === id ? Core.skipRepeat(r, d, { now: Date.now() }) : r)));
+    window.renderFoodLog?.();
+  }
+
+  function stopRepeat(id) {
+    const r = loadRepeats().find(x => x.id === id);
+    saveRepeats(loadRepeats().filter(x => x.id !== id));
+    window.renderFoodLog?.();
+    if (r) toast(`Stopped repeating ${r.entry.name}`);
+  }
+
+  function openRepeatMenu(id) {
+    const r = loadRepeats().find(x => x.id === id);
+    if (!r) return;
+    const e = r.entry;
+    const when = dayName(day());
+    Sheet().open(`
+      <div class="food-form" data-rep-menu>
+        <div class="food-sheet-hdr"><h3>${esc(e.name)}</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
+        <p class="food-sheet-sub">${e.amount ? `${esc(Core.amountLabel(e))} · ` : ''}${e.kcal || 0} kcal · ${e.protein || 0}P / ${e.carbs || 0}C / ${e.fat || 0}F</p>
+        <p class="food-sheet-sub">Repeats every day in ${esc(Core.MEAL_LABELS[r.meal] || r.meal)}. It only counts once you log it.</p>
+        <div class="food-share-actions">
+          <button type="button" class="food-add-btn" data-rep-act="log">Log ${esc(when)}</button>
+          <button type="button" class="food-share-no" data-rep-act="skip">Skip ${esc(when)}</button>
+        </div>
+        <button type="button" class="mx-link food-repeat-stop" data-rep-act="stop">Stop repeating</button>
+      </div>`, { label: `${e.name} repeats` });
+    const host = document.querySelector('[data-rep-menu]');
+    host?.querySelector('[data-close]')?.addEventListener('click', () => Sheet().close());
+    host?.querySelectorAll('[data-rep-act]').forEach(b => b.addEventListener('click', () => {
+      Sheet().close();
+      if (b.dataset.repAct === 'log') logRepeats([id]);
+      else if (b.dataset.repAct === 'skip') skipRepeatToday(id);
+      else stopRepeat(id);
+    }));
+  }
+
+  // For the food log (food-database.js): the repeats still to log that day.
+  window.FoodRepeats = {
+    load: loadRepeats,
+    pending: (date, dayEntries) => Core.pendingRepeats(loadRepeats(), dayEntries, date),
+  };
+
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-repeat-log],[data-repeat-menu],[data-repeat-all]');
+    if (!t || t.closest('#foodSheet')) return;
+    if (t.dataset.repeatLog) logRepeats([t.dataset.repeatLog]);
+    else if (t.dataset.repeatMenu) openRepeatMenu(t.dataset.repeatMenu);
+    else {
+      const d = day();
+      logRepeats(Core.pendingRepeats(loadRepeats(), Core.entriesFor(FL().load(), d), d).map(r => r.id));
+    }
+  });
 
   /* ── Saved meals ─────────────────────────────────────────── */
 

@@ -381,3 +381,44 @@ describe('progressive search helpers', () => {
     expect(Core.isWeakSearch('kwark', [])).toBe(true);
   });
 });
+
+describe('repeat items', () => {
+  const entry = Core.makeEntry(kwark, { grams: 250, amount: 250, unit: 'g', date: '2026-11-10', meal: 'breakfast', now: 5, rand: 'a' });
+
+  test('a repeat keeps the food and meal, not the day', () => {
+    const r = Core.repeatFromEntry(entry, { now: 1, rand: 'x' });
+    expect(r).toMatchObject({ id: 'rep:x', meal: 'breakfast', since: '2026-11-10', skip: [] });
+    expect(r.entry.id).toBeUndefined();
+    expect(r.entry.date).toBeUndefined();
+    expect(r.entry.kcal).toBe(entry.kcal);
+  });
+
+  test('pending until logged or skipped that day, and not before it started', () => {
+    const r = Core.repeatFromEntry(entry, { rand: 'x' });
+    expect(Core.pendingRepeats([r], [], '2026-11-11')).toHaveLength(1);
+    expect(Core.pendingRepeats([r], [], '2026-11-09')).toHaveLength(0);
+    const logged = Core.entryFromRepeat(r, { date: '2026-11-11', now: 9, rand: 'b' });
+    expect(logged).toMatchObject({ date: '2026-11-11', meal: 'breakfast', repeatId: 'rep:x', kcal: entry.kcal });
+    expect(logged.id).not.toBe(entry.id);
+    expect(Core.pendingRepeats([r], [logged], '2026-11-11')).toHaveLength(0);
+    const skipped = Core.skipRepeat(r, '2026-11-12');
+    expect(Core.pendingRepeats([skipped], [], '2026-11-12')).toHaveLength(0);
+    expect(Core.pendingRepeats([skipped], [], '2026-11-13')).toHaveLength(1);
+  });
+
+  test('skips keep only the last two weeks', () => {
+    let r = Core.repeatFromEntry(entry, { rand: 'x' });
+    for (let d = 1; d <= 20; d++) r = Core.skipRepeat(r, `2026-12-${String(d).padStart(2, '0')}`);
+    expect(r.skip).toHaveLength(14);
+    expect(r.skip[0]).toBe('2026-12-07');
+  });
+
+  test('updateRepeat follows an edited amount and meal', () => {
+    const r = Core.repeatFromEntry(entry, { rand: 'x' });
+    const edited = Core.editEntry(entry, { grams: 500, amount: 500, unit: 'g', meal: 'lunch' });
+    const u = Core.updateRepeat(r, edited, { now: 2 });
+    expect(u.meal).toBe('lunch');
+    expect(u.entry.grams).toBe(500);
+    expect(u.id).toBe('rep:x');
+  });
+});

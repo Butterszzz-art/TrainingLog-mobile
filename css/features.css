@@ -3622,6 +3622,37 @@ button.food-meal-name { margin: 0; padding: 4px 0; min-height: 0; border: 0; bac
 .food-entry .food-diary-kcal { font-size: 0.82rem; flex-shrink: 0; }
 .food-diary-list .food-share-ask { margin: 0 0 10px; }
 
+/* Repeat items (food-log-tools.js): a food set to repeat shows faintly in
+   its meal until it's logged that day. */
+.food-entry-name .food-repeat-ico { margin-right: 5px; }
+.food-repeat-ico { display: inline-flex; width: 13px; height: 13px; color: var(--primary, #5fa87e); vertical-align: -2px; flex-shrink: 0; }
+.food-repeat-ico svg { width: 13px; height: 13px; }
+.food-repeat-row { display: flex; align-items: center; gap: 8px; border-top: 1px dashed var(--border-color); }
+.food-diary-list .food-repeat-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px;
+  margin: 0; padding: 9px 0; border: none; border-radius: 0; background: transparent; box-shadow: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer; opacity: .62;
+}
+.food-repeat-main .food-entry-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.food-repeat-kcal { font-size: 0.8rem; color: var(--text-muted); flex-shrink: 0; }
+.food-diary-list .food-repeat-log {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; min-height: 0; margin: 0; padding: 0; border-radius: 999px;
+  border: 1px solid var(--primary, #5fa87e); background: transparent; color: var(--primary, #5fa87e); box-shadow: none; cursor: pointer;
+}
+.food-repeat-log .ui-icon, .food-repeat-log .ui-icon svg { width: 15px; height: 15px; display: inline-flex; }
+.food-diary-list .food-repeat-all {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; min-height: 34px; padding: 0 14px;
+  border-radius: 999px; border: 1px solid var(--primary, #5fa87e); background: transparent; box-shadow: none;
+  color: var(--primary, #5fa87e); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.food-repeat-all .ui-icon, .food-repeat-all .ui-icon svg { width: 14px; height: 14px; display: inline-flex; }
+.food-repeat-toggle { display: flex; align-items: flex-start; gap: 10px; margin: 4px 0 12px; cursor: pointer; }
+.food-repeat-toggle input { width: 18px; height: 18px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--primary, #5fa87e); }
+.food-repeat-toggle span { display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; }
+.food-repeat-toggle small { color: var(--text-muted); font-size: 0.75rem; }
+.food-repeat-stop { display: block; margin: 12px auto 0; }
+
 /* Log food sheet: tabs */
 .food-sheet-tabs {
   display: flex;

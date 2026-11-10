@@ -742,7 +742,21 @@
     const icons = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';
     const tot = Core.totals(items);
     const groups = Core.groupByMeal(items);
-    const shownMeals = Core.mealsForDay(items);
+    // Foods set to repeat that aren't logged yet this day (food-log-tools.js).
+    const pending = window.FoodRepeats ? window.FoodRepeats.pending(day, items) : [];
+    const repeatIds = new Set((window.FoodRepeats ? window.FoodRepeats.load() : []).map(r => r.id));
+    const pendingBy = {};
+    pending.forEach(r => { (pendingBy[r.meal] || (pendingBy[r.meal] = [])).push(r); });
+    const shownMeals = Core.mealsForDay([...items, ...pending.map(r => ({ meal: r.meal }))]);
+    const repeatRow = r => `
+          <div class="food-repeat-row">
+            <button type="button" class="food-repeat-main" data-repeat-menu="${_esc(r.id)}" aria-label="${_esc(r.entry.name)} repeats every day: options">
+              <span class="ui-icon food-repeat-ico" aria-hidden="true">${_icon('refresh') || '↻'}</span>
+              <span class="food-entry-name">${_esc(r.entry.name)}${r.entry.amount ? `<small> · ${_esc(Core.amountLabel(r.entry))}</small>` : ''}</span>
+              <span class="food-repeat-kcal">${r.entry.kcal || 0}</span>
+            </button>
+            <button type="button" class="food-repeat-log" data-repeat-log="${_esc(r.id)}" aria-label="Log ${_esc(r.entry.name)}"><span class="ui-icon">${_icon('plus')}</span></button>
+          </div>`;
 
     // Every meal gets a section; empty ones are a faint "+" placeholder.
     host.innerHTML = `
@@ -752,13 +766,15 @@
         ${icons}
       </div>
       ${_dayNavHtml(day)}
+      ${pending.length > 1 ? `<button type="button" class="food-repeat-all" data-repeat-all><span class="ui-icon">${_icon('refresh') || '↻'}</span> Log all repeating foods (${pending.length})</button>` : ''}
       ${CM && CM.headerHtml ? CM.headerHtml() : ''}
       ${shownMeals.map(m => {
         const list = groups[m];
+        const reps = pendingBy[m] || [];
         const label = Core.MEAL_LABELS[m];
         const name = `<button type="button" class="food-meal-name" data-edit-meals aria-label="Rename or change meals (${_esc(label)})">${_esc(label)}</button>`;
         const add = `<button type="button" class="food-meal-add" data-add-meal="${m}" aria-label="Add food to ${label.toLowerCase()}"><span class="ui-icon">${_icon('plus')}</span></button>`;
-        if (!list.length) {
+        if (!list.length && !reps.length) {
           return `<div class="food-meal-card is-empty">${name}${add}</div>`;
         }
         const mt = Core.totals(list);
@@ -767,10 +783,10 @@
           <div class="food-meal-top">
             ${name}
             <span class="food-meal-right">
-              <span class="food-meal-kcal">${mt.kcal} kcal</span>
+              ${list.length ? `<span class="food-meal-kcal">${mt.kcal} kcal</span>
               <button type="button" class="food-icon-btn" data-meal-photo="${m}" aria-label="Add a photo of ${label.toLowerCase()}" title="Meal photo"><span class="ui-icon">${_icon('camera')}</span></button>
               <button type="button" class="food-icon-btn" data-share-meal="${m}" aria-label="Send ${label.toLowerCase()} to friends or a group" title="Send to friends or a group"><span class="ui-icon">${_icon('share')}</span></button>
-              <button type="button" class="food-icon-btn" data-save-meal="${m}" aria-label="Save ${label.toLowerCase()} as a meal" title="Save as a meal"><span class="ui-icon">${_icon('bookmark')}</span></button>
+              <button type="button" class="food-icon-btn" data-save-meal="${m}" aria-label="Save ${label.toLowerCase()} as a meal" title="Save as a meal"><span class="ui-icon">${_icon('bookmark')}</span></button>` : ''}
               ${add}
             </span>
           </div>
@@ -779,7 +795,7 @@
           ${list.map(e => `
           <button type="button" class="food-entry" data-edit-entry="${_esc(e.id)}" aria-label="Edit ${_esc(e.name)}">
             <span class="food-entry-main">
-              <span class="food-entry-name">${_esc(e.name)}${e.amount ? `<small> · ${_esc(Core.amountLabel(e))}</small>` : ''}</span>
+              <span class="food-entry-name">${e.repeatId && repeatIds.has(e.repeatId) ? `<span class="ui-icon food-repeat-ico" title="Repeats every day" aria-label="Repeats every day">${_icon('refresh') || '↻'}</span>` : ''}${_esc(e.name)}${e.amount ? `<small> · ${_esc(Core.amountLabel(e))}</small>` : ''}</span>
               <span class="food-item-macros food-entry-macros">
                 <span class="fim protein-badge">${_r1(e.protein)}P</span>
                 <span class="fim carbs-badge">${_r1(e.carbs)}C</span>
@@ -788,6 +804,7 @@
             </span>
             <span class="food-diary-kcal">${e.flag ? '<span class="food-flag-dot" title="Calories do not match the macros — check this food">⚠</span> ' : ''}${e.kcal}</span>
           </button>`).join('')}
+          ${reps.map(repeatRow).join('')}
         </div>`;
       }).join('')}
       <div class="food-meal-slots">

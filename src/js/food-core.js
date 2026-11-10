@@ -628,6 +628,64 @@
     }));
   }
 
+  // ── Repeat items ─────────────────────────────────────────────────────
+  // A food the user eats every day (a shake, oats, supplements) can be set
+  // to repeat. foodRepeats_<user> (synced) holds one item per repeat:
+  //   { id, meal, entry, since, skip: [dates], updatedAt }
+  // entry is a copy of the logged food without id/date. A repeat doesn't
+  // count towards a day by itself: the log shows it in its meal with a "+"
+  // until the user logs it (the logged entry carries repeatId) or skips it.
+  const REPEAT_SKIP_KEEP = 14;
+
+  function _repeatSnapshot(entry) {
+    const { id: _i, date: _d, t: _t, repeatId: _r, ...rest } = entry || {};
+    return rest;
+  }
+
+  function repeatFromEntry(entry, { now, rand } = {}) {
+    if (!entry || !entry.name) return null;
+    const r = typeof rand === 'string' ? rand : Math.random().toString(36).slice(2, 10);
+    return {
+      id: `rep:${r}`,
+      meal: ALL_MEALS.includes(entry.meal) ? entry.meal : 'snacks',
+      entry: _repeatSnapshot(entry),
+      since: /^\d{4}-\d{2}-\d{2}$/.test(entry.date) ? entry.date : '',
+      skip: [],
+      updatedAt: now || 0,
+    };
+  }
+
+  // The repeat changed to match an edited entry (amount, meal).
+  function updateRepeat(repeat, entry, { now } = {}) {
+    return { ...repeat, meal: ALL_MEALS.includes(entry.meal) ? entry.meal : repeat.meal, entry: _repeatSnapshot(entry), updatedAt: now || 0 };
+  }
+
+  // Repeats still to log on `date`: started by then, not skipped, and not
+  // already in that day's entries.
+  function pendingRepeats(repeats, dayEntries, date) {
+    const done = new Set((dayEntries || []).map(e => e && e.repeatId).filter(Boolean));
+    return (repeats || []).filter(r => r && r.id && r.entry
+      && !done.has(r.id)
+      && !(r.skip || []).includes(date)
+      && (!r.since || r.since <= date));
+  }
+
+  function entryFromRepeat(repeat, { date, now, rand } = {}) {
+    return {
+      ...repeat.entry,
+      id: newEntryId(date, rand),
+      date,
+      meal: ALL_MEALS.includes(repeat.meal) ? repeat.meal : 'snacks',
+      repeatId: repeat.id,
+      t: now || 0,
+    };
+  }
+
+  function skipRepeat(repeat, date, { now } = {}) {
+    const skip = [...new Set([...(repeat.skip || []), date])].sort().slice(-REPEAT_SKIP_KEEP);
+    return { ...repeat, skip, updatedAt: now || 0 };
+  }
+
   // A saved meal ("my usual breakfast"): the foods and amounts, no date.
   function templateFromEntries(name, entries, { id, now, rand } = {}) {
     const items = (entries || []).map(e => {
@@ -794,7 +852,8 @@
     weeklyAverages,
     csvCell, toCsv, foodLogRows,
     normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
-    amountLabel, editEntry, copyEntries, copySourceDays, dayLabel, copyPicked, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
+    amountLabel, editEntry, copyEntries, copySourceDays,
+    repeatFromEntry, updateRepeat, pendingRepeats, entryFromRepeat, skipRepeat, dayLabel, copyPicked, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
     ALL_MEALS, MAX_MEALS, DEFAULT_MEAL_COUNT, MEAL_NAME_MAX, defaultMealLabel, normalizeMealSetup, applyMealSetup, mealsForDay,
     scaleNutrients, gramsFor, sourceLabel, normalizeFood, kcalCheck, MICROS, microSummary,
