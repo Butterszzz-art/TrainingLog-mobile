@@ -48,94 +48,87 @@
         <span class="header-badge">COACH</span>
         <span class="header-roster-summary" id="headerRosterSummary"></span>
       </div>
-      <!-- Search/+New program/messages: styled per spec, but none has a
-           backing feature yet (no global search index, no coach-side
-           program-creation flow, no messaging data model — see
-           renderWorkspace()'s side panels for the same caveat) so they're
-           disabled rather than faked. -->
+      <!-- Global search has no backing index yet, so it stays disabled
+           rather than faked. -->
       <div class="header-center">
         <label class="header-search-wrap"><span class="ui-icon" data-icon="search"></span>
         <input class="header-search" type="text" placeholder="Search clients, programs…" disabled
                title="Coming soon — global search isn't wired up yet"></label>
       </div>
       <div class="header-right">
-        <button class="capsule-chip capsule-chip--primary" disabled
-                title="Coming soon — program creation happens in the mobile app for now">+ New program</button>
-        <button class="header-icon-btn" disabled title="Coming soon — messaging isn't wired up yet" aria-label="Messages"><span class="ui-icon" data-icon="message"></span></button>
+        <button class="capsule-chip capsule-chip--primary" onclick="newLibraryProgram()">+ New program</button>
+        <button class="header-icon-btn" onclick="railNavGo('messages')" title="Messages" aria-label="Messages"><span class="ui-icon" data-icon="message"></span></button>
         <span class="header-user" id="headerUser">—</span>
         <button class="header-logout" onclick="doLogout()" title="Sign out" aria-label="Sign out"><span class="ui-icon" data-icon="logOut"></span></button>
       </div>
     </header>
 
-    <!-- Sidebar: Client Roster -->
+    <!-- Sidebar: grouped navigation only. Every destination is a .ws-panel in
+         the main panel (railNavGo() in coach.js). Items marked "Soon" open a
+         page that says what is planned and where to do it today (SOON_PAGES
+         in coach.js). The client roster that used to sit under the nav now
+         lives on the Clients page; leads are the Prospects page. -->
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <h3 class="sidebar-title">Clients</h3>
-        <button class="sidebar-invite-btn" id="sidebarInviteBtn" onclick="showInviteModal()">+ Invite</button>
-      </div>
-
-      <!-- Rail nav — real tab switching now (railNavGo() in coach.js
-           toggles which .ws-panel is .active). Counts are real where the
-           app has the data (railNavUpdateCounts()). "Programs" and
-           "Analytics" were dropped as destinations: Programs never had
-           content distinct from Templates, and Analytics' only content
-           (wsStatRow) is already a persistent strip shown above every
-           panel — a dedicated tab with identical always-visible content
-           would be redundant, not a real page. Settings has no desktop
-           view at all yet — flagged rather than faked. -->
-      <!-- Icons come from coach-icons.js (same line set as the phone app). -->
-      <nav class="rail-nav" id="railNav">
-        <button class="rail-nav-item active" data-rail="queue" onclick="railNavGo('queue')">
+      <nav class="rail-nav" id="railNav" aria-label="Coach console">
+        <button class="rail-nav-item active" data-rail="queue" onclick="railNavGo('queue')" title="Today">
           <span class="rail-nav-icon ui-icon" data-icon="inbox" aria-hidden="true"></span><span class="rail-nav-label">Today</span><span class="rail-nav-count" id="railCountQueue">0</span>
         </button>
-        <button class="rail-nav-item" data-rail="clients" onclick="railNavGo('clients')">
-          <span class="rail-nav-icon ui-icon" data-icon="users" aria-hidden="true"></span><span class="rail-nav-label">Clients</span><span class="rail-nav-count" id="railCountClients">0</span>
+        <button class="rail-nav-item" data-rail="clients" onclick="railNavGo('clients')" title="Clients">
+          <span class="rail-nav-icon ui-icon" data-icon="user" aria-hidden="true"></span><span class="rail-nav-label">Clients</span><span class="rail-nav-count" id="railCountClients">0</span>
         </button>
-        <button class="rail-nav-item" data-rail="templates" onclick="railNavGo('templates')">
-          <span class="rail-nav-icon ui-icon" data-icon="layers" aria-hidden="true"></span><span class="rail-nav-label">Templates</span><span class="rail-nav-count" id="railCountTemplates">0</span>
+        <button class="rail-nav-item" data-rail="messages" onclick="railNavGo('messages')" title="Messages">
+          <span class="rail-nav-icon ui-icon" data-icon="message" aria-hidden="true"></span><span class="rail-nav-label">Messages</span><span class="rail-nav-count" id="railCountMessages">0</span>
         </button>
-        <button class="rail-nav-item rail-nav-item--messages" data-rail="messages" onclick="railNavGo('messages')">
-          <span class="rail-nav-icon ui-icon" data-icon="message" aria-hidden="true"></span><span class="rail-nav-label">Messages</span>
+        <button class="rail-nav-item" data-rail="prospects" onclick="railNavGo('prospects')" title="Prospects">
+          <span class="rail-nav-icon ui-icon" data-icon="userPlus" aria-hidden="true"></span><span class="rail-nav-label">Prospects</span><span class="rail-nav-count" id="railCountProspects">0</span>
         </button>
-        <button class="rail-nav-item" data-rail="checkins" onclick="railNavGo('checkins')">
+        <button class="rail-nav-item" data-rail="calendar" onclick="railNavGo('calendar')" title="Calendar">
+          <span class="rail-nav-icon ui-icon" data-icon="calendar" aria-hidden="true"></span><span class="rail-nav-label">Calendar</span><span class="rail-nav-soon">Soon</span>
+        </button>
+        <div class="rail-nav-group">Coaching</div>
+        <button class="rail-nav-item" data-rail="checkins" onclick="railNavGo('checkins')" title="Check-ins">
           <span class="rail-nav-icon ui-icon" data-icon="checkCircle" aria-hidden="true"></span><span class="rail-nav-label">Check-ins</span><span class="rail-nav-count" id="railCountCheckins">0</span>
         </button>
-        <button class="rail-nav-item" data-rail="settings" onclick="railNavGo('settings')" title="Not available in the coach console yet">
-          <span class="rail-nav-icon ui-icon" data-icon="settings" aria-hidden="true"></span><span class="rail-nav-label">Settings</span>
+        <button class="rail-nav-item" data-rail="formchecks" onclick="railNavGo('formchecks')" title="Form Checks">
+          <span class="rail-nav-icon ui-icon" data-icon="camera" aria-hidden="true"></span><span class="rail-nav-label">Form Checks</span><span class="rail-nav-count" id="railCountFormChecks">0</span>
+        </button>
+        <button class="rail-nav-item" data-rail="roadmaps" onclick="railNavGo('roadmaps')" title="Roadmaps">
+          <span class="rail-nav-icon ui-icon" data-icon="map" aria-hidden="true"></span><span class="rail-nav-label">Roadmaps</span><span class="rail-nav-soon">Soon</span>
+        </button>
+        <button class="rail-nav-item" data-rail="groups" onclick="railNavGo('groups')" title="Training Groups">
+          <span class="rail-nav-icon ui-icon" data-icon="users" aria-hidden="true"></span><span class="rail-nav-label">Training Groups</span><span class="rail-nav-soon">Soon</span>
+        </button>
+        <button class="rail-nav-item" data-rail="vault" onclick="railNavGo('vault')" title="Vault">
+          <span class="rail-nav-icon ui-icon" data-icon="folder" aria-hidden="true"></span><span class="rail-nav-label">Vault</span><span class="rail-nav-soon">Soon</span>
+        </button>
+        <button class="rail-nav-item" data-rail="automations" onclick="railNavGo('automations')" title="Automations">
+          <span class="rail-nav-icon ui-icon" data-icon="zap" aria-hidden="true"></span><span class="rail-nav-label">Automations</span><span class="rail-nav-soon">Soon</span>
+        </button>
+        <div class="rail-nav-group">Training</div>
+        <button class="rail-nav-item" data-rail="programs" onclick="railNavGo('programs')" title="Programs">
+          <span class="rail-nav-icon ui-icon" data-icon="layers" aria-hidden="true"></span><span class="rail-nav-label">Programs</span><span class="rail-nav-count" id="railCountTemplates">0</span>
+        </button>
+        <button class="rail-nav-item" data-rail="workouts" onclick="railNavGo('workouts')" title="Workouts">
+          <span class="rail-nav-icon ui-icon" data-icon="clipboard" aria-hidden="true"></span><span class="rail-nav-label">Workouts</span><span class="rail-nav-soon">Soon</span>
+        </button>
+        <button class="rail-nav-item" data-rail="exercises" onclick="railNavGo('exercises')" title="Exercises">
+          <span class="rail-nav-icon ui-icon" data-icon="dumbbell" aria-hidden="true"></span><span class="rail-nav-label">Exercises</span><span class="rail-nav-soon">Soon</span>
+        </button>
+        <button class="rail-nav-item" data-rail="videos" onclick="railNavGo('videos')" title="Videos">
+          <span class="rail-nav-icon ui-icon" data-icon="video" aria-hidden="true"></span><span class="rail-nav-label">Videos</span>
+        </button>
+        <div class="rail-nav-group">Nutrition</div>
+        <button class="rail-nav-item" data-rail="foods" onclick="railNavGo('foods')" title="Foods">
+          <span class="rail-nav-icon ui-icon" data-icon="apple" aria-hidden="true"></span><span class="rail-nav-label">Foods</span>
+        </button>
+        <button class="rail-nav-item" data-rail="meals" onclick="railNavGo('meals')" title="Meals">
+          <span class="rail-nav-icon ui-icon" data-icon="utensils" aria-hidden="true"></span><span class="rail-nav-label">Meals</span><span class="rail-nav-soon">Soon</span>
+        </button>
+        <div class="rail-nav-group rail-nav-group--end"></div>
+        <button class="rail-nav-item" data-rail="settings" onclick="railNavGo('settings')" title="Settings">
+          <span class="rail-nav-icon ui-icon" data-icon="settings" aria-hidden="true"></span><span class="rail-nav-label">Settings</span><span class="rail-nav-soon">Soon</span>
         </button>
       </nav>
-
-      <!-- Roster / Leads toggle -->
-      <div class="sidebar-mode-toggle" id="sidebarModeToggle">
-        <button class="mode-tab active" data-mode="clients">Clients</button>
-        <button class="mode-tab" data-mode="leads">Leads<span id="leadsBadge" class="mode-tab-badge" hidden>0</span></button>
-      </div>
-
-      <!-- Search -->
-      <div class="sidebar-search">
-        <span class="ui-icon" data-icon="search"></span>
-        <input type="text" id="clientSearch" placeholder="Search clients…" oninput="filterClients()">
-      </div>
-
-      <!-- Filter tabs -->
-      <div class="sidebar-filters" id="statusFilters">
-        <button class="filter-tab active" data-filter="all">All</button>
-        <button class="filter-tab" data-filter="action">Needs Action</button>
-        <button class="filter-tab" data-filter="watch">Watch</button>
-        <button class="filter-tab" data-filter="ok">Stable</button>
-        <button class="filter-tab" data-filter="pending">Pending</button>
-      </div>
-
-      <!-- Client list -->
-      <div class="client-list" id="clientList">
-        <div class="client-list-loading">Loading clients…</div>
-      </div>
-
-      <!-- Bulk actions -->
-      <div class="sidebar-bulk" id="bulkBar" style="display:none;">
-        <span id="bulkCount">0 selected</span>
-        <button class="bulk-action-btn" onclick="bulkMessage()"><span class="ui-icon" data-icon="send"></span> Message all</button>
-      </div>
     </aside>
 
     <!-- Main panel: Client Detail -->
@@ -163,30 +156,101 @@
         </div>
 
         <div class="ws-panel" id="wsPanel-clients">
-          <div class="pod ws-roster-card">
-            <div class="pod-row">
-              <span class="pod-kicker">Client roster</span>
-              <span class="ws-roster-count" id="wsRosterCount"></span>
+          <div class="ws-split">
+            <div class="pod ws-side-card ws-picker">
+              <div class="pod-row">
+                <span class="pod-kicker">Find a client</span>
+                <button class="sidebar-invite-btn" id="sidebarInviteBtn" onclick="showInviteModal()">+ Invite</button>
+              </div>
+              <div class="sidebar-search">
+                <span class="ui-icon" data-icon="search"></span>
+                <input type="text" id="clientSearch" placeholder="Search clients…" oninput="filterClients()">
+              </div>
+              <div class="sidebar-filters" id="statusFilters">
+                <button class="filter-tab active" data-filter="all">All</button>
+                <button class="filter-tab" data-filter="action">Needs Action</button>
+                <button class="filter-tab" data-filter="watch">Watch</button>
+                <button class="filter-tab" data-filter="ok">Stable</button>
+                <button class="filter-tab" data-filter="pending">Pending</button>
+              </div>
+              <div class="client-list" id="clientList">
+                <div class="client-list-loading">Loading clients…</div>
+              </div>
+              <div class="sidebar-bulk" id="bulkBar" style="display:none;">
+                <span id="bulkCount">0 selected</span>
+                <button class="bulk-action-btn" onclick="bulkMessage()"><span class="ui-icon" data-icon="send"></span> Message all</button>
+              </div>
             </div>
-            <div class="ws-roster-table" id="wsRosterTable"></div>
+            <div class="pod ws-roster-card">
+              <div class="pod-row">
+                <span class="pod-kicker">Client roster</span>
+                <span class="ws-roster-count" id="wsRosterCount"></span>
+              </div>
+              <div class="ws-roster-table" id="wsRosterTable"></div>
+            </div>
           </div>
         </div>
 
-        <div class="ws-panel" id="wsPanel-templates">
+        <!-- Prospects: intake-form submissions (leads). List on the left,
+             the chosen submission on the right. -->
+        <div class="ws-panel" id="wsPanel-prospects">
+          <div class="ws-split">
+            <div class="pod ws-side-card ws-picker">
+              <div class="pod-row">
+                <span class="pod-kicker">Prospects</span>
+                <span class="ws-side-note">from your intake form</span>
+              </div>
+              <div class="sidebar-search">
+                <span class="ui-icon" data-icon="search"></span>
+                <input type="text" id="leadSearch" placeholder="Search prospects…" oninput="renderLeadList()">
+              </div>
+              <div class="sidebar-filters" id="leadFilters">
+                <button class="filter-tab active" data-lead-filter="open">Open</button>
+                <button class="filter-tab" data-lead-filter="converted">Converted</button>
+                <button class="filter-tab" data-lead-filter="dismissed">Dismissed</button>
+              </div>
+              <div class="client-list" id="leadList"></div>
+            </div>
+            <div class="ws-lead-pane">
+              <div class="pod ws-side-card" id="leadEmpty">
+                <p class="ws-empty-note">Pick a prospect to read their intake, then convert them to a client or dismiss them.</p>
+              </div>
+              <!-- Lead detail (pre-signup intake submission) -->
+              <div id="leadDetail" style="display:none;">
+                <div class="detail-header" id="leadDetailHeader"></div>
+                <div id="leadDetailBody"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages: one thread per client. Your side is the notes you send
+             (also in a client's Notes tab); theirs is replies from the app. -->
+        <div class="ws-panel" id="wsPanel-messages">
+          <div class="ws-split">
+            <div class="pod ws-side-card ws-picker">
+              <div class="pod-row">
+                <span class="pod-kicker">Inbox</span>
+                <span class="ws-side-note" id="msgInboxNote"></span>
+              </div>
+              <div class="client-list" id="msgThreadList"></div>
+            </div>
+            <div class="pod ws-side-card ws-thread" id="msgThread">
+              <p class="ws-empty-note">Pick a client to read and write messages.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Check-ins: new ones you haven't marked reviewed, then clients who
+             are past their check-in frequency (7 days unless you changed it). -->
+        <div class="ws-panel" id="wsPanel-checkins">
           <div class="pod ws-side-card">
             <div class="pod-row">
-              <span class="pod-kicker">Program templates</span>
-              <span class="ws-side-note">assigned to</span>
+              <span class="pod-kicker">To review</span>
+              <span class="ws-side-note">newest first</span>
             </div>
-            <div id="wsTemplatesList"></div>
+            <div id="wsReviewList"></div>
           </div>
-        </div>
-
-        <!-- Real now: clients with no check-in or 7+ days stale, most
-             overdue first — same staleness data railNavUpdateCounts()
-             already computed for the rail badge, just not rendered
-             anywhere until now. -->
-        <div class="ws-panel" id="wsPanel-checkins">
           <div class="pod ws-side-card">
             <div class="pod-row">
               <span class="pod-kicker">Check-ins due</span>
@@ -196,16 +260,71 @@
           </div>
         </div>
 
-        <div class="ws-panel" id="wsPanel-messages">
-          <div class="pod ws-side-card ws-messages-card">
-            <div class="pod-row">
-              <span class="pod-kicker">Messages</span>
+        <!-- Form checks: lift videos clients send (links), answered with
+             comments pinned to a moment in the video. -->
+        <div class="ws-panel" id="wsPanel-formchecks">
+          <div class="ws-split">
+            <div class="pod ws-side-card ws-picker">
+              <div class="pod-row">
+                <span class="pod-kicker">Form checks</span>
+                <span class="ws-side-note" id="fcListNote"></span>
+              </div>
+              <div class="client-list" id="fcList"><div class="client-list-loading">Loading…</div></div>
             </div>
-            <!-- Notes are real (see a client's Notes tab / saveNote()) —
-                 what's not built is a cross-client inbox aggregating them
-                 all in one place, which needs a new backend endpoint. -->
-            <p class="ws-empty-note">Send a note from an individual client's Notes tab — a unified inbox across all clients isn't built yet.</p>
+            <div class="pod ws-side-card ws-thread" id="fcDetail">
+              <p class="ws-empty-note">Pick a form check to watch it and comment.</p>
+            </div>
           </div>
+        </div>
+
+        <!-- Programs: the shared program library (same one the client
+             Program tab assigns from), with the builder and file import. -->
+        <div class="ws-panel" id="wsPanel-programs">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Program library</span>
+              <span class="ws-panel-actions">
+                <button class="bulk-action-btn bulk-action-btn--ghost" onclick="chooseProgramFile()">Import file</button>
+                <button class="bulk-action-btn bulk-action-btn--brass" onclick="newLibraryProgram()">+ New program</button>
+              </span>
+            </div>
+            <div id="wsTemplatesList"></div>
+            <div id="libProgramBuilderArea" style="margin-top:12px;"></div>
+          </div>
+        </div>
+
+        <!-- Videos: videos you share with clients, and a technique video
+             per exercise. Same data as the phone's Coach Ops → Videos. -->
+        <div class="ws-panel" id="wsPanel-videos">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Videos for your clients</span>
+              <span class="ws-side-note">program, diet, cardio, anything</span>
+            </div>
+            <div id="wsCoachVideos"><p class="ws-empty-note">Loading videos…</p></div>
+          </div>
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Technique videos per exercise</span>
+            </div>
+            <div id="libTechniqueVideosArea"><p class="ws-empty-note">Loading videos…</p></div>
+          </div>
+        </div>
+
+        <!-- Foods: every food you approved, across all clients. -->
+        <div class="ws-panel" id="wsPanel-foods">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Approved foods</span>
+              <span class="ws-side-note">shown first in your clients' food search</span>
+            </div>
+            <div id="wsFoodsList"><p class="ws-empty-note">Loading foods…</p></div>
+          </div>
+        </div>
+
+        <!-- One shared page for every destination that isn't built yet. -->
+        <div class="ws-panel" id="wsPanel-soon">
+          <div class="pod ws-side-card ws-soon" id="wsSoonCard"></div>
         </div>
       </div>
 
@@ -219,17 +338,16 @@
       <div id="clientDetail" style="display:none;">
 
         <!-- Breadcrumb bar: back link + template/check-in/publish actions.
-             "Assign template" jumps to the real Program tab (assignProgram()
-             already exists there); "Request check-in" and "Publish changes"
-             have no backing feature anywhere in this app yet (no
-             coach-initiated check-in reminders, no draft/publish state) so
-             they render disabled with a title tooltip rather than pretend
-             to do something. -->
+             "Assign template" jumps to the Program tab, "Message" opens the
+             client's thread, "Request check-in" notifies the client
+             (requestCheckIn() in coach.js). "Publish changes" has no
+             draft/publish state behind it yet, so it stays disabled. -->
         <div class="detail-breadcrumb-bar">
           <button class="ws-breadcrumb" onclick="backToWorkspace()"><span class="ui-icon" data-icon="arrowLeft"></span> All clients</button>
           <div class="detail-breadcrumb-actions">
             <button class="capsule-chip capsule-chip--neutral" onclick="switchDetailTab('program')">Assign template</button>
-            <button class="capsule-chip capsule-chip--warn" disabled title="Coming soon &mdash; check-in requests aren't wired up yet">Request check-in</button>
+            <button class="capsule-chip capsule-chip--neutral" onclick="openMessages(_selectedClientId)">Message</button>
+            <button class="capsule-chip capsule-chip--warn" id="requestCheckInBtn" onclick="requestCheckIn(_selectedClientId)">Request check-in</button>
             <button class="capsule-chip capsule-chip--primary" disabled title="Coming soon &mdash; there's no draft/publish state yet, edits save immediately">Publish changes</button>
           </div>
         </div>
@@ -254,11 +372,6 @@
         <div class="detail-panel" id="dtab_notes"></div>
       </div>
 
-      <!-- Lead detail (pre-signup intake submission) -->
-      <div id="leadDetail" style="display:none;">
-        <div class="detail-header" id="leadDetailHeader"></div>
-        <div id="leadDetailBody"></div>
-      </div>
     </main>
 
   </div>

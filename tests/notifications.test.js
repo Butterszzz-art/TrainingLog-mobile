@@ -207,4 +207,15 @@ describe('coaching notifications', () => {
     await new Promise(r => setTimeout(r, 0));
     expect(seen).toEqual(['settingsTab', 'rendered', 'settingsTab', 'rendered', 'clientsTab', 'clientsTab']);
   });
+
+  test('a client message reads as a count and opens Clients; a check-in request opens Check-in', () => {
+    const { N, w } = setup();
+    expect(N.describe(n('cm', { type: 'client_message', category: 'coaching', actor: 'Sam', text: 'sent you a message', count: 2 })))
+      .toBe('<b>Sam</b> sent you 2 messages');
+    const seen = [];
+    w.showTab = t => seen.push(t);
+    N.open(n('cm', { type: 'client_message', category: 'coaching' }));
+    N.open(n('cr', { type: 'coach_checkin_request', category: 'coaching', actor: 'Kim', text: 'asked you for a check-in' }));
+    expect(seen).toEqual(['clientsTab', 'checkInTab']);
+  });
 });

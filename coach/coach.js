@@ -25,7 +25,7 @@ let _searchQuery = '';
 let _selectedClientId = null;
 let _bulkSelected = new Set();
 let _leads = [];
-let _sidebarMode = 'clients';
+let _leadFilter = 'open';
 let _selectedLeadId = null;
 let _clientsLoadError = false;
 
@@ -237,7 +237,7 @@ function renderClientList() {
     listEl.innerHTML = '<div class="client-list-loading">'
       + (_clientsLoadError ? 'Couldn\'t load your clients — check your connection and try again.'
         : _clients.length ? 'No clients match.'
-        : 'No clients yet. Use + Invite, or convert a lead.')
+        : 'No clients yet. Use + Invite, or convert a prospect.')
       + '</div>';
     updateFilterCounts();
     return;
@@ -294,7 +294,7 @@ function updateFilterCounts() {
 document.getElementById('statusFilters')?.addEventListener('click', e => {
   const tab = e.target.closest('.filter-tab');
   if (!tab) return;
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#statusFilters .filter-tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
   _activeFilter = tab.dataset.filter;
   renderClientList();
@@ -302,19 +302,20 @@ document.getElementById('statusFilters')?.addEventListener('click', e => {
 
 function filterClients() {
   _searchQuery = document.getElementById('clientSearch')?.value || '';
-  if (_sidebarMode === 'leads') renderLeadList(); else renderClientList();
+  renderClientList();
 }
 
-document.getElementById('sidebarModeToggle')?.addEventListener('click', e => {
-  const tab = e.target.closest('.mode-tab');
-  if (tab) switchSidebarMode(tab.dataset.mode);
+document.getElementById('leadFilters')?.addEventListener('click', e => {
+  const tab = e.target.closest('.filter-tab');
+  if (!tab) return;
+  document.querySelectorAll('#leadFilters .filter-tab').forEach(t => t.classList.toggle('active', t === tab));
+  _leadFilter = tab.dataset.leadFilter;
+  renderLeadList();
 });
 
 // ── Workspace (triage-first landing view) ───────────────────────
 // Stat row / priority client / roster table are derived from the real
-// _clients array already loaded by loadClients(). Review-queue and
-// messages panels are static shells (see TODO(coach-workspace) markers
-// in coach/index.html) since no backing data model exists for those yet.
+// _clients array already loaded by loadClients().
 
 function renderWorkspace() {
   const view = document.getElementById('workspaceView');
@@ -431,28 +432,28 @@ function renderWorkspace() {
       '</div>';
   }).join('') || '<p class="ws-empty-note">No clients yet.</p>');
 
-  // Templates: the shared program library, with how many clients have each.
+  // Programs: the shared program library, with how many clients have each.
   const templatesEl = document.getElementById('wsTemplatesList');
   if (!_programs.length) {
-    templatesEl.innerHTML = '<p class="ws-empty-note">No programs in your library yet. Build one in a client\'s Program tab or on the phone (Coach Ops → Programs).</p>';
+    templatesEl.innerHTML = '<p class="ws-empty-note">No programs in your library yet. Use + New program, or import a file.</p>';
   } else {
     templatesEl.innerHTML = _programs.map(p => {
       const assigned = linked.filter(c => c.currentProgramId === p.id).length;
-      return '<div class="ws-list-row"><span class="ws-list-name">' + escapeHtml(p.name) + '</span>' +
-        '<span class="ws-list-count">' + assigned + '</span></div>';
+      return '<div class="ws-list-row"><span class="ws-list-name">' + escapeHtml(programLabel(p)) + '</span>'
+        + '<span class="ws-side-note">' + assigned + ' client' + (assigned === 1 ? '' : 's') + '</span>'
+        + '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="editLibraryProgram(\'' + escapeHtml(p.id) + '\')">Edit</button></div>';
     }).join('');
   }
 
   railNavUpdateCounts(counts, _programs.length);
   if (_activeWorkspaceSection === 'checkins') renderCheckinsList();
+  if (_activeWorkspaceSection === 'messages') renderMessageList();
 }
 
 // ── Rail nav (left sidebar) ──────────────────────────────────────
-// Real tab switching — one .ws-panel visible at a time. Used to be
-// scrollIntoView() to a section on one long always-rendered page; every
-// destination below now has real, distinct content (Programs and
-// Analytics were dropped as separate destinations — see index.html's
-// rail-nav comment for why). Settings still has no desktop view.
+// One .ws-panel visible at a time. Destinations that aren't built yet
+// (SOON_PAGES) share one panel that says what is planned and where to do
+// it today, instead of a dead button.
 
 let _activeWorkspaceSection = 'queue';
 
@@ -461,25 +462,48 @@ function railNavUpdateCounts(counts, templateCount) {
   if (el('railCountQueue')) el('railCountQueue').textContent = counts.action;
   if (el('railCountClients')) el('railCountClients').textContent = counts.all;
   if (el('railCountTemplates')) el('railCountTemplates').textContent = templateCount;
-  if (el('railCountCheckins')) el('railCountCheckins').textContent = getStaleCheckinClients().length;
+  if (el('railCountCheckins')) el('railCountCheckins').textContent = getUnreviewedClients().length + getStaleCheckinClients().length;
+  if (el('railCountFormChecks')) el('railCountFormChecks').textContent = (_formChecks || []).filter(f => f.status === 'pending').length;
+  if (el('railCountMessages')) el('railCountMessages').textContent = activeClients().reduce((n, c) => n + (c.unreadMessages || 0), 0);
+  updateLeadsBadge();
 }
 
-// Clients with no check-in at all, or none in 7+ days — most overdue
-// first. Same definition railNavUpdateCounts() already used for the rail
-// badge count; this is the first place it's actually rendered as a list.
+// How often this client is expected to check in (their coach's setting).
+function checkInEvery(c) {
+  const n = Number(c?.checkInSettings?.everyDays);
+  return Number.isInteger(n) && n >= 1 && n <= 28 ? n : 7;
+}
+
+// Clients with no check-in at all, or none within their frequency — most
+// overdue first.
 function getStaleCheckinClients() {
   return activeClients()
     .map(c => ({
       client: c,
       days: c.lastCheckIn ? (Date.now() - new Date(c.lastCheckIn).getTime()) / 86400000 : Infinity
     }))
-    .filter(x => x.days >= 7)
+    .filter(x => x.days >= checkInEvery(x.client))
     .sort((a, b) => b.days - a.days);
+}
+
+// Clients whose newest check-in the coach hasn't marked reviewed yet.
+function getUnreviewedClients() {
+  return activeClients()
+    .filter(c => c.lastCheckIn && (!c.reviewedCheckInDate || String(c.lastCheckIn).slice(0, 10) > c.reviewedCheckInDate))
+    .sort((a, b) => String(b.lastCheckIn).localeCompare(String(a.lastCheckIn)));
 }
 
 function renderCheckinsList() {
   const el = document.getElementById('wsCheckinsList');
   if (!el) return;
+  const todo = getUnreviewedClients();
+  document.getElementById('wsReviewList').innerHTML = todo.length
+    ? todo.map(c => '<div role="button" tabindex="0" class="ws-roster-row" onclick="openClientTab(\'' + escapeHtml(c.id) + '\', \'checkin\')">'
+      + '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>'
+      + '<span class="ws-roster-cell">Checked in ' + escapeHtml(shortDate(c.lastCheckIn) || c.lastCheckIn) + '</span>'
+      + '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="event.stopPropagation(); markCheckInReviewed(\'' + escapeHtml(c.id) + '\', \'' + escapeHtml(String(c.lastCheckIn).slice(0, 10)) + '\')">Mark reviewed</button>'
+      + '</div>').join('')
+    : '<p class="ws-empty-note">Nothing waiting. New check-ins show up here until you mark them reviewed.</p>';
   const stale = getStaleCheckinClients();
   el.innerHTML = stale.length
     ? stale.map(({ client: c, days }) => {
@@ -487,29 +511,64 @@ function renderCheckinsList() {
         return '<div role="button" tabindex="0" class="ws-roster-row" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">'
           + '<span class="ws-roster-name">' + escapeHtml(c.clientName || 'Unknown') + '</span>'
           + '<span class="ws-roster-cell">' + escapeHtml(label) + '</span>'
+          + '<button class="bulk-action-btn bulk-action-btn--ghost"' + (checkInRequestOpen(c) ? ' disabled' : '') + ' onclick="event.stopPropagation(); requestCheckIn(\'' + escapeHtml(c.id) + '\')">'
+          + (checkInRequestOpen(c) ? 'Requested ' + escapeHtml(shortDate(c.checkInRequestedAt.slice(0, 10))) : 'Request check-in') + '</button>'
           + '</div>';
       }).join('')
-    : '<p class="ws-empty-note">Everyone\'s checked in within the last week.</p>';
+    : '<p class="ws-empty-note">Everyone is within their check-in frequency.</p>';
+}
+
+const SOON_PAGES = {
+  calendar: { icon: 'calendar', title: 'Calendar', plan: 'Check-in due dates, plan phases and calls in one month view.',
+    today: 'Check-ins that are due are listed on the Check-ins page.', go: 'checkins', goLabel: 'Open check-ins' },
+  roadmaps: { icon: 'map', title: 'Roadmaps', plan: 'A long-term timeline per client with phases, milestones and targets.',
+    today: 'The Master Plan in a client\'s Program tab already covers phases, programs and nutrition by day type.', go: 'clients', goLabel: 'Open clients' },
+  groups: { icon: 'users', title: 'Training Groups', plan: 'Put clients in a group to give them one program and message them together.',
+    today: 'Tick several clients on the Clients page to message them at once.', go: 'clients', goLabel: 'Open clients' },
+  vault: { icon: 'folder', title: 'Vault', plan: 'A library of guides, PDFs and links to share with clients.',
+    today: 'Share video links with all or chosen clients on the Videos page.', go: 'videos', goLabel: 'Open videos' },
+  automations: { icon: 'zap', title: 'Automations', plan: 'Rules such as "no check-in for 7 days: send a reminder".',
+    today: 'Overdue check-ins are listed on the Check-ins page.', go: 'checkins', goLabel: 'Open check-ins' },
+  workouts: { icon: 'clipboard', title: 'Workouts', plan: 'Single sessions you can reuse across programs.',
+    today: 'Build whole programs on the Programs page.', go: 'programs', goLabel: 'Open programs' },
+  exercises: { icon: 'dumbbell', title: 'Exercises', plan: 'Your own exercise list with cues and demo videos.',
+    today: 'Add a technique video and cue per exercise on the Videos page.', go: 'videos', goLabel: 'Open videos' },
+  meals: { icon: 'utensils', title: 'Meals', plan: 'Meal templates you can reuse for any client.',
+    today: 'Build a meal plan for one client in their Nutrition tab.', go: 'clients', goLabel: 'Open clients' },
+  settings: { icon: 'settings', title: 'Settings', plan: 'Settings for the coach console.',
+    today: 'Use the Settings tab in the phone app for now.' },
+};
+
+// Sections that keep the roster summary tiles above them.
+const STAT_ROW_SECTIONS = ['queue', 'clients', 'checkins'];
+
+function renderSoonPage(section) {
+  const page = SOON_PAGES[section];
+  document.getElementById('wsSoonCard').innerHTML =
+    '<div class="ws-soon-head">' + coachIcon(page.icon) + '<span class="ws-soon-title">' + escapeHtml(page.title) + '</span><span class="rail-nav-soon">Soon</span></div>'
+    + '<p class="ws-soon-plan">' + escapeHtml(page.plan) + '</p>'
+    + '<p class="ws-empty-note">' + escapeHtml(page.today) + '</p>'
+    + (page.go ? '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="railNavGo(\'' + page.go + '\')">' + escapeHtml(page.goLabel) + '</button>' : '');
 }
 
 function railNavGo(section) {
-  if (section === 'settings') {
-    // No desktop settings view exists yet — say so rather than silently
-    // doing nothing or faking a page.
-    alert('Settings isn\'t available in the coach console yet — use the mobile app\'s Settings tab for now.');
-    return;
-  }
-
+  const panel = SOON_PAGES[section] ? 'soon' : section;
   document.querySelectorAll('.rail-nav-item').forEach(b => b.classList.toggle('active', b.dataset.rail === section));
-  document.querySelectorAll('.ws-panel').forEach(p => p.classList.toggle('active', p.id === 'wsPanel-' + section));
+  document.querySelectorAll('.ws-panel').forEach(p => p.classList.toggle('active', p.id === 'wsPanel-' + panel));
+  document.getElementById('wsStatRow').style.display = STAT_ROW_SECTIONS.includes(section) ? '' : 'none';
   _activeWorkspaceSection = section;
 
   // Any rail destination returns to the workspace view first, in case a
   // client file is currently open.
-  if (typeof backToWorkspace === 'function' && document.getElementById('clientDetail').style.display !== 'none') {
-    backToWorkspace();
-  }
+  if (document.getElementById('clientDetail').style.display !== 'none') backToWorkspace();
+
+  if (panel === 'soon') renderSoonPage(section);
   if (section === 'checkins') renderCheckinsList();
+  if (section === 'prospects') renderLeadList();
+  if (section === 'formchecks') loadFormChecks();
+  if (section === 'messages') { renderMessageList(); loadClients(); }
+  if (section === 'videos') { renderCoachVideos(); loadCoachExerciseVideos().then(renderTechniqueVideos); }
+  if (section === 'foods') renderFoodsLibrary();
 }
 
 function toggleBulk(id) {
@@ -549,7 +608,6 @@ function backToWorkspace() {
   _selectedClientId = null;
   renderClientList();
   document.getElementById('clientDetail').style.display = 'none';
-  document.getElementById('leadDetail').style.display = 'none';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('workspaceView').style.display = '';
   document.querySelector('.app-shell')?.classList.remove('is-rail-collapsed');
@@ -573,6 +631,7 @@ async function loadClientDetail(id) {
 
 function renderClientFile(client) {
   renderDetailHeader(client);
+  paintRequestCheckIn(client);
   renderOverview(client);
   renderCheckIn(client);
   renderProgram(client);
@@ -888,7 +947,8 @@ function renderCheckIn(c) {
   const d = _clientDetails[c.id];
   const list = d?.checkIns || [];
   if (c.status === 'pending' || !list.length) {
-    el.innerHTML = '<div class="d-card"><p class="ws-empty-note" style="text-align:center;padding:24px 0;">'
+    el.innerHTML = (c.status === 'pending' ? '' : checkInSettingsCard(c))
+      + '<div class="d-card"><p class="ws-empty-note" style="text-align:center;padding:24px 0;">'
       + (d === undefined && c.status !== 'pending' ? 'Loading…' : 'No check-ins shared yet.') + '</p></div>';
     return;
   }
@@ -897,7 +957,8 @@ function renderCheckIn(c) {
   // The strip and the comment thread load when the card scrolls into view.
   const sharesPhotos = c.sharing ? c.sharing.photos === true : null;
   const review = photoReview(c);
-  el.innerHTML = (sharesPhotos === false && !list.some(ci => ci.photoCount)
+  const reviewed = c.reviewedCheckInDate || '';
+  el.innerHTML = checkInSettingsCard(c) + (sharesPhotos === false && !list.some(ci => ci.photoCount)
     ? '<p class="ws-empty-note ci-photo-off">' + ic('camera') + ' ' + escapeHtml(c.clientName || 'This client') + ' hasn\'t switched on photo sharing, so check-ins arrive without photos.</p>' : '')
     + '<div class="ov-grid">' + list.map((ci, i) => {
       const prev = list.slice(i + 1).find(p => p.photoCount);
@@ -910,6 +971,10 @@ function renderCheckIn(c) {
         + scoreRows(ci, list[i + 1])
         + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
         + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
+        + (ci.answers || []).map(x => '<div class="ci-answer"><span class="ci-answer-q">' + escapeHtml(x.q) + '</span><span class="ci-answer-a">' + escapeHtml(x.a) + '</span></div>').join('')
+        + (i === 0 ? '<div class="ci-review-row">' + (ci.date > reviewed
+          ? '<button class="bulk-action-btn" onclick="markCheckInReviewed(\'' + escapeHtml(c.id) + '\', \'' + escapeHtml(ci.date) + '\')">' + ic('check') + ' Mark reviewed</button>'
+          : '<span class="ca-chip ca-chip--green">' + ic('check') + ' Reviewed</span>') + '</div>' : '')
         + (ci.photoCount ? '<div class="ci-photo-strip" data-ci-photos="' + escapeHtml(ci.date) + '" aria-label="' + ci.photoCount + ' check-in photos">'
           + Array.from({ length: ci.photoCount }, () => '<span class="ci-photo-thumb ci-photo-thumb--skeleton" aria-hidden="true"></span>').join('') + '</div>' : '')
         + '<div class="ci-thread" data-ci-thread="' + escapeHtml(ci.date) + '"><span class="ws-empty-note">Loading comments…</span></div>'
@@ -1278,8 +1343,18 @@ async function loadCoachExerciseVideos() {
   return window.coachExerciseVideos;
 }
 
+// The builder and the technique-video table each have two homes: inside an
+// open client's Program tab, and on the Programs / Videos library pages.
+// Returns whichever is on screen and empties the other.
+function visibleArea(clientAreaId, libraryAreaId) {
+  const inClient = document.getElementById('clientDetail').style.display !== 'none';
+  const other = document.getElementById(inClient ? libraryAreaId : clientAreaId);
+  if (other) other.innerHTML = '';
+  return document.getElementById(inClient ? clientAreaId : libraryAreaId);
+}
+
 function renderTechniqueVideos() {
-  const area = document.getElementById('techniqueVideosArea');
+  const area = visibleArea('techniqueVideosArea', 'libTechniqueVideosArea');
   if (!area || !window.TechniqueVideos) return;
   _tvState.rows = window.TechniqueVideos.rows(_programs, window.coachExerciseVideos);
   area.innerHTML = window.TechniqueVideos.html(_tvState.rows, _tvState)
@@ -1728,7 +1803,7 @@ async function unassignProgram() {
 // copy week → next, quick entry. `program` is a library entry to edit, or
 // none for a new one (one empty Monday to start from).
 function showProgramBuilder(program) {
-  const area = document.getElementById('programBuilderArea');
+  const area = visibleArea('programBuilderArea', 'libProgramBuilderArea');
   if (!area || !window.ProgramBuilder) return;
   const id = program?.id || ('prog_' + Date.now().toString(36));
   const start = program || { schema: 'pocketcoach.program/2', name: 'New program', weeks: [{ days: [{ dayId: 'd1', weekday: 1, label: 'Day 1', exercises: [] }] }] };
@@ -1765,7 +1840,7 @@ function chooseProgramFile() {
 let _importJob = null;
 
 async function importProgramFile(file) {
-  const area = document.getElementById('programBuilderArea');
+  const area = visibleArea('programBuilderArea', 'libProgramBuilderArea');
   if (!area) return;
   const IC = window.ProgramImportCore;
   const problem = IC.checkFile(file);
@@ -1801,6 +1876,17 @@ function showImportedProgram(area, fileName, result) {
     onSave: v2 => saveCoachProgram(id, v2),
     onCancel: () => { area.innerHTML = ''; },
   });
+}
+
+// Programs page: build or edit a library program without opening a client.
+function newLibraryProgram() {
+  railNavGo('programs');
+  showProgramBuilder();
+}
+
+function editLibraryProgram(id) {
+  const program = _programs.find(p => p.id === id);
+  if (program) showProgramBuilder(program);
 }
 
 function editSelectedProgram() {
@@ -2582,46 +2668,28 @@ async function loadLeads() {
     _leads = [];
   }
   updateLeadsBadge();
-  if (_sidebarMode === 'leads') renderLeadList();
+  renderLeadList();
+}
+
+function leadIsOpen(l) {
+  return l.status !== 'converted' && l.status !== 'dismissed';
 }
 
 function updateLeadsBadge() {
-  const badge = document.getElementById('leadsBadge');
-  if (!badge) return;
-  badge.hidden = _leads.length === 0;
-  badge.textContent = String(_leads.length);
-}
-
-function switchSidebarMode(mode) {
-  _sidebarMode = mode;
-  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
-  document.getElementById('statusFilters').style.display = mode === 'clients' ? '' : 'none';
-  const inviteBtn = document.getElementById('sidebarInviteBtn');
-  if (inviteBtn) inviteBtn.style.display = mode === 'clients' ? '' : 'none';
-
-  if (mode === 'clients') renderClientList(); else renderLeadList();
-
-  // Reset the main panel to the empty state — whatever was selected in the
-  // other list doesn't make sense to keep showing here.
-  // Clients mode lands on the Today workspace; Leads mode on the empty state.
-  _selectedClientId = null;
-  _selectedLeadId = null;
-  document.getElementById('workspaceView').style.display = mode === 'clients' ? '' : 'none';
-  document.getElementById('emptyState').style.display = mode === 'clients' ? 'none' : '';
-  document.getElementById('clientDetail').style.display = 'none';
-  document.getElementById('leadDetail').style.display = 'none';
+  const badge = document.getElementById('railCountProspects');
+  if (badge) badge.textContent = String(_leads.filter(leadIsOpen).length);
 }
 
 function renderLeadList() {
-  const listEl = document.getElementById('clientList');
-  let filtered = _leads.slice();
-  if (_searchQuery) {
-    const q = _searchQuery.toLowerCase();
-    filtered = filtered.filter(l => (l.naam || '').toLowerCase().includes(q));
-  }
+  const listEl = document.getElementById('leadList');
+  if (!listEl) return;
+  let filtered = _leads.filter(l => _leadFilter === 'open' ? leadIsOpen(l) : l.status === _leadFilter);
+  const q = (document.getElementById('leadSearch')?.value || '').toLowerCase();
+  if (q) filtered = filtered.filter(l => (l.naam || '').toLowerCase().includes(q));
 
   if (!filtered.length) {
-    listEl.innerHTML = '<div class="client-list-loading">No leads yet.</div>';
+    listEl.innerHTML = '<div class="client-list-loading">'
+      + (_leads.length ? 'No prospects here.' : 'No prospects yet. They appear when someone fills in your intake form.') + '</div>';
     return;
   }
 
@@ -2631,7 +2699,7 @@ function renderLeadList() {
     const createdMs = l.createdAt?._seconds ? l.createdAt._seconds * 1000 : l.createdAt;
     const created = createdMs ? new Date(createdMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—';
 
-    return '<div role="button" tabindex="0" class="client-row' + (isActive ? ' active' : '') + '" onclick="selectLead(\'' + l.id + '\')">'
+    return '<div role="button" tabindex="0" class="client-row' + (isActive ? ' active' : '') + '" onclick="selectLead(\'' + escapeHtml(l.id) + '\')">'
       + '<div class="client-avatar">' + escapeHtml(initials) + '</div>'
       + '<div class="client-info"><div class="client-name">' + escapeHtml(l.naam || 'Unnamed') + '</div>'
       + '<div class="client-meta">' + escapeHtml(created) + ' · ' + escapeHtml(l.status || 'new') + '</div></div>'
@@ -2645,9 +2713,7 @@ function selectLead(id) {
   const lead = _leads.find(l => l.id === id);
   if (!lead) return;
 
-  document.getElementById('workspaceView').style.display = 'none';
-  document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('clientDetail').style.display = 'none';
+  document.getElementById('leadEmpty').style.display = 'none';
   document.getElementById('leadDetail').style.display = '';
 
   renderLeadDetail(lead);
@@ -2819,6 +2885,449 @@ async function dismissLead(leadId, dismiss) {
   } catch {
     alert('Connection error — try again.');
   }
+}
+
+// ── Messages page ────────────────────────────────────────────────────────
+// One thread per client: the notes you send (POST …/notes, same as the
+// Notes tab) and the client's replies from the app, read together from
+// GET /api/coach/clients/:id/messages. Opening a thread marks it read. The
+// inbox list comes from the roster (lastMessage*, unreadMessages).
+let _msgClientId = null;
+let _msgThread = [];
+
+function renderMessageList() {
+  const el = document.getElementById('msgThreadList');
+  if (!el) return;
+  const clients = activeClients().slice().sort((a, b) =>
+    String(b.lastMessageAt || '').localeCompare(String(a.lastMessageAt || '')) || String(a.clientName || '').localeCompare(String(b.clientName || '')));
+  const unread = clients.reduce((n, c) => n + (c.unreadMessages || 0), 0);
+  document.getElementById('msgInboxNote').textContent = unread ? unread + ' unread' : 'all read';
+  el.innerHTML = clients.length ? clients.map(c => {
+    const id = escapeHtml(c.id);
+    const last = c.lastMessageText ? (c.lastMessageAuthor === 'coach' ? 'You: ' : '') + c.lastMessageText : 'No messages yet';
+    return '<div role="button" tabindex="0" class="client-row' + (c.id === _msgClientId ? ' active' : '') + '" onclick="openMessages(\'' + id + '\')">'
+      + '<div class="client-avatar" data-avatar-user="' + escapeHtml(c.clientName || '') + '">' + escapeHtml(initialsOf(c.clientName)) + '</div>'
+      + '<div class="client-info"><div class="client-name">' + escapeHtml(c.clientName || 'Unknown') + '</div>'
+      + '<div class="msg-preview">' + escapeHtml(last) + '</div></div>'
+      + (c.unreadMessages ? '<span class="rail-nav-count msg-unread">' + c.unreadMessages + '</span>' : '') + '</div>';
+  }).join('') : '<div class="client-list-loading">No active clients yet.</div>';
+}
+
+function renderMessageThread(status) {
+  const el = document.getElementById('msgThread');
+  const c = _clients.find(x => x.id === _msgClientId);
+  if (!el || !c) return;
+  const draft = el.querySelector('textarea')?.value || '';
+  el.innerHTML = '<div class="pod-row"><span class="ws-list-name">' + escapeHtml(c.clientName || 'Client') + '</span>'
+    + '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="selectClient(\'' + escapeHtml(c.id) + '\')">Open client</button></div>'
+    + (_msgThread.length
+      ? '<div class="ci-msgs msg-scroll">' + _msgThread.map(m => '<div class="ci-msg ci-msg--' + (m.author === 'coach' ? 'coach' : 'client') + '">'
+        + '<div class="ci-msg-meta"><b>' + (m.author === 'coach' ? 'You' : escapeHtml(c.clientName || m.authorName || 'Client')) + '</b>'
+        + '<span>' + escapeHtml(commentTime(m.createdAt)) + '</span></div>'
+        + '<div class="ci-msg-text">' + escapeHtml(m.text) + '</div></div>').join('') + '</div>'
+      : '<p class="ws-empty-note">' + escapeHtml(status && !_msgThread.length ? status : 'No messages yet. ' + (c.clientName || 'Your client') + ' gets a notification when you write, and can reply in the app.') + '</p>')
+    + '<form class="ci-compose" id="msgCompose">'
+    + '<textarea class="d-input ci-compose-input" rows="2" maxlength="4000" placeholder="Write to ' + escapeHtml((c.clientName || 'your client').split(' ')[0]) + '… (Ctrl+Enter to send)" aria-label="Message"></textarea>'
+    + '<div class="ci-compose-row"><span class="ci-compose-status' + (status && _msgThread.length ? ' is-error' : '') + '">' + escapeHtml(_msgThread.length ? status || '' : '') + '</span>'
+    + '<button type="submit" class="bulk-action-btn">' + ic('send') + ' Send</button></div></form>';
+  const input = el.querySelector('textarea');
+  input.value = draft;
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendMessage(); } });
+  el.querySelector('#msgCompose').addEventListener('submit', e => { e.preventDefault(); sendMessage(); });
+  const scroller = el.querySelector('.msg-scroll');
+  if (scroller) scroller.scrollTop = scroller.scrollHeight;
+}
+
+// From the rail, a client's "Message" button, or an inbox row.
+async function openMessages(clientId) {
+  if (_activeWorkspaceSection !== 'messages' || document.getElementById('clientDetail').style.display !== 'none') railNavGo('messages');
+  const c = _clients.find(x => x.id === clientId && x.status !== 'pending');
+  if (!c) return;
+  _msgClientId = clientId;
+  _msgThread = [];
+  renderMessageList();
+  renderMessageThread('Loading…');
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/messages', { headers: authHeaders() });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not load the messages.');
+    if (_msgClientId !== clientId) return;
+    _msgThread = data.messages || [];
+    c.unreadMessages = 0;
+    renderMessageThread();
+    renderMessageList();
+    railNavUpdateCounts(alertCounts(), _programs.length);
+  } catch (err) {
+    if (_msgClientId === clientId) renderMessageThread(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message);
+  }
+}
+
+function alertCounts() {
+  const linked = activeClients();
+  const counts = { all: linked.length, action: 0, watch: 0, ok: 0 };
+  linked.forEach(c => { if (counts[c.alertStatus] !== undefined) counts[c.alertStatus]++; });
+  return counts;
+}
+
+async function sendMessage() {
+  const el = document.getElementById('msgThread');
+  const input = el.querySelector('textarea');
+  const clientId = _msgClientId;
+  const c = _clients.find(x => x.id === clientId);
+  const text = input.value.trim();
+  if (!c || !text) { input.focus(); return; }
+  const btn = el.querySelector('[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/notes', {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify({ text }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not send the message.');
+    const at = new Date().toISOString();
+    Object.assign(c, { lastMessageAt: at, lastMessageText: text.replace(/\s+/g, ' ').slice(0, 140), lastMessageAuthor: 'coach' });
+    delete _clientNotesCache[clientId];
+    if (_msgClientId !== clientId) return;
+    _msgThread.push({ id: data.noteId || at, author: 'coach', text, createdAt: at });
+    input.value = '';
+    renderMessageThread();
+    renderMessageList();
+    el.querySelector('textarea').focus();
+  } catch (err) {
+    btn.disabled = false;
+    const status = el.querySelector('.ci-compose-status');
+    status.classList.add('is-error');
+    status.textContent = err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message;
+  }
+}
+
+// ── Check-in settings and review ─────────────────────────────────────────
+// Per client: how often a check-in is expected, and up to 8 questions of
+// your own that the client answers with each check-in (PATCH
+// /api/coach/clients/:id { checkInSettings }). The app shows the questions
+// in the client's Check-in tab.
+function checkInSettingsCard(c) {
+  const st = c.checkInSettings || {};
+  const every = checkInEvery(c);
+  const options = [[1, 'Every day'], [3, 'Every 3 days'], [7, 'Every week'], [14, 'Every 2 weeks'], [28, 'Every 4 weeks']];
+  if (!options.some(o => o[0] === every)) options.push([every, 'Every ' + every + ' days']);
+  return '<details class="d-card ci-settings"' + ((st.questions || []).length ? '' : '') + '><summary class="d-card-title">Check-in settings · '
+    + escapeHtml(options.find(o => o[0] === every)[1].toLowerCase()) + ' · ' + (st.questions || []).length + ' question' + ((st.questions || []).length === 1 ? '' : 's') + '</summary>'
+    + '<label class="ci-settings-label">How often</label>'
+    + '<select id="ciEvery" class="coach-input">' + options.map(o => '<option value="' + o[0] + '"' + (o[0] === every ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>'
+    + '<label class="ci-settings-label">Your questions (one per line, up to 8)</label>'
+    + '<textarea id="ciQuestions" class="coach-input" rows="4" placeholder="e.g. Any pain or niggles this week?">' + escapeHtml((st.questions || []).join('\n')) + '</textarea>'
+    + '<div class="ci-compose-row"><span class="ci-compose-status" id="ciSettingsStatus"></span>'
+    + '<button class="bulk-action-btn" onclick="saveCheckInSettings()">Save</button></div></details>';
+}
+
+async function saveCheckInSettings() {
+  const c = _clients.find(x => x.id === _selectedClientId);
+  if (!c) return;
+  const questions = document.getElementById('ciQuestions').value.split('\n').map(q => q.trim()).filter(Boolean);
+  const status = document.getElementById('ciSettingsStatus');
+  if (questions.length > 8) { status.textContent = 'Keep it to 8 questions.'; status.classList.add('is-error'); return; }
+  const checkInSettings = { everyDays: Number(document.getElementById('ciEvery').value), questions };
+  const ok = await patchClient(c.id, { checkInSettings });
+  if (!ok) { status.textContent = 'Could not save. Try again.'; status.classList.add('is-error'); return; }
+  c.checkInSettings = checkInSettings;
+  renderCheckIn(c);
+  railNavUpdateCounts(alertCounts(), _programs.length);
+}
+
+async function markCheckInReviewed(clientId, date) {
+  const c = _clients.find(x => x.id === clientId);
+  if (!c) return;
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkins/' + encodeURIComponent(date) + '/reviewed', { method: 'POST', headers: authHeaders() });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not mark it reviewed.');
+    c.reviewedCheckInDate = data.reviewedCheckInDate || date;
+  } catch (err) {
+    alert(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message);
+    return;
+  }
+  if (_selectedClientId === clientId && document.getElementById('clientDetail').style.display !== 'none') renderCheckIn(c);
+  if (_activeWorkspaceSection === 'checkins') renderCheckinsList();
+  railNavUpdateCounts(alertCounts(), _programs.length);
+}
+
+// ── Form Checks page (/api/coach/form-checks) ────────────────────────────
+// Clients send a video link of a lift from the app. You comment, optionally
+// at a moment in the video (seconds or m:ss); the first comment marks it
+// reviewed and notifies the client, who can write back.
+let _formChecks = null;
+let _fcId = null;
+
+async function loadFormChecks() {
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/form-checks', { headers: authHeaders() });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not load the form checks.');
+    _formChecks = data.formChecks || [];
+  } catch (err) {
+    if (!_formChecks) {
+      document.getElementById('fcList').innerHTML = '<div class="client-list-loading">' + escapeHtml(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message) + '</div>';
+      return;
+    }
+  }
+  renderFormCheckList();
+  if (_fcId) renderFormCheck();
+  railNavUpdateCounts(alertCounts(), _programs.length);
+}
+
+function fcTime(seconds) {
+  return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+}
+
+// The link with a start time, where the host supports one in the URL.
+function fcLinkAt(url, seconds) {
+  try {
+    const u = new URL(url);
+    if (!/^https?:$/.test(u.protocol)) return '';
+    if (seconds != null && /(^|\.)(youtube\.com|youtu\.be|vimeo\.com|loom\.com)$/.test(u.hostname)) {
+      if (/vimeo\.com$/.test(u.hostname)) u.hash = 't=' + seconds + 's';
+      else u.searchParams.set('t', String(seconds));
+    }
+    return u.toString();
+  } catch { return ''; }
+}
+
+function renderFormCheckList() {
+  const el = document.getElementById('fcList');
+  if (!el || !_formChecks) return;
+  const waiting = _formChecks.filter(f => f.status === 'pending').length;
+  document.getElementById('fcListNote').textContent = waiting ? waiting + ' waiting' : 'all reviewed';
+  el.innerHTML = _formChecks.length ? _formChecks.map(f =>
+    '<div role="button" tabindex="0" class="client-row' + (f.id === _fcId ? ' active' : '') + '" onclick="openFormCheck(\'' + escapeHtml(f.id) + '\')">'
+    + '<div class="client-avatar">' + escapeHtml(initialsOf(f.clientName)) + '</div>'
+    + '<div class="client-info"><div class="client-name">' + escapeHtml(f.exercise) + '</div>'
+    + '<div class="msg-preview">' + escapeHtml(f.clientName || 'Client') + ' · ' + escapeHtml(shortDate(f.createdAt)) + '</div></div>'
+    + (f.status === 'pending' ? '<span class="rail-nav-count msg-unread">New</span>' : '') + '</div>').join('')
+    : '<div class="client-list-loading">No form checks yet. Clients send them from Settings › Your Coach in the app.</div>';
+}
+
+function openFormCheck(id) {
+  _fcId = id;
+  renderFormCheckList();
+  renderFormCheck();
+}
+
+function renderFormCheck(status) {
+  const el = document.getElementById('fcDetail');
+  const f = (_formChecks || []).find(x => x.id === _fcId);
+  if (!el || !f) return;
+  const link = fcLinkAt(f.videoUrl);
+  const draft = el.querySelector('textarea')?.value || '';
+  el.innerHTML = '<div class="pod-row"><span class="ws-list-name">' + escapeHtml(f.exercise) + ' · ' + escapeHtml(f.clientName || 'Client') + '</span>'
+    + (link ? '<a class="bulk-action-btn bulk-action-btn--brass" href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">' + ic('video') + ' Watch video</a>' : '') + '</div>'
+    + (f.note ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(f.note) + '&rdquo;</p>' : '')
+    + (f.comments.length
+      ? '<div class="ci-msgs msg-scroll">' + f.comments.map(m => '<div class="ci-msg ci-msg--' + (m.author === 'coach' ? 'coach' : 'client') + '">'
+        + '<div class="ci-msg-meta"><b>' + (m.author === 'coach' ? 'You' : escapeHtml(f.clientName || 'Client')) + '</b>'
+        + (Number.isInteger(m.atSeconds) ? '<a class="ca-chip ci-msg-pin" href="' + escapeHtml(fcLinkAt(f.videoUrl, m.atSeconds)) + '" target="_blank" rel="noopener noreferrer">' + ic('clock') + ' ' + fcTime(m.atSeconds) + '</a>' : '')
+        + '<span>' + escapeHtml(commentTime(m.createdAt)) + '</span></div>'
+        + '<div class="ci-msg-text">' + escapeHtml(m.text) + '</div></div>').join('') + '</div>'
+      : '<p class="ws-empty-note">No comments yet. Your first comment marks this reviewed and notifies ' + escapeHtml(f.clientName || 'the client') + '.</p>')
+    + '<form class="ci-compose" id="fcCompose">'
+    + '<textarea class="d-input ci-compose-input" rows="2" maxlength="1000" placeholder="What should they change?" aria-label="Comment"></textarea>'
+    + '<div class="ci-compose-row"><label class="ci-compose-pin"><span>At</span><input id="fcAt" class="d-input fc-at" placeholder="m:ss" inputmode="numeric" aria-label="Moment in the video (optional)"></label>'
+    + '<span class="ci-compose-status' + (status ? ' is-error' : '') + '">' + escapeHtml(status || '') + '</span>'
+    + '<button type="submit" class="bulk-action-btn">' + ic('send') + ' Send</button></div></form>';
+  el.querySelector('textarea').value = draft;
+  el.querySelector('#fcCompose').addEventListener('submit', e => { e.preventDefault(); sendFormCheckComment(); });
+  const scroller = el.querySelector('.msg-scroll');
+  if (scroller) scroller.scrollTop = scroller.scrollHeight;
+}
+
+async function sendFormCheckComment() {
+  const el = document.getElementById('fcDetail');
+  const id = _fcId;
+  const text = el.querySelector('textarea').value.trim();
+  const at = document.getElementById('fcAt').value.trim();
+  if (!text) { el.querySelector('textarea').focus(); return; }
+  if (at && !/^(\d{1,3}:[0-5]\d|\d{1,5})$/.test(at)) { renderFormCheck('Give the moment as seconds or m:ss.'); return; }
+  el.querySelector('[type="submit"]').disabled = true;
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/form-checks/' + encodeURIComponent(id) + '/comments', {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(at ? { text, atSeconds: at } : { text }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not send the comment.');
+    _formChecks = _formChecks.map(f => (f.id === id ? data.formCheck : f));
+    el.querySelector('textarea').value = '';
+    renderFormCheckList();
+    if (_fcId === id) renderFormCheck();
+    railNavUpdateCounts(alertCounts(), _programs.length);
+  } catch (err) {
+    if (_fcId === id) renderFormCheck(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message);
+  }
+}
+
+// ── Request a check-in ───────────────────────────────────────────────────
+// POST /api/coach/clients/:id/checkin-request notifies the client (at most
+// once per 12 hours). The request counts as open until they check in.
+function checkInRequestOpen(c) {
+  const asked = Date.parse(c?.checkInRequestedAt || '');
+  if (!Number.isFinite(asked)) return false;
+  const last = Date.parse(c.lastCheckIn || '');
+  return !Number.isFinite(last) || last < asked;
+}
+
+function paintRequestCheckIn(c) {
+  const btn = document.getElementById('requestCheckInBtn');
+  if (!btn) return;
+  const open = checkInRequestOpen(c);
+  btn.disabled = c.status === 'pending' || open;
+  btn.textContent = open ? 'Check-in requested ' + shortDate(c.checkInRequestedAt.slice(0, 10)) : 'Request check-in';
+  btn.title = c.status === 'pending' ? 'Available once they accept your invite' : open ? 'They have been asked. This clears when they check in.' : 'Sends a notification asking for a check-in';
+}
+
+async function requestCheckIn(clientId) {
+  const c = _clients.find(x => x.id === clientId);
+  if (!c || c.status === 'pending') return;
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkin-request', { method: 'POST', headers: authHeaders() });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not send the request.');
+    c.checkInRequestedAt = data.checkInRequestedAt || new Date().toISOString();
+  } catch (err) {
+    alert(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message);
+    return;
+  }
+  if (_selectedClientId === clientId) paintRequestCheckIn(c);
+  if (_activeWorkspaceSection === 'checkins') renderCheckinsList();
+}
+
+// ── Videos page: videos shared with clients (/api/coach/videos) ──────────
+// Same library as the phone's Coach Ops → Videos. Links only (Loom,
+// YouTube, Vimeo, Drive or a video file); clients play them in the app.
+const COACH_VIDEO_CATEGORIES = { program: 'Program', diet: 'Diet', cardio: 'Cardio', technique: 'Technique', general: 'General' };
+let _coachVideos = null;
+let _coachVideoMsg = '';
+
+async function renderCoachVideos() {
+  const el = document.getElementById('wsCoachVideos');
+  if (!el) return;
+  if (!_coachVideos) {
+    try {
+      const res = await coachFetch(SERVER_URL + '/api/coach/videos', { headers: authHeaders() });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not load your videos.');
+      _coachVideos = data.videos || [];
+    } catch (err) {
+      el.innerHTML = '<p class="ws-empty-note">' + escapeHtml(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message) + '</p>';
+      return;
+    }
+  }
+  const clients = activeClients();
+  const audienceText = v => v.audience === 'selected'
+    ? (v.clientUids || []).length + ' client' + ((v.clientUids || []).length === 1 ? '' : 's') : 'All clients';
+  el.innerHTML = (_coachVideoMsg ? '<p class="ws-empty-note">' + escapeHtml(_coachVideoMsg) + '</p>' : '')
+    + (_coachVideos.length ? _coachVideos.map(v =>
+      '<div class="ws-list-row"><span class="ws-list-name">' + escapeHtml(v.title) + '</span>'
+      + '<span class="ws-side-note">' + escapeHtml(COACH_VIDEO_CATEGORIES[v.category] || 'General') + ' · ' + audienceText(v) + '</span>'
+      + (/^https?:\/\//i.test(v.videoUrl || '') ? '<a class="bulk-action-btn bulk-action-btn--ghost" href="' + escapeHtml(v.videoUrl) + '" target="_blank" rel="noopener noreferrer">Open</a>' : '')
+      + '<button class="bulk-action-btn bulk-action-btn--ghost" data-remove-video="' + escapeHtml(v.id) + '">Remove</button></div>').join('')
+      : '<p class="ws-empty-note">No videos yet. Add a link below and your clients get it in the app.</p>')
+    + '<details class="fl-add"><summary>Add a video</summary>'
+    + '<div class="fl-add-grid fl-add-grid--2">'
+    + '<input id="cvTitle" class="coach-input" placeholder="Title, e.g. How to read your program" maxlength="120">'
+    + '<select id="cvCategory" class="coach-input">' + Object.keys(COACH_VIDEO_CATEGORIES).map(k => '<option value="' + k + '">' + COACH_VIDEO_CATEGORIES[k] + '</option>').join('') + '</select></div>'
+    + '<input id="cvUrl" class="coach-input" placeholder="Video link (https://…)" maxlength="2000">'
+    + '<textarea id="cvMessage" class="coach-input" rows="2" maxlength="2000" style="margin-top:8px;" placeholder="Message with the video (optional)"></textarea>'
+    + '<label class="fl-add-all"><input type="checkbox" id="cvAll" checked> Share with all clients</label>'
+    + '<div id="cvClients" class="ws-check-grid" hidden>' + (clients.length ? clients.map(c =>
+      '<label><input type="checkbox" value="' + escapeHtml(c.id) + '"> ' + escapeHtml(c.clientName || 'Unknown') + '</label>').join('')
+      : '<span class="ws-empty-note">No active clients yet.</span>') + '</div>'
+    + '<button class="bulk-action-btn" id="cvSave">Save video</button></details>';
+
+  const say = msg => { _coachVideoMsg = msg; renderCoachVideos(); };
+  document.getElementById('cvAll').addEventListener('change', e => { document.getElementById('cvClients').hidden = e.target.checked; });
+  el.querySelectorAll('[data-remove-video]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Remove this video? Clients stop seeing it.')) return;
+    try {
+      const res = await coachFetch(SERVER_URL + '/api/coach/videos/' + encodeURIComponent(b.dataset.removeVideo), { method: 'DELETE', headers: authHeaders() });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error?.message || 'Could not remove it.');
+      _coachVideos = null;
+      say('Removed.');
+    } catch (err) { say(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message); }
+  }));
+  document.getElementById('cvSave').addEventListener('click', async () => {
+    const v = id => document.getElementById(id).value.trim();
+    const forAll = document.getElementById('cvAll').checked;
+    const clientUids = forAll ? [] : Array.from(document.querySelectorAll('#cvClients input:checked')).map(i => i.value);
+    const status = msg => { el.querySelector('.cv-status')?.remove(); document.getElementById('cvSave').insertAdjacentHTML('afterend', ' <span class="ws-empty-note cv-status">' + escapeHtml(msg) + '</span>'); };
+    if (!v('cvTitle')) { status('Give the video a title.'); return; }
+    if (!/^https?:\/\//i.test(v('cvUrl'))) { status('Paste the full video link (starting with https://).'); return; }
+    if (!forAll && !clientUids.length) { status('Pick at least one client.'); return; }
+    try {
+      const res = await coachFetch(SERVER_URL + '/api/coach/videos', { method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({ title: v('cvTitle'), category: v('cvCategory'), videoUrl: v('cvUrl'), message: v('cvMessage'), audience: forAll ? 'all' : 'selected', clientUids }) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not save the video.');
+      _coachVideos = null;
+      say('Saved. Your clients can watch it in the app.');
+    } catch (err) { status(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message); }
+  });
+}
+
+// ── Foods page: every approved food (/api/coach/foods) ───────────────────
+// The per-client view of the same list is in a client's Nutrition tab
+// (loadCoachFoods), which is also where a food is approved for one client.
+async function renderFoodsLibrary(message) {
+  const el = document.getElementById('wsFoodsList');
+  if (!el) return;
+  if (!_coachFoods) {
+    try {
+      const res = await coachFetch(SERVER_URL + '/api/coach/foods', { headers: authHeaders() });
+      const data = await res.json().catch(() => null);
+      _coachFoods = res.ok && data?.success ? data.foods : [];
+    } catch { _coachFoods = []; }
+  }
+  const nameOf = uid => (_clients.find(c => c.id === uid)?.clientName || 'a client').split(' ')[0];
+  const audienceText = f => f.audience !== 'selected' ? 'ALL'
+    : (f.clientUids || []).length === 1 ? nameOf(f.clientUids[0]).toUpperCase() : (f.clientUids || []).length + ' CLIENTS';
+  el.innerHTML = (message ? '<p class="ws-empty-note">' + escapeHtml(message) + '</p>' : '')
+    + (_coachFoods.length ? _coachFoods.map(f => '<div class="fl-entry"><span class="fl-name">' + escapeHtml(f.name) + (f.brand ? ' <small>' + escapeHtml(f.brand) + '</small>' : '') + '</span>'
+      + '<span class="fl-src">' + escapeHtml(audienceText(f)) + '</span>'
+      + '<span class="fl-macros">' + fmt(f.per100.kcal) + ' kcal · ' + fmt(f.per100.protein, 1) + 'P ' + fmt(f.per100.carbs, 1) + 'C ' + fmt(f.per100.fat, 1) + 'F /100' + escapeHtml(f.basis || 'g') + '</span>'
+      + '<button class="fl-approve" data-remove-food="' + escapeHtml(f.id) + '">Remove</button></div>').join('')
+      : '<p class="ws-empty-note">None yet. Add one below, or use "Approve" on a food in a client\'s food log.</p>')
+    + '<details class="fl-add"><summary>Add a food for all clients</summary>'
+    + '<div class="fl-add-grid fl-add-grid--2">'
+    + '<input id="lfName" class="coach-input" placeholder="Name, e.g. Skyr naturel" maxlength="120">'
+    + '<input id="lfBrand" class="coach-input" placeholder="Brand (optional)" maxlength="80"></div>'
+    + '<div class="fl-add-grid fl-add-grid--4">'
+    + ['kcal', 'protein', 'carbs', 'fat'].map(k => '<input id="lf_' + k + '" class="coach-input" type="number" min="0" step="any" placeholder="' + k + ' / 100 g">').join('')
+    + '</div><div class="fl-add-grid fl-add-grid--2">'
+    + '<input id="lfServing" class="coach-input" placeholder="Serving (optional), e.g. 1 beker">'
+    + '<input id="lfServingG" class="coach-input" type="number" min="0" step="any" placeholder="grams"></div>'
+    + '<p class="ws-empty-note">To approve a food for one client only, use their Nutrition tab.</p>'
+    + '<button class="bulk-action-btn" id="lfSave">Save food</button></details>';
+
+  const foodApi = async (id, options, failText) => {
+    try {
+      const res = await coachFetch(SERVER_URL + '/api/coach/foods/' + encodeURIComponent(id), { headers: authHeaders(), ...options });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || data?.success === false) throw new Error(data?.error?.message || failText);
+      _coachFoods = null;
+      return '';
+    } catch (err) { return err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message; }
+  };
+  el.querySelectorAll('[data-remove-food]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Remove this food from your approved list? Clients stop seeing it.')) return;
+    renderFoodsLibrary(await foodApi(b.dataset.removeFood, { method: 'DELETE' }, 'Could not remove the food.') || 'Removed.');
+  }));
+  document.getElementById('lfSave').addEventListener('click', async () => {
+    const v = id => document.getElementById(id).value.trim();
+    if (!v('lfName')) { renderFoodsLibrary('Give the food a name.'); return; }
+    const per100 = {};
+    ['kcal', 'protein', 'carbs', 'fat'].forEach(k => { if (v('lf_' + k) !== '') per100[k] = Number(v('lf_' + k)); });
+    const servings = v('lfServing') && Number(v('lfServingG')) > 0 ? [{ label: v('lfServing'), grams: Number(v('lfServingG')) }] : [];
+    const body = { name: v('lfName'), brand: v('lfBrand'), per100, servings, audience: 'all', clientUids: [] };
+    renderFoodsLibrary(await foodApi(slugId(body.name), { method: 'PUT', body: JSON.stringify(body) }, 'Could not save the food.') || 'Saved. Clients see it first in their food search.');
+  });
 }
 
 // ── Boot ──────────────────────────────────────────────────────
