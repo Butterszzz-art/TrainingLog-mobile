@@ -450,6 +450,18 @@
 /* Message date line with its Heads-up / Praise / New tags */
 .yc-msg-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .yc-msg.is-new .yc-note { font-weight: 600; }
+.yc-msg--mine { border-left: 2px solid var(--border-featured, rgba(47, 138, 99, 0.5)); padding-left: 10px; }
+.yc-reply { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 10px; }
+.yc-reply-input, .yc-reply-coach {
+  width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-primary);
+  font: inherit; font-size: 16px;
+}
+.yc-reply-input { resize: vertical; min-height: 56px; }
+.yc-reply .mx-cta { align-self: flex-end; }
+.yc-fc-comment { display: block; margin-top: 6px; }
+.yc-fc-actions { display: flex; gap: 8px; margin-top: 10px; }
+.yc-fc-actions a.mx-outline { text-decoration: none; }
 #yourCoachHomeCard .yc-home--invite { border-color: var(--border-featured); }
 #yourCoachHomeCard .yc-actions { margin-top: 10px; }
 #yourCoachHomeCard button.yc-home-msg {

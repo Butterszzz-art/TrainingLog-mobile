@@ -1759,6 +1759,13 @@
         <div id="checkInArchetypeFields"></div>
       </div>
 
+      <!-- Questions set by the coach (Check-in settings in the coach
+           console); filled by renderCoachCheckInQuestions(). -->
+      <div class="ci-card" id="checkInCoachQuestionsCard" hidden>
+        <h3 class="ci-card-title"><span class="ui-icon" data-icon="users"></span> From your coach</h3>
+        <div id="checkInCoachQuestions"></div>
+      </div>
+
       <!-- Notes -->
       <div class="ci-card">
         <h3 class="ci-card-title"><span class="ui-icon" data-icon="pencil"></span> Notes</h3>
@@ -13878,9 +13885,47 @@ function syncCheckInScales() {
 }
 window.syncCheckInScales = syncCheckInScales;
 
+// The coach's own check-in questions, each with a free-text answer. Answers
+// already saved for the chosen date are filled back in; typing is kept
+// across re-renders.
+function renderCoachCheckInQuestions(userId) {
+  const card = document.getElementById('checkInCoachQuestionsCard');
+  const box = document.getElementById('checkInCoachQuestions');
+  if (!card || !box) return;
+  const questions = typeof window.coachCheckInQuestions === 'function' ? window.coachCheckInQuestions() : [];
+  card.hidden = !questions.length;
+  if (!questions.length) { box.innerHTML = ''; return; }
+  const date = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const saved = (window.checkinEngine.loadCheckIns(userId).find(e => e.date === date) || {}).coachAnswers || [];
+  const typed = {};
+  box.querySelectorAll('textarea[data-coach-q]').forEach(t => { typed[t.dataset.coachQ] = t.value; });
+  box.innerHTML = '';
+  questions.forEach(q => {
+    const field = document.createElement('div');
+    field.className = 'ci-field ci-field-full';
+    const label = document.createElement('label');
+    label.textContent = q;
+    const input = document.createElement('textarea');
+    input.dataset.coachQ = q;
+    input.maxLength = 500;
+    input.rows = 2;
+    input.value = typed[q] !== undefined ? typed[q] : ((saved.find(x => x.q === q) || {}).a || '');
+    label.appendChild(input);
+    field.appendChild(label);
+    box.appendChild(field);
+  });
+}
+
+function readCoachCheckInAnswers() {
+  return Array.from(document.querySelectorAll('#checkInCoachQuestions textarea[data-coach-q]'))
+    .map(t => ({ q: t.dataset.coachQ, a: t.value.trim() }))
+    .filter(x => x.a);
+}
+
 function renderCheckInTab() {
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
   if (!userId || !window.checkinEngine) return;
+  renderCoachCheckInQuestions(userId);
   const archetype = getCheckInArchetype(userId);
 
   const phaseState = getCheckInPhaseState();
@@ -14549,7 +14594,8 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     frontPhoto: document.getElementById('checkInFrontPhotoInput')?.value || '',
     sidePhoto: document.getElementById('checkInSidePhotoInput')?.value || '',
     backPhoto: document.getElementById('checkInBackPhotoInput')?.value || '',
-    posingSessionIds: getCheckInPosingPicks(userId, dateValue)
+    posingSessionIds: getCheckInPosingPicks(userId, dateValue),
+    coachAnswers: readCoachCheckInAnswers()
   };
 
   const currentEntries = window.checkinEngine.loadCheckIns(userId);
@@ -14562,6 +14608,8 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     // with "Send to coach" in the Posing tab.
     ['frontPhoto', 'sidePhoto', 'backPhoto'].forEach(k => { if (!draft[k] && existingForDate[k]) draft[k] = existingForDate[k]; });
     if (existingForDate.posingPhotoPicks) draft.posingPhotoPicks = existingForDate.posingPhotoPicks;
+    // A coach review save has no question fields on screen: keep the athlete's answers.
+    if (!document.querySelector('#checkInCoachQuestions textarea') && existingForDate.coachAnswers) draft.coachAnswers = existingForDate.coachAnswers;
   }
 
   draft.weekLabel = manualWeekLabel || window.checkinEngine.getWeekLabelForCheckIn(draft, phaseState);

@@ -101,6 +101,11 @@
         return count > 1 ? `${who} left ${count} comments on your check-in` : `${who} ${_esc(n.text)}`;
       case 'client_checkin_reply':
         return count > 1 ? `${who} replied ${count} times on their check-in` : `${who} ${_esc(n.text)}`;
+      case 'client_form_check':
+      case 'coach_form_check':
+        return `${who} ${_esc(n.text)}${n.data?.exercise ? `: ${_esc(n.data.exercise)}` : ''}`;
+      case 'client_message':
+        return count > 1 ? `${who} sent you ${count} messages` : `${who} ${_esc(n.text)}`;
       case 'coach_video':
         return count > 1 ? `${who} sent you ${count} videos`
           : `${who} ${_esc(n.text)}${n.data?.title ? `: ${_esc(n.data.title)}` : ''}`;
@@ -291,7 +296,14 @@
         // The thread under that check-in, in Check-in history.
         if (global.CoachPhotos && typeof global.CoachPhotos.openThread === 'function') { global.CoachPhotos.openThread(n.data && n.data.date); return undefined; }
         return _yourCoach();
+      case 'coach_form_check':
+        return _yourCoach('ycFormChecks');
+      case 'coach_checkin_request':
+        if (typeof global.showTab === 'function') global.showTab('checkInTab');
+        return undefined;
       case 'client_checkin_reply':
+      case 'client_message':
+      case 'client_form_check':
       case 'coach_accepted':
       case 'coach_left':
         if (typeof global.showTab === 'function') global.showTab('clientsTab');

@@ -150,8 +150,18 @@
       // the Posing tab): { sessionId: [photoId] }. A set without an entry
       // sends all of its photos.
       posingPhotoPicks: cleanPhotoPicks(safe.posingPhotoPicks, cleanSessionIds(safe.posingSessionIds)),
+      // Answers to the coach's own check-in questions: [{ q, a }].
+      coachAnswers: cleanCoachAnswers(safe.coachAnswers),
       archetypeMetrics
     };
+  }
+
+  function cleanCoachAnswers(value) {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map(x => ({ q: typeof (x && x.q) === 'string' ? x.q.trim().slice(0, 140) : '', a: typeof (x && x.a) === 'string' ? x.a.trim().slice(0, 500) : '' }))
+      .filter(x => x.q && x.a)
+      .slice(0, 8);
   }
 
   function cleanPhotoPicks(value, sessionIds) {

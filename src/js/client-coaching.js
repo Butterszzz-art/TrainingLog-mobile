@@ -132,6 +132,8 @@
         if (typeof c.notes === 'string' && c.notes.trim()) out.notes = c.notes.trim().slice(0, 1000);
         const summary = c.insights && c.insights.summaryShort;
         if (typeof summary === 'string' && summary) out.summary = summary.slice(0, 400);
+        const answers = arr(c.coachAnswers).filter(x => x && x.q && x.a).slice(0, 8);
+        if (answers.length) out.answers = answers.map(x => ({ q: String(x.q).slice(0, 140), a: String(x.a).slice(0, 500) }));
         return out;
       });
 
@@ -388,7 +390,7 @@
     return data;
   }
 
-  const state = { invites: [], assignments: [], notes: [], videos: [], sharing: null, decided: null, plan: null, loadedAt: 0 };
+  const state = { invites: [], assignments: [], notes: [], replies: [], formChecks: [], videos: [], sharing: null, decided: null, plan: null, loadedAt: 0 };
 
   // ── sharing push ─────────────────────────────────────────────────
 
@@ -554,10 +556,12 @@
     const get = path => api$('GET', path).catch(() => null);
     const plan = root.MyPlan && typeof root.MyPlan.fetchPlan === 'function'
       ? root.MyPlan.fetchPlan().catch(() => null) : Promise.resolve(null);
-    const [inv, asn, notes, sharing, videos, planRes] = await Promise.all([
+    const [inv, asn, notes, replies, forms, sharing, videos, planRes] = await Promise.all([
       get('/api/client/coach-invites'),
       get('/api/client/coach-assignment'),
       get('/api/client/coach-notes'),
+      get('/api/client/messages'),
+      get('/api/client/form-checks'),
       get('/api/client/coach-sharing'),
       get('/api/client/coach-videos'),
       plan
@@ -566,6 +570,15 @@
     state.invites = (inv && inv.invites) || [];
     state.assignments = (asn && asn.assignments) || [];
     state.notes = (notes && notes.notes) || [];
+    state.replies = (replies && replies.messages) || [];
+    state.formChecks = (forms && forms.formChecks) || [];
+    // The coach's check-in questions, kept for the Check-in tab (also offline).
+    const activeNow = new Set(state.invites.filter(i => i.status === 'active').map(i => i.coachUid));
+    const questions = [];
+    state.assignments.filter(a => activeNow.has(a.coachUid)).forEach(a => {
+      arr(a.checkInSettings && a.checkInSettings.questions).forEach(q => { if (typeof q === 'string' && q.trim() && !questions.includes(q.trim())) questions.push(q.trim()); });
+    });
+    root.localStorage.setItem(questionsKey(), JSON.stringify(questions.slice(0, 8)));
     state.videos = (videos && videos.videos) || [];
     state.sharing = (sharing && sharing.sharing) || state.sharing || { checkIns: true, bodyweight: true, workouts: true, nutrition: false };
     state.decided = (sharing && sharing.decided) || state.decided;
@@ -747,6 +760,44 @@
         </div></div>`;
   }
 
+  const questionsKey = () => `coachCheckInQuestions_${user()}`;
+  function coachCheckInQuestions() {
+    return arr(readJSON(root.localStorage, questionsKey(), [])).filter(q => typeof q === 'string' && q);
+  }
+
+  const fcTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+  // One form check you sent, with your coach's comments under it.
+  function formCheckRow(f) {
+    return `
+        <div class="mx-row yc-fc"><div class="mx-row-main">
+          <span class="mx-row-sub yc-msg-meta">${esc(fmtDate(f.createdAt))}${f.coachUsername ? ' · ' + esc(f.coachUsername) : ''}
+            <span class="mx-chip ${f.status === 'reviewed' ? 'mx-chip--green' : 'mx-chip--brass'} mx-chip--sm">${f.status === 'reviewed' ? 'Reviewed' : 'Waiting'}</span></span>
+          <span class="mx-row-title">${esc(f.exercise)}</span>
+          ${arr(f.comments).map(m => `<span class="yc-note yc-fc-comment${m.author === 'client' ? ' yc-msg--mine' : ''}">${Number.isInteger(m.atSeconds) ? `<b>${fcTime(m.atSeconds)}</b> ` : ''}${esc(m.text)}</span>`).join('')}
+          <span class="yc-fc-actions">
+            <a class="mx-outline" href="${esc(/^https?:\/\//i.test(f.videoUrl || '') ? f.videoUrl : '#')}" target="_blank" rel="noopener noreferrer">Open video</a>
+            <button type="button" class="mx-outline" data-yc-fc-remove="${esc(f.id)}">Remove</button>
+          </span>
+        </div></div>`;
+  }
+
+  // Your own reply in the thread (POST /api/client/messages).
+  function replyRow(m) {
+    return `
+        <div class="mx-row yc-msg yc-msg--mine"><div class="mx-row-main">
+          <span class="mx-row-sub yc-msg-meta">${esc(fmtDate(m.createdAt))} · You${m.coachUsername && state.invites.filter(i => i.status === 'active').length > 1 ? ' to ' + esc(m.coachUsername) : ''}</span>
+          <span class="yc-note">${esc(m.text)}</span>
+        </div></div>`;
+  }
+
+  // Coach notes and your replies as one list, newest first.
+  function thread() {
+    return state.notes.map(n => ({ at: tsMs(n.createdAt), note: n }))
+      .concat(state.replies.map(m => ({ at: tsMs(m.createdAt), reply: m })))
+      .sort((a, b) => b.at - a.at);
+  }
+
   function planTitle(plan) {
     return (plan && plan.package && plan.package.name) || 'Your plan';
   }
@@ -872,11 +923,33 @@
         </button>`).join('')}` : '';
 
     const since = seenAt();
-    const shown = state.notes.slice(0, showAllNotes ? 100 : 10);
-    const notesHtml = state.notes.length ? `
-      <div class="pod-row"><h4 class="pod-title mx-h3">Messages from your coach</h4><span class="mx-meta">${state.notes.length}</span></div>
-      ${shown.map(n => noteRow(n, since)).join('')}
-      ${state.notes.length > shown.length ? `<button type="button" class="mx-outline mx-outline--block" data-yc-more="1">Show all ${state.notes.length}</button>` : ''}` : '';
+    const fcDraft = id => (doc.getElementById(id) || {}).value || '';
+    const formChecksHtml = active.length ? `
+      <div class="pod-row"><h4 class="pod-title mx-h3">Form checks</h4>${state.formChecks.length ? `<span class="mx-meta">${state.formChecks.length}</span>` : ''}</div>
+      <p class="mx-row-sub">Film a lift, upload it somewhere you can share a link (YouTube unlisted, Google Drive, Loom) and send the link. Your coach comments on it.</p>
+      <div class="yc-reply">
+        ${active.length > 1 ? `<select id="ycFcCoach" class="yc-reply-coach" aria-label="Which coach">${active.map(a => `<option value="${esc(a.coachUid)}">${esc(a.coachUsername)}</option>`).join('')}</select>` : ''}
+        <input id="ycFcExercise" class="yc-reply-input" maxlength="80" placeholder="Exercise, e.g. Back squat" aria-label="Exercise" value="${esc(fcDraft('ycFcExercise'))}">
+        <input id="ycFcUrl" class="yc-reply-input" type="url" maxlength="2000" placeholder="Video link (https://…)" aria-label="Video link" value="${esc(fcDraft('ycFcUrl'))}">
+        <textarea id="ycFcNote" class="yc-reply-input" rows="2" maxlength="500" placeholder="Anything your coach should look at? (optional)" aria-label="Note">${esc(fcDraft('ycFcNote'))}</textarea>
+        <button type="button" class="mx-cta" data-yc-fc-send="1"><span>Send form check</span><span class="mx-cta-icon"><span class="ui-icon">${icon('video')}</span></span></button>
+      </div>
+      ${state.formChecks.map(formCheckRow).join('')}` : '';
+
+    const all = thread();
+    const shown = all.slice(0, showAllNotes ? 200 : 10);
+    const draft = (doc.getElementById('ycReplyText') || {}).value || '';
+    const notesHtml = all.length || active.length ? `
+      <div class="pod-row"><h4 class="pod-title mx-h3">Messages with your coach</h4>${all.length ? `<span class="mx-meta">${all.length}</span>` : ''}</div>
+      ${active.length ? `
+      <div class="yc-reply">
+        ${active.length > 1 ? `<select id="ycReplyCoach" class="yc-reply-coach" aria-label="Which coach">${active.map(a => `<option value="${esc(a.coachUid)}">${esc(a.coachUsername)}</option>`).join('')}</select>` : ''}
+        <textarea id="ycReplyText" class="yc-reply-input" rows="2" maxlength="1000" placeholder="Write to ${esc(active.length === 1 ? active[0].coachUsername : 'your coach')}…" aria-label="Message to your coach">${esc(draft)}</textarea>
+        <button type="button" class="mx-cta" data-yc-send="1"><span>Send</span><span class="mx-cta-icon"><span class="ui-icon">${icon('message')}</span></span></button>
+      </div>` : ''}
+      ${shown.map(x => (x.note ? noteRow(x.note, since) : replyRow(x.reply))).join('')}
+      ${all.length ? '' : '<p class="mx-row-sub">No messages yet.</p>'}
+      ${all.length > shown.length ? `<button type="button" class="mx-outline mx-outline--block" data-yc-more="1">Show all ${all.length}</button>` : ''}` : '';
 
     section.innerHTML = `
       <section class="pod mx-pod yc-pod" aria-label="Your coach">
@@ -888,6 +961,7 @@
         ${overviewHtml(state.assignments.find(a => a.coachUid === active[0].coachUid) || {}, false)}
       </section>` : ''}
       ${notesHtml ? `<section class="pod mx-pod yc-pod" id="ycNotes">${notesHtml}</section>` : ''}
+      ${formChecksHtml ? `<section class="pod mx-pod yc-pod" id="ycFormChecks">${formChecksHtml}</section>` : ''}
       ${videosHtml ? `<section class="pod mx-pod yc-pod" id="ycVideos">${videosHtml}</section>` : ''}
       ${sharingHtml ? `<section class="pod mx-pod yc-pod">${sharingHtml}</section>` : ''}`;
   }
@@ -1120,9 +1194,61 @@
     if (root.Notifications) root.Notifications.refresh().catch(() => {});
   }
 
+  async function sendFormCheck(btn) {
+    const val = id => ((doc.getElementById(id) || {}).value || '').trim();
+    const body = { exercise: val('ycFcExercise'), videoUrl: val('ycFcUrl'), note: val('ycFcNote') };
+    if (!body.exercise) { toast('Say which exercise this is.', 'error'); return; }
+    if (!/^https?:\/\//i.test(body.videoUrl)) { toast('Paste the full video link (starting with https://).', 'error'); return; }
+    const pick = doc.getElementById('ycFcCoach');
+    if (pick) body.coachUid = pick.value;
+    btn.disabled = true;
+    try {
+      const data = await api$('POST', '/api/client/form-checks', body);
+      state.formChecks.unshift(data.formCheck);
+      ['ycFcExercise', 'ycFcUrl', 'ycFcNote'].forEach(id => { const el = doc.getElementById(id); if (el) el.value = ''; });
+      render();
+      toast('Sent to your coach.', 'success');
+    } catch (err) {
+      btn.disabled = false;
+      toast(err.status ? err.message : 'Could not send. Check your connection and try again.', 'error');
+    }
+  }
+
+  async function removeFormCheck(id) {
+    try {
+      await api$('DELETE', `/api/client/form-checks/${encodeURIComponent(id)}`);
+      state.formChecks = state.formChecks.filter(f => f.id !== id);
+      render();
+    } catch (err) {
+      toast(err.status ? err.message : 'Could not remove it. Try again.', 'error');
+    }
+  }
+
+  async function sendReply(btn) {
+    const input = doc.getElementById('ycReplyText');
+    const text = input ? input.value.trim() : '';
+    if (!text) { if (input) input.focus(); return; }
+    const pick = doc.getElementById('ycReplyCoach');
+    btn.disabled = true;
+    try {
+      const data = await api$('POST', '/api/client/messages', pick ? { text, coachUid: pick.value } : { text });
+      state.replies.push(data.message);
+      input.value = '';
+      render();
+      toast('Sent to your coach.', 'success');
+    } catch (err) {
+      btn.disabled = false;
+      toast(err.status ? err.message : 'Could not send. Check your connection and try again.', 'error');
+    }
+  }
+
   async function onClick(e) {
-    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-plan-start],[data-yc-macros],[data-yc-open-macros],[data-yc-share],[data-yc-video],[data-yc-refresh],[data-yc-open],[data-yc-plan],[data-yc-more]');
+    const t = e.target.closest('[data-yc-accept],[data-yc-leave],[data-yc-import],[data-yc-plan-start],[data-yc-macros],[data-yc-open-macros],[data-yc-share],[data-yc-video],[data-yc-refresh],[data-yc-open],[data-yc-plan],[data-yc-more],[data-yc-send],[data-yc-fc-send],[data-yc-fc-remove]');
     if (!t) return;
+
+    if (t.dataset.ycSend) { sendReply(t); return; }
+    if (t.dataset.ycFcSend) { sendFormCheck(t); return; }
+    if (t.dataset.ycFcRemove) { removeFormCheck(t.dataset.ycFcRemove); return; }
 
     if (t.dataset.ycOpen) { openYourCoach(t.dataset.ycOpen === '1' ? '' : t.dataset.ycOpen); return; }
 
@@ -1268,6 +1394,7 @@
   root.markYourCoachSeen = markSeenSoon;
   root.acceptCoachInvite = acceptCoachInvite;
   root.pushCoachShare = pushShare;
+  root.coachCheckInQuestions = coachCheckInQuestions;
   root.coachFoodLogAsk = coachFoodLogAsk;
   root.coachPhotoSharing = photoSharingStatus;
   root.askCoachPhotoSharing = askPhotoSharingOnce;
