@@ -83,7 +83,7 @@
           <span class="rail-nav-icon ui-icon" data-icon="userPlus" aria-hidden="true"></span><span class="rail-nav-label">Prospects</span><span class="rail-nav-count" id="railCountProspects">0</span>
         </button>
         <button class="rail-nav-item" data-rail="calendar" onclick="railNavGo('calendar')" title="Calendar">
-          <span class="rail-nav-icon ui-icon" data-icon="calendar" aria-hidden="true"></span><span class="rail-nav-label">Calendar</span><span class="rail-nav-soon">Soon</span>
+          <span class="rail-nav-icon ui-icon" data-icon="calendar" aria-hidden="true"></span><span class="rail-nav-label">Calendar</span>
         </button>
         <div class="rail-nav-group">Coaching</div>
         <button class="rail-nav-item" data-rail="checkins" onclick="railNavGo('checkins')" title="Check-ins">
@@ -93,7 +93,7 @@
           <span class="rail-nav-icon ui-icon" data-icon="camera" aria-hidden="true"></span><span class="rail-nav-label">Form Checks</span><span class="rail-nav-count" id="railCountFormChecks">0</span>
         </button>
         <button class="rail-nav-item" data-rail="roadmaps" onclick="railNavGo('roadmaps')" title="Roadmaps">
-          <span class="rail-nav-icon ui-icon" data-icon="map" aria-hidden="true"></span><span class="rail-nav-label">Roadmaps</span><span class="rail-nav-soon">Soon</span>
+          <span class="rail-nav-icon ui-icon" data-icon="map" aria-hidden="true"></span><span class="rail-nav-label">Roadmaps</span>
         </button>
         <button class="rail-nav-item" data-rail="groups" onclick="railNavGo('groups')" title="Training Groups">
           <span class="rail-nav-icon ui-icon" data-icon="users" aria-hidden="true"></span><span class="rail-nav-label">Training Groups</span><span class="rail-nav-soon">Soon</span>
@@ -343,6 +343,39 @@
           </div>
         </div>
 
+        <!-- Calendar: check-ins due, roadmap dates and your own entries (coach/planning.js). -->
+        <div class="ws-panel" id="wsPanel-calendar">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="cal-nav">
+                <button class="bulk-action-btn bulk-action-btn--ghost" onclick="calendarGo(-1)" aria-label="Previous month">&lsaquo;</button>
+                <span class="ws-soon-title cal-title" id="calTitle"></span>
+                <button class="bulk-action-btn bulk-action-btn--ghost" onclick="calendarGo(1)" aria-label="Next month">&rsaquo;</button>
+                <button class="bulk-action-btn bulk-action-btn--ghost" onclick="calendarGo(0)">Today</button>
+              </span>
+              <span class="ws-side-note" id="calNote">check-ins, roadmap dates, your calls</span>
+            </div>
+            <div id="calGrid"></div>
+          </div>
+          <div class="pod ws-side-card" id="calDay"></div>
+        </div>
+
+        <!-- Roadmaps: each client's phases and milestones (coach/planning.js). -->
+        <div class="ws-panel" id="wsPanel-roadmaps">
+          <div class="ws-split">
+            <div class="pod ws-side-card ws-picker">
+              <div class="pod-row">
+                <span class="pod-kicker">Roadmaps</span>
+                <span class="ws-side-note" id="rmListNote"></span>
+              </div>
+              <div class="client-list" id="rmList"></div>
+            </div>
+            <div class="pod ws-side-card ws-thread" id="rmEditor">
+              <p class="ws-empty-note">Pick a client to plan their phases and milestones.</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Vault: links to guides and other resources for clients. -->
         <div class="ws-panel" id="wsPanel-vault">
           <div class="pod ws-side-card">
@@ -437,6 +470,7 @@
   <script src="technique-videos.js"></script>
   <script src="meal-planner.js"></script>
   <script src="libraries.js"></script>
+  <script src="planning.js"></script>
   <script src="../src/js/program-import-core.js"></script>
   <script src="../src/js/food-core.js"></script>
   <script src="coach.js"></script>

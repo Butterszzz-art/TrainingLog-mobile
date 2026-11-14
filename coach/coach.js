@@ -521,10 +521,6 @@ function renderCheckinsList() {
 }
 
 const SOON_PAGES = {
-  calendar: { icon: 'calendar', title: 'Calendar', plan: 'Check-in due dates, plan phases and calls in one month view.',
-    today: 'Check-ins that are due are listed on the Check-ins page.', go: 'checkins', goLabel: 'Open check-ins' },
-  roadmaps: { icon: 'map', title: 'Roadmaps', plan: 'A long-term timeline per client with phases, milestones and targets.',
-    today: 'The Master Plan in a client\'s Program tab already covers phases, programs and nutrition by day type.', go: 'clients', goLabel: 'Open clients' },
   groups: { icon: 'users', title: 'Training Groups', plan: 'Put clients in a group to give them one program and message them together.',
     today: 'Tick several clients on the Clients page to message them at once.', go: 'clients', goLabel: 'Open clients' },
   automations: { icon: 'zap', title: 'Automations', plan: 'Rules such as "no check-in for 7 days: send a reminder".',
@@ -566,6 +562,8 @@ function railNavGo(section) {
   if (section === 'workouts') renderWorkoutsPage();
   if (section === 'meals') renderMealsPage();
   if (section === 'vault') renderVaultPage();
+  if (section === 'calendar') renderCalendarPage();
+  if (section === 'roadmaps') { renderRoadmapList(); if (_rmEdit) renderRoadmapEditor(); }
   if (section === 'foods') renderFoodsLibrary();
 }
 
