@@ -106,6 +106,8 @@
         return `${who} ${_esc(n.text)}${n.data?.exercise ? `: ${_esc(n.data.exercise)}` : ''}`;
       case 'client_message':
         return count > 1 ? `${who} sent you ${count} messages` : `${who} ${_esc(n.text)}`;
+      case 'coach_resource':
+        return count > 1 ? `${who} shared ${count} resources` : `${who} ${_esc(n.text)}${n.data?.title ? `: ${_esc(n.data.title)}` : ''}`;
       case 'coach_video':
         return count > 1 ? `${who} sent you ${count} videos`
           : `${who} ${_esc(n.text)}${n.data?.title ? `: ${_esc(n.data.title)}` : ''}`;
@@ -298,6 +300,8 @@
         return _yourCoach();
       case 'coach_form_check':
         return _yourCoach('ycFormChecks');
+      case 'coach_resource':
+        return _yourCoach('ycVault');
       case 'coach_checkin_request':
         if (typeof global.showTab === 'function') global.showTab('checkInTab');
         return undefined;

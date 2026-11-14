@@ -390,7 +390,7 @@
     return data;
   }
 
-  const state = { invites: [], assignments: [], notes: [], replies: [], formChecks: [], videos: [], sharing: null, decided: null, plan: null, loadedAt: 0 };
+  const state = { invites: [], assignments: [], notes: [], replies: [], formChecks: [], vault: [], videos: [], sharing: null, decided: null, plan: null, loadedAt: 0 };
 
   // ── sharing push ─────────────────────────────────────────────────
 
@@ -556,12 +556,13 @@
     const get = path => api$('GET', path).catch(() => null);
     const plan = root.MyPlan && typeof root.MyPlan.fetchPlan === 'function'
       ? root.MyPlan.fetchPlan().catch(() => null) : Promise.resolve(null);
-    const [inv, asn, notes, replies, forms, sharing, videos, planRes] = await Promise.all([
+    const [inv, asn, notes, replies, forms, vault, sharing, videos, planRes] = await Promise.all([
       get('/api/client/coach-invites'),
       get('/api/client/coach-assignment'),
       get('/api/client/coach-notes'),
       get('/api/client/messages'),
       get('/api/client/form-checks'),
+      get('/api/client/coach-vault'),
       get('/api/client/coach-sharing'),
       get('/api/client/coach-videos'),
       plan
@@ -572,6 +573,7 @@
     state.notes = (notes && notes.notes) || [];
     state.replies = (replies && replies.messages) || [];
     state.formChecks = (forms && forms.formChecks) || [];
+    state.vault = (vault && vault.items) || [];
     // The coach's check-in questions, kept for the Check-in tab (also offline).
     const activeNow = new Set(state.invites.filter(i => i.status === 'active').map(i => i.coachUid));
     const questions = [];
@@ -923,6 +925,19 @@
         </button>`).join('')}` : '';
 
     const since = seenAt();
+    // Guides and links from the coach's vault, grouped by folder name in the sub line.
+    const vaultHtml = state.vault.length ? `
+      <div class="pod-row"><h4 class="pod-title mx-h3">Resources from your coach</h4><span class="mx-meta">${state.vault.length}</span></div>
+      ${state.vault.map(x => `
+        <a class="mx-row yc-resource" href="${esc(/^https?:\/\//i.test(x.url || '') ? x.url : '#')}" target="_blank" rel="noopener noreferrer">
+          <span class="mx-row-ico"><span class="ui-icon">${icon('fileText')}</span></span>
+          <span class="mx-row-main">
+            <span class="mx-row-title">${esc(x.title)}</span>
+            <span class="mx-row-sub">${esc([x.folder, x.coachUsername, x.createdAt ? fmtDate(Date.parse(x.createdAt)) : ''].filter(Boolean).join(' · '))}</span>
+            ${x.description ? `<span class="mx-row-sub">${esc(x.description)}</span>` : ''}
+          </span>
+        </a>`).join('')}` : '';
+
     const fcDraft = id => (doc.getElementById(id) || {}).value || '';
     const formChecksHtml = active.length ? `
       <div class="pod-row"><h4 class="pod-title mx-h3">Form checks</h4>${state.formChecks.length ? `<span class="mx-meta">${state.formChecks.length}</span>` : ''}</div>
@@ -962,6 +977,7 @@
       </section>` : ''}
       ${notesHtml ? `<section class="pod mx-pod yc-pod" id="ycNotes">${notesHtml}</section>` : ''}
       ${formChecksHtml ? `<section class="pod mx-pod yc-pod" id="ycFormChecks">${formChecksHtml}</section>` : ''}
+      ${vaultHtml ? `<section class="pod mx-pod yc-pod" id="ycVault">${vaultHtml}</section>` : ''}
       ${videosHtml ? `<section class="pod mx-pod yc-pod" id="ycVideos">${videosHtml}</section>` : ''}
       ${sharingHtml ? `<section class="pod mx-pod yc-pod">${sharingHtml}</section>` : ''}`;
   }

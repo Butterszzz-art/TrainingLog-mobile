@@ -783,3 +783,10 @@ span.client-checkbox { border-color: transparent; background: none; cursor: defa
 .ci-review-row { display: flex; margin: 10px 0 4px; }
 .fc-at { width: 76px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border-row); background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
 a.ci-msg-pin, a.bulk-action-btn { text-decoration: none; }
+
+/* Library pages (coach/libraries.js) */
+.lib-sub { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 400; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-list-name small { font-weight: 400; color: var(--text-tertiary); }
+.lib-folder { margin: 14px 0 2px; font-family: var(--font-label); font-size: 11.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ca-label); }
+.pb-insert { margin-top: 8px; max-width: 320px; }
+.pb [hidden] { display: none !important; }
