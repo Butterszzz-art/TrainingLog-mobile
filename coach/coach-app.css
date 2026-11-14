@@ -824,3 +824,18 @@ a.ci-msg-pin, a.bulk-action-btn { text-decoration: none; }
 .cal-more { font-size: 11px; color: var(--text-tertiary); }
 .cal-dot { flex: none; width: 10px; height: 10px; padding: 0; border-radius: 50%; }
 @media (max-width: 1200px) { .rm-row { grid-template-columns: 1fr 1fr; } .rm-row--stone { grid-template-columns: 150px 1fr 32px; } }
+
+/* Training Groups and Automations (coach/teams.js) */
+.grp-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-row); }
+.grp-actions .coach-input { margin: 0; }
+.grp-actions textarea { width: 100%; box-sizing: border-box; }
+.grp-inline { display: flex; gap: 8px; align-items: center; width: 100%; }
+.grp-inline select { flex: 1; min-width: 0; }
+.ws-check-grid small { color: var(--text-tertiary); }
+.auto-rule { padding: 14px 0; border-bottom: 1px solid var(--border-row); }
+.auto-rule .coach-input { margin: 8px 0 0; }
+.auto-rule textarea { width: 100%; box-sizing: border-box; }
+.auto-toggle { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--text-primary); cursor: pointer; }
+.auto-toggle input { width: 18px; height: 18px; accent-color: var(--green-70); }
+.auto-inline { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-secondary); }
+.auto-inline select { width: auto; margin: 0; }

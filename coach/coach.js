@@ -521,10 +521,6 @@ function renderCheckinsList() {
 }
 
 const SOON_PAGES = {
-  groups: { icon: 'users', title: 'Training Groups', plan: 'Put clients in a group to give them one program and message them together.',
-    today: 'Tick several clients on the Clients page to message them at once.', go: 'clients', goLabel: 'Open clients' },
-  automations: { icon: 'zap', title: 'Automations', plan: 'Rules such as "no check-in for 7 days: send a reminder".',
-    today: 'Overdue check-ins are listed on the Check-ins page.', go: 'checkins', goLabel: 'Open check-ins' },
   settings: { icon: 'settings', title: 'Settings', plan: 'Settings for the coach console.',
     today: 'Use the Settings tab in the phone app for now.' },
 };
@@ -563,6 +559,8 @@ function railNavGo(section) {
   if (section === 'meals') renderMealsPage();
   if (section === 'vault') renderVaultPage();
   if (section === 'calendar') renderCalendarPage();
+  if (section === 'groups') renderGroupsPage();
+  if (section === 'automations') renderAutomationsPage();
   if (section === 'roadmaps') { renderRoadmapList(); if (_rmEdit) renderRoadmapEditor(); }
   if (section === 'foods') renderFoodsLibrary();
 }
