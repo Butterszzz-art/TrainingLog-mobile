@@ -96,13 +96,13 @@
           <span class="rail-nav-icon ui-icon" data-icon="map" aria-hidden="true"></span><span class="rail-nav-label">Roadmaps</span>
         </button>
         <button class="rail-nav-item" data-rail="groups" onclick="railNavGo('groups')" title="Training Groups">
-          <span class="rail-nav-icon ui-icon" data-icon="users" aria-hidden="true"></span><span class="rail-nav-label">Training Groups</span><span class="rail-nav-soon">Soon</span>
+          <span class="rail-nav-icon ui-icon" data-icon="users" aria-hidden="true"></span><span class="rail-nav-label">Training Groups</span><span class="rail-nav-count" id="railCountGroups">0</span>
         </button>
         <button class="rail-nav-item" data-rail="vault" onclick="railNavGo('vault')" title="Vault">
           <span class="rail-nav-icon ui-icon" data-icon="folder" aria-hidden="true"></span><span class="rail-nav-label">Vault</span><span class="rail-nav-count" id="railCountVault">0</span>
         </button>
         <button class="rail-nav-item" data-rail="automations" onclick="railNavGo('automations')" title="Automations">
-          <span class="rail-nav-icon ui-icon" data-icon="zap" aria-hidden="true"></span><span class="rail-nav-label">Automations</span><span class="rail-nav-soon">Soon</span>
+          <span class="rail-nav-icon ui-icon" data-icon="zap" aria-hidden="true"></span><span class="rail-nav-label">Automations</span>
         </button>
         <div class="rail-nav-group">Training</div>
         <button class="rail-nav-item" data-rail="programs" onclick="railNavGo('programs')" title="Programs">
@@ -376,6 +376,34 @@
           </div>
         </div>
 
+        <!-- Training Groups: named sets of clients to message, program or
+             ask for a check-in together (coach/teams.js). -->
+        <div class="ws-panel" id="wsPanel-groups">
+          <div class="ws-split">
+            <div class="pod ws-side-card ws-picker">
+              <div class="pod-row">
+                <span class="pod-kicker">Training groups</span>
+                <button class="sidebar-invite-btn" onclick="openGroup()">+ New group</button>
+              </div>
+              <div class="client-list" id="grpList"><div class="client-list-loading">Loading…</div></div>
+            </div>
+            <div class="pod ws-side-card ws-thread" id="grpEditor">
+              <p class="ws-empty-note">Pick a group, or make a new one.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Automations: rules the server runs for the coach (coach/teams.js). -->
+        <div class="ws-panel" id="wsPanel-automations">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Automations</span>
+              <span class="ws-side-note">run for you, even when you are away</span>
+            </div>
+            <div id="wsAutomations"><p class="ws-empty-note">Loading…</p></div>
+          </div>
+        </div>
+
         <!-- Vault: links to guides and other resources for clients. -->
         <div class="ws-panel" id="wsPanel-vault">
           <div class="pod ws-side-card">
@@ -471,6 +499,7 @@
   <script src="meal-planner.js"></script>
   <script src="libraries.js"></script>
   <script src="planning.js"></script>
+  <script src="teams.js"></script>
   <script src="../src/js/program-import-core.js"></script>
   <script src="../src/js/food-core.js"></script>
   <script src="coach.js"></script>
