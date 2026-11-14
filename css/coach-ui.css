@@ -461,6 +461,8 @@
 .yc-reply .mx-cta { align-self: flex-end; }
 .yc-fc-comment { display: block; margin-top: 6px; }
 a.yc-resource { text-decoration: none; color: inherit; }
+.yc-phase.is-now { border-left: 2px solid var(--border-featured, rgba(47, 138, 99, 0.5)); padding-left: 10px; }
+.yc-phase.is-done { opacity: 0.55; }
 .yc-fc-actions { display: flex; gap: 8px; margin-top: 10px; }
 .yc-fc-actions a.mx-outline { text-decoration: none; }
 #yourCoachHomeCard .yc-home--invite { border-color: var(--border-featured); }

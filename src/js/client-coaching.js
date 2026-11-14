@@ -925,6 +925,28 @@
         </button>`).join('')}` : '';
 
     const since = seenAt();
+    // The coach's long-term plan: phases (the one running now is marked) and milestones.
+    const todayIso = isoDay(new Date());
+    const dayLabel = iso => fmtDate(Date.parse(iso + 'T00:00:00'));
+    const roadmapHtml = state.assignments.filter(a => a.roadmap && active.some(x => x.coachUid === a.coachUid)).map(a => {
+      const phases = arr(a.roadmap.phases);
+      const stones = arr(a.roadmap.milestones).filter(m => m.date >= todayIso);
+      return `
+      <div class="pod-row"><h4 class="pod-title mx-h3">Your roadmap</h4>${active.length > 1 ? `<span class="mx-meta">${esc(a.coachUsername || '')}</span>` : ''}</div>
+      ${phases.map(ph => {
+        const now = ph.start <= todayIso && todayIso <= ph.end;
+        const done = ph.end < todayIso;
+        return `
+        <div class="mx-row yc-phase${now ? ' is-now' : ''}${done ? ' is-done' : ''}"><div class="mx-row-main">
+          <span class="mx-row-sub yc-msg-meta">${esc(dayLabel(ph.start))} – ${esc(dayLabel(ph.end))}${now ? '<span class="mx-chip mx-chip--green mx-chip--sm">Now</span>' : ''}</span>
+          <span class="mx-row-title">${esc(ph.name)}</span>
+          ${ph.goal ? `<span class="mx-row-sub">${esc(ph.goal)}</span>` : ''}
+        </div></div>`;
+      }).join('')}
+      ${stones.length ? `<div class="mx-row"><div class="mx-row-main"><span class="mx-lbl">Coming up</span>
+        ${stones.slice(0, 5).map(m => `<span class="mx-row-sub">${esc(dayLabel(m.date))} · ${esc(m.title)}</span>`).join('')}</div></div>` : ''}`;
+    }).join('');
+
     // Guides and links from the coach's vault, grouped by folder name in the sub line.
     const vaultHtml = state.vault.length ? `
       <div class="pod-row"><h4 class="pod-title mx-h3">Resources from your coach</h4><span class="mx-meta">${state.vault.length}</span></div>
@@ -975,6 +997,7 @@
         <div class="pod-row"><h4 class="pod-title mx-h3">How you're tracking</h4></div>
         ${overviewHtml(state.assignments.find(a => a.coachUid === active[0].coachUid) || {}, false)}
       </section>` : ''}
+      ${roadmapHtml ? `<section class="pod mx-pod yc-pod" id="ycRoadmap">${roadmapHtml}</section>` : ''}
       ${notesHtml ? `<section class="pod mx-pod yc-pod" id="ycNotes">${notesHtml}</section>` : ''}
       ${formChecksHtml ? `<section class="pod mx-pod yc-pod" id="ycFormChecks">${formChecksHtml}</section>` : ''}
       ${vaultHtml ? `<section class="pod mx-pod yc-pod" id="ycVault">${vaultHtml}</section>` : ''}
