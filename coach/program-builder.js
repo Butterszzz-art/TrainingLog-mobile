@@ -7,7 +7,12 @@
  * 2-3min") fills a new row's fields; it uses the same parser as the file
  * import (src/js/program-model.js).
  *
- *   ProgramBuilder.mount(container, program | null, { onSave(v2) → Promise, onCancel })
+ *   ProgramBuilder.mount(container, program | null, { onSave(v2) → Promise, onCancel,
+ *     single?, workouts?() → [workout], onSaveWorkout?(day) → Promise<message> })
+ *
+ * `single` edits one session (a library workout): no week bar, no weekday,
+ * no adding or removing days. `workouts` lists the coach's saved workouts
+ * for "Insert workout" under a day; `onSaveWorkout` adds "Save as workout".
  *
  * The program in the builder is always "expanded" (weeks that were sameAs
  * hold their own copy) so any week can be edited; it is saved that way.
@@ -62,6 +67,8 @@
   function mount(container, program, opts) {
     const options_ = opts || {};
     const state = { program: expand(program), week: 1, saving: false, message: '' };
+    const single = !!options_.single;
+    const savedWorkouts = () => (typeof options_.workouts === 'function' ? options_.workouts() || [] : []);
 
     function week() { return state.program.weeks[state.week - 1]; }
     function warnings() { return M.validate(M.readProgram(state.program) || state.program); }
@@ -92,14 +99,17 @@
     function dayHtml(d, di, warnedIds, dayWarned) {
       return '<section class="pb-day' + (dayWarned.has(d.dayId) ? ' is-warned' : '') + '" data-d="' + di + '">'
         + '<header class="pb-day-head">'
-        + '<select class="pb-in pb-in--weekday" data-f="weekday" aria-label="Weekday">' + options(WEEKDAY_OPTIONS, d.weekday) + '</select>'
-        + '<input class="pb-in pb-in--label" data-f="label" value="' + esc(d.label) + '" placeholder="Lower A" maxlength="40" aria-label="Day name">'
+        + (single ? '' : '<select class="pb-in pb-in--weekday" data-f="weekday" aria-label="Weekday">' + options(WEEKDAY_OPTIONS, d.weekday) + '</select>'
+          + '<input class="pb-in pb-in--label" data-f="label" value="' + esc(d.label) + '" placeholder="Lower A" maxlength="40" aria-label="Day name">')
         + '<input class="pb-in pb-in--focus" data-f="focus" value="' + esc(d.focus) + '" placeholder="Focus (optional)" maxlength="60" aria-label="Focus">'
-        + '<button type="button" class="pb-link" data-act="del-day">Remove day</button>'
+        + (!single && options_.onSaveWorkout && d.exercises.length ? '<button type="button" class="pb-link" data-act="save-workout">Save as workout</button>' : '')
+        + (single ? '' : '<button type="button" class="pb-link" data-act="del-day">Remove day</button>')
         + '</header>'
         + '<table class="pb-table"><thead><tr><th>Exercise</th><th>Type</th><th>Sets</th><th>Reps</th><th>RIR</th><th title="RIR on the last set; empty = same">Last set</th><th>Rest</th><th>Notes</th><th></th></tr></thead>'
         + '<tbody>' + d.exercises.map((e, ei) => rowHtml(e, di, ei, warnedIds)).join('') + '</tbody></table>'
         + '<input class="pb-in pb-quick" data-quick="' + di + '" placeholder="Quick add: Squat 4x6-8 @2 2-3min — Enter" aria-label="Quick add exercise">'
+        + (!single && savedWorkouts().length ? '<select class="pb-in pb-insert" data-insert="' + di + '" aria-label="Insert a saved workout"><option value="">+ Insert a saved workout…</option>'
+          + savedWorkouts().map(w => '<option value="' + esc(w.id) + '">' + esc(w.name) + ' (' + w.exercises.length + ')</option>').join('') + '</select>' : '')
         + '</section>';
     }
 
@@ -131,7 +141,7 @@
       container.querySelectorAll('.pb-tab').forEach(tab => tab.classList.toggle('has-warn', list.some(x => x.week === Number(tab.dataset.week))));
       const s = M.stats(M.readProgram(state.program) || state.program);
       const stats = container.querySelector('.pb-stats');
-      if (stats) stats.textContent = s.weekCount + ' wk · ' + s.dayCount + ' days/wk · ' + s.exerciseCount + ' rows';
+      if (stats) stats.textContent = single ? s.exerciseCount + ' rows' : s.weekCount + ' wk · ' + s.dayCount + ' days/wk · ' + s.exerciseCount + ' rows';
     }
 
     function render() {
@@ -148,15 +158,15 @@
 
       container.innerHTML = '<div class="pb">'
         + '<div class="pb-top">'
-        + '<label class="mp-field pb-name"><span class="mp-field-label">Program name</span><input class="mp-input mp-input--text" data-pf="name" value="' + esc(p.name) + '" maxlength="80"></label>'
-        + '<div class="pb-stats">' + s.weekCount + ' wk · ' + s.dayCount + ' days/wk · ' + s.exerciseCount + ' rows</div>'
+        + '<label class="mp-field pb-name"><span class="mp-field-label">' + (single ? 'Workout name' : 'Program name') + '</span><input class="mp-input mp-input--text" data-pf="name" value="' + esc(p.name) + '" maxlength="80"></label>'
+        + '<div class="pb-stats">' + (single ? s.exerciseCount + ' rows' : s.weekCount + ' wk · ' + s.dayCount + ' days/wk · ' + s.exerciseCount + ' rows') + '</div>'
         + '</div>'
-        + '<details class="pb-notes"><summary>Notes, progression &amp; rules</summary>'
+        + '<details class="pb-notes"' + (single ? ' hidden' : '') + '><summary>Notes, progression &amp; rules</summary>'
         + '<label class="mp-field"><span class="mp-field-label">Notes (block)</span><textarea class="coach-input" data-pf="notes" rows="2" maxlength="4000">' + esc(p.notes) + '</textarea></label>'
         + '<label class="mp-field"><span class="mp-field-label">Progression</span><textarea class="coach-input" data-pf="progressionNotes" rows="2" maxlength="4000">' + esc(p.progressionNotes) + '</textarea></label>'
         + '<label class="mp-field"><span class="mp-field-label">Rules (one per line)</span><textarea class="coach-input" data-pf="rules" rows="3">' + esc((p.rules || []).join('\n')) + '</textarea></label>'
         + '</details>'
-        + '<div class="pb-weekbar"><div class="pb-tabs" role="tablist" aria-label="Program week">' + tabs + '</div>'
+        + '<div class="pb-weekbar"' + (single ? ' hidden' : '') + '><div class="pb-tabs" role="tablist" aria-label="Program week">' + tabs + '</div>'
         + '<div class="pb-weekacts">'
         + '<button type="button" class="pb-link" data-act="copy-week">Copy W' + state.week + ' → W' + (state.week + 1) + '</button>'
         + '<button type="button" class="pb-link" data-act="add-week">+ Empty week</button>'
@@ -164,9 +174,9 @@
         + '</div></div>'
         + '<div class="pb-warn-slot">' + warnHtml(here, otherWeeks) + '</div>'
         + '<div class="pb-days">' + w.days.map((d, di) => dayHtml(d, di, warnedIds, dayWarned)).join('') + '</div>'
-        + '<button type="button" class="pb-link" data-act="add-day">+ Add training day</button>'
+        + (single ? '' : '<button type="button" class="pb-link" data-act="add-day">+ Add training day</button>')
         + '<div class="pb-foot">'
-        + '<button type="button" class="mp-btn" data-act="save"' + (state.saving ? ' disabled' : '') + '>' + (state.saving ? 'Saving…' : 'Save to library') + '</button>'
+        + '<button type="button" class="mp-btn" data-act="save"' + (state.saving ? ' disabled' : '') + '>' + (state.saving ? 'Saving…' : single ? 'Save workout' : 'Save to library') + '</button>'
         + '<button type="button" class="pb-link" data-act="cancel">Cancel</button>'
         + '<span class="pb-msg" role="status">' + esc(state.message) + '</span>'
         + '</div></div>';
@@ -190,6 +200,7 @@
       if (t.dataset.pf) {
         if (t.dataset.pf === 'rules') state.program.rules = t.value.split('\n').map(s => s.trim()).filter(Boolean);
         else state.program[t.dataset.pf] = t.value;
+        if (single && t.dataset.pf === 'name' && week().days[0]) week().days[0].label = t.value;
         return;
       }
       const f = t.dataset.f;
@@ -204,6 +215,19 @@
     // Committed changes (selects, rest text, number fields): re-render for warnings.
     container.addEventListener('change', ev => {
       const t = ev.target;
+      if (t.dataset.insert !== undefined && t.value) {
+        const w = savedWorkouts().find(x => x.id === t.value);
+        const target = week().days[Number(t.dataset.insert)];
+        if (w && target) {
+          w.exercises.forEach(e => target.exercises.push(newRow(state.week, target, Object.assign({}, e, { id: undefined }))));
+          target.exercises.forEach(e => { if (!e.id) e.id = newRow(state.week, target).id; });
+          if (!target.label) target.label = w.name;
+          if (!target.focus && w.focus) target.focus = w.focus;
+          state.message = 'Inserted ' + w.name + '.';
+        }
+        render();
+        return;
+      }
       const f = t.dataset.f;
       if (!f) return;
       const { day, ex } = rowAt(t);
@@ -273,12 +297,18 @@
         p.weeks.splice(state.week - 1, 1);
         renumber(p);
         state.week = Math.min(state.week, p.weeks.length);
+      } else if (act === 'save-workout') {
+        try {
+          state.message = (await options_.onSaveWorkout(JSON.parse(JSON.stringify(day)))) || '';
+        } catch (err) {
+          state.message = (err && err.message) || 'Could not save the workout.';
+        }
       } else if (act === 'cancel') {
         if (options_.onCancel) options_.onCancel();
         return;
       } else if (act === 'save') {
         const clean = M.readProgram(p);
-        if (!clean) { state.message = 'Give the program a name.'; render(); return; }
+        if (!clean) { state.message = single ? 'Give the workout a name.' : 'Give the program a name.'; render(); return; }
         if (!M.stats(clean).exerciseCount) { state.message = 'Add at least one exercise.'; render(); return; }
         state.saving = true; state.message = ''; render();
         try {
@@ -295,6 +325,7 @@
     render();
     return {
       getProgram: () => M.readProgram(state.program),
+      refresh: render,
       setWeek: n => { state.week = Math.max(1, Math.min(n, state.program.weeks.length)); render(); },
     };
   }

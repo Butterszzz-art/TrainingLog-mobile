@@ -460,6 +460,7 @@
 .yc-reply-input { resize: vertical; min-height: 56px; }
 .yc-reply .mx-cta { align-self: flex-end; }
 .yc-fc-comment { display: block; margin-top: 6px; }
+a.yc-resource { text-decoration: none; color: inherit; }
 .yc-fc-actions { display: flex; gap: 8px; margin-top: 10px; }
 .yc-fc-actions a.mx-outline { text-decoration: none; }
 #yourCoachHomeCard .yc-home--invite { border-color: var(--border-featured); }

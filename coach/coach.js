@@ -77,6 +77,7 @@ async function checkAuth() {
     loadClients();
     loadLeads();
     loadPrograms().then(renderWorkspace);
+    loadWorkouts().catch(() => {});
   }
 }
 
@@ -115,6 +116,7 @@ async function doCoachLogin() {
     loadClients();
     loadLeads();
     loadPrograms().then(renderWorkspace);
+    loadWorkouts().catch(() => {});
   } catch (err) {
     errorEl.textContent = err?.message || 'Invalid credentials.';
   } finally {
@@ -525,16 +527,8 @@ const SOON_PAGES = {
     today: 'The Master Plan in a client\'s Program tab already covers phases, programs and nutrition by day type.', go: 'clients', goLabel: 'Open clients' },
   groups: { icon: 'users', title: 'Training Groups', plan: 'Put clients in a group to give them one program and message them together.',
     today: 'Tick several clients on the Clients page to message them at once.', go: 'clients', goLabel: 'Open clients' },
-  vault: { icon: 'folder', title: 'Vault', plan: 'A library of guides, PDFs and links to share with clients.',
-    today: 'Share video links with all or chosen clients on the Videos page.', go: 'videos', goLabel: 'Open videos' },
   automations: { icon: 'zap', title: 'Automations', plan: 'Rules such as "no check-in for 7 days: send a reminder".',
     today: 'Overdue check-ins are listed on the Check-ins page.', go: 'checkins', goLabel: 'Open check-ins' },
-  workouts: { icon: 'clipboard', title: 'Workouts', plan: 'Single sessions you can reuse across programs.',
-    today: 'Build whole programs on the Programs page.', go: 'programs', goLabel: 'Open programs' },
-  exercises: { icon: 'dumbbell', title: 'Exercises', plan: 'Your own exercise list with cues and demo videos.',
-    today: 'Add a technique video and cue per exercise on the Videos page.', go: 'videos', goLabel: 'Open videos' },
-  meals: { icon: 'utensils', title: 'Meals', plan: 'Meal templates you can reuse for any client.',
-    today: 'Build a meal plan for one client in their Nutrition tab.', go: 'clients', goLabel: 'Open clients' },
   settings: { icon: 'settings', title: 'Settings', plan: 'Settings for the coach console.',
     today: 'Use the Settings tab in the phone app for now.' },
 };
@@ -567,7 +561,11 @@ function railNavGo(section) {
   if (section === 'prospects') renderLeadList();
   if (section === 'formchecks') loadFormChecks();
   if (section === 'messages') { renderMessageList(); loadClients(); }
-  if (section === 'videos') { renderCoachVideos(); loadCoachExerciseVideos().then(renderTechniqueVideos); }
+  if (section === 'videos') renderCoachVideos();
+  if (section === 'exercises') loadCoachExerciseVideos().then(renderTechniqueVideos);
+  if (section === 'workouts') renderWorkoutsPage();
+  if (section === 'meals') renderMealsPage();
+  if (section === 'vault') renderVaultPage();
   if (section === 'foods') renderFoodsLibrary();
 }
 
@@ -1807,10 +1805,14 @@ function showProgramBuilder(program) {
   if (!area || !window.ProgramBuilder) return;
   const id = program?.id || ('prog_' + Date.now().toString(36));
   const start = program || { schema: 'pocketcoach.program/2', name: 'New program', weeks: [{ days: [{ dayId: 'd1', weekday: 1, label: 'Day 1', exercises: [] }] }] };
-  window.ProgramBuilder.mount(area, start, {
+  const builder = window.ProgramBuilder.mount(area, start, {
     onSave: v2 => saveCoachProgram(id, v2),
     onCancel: () => { area.innerHTML = ''; },
+    // Saved workouts (coach/libraries.js): insert one into a day, or save a day as one.
+    workouts: () => _workouts || [],
+    onSaveWorkout: day => saveDayAsWorkout(day),
   });
+  if (!_workouts) loadWorkouts().then(list => { if (list.length && area.contains(area.querySelector('.pb'))) builder.refresh(); }).catch(() => {});
   area.querySelector('[data-pf="name"]')?.focus();
 }
 

@@ -99,7 +99,7 @@
           <span class="rail-nav-icon ui-icon" data-icon="users" aria-hidden="true"></span><span class="rail-nav-label">Training Groups</span><span class="rail-nav-soon">Soon</span>
         </button>
         <button class="rail-nav-item" data-rail="vault" onclick="railNavGo('vault')" title="Vault">
-          <span class="rail-nav-icon ui-icon" data-icon="folder" aria-hidden="true"></span><span class="rail-nav-label">Vault</span><span class="rail-nav-soon">Soon</span>
+          <span class="rail-nav-icon ui-icon" data-icon="folder" aria-hidden="true"></span><span class="rail-nav-label">Vault</span><span class="rail-nav-count" id="railCountVault">0</span>
         </button>
         <button class="rail-nav-item" data-rail="automations" onclick="railNavGo('automations')" title="Automations">
           <span class="rail-nav-icon ui-icon" data-icon="zap" aria-hidden="true"></span><span class="rail-nav-label">Automations</span><span class="rail-nav-soon">Soon</span>
@@ -109,10 +109,10 @@
           <span class="rail-nav-icon ui-icon" data-icon="layers" aria-hidden="true"></span><span class="rail-nav-label">Programs</span><span class="rail-nav-count" id="railCountTemplates">0</span>
         </button>
         <button class="rail-nav-item" data-rail="workouts" onclick="railNavGo('workouts')" title="Workouts">
-          <span class="rail-nav-icon ui-icon" data-icon="clipboard" aria-hidden="true"></span><span class="rail-nav-label">Workouts</span><span class="rail-nav-soon">Soon</span>
+          <span class="rail-nav-icon ui-icon" data-icon="clipboard" aria-hidden="true"></span><span class="rail-nav-label">Workouts</span><span class="rail-nav-count" id="railCountWorkouts">0</span>
         </button>
         <button class="rail-nav-item" data-rail="exercises" onclick="railNavGo('exercises')" title="Exercises">
-          <span class="rail-nav-icon ui-icon" data-icon="dumbbell" aria-hidden="true"></span><span class="rail-nav-label">Exercises</span><span class="rail-nav-soon">Soon</span>
+          <span class="rail-nav-icon ui-icon" data-icon="dumbbell" aria-hidden="true"></span><span class="rail-nav-label">Exercises</span>
         </button>
         <button class="rail-nav-item" data-rail="videos" onclick="railNavGo('videos')" title="Videos">
           <span class="rail-nav-icon ui-icon" data-icon="video" aria-hidden="true"></span><span class="rail-nav-label">Videos</span>
@@ -122,7 +122,7 @@
           <span class="rail-nav-icon ui-icon" data-icon="apple" aria-hidden="true"></span><span class="rail-nav-label">Foods</span>
         </button>
         <button class="rail-nav-item" data-rail="meals" onclick="railNavGo('meals')" title="Meals">
-          <span class="rail-nav-icon ui-icon" data-icon="utensils" aria-hidden="true"></span><span class="rail-nav-label">Meals</span><span class="rail-nav-soon">Soon</span>
+          <span class="rail-nav-icon ui-icon" data-icon="utensils" aria-hidden="true"></span><span class="rail-nav-label">Meals</span><span class="rail-nav-count" id="railCountMeals">0</span>
         </button>
         <div class="rail-nav-group rail-nav-group--end"></div>
         <button class="rail-nav-item" data-rail="settings" onclick="railNavGo('settings')" title="Settings">
@@ -294,7 +294,7 @@
         </div>
 
         <!-- Videos: videos you share with clients, and a technique video
-             per exercise. Same data as the phone's Coach Ops → Videos. -->
+             (the per-exercise demo videos are on the Exercises page). -->
         <div class="ws-panel" id="wsPanel-videos">
           <div class="pod ws-side-card">
             <div class="pod-row">
@@ -303,11 +303,54 @@
             </div>
             <div id="wsCoachVideos"><p class="ws-empty-note">Loading videos…</p></div>
           </div>
+        </div>
+
+        <!-- Workouts: single sessions kept to reuse in programs (coach/libraries.js). -->
+        <div class="ws-panel" id="wsPanel-workouts">
           <div class="pod ws-side-card">
             <div class="pod-row">
-              <span class="pod-kicker">Technique videos per exercise</span>
+              <span class="pod-kicker">Workout library</span>
+              <span class="ws-panel-actions">
+                <button class="bulk-action-btn bulk-action-btn--brass" onclick="editWorkout()">+ New workout</button>
+              </span>
             </div>
-            <div id="libTechniqueVideosArea"><p class="ws-empty-note">Loading videos…</p></div>
+            <div id="wsWorkoutsList"><p class="ws-empty-note">Loading workouts…</p></div>
+            <div id="workoutBuilderArea" style="margin-top:12px;"></div>
+          </div>
+        </div>
+
+        <!-- Exercises: every exercise in your programs, with its cue and demo video. -->
+        <div class="ws-panel" id="wsPanel-exercises">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Exercises</span>
+              <span class="ws-side-note">cue and demo video per exercise</span>
+            </div>
+            <div id="libTechniqueVideosArea"><p class="ws-empty-note">Loading exercises…</p></div>
+          </div>
+        </div>
+
+        <!-- Meals: the meal library the meal planner saves to. -->
+        <div class="ws-panel" id="wsPanel-meals">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Meal library</span>
+              <span class="ws-panel-actions">
+                <button class="bulk-action-btn bulk-action-btn--brass" onclick="editMeal()">+ New meal</button>
+              </span>
+            </div>
+            <div id="wsMealsList"><p class="ws-empty-note">Loading meals…</p></div>
+          </div>
+        </div>
+
+        <!-- Vault: links to guides and other resources for clients. -->
+        <div class="ws-panel" id="wsPanel-vault">
+          <div class="pod ws-side-card">
+            <div class="pod-row">
+              <span class="pod-kicker">Vault</span>
+              <span class="ws-side-note">guides, PDFs and links for your clients</span>
+            </div>
+            <div id="wsVaultList"><p class="ws-empty-note">Loading…</p></div>
           </div>
         </div>
 
@@ -393,6 +436,7 @@
   <script src="plan-import.js"></script>
   <script src="technique-videos.js"></script>
   <script src="meal-planner.js"></script>
+  <script src="libraries.js"></script>
   <script src="../src/js/program-import-core.js"></script>
   <script src="../src/js/food-core.js"></script>
   <script src="coach.js"></script>
