@@ -178,6 +178,31 @@ self.addEventListener('activate', (event) => {
 
 /* ── Fetch strategy ───────────────────────────────────────── */
 
+// A cache miss still has to answer with a Response: resolving respondWith()
+// with undefined throws "Failed to convert value to 'Response'" for every
+// file on the page.
+const orNetworkError = (cached) => cached || Response.error();
+
+// The app shell (index.html at the root of this worker's scope) is the
+// offline page for the app itself only. Other pages (the coach console at
+// /coach/, the intake form, pricing, …) load their files relative to their
+// own folder, so the app shell served at their address is a page of broken
+// links. They get their own cached copy, or a plain "can't connect" page.
+const SCOPE_PATH = new URL(self.registration.scope).pathname;
+const isAppShellPath = (pathname) => pathname === SCOPE_PATH || pathname === SCOPE_PATH + 'index.html';
+
+function offlinePage() {
+  return new Response(
+    '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>Pocket Coach</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;'
+    + 'background:#0b110e;color:#e8efe9;font:16px/1.5 system-ui,sans-serif;text-align:center;padding:24px}'
+    + 'button{margin-top:16px;padding:10px 22px;border:0;border-radius:999px;background:#2f8a63;color:#fff;font:inherit;cursor:pointer}</style></head>'
+    + '<body><main><h1>Can\'t connect</h1><p>This page could not be loaded. Check your connection and try again.</p>'
+    + '<button onclick="location.reload()">Try again</button></main></body></html>',
+    { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  );
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -210,7 +235,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(() => caches.match(request).then(orNetworkError))
     );
     return;
   }
@@ -228,7 +253,11 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
         }
         return response;
-      }).catch(() => caches.match(request).then(c => c || caches.match('/index.html')))
+      }).catch(() => caches.match(request).then((cached) => {
+        if (cached) return cached;
+        if (request.mode !== 'navigate') return Response.error();
+        return isAppShellPath(url.pathname) ? caches.match('/index.html').then((shell) => shell || offlinePage()) : offlinePage();
+      }))
     );
     return;
   }
@@ -246,7 +275,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
         }
         return response;
-      }).catch(() => caches.match(request))
+      }).catch(() => caches.match(request).then(orNetworkError))
     );
     return;
   }
@@ -262,7 +291,7 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_STATIC).then((c) => c.put(request, clone));
       }
       return response;
-    }))
+    }).catch(() => Response.error()))
   );
 });
 
