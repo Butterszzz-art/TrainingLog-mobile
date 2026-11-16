@@ -173,11 +173,29 @@
       }
       return;
     }
-    if (typeof window.openUpgradeModal === 'function') window.openUpgradeModal('pro');
+    if (typeof window.openUpgradeModal === 'function') {
+      var usage = window.PocketCoachAiUsage && window.PocketCoachAiUsage.get();
+      var limit = (usage && usage.limit) || 5;
+      if (error.code === 'ai.quota_exceeded') {
+        window.openUpgradeModal('pro', { heading: 'You’ve used your ' + limit + ' free AI uses this month' });
+      } else {
+        window.openUpgradeModal('pro');
+      }
+    }
+  }
+
+  // The server sends the AI uses left after each metered call.
+  function forwardRemaining(res) {
+    var left = res && res.headers && typeof res.headers.get === 'function' ? res.headers.get('X-AI-Remaining') : null;
+    if (left == null || left === '') return;
+    try {
+      document.dispatchEvent(new CustomEvent('pc:ai-remaining', { detail: { remaining: Number(left) } }));
+    } catch (e) { /* old WebView without CustomEvent — counter refreshes with the plan */ }
   }
 
   function sendAi(input, init) {
     return nativeFetch(input, init).then(function (res) {
+      forwardRemaining(res);
       if (res.status !== 403) return res;
       return res.clone().json().then(function (body) {
         var error = body && body.error;

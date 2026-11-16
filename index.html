@@ -3962,6 +3962,7 @@
       </div>
       <div class="sleep-ai-body" id="sleepAiBody">Analysing your sleep patterns…</div>
       <button class="sleep-ai-btn" id="sleepAiBtn" onclick="requestSleepInsight()">Analyse My Sleep</button>
+      <p class="ai-usage-note" data-ai-usage hidden></p>
     </div>
 
     <!-- Sleep score (Activity Sync only — hidden entirely for manual-only users) -->
@@ -4300,6 +4301,9 @@
 <script src="src/js/local-account-data.js"></script>
 <script src="src/js/settings.js"></script>
 <script src="src/js/coach-code.js"></script>
+<script src="src/js/plan-source.js"></script>
+<script src="src/js/ai-usage.js"></script>
+<script src="src/js/client-pro.js"></script>
 <script src="src/js/payments.js"></script>
 <script src="src/js/plan-limits.js"></script>
 <script type="module" src="history.js"></script>
@@ -4808,15 +4812,34 @@ async function loadUserPlan() {
     window.currentReferralCode = data.referralCode || '';
     window.currentReferralCredits = data.referralCredits || 0;
     window.currentIsAdmin = data.admin === true;
+    // Where the plan comes from (subscription, pass, trial, lifetime, …) and
+    // when it ends — see src/js/plan-source.js. Old servers omit these.
     window.currentPlanSource = data.planSource || null;
+    window.currentPlanExpiresAt = data.planExpiresAt || null;
     window.currentCoachPro = data.coachPro || null; // Pro from a coach's code (src/js/coach-code.js)
     window.currentUserPlanLoaded = true;
     localStorage.setItem('userPlan', window.currentUserPlan);
     localStorage.setItem('userIsAdmin', window.currentIsAdmin ? '1' : '');
+    localStorage.setItem('userPlanSource', window.currentPlanSource || '');
+    localStorage.setItem('userPlanExpiresAt', window.currentPlanExpiresAt || '');
+    // Monthly AI uses (PAY2-3); null on older servers.
+    window.currentAiUsage = data.ai || null;
+    try { localStorage.setItem('userAiUsage', data.ai ? JSON.stringify(data.ai) : ''); } catch (e) { /* quota */ }
+    if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
+    // Pro included by the user's coach (PAY2-9); null when not coached.
+    window.currentClientPro = data.clientPro || null;
+    try { localStorage.setItem('userClientPro', data.clientPro ? JSON.stringify(data.clientPro) : ''); } catch (e) { /* quota */ }
+    if (window.PocketCoachClientPro) setTimeout(window.PocketCoachClientPro.check, 1500);
     // Coach Mode depends on the plan — re-apply now that we know it.
     if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
   } catch {
+    // Keep the cached plan; never fall back to blocking anything.
     window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
+    window.currentPlanSource = localStorage.getItem('userPlanSource') || null;
+    window.currentPlanExpiresAt = localStorage.getItem('userPlanExpiresAt') || null;
+    try { window.currentAiUsage = JSON.parse(localStorage.getItem('userAiUsage') || 'null'); } catch (e) { window.currentAiUsage = null; }
+    if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
+    try { window.currentClientPro = JSON.parse(localStorage.getItem('userClientPro') || 'null'); } catch (e) { window.currentClientPro = null; }
   }
 }
 
@@ -4988,9 +5011,10 @@ var UPGRADE_PLANS = {
   coach: {
     name: 'Coach', badge: 'For coaches', chip: 'mx-chip--brass', cardCls: 'pod--warn',
     monthly: 16, annual: 13, annualNote: 'Billed £156/year · save £36',
-    sub: 'Everything in Pro, plus:',
+    sub: 'Everything in Pro, plus your coaching dashboard. Unlimited clients, one flat price. Your clients get Pocket Coach Pro included.',
     features: [
       ['users', 'Full coaching dashboard'],
+      ['sparkles', 'Pro included for your clients'],
       ['clipboard', 'Client roster'],
       ['pencil', 'AI draft messages'],
       ['barChart', 'Compliance tracking'],
@@ -5035,12 +5059,20 @@ function upgradePlanCard(key, isAnnual) {
     + '</section>';
 }
 
-function openUpgradeModal(defaultPlan) {
+// opts.heading: replaces the "Upgrade" title, e.g. "You've used your 5 free
+// AI uses this month" (ai-consent.js on ai.quota_exceeded).
+function openUpgradeModal(defaultPlan, opts) {
   defaultPlan = defaultPlan || 'pro';
+  var heading = opts && opts.heading
+    ? String(opts.heading).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; })
+    : 'Upgrade';
   var billing = localStorage.getItem('billingCycle') || 'annual';
-  var isAnnual = billing === 'annual';
+  var isAnnual = (opts && opts.annual) ? true : billing === 'annual';
   var apple = usesAppleIAP();
   appleProductsSettled = false; // a failed load is retried below
+  var sub = opts && opts.sub
+    ? String(opts.sub).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; })
+    : 'Unlock AI features and coaching tools';
 
   var overlay = document.createElement('div');
   overlay.className = 'payment-method-modal';
@@ -5049,8 +5081,8 @@ function openUpgradeModal(defaultPlan) {
     + '<button type="button" class="close-payment-modal" aria-label="Close" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
     + '<div class="upg-head">'
     +   '<span class="mx-kicker">Pocket Coach</span>'
-    +   '<h3 class="upg-title">Upgrade</h3>'
-    +   '<p class="mx-sub">Unlock AI features and coaching tools</p>'
+    +   '<h3 class="upg-title">' + heading + '</h3>'
+    +   '<p class="mx-sub">' + sub + '</p>'
     + '</div>'
     + '<div class="upg-billing">'
     +   '<span id="modalBillMonthly" class="' + (!isAnnual ? 'is-on' : '') + '">Monthly</span>'
@@ -5062,6 +5094,8 @@ function openUpgradeModal(defaultPlan) {
     + '</div>'
     + upgradePlanCard('pro', isAnnual)
     + upgradePlanCard('coach', isAnnual)
+    // opts.continueFree: an equal-weight way out (e.g. Client Pro ended).
+    + (opts && opts.continueFree ? '<button type="button" class="mx-outline mx-outline--block upg-continue-free" onclick="this.closest(\'.payment-method-modal\').remove()">Continue with Free</button>' : '')
     + (apple ? '<button type="button" class="payment-restore" onclick="this.closest(\'.payment-method-modal\').remove();pocketCoachPayments.restore()">Restore Purchases</button>' : '')
     + '<p class="payment-note payment-terms"><a href="terms.html">Terms of Use</a> · <a href="privacy.html">Privacy Policy</a></p>'
     + '</div>';
@@ -5124,19 +5158,26 @@ function renderSubscriptionPanel() {
   var status = document.getElementById('subStatusLabel');
   var btn = document.getElementById('subActionBtn');
   if (label) label.textContent = plan === 'coach' ? 'Coach Plan' : plan === 'pro' ? 'Pro Plan' : 'Free Plan';
-  if (status) {
-    var s = window.currentSubStatus || 'none';
-    var coachPro = window.currentCoachPro;
-    if (window.currentPlanSource === 'coach_code' && coachPro && coachPro.coachUsername) status.textContent = 'Included by @' + coachPro.coachUsername;
-    else status.textContent = s === 'active' ? 'Active subscription' : s === 'trialing' ? 'Free trial active' : s === 'past_due' ? 'Payment issue' : 'No active subscription';
-  }
+  var desc = window.PlanSource
+    ? window.PlanSource.describePlanSource({
+        plan: plan, source: window.currentPlanSource, expiresAt: window.currentPlanExpiresAt,
+        subStatus: window.currentSubStatus,
+        coachName: window.currentClientPro && window.currentClientPro.coachName,
+        coachUsername: window.currentCoachPro && window.currentCoachPro.coachUsername,
+      })
+    : { status: '', isSubscription: plan !== 'free' };
+  if (status) status.textContent = desc.status;
   var restore = document.getElementById('subRestoreBtn');
   if (restore) restore.hidden = !usesAppleIAP();
   if (btn) {
-    btn.textContent = (plan === 'pro' || plan === 'coach') ? 'Manage Subscription' : 'Upgrade';
-    btn.style.background = (plan === 'pro' || plan === 'coach') ? 'transparent' : '';
-    btn.style.border = (plan === 'pro' || plan === 'coach') ? '1px solid var(--border-color)' : '';
-    btn.style.color = (plan === 'pro' || plan === 'coach') ? 'var(--secondary-text)' : '';
+    // Subscriptions are managed in Stripe/App Store. Pass, trial and lifetime
+    // holders have nothing to manage, so the button shows the plans instead.
+    var manages = plan !== 'free' && desc.isSubscription;
+    btn.textContent = manages ? 'Manage Subscription' : plan === 'free' ? 'Upgrade' : 'See plans';
+    btn.onclick = manages ? function () { openManageBilling(); } : function () { openUpgradeModal('pro'); };
+    btn.style.background = manages ? 'transparent' : '';
+    btn.style.border = manages ? '1px solid var(--border-color)' : '';
+    btn.style.color = manages ? 'var(--secondary-text)' : '';
   }
 }
 
@@ -12763,6 +12804,7 @@ function normalizeCoachClientRecord(client = {}) {
     currentProgram: client.currentProgram || '',
     currentProgramId: client.currentProgramId || '',
     activeProgramName: client.activeProgramName || '',
+    clientPro: client.clientPro || null, // 'active' | 'paused_inactive' | 'off'
     lastCheckInDate: client.lastCheckInDate || client.lastCheckIn || '',
     compliancePercent: pct === null ? null : Math.max(0, Math.min(100, Math.round(pct))),
     workoutsLoggedThisWeek: numOrNull(client.workoutsLoggedThisWeek),
@@ -13064,6 +13106,14 @@ function coachPct(value) {
   return value === null || value === undefined ? '—' : `${value}<small>%</small>`;
 }
 
+// Client Pro (PAY2-9): clients you coach get Pro included while you're
+// actively coaching them.
+function coachClientProBadge(state) {
+  if (state === 'active') return '<span class="mx-tag mx-tag--hi coach-client-pro">Pro</span>';
+  if (state === 'paused_inactive') return '<span class="coach-client-pro-paused">Pro paused, no activity in 30 days</span>';
+  return '';
+}
+
 function renderCoachClientCard(client) {
   const c = normalizeCoachClientRecord(client);
   const initials = String(c.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -13100,6 +13150,7 @@ function renderCoachClientCard(client) {
         <div class="coach-client-id">
           <h3 class="coach-client-name">${escapeCoachText(c.name)}</h3>
           <p class="coach-client-meta">${escapeCoachText(c.archetype)} · ${escapeCoachText(c.currentPhase)}</p>
+          ${coachClientProBadge(c.clientPro)}
         </div>
         <span class="coach-alert-pill mx-chip mx-chip--sm ${chipCls} ${alertMeta.className}">${alertMeta.label}</span>
       </header>
@@ -14387,15 +14438,33 @@ function isProUser() {
 }
 
 // ── AI check-in summary ───────────────────────────────────────────────────────
-async function requestAiCheckInSummary(draft, compliancePercent) {
+async function requestAiCheckInSummary(draft, compliancePercent, opts) {
   const card = document.getElementById('checkInAiSummaryCard');
   if (!card) return;
 
-  // No upgrade prompt right after a basic task: free accounts just don't get
-  // the automatic summary.
-  if (!isProUser()) {
-    card.style.display = 'none';
-    card.innerHTML = '';
+  // Free accounts: no automatic summary and never an upgrade prompt right
+  // after a basic task. While they have free AI uses left, offer a button
+  // that spends one; with none left, show nothing.
+  if (!isProUser() && !(opts && opts.tapped)) {
+    const usage = window.PocketCoachAiUsage;
+    const left = usage ? usage.remaining() : null;
+    if (!left) {
+      card.style.display = 'none';
+      card.innerHTML = '';
+      return;
+    }
+    card.style.display = '';
+    card.innerHTML = `
+      <div class="ci-ai-card">
+        <span class="ci-ai-label"><span class="ui-icon">${ICONS.sparkles}</span> AI Summary</span>
+        <button type="button" class="ci-ai-offer-btn">Summarise this check-in</button>
+        <p class="ai-usage-note" data-ai-usage hidden></p>
+      </div>`;
+    usage.render();
+    card.querySelector('.ci-ai-offer-btn').addEventListener('click', () => {
+      if (typeof window.markAiUserAction === 'function') window.markAiUserAction('checkin-summary');
+      requestAiCheckInSummary(draft, compliancePercent, { tapped: true });
+    });
     return;
   }
 
@@ -21762,13 +21831,6 @@ window.renderCaffeinePod = renderCaffeinePod;
 
   window.openMacroAiAdvisor = async function () {
     if (typeof window.markAiUserAction === 'function') window.markAiUserAction('macro-advisor');
-    if (!isProUser()) {
-      const btn = document.getElementById('macroAiAdvisorBtn');
-      const locked = document.getElementById('macroAiAdvisorLocked');
-      if (btn) { btn.style.opacity = '0.45'; btn.disabled = true; }
-      if (locked) locked.style.display = '';
-      return;
-    }
 
     const backdrop = document.getElementById('macroAiBackdrop');
     const panel    = document.getElementById('macroAiPanel');
