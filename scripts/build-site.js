@@ -33,7 +33,7 @@ const SKIP_ANY = [
 // Paths (relative, forward slashes) that are server code.
 const SKIP_PATHS = new Set(['src/routes']);
 // Dotfiles that the site does need.
-const KEEP_DOT = new Set(['.well-known', '.nojekyll']);
+const KEEP_DOT = new Set(['.well-known']);
 
 function skip(rel, name, isTop) {
   if (isTop && SKIP_TOP.has(name)) return true;
