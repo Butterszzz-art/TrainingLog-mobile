@@ -277,18 +277,26 @@
     // single set, so the same exercise can appear as several separate
     // log[] entries; show one row per exercise with the combined count.
     const byExercise = new Map();
-    log.forEach(entry => {
-      const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
-      const weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
-      const existing = byExercise.get(entry.exercise) || { setCount: 0, lastReps: null, lastWeight: null };
-      existing.setCount += reps.length;
-      if (reps.length) { existing.lastReps = reps[reps.length - 1]; existing.lastWeight = weights[weights.length - 1]; }
-      byExercise.set(entry.exercise, existing);
-    });
+    if (global.sessionGrouping) {
+      // Same grouping as the log cards (by exercise id, else name, any case).
+      global.sessionGrouping.groupSessionLog(log).forEach(block => {
+        const last = block.sets[block.sets.length - 1];
+        byExercise.set(block.name, { setCount: block.sets.length, lastReps: last ? last.reps : null, lastWeight: last ? last.weight : null });
+      });
+    } else {
+      log.forEach(entry => {
+        const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+        const weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+        const existing = byExercise.get(entry.exercise) || { setCount: 0, lastReps: null, lastWeight: null };
+        existing.setCount += reps.length;
+        if (reps.length) { existing.lastReps = reps[reps.length - 1]; existing.lastWeight = weights[weights.length - 1]; }
+        byExercise.set(entry.exercise, existing);
+      });
+    }
 
     const rows = Array.from(byExercise.entries()).map(([name, e]) => {
       const summary = e.setCount ? `${e.setCount}×${e.lastReps ?? '?'}${e.lastWeight != null ? ' · ' + e.lastWeight + ' kg' : ''}` : '';
-      return `<div class="sq-row"><span class="sq-name">${name}</span><span class="sq-summary">${summary}</span></div>`;
+      return `<div class="sq-row"><span class="sq-name">${_escHTML(name)}</span><span class="sq-summary">${summary}</span></div>`;
     }).join('') + (warmups.length
       ? `<div class="sq-row sq-row--warmup"><span class="sq-name">Warm-ups</span><span class="sq-summary">${warmups.length} set${warmups.length === 1 ? '' : 's'} · not counted</span></div>`
       : '');
@@ -830,8 +838,8 @@
     _syncQuickLogSidesUI();
   }
 
-  /** Sets already logged today for this exact exercise name — real count
-   * from the same store renderSessionSoFar() reads. */
+  /** Sets already logged today for this exercise (its whole block, matched
+   * by id or case-insensitive name) — from the store renderSessionSoFar() reads. */
   function _todaysSetCount(name) {
     const u = _user();
     if (!u || typeof localStorage === 'undefined') return 0;
@@ -840,9 +848,34 @@
       const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
       const today = workouts.find(w => w.date === todayStr);
       if (!today) return 0;
-      return (today.log || []).filter(e => e.exercise === name)
-        .reduce((n, e) => n + (Array.isArray(e.repsArray) ? e.repsArray.length : 0), 0);
+      const block = _todaysBlock(today, name);
+      return block ? block.sets.length : 0;
     } catch { return 0; }
+  }
+
+  /** Today's exercise block for `name` (matched by id, else name), or null. */
+  function _todaysBlock(today, name) {
+    const g = global.sessionGrouping;
+    if (!today || !name) return null;
+    if (g) return g.findBlockFor(today.log || [], name);
+    const sets = [];
+    (today.log || []).forEach((e, entryIndex) => {
+      if (String(e.exercise || '').trim().toLowerCase() !== String(name).trim().toLowerCase()) return;
+      (e.repsArray || []).forEach((r, setIndex) => sets.push({ entryIndex, setIndex, reps: r, weight: (e.weightsArray || [])[setIndex] }));
+    });
+    return sets.length ? { sets } : null;
+  }
+
+  /** The last set already logged today for `name`: { weight, reps } or null. */
+  function _todaysLastSet(name) {
+    const u = _user();
+    if (!u || typeof localStorage === 'undefined') return null;
+    try {
+      const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
+      const block = _todaysBlock(workouts.find(w => w.date === _localDateKey()), name);
+      const last = block && block.sets[block.sets.length - 1];
+      return last && last.reps != null ? { weight: last.weight, reps: last.reps } : null;
+    } catch { return null; }
   }
 
   /** "Log set N" for the common single-row case; "Log N sets" once more
@@ -1049,6 +1082,15 @@
 
         _qlWeight = weightEl && weightEl.value !== '' ? Number(weightEl.value) : fallbackWeight;
         _qlReps = repsEl && repsEl.value !== '' ? Number(repsEl.value) : fallbackReps;
+
+        // Picked an exercise already in today's session (e.g. back to it
+        // after another lift): the next set continues that block, so start
+        // from its previous set rather than last session's suggestion.
+        const todaysLast = isNewExercise ? _todaysLastSet(name) : null;
+        if (todaysLast) {
+          if (todaysLast.weight != null) _qlWeight = Number(todaysLast.weight);
+          _qlReps = Number(todaysLast.reps);
+        }
       }
       if (isNewExercise) _resetQuickLogSetOpts();
       _syncQuickLogDisplay();

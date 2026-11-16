@@ -4310,6 +4310,7 @@
 <!-- Optional runtime configuration -->
 <script src="config.js"></script>
 <script src="auth.js"></script>
+<script src="src/js/session-grouping.js"></script>
 <script src="archiveOldWorkouts.js"></script>
 <script src="src/js/workout-data.js"></script>
 <script src="progressiveOverload.js"></script>
@@ -6543,6 +6544,50 @@ function submitLogEntry() {
   }
 }
 
+// Adds newEntry's sets onto the latest stored entry of the same exercise in
+// this session (matched by exerciseId, else name) and returns that entry, or
+// returns null when a new entry is needed: no earlier sets, a different unit
+// or machine/gym tag (those change how PRs compare), or a planned
+// program/template row whose sets are ticked off rather than logged.
+function appendToSessionEntry(log, newEntry) {
+  const grouping = window.sessionGrouping;
+  if (!grouping || !Array.isArray(log) || !log.length) return null;
+  const block = grouping.findBlockFor(log, newEntry.exercise, newEntry.exerciseId);
+  if (!block) return null;
+  const target = log[block.entryIndexes[block.entryIndexes.length - 1]];
+  if (!target || target.templateExerciseId) return null;
+  if ((target.unit || 'kg') !== (newEntry.unit || 'kg')) return null;
+  const ctxKey = ctx => JSON.stringify({
+    m: !!ctx?.altMachine, g: !!ctx?.altGym, n: String(ctx?.gymName || '').trim().toLowerCase()
+  });
+  if (ctxKey(target.sessionCtx) !== ctxKey(newEntry.sessionCtx)) return null;
+
+  normalizeEntry(target);
+  const length = target.repsArray.length;
+  grouping.PER_SET_ARRAYS.forEach(key => {
+    const incoming = Array.isArray(newEntry[key]) ? newEntry[key] : [];
+    if (!Array.isArray(target[key])) target[key] = [];
+    // Older entries may predate an array (rirArray, sideRepsArray, ...):
+    // pad to the set count so every array stays index-aligned.
+    while (target[key].length < length) {
+      target[key].push(key === 'advancedArray' ? createDefaultAdvancedSet() : grouping.PER_SET_DEFAULTS[key]);
+    }
+    target[key].length = length;
+    for (let i = 0; i < newEntry.repsArray.length; i++) {
+      const v = incoming[i];
+      target[key].push(v !== undefined ? v : (key === 'advancedArray' ? createDefaultAdvancedSet() : grouping.PER_SET_DEFAULTS[key]));
+    }
+  });
+  target.sets = target.repsArray.length;
+  if (!target.exerciseId && newEntry.exerciseId) target.exerciseId = newEntry.exerciseId;
+  if (!Number(target.goal) && Number(newEntry.goal)) target.goal = newEntry.goal;
+  if (!Number(target.repGoal) && Number(newEntry.repGoal)) target.repGoal = newEntry.repGoal;
+  if (newEntry.targetRPE != null) target.targetRPE = newEntry.targetRPE;
+  if (newEntry.targetRIR != null) target.targetRIR = newEntry.targetRIR;
+  if (newEntry.maxedOut) target.maxedOut = true;
+  return target;
+}
+
 function addLogEntry() {
   const exercise = document.getElementById("exercise").value.trim();
   const sets = +document.getElementById("sets").value;
@@ -6677,13 +6722,20 @@ function addLogEntry() {
   }
 
   const activeWorkoutIndex = workouts.findIndex(w => w.date === date);
-  workouts[activeWorkoutIndex].log.push(newEntry);
+  const _grouping = window.sessionGrouping;
+  if (_grouping) newEntry.exerciseId = _grouping.exerciseIdFor(exercise);
+  // Same exercise already in this session: add the set(s) to its block
+  // instead of a new log entry, so it shows as one exercise with numbered
+  // sets. Volume/PR/set counts read the per-set arrays, so they don't change.
+  const savedEntry = (typeof appendToSessionEntry === 'function'
+    && appendToSessionEntry(workouts[activeWorkoutIndex].log, newEntry)) || newEntry;
+  if (savedEntry === newEntry) workouts[activeWorkoutIndex].log.push(newEntry);
 
   let _deloadFor = null;
   if (typeof suggestNextSession === 'function') {
-    const recommendation = suggestNextSession(newEntry, getOverloadWorkouts(_activeUser, workouts));
+    const recommendation = suggestNextSession(savedEntry, getOverloadWorkouts(_activeUser, workouts));
     if (recommendation) {
-      newEntry.nextSessionRecommendation = recommendation;
+      savedEntry.nextSessionRecommendation = recommendation;
       if (recommendation.strategy === 'deload') _deloadFor = exercise;
     }
   }
@@ -6935,18 +6987,62 @@ function repeatLastWorkoutShortcut() {
     window.showToast?.('No previous workout to repeat yet.', 'info', 2500);
     return;
   }
-  const lastWorkout = withLogs.slice().sort((a, b) => (a.date > b.date ? 1 : -1)).pop();
-  const lastEntry = lastWorkout.log[lastWorkout.log.length - 1];
-  if (!lastEntry?.exercise) return;
+  const today = localDateKey();
+  const sorted = withLogs.slice().sort((a, b) => (a.date > b.date ? 1 : -1));
+  // The last session before today (today's own can't be "last workout").
+  const lastWorkout = sorted.filter(w => (w.date || '') < today).pop() || sorted.pop();
+  if (workouts.some(w => w.date === today && w.metadata?.source === 'repeat')) {
+    window.showToast?.("Last workout is already in today's log.", 'info', 2500);
+    return;
+  }
 
-  const lastIndex = (lastEntry.weightsArray?.length || 1) - 1;
-  const plannedFirstSet = {
-    weight: lastEntry.weightsArray?.[lastIndex] ?? null,
-    reps: lastEntry.repsArray?.[lastIndex] ?? null,
-  };
+  // One planned block per exercise with that exercise's sets — sessions
+  // quick-logged one set per entry used to come back as one row per set.
+  const grouping = window.sessionGrouping;
+  const collapsed = grouping ? grouping.collapseSessionLog(lastWorkout.log) : lastWorkout.log;
+  const log = collapsed
+    .filter(e => e && e.exercise && Array.isArray(e.repsArray) && e.repsArray.length)
+    .map((e, i) => {
+      const n = e.repsArray.length;
+      return {
+        exercise: e.exercise,
+        exerciseId: e.exerciseId || grouping?.exerciseIdFor(e.exercise),
+        sets: n,
+        repsArray: e.repsArray.map(r => Number(r) || 0),
+        weightsArray: Array.from({ length: n }, (_, j) => Number(e.weightsArray?.[j]) || 0),
+        dropsetArray: Array.from({ length: n }, (_, j) => !!e.dropsetArray?.[j]),
+        restPauseArray: Array.from({ length: n }, (_, j) => !!e.restPauseArray?.[j]),
+        unilateralArray: Array.from({ length: n }, (_, j) => !!e.unilateralArray?.[j]),
+        skippedArray: Array(n).fill(false),
+        completedArray: Array(n).fill(false),
+        setTypeArray: Array.from({ length: n }, (_, j) => e.setTypeArray?.[j] || DEFAULT_SET_TYPE),
+        advancedArray: Array.from({ length: n }, () => createDefaultAdvancedSet()),
+        templateExerciseId: `repeat_${i}`,
+        unit: e.unit || 'kg',
+        date: today,
+      };
+    });
+  if (!log.length) return;
 
-  if (typeof window.startQuickLogFor === 'function') {
-    window.startQuickLogFor(lastEntry.exercise, plannedFirstSet);
+  workouts.push({
+    id: newWorkoutId(),
+    title: lastWorkout.title && !/^Workout on \d{4}-\d{2}-\d{2}$/.test(lastWorkout.title) ? lastWorkout.title : `Workout on ${today}`,
+    date: today,
+    metadata: { source: 'repeat', planned: true, repeatOf: lastWorkout.id || lastWorkout.date || null },
+    log,
+    restBreaks: [],
+  });
+  localStorage.setItem(`workouts_${userId}`, JSON.stringify(workouts));
+  if (typeof renderWorkouts === 'function') renderWorkouts();
+  const setCount = log.reduce((n, e) => n + e.sets, 0);
+  window.showToast?.(`Last workout loaded: ${log.length} exercise${log.length === 1 ? '' : 's'}, ${setCount} set${setCount === 1 ? '' : 's'}.`, 'success', 2500);
+  // renderWorkouts() may archive old sessions first, so look the index up again.
+  const stored = JSON.parse(localStorage.getItem(`workouts_${userId}`)) || [];
+  const loadedIndex = stored.findIndex(w => w.date === today && w.metadata?.source === 'repeat');
+  const details = document.getElementById(`workoutDetails${loadedIndex}`);
+  if (details) {
+    details.style.display = 'block';
+    details.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }
 }
 window.repeatLastWorkoutShortcut = repeatLastWorkoutShortcut;
@@ -7425,7 +7521,10 @@ function getExerciseTrend(entry, previousExercise) {
   return { icon: '➡️', label: 'Holding steady vs last time', cls: 'trend-flat' };
 }
 
-function createExerciseCard(workoutIndex, entryIndex, entry) {
+// `block` (from sessionGrouping.groupSessionLog) is passed when the exercise
+// spans several stored entries: `entry` is then the merged read-only view and
+// each set row edits its own stored entry via block.sets[].entryIndex.
+function createExerciseCard(workoutIndex, entryIndex, entry, block = null, rawLog = null) {
   const card = document.createElement('div');
   card.className = 'exercise-card';
 
@@ -7493,7 +7592,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   headerMenuButton.className = 'menu-button';
   headerMenuButton.setAttribute('aria-label', 'Exercise actions');
   headerMenuButton.innerHTML = '&#8942;';
-  headerMenuButton.addEventListener('click', event => openContextMenu(event, workoutIndex, entryIndex));
+  headerMenuButton.addEventListener('click', event => openContextMenu(event, workoutIndex, entryIndex, null, block ? block.entryIndexes : null));
   header.appendChild(headerMenuButton);
 
   card.appendChild(header);
@@ -7563,11 +7662,19 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   const setList = document.createElement('div');
   setList.className = 'set-list';
 
-  const reps = entry.repsArray || [];
-  reps.forEach((rep, setIndex) => {
-    const row = createSetRow(workoutIndex, entryIndex, entry, setIndex);
-    setList.appendChild(row);
-  });
+  if (block) {
+    const log = rawLog || workouts[workoutIndex]?.log || [];
+    block.sets.forEach(s => {
+      const stored = log[s.entryIndex];
+      if (stored) setList.appendChild(createSetRow(workoutIndex, s.entryIndex, stored, s.setIndex, s.number));
+    });
+  } else {
+    const reps = entry.repsArray || [];
+    reps.forEach((rep, setIndex) => {
+      const row = createSetRow(workoutIndex, entryIndex, entry, setIndex);
+      setList.appendChild(row);
+    });
+  }
 
   card.appendChild(setList);
 
@@ -7613,7 +7720,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry) {
   return card;
 }
 
-function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
+function createSetRow(workoutIndex, entryIndex, entry, setIndex, displayNumber = setIndex + 1) {
   const wrapper = document.createElement('div');
   wrapper.className = 'set-row-wrapper';
 
@@ -7629,8 +7736,8 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
 
   const indexLabel = document.createElement('span');
   indexLabel.className = 'set-index';
-  indexLabel.textContent = `${setIndex + 1}`;
-  indexLabel.setAttribute('aria-label', `Set ${setIndex + 1}`);
+  indexLabel.textContent = `${displayNumber}`;
+  indexLabel.setAttribute('aria-label', `Set ${displayNumber}`);
   setRow.appendChild(indexLabel);
 
   const weightWrapper = document.createElement('div');
@@ -7641,7 +7748,7 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   const weightInput = document.createElement('input');
   weightInput.type = 'text';
   weightInput.inputMode = 'decimal';
-  weightInput.setAttribute('aria-label', `Set ${setIndex + 1} weight`);
+  weightInput.setAttribute('aria-label', `Set ${displayNumber} weight`);
   weightInput.value = entry.weightsArray?.[setIndex] ?? '';
   weightInput.addEventListener('change', event => editSetValue(workoutIndex, entryIndex, 'weight', event.target.value, setIndex));
   weightWrapper.appendChild(weightLabel);
@@ -7662,7 +7769,7 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex) {
   const repsInput = document.createElement('input');
   repsInput.type = 'number';
   repsInput.inputMode = 'numeric';
-  repsInput.setAttribute('aria-label', `Set ${setIndex + 1} reps`);
+  repsInput.setAttribute('aria-label', `Set ${displayNumber} reps`);
   repsInput.value = entry.repsArray?.[setIndex] ?? '';
   repsInput.addEventListener('change', event => editSetValue(workoutIndex, entryIndex, 'rep', event.target.value, setIndex));
   repsWrapper.appendChild(repsLabel);
@@ -7983,7 +8090,9 @@ document.addEventListener('keydown', event => {
   }
 });
 
-function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
+// blockEntryIndexes: every stored entry of a grouped exercise card, so
+// exercise-level actions cover all of its sets, not just the first entry's.
+function openContextMenu(event, workoutIndex, entryIndex, setIndex = null, blockEntryIndexes = null) {
   event.preventDefault();
   event.stopPropagation();
 
@@ -8041,8 +8150,11 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
     const _logUserForMenu = window.coachLoggingClient || currentUser;
     const _workoutsForMenu = JSON.parse(localStorage.getItem(`workouts_${_logUserForMenu}`)) || [];
     const _entryForMenu = _workoutsForMenu[workoutIndex]?.log?.[entryIndex];
+    const _blockIdx = Array.isArray(blockEntryIndexes) && blockEntryIndexes.length ? blockEntryIndexes : [entryIndex];
+    // New sets go at the end of the block: onto its latest stored entry.
+    const _lastIdx = _blockIdx[_blockIdx.length - 1];
 
-    addButton('Add Set', () => addSetToLog(workoutIndex, entryIndex));
+    addButton('Add Set', () => addSetToLog(workoutIndex, _lastIdx));
     const goalRow = card.querySelector('.goal-row');
     if (goalRow) {
       addButton('Edit Goals', () => {
@@ -8050,9 +8162,9 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null) {
         goalRow.querySelector('input')?.focus();
       });
     }
-    addButton(_entryForMenu?.maxedOut ? 'Un-mark Maxed Out' : 'Mark as Maxed Out', () => toggleMaxedOut(workoutIndex, entryIndex));
-    addButton(_entryForMenu?.sessionCtx?.altMachine ? 'Same machine as usual' : 'Different machine', () => toggleAltMachineEntry(workoutIndex, entryIndex));
-    addButton('Delete Exercise', () => removeLogEntry(workoutIndex, entryIndex));
+    addButton(_entryForMenu?.maxedOut ? 'Un-mark Maxed Out' : 'Mark as Maxed Out', () => toggleMaxedOut(workoutIndex, _blockIdx));
+    addButton(_entryForMenu?.sessionCtx?.altMachine ? 'Same machine as usual' : 'Different machine', () => toggleAltMachineEntry(workoutIndex, _blockIdx));
+    addButton('Delete Exercise', () => removeLogEntry(workoutIndex, _blockIdx));
   }
 
   if (activeContextMenu && activeContextMenu !== menu) {
@@ -8158,9 +8270,10 @@ function openSessionRatingModal(workoutIndex) {
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const log = Array.isArray(workout.log) ? workout.log : [];
   const setCount = log.reduce((n, e) => n + (Array.isArray(e?.repsArray) ? e.repsArray.length : (Number(e?.sets) || 0)), 0);
+  const exerciseCount = window.sessionGrouping ? window.sessionGrouping.groupSessionLog(log).length : log.length;
   const chips = [
     workout.title ? `<span class="tl-sheet-chip">${icon('clipboard')}${esc(workout.title)}</span>` : '',
-    log.length ? `<span class="tl-sheet-chip">${icon('dumbbell')}${log.length} exercise${log.length === 1 ? '' : 's'}</span>` : '',
+    exerciseCount ? `<span class="tl-sheet-chip">${icon('dumbbell')}${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}</span>` : '',
     setCount ? `<span class="tl-sheet-chip">${icon('check')}${setCount} set${setCount === 1 ? '' : 's'}</span>` : ''
   ].join('');
   const isEdit = !!workout.sessionRating;
@@ -8329,11 +8442,23 @@ function renderWorkouts() {
     cardsWrapper.className = 'exercise-card-list';
 
     if (Array.isArray(workout.log)) {
-      workout.log.forEach((entry, entryIndex) => {
+      workout.log.forEach(entry => {
         if (normalizeEntry(entry)) {
           workoutsUpdated = true;
         }
-        const card = createExerciseCard(workoutIndex, entryIndex, entry);
+        // Additive, backfilled on read: the id sets are grouped by.
+        if (window.sessionGrouping?.ensureExerciseId(entry)) workoutsUpdated = true;
+      });
+      // One card per exercise: sets logged as separate entries (older quick
+      // logs, or the same lift picked up again later) show as one block.
+      const blocks = window.sessionGrouping
+        ? window.sessionGrouping.groupSessionLog(workout.log)
+        : workout.log.map((entry, entryIndex) => ({ entryIndexes: [entryIndex] }));
+      blocks.forEach(block => {
+        const firstIndex = block.entryIndexes[0];
+        const card = block.entryIndexes.length > 1
+          ? createExerciseCard(workoutIndex, firstIndex, window.sessionGrouping.mergedBlockEntry(workout.log, block), block)
+          : createExerciseCard(workoutIndex, firstIndex, workout.log[firstIndex]);
         cardsWrapper.appendChild(card);
       });
     }
@@ -8465,6 +8590,10 @@ function addSetToLog(workoutIndex, entryIndex, afterIndex = null) {
     entry.advancedArray = [];
   }
   entry.advancedArray.splice(insertPosition, 0, createDefaultAdvancedSet());
+  insertAt(entry.rpeArray, null);
+  insertAt(entry.rirArray, null);
+  insertAt(entry.unilateralArray, false);
+  insertAt(entry.sideRepsArray, null);
 
   entry.sets = entry.repsArray.length;
 
@@ -8492,6 +8621,11 @@ function deleteSetFromLog(workoutIndex, entryIndex, setIndex) {
   removeAt('completedArray');
   removeAt('setTypeArray');
   removeAt('advancedArray');
+  // Per-set RPE/RIR/L-R arrays too, or later sets inherit a deleted set's values.
+  removeAt('rpeArray');
+  removeAt('rirArray');
+  removeAt('unilateralArray');
+  removeAt('sideRepsArray');
 
   entry.sets = entry.repsArray.length;
 
@@ -8553,13 +8687,17 @@ function changeSetType(workoutIndex, entryIndex, setIndex, type) {
   renderWorkouts();
 }
 
+// entryIndex may be an array: every stored entry of one grouped exercise.
 function toggleMaxedOut(workoutIndex, entryIndex) {
   const _logUser = window.coachLoggingClient || currentUser;
   const workouts = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
-  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  const indexes = Array.isArray(entryIndex) ? entryIndex : [entryIndex];
+  const entries = indexes.map(i => workouts[workoutIndex]?.log?.[i]).filter(Boolean);
+  const entry = entries[0];
   if (!entry) return;
 
-  entry.maxedOut = !entry.maxedOut;
+  const next = !entry.maxedOut;
+  entries.forEach(e => { e.maxedOut = next; });
   localStorage.setItem(`workouts_${_logUser}`, JSON.stringify(workouts));
   renderWorkouts();
 }
@@ -8573,14 +8711,19 @@ window.toggleMaxedOut = toggleMaxedOut;
 function toggleAltMachineEntry(workoutIndex, entryIndex) {
   const _logUser = window.coachLoggingClient || currentUser;
   const workouts = JSON.parse(localStorage.getItem(`workouts_${_logUser}`)) || [];
-  const entry = workouts[workoutIndex]?.log?.[entryIndex];
+  const indexes = Array.isArray(entryIndex) ? entryIndex : [entryIndex];
+  const entries = indexes.map(i => workouts[workoutIndex]?.log?.[i]).filter(Boolean);
+  const entry = entries[0];
   if (!entry) return;
 
-  const ctx = { altMachine: false, altGym: false, gymName: '', ...(entry.sessionCtx || {}) };
-  ctx.altMachine = !ctx.altMachine;
-  if (ctx.altMachine || ctx.altGym) entry.sessionCtx = ctx;
-  else delete entry.sessionCtx;
-  delete entry.nextSessionRecommendation;
+  const turnOn = !entry.sessionCtx?.altMachine;
+  entries.forEach(e => {
+    const ctx = { altMachine: false, altGym: false, gymName: '', ...(e.sessionCtx || {}) };
+    ctx.altMachine = turnOn;
+    if (ctx.altMachine || ctx.altGym) e.sessionCtx = ctx;
+    else delete e.sessionCtx;
+    delete e.nextSessionRecommendation;
+  });
 
   localStorage.setItem(`workouts_${_logUser}`, JSON.stringify(workouts));
   // A set that now counts (or no longer counts) may change this exercise's PRs.
@@ -8898,7 +9041,10 @@ async function loadTemplateDropdown(username = currentUser) {
 
 function buildTemplateFromWorkout(workout, metadata = {}) {
   const safeWorkout = workout && typeof workout === 'object' ? workout : {};
-  const log = Array.isArray(safeWorkout.log) ? safeWorkout.log : [];
+  const rawLog = Array.isArray(safeWorkout.log) ? safeWorkout.log : [];
+  // One template exercise per exercise (with all its sets), not one per
+  // stored entry — quick log used to store each set as its own entry.
+  const log = window.sessionGrouping ? window.sessionGrouping.collapseSessionLog(rawLog) : rawLog;
   const exercises = log.map((entry, exerciseIndex) => {
     const setCount = Number(entry.sets) || (Array.isArray(entry.repsArray) ? entry.repsArray.length : 0);
     const groupType = entry.groupType || 'straight';
@@ -14757,9 +14903,12 @@ function calculateWorkoutVolume(workout) {
 }
 
 
+// entryIndex may be an array (a grouped exercise): removed highest first so
+// the remaining indexes stay valid.
 function removeLogEntry(workoutIndex, entryIndex) {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  workouts[workoutIndex].log.splice(entryIndex, 1);
+  const indexes = (Array.isArray(entryIndex) ? entryIndex : [entryIndex]).slice().sort((a, b) => b - a);
+  indexes.forEach(i => workouts[workoutIndex].log.splice(i, 1));
   localStorage.setItem(`workouts_${currentUser}`, JSON.stringify(workouts));
   if (typeof syncLocalHistoryFromWorkouts === 'function') {
     syncLocalHistoryFromWorkouts();
@@ -14782,7 +14931,9 @@ function removeWorkout(index) {
 function buildWorkoutHistoryEntry(workout, index = 0) {
   if (!workout || !Array.isArray(workout.log) || !workout.log.length) return null;
 
-  const sets = workout.log.map(entry => {
+  // One History row per exercise, sets in logged order.
+  const log = window.sessionGrouping ? window.sessionGrouping.collapseSessionLog(workout.log) : workout.log;
+  const sets = log.map(entry => {
     const reps = Array.isArray(entry.repsArray)
       ? entry.repsArray
           .filter(v => v !== null && v !== undefined && v !== '')

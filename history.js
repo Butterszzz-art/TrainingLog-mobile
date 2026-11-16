@@ -417,11 +417,17 @@ function normalizeHistoryItem(item) {
       ))
     : mapToResistanceLog(workout).exercises;
 
+  // Older quick-logged sessions stored every set as its own exercise row:
+  // show one row per exercise with all of its sets (display only — the
+  // volume of the grouped rows is the same sum).
+  const grouping = typeof window !== 'undefined' ? window.sessionGrouping : null;
+  const groupedExercises = grouping ? grouping.groupHistoryExercises(exercises) : exercises;
+
   return {
     id: item?.id || workout?.id || generateLocalId(),
     title: item?.title || workout?.title || workout?.name || 'Workout',
     date: item?.date || workout?.date || workout?.createdAt,
-    exercises,
+    exercises: groupedExercises,
     sessionRating: item?.sessionRating || workout?.sessionRating || null,
     workout
   };
@@ -684,15 +690,31 @@ function renderHistoryDetail(containerEl, log) {
         .map(key => ({ label: SESSION_RATING_LABELS[key], value: Number(log.sessionRating[key]) || 0 }))
     : [];
 
+  // The full record (when it's still on this device) also has RIR and set
+  // tags; group it the same way as the log so each exercise shows once.
+  const grouping = typeof window !== 'undefined' ? window.sessionGrouping : null;
+  const srcBlocks = src && grouping ? grouping.groupSessionLog(src.list[src.index].log) : [];
+  const blockFor = name => {
+    if (!grouping) return null;
+    const id = grouping.exerciseIdFor(name);
+    return srcBlocks.find(b => b.exerciseId === id || grouping.exerciseIdFor(b.name) === id) || null;
+  };
+
   const exerciseHtml = exercises.map((ex, exIndex) => {
     const reps = Array.isArray(ex?.repsArray) ? ex.repsArray : [];
     const weights = Array.isArray(ex?.weightsArray) ? ex.weightsArray : [];
     const length = Math.max(reps.length, weights.length);
     const vol = historyVolume([ex]);
+    const block = blockFor(ex?.name);
+    const richSets = block && block.sets.length === length ? block.sets : null;
     const sets = Array.from({ length }, (_, idx) => {
       const repValue = reps[idx] ?? 0;
       const weightValue = weights[idx] ?? 0;
-      return `<div class="hist-set"><span class="hist-set-n">${idx + 1}</span><b>${histEsc(weightValue)}<small>kg</small><span class="hist-x">×</span>${histEsc(repValue)}</b></div>`;
+      const rich = richSets ? richSets[idx] : null;
+      const extra = rich
+        ? [rich.rir != null ? `RIR ${rich.rir}` : '', ...(rich.tags || [])].filter(Boolean)
+        : [];
+      return `<div class="hist-set"><span class="hist-set-n">${idx + 1}</span><b>${histEsc(weightValue)}<small>kg</small><span class="hist-x">×</span>${histEsc(repValue)}</b>${extra.length ? `<span class="mx-meta hist-set-tags">${histEsc(extra.join(' · '))}</span>` : ''}</div>`;
     });
     return `
       <section class="pod mx-pod history-detail-card" aria-label="${histEsc(ex?.name || 'Exercise')}">
