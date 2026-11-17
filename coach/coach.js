@@ -943,9 +943,9 @@ function scoreRows(ci, prev) {
 function renderCheckIn(c) {
   const el = document.getElementById('dtab_checkin');
   const d = _clientDetails[c.id];
-  const list = d?.checkIns || [];
+  const list = checkInEntries(d);
   if (c.status === 'pending' || !list.length) {
-    el.innerHTML = (c.status === 'pending' ? '' : checkInSettingsCard(c))
+    el.innerHTML = (c.status === 'pending' ? '' : checkInSettingsCard(c) + addPhotosBar(c))
       + '<div class="d-card"><p class="ws-empty-note" style="text-align:center;padding:24px 0;">'
       + (d === undefined && c.status !== 'pending' ? 'Loading…' : 'No check-ins shared yet.') + '</p></div>';
     return;
@@ -956,29 +956,241 @@ function renderCheckIn(c) {
   const sharesPhotos = c.sharing ? c.sharing.photos === true : null;
   const review = photoReview(c);
   const reviewed = c.reviewedCheckInDate || '';
-  el.innerHTML = checkInSettingsCard(c) + (sharesPhotos === false && !list.some(ci => ci.photoCount)
-    ? '<p class="ws-empty-note ci-photo-off">' + ic('camera') + ' ' + escapeHtml(c.clientName || 'This client') + ' hasn\'t switched on photo sharing, so check-ins arrive without photos.</p>' : '')
+  const checkIns = list.filter(e => !e.photoOnly);
+  el.innerHTML = checkInSettingsCard(c) + addPhotosBar(c) + (sharesPhotos === false && !list.some(ci => ci.photoCount)
+    ? '<p class="ws-empty-note ci-photo-off">' + ic('camera') + ' ' + escapeHtml(c.clientName || 'This client') + ' hasn\'t switched on photo sharing, so check-ins arrive without photos. You can add photos yourself.</p>' : '')
     + '<div class="ov-grid">' + list.map((ci, i) => {
-      const prev = list.slice(i + 1).find(p => p.photoCount);
+      const prev = list.slice(i + 1).find(p => p.photoCount || p.coachPhotoCount);
+      const total = (ci.photoCount || 0) + (ci.coachPhotoCount || 0);
+      // A date with only photos you added: no scores, review or thread.
+      if (ci.photoOnly) {
+        return '<div class="d-card ci-card' + (i === 0 ? ' d-card--wide' : '') + '" data-ci-card="' + escapeHtml(ci.date) + '"'
+          + (prev ? ' data-ci-prev="' + escapeHtml(prev.date) + '"' : '') + '>'
+          + cardHead('Progress photos', null, null, '<span class="ci-card-chips"><span class="ca-chip">' + escapeHtml(shortDate(ci.date) || ci.date) + '</span></span>')
+          + '<p class="ws-empty-note">Added by you. Only you can see these.</p>'
+          + photoStrip(ci.date, total) + addPhotosButton(c.id, ci.date)
+          + '</div>';
+      }
+      // The newest shared check-in (photo-only dates don't count) gets the
+      // wide card and the review button; scores compare with the one before.
+      const ri = checkIns.indexOf(ci);
+      const latest = ri === 0;
       const flags = (review.newPhotos.includes(ci.date) ? '<span class="ca-chip ca-chip--green ci-flag">New photos</span>' : '')
         + (review.replies.includes(ci.date) ? '<span class="ca-chip ca-chip--brass ci-flag">Client replied</span>' : '');
-      return '<div class="d-card ci-card' + (i === 0 ? ' d-card--wide' : '') + '" data-ci-card="' + escapeHtml(ci.date) + '"'
+      return '<div class="d-card ci-card' + (latest ? ' d-card--wide' : '') + '" data-ci-card="' + escapeHtml(ci.date) + '"'
         + (prev ? ' data-ci-prev="' + escapeHtml(prev.date) + '"' : '') + '>'
-        + cardHead(i === 0 ? 'Latest check-in' : 'Check-in', null, null,
-          '<span class="ci-card-chips">' + flags + '<span class="ca-chip' + (i === 0 ? ' ca-chip--green' : '') + '">' + escapeHtml(shortDate(ci.date) || ci.date) + (ci.bodyweight ? ' · ' + ci.bodyweight + ' kg' : '') + '</span></span>')
-        + scoreRows(ci, list[i + 1])
+        + cardHead(latest ? 'Latest check-in' : 'Check-in', null, null,
+          '<span class="ci-card-chips">' + flags + '<span class="ca-chip' + (latest ? ' ca-chip--green' : '') + '">' + escapeHtml(shortDate(ci.date) || ci.date) + (ci.bodyweight ? ' · ' + ci.bodyweight + ' kg' : '') + '</span></span>')
+        + scoreRows(ci, checkIns[ri + 1])
         + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
         + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
         + (ci.answers || []).map(x => '<div class="ci-answer"><span class="ci-answer-q">' + escapeHtml(x.q) + '</span><span class="ci-answer-a">' + escapeHtml(x.a) + '</span></div>').join('')
-        + (i === 0 ? '<div class="ci-review-row">' + (ci.date > reviewed
+        + (latest ? '<div class="ci-review-row">' + (ci.date > reviewed
           ? '<button class="bulk-action-btn" onclick="markCheckInReviewed(\'' + escapeHtml(c.id) + '\', \'' + escapeHtml(ci.date) + '\')">' + ic('check') + ' Mark reviewed</button>'
           : '<span class="ca-chip ca-chip--green">' + ic('check') + ' Reviewed</span>') + '</div>' : '')
-        + (ci.photoCount ? '<div class="ci-photo-strip" data-ci-photos="' + escapeHtml(ci.date) + '" aria-label="' + ci.photoCount + ' check-in photos">'
-          + Array.from({ length: ci.photoCount }, () => '<span class="ci-photo-thumb ci-photo-thumb--skeleton" aria-hidden="true"></span>').join('') + '</div>' : '')
+        + photoStrip(ci.date, total) + addPhotosButton(c.id, ci.date)
         + '<div class="ci-thread" data-ci-thread="' + escapeHtml(ci.date) + '"><span class="ws-empty-note">Loading comments…</span></div>'
         + '</div>';
     }).join('') + '</div>';
   watchCheckInCards(c.id, el);
+}
+
+// Shared check-ins plus dates that only have photos you added, newest
+// first. Each entry carries coachPhotoCount (photos you added on that date).
+function checkInEntries(d) {
+  const counts = d?.coachPhotoCounts || {};
+  const list = (d?.checkIns || []).map(ci => ({ ...ci, coachPhotoCount: counts[ci.date] || 0 }));
+  const have = new Set(list.map(ci => ci.date));
+  for (const [date, n] of Object.entries(counts)) {
+    if (!have.has(date) && n > 0) list.push({ date, photoOnly: true, coachPhotoCount: n });
+  }
+  return list.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
+function photoStrip(date, count) {
+  if (!count) return '';
+  return '<div class="ci-photo-strip" data-ci-photos="' + escapeHtml(date) + '" aria-label="' + count + ' check-in photos">'
+    + Array.from({ length: count }, () => '<span class="ci-photo-thumb ci-photo-thumb--skeleton" aria-hidden="true"></span>').join('') + '</div>';
+}
+
+function addPhotosButton(clientId, date) {
+  return '<div class="ci-add-photos-row"><button type="button" class="bulk-action-btn bulk-action-btn--ghost" onclick="openAddCheckInPhotos(\''
+    + escapeHtml(clientId) + '\', \'' + escapeHtml(date) + '\')">' + ic('camera') + ' Add photos</button></div>';
+}
+
+// Above the cards: add progress photos on any date (e.g. photos the client
+// sent by message, or an in-person check-in).
+function addPhotosBar(c) {
+  return '<div class="ci-add-photos-bar"><span class="ws-empty-note">Got progress photos another way? Add them to a check-in to track ' + escapeHtml(c.clientName || 'your client') + '\'s progress here.</span>'
+    + '<button type="button" class="bulk-action-btn" onclick="openAddCheckInPhotos(\'' + escapeHtml(c.id) + '\', \'\')">' + ic('camera') + ' Add progress photos</button></div>';
+}
+
+// ── Adding check-in photos (POST/DELETE /api/coach/clients/:id/checkin-photos/:date) ──
+// Photos are shrunk in the browser to a JPEG under the backend's 450 KB cap
+// and sent one per request. Only the coach sees them.
+
+const COACH_PHOTO_MAX_BYTES = 440 * 1024;
+const COACH_PHOTO_POSES = ['Front', 'Side', 'Back', 'Front double biceps', 'Back double biceps', 'Side chest', 'Abs and thigh', 'Most muscular'];
+
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('unreadable')); };
+    img.src = url;
+  });
+}
+
+// A JPEG data URL of the image, long edge ≤ 1600 px, under COACH_PHOTO_MAX_BYTES.
+async function shrinkPhoto(file) {
+  const img = await loadImageFile(file);
+  let edge = 1600;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const scale = Math.min(1, edge / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    for (const quality of [0.85, 0.75, 0.65]) {
+      const url = canvas.toDataURL('image/jpeg', quality);
+      if (Math.floor((url.length - url.indexOf(',') - 1) * 3 / 4) <= COACH_PHOTO_MAX_BYTES) return url;
+    }
+    edge = Math.round(edge * 0.8);
+  }
+  throw new Error('too_large');
+}
+
+function openAddCheckInPhotos(clientId, date) {
+  const c = _clients.find(x => x.id === clientId);
+  if (!c) return;
+  const entries = checkInEntries(_clientDetails[clientId]);
+  const today = new Date();
+  const todayIso = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const items = []; // { file, image (data URL) | null, pose, error }
+  document.getElementById('ciAddPhotos')?.remove();
+  const box = document.createElement('div');
+  box.id = 'ciAddPhotos';
+  box.className = 'ci-add-overlay';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.setAttribute('aria-labelledby', 'ciAddPhotosTitle');
+  box.innerHTML = '<form class="ci-add-dialog">'
+    + '<h3 id="ciAddPhotosTitle">Add check-in photos</h3>'
+    + '<p class="ws-empty-note">For ' + escapeHtml(c.clientName || 'this client') + '. Only you can see photos you add; they show with the check-in and in Compare.</p>'
+    + '<label class="ci-settings-label" for="ciAddDate">Check-in</label>'
+    + '<select id="ciAddDate" class="coach-input">'
+    + (entries.some(e => e.date === todayIso) ? '' : '<option value="' + todayIso + '">Today (' + escapeHtml(shortDate(todayIso) || todayIso) + ')</option>')
+    + entries.map(e => '<option value="' + escapeHtml(e.date) + '">' + escapeHtml(shortDate(e.date) || e.date) + (e.photoOnly ? ' · photos only' : ' · check-in') + '</option>').join('')
+    + '<option value="other">Another date…</option></select>'
+    + '<input type="date" id="ciAddOtherDate" class="coach-input" max="' + todayIso + '" hidden aria-label="Photo date">'
+    + '<label class="ci-add-drop" tabindex="0"><input type="file" id="ciAddFiles" accept="image/jpeg,image/png,image/webp" multiple hidden>'
+    + ic('camera') + '<span>Choose photos or drop them here</span><small>JPEG, PNG or WebP · up to 10 per check-in</small></label>'
+    + '<div class="ci-add-list" id="ciAddList"></div>'
+    + '<datalist id="ciPoseList">' + COACH_PHOTO_POSES.map(p => '<option value="' + escapeHtml(p) + '">').join('') + '</datalist>'
+    + '<div class="ci-compose-row"><span class="ci-compose-status" id="ciAddStatus"></span>'
+    + '<button type="button" class="bulk-action-btn bulk-action-btn--ghost" data-ci-add="cancel">Cancel</button>'
+    + '<button type="submit" class="bulk-action-btn" id="ciAddSave" disabled>Add photos</button></div>'
+    + '</form>';
+  document.body.appendChild(box);
+
+  const q = id => box.querySelector('#' + id);
+  const dateSel = q('ciAddDate');
+  if (date && [...dateSel.options].some(o => o.value === date)) dateSel.value = date;
+  dateSel.onchange = () => { q('ciAddOtherDate').hidden = dateSel.value !== 'other'; };
+  const status = (text, isError) => { q('ciAddStatus').textContent = text || ''; q('ciAddStatus').classList.toggle('is-error', !!isError); };
+  const paint = () => {
+    q('ciAddList').innerHTML = items.map((it, i) => '<div class="ci-add-item">'
+      + (it.image ? '<img src="' + escapeHtml(it.image) + '" alt="">' : '<span class="ci-add-item-ph">' + (it.error ? '!' : '…') + '</span>')
+      + '<div class="ci-add-item-body"><span class="ci-add-item-name">' + escapeHtml(it.file.name) + '</span>'
+      + (it.error ? '<span class="ci-compose-status is-error">' + escapeHtml(it.error) + '</span>'
+        : '<input class="coach-input" list="ciPoseList" maxlength="60" placeholder="Pose (optional), e.g. Front" data-pose="' + i + '" value="' + escapeHtml(it.pose) + '">')
+      + '</div><button type="button" class="ci-add-item-x" data-remove="' + i + '" aria-label="Remove ' + escapeHtml(it.file.name) + '">&times;</button></div>').join('');
+    q('ciAddSave').disabled = !items.some(it => it.image);
+  };
+  const addFiles = async files => {
+    const list = [...files].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic)$/i.test(f.name));
+    if (items.length + list.length > 10) status('Up to 10 photos at a time.', true);
+    for (const file of list.slice(0, Math.max(0, 10 - items.length))) {
+      const it = { file, image: null, pose: guessPose(file.name), error: '' };
+      items.push(it);
+      paint();
+      try { it.image = await shrinkPhoto(file); } catch (err) {
+        it.error = err.message === 'too_large' ? 'This photo is too large.' : 'This file can\'t be read. Use JPEG, PNG or WebP.';
+      }
+      if (box.isConnected) paint();
+    }
+  };
+  const shut = () => { document.removeEventListener('keydown', onKey); box.remove(); };
+  const onKey = e => { if (e.key === 'Escape') shut(); };
+  document.addEventListener('keydown', onKey);
+  q('ciAddFiles').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+  const drop = box.querySelector('.ci-add-drop');
+  drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); q('ciAddFiles').click(); } };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('is-over'); };
+  drop.ondragleave = () => drop.classList.remove('is-over');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('is-over'); addFiles(e.dataTransfer.files); };
+  box.addEventListener('input', e => { const i = e.target.dataset.pose; if (i != null && items[i]) items[i].pose = e.target.value; });
+  box.addEventListener('click', e => {
+    if (e.target === box || e.target.closest('[data-ci-add="cancel"]')) { shut(); return; }
+    const rm = e.target.closest('[data-remove]');
+    if (rm) { items.splice(Number(rm.dataset.remove), 1); paint(); }
+  });
+  box.querySelector('form').onsubmit = async e => {
+    e.preventDefault();
+    const target = dateSel.value === 'other' ? q('ciAddOtherDate').value : dateSel.value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(target || '')) { status('Pick a date.', true); return; }
+    const ready = items.filter(it => it.image);
+    q('ciAddSave').disabled = true;
+    let sent = 0;
+    try {
+      for (const it of ready) {
+        status('Uploading ' + (sent + 1) + ' of ' + ready.length + '…');
+        const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkin-photos/' + encodeURIComponent(target), {
+          method: 'POST', headers: authHeaders(), body: JSON.stringify({ image: it.image, pose: it.pose.trim() }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Upload failed.');
+        sent += 1;
+        items.splice(items.indexOf(it), 1);
+      }
+    } catch (err) {
+      status((sent ? sent + ' added. ' : '') + (err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message), true);
+      paint();
+    }
+    if (sent) await refreshCheckInPhotos(clientId, target);
+    // Done once nothing uploadable is left (unreadable files don't hold it open).
+    if (!items.some(it => it.image) && box.isConnected) shut();
+  };
+}
+
+// "IMG_front.jpg" → "Front", so the Compare view can pair poses.
+function guessPose(name) {
+  const n = String(name || '').toLowerCase();
+  return COACH_PHOTO_POSES.slice().reverse().find(p => n.includes(p.toLowerCase())) || '';
+}
+
+// After adding or removing photos: drop the cached photos for that date and
+// reload the client's counts.
+async function refreshCheckInPhotos(clientId, date) {
+  delete _checkInPhotos[clientId + '|' + date];
+  await loadClientDetail(clientId);
+  const c = _clients.find(x => x.id === clientId);
+  if (c && _selectedClientId === clientId) renderCheckIn(c);
+}
+
+async function removeCoachPhoto(clientId, date, photoId) {
+  if (!confirm('Remove this photo? This can\'t be undone.')) return false;
+  try {
+    const res = await coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkin-photos/' + encodeURIComponent(date) + '/' + encodeURIComponent(photoId), { method: 'DELETE', headers: authHeaders() });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) throw new Error(data?.error?.message || 'Could not remove the photo.');
+  } catch (err) {
+    alert(err.message === 'Failed to fetch' ? 'Connection error. Try again.' : err.message);
+    return false;
+  }
+  await refreshCheckInPhotos(clientId, date);
+  return true;
 }
 
 // What the coach still has to look at, from the roster row: check-ins with
@@ -1023,7 +1235,9 @@ function fetchCheckInPhotos(clientId, date) {
     _checkInPhotos[key] = coachFetch(SERVER_URL + '/api/coach/clients/' + encodeURIComponent(clientId) + '/checkin-photos/' + encodeURIComponent(date), { headers: authHeaders() })
       .then(res => res.json().then(data => {
         if (!res.ok || !data.success) throw new Error(data?.error?.message || 'Request failed');
-        return data.photos || [];
+        // The client's photos first (comments pin to their index), then the
+        // ones you added (addedBy: 'coach').
+        return [...(data.photos || []), ...(data.coachPhotos || []).map(p => ({ ...p, addedBy: 'coach' }))];
       }))
       .catch(err => { delete _checkInPhotos[key]; throw err; });
   }
@@ -1042,12 +1256,13 @@ async function loadCheckInPhotos(clientId, strip) {
     if (!strip.isConnected) return;
     if (!photos.length) { strip.innerHTML = '<span class="ws-empty-note">Photos are no longer shared.</span>'; return; }
     strip.innerHTML = photos.map((p, i) =>
-      '<button type="button" class="ci-photo-thumb" data-photo="' + i + '" aria-label="Open ' + escapeHtml(photoName(p, i)) + '">'
+      '<button type="button" class="ci-photo-thumb" data-photo="' + i + '" aria-label="Open ' + escapeHtml(photoName(p, i)) + (p.addedBy === 'coach' ? ' (added by you)' : '') + '">'
       + '<img src="' + escapeHtml(p.image) + '" alt="" loading="lazy">'
+      + (p.addedBy === 'coach' ? '<em class="ci-photo-mine">You</em>' : '')
       + (p.pose ? '<span>' + escapeHtml(p.pose) + '</span>' : '') + '</button>').join('');
     strip.onclick = e => {
       const btn = e.target.closest('[data-photo]');
-      if (btn) openCheckInPhoto(photos, Number(btn.dataset.photo), date, { clientId, prevDate: card?.dataset.ciPrev || '' });
+      if (btn) openCheckInPhoto(photos, Number(btn.dataset.photo), date, { clientId, prevDate: card?.dataset.ciPrev || '', canComment: !!card?.querySelector('[data-ci-thread]') });
     };
     // The composer can pin a comment to one of these photos.
     const pin = card?.querySelector('[data-ci-pin]');
@@ -1059,6 +1274,8 @@ async function loadCheckInPhotos(clientId, strip) {
 
 function fillPinSelect(select, photos) {
   const keep = select.value;
+  // Only the client's own photos: they can't see the ones you added.
+  photos = photos.filter(p => p.addedBy !== 'coach');
   select.innerHTML = '<option value="">Whole check-in</option>'
     + photos.map((p, i) => '<option value="' + i + '">' + escapeHtml(photoName(p, i)) + ' photo</option>').join('');
   select.hidden = false;
@@ -1090,6 +1307,7 @@ function openCheckInPhoto(photos, start, date, ctx = {}) {
     + '<button type="button" data-v="next" aria-label="Next photo">&rsaquo;</button>'
     + (ctx.prevDate ? '<button type="button" class="ci-photo-viewer-pill" data-v="compare" aria-pressed="false">Compare with ' + escapeHtml(shortDate(ctx.prevDate) || ctx.prevDate) + '</button>' : '')
     + (ctx.clientId ? '<button type="button" class="ci-photo-viewer-pill" data-v="comment">Comment on this photo</button>' : '')
+    + (ctx.clientId ? '<button type="button" class="ci-photo-viewer-pill" data-v="remove">Remove photo</button>' : '')
     + '</div>'
     + '<button type="button" class="ci-photo-viewer-close" data-v="close" aria-label="Close">&times;</button>';
   const q = sel => box.querySelector('[data-v="' + sel + '"]');
@@ -1097,7 +1315,11 @@ function openCheckInPhoto(photos, start, date, ctx = {}) {
     const p = photos[i];
     q('img').src = p.image;
     q('cap').textContent = compare ? (shortDate(date) || date) + ' · ' + photoName(p, i) : '';
-    q('label').textContent = (shortDate(date) || date) + ' · ' + (i + 1) + ' / ' + photos.length + (p.pose ? ' · ' + p.pose : '');
+    q('label').textContent = (shortDate(date) || date) + ' · ' + (i + 1) + ' / ' + photos.length + (p.pose ? ' · ' + p.pose : '') + (p.addedBy === 'coach' ? ' · added by you' : '');
+    // Comments go to the client, so only on their own photos; only the
+    // photos you added can be removed here.
+    if (q('comment')) q('comment').hidden = p.addedBy === 'coach' || ctx.canComment === false;
+    if (q('remove')) q('remove').hidden = p.addedBy !== 'coach';
     const fig = q('prevfig');
     fig.hidden = !compare;
     box.classList.toggle('is-compare', compare);
@@ -1130,6 +1352,9 @@ function openCheckInPhoto(photos, start, date, ctx = {}) {
     } else if (v === 'comment') {
       shut();
       focusComposer(date, i);
+    } else if (v === 'remove') {
+      const p = photos[i];
+      if (p?.addedBy === 'coach' && p.id && await removeCoachPhoto(ctx.clientId, date, p.id)) shut();
     } else if (v === 'close' || e.target === box) shut();
   });
   document.addEventListener('keydown', onKey);
