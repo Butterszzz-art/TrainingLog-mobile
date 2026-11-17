@@ -436,6 +436,7 @@
     return (Array.isArray(day.exercises) ? day.exercises : []).map((ex, exerciseIndex) => {
       const sets = Array.isArray(ex.sets) && ex.sets.length ? ex.sets : [{ reps: 0 }];
       const fallback = lookup(ex.name);
+      const rest = Number(sets[0].restSec);
       return {
         exercise: ex.name,
         sets: sets.length,
@@ -449,6 +450,13 @@
         groupType: ex.supersetGroup ? 'superset' : 'straight',
         groupId: ex.supersetGroup ? `program_${ex.supersetGroup}` : null,
         templateExerciseId: `program_${exerciseIndex}`,
+        // Rest the plan prescribes (set-complete.js starts it on each tick),
+        // and whether it sets the back-off weight itself — otherwise it's
+        // worked out from the top set's reps left once that's ticked.
+        restSec: rest > 0 ? rest : null,
+        // The coach's target effort: advice reads it until reps left is logged.
+        targetRIR: Number.isFinite(Number(sets[0].rir)) && sets[0].rir !== null && sets[0].rir !== '' ? Number(sets[0].rir) : null,
+        plannedBackoffWeight: sets.some(set => set.setType === 'backoff' && Number(set.weight) > 0),
         unit: 'kg',
         date: dateKey,
       };
