@@ -7662,24 +7662,40 @@ function createExerciseCard(workoutIndex, entryIndex, entry, block = null, rawLo
   const setList = document.createElement('div');
   setList.className = 'set-list';
 
+  // A loaded program/template session: each set is logged by ticking it
+  // (src/js/set-complete.js). The next set to do gets the effort strip.
+  const _setDone = window.SetComplete;
+  const _planned = !!(_setDone && _setDone.isPlannedWorkout(workouts[workoutIndex]));
+  let _openSet = null;
+  if (_planned) {
+    const log = rawLog || workouts[workoutIndex]?.log || [];
+    const indexes = block ? block.entryIndexes : [entryIndex];
+    _openSet = _setDone.nextOpenSet(block ? log : { [entryIndex]: entry }, indexes);
+  }
+  const _rowOpts = (ei, si) => (_planned
+    ? { planned: true, current: !!(_openSet && _openSet[0] === ei && _openSet[1] === si) }
+    : null);
+
   if (block) {
     const log = rawLog || workouts[workoutIndex]?.log || [];
     block.sets.forEach(s => {
       const stored = log[s.entryIndex];
-      if (stored) setList.appendChild(createSetRow(workoutIndex, s.entryIndex, stored, s.setIndex, s.number));
+      if (stored) setList.appendChild(createSetRow(workoutIndex, s.entryIndex, stored, s.setIndex, s.number, _rowOpts(s.entryIndex, s.setIndex)));
     });
   } else {
     const reps = entry.repsArray || [];
     reps.forEach((rep, setIndex) => {
-      const row = createSetRow(workoutIndex, entryIndex, entry, setIndex);
+      const row = createSetRow(workoutIndex, entryIndex, entry, setIndex, setIndex + 1, _rowOpts(entryIndex, setIndex));
       setList.appendChild(row);
     });
   }
 
   card.appendChild(setList);
 
-  const recommendation = entry.nextSessionRecommendation || (typeof suggestNextSession === 'function'
-    ? suggestNextSession(entry, getOverloadWorkouts())
+  // A loaded session's unticked sets are still to do: judge only the ticked ones.
+  const _judged = _planned ? _setDone.completedEntry(entry) : entry;
+  const recommendation = entry.nextSessionRecommendation || (_judged && typeof suggestNextSession === 'function'
+    ? suggestNextSession(_judged, _planned ? _setDone.completedWorkouts(getOverloadWorkouts()) : getOverloadWorkouts())
     : null);
   if (recommendation?.message) {
     const recommendationBar = document.createElement('div');
@@ -7720,9 +7736,12 @@ function createExerciseCard(workoutIndex, entryIndex, entry, block = null, rawLo
   return card;
 }
 
-function createSetRow(workoutIndex, entryIndex, entry, setIndex, displayNumber = setIndex + 1) {
+function createSetRow(workoutIndex, entryIndex, entry, setIndex, displayNumber = setIndex + 1, opts = null) {
   const wrapper = document.createElement('div');
   wrapper.className = 'set-row-wrapper';
+  const planned = !!(opts && opts.planned && window.SetComplete);
+  if (planned) wrapper.classList.add('set-row-wrapper--planned');
+  if (planned && opts.current) wrapper.classList.add('is-current');
 
   const setRow = document.createElement('div');
   setRow.className = 'set-row';
@@ -7795,16 +7814,34 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex, displayNumber =
     setRow.appendChild(typeBadge);
   }
 
+  const isDone = entry.completedArray?.[setIndex] || false;
+  const setRir = entry.rirArray?.[setIndex];
+  if (planned && setRir != null) {
+    // Reps left on this set; tap to change it.
+    const rirPill = document.createElement('button');
+    rirPill.type = 'button';
+    rirPill.className = 'set-rir-pill';
+    rirPill.textContent = `RIR ${setRir >= 4 ? '4+' : setRir}`;
+    rirPill.setAttribute('aria-label', `Set ${displayNumber}: ${setRir >= 4 ? '4 or more' : setRir} reps left. Change`);
+    rirPill.addEventListener('click', () => window.SetComplete.toggleEffort(workoutIndex, entryIndex, setIndex));
+    setRow.appendChild(rirPill);
+  }
+
   const completeLabel = document.createElement('label');
-  completeLabel.className = 'set-complete';
+  completeLabel.className = planned ? 'set-complete set-complete--log' : 'set-complete';
   const completeCheckbox = document.createElement('input');
   completeCheckbox.type = 'checkbox';
-  completeCheckbox.checked = entry.completedArray?.[setIndex] || false;
-  completeCheckbox.addEventListener('change', event => toggleSetCompletion(workoutIndex, entryIndex, setIndex, event.target.checked));
+  completeCheckbox.checked = isDone;
+  if (planned) {
+    completeCheckbox.setAttribute('aria-label', isDone ? `Set ${displayNumber} complete. Untick` : `Complete set ${displayNumber}`);
+    completeCheckbox.addEventListener('change', event => window.SetComplete.completeSet(workoutIndex, entryIndex, setIndex, event.target.checked));
+  } else {
+    completeCheckbox.addEventListener('change', event => toggleSetCompletion(workoutIndex, entryIndex, setIndex, event.target.checked));
+  }
   completeLabel.appendChild(completeCheckbox);
   const completeText = document.createElement('span');
   completeText.className = 'set-complete-text';
-  completeText.textContent = 'Done';
+  completeText.textContent = planned ? 'Complete set' : 'Done';
   completeLabel.appendChild(completeText);
   setRow.appendChild(completeLabel);
 
@@ -7817,6 +7854,40 @@ function createSetRow(workoutIndex, entryIndex, entry, setIndex, displayNumber =
   setRow.appendChild(setMenuButton);
 
   wrapper.appendChild(setRow);
+
+  // Effort strip, as on the manual log form: reps left (RIR) and Top /
+  // Back-off. Open on the set to do next, or on a ticked set via its RIR pill.
+  if (planned && (opts.current || window.SetComplete.isEffortOpen(workoutIndex, entryIndex, setIndex))) {
+    const strip = document.createElement('div');
+    strip.className = 'set-effort';
+    strip.setAttribute('role', 'group');
+    strip.setAttribute('aria-label', `Set ${displayNumber} effort`);
+    const rirLabel = document.createElement('span');
+    rirLabel.className = 'set-effort-label';
+    rirLabel.textContent = 'Reps left';
+    strip.appendChild(rirLabel);
+    const chip = (text, active, title, onClick) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `set-effort-chip${active ? ' is-active' : ''}`;
+      b.textContent = text;
+      b.title = title;
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      b.addEventListener('click', onClick);
+      strip.appendChild(b);
+    };
+    [0, 1, 2, 3, 4].forEach(v => chip(v === 4 ? '4+' : String(v), setRir === v || (v === 4 && setRir > 4),
+      v === 0 ? 'No reps left — failure' : v === 4 ? '4 or more reps left' : `${v} rep${v === 1 ? '' : 's'} left`,
+      () => window.SetComplete.setSetRir(workoutIndex, entryIndex, setIndex, v)));
+    const gap = document.createElement('span');
+    gap.className = 'set-effort-gap';
+    strip.appendChild(gap);
+    chip('Top', setType === 'top-set', 'Top Set — your main set, used for PRs and to work out the back-offs',
+      () => window.SetComplete.setSetRole(workoutIndex, entryIndex, setIndex, 'top'));
+    chip('BO', setType === 'backoff', 'Back-off Set — lighter set after the top set, excluded from PRs',
+      () => window.SetComplete.setSetRole(workoutIndex, entryIndex, setIndex, 'backoff'));
+    wrapper.appendChild(strip);
+  }
 
   const advancedData = ensureAdvancedArray(entry)[setIndex];
   const baseWeight = entry.weightsArray?.[setIndex] ?? null;
@@ -8800,6 +8871,13 @@ function startRestTimer() {
     alert('Enter rest time');
     return;
   }
+  startRestTimerSeconds(totalSeconds);
+}
+
+// Start a rest of `totalSeconds` — the Rest Timer view, and a set ticked
+// off in a loaded program/template (src/js/set-complete.js).
+function startRestTimerSeconds(totalSeconds) {
+  totalSeconds = Math.max(1, Math.round(Number(totalSeconds) || 0));
   localStorage.setItem(REST_TIMER_KEY, JSON.stringify({
     endTimeMs: Date.now() + totalSeconds * 1000,
     totalSeconds
@@ -19783,6 +19861,7 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
     window.loadTodayProgram = loadTodayProgram;
   }
   window.startRestTimer = startRestTimer;
+  window.startRestTimerSeconds = startRestTimerSeconds;
   if (typeof renderCrossfitWorkouts === 'function') {
     window.renderCrossfitWorkouts = renderCrossfitWorkouts;
   }
@@ -21757,6 +21836,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/today-program.js"></script>
   <script src="src/js/calendar-sync.js"></script>
   <script src="src/js/session-queue.js"></script>
+  <script src="src/js/set-complete.js"></script>
   <script src="src/js/performance-mode.js"></script>
   <script src="src/js/profiles.js"></script>
   <script src="src/js/settings-hero.js"></script>
