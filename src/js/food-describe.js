@@ -29,6 +29,12 @@
   let st = { host: null, meal: null, text: '', state: 'idle', error: '', rows: [] };
   let seq = 0;
 
+  // Voice (speech-input.js): null until we know, then true/false.
+  // listening: words heard so far are shown in the box as they come.
+  const MIC_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/></svg>';
+  const voice = { ok: null, listening: false, before: '', note: '' };
+  const SI = () => window.SpeechInput;
+
   function authHeaders() { return FL().authHeaders ? FL().authHeaders() : {}; }
 
   function rowFor(item) {
@@ -133,10 +139,12 @@
     host.innerHTML = `
       <form class="fd-form" data-fd-form>
         <label class="fd-label" for="fdText">What did you eat?</label>
-        <textarea id="fdText" class="fd-text" rows="3" maxlength="${MAX_TEXT}" placeholder="e.g. 2 eggs, a slice of toast with butter and a flat white" ${busy ? 'disabled' : ''}>${esc(st.text)}</textarea>
+        <textarea id="fdText" class="fd-text${voice.listening ? ' is-listening' : ''}" rows="3" maxlength="${MAX_TEXT}" placeholder="${voice.listening ? 'Listening… say what you ate' : `e.g. 2 eggs, a slice of toast with butter and a flat white${voice.ok ? ' — or tap the mic and say it' : ''}`}" ${busy || voice.listening ? 'readonly' : ''}>${esc(st.text)}</textarea>
+        ${voice.note ? `<p class="fd-voice-note" role="status">${esc(voice.note)}</p>` : ''}
         <div class="fd-actions">
+          ${voice.ok ? `<button type="button" class="fd-mic${voice.listening ? ' is-on' : ''}" data-fd-mic aria-pressed="${voice.listening}" aria-label="${voice.listening ? 'Stop listening' : 'Say what you ate'}" ${busy ? 'disabled' : ''}>${MIC_SVG}<span>${voice.listening ? 'Stop' : 'Speak'}</span></button>` : ''}
           <span class="fd-pro"><span class="ui-icon">${icon('sparkles')}</span>Pro · uses 1 AI credit</span>
-          <button type="submit" class="food-add-btn" ${busy ? 'disabled' : ''}>${st.state === 'done' ? 'Find again' : 'Find foods'}</button>
+          <button type="submit" class="food-add-btn" ${busy || voice.listening ? 'disabled' : ''}>${st.state === 'done' ? 'Find again' : 'Find foods'}</button>
         </div>
       </form>
       ${body}`;
@@ -154,6 +162,62 @@
       btn.textContent = logLabel(t);
       btn.disabled = !t.count;
     }
+  }
+
+  /* ── Voice ───────────────────────────────────────────────── */
+
+  async function checkVoice() {
+    if (voice.ok !== null || !SI()) { if (!SI()) voice.ok = false; return; }
+    try { voice.ok = await SI().supported(); } catch { voice.ok = false; }
+    if (voice.ok) draw();
+  }
+
+  // Listens, shows the words as they come, then finds the foods. Words
+  // already in the box stay in front ("2 eggs" typed + "and toast" said).
+  async function startVoice() {
+    if (!SI() || voice.listening || st.state === 'loading') return;
+    if (voice.ok === null) await checkVoice();
+    if (!voice.ok) return;
+    voice.listening = true;
+    voice.note = '';
+    voice.before = st.text.trim();
+    // "oats" typed + "and a banana" said → "oats and a banana"; "oats" +
+    // "a banana" → "oats, a banana".
+    const join = said => {
+      if (!voice.before || !said) return voice.before || said;
+      const sep = /[,.;]$/.test(voice.before) || /^(and|with|plus|en|met)\b/i.test(said) ? ' ' : ', ';
+      return voice.before + sep + said;
+    };
+    draw();
+    let heard = '';
+    try {
+      heard = await SI().listen({
+        onPartial: (t) => {
+          st.text = join(t).slice(0, MAX_TEXT);
+          const ta = st.host && st.host.querySelector('#fdText');
+          if (ta) ta.value = st.text;
+        },
+      });
+    } catch (e) {
+      voice.note = e && e.code === 'permission'
+        ? 'Allow microphone access for Pocket Coach in your settings to log by voice.'
+        : 'Couldn’t hear that. Try again, or type it.';
+    }
+    voice.listening = false;
+    if (heard) {
+      st.text = join(heard).slice(0, MAX_TEXT);
+      draw();
+      find();
+      return;
+    }
+    st.text = voice.before;
+    if (!voice.note) voice.note = 'Didn’t catch anything. Tap Speak and say what you ate.';
+    draw();
+  }
+
+  function toggleVoice() {
+    if (voice.listening) SI().stop();
+    else startVoice();
   }
 
   /* ── Server ──────────────────────────────────────────────── */
@@ -268,6 +332,7 @@
       }
     });
     host.addEventListener('click', (e) => {
+      if (e.target.closest('[data-fd-mic]')) { toggleVoice(); return; }
       if (e.target.closest('[data-fd-log]')) logAll();
       const s = e.target.closest('[data-fd-search]');
       if (s) searchInstead(Number(s.dataset.fdSearch));
@@ -282,15 +347,23 @@
   }
 
   // From the Log food sheet's Describe tab (food-database.js).
-  function open({ host, meal } = {}) {
+  // From the Log food sheet's Describe tab (food-database.js). listen: start
+  // the mic straight away (the mic in the search bar).
+  function open({ host, meal, listen } = {}) {
     if (!host) return;
     st.host = host;
     st.meal = meal || null;
+    voice.note = '';
     bind(host);
     draw();
-    if (st.state === 'idle') setTimeout(() => host.querySelector('#fdText')?.focus(), 30);
+    checkVoice();
+    if (listen) startVoice();
+    else if (st.state === 'idle') setTimeout(() => host.querySelector('#fdText')?.focus(), 30);
   }
 
+  // The sheet closed: stop listening (what was heard so far is kept).
+  function stopVoice() { if (voice.listening && SI()) SI().stop(); }
+
   window.openFoodDescribe = open;
-  window.FoodDescribe = { open, _state: () => st };
+  window.FoodDescribe = { open, startVoice, stopVoice, _state: () => st, _voice: () => voice };
 })();

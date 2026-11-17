@@ -59,6 +59,7 @@ const APP_SHELL = [
   '/src/js/data-export.js',
   '/src/js/food-core.js',
   '/src/js/meal-photos.js',
+  '/src/js/speech-input.js',
   '/src/js/food-database.js',
   '/src/js/food-barcode.js',
   '/src/js/food-log-tools.js',

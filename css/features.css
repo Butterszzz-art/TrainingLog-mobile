@@ -3686,6 +3686,19 @@ button.food-meal-name { margin: 0; padding: 4px 0; min-height: 0; border: 0; bac
 .fd-text { width: 100%; box-sizing: border-box; resize: vertical; min-height: 72px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font: inherit; font-size: 0.9rem; line-height: 1.4; }
 .fd-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .fd-actions .food-add-btn { margin-left: 0; }
+.fd-actions .fd-pro { margin-right: auto; }
+.food-sheet button.fd-mic, .fd-form button.fd-mic {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  margin: 0; min-height: 34px; padding: 0 12px; border-radius: 999px;
+  border: 1px solid var(--primary); background: transparent; color: var(--primary);
+  font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.fd-form button.fd-mic.is-on { background: var(--primary); color: var(--label-on-green, #fff); animation: fd-pulse 1.4s ease-in-out infinite; }
+@keyframes fd-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.45); } 50% { box-shadow: 0 0 0 6px rgba(46, 204, 113, 0); } }
+@media (prefers-reduced-motion: reduce) { .fd-form button.fd-mic.is-on { animation: none; } }
+.fd-text.is-listening { border-color: var(--primary); }
+.fd-voice-note { margin: 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+.food-voice-btn[hidden] { display: none; }
 .fd-pro { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; color: var(--text-muted); }
 .fd-pro .ui-icon, .fd-pro .ui-icon svg { width: 13px; height: 13px; display: inline-flex; }
 .fd-loading { display: flex; align-items: center; gap: 8px; margin: 14px 2px; font-size: 0.85rem; color: var(--text-muted); }
