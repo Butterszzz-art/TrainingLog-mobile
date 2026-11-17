@@ -104,6 +104,64 @@ describe('today-session', () => {
     });
   });
 
+  describe('Not today (declineToday)', () => {
+    function startProgramToday() {
+      const today = new Date();
+      localStorage.setItem('activeProgram_athleteA', JSON.stringify({ programId: 'p1', startDate: localKey(today) }));
+      localStorage.setItem('programs_athleteA', JSON.stringify([{
+        id: 'p1', name: 'Upper/Lower', frequency: [DOW[today.getDay()]], startDate: localKey(today),
+        days: [{ name: 'Lower A', exercises: [{ name: 'Squat', sets: [{ reps: 5 }] }] }],
+      }]));
+    }
+
+    test("declining the program day leaves nothing planned today, program untouched", () => {
+      startProgramToday();
+      expect(getTodaysPlannedDay()).toMatchObject({ name: 'Lower A', source: 'program' });
+      const record = todaySession.declineToday();
+      expect(record).toMatchObject({ name: 'Lower A', source: 'program', date: localKey() });
+      expect(getTodaysPlannedDay()).toBeNull();
+      expect(todaySession.readDecline()).toMatchObject({ name: 'Lower A' });
+      // The schedule itself still has Lower A today.
+      expect(todaySession.programDayToday()).toMatchObject({ name: 'Lower A' });
+    });
+
+    test('only lasts for today', () => {
+      startProgramToday();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      localStorage.setItem('todaySessionDeclined_athleteA', JSON.stringify({ date: localKey(yesterday), name: 'Lower A' }));
+      expect(todaySession.readDecline()).toBeNull();
+      expect(getTodaysPlannedDay()).toMatchObject({ name: 'Lower A' });
+    });
+
+    test('undo brings the session back', () => {
+      startProgramToday();
+      todaySession.declineToday();
+      todaySession.undoDecline();
+      expect(getTodaysPlannedDay()).toMatchObject({ name: 'Lower A' });
+    });
+
+    test('picking a template afterwards replaces the decline', () => {
+      startProgramToday();
+      todaySession.declineToday();
+      todaySession.pickTemplateForToday(builderTemplate);
+      expect(todaySession.readDecline()).toBeNull();
+    });
+
+    test('declining a picked template keeps the pick for undo', () => {
+      todaySession.pickTemplateForToday(builderTemplate);
+      todaySession.declineToday();
+      expect(getTodaysPlannedDay()).toBeNull();
+      todaySession.undoDecline();
+      expect(getTodaysPlannedDay()).toMatchObject({ name: 'Push A', source: 'template' });
+    });
+
+    test('nothing to decline returns null', () => {
+      expect(todaySession.declineToday()).toBeNull();
+      expect(todaySession.readDecline()).toBeNull();
+    });
+  });
+
   describe('isLoadedFrom', () => {
     test('matches the template workout loaded today', () => {
       const day = todaySession.pickTemplateForToday(builderTemplate);

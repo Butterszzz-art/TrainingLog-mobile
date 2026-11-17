@@ -190,10 +190,12 @@
 
     const day = getTodaysPlannedDay();
     if (!day) {
+      const ts = _session();
+      const declined = ts && ts.readDecline ? ts.readDecline(_user()) : null;
       el.innerHTML = `
         <div class="pod pod--hero train-hero-card">
-          <div class="pod-kicker">No session planned today</div>
-          <p class="ws-empty-note" style="margin-top:8px;">Load a saved template below to plan today's session, or just log as you go.</p>
+          <div class="pod-kicker">${declined ? `${_escHTML(declined.name)} skipped today` : 'No session planned today'}</div>
+          <p class="ws-empty-note" style="margin-top:8px;">${declined ? 'Log whatever you like, or load a template below. Your plan carries on tomorrow.' : "Load a saved template below to plan today's session, or just log as you go."}</p>${declined ? '<button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="undoDeclineFromLog()">Undo · bring it back</button>' : ''}
           <button type="button" class="cta-capsule-outline train-hero-pm-btn" onclick="_askGymThen(function(){ if(typeof startPerformanceMode==='function') startPerformanceMode(); })"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Start in performance mode</button>${_saveRoutineButton(day)}
         </div>`;
       return;
@@ -532,6 +534,44 @@
     return index;
   }
 
+  /** After "Not today": take today's workout loaded from `day` back out of
+   * the log when no set in it has been ticked yet. Returns true if removed. */
+  function unloadUntouchedSession(day) {
+    const u = _user();
+    if (!day || !u) return false;
+    const workouts = _readWorkouts(u);
+    const index = _loadedProgramWorkoutIndex(day, workouts);
+    if (index === -1) return false;
+    const touched = (workouts[index].log || []).some(entry => (entry.completedArray || []).some(Boolean));
+    if (touched) return false;
+    workouts.splice(index, 1);
+    localStorage.setItem('workouts_' + u, JSON.stringify(workouts));
+    if (typeof global.syncLocalHistoryFromWorkouts === 'function') global.syncLocalHistoryFromWorkouts();
+    if (typeof global.renderWorkouts === 'function') global.renderWorkouts();
+    return true;
+  }
+
+  /** Log tab "Not today": same as the Home card's (today-program.js). */
+  function declineTodayFromLog() {
+    if (typeof global.declineTodaySession === 'function') return global.declineTodaySession();
+    const ts = _session();
+    const day = getTodaysPlannedDay();
+    if (!ts || !ts.declineToday || !ts.declineToday({ user: _user(), day })) return false;
+    unloadUntouchedSession(day);
+    renderSessionQueue();
+    renderTrainHero();
+    return true;
+  }
+
+  /** Undo "Not today" from the Log tab. */
+  function undoDeclineFromLog() {
+    const ts = _session();
+    if (ts && ts.undoDecline) ts.undoDecline(_user());
+    renderSessionQueue();
+    renderTrainHero();
+    if (typeof global.renderTodayProgramCard === 'function') global.renderTodayProgramCard();
+  }
+
   /** Open quick log on the first lift from last time not yet matched today. */
   function _continueMatched(day, u) {
     const ps = _schedule();
@@ -560,8 +600,24 @@
     if (!el) return;
     const day = getTodaysPlannedDay();
     const exercises = day && Array.isArray(day.exercises) ? day.exercises : [];
+    const ts = _session();
+    const declined = !day && ts && ts.readDecline ? ts.readDecline(_user()) : null;
+    if (declined) {
+      el.hidden = false;
+      el.innerHTML = `
+      <button type="button" class="sq-program-load is-loaded" onclick="undoDeclineFromLog()">
+        <span class="sq-program-load-text">
+          <span class="sq-program-load-name">${_escHTML(declined.name)} skipped today</span>
+          <span class="sq-program-load-sub">Not preloaded · your plan carries on tomorrow</span>
+        </span>
+        <span class="sq-program-load-cta">Undo</span>
+      </button>`;
+      return;
+    }
     if (!day || !exercises.length || day.source === 'match') { el.innerHTML = ''; el.hidden = true; return; }
     const loaded = _loadedProgramWorkoutIndex(day, _readWorkouts(_user())) !== -1;
+    const ps = _schedule();
+    const started = !!(ps && ps.dayProgress(day, ps.workoutsOn(_localDateKey(), _user())).started);
     const week = day.weekCount > 1 ? ` · week ${day.weekNum}` : '';
     const source = day.source === 'program'
       ? `${_escHTML(day.programName || 'Your program')}${week}`
@@ -575,7 +631,8 @@
           <span class="sq-program-load-sub">${source} · ${exercises.length} lift${exercises.length === 1 ? '' : 's'}</span>
         </span>
         <span class="sq-program-load-cta">${loaded ? 'Show' : 'Load'}</span>
-      </button>`;
+      </button>${started ? '' : `
+      <button type="button" class="sq-program-decline" onclick="declineTodayFromLog()">Not today</button>`}`;
   }
 
   function renderSessionQueue() {
@@ -1242,7 +1299,7 @@
     }
   }
 
-  const api = { getTodaysPlannedDay, sessionMetadata, sessionSourceLabel, todaysLiftedSession, canSaveTodayAsRoutine, saveTodayAsRoutine, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
+  const api = { unloadUntouchedSession, declineTodayFromLog, undoDeclineFromLog, getTodaysPlannedDay, sessionMetadata, sessionSourceLabel, todaysLiftedSession, canSaveTodayAsRoutine, saveTodayAsRoutine, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
     initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
@@ -1275,6 +1332,9 @@
   global.getTodaysPlannedDay = getTodaysPlannedDay;
   global.renderSessionQueue = renderSessionQueue;
   global.loadTodayProgramIntoLog = loadTodayProgramIntoLog;
+  global.unloadUntouchedSession = unloadUntouchedSession;
+  global.declineTodayFromLog = declineTodayFromLog;
+  global.undoDeclineFromLog = undoDeclineFromLog;
   global.saveTodayAsRoutine = saveTodayAsRoutine;
   global.renderProgramTemplateRow = renderProgramTemplateRow;
   global.renderTrainHero = renderTrainHero;

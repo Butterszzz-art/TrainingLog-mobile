@@ -1447,6 +1447,10 @@
   cursor: pointer;
 }
 
+/* "Not today" under today's lifts (today-program.js) */
+.tpc-decline { display: flex; justify-content: flex-end; }
+.tpc-decline .tpc-dismiss { align-self: auto; min-height: 32px; padding: 4px 2px; }
+
 .tpc-body {
   display: flex;
   flex-direction: column;

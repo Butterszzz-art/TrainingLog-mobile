@@ -535,6 +535,23 @@
   color: var(--text-color);
 }
 .sq-program-load:focus-visible { outline: 2px solid var(--primary, #5fa87e); outline-offset: 2px; }
+/* "Not today": decline today's suggested session (today-session.js declineToday) */
+.sq-program-decline {
+  display: block;
+  margin: -4px 0 8px auto;
+  min-height: 32px;
+  padding: 4px 2px;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.sq-program-decline:focus-visible { outline: 2px solid var(--primary, #5fa87e); outline-offset: 2px; }
 
 /* Plan rows tick off as today's sets are logged */
 .sq-progress {

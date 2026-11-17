@@ -14,6 +14,11 @@
  * performance mode already read: { name, exercises: [{ name, sets: [{ reps,
  * weight, ... }] }], source: 'program' | 'template' | 'rotation' | 'match', ... }.
  *
+ * "Not today": the lifter can decline today's suggestion (declineToday). For
+ * the rest of the day nothing is suggested or preloaded, but the program and
+ * history logic are untouched: tomorrow's session comes as usual, and picking
+ * a template or undoing brings a session back.
+ *
  * Workouts loaded from either source carry metadata.planned = true, so their
  * sets count as done once ticked rather than as soon as they're loaded
  * (program-schedule.js isPlannedWorkout / dayProgress).
@@ -22,6 +27,7 @@
   'use strict';
 
   const PICK_KEY = 'todaySessionPick_';
+  const DECLINE_KEY = 'todaySessionDeclined_';
 
   function _localDateKey(d) {
     const date = d || new Date();
@@ -106,6 +112,8 @@
     if (!u || !day || !global.localStorage) return null;
     const pick = { date: _localDateKey(options.now), templateId: day.templateId || null, day };
     global.localStorage.setItem(PICK_KEY + u, JSON.stringify(pick));
+    // Choosing a session is the opposite of "not today".
+    global.localStorage.removeItem(DECLINE_KEY + u);
     return day;
   }
 
@@ -129,6 +137,35 @@
   function clearTemplatePick(user) {
     const u = _user(user);
     if (u && global.localStorage) global.localStorage.removeItem(PICK_KEY + u);
+  }
+
+  // ── "Not today" ─────────────────────────────────────────────────────────
+
+  /** Decline today's suggested session (program day, picked template or
+   * "usual next"). Only today is affected; the program keeps its schedule.
+   * Returns the declined record, or null when there was nothing to decline. */
+  function declineToday(opts) {
+    const options = opts || {};
+    const u = _user(options.user);
+    if (!u || !global.localStorage) return null;
+    const day = options.day || _suggestedToday(u, options.now);
+    if (!day) return null;
+    const record = { date: _localDateKey(options.now), name: day.name || 'Session', source: day.source || null };
+    global.localStorage.setItem(DECLINE_KEY + u, JSON.stringify(record));
+    return record;
+  }
+
+  /** Today's decline ({ date, name, source }), or null (none, or another day). */
+  function readDecline(user, now) {
+    const u = _user(user);
+    if (!u) return null;
+    const record = _readJSON(DECLINE_KEY + u, null);
+    return record && record.date === _localDateKey(now) ? record : null;
+  }
+
+  function undoDecline(user) {
+    const u = _user(user);
+    if (u && global.localStorage) global.localStorage.removeItem(DECLINE_KEY + u);
   }
 
   // ── Today's session ─────────────────────────────────────────────────────
@@ -191,9 +228,16 @@
     return day;
   }
 
-  /** Today's session from the first source that has one, or null. */
-  function getTodaysSession(user, now) {
+  /** What would be suggested today, ignoring a decline. */
+  function _suggestedToday(user, now) {
     return programDayToday(user, now) || readTemplatePick(user, now) || historySessionToday(user, now);
+  }
+
+  /** Today's session from the first source that has one, or null after
+   * "Not today" (picking a session afterwards clears the decline). */
+  function getTodaysSession(user, now) {
+    if (readDecline(user, now)) return null;
+    return _suggestedToday(user, now);
   }
 
   /** True when `w` is the workout loaded from `day` today (`dateKey`). */
@@ -220,6 +264,9 @@
     historySessionToday,
     clearHistoryMemo: () => { _memo = null; },
     getTodaysSession,
+    declineToday,
+    readDecline,
+    undoDecline,
     isLoadedFrom,
   };
 

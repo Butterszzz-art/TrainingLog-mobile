@@ -11,6 +11,10 @@
  *    templates are offered instead.
  *  - A template picked for today (today-session.js) shows as today's
  *    session when there's no program day today.
+ *  - "Not today" under today's lifts declines the suggestion for the day
+ *    (today-session.js declineToday): nothing is preloaded, the program
+ *    keeps its schedule, and Undo / "Do it today" / a template brings a
+ *    session back.
  *  - With no active program, the lifter's history fills in: "your usual
  *    next" before lifting, or the past session today matches once started
  *    (usual-session.js via today-session.js). Under "your usual next",
@@ -141,6 +145,22 @@
     return schedule.weekCount > 1 ? `Week ${d.weekNum} of ${schedule.weekCount}` : `Week ${d.weekNum}`;
   }
 
+  /** "Not today" link under today's lifts, until lifting starts. */
+  function _declineRow() {
+    return `<div class="tpc-decline"><button type="button" class="tpc-dismiss" data-tpc-decline>Not today</button></div>`;
+  }
+
+  /** Today after "Not today": what was skipped, with Undo. */
+  function _declinedSlide(declined, footer, hint) {
+    return `<div class="tpc-slide tpc-slide--today">${_banner({
+      tone: 'muted',
+      kicker: 'Not today',
+      name: `${_esc(declined.name)} skipped`,
+      sub: hint || 'Log whatever you like today',
+      action: '<button type="button" class="tpc-go tpc-go--ghost" data-tpc-undo-decline>Undo</button>',
+    })}<div class="tpc-body">${footer || ''}</div></div>`;
+  }
+
   function _slideFor(d, ctx) {
     const { schedule, today, ps, user } = ctx;
     const isPast = d.date < today.date;
@@ -148,6 +168,7 @@
 
     if (!d.isTraining) {
       const next = schedule.nextTrainingAfter(d.date);
+      if (isToday && ctx.templateDay && ctx.declined) return _declinedSlide(ctx.declined, _nextUpRow(next, today, ps));
       if (isToday && ctx.templateDay) {
         return _templateTodaySlide(ctx.templateDay, d.key, ps, user, _nextUpRow(next, today, ps));
       }
@@ -182,6 +203,11 @@
 
     if (isToday) {
       const progress = ps.dayProgress(d.day, ps.workoutsOn(d.key, user));
+      if (ctx.declined && !progress.started) {
+        const next = schedule.nextTrainingAfter(d.date);
+        return _declinedSlide(ctx.declined, _nextUpRow(next, today, ps),
+          `${_esc(schedule.program.name)} carries on · swipe to do another day today`);
+      }
       if (progress.complete) {
         const next = schedule.nextTrainingAfter(d.date);
         return `<div class="tpc-slide">${_banner({
@@ -196,7 +222,7 @@
         name: _esc(d.day.name),
         sub,
         action: `<button type="button" class="tpc-go" data-tpc-start>${progress.started ? 'Continue' : 'Start'}</button>`,
-      })}<div class="tpc-body">${_liftRows(stats.exercises, progress)}</div></div>`;
+      })}<div class="tpc-body">${_liftRows(stats.exercises, progress)}${progress.started ? '' : _declineRow()}</div></div>`;
     }
 
     // Future training day
@@ -233,7 +259,7 @@
       name: _esc(day.name),
       sub,
       action: `<button type="button" class="tpc-go" data-tpc-start>${progress.started ? 'Continue' : 'Start'}</button>`,
-    })}<div class="tpc-body">${_liftRows(stats.exercises, progress)}${progress.started ? '' : (extra || '')}</div></div>`;
+    })}<div class="tpc-body">${_liftRows(stats.exercises, progress)}${progress.started ? '' : (extra || '') + _declineRow()}</div></div>`;
   }
 
   // ── Program from history ───────────────────────────────────────────────────
@@ -310,6 +336,19 @@
       <div class="tpc-card">
         <div class="tpc-viewport">
           <div class="tpc-track">${_templateTodaySlide(day, ps.localDateKey(), ps, user, '', extra)}</div>
+        </div>
+      </div>`;
+    el._tpcDay = null;
+    el._tpcIndex = 0;
+    _fitHeight(el);
+  }
+
+  /** Card for a lifter with no program who declined today's session. */
+  function _renderDeclined(el, declined) {
+    el.innerHTML = `
+      <div class="tpc-card">
+        <div class="tpc-viewport">
+          <div class="tpc-track">${_declinedSlide(declined, '', 'Log whatever you like today · back to normal tomorrow')}</div>
         </div>
       </div>`;
     el._tpcDay = null;
@@ -414,7 +453,9 @@
     const ts = _ts();
     const templateDay = ts ? ts.readTemplatePick(user) : null;
     const schedule = ps.getActiveSchedule(user);
+    const declined = ts && ts.readDecline ? ts.readDecline(user) : null;
     if (!schedule) {
+      if (declined) { _renderDeclined(el, declined); return; }
       const fromHistory = templateDay || (ts && ts.historySessionToday ? ts.historySessionToday(user) : null);
       if (fromHistory) { _renderTemplateToday(el, fromHistory, user); return; }
       if (_renderPick(el, user)) return;
@@ -430,7 +471,7 @@
 
     const plannedThisWeek = week.filter(d => d.isTraining).length;
     const doneThisWeek = week.filter(d => d.isTraining && d.date <= today.date && loggedOn(d)).length;
-    const ctx = { schedule, today, ps, user, plannedThisWeek, doneThisWeek, templateDay };
+    const ctx = { schedule, today, ps, user, plannedThisWeek, doneThisWeek, templateDay, declined };
 
     // Keep the swiped-to day across re-renders within the same day.
     const keepIdx = el._tpcDay === today.key && Number.isInteger(el._tpcIndex) ? el._tpcIndex : todayIdx;
@@ -522,6 +563,24 @@
     else if (typeof window.goToQuickLog === 'function') window.goToQuickLog();
   }
 
+  /** "Not today": stop suggesting/preloading today's session. The program
+   * and history logic are untouched; tomorrow comes as usual. A workout
+   * already loaded for it but not started is taken back out of the log. */
+  function declineTodaySession() {
+    const ts = _ts();
+    const user = _user();
+    if (!ts || !ts.declineToday || !user) return false;
+    const day = ts.getTodaysSession(user);
+    const record = ts.declineToday({ user, day });
+    if (!record) return false;
+    if (typeof window.unloadUntouchedSession === 'function') window.unloadUntouchedSession(day);
+    const el = document.getElementById('todayProgramCard');
+    if (el) el._tpcIndex = null;
+    _refreshAll();
+    _toast(`${record.name} skipped for today.`);
+    return true;
+  }
+
   function _toast(msg, type) { if (typeof window.showToast === 'function') window.showToast(msg, type || 'success'); }
 
   function _wire(el) {
@@ -536,12 +595,23 @@
       const t = e.target.closest('button');
       if (!t || !el.contains(t)) return;
       if (t.hasAttribute('data-tpc-start')) { startTodayProgramSession(); return; }
+      if (t.hasAttribute('data-tpc-decline')) { declineTodaySession(); return; }
+      if (t.hasAttribute('data-tpc-undo-decline')) {
+        const ts = _ts();
+        if (ts && ts.undoDecline) ts.undoDecline(_user());
+        el._tpcIndex = null;
+        _refreshAll();
+        return;
+      }
       if (t.dataset.tpcGo != null) { _go(el, Number(t.dataset.tpcGo)); return; }
       if (t.dataset.tpcSwap) {
         const ps = _ps();
         const schedule = ps && ps.getActiveSchedule(_user());
         const target = schedule ? schedule.dayFor(ps.parseLocalDate(t.dataset.tpcSwap)) : null;
         if (target && target.day && ps.swapIntoToday(t.dataset.tpcSwap, { schedule })) {
+          // Doing another day today replaces "Not today".
+          const ts = _ts();
+          if (ts && ts.undoDecline) ts.undoDecline(_user());
           el._tpcIndex = null;
           _refreshAll();
           _toast(`${target.day.name} moved to today.`);
@@ -553,6 +623,8 @@
         if (!core || typeof core.startProgram !== 'function') return;
         const started = core.startProgram(window, t.dataset.tpcPick, { userId: _user() });
         if (started) {
+          const ts = _ts();
+          if (ts && ts.undoDecline) ts.undoDecline(_user());
           _toast(`Started ${started.name || 'your program'}. Week 1 begins today.`);
           _refreshAll();
         }
@@ -617,5 +689,6 @@
   window.renderTodayProgramCard = renderTodayProgramCard;
   window.startTodayProgramSession = startTodayProgramSession;
   window.makeProgramFromHistory = makeProgramFromHistory;
+  window.declineTodaySession = declineTodaySession;
   window.getTodayWorkoutName = getTodayWorkoutName;
 })();
