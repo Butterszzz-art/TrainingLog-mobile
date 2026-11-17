@@ -238,9 +238,13 @@
   function defaultMealLabel(key) { const n = mealNumber(key); return n > 0 ? `Meal ${n}` : String(key || ''); }
 
   /**
-   * The stored setup ({ count, names }) cleaned up. With none stored yet,
-   * the count is DEFAULT_MEAL_COUNT, or more when `usedKeys` (meals the
-   * user already logged to) go further, so nothing logged disappears.
+   * The stored setup ({ count, names, times?, remind? }) cleaned up. With
+   * none stored yet, the count is DEFAULT_MEAL_COUNT, or more when
+   * `usedKeys` (meals the user already logged to) go further, so nothing
+   * logged disappears.
+   * times: planned clock time per meal ("08:00"), for scheduled meals and
+   * their reminders (meal-timing.js); remind: send those reminders.
+   * Both are left out when not set.
    */
   function normalizeMealSetup(raw, usedKeys) {
     const r = raw && typeof raw === 'object' ? raw : {};
@@ -249,11 +253,14 @@
     const c = Math.round(Number(r.count));
     const count = Math.min(MAX_MEALS, Math.max(1, Number.isFinite(c) && c > 0 ? c : fallback));
     const names = {};
+    const times = {};
     ALL_MEALS.forEach(k => {
       const v = r.names && typeof r.names[k] === 'string' ? r.names[k].replace(/\s+/g, ' ').trim().slice(0, MEAL_NAME_MAX) : '';
       if (v) names[k] = v;
+      const t = r.times && typeof r.times[k] === 'string' ? /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(r.times[k].trim()) : null;
+      if (t) times[k] = `${t[1].padStart(2, '0')}:${t[2]}`;
     });
-    return { count, names };
+    return { count, names, ...(Object.keys(times).length ? { times } : {}), ...(r.remind === true ? { remind: true } : {}) };
   }
 
   /** Puts a setup into MEALS / MEAL_LABELS. */
@@ -618,9 +625,11 @@
   }
 
   // Copies of entries for another day (new ids, same meals and amounts).
+  // When they were eaten isn't copied: that's set when they're logged
+  // (meal-timing-core.js stampEntry).
   function copyEntries(entries, toDate, { now, rand } = {}) {
     let i = 0;
-    return (entries || []).map(e => ({
+    return (entries || []).map(({ eatenAt: _e, ...e }) => ({
       ...e,
       id: newEntryId(toDate, rand ? `${rand}${i++}` : undefined),
       date: toDate,
@@ -638,7 +647,7 @@
   const REPEAT_SKIP_KEEP = 14;
 
   function _repeatSnapshot(entry) {
-    const { id: _i, date: _d, t: _t, repeatId: _r, ...rest } = entry || {};
+    const { id: _i, date: _d, t: _t, repeatId: _r, eatenAt: _e, ...rest } = entry || {};
     return rest;
   }
 

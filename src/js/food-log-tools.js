@@ -44,13 +44,20 @@
       const total = byDay[date] || (byDay[date] = { protein: 0, carbs: 0, fats: 0, cals: 0 });
       Object.keys(total).forEach(k => { total[k] += d[k]; });
     };
-    changes.forEach(({ before, after }) => {
+    changes.forEach(({ before, after: next }) => {
+      let after = next;
       if (before) {
         const i = log.findIndex(e => e.id === before.id);
         if (i >= 0) log.splice(i, 1);
         add(before.date, Core.progressDelta(before, -1));
       }
       if (after) {
+        // New foods, and foods moved to another meal, get when they were
+        // eaten (meal-timing.js): the meal's time, or now for today.
+        if (window.MealTiming && (!before || before.meal !== after.meal || before.date !== after.date)) {
+          const { eatenAt: _e, ...fresh } = after;
+          after = window.MealTiming.stamp(before ? fresh : after, log.filter(e => e && e.date === after.date));
+        }
         log.push(after);
         add(after.date, Core.progressDelta(after, 1));
       }
