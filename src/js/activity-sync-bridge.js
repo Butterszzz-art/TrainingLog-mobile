@@ -21,7 +21,14 @@
   'use strict';
 
   const CONNECTED_FLAG_KEY = 'activitySyncConnected';
-  const THROTTLE_MS = 2 * 60 * 1000; // don't refetch more than once per 2 min
+  // How often each fetch may run. Apple Health is read on the phone, so it
+  // can refresh almost freely; the Google Health (Fitbit) path is a server
+  // round trip that fans out to several Google calls, so it waits longer.
+  const THROTTLE_MS = 60 * 1000; // today's numbers, via the server
+  const LOCAL_THROTTLE_MS = 15 * 1000; // today's numbers, from Apple Health
+  const LOCAL_HISTORY_THROTTLE_MS = 60 * 1000; // past days, from Apple Health
+  const LIVE_REFRESH_MS = 60 * 1000; // re-check while Home/Macros is on screen
+  const LIVE_TABS = new Set(['homeTab', 'macroTab']);
   let lastFetchedAt = 0;
   let inFlight = null;
   let lastSleepFetchedAt = 0;
@@ -31,6 +38,21 @@
   let lastHistoryFetchedAt = 0;
   let historyInFlight = null;
   const HISTORY_THROTTLE_MS = 30 * 60 * 1000; // past days rarely change
+
+  function readsOnDevice() {
+    const appleHealth = globalScope.AppleHealth;
+    try {
+      return Boolean(appleHealth && typeof appleHealth.isConnected === 'function' && appleHealth.isConnected());
+    } catch (_error) {
+      return false;
+    }
+  }
+  function todayThrottleMs() {
+    return readsOnDevice() ? LOCAL_THROTTLE_MS : THROTTLE_MS;
+  }
+  function historyThrottleMs() {
+    return readsOnDevice() ? LOCAL_HISTORY_THROTTLE_MS : HISTORY_THROTTLE_MS;
+  }
   const BURN_AVERAGE_DAYS = 7;
   const BURN_AVERAGE_MIN_DAYS = 3;
   let lastRecoveryFetchedAt = 0;
@@ -314,7 +336,7 @@
 
   async function fetchAndApplyTodaySleep(options = {}) {
     const force = Boolean(options.force);
-    if (!force && Date.now() - lastSleepFetchedAt < THROTTLE_MS) return null;
+    if (!force && Date.now() - lastSleepFetchedAt < todayThrottleMs()) return null;
     if (sleepInFlight) return sleepInFlight;
     if (!canFetch()) return null;
 
@@ -355,7 +377,7 @@
   // log (e.g. days the app wasn't opened), one night at a time.
   async function fetchAndApplyRecentSleep(options = {}) {
     const force = Boolean(options.force);
-    if (!force && Date.now() - lastSleepBackfillAt < HISTORY_THROTTLE_MS) return 0;
+    if (!force && Date.now() - lastSleepBackfillAt < historyThrottleMs()) return 0;
     if (sleepBackfillInFlight) return sleepBackfillInFlight;
     if (!canFetch()) return 0;
 
@@ -418,7 +440,7 @@
 
   async function fetchAndApplyTodayActivity(options = {}) {
     const force = Boolean(options.force);
-    if (!force && Date.now() - lastFetchedAt < THROTTLE_MS) return null;
+    if (!force && Date.now() - lastFetchedAt < todayThrottleMs()) return null;
     if (inFlight) return inFlight;
 
     if (typeof globalScope.getAuthHeaders !== 'function'
@@ -460,6 +482,7 @@
         cacheActivity(activity);
         applyMissionSync(activity);
         rerenderConsumers();
+        updateLiveRefresh(); // e.g. right after connecting
         return activity;
       } catch (error) {
         console.warn('[ActivitySyncBridge] fetch failed', error);
@@ -608,7 +631,7 @@
   async function fetchAndApplyCardio(options = {}) {
     const force = Boolean(options.force);
     if (!force && !isConnected()) return null;
-    if (!force && Date.now() - lastCardioFetchedAt < THROTTLE_MS) return null;
+    if (!force && Date.now() - lastCardioFetchedAt < todayThrottleMs()) return null;
     if (cardioInFlight) return cardioInFlight;
 
     if (typeof globalScope.getAuthHeaders !== 'function'
@@ -716,7 +739,7 @@
   async function fetchAndApplyHistory(options = {}) {
     const force = Boolean(options.force);
     if (!force && !isConnected()) return null;
-    if (!force && Date.now() - lastHistoryFetchedAt < HISTORY_THROTTLE_MS) return null;
+    if (!force && Date.now() - lastHistoryFetchedAt < historyThrottleMs()) return null;
     if (historyInFlight) return historyInFlight;
 
     if (typeof globalScope.getAuthHeaders !== 'function'
@@ -872,7 +895,7 @@
   async function fetchAndApplyRecovery(options = {}) {
     const force = Boolean(options.force);
     if (!force && !isConnected()) return null;
-    if (!force && Date.now() - lastRecoveryFetchedAt < HISTORY_THROTTLE_MS) return null;
+    if (!force && Date.now() - lastRecoveryFetchedAt < historyThrottleMs()) return null;
     if (recoveryInFlight) return recoveryInFlight;
 
     if (typeof globalScope.getAuthHeaders !== 'function'
@@ -1187,7 +1210,7 @@
   async function fetchAndApplyBody(options = {}) {
     const force = Boolean(options.force);
     if (!force && !isConnected()) return null;
-    if (!force && Date.now() - lastBodyFetchedAt < HISTORY_THROTTLE_MS) return null;
+    if (!force && Date.now() - lastBodyFetchedAt < historyThrottleMs()) return null;
     if (bodyInFlight) return bodyInFlight;
 
     if (typeof globalScope.getAuthHeaders !== 'function'
@@ -1255,28 +1278,65 @@
     return bodyInFlight;
   }
 
+  // Everything the app shows from the tracker. Each fetch keeps its own
+  // throttle, so calling this often only re-asks for what is due.
+  function refreshAll() {
+    // Workouts only after the activity fetch has confirmed a connection.
+    Promise.resolve(fetchAndApplyTodayActivity()).then(() => {
+      fetchAndApplyCardio();
+      fetchAndApplyHistory();
+      // After sleep, so the Recovery mission sees last night's sleep too.
+      Promise.resolve(sleepInFlight).then(() => fetchAndApplyRecovery());
+      fetchAndApplyBody();
+    });
+    // Last night first, then any earlier nights still missing.
+    Promise.resolve(fetchAndApplyTodaySleep()).then(() => fetchAndApplyRecentSleep());
+  }
+
+  let currentTab = 'homeTab';
+  let liveTimer = null;
+
+  function isVisible() {
+    return globalScope.document?.visibilityState !== 'hidden';
+  }
+
+  // While steps/burn are on screen, keep them moving instead of waiting for
+  // a tab change. Stops when the app is hidden or the user leaves those tabs.
+  function updateLiveRefresh() {
+    const want = isVisible() && LIVE_TABS.has(currentTab) && isConnected();
+    if (want && !liveTimer) {
+      liveTimer = setInterval(() => {
+        if (!isVisible() || !LIVE_TABS.has(currentTab) || !isConnected()) return updateLiveRefresh();
+        fetchAndApplyTodayActivity();
+        if (currentTab === 'macroTab') fetchAndApplyHistory();
+      }, LIVE_REFRESH_MS);
+    } else if (!want && liveTimer) {
+      clearInterval(liveTimer);
+      liveTimer = null;
+    }
+  }
+
   if (typeof globalScope.document !== 'undefined') {
     globalScope.document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
-        // Workouts only after the activity fetch has confirmed a connection.
-        Promise.resolve(fetchAndApplyTodayActivity()).then(() => {
-          fetchAndApplyCardio();
-          fetchAndApplyHistory();
-          // After sleep, so the Recovery mission sees last night's sleep too.
-          Promise.resolve(sleepInFlight).then(() => fetchAndApplyRecovery());
-          fetchAndApplyBody();
-        });
-        // Last night first, then any earlier nights still missing.
-        Promise.resolve(fetchAndApplyTodaySleep()).then(() => fetchAndApplyRecentSleep());
+        refreshAll();
+        Promise.resolve(inFlight).then(updateLiveRefresh);
       }, 1000);
     });
-    // Coming back to the app (e.g. first look after waking up) logs the
-    // night that just ended without needing a trip to the Sleep tab.
+    // Coming back to the app (after a walk, or first look after waking up)
+    // picks up new steps, workouts and last night's sleep straight away,
+    // without needing a tab change.
     globalScope.document.addEventListener('visibilitychange', () => {
-      if (globalScope.document.visibilityState !== 'visible') return;
-      Promise.resolve(fetchAndApplyTodaySleep()).then(() => fetchAndApplyRecentSleep());
+      if (isVisible()) {
+        renderSyncInfoLine();
+        refreshAll();
+        Promise.resolve(inFlight).then(updateLiveRefresh);
+      } else {
+        updateLiveRefresh();
+      }
     });
     globalScope.document.addEventListener('traininglog:tab-changed', (e) => {
+      if (e.detail?.tab) currentTab = e.detail.tab;
       if (e.detail?.tab === 'homeTab') {
         renderSyncInfoLine(); // reflect cache immediately, even if the fetch below is throttled
         fetchAndApplyTodayActivity();
@@ -1291,6 +1351,7 @@
         fetchAndApplyTodayActivity();
         fetchAndApplyHistory();
       }
+      updateLiveRefresh();
     });
   }
 
@@ -1300,6 +1361,7 @@
   function resetConnectionState() {
     setConnectedFlag(false);
     setNeedsReconnect(false);
+    updateLiveRefresh();
     rerenderConsumers();
     rerenderSleepConsumers();
     renderTrackerBurn();
