@@ -6,6 +6,10 @@
    never gives the numbers). Every food comes back as a row to check:
    which match, how much, include or not. "Log" adds the ticked ones to
    the chosen meal like any other food.
+   Photo: the camera button sends a photo of the meal (plus the text as an
+   optional note) to POST /api/ai/food-photo instead; the AI estimates the
+   amounts, so the check step matters more. When logged, the photo is
+   saved as that meal's photo (meal-photos.js).
    Pro and AI consent are handled by the app's AI fetch wrapper
    (ai-consent.js): without them it shows the consent sheet or upgrade.
    ============================================================= */
@@ -24,9 +28,13 @@
   const logOnly = () => document.documentElement.classList.contains('pc-log-only');
   const logLabel = t => `Log ${t.count} food${t.count === 1 ? '' : 's'}${logOnly() ? '' : ` · ${t.kcal} kcal`}`;
 
-  // { host, meal, text, state: 'idle'|'loading'|'done'|'error', error, rows }
+  // { host, meal, text, photo, state: 'idle'|'loading'|'done'|'error', error, rows }
   // row: { item, foods, pick (index), amount, unit, on }
-  let st = { host: null, meal: null, text: '', state: 'idle', error: '', rows: [] };
+  // photo: a meal photo (JPEG data URL from meal-photos.js) to find the
+  // foods in; the text is then an optional note with it.
+  let st = { host: null, meal: null, text: '', photo: null, state: 'idle', error: '', rows: [] };
+  const CAMERA_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  const MP = () => window.mealPhotos;
   let seq = 0;
 
   // Voice (speech-input.js): null until we know, then true/false.
@@ -124,7 +132,9 @@
     } else if (st.state === 'error') {
       body = `<p class="fd-error" role="alert">${esc(st.error)}</p>`;
     } else if (st.state === 'done' && !st.rows.length) {
-      body = '<p class="fd-error" role="status">No food found in that. Try listing what you ate, e.g. “2 eggs, 1 slice of toast, coffee with milk”.</p>';
+      body = st.photo
+        ? '<p class="fd-error" role="status">No food found in the photo. Try a photo from above with the whole plate in view, or describe the meal in words.</p>'
+        : '<p class="fd-error" role="status">No food found in that. Try listing what you ate, e.g. “2 eggs, 1 slice of toast, coffee with milk”.</p>';
     } else if (st.state === 'done') {
       const t = totalsHtml();
       body = `
@@ -136,16 +146,27 @@
           <button type="button" class="food-add-btn" data-fd-log${t.count ? '' : ' disabled'}>${logLabel(t)}</button>
         </div>`;
     }
+    const canPhoto = !!(MP() && MP().pickPhoto);
+    const placeholder = voice.listening ? 'Listening… say what you ate'
+      : st.photo ? 'Anything the photo doesn’t show? e.g. fried in olive oil, I ate half (optional)'
+        : `e.g. 2 eggs, a slice of toast with butter and a flat white${voice.ok ? ' — or tap the mic and say it' : ''}`;
     host.innerHTML = `
       <form class="fd-form" data-fd-form>
-        <label class="fd-label" for="fdText">What did you eat?</label>
-        <textarea id="fdText" class="fd-text${voice.listening ? ' is-listening' : ''}" rows="3" maxlength="${MAX_TEXT}" placeholder="${voice.listening ? 'Listening… say what you ate' : `e.g. 2 eggs, a slice of toast with butter and a flat white${voice.ok ? ' — or tap the mic and say it' : ''}`}" ${busy || voice.listening ? 'readonly' : ''}>${esc(st.text)}</textarea>
+        <label class="fd-label" for="fdText">${st.photo ? 'Your meal' : 'What did you eat?'}</label>
+        ${st.photo ? `
+        <div class="fd-photo">
+          <img src="${esc(st.photo)}" alt="Photo of your meal">
+          <button type="button" class="fd-photo-x" data-fd-photo-clear aria-label="Remove photo" ${busy ? 'disabled' : ''}>✕</button>
+        </div>` : ''}
+        <textarea id="fdText" class="fd-text${voice.listening ? ' is-listening' : ''}${st.photo ? ' is-note' : ''}" rows="${st.photo ? 2 : 3}" maxlength="${MAX_TEXT}" placeholder="${esc(placeholder)}" ${busy || voice.listening ? 'readonly' : ''}>${esc(st.text)}</textarea>
         ${voice.note ? `<p class="fd-voice-note" role="status">${esc(voice.note)}</p>` : ''}
         <div class="fd-actions">
           ${voice.ok ? `<button type="button" class="fd-mic${voice.listening ? ' is-on' : ''}" data-fd-mic aria-pressed="${voice.listening}" aria-label="${voice.listening ? 'Stop listening' : 'Say what you ate'}" ${busy ? 'disabled' : ''}>${MIC_SVG}<span>${voice.listening ? 'Stop' : 'Speak'}</span></button>` : ''}
-          <span class="fd-pro"><span class="ui-icon">${icon('sparkles')}</span>Pro · uses 1 AI credit</span>
-          <button type="submit" class="food-add-btn" ${busy || voice.listening ? 'disabled' : ''}>${st.state === 'done' ? 'Find again' : 'Find foods'}</button>
+          ${canPhoto && !st.photo ? `<button type="button" class="fd-mic fd-cam" data-fd-photo aria-label="Find the foods in a photo of your meal" ${busy || voice.listening ? 'disabled' : ''}>${CAMERA_SVG}<span>Photo</span></button>` : ''}
+          <span class="fd-pro"><span class="ui-icon">${icon('sparkles')}</span>Pro · 1 AI credit</span>
+          <button type="submit" class="food-add-btn" ${busy || voice.listening ? 'disabled' : ''}>${st.state === 'done' ? 'Find again' : (st.photo ? 'Find foods in photo' : 'Find foods')}</button>
         </div>
+        ${st.photo && st.state !== 'done' ? '<p class="fd-voice-note">Amounts from a photo are estimates — check them before logging.</p>' : ''}
       </form>
       ${body}`;
   }
@@ -220,20 +241,45 @@
     else startVoice();
   }
 
+  /* ── Photo ───────────────────────────────────────────────── */
+
+  // Camera or library (meal-photos.js shrinks it to a small JPEG), then
+  // straight on to finding the foods; a note can be added and sent again.
+  async function pickPhoto() {
+    if (!MP() || st.state === 'loading') return;
+    let image = null;
+    try { image = await MP().pickPhoto(); } catch (e) {
+      voice.note = (e && e.message) || 'Couldn’t use that photo.';
+      draw();
+      return;
+    }
+    if (!image) return;
+    st.photo = image;
+    voice.note = '';
+    find();
+  }
+
+  function clearPhoto() {
+    st.photo = null;
+    if (st.state !== 'loading') { st.state = 'idle'; st.rows = []; }
+    draw();
+  }
+
   /* ── Server ──────────────────────────────────────────────── */
 
   async function find() {
     const text = st.text.trim();
-    if (text.length < 2) return;
+    const photo = st.photo;
+    if (!photo && text.length < 2) return;
     const my = ++seq;
     st.state = 'loading';
     st.rows = [];
     draw();
     try {
-      const res = await fetch(`${window.SERVER_URL}/api/ai/food-describe`, {
+      const res = await fetch(`${window.SERVER_URL}/api/ai/${photo ? 'food-photo' : 'food-describe'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(photo ? { image: photo, note: text } : { text }),
       });
       const data = await res.json().catch(() => null);
       if (my !== seq) return;
@@ -267,7 +313,12 @@
     if (typeof window.applyFoodLogChanges === 'function') window.applyFoodLogChanges(entries.map(after => ({ after })));
     else entries.forEach(e => FL().add(e));
     const kcal = entries.reduce((s, e) => s + (e.kcal || 0), 0);
-    st = { host: st.host, meal: st.meal, text: '', state: 'idle', error: '', rows: [] };
+    // The photo the foods came from becomes that meal's photo.
+    if (st.photo && MP() && MP().isAvailable && MP().isAvailable()) {
+      const user = (window.getActiveUsername && window.getActiveUsername()) || window.currentUser || localStorage.getItem('fitnessAppUser') || '';
+      if (user) MP().savePhoto(user, date, meal, st.photo).then(() => window.renderFoodLog?.()).catch(() => {});
+    }
+    st = { host: st.host, meal: st.meal, text: '', photo: null, state: 'idle', error: '', rows: [] };
     draw();
     window.closeFoodSearch?.();
     FL().toast?.(`✅ ${entries.length} food${entries.length === 1 ? '' : 's'} logged${logOnly() ? '' : ` — ${kcal} kcal`}`);
@@ -332,6 +383,8 @@
       }
     });
     host.addEventListener('click', (e) => {
+      if (e.target.closest('[data-fd-photo]')) { pickPhoto(); return; }
+      if (e.target.closest('[data-fd-photo-clear]')) { clearPhoto(); return; }
       if (e.target.closest('[data-fd-mic]')) { toggleVoice(); return; }
       if (e.target.closest('[data-fd-log]')) logAll();
       const s = e.target.closest('[data-fd-search]');

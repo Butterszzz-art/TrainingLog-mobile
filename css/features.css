@@ -3698,6 +3698,14 @@ button.food-meal-name { margin: 0; padding: 4px 0; min-height: 0; border: 0; bac
 @media (prefers-reduced-motion: reduce) { .fd-form button.fd-mic.is-on { animation: none; } }
 .fd-text.is-listening { border-color: var(--primary); }
 .fd-voice-note { margin: 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+/* Photo of the meal (food-describe.js) */
+.fd-photo { position: relative; align-self: flex-start; }
+.fd-photo img { display: block; width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-color); }
+.fd-form button.fd-photo-x {
+  position: absolute; top: 4px; right: 4px; margin: 0; min-height: 0; width: 26px; height: 26px; padding: 0;
+  border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 0.8rem; line-height: 26px; cursor: pointer;
+}
+.fd-text.is-note { min-height: 52px; }
 .food-voice-btn[hidden] { display: none; }
 .fd-pro { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; color: var(--text-muted); }
 .fd-pro .ui-icon, .fd-pro .ui-icon svg { width: 13px; height: 13px; display: inline-flex; }
