@@ -778,7 +778,9 @@
         const name = `<button type="button" class="food-meal-name" data-edit-meals aria-label="Rename or change meals (${_esc(label)})">${_esc(label)}</button>`;
         const add = `<button type="button" class="food-meal-add" data-add-meal="${m}" aria-label="Add food to ${label.toLowerCase()}"><span class="ui-icon">${_icon('plus')}</span></button>`;
         if (!list.length && !reps.length) {
-          return `<div class="food-meal-card is-empty">${name}${add}</div>`;
+          // Planned time (scheduled meals) next to the name, when there is one.
+          const planned = window.MealTiming ? window.MealTiming.plannedHtml(m, day) : '';
+          return `<div class="food-meal-card is-empty">${planned ? `<span class="food-meal-left">${name}${planned}</span>` : name}${add}</div>`;
         }
         const mt = Core.totals(list);
         return `
@@ -820,8 +822,9 @@
   window.renderFoodLog = renderFoodLog;
 
   /* ── Meals: how many, and their names ────────────────────── */
-  // mealSetup_<user> = { count, names: { breakfast: 'Pre-workout', ... } }
-  // (synced). Keys are the stored meal keys; see food-core.js.
+  // mealSetup_<user> = { count, names: { breakfast: 'Pre-workout', ... },
+  // times?: { breakfast: '08:00' }, remind? } (synced). Keys are the stored
+  // meal keys; see food-core.js. Times and reminders: meal-timing.js.
 
   const MEAL_SETUP_KEY = u => `mealSetup_${u}`;
 
@@ -865,11 +868,14 @@
       window.FoodSheet.open(`
         <form class="food-form food-meals-form" data-meals-form>
           <div class="food-sheet-hdr"><h3>Your meals</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
-          <p class="food-sheet-sub">Name them whatever fits your day, e.g. Pre-workout or Late snack. Up to ${Core.MAX_MEALS} meals.</p>
+          <p class="food-sheet-sub">Name them whatever fits your day, e.g. Pre-workout or Late snack. Up to ${Core.MAX_MEALS} meals. Add a time to plan when you eat each one (optional); reminders can be turned on under Meal timing.</p>
           ${keys.map((k, i) => `
           <div class="food-meals-row">
             <label class="food-field"><span>${_esc(Core.defaultMealLabel(k))}</span>
               <input data-meal-name="${k}" maxlength="${Core.MEAL_NAME_MAX}" value="${_esc(s.names[k] || '')}" placeholder="${_esc(Core.defaultMealLabel(k))}" autocomplete="off" />
+            </label>
+            <label class="food-field food-meals-time"><span>Time</span>
+              <input type="time" data-meal-time="${k}" value="${_esc((s.times && s.times[k]) || '')}" aria-label="Planned time for ${_esc(Core.MEAL_LABELS[k])}" />
             </label>
             ${i === keys.length - 1 && keys.length > 1 ? `<button type="button" class="food-meals-remove" data-remove-meal-slot aria-label="Remove ${_esc(Core.MEAL_LABELS[k])}">Remove</button>` : ''}
           </div>`).join('')}
@@ -886,6 +892,14 @@
       };
       form.querySelector('[data-close]').onclick = () => { window.FoodSheet.close(); renderFoodLog(); };
       form.querySelectorAll('[data-meal-name]').forEach(i => i.addEventListener('input', () => saveMealSetup({ ...loadMealSetup(), names: names() })));
+      // Planned times (scheduled meals, meal-timing.js). Clearing one unplans it.
+      form.querySelectorAll('[data-meal-time]').forEach(i => i.addEventListener('change', () => {
+        const cur = loadMealSetup();
+        const times = { ...(cur.times || {}) };
+        if (i.value) times[i.dataset.mealTime] = i.value;
+        else delete times[i.dataset.mealTime];
+        saveMealSetup({ ...cur, names: names(), times });
+      }));
       form.querySelector('[data-meals-add]')?.addEventListener('click', () => {
         saveMealSetup({ ...loadMealSetup(), names: names(), count: loadMealSetup().count + 1 });
         draw();
@@ -897,7 +911,9 @@
         const gone = Core.ALL_MEALS[cur.count - 1];
         const n = { ...names() };
         delete n[gone];
-        saveMealSetup({ count: cur.count - 1, names: n });
+        const times = { ...(cur.times || {}) };
+        delete times[gone];
+        saveMealSetup({ ...cur, count: cur.count - 1, names: n, times });
         draw();
       });
       form.onsubmit = (e) => { e.preventDefault(); window.FoodSheet.close(); renderFoodLog(); };

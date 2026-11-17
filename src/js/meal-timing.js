@@ -7,8 +7,16 @@
    - draws the time chip on each meal card (tap: set the time);
    - draws the "Meal timing" card above the meals: the fasting timer or
      eating window, and the day's spacing;
-   - the timing sheet: fasting goal on/off and hours, last 7 days.
+   - the timing sheet: fasting goal on/off and hours, planned meal times
+     and reminders, last 7 days;
+   - scheduled meals: planned times per meal (set in "Your meals",
+     food-database.js) show on the meal cards and as "Next: …" on the
+     card; with reminders on, the phone gets a local notification at each
+     planned time for the next 7 days (Capacitor LocalNotifications),
+     re-planned whenever the food log is drawn so a meal already logged
+     today isn't reminded.
    fastingPlan_<user> (synced, cloud-sync.js): { on, hours, startedAt? }
+   mealSetup_<user> (synced): { …, times: { breakfast: '08:00' }, remind }
    ============================================================= */
 
 (function () {
@@ -35,6 +43,8 @@
   const log = () => (FL().load ? FL().load() : []);
   const today = () => (FL().today ? FL().today() : new Date().toISOString().slice(0, 10));
   const shownDay = () => (FL().day ? FL().day() : today());
+  const mealSetup = () => (FL().mealSetup ? FL().mealSetup() : {});
+  const labelOf = m => (Core() && Core().MEAL_LABELS[m]) || m;
 
   /* ── Stamping new entries ─────────────────────────────────── */
 
@@ -52,9 +62,43 @@
     const day = list[0].date;
     const t = MT().mealTime(list, day, meal);
     const label = (Core() && Core().MEAL_LABELS[meal]) || meal;
-    return t !== null
-      ? `<button type="button" class="mt-chip" data-mt-meal-time="${esc(meal)}" aria-label="${esc(label)} eaten at ${MT().hhmm(t)}: change the time">${MT().hhmm(t)}</button>`
-      : `<button type="button" class="mt-chip is-unset" data-mt-meal-time="${esc(meal)}" aria-label="Set when you ate ${esc(label.toLowerCase())}"><span class="ui-icon">${icon('clock')}</span>time</button>`;
+    const planned = (mealSetup().times || {})[meal];
+    if (t !== null) return `<button type="button" class="mt-chip" data-mt-meal-time="${esc(meal)}" aria-label="${esc(label)} eaten at ${MT().hhmm(t)}: change the time">${MT().hhmm(t)}</button>`;
+    return `<button type="button" class="mt-chip is-unset" data-mt-meal-time="${esc(meal)}" aria-label="Set when you ate ${esc(label.toLowerCase())}${planned ? ` (planned ${planned})` : ''}"><span class="ui-icon">${icon('clock')}</span>${planned ? esc(planned) : 'time'}</button>`;
+  }
+
+  // An empty meal with a planned time: the time, marked due or late today.
+  function plannedHtml(meal, day) {
+    if (!MT()) return '';
+    const times = mealSetup().times || {};
+    if (!times[meal]) return '';
+    let cls = '';
+    if (day === today()) {
+      const s = MT().daySchedule(log(), times, [meal], day, Date.now())[0];
+      if (s && s.status === 'due') cls = ' is-due';
+      else if (s && s.status === 'late') cls = ' is-late';
+    }
+    return `<span class="mt-chip is-planned${cls}" aria-label="${esc(labelOf(meal))} planned at ${esc(times[meal])}"><span class="ui-icon">${icon('clock')}</span>${esc(times[meal])}</span>`;
+  }
+
+  // "Next: Lunch at 12:30 · in 1h 20m", for today's card.
+  function scheduleHtml() {
+    const M = MT();
+    const times = mealSetup().times;
+    if (!times || !Core()) return '';
+    const now = Date.now();
+    const sched = M.daySchedule(log(), times, Core().MEALS, today(), now);
+    if (!sched.length) return '';
+    const next = M.nextMeal(sched);
+    const late = sched.filter(x => x.status === 'late');
+    let main;
+    if (next && next.status === 'due') main = `<b>${esc(labelOf(next.meal))} now</b><small>planned ${M.hhmm(next.at)}</small>`;
+    else if (next) main = `<b>Next: ${esc(labelOf(next.meal))} at ${M.hhmm(next.at)}</b><small>in ${M.duration(next.at - now)}</small>`;
+    else if (!late.length) main = '<b>All planned meals logged</b> ✓';
+    else main = '';
+    const lateNote = late.length ? `<small class="mt-late">${late.map(x => `${esc(labelOf(x.meal))} (${M.hhmm(x.at)})`).join(', ')} not logged yet</small>` : '';
+    if (!main && !lateNote) return '';
+    return `<div class="mt-status mt-next"><div class="mt-status-main">${main}${lateNote}</div>${mealSetup().remind ? `<span class="mt-bell" title="Reminders on" aria-label="Reminders on">🔔</span>` : ''}</div>`;
   }
 
   function openMealTime(meal) {
@@ -163,13 +207,15 @@
     const items = all.filter(e => e && e.date === day);
     const sum = M.daySummary(items, now);
     const status = isToday ? statusHtml(M.fastStatus(all, plan, now), plan) : '';
+    const schedule = isToday ? scheduleHtml() : '';
     if (!isToday && !sum) return '';
     const untimed = !sum && items.some(e => !M.isPlannedOnly(e));
     return `
       <div class="mt-hdr">
         <span class="mt-title"><span class="ui-icon">${icon('clock')}</span>Meal timing${plan.on ? ` <span class="mt-plan">${planLabel(plan)}</span>` : ''}</span>
-        <button type="button" class="mx-link mt-open" data-mt-open>${plan.on ? 'Fasting & stats' : 'Fasting timer'}</button>
+        <button type="button" class="mx-link mt-open" data-mt-open>${plan.on || mealSetup().times ? 'Plan & stats' : 'Fasting & schedule'}</button>
       </div>
+      ${schedule}
       ${status}
       ${summaryHtml(sum)}
       ${untimed ? '<p class="mt-summary">Tap “time” on a meal to say when you ate it.</p>' : ''}`;
@@ -177,9 +223,85 @@
 
   function cardHtml(day) {
     if (!MT()) return '';
+    syncReminders(); // the log or the meal setup may have changed
     const inner = cardInner(day || shownDay());
     return inner ? `<div class="mt-card" id="mtCard">${inner}</div>` : '';
   }
+
+  /* ── Meal reminders (phone notifications) ─────────────────── */
+
+  function notifier() {
+    const c = window.Capacitor;
+    if (!c || typeof c.isNativePlatform !== 'function' || !c.isNativePlatform()) return null;
+    if (typeof c.isPluginAvailable === 'function' && !c.isPluginAvailable('LocalNotifications')) return null;
+    return (c.Plugins && c.Plugins.LocalNotifications) || (typeof c.registerPlugin === 'function' ? c.registerPlugin('LocalNotifications') : null);
+  }
+
+  let lastSig = null;
+  let syncTimer = null;
+  function syncReminders() {
+    if (!notifier()) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(scheduleReminders, 800);
+  }
+
+  // Replaces every meal reminder with the current plan (stable ids).
+  async function scheduleReminders() {
+    const ln = notifier();
+    if (!ln || !MT() || !Core() || !user()) return;
+    const s = mealSetup();
+    const plan = s.remind && s.times ? MT().reminderPlan({
+      times: s.times, meals: Core().MEALS, labels: Core().MEAL_LABELS, entries: log(), today: today(), now: Date.now(),
+    }) : [];
+    const sig = JSON.stringify(plan.map(p => [p.id, p.at, p.title]));
+    if (sig === lastSig) return;
+    try {
+      if (plan.length) {
+        const perm = await ln.checkPermissions();
+        if (!perm || perm.display !== 'granted') return;
+      }
+      await ln.cancel({ notifications: MT().allReminderIds().map(id => ({ id })) });
+      if (plan.length) {
+        await ln.schedule({
+          notifications: plan.map(p => ({
+            id: p.id, title: p.title, body: p.body,
+            schedule: { at: new Date(p.at), allowWhileIdle: true },
+            extra: { kind: 'meal-reminder', meal: p.meal },
+          })),
+        });
+      }
+      lastSig = sig;
+    } catch (err) {
+      console.warn('[MealTiming] could not schedule reminders', err);
+    }
+  }
+
+  // → true when reminders can be sent (asks for permission if needed).
+  async function allowReminders() {
+    const ln = notifier();
+    if (!ln) return false;
+    try {
+      let perm = await ln.checkPermissions();
+      if (perm.display !== 'granted') perm = await ln.requestPermissions();
+      return perm.display === 'granted';
+    } catch { return false; }
+  }
+
+  // Tapping a reminder opens the food log at that meal.
+  (function listenForTaps() {
+    const ln = notifier();
+    if (!ln || typeof ln.addListener !== 'function') return;
+    ln.addListener('localNotificationActionPerformed', (ev) => {
+      const extra = ev && ev.notification && ev.notification.extra;
+      if (!extra || extra.kind !== 'meal-reminder') return;
+      setTimeout(() => {
+        if (typeof window.showTab === 'function') window.showTab('macroTab');
+        window.openFoodSearch?.({ meal: extra.meal });
+      }, 600);
+    });
+    // Keeps the next 7 days planned even if the food log isn't opened.
+    setTimeout(scheduleReminders, 4000);
+  })();
 
   // Keeps the timer current while the card is on screen.
   setInterval(() => {
@@ -222,6 +344,19 @@
           ${plan.on && w.fasts ? row(`Fasts of ${plan.hours}h+`, `${w.goalHit} of ${w.fasts}`) : ''}
         </div>`
         : '<p class="food-sheet-sub">No meal times in the last 7 days yet. Food you log for today gets the time you log it; tap a meal’s time to change it.</p>';
+      const setup = mealSetup();
+      const times = setup.times || {};
+      const planned = (Core() ? Core().MEALS : []).filter(m => times[m]).sort((a, b) => times[a].localeCompare(times[b]));
+      const canNotify = !!notifier();
+      const schedule = `
+          <h4 class="mt-h4">Planned meals</h4>
+          ${planned.length ? `
+          <div class="mt-stats">${planned.map(m => row(labelOf(m), times[m])).join('')}</div>` : '<p class="food-sheet-sub">Give your meals a time to plan your day and get reminders.</p>'}
+          <button type="button" class="mx-link mt-set-times" data-mt-set-times>${planned.length ? 'Change meal times' : 'Set meal times'}</button>
+          <label class="mt-toggle${planned.length && canNotify ? '' : ' is-off'}"><input type="checkbox" data-mt-remind${setup.remind ? ' checked' : ''}${planned.length && canNotify ? '' : ' disabled'}><span>Remind me at meal times</span></label>
+          <p class="food-sheet-sub">${canNotify
+            ? 'A notification at each planned time, skipped once you’ve logged that meal.'
+            : 'Reminders come as notifications on your phone, in the Pocket Coach app.'}</p>`;
       Sheet().open(`
         <div class="mt-sheet">
           <div class="food-sheet-hdr"><h3>Meal timing</h3><button type="button" class="food-sheet-x" aria-label="Close" data-close>✕</button></div>
@@ -230,10 +365,24 @@
           <div class="mt-presets${plan.on ? '' : ' is-off'}" role="radiogroup" aria-label="Fasting hours">
             ${M.FAST_PRESETS.map(h => `<button type="button" role="radio" aria-checked="${plan.hours === h}" class="mt-preset${plan.hours === h ? ' is-on' : ''}" data-mt-hours="${h}"${plan.on ? '' : ' disabled'}>${h}:${24 - h}</button>`).join('')}
           </div>
+          ${schedule}
           ${stats}
         </div>`, { label: 'Meal timing' });
       const box = document.querySelector('#foodSheet .mt-sheet');
       if (!box) return;
+      box.querySelector('[data-mt-set-times]').onclick = () => { Sheet().close(); window.openMealSetup?.(); };
+      box.querySelector('[data-mt-remind]').onchange = async (e) => {
+        const on = e.target.checked;
+        if (on && !(await allowReminders())) {
+          FL().toast?.('Allow notifications for Pocket Coach in your phone’s settings to get meal reminders.');
+          draw();
+          return;
+        }
+        FL().saveMealSetup?.({ ...mealSetup(), remind: on });
+        lastSig = null;
+        window.renderFoodLog?.();
+        draw();
+      };
       box.querySelector('[data-close]').onclick = () => { Sheet().close(); window.renderFoodLog?.(); };
       box.querySelector('[data-mt-on]').onchange = (e) => { savePlan({ ...loadPlan(), on: e.target.checked }); window.renderFoodLog?.(); draw(); };
       box.querySelectorAll('[data-mt-hours]').forEach(b => b.addEventListener('click', () => { savePlan({ ...loadPlan(), hours: Number(b.dataset.mtHours) }); window.renderFoodLog?.(); draw(); }));
@@ -250,5 +399,5 @@
     else if (t.hasAttribute('data-mt-stop')) undoStart();
   });
 
-  window.MealTiming = { stamp, chipHtml, cardHtml, openSheet, openMealTime, loadPlan };
+  window.MealTiming = { stamp, chipHtml, plannedHtml, cardHtml, openSheet, openMealTime, loadPlan, scheduleReminders };
 })();

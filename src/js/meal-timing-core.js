@@ -230,11 +230,91 @@
     return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
   }
 
+  // ── Scheduled meals ────────────────────────────────────────────────
+  // The meal setup (food-core.js normalizeMealSetup) can hold a planned
+  // clock time per meal: { times: { breakfast: '08:00', ... }, remind }.
+  const DUE_BEFORE_MIN = 15;  // "due" from 15 min before the planned time
+  const DUE_AFTER_MIN = 60;   // … until an hour after; then "late"
+  const REMINDER_DAYS = 7;
+  const REMINDER_ID_BASE = 7100;
+  // Order of the stored meal keys (food-core.js ALL_MEALS), for stable ids.
+  const MEAL_KEYS = ['breakfast', 'lunch', 'dinner', 'snacks', 'meal5', 'meal6'];
+
+  const addDays = (date, n) => new Date(Date.parse(`${date}T12:00:00Z`) + n * DAY).toISOString().slice(0, 10);
+
+  // A meal counts as eaten on a day once anything is logged in it (planned
+  // coach foods not ticked off don't count).
+  function loggedMeals(entries, date) {
+    return new Set((entries || []).filter(e => e && e.date === date && !isPlannedOnly(e)).map(e => e.meal));
+  }
+
+  /**
+   * The day's planned meals in time order:
+   *   [{ meal, at, status: 'eaten'|'due'|'late'|'upcoming' }]
+   * `meals`: the meals in use (only those are scheduled).
+   */
+  function daySchedule(entries, times, meals, date, now) {
+    const done = loggedMeals(entries, date);
+    return (meals || []).filter(m => times && times[m])
+      .map(m => ({ meal: m, at: timeOnDay(date, times[m]) }))
+      .filter(x => x.at !== null)
+      .sort((a, b) => a.at - b.at)
+      .map(x => {
+        let status = 'upcoming';
+        if (done.has(x.meal)) status = 'eaten';
+        else if (now > x.at + DUE_AFTER_MIN * MIN) status = 'late';
+        else if (now >= x.at - DUE_BEFORE_MIN * MIN) status = 'due';
+        return { ...x, status };
+      });
+  }
+
+  // The meal to show as "next": one due now, else the next upcoming one.
+  function nextMeal(schedule) {
+    const list = schedule || [];
+    return list.find(x => x.status === 'due') || list.find(x => x.status === 'upcoming') || null;
+  }
+
+  /**
+   * Reminders to schedule on the phone for the next REMINDER_DAYS days, one
+   * per planned meal per day, skipping times already past and today's meals
+   * already logged. Ids are stable, so scheduling again replaces them.
+   * → [{ id, at, meal, date, title, body }]
+   */
+  function reminderPlan({ times, meals, labels, entries, today, now, days = REMINDER_DAYS } = {}) {
+    const out = [];
+    if (!times || !today) return out;
+    const done = loggedMeals(entries, today);
+    for (let d = 0; d < days; d++) {
+      const date = addDays(today, d);
+      (meals || []).forEach(m => {
+        if (!times[m] || (d === 0 && done.has(m))) return;
+        const at = timeOnDay(date, times[m]);
+        if (at === null || at <= now + 30000) return;
+        const label = (labels && labels[m]) || m;
+        out.push({
+          id: REMINDER_ID_BASE + d * 10 + Math.max(0, MEAL_KEYS.indexOf(m)),
+          at, meal: m, date,
+          title: `${label} · ${times[m]}`,
+          body: 'Time to eat. Tap to log it.',
+        });
+      });
+    }
+    return out.sort((a, b) => a.at - b.at);
+  }
+
+  // Every id reminderPlan can use, so all of them can be cancelled.
+  function allReminderIds(days = REMINDER_DAYS) {
+    const ids = [];
+    for (let d = 0; d < days; d++) MEAL_KEYS.forEach((_, i) => ids.push(REMINDER_ID_BASE + d * 10 + i));
+    return ids;
+  }
+
   const api = {
     MIN, HOUR, DAY, FAST_PRESETS, DEFAULT_HOURS, FAST_MIN_HOURS,
     hhmm, duration, timeOnDay, clockLabel,
     isPlannedOnly, eatenEntries, mealTime, mealEvents, stampEntry,
     daySummary, normalizePlan, pastFasts, fastStatus, weekStats,
+    REMINDER_DAYS, daySchedule, nextMeal, reminderPlan, allReminderIds,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MealTimingCore = api;

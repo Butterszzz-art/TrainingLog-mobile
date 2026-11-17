@@ -184,3 +184,57 @@ describe('food-core leaves eaten times behind on copies and repeats', () => {
     expect(r.entry.eatenAt).toBeUndefined();
   });
 });
+
+describe('scheduled meals', () => {
+  const d = '2026-11-17';
+  const times = { breakfast: '08:00', lunch: '12:30', dinner: '19:00' };
+  const meals = ['breakfast', 'lunch', 'dinner'];
+
+  test('normalizeMealSetup keeps valid times and remind, leaves them out when unset', () => {
+    expect(Core.normalizeMealSetup({ count: 3, names: {} })).toEqual({ count: 3, names: {} });
+    const s = Core.normalizeMealSetup({ count: 3, names: {}, times: { breakfast: '8:05', lunch: '25:00', dinner: 'x', snacks: '21:30' }, remind: true });
+    expect(s.times).toEqual({ breakfast: '08:05', snacks: '21:30' });
+    expect(s.remind).toBe(true);
+    expect(Core.normalizeMealSetup({ remind: 'yes' }).remind).toBeUndefined();
+  });
+
+  test('daySchedule: eaten, due, late and upcoming in time order', () => {
+    const log = [entry(d, 'breakfast', '08:10')];
+    const s = MT.daySchedule(log, times, meals, d, at(d, '12:20'));
+    expect(s.map(x => [x.meal, x.status])).toEqual([['breakfast', 'eaten'], ['lunch', 'due'], ['dinner', 'upcoming']]);
+    const later = MT.daySchedule(log, times, meals, d, at(d, '14:00'));
+    expect(later[1].status).toBe('late');
+    expect(MT.nextMeal(later).meal).toBe('dinner');
+  });
+
+  test('daySchedule: only meals in use with a time; planned coach food is not eaten', () => {
+    const log = [entry(d, 'lunch', null, { coach: {}, confirmed: false })];
+    const s = MT.daySchedule(log, { ...times, meal5: '22:00' }, ['lunch', 'dinner'], d, at(d, '12:30'));
+    expect(s.map(x => x.meal)).toEqual(['lunch', 'dinner']);
+    expect(s[0].status).toBe('due');
+  });
+
+  test('nextMeal: nothing left → null', () => {
+    expect(MT.nextMeal([{ meal: 'dinner', status: 'eaten' }])).toBeNull();
+  });
+
+  test('reminderPlan: 7 days, skips past times and meals already logged today', () => {
+    const plan = MT.reminderPlan({
+      times, meals, labels: { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' },
+      entries: [entry(d, 'lunch', null)], today: d, now: at(d, '10:00'),
+    });
+    // today: breakfast is past, lunch is logged → only dinner; then 6 days × 3
+    expect(plan.length).toBe(1 + 6 * 3);
+    expect(plan[0].meal).toBe('dinner');
+    expect(MT.hhmm(plan[0].at)).toBe('19:00');
+    expect(plan[0].title).toBe('Dinner · 19:00');
+    expect(plan[1].date).toBe('2026-11-18');
+    const ids = plan.map(p => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    ids.forEach(id => expect(MT.allReminderIds()).toContain(id));
+  });
+
+  test('reminderPlan: no times → nothing', () => {
+    expect(MT.reminderPlan({ times: null, meals, today: d, now: 0 })).toEqual([]);
+  });
+});

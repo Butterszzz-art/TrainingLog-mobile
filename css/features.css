@@ -3557,6 +3557,8 @@ button.food-meal-name { margin: 0; padding: 4px 0; min-height: 0; border: 0; bac
 .food-meal-slots .food-meal-slot-edit { margin: 0; }
 .food-meals-row { display: flex; align-items: flex-end; gap: 8px; }
 .food-meals-row .food-field { flex: 1; }
+.food-meals-row .food-meals-time { flex: 0 0 104px; }
+.food-meals-row .food-meals-time input { width: 100%; box-sizing: border-box; }
 .food-meals-row .food-meals-remove { margin: 0 0 4px; min-height: 40px; padding: 0 10px; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 0.8rem; cursor: pointer; }
 .food-meal-right { display: inline-flex; align-items: center; gap: 6px; }
 .food-meal-right .food-meal-kcal { font-size: 0.75rem; color: var(--text-muted); margin-right: 2px; }
@@ -3593,6 +3595,14 @@ button.food-meal-name { margin: 0; padding: 4px 0; min-height: 0; border: 0; bac
 .mt-bar span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width 0.4s ease; }
 .mt-status.is-eating + .mt-bar span { opacity: 0.55; }
 .mt-summary { margin: 6px 0 0; font-size: 0.76rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* Scheduled meals: planned times, next meal, reminders */
+.mt-chip.is-planned { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; border: 1px dashed var(--border-color); color: var(--text-muted); font-size: 0.72rem; font-weight: 500; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.mt-chip.is-planned.is-due { border-style: solid; border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.mt-chip.is-planned.is-late { border-style: solid; color: var(--text-color); }
+.mt-next .mt-late { display: block; font-size: 0.74rem; color: var(--text-muted); }
+.mt-bell { font-size: 0.85rem; flex-shrink: 0; }
+.mt-sheet .mt-set-times { display: inline-block; margin: 8px 0 4px; }
+.mt-toggle.is-off { opacity: 0.5; }
 .mt-time-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .mt-toggle { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; font-weight: 600; color: var(--text-color); margin: 4px 0 2px; cursor: pointer; }
 .mt-toggle input { width: 18px; height: 18px; accent-color: var(--primary); }
