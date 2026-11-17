@@ -359,6 +359,9 @@
     if (name === 'mine' && typeof window.openFoodLibrary === 'function') {
       window.openFoodLibrary({ host: document.getElementById('foodMyFoodsPanel'), meal: _sheetMeal || undefined });
     }
+    if (name === 'describe' && typeof window.openFoodDescribe === 'function') {
+      window.openFoodDescribe({ host: document.getElementById('foodDescribePanel'), meal: _sheetMeal || undefined });
+    }
     if (name === 'search') setTimeout(() => document.getElementById('foodSearchInput')?.focus(), 30);
   }
   window.showFoodSheetTab = showFoodSheetTab;
@@ -1134,6 +1137,16 @@
     customFoods: loadCustomFoods, saveCustomFood, deleteCustomFood, localFoodByBarcode,
     coachFoods: loadCoachFoods, refreshCoachFoods,
     authHeaders: _authHeaders, toast: (m) => _toast(m),
+    // Foods logged some other way (food-describe.js) into the recent list.
+    addRecent(foodsLogged, meal) {
+      const u = _user();
+      if (!u) return;
+      try {
+        let list = _readJSON(RECENT_KEY(u), []);
+        (foodsLogged || []).forEach(f => { list = Core.addRecent(list, f, Date.now(), meal); });
+        localStorage.setItem(RECENT_KEY(u), JSON.stringify(list));
+      } catch { /* storage full; the recent list is only a convenience */ }
+    },
   };
 
   /* ── Ask once about sharing the food log with a coach ────── */

@@ -422,3 +422,28 @@ describe('repeat items', () => {
     expect(u.id).toBe('rep:x');
   });
 });
+
+describe('amountFor (describe-to-log / typed amounts)', () => {
+  const C = require('../src/js/food-core');
+  const bread = { basis: 'g', servings: [{ label: '1 slice (35g)', grams: 35 }, { label: '1 loaf', grams: 800 }] };
+  const egg = { basis: 'g', servings: [{ label: '1 large', grams: 50 }] };
+  const milk = { basis: 'ml', servings: [] };
+  test('grams said: as they are', () => {
+    expect(C.amountFor(bread, { grams: 70 })).toEqual({ amount: 70, unit: 'g', grams: 70 });
+  });
+  test('ml said: in the food basis', () => {
+    expect(C.amountFor(milk, { ml: 250, grams: 250 })).toEqual({ amount: 250, unit: 'ml', grams: 250 });
+  });
+  test('a count with a matching serving: that many of it', () => {
+    expect(C.amountFor(bread, { count: 2, servingHint: 'slice', grams: 70 })).toEqual({ amount: 2, unit: '1 slice (35g)', grams: 70 });
+  });
+  test('a count whose serving the food lacks: the gram estimate', () => {
+    expect(C.amountFor(egg, { count: 2, servingHint: 'piece', grams: 100 })).toEqual({ amount: 100, unit: 'g', grams: 100 });
+  });
+  test('a count without a hint: the first serving', () => {
+    expect(C.amountFor(egg, { count: 2 })).toEqual({ amount: 2, unit: '1 large', grams: 100 });
+  });
+  test('nothing to go on: 100 g', () => {
+    expect(C.amountFor(bread, {})).toEqual({ amount: 100, unit: 'g', grams: 100 });
+  });
+});
