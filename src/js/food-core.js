@@ -618,9 +618,11 @@
   }
 
   // Copies of entries for another day (new ids, same meals and amounts).
+  // When they were eaten isn't copied: that's set when they're logged
+  // (meal-timing-core.js stampEntry).
   function copyEntries(entries, toDate, { now, rand } = {}) {
     let i = 0;
-    return (entries || []).map(e => ({
+    return (entries || []).map(({ eatenAt: _e, ...e }) => ({
       ...e,
       id: newEntryId(toDate, rand ? `${rand}${i++}` : undefined),
       date: toDate,
@@ -638,7 +640,7 @@
   const REPEAT_SKIP_KEEP = 14;
 
   function _repeatSnapshot(entry) {
-    const { id: _i, date: _d, t: _t, repeatId: _r, ...rest } = entry || {};
+    const { id: _i, date: _d, t: _t, repeatId: _r, eatenAt: _e, ...rest } = entry || {};
     return rest;
   }
 

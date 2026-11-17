@@ -3560,6 +3560,56 @@ button.food-meal-name { margin: 0; padding: 4px 0; min-height: 0; border: 0; bac
 .food-meals-row .food-meals-remove { margin: 0 0 4px; min-height: 40px; padding: 0 10px; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 0.8rem; cursor: pointer; }
 .food-meal-right { display: inline-flex; align-items: center; gap: 6px; }
 .food-meal-right .food-meal-kcal { font-size: 0.75rem; color: var(--text-muted); margin-right: 2px; }
+/* Meal timing (src/js/meal-timing.js): the time chip next to a meal's
+   name, and the timing / fasting card above the meals. */
+.food-meal-left { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 62%; }
+.food-meal-left button.food-meal-name { max-width: none; }
+.food-diary-list button.mt-chip {
+  display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+  margin: 0; min-height: 0; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--border-color); background: transparent;
+  color: var(--text-muted); font: inherit; font-size: 0.72rem; font-weight: 600;
+  font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.food-diary-list button.mt-chip.is-unset { border-style: dashed; font-weight: 500; }
+.mt-chip .ui-icon, .mt-chip .ui-icon svg { width: 11px; height: 11px; display: inline-flex; }
+.mt-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.mt-hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mt-title { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--text-color); }
+.mt-title .ui-icon, .mt-title .ui-icon svg { width: 14px; height: 14px; display: inline-flex; }
+.mt-plan { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 999px; padding: 0 6px; }
+.mt-card .mt-open { margin: 0; font-size: 0.78rem; }
+.mt-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.mt-status-main { font-size: 0.88rem; color: var(--text-color); line-height: 1.3; min-width: 0; }
+.mt-status-main b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.mt-status-main small { display: block; font-size: 0.74rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.food-diary-list button.mt-btn {
+  flex-shrink: 0; margin: 0; min-height: 32px; padding: 0 12px; border-radius: 999px;
+  border: 1px solid var(--primary); background: transparent; color: var(--primary);
+  font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+}
+.food-diary-list button.mt-btn.is-quiet { border-color: var(--border-color); color: var(--text-muted); }
+.mt-bar { height: 6px; border-radius: 999px; background: var(--border-color); overflow: hidden; margin-top: 8px; }
+.mt-bar span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width 0.4s ease; }
+.mt-status.is-eating + .mt-bar span { opacity: 0.55; }
+.mt-summary { margin: 6px 0 0; font-size: 0.76rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mt-time-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.mt-toggle { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; font-weight: 600; color: var(--text-color); margin: 4px 0 2px; cursor: pointer; }
+.mt-toggle input { width: 18px; height: 18px; accent-color: var(--primary); }
+.mt-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.mt-presets.is-off { opacity: 0.45; }
+.food-sheet button.mt-preset {
+  margin: 0; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--border-color); background: transparent; color: var(--text-color);
+  font: inherit; font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.food-sheet button.mt-preset.is-on { background: var(--primary); border-color: var(--primary); color: var(--label-on-green); }
+.mt-h4 { margin: 14px 0 6px; font-size: 0.82rem; color: var(--text-color); }
+.mt-stats { display: grid; grid-template-columns: 1fr; gap: 0; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; }
+.mt-stat { display: flex; justify-content: space-between; gap: 10px; padding: 7px 10px; font-size: 0.82rem; color: var(--text-muted); }
+.mt-stat + .mt-stat { border-top: 1px solid var(--border-color); }
+.mt-stat b { color: var(--text-color); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .mt-bar span { transition: none; } }
 /* Meal photo (src/js/meal-photos.js): a wide thumbnail under the header. */
 .food-meal-photo-slot:empty { display: none; }
 .food-meal-photo {

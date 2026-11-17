@@ -157,7 +157,14 @@
     const s = slotState(FL().load(), shown(), slot, mp);
     if (!s || locked()) return;
     const ids = new Set(s.entries.map(e => e.id));
-    FL().save(FL().load().map(e => (ids.has(e.id) ? { ...e, confirmed: true } : e)));
+    // Ticked off = eaten: it gets a time like any food logged (meal-timing.js).
+    const MTm = globalScope.MealTiming;
+    const all = FL().load();
+    FL().save(all.map(e => {
+      if (!ids.has(e.id)) return e;
+      const done = { ...e, confirmed: true };
+      return MTm ? MTm.stamp(done, all.filter(x => x && x.date === e.date && !ids.has(x.id))) : done;
+    }));
     globalScope.renderFoodLog && globalScope.renderFoodLog();
   }
 

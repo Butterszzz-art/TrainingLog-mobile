@@ -688,6 +688,8 @@
   // Adds an entry and its macros to its day's totals.
   function addEntry(entry) {
     const log = loadLog();
+    // When it was eaten (meal-timing.js): the meal's time, or now for today.
+    if (window.MealTiming) entry = window.MealTiming.stamp(entry, log.filter(e => e && e.date === entry.date));
     log.push(entry);
     saveLog(log);
     _count(entry.date, Core.progressDelta(entry, 1));
@@ -766,6 +768,7 @@
         ${icons}
       </div>
       ${_dayNavHtml(day)}
+      ${window.MealTiming ? window.MealTiming.cardHtml(day) : ''}
       ${pending.length > 1 ? `<button type="button" class="food-repeat-all" data-repeat-all><span class="ui-icon">${_icon('refresh') || '↻'}</span> Log all repeating foods (${pending.length})</button>` : ''}
       ${CM && CM.headerHtml ? CM.headerHtml() : ''}
       ${shownMeals.map(m => {
@@ -781,7 +784,7 @@
         return `
         <div class="food-meal-card">
           <div class="food-meal-top">
-            ${name}
+            <span class="food-meal-left">${name}${window.MealTiming ? window.MealTiming.chipHtml(m, list) : ''}</span>
             <span class="food-meal-right">
               ${list.length ? `<span class="food-meal-kcal">${mt.kcal} kcal</span>
               <button type="button" class="food-icon-btn" data-meal-photo="${m}" aria-label="Add a photo of ${label.toLowerCase()}" title="Meal photo"><span class="ui-icon">${_icon('camera')}</span></button>
