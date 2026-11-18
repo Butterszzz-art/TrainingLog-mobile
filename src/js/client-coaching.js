@@ -581,6 +581,14 @@
       arr(a.checkInSettings && a.checkInSettings.questions).forEach(q => { if (typeof q === 'string' && q.trim() && !questions.includes(q.trim())) questions.push(q.trim()); });
     });
     root.localStorage.setItem(questionsKey(), JSON.stringify(questions.slice(0, 8)));
+    // How often the active coach expects a check-in (days), for the calendar
+    // feed (calendar-sync.js). The most frequent coach wins.
+    const everyDays = state.assignments.filter(a => activeNow.has(a.coachUid))
+      .map(a => Number(a.checkInSettings && a.checkInSettings.everyDays))
+      .filter(n => Number.isInteger(n) && n >= 1 && n <= 28);
+    if (everyDays.length) root.localStorage.setItem(checkInEveryKey(), String(Math.min(...everyDays)));
+    else if (activeNow.size) root.localStorage.setItem(checkInEveryKey(), '7');
+    else root.localStorage.removeItem(checkInEveryKey());
     state.videos = (videos && videos.videos) || [];
     state.sharing = (sharing && sharing.sharing) || state.sharing || { checkIns: true, bodyweight: true, workouts: true, nutrition: false };
     state.decided = (sharing && sharing.decided) || state.decided;
@@ -763,6 +771,7 @@
   }
 
   const questionsKey = () => `coachCheckInQuestions_${user()}`;
+  const checkInEveryKey = () => `coachCheckInEvery_${user()}`;
   function coachCheckInQuestions() {
     return arr(readJSON(root.localStorage, questionsKey(), [])).filter(q => typeof q === 'string' && q);
   }
