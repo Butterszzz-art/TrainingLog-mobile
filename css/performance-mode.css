@@ -408,8 +408,12 @@ body.performance-mode .ex-cues:not([hidden]) {
   justify-content: flex-end;
   position: relative;
   margin: -2px 2px 8px;
-  z-index: 30;
 }
+/* Lift only while the bubble is open, so it covers the set inputs below it.
+   Stay under the sticky rest banner / rest-over card and the workout
+   context menu (all z-index 20): a permanent z-index 30 made the closed
+   Cues pill poke through those when scrolling. */
+body.performance-mode .ex-cues.is-open:not([hidden]) { z-index: 19; }
 
 .ex-cues-btn {
   display: inline-flex;
