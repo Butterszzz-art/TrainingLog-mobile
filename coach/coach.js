@@ -326,6 +326,8 @@ document.getElementById('leadFilters')?.addEventListener('click', e => {
 function renderWorkspace() {
   const view = document.getElementById('workspaceView');
   if (!view) return;
+  // Setup checklist + first-visit tour (coach-guide-desktop.js).
+  if (window.CoachGuideDesktop) setTimeout(window.CoachGuideDesktop.refresh, 0);
 
   const linked = activeClients();
   const counts = { all: linked.length, action: 0, watch: 0, ok: 0 };

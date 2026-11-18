@@ -34,6 +34,7 @@
   <link rel="stylesheet" href="css/tutorial.css">
   <link rel="stylesheet" href="css/next-step-chips.css">
   <link rel="stylesheet" href="css/guide.css">
+  <link rel="stylesheet" href="css/coach-guide.css">
   <link rel="stylesheet" href="css/sleep.css">
   <link rel="stylesheet" href="css/friends.css">
   <link rel="stylesheet" href="css/rehab.css">
@@ -4833,6 +4834,8 @@ async function loadUserPlan() {
     if (window.PocketCoachClientPro) setTimeout(window.PocketCoachClientPro.check, 1500);
     // Coach Mode depends on the plan — re-apply now that we know it.
     if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
+    // Coach guide (src/js/coach-guide.js) opens its welcome on the Coach plan.
+    window.dispatchEvent(new CustomEvent('pc:plan-loaded', { detail: { plan: window.currentUserPlan } }));
   } catch {
     // Keep the cached plan; never fall back to blocking anything.
     window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
@@ -4841,6 +4844,7 @@ async function loadUserPlan() {
     try { window.currentAiUsage = JSON.parse(localStorage.getItem('userAiUsage') || 'null'); } catch (e) { window.currentAiUsage = null; }
     if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
     try { window.currentClientPro = JSON.parse(localStorage.getItem('userClientPro') || 'null'); } catch (e) { window.currentClientPro = null; }
+    window.dispatchEvent(new CustomEvent('pc:plan-loaded', { detail: { plan: window.currentUserPlan, cached: true } }));
   }
 }
 
@@ -13850,6 +13854,7 @@ async function renderCoachDashboard() {
   if (coachDashboardState.selectedClientId) await loadCoachClientDetail(coachDashboardState.selectedClientId, true);
   renderCoachDashboardView();
   if (typeof renderCoachQueue === 'function') renderCoachQueue();
+  if (window.CoachGuide) window.CoachGuide.refresh(); // setup checklist ticks from the roster
 }
 
 /** Mobile "Coach" triage view: who needs attention first, then the
@@ -21985,6 +21990,8 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/next-step-chips.js"></script>
   <script src="src/js/guide-core.js"></script>
   <script src="src/js/guide-tours.js"></script>
+  <script src="src/js/coach-guide-core.js"></script>
+  <script src="src/js/coach-guide.js"></script>
   <script src="src/js/guide-ui.js"></script>
   <script src="src/js/onboarding-cover.js"></script>
 
