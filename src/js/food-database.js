@@ -739,6 +739,8 @@
     // Today-only controls (Copy previous day, Mark complete) hide while an
     // earlier day is shown.
     document.getElementById('macrosTargetsView')?.classList.toggle('is-past-day', day !== _today());
+    // The Macros card above shows the same day (index.html setMacroViewDate).
+    window.setMacroViewDate?.(day === _today() ? null : day);
     const items = Core.entriesFor(loadLog(), day);
     _updateMicrosButton(items);
     const icons = typeof window.foodLogToolbar === 'function' ? window.foodLogToolbar(items) : '';

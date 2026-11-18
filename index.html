@@ -10754,12 +10754,46 @@ function addMacroFavorite(favId) {
 }
 window.addMacroFavorite = addMacroFavorite;
 
+// The day the Macros card shows: today (null), or an earlier day the food
+// log stepped back to with its day arrows (src/js/food-database.js). `var`
+// so updateMacroUI() can run before this line has.
+var macroViewDate = null;
+function getMacroViewDate() {
+  return macroViewDate && macroViewDate < getTodayDateString() ? macroViewDate : null;
+}
+function setMacroViewDate(iso) {
+  const next = /^\d{4}-\d{2}-\d{2}$/.test(String(iso || "")) && iso < getTodayDateString() ? iso : null;
+  if (next === getMacroViewDate()) return;
+  macroViewDate = next;
+  updateMacroUI();
+}
+window.getMacroViewDate = getMacroViewDate;
+window.setMacroViewDate = setMacroViewDate;
+
+// An earlier day's saved totals from macroHistory, shaped like
+// loadDailyMacroProgress().
+function loadMacroHistoryDayProgress(date) {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(`macroHistory_${currentUser}`)) || []; } catch (_err) { history = []; }
+  const t = (history.find(h => h && h.date === date) || {}).totals || {};
+  const out = {
+    protein: Number(t.protein) || 0,
+    carbs: Number(t.carbs) || 0,
+    fats: Number(t.fats ?? t.fat) || 0,
+    cals: Number(t.cals) || 0,
+  };
+  out.calories = macroProgressCalories(out);
+  return out;
+}
+
 function updateMacroUI() {
   renderAssignedNutritionPlanForAthlete();
   window.activitySyncBridge?.renderTrackerBurn?.();
   // Today's saved intake is the one source of truth: meals, favorites,
-  // quick-add and food search all write to it.
-  const progress = loadDailyMacroProgress();
+  // quick-add and food search all write to it. An earlier day shown from the
+  // food log reads that day's saved totals instead.
+  const viewDate = getMacroViewDate();
+  const progress = viewDate ? loadMacroHistoryDayProgress(viewDate) : loadDailyMacroProgress();
   window.renderQuickAddToday?.();
   const totalProtein = progress.protein;
   const totalCarbs = progress.carbs;
@@ -10767,7 +10801,8 @@ function updateMacroUI() {
   const totalCals = progress.calories;
 
   const adaptiveTargets = getAdaptiveMacroTargets();
-  const cardioCals = adaptiveTargets.cardioCalories || 0;
+  // Cardio burn is today's; an earlier day doesn't net it off.
+  const cardioCals = viewDate ? 0 : (adaptiveTargets.cardioCalories || 0);
   const netCals = Math.max(0, totalCals - cardioCals);
   const dayProfileEl = document.getElementById("macroDayProfileSummary");
   if (dayProfileEl) {
@@ -10829,7 +10864,13 @@ function updateMacroUI() {
     { netCals }
   );
 
-  renderMacroNudge();
+  // The pace nudge is about today; an earlier day has none.
+  if (viewDate) {
+    const nudgeEl = document.getElementById('macroNudgeContainer');
+    if (nudgeEl) nudgeEl.innerHTML = '';
+  } else {
+    renderMacroNudge();
+  }
   renderMacroDayActions();
 
   const hydrationInput = document.getElementById("hydrationMlInput");
@@ -10852,7 +10893,7 @@ function updateMacroUI() {
   }
 
   try {
-    if (window.dailyMissionEngine?.syncMissionFromMacroProgress) {
+    if (!viewDate && window.dailyMissionEngine?.syncMissionFromMacroProgress) {
       window.dailyMissionEngine.syncMissionFromMacroProgress({
         date: getTodayDateString(),
         value: {
@@ -11534,6 +11575,8 @@ function adjustMacroHistoryDay(date, { protein = 0, carbs = 0, fats = 0, cals = 
     wEntry.calories = next.calories;
     localStorage.setItem(wKey, JSON.stringify(wLog));
   }
+  // The Macros card is showing this day: refresh it.
+  if (getMacroViewDate() === date) updateMacroUI();
   return next;
 }
 window.adjustMacroHistoryDay = adjustMacroHistoryDay;
