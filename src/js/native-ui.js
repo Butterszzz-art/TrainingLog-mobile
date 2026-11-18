@@ -96,7 +96,7 @@
   // celebration card is up — toasts queue and show one at a time, docked below
   // the rest timer instead of on top of it.
 
-  const SPOTLIGHT_SEL  = '#_prModal, .milestone-celebrate';
+  const SPOTLIGHT_SEL  = '#_prModal, #_overloadWin, .milestone-celebrate';
   const QUEUE_MAX      = 4;
   const QUEUE_MAX_WAIT = 15000; // a tip that waited this long is stale — drop it
   const _queue = [];
