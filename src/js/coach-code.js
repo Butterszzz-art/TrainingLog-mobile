@@ -108,7 +108,7 @@
     const field = $('coachCodeOwn');
     const value = field && field.value;
     if (!value || value === 'Loading…') return;
-    const done = () => toast('Coach code copied', 'success');
+    const done = () => { toast('Coach code copied', 'success'); if (root.CoachGuide) root.CoachGuide.mark('code'); };
     if (root.navigator && root.navigator.clipboard) root.navigator.clipboard.writeText(value).then(done).catch(() => { field.select(); done(); });
     else { field.select(); root.document.execCommand && root.document.execCommand('copy'); done(); }
   }

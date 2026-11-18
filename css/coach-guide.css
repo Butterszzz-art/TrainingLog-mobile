@@ -1,0 +1,145 @@
+/* ── Coach guide: welcome sheet, setup checklist, Guide button ──
+   (src/js/coach-guide.js). Built on the mx- kit + pod tokens. */
+
+#coachGuideCard:empty { display: none; }
+#coachGuideCard { margin-bottom: 14px; }
+
+/* A global button rule adds vertical margin; lay out with gap instead. */
+.cg-card button,
+.cg-sheet button,
+.cg-guide-btn { margin: 0; }
+
+/* Guide button beside the Coach heading */
+.coach-page-header { position: relative; }
+button.cg-guide-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: auto;
+  min-height: 0;
+  padding: 6px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--primary-text, var(--primary));
+  box-shadow: none;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* ── Checklist card ── */
+.cg-card { gap: 10px; }
+.cg-card-head { display: flex; align-items: center; gap: 10px; }
+.cg-card-head .pod-title { margin: 0; flex: 1; }
+.cg-count { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.cg-x { width: 32px; height: 32px; margin: -6px -8px -6px 0; }
+.cg-x svg { width: 16px; height: 16px; }
+
+.cg-meter { height: 6px; border-radius: var(--radius-pill); background: var(--border-default); overflow: hidden; }
+.cg-meter span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width .4s ease; }
+
+.cg-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cg-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+.cg-step:last-child { border-bottom: 0; }
+.cg-tick {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-default);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cg-tick svg { width: 13px; height: 13px; }
+.cg-step.is-done .cg-tick { background: var(--primary); border-color: var(--primary); color: #fff; }
+.cg-step.is-next .cg-tick { border-color: var(--primary); }
+.cg-step-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cg-step-title { display: inline-flex; align-items: center; gap: 6px; font-size: 14.5px; color: var(--text-primary, var(--text-color)); }
+.cg-step.is-done .cg-step-title { color: var(--text-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.cg-step-text small { font-size: 12.5px; color: var(--text-muted); line-height: 1.35; }
+.cg-where { display: inline-flex; color: var(--text-muted); }
+.cg-where svg { width: 14px; height: 14px; }
+
+button.cg-act {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--primary-text, var(--primary));
+  box-shadow: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cg-step.is-next button.cg-act { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.cg-card-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 2px; }
+button.cg-link {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 4px 0;
+  width: auto;
+  min-height: 0;
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary-text, var(--primary));
+  cursor: pointer;
+}
+button.cg-link.cg-dim { color: var(--text-muted); }
+
+/* ── Welcome sheet ── */
+.cg-lead { margin: -4px 0 0; }
+.cg-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.cg-split-col {
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cg-split-col strong { font-size: 15px; }
+.cg-split-col ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-secondary); line-height: 1.35; }
+.cg-split-icon { color: var(--primary-text, var(--primary)); display: inline-flex; }
+.cg-split-icon svg { width: 22px; height: 22px; }
+.cg-url {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--border-default);
+  font-size: 14px;
+}
+.cg-url svg { width: 18px; height: 18px; grid-row: span 2; color: var(--text-muted); }
+.cg-url small { color: var(--text-muted); font-size: 12px; }
+.cg-sheet-actions { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.cg-sheet-actions .cg-secondary { justify-content: center; }
+.cg-sheet-actions button.cg-link { align-self: center; }
+.cg-progress-note { margin: 0; text-align: center; }
+
+@media (max-width: 360px) {
+  .cg-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+.cg-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
