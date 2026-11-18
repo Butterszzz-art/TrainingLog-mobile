@@ -1,4 +1,4 @@
-process.env.TZ = 'Europe/Amsterdam';
+// Runs in Europe/Amsterdam: Jest's globalSetup (tests/setup/timezone.js) pins the zone.
 const MT = require('../src/js/meal-timing-core');
 const Core = require('../src/js/food-core');
 

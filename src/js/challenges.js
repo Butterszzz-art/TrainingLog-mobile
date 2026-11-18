@@ -275,7 +275,7 @@
 
   function _celebrateMilestone(m) {
     // Don't open on top of the PR card — wait until it's gone.
-    if (document.getElementById('_prModal')) {
+    if (document.getElementById('_prModal') || document.getElementById('_overloadWin')) {
       setTimeout(() => _celebrateMilestone(m), 600);
       return;
     }
