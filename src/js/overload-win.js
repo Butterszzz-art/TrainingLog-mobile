@@ -230,12 +230,23 @@
     try { return !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return false; }
   }
 
+  /** Success buzz: @capacitor/haptics in the native app (iOS + Android), else the web vibrate API. */
   function _haptic() {
+    const vibrate = () => {
+      try {
+        if (global.navigator && typeof global.navigator.vibrate === 'function') global.navigator.vibrate([12, 40, 18]);
+      } catch { /* optional */ }
+    };
     try {
-      const H = global.Capacitor && global.Capacitor.Plugins && global.Capacitor.Plugins.Haptics;
-      if (H && typeof H.notification === 'function') { H.notification({ type: 'SUCCESS' }); return; }
-      if (global.navigator && typeof global.navigator.vibrate === 'function') global.navigator.vibrate([12, 40, 18]);
-    } catch { /* optional */ }
+      const cap = global.Capacitor;
+      const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+      const H = native && cap.Plugins && cap.Plugins.Haptics;
+      if (H && typeof H.notification === 'function') {
+        Promise.resolve(H.notification({ type: 'SUCCESS' })).catch(vibrate);
+        return;
+      }
+    } catch { /* fall back below */ }
+    vibrate();
   }
 
   /** The PR card is up for this lift: add the overload line to it instead. */
@@ -442,7 +453,7 @@
     document.addEventListener('tl:set-logged', _onSetLogged);
   }
 
-  const api = { evaluateWin, describeWin, beats, progressed, alreadyCelebrated, markCelebrated, checkAndCelebrate, showWinCard };
+  const api = { evaluateWin, describeWin, beats, progressed, alreadyCelebrated, markCelebrated, checkAndCelebrate, showWinCard, haptic: _haptic };
   global.OverloadWin = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
