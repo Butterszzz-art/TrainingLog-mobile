@@ -6,6 +6,9 @@
   "scripts": {
     "test": "jest"
   },
+  "jest": {
+    "globalSetup": "./tests/setup/timezone.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
