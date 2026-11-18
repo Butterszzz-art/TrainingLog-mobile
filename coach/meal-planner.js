@@ -71,6 +71,9 @@
       day: 'training',
       plan: o.plan && o.plan.days ? clone({ training: o.plan.days.training || {}, rest: o.plan.days.rest || {} }) : { training: {}, rest: {} },
       note: (o.plan && o.plan.note) || '',
+      // When to eat each slot ('HH:MM'), same on training and rest days.
+      // Optional; timed meals land in the client's calendar feed.
+      times: { ...((o.plan && o.plan.times) || {}) },
       editing: null,   // { slot, index (null = new), meal }
       results: [],
       query: '',
@@ -102,6 +105,7 @@
       const canAdd = opts.length < MAX_OPTIONS;
       const libOpts = library.map(m => `<option value="${esc(m.id)}">${esc(m.name)} (${mealTotals(m).kcal} kcal)</option>`).join('');
       return `<section class="mp2-slot"><header class="mp2-slot-head"><span class="mp2-slot-name">${label}</span>
+          <input type="time" class="pb-in mp2-slot-time" data-mp-time="${slot}" value="${esc(state.times[slot] || '')}" aria-label="Time for ${label}" title="When to eat it (shows in the client's calendar)">
           ${opts.length ? `<span class="mp2-macros">${macroLine(mealTotals(opts[0]))}</span>` : '<span class="mp2-macros">Nothing planned</span>'}</header>
         ${opts.map((m, i) => optionHtml(m, slot, i)).join('')}
         ${canAdd ? `<div class="mp2-add">
@@ -154,7 +158,7 @@
         <div class="mp-adjust-actions"><button type="button" class="mp-btn mp-btn--gold" data-mp="send"${state.busy ? ' disabled' : ''}>Send meal plan</button>
           ${o.plan ? '<button type="button" class="pb-link pb-link--danger" data-mp="clear">Remove meal plan</button>' : ''}
           <span class="pb-msg" role="status">${esc(state.message)}</span></div>
-        <p class="ws-empty-note">${esc(o.clientName || 'The client')}’s food log fills with that day’s meals (training or rest day, by their schedule). They confirm or change them, can swap to an alternative, and complete the day.</p>`}
+        <p class="ws-empty-note">${esc(o.clientName || 'The client')}’s food log fills with that day’s meals (training or rest day, by their schedule). They confirm or change them, can swap to an alternative, and complete the day. Meals with a time also show in their calendar if they sync it.</p>`}
       </div>`;
     }
 
@@ -188,6 +192,9 @@
         it.amount = it.unit && it.unit !== it.food.basis && it.grams ? Math.round((it.amount * g / it.grams) * 100) / 100 : g;
         it.grams = g;
         render();
+      } else if (t.matches('[data-mp-time]')) {
+        if (t.value) state.times[t.dataset.mpTime] = t.value;
+        else delete state.times[t.dataset.mpTime];
       } else if (t.matches('[data-mp-lib]') && t.value) {
         const m = library.find(x => x.id === t.value);
         if (m) (day()[t.dataset.mpLib] = day()[t.dataset.mpLib] || []).push(clone(m));
@@ -242,10 +249,10 @@
         if (!Object.keys(state.plan.training).length && !Object.keys(state.plan.rest).length) { state.message = 'Add at least one meal first.'; render(); return; }
         state.busy = true; state.message = ''; render();
         try {
-          const res = await api.send({ days: state.plan }, state.note.trim());
+          const res = await api.send({ days: state.plan, times: { ...state.times } }, state.note.trim());
           const msg = deliveryMessage(o.clientName, res);
           if (!msg.saved) throw new Error(msg.text);
-          o.plan = { days: clone(state.plan), note: state.note.trim(), sentAt: new Date().toISOString() };
+          o.plan = { days: clone(state.plan), times: { ...state.times }, note: state.note.trim(), sentAt: new Date().toISOString() };
           state.message = msg.text;
         } catch (err) { state.message = err.message || 'Could not send.'; }
         state.busy = false;

@@ -664,6 +664,8 @@
     const updated = [normalized, ...deduped].sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
     storage.setItem(getStorageKey(userId), JSON.stringify(updated));
     syncCheckInStateToBackend(resolveUserId(userId), updated);
+    // The next check-in moves in the calendar feed (src/js/calendar-sync.js).
+    if (typeof window !== 'undefined' && window.calendarSync) window.calendarSync.scheduleSync();
     return updated;
   }
 

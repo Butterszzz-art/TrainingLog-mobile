@@ -842,6 +842,8 @@
     const s = Core.normalizeMealSetup(setup);
     try { localStorage.setItem(MEAL_SETUP_KEY(_user()), JSON.stringify(s)); } catch { /* storage full */ }
     Core.applyMealSetup(s);
+    // Planned meal times go in the calendar feed (calendar-sync.js).
+    if (window.calendarSync) window.calendarSync.scheduleSync();
   }
 
   function addMealSlot() {
