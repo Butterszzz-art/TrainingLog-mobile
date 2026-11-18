@@ -209,3 +209,35 @@ describe('once per exercise per session', () => {
     expect(document.getElementById('_overloadWin')).toBeNull();
   });
 });
+
+describe('success buzz', () => {
+  afterEach(() => {
+    delete globalThis.Capacitor;
+    delete globalThis.navigator.vibrate;
+  });
+
+  test('native app: uses the Haptics plugin, not vibrate', async () => {
+    const notification = jest.fn(() => Promise.resolve());
+    globalThis.Capacitor = { isNativePlatform: () => true, Plugins: { Haptics: { notification } } };
+    globalThis.navigator.vibrate = jest.fn();
+    win.haptic();
+    await Promise.resolve();
+    expect(notification).toHaveBeenCalledWith({ type: 'SUCCESS' });
+    expect(globalThis.navigator.vibrate).not.toHaveBeenCalled();
+  });
+
+  test('native call fails: falls back to vibrate', async () => {
+    globalThis.Capacitor = { isNativePlatform: () => true, Plugins: { Haptics: { notification: () => Promise.reject(new Error('no')) } } };
+    globalThis.navigator.vibrate = jest.fn();
+    win.haptic();
+    await new Promise(r => setTimeout(r, 0));
+    expect(globalThis.navigator.vibrate).toHaveBeenCalledWith([12, 40, 18]);
+  });
+
+  test('web: vibrate only', () => {
+    globalThis.Capacitor = { isNativePlatform: () => false, Plugins: {} };
+    globalThis.navigator.vibrate = jest.fn();
+    win.haptic();
+    expect(globalThis.navigator.vibrate).toHaveBeenCalled();
+  });
+});
