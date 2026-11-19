@@ -148,7 +148,55 @@
   function plan() {
     const u = _user();
     if (!u || !Core()) return [];
-    return Core().planNudges(context(u));
+    const early = lifecycle(u);
+    // "Session 2 is ready" / the comeback ping replace that day's plain
+    // "Train" ping rather than arriving next to it.
+    const replaced = new Set(early.filter(p => p.kind !== 'weekOne').map(p => p.date));
+    return Core().planNudges(context(u))
+      .filter(p => !(p.kind === 'workout' && replaced.has(p.date)))
+      .concat(early)
+      .sort((a, b) => a.at - b.at);
+  }
+
+  /* ── Early days (habit-core.js planLifecycle) ─────────────────
+     For users who went through onboarding (habit_<user>.startedAt):
+     "Session 2 is ready", the first-week recap and a comeback ping after
+     5 quiet days, during their first month only. They ride on the
+     "Train" reminder: off when it's off, and nothing in vacation or
+     sick mode. */
+  function lifecycle(u) {
+    const HC = window.HabitCore;
+    const habit = window.Habit;
+    if (!HC || !habit || _paused()) return [];
+    const workout = getSettings(u).find(s => s.id === 'workout');
+    if (!workout || !workout.enabled) return [];
+    const state = habit.load(u);
+    if (!state.startedAt) return [];
+    const history = typeof window.getFullWorkoutHistory === 'function' ? window.getFullWorkoutHistory(u)
+      : [..._json('workoutHistory_' + u, []), ..._json('workouts_' + u, [])];
+    const own = history.filter(w => w && !w.imported);
+    const ownDays = HC.sessionDays(own).own;
+    const weekEnd = HC.addDays(state.startedAt, 7);
+    let sets = 0;
+    const weekDays = new Set();
+    own.forEach(w => {
+      const d = String(w.date || '').slice(0, 10);
+      if (d < state.startedAt || d > weekEnd) return;
+      const n = HC.summarizeSession(w).sets;
+      if (n) { sets += n; weekDays.add(d); }
+    });
+    return HC.planLifecycle({
+      state: { ...state, trainingDays: state.trainingDays || workout.days, reminderTime: state.reminderTime || workout.time },
+      now: Date.now(),
+      ownDays,
+      nextHint: state.nextHint || '',
+      weekOne: { sessions: weekDays.size, sets },
+    });
+  }
+
+  function allIds() {
+    const HC = window.HabitCore;
+    return Core().allIds().concat(HC ? HC.lifecycleIds() : []);
   }
 
   /* ── Native: local notifications ──────────────────────────── */
@@ -191,7 +239,7 @@
     try {
       const perm = await ln.checkPermissions();
       if (!perm || perm.display !== 'granted') return;
-      await ln.cancel({ notifications: Core().allIds().map(id => ({ id })) });
+      await ln.cancel({ notifications: allIds().map(id => ({ id })) });
       if (list.length) {
         await ln.schedule({
           notifications: list.map(p => ({
