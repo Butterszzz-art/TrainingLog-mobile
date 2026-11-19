@@ -24,13 +24,35 @@
  * sets and load per week, deload last week). The Sheet view shows a block
  * (or every week) as one grid like a spreadsheet: a row per exercise, a
  * column per week, each cell "4×6-8 @2 75%" editable in place. "Export CSV"
- * writes the Week | Day | Exercise | … sheet the import reads back. */
+ * writes the Week | Day | Exercise | … sheet the import reads back.
+ *
+ * Volume: each row counts toward a muscle (exerciseMuscleMap.js's
+ * getMuscleGroup, or the row's Muscle column). The Volume view holds the
+ * program's MEV / MAV / MRV per muscle and colours each week's sets by zone;
+ * Progression can ramp each muscle from one landmark to another. */
 (function (root) {
   'use strict';
 
   const M = root.ProgramModel;
   const WEEKDAY_OPTIONS = [['', '—']].concat(M.WEEKDAYS.map((d, i) => [String(i + 1), d]));
   const TYPE_OPTIONS = [['', 'Type'], ['compound', 'Compound'], ['isolation', 'Isolation'], ['core', 'Core']];
+  const ZONE_TEXT = { below: 'below MEV', productive: 'MEV–MAV', high: 'MAV–MRV', over: 'over MRV' };
+  const LANDMARK_LABEL = { mev: 'MEV', mav: 'MAV', mrv: 'MRV' };
+
+  function muscleLabel(m) {
+    return m === 'other' ? 'Other' : m.charAt(0).toUpperCase() + m.slice(1);
+  }
+
+  /** The muscle a row counts toward: its own pick, else the exercise-name lookup. */
+  function muscleOf(e) {
+    if (e && M.MUSCLES.includes(e.muscle)) return e.muscle;
+    const m = typeof root.getMuscleGroup === 'function' && e && e.name ? root.getMuscleGroup(e.name) : 'other';
+    return M.MUSCLES.includes(m) ? m : 'other';
+  }
+
+  function autoMuscle(e) {
+    return muscleOf(Object.assign({}, e, { muscle: null }));
+  }
 
   function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -47,6 +69,7 @@
       w.block ? { block: w.block } : {}, w.deload ? { deload: true } : {},
       { days: JSON.parse(JSON.stringify(M.weekDays(p, w.week))) }));
     p.blocks = p.blocks || [];
+    p.volume = p.volume || {};
     return p;
   }
 
@@ -130,6 +153,8 @@
         + '<td class="pb-name-cell"><input class="pb-in pb-in--name" data-f="name" value="' + esc(e.name) + '" placeholder="Exercise" maxlength="80" aria-label="Exercise">'
         + (root.ExerciseVideos ? root.ExerciseVideos.button(e.name, root.coachExerciseVideos || []) : '') + '</td>'
         + '<td><select class="pb-in" data-f="type" aria-label="Type">' + options(TYPE_OPTIONS, e.type) + '</select></td>'
+        + '<td><select class="pb-in pb-in--muscle" data-f="muscle" aria-label="Muscle the sets count toward">'
+        + options([['', 'Auto · ' + muscleLabel(autoMuscle(e))]].concat(M.MUSCLES.map(m => [m, muscleLabel(m)])), e.muscle || '') + '</select></td>'
         + '<td>' + numberCell('sets', e.sets, ' min="1" max="20" aria-label="Sets"') + '</td>'
         + '<td class="pb-range">' + numberCell('repsMin', e.repsMin, ' min="1" max="100" aria-label="Reps from"') + '<span>–</span>' + numberCell('repsMax', e.repsMax, ' min="1" max="100" aria-label="Reps to"') + '</td>'
         + '<td>' + numberCell('rir', e.rir, ' min="0" max="10" step="0.5" aria-label="Target RIR"') + '</td>'
@@ -153,7 +178,7 @@
         + (!single && options_.onSaveWorkout && d.exercises.length ? '<button type="button" class="pb-link" data-act="save-workout">Save as workout</button>' : '')
         + (single ? '' : '<button type="button" class="pb-link" data-act="del-day">Remove day</button>')
         + '</header>'
-        + '<table class="pb-table"><thead><tr><th>Exercise</th><th>Type</th><th>Sets</th><th>Reps</th><th>RIR</th><th title="RIR on the last set; empty = same">Last set</th><th title="% of 1RM or kg">Load</th><th>Rest</th><th>Notes</th><th></th></tr></thead>'
+        + '<table class="pb-table"><thead><tr><th>Exercise</th><th>Type</th><th title="The muscle these sets count toward for MEV / MAV / MRV">Muscle</th><th>Sets</th><th>Reps</th><th>RIR</th><th title="RIR on the last set; empty = same">Last set</th><th title="% of 1RM or kg">Load</th><th>Rest</th><th>Notes</th><th></th></tr></thead>'
         + '<tbody>' + d.exercises.map((e, ei) => rowHtml(e, di, ei, warnedIds)).join('') + '</tbody></table>'
         + '<input class="pb-in pb-quick" data-quick="' + di + '" placeholder="Quick add: Squat 4x6-8 @2 75% 2-3min — Enter" aria-label="Quick add exercise">'
         + (!single && savedWorkouts().length ? '<select class="pb-in pb-insert" data-insert="' + di + '" aria-label="Insert a saved workout"><option value="">+ Insert a saved workout…</option>'
@@ -271,12 +296,16 @@
         + numField('to', 'To week', pn.to, ' min="1" max="' + state.program.weeks.length + '"')
         + numField('rirStart', 'RIR first wk', pn.rirStart, ' min="0" max="10" step="0.5" placeholder="keep"')
         + numField('rirEnd', 'RIR last wk', pn.rirEnd, ' min="0" max="10" step="0.5" placeholder="keep"')
-        + numField('setsPerWeek', '+ sets / wk', pn.setsPerWeek, ' min="-5" max="5"')
-        + numField('setsMax', 'Max sets', pn.setsMax, ' min="1" max="20"')
+        + '<label class="pb-meta"><span>Sets</span><select class="pb-in" data-pp="volume">'
+        + options([['', '+ sets / wk (below)'], ['mev-mav', 'MEV → MAV'], ['mev-mrv', 'MEV → MRV'], ['mav-mrv', 'MAV → MRV']], pn.volume || '') + '</select></label>'
+        + (pn.volume ? '' : numField('setsPerWeek', '+ sets / wk', pn.setsPerWeek, ' min="-5" max="5"'))
+        + numField('setsMax', 'Max sets / exercise', pn.setsMax, ' min="1" max="20"')
+        + numField('repsPerWeek', '± reps / wk', pn.repsPerWeek, ' min="-10" max="10" title="Moves each rep range, e.g. -1: 10-12 → 9-11 → 8-10"')
         + numField('pctPerWeek', '+ %1RM / wk', pn.pctPerWeek, ' min="-20" max="20" step="0.5"')
         + numField('kgPerWeek', '+ kg / wk', pn.kgPerWeek, ' min="-50" max="50" step="0.25"')
         + '<label class="pb-meta pb-meta--check"><input type="checkbox" data-pp="deloadLast"' + (pn.deloadLast && deloadOk ? ' checked' : '') + (deloadOk ? '' : ' disabled') + '><span>Last week is a deload (½ sets, RIR +2, load −10%)</span></label>'
         + '</div>'
+        + (pn.volume ? '<p class="pb-panel-note">Each muscle\'s weekly sets go from its ' + pn.volume.split('-').map(k => LANDMARK_LABEL[k]).join(' on W' + pn.from + ' to its ') + ' on the last training week, shared over its exercises (see Volume for the numbers). Rows counted as Other keep their sets.</p>' : '')
         + '<div class="pb-panel-acts"><button type="button" class="mp-btn" data-act="progress-apply"' + (pn.to > pn.from ? '' : ' disabled') + '>Fill W' + (pn.from + 1) + '–W' + pn.to + '</button><button type="button" class="pb-link" data-act="panel-close">Cancel</button></div></div>';
     }
 
@@ -287,7 +316,7 @@
       return {
         kind: 'progress', from: r.from, to: r.to,
         rirStart: firstRir !== null ? firstRir : 3, rirEnd: firstRir !== null ? Math.max(0, firstRir - 2) : 1,
-        setsPerWeek: 0, setsMax: 20, pctPerWeek: 0, kgPerWeek: 0,
+        setsPerWeek: 0, setsMax: 8, repsPerWeek: 0, volume: '', pctPerWeek: 0, kgPerWeek: 0,
         deloadLast: r.deloads.includes(r.to) || r.to - r.from >= 3,
       };
     }
@@ -302,6 +331,76 @@
         const a = el.querySelector(sel);
         const b = fresh.querySelector(sel);
         if (a && b) { a.innerHTML = b.innerHTML; if ('disabled' in a) a.disabled = b.disabled; }
+      });
+    }
+
+    // ── Volume (MEV / MAV / MRV) ────────────────────────────────────────────
+    function lmFor(m) {
+      return M.landmarks(state.program, m);
+    }
+
+    function setsCell(n, lm) {
+      const zone = M.volumeZone(n, lm);
+      return '<span class="pb-vz pb-vz--' + (zone || 'none') + '" title="' + esc(zone ? n + ' sets: ' + ZONE_TEXT[zone] : n + ' sets') + '">' + n + '</span>';
+    }
+
+    // One line under the week bar: this week's sets per muscle, coloured by zone.
+    function weekVolumeHtml() {
+      const sets = M.muscleSets(state.program, state.week, muscleOf);
+      const list = Object.keys(sets).filter(m => sets[m] > 0).sort((a, b) => (a === 'other') - (b === 'other') || sets[b] - sets[a]);
+      if (!list.length) return '';
+      return '<div class="pb-volline" data-volline><span class="pb-volline-label">Sets this week</span>'
+        + list.map(m => {
+          const lm = lmFor(m);
+          return '<span class="pb-volchip pb-vz--' + (M.volumeZone(sets[m], lm) || 'none') + '" title="' + esc(lm ? 'MEV ' + lm.mev + ' · MAV ' + lm.mav + ' · MRV ' + lm.mrv : 'No landmarks') + '">'
+            + esc(muscleLabel(m)) + ' <strong>' + sets[m] + '</strong>' + (lm ? '<small>/' + lm.mrv + '</small>' : '') + '</span>';
+        }).join('')
+        + '<button type="button" class="pb-link" data-act="view-volume">Volume…</button></div>';
+    }
+
+    function refreshWeekVolume() {
+      const el = container.querySelector('[data-volline]');
+      if (!el) return;
+      const fresh = container.ownerDocument.createElement('div');
+      fresh.innerHTML = weekVolumeHtml();
+      if (fresh.firstChild) el.replaceWith(fresh.firstChild);
+    }
+
+    // Volume view: landmarks per muscle (editable) and each week's sets.
+    function volumeHtml() {
+      const { from, to } = sheetRange();
+      const cols = [];
+      for (let n = from; n <= to; n++) cols.push(n);
+      const perWeek = cols.map(n => M.muscleSets(state.program, n, muscleOf));
+      const used = M.MUSCLES.filter(m => perWeek.some(w => w[m] > 0));
+      const other = perWeek.some(w => w.other > 0);
+      const custom = Object.keys(state.program.volume || {}).length;
+      const head = '<tr><th class="pb-sheet-ex">Muscle</th><th title="Minimum effective volume">MEV</th><th title="Maximum adaptive volume">MAV</th><th title="Maximum recoverable volume">MRV</th>'
+        + cols.map(n => '<th class="' + (state.program.weeks[n - 1].deload ? 'is-deload' : '') + '">W' + n + (state.program.weeks[n - 1].deload ? ' · D' : '') + '</th>').join('') + '</tr>';
+      const rows = used.map(m => {
+        const lm = lmFor(m);
+        const own = !!(state.program.volume && state.program.volume[m]);
+        return '<tr><td class="pb-sheet-ex">' + esc(muscleLabel(m)) + (own ? ' <small class="pb-own" title="Set for this program">●</small>' : '') + '</td>'
+          + ['mev', 'mav', 'mrv'].map(k => '<td><input class="pb-in pb-in--num pb-lm" type="number" min="0" max="60" data-lm="' + m + '" data-lk="' + k + '" value="' + esc(lm ? lm[k] : '') + '" aria-label="' + esc(muscleLabel(m) + ' ' + LANDMARK_LABEL[k]) + '"></td>').join('')
+          + perWeek.map((w, i) => '<td data-vcell="' + m + '|' + cols[i] + '">' + setsCell(w[m] || 0, lm) + '</td>').join('') + '</tr>';
+      }).join('');
+      const otherRow = other ? '<tr><td class="pb-sheet-ex">Other</td><td colspan="3" class="pb-sheet-off">Pick a muscle in the Week view</td>'
+        + perWeek.map(w => '<td>' + setsCell(w.other || 0, null) + '</td>').join('') + '</tr>' : '';
+      return '<div class="pb-sheet-wrap">'
+        + '<p class="pb-panel-note">Hard sets per muscle per week. <strong>MEV</strong> is the least that still grows, <strong>MAV</strong> where most growth happens, <strong>MRV</strong> the most that can be recovered from. '
+        + 'The numbers start from common ballparks; change them for this client (the program keeps them).</p>'
+        + '<div class="pb-legend"><span class="pb-vz pb-vz--below">below MEV</span><span class="pb-vz pb-vz--productive">MEV–MAV</span><span class="pb-vz pb-vz--high">MAV–MRV</span><span class="pb-vz pb-vz--over">over MRV</span>'
+        + (custom ? '<button type="button" class="pb-link" data-act="lm-reset">Reset landmarks to defaults</button>' : '') + '</div>'
+        + '<table class="pb-sheet pb-vol"><thead>' + head + '</thead><tbody>'
+        + (rows + otherRow || '<tr><td colspan="' + (cols.length + 4) + '">No exercises yet.</td></tr>') + '</tbody></table></div>';
+    }
+
+    function refreshVolumeCells() {
+      const fresh = container.ownerDocument.createElement('div');
+      fresh.innerHTML = volumeHtml();
+      container.querySelectorAll('[data-vcell]').forEach(td => {
+        const twin = fresh.querySelector('[data-vcell="' + td.dataset.vcell + '"]');
+        if (twin) td.innerHTML = twin.innerHTML;
       });
     }
 
@@ -398,14 +497,16 @@
       const otherWeeks = Array.from(new Set(list.filter(x => x.week !== state.week).map(x => x.week)));
       const tabs = single ? '' : tabsHtml(list);
       const s = M.stats(M.readProgram(p) || p);
-      const sheet = !single && state.view === 'sheet';
+      const sheet = !single && (state.view === 'sheet' || state.view === 'volume');
+      const vol = !single && state.view === 'volume';
 
       container.innerHTML = '<div class="pb">'
         + '<div class="pb-top">'
         + '<label class="mp-field pb-name"><span class="mp-field-label">' + (single ? 'Workout name' : 'Program name') + '</span><input class="mp-input mp-input--text" data-pf="name" value="' + esc(p.name) + '" maxlength="80"></label>'
         + '<div class="pb-stats">' + statsText(s) + '</div>'
         + (single ? '' : '<div class="pb-view" role="radiogroup" aria-label="View"><button type="button" role="radio" class="pb-view-btn' + (sheet ? '' : ' is-on') + '" aria-checked="' + !sheet + '" data-act="view-week">Week</button>'
-          + '<button type="button" role="radio" class="pb-view-btn' + (sheet ? ' is-on' : '') + '" aria-checked="' + sheet + '" data-act="view-sheet">Sheet</button></div>')
+          + '<button type="button" role="radio" class="pb-view-btn' + (sheet && !vol ? ' is-on' : '') + '" aria-checked="' + (sheet && !vol) + '" data-act="view-sheet">Sheet</button>'
+          + '<button type="button" role="radio" class="pb-view-btn' + (vol ? ' is-on' : '') + '" aria-checked="' + vol + '" data-act="view-volume">Volume</button></div>')
         + '</div>'
         + '<details class="pb-notes"' + (single ? ' hidden' : '') + '><summary>Notes, progression &amp; rules</summary>'
         + '<label class="mp-field"><span class="mp-field-label">Notes (block)</span><textarea class="coach-input" data-pf="notes" rows="2" maxlength="4000">' + esc(p.notes) + '</textarea></label>'
@@ -421,11 +522,11 @@
         + (p.weeks.length > 1 ? '<button type="button" class="pb-link pb-link--danger" data-act="del-week">Delete W' + state.week + '</button>' : '')
         + '</div></div>'
         + (single ? '' : panelHtml())
-        + (single || sheet ? '' : weekMetaHtml())
+        + (single || sheet ? '' : weekMetaHtml() + weekVolumeHtml())
         + '<div class="pb-warn-slot">' + warnHtml(here, otherWeeks) + '</div>'
         + (sheet
           ? '<div class="pb-sheet-bar"><span>' + (state.sheetAll || !currentRun() ? 'All weeks' : (currentRun().block ? esc(currentRun().block.name) : 'Weeks') + ' · W' + sheetRange().from + '–W' + sheetRange().to) + '</span>'
-            + '<label class="pb-meta--check"><input type="checkbox" data-act="sheet-all"' + (state.sheetAll ? ' checked' : '') + '> Show every week</label></div>' + sheetHtml()
+            + '<label class="pb-meta--check"><input type="checkbox" data-act="sheet-all"' + (state.sheetAll ? ' checked' : '') + '> Show every week</label></div>' + (vol ? volumeHtml() : sheetHtml())
           : '<div class="pb-days">' + w.days.map((d, di) => dayHtml(d, di, warnedIds, dayWarned)).join('') + '</div>'
             + (single ? '' : '<button type="button" class="pb-link" data-act="add-day">+ Add training day</button>'))
         + '<div class="pb-foot">'
@@ -455,6 +556,16 @@
       if (t.dataset.bf) {
         const blk = state.program.blocks.find(b => b.id === week().block);
         if (blk) blk[t.dataset.bf] = t.value;
+        return;
+      }
+      if (t.dataset.lm) {
+        const n = numOrNull(t.value);
+        if (n === null) return;
+        const m = t.dataset.lm;
+        const cur = Object.assign({}, lmFor(m) || { mev: 0, mav: 0, mrv: 0 });
+        cur[t.dataset.lk] = Math.max(0, Math.min(60, Math.round(n)));
+        state.program.volume[m] = cur;
+        refreshVolumeCells();
         return;
       }
       if (t.dataset.pp && state.panel && t.type !== 'checkbox') {
@@ -499,7 +610,7 @@
         // No re-render for typed values: the change fires as the coach clicks
         // the panel's button, and a re-render would swallow that click.
         if (t.type === 'checkbox') { state.panel[t.dataset.pp] = t.checked; render(); }
-        else if (t.tagName === 'SELECT') render();
+        else if (t.tagName === 'SELECT') { state.panel[t.dataset.pp] = t.value; render(); }
         else updatePanelText();
         return;
       }
@@ -527,6 +638,7 @@
         render();
         return;
       }
+      if (ex && f === 'muscle') { if (t.value) ex.muscle = t.value; else delete ex.muscle; refreshWeekVolume(); return; }
       if (ex && f === 'type') ex.type = t.value || null;
       else if (ex && f === 'rest') { Object.assign(ex, M.parseRest(t.value)); t.value = restText(ex); }
       else if (ex && f === 'load') { Object.assign(ex, M.parseLoad(t.value)); t.value = loadText(ex); }
@@ -536,6 +648,7 @@
         if (sel) sel.value = ex.type;
       }
       refresh();
+      refreshWeekVolume();
     });
 
     // ── Sheet edits ─────────────────────────────────────────────────────────
@@ -656,7 +769,13 @@
       const act = btn.dataset.act;
       const p = state.program;
       const { day, di, ei } = rowAt(btn);
-      if (act === 'view-week' || act === 'view-sheet') { state.view = act === 'view-sheet' ? 'sheet' : 'week'; render(); return; }
+      if (act === 'view-week' || act === 'view-sheet' || act === 'view-volume') { state.view = act.slice(5); render(); return; }
+      if (act === 'lm-reset') {
+        if (!root.confirm('Use the default MEV / MAV / MRV for every muscle in this program?')) return;
+        state.program.volume = {};
+        render();
+        return;
+      }
       if (act === 'sheet-all') { state.sheetAll = !!btn.checked; render(); return; }
       if (act === 'panel-close') { state.panel = null; render(); return; }
       if (act === 'meso-open') {
@@ -705,9 +824,23 @@
         if (!root.confirm('Rebuild W' + (from + 1) + '–W' + to + ' from W' + from + '? Changes made by hand in those weeks are replaced.')) return;
         const clean = M.readProgram(p);
         if (!clean) { state.message = 'Give the program a name first.'; render(); return; }
-        state.program = expand(M.progressWeeks(clean, from, to, Object.assign({}, pn, { deloadLast: pn.deloadLast && to > from })));
+        const [volumeFrom, volumeTo] = pn.volume ? pn.volume.split('-') : [null, null];
+        state.program = expand(M.progressWeeks(clean, from, to, Object.assign({}, pn, {
+          deloadLast: pn.deloadLast && to > from, volumeFrom, volumeTo, muscleOf,
+        })));
         state.panel = null;
         state.message = 'Filled W' + (from + 1) + '–W' + to + '.';
+        // Muscles the rows could not carry to their landmark (one exercise at
+        // the per-exercise cap): say so, the coach adds an exercise or raises the cap.
+        if (volumeTo) {
+          const lastTraining = pn.deloadLast && to > from ? to - 1 : to;
+          const got = M.muscleSets(state.program, lastTraining, muscleOf);
+          const short = Object.keys(got).filter(m => m !== 'other' && lmFor(m) && got[m] < lmFor(m)[volumeTo]);
+          if (short.length) {
+            state.message += ' ' + short.map(m => muscleLabel(m) + ' ' + got[m] + '/' + lmFor(m)[volumeTo]).join(', ')
+              + ' stop short of ' + LANDMARK_LABEL[volumeTo] + ': add an exercise or raise Max sets / exercise.';
+          }
+        }
         render();
         return;
       }

@@ -1577,3 +1577,27 @@ mark.pi-suggested { background: var(--warning-bg, rgba(168,124,56,.25)); color: 
 /* Client Pro (PAY2-9) */
 .client-pro-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; vertical-align: middle; background: rgba(47, 143, 78, 0.18); color: var(--green, #7fdc9b); }
 .client-pro-paused { font-size: 0.72rem; color: var(--text-muted, #9aa59d); margin-top: 2px; }
+
+/* Volume landmarks (MEV / MAV / MRV) in the program builder. Zone colours:
+   below MEV = muted, MEV–MAV = green, MAV–MRV = amber, over MRV = red. */
+.pb-in--muscle { width: 150px; }
+.pb-volline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pb-volline-label { font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-right: 4px; }
+.pb-volchip { display: inline-flex; align-items: baseline; gap: 4px; padding: 3px 9px; border-radius: var(--radius-pill, 999px); font-size: 0.78rem; border: 1px solid currentColor; }
+.pb-volchip small { opacity: 0.7; }
+.pb-vz { display: inline-block; min-width: 28px; padding: 2px 6px; border-radius: 6px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; }
+.pb-vz--none { color: var(--text-muted); }
+.pb-vz--below { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted, #888) 12%, transparent); }
+.pb-vz--productive { color: var(--primary-text, #42a679); background: rgba(66, 166, 121, 0.16); }
+.pb-vz--high { color: #e0a64a; background: rgba(224, 166, 74, 0.16); }
+.pb-vz--over { color: var(--danger-text, #e0707f); background: rgba(224, 112, 127, 0.16); }
+.pb-volchip.pb-vz--productive, .pb-volchip.pb-vz--high, .pb-volchip.pb-vz--over, .pb-volchip.pb-vz--below { font-weight: 600; }
+.pb-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.76rem; }
+.pb-legend .pb-vz { font-weight: 600; }
+.pb-vol .pb-lm { width: 58px; border-color: var(--border); }
+.pb-vol td { text-align: center; }
+.pb-vol td.pb-sheet-ex { text-align: left; }
+.pb-own { color: var(--primary); font-size: 0.6rem; vertical-align: middle; }
+
+/* Builder status line: sentence case so longer notes (e.g. muscles short of a landmark) read easily. */
+.pb-msg { text-transform: none; letter-spacing: 0.01em; font-size: 0.8rem; font-weight: 600; }

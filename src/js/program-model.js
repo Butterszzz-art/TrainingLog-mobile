@@ -11,16 +11,25 @@
  *
  *   { schema, name, notes, progressionNotes, rules[],
  *     blocks?: [{ id, name, goal }],
+ *     volume?: { [muscle]: { mev, mav, mrv } },
  *     weeks: [{ week, label, note, block?, deload?, days: [{ dayId, weekday 1-7, label, focus, notes,
  *       exercises: [{ id, name, type, sets, repsMin, repsMax, rir, lastSetRir,
- *                     restSec, restSecMax, notes, loadPct?, loadKg? }] }] }
+ *                     restSec, restSecMax, notes, loadPct?, loadKg?, muscle? }] }] }
  *             | { week, sameAs, block?, deload? } ] }
  *
  * Blocks are mesocycles: each week names the block it belongs to (`block` =
  * a block id) and may be a deload week. A block's weeks are the weeks that
  * name it, normally one consecutive run. `loadPct` (% of 1RM) or `loadKg` is
- * an optional load target on a row. The optional keys are left out when not
- * set, so programs without blocks or loads read exactly as before.
+ * an optional load target on a row.
+ *
+ * Volume landmarks: `volume` holds the coach's MEV / MAV / MRV (weekly hard
+ * sets per muscle: minimum effective, maximum adaptive, maximum recoverable)
+ * for muscles where they differ from DEFAULT_LANDMARKS. A row's `muscle`
+ * overrides the muscle the caller's name lookup would give it. The model has
+ * no exercise→muscle table: callers pass `muscleOf(row)`.
+ *
+ * The optional keys are left out when not set, so programs without them
+ * read exactly as before.
  *
  * readProgram() also reads the v1 library shape { name, days: { Mon: [...] } }
  * (one repeating week) and the app's library shape (weeks/days with per-set
@@ -39,6 +48,27 @@
   const SCHEMA = 'pocketcoach.program/2';
   const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // ISO 1..7
   const TYPES = ['compound', 'isolation', 'core'];
+  const MUSCLES = ['chest', 'back', 'shoulders', 'traps', 'biceps', 'triceps', 'forearms', 'quads', 'hamstrings', 'glutes', 'calves', 'adductors', 'abductors', 'abs'];
+  // Weekly hard sets per muscle. Commonly published ballparks
+  // (Renaissance Periodization style), a starting point the coach edits per
+  // program: MEV = least that grows, MAV = where most growth happens,
+  // MRV = most that can be recovered from.
+  const DEFAULT_LANDMARKS = {
+    chest: { mev: 8, mav: 16, mrv: 22 },
+    back: { mev: 10, mav: 18, mrv: 25 },
+    shoulders: { mev: 8, mav: 19, mrv: 26 },
+    traps: { mev: 4, mav: 16, mrv: 26 },
+    biceps: { mev: 8, mav: 17, mrv: 26 },
+    triceps: { mev: 6, mav: 12, mrv: 18 },
+    forearms: { mev: 2, mav: 10, mrv: 20 },
+    quads: { mev: 8, mav: 15, mrv: 20 },
+    hamstrings: { mev: 6, mav: 13, mrv: 20 },
+    glutes: { mev: 4, mav: 8, mrv: 16 },
+    calves: { mev: 8, mav: 14, mrv: 20 },
+    adductors: { mev: 2, mav: 8, mrv: 14 },
+    abductors: { mev: 2, mav: 8, mrv: 14 },
+    abs: { mev: 4, mav: 16, mrv: 25 },
+  };
   const LIMITS = { weeks: 52, days: 7, exercises: 20, name: 80, label: 40, focus: 60, notes: 300, programNotes: 4000, rules: 20, blocks: 16, blockGoal: 200 };
 
   // ── small helpers ─────────────────────────────────────────────────────────
@@ -257,7 +287,52 @@
       restSec,
       restSecMax,
       notes: str(e.notes, LIMITS.notes),
-    }, loadPct !== null ? { loadPct } : {}, loadKg !== null ? { loadKg } : {});
+    }, loadPct !== null ? { loadPct } : {}, loadKg !== null ? { loadKg } : {}, MUSCLES.includes(e.muscle) ? { muscle: e.muscle } : {});
+  }
+
+  /** { chest: { mev, mav, mrv }, … } → only known muscles, whole sets 0–60, mev ≤ mav ≤ mrv. */
+  function normalizeVolume(src) {
+    const out = {};
+    if (!src || typeof src !== 'object') return out;
+    MUSCLES.forEach(m => {
+      const v = src[m];
+      if (!v || typeof v !== 'object') return;
+      const vals = [int(v.mev, 0, 60), int(v.mav, 0, 60), int(v.mrv, 0, 60)];
+      if (vals.some(x => x === null)) return;
+      vals.sort((a, b) => a - b);
+      out[m] = { mev: vals[0], mav: vals[1], mrv: vals[2] };
+    });
+    return out;
+  }
+
+  /** The MEV / MAV / MRV in use for a muscle: the program's own, else the default, else null. */
+  function landmarks(program, muscle) {
+    return (program && program.volume && program.volume[muscle]) || DEFAULT_LANDMARKS[muscle] || null;
+  }
+
+  /** Where `sets` sits: 'below' MEV, 'productive' (MEV–MAV), 'high' (MAV–MRV) or 'over' MRV. */
+  function volumeZone(sets, lm) {
+    if (!lm) return null;
+    if (sets < lm.mev) return 'below';
+    if (sets <= lm.mav) return 'productive';
+    if (sets <= lm.mrv) return 'high';
+    return 'over';
+  }
+
+  function rowMuscle(row, muscleOf) {
+    if (row && MUSCLES.includes(row.muscle)) return row.muscle;
+    const m = typeof muscleOf === 'function' ? muscleOf(row) : null;
+    return MUSCLES.includes(m) ? m : 'other';
+  }
+
+  /** Weekly sets per muscle in `week`: { quads: 12, other: 2, … }. */
+  function muscleSets(program, week, muscleOf) {
+    const out = {};
+    weekDays(program, week).forEach(d => d.exercises.forEach(e => {
+      const m = rowMuscle(e, muscleOf);
+      out[m] = (out[m] || 0) + (Number(e.sets) || 0);
+    }));
+    return out;
   }
 
   function normalizeDay(src, index, weekNo) {
@@ -381,13 +456,14 @@
     if (!weeks.length) weeks.push({ week: 1, label: 'Week 1', note: '', days: [] });
     // Blocks no week belongs to are dropped.
     const used = blocks.filter(b => weeks.some(w => w.block === b.id));
+    const volume = normalizeVolume(p.volume);
     return Object.assign({
       schema: SCHEMA,
       name,
       notes: str(p.notes, LIMITS.programNotes),
       progressionNotes: str(p.progressionNotes, LIMITS.programNotes),
       rules: (Array.isArray(p.rules) ? p.rules : []).map(r => str(r, LIMITS.notes)).filter(Boolean).slice(0, LIMITS.rules),
-    }, used.length ? { blocks: used } : {}, { weeks });
+    }, used.length ? { blocks: used } : {}, Object.keys(volume).length ? { volume } : {}, { weeks });
   }
 
   // ── reading a normalised v2 program ───────────────────────────────────────
@@ -445,9 +521,18 @@
    * would drag a progression across a spreadsheet. Returns a new program.
    *   opts.rirStart / rirEnd   RIR on the first / last training week (linear
    *                            in between, steps of 0.5). Null keeps each row's RIR.
-   *   opts.setsPerWeek         sets added per week (0 = same), capped at opts.setsMax.
+   *   opts.setsPerWeek         sets added per week (0 = same), capped at opts.setsMax
+   *                            (also the most sets one row gets in a volume ramp).
    *   opts.pctPerWeek          %1RM added per week on rows with a % load.
    *   opts.kgPerWeek           kg added per week on rows with a kg load.
+   *   opts.repsPerWeek         reps added per week to both ends of each row's
+   *                            range (-1: 10-12 → 9-11 → 8-10), at least 1.
+   *   opts.volumeFrom / volumeTo   'mev' | 'mav' | 'mrv': each muscle's weekly
+   *                            sets go from that landmark on the first week to
+   *                            the other on the last training week, shared
+   *                            over the muscle's rows by their template sets.
+   *                            Replaces setsPerWeek for muscles with landmarks;
+   *                            opts.muscleOf(row) names a row's muscle.
    *   opts.deloadLast          the last week is a deload: about half the sets
    *                            (opts.deloadSetsFactor, default 0.5), RIR +2 on
    *                            the template, loads -10%.
@@ -470,15 +555,55 @@
     const pctPerWeek = num(o.pctPerWeek, -20, 20) || 0;
     const kgPerWeek = num(o.kgPerWeek, -50, 50) || 0;
     const factor = num(o.deloadSetsFactor, 0.1, 1) || 0.5;
+    const repsPerWeek = int(o.repsPerWeek, -10, 10) || 0;
     const half = x => Math.round(x * 2) / 2;
+    const LANDMARK_KEYS = ['mev', 'mav', 'mrv'];
+    const ramp = LANDMARK_KEYS.includes(o.volumeFrom) && LANDMARK_KEYS.includes(o.volumeTo);
+    // Template sets per muscle (rows across every day of the template week).
+    const muscleOfRow = new Map();
+    const templateSets = {};
+    template.forEach(d => d.exercises.forEach(e => {
+      const m = rowMuscle(e, o.muscleOf);
+      muscleOfRow.set(e, m);
+      templateSets[m] = (templateSets[m] || 0) + e.sets;
+    }));
+    const rampSets = new Map(); // week → Map(row → sets)
+    if (ramp) {
+      for (let week = start; week <= end - (deloadLast ? 1 : 0); week++) {
+        const t = training > 1 ? (week - start) / (training - 1) : 0;
+        const sets = new Map();
+        Object.keys(templateSets).forEach(m => {
+          const lm = landmarks(program, m);
+          if (!lm || m === 'other' || !templateSets[m]) return;
+          const target = Math.round(lm[o.volumeFrom] + (lm[o.volumeTo] - lm[o.volumeFrom]) * t);
+          const rows = [];
+          template.forEach(d => d.exercises.forEach(e => { if (muscleOfRow.get(e) === m) rows.push(e); }));
+          // Share the target by template sets (largest remainder), at least 1
+          // and at most setsMax a row: one exercise never carries a whole MRV.
+          // Past what the rows can hold, the muscle stays short of its target
+          // (the coach adds an exercise).
+          const cap = setsMax;
+          const raw = rows.map(e => target * e.sets / templateSets[m]);
+          const got = raw.map(x => Math.max(1, Math.min(cap, Math.floor(x))));
+          let left = target - got.reduce((a, b) => a + b, 0);
+          const order = raw.map((x, i) => [x - Math.floor(x), i]).sort((a, b) => b[0] - a[0]);
+          for (let i = 0; left > 0 && i < order.length * cap; i++) {
+            const j = order[i % order.length][1];
+            if (got[j] < cap) { got[j]++; left--; }
+          }
+          rows.forEach((e, i) => sets.set(e, got[i]));
+        });
+        rampSets.set(week, sets);
+      }
+    }
 
     for (let week = start; week <= end; week++) {
       const k = week - start;
       const isDeload = deloadLast && week === end;
       const t = training > 1 ? Math.min(1, k / (training - 1)) : 0;
-      const days = clone(template).map(d => Object.assign(d, {
-        exercises: d.exercises.map((e, j) => {
-          const row = Object.assign({}, e, { id: 'w' + week + '-' + d.dayId + '-e' + (j + 1) });
+      const days = template.map(td => Object.assign(clone(td), {
+        exercises: td.exercises.map((e, j) => {
+          const row = Object.assign({}, e, { id: 'w' + week + '-' + td.dayId + '-e' + (j + 1) });
           const gap = e.rir !== null && e.lastSetRir !== null ? e.rir - e.lastSetRir : null;
           if (isDeload) {
             row.sets = Math.max(1, Math.round(e.sets * factor));
@@ -489,7 +614,12 @@
             if (e.loadKg != null) row.loadKg = Math.floor(e.loadKg * 0.9 / 2.5) * 2.5;
             return row;
           }
-          row.sets = Math.max(1, Math.min(Math.max(setsMax, e.sets), e.sets + setsPerWeek * k));
+          const ramped = rampSets.get(week) && rampSets.get(week).get(e);
+          row.sets = ramped !== undefined ? ramped : Math.max(1, Math.min(Math.max(setsMax, e.sets), e.sets + setsPerWeek * k));
+          if (repsPerWeek && e.repsMin !== null) {
+            row.repsMin = Math.max(1, Math.min(100, e.repsMin + repsPerWeek * k));
+            row.repsMax = e.repsMax !== null ? Math.max(row.repsMin + 1, Math.min(100, e.repsMax + repsPerWeek * k)) : null;
+          }
           if (e.rir !== null && rirStart !== null) {
             row.rir = half(rirStart + ((rirEnd !== null ? rirEnd : rirStart) - rirStart) * t);
             row.lastSetRir = gap !== null ? Math.max(0, half(row.rir - gap)) : null;
@@ -664,7 +794,8 @@
   }
 
   return {
-    SCHEMA, WEEKDAYS, TYPES, LIMITS,
+    SCHEMA, WEEKDAYS, TYPES, LIMITS, MUSCLES, DEFAULT_LANDMARKS,
+    landmarks, volumeZone, muscleSets,
     readProgram, weekDays, stats, validate, copyWeek, toLibrary, toV1Days,
     blockRuns, weeklySets, progressWeeks,
     parseQuickEntry, parseReps, parseRir, parseRest, parseDayLabel, parseWeek, parseLoad, parseCell,

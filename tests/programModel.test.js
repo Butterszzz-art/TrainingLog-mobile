@@ -142,3 +142,59 @@ describe('mesocycles, deloads and loads', () => {
     expect(M.validate(p).some(w => /A is split/.test(w.message))).toBe(true);
   });
 });
+
+describe('volume landmarks (MEV / MAV / MRV) and rep-range progression', () => {
+  const muscleOf = e => ({ Squat: 'quads', 'Leg extension': 'quads', 'Leg curl': 'hamstrings' })[e.name] || 'other';
+  const prog = extra => M.readProgram(Object.assign({
+    name: 'Volume',
+    weeks: [{ days: [
+      { dayId: 'd1', weekday: 1, exercises: [
+        { name: 'Squat', sets: 3, repsMin: 6, repsMax: 8, rir: 3 },
+        { name: 'Leg extension', sets: 2, repsMin: 10, repsMax: 15, rir: 3 },
+        { name: 'Leg curl', sets: 3, repsMin: 10, repsMax: 12, rir: 3 },
+        { name: 'Farmer walk', sets: 2, repsMin: 1, rir: null, type: 'core' },
+      ] },
+      { dayId: 'd2', weekday: 4, exercises: [{ name: 'Squat', sets: 3, repsMin: 6, repsMax: 8, rir: 3 }] },
+    ] }, { sameAs: 1 }, { sameAs: 1 }, { sameAs: 1 }, { sameAs: 1 }],
+  }, extra));
+
+  test('volume is kept per known muscle, sorted so mev ≤ mav ≤ mrv; row muscle overrides', () => {
+    const p = prog({ volume: { quads: { mev: 10, mav: 16, mrv: 20 }, glutes: { mev: 12, mav: 4, mrv: 8 }, aliens: { mev: 1, mav: 2, mrv: 3 }, calves: { mev: 'x' } } });
+    expect(p.volume).toEqual({ quads: { mev: 10, mav: 16, mrv: 20 }, glutes: { mev: 4, mav: 8, mrv: 12 } });
+    expect(M.landmarks(p, 'quads')).toEqual({ mev: 10, mav: 16, mrv: 20 });
+    expect(M.landmarks(p, 'chest')).toEqual(M.DEFAULT_LANDMARKS.chest);
+    expect(M.landmarks(p, 'other')).toBeNull();
+    expect('volume' in prog()).toBe(false);
+    const withMuscle = M.readProgram({ name: 'm', weeks: [{ days: [{ dayId: 'd1', weekday: 1, exercises: [{ name: 'Farmer walk', muscle: 'traps' }, { name: 'X', muscle: 'wings' }] }] }] });
+    expect(withMuscle.weeks[0].days[0].exercises.map(e => e.muscle)).toEqual(['traps', undefined]);
+    expect(M.muscleSets(withMuscle, 1, muscleOf)).toEqual({ traps: 3, other: 3 });
+  });
+
+  test('muscleSets and volumeZone', () => {
+    expect(M.muscleSets(prog(), 1, muscleOf)).toEqual({ quads: 8, hamstrings: 3, other: 2 });
+    const lm = { mev: 10, mav: 16, mrv: 20 };
+    expect([9, 10, 16, 17, 20, 21].map(n => M.volumeZone(n, lm))).toEqual(['below', 'productive', 'productive', 'high', 'high', 'over']);
+    expect(M.volumeZone(5, null)).toBeNull();
+  });
+
+  test('progressWeeks ramps each muscle from MEV to MRV, shared over its rows, capped per row', () => {
+    const p = prog({ volume: { quads: { mev: 10, mav: 16, mrv: 20 }, hamstrings: { mev: 6, mav: 10, mrv: 14 } } });
+    const q = M.progressWeeks(p, 1, 5, { volumeFrom: 'mev', volumeTo: 'mrv', setsMax: 6, deloadLast: true, muscleOf });
+    const quads = [1, 2, 3, 4].map(w => M.muscleSets(q, w, muscleOf).quads);
+    expect(quads).toEqual([10, 13, 17, 18]); // week 4 wants 20; three rows × 6 max = 18
+    expect([1, 2, 3, 4].map(w => M.muscleSets(q, w, muscleOf).hamstrings)).toEqual([6, 6, 6, 6]); // one row, capped at 6
+    expect(M.weekDays(q, 1)[0].exercises.map(e => e.sets)).toEqual([4, 2, 6, 2]); // 10 quad sets as 4 + 2 + 4 by template share
+    expect(M.weekDays(q, 1)[1].exercises[0].sets).toBe(4);
+    expect(M.weekDays(q, 2)[0].exercises[3].sets).toBe(2); // "other" keeps its sets
+    expect(q.weeks[4].deload).toBe(true);
+    expect(M.weekDays(q, 5)[0].exercises[0].sets).toBe(2); // deload: half the template
+  });
+
+  test('repsPerWeek moves each rep range on its own', () => {
+    const q = M.progressWeeks(prog(), 1, 3, { repsPerWeek: -2 });
+    const day = w => M.weekDays(q, w)[0].exercises;
+    expect([1, 2, 3].map(w => [day(w)[0].repsMin, day(w)[0].repsMax])).toEqual([[6, 8], [4, 6], [2, 4]]);
+    expect([1, 2, 3].map(w => [day(w)[1].repsMin, day(w)[1].repsMax])).toEqual([[10, 15], [8, 13], [6, 11]]);
+    expect(day(3)[3]).toMatchObject({ repsMin: 1, repsMax: null }); // never below 1
+  });
+});

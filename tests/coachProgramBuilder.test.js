@@ -190,3 +190,56 @@ test('week settings: deload toggle; CSV export lists every week', () => {
   expect(lines[0]).toBe('Block,Week,Day,Exercise,Sets,Reps,RIR,Load,Rest,Notes');
   expect(lines[2]).toBe(',Week 2 (deload),Mon - Lower,Squat,3,6-8,3,70%,,');
 });
+
+const MUSCLE_MAP = fs.readFileSync(path.join(__dirname, '../exerciseMuscleMap.js'), 'utf8');
+
+test('Volume: chips per muscle, Muscle column, editable MEV/MAV/MRV, MEV → MRV progression', async () => {
+  const t = setup({
+    schema: 'pocketcoach.program/2', name: 'Legs',
+    weeks: [{ days: [{ dayId: 'd1', weekday: 1, label: 'Lower', exercises: [
+      { name: 'Back squat', sets: 4, repsMin: 6, repsMax: 8, rir: 3 },
+      { name: 'Lying leg curl', sets: 3, repsMin: 10, repsMax: 12, rir: 2 },
+      { name: 'Farmer walk', sets: 2, repsMin: 1, rir: null, type: 'core' },
+    ] }] }, { sameAs: 1 }, { sameAs: 1 }, { sameAs: 1 }],
+  });
+  const { w, $, $$, click, type, flush, saved, api } = t;
+  w.eval(MUSCLE_MAP);
+  api.refresh();
+  const chips = () => $$('.pb-volchip').map(c => c.textContent);
+  expect(chips()).toContain('Quads 4/20');
+  expect(chips()).toContain('Hamstrings 3/20');
+  // The Muscle column shows the guess and can override it.
+  const farmer = $$('.pb-row')[2].querySelector('[data-f="muscle"]');
+  expect(farmer.options[0].textContent).toMatch(/^Auto · /);
+  type(farmer, 'traps');
+  expect(chips()).toContain('Traps 2/26');
+
+  // Volume view: edit landmarks; cells take the zone colour.
+  click($('[data-act="view-volume"]'));
+  expect($$('.pb-vol tbody tr').map(r => r.cells[0].textContent.trim())).toEqual(['Traps', 'Quads', 'Hamstrings']);
+  const quadsMev = $('[data-lm="quads"][data-lk="mev"]');
+  type(quadsMev, '6');
+  expect($('[data-vcell="quads|1"] .pb-vz').className).toContain('pb-vz--below');
+  type(quadsMev, '4');
+  expect($('[data-vcell="quads|1"] .pb-vz').className).toContain('pb-vz--productive');
+
+  click($('[data-act="view-week"]'));
+  click($('[data-act="progress-open"]'));
+  const vol = $('[data-pp="volume"]');
+  type(vol, 'mev-mrv');
+  expect($('[data-pp="setsPerWeek"]')).toBeNull();
+  type($('[data-pp="repsPerWeek"]'), '-1');
+  click($('[data-act="progress-apply"]'));
+  expect($('.pb-msg').textContent).toMatch(/Quads 8\/20, Hamstrings 8\/20, Traps 8\/26 stop short of MRV/);
+  click($('[data-act="save"]'));
+  await flush();
+  const p = saved[0];
+  expect(p.volume).toEqual({ quads: { mev: 4, mav: 15, mrv: 20 } });
+  expect(p.weeks[0].days[0].exercises[2].muscle).toBe('traps');
+  const sets = n => p.weeks[n - 1].days[0].exercises.map(e => e.sets);
+  // Quads 4 → 20 over W1–W3 but one row holds at most 8 (default cap); hamstrings 6 → 20, capped too.
+  expect(sets(1)).toEqual([4, 6, 4]);
+  expect(sets(2)).toEqual([8, 8, 8]);
+  expect(p.weeks[3].deload).toBe(true);
+  expect(p.weeks[2].days[0].exercises[0]).toMatchObject({ repsMin: 4, repsMax: 6 });
+});
