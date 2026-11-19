@@ -1587,9 +1587,33 @@ function renderProgram(c) {
     + '<div class="d-card"><div class="d-card-title">Assigned: ' + escapeHtml(c.currentProgram || 'none') + '</div>' + preview
     + (c.activeProgramName && c.activeProgramName !== c.currentProgram ? '<p class="ws-empty-note">Client is currently following: ' + escapeHtml(c.activeProgramName) + '</p>' : '')
     + '</div>'
+    + (current && window.ScheduleEditor ? '<div class="d-card"><div class="d-card-title">Weeks for ' + escapeHtml(c.clientName || 'this client') + '</div>'
+      + '<p class="ws-empty-note">Repeat a week or put in a week off for this client only. Dates and the current week follow the start date.</p>'
+      + '<div id="scheduleEditorArea"></div></div>' : '')
     + '<div class="d-card"><div class="d-card-title">Technique videos</div><div id="techniqueVideosArea"><p class="ws-empty-note">Loading videos…</p></div></div>';
   initMasterPlan(c);
+  if (current) mountScheduleEditor(c, current);
   loadCoachExerciseVideos().then(renderTechniqueVideos);
+}
+
+// This client's repeat / pause weeks and start date (coach/schedule-editor.js).
+function mountScheduleEditor(c, program) {
+  const area = document.getElementById('scheduleEditorArea');
+  if (!area || !window.ScheduleEditor) return;
+  const shared = String(c.activeProgramId || '');
+  const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const sameProgram = !!shared && (shared === c.currentProgramId || shared.endsWith('-' + slug(c.currentProgramId)));
+  const schedule = c.programSchedule && (!c.programSchedule.programId || c.programSchedule.programId === c.currentProgramId) ? c.programSchedule : null;
+  window.ScheduleEditor.mount(area, {
+    clientName: c.clientName,
+    program,
+    schedule,
+    clientStart: c.activeProgramStartDate ? { date: c.activeProgramStartDate, sameProgram } : null,
+    onSave: async next => {
+      if (!(await patchClient(c.id, { programSchedule: next }))) throw new Error('Could not save.');
+      c.programSchedule = next ? Object.assign({ programId: c.currentProgramId }, next) : null;
+    },
+  });
 }
 
 // ── Technique videos per exercise (coach/technique-videos.js) ─────────────
@@ -2049,6 +2073,8 @@ async function assignProgram() {
   const message = document.getElementById('coachProgramNote')?.value.trim() || '';
   if (!(await patchClient(client.id, { programId: sel.value, ...(message ? { message } : {}) }))) return;
   const prog = _programs.find(p => p.id === sel.value);
+  // Another program starts without repeat / pause weeks (the server clears them too).
+  if (client.currentProgramId !== sel.value) client.programSchedule = null;
   client.currentProgramId = sel.value;
   client.currentProgram = prog ? prog.name : client.currentProgram;
   alert('"' + client.currentProgram + '" sent to ' + client.clientName + '. They can start it from Settings → Your Coach.');
