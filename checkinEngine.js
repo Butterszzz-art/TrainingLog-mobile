@@ -57,6 +57,12 @@
 
   const MAX_POSING_SETS = 10;
 
+  // Detailed check-in answers (src/js/checkin-detail.js).
+  function detailApi() {
+    if (globalScope.checkInDetail) return globalScope.checkInDetail;
+    try { return typeof require === 'function' ? require('./src/js/checkin-detail.js') : null; } catch (_error) { return null; }
+  }
+
   function getStorageKey(userId) {
     return `${STORAGE_PREFIX}${resolveUserId(userId)}`;
   }
@@ -152,7 +158,14 @@
       posingPhotoPicks: cleanPhotoPicks(safe.posingPhotoPicks, cleanSessionIds(safe.posingSessionIds)),
       // Answers to the coach's own check-in questions: [{ q, a }].
       coachAnswers: cleanCoachAnswers(safe.coachAnswers),
-      archetypeMetrics
+      archetypeMetrics,
+      // Recovery per muscle, workload per session, nutrition, lifestyle…
+      // (src/js/checkin-detail.js). Absent when nothing was answered.
+      ...(function () {
+        const api = detailApi();
+        const detail = api ? api.cleanDetail(safe.detail) : null;
+        return detail ? { detail } : {};
+      })()
     };
   }
 

@@ -1761,6 +1761,10 @@
         <div id="checkInArchetypeFields"></div>
       </div>
 
+      <!-- Training / Nutrition / Lifestyle & health: filled by
+           renderCheckInDetailForm() (src/js/checkin-detail-form.js). -->
+      <div id="checkInDetailSections"></div>
+
       <!-- Questions set by the coach (Check-in settings in the coach
            console); filled by renderCoachCheckInQuestions(). -->
       <div class="ci-card" id="checkInCoachQuestionsCard" hidden>
@@ -4344,7 +4348,9 @@
 <script src="cardioTab.js"></script>
 <script src="weightTab.js"></script>
 <script src="prepMode.js"></script>
+<script src="src/js/checkin-detail.js"></script>
 <script src="checkinEngine.js"></script>
+<script src="src/js/checkin-detail-form.js"></script>
 <script src="dailyMissionEngine.js"></script>
 <script src="posingEngine.js"></script>
 <script src="posingMediaStore.js"></script>
@@ -14289,6 +14295,11 @@ function renderCheckInTab() {
   prefillCheckInBodyweightFromWeighIns(userId);
   hydrateCheckInFormFromLatestEntry(checkIns);
   renderCheckInPosingPhotos();
+  window.renderCheckInDetailForm?.(userId, {
+    date: dateInput?.value,
+    // Questions the archetype card already asks are left out.
+    archetypeKeys: (CHECKIN_ARCHETYPE_SCHEMAS[archetype] || CHECKIN_ARCHETYPE_SCHEMAS.hybrid).fields.map(f => f.key)
+  });
   bindCheckInSliderDisplays();
   autoFillCardioAdherenceSlider(userId);
   enhanceCheckInScales();
@@ -14937,7 +14948,8 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     sidePhoto: document.getElementById('checkInSidePhotoInput')?.value || '',
     backPhoto: document.getElementById('checkInBackPhotoInput')?.value || '',
     posingSessionIds: getCheckInPosingPicks(userId, dateValue),
-    coachAnswers: readCoachCheckInAnswers()
+    coachAnswers: readCoachCheckInAnswers(),
+    detail: window.readCheckInDetailForm?.() || null
   };
 
   const currentEntries = window.checkinEngine.loadCheckIns(userId);
@@ -14952,6 +14964,7 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     if (existingForDate.posingPhotoPicks) draft.posingPhotoPicks = existingForDate.posingPhotoPicks;
     // A coach review save has no question fields on screen: keep the athlete's answers.
     if (!document.querySelector('#checkInCoachQuestions textarea') && existingForDate.coachAnswers) draft.coachAnswers = existingForDate.coachAnswers;
+    if (!document.querySelector('#checkInDetailSections [data-detail-choice]') && existingForDate.detail) draft.detail = existingForDate.detail;
   }
 
   draft.weekLabel = manualWeekLabel || window.checkinEngine.getWeekLabelForCheckIn(draft, phaseState);

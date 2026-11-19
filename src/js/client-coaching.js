@@ -117,6 +117,11 @@
     return Math.round(pct * 100);
   }
 
+  function checkInDetailApi() {
+    if (root && root.checkInDetail) return root.checkInDetail;
+    try { return typeof require === 'function' ? require('./checkin-detail.js') : null; } catch (_e) { return null; }
+  }
+
   function buildShareSnapshot(store, username, nowInput) {
     const now = nowInput instanceof Date ? nowInput : new Date(nowInput || Date.now());
     const checkIns = arr(readJSON(store, CHECKIN_PREFIX + username, []))
@@ -134,6 +139,11 @@
         if (typeof summary === 'string' && summary) out.summary = summary.slice(0, 400);
         const answers = arr(c.coachAnswers).filter(x => x && x.q && x.a).slice(0, 8);
         if (answers.length) out.answers = answers.map(x => ({ q: String(x.q).slice(0, 140), a: String(x.a).slice(0, 500) }));
+        // Recovery per muscle, workload per session, nutrition and
+        // lifestyle answers (src/js/checkin-detail.js).
+        const detailApi = checkInDetailApi();
+        const detail = detailApi ? detailApi.cleanDetail(c.detail) : null;
+        if (detail) out.detail = detail;
         return out;
       });
 

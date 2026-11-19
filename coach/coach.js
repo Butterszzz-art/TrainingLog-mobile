@@ -987,6 +987,7 @@ function renderCheckIn(c) {
         + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
         + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
         + (ci.answers || []).map(x => '<div class="ci-answer"><span class="ci-answer-q">' + escapeHtml(x.q) + '</span><span class="ci-answer-a">' + escapeHtml(x.a) + '</span></div>').join('')
+        + checkInDetailBlock(ci.detail, latest)
         + (latest ? '<div class="ci-review-row">' + (ci.date > reviewed
           ? '<button class="bulk-action-btn" onclick="markCheckInReviewed(\'' + escapeHtml(c.id) + '\', \'' + escapeHtml(ci.date) + '\')">' + ic('check') + ' Mark reviewed</button>'
           : '<span class="ca-chip ca-chip--green">' + ic('check') + ' Reviewed</span>') + '</div>' : '')
@@ -995,6 +996,45 @@ function renderCheckIn(c) {
         + '</div>';
     }).join('') + '</div>';
   watchCheckInCards(c.id, el);
+}
+
+// The detailed answers on a check-in (src/js/checkin-detail.js): flags to
+// look at first, then every answer by section. Open on the latest check-in.
+function checkInDetailBlock(detail, open) {
+  const api = window.checkInDetail;
+  const d = api && api.cleanDetail(detail);
+  if (!d) return '';
+  const t = d.training || {}, n = d.nutrition || {}, l = d.lifestyle || {};
+  const row = (q, a) => a == null || a === '' ? '' : '<div class="ci-answer"><span class="ci-answer-q">' + escapeHtml(q) + '</span><span class="ci-answer-a">' + escapeHtml(String(a)) + '</span></div>';
+  const tone = { none: '', day: 'ca-chip--green', justInTime: 'ca-chip--brass', stillSore: 'ca-chip--red',
+    easy: 'ca-chip--brass', good: 'ca-chip--green', limit: 'ca-chip--green', tooMuch: 'ca-chip--red' };
+  const chip = (label, value, list) => '<span class="ca-chip ' + (tone[value] || '') + '">' + escapeHtml(label) + ': ' + escapeHtml(api.labelOf(list, value)) + '</span>';
+  const head = h => '<div class="ci-detail-head">' + escapeHtml(h) + '</div>';
+  const flags = api.detailFlags(d);
+  const warns = flags.filter(f => f.level === 'warn').length;
+  const training = (t.programWeek ? row('Week / day', t.programWeek) : '')
+    + (t.recovery ? '<div class="ci-detail-chips">' + api.MUSCLES.filter(([k]) => t.recovery[k]).map(([k, label]) => chip(label, t.recovery[k], api.RECOVERY)).join('') + '</div>' : '')
+    + (t.workload ? '<div class="ci-detail-chips">' + t.workload.map(w => chip(w.day, w.rating, api.WORKLOAD)).join('') + '</div>' : '')
+    + row('Workload & soreness', t.workloadNotes) + row('Joint pain', t.jointPain) + row('Performance', t.performance)
+    + row('Pumps', t.pump != null ? t.pump + '/5' + (t.pumpNotes ? ' · ' + t.pumpNotes : '') : t.pumpNotes)
+    + row('Cardio / steps', t.cardioAdherence != null ? t.cardioAdherence + '/5' + (t.cardioNotes ? ' · ' + t.cardioNotes : '') : t.cardioNotes);
+  const nutrition = (n.ratings ? row('Ratings (5 = easy)', api.NUTRITION.filter(([k]) => n.ratings[k] != null).map(([k, label]) => label + ' ' + n.ratings[k]).join(' · ')) : '')
+    + row('Off-plan meals', n.offPlanMeals) + row('Water target', n.water ? api.labelOf(api.WATER, n.water) : '');
+  const lifestyle = row('Physical fatigue', l.physicalFatigue != null ? l.physicalFatigue + '/10' : '')
+    + row('Energy in training', l.trainingEnergy != null ? l.trainingEnergy + '/10' : '')
+    + row('Low scores', l.markerNotes) + row('Mental struggles', l.mentalStruggles) + row('Sleep insights', l.sleepInsights)
+    + row('Caffeine', l.caffeineMg != null ? l.caffeineMg + ' mg/day' : '')
+    + row('Supplements', l.supplementAdherence != null ? l.supplementAdherence + '/5' : '')
+    + row('Medications', l.medications)
+    + row('PEDs on plan', l.peds ? api.labelOf(api.PEDS, l.peds) + (l.pedNotes ? ' · ' + l.pedNotes : '') : l.pedNotes)
+    + row('Other feedback', l.otherFeedback);
+  return '<details class="ci-detail"' + (open ? ' open' : '') + '><summary>Full check-in'
+    + (warns ? ' <span class="ca-chip ca-chip--red">' + warns + ' to look at</span>' : '') + '</summary>'
+    + (flags.length ? '<ul class="ci-detail-flags">' + flags.map(f => '<li class="ci-detail-flag ci-detail-flag--' + f.level + '">' + escapeHtml(f.text) + '</li>').join('') + '</ul>' : '')
+    + (training ? head('Training') + training : '')
+    + (nutrition ? head('Nutrition') + nutrition : '')
+    + (lifestyle ? head('Lifestyle & health') + lifestyle : '')
+    + '</details>';
 }
 
 // Shared check-ins plus dates that only have photos you added, newest
@@ -2807,7 +2847,8 @@ async function aiAnalyse() {
         compliancePercent: client.compliancePercent,
         goal: client.currentProgram || 'current phase',
         archetype: client.trainingMode || 'general',
-        adjustmentNotes: ci.notes || ''
+        adjustmentNotes: ci.notes || '',
+        detail: window.checkInDetail ? window.checkInDetail.detailToText(ci.detail) : ''
       })
     });
     const data = await res.json();
@@ -2826,6 +2867,7 @@ function draftPayload(client) {
     currentPhase: client.currentProgram || client.activeProgramName || '',
     compliancePercent: client.compliancePercent,
     checkIn: ci,
+    checkInDetail: window.checkInDetail ? window.checkInDetail.detailToText(ci && ci.detail) : '',
     bodyweightChange: client.weeklyWeightChangePercent,
     alerts: (client.alerts || []).map(a => ({ label: a.label, reason: a.reason })),
     currentProgramSummary: client.currentProgram || '',
