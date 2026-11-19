@@ -150,6 +150,12 @@
           ? ` Keep ${esc(t.progression.rir[1])}–${esc(t.progression.rir[0])} reps in reserve; go to failure only on an exercise's last set.`
           : ''}`
       : '';
+    // Coach only: Menno Henselmans' volume formula next to the Butters
+    // University number the plan uses. Advice to compare, never the target.
+    const menno = coachView && t.comparison?.menno;
+    const mennoLine = menno && menno.note
+      ? `<p class="pp-note pp-compare"><strong>Comparison only:</strong> ${esc(menno.note)}</p>`
+      : '';
     const flags = coachView ? flagList((phase.redFlags || []).filter((f) => !commonFlags.has(flagKey(f)))) : '';
     const prov = coachView
       ? `<div class="pp-prov">${ruleTag(n.provenance?.kcal)}${ruleTag(n.provenance?.proteinG)}${ruleTag(n.provenance?.fatG)}${ruleTag(t.provenance?.weeklySetsPerMuscle)}</div>`
@@ -167,7 +173,7 @@
       <div class="pp-training">
         ${programLine(phase, programs, coachView)}
         ${sets ? `<div class="pp-sub">${esc(t.split?.naam || '')}${t.split?.sessionsPerWeek ? ` · ${esc(t.split.sessionsPerWeek)}×/week` : ''} · weekly sets per muscle</div>
-        <div class="pp-chips">${sets}</div>` : ''}
+        <div class="pp-chips">${sets}</div>${mennoLine}` : ''}
         ${progression ? `<p class="pp-note">${progression}</p>` : ''}
         ${deload ? `<p class="pp-note">${deload}</p>` : ''}
       </div>
