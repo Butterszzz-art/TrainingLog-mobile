@@ -733,6 +733,13 @@
     return { coachName: active.map(i => i.coachUsername).filter(Boolean).join(' & ') };
   }
 
+  // Who coaches this user right now ('' when no one, null before the
+  // coaching state has loaded), for reminders.js.
+  function activeCoachName() {
+    if (!state.loadedAt) return null;
+    return state.invites.filter(i => i.status === 'active').map(i => i.coachUsername).filter(Boolean).join(' & ');
+  }
+
   async function answerCoachFoodLogShare(yes) {
     try {
       const data = await api$('PUT', '/api/client/coach-sharing', { nutrition: !!yes });
@@ -1444,6 +1451,7 @@
   root.pushCoachShare = pushShare;
   root.coachCheckInQuestions = coachCheckInQuestions;
   root.coachFoodLogAsk = coachFoodLogAsk;
+  root.activeCoachName = activeCoachName;
   root.coachPhotoSharing = photoSharingStatus;
   root.askCoachPhotoSharing = askPhotoSharingOnce;
   root.answerCoachPhotoSharing = answerPhotoSharing;

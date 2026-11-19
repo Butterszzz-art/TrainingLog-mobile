@@ -2250,6 +2250,30 @@ body.theme-dark .set-row {
 
 /* ── Reminders ─────────────────────────────────────────────── */
 
+.reminder-item-sub {
+  display: block;
+  font-weight: 400;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.reminder-follows {
+  font-size: 0.76rem;
+  color: var(--secondary-text);
+  margin-bottom: 4px;
+}
+
+.reminder-next {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  margin: 0 0 10px;
+}
+
+.reminder-test {
+  margin-top: 4px;
+}
+
 .reminder-perm-banner {
   display: flex;
   align-items: center;

@@ -45,6 +45,7 @@
     // Refresh streak display if leaderboard helpers are loaded
     if (typeof window.renderPersonalStats === 'function') window.renderPersonalStats();
     if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+    window.CoachNudges?.sync(); // reminders pause while on vacation
   }
 
   /**
@@ -130,6 +131,8 @@
     renderSickBanner();
     if (typeof window.renderPersonalStats === 'function') window.renderPersonalStats();
     if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+
+    window.CoachNudges?.sync(); // reminders pause while sick
   }
 
   function isSickDate(dateStr) {

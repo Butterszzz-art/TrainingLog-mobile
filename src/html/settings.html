@@ -185,17 +185,10 @@
         <span class="st-saved" aria-live="polite"></span>
       </header>
 
-      <div class="mx-kicker st-kicker">Daily reminder</div>
-      <div class="pod st-group">
-        <label class="st-row" for="streakReminderEnabled"><span class="st-label">Notifications</span>
-          <input type="checkbox" class="st-switch" id="streakReminderEnabled" name="streakReminderEnabled"></label>
-        <label class="st-row" for="streakReminderTime"><span class="st-label">Time</span>
-          <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00"></label>
-      </div>
-
-      <div class="mx-kicker st-kicker">Workout reminders</div>
-      <!-- renderRemindersPanel() (src/js/reminders.js) fills this; it saves
-           its own changes, so it's kept out of the settings autosave. -->
+      <div class="mx-kicker st-kicker">Coach reminders</div>
+      <!-- renderRemindersPanel() (src/js/reminders.js) fills this: pings to
+           train, log food, weigh in and check in. It saves its own changes,
+           so it's kept out of the settings autosave. -->
       <div class="pod st-group">
         <div class="st-block" id="remindersPanel" data-no-autosave></div>
       </div>
