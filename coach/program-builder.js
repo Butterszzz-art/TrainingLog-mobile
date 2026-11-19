@@ -16,7 +16,15 @@
  *
  * The program in the builder is always "expanded" (weeks that were sameAs
  * hold their own copy) so any week can be edited; it is saved that way.
- * Text inputs update the state in place; structural changes re-render. */
+ * Text inputs update the state in place; structural changes re-render.
+ *
+ * Long-term programs: weeks are grouped into mesocycles (blocks) with a
+ * name and goal, and any week can be a deload. "+ Mesocycle" appends a block
+ * of weeks; "Progression" fills a block from its first week (RIR from → to,
+ * sets and load per week, deload last week). The Sheet view shows a block
+ * (or every week) as one grid like a spreadsheet: a row per exercise, a
+ * column per week, each cell "4×6-8 @2 75%" editable in place. "Export CSV"
+ * writes the Week | Day | Exercise | … sheet the import reads back. */
 (function (root) {
   'use strict';
 
@@ -35,8 +43,47 @@
   /** Any program shape → v2 with every week holding its own days. */
   function expand(program) {
     const p = M.readProgram(program) || M.readProgram({ schema: M.SCHEMA, name: 'New program', weeks: [{ days: [] }] });
-    p.weeks = p.weeks.map(w => ({ week: w.week, label: w.label, note: w.note || '', days: JSON.parse(JSON.stringify(M.weekDays(p, w.week))) }));
+    p.weeks = p.weeks.map(w => Object.assign({ week: w.week, label: w.label, note: w.note || '' },
+      w.block ? { block: w.block } : {}, w.deload ? { deload: true } : {},
+      { days: JSON.parse(JSON.stringify(M.weekDays(p, w.week))) }));
+    p.blocks = p.blocks || [];
     return p;
+  }
+
+  function nextBlockId(p) {
+    let n = p.blocks.length + 1;
+    while (p.blocks.some(b => b.id === 'b' + n)) n++;
+    return 'b' + n;
+  }
+
+  function loadText(e) {
+    return M.formatLoad(e);
+  }
+
+  /** Week | Day | Exercise | … rows, the layout the sheet import reads. */
+  function toCsv(program) {
+    const p = M.readProgram(program);
+    if (!p) return '';
+    const blockName = id => ((p.blocks || []).find(b => b.id === id) || {}).name || '';
+    const cell = v => {
+      const t = String(v == null ? '' : v);
+      return /[",\n;]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    };
+    const lines = [['Block', 'Week', 'Day', 'Exercise', 'Sets', 'Reps', 'RIR', 'Load', 'Rest', 'Notes']];
+    p.weeks.forEach(w => {
+      M.weekDays(p, w.week).forEach(d => {
+        const day = (d.weekday ? M.WEEKDAYS[d.weekday - 1] + ' - ' : '') + d.label + (d.focus ? ' (' + d.focus + ')' : '');
+        d.exercises.forEach(e => {
+          lines.push([
+            blockName(w.block), 'Week ' + w.week + (w.deload ? ' (deload)' : ''), day, e.name, e.sets,
+            e.repsMin === null ? '' : e.repsMin + (e.repsMax ? '-' + e.repsMax : ''),
+            e.rir === null ? '' : e.rir + (e.lastSetRir !== null ? ' (last set ' + e.lastSetRir + ')' : ''),
+            loadText(e), e.restSec === null ? '' : M.formatRest(e.restSec, e.restSecMax), e.notes,
+          ]);
+        });
+      });
+    });
+    return lines.map(l => l.map(cell).join(',')).join('\r\n') + '\r\n';
   }
 
   function renumber(p) {
@@ -66,7 +113,7 @@
 
   function mount(container, program, opts) {
     const options_ = opts || {};
-    const state = { program: expand(program), week: 1, saving: false, message: '' };
+    const state = { program: expand(program), week: 1, saving: false, message: '', view: 'week', sheetAll: false, panel: null };
     const single = !!options_.single;
     const savedWorkouts = () => (typeof options_.workouts === 'function' ? options_.workouts() || [] : []);
 
@@ -87,6 +134,7 @@
         + '<td class="pb-range">' + numberCell('repsMin', e.repsMin, ' min="1" max="100" aria-label="Reps from"') + '<span>–</span>' + numberCell('repsMax', e.repsMax, ' min="1" max="100" aria-label="Reps to"') + '</td>'
         + '<td>' + numberCell('rir', e.rir, ' min="0" max="10" step="0.5" aria-label="Target RIR"') + '</td>'
         + '<td>' + numberCell('lastSetRir', e.lastSetRir, ' min="0" max="10" step="0.5" placeholder="=" aria-label="Last-set RIR"') + '</td>'
+        + '<td><input class="pb-in pb-in--load" data-f="load" value="' + esc(loadText(e)) + '" placeholder="75% / 100kg" aria-label="Load"></td>'
         + '<td><input class="pb-in pb-in--rest" data-f="rest" value="' + esc(restText(e)) + '" placeholder="2-3 min" aria-label="Rest"></td>'
         + '<td><input class="pb-in pb-in--notes" data-f="notes" value="' + esc(e.notes) + '" placeholder="Notes" maxlength="300" aria-label="Notes"></td>'
         + '<td class="pb-row-act">'
@@ -105,9 +153,9 @@
         + (!single && options_.onSaveWorkout && d.exercises.length ? '<button type="button" class="pb-link" data-act="save-workout">Save as workout</button>' : '')
         + (single ? '' : '<button type="button" class="pb-link" data-act="del-day">Remove day</button>')
         + '</header>'
-        + '<table class="pb-table"><thead><tr><th>Exercise</th><th>Type</th><th>Sets</th><th>Reps</th><th>RIR</th><th title="RIR on the last set; empty = same">Last set</th><th>Rest</th><th>Notes</th><th></th></tr></thead>'
+        + '<table class="pb-table"><thead><tr><th>Exercise</th><th>Type</th><th>Sets</th><th>Reps</th><th>RIR</th><th title="RIR on the last set; empty = same">Last set</th><th title="% of 1RM or kg">Load</th><th>Rest</th><th>Notes</th><th></th></tr></thead>'
         + '<tbody>' + d.exercises.map((e, ei) => rowHtml(e, di, ei, warnedIds)).join('') + '</tbody></table>'
-        + '<input class="pb-in pb-quick" data-quick="' + di + '" placeholder="Quick add: Squat 4x6-8 @2 2-3min — Enter" aria-label="Quick add exercise">'
+        + '<input class="pb-in pb-quick" data-quick="' + di + '" placeholder="Quick add: Squat 4x6-8 @2 75% 2-3min — Enter" aria-label="Quick add exercise">'
         + (!single && savedWorkouts().length ? '<select class="pb-in pb-insert" data-insert="' + di + '" aria-label="Insert a saved workout"><option value="">+ Insert a saved workout…</option>'
           + savedWorkouts().map(w => '<option value="' + esc(w.id) + '">' + esc(w.name) + ' (' + w.exercises.length + ')</option>').join('') + '</select>' : '')
         + '</section>';
@@ -141,7 +189,203 @@
       container.querySelectorAll('.pb-tab').forEach(tab => tab.classList.toggle('has-warn', list.some(x => x.week === Number(tab.dataset.week))));
       const s = M.stats(M.readProgram(state.program) || state.program);
       const stats = container.querySelector('.pb-stats');
-      if (stats) stats.textContent = single ? s.exerciseCount + ' rows' : s.weekCount + ' wk · ' + s.dayCount + ' days/wk · ' + s.exerciseCount + ' rows';
+      if (stats) stats.textContent = statsText(s);
+    }
+
+    function statsText(s) {
+      if (single) return s.exerciseCount + ' rows';
+      return (s.blockCount ? s.blockCount + (s.blockCount === 1 ? ' block · ' : ' blocks · ') : '') + s.weekCount + ' wk · ' + s.dayCount + ' days/wk · ' + s.exerciseCount + ' rows';
+    }
+
+    function blockIndex(id) {
+      return state.program.blocks.findIndex(b => b.id === id);
+    }
+
+    function runs() {
+      return M.blockRuns(M.readProgram(state.program) || state.program);
+    }
+
+    function currentRun() {
+      return runs().find(r => r.from <= state.week && state.week <= r.to);
+    }
+
+    // Week tabs grouped by mesocycle.
+    function tabsHtml(list) {
+      return runs().map(r => {
+        const bi = r.block ? blockIndex(r.block.id) : -1;
+        const tabs = [];
+        for (let n = r.from; n <= r.to; n++) {
+          const wk = state.program.weeks[n - 1];
+          tabs.push('<button type="button" role="tab" class="pb-tab' + (n === state.week ? ' is-active' : '') + (list.some(x => x.week === n) ? ' has-warn' : '') + (wk.deload ? ' is-deload' : '')
+            + '" aria-selected="' + (n === state.week) + '" data-week="' + n + '"' + (wk.deload ? ' title="Deload week"' : '') + '>W' + n + (wk.deload ? '<small>D</small>' : '') + '</button>');
+        }
+        return '<div class="pb-run' + (r.block ? ' pb-run--b' + (bi % 6) : '') + '">'
+          + (r.block ? '<div class="pb-run-head" title="' + esc(r.block.goal) + '">' + esc(r.block.name) + ' <span>W' + r.from + (r.to > r.from ? '–' + r.to : '') + '</span></div>' : (state.program.blocks.length ? '<div class="pb-run-head pb-run-head--none">No block</div>' : ''))
+          + '<div class="pb-run-tabs">' + tabs.join('') + '</div></div>';
+      }).join('');
+    }
+
+    // Label, block, deload and note of the open week; name and goal of its block.
+    function weekMetaHtml() {
+      const w = week();
+      const blk = w.block ? state.program.blocks.find(b => b.id === w.block) : null;
+      return '<div class="pb-weekmeta">'
+        + '<label class="pb-meta"><span>Week name</span><input class="pb-in" data-wf="label" value="' + esc(w.label) + '" maxlength="40"></label>'
+        + '<label class="pb-meta"><span>Mesocycle</span><select class="pb-in" data-wf="block"><option value="">No block</option>'
+        + state.program.blocks.map(b => '<option value="' + esc(b.id) + '"' + (b.id === w.block ? ' selected' : '') + '>' + esc(b.name) + '</option>').join('') + '</select></label>'
+        + '<label class="pb-meta pb-meta--check"><input type="checkbox" data-wf="deload"' + (w.deload ? ' checked' : '') + '><span>Deload week</span></label>'
+        + '<label class="pb-meta pb-meta--grow"><span>Week note (the client sees it)</span><input class="pb-in" data-wf="note" value="' + esc(w.note) + '" maxlength="300" placeholder="e.g. Push the last set of each lift"></label>'
+        + (blk ? '<label class="pb-meta"><span>Block name</span><input class="pb-in" data-bf="name" value="' + esc(blk.name) + '" maxlength="40"></label>'
+          + '<label class="pb-meta pb-meta--grow"><span>Block goal</span><input class="pb-in" data-bf="goal" value="' + esc(blk.goal) + '" maxlength="200" placeholder="e.g. Volume: 10 → 16 sets for quads"></label>'
+          + '<button type="button" class="pb-link pb-link--danger" data-act="del-block" title="The weeks stay; they just leave the block">Remove block</button>' : '')
+        + '</div>';
+    }
+
+    function numField(key, label, value, attrs) {
+      return '<label class="pb-meta"><span>' + label + '</span><input class="pb-in pb-in--num" type="number" data-pp="' + key + '" value="' + esc(value == null ? '' : value) + '"' + (attrs || '') + '></label>';
+    }
+
+    function panelHtml() {
+      const pn = state.panel;
+      if (!pn) return '';
+      if (pn.kind === 'meso') {
+        return '<div class="pb-panel" data-panel="meso"><div class="pb-panel-title">New mesocycle</div>'
+          + '<div class="pb-panel-grid">'
+          + '<label class="pb-meta pb-meta--grow"><span>Name</span><input class="pb-in" data-pp="name" value="' + esc(pn.name) + '" maxlength="40" placeholder="Accumulation"></label>'
+          + numField('weeks', 'Weeks', pn.weeks, ' min="1" max="16"')
+          + '<label class="pb-meta"><span>Start from</span><select class="pb-in" data-pp="from"><option value="copy"' + (pn.from === 'copy' ? ' selected' : '') + '>Copy of W' + state.week + '</option><option value="empty"' + (pn.from === 'empty' ? ' selected' : '') + '>Empty weeks</option></select></label>'
+          + '<label class="pb-meta pb-meta--check"><input type="checkbox" data-pp="deloadLast"' + (pn.deloadLast ? ' checked' : '') + '><span>Last week is a deload</span></label>'
+          + '<label class="pb-meta pb-meta--wide"><span>Goal</span><input class="pb-in" data-pp="goal" value="' + esc(pn.goal) + '" maxlength="200" placeholder="e.g. Build volume, RIR 3 → 1"></label>'
+          + '</div>'
+          + '<p class="pb-panel-note">' + (mesoReusesFirst(pn)
+            ? 'W1' + ((pn.weeks || 0) > 1 ? '–W' + Math.min(16, pn.weeks) : '') + ' become this block'
+            : 'Adds ' + (pn.weeks || 0) + ' weeks after W' + state.program.weeks.length + (state.program.weeks.length + (pn.weeks || 0) > M.LIMITS.weeks ? ' (only up to ' + M.LIMITS.weeks + ' weeks fit)' : ''))
+          + '. Set the progression across them next.</p>'
+          + '<div class="pb-panel-acts"><button type="button" class="mp-btn" data-act="meso-create">Add mesocycle</button><button type="button" class="pb-link" data-act="panel-close">Cancel</button></div></div>';
+      }
+      const deloadOk = pn.to > pn.from;
+      return '<div class="pb-panel" data-panel="progress"><div class="pb-panel-title">Progression · W' + pn.from + ' → W' + pn.to + '</div>'
+        + '<p class="pb-panel-note">Rebuilds W' + (pn.from + 1) + '–W' + pn.to + ' from W' + pn.from + ' (exercises, reps, rest and notes as in W' + pn.from + '). Edit single weeks afterwards as you like.</p>'
+        + '<div class="pb-panel-grid">'
+        + numField('from', 'From week', pn.from, ' min="1" max="' + state.program.weeks.length + '"')
+        + numField('to', 'To week', pn.to, ' min="1" max="' + state.program.weeks.length + '"')
+        + numField('rirStart', 'RIR first wk', pn.rirStart, ' min="0" max="10" step="0.5" placeholder="keep"')
+        + numField('rirEnd', 'RIR last wk', pn.rirEnd, ' min="0" max="10" step="0.5" placeholder="keep"')
+        + numField('setsPerWeek', '+ sets / wk', pn.setsPerWeek, ' min="-5" max="5"')
+        + numField('setsMax', 'Max sets', pn.setsMax, ' min="1" max="20"')
+        + numField('pctPerWeek', '+ %1RM / wk', pn.pctPerWeek, ' min="-20" max="20" step="0.5"')
+        + numField('kgPerWeek', '+ kg / wk', pn.kgPerWeek, ' min="-50" max="50" step="0.25"')
+        + '<label class="pb-meta pb-meta--check"><input type="checkbox" data-pp="deloadLast"' + (pn.deloadLast && deloadOk ? ' checked' : '') + (deloadOk ? '' : ' disabled') + '><span>Last week is a deload (½ sets, RIR +2, load −10%)</span></label>'
+        + '</div>'
+        + '<div class="pb-panel-acts"><button type="button" class="mp-btn" data-act="progress-apply"' + (pn.to > pn.from ? '' : ' disabled') + '>Fill W' + (pn.from + 1) + '–W' + pn.to + '</button><button type="button" class="pb-link" data-act="panel-close">Cancel</button></div></div>';
+    }
+
+    function progressPanelFor(run) {
+      const r = run || currentRun() || { from: state.week, to: state.program.weeks.length, deloads: [] };
+      const rows = (week() && M.weekDays(M.readProgram(state.program) || state.program, r.from)) || [];
+      const firstRir = rows.reduce((v, d) => (v !== null ? v : (d.exercises.find(e => e.rir !== null) || {}).rir ?? null), null);
+      return {
+        kind: 'progress', from: r.from, to: r.to,
+        rirStart: firstRir !== null ? firstRir : 3, rirEnd: firstRir !== null ? Math.max(0, firstRir - 2) : 1,
+        setsPerWeek: 0, setsMax: 20, pctPerWeek: 0, kgPerWeek: 0,
+        deloadLast: r.deloads.includes(r.to) || r.to - r.from >= 3,
+      };
+    }
+
+    // Titles and button labels that follow the panel's numbers.
+    function updatePanelText() {
+      const el = container.querySelector('.pb-panel');
+      if (!el) return;
+      const fresh = container.ownerDocument.createElement('div');
+      fresh.innerHTML = panelHtml();
+      ['.pb-panel-title', '.pb-panel-note', '.pb-panel-acts .mp-btn'].forEach(sel => {
+        const a = el.querySelector(sel);
+        const b = fresh.querySelector(sel);
+        if (a && b) { a.innerHTML = b.innerHTML; if ('disabled' in a) a.disabled = b.disabled; }
+      });
+    }
+
+    // A one-week program without a block becomes the block's first week.
+    function mesoReusesFirst(pn) {
+      const p = state.program;
+      return p.weeks.length === 1 && !p.weeks[0].block && (pn.from === 'copy' || !p.weeks[0].days.some(d => d.exercises.length));
+    }
+
+    // ── Sheet: the open block (or every week) as one grid ──────────────────
+    function sheetRange() {
+      const r = currentRun();
+      return state.sheetAll || !r ? { from: 1, to: state.program.weeks.length } : r;
+    }
+
+    // Rows of one day across weeks, matched by exercise name (the 2nd squat
+    // in a day is its own row).
+    function sheetRows(dayId, from, to) {
+      const keys = [];
+      const cells = new Map();
+      for (let n = from; n <= to; n++) {
+        const d = state.program.weeks[n - 1].days.find(x => x.dayId === dayId);
+        if (!d) continue;
+        const seen = {};
+        d.exercises.forEach((e, i) => {
+          const base = e.name.trim().toLowerCase();
+          seen[base] = (seen[base] || 0) + 1;
+          const key = base + '#' + seen[base];
+          if (!cells.has(key)) { cells.set(key, { key, name: e.name, weeks: {} }); keys.push(key); }
+          cells.get(key).weeks[n] = i;
+        });
+      }
+      return keys.map(k => cells.get(k));
+    }
+
+    function sheetDays(from, to) {
+      const out = [];
+      for (let n = from; n <= to; n++) {
+        state.program.weeks[n - 1].days.forEach(d => { if (!out.some(x => x.dayId === d.dayId)) out.push({ dayId: d.dayId, label: d.label, weekday: d.weekday }); });
+      }
+      return out.sort((a, b) => (a.weekday || 99) - (b.weekday || 99));
+    }
+
+    function sheetHtml() {
+      const { from, to } = sheetRange();
+      const cols = [];
+      for (let n = from; n <= to; n++) cols.push(n);
+      const p = state.program;
+      const head = '<tr><th class="pb-sheet-ex">Exercise</th>' + cols.map(n => '<th class="' + (p.weeks[n - 1].deload ? 'is-deload' : '') + '">W' + n + (p.weeks[n - 1].deload ? ' · D' : '') + '</th>').join('') + '</tr>';
+      const days = sheetDays(from, to);
+      const totals = cols.map(n => p.weeks[n - 1].days.reduce((t, d) => t + d.exercises.reduce((m, e) => m + (Number(e.sets) || 0), 0), 0));
+      const body = days.map(d => {
+        const rows = sheetRows(d.dayId, from, to);
+        const dayHead = '<tr class="pb-sheet-day"><th colspan="' + (cols.length + 1) + '">' + esc((d.weekday ? M.WEEKDAYS[d.weekday - 1] + ' · ' : '') + d.label) + '</th></tr>';
+        const lines = rows.map(r => '<tr><td class="pb-sheet-ex"><input class="pb-in pb-in--name" data-sn="' + esc(d.dayId) + '" data-key="' + esc(r.key) + '" value="' + esc(r.name) + '" aria-label="Exercise name"></td>'
+          + cols.map(n => {
+            const wd = p.weeks[n - 1].days.find(x => x.dayId === d.dayId);
+            if (!wd) return '<td class="pb-sheet-off">—</td>';
+            const i = r.weeks[n];
+            const e = i !== undefined ? wd.exercises[i] : null;
+            return '<td><input class="pb-in pb-cell" data-sw="' + n + '" data-sd="' + esc(d.dayId) + '" data-key="' + esc(r.key) + '" value="' + esc(e ? M.formatCell(e) : '') + '" placeholder="—" aria-label="' + esc(r.name) + ' week ' + n + '"></td>';
+          }).join('') + '</tr>').join('');
+        const setRow = '<tr class="pb-sheet-sum"><td>Sets</td>' + cols.map(n => {
+          const wd = p.weeks[n - 1].days.find(x => x.dayId === d.dayId);
+          return '<td>' + (wd ? wd.exercises.reduce((m, e) => m + (Number(e.sets) || 0), 0) : '') + '</td>';
+        }).join('') + '</tr>';
+        const add = '<tr><td colspan="' + (cols.length + 1) + '"><input class="pb-in pb-quick" data-sadd="' + esc(d.dayId) + '" placeholder="+ Exercise in every week shown: Squat 3x8 @3 — Enter" aria-label="Add exercise to every week"></td></tr>';
+        return dayHead + lines + setRow + add;
+      }).join('');
+      const foot = '<tr class="pb-sheet-total"><td>Total sets</td>' + totals.map(t => '<td>' + t + '</td>').join('') + '</tr>';
+      return '<div class="pb-sheet-wrap"><p class="pb-panel-note">Each cell is sets×reps @RIR/last-set RIR and an optional load (75% or 100kg), e.g. <code>4×6-8 @2/1 75%</code>. Clear a cell to drop the exercise from that week. Rest and notes are edited in the Week view.</p>'
+        + '<table class="pb-sheet"><thead>' + head + '</thead><tbody>' + (days.length ? body : '<tr><td>No training days yet.</td></tr>') + foot + '</tbody></table></div>';
+    }
+
+    function findCell(n, dayId, key) {
+      const d = state.program.weeks[n - 1] && state.program.weeks[n - 1].days.find(x => x.dayId === dayId);
+      if (!d) return { day: null, index: -1 };
+      const seen = {};
+      const index = d.exercises.findIndex(e => {
+        const base = e.name.trim().toLowerCase();
+        seen[base] = (seen[base] || 0) + 1;
+        return base + '#' + seen[base] === key;
+      });
+      return { day: d, index };
     }
 
     function render() {
@@ -152,14 +396,16 @@
       const warnedIds = new Set(here.map(x => x.exerciseId).filter(Boolean));
       const dayWarned = new Set(here.filter(x => x.dayId && !x.exerciseId).map(x => x.dayId));
       const otherWeeks = Array.from(new Set(list.filter(x => x.week !== state.week).map(x => x.week)));
-      const tabs = p.weeks.map((wk, i) => '<button type="button" role="tab" class="pb-tab' + (i + 1 === state.week ? ' is-active' : '') + (list.some(x => x.week === i + 1) ? ' has-warn' : '')
-        + '" aria-selected="' + (i + 1 === state.week) + '" data-week="' + (i + 1) + '">W' + (i + 1) + '</button>').join('');
+      const tabs = single ? '' : tabsHtml(list);
       const s = M.stats(M.readProgram(p) || p);
+      const sheet = !single && state.view === 'sheet';
 
       container.innerHTML = '<div class="pb">'
         + '<div class="pb-top">'
         + '<label class="mp-field pb-name"><span class="mp-field-label">' + (single ? 'Workout name' : 'Program name') + '</span><input class="mp-input mp-input--text" data-pf="name" value="' + esc(p.name) + '" maxlength="80"></label>'
-        + '<div class="pb-stats">' + (single ? s.exerciseCount + ' rows' : s.weekCount + ' wk · ' + s.dayCount + ' days/wk · ' + s.exerciseCount + ' rows') + '</div>'
+        + '<div class="pb-stats">' + statsText(s) + '</div>'
+        + (single ? '' : '<div class="pb-view" role="radiogroup" aria-label="View"><button type="button" role="radio" class="pb-view-btn' + (sheet ? '' : ' is-on') + '" aria-checked="' + !sheet + '" data-act="view-week">Week</button>'
+          + '<button type="button" role="radio" class="pb-view-btn' + (sheet ? ' is-on' : '') + '" aria-checked="' + sheet + '" data-act="view-sheet">Sheet</button></div>')
         + '</div>'
         + '<details class="pb-notes"' + (single ? ' hidden' : '') + '><summary>Notes, progression &amp; rules</summary>'
         + '<label class="mp-field"><span class="mp-field-label">Notes (block)</span><textarea class="coach-input" data-pf="notes" rows="2" maxlength="4000">' + esc(p.notes) + '</textarea></label>'
@@ -168,16 +414,24 @@
         + '</details>'
         + '<div class="pb-weekbar"' + (single ? ' hidden' : '') + '><div class="pb-tabs" role="tablist" aria-label="Program week">' + tabs + '</div>'
         + '<div class="pb-weekacts">'
+        + '<button type="button" class="pb-link" data-act="meso-open">+ Mesocycle</button>'
+        + '<button type="button" class="pb-link" data-act="progress-open"' + (p.weeks.length > 1 ? '' : ' disabled') + '>Progression…</button>'
         + '<button type="button" class="pb-link" data-act="copy-week">Copy W' + state.week + ' → W' + (state.week + 1) + '</button>'
         + '<button type="button" class="pb-link" data-act="add-week">+ Empty week</button>'
         + (p.weeks.length > 1 ? '<button type="button" class="pb-link pb-link--danger" data-act="del-week">Delete W' + state.week + '</button>' : '')
         + '</div></div>'
+        + (single ? '' : panelHtml())
+        + (single || sheet ? '' : weekMetaHtml())
         + '<div class="pb-warn-slot">' + warnHtml(here, otherWeeks) + '</div>'
-        + '<div class="pb-days">' + w.days.map((d, di) => dayHtml(d, di, warnedIds, dayWarned)).join('') + '</div>'
-        + (single ? '' : '<button type="button" class="pb-link" data-act="add-day">+ Add training day</button>')
+        + (sheet
+          ? '<div class="pb-sheet-bar"><span>' + (state.sheetAll || !currentRun() ? 'All weeks' : (currentRun().block ? esc(currentRun().block.name) : 'Weeks') + ' · W' + sheetRange().from + '–W' + sheetRange().to) + '</span>'
+            + '<label class="pb-meta--check"><input type="checkbox" data-act="sheet-all"' + (state.sheetAll ? ' checked' : '') + '> Show every week</label></div>' + sheetHtml()
+          : '<div class="pb-days">' + w.days.map((d, di) => dayHtml(d, di, warnedIds, dayWarned)).join('') + '</div>'
+            + (single ? '' : '<button type="button" class="pb-link" data-act="add-day">+ Add training day</button>'))
         + '<div class="pb-foot">'
         + '<button type="button" class="mp-btn" data-act="save"' + (state.saving ? ' disabled' : '') + '>' + (state.saving ? 'Saving…' : single ? 'Save workout' : 'Save to library') + '</button>'
         + '<button type="button" class="pb-link" data-act="cancel">Cancel</button>'
+        + (single ? '' : '<button type="button" class="pb-link" data-act="export-csv" title="Opens in Excel or Google Sheets; Import file reads it back">Export CSV</button>')
         + '<span class="pb-msg" role="status">' + esc(state.message) + '</span>'
         + '</div></div>';
     }
@@ -197,6 +451,16 @@
     // Typing: update the state, no re-render (keeps focus).
     container.addEventListener('input', ev => {
       const t = ev.target;
+      if (t.dataset.wf === 'label' || t.dataset.wf === 'note') { week()[t.dataset.wf] = t.value; return; }
+      if (t.dataset.bf) {
+        const blk = state.program.blocks.find(b => b.id === week().block);
+        if (blk) blk[t.dataset.bf] = t.value;
+        return;
+      }
+      if (t.dataset.pp && state.panel && t.type !== 'checkbox') {
+        state.panel[t.dataset.pp] = t.type === 'number' ? numOrNull(t.value) : t.value;
+        return;
+      }
       if (t.dataset.pf) {
         if (t.dataset.pf === 'rules') state.program.rules = t.value.split('\n').map(s => s.trim()).filter(Boolean);
         else state.program[t.dataset.pf] = t.value;
@@ -208,13 +472,39 @@
       const { day, ex } = rowAt(t);
       if (ex) {
         if (f === 'name' || f === 'notes') ex[f] = t.value;
-        else if (f !== 'rest' && f !== 'type') ex[f] = numOrNull(t.value);
+        else if (f !== 'rest' && f !== 'type' && f !== 'load') ex[f] = numOrNull(t.value);
       } else if (day && (f === 'label' || f === 'focus')) day[f] = t.value;
     });
 
     // Committed changes (selects, rest text, number fields): re-render for warnings.
     container.addEventListener('change', ev => {
       const t = ev.target;
+      if (t.dataset.wf === 'block') {
+        if (t.value) week().block = t.value; else delete week().block;
+        render();
+        return;
+      }
+      if (t.dataset.wf === 'deload') {
+        if (t.checked) week().deload = true; else delete week().deload;
+        render();
+        return;
+      }
+      if (t.dataset.bf === 'name') {
+        const blk = state.program.blocks.find(b => b.id === week().block);
+        if (blk && !t.value.trim()) blk.name = 'Block';
+        render();
+        return;
+      }
+      if (t.dataset.pp && state.panel) {
+        // No re-render for typed values: the change fires as the coach clicks
+        // the panel's button, and a re-render would swallow that click.
+        if (t.type === 'checkbox') { state.panel[t.dataset.pp] = t.checked; render(); }
+        else if (t.tagName === 'SELECT') render();
+        else updatePanelText();
+        return;
+      }
+      if (t.dataset.sw) { sheetCellChanged(t); return; }
+      if (t.dataset.sn !== undefined) { sheetRename(t); return; }
       if (t.dataset.insert !== undefined && t.value) {
         const w = savedWorkouts().find(x => x.id === t.value);
         const target = week().days[Number(t.dataset.insert)];
@@ -239,6 +529,7 @@
       }
       if (ex && f === 'type') ex.type = t.value || null;
       else if (ex && f === 'rest') { Object.assign(ex, M.parseRest(t.value)); t.value = restText(ex); }
+      else if (ex && f === 'load') { Object.assign(ex, M.parseLoad(t.value)); t.value = loadText(ex); }
       if (ex && f === 'name' && !ex.type && ex.name) {
         ex.type = M.guessType(ex.name);
         const sel = t.closest('tr').querySelector('[data-f="type"]');
@@ -247,8 +538,103 @@
       refresh();
     });
 
+    // ── Sheet edits ─────────────────────────────────────────────────────────
+    function sheetNameOf(t) {
+      const input = t.closest('tr') && t.closest('tr').querySelector('[data-sn]');
+      return input ? input.value.trim() : '';
+    }
+
+    function updateSheetSums() {
+      const table = container.querySelector('.pb-sheet');
+      if (!table) return;
+      const wrap = table.closest('.pb-sheet-wrap');
+      const fresh = container.ownerDocument.createElement('div');
+      fresh.innerHTML = sheetHtml();
+      const sums = [...fresh.querySelectorAll('.pb-sheet-sum td, .pb-sheet-total td')];
+      [...table.querySelectorAll('.pb-sheet-sum td, .pb-sheet-total td')].forEach((td, i) => { if (sums[i]) td.textContent = sums[i].textContent; });
+      const stats = container.querySelector('.pb-stats');
+      if (stats) stats.textContent = statsText(M.stats(M.readProgram(state.program) || state.program));
+      return wrap;
+    }
+
+    function sheetCellChanged(t) {
+      const n = Number(t.dataset.sw);
+      const { day, index } = findCell(n, t.dataset.sd, t.dataset.key);
+      if (!day) return;
+      const parsed = M.parseCell(t.value);
+      if (!parsed) {
+        if (index !== -1) day.exercises.splice(index, 1);
+        t.value = '';
+      } else if (index !== -1) {
+        const ex = day.exercises[index];
+        if ('loadPct' in parsed || 'loadKg' in parsed) { ex.loadPct = null; ex.loadKg = null; }
+        Object.assign(ex, parsed);
+        if (ex.repsMax !== null && ex.repsMin !== null && ex.repsMax <= ex.repsMin) ex.repsMax = null;
+        t.value = M.formatCell(ex);
+      } else {
+        const name = sheetNameOf(t);
+        if (!name || day.exercises.length >= M.LIMITS.exercises) { t.value = ''; return; }
+        const row = newRow(n, day, Object.assign({ name, type: M.guessType(name) }, parsed));
+        day.exercises.push(row);
+        t.value = M.formatCell(row);
+      }
+      updateSheetSums();
+    }
+
+    function sheetRename(t) {
+      const name = t.value.trim();
+      const { from, to } = sheetRange();
+      if (!name) { render(); return; }
+      const hits = [];
+      for (let n = from; n <= to; n++) {
+        const { day, index } = findCell(n, t.dataset.sn, t.dataset.key);
+        if (day && index !== -1) hits.push(day.exercises[index]);
+      }
+      hits.forEach(e => { e.name = name; e.type = e.type || M.guessType(name); });
+      // Re-key the row in place when the new name is unique in the day (no
+      // re-render: keeps focus and the next click); otherwise redraw.
+      const base = name.toLowerCase() + '#';
+      const same = sheetRows(t.dataset.sn, from, to).filter(r => r.key.startsWith(base));
+      if (same.length === 1 && same[0].key === base + '1') {
+        t.closest('tr').querySelectorAll('[data-key]').forEach(el => { el.dataset.key = base + '1'; });
+      } else {
+        render();
+      }
+    }
+
+    function download(name, text) {
+      const URL_ = root.URL;
+      if (!URL_ || typeof URL_.createObjectURL !== 'function' || typeof root.Blob !== 'function') return false;
+      const url = URL_.createObjectURL(new root.Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' }));
+      const doc = container.ownerDocument;
+      const a = doc.createElement('a');
+      a.href = url;
+      a.download = name;
+      doc.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL_.revokeObjectURL(url), 1000);
+      return true;
+    }
+
     container.addEventListener('keydown', ev => {
       const t = ev.target;
+      if (ev.key === 'Enter' && t.dataset.sadd !== undefined) {
+        ev.preventDefault();
+        const row = M.parseQuickEntry(t.value.trim());
+        if (!row.name) return;
+        const { from, to } = sheetRange();
+        for (let n = from; n <= to; n++) {
+          const day = state.program.weeks[n - 1].days.find(d => d.dayId === t.dataset.sadd);
+          if (day && day.exercises.length < M.LIMITS.exercises) day.exercises.push(newRow(n, day, Object.assign({}, row, { type: M.guessType(row.name) })));
+        }
+        const dayId = t.dataset.sadd;
+        render();
+        const again = [...container.querySelectorAll('[data-sadd]')].find(x => x.dataset.sadd === dayId);
+        if (again) again.focus();
+        return;
+      }
+      if (ev.key === 'Enter' && t.dataset.sw) { ev.preventDefault(); t.blur(); return; }
       if (ev.key !== 'Enter' || t.dataset.quick === undefined) return;
       ev.preventDefault();
       const text = t.value.trim();
@@ -270,6 +656,78 @@
       const act = btn.dataset.act;
       const p = state.program;
       const { day, di, ei } = rowAt(btn);
+      if (act === 'view-week' || act === 'view-sheet') { state.view = act === 'view-sheet' ? 'sheet' : 'week'; render(); return; }
+      if (act === 'sheet-all') { state.sheetAll = !!btn.checked; render(); return; }
+      if (act === 'panel-close') { state.panel = null; render(); return; }
+      if (act === 'meso-open') {
+        state.panel = { kind: 'meso', name: 'Mesocycle ' + (p.blocks.length + 1), goal: '', weeks: 4, from: 'copy', deloadLast: true };
+        render();
+        const input = container.querySelector('[data-pp="name"]');
+        if (input) { input.focus(); input.select(); }
+        return;
+      }
+      if (act === 'progress-open') { state.panel = progressPanelFor(); render(); return; }
+      if (act === 'meso-create') {
+        const pn = state.panel;
+        const name = String(pn.name || '').trim();
+        const reuseFirst = mesoReusesFirst(pn);
+        const room = M.LIMITS.weeks - p.weeks.length + (reuseFirst ? 1 : 0);
+        const count = Math.min(Math.max(1, Math.round(Number(pn.weeks) || 0)), 16, room);
+        if (!name) { state.message = 'Give the mesocycle a name.'; render(); return; }
+        if (room <= 0) { state.message = 'A program holds up to ' + M.LIMITS.weeks + ' weeks.'; render(); return; }
+        if (p.blocks.length >= M.LIMITS.blocks) { state.message = 'A program holds up to ' + M.LIMITS.blocks + ' mesocycles.'; render(); return; }
+        const id = nextBlockId(p);
+        p.blocks.push({ id, name: name.slice(0, 40), goal: String(pn.goal || '').trim().slice(0, 200) });
+        const template = pn.from === 'copy' ? week().days : [];
+        const first = reuseFirst ? 1 : p.weeks.length + 1;
+        if (reuseFirst) p.weeks[0].block = id;
+        for (let i = reuseFirst ? 1 : 0; i < count; i++) {
+          const n = p.weeks.length + 1;
+          const days = JSON.parse(JSON.stringify(template)).map(d => Object.assign(d, {
+            exercises: d.exercises.map((e, j) => Object.assign(e, { id: 'w' + n + '-' + d.dayId + '-e' + (j + 1) })),
+          }));
+          p.weeks.push({ week: n, label: '', note: '', block: id, days });
+        }
+        const last = first + count - 1;
+        if (pn.deloadLast && count > 1) p.weeks[last - 1].deload = true;
+        renumber(p);
+        state.week = first;
+        state.panel = pn.from === 'copy' && count > 1 ? progressPanelFor() : null;
+        state.message = 'Added ' + name + ' (W' + first + '–W' + last + ').' + (state.panel ? ' Set its progression below.' : '');
+        render();
+        return;
+      }
+      if (act === 'progress-apply') {
+        const pn = state.panel;
+        const from = Math.max(1, Math.round(Number(pn.from) || 1));
+        const to = Math.min(p.weeks.length, Math.round(Number(pn.to) || 1));
+        if (to <= from) return;
+        if (!root.confirm('Rebuild W' + (from + 1) + '–W' + to + ' from W' + from + '? Changes made by hand in those weeks are replaced.')) return;
+        const clean = M.readProgram(p);
+        if (!clean) { state.message = 'Give the program a name first.'; render(); return; }
+        state.program = expand(M.progressWeeks(clean, from, to, Object.assign({}, pn, { deloadLast: pn.deloadLast && to > from })));
+        state.panel = null;
+        state.message = 'Filled W' + (from + 1) + '–W' + to + '.';
+        render();
+        return;
+      }
+      if (act === 'del-block') {
+        const id = week().block;
+        const blk = p.blocks.find(b => b.id === id);
+        if (!blk || !root.confirm('Remove the block "' + blk.name + '"? Its weeks stay in the program.')) return;
+        p.blocks = p.blocks.filter(b => b.id !== id);
+        p.weeks.forEach(w => { if (w.block === id) delete w.block; });
+        render();
+        return;
+      }
+      if (act === 'export-csv') {
+        const clean = M.readProgram(p);
+        if (!clean) { state.message = 'Give the program a name first.'; render(); return; }
+        const file = (clean.name.replace(/[^\w\- ]+/g, '').trim() || 'program') + '.csv';
+        state.message = download(file, toCsv(clean)) ? 'Exported ' + file + '.' : 'Export is not available in this browser.';
+        render();
+        return;
+      }
       if (act === 'up' && ei > 0) { const [r] = day.exercises.splice(ei, 1); day.exercises.splice(ei - 1, 0, r); }
       else if (act === 'down' && ei < day.exercises.length - 1) { const [r] = day.exercises.splice(ei, 1); day.exercises.splice(ei + 1, 0, r); }
       else if (act === 'del-row') day.exercises.splice(ei, 1);
@@ -289,7 +747,8 @@
         state.week += 1;
       } else if (act === 'add-week') {
         if (p.weeks.length >= M.LIMITS.weeks) return;
-        p.weeks.push({ week: p.weeks.length + 1, label: '', note: '', days: [] });
+        const lastBlock = p.weeks.length ? p.weeks[p.weeks.length - 1].block : null;
+        p.weeks.push(Object.assign({ week: p.weeks.length + 1, label: '', note: '' }, lastBlock ? { block: lastBlock } : {}, { days: [] }));
         renumber(p);
         state.week = p.weeks.length;
       } else if (act === 'del-week') {
@@ -330,5 +789,5 @@
     };
   }
 
-  root.ProgramBuilder = { mount, expand };
+  root.ProgramBuilder = { mount, expand, toCsv };
 })(typeof window !== 'undefined' ? window : globalThis);

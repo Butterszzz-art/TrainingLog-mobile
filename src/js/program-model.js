@@ -10,10 +10,17 @@
  * explicit fields (no free-text parsing).
  *
  *   { schema, name, notes, progressionNotes, rules[],
- *     weeks: [{ week, label, note, days: [{ dayId, weekday 1-7, label, focus, notes,
+ *     blocks?: [{ id, name, goal }],
+ *     weeks: [{ week, label, note, block?, deload?, days: [{ dayId, weekday 1-7, label, focus, notes,
  *       exercises: [{ id, name, type, sets, repsMin, repsMax, rir, lastSetRir,
- *                     restSec, restSecMax, notes }] }] }
- *             | { week, sameAs } ] }
+ *                     restSec, restSecMax, notes, loadPct?, loadKg? }] }] }
+ *             | { week, sameAs, block?, deload? } ] }
+ *
+ * Blocks are mesocycles: each week names the block it belongs to (`block` =
+ * a block id) and may be a deload week. A block's weeks are the weeks that
+ * name it, normally one consecutive run. `loadPct` (% of 1RM) or `loadKg` is
+ * an optional load target on a row. The optional keys are left out when not
+ * set, so programs without blocks or loads read exactly as before.
  *
  * readProgram() also reads the v1 library shape { name, days: { Mon: [...] } }
  * (one repeating week) and the app's library shape (weeks/days with per-set
@@ -32,7 +39,7 @@
   const SCHEMA = 'pocketcoach.program/2';
   const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // ISO 1..7
   const TYPES = ['compound', 'isolation', 'core'];
-  const LIMITS = { weeks: 52, days: 7, exercises: 20, name: 80, label: 40, focus: 60, notes: 300, programNotes: 4000, rules: 20 };
+  const LIMITS = { weeks: 52, days: 7, exercises: 20, name: 80, label: 40, focus: 60, notes: 300, programNotes: 4000, rules: 20, blocks: 16, blockGoal: 200 };
 
   // ── small helpers ─────────────────────────────────────────────────────────
 
@@ -107,6 +114,59 @@
     return { restSec: num(a, 0, 1800), restSecMax: b !== null && b > a ? num(b, 0, 1800) : null };
   }
 
+  /** "75%" → {loadPct:75}; "100kg" / "100 kg" / "100" → {loadKg:100}; "" / "-" → nulls. */
+  function parseLoad(text) {
+    const s = String(text == null ? '' : text).trim().toLowerCase().replace(',', '.');
+    const m = s.match(/^(\d+(?:\.\d+)?)\s*(%|kg|kgs)?(?:\s*1rm)?$/);
+    if (!m) return { loadPct: null, loadKg: null };
+    if (m[2] === '%') return { loadPct: roundTo(num(m[1], 1, 120), 0.5), loadKg: null };
+    return { loadPct: null, loadKg: roundTo(num(m[1], 0, 1000), 0.25) };
+  }
+
+  function roundTo(n, step) {
+    return n === null ? null : Math.round(n / step) * step;
+  }
+
+  /**
+   * One sheet cell: "4x6-8 @2/1 75%" → only the fields it names
+   * ({ sets, repsMin, repsMax, rir, lastSetRir, loadPct | loadKg }).
+   * Returns null for a blank cell or "-" (no row that week).
+   */
+  function parseCell(text) {
+    let s = String(text == null ? '' : text).trim();
+    if (!s || /^[-–—x]+$/i.test(s)) return null;
+    const out = {};
+    const load = s.match(/(?:^|\s)(\d+(?:[.,]\d+)?)\s*(%|kg)(?=\s|$)/i);
+    if (load) { Object.assign(out, parseLoad(load[1] + load[2])); s = (s.slice(0, load.index) + ' ' + s.slice(load.index + load[0].length)).trim(); }
+    const rir = s.match(/(?:^|\s)(?:@\s*|rir\s*)(\d(?:\.\d)?(?:\s*\/\s*\d(?:\.\d)?)?)/i);
+    if (rir) { Object.assign(out, parseRir(rir[1])); s = (s.slice(0, rir.index) + ' ' + s.slice(rir.index + rir[0].length)).trim(); }
+    const sr = s.match(/^(\d{1,2})\s*[x×]\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?$/i);
+    if (sr) {
+      out.sets = int(sr[1], 1, 20) || 3;
+      out.repsMin = int(sr[2], 1, 100);
+      out.repsMax = sr[3] && Number(sr[3]) > Number(sr[2]) ? int(sr[3], 1, 100) : null;
+    } else if (s) {
+      const sets = s.match(/^(\d{1,2})\s*(?:sets?)?$/i);
+      if (sets) out.sets = int(sets[1], 1, 20) || 3;
+    }
+    return out;
+  }
+
+  /** Row → sheet cell text, the inverse of parseCell: "4×6-8 @2/1 75%". */
+  function formatCell(e) {
+    const reps = e.repsMin === null || e.repsMin === undefined ? '?' : (e.repsMax ? e.repsMin + '-' + e.repsMax : String(e.repsMin));
+    let out = e.sets + '×' + reps;
+    if (e.rir !== null && e.rir !== undefined) out += ' @' + e.rir + (e.lastSetRir !== null && e.lastSetRir !== undefined ? '/' + e.lastSetRir : '');
+    const load = formatLoad(e);
+    return load ? out + ' ' + load : out;
+  }
+
+  function formatLoad(e) {
+    if (e && e.loadPct !== null && e.loadPct !== undefined) return e.loadPct + '%';
+    if (e && e.loadKg !== null && e.loadKg !== undefined) return e.loadKg + 'kg';
+    return '';
+  }
+
   /** "Mon - Lower A (quads)" → {weekday:1, label:'Lower A', focus:'quads'}; "Lower A" → weekday null. */
   function parseDayLabel(text) {
     let s = String(text == null ? '' : text).trim();
@@ -127,7 +187,8 @@
 
   /**
    * Quick entry for one row: "Squat 4x6-8 @2 2-3min" → name, sets, reps,
-   * RIR ("@3", "@3/2" = last set 2, "RIR 2"), rest ("90s", "2-3 min").
+   * RIR ("@3", "@3/2" = last set 2, "RIR 2"), rest ("90s", "2-3 min"),
+   * load ("75%" of 1RM or "100kg").
    * Anything not recognised stays in the name. Sets×reps optional (3×10).
    */
   function parseQuickEntry(line) {
@@ -135,6 +196,13 @@
     const row = { name: '', sets: 3, repsMin: 10, repsMax: null, rir: null, lastSetRir: null, restSec: null, restSecMax: null };
     const rest = s.match(/\s+(\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*(?:s|sec|secs|m|min|mins)\b\.?)/i);
     if (rest) { Object.assign(row, parseRest(rest[1])); s = (s.slice(0, rest.index) + s.slice(rest.index + rest[0].length)).trim(); }
+    const load = s.match(/\s+(\d+(?:[.,]\d+)?)\s*(%|kg)(?=\s|$)/i);
+    if (load) {
+      const l = parseLoad(load[1] + load[2]);
+      if (l.loadPct !== null) row.loadPct = l.loadPct;
+      if (l.loadKg !== null) row.loadKg = l.loadKg;
+      s = (s.slice(0, load.index) + s.slice(load.index + load[0].length)).trim();
+    }
     const rir = s.match(/\s+(?:@\s*|rir\s*)(\d(?:\.\d)?(?:\s*\/\s*\d(?:\.\d)?)?)/i);
     if (rir) { Object.assign(row, parseRir(rir[1])); s = (s.slice(0, rir.index) + s.slice(rir.index + rir[0].length)).trim(); }
     const sr = s.match(/\s+(\d{1,2})\s*[x×]\s*(\d{1,3})(?:\s*-\s*(\d{1,3}))?\s*$/i);
@@ -175,7 +243,9 @@
     const restSec = int(e.restSec, 0, 1800);
     let restSecMax = int(e.restSecMax, 0, 1800);
     if (restSecMax !== null && (restSec === null || restSecMax <= restSec)) restSecMax = null;
-    return {
+    const loadPct = roundTo(num(e.loadPct, 1, 120), 0.5);
+    const loadKg = loadPct === null ? roundTo(num(e.loadKg, 0, 1000), 0.25) : null;
+    return Object.assign({
       id: str(e.id, 64) || fallbackId,
       name,
       type: TYPES.includes(e.type) ? e.type : null,
@@ -187,7 +257,7 @@
       restSec,
       restSecMax,
       notes: str(e.notes, LIMITS.notes),
-    };
+    }, loadPct !== null ? { loadPct } : {}, loadKg !== null ? { loadKg } : {});
   }
 
   function normalizeDay(src, index, weekNo) {
@@ -230,6 +300,8 @@
       restSec: first.restSec,
       restSecMax: first.restSecMax,
       notes: ex.notes,
+      loadPct: first.percent1RM,
+      loadKg: first.percent1RM ? null : first.weight,
     };
   }
 
@@ -279,6 +351,19 @@
 
     const name = str(p.name, LIMITS.name);
     if (!name) return null;
+    const blocks = [];
+    (Array.isArray(p.blocks) ? p.blocks : []).forEach((b, i) => {
+      if (!b || typeof b !== 'object' || blocks.length >= LIMITS.blocks) return;
+      const name = str(b.name, LIMITS.label);
+      if (!name) return;
+      let id = str(b.id, 24).replace(/[^a-zA-Z0-9_-]/g, '') || 'b' + (i + 1);
+      while (blocks.some(x => x.id === id)) id += 'x';
+      blocks.push({ id, name, goal: str(b.goal, LIMITS.blockGoal) });
+    });
+    const blockIds = new Set(blocks.map(b => b.id));
+    const weekExtras = src2 => Object.assign({},
+      typeof src2.block === 'string' && blockIds.has(src2.block) ? { block: src2.block } : {},
+      src2.deload === true ? { deload: true } : {});
     const rawWeeks = (Array.isArray(p.weeks) ? p.weeks : []).slice(0, LIMITS.weeks);
     const weeks = [];
     rawWeeks.forEach((w, i) => {
@@ -287,21 +372,22 @@
       const label = str(src2.label, LIMITS.label) || 'Week ' + week;
       const sameAs = int(src2.sameAs, 1, LIMITS.weeks);
       if (sameAs && sameAs < week && weeks[sameAs - 1] && weeks[sameAs - 1].days) {
-        weeks.push({ week, label, sameAs });
+        weeks.push(Object.assign({ week, label, sameAs }, weekExtras(src2)));
         return;
       }
       const days = sortDays((Array.isArray(src2.days) ? src2.days : []).slice(0, LIMITS.days).map((d, j) => normalizeDay(d, j, week)));
-      weeks.push({ week, label, note: str(src2.note, LIMITS.notes), days });
+      weeks.push(Object.assign({ week, label, note: str(src2.note, LIMITS.notes) }, weekExtras(src2), { days }));
     });
     if (!weeks.length) weeks.push({ week: 1, label: 'Week 1', note: '', days: [] });
-    return {
+    // Blocks no week belongs to are dropped.
+    const used = blocks.filter(b => weeks.some(w => w.block === b.id));
+    return Object.assign({
       schema: SCHEMA,
       name,
       notes: str(p.notes, LIMITS.programNotes),
       progressionNotes: str(p.progressionNotes, LIMITS.programNotes),
       rules: (Array.isArray(p.rules) ? p.rules : []).map(r => str(r, LIMITS.notes)).filter(Boolean).slice(0, LIMITS.rules),
-      weeks,
-    };
+    }, used.length ? { blocks: used } : {}, { weeks });
   }
 
   // ── reading a normalised v2 program ───────────────────────────────────────
@@ -325,13 +411,115 @@
       days.forEach(d => { exerciseCount += d.exercises.length; });
     }
     const weekdays = Array.from(new Set(weekDays(program, 1).map(d => d.weekday).filter(Boolean))).sort();
-    return { weekCount, dayCount, exerciseCount, weekdays };
+    return { weekCount, dayCount, exerciseCount, weekdays, blockCount: (program.blocks || []).length };
+  }
+
+  /**
+   * The program's mesocycles in week order: one entry per consecutive run of
+   * weeks in the same block, { block: {id,name,goal} | null, from, to, deloads: [week] }.
+   * Weeks outside any block form runs with block null.
+   */
+  function blockRuns(program) {
+    const byId = new Map((program.blocks || []).map(b => [b.id, b]));
+    const runs = [];
+    program.weeks.forEach(w => {
+      const block = (w.block && byId.get(w.block)) || null;
+      const last = runs[runs.length - 1];
+      if (last && last.block === block) last.to = w.week;
+      else runs.push({ block, from: w.week, to: w.week, deloads: [] });
+      if (w.deload) runs[runs.length - 1].deloads.push(w.week);
+    });
+    return runs;
+  }
+
+  /** Total sets per week (sameAs resolved): [{ week, sets }]. */
+  function weeklySets(program) {
+    return program.weeks.map(w => ({
+      week: w.week,
+      sets: weekDays(program, w.week).reduce((n, d) => n + d.exercises.reduce((m, e) => m + e.sets, 0), 0),
+    }));
+  }
+
+  /**
+   * Fill weeks from..to from week `from` (the template), the way a coach
+   * would drag a progression across a spreadsheet. Returns a new program.
+   *   opts.rirStart / rirEnd   RIR on the first / last training week (linear
+   *                            in between, steps of 0.5). Null keeps each row's RIR.
+   *   opts.setsPerWeek         sets added per week (0 = same), capped at opts.setsMax.
+   *   opts.pctPerWeek          %1RM added per week on rows with a % load.
+   *   opts.kgPerWeek           kg added per week on rows with a kg load.
+   *   opts.deloadLast          the last week is a deload: about half the sets
+   *                            (opts.deloadSetsFactor, default 0.5), RIR +2 on
+   *                            the template, loads -10%.
+   * Rows without a RIR (e.g. core) keep none. Last-set RIR keeps its gap to
+   * the other sets. Week labels, notes and blocks are kept.
+   */
+  function progressWeeks(program, from, to, opts) {
+    const o = opts || {};
+    const next = clone(program);
+    const start = Math.max(1, from);
+    const end = Math.min(to, next.weeks.length);
+    if (end < start) return next;
+    const template = clone(weekDays(program, start));
+    const deloadLast = !!o.deloadLast && end > start;
+    const training = (deloadLast ? end - 1 : end) - start + 1;
+    const rirStart = num(o.rirStart, 0, 10);
+    const rirEnd = num(o.rirEnd, 0, 10);
+    const setsPerWeek = int(o.setsPerWeek, -5, 5) || 0;
+    const setsMax = int(o.setsMax, 1, 20) || 20;
+    const pctPerWeek = num(o.pctPerWeek, -20, 20) || 0;
+    const kgPerWeek = num(o.kgPerWeek, -50, 50) || 0;
+    const factor = num(o.deloadSetsFactor, 0.1, 1) || 0.5;
+    const half = x => Math.round(x * 2) / 2;
+
+    for (let week = start; week <= end; week++) {
+      const k = week - start;
+      const isDeload = deloadLast && week === end;
+      const t = training > 1 ? Math.min(1, k / (training - 1)) : 0;
+      const days = clone(template).map(d => Object.assign(d, {
+        exercises: d.exercises.map((e, j) => {
+          const row = Object.assign({}, e, { id: 'w' + week + '-' + d.dayId + '-e' + (j + 1) });
+          const gap = e.rir !== null && e.lastSetRir !== null ? e.rir - e.lastSetRir : null;
+          if (isDeload) {
+            row.sets = Math.max(1, Math.round(e.sets * factor));
+            if (e.rir !== null) row.rir = Math.min(10, (rirStart !== null ? rirStart : e.rir) + 2);
+            row.lastSetRir = null;
+            // 90% of the template load, rounded down to a 2.5 step.
+            if (e.loadPct != null) row.loadPct = Math.max(1, Math.floor(e.loadPct * 0.9 / 2.5) * 2.5);
+            if (e.loadKg != null) row.loadKg = Math.floor(e.loadKg * 0.9 / 2.5) * 2.5;
+            return row;
+          }
+          row.sets = Math.max(1, Math.min(Math.max(setsMax, e.sets), e.sets + setsPerWeek * k));
+          if (e.rir !== null && rirStart !== null) {
+            row.rir = half(rirStart + ((rirEnd !== null ? rirEnd : rirStart) - rirStart) * t);
+            row.lastSetRir = gap !== null ? Math.max(0, half(row.rir - gap)) : null;
+            if (row.lastSetRir === row.rir) row.lastSetRir = null;
+          }
+          if (e.loadPct != null && pctPerWeek) row.loadPct = Math.max(1, Math.min(120, half(e.loadPct + pctPerWeek * k)));
+          if (e.loadKg != null && kgPerWeek) row.loadKg = Math.max(0, Math.round((e.loadKg + kgPerWeek * k) * 4) / 4);
+          return row;
+        }),
+      }));
+      const w = next.weeks[week - 1];
+      const keep = { week, label: w.label, note: w.note || '' };
+      if (w.block) keep.block = w.block;
+      if (isDeload) keep.deload = true;
+      else if (w.deload && !(deloadLast)) keep.deload = true;
+      next.weeks[week - 1] = Object.assign(keep, { days });
+    }
+    return readProgram(next) || next;
   }
 
   /** Things worth a second look, each pinned to where it is. */
   function validate(program) {
     const warnings = [];
     const add = (where, message) => warnings.push(Object.assign({ message }, where));
+    const seenBlocks = new Set();
+    blockRuns(program).forEach(r => {
+      if (!r.block) return;
+      if (seenBlocks.has(r.block.id)) add({ week: r.from }, r.block.name + ' is split: weeks ' + r.from + '–' + r.to + ' are apart from its other weeks.');
+      seenBlocks.add(r.block.id);
+    });
     const firstWeekdays = JSON.stringify(weekDays(program, 1).map(d => d.weekday));
     program.weeks.forEach(w => {
       if (w.sameAs) return;
@@ -361,8 +549,15 @@
       exercises: d.exercises.map(e => Object.assign(e, { id: e.id.replace(/^w\d+-/, 'w' + (week + 1) + '-') })),
     }));
     const target = { week: week + 1, label: 'Week ' + (week + 1), note: '', days };
-    if (next.weeks[week]) next.weeks[week] = Object.assign(target, { label: next.weeks[week].label || target.label });
-    else if (next.weeks.length < LIMITS.weeks) next.weeks.push(target);
+    const existing = next.weeks[week];
+    if (existing) {
+      next.weeks[week] = Object.assign(target, { label: existing.label || target.label, note: existing.note || '' },
+        existing.block ? { block: existing.block } : {}, existing.deload ? { deload: true } : {});
+    } else if (next.weeks.length < LIMITS.weeks) {
+      const src = program.weeks[week - 1];
+      if (src && src.block) target.block = src.block;
+      next.weeks.push(target);
+    }
     return next;
   }
 
@@ -371,6 +566,7 @@
     const reps = e.repsMin === null ? '?' : (e.repsMax ? e.repsMin + '–' + e.repsMax : String(e.repsMin));
     let out = e.name + ' ' + e.sets + '×' + reps;
     if (e.rir !== null) out += ' · RIR ' + e.rir + (e.lastSetRir !== null ? ' (last set ' + e.lastSetRir + ')' : '');
+    if (formatLoad(e)) out += ' · ' + (e.loadPct != null ? e.loadPct + '% 1RM' : e.loadKg + ' kg');
     if (e.restSec !== null) out += ' · rest ' + formatRest(e.restSec, e.restSecMax);
     return out;
   }
@@ -400,13 +596,16 @@
             rir,
             restSec: e.restSec === null ? 120 : e.restSec,
             ...(e.restSecMax ? { restSecMax: e.restSecMax } : {}),
+            ...(e.loadKg !== undefined && e.loadKg !== null ? { weight: e.loadKg } : {}),
+            ...(e.loadPct !== undefined && e.loadPct !== null ? { percent1RM: e.loadPct } : {}),
           };
         };
         return {
           exerciseId: e.id || ('w' + week + '-' + d.dayId + '-' + slug(e.name)),
           name: e.name,
           ...(e.type ? { type: e.type } : {}),
-          ...(e.notes ? { notes: e.notes } : {}),
+          // The app shows notes with every exercise: a % of 1RM goes there too.
+          ...(e.notes || e.loadPct ? { notes: [e.loadPct ? e.loadPct + '% of 1RM' : '', e.notes].filter(Boolean).join(' · ') } : {}),
           sets: Array.from({ length: e.sets }, (_, i) => set(i)),
         };
       }),
@@ -433,10 +632,18 @@
       rev: m.rev || null,
     };
     if (program.weeks.length > 1) {
-      out.weeks = program.weeks.map(w => (w.sameAs
+      // `phase` is what the app shows above each week (and groups weeks by):
+      // the block's name, "Deload", then the week's note.
+      const blockName = id => ((program.blocks || []).find(b => b.id === id) || {}).name || '';
+      const phase = w => [blockName(w.block), w.deload ? 'Deload' : '', w.note || ''].filter(Boolean).join(' · ');
+      out.weeks = program.weeks.map(w => Object.assign(w.sameAs
         ? { week: w.week, label: w.label, sameAs: w.sameAs }
-        : { week: w.week, label: w.label, phase: w.note || '', days: w.days.map(d => libraryDay(d, w.week)) }));
+        : { week: w.week, label: w.label, phase: phase(w), days: w.days.map(d => libraryDay(d, w.week)) },
+      w.sameAs && phase(w) ? { phase: phase(w) } : {}, w.deload ? { deload: true } : {}));
       out.durationWeeks = program.weeks.length;
+      if (program.blocks && program.blocks.length) {
+        out.blocks = blockRuns(program).filter(r => r.block).map(r => ({ name: r.block.name, goal: r.block.goal, fromWeek: r.from, toWeek: r.to }));
+      }
     }
     return out;
   }
@@ -459,7 +666,8 @@
   return {
     SCHEMA, WEEKDAYS, TYPES, LIMITS,
     readProgram, weekDays, stats, validate, copyWeek, toLibrary, toV1Days,
-    parseQuickEntry, parseReps, parseRir, parseRest, parseDayLabel, parseWeek,
-    formatRow, formatRest, weekdayNumber, guessType,
+    blockRuns, weeklySets, progressWeeks,
+    parseQuickEntry, parseReps, parseRir, parseRest, parseDayLabel, parseWeek, parseLoad, parseCell,
+    formatRow, formatRest, formatCell, formatLoad, weekdayNumber, guessType,
   };
 });

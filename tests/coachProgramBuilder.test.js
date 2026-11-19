@@ -110,3 +110,83 @@ test('save refuses an empty program', async () => {
   expect(saved).toHaveLength(0);
   expect($('.pb-msg').textContent).toMatch(/at least one exercise/);
 });
+
+const fourDays = {
+  schema: 'pocketcoach.program/2', name: 'Block test',
+  weeks: [{ days: [{ dayId: 'd1', weekday: 1, label: 'Lower', exercises: [
+    { name: 'Squat', type: 'compound', sets: 3, repsMin: 6, repsMax: 8, rir: 3, loadPct: 70 },
+  ] }] }],
+};
+
+test('+ Mesocycle turns a one-week program into a block, then Progression fills it', async () => {
+  const { $, $$, click, type, flush, saved } = setup(fourDays);
+  click($('[data-act="meso-open"]'));
+  type($('[data-pp="name"]'), 'Accumulation');
+  type($('[data-pp="weeks"]'), '4');
+  type($('[data-pp="goal"]'), 'Volume up', false);
+  click($('[data-act="meso-create"]'));
+  expect($$('.pb-tab')).toHaveLength(4);
+  expect($('.pb-run-head').textContent).toBe('Accumulation W1–4');
+  expect($('.pb-tab.is-active').textContent).toBe('W1');
+  expect($$('.pb-tab')[3].classList.contains('is-deload')).toBe(true);
+  // The progression panel opens for the new block.
+  expect($('[data-panel="progress"]')).not.toBeNull();
+  type($('[data-pp="setsPerWeek"]'), '1');
+  const apply = $('[data-act="progress-apply"]');
+  type($('[data-pp="pctPerWeek"]'), '2.5'); // commit, then click the same button
+  expect(apply.isConnected).toBe(true);
+  click(apply);
+  // A second block is appended after the first.
+  click($('[data-act="meso-open"]'));
+  type($('[data-pp="name"]'), 'Intensification');
+  type($('[data-pp="weeks"]'), '2');
+  click($('[data-act="meso-create"]'));
+  expect($$('.pb-tab')).toHaveLength(6);
+  click($('[data-act="save"]'));
+  await flush();
+  const p = saved[0];
+  expect(p.blocks.map(b => b.name)).toEqual(['Accumulation', 'Intensification']);
+  expect(p.blocks[0].goal).toBe('Volume up');
+  expect(p.weeks.map(w => w.block)).toEqual(['b1', 'b1', 'b1', 'b1', 'b2', 'b2']);
+  const sq = n => p.weeks[n - 1].days[0].exercises[0];
+  expect([1, 2, 3].map(n => sq(n).sets)).toEqual([3, 4, 5]);
+  expect([1, 2, 3].map(n => sq(n).rir)).toEqual([3, 2, 1]);
+  expect([1, 2, 3].map(n => sq(n).loadPct)).toEqual([70, 72.5, 75]);
+  expect(p.weeks[3].deload).toBe(true);
+  expect(sq(4)).toMatchObject({ sets: 2, rir: 5, loadPct: 62.5 });
+});
+
+test('Sheet view edits a week cell in place and adds an exercise to every week', async () => {
+  const { $, $$, click, type, enter, flush, saved } = setup(fourDays);
+  click($('[data-act="copy-week"]'));
+  click($('[data-act="view-sheet"]'));
+  const cells = $$('.pb-cell');
+  expect(cells.map(c => c.value)).toEqual(['3×6-8 @3 70%', '3×6-8 @3 70%']);
+  type(cells[1], '4x5 @1 80%');
+  expect(cells[1].value).toBe('4×5 @1 80%');
+  expect($('.pb-sheet-total').textContent).toBe('Total sets34');
+  const add = $('[data-sadd="d1"]');
+  add.value = 'Leg curl 2x12 @2';
+  enter(add);
+  expect($$('.pb-sheet [data-sn]').map(i => i.value)).toEqual(['Squat', 'Leg curl']);
+  type($$('.pb-cell')[2], ''); // drop leg curl from week 1
+  click($('[data-act="save"]'));
+  await flush();
+  const p = saved[0];
+  expect(p.weeks[1].days[0].exercises[0]).toMatchObject({ sets: 4, repsMin: 5, repsMax: null, rir: 1, loadPct: 80 });
+  expect(p.weeks[0].days[0].exercises.map(e => e.name)).toEqual(['Squat']);
+  expect(p.weeks[1].days[0].exercises.map(e => e.name)).toEqual(['Squat', 'Leg curl']);
+});
+
+test('week settings: deload toggle; CSV export lists every week', () => {
+  const { w, $, click, api } = setup(fourDays);
+  click($('[data-act="copy-week"]'));
+  const box = $('[data-wf="deload"]');
+  box.checked = true;
+  box.dispatchEvent(new w.Event('change', { bubbles: true }));
+  expect(api.getProgram().weeks[1].deload).toBe(true);
+  const csv = w.ProgramBuilder.toCsv(api.getProgram());
+  const lines = csv.trim().split('\r\n');
+  expect(lines[0]).toBe('Block,Week,Day,Exercise,Sets,Reps,RIR,Load,Rest,Notes');
+  expect(lines[2]).toBe(',Week 2 (deload),Mon - Lower,Squat,3,6-8,3,70%,,');
+});
