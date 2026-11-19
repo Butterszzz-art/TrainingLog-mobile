@@ -101,7 +101,11 @@
       ? (arr(program.frequency).length || arr(program.days).length || null)
       : null;
     const startDate = String(active.startDate || (program && program.startDate) || '').slice(0, 10);
-    return { name: active.programName || (program && (program.name || program.title)) || '', perWeek, startDate };
+    // A coach's program is shared as the coach's own program id, so the
+    // dashboard can match it to what it assigned.
+    const src = program && program.source;
+    const shareId = src && src.type === 'coach-program' && src.programId ? src.programId : (src && src.id) || id || '';
+    return { name: active.programName || (program && (program.name || program.title)) || '', perWeek, startDate, id: String(shareId) };
   }
 
   // Average of sessions / planned over the last completed weeks (up to 4)
@@ -161,7 +165,9 @@
       bodyweight,
       workouts: { thisWeek: weekly[weekly.length - 1].count, weekStart: weekly[weekly.length - 1].weekStart, weekly },
       compliancePercent: compliancePercent(weekly, program && program.perWeek, program && program.startDate),
-      activeProgramName: (program && program.name) || ''
+      activeProgramName: (program && program.name) || '',
+      activeProgramId: (program && program.id) || '',
+      activeProgramStartDate: (program && program.startDate) || ''
     };
   }
 
@@ -613,6 +619,7 @@
     if (typeof root.setNutritionLogOnly === 'function') root.setNutritionLogOnly(logOnly);
     syncCoachMacroPlan(activeUids);
     syncPlanProgram(activeUids);
+    syncCoachSchedule(activeUids);
     // The active coach's meal plan fills the food log each day (src/js/coach-meals.js).
     if (root.CoachMeals && root.CoachMeals.sync) {
       const withMeals = state.assignments
@@ -668,6 +675,143 @@
     else delete store[username];
     root.localStorage.setItem(MACRO_PLAN_STORE, JSON.stringify(store));
     if (typeof root.onCoachMacroPlanChanged === 'function') root.onCoachMacroPlanChanged();
+  }
+
+  // ── The coach's repeat / pause weeks (src/js/program-timeline.js) ─────
+  // A coach can repeat a week or add a week off for this client without
+  // changing the program (assignment.programSchedule). The program the
+  // client follows carries it as `timeline`, which program-schedule.js
+  // follows day by day; Your Coach shows where the client is.
+  const weekCountOf = p => (p && Array.isArray(p.weeks) && p.weeks.length ? p.weeks.length : 1);
+
+  /** The coach's schedule for the program it assigned, or null. */
+  function scheduleFor(asn) {
+    const PT = root.ProgramTimeline;
+    const s = asn && asn.programSchedule;
+    if (!PT || !s) return null;
+    if (s.programId && asn.currentProgramId && s.programId !== asn.currentProgramId) return null;
+    return PT.normalize(s, weekCountOf(asn.program));
+  }
+
+  /** The client's active program when it is this coach's assigned program: { active, programs, program }. */
+  function coachProgramRecord(asn) {
+    const u = user();
+    if (!u || !asn || !asn.program) return null;
+    const active = readJSON(root.localStorage, `activeProgram_${u}`, null);
+    if (!active || !active.programId) return null;
+    const programs = arr(readJSON(root.localStorage, `programs_${u}`, []));
+    const program = programs.find(p => p && p.id === active.programId);
+    const src = program && program.source;
+    if (!src) return null;
+    const mine = (src.type === 'coach-program' && src.coachUid === asn.coachUid) || (asn.program.id && src.id === asn.program.id);
+    return mine ? { active, programs, program } : null;
+  }
+
+  function timelineOf(schedule) {
+    return schedule && schedule.changes.length ? { startDate: schedule.startDate, changes: schedule.changes } : null;
+  }
+
+  // Keeps the followed program in step with the coach's latest schedule:
+  // the changes, and the start date when the coach set one.
+  function syncCoachSchedule(activeUids) {
+    const u = user();
+    if (!u) return;
+    state.assignments.filter(a => a && a.program && activeUids.has(a.coachUid)).forEach(asn => {
+      const rec = coachProgramRecord(asn);
+      if (!rec) return;
+      const schedule = scheduleFor(asn);
+      const next = timelineOf(schedule);
+      const timelineChanged = JSON.stringify(rec.program.timeline || null) !== JSON.stringify(next);
+      const startDate = schedule && schedule.startDate;
+      const startChanged = !!startDate && startDate !== rec.active.startDate;
+      if (!timelineChanged && !startChanged) return;
+      if (next) rec.program.timeline = next; else delete rec.program.timeline;
+      if (startChanged) {
+        rec.program.startDate = startDate;
+        rec.active.startDate = startDate;
+        root.localStorage.setItem(`activeProgram_${u}`, JSON.stringify(rec.active));
+      }
+      root.localStorage.setItem(`programs_${u}`, JSON.stringify(rec.programs));
+      if (typeof root.renderTodayProgramCard === 'function') root.renderTodayProgramCard();
+      toast(`${asn.coachUsername || 'Your coach'} updated the weeks of ${rec.program.name || 'your program'}.`);
+    });
+  }
+
+  function shortDay(d) {
+    return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+
+  // Where the client is in a multi-week coach program: mesocycle, week, a
+  // strip of every week (blocks coloured, deloads and pauses marked) and the
+  // next change the coach planned.
+  function programPositionHtml(asn) {
+    const PT = root.ProgramTimeline;
+    const p = asn.program;
+    const n = weekCountOf(p);
+    if (!PT || !p || n < 2) return '';
+    const schedule = scheduleFor(asn);
+    const rec = coachProgramRecord(asn);
+    const startDate = (rec && rec.active.startDate) || (schedule && schedule.startDate) || '';
+    const pos = startDate ? PT.locate({ program: p, schedule, startDate, today: new Date(), weekdays: p.frequency, sessionsPerWeek: arr(p.days).length || undefined }) : null;
+    const slots = pos ? pos.slots : PT.slots(n, schedule);
+    const meta = PT.weekMeta(p);
+    const blocks = [];
+    meta.forEach(m => { if (m.block && !blocks.some(b => b.fromWeek === m.block.fromWeek)) blocks.push(m.block); });
+    const blockIdx = week => {
+      const b = week ? (meta[week - 1] || {}).block : null;
+      return b ? blocks.findIndex(x => x.fromWeek === b.fromWeek) : -1;
+    };
+    const pauses = slots.filter(s => s.kind === 'pause').length;
+
+    let title;
+    let sub;
+    if (!pos) {
+      title = `${slots.length} weeks${blocks.length ? ` · ${blocks.length} mesocycle${blocks.length === 1 ? '' : 's'}` : ''}`;
+      sub = 'Your weeks start counting when you start the program.';
+    } else if (pos.before) {
+      title = `Starts ${shortDay(new Date(startDate + 'T00:00:00'))}`;
+      sub = `${slots.length} weeks${pauses ? ` (${pauses} week${pauses === 1 ? '' : 's'} off)` : ''}`;
+    } else if (pos.finished) {
+      title = 'Program finished';
+      sub = 'Your coach will set what comes next.';
+    } else if (pos.pause) {
+      title = `Week off${pos.note ? ` · ${pos.note}` : ''}`;
+      sub = `Week ${pos.slotNumber} of ${pos.totalSlots} · ${pos.weeksLeft} to go`;
+    } else {
+      title = [pos.block ? `${pos.block.name} · week ${pos.weekInBlock} of ${pos.blockSlots}` : `Week ${pos.slotNumber} of ${pos.totalSlots}`,
+        pos.deload ? 'Deload' : '', pos.repeat ? 'Repeat week' : ''].filter(Boolean).join(' · ');
+      sub = `${pos.block ? `Week ${pos.slotNumber} of ${pos.totalSlots} · ` : ''}${pos.weeksLeft} week${pos.weeksLeft === 1 ? '' : 's'} to go`;
+    }
+    // The next repeat or pause from here on.
+    const from = pos && !pos.before ? pos.slotIndex + 1 : 0;
+    const upcoming = slots.slice(from).find(s => s.kind !== 'week');
+    const when = upcoming && pos ? ` from ${shortDay(pos.monday(upcoming.slot - 1))}` : ` (week ${upcoming ? upcoming.slot : ''})`;
+    const upcomingHtml = upcoming
+      ? `<span class="mx-row-sub yc-next-change">Coming up: ${upcoming.kind === 'pause' ? 'a week off' : `week ${upcoming.week} again`}${when}${upcoming.note ? ` · ${esc(upcoming.note)}` : ''}</span>` : '';
+    const now = pos && !pos.before && !pos.finished ? pos.slotIndex : -1;
+    const strip = slots.map((s, i) => {
+      const cls = ['yc-seg'];
+      const bi = blockIdx(s.week);
+      if (bi >= 0) cls.push('yc-seg--b' + (bi % 6));
+      if (s.kind === 'pause') cls.push('is-pause');
+      if (s.kind === 'repeat') cls.push('is-repeat');
+      if (s.week && (meta[s.week - 1] || {}).deload) cls.push('is-deload');
+      if (i === now) cls.push('is-now');
+      if (now >= 0 && i < now) cls.push('is-done');
+      const label = s.kind === 'pause' ? 'Week off' : `Week ${s.week}${s.kind === 'repeat' ? ' again' : ''}${(meta[s.week - 1] || {}).deload ? ' (deload)' : ''}`;
+      return `<span class="${cls.join(' ')}" title="${esc(label + (s.note ? ' · ' + s.note : ''))}"></span>`;
+    }).join('');
+    const legend = blocks.length ? `<span class="yc-legend">${blocks.map((b, i) => `<span class="yc-legend-item yc-seg--b${i % 6}">${esc(b.name)}</span>`).join('')}</span>` : '';
+    return `
+      <div class="mx-row yc-position"><div class="mx-row-main">
+        <span class="mx-lbl">Where you are</span>
+        <span class="mx-row-title">${esc(title)}</span>
+        <span class="mx-row-sub">${esc(sub)}</span>
+        <span class="yc-strip" role="img" aria-label="${esc(slots.length + ' weeks' + (now >= 0 ? ', you are in week ' + (now + 1) : ''))}">${strip}</span>
+        ${legend}
+        ${pos && pos.block && pos.block.goal && !pos.pause ? `<span class="mx-row-sub">Goal: ${esc(pos.block.goal)}</span>` : ''}
+        ${upcomingHtml}
+      </div></div>`;
   }
 
   // ── Program from the published master plan ───────────────────────
@@ -907,7 +1051,7 @@
             <div class="mx-row-main"><span class="mx-lbl">Program ${programState}</span><span class="mx-row-title">${esc(asn.currentProgram)}</span>
               ${program ? `<span class="mx-row-sub">${program.days.length} day${program.days.length === 1 ? '' : 's'} a week · ${esc(arr(program.frequency).join(', '))}</span>` : ''}</div>
             ${program ? `<button type="button" class="mx-outline" data-yc-import="${esc(inv.coachUid)}" data-yc-rev="${esc(programRev)}">${startedRev === programRev ? 'Restart' : 'Start'}</button>` : ''}
-          </div>` : ''}
+          </div>${program ? programPositionHtml(asn) : ''}` : ''}
         ${asn.macroPlan && asn.macroPlan.days ? `
           <div class="mx-row">
             <div class="mx-row-main"><span class="mx-lbl">Macro targets</span><span class="mx-row-title">${esc(macroPlanLine(asn.macroPlan))}</span>
@@ -1381,11 +1525,17 @@
       const asn = state.assignments.find(a => a.coachUid === t.dataset.ycImport);
       const core = root.programBuilderV2Core;
       if (!asn || !asn.program || !core) return;
-      const ok = await root.showConfirm(`Start "${asn.program.title}"? It becomes your active program and Today's session follows it.`, { confirmText: 'Start program' });
+      const schedule = scheduleFor(asn);
+      const startDate = schedule && schedule.startDate ? schedule.startDate : '';
+      const ok = await root.showConfirm(`Start "${asn.program.title}"? It becomes your active program and Today's session follows it${startDate ? ` from ${shortDay(new Date(startDate + 'T00:00:00'))}, the date your coach set` : ''}.`, { confirmText: 'Start program' });
       if (!ok) return;
-      const imported = core.importLibraryProgram(root, asn.program, { userId: user() });
+      const timeline = timelineOf(schedule);
+      const imported = core.importLibraryProgram(root, timeline ? { ...asn.program, timeline } : asn.program, {
+        userId: user(),
+        source: { type: 'coach-program', coachUid: asn.coachUid, programId: asn.currentProgramId || '', id: asn.program.id || '' },
+      });
       if (imported) {
-        core.startProgram(root, imported.id, { userId: user() });
+        core.startProgram(root, imported.id, { userId: user(), ...(startDate ? { startDate } : {}) });
         const started = readJSON(root.localStorage, startedKey(), {});
         started[asn.coachUid] = t.dataset.ycRev || '';
         root.localStorage.setItem(startedKey(), JSON.stringify(started));

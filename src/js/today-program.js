@@ -142,7 +142,8 @@
   }
 
   function _weekLabel(schedule, d) {
-    return schedule.weekCount > 1 ? `Week ${d.weekNum} of ${schedule.weekCount}` : `Week ${d.weekNum}`;
+    if (schedule.weekCount > 1) return `Week ${d.weekNum} of ${schedule.weekCount}${d.repeat ? ' (again)' : ''}`;
+    return `Week ${d.weekNum}`;
   }
 
   /** "Not today" link under today's lifts, until lifting starts. */
@@ -172,6 +173,14 @@
       if (isToday && ctx.templateDay) {
         return _templateTodaySlide(ctx.templateDay, d.key, ps, user, _nextUpRow(next, today, ps));
       }
+      if (isToday && d.pause) {
+        return `<div class="tpc-slide">${_banner({
+          tone: 'muted',
+          kicker: `Pause week · after ${_weekLabel(schedule, d)}`,
+          name: 'Week off',
+          sub: d.pauseNote ? _esc(d.pauseNote) : 'Your coach planned a week without training',
+        })}<div class="tpc-body">${_nextUpRow(next, today, ps)}</div></div>`;
+      }
       if (isToday) {
         const action = next ? `<button type="button" class="tpc-go tpc-go--ghost" data-tpc-swap="${next.key}">Train</button>` : '';
         return `<div class="tpc-slide">${_banner({
@@ -182,7 +191,7 @@
           action,
         })}<div class="tpc-body">${_nextUpRow(next, today, ps)}</div></div>`;
       }
-      return `<div class="tpc-slide">${_banner({ tone: 'muted', kicker: `${d.abbr} · Rest`, name: 'Rest day', sub: '' })}
+      return `<div class="tpc-slide">${_banner({ tone: 'muted', kicker: `${d.abbr} · ${d.pause ? 'Pause week' : 'Rest'}`, name: d.pause ? 'Week off' : 'Rest day', sub: d.pause ? _esc(d.pauseNote || '') : '' })}
         <div class="tpc-body">${next && next.day ? `<div class="tpc-next"><span>Next: <b>${_esc(next.day.name)}</b></span><span>${next.abbr}</span></div>` : ''}</div></div>`;
     }
 

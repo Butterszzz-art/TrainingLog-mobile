@@ -1601,3 +1601,30 @@ mark.pi-suggested { background: var(--warning-bg, rgba(168,124,56,.25)); color: 
 
 /* Builder status line: sentence case so longer notes (e.g. muscles short of a landmark) read easily. */
 .pb-msg { text-transform: none; letter-spacing: 0.01em; font-size: 0.8rem; font-weight: 600; }
+
+/* One client's weeks of their program (coach/schedule-editor.js). */
+.se { display: flex; flex-direction: column; gap: 10px; }
+.se-top { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.se-summary { font-size: 0.82rem; color: var(--text-sec); line-height: 1.5; }
+.se-summary strong { color: var(--text); }
+.se-table-wrap { overflow-x: auto; }
+.se-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.se-table th { text-align: left; padding: 4px 6px; font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.se-table td { padding: 4px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.se-row.is-past { opacity: 0.5; }
+.se-row.is-now td { background: rgba(66, 166, 121, 0.10); }
+.se-row.is-now td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+.se-n { width: 28px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.se-date { white-space: nowrap; color: var(--text-sec); }
+.se-now { margin-left: 6px; font-family: var(--font-label); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary-text, #42a679); }
+.se-chip { display: inline-block; padding: 1px 8px; border-radius: var(--radius-pill, 999px); border: 1px solid var(--border); font-weight: 700; font-size: 0.78rem; white-space: nowrap; }
+.se-chip--repeat { border-color: #4a7fc1; color: #8db4e6; }
+.se-chip--pause { border-style: dashed; color: var(--text-sec); }
+.se-chip--deload { border-color: #e0a64a; color: #e0a64a; font-weight: 600; }
+.se-block { white-space: nowrap; }
+.se-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; background: var(--pb-block); }
+.se-dot--b0 { --pb-block: #2f8a63; } .se-dot--b1 { --pb-block: #4a7fc1; } .se-dot--b2 { --pb-block: #b07a2a; }
+.se-dot--b3 { --pb-block: #8a5bb5; } .se-dot--b4 { --pb-block: #c0566a; } .se-dot--b5 { --pb-block: #3d9aa1; }
+.se-note .pb-in { width: 100%; min-width: 140px; }
+.se-acts { white-space: nowrap; text-align: right; }
+.se-acts .pb-link { margin-left: 10px; }
