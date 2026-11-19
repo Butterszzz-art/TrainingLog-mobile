@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v99';
+const CACHE_VERSION = 'pocket-coach-v100';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -27,6 +27,8 @@ const APP_SHELL = [
   '/css/next-step-chips.css',
   '/css/overload-win.css',
   '/css/guide.css',
+  '/css/history-import.css',
+  '/css/habit.css',
   '/css/coach-guide.css',
   '/css/onboarding-cover.css',
   '/css/sleep.css',
@@ -127,6 +129,12 @@ const APP_SHELL = [
   '/src/js/coach-guide.js',
   '/src/js/guide-ui.js',
   '/src/js/onboarding-cover.js',
+  '/src/js/history-import-core.js',
+  '/src/js/history-import.js',
+  '/src/js/habit-core.js',
+  '/src/js/train-together.js',
+  '/src/js/habit.js',
+  '/src/js/first-session-card.js',
   '/src/js/archetype-config.js',
   '/src/js/shares.js',
   '/src/js/meal-share.js',

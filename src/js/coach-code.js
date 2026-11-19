@@ -61,6 +61,20 @@
     if (btn) btn.textContent = text ? 'Change' : 'Use code';
   }
 
+  // Shared with onboarding's "Train with someone" step (train-together.js).
+  // code: already cleaned (cleanCode). Resolves with { coachUsername }.
+  async function redeemCode(code) {
+    const data = await api('POST', '/api/client/coach-code', { code });
+    root.currentCoachPro = { status: 'active', coachUsername: data.coachUsername };
+    if (typeof root.loadUserPlan === 'function') await root.loadUserPlan();
+    if (typeof root.renderYourCoachSection === 'function') root.renderYourCoachSection();
+    return data;
+  }
+
+  function redeemErrorText(err) {
+    return err && err.status === 429 ? 'Too many tries. Wait a few minutes and try again.' : ((err && err.message) || 'Could not use that code.');
+  }
+
   let redeeming = false;
   async function redeem() {
     const input = $('coachCodeInput');
@@ -71,15 +85,12 @@
     redeeming = true;
     if (btn) btn.disabled = true;
     try {
-      const data = await api('POST', '/api/client/coach-code', { code });
+      const data = await redeemCode(code);
       input.value = '';
-      root.currentCoachPro = { status: 'active', coachUsername: data.coachUsername };
       toast(`You're linked to @${data.coachUsername}. Pro is on.`, 'success');
-      if (typeof root.loadUserPlan === 'function') await root.loadUserPlan();
       refreshAccount();
-      if (typeof root.renderYourCoachSection === 'function') root.renderYourCoachSection();
     } catch (err) {
-      toast(err.status === 429 ? 'Too many tries. Wait a few minutes and try again.' : (err.message || 'Could not use that code.'), 'error');
+      toast(redeemErrorText(err), 'error');
     } finally {
       redeeming = false;
       if (btn) btn.disabled = false;
@@ -161,6 +172,7 @@
   }
 
   root.renderCoachCodePanel = renderCoachCodePanel;
+  root.CoachCode = { cleanCode, displayCode, redeemCode, redeemErrorText };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { cleanCode, displayCode, statusText };
   }
