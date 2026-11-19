@@ -834,6 +834,14 @@ span.client-checkbox { border-color: transparent; background: none; cursor: defa
 .ci-answer { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-top: 1px solid var(--border-row); }
 .ci-answer-q { font-size: 12.5px; color: var(--text-tertiary); }
 .ci-answer-a { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ci-detail { margin-top: 10px; border-top: 1px solid var(--border-row); padding-top: 10px; }
+.ci-detail > summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+.ci-detail-head { margin: 14px 0 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); }
+.ci-detail-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; border-top: 1px solid var(--border-row); }
+.ci-detail-flags { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ci-detail-flag { font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-row); }
+.ci-detail-flag--warn { border-color: var(--border-alert); background: var(--danger-bg); color: var(--danger-text-mobile); }
+.ci-detail-flag--info { color: var(--text-secondary); }
 .ci-review-row { display: flex; margin: 10px 0 4px; }
 .fc-at { width: 76px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border-row); background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
 a.ci-msg-pin, a.bulk-action-btn { text-decoration: none; }

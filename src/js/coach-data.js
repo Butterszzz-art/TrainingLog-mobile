@@ -279,7 +279,11 @@
         .filter(e => e && withinDays(e.date, now, BODYWEIGHT_DAYS))
         .map(e => ({ date: day(e.date), kg: num(e.weightKg) ?? num(e.weight) }))
         .filter(e => e.kg);
-      pack.checkIns = arr(readJSON(store, `checkIns_${username}`, []))
+      // tl_checkins_v1_ is where checkinEngine.js keeps check-ins;
+      // checkIns_ is an older copy written only with an AI summary.
+      const stored = arr(readJSON(store, `tl_checkins_v1_${username}`, []));
+      const detailApi = (root && root.checkInDetail) || (typeof require === 'function' ? (() => { try { return require('./checkin-detail.js'); } catch (_e) { return null; } })() : null);
+      pack.checkIns = (stored.length ? stored : arr(readJSON(store, `checkIns_${username}`, [])))
         .filter(c => c && c.date)
         .sort((x, y) => (x.date < y.date ? -1 : 1))
         .slice(-12)
@@ -289,6 +293,9 @@
           sleep: num(c.sleep), energy: num(c.energy), stress: num(c.stress),
           hunger: num(c.hunger), digestion: num(c.digestion), trainingPerformance: num(c.trainingPerformance),
           notes: typeof c.notes === 'string' ? c.notes.slice(0, 300) : '',
+          // Muscle recovery, session workload, joint pain, nutrition and
+          // lifestyle answers as plain text (src/js/checkin-detail.js).
+          ...(() => { const t = detailApi ? detailApi.detailToText(c.detail) : ''; return t ? { detail: t.slice(0, 2500) } : {}; })(),
         }));
     }
 
