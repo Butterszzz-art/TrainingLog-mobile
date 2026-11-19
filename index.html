@@ -18117,79 +18117,8 @@ function updateTrainingCalendar() {
   renderTrainingCalendar(calendarMonth, calendarYear);
 }
 
-let streakReminderTimeoutId = null;
-
-function getReminderSettings() {
-  const fallback = { streakReminderEnabled: false, streakReminderTime: '19:00' };
-  if (typeof window.getStoredUserSettings !== 'function') return fallback;
-  const saved = window.getStoredUserSettings() || {};
-  return {
-    streakReminderEnabled: Boolean(saved.streakReminderEnabled),
-    streakReminderTime: saved.streakReminderTime || '19:00'
-  };
-}
-
-function hasWorkoutLoggedForDate(dateStr) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  return workouts.some(w => w && w.date === dateStr && isWorkoutCompleted(w));
-}
-
-function isPlannedTrainingDate(dateStr) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  const planned = new Set(getPlannedProgramDates(d, d));
-  if (planned.has(dateStr)) return true;
-
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const templatePlanned = getPlannedTemplateDates(d, d, workouts);
-  return templatePlanned.includes(dateStr);
-}
-
-function sendStreakReminderNotification() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') return;
-  const title = 'Workout reminder';
-  const body = 'You planned a training session today. Log your workout to keep your streak alive.';
-  new Notification(title, { body, tag: `streak-reminder-${currentUser}` });
-}
-
-function checkDailyStreakReminder() {
-  if (!currentUser) return;
-  const { streakReminderEnabled } = getReminderSettings();
-  if (!streakReminderEnabled) return;
-  const today = normalizeIsoDate(new Date());
-  if (!isPlannedTrainingDate(today)) return;
-  if (hasWorkoutLoggedForDate(today)) return;
-  sendStreakReminderNotification();
-}
-
-function scheduleStreakReminderJob() {
-  if (streakReminderTimeoutId) clearTimeout(streakReminderTimeoutId);
-  if (!currentUser) return;
-
-  const { streakReminderEnabled, streakReminderTime } = getReminderSettings();
-  if (!streakReminderEnabled) return;
-
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission().catch(() => {});
-  }
-
-  const [hourStr, minuteStr] = String(streakReminderTime || '19:00').split(':');
-  const hour = Number(hourStr);
-  const minute = Number(minuteStr);
-
-  const now = new Date();
-  const nextRun = new Date(now);
-  nextRun.setSeconds(0, 0);
-  nextRun.setHours(Number.isFinite(hour) ? hour : 19, Number.isFinite(minute) ? minute : 0, 0, 0);
-  if (nextRun <= now) nextRun.setDate(nextRun.getDate() + 1);
-
-  streakReminderTimeoutId = setTimeout(() => {
-    checkDailyStreakReminder();
-    scheduleStreakReminderJob();
-  }, nextRun.getTime() - now.getTime());
-}
-
-window.addEventListener('traininglog:settings-saved', scheduleStreakReminderJob);
+// The daily workout reminder is now part of the coach reminders
+// (src/js/reminders.js), which schedule real phone notifications.
 
 
 // ========= CROSSFIT TRACKER =========
@@ -19279,7 +19208,7 @@ async function fetchDailyLogs(username) {
   }
   initSmartGoalForm();
   if (typeof updateStreakCounter === 'function') updateStreakCounter();
-  scheduleStreakReminderJob();
+  if (window.CoachNudges) window.CoachNudges.sync();
 
   // Home is rendered — let the launch loading screen finish (no-op otherwise)
   if (typeof window._markAppReady === 'function') window._markAppReady();
@@ -21880,6 +21809,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/push-notifications.js"></script>
   <script src="src/js/apple-health.js"></script>
   <script src="src/js/rehab.js"></script>
+  <script src="src/js/coach-nudges-core.js"></script>
   <script src="src/js/reminders.js"></script>
   <script src="src/js/program-schedule.js"></script>
   <script src="src/js/usual-session.js"></script>
