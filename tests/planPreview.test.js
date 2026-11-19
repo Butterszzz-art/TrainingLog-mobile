@@ -52,6 +52,18 @@ describe('PlanPreview.render', () => {
     expect(PlanPreview.render(noConflicts, { coachView: true })).not.toContain('Differs from Butters University');
   });
 
+  test('coach view shows Menno\'s volume only as a comparison; the client never sees it', () => {
+    const withMenno = JSON.parse(JSON.stringify(draft));
+    for (const ph of withMenno.phases) {
+      ph.training.comparison = { menno: { value: 20.7, ruleId: 'train.volume.henselmans', note: "Menno's formula says 20.7 sets (+8.7), above BU's 10–15 band. The plan uses Butters University (12)." } };
+    }
+    const coach = PlanPreview.render(withMenno, { today: '2026-10-26', coachView: true });
+    expect(coach).toContain('Comparison only:');
+    expect(coach).toContain('The plan uses Butters University (12)');
+    expect(PlanPreview.render(withMenno, { today: '2026-10-26' })).not.toContain('Comparison only');
+    expect(PlanPreview.render(draft, { today: '2026-10-26', coachView: true })).not.toContain('Comparison only');
+  });
+
   test('shows the reps-in-reserve rule when the plan carries it', () => {
     const withRir = JSON.parse(JSON.stringify(published));
     for (const ph of withRir.phases) ph.training.progression = { scheme: 'double_progression', repRange: [6, 12], rir: [3, 1], failure: 'last_set_only' };
