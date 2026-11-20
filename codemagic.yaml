@@ -77,6 +77,9 @@ definitions:
         # (plugins/workout-activity). ActivityKit refuses to start one
         # without this key.
         set_plist NSSupportsLiveActivities bool true
+        # App Group the Home Screen "Today" widget reads from
+        # (TodayWidgetStore.groupId; entitlement in add-capabilities.rb).
+        set_plist PocketCoachAppGroup string "group.$BUNDLE_ID"
         # Apple Health (plugins/health-kit). iOS shows these on the permission
         # sheet and kills the app if they're missing.
         set_plist NSHealthShareUsageDescription string "Pocket Coach reads your steps, sleep, resting heart rate, HRV, weight, workouts and food from Apple Health to fill in your training log and recovery."
