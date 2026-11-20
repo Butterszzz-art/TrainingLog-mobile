@@ -63,6 +63,19 @@ describe('locate', () => {
     expect(at('2026-12-14')).toMatchObject({ finished: true, weeksLeft: 0 });
   });
 
+  test('the days after a week\'s last session stay in that calendar week', () => {
+    // Week 2 is 9–15 Nov; its last session is Friday the 13th.
+    expect(at('2026-11-13').slotNumber).toBe(2);
+    expect(at('2026-11-14').slotNumber).toBe(2); // Saturday
+    expect(at('2026-11-15').slotNumber).toBe(2); // Sunday
+    expect(at('2026-11-16').slotNumber).toBe(3); // Monday: next week's first session
+    // Mon/Thu: Friday and the weekend after Thursday's session are still that week.
+    const monThu = iso => T.locate({ program, startDate: '2026-11-02', weekdays: ['Mon', 'Thu'], today: new Date(iso + 'T12:00:00') });
+    expect(monThu('2026-11-20').slotNumber).toBe(3);
+    expect(monThu('2026-11-22').slotNumber).toBe(3);
+    expect(monThu('2026-11-23').slotNumber).toBe(4);
+  });
+
   test('a repeat makes the block longer; a pause shows as a pause in the block before it', () => {
     const schedule = { changes: [{ id: 'r', kind: 'repeat', afterWeek: 2 }, { id: 'p', kind: 'pause', afterWeek: 2, note: 'Holiday' }] };
     // W1 W2 R2 P W3 W4 W5 W6

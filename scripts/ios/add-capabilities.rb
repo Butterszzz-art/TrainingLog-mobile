@@ -26,6 +26,7 @@ APP_DIR = File.join(ROOT, 'ios', 'App')
 PROJECT_PATH = File.join(APP_DIR, 'App.xcodeproj')
 ENTITLEMENTS_REL = 'App/App.entitlements'
 ENTITLEMENTS_PATH = File.join(APP_DIR, ENTITLEMENTS_REL)
+APP_BUNDLE_ID = ENV.fetch('BUNDLE_ID', 'org.pocketcoachcoms.app')
 APP_DELEGATE = File.join(APP_DIR, 'App', 'AppDelegate.swift')
 
 abort "No Xcode project at #{PROJECT_PATH} - run `npx cap add ios` first" unless File.directory?(PROJECT_PATH)
@@ -45,6 +46,10 @@ ENTITLEMENTS = {
   # Universal Links: pocketcoachcoms.org invite links open the app
   # (.well-known/apple-app-site-association, src/js/app-links.js).
   'com.apple.developer.associated-domains' => '<array><string>applinks:pocketcoachcoms.org</string></array>',
+  # App Group shared with the widget extension: the app writes the Home Screen
+  # "Today" widget's data there (plugins/workout-activity, src/js/home-widget.js).
+  # add-live-activity.rb gives the extension the same group.
+  'com.apple.security.application-groups' => "<array><string>group.#{APP_BUNDLE_ID}</string></array>",
 }
 
 File.write(ENTITLEMENTS_PATH, <<~PLIST)

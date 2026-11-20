@@ -114,6 +114,20 @@ What's done in code, and what still has to happen outside it. Work top to bottom
     Dynamic Island shows it on iPhone 14 Pro and later. "Rest over" appears when it runs out,
     and ending the workout removes it.
 
+### Home Screen "Today" widget (program day + macros)
+The widget lives in the same extension as the Live Activity and reads what the app
+writes into a shared App Group, so both App IDs need that group.
+24a. Apple Developer → Identifiers → **App Groups** → +: register **`group.org.pocketcoachcoms.app`**.
+24b. Identifiers → `org.pocketcoachcoms.app` **and** `org.pocketcoachcoms.app.LiveActivity`:
+     tick **App Groups**, Configure → select `group.org.pocketcoachcoms.app`, Save.
+     Then fetch both App Store provisioning profiles again in Codemagic (the old ones
+     don't include the group, and signing fails with "doesn't include the
+     com.apple.security.application-groups entitlement").
+24c. TestFlight check: long-press the Home Screen → + → Pocket Coach → **Today** (medium).
+     It shows calories left in the ring, the program week and day, and protein /
+     carbs / fat left. Log food or finish the day's workout in the app, go home: the
+     widget updates. After midnight it moves to the next day's session with nothing eaten.
+
 ### Push notifications (iPhone/iPad)
 25. Apple Developer → Identifiers → `org.pocketcoachcoms.app`: tick **Push Notifications**, Save.
     Then fetch the App Store provisioning profile again in Codemagic.

@@ -172,6 +172,18 @@ describe('the coach\'s repeat / pause weeks (program.timeline)', () => {
     expect(s.dayFor(date('2026-11-16')).weekNum).toBe(2);
   });
 
+  test('rest days after a week\'s last session keep that week; the pause starts on Monday', () => {
+    const s = ps.createSchedule(withTimeline([{ id: 'p', kind: 'pause', afterWeek: 1 }]), { startDate: '2026-11-02' }, { core });
+    // Week 1's last session is Friday 6 Nov; the pause is the week of 9 Nov.
+    expect(s.dayFor(date('2026-11-07'))).toMatchObject({ weekNum: 1, pause: false }); // Saturday
+    expect(s.dayFor(date('2026-11-08'))).toMatchObject({ weekNum: 1, pause: false }); // Sunday
+    expect(s.dayFor(date('2026-11-10')).pause).toBe(true); // Tuesday of the pause week
+    expect(s.dayFor(date('2026-11-15')).pause).toBe(true); // its Sunday
+    const plain = ps.createSchedule(twoWeeks, { startDate: '2026-11-02' }, { core });
+    expect(plain.dayFor(date('2026-11-08')).weekNum).toBe(1);
+    expect(plain.dayFor(date('2026-11-09')).weekNum).toBe(2);
+  });
+
   test('a pause week has no sessions and says so; training resumes after it', () => {
     const s = ps.createSchedule(withTimeline([{ id: 'p', kind: 'pause', afterWeek: 1, note: 'Holiday' }]), { startDate: '2026-11-02' }, { core });
     const mon = s.dayFor(date('2026-11-09'));

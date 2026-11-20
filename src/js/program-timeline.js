@@ -148,13 +148,21 @@
     return (Array.isArray(weekdays) ? weekdays : []).map(d => (typeof d === 'number' ? d % 7 : WEEKDAY_NUM[d])).filter(n => n !== undefined);
   }
 
-  /** The 0-based slot a date falls in (-1 before the start), counted the way program-schedule.js does: every `sessionsPerWeek` training days is one slot. */
+  /**
+   * The 0-based slot a date falls in (-1 before the start), counted the way
+   * program-schedule.js does: every `sessionsPerWeek` training days is one slot.
+   * A date belongs to the slot of the latest session on or before it, so the
+   * days after a week's last session stay in that week until the next week's
+   * first training day (a Friday after Mon/Thu sessions is still that week).
+   */
   function slotIndexAt(startDate, date, trainingNums, sessionsPerWeek) {
     const start = midnight(startDate);
     const day = midnight(date);
     if (day < start) return -1;
     const per = Math.max(1, sessionsPerWeek || trainingNums.length || 1);
-    return Math.floor(countTrainingDays(start, day, trainingNums) / per);
+    const next = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+    const sessionsSoFar = countTrainingDays(start, next, trainingNums);
+    return sessionsSoFar ? Math.floor((sessionsSoFar - 1) / per) : 0;
   }
 
   /** The Monday of the week holding the first training day of slot `index`. */

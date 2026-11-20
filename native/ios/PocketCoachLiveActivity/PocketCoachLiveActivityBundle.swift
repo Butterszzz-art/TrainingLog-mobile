@@ -5,5 +5,6 @@ import WidgetKit
 struct PocketCoachLiveActivityBundle: WidgetBundle {
     var body: some Widget {
         WorkoutLiveActivity()
+        TodayWidget()
     }
 }
