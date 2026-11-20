@@ -1181,6 +1181,8 @@ function openSettingsPage(key) {
     window.renderCoachCodePanel?.();
   } else if (key === 'devices') {
     refreshActivitySyncStatus(container);
+    window.calendarSync?.refreshStatus?.();
+    window.calendarSync?.scheduleSync?.(); // picks up a feed this phone forgot
   }
 
   window.scrollTo?.(0, 0);
