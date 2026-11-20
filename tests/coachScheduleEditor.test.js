@@ -73,8 +73,12 @@ test('the Save button survives a start-date change (so the next click lands)', (
 });
 
 test('uses the client\'s own start date when the coach set none; past weeks can\'t be changed', () => {
+  // The program trains Mon + Thu, and a week counts as done once its Thursday
+  // has passed, so from Friday on the client is already in the next week.
+  // Start the client so today is in their 3rd week on any weekday.
   const d = new Date();
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 14); // Monday two weeks ago
+  const back = d.getDay() >= 1 && d.getDay() <= 4 ? 14 : 7;
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - back); // a Monday 1–2 weeks back
   const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const { $$, $ } = setup({ clientStart: { date: iso, sameProgram: true } });
   expect($('.se-summary').textContent).toMatch(/Ana started on/);
