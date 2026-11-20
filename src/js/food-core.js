@@ -212,6 +212,31 @@
     return !list.some(f => matchesQuery(f, query));
   }
 
+  // Where to start the amount for a food picked for a described item
+  // (the AI describe-to-log, or an amount typed with a search):
+  //   t: { grams?, ml?, count?, servingHint? } (parseFoodQuery's shape, plus
+  //   `grams` as an estimate when a count was given)
+  // A count uses that many of the food's matching serving ("2 slices" → 2 ×
+  // its slice serving); with no serving to match, the gram estimate; then
+  // 100 g. → { amount, unit, grams }
+  function amountFor(food, t) {
+    const basis = food && food.basis === 'ml' ? 'ml' : 'g';
+    const q = t || {};
+    const servings = food && Array.isArray(food.servings) ? food.servings : [];
+    const exact = num(q.ml) || (q.count ? null : num(q.grams));
+    if (exact && exact > 0) return { amount: round1(exact), unit: basis, grams: round1(exact) };
+    const count = num(q.count);
+    if (count && count > 0 && servings.length) {
+      const hint = q.servingHint;
+      const s = (hint && servings.find(x => x.label.toLowerCase().includes(hint)))
+        || (!hint || !num(q.grams) ? servings[0] : null);
+      if (s) return { amount: count, unit: s.label, grams: round1(count * s.grams) };
+    }
+    const est = num(q.grams);
+    if (est && est > 0) return { amount: round1(est), unit: basis, grams: round1(est) };
+    return { amount: 100, unit: basis, grams: 100 };
+  }
+
   // ── Food log entries ─────────────────────────────────────────────────
   // The food log is a flat list in localStorage (`foodLog_<user>`), one
   // entry per food logged. Cloud sync copies each entry to the server on
@@ -861,7 +886,7 @@
     weeklyAverages,
     csvCell, toCsv, foodLogRows,
     normalizeBarcode, validBarcode, findByBarcode, customFoodFromForm,
-    amountLabel, editEntry, copyEntries, copySourceDays,
+    amountLabel, amountFor, editEntry, copyEntries, copySourceDays,
     repeatFromEntry, updateRepeat, pendingRepeats, entryFromRepeat, skipRepeat, dayLabel, copyPicked, templateFromEntries, entriesFromTemplate, recipeFood, parseRecipeJsonLd,
     NUTRIENT_KEYS, SOURCE_LABELS, MEALS, MEAL_LABELS, KEEP_DAYS,
     ALL_MEALS, MAX_MEALS, DEFAULT_MEAL_COUNT, MEAL_NAME_MAX, defaultMealLabel, normalizeMealSetup, applyMealSetup, mealsForDay,

@@ -896,9 +896,12 @@
       <div class="food-sheet-tabs" role="tablist" aria-label="How to log">
         <button type="button" role="tab" class="food-sheet-tab is-active" data-food-tab="search" aria-selected="true">Search</button>
         <button type="button" role="tab" class="food-sheet-tab" data-food-tab="mine" aria-selected="false">My foods</button>
+        <button type="button" role="tab" class="food-sheet-tab" data-food-tab="describe" aria-selected="false">Describe</button>
       </div>
       <div id="foodSearchHost" class="food-sheet-panel" data-food-panel="search"></div>
       <div id="foodMyFoodsPanel" class="food-sheet-panel" data-food-panel="mine" hidden></div>
+      <!-- Describe what you ate in words, AI finds the foods (src/js/food-describe.js) -->
+      <div id="foodDescribePanel" class="food-sheet-panel" data-food-panel="describe" hidden></div>
     </div>
   </div>
 
@@ -21991,10 +21994,12 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/food-core.js"></script>
   <script src="src/js/meal-timing-core.js"></script>
   <script src="src/js/meal-photos.js"></script>
+  <script src="src/js/speech-input.js"></script>
   <script src="src/js/food-database.js"></script>
   <script src="src/js/food-barcode.js"></script>
   <script src="src/js/food-log-tools.js"></script>
   <script src="src/js/meal-timing.js"></script>
+  <script src="src/js/food-describe.js"></script>
   <script src="src/js/nutrition-insights.js"></script>
   <script src="src/js/nutrition-review.js"></script>
   <script src="src/js/weekly-summary.js"></script>

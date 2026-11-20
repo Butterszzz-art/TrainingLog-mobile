@@ -1,0 +1,15 @@
+{
+  "name": "capacitor-speech-to-text",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Capacitor plugin: turns speech into text with the phone's own speech recognition (iOS Speech framework, Android SpeechRecognizer), for logging food by voice.",
+  "license": "UNLICENSED",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  }
+}

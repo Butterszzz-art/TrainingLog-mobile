@@ -5,7 +5,7 @@
    Version bump to force cache refresh on each deploy.
    ============================================================= */
 
-const CACHE_VERSION = 'pocket-coach-v101';
+const CACHE_VERSION = 'pocket-coach-v102';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_API     = `${CACHE_VERSION}-api`;
 
@@ -65,10 +65,12 @@ const APP_SHELL = [
   '/src/js/food-core.js',
   '/src/js/meal-timing-core.js',
   '/src/js/meal-photos.js',
+  '/src/js/speech-input.js',
   '/src/js/food-database.js',
   '/src/js/food-barcode.js',
   '/src/js/food-log-tools.js',
   '/src/js/meal-timing.js',
+  '/src/js/food-describe.js',
   '/src/js/nutrition-insights.js',
   '/src/js/nutrition-review.js',
   '/src/js/weekly-summary.js',

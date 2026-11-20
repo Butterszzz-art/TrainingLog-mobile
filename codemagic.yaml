@@ -59,6 +59,9 @@ definitions:
         # which offers "Take Photo" on iOS. Without these usage strings iOS
         # kills the app the moment the camera or library is opened.
         set_plist NSCameraUsageDescription string "Pocket Coach uses the camera to scan food barcodes, and for posing photo check-ins, profile photos and workout story photos."
+        # Logging food by voice (plugins/speech-to-text).
+        set_plist NSMicrophoneUsageDescription string "Pocket Coach uses the microphone when you tap the mic to say what you ate."
+        set_plist NSSpeechRecognitionUsageDescription string "Pocket Coach turns what you say into text so you can log food by voice."
         set_plist NSPhotoLibraryUsageDescription string "Pocket Coach lets you choose a profile photo or a workout story background from your library."
         # "Save image" on the workout story writes to Photos
         # (plugins/instagram-stories saveImage).

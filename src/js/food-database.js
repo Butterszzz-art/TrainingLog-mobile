@@ -158,6 +158,7 @@
         <input type="search" id="foodSearchInput" class="food-search-input"
           placeholder="Search food — e.g. kwark, hagelslag, rice" autocomplete="off" enterkeyhint="search"
           aria-label="Search food" />
+        <button type="button" class="food-scan-btn food-voice-btn" data-food-voice hidden aria-label="Say what you ate"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/></svg></button>
         <button type="button" class="food-scan-btn" onclick="scanFoodBarcode()" aria-label="Scan a barcode"><span class="ui-icon" aria-hidden="true">${_icon('camera')}</span></button>
       </div>
       <button type="button" class="food-own-link" onclick="openCustomFoodForm()">＋ Add your own food</button>
@@ -193,6 +194,18 @@
 
     if (host) host.appendChild(widget);
     else container.parentNode.insertBefore(widget, container);
+
+    // Voice logging (speech-input.js → the Describe tab): the mic shows
+    // only where speech to text works on this device.
+    const voiceBtn = widget.querySelector('[data-food-voice]');
+    if (window.SpeechInput && voiceBtn) {
+      window.SpeechInput.supported().then(ok => { voiceBtn.hidden = !ok; }).catch(() => {});
+      voiceBtn.addEventListener('click', () => {
+        if (!document.getElementById('foodSearchSheet')) return;
+        if (document.getElementById('foodSearchSheet').hidden) openFoodSearch({ focus: false, tab: 'describe', listen: true });
+        else showFoodSheetTab('describe', { listen: true });
+      });
+    }
 
     const input     = widget.querySelector('#foodSearchInput');
     const resultsEl = widget.querySelector('#foodSearchResults');
@@ -347,7 +360,7 @@
   let _sheetMeal = null;
 
   // Search / My foods tabs in the Log food sheet (quick add is on the Macros card).
-  function showFoodSheetTab(name) {
+  function showFoodSheetTab(name, opts = {}) {
     const sheet = document.getElementById('foodSearchSheet');
     if (!sheet) return;
     sheet.querySelectorAll('[data-food-tab]').forEach(b => {
@@ -359,6 +372,10 @@
     if (name === 'mine' && typeof window.openFoodLibrary === 'function') {
       window.openFoodLibrary({ host: document.getElementById('foodMyFoodsPanel'), meal: _sheetMeal || undefined });
     }
+    if (name === 'describe' && typeof window.openFoodDescribe === 'function') {
+      window.openFoodDescribe({ host: document.getElementById('foodDescribePanel'), meal: _sheetMeal || undefined, listen: !!opts.listen });
+    }
+    if (name !== 'describe') window.FoodDescribe?.stopVoice?.();
     if (name === 'search') setTimeout(() => document.getElementById('foodSearchInput')?.focus(), 30);
   }
   window.showFoodSheetTab = showFoodSheetTab;
@@ -368,7 +385,7 @@
     if (tab) showFoodSheetTab(tab.dataset.foodTab);
   });
 
-  function openFoodSearch({ focus = true, meal = null, tab = 'search' } = {}) {
+  function openFoodSearch({ focus = true, meal = null, tab = 'search', listen = false } = {}) {
     injectFoodSearchWidget();
     const sheet = document.getElementById('foodSearchSheet');
     if (!sheet) {
@@ -384,7 +401,7 @@
     if (mealSel && _sheetMeal) mealSel.value = _sheetMeal;
     sheet.hidden = false;
     document.body.classList.add('food-search-open');
-    showFoodSheetTab(tab);
+    showFoodSheetTab(tab, { listen });
     _updateDock();
     const input = document.getElementById('foodSearchInput');
     const results = document.getElementById('foodSearchResults');
@@ -396,6 +413,7 @@
     const sheet = document.getElementById('foodSearchSheet');
     if (!sheet || sheet.hidden) return;
     sheet.hidden = true;
+    window.FoodDescribe?.stopVoice?.();
     document.body.classList.remove('food-search-open');
     window.clearFoodSelection?.();
     _sheetMeal = null;
@@ -1157,6 +1175,16 @@
     customFoods: loadCustomFoods, saveCustomFood, deleteCustomFood, localFoodByBarcode,
     coachFoods: loadCoachFoods, refreshCoachFoods,
     authHeaders: _authHeaders, toast: (m) => _toast(m),
+    // Foods logged some other way (food-describe.js) into the recent list.
+    addRecent(foodsLogged, meal) {
+      const u = _user();
+      if (!u) return;
+      try {
+        let list = _readJSON(RECENT_KEY(u), []);
+        (foodsLogged || []).forEach(f => { list = Core.addRecent(list, f, Date.now(), meal); });
+        localStorage.setItem(RECENT_KEY(u), JSON.stringify(list));
+      } catch { /* storage full; the recent list is only a convenience */ }
+    },
   };
 
   /* ── Ask once about sharing the food log with a coach ────── */
