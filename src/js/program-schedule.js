@@ -193,9 +193,13 @@
           trainingIndex = o;
         }
       }
-      const weekNum = weekNumFor(trainingIndex, date);
+      // A rest day belongs to the week of the session before it, so the days
+      // after a week's last session stay in that calendar week until the
+      // next week's first training day (ProgramTimeline.slotIndexAt agrees).
+      const weekIndex = isTraining || trainingIndex === 0 ? trainingIndex : trainingIndex - 1;
+      const weekNum = weekNumFor(weekIndex, date);
       // A pause week (timeline): no session, even on a training weekday.
-      const pauseSlot = timeline && !before ? slotAt(trainingIndex) : null;
+      const pauseSlot = timeline && !before ? slotAt(weekIndex) : null;
       const pause = !!(pauseSlot && pauseSlot.week === null);
       if (pause) isTraining = false;
       return {
