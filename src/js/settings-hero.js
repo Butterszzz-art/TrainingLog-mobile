@@ -79,6 +79,7 @@
           : 'Off';
 
     const connected = global.activitySyncBridge?.isConnected?.();
+    const calendarOn = !!global.calendarSync?.isEnabled?.();
     const plan = global.currentUserPlan || 'free';
 
     return {
@@ -86,7 +87,7 @@
       training: MODE_LABELS[mode] || 'Bodybuilding',
       targets: targets || 'Set targets',
       reminders,
-      devices: connected ? 'Connected' : 'Not connected',
+      devices: [calendarOn ? 'Calendar on' : '', connected ? 'Connected' : ''].filter(Boolean).join(' · ') || 'Not connected',
       account: plan === 'coach' ? 'Coach plan' : plan === 'pro' ? 'Pro plan' : 'Free plan'
     };
   }
@@ -96,7 +97,7 @@
     ['training', 'Training'],
     ['targets', 'Targets'],
     ['reminders', 'Reminders'],
-    ['devices', 'Devices'],
+    ['devices', 'Calendar & devices'],
     ['account', 'Account']
   ];
 

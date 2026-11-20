@@ -206,8 +206,17 @@
     <section class="st-page" data-st-page="devices" aria-labelledby="stDevicesTitle" hidden>
       <header class="st-head">
         <button type="button" class="st-back" data-st-back aria-label="Back to settings"></button>
-        <h3 id="stDevicesTitle" class="st-title">Devices</h3>
+        <h3 id="stDevicesTitle" class="st-title">Calendar &amp; devices</h3>
       </header>
+
+      <!-- Calendar sync (src/js/calendar-sync.js): the row opens its sheet. -->
+      <div class="mx-kicker st-kicker">Calendar</div>
+      <div class="pod st-group">
+        <button type="button" class="st-row st-row--btn" data-calendar-sync>
+          <span class="st-label">Calendar sync<small>Training, coach meal times and check-ins in your phone's calendar</small></span>
+          <span class="st-val" data-calendar-status>Off</span><span class="st-chev" aria-hidden="true"></span>
+        </button>
+      </div>
 
       <!-- iPhone only: shown by settings.js when Apple Health is available -->
       <div id="appleHealthSection" hidden>

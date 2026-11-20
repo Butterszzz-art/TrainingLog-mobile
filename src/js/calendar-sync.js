@@ -416,7 +416,7 @@
     clearTimeout(_syncTimer);
     _syncTimer = setTimeout(() => {
       const run = isEnabled() ? Promise.resolve(true) : restore().then(st => !!st);
-      run.then(on => (on ? syncNow() : null)).catch(() => {});
+      run.then(on => (on ? syncNow() : null)).then(refreshStatus).catch(() => {});
     }, 1500);
   }
 
@@ -568,7 +568,15 @@
 
   function _onKey(e) { if (e.key === 'Escape') close(); }
 
+  /** "On" / "Off" wherever the app shows it (Settings → Calendar & devices). */
+  function refreshStatus() {
+    if (typeof document === 'undefined') return;
+    const on = isEnabled();
+    document.querySelectorAll('[data-calendar-status]').forEach(el => { el.textContent = on ? 'On' : 'Off'; });
+  }
+
   function close() {
+    refreshStatus();
     if (_sheet) _sheet.remove();
     _sheet = null;
     document.removeEventListener('keydown', _onKey);
@@ -586,6 +594,7 @@
       _busy = false;
       if (btn) btn.disabled = false;
       _render();
+      refreshStatus();
       if (typeof global.renderTodayProgramCard === 'function') global.renderTodayProgramCard();
     }
   }
@@ -671,7 +680,7 @@
     // up a feed this phone forgot about).
     (isEnabled() ? Promise.resolve(true) : restore().then(st => !!st))
       .then(on => (on ? syncNow() : null))
-      .then(_render)
+      .then(() => { _render(); refreshStatus(); })
       .catch(() => {});
   }
 
@@ -693,7 +702,7 @@
   }
 
   const exported = {
-    open, close, isEnabled, readState, readInclude, setInclude, restore,
+    open, close, refreshStatus, isEnabled, readState, readInclude, setInclude, restore,
     buildEvents, trainingEvents, mealEvents, checkInEvents,
     syncNow, scheduleSync, feedUrl,
   };
