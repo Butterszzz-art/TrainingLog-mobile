@@ -1,0 +1,58 @@
+/* ── History import sheet (src/js/history-import.js) ──────────
+   Built on the mx-sheet kit + guide buttons (css/guide.css). */
+
+.hi-sheet button { margin: 0; }
+.hi-body { display: flex; flex-direction: column; gap: 14px; }
+.hi-lead { margin: 0; }
+.hi-note,
+.hi-fine { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--text-tertiary, var(--secondary-text)); }
+.hi-fine { font-size: 11.5px; }
+
+.hi-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.hi-source,
+button.hi-source {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--pod-border, var(--border-color));
+  border-radius: var(--radius-md, 12px);
+  background: var(--pod-bg, var(--card-bg));
+  color: var(--text-primary, var(--text-color));
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: none;
+  cursor: pointer;
+}
+.hi-source.is-on { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+
+.hi-how {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface-sunken, rgba(127, 127, 127, 0.08));
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.hi-file { position: relative; align-self: stretch; text-align: center; padding: 12px 16px; }
+.hi-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+.hi-error { margin: 0; font-size: 13px; color: var(--danger, #d9534f); }
+
+.hi-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.hi-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 12px 6px;
+  border: 1px solid var(--pod-border, var(--border-color));
+  border-radius: var(--radius-md, 12px);
+}
+.hi-stat b { font-size: 22px; line-height: 1.1; color: var(--text-primary, var(--text-color)); }
+.hi-stat span { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary, var(--secondary-text)); }
+
+.hi-bar { height: 6px; border-radius: 3px; overflow: hidden; background: var(--surface-sunken, rgba(127, 127, 127, 0.15)); }
+.hi-bar i { display: block; height: 100%; background: var(--primary); transition: width 0.25s ease; }
+
+.hi-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.hi-done { display: flex; flex-direction: column; gap: 6px; }
+.hi-done b { font-size: 18px; color: var(--text-primary, var(--text-color)); }
+.hi-done .mx-sub { margin: 0; }

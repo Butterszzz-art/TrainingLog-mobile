@@ -474,7 +474,8 @@ if (typeof module !== 'undefined') {
   module.exports = {
     getProgressiveOverloadSuggestion, suggestNextSession, suggestNextSet,
     isAltSessionEntry, isComparableEntry, entryGymKey, normalizeGymName,
-    liftType, weightStep, setRir, classifyEffort
+    liftType, weightStep, setRir, classifyEffort,
+    collectSessions, topSetOf, e1rm
   };
 }
 if (typeof window !== 'undefined') {
@@ -485,4 +486,6 @@ if (typeof window !== 'undefined') {
   window.isComparableEntry = isComparableEntry;
   window.entryGymKey = entryGymKey;
   window.normalizeGymName = normalizeGymName;
+  window.overloadCollectSessions = collectSessions;
+  window.overloadTopSetOf = topSetOf;
 }

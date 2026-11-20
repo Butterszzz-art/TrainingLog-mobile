@@ -9,7 +9,12 @@
 #   ruby scripts/ios/add-live-activity.rb
 #
 # Sources: native/ios/PocketCoachLiveActivity (widget UI + Info.plist) and
-# the shared WorkoutActivityAttributes.swift from plugins/workout-activity.
+# the files shared with plugins/workout-activity: WorkoutActivityAttributes.swift
+# (Live Activity) and TodayWidgetStore.swift (Home Screen "Today" widget).
+#
+# The Today widget reads what the app writes into an App Group, so this also
+# gives the extension that App Group (entitlements + PocketCoachAppGroup in its
+# Info.plist). add-capabilities.rb does the same for the app.
 
 begin
   require 'xcodeproj'
@@ -26,10 +31,12 @@ PROJECT_PATH = File.join(APP_DIR, 'App.xcodeproj')
 EXT_NAME = 'PocketCoachLiveActivity'
 EXT_DIR = File.join(APP_DIR, EXT_NAME)
 SOURCE_DIR = File.join(ROOT, 'native', 'ios', EXT_NAME)
-SHARED_ATTRIBUTES = File.join(ROOT, 'plugins', 'workout-activity', 'ios', 'Sources',
-                              'WorkoutActivityPlugin', 'WorkoutActivityAttributes.swift')
+PLUGIN_SOURCES = File.join(ROOT, 'plugins', 'workout-activity', 'ios', 'Sources', 'WorkoutActivityPlugin')
+SHARED_SOURCES = %w[WorkoutActivityAttributes.swift TodayWidgetStore.swift].map { |f| File.join(PLUGIN_SOURCES, f) }
 APP_BUNDLE_ID = ENV.fetch('BUNDLE_ID', 'org.pocketcoachcoms.app')
 EXT_BUNDLE_ID = "#{APP_BUNDLE_ID}.LiveActivity"
+APP_GROUP = "group.#{APP_BUNDLE_ID}"
+ENTITLEMENTS_FILE = "#{EXT_NAME}.entitlements"
 # Activity.request(attributes:content:pushType:) needs iOS 16.2.
 DEPLOYMENT_TARGET = '16.2'
 
@@ -47,7 +54,24 @@ end
 FileUtils.rm_rf(EXT_DIR)
 FileUtils.mkdir_p(EXT_DIR)
 FileUtils.cp(Dir[File.join(SOURCE_DIR, '*')], EXT_DIR)
-FileUtils.cp(SHARED_ATTRIBUTES, EXT_DIR)
+SHARED_SOURCES.each { |f| FileUtils.cp(f, EXT_DIR) }
+
+# The App Group the Today widget reads (TodayWidgetStore.groupId).
+info_path = File.join(EXT_DIR, 'Info.plist')
+info = Xcodeproj::Plist.read_from_path(info_path)
+info['PocketCoachAppGroup'] = APP_GROUP
+Xcodeproj::Plist.write_to_path(info, info_path)
+
+File.write(File.join(EXT_DIR, ENTITLEMENTS_FILE), <<~PLIST)
+  <?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+  <plist version="1.0">
+  <dict>
+  \t<key>com.apple.security.application-groups</key>
+  \t<array><string>#{APP_GROUP}</string></array>
+  </dict>
+  </plist>
+PLIST
 
 # 2. The extension target.
 ext = project.new_target(:app_extension, EXT_NAME, :ios, DEPLOYMENT_TARGET, nil, :swift)
@@ -59,6 +83,7 @@ Dir[File.join(EXT_DIR, '*.swift')].sort.each do |path|
   ext.source_build_phase.add_file_reference(group.new_reference(File.basename(path)))
 end
 group.new_reference('Info.plist')
+group.new_reference(ENTITLEMENTS_FILE)
 
 # Signing team and versions follow the app target, so the extension is
 # signed the same way and its version matches (App Store Connect rejects a
@@ -71,6 +96,7 @@ ext.build_configurations.each do |config|
   s['PRODUCT_BUNDLE_IDENTIFIER'] = EXT_BUNDLE_ID
   s['PRODUCT_NAME'] = '$(TARGET_NAME)'
   s['INFOPLIST_FILE'] = "#{EXT_NAME}/Info.plist"
+  s['CODE_SIGN_ENTITLEMENTS'] = "#{EXT_NAME}/#{ENTITLEMENTS_FILE}"
   s['GENERATE_INFOPLIST_FILE'] = 'NO'
   s['IPHONEOS_DEPLOYMENT_TARGET'] = DEPLOYMENT_TARGET
   s['SWIFT_VERSION'] = '5.0'

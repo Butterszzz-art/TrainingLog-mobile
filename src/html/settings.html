@@ -185,17 +185,10 @@
         <span class="st-saved" aria-live="polite"></span>
       </header>
 
-      <div class="mx-kicker st-kicker">Daily reminder</div>
-      <div class="pod st-group">
-        <label class="st-row" for="streakReminderEnabled"><span class="st-label">Notifications</span>
-          <input type="checkbox" class="st-switch" id="streakReminderEnabled" name="streakReminderEnabled"></label>
-        <label class="st-row" for="streakReminderTime"><span class="st-label">Time</span>
-          <input type="time" id="streakReminderTime" name="streakReminderTime" value="19:00"></label>
-      </div>
-
-      <div class="mx-kicker st-kicker">Workout reminders</div>
-      <!-- renderRemindersPanel() (src/js/reminders.js) fills this; it saves
-           its own changes, so it's kept out of the settings autosave. -->
+      <div class="mx-kicker st-kicker">Coach reminders</div>
+      <!-- renderRemindersPanel() (src/js/reminders.js) fills this: pings to
+           train, log food, weigh in and check in. It saves its own changes,
+           so it's kept out of the settings autosave. -->
       <div class="pod st-group">
         <div class="st-block" id="remindersPanel" data-no-autosave></div>
       </div>
@@ -313,6 +306,9 @@
 
       <div class="mx-kicker st-kicker">Your data</div>
       <div class="pod st-group">
+        <button type="button" class="st-row st-row--btn" onclick="openHistoryImport()">
+          <span class="st-label">Import history<small>From Strong, Hevy, Fitbod or a spreadsheet (CSV)</small></span><span class="st-chev" aria-hidden="true"></span>
+        </button>
         <button type="button" class="st-row st-row--btn" onclick="exportAllJSON()">
           <span class="st-label">Full backup<small>Everything, as one JSON file</small></span><span class="st-chev" aria-hidden="true"></span>
         </button>
@@ -350,7 +346,7 @@
       <div class="pod st-group">
         <label class="st-row" for="aiConsentToggle"><span class="st-label">Allow AI features</span>
           <input type="checkbox" class="st-switch" id="aiConsentToggle"></label>
-        <p class="st-note">AI features send the workout, nutrition, sleep and goal data they need to Ollama, or when Ollama can't take a request, to Groq (short requests) or to OpenRouter and the AI model providers it uses (currently Google, NVIDIA, Alibaba and Nex AGI), to generate responses. Providers of free models on OpenRouter may store it and use it to improve their models. Turn this off to keep your data out of AI processing — the rest of the app still works.</p>
+        <p class="st-note">AI features send the workout, nutrition, sleep and goal data they need (and meal photos you ask them to log) to Anthropic, whose Claude models generate the responses. Anthropic doesn't train its models on it. Turn this off to keep your data out of AI processing — the rest of the app still works.</p>
         <p class="settings-legal-links">
           <a href="terms.html">Terms of use</a> ·
           <a href="privacy.html">Privacy policy</a> ·

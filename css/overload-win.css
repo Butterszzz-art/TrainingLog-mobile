@@ -1,0 +1,201 @@
+/* =============================================================
+   OVERLOAD WIN CARD (src/js/overload-win.js)
+   Green reward card for beating last session's top set or hitting
+   the overload tip. Sits where the PR card does (top of screen,
+   below the rest timer via --ow-top), no backdrop, tap to skip.
+   Green, not gold, so it never reads as an all-time PR.
+   ============================================================= */
+
+.overload-win-overlay {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  top: var(--ow-top, calc(12px + env(safe-area-inset-top, 0px)));
+  z-index: 3000;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.overload-win {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  display: grid;
+  gap: 10px;
+  padding: 14px 14px 16px;
+  border-radius: var(--radius-pod, 22px);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(95, 184, 138, 0.38) 0%, rgba(47, 138, 99, 0.16) 40%, transparent 70%),
+    linear-gradient(160deg, #173426 0%, #0f1d17 70%);
+  border: 1px solid rgba(142, 194, 164, 0.45);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), 0 0 40px rgba(95, 184, 138, 0.25);
+  color: var(--text-color, #f4f7f5);
+  font-family: var(--font-body, 'Archivo', sans-serif);
+  text-align: left;
+  cursor: pointer;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-140%) scale(0.92);
+}
+
+.overload-win-overlay.visible .overload-win {
+  pointer-events: auto;
+  animation: owIn 0.62s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+.overload-win-overlay.closing .overload-win {
+  opacity: 1;
+  transform: none;
+  animation: owOut 0.25s ease-in forwards;
+}
+@keyframes owIn {
+  0%   { transform: translateY(-140%) scale(0.92); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes owOut { to { transform: translateY(-30%) scale(0.96); opacity: 0; } }
+
+/* One shine sweep on entry */
+.overload-win::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.16) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+.overload-win-overlay.visible .overload-win::after { animation: owShine 0.9s 0.45s ease-out forwards; }
+@keyframes owShine { to { transform: translateX(120%); } }
+
+.overload-win:focus-visible { outline: 2px solid var(--green-100, #8ec2a4); outline-offset: 2px; }
+
+.ow-head { display: flex; align-items: center; gap: 10px; }
+.ow-badge {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #8ec2a4, #2f8a63 70%);
+  box-shadow: 0 0 0 3px rgba(142, 194, 164, 0.22), 0 0 18px rgba(95, 184, 138, 0.6);
+}
+.ow-badge svg { width: 22px; height: 22px; }
+.overload-win-overlay.visible .ow-badge { animation: owPop 0.5s 0.3s cubic-bezier(0.2, 1.8, 0.4, 1) both; }
+@keyframes owPop { 0% { transform: scale(0.3) rotate(-30deg); } 100% { transform: none; } }
+
+.ow-titles { display: grid; gap: 1px; min-width: 0; flex: 1; }
+.ow-kicker {
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green-100, #8ec2a4);
+}
+.ow-title {
+  font-family: var(--font-display, 'Anton', sans-serif);
+  font-size: 24px;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+}
+.ow-skip {
+  align-self: start;
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8c9891);
+}
+
+.ow-delta-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.ow-delta {
+  font-family: var(--font-display, 'Anton', sans-serif);
+  font-size: 46px;
+  line-height: 0.9;
+  color: #b9f0cf;
+  text-shadow: 0 0 22px rgba(95, 184, 138, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.ow-delta small { font-size: 22px; margin-left: 3px; color: var(--green-100, #8ec2a4); }
+.ow-delta-sub {
+  min-width: 0;
+  padding-bottom: 4px;
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--secondary-text, #b8c2bc);
+}
+
+.ow-compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-tight, 14px);
+  background: rgba(5, 8, 7, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+.ow-c { display: grid; gap: 1px; }
+.ow-c--today { text-align: right; }
+.ow-lbl {
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8c9891);
+}
+.ow-val { font-family: var(--font-label, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 17px; }
+.ow-c--today .ow-val { color: #b9f0cf; }
+.ow-arrow { color: #5fb88a; font-size: 18px; }
+
+.ow-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ow-chip {
+  padding: 5px 10px;
+  border-radius: var(--radius-pill, 999px);
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(142, 194, 164, 0.14);
+  color: var(--green-100, #8ec2a4);
+  border: 1px solid rgba(142, 194, 164, 0.3);
+}
+.ow-chip--fire { background: rgba(199, 154, 84, 0.16); color: #e7c48c; border-color: rgba(199, 154, 84, 0.35); }
+
+.ow-meter { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: rgba(255, 255, 255, 0.06); }
+.ow-meter > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--green-60, #2f8a63), var(--green-100, #8ec2a4));
+}
+.overload-win-overlay.visible .ow-meter > span { animation: owDrain var(--ow-card-ms, 5000ms) linear forwards; }
+@keyframes owDrain { to { transform: scaleX(0); } }
+
+.ow-burst { position: absolute; inset: -40px -14px; width: calc(100% + 28px); height: calc(100% + 120px); pointer-events: none; }
+
+/* PR card: the overload line added when a PR outranks this card */
+.pr-modal-overload {
+  font-family: var(--font-label, 'Barlow Condensed', sans-serif);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green-100, #8ec2a4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overload-win-overlay.visible .overload-win,
+  .overload-win-overlay.closing .overload-win { animation: none; transform: none; opacity: 1; transition: opacity 0.15s; }
+  .overload-win-overlay.closing .overload-win { opacity: 0; }
+  .overload-win-overlay.visible .overload-win::after,
+  .overload-win-overlay.visible .ow-badge,
+  .overload-win-overlay.visible .ow-meter > span { animation: none; }
+}

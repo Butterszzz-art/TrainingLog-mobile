@@ -34,6 +34,9 @@
   <link rel="stylesheet" href="css/tutorial.css">
   <link rel="stylesheet" href="css/next-step-chips.css">
   <link rel="stylesheet" href="css/guide.css">
+  <link rel="stylesheet" href="css/history-import.css">
+  <link rel="stylesheet" href="css/habit.css">
+  <link rel="stylesheet" href="css/coach-guide.css">
   <link rel="stylesheet" href="css/sleep.css">
   <link rel="stylesheet" href="css/friends.css">
   <link rel="stylesheet" href="css/rehab.css">
@@ -52,6 +55,7 @@
   <link rel="stylesheet" href="css/login.css">
   <link rel="stylesheet" href="css/ui-declutter.css">
   <link rel="stylesheet" href="css/features.css">
+  <link rel="stylesheet" href="css/overload-win.css">
   <link rel="stylesheet" href="css/weekly-recap.css">
   <link rel="stylesheet" href="css/calendar-sync.css">
   <link rel="stylesheet" href="css/cardio.css">
@@ -384,6 +388,8 @@
       <span class="ob-step" data-step="4"></span>
       <span class="ob-step" data-step="5"></span>
       <span class="ob-step" data-step="6"></span>
+      <span class="ob-step" data-step="7"></span>
+      <span class="ob-step" data-step="8"></span>
     </div>
 
     <!-- Step 0: Make it yours — display name, logbook name, colour
@@ -419,7 +425,7 @@
 
     <!-- Step 1: Training focus -->
     <div class="ob-screen" id="obStep1">
-      <div class="ob-step-label">Step 1 of 6</div>
+      <div class="ob-step-label">Step 1 of 8</div>
       <h2>What's your training focus?</h2>
       <p class="ob-subtitle">We'll personalise the app for you</p>
       <div class="ob-archetype-grid">
@@ -450,7 +456,7 @@
 
     <!-- Step 2: Primary goal -->
     <div class="ob-screen" id="obStep2">
-      <div class="ob-step-label">Step 2 of 6</div>
+      <div class="ob-step-label">Step 2 of 8</div>
       <h2>What's your main goal?</h2>
       <p class="ob-subtitle">Shapes your macro targets and coaching style</p>
       <div class="ob-option-list" role="radiogroup">
@@ -493,7 +499,7 @@
 
     <!-- Step 3: Experience level -->
     <div class="ob-screen" id="obStep3">
-      <div class="ob-step-label">Step 3 of 6</div>
+      <div class="ob-step-label">Step 3 of 8</div>
       <h2>Your experience level</h2>
       <p class="ob-subtitle">Helps us set smart starting defaults</p>
       <div class="ob-option-list" role="radiogroup">
@@ -528,7 +534,7 @@
 
     <!-- Step 4: Body stats -->
     <div class="ob-screen" id="obStep4">
-      <div class="ob-step-label">Step 4 of 6</div>
+      <div class="ob-step-label">Step 4 of 8</div>
       <h2>Your body stats</h2>
       <p class="ob-subtitle">Used to calculate your personalised macros</p>
       <div class="ob-unit-row">
@@ -574,7 +580,7 @@
 
     <!-- Step 5: Activity level -->
     <div class="ob-screen" id="obStep5">
-      <div class="ob-step-label">Step 5 of 6</div>
+      <div class="ob-step-label">Step 5 of 8</div>
       <h2>How active are you?</h2>
       <p class="ob-subtitle">Outside of your gym sessions</p>
       <div class="ob-option-list" role="radiogroup">
@@ -625,7 +631,7 @@
 
     <!-- Step 6: Preferences + macro preview -->
     <div class="ob-screen" id="obStep6">
-      <div class="ob-step-label">Step 6 of 6</div>
+      <div class="ob-step-label">Step 6 of 8</div>
       <h2>Almost done!</h2>
       <p class="ob-subtitle">A few preferences — editable any time in Settings</p>
       <div id="obMacroPreview" class="ob-macro-preview" style="display:none"></div>
@@ -645,8 +651,66 @@
           </div>
         </div>
       </div>
-      <button class="ob-next-btn" id="obFinish">Let's go!</button>
+      <button class="ob-next-btn" id="obNext6">Continue</button>
       <button class="ob-back-btn" id="obBack6">Back</button>
+    </div>
+
+    <!-- Step 7: Training week → weekly goal + "Train" reminder
+         (habit_<user> and reminders_<user>, saved in _finishOnboarding) -->
+    <div class="ob-screen" id="obStep7">
+      <div class="ob-step-label">Step 7 of 8</div>
+      <h2>Your training week</h2>
+      <p class="ob-subtitle">Which days do you usually train? We’ll set a weekly goal you can actually hit.</p>
+      <div class="ob-week-days" id="obWeekDays" role="group" aria-label="Training days">
+        <button type="button" class="ob-week-day" data-dow="1" aria-pressed="false" aria-label="Monday">M</button>
+        <button type="button" class="ob-week-day" data-dow="2" aria-pressed="false" aria-label="Tuesday">T</button>
+        <button type="button" class="ob-week-day" data-dow="3" aria-pressed="false" aria-label="Wednesday">W</button>
+        <button type="button" class="ob-week-day" data-dow="4" aria-pressed="false" aria-label="Thursday">T</button>
+        <button type="button" class="ob-week-day" data-dow="5" aria-pressed="false" aria-label="Friday">F</button>
+        <button type="button" class="ob-week-day" data-dow="6" aria-pressed="false" aria-label="Saturday">S</button>
+        <button type="button" class="ob-week-day" data-dow="0" aria-pressed="false" aria-label="Sunday">S</button>
+      </div>
+      <div class="ob-week-row">
+        <span class="ob-week-row-text">
+          <span class="ob-week-row-label">Weekly goal</span>
+          <span class="ob-week-row-hint">Sessions a week. Missing a day won’t break your streak.</span>
+        </span>
+        <span class="ob-goal-stepper">
+          <button type="button" id="obGoalMinus" aria-label="One fewer session">−</button>
+          <span class="ob-goal-val" id="obGoalVal" aria-live="polite">3</span>
+          <button type="button" id="obGoalPlus" aria-label="One more session">+</button>
+        </span>
+      </div>
+      <div class="ob-week-row">
+        <span class="ob-week-row-text">
+          <span class="ob-week-row-label">Remind me to train</span>
+          <span class="ob-week-row-hint">On those days only. One ping, nothing else.</span>
+        </span>
+        <input type="time" class="ob-week-time" id="obRemindTime" value="17:00" aria-label="Reminder time">
+        <label class="reminder-toggle">
+          <input type="checkbox" id="obRemindOn" checked aria-label="Remind me to train">
+          <span class="reminder-toggle-track"></span>
+        </label>
+      </div>
+      <p class="ob-week-note" id="obWeekNote">Pick at least one day, or skip and set it later on Home.</p>
+      <button class="ob-next-btn" id="obNext7" disabled>Continue</button>
+      <button class="ob-back-btn" id="obSkip7">Skip for now</button>
+      <button class="ob-back-btn" id="obBack7">Back</button>
+    </div>
+
+    <!-- Step 8: Train with someone (src/js/train-together.js) + bring your
+         history (src/js/history-import.js). Everything here is optional. -->
+    <div class="ob-screen" id="obStep8">
+      <div class="ob-step-label">Step 8 of 8</div>
+      <h2>Train with someone</h2>
+      <p class="ob-subtitle">People who train with a coach or a friend keep showing up. Both are optional.</p>
+      <div id="obTrainTogether" class="tt-body"></div>
+      <button type="button" class="ob-history-btn" id="obHistoryBtn">
+        <span><strong>Used another app before?</strong><small>Bring your Strong, Hevy or Fitbod history so your charts start full.</small></span>
+        <span aria-hidden="true">›</span>
+      </button>
+      <button class="ob-next-btn" id="obFinish">Let's go!</button>
+      <button class="ob-back-btn" id="obBack8">Back</button>
     </div>
   </div>
 </div>
@@ -890,6 +954,9 @@
     <!-- ── Your Coach: invite / coach messages (src/js/client-coaching.js) ── -->
     <div class="home-zone" id="yourCoachHomeCard" hidden></div>
 
+    <!-- ── Starter card: first two weeks after onboarding (src/js/habit.js) ── -->
+    <div class="home-zone" id="starterCard"></div>
+
     <!-- ── Guide: goal path / next step, until you're set up (src/js/guide-ui.js) ── -->
     <div class="home-zone" id="guidePathCard"></div>
 
@@ -908,6 +975,8 @@
       <div class="home-section-label">This week</div>
       <div class="home-zone home-zone--weekly">
         <div class="wk-card">
+          <!-- Weekly goal: N sessions a week, weeks in a row (src/js/habit.js) -->
+          <div id="weeklyGoalCard"></div>
           <div id="weeklySummaryCard"></div>
           <div id="homeConsistencyRow"></div>
           <div id="stepWidgetCard" class="wk-steps">
@@ -1761,6 +1830,10 @@
         <p class="ci-card-desc" id="checkInArchetypeSectionDescription">Loading archetype-specific prompts…</p>
         <div id="checkInArchetypeFields"></div>
       </div>
+
+      <!-- Training / Nutrition / Lifestyle & health: filled by
+           renderCheckInDetailForm() (src/js/checkin-detail-form.js). -->
+      <div id="checkInDetailSections"></div>
 
       <!-- Questions set by the coach (Check-in settings in the coach
            console); filled by renderCoachCheckInQuestions(). -->
@@ -4345,7 +4418,9 @@
 <script src="cardioTab.js"></script>
 <script src="weightTab.js"></script>
 <script src="prepMode.js"></script>
+<script src="src/js/checkin-detail.js"></script>
 <script src="checkinEngine.js"></script>
+<script src="src/js/checkin-detail-form.js"></script>
 <script src="dailyMissionEngine.js"></script>
 <script src="posingEngine.js"></script>
 <script src="posingMediaStore.js"></script>
@@ -4836,6 +4911,8 @@ async function loadUserPlan() {
     if (window.PocketCoachClientPro) setTimeout(window.PocketCoachClientPro.check, 1500);
     // Coach Mode depends on the plan — re-apply now that we know it.
     if (typeof applyAppModeToNavigation === 'function') applyAppModeToNavigation();
+    // Coach guide (src/js/coach-guide.js) opens its welcome on the Coach plan.
+    window.dispatchEvent(new CustomEvent('pc:plan-loaded', { detail: { plan: window.currentUserPlan } }));
   } catch {
     // Keep the cached plan; never fall back to blocking anything.
     window.currentUserPlan = localStorage.getItem('userPlan') || 'free';
@@ -4844,6 +4921,7 @@ async function loadUserPlan() {
     try { window.currentAiUsage = JSON.parse(localStorage.getItem('userAiUsage') || 'null'); } catch (e) { window.currentAiUsage = null; }
     if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
     try { window.currentClientPro = JSON.parse(localStorage.getItem('userClientPro') || 'null'); } catch (e) { window.currentClientPro = null; }
+    window.dispatchEvent(new CustomEvent('pc:plan-loaded', { detail: { plan: window.currentUserPlan, cached: true } }));
   }
 }
 
@@ -10757,12 +10835,46 @@ function addMacroFavorite(favId) {
 }
 window.addMacroFavorite = addMacroFavorite;
 
+// The day the Macros card shows: today (null), or an earlier day the food
+// log stepped back to with its day arrows (src/js/food-database.js). `var`
+// so updateMacroUI() can run before this line has.
+var macroViewDate = null;
+function getMacroViewDate() {
+  return macroViewDate && macroViewDate < getTodayDateString() ? macroViewDate : null;
+}
+function setMacroViewDate(iso) {
+  const next = /^\d{4}-\d{2}-\d{2}$/.test(String(iso || "")) && iso < getTodayDateString() ? iso : null;
+  if (next === getMacroViewDate()) return;
+  macroViewDate = next;
+  updateMacroUI();
+}
+window.getMacroViewDate = getMacroViewDate;
+window.setMacroViewDate = setMacroViewDate;
+
+// An earlier day's saved totals from macroHistory, shaped like
+// loadDailyMacroProgress().
+function loadMacroHistoryDayProgress(date) {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(`macroHistory_${currentUser}`)) || []; } catch (_err) { history = []; }
+  const t = (history.find(h => h && h.date === date) || {}).totals || {};
+  const out = {
+    protein: Number(t.protein) || 0,
+    carbs: Number(t.carbs) || 0,
+    fats: Number(t.fats ?? t.fat) || 0,
+    cals: Number(t.cals) || 0,
+  };
+  out.calories = macroProgressCalories(out);
+  return out;
+}
+
 function updateMacroUI() {
   renderAssignedNutritionPlanForAthlete();
   window.activitySyncBridge?.renderTrackerBurn?.();
   // Today's saved intake is the one source of truth: meals, favorites,
-  // quick-add and food search all write to it.
-  const progress = loadDailyMacroProgress();
+  // quick-add and food search all write to it. An earlier day shown from the
+  // food log reads that day's saved totals instead.
+  const viewDate = getMacroViewDate();
+  const progress = viewDate ? loadMacroHistoryDayProgress(viewDate) : loadDailyMacroProgress();
   window.renderQuickAddToday?.();
   const totalProtein = progress.protein;
   const totalCarbs = progress.carbs;
@@ -10770,7 +10882,8 @@ function updateMacroUI() {
   const totalCals = progress.calories;
 
   const adaptiveTargets = getAdaptiveMacroTargets();
-  const cardioCals = adaptiveTargets.cardioCalories || 0;
+  // Cardio burn is today's; an earlier day doesn't net it off.
+  const cardioCals = viewDate ? 0 : (adaptiveTargets.cardioCalories || 0);
   const netCals = Math.max(0, totalCals - cardioCals);
   const dayProfileEl = document.getElementById("macroDayProfileSummary");
   if (dayProfileEl) {
@@ -10832,7 +10945,13 @@ function updateMacroUI() {
     { netCals }
   );
 
-  renderMacroNudge();
+  // The pace nudge is about today; an earlier day has none.
+  if (viewDate) {
+    const nudgeEl = document.getElementById('macroNudgeContainer');
+    if (nudgeEl) nudgeEl.innerHTML = '';
+  } else {
+    renderMacroNudge();
+  }
   renderMacroDayActions();
 
   const hydrationInput = document.getElementById("hydrationMlInput");
@@ -10855,7 +10974,7 @@ function updateMacroUI() {
   }
 
   try {
-    if (window.dailyMissionEngine?.syncMissionFromMacroProgress) {
+    if (!viewDate && window.dailyMissionEngine?.syncMissionFromMacroProgress) {
       window.dailyMissionEngine.syncMissionFromMacroProgress({
         date: getTodayDateString(),
         value: {
@@ -11537,6 +11656,8 @@ function adjustMacroHistoryDay(date, { protein = 0, carbs = 0, fats = 0, cals = 
     wEntry.calories = next.calories;
     localStorage.setItem(wKey, JSON.stringify(wLog));
   }
+  // The Macros card is showing this day: refresh it.
+  if (getMacroViewDate() === date) updateMacroUI();
   return next;
 }
 window.adjustMacroHistoryDay = adjustMacroHistoryDay;
@@ -12631,13 +12752,18 @@ function renderHomeGreeting() {
   const dateStr = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const gamification = getHomeGamificationSummary(profile, username);
   const streakCount = gamification?.habitStreak || gamification?.currentStreak || 0;
+  // With a weekly goal set, the streak counts weeks (src/js/habit.js).
+  const weekStreak = window.Habit?.greetingStreak?.(username);
+  const streakText = typeof weekStreak === 'string'
+    ? (weekStreak ? ` &middot; ${weekStreak}` : '')
+    : (streakCount ? ` &middot; day ${streakCount} of the streak` : '');
   const contextLine = getHomeContextLine(profile, username, getHomeAthleteArchetype(profile, username));
   const initials = (displayName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   el.innerHTML = `
     <div>
       <div class="home-greeting-name">${timeOfDay}, ${displayName}</div>
-      <div class="home-greeting-meta">${dateStr}${streakCount ? ` &middot; day ${streakCount} of the streak` : ''}</div>
+      <div class="home-greeting-meta">${dateStr}${streakText}</div>
     </div>
     <div class="home-greeting-icons">
       <button class="home-greeting-icon-btn" onclick="showTab('allTab')" aria-label="Search / everything"><span class="ui-icon" data-icon="search"></span></button>
@@ -13810,6 +13936,7 @@ async function renderCoachDashboard() {
   if (coachDashboardState.selectedClientId) await loadCoachClientDetail(coachDashboardState.selectedClientId, true);
   renderCoachDashboardView();
   if (typeof renderCoachQueue === 'function') renderCoachQueue();
+  if (window.CoachGuide) window.CoachGuide.refresh(); // setup checklist ticks from the roster
 }
 
 /** Mobile "Coach" triage view: who needs attention first, then the
@@ -14243,6 +14370,11 @@ function renderCheckInTab() {
   prefillCheckInBodyweightFromWeighIns(userId);
   hydrateCheckInFormFromLatestEntry(checkIns);
   renderCheckInPosingPhotos();
+  window.renderCheckInDetailForm?.(userId, {
+    date: dateInput?.value,
+    // Questions the archetype card already asks are left out.
+    archetypeKeys: (CHECKIN_ARCHETYPE_SCHEMAS[archetype] || CHECKIN_ARCHETYPE_SCHEMAS.hybrid).fields.map(f => f.key)
+  });
   bindCheckInSliderDisplays();
   autoFillCardioAdherenceSlider(userId);
   enhanceCheckInScales();
@@ -14891,7 +15023,8 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     sidePhoto: document.getElementById('checkInSidePhotoInput')?.value || '',
     backPhoto: document.getElementById('checkInBackPhotoInput')?.value || '',
     posingSessionIds: getCheckInPosingPicks(userId, dateValue),
-    coachAnswers: readCoachCheckInAnswers()
+    coachAnswers: readCoachCheckInAnswers(),
+    detail: window.readCheckInDetailForm?.() || null
   };
 
   const currentEntries = window.checkinEngine.loadCheckIns(userId);
@@ -14906,6 +15039,7 @@ function saveWeeklyCheckIn(actor = 'athlete') {
     if (existingForDate.posingPhotoPicks) draft.posingPhotoPicks = existingForDate.posingPhotoPicks;
     // A coach review save has no question fields on screen: keep the athlete's answers.
     if (!document.querySelector('#checkInCoachQuestions textarea') && existingForDate.coachAnswers) draft.coachAnswers = existingForDate.coachAnswers;
+    if (!document.querySelector('#checkInDetailSections [data-detail-choice]') && existingForDate.detail) draft.detail = existingForDate.detail;
   }
 
   draft.weekLabel = manualWeekLabel || window.checkinEngine.getWeekLabelForCheckIn(draft, phaseState);
@@ -18071,79 +18205,8 @@ function updateTrainingCalendar() {
   renderTrainingCalendar(calendarMonth, calendarYear);
 }
 
-let streakReminderTimeoutId = null;
-
-function getReminderSettings() {
-  const fallback = { streakReminderEnabled: false, streakReminderTime: '19:00' };
-  if (typeof window.getStoredUserSettings !== 'function') return fallback;
-  const saved = window.getStoredUserSettings() || {};
-  return {
-    streakReminderEnabled: Boolean(saved.streakReminderEnabled),
-    streakReminderTime: saved.streakReminderTime || '19:00'
-  };
-}
-
-function hasWorkoutLoggedForDate(dateStr) {
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  return workouts.some(w => w && w.date === dateStr && isWorkoutCompleted(w));
-}
-
-function isPlannedTrainingDate(dateStr) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  const planned = new Set(getPlannedProgramDates(d, d));
-  if (planned.has(dateStr)) return true;
-
-  const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
-  const templatePlanned = getPlannedTemplateDates(d, d, workouts);
-  return templatePlanned.includes(dateStr);
-}
-
-function sendStreakReminderNotification() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') return;
-  const title = 'Workout reminder';
-  const body = 'You planned a training session today. Log your workout to keep your streak alive.';
-  new Notification(title, { body, tag: `streak-reminder-${currentUser}` });
-}
-
-function checkDailyStreakReminder() {
-  if (!currentUser) return;
-  const { streakReminderEnabled } = getReminderSettings();
-  if (!streakReminderEnabled) return;
-  const today = normalizeIsoDate(new Date());
-  if (!isPlannedTrainingDate(today)) return;
-  if (hasWorkoutLoggedForDate(today)) return;
-  sendStreakReminderNotification();
-}
-
-function scheduleStreakReminderJob() {
-  if (streakReminderTimeoutId) clearTimeout(streakReminderTimeoutId);
-  if (!currentUser) return;
-
-  const { streakReminderEnabled, streakReminderTime } = getReminderSettings();
-  if (!streakReminderEnabled) return;
-
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission().catch(() => {});
-  }
-
-  const [hourStr, minuteStr] = String(streakReminderTime || '19:00').split(':');
-  const hour = Number(hourStr);
-  const minute = Number(minuteStr);
-
-  const now = new Date();
-  const nextRun = new Date(now);
-  nextRun.setSeconds(0, 0);
-  nextRun.setHours(Number.isFinite(hour) ? hour : 19, Number.isFinite(minute) ? minute : 0, 0, 0);
-  if (nextRun <= now) nextRun.setDate(nextRun.getDate() + 1);
-
-  streakReminderTimeoutId = setTimeout(() => {
-    checkDailyStreakReminder();
-    scheduleStreakReminderJob();
-  }, nextRun.getTime() - now.getTime());
-}
-
-window.addEventListener('traininglog:settings-saved', scheduleStreakReminderJob);
+// The daily workout reminder is now part of the coach reminders
+// (src/js/reminders.js), which schedule real phone notifications.
 
 
 // ========= CROSSFIT TRACKER =========
@@ -19233,7 +19296,7 @@ async function fetchDailyLogs(username) {
   }
   initSmartGoalForm();
   if (typeof updateStreakCounter === 'function') updateStreakCounter();
-  scheduleStreakReminderJob();
+  if (window.CoachNudges) window.CoachNudges.sync();
 
   // Home is rendered — let the launch loading screen finish (no-op otherwise)
   if (typeof window._markAppReady === 'function') window._markAppReady();
@@ -20057,6 +20120,12 @@ const _ob = {
   activityFactor: null,
   unit: 'kg',            // display unit for rest of app
   theme: 'dark',
+  // Step 7: training week (src/js/habit.js)
+  trainingDays: [],      // JS getDay() numbers
+  weeklyGoal: 3,
+  goalTouched: false,    // set by -/+; otherwise the goal follows the days
+  remindOn: true,
+  remindTime: '17:00',
 };
 
 function showOnboarding() {
@@ -20080,6 +20149,44 @@ function _obGoToStep(step) {
     dot.classList.toggle('ob-done', n < step);
   });
   if (step === 6) _obRenderMacroPreview();
+  if (step === 7) _obRenderWeek();
+  if (step === 8) _obRenderTogether();
+}
+
+// ── Step 7: training week ────────────────────────────────────────
+function _obRenderWeek() {
+  const days = new Set(_ob.trainingDays);
+  if (!_ob.goalTouched && window.HabitCore) _ob.weeklyGoal = window.HabitCore.suggestGoal(_ob.trainingDays, _ob.experience);
+  document.querySelectorAll('#obWeekDays .ob-week-day').forEach(b => {
+    const on = days.has(Number(b.dataset.dow));
+    b.classList.toggle('ob-active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const val = document.getElementById('obGoalVal');
+  if (val) val.textContent = String(_ob.weeklyGoal);
+  const next = document.getElementById('obNext7');
+  if (next) next.disabled = !days.size;
+  const note = document.getElementById('obWeekNote');
+  if (note) {
+    note.textContent = days.size
+      ? `${_ob.weeklyGoal} session${_ob.weeklyGoal === 1 ? '' : 's'} a week${_ob.remindOn ? `, with a reminder at ${_ob.remindTime} on ${days.size === 7 ? 'every day' : `${days.size} day${days.size === 1 ? '' : 's'}`}` : ''}. Change it any time on Home.`
+      : 'Pick at least one day, or skip and set it later on Home.';
+  }
+}
+
+// ── Step 8: train with someone + bring your history ─────────────
+function _obRenderTogether() {
+  const host = document.getElementById('obTrainTogether');
+  if (host && !host.childElementCount && window.TrainTogether) {
+    host.innerHTML = window.TrainTogether.optionsHtml();
+    window.TrainTogether.bindOptions(host);
+  }
+  const hist = document.getElementById('obHistoryBtn');
+  const done = window.HistoryImport && window.HistoryImport.lastImport();
+  if (hist) {
+    hist.classList.toggle('is-done', !!done);
+    if (done) hist.querySelector('small').textContent = `${done.sessions} sessions imported from ${done.source}.`;
+  }
 }
 
 window._ob = _ob;
@@ -20211,7 +20318,34 @@ function _initOnboarding() {
     if (e.target.closest('#obBack5')) { _obGoToStep(4); return; }
     if (e.target.closest('#obNext5')) { _obGoToStep(6); return; }
     if (e.target.closest('#obBack6')) { _obGoToStep(5); return; }
+    if (e.target.closest('#obNext6')) { _obGoToStep(7); return; }
+    if (e.target.closest('#obBack7')) { _obGoToStep(6); return; }
+    if (e.target.closest('#obNext7')) { _obGoToStep(8); return; }
+    if (e.target.closest('#obSkip7')) { _ob.trainingDays = []; _ob.goalTouched = false; _obGoToStep(8); return; }
+    if (e.target.closest('#obBack8')) { _obGoToStep(7); return; }
+    if (e.target.closest('#obHistoryBtn')) {
+      if (window.HistoryImport) window.HistoryImport.open({ onClose: () => _obRenderTogether() });
+      return;
+    }
     if (e.target.closest('#obFinish')) { _finishOnboarding(); return; }
+
+    // Step 7 — training days and weekly goal
+    const dayBtn = e.target.closest('#obWeekDays .ob-week-day');
+    if (dayBtn) {
+      const dow = Number(dayBtn.dataset.dow);
+      const set = new Set(_ob.trainingDays);
+      if (set.has(dow)) set.delete(dow); else set.add(dow);
+      _ob.trainingDays = [...set].sort();
+      _obRenderWeek();
+      return;
+    }
+    if (e.target.closest('#obGoalMinus') || e.target.closest('#obGoalPlus')) {
+      const up = !!e.target.closest('#obGoalPlus');
+      _ob.weeklyGoal = Math.min(7, Math.max(1, _ob.weeklyGoal + (up ? 1 : -1)));
+      _ob.goalTouched = true;
+      _obRenderWeek();
+      return;
+    }
 
     // Stats unit toggle
     const statsUnitBtn = e.target.closest('#obStatsUnitToggle .ob-toggle-btn');
@@ -20263,6 +20397,12 @@ function _initOnboarding() {
       const btn = document.getElementById('obNext5');
       if (btn) btn.disabled = false;
     }
+  });
+
+  // Step 7 — reminder switch and time
+  overlay.addEventListener('change', (e) => {
+    if (e.target.id === 'obRemindOn') { _ob.remindOn = e.target.checked; _obRenderWeek(); }
+    if (e.target.id === 'obRemindTime' && /^\d{2}:\d{2}$/.test(e.target.value)) { _ob.remindTime = e.target.value; _obRenderWeek(); }
   });
 
   // Stats inputs — validate on each keystroke
@@ -20359,10 +20499,48 @@ function _finishOnboarding() {
 
     // ── 5. Apply theme ───────────────────────────────────────────
     if (typeof window.applyTheme === 'function') window.applyTheme(_ob.theme);
+
+    // ── 6. Training week: weekly goal, starter mode, reminders ──────
+    _obSaveTrainingWeek(user);
   }
 
   document.getElementById('onboardingOverlay').setAttribute('hidden', '');
   showTutorial();
+}
+
+// Starts the first-two-weeks starter mode and saves the weekly goal
+// (habit_<user>, src/js/habit.js). New users get one reminder, "Train" on
+// their training days, instead of the four default pings; the others stay
+// one switch away in Settings › Reminders.
+function _obSaveTrainingWeek(user) {
+  const today = window.HabitCore ? window.HabitCore.dateKey(Date.now()) : new Date().toISOString().slice(0, 10);
+  const key = `habit_${user}`;
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(key)) || {}; } catch { state = {}; }
+  if (!state.startedAt) state.startedAt = today;
+  if (_ob.trainingDays.length) {
+    state.trainingDays = _ob.trainingDays.slice();
+    state.weeklyGoal = _ob.weeklyGoal;
+  }
+  state.reminderTime = _ob.remindTime;
+  try { localStorage.setItem(key, JSON.stringify(state)); } catch { /* storage full */ }
+
+  const N = window.CoachNudges;
+  if (N && typeof N.getSettings === 'function') {
+    const list = N.getSettings();
+    list.forEach(r => {
+      if (r.id === 'workout') {
+        r.enabled = !!_ob.remindOn;
+        r.time = _ob.remindTime;
+        if (_ob.trainingDays.length) r.days = _ob.trainingDays.slice();
+      } else if (r.id === 'food' || r.id === 'weighin') {
+        r.enabled = false;
+      }
+    });
+    N.saveSettings(list);
+    if (_ob.remindOn && typeof N.requestPermission === 'function') N.requestPermission().catch(() => {});
+  }
+  document.dispatchEvent(new CustomEvent('tl:habit-changed'));
 }
 
 document.addEventListener('DOMContentLoaded', _initOnboarding);
@@ -21799,6 +21977,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/activity-sync-bridge.js"></script>
   <script src="src/js/coaching-enhanced.js"></script>
   <script src="src/js/coach-videos.js"></script>
+  <script src="src/js/program-timeline.js"></script>
   <script src="src/js/client-coaching.js"></script>
   <script src="src/js/coach-photos.js"></script>
   <script src="src/js/workout-archiver.js"></script>
@@ -21808,15 +21987,18 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/workout-intelligence.js"></script>
   <script src="src/js/warmup-sets.js"></script>
   <script src="src/js/live-activity.js"></script>
+  <script src="src/js/home-widget.js"></script>
   <script src="src/js/body-measurements.js"></script>
   <script src="src/js/readiness-checkin.js"></script>
   <script src="src/js/data-export.js"></script>
   <script src="src/js/food-core.js"></script>
+  <script src="src/js/meal-timing-core.js"></script>
   <script src="src/js/meal-photos.js"></script>
   <script src="src/js/speech-input.js"></script>
   <script src="src/js/food-database.js"></script>
   <script src="src/js/food-barcode.js"></script>
   <script src="src/js/food-log-tools.js"></script>
+  <script src="src/js/meal-timing.js"></script>
   <script src="src/js/food-describe.js"></script>
   <script src="src/js/nutrition-insights.js"></script>
   <script src="src/js/nutrition-review.js"></script>
@@ -21834,6 +22016,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/push-notifications.js"></script>
   <script src="src/js/apple-health.js"></script>
   <script src="src/js/rehab.js"></script>
+  <script src="src/js/coach-nudges-core.js"></script>
   <script src="src/js/reminders.js"></script>
   <script src="src/js/program-schedule.js"></script>
   <script src="src/js/usual-session.js"></script>
@@ -21842,6 +22025,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/calendar-sync.js"></script>
   <script src="src/js/session-queue.js"></script>
   <script src="src/js/set-complete.js"></script>
+  <script src="src/js/overload-win.js"></script>
   <script src="src/js/performance-mode.js"></script>
   <script src="src/js/profiles.js"></script>
   <script src="src/js/settings-hero.js"></script>
@@ -21945,8 +22129,16 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/next-step-chips.js"></script>
   <script src="src/js/guide-core.js"></script>
   <script src="src/js/guide-tours.js"></script>
+  <script src="src/js/coach-guide-core.js"></script>
+  <script src="src/js/coach-guide.js"></script>
   <script src="src/js/guide-ui.js"></script>
   <script src="src/js/onboarding-cover.js"></script>
+  <script src="src/js/history-import-core.js"></script>
+  <script src="src/js/history-import.js"></script>
+  <script src="src/js/habit-core.js"></script>
+  <script src="src/js/train-together.js"></script>
+  <script src="src/js/habit.js"></script>
+  <script src="src/js/first-session-card.js"></script>
 
 <!-- ── AI Macro Advisor panel (direct body child — avoids stacking context clipping) -->
 <div id="macroAiBackdrop" class="ai-sheet-backdrop" style="display:none;" onclick="closeMacroAiAdvisor()"></div>

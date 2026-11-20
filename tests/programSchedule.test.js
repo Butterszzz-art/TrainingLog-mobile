@@ -149,3 +149,59 @@ describe('dayProgress', () => {
     expect(p.doneSets).toBe(0);
   });
 });
+
+describe('the coach\'s repeat / pause weeks (program.timeline)', () => {
+  // Two-week program: week 1 benches 80, week 2 benches 85; Mon/Wed/Fri from Mon 2 Nov 2026.
+  const day = (name, w) => ({ name, exercises: [ex('Bench Press', 3, 5, w)] });
+  const twoWeeks = {
+    id: 'blk', name: 'Block', frequency: ['Mon', 'Wed', 'Fri'],
+    days: [day('A', 80), day('B', 80), day('C', 80)],
+    weeks: [
+      { week: 1, days: [day('A', 80), day('B', 80), day('C', 80)] },
+      { week: 2, deload: true, days: [day('A', 85), day('B', 85), day('C', 85)] },
+    ],
+  };
+  const withTimeline = changes => Object.assign({}, twoWeeks, { timeline: { startDate: '', changes } });
+  const bench = d => d.day && d.day.exercises[0].sets[0].weight;
+
+  test('a repeated week comes round again; later weeks move back', () => {
+    const s = ps.createSchedule(withTimeline([{ id: 'r', kind: 'repeat', afterWeek: 1 }]), { startDate: '2026-11-02' }, { core });
+    expect(bench(s.dayFor(date('2026-11-09')))).toBe(80); // week 1 again
+    expect(s.dayFor(date('2026-11-09'))).toMatchObject({ weekNum: 1, repeat: true });
+    expect(bench(s.dayFor(date('2026-11-16')))).toBe(85);
+    expect(s.dayFor(date('2026-11-16')).weekNum).toBe(2);
+  });
+
+  test('rest days after a week\'s last session keep that week; the pause starts on Monday', () => {
+    const s = ps.createSchedule(withTimeline([{ id: 'p', kind: 'pause', afterWeek: 1 }]), { startDate: '2026-11-02' }, { core });
+    // Week 1's last session is Friday 6 Nov; the pause is the week of 9 Nov.
+    expect(s.dayFor(date('2026-11-07'))).toMatchObject({ weekNum: 1, pause: false }); // Saturday
+    expect(s.dayFor(date('2026-11-08'))).toMatchObject({ weekNum: 1, pause: false }); // Sunday
+    expect(s.dayFor(date('2026-11-10')).pause).toBe(true); // Tuesday of the pause week
+    expect(s.dayFor(date('2026-11-15')).pause).toBe(true); // its Sunday
+    const plain = ps.createSchedule(twoWeeks, { startDate: '2026-11-02' }, { core });
+    expect(plain.dayFor(date('2026-11-08')).weekNum).toBe(1);
+    expect(plain.dayFor(date('2026-11-09')).weekNum).toBe(2);
+  });
+
+  test('a pause week has no sessions and says so; training resumes after it', () => {
+    const s = ps.createSchedule(withTimeline([{ id: 'p', kind: 'pause', afterWeek: 1, note: 'Holiday' }]), { startDate: '2026-11-02' }, { core });
+    const mon = s.dayFor(date('2026-11-09'));
+    expect(mon).toMatchObject({ isTraining: false, pause: true, pauseNote: 'Holiday', phase: 'Pause week', weekNum: 1 });
+    expect(s.weekOf(date('2026-11-09')).filter(d => d.isTraining)).toHaveLength(0);
+    expect(s.nextTrainingAfter(date('2026-11-09')).key).toBe('2026-11-16');
+    expect(bench(s.dayFor(date('2026-11-16')))).toBe(85);
+  });
+
+  test('without a timeline nothing changes', () => {
+    const s = ps.createSchedule(twoWeeks, { startDate: '2026-11-02' }, { core });
+    expect(bench(s.dayFor(date('2026-11-09')))).toBe(85);
+    expect(s.dayFor(date('2026-11-09')).pause).toBe(false);
+  });
+
+  test('an imported coach program keeps its deload weeks', () => {
+    global.localStorage = memoryStorage();
+    const imported = core.importLibraryProgram({ localStorage: global.localStorage }, Object.assign({ id: 'coach-x-p1', title: 'Block' }, twoWeeks), { userId: 'athleteA' });
+    expect(imported.weeks[1].deload).toBe(true);
+  });
+});

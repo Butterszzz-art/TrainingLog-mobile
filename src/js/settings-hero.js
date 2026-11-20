@@ -74,7 +74,9 @@
     const sick = typeof global.getSickMode === 'function' && global.getSickMode().active;
     const reminders = vacation ? 'Vacation on'
       : sick ? 'Sick mode on'
-        : settings.streakReminderEnabled ? `On · ${settings.streakReminderTime || '19:00'}` : 'Off';
+        : global.CoachNudges && global.CoachNudgesCore
+          ? global.CoachNudgesCore.summary(global.CoachNudges.getSettings())
+          : 'Off';
 
     const connected = global.activitySyncBridge?.isConnected?.();
     const plan = global.currentUserPlan || 'free';

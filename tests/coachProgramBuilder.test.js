@@ -110,3 +110,136 @@ test('save refuses an empty program', async () => {
   expect(saved).toHaveLength(0);
   expect($('.pb-msg').textContent).toMatch(/at least one exercise/);
 });
+
+const fourDays = {
+  schema: 'pocketcoach.program/2', name: 'Block test',
+  weeks: [{ days: [{ dayId: 'd1', weekday: 1, label: 'Lower', exercises: [
+    { name: 'Squat', type: 'compound', sets: 3, repsMin: 6, repsMax: 8, rir: 3, loadPct: 70 },
+  ] }] }],
+};
+
+test('+ Mesocycle turns a one-week program into a block, then Progression fills it', async () => {
+  const { $, $$, click, type, flush, saved } = setup(fourDays);
+  click($('[data-act="meso-open"]'));
+  type($('[data-pp="name"]'), 'Accumulation');
+  type($('[data-pp="weeks"]'), '4');
+  type($('[data-pp="goal"]'), 'Volume up', false);
+  click($('[data-act="meso-create"]'));
+  expect($$('.pb-tab')).toHaveLength(4);
+  expect($('.pb-run-head').textContent).toBe('Accumulation W1–4');
+  expect($('.pb-tab.is-active').textContent).toBe('W1');
+  expect($$('.pb-tab')[3].classList.contains('is-deload')).toBe(true);
+  // The progression panel opens for the new block.
+  expect($('[data-panel="progress"]')).not.toBeNull();
+  type($('[data-pp="setsPerWeek"]'), '1');
+  const apply = $('[data-act="progress-apply"]');
+  type($('[data-pp="pctPerWeek"]'), '2.5'); // commit, then click the same button
+  expect(apply.isConnected).toBe(true);
+  click(apply);
+  // A second block is appended after the first.
+  click($('[data-act="meso-open"]'));
+  type($('[data-pp="name"]'), 'Intensification');
+  type($('[data-pp="weeks"]'), '2');
+  click($('[data-act="meso-create"]'));
+  expect($$('.pb-tab')).toHaveLength(6);
+  click($('[data-act="save"]'));
+  await flush();
+  const p = saved[0];
+  expect(p.blocks.map(b => b.name)).toEqual(['Accumulation', 'Intensification']);
+  expect(p.blocks[0].goal).toBe('Volume up');
+  expect(p.weeks.map(w => w.block)).toEqual(['b1', 'b1', 'b1', 'b1', 'b2', 'b2']);
+  const sq = n => p.weeks[n - 1].days[0].exercises[0];
+  expect([1, 2, 3].map(n => sq(n).sets)).toEqual([3, 4, 5]);
+  expect([1, 2, 3].map(n => sq(n).rir)).toEqual([3, 2, 1]);
+  expect([1, 2, 3].map(n => sq(n).loadPct)).toEqual([70, 72.5, 75]);
+  expect(p.weeks[3].deload).toBe(true);
+  expect(sq(4)).toMatchObject({ sets: 2, rir: 5, loadPct: 62.5 });
+});
+
+test('Sheet view edits a week cell in place and adds an exercise to every week', async () => {
+  const { $, $$, click, type, enter, flush, saved } = setup(fourDays);
+  click($('[data-act="copy-week"]'));
+  click($('[data-act="view-sheet"]'));
+  const cells = $$('.pb-cell');
+  expect(cells.map(c => c.value)).toEqual(['3×6-8 @3 70%', '3×6-8 @3 70%']);
+  type(cells[1], '4x5 @1 80%');
+  expect(cells[1].value).toBe('4×5 @1 80%');
+  expect($('.pb-sheet-total').textContent).toBe('Total sets34');
+  const add = $('[data-sadd="d1"]');
+  add.value = 'Leg curl 2x12 @2';
+  enter(add);
+  expect($$('.pb-sheet [data-sn]').map(i => i.value)).toEqual(['Squat', 'Leg curl']);
+  type($$('.pb-cell')[2], ''); // drop leg curl from week 1
+  click($('[data-act="save"]'));
+  await flush();
+  const p = saved[0];
+  expect(p.weeks[1].days[0].exercises[0]).toMatchObject({ sets: 4, repsMin: 5, repsMax: null, rir: 1, loadPct: 80 });
+  expect(p.weeks[0].days[0].exercises.map(e => e.name)).toEqual(['Squat']);
+  expect(p.weeks[1].days[0].exercises.map(e => e.name)).toEqual(['Squat', 'Leg curl']);
+});
+
+test('week settings: deload toggle; CSV export lists every week', () => {
+  const { w, $, click, api } = setup(fourDays);
+  click($('[data-act="copy-week"]'));
+  const box = $('[data-wf="deload"]');
+  box.checked = true;
+  box.dispatchEvent(new w.Event('change', { bubbles: true }));
+  expect(api.getProgram().weeks[1].deload).toBe(true);
+  const csv = w.ProgramBuilder.toCsv(api.getProgram());
+  const lines = csv.trim().split('\r\n');
+  expect(lines[0]).toBe('Block,Week,Day,Exercise,Sets,Reps,RIR,Load,Rest,Notes');
+  expect(lines[2]).toBe(',Week 2 (deload),Mon - Lower,Squat,3,6-8,3,70%,,');
+});
+
+const MUSCLE_MAP = fs.readFileSync(path.join(__dirname, '../exerciseMuscleMap.js'), 'utf8');
+
+test('Volume: chips per muscle, Muscle column, editable MEV/MAV/MRV, MEV → MRV progression', async () => {
+  const t = setup({
+    schema: 'pocketcoach.program/2', name: 'Legs',
+    weeks: [{ days: [{ dayId: 'd1', weekday: 1, label: 'Lower', exercises: [
+      { name: 'Back squat', sets: 4, repsMin: 6, repsMax: 8, rir: 3 },
+      { name: 'Lying leg curl', sets: 3, repsMin: 10, repsMax: 12, rir: 2 },
+      { name: 'Farmer walk', sets: 2, repsMin: 1, rir: null, type: 'core' },
+    ] }] }, { sameAs: 1 }, { sameAs: 1 }, { sameAs: 1 }],
+  });
+  const { w, $, $$, click, type, flush, saved, api } = t;
+  w.eval(MUSCLE_MAP);
+  api.refresh();
+  const chips = () => $$('.pb-volchip').map(c => c.textContent);
+  expect(chips()).toContain('Quads 4/20');
+  expect(chips()).toContain('Hamstrings 3/20');
+  // The Muscle column shows the guess and can override it.
+  const farmer = $$('.pb-row')[2].querySelector('[data-f="muscle"]');
+  expect(farmer.options[0].textContent).toMatch(/^Auto · /);
+  type(farmer, 'traps');
+  expect(chips()).toContain('Traps 2/26');
+
+  // Volume view: edit landmarks; cells take the zone colour.
+  click($('[data-act="view-volume"]'));
+  expect($$('.pb-vol tbody tr').map(r => r.cells[0].textContent.trim())).toEqual(['Traps', 'Quads', 'Hamstrings']);
+  const quadsMev = $('[data-lm="quads"][data-lk="mev"]');
+  type(quadsMev, '6');
+  expect($('[data-vcell="quads|1"] .pb-vz').className).toContain('pb-vz--below');
+  type(quadsMev, '4');
+  expect($('[data-vcell="quads|1"] .pb-vz').className).toContain('pb-vz--productive');
+
+  click($('[data-act="view-week"]'));
+  click($('[data-act="progress-open"]'));
+  const vol = $('[data-pp="volume"]');
+  type(vol, 'mev-mrv');
+  expect($('[data-pp="setsPerWeek"]')).toBeNull();
+  type($('[data-pp="repsPerWeek"]'), '-1');
+  click($('[data-act="progress-apply"]'));
+  expect($('.pb-msg').textContent).toMatch(/Quads 8\/20, Hamstrings 8\/20, Traps 8\/26 stop short of MRV/);
+  click($('[data-act="save"]'));
+  await flush();
+  const p = saved[0];
+  expect(p.volume).toEqual({ quads: { mev: 4, mav: 15, mrv: 20 } });
+  expect(p.weeks[0].days[0].exercises[2].muscle).toBe('traps');
+  const sets = n => p.weeks[n - 1].days[0].exercises.map(e => e.sets);
+  // Quads 4 → 20 over W1–W3 but one row holds at most 8 (default cap); hamstrings 6 → 20, capped too.
+  expect(sets(1)).toEqual([4, 6, 4]);
+  expect(sets(2)).toEqual([8, 8, 8]);
+  expect(p.weeks[3].deload).toBe(true);
+  expect(p.weeks[2].days[0].exercises[0]).toMatchObject({ repsMin: 4, repsMax: 6 });
+});

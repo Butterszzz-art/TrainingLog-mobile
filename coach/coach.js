@@ -326,6 +326,8 @@ document.getElementById('leadFilters')?.addEventListener('click', e => {
 function renderWorkspace() {
   const view = document.getElementById('workspaceView');
   if (!view) return;
+  // Setup checklist + first-visit tour (coach-guide-desktop.js).
+  if (window.CoachGuideDesktop) setTimeout(window.CoachGuideDesktop.refresh, 0);
 
   const linked = activeClients();
   const counts = { all: linked.length, action: 0, watch: 0, ok: 0 };
@@ -985,6 +987,7 @@ function renderCheckIn(c) {
         + (ci.summary ? '<p class="ws-empty-note">' + escapeHtml(ci.summary) + '</p>' : '')
         + (ci.notes ? '<p class="checkin-client-quote">&ldquo;' + escapeHtml(ci.notes) + '&rdquo;</p>' : '')
         + (ci.answers || []).map(x => '<div class="ci-answer"><span class="ci-answer-q">' + escapeHtml(x.q) + '</span><span class="ci-answer-a">' + escapeHtml(x.a) + '</span></div>').join('')
+        + checkInDetailBlock(ci.detail, latest)
         + (latest ? '<div class="ci-review-row">' + (ci.date > reviewed
           ? '<button class="bulk-action-btn" onclick="markCheckInReviewed(\'' + escapeHtml(c.id) + '\', \'' + escapeHtml(ci.date) + '\')">' + ic('check') + ' Mark reviewed</button>'
           : '<span class="ca-chip ca-chip--green">' + ic('check') + ' Reviewed</span>') + '</div>' : '')
@@ -993,6 +996,45 @@ function renderCheckIn(c) {
         + '</div>';
     }).join('') + '</div>';
   watchCheckInCards(c.id, el);
+}
+
+// The detailed answers on a check-in (src/js/checkin-detail.js): flags to
+// look at first, then every answer by section. Open on the latest check-in.
+function checkInDetailBlock(detail, open) {
+  const api = window.checkInDetail;
+  const d = api && api.cleanDetail(detail);
+  if (!d) return '';
+  const t = d.training || {}, n = d.nutrition || {}, l = d.lifestyle || {};
+  const row = (q, a) => a == null || a === '' ? '' : '<div class="ci-answer"><span class="ci-answer-q">' + escapeHtml(q) + '</span><span class="ci-answer-a">' + escapeHtml(String(a)) + '</span></div>';
+  const tone = { none: '', day: 'ca-chip--green', justInTime: 'ca-chip--brass', stillSore: 'ca-chip--red',
+    easy: 'ca-chip--brass', good: 'ca-chip--green', limit: 'ca-chip--green', tooMuch: 'ca-chip--red' };
+  const chip = (label, value, list) => '<span class="ca-chip ' + (tone[value] || '') + '">' + escapeHtml(label) + ': ' + escapeHtml(api.labelOf(list, value)) + '</span>';
+  const head = h => '<div class="ci-detail-head">' + escapeHtml(h) + '</div>';
+  const flags = api.detailFlags(d);
+  const warns = flags.filter(f => f.level === 'warn').length;
+  const training = (t.programWeek ? row('Week / day', t.programWeek) : '')
+    + (t.recovery ? '<div class="ci-detail-chips">' + api.MUSCLES.filter(([k]) => t.recovery[k]).map(([k, label]) => chip(label, t.recovery[k], api.RECOVERY)).join('') + '</div>' : '')
+    + (t.workload ? '<div class="ci-detail-chips">' + t.workload.map(w => chip(w.day, w.rating, api.WORKLOAD)).join('') + '</div>' : '')
+    + row('Workload & soreness', t.workloadNotes) + row('Joint pain', t.jointPain) + row('Performance', t.performance)
+    + row('Pumps', t.pump != null ? t.pump + '/5' + (t.pumpNotes ? ' · ' + t.pumpNotes : '') : t.pumpNotes)
+    + row('Cardio / steps', t.cardioAdherence != null ? t.cardioAdherence + '/5' + (t.cardioNotes ? ' · ' + t.cardioNotes : '') : t.cardioNotes);
+  const nutrition = (n.ratings ? row('Ratings (5 = easy)', api.NUTRITION.filter(([k]) => n.ratings[k] != null).map(([k, label]) => label + ' ' + n.ratings[k]).join(' · ')) : '')
+    + row('Off-plan meals', n.offPlanMeals) + row('Water target', n.water ? api.labelOf(api.WATER, n.water) : '');
+  const lifestyle = row('Physical fatigue', l.physicalFatigue != null ? l.physicalFatigue + '/10' : '')
+    + row('Energy in training', l.trainingEnergy != null ? l.trainingEnergy + '/10' : '')
+    + row('Low scores', l.markerNotes) + row('Mental struggles', l.mentalStruggles) + row('Sleep insights', l.sleepInsights)
+    + row('Caffeine', l.caffeineMg != null ? l.caffeineMg + ' mg/day' : '')
+    + row('Supplements', l.supplementAdherence != null ? l.supplementAdherence + '/5' : '')
+    + row('Medications', l.medications)
+    + row('PEDs on plan', l.peds ? api.labelOf(api.PEDS, l.peds) + (l.pedNotes ? ' · ' + l.pedNotes : '') : l.pedNotes)
+    + row('Other feedback', l.otherFeedback);
+  return '<details class="ci-detail"' + (open ? ' open' : '') + '><summary>Full check-in'
+    + (warns ? ' <span class="ca-chip ca-chip--red">' + warns + ' to look at</span>' : '') + '</summary>'
+    + (flags.length ? '<ul class="ci-detail-flags">' + flags.map(f => '<li class="ci-detail-flag ci-detail-flag--' + f.level + '">' + escapeHtml(f.text) + '</li>').join('') + '</ul>' : '')
+    + (training ? head('Training') + training : '')
+    + (nutrition ? head('Nutrition') + nutrition : '')
+    + (lifestyle ? head('Lifestyle & health') + lifestyle : '')
+    + '</details>';
 }
 
 // Shared check-ins plus dates that only have photos you added, newest
@@ -1545,9 +1587,33 @@ function renderProgram(c) {
     + '<div class="d-card"><div class="d-card-title">Assigned: ' + escapeHtml(c.currentProgram || 'none') + '</div>' + preview
     + (c.activeProgramName && c.activeProgramName !== c.currentProgram ? '<p class="ws-empty-note">Client is currently following: ' + escapeHtml(c.activeProgramName) + '</p>' : '')
     + '</div>'
+    + (current && window.ScheduleEditor ? '<div class="d-card"><div class="d-card-title">Weeks for ' + escapeHtml(c.clientName || 'this client') + '</div>'
+      + '<p class="ws-empty-note">Repeat a week or put in a week off for this client only. Dates and the current week follow the start date.</p>'
+      + '<div id="scheduleEditorArea"></div></div>' : '')
     + '<div class="d-card"><div class="d-card-title">Technique videos</div><div id="techniqueVideosArea"><p class="ws-empty-note">Loading videos…</p></div></div>';
   initMasterPlan(c);
+  if (current) mountScheduleEditor(c, current);
   loadCoachExerciseVideos().then(renderTechniqueVideos);
+}
+
+// This client's repeat / pause weeks and start date (coach/schedule-editor.js).
+function mountScheduleEditor(c, program) {
+  const area = document.getElementById('scheduleEditorArea');
+  if (!area || !window.ScheduleEditor) return;
+  const shared = String(c.activeProgramId || '');
+  const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const sameProgram = !!shared && (shared === c.currentProgramId || shared.endsWith('-' + slug(c.currentProgramId)));
+  const schedule = c.programSchedule && (!c.programSchedule.programId || c.programSchedule.programId === c.currentProgramId) ? c.programSchedule : null;
+  window.ScheduleEditor.mount(area, {
+    clientName: c.clientName,
+    program,
+    schedule,
+    clientStart: c.activeProgramStartDate ? { date: c.activeProgramStartDate, sameProgram } : null,
+    onSave: async next => {
+      if (!(await patchClient(c.id, { programSchedule: next }))) throw new Error('Could not save.');
+      c.programSchedule = next ? Object.assign({ programId: c.currentProgramId }, next) : null;
+    },
+  });
 }
 
 // ── Technique videos per exercise (coach/technique-videos.js) ─────────────
@@ -2007,6 +2073,8 @@ async function assignProgram() {
   const message = document.getElementById('coachProgramNote')?.value.trim() || '';
   if (!(await patchClient(client.id, { programId: sel.value, ...(message ? { message } : {}) }))) return;
   const prog = _programs.find(p => p.id === sel.value);
+  // Another program starts without repeat / pause weeks (the server clears them too).
+  if (client.currentProgramId !== sel.value) client.programSchedule = null;
   client.currentProgramId = sel.value;
   client.currentProgram = prog ? prog.name : client.currentProgram;
   alert('"' + client.currentProgram + '" sent to ' + client.clientName + '. They can start it from Settings → Your Coach.');
@@ -2805,7 +2873,8 @@ async function aiAnalyse() {
         compliancePercent: client.compliancePercent,
         goal: client.currentProgram || 'current phase',
         archetype: client.trainingMode || 'general',
-        adjustmentNotes: ci.notes || ''
+        adjustmentNotes: ci.notes || '',
+        detail: window.checkInDetail ? window.checkInDetail.detailToText(ci.detail) : ''
       })
     });
     const data = await res.json();
@@ -2824,6 +2893,7 @@ function draftPayload(client) {
     currentPhase: client.currentProgram || client.activeProgramName || '',
     compliancePercent: client.compliancePercent,
     checkIn: ci,
+    checkInDetail: window.checkInDetail ? window.checkInDetail.detailToText(ci && ci.detail) : '',
     bodyweightChange: client.weeklyWeightChangePercent,
     alerts: (client.alerts || []).map(a => ({ label: a.label, reason: a.reason })),
     currentProgramSummary: client.currentProgram || '',

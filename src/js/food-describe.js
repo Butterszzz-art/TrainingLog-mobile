@@ -275,6 +275,9 @@
     st.state = 'loading';
     st.rows = [];
     draw();
+    // Every way in (Find, a voice result, a picked photo) is a tap, so a 403
+    // opens the upgrade sheet / monthly-limit toast (ai-consent.js).
+    if (typeof window.markAiUserAction === 'function') window.markAiUserAction(photo ? 'food-photo' : 'food-describe');
     try {
       const res = await fetch(`${window.SERVER_URL}/api/ai/${photo ? 'food-photo' : 'food-describe'}`, {
         method: 'POST',

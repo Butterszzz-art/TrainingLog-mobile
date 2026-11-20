@@ -75,6 +75,14 @@ function _fmt(totalSeconds) {
   function syncDayLabel() {
     const el = document.getElementById('macroHeroDayLabel');
     if (!el) return;
+    // An earlier day picked in the food log (index.html getMacroViewDate).
+    const past = window.getMacroViewDate?.();
+    if (past) {
+      el.textContent = typeof window.describeMacroDay === 'function'
+        ? window.describeMacroDay(past).replace(/^./, c => c.toUpperCase())
+        : past;
+      return;
+    }
     const refeed   = document.getElementById('refeedDayToggle')?.checked;
     const training = document.getElementById('trainingDayToggle')?.checked;
     el.textContent = refeed ? 'Today · Refeed day' : training ? 'Today · Training day' : 'Today';

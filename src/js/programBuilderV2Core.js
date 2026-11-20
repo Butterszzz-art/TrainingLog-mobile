@@ -289,6 +289,7 @@
         label: typeof safeWeek.label === "string" && safeWeek.label.trim() ? safeWeek.label : "Week " + number,
         phase: typeof safeWeek.phase === "string" ? safeWeek.phase : "",
       };
+      if (safeWeek.deload === true) normalized.deload = true;
       if (Number.isInteger(safeWeek.sameAs) && safeWeek.sameAs > 0 && safeWeek.sameAs !== number) {
         normalized.sameAs = safeWeek.sameAs;
       } else {

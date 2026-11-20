@@ -7,6 +7,10 @@
  *    doesn't skip ahead; multi-week library programs pick that week's sets.
  *  - "Do it today" swaps are kept per program as date → training index
  *    overrides (null = rest) in programDayOverrides_<user>.
+ *  - A coach program can carry `timeline` (the coach's repeat / pause weeks
+ *    for this client, src/js/program-timeline.js): each round of training
+ *    days follows its slot, so a repeated week comes round again and a
+ *    pause week has no sessions.
  *  - dayProgress() tallies today's log against the plan: sets in a planned
  *    workout (loaded from a program day or a template, see today-session.js)
  *    count once ticked Done, sets logged any other way count as soon as
@@ -121,7 +125,33 @@
     const nDays = program.days.length;
     const weekCount = core && typeof core.getWeekCount === 'function' ? core.getWeekCount(program) : 1;
 
+    // The coach's repeat / pause weeks (not for a master plan, which has its own calendar).
+    const PT = global.ProgramTimeline || (typeof require === 'function' ? (() => { try { return require('./program-timeline'); } catch { return null; } })() : null);
+    const timeline = !program.planId && program.timeline && PT ? PT.slots(weekCount, program.timeline) : null;
+
+    /** The timeline slot for a training index: { week (null = pause), kind, note }. Past the end the program weeks go round again. */
+    function slotAt(trainingIndex) {
+      const i = Math.floor(trainingIndex / nDays);
+      if (i < timeline.length) return timeline[i];
+      return { week: ((i - timeline.length) % weekCount) + 1, kind: 'week', note: '' };
+    }
+
+    /** The program week a pause belongs to (the one before it), for labels. */
+    function weekBefore(trainingIndex) {
+      for (let i = Math.floor(trainingIndex / nDays); i >= 0; i--) {
+        const s = slotAt(i * nDays);
+        if (s.week !== null) return s.week;
+      }
+      return 1;
+    }
+
     function dayAt(trainingIndex) {
+      if (timeline) {
+        const slot = slotAt(trainingIndex);
+        if (slot.week === null) return null;
+        const list = core && typeof core.getWeekDays === 'function' ? core.getWeekDays(program, slot.week) : program.days;
+        return (list && list[trainingIndex % nDays]) || program.days[trainingIndex % nDays];
+      }
       const week = Math.floor(trainingIndex / nDays) + 1;
       const list = core && typeof core.getWeekDays === 'function' ? core.getWeekDays(program, week) : program.days;
       return (list && list[trainingIndex % nDays]) || program.days[trainingIndex % nDays];
@@ -132,6 +162,7 @@
     // the week's last session still belongs to that week.
     function weekNumFor(trainingIndex, date) {
       if (program.planId) return Math.min(weekCount, Math.max(1, Math.floor((date - startDate) / (7 * DAY_MS)) + 1));
+      if (timeline) return slotAt(trainingIndex).week || weekBefore(trainingIndex);
       if (weekCount > 1) return (Math.floor(trainingIndex / nDays) % weekCount) + 1;
       return Math.max(1, Math.floor((date - startDate) / (7 * DAY_MS)) + 1);
     }
@@ -162,7 +193,15 @@
           trainingIndex = o;
         }
       }
-      const weekNum = weekNumFor(trainingIndex, date);
+      // A rest day belongs to the week of the session before it, so the days
+      // after a week's last session stay in that calendar week until the
+      // next week's first training day (ProgramTimeline.slotIndexAt agrees).
+      const weekIndex = isTraining || trainingIndex === 0 ? trainingIndex : trainingIndex - 1;
+      const weekNum = weekNumFor(weekIndex, date);
+      // A pause week (timeline): no session, even on a training weekday.
+      const pauseSlot = timeline && !before ? slotAt(weekIndex) : null;
+      const pause = !!(pauseSlot && pauseSlot.week === null);
+      if (pause) isTraining = false;
       return {
         date,
         key,
@@ -172,7 +211,10 @@
         swapped,
         day: isTraining ? dayAt(trainingIndex) : null,
         weekNum,
-        phase: weekCount > 1 ? phaseFor(weekNum) : '',
+        phase: pause ? 'Pause week' : weekCount > 1 ? phaseFor(weekNum) : '',
+        pause,
+        pauseNote: pause ? pauseSlot.note || '' : '',
+        repeat: !!(pauseSlot && pauseSlot.kind === 'repeat'),
       };
     }
 
@@ -194,7 +236,7 @@
       return null;
     }
 
-    return { program, startDate, trainingNums, nDays, weekCount, dayFor, weekOf, nextTrainingAfter };
+    return { program, startDate, trainingNums, nDays, weekCount, timeline, dayFor, weekOf, nextTrainingAfter };
   }
 
   /** Schedule for the signed-in user's active program, or null. */

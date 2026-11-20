@@ -50,3 +50,26 @@
   cursor: pointer;
 }
 .cal-textbtn--danger { color: var(--danger-text-mobile, #e38b8b); }
+
+/* What goes in the feed: training / meals / check-ins */
+.cal-toggles {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-row, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  overflow: hidden;
+}
+.cal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cal-toggle + .cal-toggle { border-top: 1px solid var(--border-row, rgba(255, 255, 255, 0.08)); }
+.cal-toggle-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cal-toggle-label { color: var(--text); font-weight: 700; font-size: 15px; }
+.cal-toggle-sub { color: var(--text-tertiary); font-size: 12px; line-height: 1.35; }
+.cal-toggle input[type="checkbox"] { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--green-90, #8fd1ab); }
