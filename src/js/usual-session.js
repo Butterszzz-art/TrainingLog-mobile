@@ -192,20 +192,45 @@
   }
 
   /**
+   * Routines that have dropped out of the rotation: every other routine has
+   * been trained at least twice since this one was last done. Without this,
+   * a routine the lifter stopped doing (or now trains with different lifts,
+   * so it groups apart) stays "done longest ago" and is suggested every day
+   * until it ages out of the three-week window.
+   */
+  function _inRotation(groups) {
+    if (groups.length < 2) return groups;
+    const kept = groups.filter(g => {
+      const last = g.sessions[0].date;
+      return groups.some(o => o !== g && o.sessions.filter(s => s.date > last).length < 2);
+    });
+    return kept.length ? kept : groups;
+  }
+
+  /**
    * The lifter's usual next session, or null when history shows no routine
    * (no group trained twice in the last six weeks and once in the last three).
-   * opts: { now, muscleOf } — muscleOf names a lift's muscle group.
+   * opts: { now, muscleOf, skipped } — muscleOf names a lift's muscle group;
+   * skipped maps a rotationKey to the last day it was turned down ("Not
+   * today"), which sends that routine to the back of the queue from the next
+   * day on, as if it had been done.
    */
   function inferUsualNext(workouts, opts) {
     const options = opts || {};
     const todayKey = _localDateKey(options.now);
     const from = _localDateKey(new Date((_parseKey(todayKey) || new Date()).getTime() - WINDOW_DAYS * DAY_MS));
     const sessions = sessionsByDay(workouts, { before: todayKey, after: from });
-    const groups = groupSessions(sessions)
-      .filter(g => g.sessions.length >= 2 && _daysBetween(g.sessions[0].date, todayKey) <= RECENT_DAYS);
+    const groups = _inRotation(groupSessions(sessions)
+      .filter(g => g.sessions.length >= 2 && _daysBetween(g.sessions[0].date, todayKey) <= RECENT_DAYS));
     if (!groups.length) return null;
-    // The routine done longest ago comes round next; ties go to the bigger group.
-    groups.sort((a, b) => a.sessions[0].date.localeCompare(b.sessions[0].date) || b.sessions.length - a.sessions.length);
+    const skipped = options.skipped && typeof options.skipped === 'object' ? options.skipped : {};
+    const turn = g => {
+      const done = g.sessions[0].date;
+      const skip = skipped[_groupKey(g)];
+      return typeof skip === 'string' && skip < todayKey && skip > done ? skip : done;
+    };
+    // The routine done (or turned down) longest ago comes round next; ties go to the bigger group.
+    groups.sort((a, b) => turn(a).localeCompare(turn(b)) || b.sessions.length - a.sessions.length);
     const next = groups[0];
     const exercises = _groupExercises(next);
     if (!exercises.length) return null;

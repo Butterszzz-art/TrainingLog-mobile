@@ -313,53 +313,33 @@
       </div>`;
   }
 
-  // ── Weekly volume landmarks (MEV/MAV/MRV) ───────────────────────
-  // MEV/MAV/MRV are commonly-published weekly-set training guidelines
-  // (Renaissance-Periodization-style ballparks), not a per-user
-  // prescription this app computes — they're reference thresholds.
-  // What IS real: the actual weekly set count per muscle, tallied from
-  // the same workout history libraries.js already reads.
-  const VOLUME_LANDMARKS = {
-    Chest: { mev: 8, mav: 18, mrv: 22 },
-    Back: { mev: 10, mav: 20, mrv: 25 },
-    Delts: { mev: 8, mav: 20, mrv: 26 },
-    Arms: { mev: 8, mav: 18, mrv: 24 },
-    Legs: { mev: 10, mav: 20, mrv: 28 },
-    Core: { mev: 6, mav: 16, mrv: 20 },
-  };
+  // ── Weekly sets per muscle ──────────────────────────────────────
+  // The same numbers as Insights → Recovery: trailing 7-day sets per muscle
+  // from recoveryMap.js computeMuscleRecoverySummary, against the lifter's
+  // own weekly targets (Insights → Weekly targets, else the defaults). This
+  // card used to keep its own coarse MEV/MAV/MRV ballparks and its own
+  // counting (UTC dates, live log + a second archive), so the two screens
+  // never agreed.
 
-  /** Real weekly (last 7 days) set count per coarse muscle group, from
-   * the live + archived workout history. */
-  function _weeklySetsByMuscle() {
-    const u = _user();
-    const counts = {};
-    if (!u || typeof localStorage === 'undefined' || typeof global.getCoarseMuscleGroup !== 'function') return counts;
+  function _readWorkoutHistory(u) {
+    if (typeof global.getFullWorkoutHistory === 'function') {
+      try { return global.getFullWorkoutHistory(u) || []; } catch { /* fall back */ }
+    }
+    try { return JSON.parse(localStorage.getItem('workouts_' + u)) || []; } catch { return []; }
+  }
 
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 7);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
-
-    const tally = (name, dateStr, setCount) => {
-      if (!dateStr || dateStr < cutoffStr) return;
-      const group = global.getCoarseMuscleGroup(name);
-      counts[group] = (counts[group] || 0) + setCount;
-    };
-
-    try {
-      const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
-      workouts.forEach(w => (w.log || []).forEach(entry => {
-        tally(entry.exercise, w.date, Array.isArray(entry.repsArray) ? entry.repsArray.length : 0);
-      }));
-    } catch { /* ignore */ }
-
-    try {
-      const archived = JSON.parse(localStorage.getItem('tl_workout_history_v1')) || [];
-      archived.filter(w => !w.userId || w.userId === u).forEach(w => (w.exercises || []).forEach(ex => {
-        tally(ex.name, (w.date || '').slice(0, 10), Array.isArray(ex.repsArray) ? ex.repsArray.length : 0);
-      }));
-    } catch { /* ignore */ }
-
-    return counts;
+  /** Muscles trained in the last 7 days: [{ muscle, sets, target, ratio }], most worked first. */
+  function weeklyMuscleVolume(user, opts) {
+    const u = user || _user();
+    const compute = global.computeMuscleRecoverySummary;
+    if (!u || typeof compute !== 'function') return [];
+    const options = opts || {};
+    const workouts = options.workouts || _readWorkoutHistory(u);
+    const readTargets = global.readMuscleWeeklyTargets;
+    const weeklyTargets = (typeof readTargets === 'function' && readTargets(u)) || undefined;
+    return compute(workouts, { weeklyTargets, now: options.now })
+      .filter(r => r.sets > 0)
+      .sort((a, b) => b.sets - a.sets);
   }
 
   function renderVolumeLandmarks() {
@@ -367,39 +347,29 @@
     const el = document.getElementById('volumeLandmarksCard');
     if (!el) return;
 
-    const weekly = _weeklySetsByMuscle();
-    const groups = Object.keys(VOLUME_LANDMARKS).filter(g => weekly[g] > 0);
-    if (!groups.length) { el.innerHTML = ''; return; }
-
-    const rows = groups.map(g => {
-      const { mev, mav, mrv } = VOLUME_LANDMARKS[g];
-      const actual = weekly[g] || 0;
-      const fillPct = Math.min(100, Math.round((actual / mrv) * 100));
-      const mevPct = Math.round((mev / mrv) * 100);
-      const mavPct = Math.round((mav / mrv) * 100);
-      const overMav = actual >= mav;
-      const fillColor = overMav
-        ? 'var(--fill-meter-brass)'
-        : 'var(--fill-meter-b)';
-      return `
-        <div class="vl-row">
-          <span class="vl-muscle">${g}</span>
-          <div class="vl-track">
-            <div class="vl-fill" style="width:${fillPct}%;background:${fillColor}"></div>
-            <div class="vl-tick" style="left:${mevPct}%"></div>
-            <div class="vl-tick vl-tick--mav" style="left:${mavPct}%"></div>
-          </div>
-          <span class="vl-count${overMav ? ' is-high' : ''}">${actual}/${mrv}</span>
-        </div>`;
-    }).join('');
+    const rows = weeklyMuscleVolume();
+    if (!rows.length) { el.innerHTML = ''; return; }
+    const fmt = typeof global.formatSetCount === 'function' ? global.formatSetCount : n => String(n);
 
     el.innerHTML = `
       <div class="pod vl-card">
         <div class="pod-row">
-          <span class="pod-kicker">Weekly volume landmarks</span>
-          <span class="sq-count">sets &middot; MEV/MAV/MRV</span>
+          <span class="pod-kicker">Weekly sets per muscle</span>
+          <span class="sq-count">last 7 days &middot; your targets</span>
         </div>
-        ${rows}
+        ${rows.map(r => {
+          const over = r.sets > r.target;
+          const fillPct = r.target > 0 ? Math.min(100, Math.round((r.sets / r.target) * 100)) : 100;
+          const label = r.muscle.charAt(0).toUpperCase() + r.muscle.slice(1);
+          return `
+        <div class="vl-row">
+          <span class="vl-muscle">${_escHTML(label)}</span>
+          <div class="vl-track">
+            <div class="vl-fill" style="width:${fillPct}%;background:${over ? 'var(--fill-meter-brass)' : 'var(--fill-meter-b)'}"></div>
+          </div>
+          <span class="vl-count${over ? ' is-high' : ''}">${fmt(r.sets)}/${r.target}</span>
+        </div>`;
+        }).join('')}
       </div>`;
   }
 
@@ -1300,7 +1270,7 @@
   }
 
   const api = { unloadUntouchedSession, declineTodayFromLog, undoDeclineFromLog, getTodaysPlannedDay, sessionMetadata, sessionSourceLabel, todaysLiftedSession, canSaveTodayAsRoutine, saveTodayAsRoutine, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
-    initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks,
+    initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks, weeklyMuscleVolume,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
     refreshLogButtonLabel: _updateQuickLogButtonLabel };

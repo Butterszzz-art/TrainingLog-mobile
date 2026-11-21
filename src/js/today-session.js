@@ -28,6 +28,12 @@
 
   const PICK_KEY = 'todaySessionPick_';
   const DECLINE_KEY = 'todaySessionDeclined_';
+  // "Usual next" routines turned down with "Not today": rotationKey → date.
+  // From the next day on, that routine waits its turn behind the others
+  // (usual-session.js inferUsualNext opts.skipped) instead of coming back
+  // every morning.
+  const SKIP_KEY = 'usualSessionSkips_';
+  const SKIP_KEEP_DAYS = 42;
 
   function _localDateKey(d) {
     const date = d || new Date();
@@ -151,8 +157,29 @@
     const day = options.day || _suggestedToday(u, options.now);
     if (!day) return null;
     const record = { date: _localDateKey(options.now), name: day.name || 'Session', source: day.source || null };
+    if (day.source === 'rotation' && day.rotationKey) record.rotationKey = day.rotationKey;
     global.localStorage.setItem(DECLINE_KEY + u, JSON.stringify(record));
+    if (record.rotationKey) _writeSkip(u, record.rotationKey, record.date, options.now);
     return record;
+  }
+
+  /** Routines turned down lately: { rotationKey: 'YYYY-MM-DD' }. */
+  function readSkips(user) {
+    const u = _user(user);
+    const raw = u ? _readJSON(SKIP_KEY + u, null) : null;
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  }
+
+  function _writeSkip(u, rotationKey, dateKey, now) {
+    const cutoffDate = new Date(now || Date.now());
+    cutoffDate.setDate(cutoffDate.getDate() - SKIP_KEEP_DAYS);
+    const cutoff = _localDateKey(cutoffDate);
+    const kept = {};
+    Object.entries(readSkips(u)).forEach(([k, v]) => { if (typeof v === 'string' && v >= cutoff) kept[k] = v; });
+    if (dateKey) kept[rotationKey] = dateKey;
+    else delete kept[rotationKey];
+    try { global.localStorage.setItem(SKIP_KEY + u, JSON.stringify(kept)); } catch { /* storage full */ }
+    _memo = null;
   }
 
   /** Today's decline ({ date, name, source }), or null (none, or another day). */
@@ -165,7 +192,10 @@
 
   function undoDecline(user) {
     const u = _user(user);
-    if (u && global.localStorage) global.localStorage.removeItem(DECLINE_KEY + u);
+    if (!u || !global.localStorage) return;
+    const record = _readJSON(DECLINE_KEY + u, null);
+    if (record && record.rotationKey && readSkips(u)[record.rotationKey] === record.date) _writeSkip(u, record.rotationKey, null);
+    global.localStorage.removeItem(DECLINE_KEY + u);
   }
 
   // ── Today's session ─────────────────────────────────────────────────────
@@ -222,7 +252,7 @@
     const at = Date.now();
     if (_memo && _memo.key === key && at - _memo.at < MEMO_MS) return _memo.day;
     const history = _history(u);
-    const opts = { now, muscleOf: typeof global.getMuscleGroup === 'function' ? global.getMuscleGroup : null };
+    const opts = { now, muscleOf: typeof global.getMuscleGroup === 'function' ? global.getMuscleGroup : null, skipped: readSkips(u) };
     const day = usual.matchToday(history, opts) || usual.inferUsualNext(history, opts);
     _memo = { key, at, day };
     return day;
@@ -267,6 +297,7 @@
     declineToday,
     readDecline,
     undoDecline,
+    readSkips,
     isLoadedFrom,
   };
 

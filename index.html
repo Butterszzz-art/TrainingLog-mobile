@@ -17534,12 +17534,7 @@ function renderRecoveryProgress(workouts) {
   if (!panel || typeof computeMuscleRecoverySummary !== 'function') return;
 
   const soreness = getTodaySorenessForRecovery();
-  let savedTargets = null;
-  try {
-    savedTargets = JSON.parse(localStorage.getItem(`muscleWeeklyTargets_${currentUser}`));
-  } catch {
-    savedTargets = null;
-  }
+  const savedTargets = readMuscleWeeklyTargets(currentUser);
 
   const summary = computeMuscleRecoverySummary(workouts, {
     soreness,
@@ -17569,7 +17564,7 @@ function renderRecoveryProgress(workouts) {
         </div>
         <div class="recovery-row-mid">
           <div class="ratio-track${over ? ' is-over' : ''}"><div class="ratio-fill" style="width:${pct}%"></div></div>
-          <span class="recovery-row-sets">${row.sets.toFixed(1)} / ${row.target} sets</span>
+          <span class="recovery-row-sets">${formatSetCount(row.sets)} / ${row.target} sets</span>
         </div>
         <div class="recovery-row-days">${daysLabel}</div>
       </div>`;

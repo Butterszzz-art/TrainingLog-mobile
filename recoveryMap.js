@@ -82,6 +82,25 @@ function fatigueStatus(score) {
   return 'Overreached';
 }
 
+// The lifter's own weekly set targets (Insights → Recovery → Weekly targets),
+// or null for the defaults. Shared by the Insights Recovery Map and the Log
+// tab's weekly volume card so both show the same numbers.
+function readMuscleWeeklyTargets(user) {
+  if (!user || typeof localStorage === 'undefined') return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(`muscleWeeklyTargets_${user}`));
+    return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+// Sets for display: whole numbers as-is, otherwise one decimal.
+function formatSetCount(n) {
+  const v = toNumber(n);
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+}
+
 // options.now: reference date (defaults to current time; pass explicitly in tests)
 // options.weeklyTargets: overrides for DEFAULT_WEEKLY_MUSCLE_TARGETS
 // options.soreness: today's whole-body soreness rating, 1 (very sore) - 5 (none), or null if not logged
@@ -155,6 +174,8 @@ if (typeof module !== 'undefined') {
     RECOVERY_HALF_LIFE_DAYS,
     MUSCLE_TARGET_BOUNDS,
     clampMuscleTarget,
+    readMuscleWeeklyTargets,
+    formatSetCount,
     fatigueToColor,
     fatigueStatus,
     computeMuscleRecoverySummary
@@ -164,6 +185,8 @@ if (typeof window !== 'undefined') {
   window.DEFAULT_WEEKLY_MUSCLE_TARGETS = DEFAULT_WEEKLY_MUSCLE_TARGETS;
   window.MUSCLE_TARGET_BOUNDS = MUSCLE_TARGET_BOUNDS;
   window.clampMuscleTarget = clampMuscleTarget;
+  window.readMuscleWeeklyTargets = readMuscleWeeklyTargets;
+  window.formatSetCount = formatSetCount;
   window.fatigueToColor = fatigueToColor;
   window.fatigueStatus = fatigueStatus;
   window.computeMuscleRecoverySummary = computeMuscleRecoverySummary;
