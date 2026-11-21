@@ -134,7 +134,7 @@
     try { await document.fonts?.load?.('400 100px Anton'); } catch (_e) { /* fallback font */ }
     window.StoryComposer.open({
       draw,
-      fileBase: `pocket-coach-weight-${new Date().toISOString().slice(0, 10)}`,
+      fileBase: `pocket-coach-weight-${(globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))}`,
       label: 'Share weight progress as a story',
       controls: controls(),
     });

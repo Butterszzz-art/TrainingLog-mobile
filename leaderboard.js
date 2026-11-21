@@ -207,8 +207,9 @@ function buildLocalStats(username) {
   }
 
   // Workouts this month
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-  const monthEnd   = today.toISOString().slice(0, 10);
+  const monthStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthStart = (globalThis.AppTime?.dateKey(monthStartDate) || monthStartDate.toISOString().slice(0, 10));
+  const monthEnd   = (globalThis.AppTime?.dateKey(today) || today.toISOString().slice(0, 10));
   const monthWorkouts = workouts.filter(w => w.date >= monthStart && w.date <= monthEnd).length;
 
   // Total volume (all time)

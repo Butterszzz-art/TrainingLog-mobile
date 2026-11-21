@@ -270,6 +270,17 @@
           <input type="checkbox" class="st-switch" id="coachModeToggle"></label>
       </div>
 
+      <!-- The app's clock (src/js/app-time.js). It follows the phone's time
+           zone, so travelling between countries moves "today" with you.
+           Filled by renderTimeZoneRow() in settings.js. -->
+      <div class="mx-kicker st-kicker">Time zone</div>
+      <div class="pod st-group">
+        <div class="st-row" id="stTimeZoneRow">
+          <span class="st-label">Clock<small>Follows your phone's time zone</small></span>
+          <span class="st-val" id="stTimeZoneLabel">—</span>
+        </div>
+      </div>
+
       <!-- Coach Pro codes (src/js/coach-code.js). Athletes enter a coach's
            code for Pro; coaches see and share their own code below. -->
       <div class="mx-kicker st-kicker">Coach code</div>

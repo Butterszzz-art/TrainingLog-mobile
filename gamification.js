@@ -86,8 +86,9 @@
   }
 
   function getTodayIsoDate(dateLike) {
+    if (!dateLike && globalThis.AppTime) return globalThis.AppTime.today();
     const d = dateLike ? new Date(dateLike) : new Date();
-    if (Number.isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+    if (Number.isNaN(d.getTime())) return (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     return d.toISOString().slice(0, 10);
   }
 

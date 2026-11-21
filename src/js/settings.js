@@ -963,7 +963,7 @@ function getPhaseSetupApi() {
   return api;
 }
 
-function getProfileTimelineLabel(state, referenceDate = new Date().toISOString().slice(0, 10)) {
+function getProfileTimelineLabel(state, referenceDate = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))) {
   if (!window.prepModeApi) return 'Improvement Season Week 1';
   const mode = String(state?.mode || state?.currentPhase || 'improvement').toLowerCase().replace(/\s+/g, '_');
   const payload = { ...(state || {}), referenceDate };
@@ -1149,6 +1149,16 @@ function refreshSettingsPageValues(container = document) {
   }
 }
 
+// Account → Time zone: the zone the app's clock is on and the time there.
+function renderTimeZoneRow(root = document) {
+  const el = root.querySelector('#stTimeZoneLabel');
+  const T = window.AppTime;
+  if (!el || !T) return;
+  el.textContent = `${T.zoneLabel()} · ${T.formatTime()}`;
+  el.title = T.zone() || '';
+}
+window.addEventListener('apptime:change', () => renderTimeZoneRow());
+
 function openSettingsPage(key) {
   const container = document.getElementById('settingsFormContainer');
   const tab = document.getElementById('settingsTab');
@@ -1176,6 +1186,7 @@ function openSettingsPage(key) {
   } else if (key === 'reminders') {
     window.renderRemindersPanel?.();
   } else if (key === 'account') {
+    renderTimeZoneRow(container);
     window.renderSubscriptionPanel?.();
     window.loadReferralPanel?.();
     window.renderCoachCodePanel?.();

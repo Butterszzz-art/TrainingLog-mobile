@@ -102,7 +102,7 @@
       bodyPart: data.bodyPart,
       type: data.type || 'general pain',
       severity: data.severity || 3,
-      date: data.date || new Date().toISOString().slice(0, 10),
+      date: data.date || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)),
       notes: data.notes || '',
       status: 'active',
       createdAt: new Date().toISOString(),
@@ -180,7 +180,7 @@
       + '<label>Type<select id="rehabType">'
       + INJURY_TYPES.map(t => '<option value="' + t + '">' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>').join('')
       + '</select></label>'
-      + '<label>Date<input type="date" id="rehabDate" value="' + new Date().toISOString().slice(0, 10) + '"></label>'
+      + '<label>Date<input type="date" id="rehabDate" value="' + (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)) + '"></label>'
       + '<label class="rehab-form-full">Notes<input type="text" id="rehabNotes" placeholder="How it happened…"></label>'
       + '</div>'
       + '<div class="rehab-severity-row">'

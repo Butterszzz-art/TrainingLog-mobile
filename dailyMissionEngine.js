@@ -42,10 +42,10 @@
   }
 
   function resolveDate(date) {
-    if (!date) return new Date().toISOString().slice(0, 10);
+    if (!date) return (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
     const parsed = new Date(date);
-    if (Number.isNaN(parsed.getTime())) return new Date().toISOString().slice(0, 10);
+    if (Number.isNaN(parsed.getTime())) return (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     return parsed.toISOString().slice(0, 10);
   }
 

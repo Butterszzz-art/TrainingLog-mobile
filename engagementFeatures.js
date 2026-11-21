@@ -34,7 +34,7 @@
   }
 
   function todayKey() {
-    return new Date().toISOString().slice(0, 10);
+    return (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   function safeParse(raw, fallback) {

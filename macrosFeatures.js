@@ -79,7 +79,7 @@ const getTodayString = () => {
   if (typeof window.getTodayDateString === 'function') {
     return window.getTodayDateString();
   }
-  return new Date().toISOString().split('T')[0];
+  return (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
 };
 
 export function updateWeeklyTrend(progressOverride) {
@@ -161,7 +161,7 @@ export function renderHeatmap() {
   for(let i=29;i>=0;i--){
     const d = new Date();
     d.setDate(d.getDate()-i);
-    const keyDate = d.toISOString().slice(0,10);
+    const keyDate = (globalThis.AppTime?.dateKey(d) || d.toISOString().slice(0, 10));
     const pct = map[keyDate] || 0;
     const cell = document.createElement('div');
     const g = Math.floor(255*(1-pct));

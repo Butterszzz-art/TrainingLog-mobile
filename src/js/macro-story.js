@@ -20,7 +20,7 @@
 
   // Same day boundary as the Macros tab's running totals.
   function today() {
-    return (typeof window.getTodayDateString === 'function' && window.getTodayDateString()) || new Date().toISOString().slice(0, 10);
+    return (typeof window.getTodayDateString === 'function' && window.getTodayDateString()) || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   // The pick is remembered for the rest of the day only.

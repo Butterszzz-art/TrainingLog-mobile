@@ -15,7 +15,7 @@
   function today() {
     return typeof global.getTodayDateString === 'function'
       ? global.getTodayDateString()
-      : new Date().toISOString().slice(0, 10);
+      : (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   // Today's quick adds, oldest first. A list from another day reads as empty.

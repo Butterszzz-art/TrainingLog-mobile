@@ -64,12 +64,14 @@
     return names.join(', ');
   }
 
-  // Time range for one of the app's days ("YYYY-MM-DD"). The app dates its
-  // log with getTodayDateString(), which is the UTC date, so we read the same
-  // UTC day from Health Connect; otherwise food could land on the wrong day.
+  // Time range for one of the app's days ("YYYY-MM-DD"): local midnight to
+  // the next local midnight, the same day getTodayDateString() dates the log
+  // with. (23 or 25 hours long on a daylight-saving change.)
   function dayRange(day) {
-    var start = Date.parse(day + 'T00:00:00Z');
-    return { start: start, end: start + 24 * 60 * 60 * 1000 };
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day || ''));
+    if (!m) return { start: NaN, end: NaN };
+    var y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+    return { start: new Date(y, mo, d).getTime(), end: new Date(y, mo, d + 1).getTime() };
   }
 
   var api = {
@@ -118,7 +120,7 @@
   function today() {
     return typeof window.getTodayDateString === 'function'
       ? window.getTodayDateString()
-      : new Date().toISOString().slice(0, 10);
+      : (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   function formatTime(ms) {

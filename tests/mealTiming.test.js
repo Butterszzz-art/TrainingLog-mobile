@@ -15,13 +15,13 @@ describe('clock helpers', () => {
     expect(MT.duration(-1)).toBe('');
   });
 
-  test('timeOnDay keeps the moment on the food log (UTC) day', () => {
+  test('timeOnDay puts the time on the food log (local) day', () => {
     const noon = MT.timeOnDay('2026-11-17', '12:30');
     expect(MT.hhmm(noon)).toBe('12:30');
-    expect(new Date(noon).toISOString().slice(0, 10)).toBe('2026-11-17');
-    // 00:30 in Amsterdam on the UTC day 17th is the night after the 17th.
-    const late = MT.timeOnDay('2026-11-17', '00:30');
-    expect(new Date(late).toISOString()).toBe('2026-11-17T23:30:00.000Z');
+    expect(new Date(noon).toISOString()).toBe('2026-11-17T11:30:00.000Z');
+    // 00:30 on the 17th is the start of the 17th in Amsterdam (23:30 UTC on the 16th).
+    const early = MT.timeOnDay('2026-11-17', '00:30');
+    expect(new Date(early).toISOString()).toBe('2026-11-16T23:30:00.000Z');
     expect(MT.timeOnDay('2026-11-17', '25:00')).toBeNull();
     expect(MT.timeOnDay('nope', '10:00')).toBeNull();
   });
@@ -160,7 +160,8 @@ describe('pastFasts and weekStats', () => {
 test('weekStats averages late meals around midnight, not noon', () => {
   const log = [
     entry('2026-11-15', 'breakfast', '12:00'), entry('2026-11-15', 'dinner', '23:30'),
-    entry('2026-11-16', 'breakfast', '12:00'), entry('2026-11-16', 'dinner', '00:30'),
+    // Dinner on the 16th's log, eaten just after midnight.
+    entry('2026-11-16', 'breakfast', '12:00'), entry('2026-11-16', 'dinner', '00:30', { eatenAt: at('2026-11-17', '00:30') }),
   ];
   const w = MT.weekStats(log, null, at('2026-11-17', '10:00'));
   expect(MT.clockLabel(w.avgLast)).toBe('00:00');

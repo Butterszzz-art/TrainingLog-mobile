@@ -70,7 +70,7 @@
     const box = doc.getElementById('checkInDetailSections');
     const api = D();
     if (!box || !api) return;
-    const date = opts.date || new Date().toISOString().slice(0, 10);
+    const date = opts.date || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     const archetypeKeys = new Set(opts.archetypeKeys || []);
     const key = `${date}|${[...archetypeKeys].sort().join(',')}`;
     if (box.dataset.renderedFor === key) return; // keep what was typed

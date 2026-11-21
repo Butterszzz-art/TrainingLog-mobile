@@ -213,7 +213,7 @@ function applyDailyMacroAdjustment({
   baseTargets,
   workout,
   recovery = {},
-  date = new Date().toISOString().slice(0, 10),
+  date = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)),
   isRestDay = false,
 } = {}) {
   const safeUser = user || '';

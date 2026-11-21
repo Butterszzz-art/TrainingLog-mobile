@@ -25,7 +25,7 @@
 
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const user = () => (window.getActiveUsername && window.getActiveUsername()) || window.currentUser || localStorage.getItem('fitnessAppUser') || '';
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   function readJSON(key, fallback) {
     try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch { return fallback; }
   }
@@ -76,9 +76,10 @@
   }
 
   function lastWeek() {
+    // Monday of the lifter's own week (their local calendar, not UTC's).
     const d = new Date();
-    const dow = (d.getUTCDay() + 6) % 7;
-    const thisMonday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dow)).toISOString().slice(0, 10);
+    const dow = (d.getDay() + 6) % 7;
+    const thisMonday = NI().addDays(today(), -dow);
     const start = NI().addDays(thisMonday, -7);
     return { start, end: NI().addDays(start, 6) };
   }

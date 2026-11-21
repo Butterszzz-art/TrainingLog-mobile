@@ -10,7 +10,7 @@ function calculateStreak(dates) {
     const d = new Date(sorted[i]);
     const compare = new Date();
     compare.setDate(compare.getDate() - streak);
-    if (d.toISOString().split('T')[0] === compare.toISOString().split('T')[0]) {
+    if (d.toISOString().split('T')[0] === (globalThis.AppTime?.dateKey(compare) || compare.toISOString().slice(0, 10))) {
       streak++;
     } else {
       break;

@@ -32,7 +32,7 @@
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1));
-    return d.toISOString().slice(0, 10);
+    return (globalThis.AppTime?.dateKey(d) || d.toISOString().slice(0, 10));
   }
 
   /* ── Monthly challenge definitions ──────────────────────── */
@@ -124,7 +124,7 @@
 
     const month    = _thisMonth();
     const weekStart = _thisWeekStart();
-    const today    = new Date().toISOString().slice(0, 10);
+    const today    = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
 
     // Total & month & week workouts
     const totalWorkouts = workouts.length;

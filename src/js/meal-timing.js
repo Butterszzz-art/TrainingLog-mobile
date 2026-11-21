@@ -41,7 +41,7 @@
   }
 
   const log = () => (FL().load ? FL().load() : []);
-  const today = () => (FL().today ? FL().today() : new Date().toISOString().slice(0, 10));
+  const today = () => (FL().today ? FL().today() : (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)));
   const shownDay = () => (FL().day ? FL().day() : today());
   const mealSetup = () => (FL().mealSetup ? FL().mealSetup() : {});
   const labelOf = m => (Core() && Core().MEAL_LABELS[m]) || m;

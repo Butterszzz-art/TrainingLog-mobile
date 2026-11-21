@@ -50,7 +50,7 @@
     if (!username) return;
 
     const dateEl = document.getElementById('measureDate');
-    const date   = dateEl?.value || new Date().toISOString().slice(0, 10);
+    const date   = dateEl?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
 
     const entry = { date };
     FIELDS.forEach(f => {
