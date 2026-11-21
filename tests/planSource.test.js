@@ -37,6 +37,10 @@ describe('describePlanSource', () => {
     expect(d({ plan: 'pro', source: 'coach_code' }).status).toBe('Pro, included by your coach');
   });
 
+  test('admin access', () => {
+    expect(d({ plan: 'coach', source: 'admin' })).toEqual({ status: 'Coach (admin access)', isSubscription: false });
+  });
+
   test('a bad date is ignored rather than shown as "Invalid Date"', () => {
     expect(d({ plan: 'pro', source: 'prep_pass', expiresAt: 'nope' }).status).toBe('Pro via Prep Pass');
   });
