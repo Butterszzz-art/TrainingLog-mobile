@@ -66,6 +66,33 @@ describe('usual-session', () => {
       expect(usual.inferUsualNext([])).toBeNull();
     });
 
+    test('a routine the lifter stopped doing drops out instead of being next every day', () => {
+      // Legs twice two-plus weeks ago, then push and pull twice each since.
+      const history = [
+        legs(daysAgo(17)), legs(daysAgo(14)),
+        push(daysAgo(9)), pull(daysAgo(8)), push(daysAgo(5)), pull(daysAgo(4)),
+      ];
+      const next = usual.inferUsualNext(history, { muscleOf });
+      expect(next.exercises[0].name).toBe('Bench Press');
+    });
+
+    test('a routine still in the rotation stays next even when overdue', () => {
+      // Legs done once since push and pull were each done once: still its turn.
+      const history = [push(daysAgo(12)), pull(daysAgo(11)), legs(daysAgo(10)), push(daysAgo(8)), pull(daysAgo(7)), legs(daysAgo(6)), push(daysAgo(3)), pull(daysAgo(2))];
+      expect(usual.inferUsualNext(history, { muscleOf }).exercises[0].name).toBe('Back Squat');
+    });
+
+    test('"Not today" on a routine sends it behind the others from the next day', () => {
+      const history = [push(daysAgo(9)), pull(daysAgo(8)), legs(daysAgo(7)), push(daysAgo(5)), pull(daysAgo(4)), legs(daysAgo(2))];
+      const first = usual.inferUsualNext(history, { muscleOf });
+      expect(first.exercises[0].name).toBe('Bench Press');
+      // Turned down yesterday: pull is next today.
+      const skipped = { [first.rotationKey]: daysAgo(1) };
+      expect(usual.inferUsualNext(history, { muscleOf, skipped }).exercises[0].name).toBe('Barbell Row');
+      // Turned down today: today's answer doesn't change until tomorrow.
+      expect(usual.inferUsualNext(history, { muscleOf, skipped: { [first.rotationKey]: daysAgo(0) } }).exercises[0].name).toBe('Bench Press');
+    });
+
     test("today's workouts don't count as history", () => {
       const next = usual.inferUsualNext([push(daysAgo(4)), pull(daysAgo(3)), push(daysAgo(2)), pull(daysAgo(1)), push(daysAgo(0))], { muscleOf });
       expect(next.exercises[0].name).toBe('Bench Press');
@@ -138,6 +165,23 @@ describe('today-session from history', () => {
     const again = getTodaysPlannedDay();
     expect(again).toMatchObject({ source: 'rotation', rotationKey: day.rotationKey });
     expect(todaySession.isLoadedFrom(w, again, daysAgo(0))).toBe(true);
+  });
+
+  test('"Not today" on "your usual next" moves on to the next routine tomorrow; Undo takes it back', () => {
+    seed([], [push(daysAgo(10)), pull(daysAgo(9)), push(daysAgo(6)), pull(daysAgo(5))]);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const day = todaySession.getTodaysSession(undefined, yesterday);
+    expect(day.exercises[0].name).toBe('Bench Press');
+    const record = todaySession.declineToday({ day, now: yesterday });
+    expect(record).toMatchObject({ source: 'rotation', rotationKey: day.rotationKey });
+    expect(todaySession.readSkips()).toEqual({ [day.rotationKey]: daysAgo(1) });
+    todaySession.clearHistoryMemo();
+    expect(getTodaysPlannedDay().exercises[0].name).toBe('Barbell Row');
+
+    localStorage.setItem('todaySessionDeclined_athleteA', JSON.stringify(record));
+    todaySession.undoDecline();
+    expect(todaySession.readSkips()).toEqual({});
   });
 
   test('an active program keeps rest days as rest days (no history suggestion)', () => {

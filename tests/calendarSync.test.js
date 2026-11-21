@@ -193,3 +193,29 @@ test('restore picks up a feed the server still has', async () => {
     delete global.fetch;
   }
 });
+
+describe('network failures ("Load failed" on iPhone)', () => {
+  const loadFailed = () => Object.assign(new TypeError('Load failed'), { name: 'TypeError' });
+  afterEach(() => { delete global.fetch; jest.useRealTimers(); });
+
+  test('one network failure is retried and the feed is created', async () => {
+    activate('athleteA');
+    global.fetch = jest.fn()
+      .mockRejectedValueOnce(loadFailed())
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, path: '/cal/abc.ics' }) });
+    const st = await cal.syncNow({ create: true, force: true });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(st.path).toBe('/cal/abc.ics');
+    expect(cal.isEnabled('athleteA')).toBe(true);
+  });
+
+  test('two failures give a readable message instead of "Load failed"', async () => {
+    activate('athleteA');
+    global.fetch = jest.fn().mockRejectedValue(loadFailed());
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(cal.syncNow({ create: true, force: true })).rejects.toThrow("Couldn't reach Pocket Coach");
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(cal.isEnabled('athleteA')).toBe(false);
+    warn.mockRestore();
+  });
+});

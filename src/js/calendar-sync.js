@@ -151,12 +151,44 @@
     return `${m[1].padStart(2, '0')}:${m[2]}`;
   }
 
-  async function api(method, path, body) {
-    const res = await fetch(_server() + '/api/calendar' + path, {
+  const REQUEST_TIMEOUT_MS = 20000;
+  const RETRY_DELAY_MS = 1200;
+  const OFFLINE_MESSAGE = "Couldn't reach Pocket Coach. Check your connection and try again.";
+
+  /** fetch() rejected without an HTTP response: offline, timed out, or an
+   * error page from the server's edge without CORS headers (Safari calls
+   * all of these "Load failed", Chrome "Failed to fetch"). */
+  function _isNetworkError(err) {
+    if (!err) return false;
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') return true;
+    return err.name === 'TypeError' || /load failed|failed to fetch|network ?error|network connection was lost/i.test(String(err.message || ''));
+  }
+
+  async function _send(method, path, body) {
+    const init = {
       method,
       headers: { ..._authHeaders(), ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
-    });
+    };
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') init.signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    return fetch(_server() + '/api/calendar' + path, init);
+  }
+
+  async function api(method, path, body) {
+    let res;
+    try {
+      res = await _send(method, path, body);
+    } catch (err) {
+      if (!_isNetworkError(err)) throw err;
+      // One retry: a cold start or a blip on mobile data usually clears.
+      await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+      try {
+        res = await _send(method, path, body);
+      } catch (again) {
+        console.warn('[calendar] ' + method + ' /api/calendar' + path + ' failed:', (again && again.message) || again);
+        throw new Error(_isNetworkError(again) ? OFFLINE_MESSAGE : ((again && again.message) || OFFLINE_MESSAGE));
+      }
+    }
     let json = null;
     try { json = await res.json(); } catch { /* empty body */ }
     if (!res.ok || !json || json.success === false) {
