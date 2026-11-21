@@ -453,6 +453,8 @@ function renderWorkspace() {
     }).join('');
   }
 
+  renderExamplePrograms();
+
   railNavUpdateCounts(counts, _programs.length);
   if (_activeWorkspaceSection === 'checkins') renderCheckinsList();
   if (_activeWorkspaceSection === 'messages') renderMessageList();
@@ -2178,6 +2180,25 @@ function showImportedProgram(area, fileName, result) {
 function newLibraryProgram() {
   railNavGo('programs');
   showProgramBuilder();
+}
+
+// Example programs (coach/example-programs.js): open one in the builder to
+// show a prospect; it only lands in the library if the coach presses Save.
+function renderExamplePrograms() {
+  const el = document.getElementById('wsExamplePrograms');
+  const ex = window.CoachExamplePrograms;
+  if (!el || !ex) return;
+  el.innerHTML = ex.list.map(e => '<div class="ws-list-row"><span class="ws-list-name">' + escapeHtml(e.title)
+    + '<br><span class="ws-side-note">' + escapeHtml(e.summary) + '</span></span>'
+    + '<button class="bulk-action-btn bulk-action-btn--ghost" onclick="openExampleProgram(\'' + escapeHtml(e.id) + '\')">Open</button></div>').join('');
+}
+
+function openExampleProgram(id) {
+  const program = window.CoachExamplePrograms && window.CoachExamplePrograms.build(id);
+  if (!program) return;
+  railNavGo('programs');
+  showProgramBuilder(program);
+  document.getElementById('libProgramBuilderArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function editLibraryProgram(id) {
