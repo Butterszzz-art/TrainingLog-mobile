@@ -633,6 +633,7 @@ function renderClientFile(client) {
   renderDetailHeader(client);
   paintRequestCheckIn(client);
   renderOverview(client);
+  if (window.renderWalkthrough) window.renderWalkthrough(client);
   renderCheckIn(client);
   renderProgram(client);
   renderNutrition(client);
