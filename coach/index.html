@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="../css/profiles.css">
   <link rel="stylesheet" href="coach-app.css">
   <link rel="stylesheet" href="coach-guide-desktop.css">
+  <link rel="stylesheet" href="walkthrough.css">
 </head>
 <body>
 
@@ -463,6 +464,7 @@
         <!-- Detail tabs -->
         <div class="detail-tabs" id="detailTabs">
           <button class="detail-tab active" data-dtab="overview">Overview</button>
+          <button class="detail-tab" data-dtab="walkthrough">Walkthrough</button>
           <button class="detail-tab" data-dtab="checkin">Check-In</button>
           <button class="detail-tab" data-dtab="program">Program</button>
           <button class="detail-tab" data-dtab="nutrition">Nutrition</button>
@@ -471,6 +473,7 @@
 
         <!-- Tab panels -->
         <div class="detail-panel active" id="dtab_overview"></div>
+        <div class="detail-panel" id="dtab_walkthrough"></div>
         <div class="detail-panel" id="dtab_checkin"></div>
         <div class="detail-panel" id="dtab_program"></div>
         <div class="detail-panel" id="dtab_nutrition"></div>
@@ -508,6 +511,7 @@
   <script src="../src/js/food-core.js"></script>
   <script src="../src/js/checkin-detail.js"></script>
   <script src="coach.js"></script>
+  <script src="walkthrough.js"></script>
   <script src="../src/js/coach-guide-core.js"></script>
   <script src="coach-guide-desktop.js"></script>
 </body>
