@@ -57,6 +57,8 @@
       // Pro from a coach's code (src/js/coach-code.js).
       case 'coach_code':
         return { status: o.coachUsername ? 'Included by @' + o.coachUsername : name + ', included by your coach', isSubscription: false };
+      // Admin accounts (ADMIN_USERNAMES on the server) get Coach without paying.
+      case 'admin': return { status: name + ' (admin access)', isSubscription: false };
       default: return { status: name + until, isSubscription: false };
     }
   }
