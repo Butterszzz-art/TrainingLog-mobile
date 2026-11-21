@@ -25,7 +25,7 @@
   const VALID_MODES = new Set(Object.keys(MODE_LABELS));
 
   function getTodayDateString() {
-    return new Date().toISOString().slice(0, 10);
+    return (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   function resolveUserId(userId) {

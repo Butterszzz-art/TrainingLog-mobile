@@ -27,7 +27,7 @@
     try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
   }
 
-  function _isoDate(d) { return d.toISOString().slice(0, 10); }
+  function _isoDate(d) { return (globalThis.AppTime?.dateKey(d) || d.toISOString().slice(0, 10)); }
 
   function _daysAgo(n) {
     const d = new Date(); d.setDate(d.getDate() - n); return _isoDate(d);

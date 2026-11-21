@@ -658,7 +658,7 @@
 
   // Same day boundary as the Macros tab's running totals.
   function _today() {
-    return (typeof window.getTodayDateString === 'function' && window.getTodayDateString()) || new Date().toISOString().slice(0, 10);
+    return (typeof window.getTodayDateString === 'function' && window.getTodayDateString()) || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   // The day the food log shows and adds to: today, unless the user stepped

@@ -357,7 +357,7 @@
       saveWeightGoal({
         targetKg,
         startKg: keepStart ? goal.startKg : startKg,
-        startDate: keepStart ? goal.startDate : new Date().toISOString().slice(0, 10),
+        startDate: keepStart ? goal.startDate : (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)),
         dueDate: due,
         setAt: new Date().toISOString(),
       });

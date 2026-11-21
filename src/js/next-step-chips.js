@@ -165,8 +165,7 @@
     return localStorage.getItem('currentUser') || localStorage.getItem('username') || null;
   }
 
-  function todayStr() {
-    const d = new Date();
+  function todayStr(d = new Date()) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
@@ -192,7 +191,7 @@
       days.add(w.date);
       if (ex && w.log.some(e => String(e?.exercise || '').trim().toLowerCase() === ex)) exDays.add(w.date);
     });
-    const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+    const weekAgo = todayStr(new Date(Date.now() - 7 * 864e5));
     return {
       exercise: extra?.exercise ? String(extra.exercise).trim() : '',
       workoutDays: days.size,

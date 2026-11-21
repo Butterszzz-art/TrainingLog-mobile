@@ -102,7 +102,7 @@ function bulkExportCSV() {
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `coach-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `coach-report-${(globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   _showExportToast('CSV exported');
@@ -925,7 +925,7 @@ window.exportClientData = async function (clientId) {
     ]);
     const name = detail.client?.clientName || clientId;
     _downloadJSON({ exportedAt: new Date().toISOString(), client: detail.client, notes: notes.notes || [] },
-      `client-data-${String(name).replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`);
+      `client-data-${String(name).replace(/\s+/g, '-').toLowerCase()}-${(globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))}.json`);
   } catch (err) {
     window.showToast(err.message || 'Export failed.', 'error');
   }
@@ -955,7 +955,7 @@ window.exportAllCoachData = async function () {
       coach: _coachUser(),
       programs,
       clients: _activeClients().map(c => ({ id: c.id, name: c.name, status: c.status, currentProgram: c.currentProgram, nutrition: c.currentNutritionSummary, sharing: c.sharing }))
-    }, `all-coach-data-${new Date().toISOString().slice(0, 10)}.json`);
+    }, `all-coach-data-${(globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))}.json`);
   } catch (err) {
     window.showToast(err.message || 'Export failed.', 'error');
   }

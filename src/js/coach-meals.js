@@ -98,7 +98,7 @@
   const PLAN_KEY = () => `coachMealPlan_${user()}`;
   const read = (k, f) => { try { const v = JSON.parse(globalScope.localStorage.getItem(k)); return v == null ? f : v; } catch (_e) { return f; } };
   const FL = () => globalScope.FoodLog;
-  const today = () => (FL() && FL().today()) || new Date().toISOString().slice(0, 10);
+  const today = () => (FL() && FL().today()) || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   // The day the food log shows: today, or an earlier day being filled in.
   const shown = () => (FL() && FL().day ? FL().day() : today());
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

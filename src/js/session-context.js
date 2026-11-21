@@ -35,7 +35,7 @@
 
   function setVacationMode(active) {
     const prev = getVacationMode();
-    const now  = new Date().toISOString().slice(0, 10);
+    const now  = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     _set(VACATION_KEY, {
       active,
       since: active ? (prev.since || now) : null,
@@ -57,7 +57,7 @@
     if (!v.since) return false;
     const d       = dateStr;
     const since   = v.since;
-    const resumed = v.resumedOn || new Date().toISOString().slice(0, 10);
+    const resumed = v.resumedOn || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     return d >= since && d <= resumed;
   }
 
@@ -122,7 +122,7 @@
 
   function setSickMode(active) {
     const prev = getSickMode();
-    const now = new Date().toISOString().slice(0, 10);
+    const now = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     _set(SICK_KEY, {
       active,
       since: active ? (prev.since || now) : null,
@@ -138,7 +138,7 @@
   function isSickDate(dateStr) {
     const s = getSickMode();
     if (!s.since) return false;
-    const recovered = s.recoveredOn || new Date().toISOString().slice(0, 10);
+    const recovered = s.recoveredOn || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     return dateStr >= s.since && dateStr <= recovered;
   }
 

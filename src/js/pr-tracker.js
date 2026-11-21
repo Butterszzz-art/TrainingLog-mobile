@@ -66,7 +66,7 @@
 
     const prs = _loadPRs(username);
     const newPRs = [];
-    const today = new Date().toISOString().slice(0, 10);
+    const today = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
 
     for (const entry of log) {
       const name = (entry.exercise || entry.name || '').trim();

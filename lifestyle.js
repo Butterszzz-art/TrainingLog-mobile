@@ -13,7 +13,7 @@ function initLifestyle(){
   });
   showLifestyleTab('dailyTab');
   const _sd = document.getElementById('scheduleDate');
-  if (_sd) _sd.value = new Date().toISOString().split('T')[0];
+  if (_sd) _sd.value = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   renderSchedule();
   renderStudy();
   renderTodos();
@@ -90,7 +90,7 @@ function startStudySession(){
     clearInterval(studyTimer); studyTimer=null;
     const mins=Math.round((Date.now()-studyStart)/60000);
     const subject=document.getElementById('subjectFilter')?.value || 'General';
-    const date=new Date().toISOString().split('T')[0];
+    const date=(globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     const data=load('study');
     data.push({id:Date.now(),date,subject,duration:mins});
     save('study',data);
@@ -116,7 +116,7 @@ function openStudyForm(){
   const subject=prompt('Subject');
   const duration=parseInt(prompt('Duration (minutes)'),10);
   if(!subject||!duration) return;
-  const date=new Date().toISOString().split('T')[0];
+  const date=(globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const data=load('study');
   data.push({id:Date.now(),date,subject,duration});
   save('study',data); renderStudy();
@@ -177,7 +177,7 @@ function renderHabits(){
     const li=document.createElement('li');
     const chk=document.createElement('input');
     chk.type='checkbox';
-    const date=new Date().toISOString().split('T')[0];
+    const date=(globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     const log=load('habitLog');
     const entry=log.find(e=>e.habit===h.id&&e.date===date);
     chk.checked=!!entry;

@@ -112,7 +112,7 @@
   function buildTaperPlan(meetDateISO, referenceDateISO) {
     const meetDate = toDateOnlyUTC(meetDateISO);
     if (!meetDate) return [];
-    const refISO = referenceDateISO || new Date().toISOString().slice(0, 10);
+    const refISO = referenceDateISO || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     const daysOutToday = daysBetween(refISO, meetDateISO);
     if (daysOutToday === null) return [];
 

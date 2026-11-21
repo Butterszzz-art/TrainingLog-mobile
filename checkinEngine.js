@@ -74,7 +74,7 @@
 
   function toIsoDate(value) {
     const date = toDate(value);
-    return date ? date.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+    return date ? date.toISOString().slice(0, 10) : (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   function normalizeCheckIn(checkIn, phaseState = {}) {
@@ -259,7 +259,7 @@
   }
 
   function getWeekLabelForCheckIn(checkIn, phaseState = {}) {
-    const entryDate = checkIn?.date || new Date().toISOString().slice(0, 10);
+    const entryDate = checkIn?.date || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
     const rawPhase = typeof checkIn?.phase === 'string' && checkIn.phase.trim()
       ? checkIn.phase.trim().toLowerCase().replace(/\s+/g, '_')
       : String(phaseState.mode || 'improvement').toLowerCase();

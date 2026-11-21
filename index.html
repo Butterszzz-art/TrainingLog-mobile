@@ -17,6 +17,9 @@
       } catch (e) { /* storage unavailable: show the login form */ }
     })();
   </script>
+  <!-- The app's clock and calendar day in the lifter's time zone (AppTime).
+       Loaded first: everything that asks "what day is it" goes through it. -->
+  <script src="src/js/app-time.js"></script>
   <!-- Sets the user's app colour on <html> before first paint. -->
   <script src="src/js/logbook-cover.js"></script>
   <link href="vendor/fonts/fonts.css" rel="stylesheet">
@@ -7204,6 +7207,23 @@ function resetEntryDateToToday(input = document.getElementById('entryDate')) {
   input.dataset.autoDate = input.value;
 }
 
+// The app's day moved: midnight passed with the app open, or the phone
+// changed time zone (landed in another country). AppTime fires this; roll
+// the macro day over and redraw the day-based screens. The Log tab is left
+// alone mid-session (its date field already resolves "today" per set).
+if (typeof window.addEventListener === 'function') window.addEventListener('apptime:change', (e) => {
+  const d = (e && e.detail) || {};
+  if (typeof currentUser !== 'undefined' && currentUser && typeof rolloverMacroDay === 'function') rolloverMacroDay();
+  const entryDate = document.getElementById('entryDate');
+  if (entryDate && entryDate.value === entryDate.dataset.autoDate) resetEntryDateToToday(entryDate);
+  const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  const id = activeTab && activeTab.id;
+  if (!typing && (id === 'homeTab' || id === 'macroTab')) showTab(id);
+  if (d.previousZone && d.zone !== d.previousZone && window.AppTime && typeof window.showToast === 'function') {
+    window.showToast(`Clock now on ${window.AppTime.cityName(d.zone)} time (${window.AppTime.offsetLabel()})`);
+  }
+});
+
 function resolveEntryDate(input) {
   if (!input || !input.value || input.value === input.dataset.autoDate) return localDateKey();
   return input.value;
@@ -9228,8 +9248,8 @@ function buildTemplateFromWorkout(workout, metadata = {}) {
   const tags = Array.isArray(metadata.tags) ? metadata.tags : [];
 
   return {
-    title: metadata.name || safeWorkout.title || `Template ${new Date().toISOString().split('T')[0]}`,
-    date: safeWorkout.date || new Date().toISOString().split('T')[0],
+    title: metadata.name || safeWorkout.title || `Template ${(globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))}`,
+    date: safeWorkout.date || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)),
     metadata: {
       description: metadata.description || safeWorkout.description || '',
       tags
@@ -9301,7 +9321,7 @@ function openSaveTemplateModal(workoutIndex) {
   const fallbackTitle = `Workout on ${workout.date}`;
   const defaultName = (workout.title && workout.title !== fallbackTitle)
     ? workout.title
-    : `Template ${workout.date || new Date().toISOString().split('T')[0]}`;
+    : `Template ${workout.date || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))}`;
 
   const modal = document.createElement('div');
   modal.className = 'gdpr-modal-overlay';
@@ -9567,7 +9587,7 @@ function saveSimpleTemplate() {
   if (!name || newTemplateExercises.length === 0) { window.showToast('Add a name and at least one exercise.', 'warn'); return; }
   const templateData = {
     title: name,
-    date: new Date().toISOString().split('T')[0],
+    date: (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)),
     metadata: {
       description,
       tags
@@ -10004,7 +10024,7 @@ function submitMeal(idx) {
     if (icon) icon.innerHTML = ICONS.chevronRight;
   }
 
-  const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+  const today = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)); // yyyy-mm-dd
   const meals = macroMeals; // your meals array
   const totals = { calories: totalCals, protein: totalProtein, carbs: totalCarbs, fat: totalFats };
 
@@ -11413,9 +11433,14 @@ function applyCustomCalories() {
   }
 }
 
+// The app's day (YYYY-MM-DD) in the lifter's own time zone (src/js/app-time.js).
+// It used to be toISOString()'s UTC date, so food logged before 10am in
+// Sydney, or after 7pm in New York, landed on the wrong day.
 function getTodayDateString() {
+  if (typeof window !== 'undefined' && window.AppTime) return window.AppTime.today();
   const d = new Date();
-  return d.toISOString().slice(0, 10); // YYYY-MM-DD
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 // Today's intake. `cals` is calories logged on their own ("+250 kcal"), on
@@ -11541,7 +11566,9 @@ function getPreviousMacroDay() {
 }
 
 function describeMacroDay(date) {
-  const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const t = new Date();
+  const y = new Date(t.getFullYear(), t.getMonth(), t.getDate() - 1);
+  const yesterday = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, "0")}-${String(y.getDate()).padStart(2, "0")}`;
   if (date === yesterday) return "yesterday";
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ""));
   if (!m) return date;
@@ -12292,13 +12319,13 @@ function getComplianceSnapshot(profile, username, archetype) {
   const missionState = getTodayMissionState(profile, username);
   const dailyPercent = window.complianceEngine?.calculateDailyCompliancePercent?.(missionState, archetype) ?? 0;
   const dailyStatus = window.complianceEngine?.getComplianceStatus?.(dailyPercent) || 'off_track';
-  const weekly = window.complianceEngine?.calculateWeeklyCompliance?.(username, new Date().toISOString().slice(0, 10), archetype)
+  const weekly = window.complianceEngine?.calculateWeeklyCompliance?.(username, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)), archetype)
     || { averagePercent: 0, status: 'off_track', completedDays: 0, activeDays: 0, days: [] };
-  const rolling7 = window.complianceEngine?.calculateRolling7DayCompliance?.(username, new Date().toISOString().slice(0, 10), archetype)
+  const rolling7 = window.complianceEngine?.calculateRolling7DayCompliance?.(username, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)), archetype)
     || { percent: weekly.averagePercent || 0, status: weekly.status || 'off_track' };
   const trend = window.complianceEngine?.getComplianceTrend?.(username, archetype)
     || { trend: 'steady', delta: 0, insight: 'Behind this week. Start with what’s in Do this now' };
-  const insightsPayload = window.complianceEngine?.getComplianceInsights?.(username, new Date().toISOString().slice(0, 10), archetype)
+  const insightsPayload = window.complianceEngine?.getComplianceInsights?.(username, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)), archetype)
     || { insights: [trend.insight], missed: { byTask: {}, topMissedTask: null } };
   return { dailyPercent, dailyStatus, weekly, rolling7, trend, insightsPayload };
 }
@@ -12341,7 +12368,7 @@ const MISSION_ITEM_META = {
 function getTodayMissionState(profile, username) {
   const engine = window.dailyMissionEngine;
   if (!engine) return null;
-  const date = new Date().toISOString().slice(0, 10);
+  const date = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const phaseState = window.prepModeApi?.getCurrentPhaseState?.(username) || profile || {};
   return engine.getDailyMissionState(username, date)
     || engine.generateDefaultMissionFromPhase(username, phaseState, date);
@@ -12353,7 +12380,7 @@ function toggleMissionItem(itemKey, checked) {
   const engine = window.dailyMissionEngine;
   if (!engine) return;
   const userId = currentUser || localStorage.getItem('currentUser');
-  const date = new Date().toISOString().slice(0, 10);
+  const date = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   if (checked) {
     engine.markMissionItemComplete(userId, date, itemKey);
   } else {
@@ -12397,7 +12424,7 @@ function togglePosingComplete(isComplete) {
   try {
     if (window.dailyMissionEngine?.syncMissionFromPosingEntry) {
       window.dailyMissionEngine.syncMissionFromPosingEntry({
-        date: new Date().toISOString().slice(0, 10),
+        date: (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)),
         complete: Boolean(isComplete)
       }, currentUser);
     }
@@ -12422,9 +12449,9 @@ function getLatestCheckIn(userId) {
 function renderPosingDashboardCard(userId) {
   const posingApi = window.posingEngine;
   if (!posingApi) return '';
-  const weekly = posingApi.getWeeklySummary(userId, new Date().toISOString().slice(0, 10));
-  const streak = posingApi.calculateStreak(userId, new Date().toISOString().slice(0, 10));
-  const overdue = posingApi.getOverdueStatus(userId, new Date().toISOString().slice(0, 10));
+  const weekly = posingApi.getWeeklySummary(userId, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)));
+  const streak = posingApi.calculateStreak(userId, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)));
+  const overdue = posingApi.getOverdueStatus(userId, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)));
   return `
     <section class="home-dashboard-card">
       <h3 class="home-card-title">Posing Readiness</h3>
@@ -12452,7 +12479,7 @@ function savePosingTargets() {
 function addPosingSession() {
   if (!window.posingEngine) return;
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  const date = document.getElementById('posingDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const date = document.getElementById('posingDateInput')?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const minutes = Number(document.getElementById('posingMinutesInput')?.value) || 0;
   const notes = document.getElementById('posingNotesInput')?.value || '';
   if (minutes <= 0) {
@@ -12570,7 +12597,7 @@ function renderPosingTab() {
   const body = document.getElementById('posingBody');
   if (!summaryEl || !body) return;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const dateInput = document.getElementById('posingDateInput');
   if (dateInput && !dateInput.value) dateInput.value = today;
 
@@ -12926,7 +12953,7 @@ function getHomeContextLine(profile, username, archetype) {
     const days = getCountdownDaysNumber(showDateLike);
     if (days === 0) parts.push('Show day');
     else if (days != null) parts.push(`${days} days out`);
-    const week = getTimelineHeaderLabel(profile, username, new Date().toISOString().slice(0, 10));
+    const week = getTimelineHeaderLabel(profile, username, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)));
     if (week) parts.push(escapeCoachText(week));
     const peak = showDateLike && profile.peakWeekStart ? new Date(profile.peakWeekStart) : null;
     if (peak && !Number.isNaN(peak.getTime()) && peak >= new Date(new Date().toDateString())) {
@@ -12972,7 +12999,7 @@ function renderHomeMissionTicks(profile, username) {
   if (!items.length) return '';
   const userId = username || currentUser || localStorage.getItem('currentUser');
   const posingOverdue = items.includes('posingComplete') && !state.posingComplete
-    && window.posingEngine?.getOverdueStatus?.(userId, new Date().toISOString().slice(0, 10))?.overdue;
+    && window.posingEngine?.getOverdueStatus?.(userId, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)))?.overdue;
   const allDone = items.every(k => state[k]);
   const check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
   const chips = items.map(k => {
@@ -14199,8 +14226,8 @@ function autoFillCardioAdherenceSlider(userId) {
   const weekStart = new Date(today);
   weekStart.setDate(today.getDate() - dayOfWeek);
   weekStart.setHours(0, 0, 0, 0);
-  const weekStartStr = weekStart.toISOString().slice(0, 10);
-  const todayStr     = today.toISOString().slice(0, 10);
+  const weekStartStr = localDateKey(weekStart);
+  const todayStr     = localDateKey(today);
 
   const sessionsThisWeek = log.filter(e => e.date >= weekStartStr && e.date <= todayStr).length;
   if (sessionsThisWeek === 0) return; // leave slider at default
@@ -14300,7 +14327,7 @@ function renderCoachCheckInQuestions(userId) {
   const questions = typeof window.coachCheckInQuestions === 'function' ? window.coachCheckInQuestions() : [];
   card.hidden = !questions.length;
   if (!questions.length) { box.innerHTML = ''; return; }
-  const date = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const date = document.getElementById('checkInDateInput')?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const saved = (window.checkinEngine.loadCheckIns(userId).find(e => e.date === date) || {}).coachAnswers || [];
   const typed = {};
   box.querySelectorAll('textarea[data-coach-q]').forEach(t => { typed[t.dataset.coachQ] = t.value; });
@@ -14334,7 +14361,7 @@ function renderCheckInTab() {
   const archetype = getCheckInArchetype(userId);
 
   const phaseState = getCheckInPhaseState();
-  const checkInHeader = getTimelineHeaderLabel(phaseState, userId, new Date().toISOString().slice(0, 10));
+  const checkInHeader = getTimelineHeaderLabel(phaseState, userId, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)));
   const nextDate = window.checkinEngine.getNextCheckInDate(phaseState);
   const nextDateEl = document.getElementById('checkInNextDate');
   if (nextDateEl) {
@@ -14355,7 +14382,7 @@ function renderCheckInTab() {
 
   const dateInput = document.getElementById('checkInDateInput');
   if (dateInput && !dateInput.value) {
-    dateInput.value = new Date().toISOString().slice(0, 10);
+    dateInput.value = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   const phaseInput = document.getElementById('checkInPhaseInput');
@@ -14541,7 +14568,7 @@ function prefillCheckInBodyweightFromWeighIns(userId) {
   if (!input || !window.checkinEngine?.loadWeighIns) return;
   if (input.value && !input.dataset.autofill) return;
 
-  const date = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const date = document.getElementById('checkInDateInput')?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const match = window.checkinEngine.findWeighInForDate(window.checkinEngine.loadWeighIns(userId), date);
   if (match) {
     input.value = match.weightKg;
@@ -14942,7 +14969,7 @@ function renderCheckInPosingPhotos() {
   const desc = document.getElementById('ciPosingPhotosDesc');
   if (!list) return;
   const userId = currentUser || localStorage.getItem('currentUser') || localStorage.getItem('username');
-  const date = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const date = document.getElementById('checkInDateInput')?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const { sets } = checkInPosingChoices(userId, date);
   const picked = new Set(getCheckInPosingPicks(userId, date));
   _ciPosingPicks.date = date;
@@ -14993,7 +15020,7 @@ function saveWeeklyCheckIn(actor = 'athlete') {
   const trainingMetricKey = CHECKIN_TRAINING_PERFORMANCE_BY_ARCHETYPE[archetype];
 
   const phaseState = getCheckInPhaseState();
-  const dateValue = document.getElementById('checkInDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const dateValue = document.getElementById('checkInDateInput')?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const phaseValue = document.getElementById('checkInPhaseInput')?.value || phaseState.mode || 'improvement';
   const manualWeekLabel = document.getElementById('checkInWeekLabelInput')?.value?.trim();
 
@@ -15363,7 +15390,7 @@ function addWeightEntry() {
   const { unit } = getBodyweightPreference();
   const weightKg = convertWeightValue(rawValue, unit, 'kg', null);
   const dateField = document.getElementById("weightDateInput");
-  const date = dateField.value || new Date().toISOString().split('T')[0];
+  const date = dateField.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const log = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   // Replace if same date exists, otherwise add
   const existingIdx = log.findIndex(e => e.date === date);
@@ -15824,7 +15851,7 @@ function initCardioDateChip() {
   chip.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   // Default the hidden date input to today
   const dateInput = document.getElementById('cardioDate');
-  if (dateInput && !dateInput.value) dateInput.value = d.toISOString().slice(0, 10);
+  if (dateInput && !dateInput.value) dateInput.value = localDateKey(d);
 }
 
 /** Live-update the pace/speed preview chip under duration+distance fields */
@@ -15860,7 +15887,7 @@ function addCardioEntry() {
   const intensity = document.getElementById('cardioIntensity')?.value || 'moderate';
   const hrRaw = parseFloat(document.getElementById('cardioHeartRate')?.value);
   const heartRate = Number.isFinite(hrRaw) && hrRaw > 0 ? hrRaw : null;
-  const date = document.getElementById('cardioDate')?.value || new Date().toISOString().split('T')[0];
+  const date = document.getElementById('cardioDate')?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
 
   if (!type || !Number.isFinite(duration) || duration <= 0) {
     window.showToast?.('Choose an activity and enter a duration.', 'warn') ||
@@ -15901,7 +15928,7 @@ function addCardioEntry() {
   });
   // Reset date to today and close optional accordion
   const dateInput = document.getElementById('cardioDate');
-  if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+  if (dateInput) dateInput.value = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const opt = document.getElementById('cardioOptional');
   if (opt) opt.removeAttribute('open');
   // Reset intensity to moderate
@@ -15926,7 +15953,7 @@ function addCardioEntry() {
  *  Calling this now just signals the mission engine directly. */
 function completeCardioSession() {
   try {
-    const entry = { date: new Date().toISOString().split('T')[0], type: 'session_complete' };
+    const entry = { date: (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)), type: 'session_complete' };
     window.dailyMissionEngine?.syncMissionFromCardioEntry?.(entry, currentUser);
   } catch (e) { /* silent */ }
   window.showToast?.('Cardio session marked complete!', 'success', 3000);
@@ -15947,7 +15974,7 @@ function renderCardioCatchUpBanner(logArg) {
   const container = document.getElementById('cardioCatchUpBanner');
   if (!container || !currentUser) return;
   const log = logArg || JSON.parse(localStorage.getItem(`cardioLog_${currentUser}`)) || [];
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const loggedToday = log.some(e => e.date === todayKey);
   const hour = new Date().getHours();
 
@@ -15988,7 +16015,7 @@ function quickLogCardioCatchUp() {
     window.showToast?.('Pick an activity and a duration first.', 'warn');
     return;
   }
-  const date = new Date().toISOString().slice(0, 10);
+  const date = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const bodyweightLog = JSON.parse(localStorage.getItem(`bodyweightLog_${currentUser}`)) || [];
   const fallbackWeightKg = Number(JSON.parse(localStorage.getItem('personalDetails') || 'null')?.weightKg) || 70;
   const latestWeightKg = bodyweightLog.length
@@ -16026,7 +16053,7 @@ function renderCardio() {
   /* ── Weekly summary (rolling 7 days) ────────────────────── */
   const today = new Date();
   const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 6);
-  const weekStart = weekAgo.toISOString().slice(0, 10);
+  const weekStart = localDateKey(weekAgo);
   const weekEntries = log.filter(e => (e.date || '') >= weekStart);
 
   const weekSessions = weekEntries.length;
@@ -16042,7 +16069,7 @@ function renderCardio() {
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today); d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = localDateKey(d);
       const mins = weekEntries.filter(e => e.date === key).reduce((s, e) => s + (parseFloat(e.duration) || 0), 0);
       days.push({
         mins,
@@ -16106,8 +16133,8 @@ function renderCardio() {
   });
 
   const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-  const todayStr     = today.toISOString().slice(0, 10);
-  const yesterdayStr = new Date(today.getTime() - 86400000).toISOString().slice(0, 10);
+  const todayStr     = localDateKey(today);
+  const yesterdayStr = localDateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1));
 
   function _dateLabel(d) {
     if (d === todayStr)     return 'Today';
@@ -16972,13 +16999,13 @@ function getArrayTrendSummary(values, options = {}) {
 }
 
 function getCurrentWeekDateRange() {
+  // Sunday to Saturday of the lifter's own week (local calendar, not UTC's).
   const now = new Date();
-  const day = now.getUTCDay();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day));
-  const end = new Date(start.getTime() + (6 * 86400000));
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10)
+    start: localDateKey(start),
+    end: localDateKey(end)
   };
 }
 
@@ -17059,7 +17086,7 @@ function renderProgressArchetypeSpotlight(context = {}) {
   const checkIns = window.checkinEngine?.loadCheckIns?.(userId) || [];
   const complianceSnapshot = getComplianceSnapshot({}, userId, archetype);
   const bbSummary = typeof computeBodybuildingProgressSummary === 'function' ? computeBodybuildingProgressSummary(workouts || []) : null;
-  const posingWeekly = window.posingEngine?.getWeeklySummary?.(userId, new Date().toISOString().slice(0, 10)) || null;
+  const posingWeekly = window.posingEngine?.getWeeklySummary?.(userId, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))) || null;
 
   const strengthTrend = getArrayTrendSummary(workoutHistory.map((h) => Number(h.estimated1RM || 0)), { precision: 1 });
   const cardioTrend = getArrayTrendSummary(cardioHistory.map((h) => Number(h.duration || 0)), { precision: 0 });
@@ -17658,7 +17685,7 @@ function renderPRs() {
     if (!stamp) return '—';
     const d = new Date(stamp);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toISOString().split('T')[0];
+    return localDateKey(d);
   };
 
   const rows = [];
@@ -18276,7 +18303,7 @@ function saveCrossfitWorkout() {
     }
   });
 
-  const date = new Date().toISOString().split('T')[0];
+  const date = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const cfLog = JSON.parse(localStorage.getItem(`crossfitLog_${currentUser}`)) || [];
   cfLog.push({ date, name, minutes, seconds, rounds, notes, exercises });
   localStorage.setItem(`crossfitLog_${currentUser}`, JSON.stringify(cfLog));
@@ -18384,7 +18411,7 @@ function completeCrossfitWorkout() {
     return;
   }
   const workouts = JSON.parse(localStorage.getItem(`crossfitWorkouts_${currentUser}`)) || [];
-  workouts.push({ date: new Date().toISOString().split('T')[0], log: crossfitEntries });
+  workouts.push({ date: (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)), log: crossfitEntries });
   localStorage.setItem(`crossfitWorkouts_${currentUser}`, JSON.stringify(workouts));
   
   crossfitEntries = [];
@@ -18448,7 +18475,7 @@ function loadCrossfitTemplate() {
 
     // Set HYROX date to today
     const dateEl = document.getElementById('hyroxDate');
-    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+    if (dateEl && !dateEl.value) dateEl.value = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
 
     // Auto-calc HYROX total on input
     document.getElementById('hyroxStations')?.addEventListener('input', calcHyroxTotal);
@@ -18497,7 +18524,7 @@ function calcHyroxTotal() {
 function saveHyroxSimulation() {
   const user = currentUser || localStorage.getItem('fitnessAppUser');
   if (!user) return;
-  const date = document.getElementById('hyroxDate')?.value || new Date().toISOString().slice(0, 10);
+  const date = document.getElementById('hyroxDate')?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const stations = {};
   let total = 0;
   document.querySelectorAll('.hyrox-time-input').forEach(inp => {
@@ -19515,7 +19542,7 @@ async function _commSendToUser(recipient, message) {
     return;
   }
 
-  _commAddToOutbox({ type: item.type, name: item.name, to: `@${share.to || recipient}`, toType: 'user', date: new Date().toISOString().slice(0, 10) });
+  _commAddToOutbox({ type: item.type, name: item.name, to: `@${share.to || recipient}`, toType: 'user', date: (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)) });
 
   window.showToast?.(`"${item.name}" sent to @${share.to || recipient}!`, 'success', 3500);
   if (document.getElementById('commShareRecipient')) document.getElementById('commShareRecipient').value = '';
@@ -19543,7 +19570,7 @@ async function _commSendToGroup(groupId, message) {
   });
   if (!shared) return;
 
-  _commAddToOutbox({ type: item.type, name: item.name, to: groupName, toType: 'group', date: new Date().toISOString().slice(0, 10) });
+  _commAddToOutbox({ type: item.type, name: item.name, to: groupName, toType: 'group', date: (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10)) });
 
   window.showToast?.(`"${item.name}" shared to ${groupName}!`, 'success', 3500);
   if (document.getElementById('commShareMessage')) document.getElementById('commShareMessage').value = '';
@@ -20513,7 +20540,7 @@ function _finishOnboarding() {
 // their training days, instead of the four default pings; the others stay
 // one switch away in Settings › Reminders.
 function _obSaveTrainingWeek(user) {
-  const today = window.HabitCore ? window.HabitCore.dateKey(Date.now()) : new Date().toISOString().slice(0, 10);
+  const today = window.HabitCore ? window.HabitCore.dateKey(Date.now()) : (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const key = `habit_${user}`;
   let state = {};
   try { state = JSON.parse(localStorage.getItem(key)) || {}; } catch { state = {}; }
@@ -21400,7 +21427,7 @@ function renderPowerliftingTab() {
 
   // Set today as default date for 1RM
   const oneRMDate = document.getElementById('oneRMDate');
-  if (oneRMDate && !oneRMDate.value) oneRMDate.value = new Date().toISOString().slice(0, 10);
+  if (oneRMDate && !oneRMDate.value) oneRMDate.value = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
 
   // Load saved meet details
   const savedMeet = JSON.parse(localStorage.getItem('plMeetDetails') || 'null');
@@ -21623,7 +21650,7 @@ function saveOneRMEntry() {
   const lift = document.getElementById('oneRMExercise')?.value;
   const weight = parseFloat(document.getElementById('oneRMWeight')?.value);
   const reps = parseInt(document.getElementById('oneRMReps')?.value, 10) || 1;
-  const date = document.getElementById('oneRMDate')?.value || new Date().toISOString().slice(0, 10);
+  const date = document.getElementById('oneRMDate')?.value || (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   const rpe = parseFloat(document.getElementById('oneRMRPE')?.value) || null;
   if (!lift || !Number.isFinite(weight) || weight <= 0) {
     alert('Enter a valid lift and weight.');
@@ -21842,7 +21869,7 @@ function renderMeetPrep() {
   const fedChip = savedMeet.fed ? `<span style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:0.78rem;color:var(--secondary-text);margin-right:6px;">${savedMeet.fed}</span>` : '';
   const wcChip = savedMeet.weightClass ? `<span style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:0.78rem;color:var(--secondary-text);">${savedMeet.weightClass}</span>` : '';
 
-  const plan = window.PowerliftingPeakWeek?.buildTaperPlan(dateVal, new Date().toISOString().slice(0, 10)) || [];
+  const plan = window.PowerliftingPeakWeek?.buildTaperPlan(dateVal, (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))) || [];
   if (!plan.length) { display.innerHTML = ''; return; }
 
   const daysOutToday = plan[0].daysOut;

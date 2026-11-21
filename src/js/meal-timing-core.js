@@ -51,11 +51,9 @@
     return r ? `${h}h ${String(r).padStart(2, '0')}m` : `${h}h`;
   }
 
-  // Epoch ms for "HH:MM" on a food log day. Food log dates are UTC calendar
-  // days (getTodayDateString), so the time is put on whichever local day
-  // makes the moment fall on that UTC date: in the Netherlands 00:30 on
-  // "2026-11-17" is the night after the 17th, in New York 21:00 on the 17th
-  // is the evening of the 16th. Falls back to the local day itself.
+  // Epoch ms for "HH:MM" on a food log day. Food log dates are the lifter's
+  // own calendar days (getTodayDateString → AppTime.today()), so 00:30 on
+  // "2026-11-17" is the start of the 17th wherever they are.
   function timeOnDay(date, time) {
     const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ''));
     const tm = /^(\d{1,2}):(\d{2})$/.exec(String(time || ''));
@@ -63,12 +61,7 @@
     const h = Number(tm[1]);
     const mi = Number(tm[2]);
     if (h > 23 || mi > 59) return null;
-    const at = off => new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]) + off, h, mi).getTime();
-    for (const off of [0, 1, -1]) {
-      const ms = at(off);
-      if (new Date(ms).toISOString().slice(0, 10) === date) return ms;
-    }
-    return at(0);
+    return new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi).getTime();
   }
 
   // ── Entries → meals ─────────────────────────────────────────────────

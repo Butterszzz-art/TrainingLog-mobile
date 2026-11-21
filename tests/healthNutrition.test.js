@@ -38,10 +38,17 @@ describe('health-nutrition helpers', () => {
     expect(hn.importDelta(prev, { protein: 15, carbs: 0, fats: 0, cals: 0 }, TODAY).protein).toBe(-25);
   });
 
-  test('dayRange covers the app day (UTC date)', () => {
+  test('dayRange covers the app day (local midnight to midnight)', () => {
     const r = hn.dayRange(TODAY);
-    expect(new Date(r.start).toISOString()).toBe('2026-10-26T00:00:00.000Z');
+    // Amsterdam is UTC+1 on 26 Oct 2026, so local midnight is 23:00 UTC the day before.
+    expect(new Date(r.start).toISOString()).toBe('2026-10-25T23:00:00.000Z');
     expect(r.end - r.start).toBe(24 * 60 * 60 * 1000);
+  });
+
+  test('dayRange is 25 hours on the night the clocks go back', () => {
+    const r = hn.dayRange('2026-10-25');
+    expect(new Date(r.start).toISOString()).toBe('2026-10-24T22:00:00.000Z');
+    expect(r.end - r.start).toBe(25 * 60 * 60 * 1000);
   });
 
   test('describeSources names known apps', () => {

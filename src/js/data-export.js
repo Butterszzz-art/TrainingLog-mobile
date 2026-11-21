@@ -39,7 +39,7 @@
   }
 
   function _dateStamp() {
-    return new Date().toISOString().slice(0, 10);
+    return (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
   }
 
   /* ── Export: Workouts ────────────────────────────────────── */
