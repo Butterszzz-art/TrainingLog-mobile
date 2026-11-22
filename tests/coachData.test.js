@@ -353,3 +353,32 @@ describe('buildCoachDataPack intake', () => {
     ]);
   });
 });
+
+describe('session timing for the AI coach (BU Time-efficient training)', () => {
+  const day = n => new Date(NOW.getTime() - n * 86400000).toISOString().slice(0, 10);
+  const timed = (n, e) => ({ id: 'w' + n, date: day(n), title: 'Full A', log: [{ exercise: 'Bench Press', repsArray: [8, 8], weightsArray: [80, 80] }], efficiency: e });
+  const store = () => memoryStore(Object.fromEntries(Object.entries({
+    workouts_ana: [
+      timed(9, { durationMin: 58, workingSets: 16, minPerSet: 3.6, otherMin: 14, budgetMin: 45 }),
+      timed(6, { durationMin: 61, workingSets: 17, minPerSet: 3.6, otherMin: 16, plannedMin: 45 }),
+      timed(3, { durationMin: 57, workingSets: 16, minPerSet: 3.6, otherMin: 12, budgetMin: 45 }),
+      { id: 'w1', date: day(1), log: [{ exercise: 'Row', repsArray: [8] }] },
+    ],
+    tl_performance_mode_v1: { active: false, restSeconds: 'auto', budgetMin: 45 },
+  }).map(([k, v]) => [k, JSON.stringify(v)])));
+
+  test('the pack carries each session\'s timing and the time budget', () => {
+    const pack = CoachData.buildCoachDataPack(store(), 'ana', null, NOW, null);
+    expect(pack.timeBudgetMin).toBe(45);
+    const byDate = Object.fromEntries(pack.workouts.map(w => [w.date, w.timing]));
+    expect(byDate[day(9)]).toEqual({ min: 58, sets: 16, perSet: 3.6, otherMin: 14, target: 45, budget: true });
+    expect(byDate[day(6)]).toEqual({ min: 61, sets: 17, perSet: 3.6, otherMin: 16, target: 45 });
+    expect(byDate[day(1)]).toBeUndefined();
+  });
+
+  test('the brief flags sessions running 10+ min over target', () => {
+    const pack = CoachData.buildCoachDataPack(store(), 'ana', null, NOW, null);
+    const digest = CoachData.buildBriefDigest(pack, {});
+    expect(digest.signals.map(s => s.text)).toContain('Sessions averaging 59 min, about 14 over your 45-min target');
+  });
+});

@@ -117,6 +117,20 @@
     return out;
   }
 
+  /** A finished session's timing for the coach: minutes, working sets,
+   * minutes per set, minutes that were neither sets nor timed rest, and
+   * the target (time budget, else the plan's estimate). */
+  function packTiming(e) {
+    if (!e || !num(e.durationMin) || !num(e.workingSets)) return null;
+    const t = { min: num(e.durationMin), sets: num(e.workingSets) };
+    if (num(e.minPerSet)) t.perSet = num(e.minPerSet);
+    if (num(e.otherMin) !== null) t.otherMin = num(e.otherMin);
+    const target = num(e.budgetMin) || num(e.plannedMin);
+    if (target) t.target = target;
+    if (num(e.budgetMin)) t.budget = true;
+    return t;
+  }
+
   function packWorkouts(store, username, now) {
     return allWorkouts(store, username)
       .filter(w => withinDays(w.date, now, WORKOUT_DAYS))
@@ -124,6 +138,8 @@
       .map(w => ({
         date: day(w.date),
         title: w.title || w.name || w.templateName || 'Workout',
+        // How long it took vs. its target (src/js/session-efficiency.js).
+        ...(() => { const t = packTiming(w.efficiency); return t ? { timing: t } : {}; })(),
         exercises: arr(w.log)
           .filter(e => e && e.exercise)
           .map(e => {
@@ -272,6 +288,9 @@
         .map(c => ({ date: day(c.date), type: c.type || 'cardio', durationMin: num(c.duration), distanceKm: num(c.distance) }));
       const program = resolveProgram(store, username);
       if (program) pack.program = program;
+      // The time budget the lifter last picked in performance mode.
+      const pm = readJSON(store, 'tl_performance_mode_v1', null);
+      if (pm && [30, 45, 60].includes(Number(pm.budgetMin))) pack.timeBudgetMin = Number(pm.budgetMin);
     }
 
     if (a.body) {
@@ -461,6 +480,21 @@
 
   // Exercises whose best estimated 1RM hasn't moved (within 1%) for 2+ weeks
   // across 3+ sessions — returns the most-trained one, or null.
+  /** Recent sessions with a target (the lifter's time budget, else the
+   * plan's estimate), from each pack workout's `timing`: { count, avgMin,
+   * avgTarget, overMin } over the last 4 such sessions in 28 days, or null.
+   * BU Time-efficient training; same rule as the coach dashboard card. */
+  function sessionLength(workouts, now) {
+    const timed = arr(workouts)
+      .filter(w => w && w.timing && num(w.timing.min) && num(w.timing.target) && now - Date.parse(w.date) <= 28 * DAY)
+      .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+      .slice(0, 4);
+    if (!timed.length) return null;
+    const avgMin = Math.round(timed.reduce((n, w) => n + num(w.timing.min), 0) / timed.length);
+    const avgTarget = Math.round(timed.reduce((n, w) => n + num(w.timing.target), 0) / timed.length);
+    return { count: timed.length, avgMin, avgTarget, overMin: avgMin - avgTarget };
+  }
+
   function findStall(workouts, now) {
     const byName = {};
     arr(workouts).forEach(w => {
@@ -558,6 +592,12 @@
         signals.push({ key: 'load', text: `${last7} session${last7 === 1 ? '' : 's'} in the last 7 days`, tone: 'good', weight: 0 });
       }
       if (daysSince >= 2 && daysSince < 5) score += 4;
+    }
+
+    // Session length against the target (BU Time-efficient training).
+    const length = sessionLength(p.workouts, now);
+    if (length && length.count >= 3 && length.overMin >= 10) {
+      signals.push({ key: 'time', text: `Sessions averaging ${length.avgMin} min, about ${length.overMin} over your ${length.avgTarget}-min target`, tone: 'watch', weight: 1 });
     }
 
     // Bodyweight trend against the phase goal.
