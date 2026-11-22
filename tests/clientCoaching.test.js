@@ -223,3 +223,34 @@ describe('checkInPhotoPlan', () => {
     expect(plan.some(s => s.date === '2026-08-01')).toBe(false);
   });
 });
+
+describe('time-efficiency share (sessions + muscle sets)', () => {
+  const { sessionTimes, weeklyMuscleSets } = require('../src/js/client-coaching.js');
+  const store = memoryStore({
+    workouts_ana: [
+      { id: 'w1', date: '2026-09-23', efficiency: { durationMin: 52, workingSets: 16, minPerSet: 3.3, otherMin: 12, budgetMin: 45 },
+        log: [{ exercise: 'Bench Press', repsArray: [5, 8, 8, 8], setTypeArray: ['warmup'] }, { exercise: 'Leg Extension', sets: 3 }] },
+      { id: 'w2', date: '2026-09-21', efficiency: { durationMin: 40, workingSets: 14, minPerSet: 2.9, otherMin: 3, plannedMin: 42 },
+        log: [{ exercise: 'Bench Press', repsArray: [8, 8, 8] }] },
+      { id: 'w3', date: '2026-08-01', efficiency: { durationMin: 90, workingSets: 20 }, log: [{ exercise: 'Bench Press', repsArray: [8, 8] }] },
+      { id: 'w4', date: '2026-09-22', log: [{ exercise: 'Row', repsArray: [8, 8] }] },
+    ],
+  });
+
+  test('recent sessions with efficiency, newest first, target from budget or plan', () => {
+    expect(sessionTimes(store, 'ana', NOW)).toEqual([
+      { date: '2026-09-23', durationMin: 52, sets: 16, minPerSet: 3.3, otherMin: 12, targetMin: 45 },
+      { date: '2026-09-21', durationMin: 40, sets: 14, minPerSet: 2.9, otherMin: 3, targetMin: 42 },
+    ]);
+  });
+
+  test('weekly working sets per muscle over two weeks, warm-ups excluded', () => {
+    expect(weeklyMuscleSets(store, 'ana', NOW)).toEqual({ chest: 3, quads: 1.5, back: 1 });
+  });
+
+  test('both ride in the snapshot under workouts', () => {
+    const snap = buildShareSnapshot(store, 'ana', NOW);
+    expect(snap.workouts.sessions).toHaveLength(2);
+    expect(snap.workouts.muscleSets.chest).toBe(3);
+  });
+});

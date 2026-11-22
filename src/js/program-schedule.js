@@ -150,7 +150,9 @@
         const slot = slotAt(trainingIndex);
         if (slot.week === null) return null;
         const list = core && typeof core.getWeekDays === 'function' ? core.getWeekDays(program, slot.week) : program.days;
-        return (list && list[trainingIndex % nDays]) || program.days[trainingIndex % nDays];
+        const day = (list && list[trainingIndex % nDays]) || program.days[trainingIndex % nDays];
+        // A busy week: the same day at maintenance volume (ProgramTimeline.maintenanceDay).
+        return slot.kind === 'busy' && PT && typeof PT.maintenanceDay === 'function' ? PT.maintenanceDay(day) : day;
       }
       const week = Math.floor(trainingIndex / nDays) + 1;
       const list = core && typeof core.getWeekDays === 'function' ? core.getWeekDays(program, week) : program.days;
@@ -211,10 +213,12 @@
         swapped,
         day: isTraining ? dayAt(trainingIndex) : null,
         weekNum,
-        phase: pause ? 'Pause week' : weekCount > 1 ? phaseFor(weekNum) : '',
+        phase: pause ? 'Pause week' : pauseSlot && pauseSlot.kind === 'busy' ? 'Busy week · maintenance' : weekCount > 1 ? phaseFor(weekNum) : '',
         pause,
         pauseNote: pause ? pauseSlot.note || '' : '',
         repeat: !!(pauseSlot && pauseSlot.kind === 'repeat'),
+        busy: !!(pauseSlot && pauseSlot.kind === 'busy'),
+        busyNote: pauseSlot && pauseSlot.kind === 'busy' ? pauseSlot.note || '' : '',
       };
     }
 

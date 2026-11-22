@@ -275,6 +275,9 @@
     if (restSecMax !== null && (restSec === null || restSecMax <= restSec)) restSecMax = null;
     const loadPct = roundTo(num(e.loadPct, 1, 120), 0.5);
     const loadKg = loadPct === null ? roundTo(num(e.loadKg, 0, 1000), 0.25) : null;
+    // Superset letter: rows in a day with the same letter are done back to
+    // back (the app alternates them and shortens the rest between them).
+    const superset = typeof e.superset === 'string' && /^[A-H]$/.test(e.superset.trim().toUpperCase()) ? e.superset.trim().toUpperCase() : null;
     return Object.assign({
       id: str(e.id, 64) || fallbackId,
       name,
@@ -287,7 +290,8 @@
       restSec,
       restSecMax,
       notes: str(e.notes, LIMITS.notes),
-    }, loadPct !== null ? { loadPct } : {}, loadKg !== null ? { loadKg } : {}, MUSCLES.includes(e.muscle) ? { muscle: e.muscle } : {});
+    }, loadPct !== null ? { loadPct } : {}, loadKg !== null ? { loadKg } : {}, MUSCLES.includes(e.muscle) ? { muscle: e.muscle } : {},
+    superset ? { superset } : {});
   }
 
   /** { chest: { mev, mav, mrv }, … } → only known muscles, whole sets 0–60, mev ≤ mav ≤ mrv. */
@@ -737,6 +741,7 @@
           // The app shows notes with every exercise: a % of 1RM goes there too.
           ...(e.notes || e.loadPct ? { notes: [e.loadPct ? e.loadPct + '% of 1RM' : '', e.notes].filter(Boolean).join(' · ') } : {}),
           sets: Array.from({ length: e.sets }, (_, i) => set(i)),
+          ...(e.superset ? { supersetGroup: e.superset } : {}),
         };
       }),
     };

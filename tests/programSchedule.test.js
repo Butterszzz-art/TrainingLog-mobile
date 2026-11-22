@@ -193,6 +193,18 @@ describe('the coach\'s repeat / pause weeks (program.timeline)', () => {
     expect(bench(s.dayFor(date('2026-11-16')))).toBe(85);
   });
 
+  test('a busy week repeats the week at maintenance volume, then the block carries on', () => {
+    const s = ps.createSchedule(withTimeline([{ id: 'b', kind: 'busy', afterWeek: 1, note: 'Exams' }]), { startDate: '2026-11-02' }, { core });
+    const mon = s.dayFor(date('2026-11-09'));
+    expect(mon).toMatchObject({ isTraining: true, busy: true, busyNote: 'Exams', phase: 'Busy week · maintenance', weekNum: 1 });
+    expect(mon.day.maintenance).toBe(true);
+    expect(mon.day.exercises[0].sets).toHaveLength(1); // 3 sets → 1, same load
+    expect(bench(mon)).toBe(80);
+    expect(s.dayFor(date('2026-11-02')).day.exercises[0].sets).toHaveLength(3); // week 1 untouched
+    expect(bench(s.dayFor(date('2026-11-16')))).toBe(85);
+    expect(s.dayFor(date('2026-11-16')).busy).toBe(false);
+  });
+
   test('without a timeline nothing changes', () => {
     const s = ps.createSchedule(twoWeeks, { startDate: '2026-11-02' }, { core });
     expect(bench(s.dayFor(date('2026-11-09')))).toBe(85);

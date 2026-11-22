@@ -3,6 +3,8 @@
  * Without touching the library program, the coach can, for this client:
  *   - set the start date,
  *   - repeat a week ("do week 3 again"),
+ *   - add a busy week: a maintenance copy of a week (exams, shifts) with
+ *     about a third of the sets (BU Time-efficient training),
  *   - put in a week off (holiday, illness) before any week,
  * and see every week with its dates, mesocycle and deload, the client's
  * current week marked. Saved as the client's programSchedule
@@ -64,23 +66,25 @@
         const monday = pos ? pos.monday(i) : null;
         const sunday = monday ? new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6) : null;
         const past = now >= 0 && i < now;
-        const label = s.kind === 'pause' ? 'Week off' : 'W' + s.week + (s.kind === 'repeat' ? ' again' : '');
+        const label = s.kind === 'pause' ? 'Week off' : 'W' + s.week + (s.kind === 'repeat' ? ' again' : s.kind === 'busy' ? ' busy' : '');
         const change = s.changeId ? state.changes.find(c => c.id === s.changeId) : null;
         return '<tr class="se-row' + (i === now ? ' is-now' : '') + (past ? ' is-past' : '') + (s.kind !== 'week' ? ' is-change' : '') + '" data-i="' + i + '">'
           + '<td class="se-n">' + (i + 1) + '</td>'
           + '<td class="se-date">' + (monday ? esc(fmt(monday) + ' – ' + fmt(sunday)) : '') + (i === now ? ' <span class="se-now">This week</span>' : '') + '</td>'
-          + '<td class="se-week"><span class="se-chip' + (s.kind === 'pause' ? ' se-chip--pause' : s.kind === 'repeat' ? ' se-chip--repeat' : '') + '">' + esc(label) + '</span>'
+          + '<td class="se-week"><span class="se-chip' + (s.kind === 'pause' ? ' se-chip--pause' : s.kind === 'repeat' ? ' se-chip--repeat' : s.kind === 'busy' ? ' se-chip--busy' : '') + '">' + esc(label) + '</span>'
           + (m && m.deload ? ' <span class="se-chip se-chip--deload">Deload</span>' : '') + '</td>'
           + '<td class="se-block">' + (m && m.block ? '<span class="se-dot se-dot--b' + (bi % 6) + '"></span>' + esc(m.block.name) : (s.kind === 'pause' ? '' : '—')) + '</td>'
-          + '<td class="se-note">' + (change ? '<input class="pb-in" data-note="' + esc(change.id) + '" value="' + esc(change.note) + '" maxlength="80" placeholder="' + (s.kind === 'pause' ? 'e.g. Holiday' : 'Why, e.g. missed sessions') + '" aria-label="Note">' : '') + '</td>'
+          + '<td class="se-note">' + (change ? '<input class="pb-in" data-note="' + esc(change.id) + '" value="' + esc(change.note) + '" maxlength="80" placeholder="' + (s.kind === 'pause' ? 'e.g. Holiday' : s.kind === 'busy' ? 'e.g. Exams' : 'Why, e.g. missed sessions') + '" aria-label="Note">' : '') + '</td>'
           + '<td class="se-acts">'
           + (past ? '' : '<button type="button" class="pb-link" data-act="pause" title="A week without training before this week; everything after moves back a week">Week off here</button>')
           + (past || s.kind === 'pause' ? '' : '<button type="button" class="pb-link" data-act="repeat" title="Do this week once more right after it">Repeat</button>')
+          + (past || s.kind === 'pause' ? '' : '<button type="button" class="pb-link" data-act="busy" title="Add a maintenance copy of this week right after it: same days and loads, about a third of the sets">Busy week</button>')
           + (change ? '<button type="button" class="pb-link pb-link--danger" data-act="remove">Remove</button>' : '')
           + '</td></tr>';
       }).join('');
       const pauses = slots.filter(s => s.kind === 'pause').length;
       const repeats = slots.filter(s => s.kind === 'repeat').length;
+      const busy = slots.filter(s => s.kind === 'busy').length;
       const where = !pos ? 'Set a start date (or wait until ' + esc(o.clientName || 'the client') + ' starts the program) to see dates and the current week.'
         : pos.before ? 'Starts ' + esc(fmt(new Date(start + 'T00:00:00'))) + '.'
           : pos.finished ? 'The program has ended.'
@@ -88,7 +92,7 @@
       return '<div class="se">'
         + '<div class="se-top">'
         + '<label class="pb-meta"><span>Start date</span><input class="pb-in" type="date" data-start value="' + esc(state.startDate) + '"></label>'
-        + '<div class="se-summary"><strong>' + slots.length + ' weeks</strong>' + (weekCount !== slots.length ? ' (program ' + weekCount + ' + ' + [repeats ? repeats + ' repeated' : '', pauses ? pauses + ' off' : ''].filter(Boolean).join(', ') + ')' : '')
+        + '<div class="se-summary"><strong>' + slots.length + ' weeks</strong>' + (weekCount !== slots.length ? ' (program ' + weekCount + ' + ' + [repeats ? repeats + ' repeated' : '', busy ? busy + ' busy' : '', pauses ? pauses + ' off' : ''].filter(Boolean).join(', ') + ')' : '')
         + '<br><span>' + where + '</span>'
         + (clientStart && !state.startDate ? '<br><span>' + esc(o.clientName || 'The client') + ' started on ' + esc(fmt(new Date(clientStart + 'T00:00:00'))) + '.</span>' : '')
         + '</div></div>'
@@ -140,10 +144,12 @@
         insertAt(list, i, { id: newId(), kind: 'pause', afterWeek: weekBefore(list, i), note: '' }, false);
       } else if (act === 'repeat') {
         insertAt(list, i, { id: newId(), kind: 'repeat', afterWeek: list[i].week, note: '' }, true);
+      } else if (act === 'busy') {
+        insertAt(list, i, { id: newId(), kind: 'busy', afterWeek: list[i].week, note: '' }, true);
       } else if (act === 'remove') {
         state.changes = state.changes.filter(c => c.id !== list[i].changeId);
       } else if (act === 'clear') {
-        if (!root.confirm('Undo every repeat and week off for this client?')) return;
+        if (!root.confirm('Undo every repeat, busy week and week off for this client?')) return;
         state.changes = [];
       } else if (act === 'save') {
         state.saving = true; state.message = ''; render();

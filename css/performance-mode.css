@@ -28,6 +28,7 @@ body.performance-mode .rest-banner-ring-wrap { cursor: pointer; }
 /* Performance-mode-only parts stay out of the normal view */
 .pm-header,
 #pmRestPresets,
+#pmTimeBudget,
 .rest-over-card,
 .rest-banner-pm-head,
 .rest-banner-pm-btn,
@@ -85,6 +86,7 @@ body.performance-mode #pmHeader           { order: 0; }
 body.performance-mode #restBanner         { order: 1; }
 body.performance-mode #restOverCard       { order: 1; }
 body.performance-mode #workoutTimer       { order: 2; }
+body.performance-mode #pmTimeBudget       { order: 2; }
 body.performance-mode #coachLogForBar     { order: 3; }
 body.performance-mode #injuryWarnBanner   { order: 3; }
 body.performance-mode #resistance-section { order: 4; }
@@ -564,3 +566,121 @@ body.performance-mode .ex-cues.is-open:not([hidden]) { z-index: 19; }
   color: var(--brass-light, var(--green-70));
   margin-bottom: 2px;
 }
+
+/* ── Time budget: pace bar and "behind" fixes ───────────────── */
+
+body.performance-mode #pmTimeBudget {
+  display: block;
+  margin: 0 12px 10px;
+}
+body.performance-mode #pmTimeBudget[hidden] { display: none; }
+
+.pm-budget-pace {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--secondary-text);
+  text-align: right;
+}
+.pm-budget-pace[data-status="ahead"],
+.pm-budget-pace[data-status="done"] { color: var(--green-70); }
+.pm-budget-pace[data-status="behind"],
+.pm-budget-pace[data-status="over"] { color: var(--warning-gold); }
+
+.pm-budget-presets {
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 0;
+}
+.pm-budget-presets .rest-preset-btn {
+  flex: 1;
+  margin: 0;
+  padding: 8px 0;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.pm-budget-bar {
+  height: 6px;
+  margin-top: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--border-default);
+  overflow: hidden;
+}
+.pm-budget-bar[hidden] { display: none; }
+.pm-budget-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--green-70);
+  transition: width 0.4s ease;
+}
+.pm-budget-bar[data-status="behind"] i,
+.pm-budget-bar[data-status="over"] i { background: var(--warning-gold); }
+
+.pm-budget-tips {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pm-budget-tips[hidden] { display: none; }
+
+.pm-budget-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--warning-border);
+  border-radius: 12px;
+}
+.pm-budget-tip-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-color);
+}
+.pm-budget-tip-text small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--secondary-text);
+}
+.pm-budget-tip-do {
+  flex: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--green-70);
+  color: rgb(var(--acc-0b130d));
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pm-budget-tip-x {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 18px;
+  cursor: pointer;
+}
+.pm-budget-tip-note {
+  font-size: 11px;
+  color: var(--secondary-text);
+}
+
+.pm-budget-applied {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secondary-text);
+}
+.pm-budget-applied[hidden] { display: none; }

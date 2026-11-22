@@ -10,7 +10,13 @@
  *   - the rest timer auto-starts after every logged set, at a length the
  *     lifter picks from the existing Rest-tab presets;
  *   - the rest timer can be paused/resumed and nudged by ±15 s;
- *   - a "Rest over!" card replaces the banner when the rest ends.
+ *   - a "Rest over!" card replaces the banner when the rest ends;
+ *   - "Auto" rest fits each exercise (heavy compound 2 min, isolation
+ *     75 s, ~45 s between the halves of a superset) — time-budget-core.js;
+ *   - a time budget (30/45/60 min) with a pace bar and, when the session
+ *     is running behind, fixes in BU's order: superset non-competing
+ *     exercises, myo-reps on isolations, and only then drop accessory sets;
+ *   - in a superset (planned or accepted), logging a set arms the partner.
  *
  * Rest-timer state is the same wall-clock record index.html already
  * persists under tl_rest_timer_v1 ({ endTimeMs, totalSeconds }), with one
@@ -20,9 +26,13 @@
   'use strict';
 
   const STORAGE_KEY = 'tl_performance_mode_v1';
+  // This session's accepted time-budget changes ({ date, changes, dismissed }).
+  const BUDGET_SESSION_KEY = 'tl_time_budget_session_v1';
+  const PACE_REFRESH_MS = 20000;
   const REST_TIMER_KEY = 'tl_rest_timer_v1';
   const WORKOUT_TIMER_KEY = 'tl_workout_timer_v1';
   const REST_PRESETS = [60, 90, 120, 180, 300];
+  const AUTO_REST = 'auto';
   const DEFAULT_REST_SECONDS = 90;
   const URGENT_SECONDS = 10;
   const REST_OVER_VISIBLE_MS = 6000;
@@ -85,7 +95,14 @@
     return !!(settings && settings.active && workoutTimer && workoutTimer.startTimeMs && savedUser);
   }
 
+  function _core() {
+    if (global.TimeBudgetCore) return global.TimeBudgetCore;
+    try { return typeof require === 'function' ? require('./time-budget-core') : null; } catch { return null; }
+  }
+
+  /** A preset in seconds, or 'auto' (rest fits each exercise). */
   function normaliseRestSeconds(value) {
+    if (value === AUTO_REST) return AUTO_REST;
     const n = Number(value);
     return REST_PRESETS.includes(n) ? n : DEFAULT_REST_SECONDS;
   }
@@ -102,7 +119,12 @@
 
   function getSettings() {
     const s = _read(STORAGE_KEY) || {};
-    return { active: !!s.active, restSeconds: normaliseRestSeconds(s.restSeconds) };
+    const core = _core();
+    return {
+      active: !!s.active,
+      restSeconds: normaliseRestSeconds(s.restSeconds),
+      budgetMin: core ? core.normaliseBudget(s.budgetMin) : null,
+    };
   }
 
   function _saveSettings(patch) {
@@ -119,10 +141,13 @@
     if (typeof document === 'undefined') return;
     const { restSeconds } = getSettings();
     document.querySelectorAll('#pmRestPresets [data-rest-seconds]').forEach((btn) => {
-      const on = Number(btn.dataset.restSeconds) === restSeconds;
+      const v = btn.dataset.restSeconds;
+      const on = v === AUTO_REST ? restSeconds === AUTO_REST : Number(v) === restSeconds;
       btn.classList.toggle('active-preset', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+    const hint = document.getElementById('pmRestHint');
+    if (hint) hint.textContent = restSeconds === AUTO_REST ? 'fits each exercise' : 'starts after each logged set';
   }
 
   function _renderDayName() {
@@ -132,15 +157,208 @@
     el.textContent = day && day.name ? ` · ${day.name}` : '';
   }
 
-  function _todaysLoggedExercises() {
-    const u = global.coachLoggingClient || global.currentUser || global.localStorage.getItem('fitnessAppUser');
+  function _todayKey() {
     // Local calendar day — workouts are keyed by it, not by UTC's date.
     const d = new Date();
     const pad = (n) => String(n).padStart(2, '0');
-    const todayStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  /** Today's stored log entries (one per exercise, or one per set in old data). */
+  function _todaysLog() {
+    const u = global.coachLoggingClient || global.currentUser || global.localStorage.getItem('fitnessAppUser');
     const workouts = (u && _read('workouts_' + u)) || [];
-    const today = Array.isArray(workouts) ? workouts.find((w) => w.date === todayStr) : null;
-    return new Set(((today && today.log) || []).map((e) => e.exercise));
+    const today = Array.isArray(workouts) ? workouts.find((w) => w.date === _todayKey()) : null;
+    return (today && Array.isArray(today.log)) ? today.log : [];
+  }
+
+  function _todaysLoggedExercises() {
+    return new Set(_todaysLog().map((e) => e.exercise));
+  }
+
+  function _plannedDay() {
+    return typeof global.getTodaysPlannedDay === 'function' ? global.getTodaysPlannedDay() : null;
+  }
+
+  // ── Time budget ─────────────────────────────────────────────────
+
+  function _budgetSession() {
+    const s = _read(BUDGET_SESSION_KEY);
+    if (s && s.date === _todayKey()) {
+      return { date: s.date, changes: s.changes || {}, dismissed: Array.isArray(s.dismissed) ? s.dismissed : [] };
+    }
+    return { date: _todayKey(), changes: {}, dismissed: [] };
+  }
+
+  function _saveBudgetSession(patch) {
+    _write(BUDGET_SESSION_KEY, { ..._budgetSession(), ...patch });
+  }
+
+  function _suggestionId(sg) {
+    return `${sg.type}:${sg.keys ? sg.keys.join('+') : sg.key}`;
+  }
+
+  function _muscleOf(name) {
+    return typeof global.getMuscleGroup === 'function' ? global.getMuscleGroup(name) : 'other';
+  }
+
+  function _elapsedMs() {
+    const t = _read(WORKOUT_TIMER_KEY);
+    return t && typeof t.startTimeMs === 'number' ? Math.max(0, Date.now() - t.startTimeMs) : 0;
+  }
+
+  /** Everything the budget pod shows, from storage — pure apart from reads. */
+  function _budgetModel() {
+    const core = _core();
+    if (!core) return null;
+    const day = _plannedDay();
+    const hasPlan = !!(day && Array.isArray(day.exercises) && day.exercises.length);
+    const session = _budgetSession();
+    const done = core.countDoneSets(_todaysLog());
+    const { budgetMin } = getSettings();
+    const pace = core.paceStatus({ day, done, changes: session.changes, elapsedMs: _elapsedMs(), budgetMin });
+    const tips = hasPlan && (pace.status === 'behind')
+      ? core.suggestCuts({ day, done, changes: session.changes, overMin: pace.overMin, muscleOf: _muscleOf, limit: 6 })
+        .filter((sg) => !session.dismissed.includes(_suggestionId(sg))).slice(0, 3)
+      : [];
+    return { core, day, hasPlan, session, done, pace, tips, budgetMin };
+  }
+
+  let _lastTips = [];
+
+  function _esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function _describeChanges(changes, day) {
+    const core = _core();
+    const names = {};
+    ((day && day.exercises) || []).forEach((ex) => { names[core.exerciseKey(ex.name)] = ex.name; });
+    const n = (k) => names[k] || k;
+    const parts = [];
+    (changes.pairs || []).forEach(([a, b]) => parts.push(`Superset ${n(a)} + ${n(b)}`));
+    (changes.myo || []).forEach((k) => parts.push(`Myo-reps on ${n(k)}`));
+    Object.keys(changes.cuts || {}).forEach((k) => {
+      const c = changes.cuts[k];
+      if (c > 0) parts.push(`${n(k)} −${c} set${c === 1 ? '' : 's'}`);
+    });
+    return parts;
+  }
+
+  function _renderBudget() {
+    if (typeof document === 'undefined' || !isActive()) return;
+    const card = document.getElementById('pmTimeBudget');
+    if (!card) return;
+    const m = _budgetModel();
+    if (!m) { card.hidden = true; return; }
+    card.hidden = false;
+
+    document.querySelectorAll('#pmTimeBudget [data-budget-min]').forEach((btn) => {
+      const v = btn.dataset.budgetMin;
+      const on = v === '' ? m.budgetMin === null : Number(v) === m.budgetMin;
+      btn.classList.toggle('active-preset', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    const paceEl = document.getElementById('pmBudgetPace');
+    if (paceEl) {
+      paceEl.textContent = m.hasPlan || m.budgetMin ? m.core.formatPace(m.hasPlan ? m.pace : { ...m.pace, plannedSets: 0 }) : '';
+      paceEl.dataset.status = m.pace.status;
+    }
+
+    const bar = document.getElementById('pmBudgetBar');
+    const fill = document.getElementById('pmBudgetBarFill');
+    if (bar && fill) {
+      bar.hidden = !m.budgetMin;
+      if (m.budgetMin) {
+        fill.style.width = `${Math.min(100, Math.round((m.pace.elapsedMin / m.budgetMin) * 100))}%`;
+        bar.dataset.status = m.pace.status;
+      }
+    }
+
+    _lastTips = m.tips;
+    const list = document.getElementById('pmBudgetTips');
+    if (list) {
+      list.hidden = !m.tips.length;
+      list.innerHTML = m.tips.map((sg, i) => `
+        <li class="pm-budget-tip">
+          <span class="pm-budget-tip-text">${_esc(sg.text)}<small>saves ~${sg.savesMin} min</small></span>
+          <button type="button" class="pm-budget-tip-do" onclick="applyPerformanceBudgetTip(${i})">Do it</button>
+          <button type="button" class="pm-budget-tip-x" onclick="dismissPerformanceBudgetTip(${i})" aria-label="Dismiss">×</button>
+        </li>`).join('') + (m.tips.length ? '<li class="pm-budget-tip-note">Heavy top sets and your warm-up ramp stay as planned.</li>' : '');
+    }
+
+    const applied = document.getElementById('pmBudgetApplied');
+    if (applied) {
+      const parts = m.hasPlan ? _describeChanges(m.session.changes, m.day) : [];
+      const myoTip = (m.session.changes.myo || []).length
+        ? ' Myo-reps: one set near failure, then mini-sets of 3–5 reps with ~15–20 s rest until reps drop.' : '';
+      applied.hidden = !parts.length;
+      applied.textContent = parts.length ? `Today: ${parts.join(' · ')}.${myoTip}` : '';
+    }
+  }
+
+  let _paceTimer = null;
+  function _startPaceRefresh() {
+    clearInterval(_paceTimer);
+    _paceTimer = setInterval(_renderBudget, PACE_REFRESH_MS);
+  }
+  function _stopPaceRefresh() {
+    clearInterval(_paceTimer);
+    _paceTimer = null;
+  }
+
+  function setPerformanceBudget(minutes) {
+    const core = _core();
+    const budgetMin = core ? core.normaliseBudget(minutes) : null;
+    // A budget is a reason to let rest fit each exercise.
+    const patch = { budgetMin };
+    if (budgetMin && getSettings().restSeconds !== AUTO_REST) patch.restSeconds = AUTO_REST;
+    _saveSettings(patch);
+    _renderRestPresets();
+    _renderBudget();
+  }
+
+  function applyPerformanceBudgetTip(index) {
+    const core = _core();
+    const sg = _lastTips[index];
+    if (!core || !sg) return;
+    _saveBudgetSession({ changes: core.applySuggestion(_budgetSession().changes, sg) });
+    _renderBudget();
+  }
+
+  function dismissPerformanceBudgetTip(index) {
+    const sg = _lastTips[index];
+    if (!sg) return;
+    const s = _budgetSession();
+    _saveBudgetSession({ dismissed: [...s.dismissed, _suggestionId(sg)] });
+    _renderBudget();
+  }
+
+  /** Rest after a set of `exercise`: the lifter's preset, or Auto. */
+  function _restSecondsAfter(exercise) {
+    const { restSeconds } = getSettings();
+    if (restSeconds !== AUTO_REST) return restSeconds;
+    const core = _core();
+    if (!core) return DEFAULT_REST_SECONDS;
+    return core.restSecondsFor(exercise, _plannedDay(), core.countDoneSets(_todaysLog()), _budgetSession().changes);
+  }
+
+  /** In a superset, arm the partner with its next planned set. */
+  function _armPartnerAfter(exercise) {
+    const core = _core();
+    if (!core || !exercise || typeof global.startQuickLogFor !== 'function') return;
+    const day = _plannedDay();
+    const done = core.countDoneSets(_todaysLog());
+    const next = core.nextInPair(exercise, day, done, _budgetSession().changes);
+    if (!next) return;
+    const ex = (day.exercises || []).find((e) => core.exerciseKey(e.name) === core.exerciseKey(next));
+    const sets = (ex && Array.isArray(ex.sets)) ? ex.sets.filter((st) => !st || st.setType !== 'warmup') : [];
+    const planned = sets[Math.min(done[core.exerciseKey(next)] || 0, Math.max(0, sets.length - 1))] || {};
+    global.startQuickLogFor(ex ? ex.name : next, {
+      weight: planned.weight != null && Number(planned.weight) > 0 ? Number(planned.weight) : null,
+      reps: planned.reps != null && Number(planned.reps) > 0 ? Number(planned.reps) : null,
+    });
   }
 
   /** Arm the quick-log card with the first planned exercise not yet
@@ -195,8 +413,13 @@
       if (typeof global.scrollTo === 'function') global.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // A new session starts with a clean slate of budget changes.
+    if (!opts.restore) _write(BUDGET_SESSION_KEY, { date: _todayKey(), changes: {}, dismissed: [] });
+
     _renderDayName();
     _renderRestPresets();
+    _renderBudget();
+    _startPaceRefresh();
     _requestWakeLock();
   }
 
@@ -205,6 +428,7 @@
     _saveSettings({ active: false });
     document.body.classList.remove('performance-mode');
     hideRestOverCard();
+    _stopPaceRefresh();
     _releaseWakeLock();
   }
 
@@ -250,13 +474,16 @@
 
   /** addLogEntry() fires tl:set-logged once a set is saved. Wait a tick so
    * quickLogSet() has re-armed the card ("Log set N+1") before reading it. */
-  function _onSetLogged() {
+  function _onSetLogged(e) {
     if (!isActive()) return;
+    const exercise = (e && e.detail && e.detail.exercise) || '';
     setTimeout(() => {
       hideRestOverCard();
+      _armPartnerAfter(exercise);
       _setNextUpText();
-      _write(REST_TIMER_KEY, createRestState(getSettings().restSeconds, Date.now()));
+      _write(REST_TIMER_KEY, createRestState(_restSecondsAfter(exercise), Date.now()));
       _rerunRestTimer();
+      _renderBudget();
     }, 0);
   }
 
@@ -308,11 +535,12 @@
   }
 
   const api = {
-    REST_PRESETS, DEFAULT_REST_SECONDS, URGENT_SECONDS,
+    REST_PRESETS, DEFAULT_REST_SECONDS, URGENT_SECONDS, AUTO_REST,
     getRestRemaining, createRestState, togglePausedState, adjustRestState, isRestUrgent,
     formatNextUp, normaliseRestSeconds, shouldRestoreOnLoad, getSettings,
     startPerformanceMode, exitPerformanceMode, restorePerformanceModeIfNeeded, setPerformanceRestSeconds,
     toggleRestTimerPause, adjustRestTimer, hideRestOverCard,
+    setPerformanceBudget, applyPerformanceBudgetTip, dismissPerformanceBudgetTip,
   };
   global.PerformanceMode = api;
   global.startPerformanceMode = startPerformanceMode;
@@ -322,6 +550,9 @@
   global.toggleRestTimerPause = toggleRestTimerPause;
   global.adjustRestTimer = adjustRestTimer;
   global.hideRestOverCard = hideRestOverCard;
+  global.setPerformanceBudget = setPerformanceBudget;
+  global.applyPerformanceBudgetTip = applyPerformanceBudgetTip;
+  global.dismissPerformanceBudgetTip = dismissPerformanceBudgetTip;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   }

@@ -7,6 +7,9 @@
  *   { kind: 'repeat', afterWeek: 3 }  → week 3 is done twice
  *   { kind: 'pause',  afterWeek: 5 }  → a week without training after week 5
  *                                       (holiday, illness); afterWeek 0 = before week 1
+ *   { kind: 'busy',   afterWeek: 4 }  → a maintenance copy of week 4 (exams,
+ *                                       shifts): same days and loads, about a
+ *                                       third of the sets (maintenanceDay)
  * stored as the client's programSchedule:
  *   { programId, startDate: 'YYYY-MM-DD' | '', changes: [{ id, kind, afterWeek, note }] }
  *
@@ -28,7 +31,7 @@
 
   const MAX_CHANGES = 30;
   const MAX_WEEKS = 52;
-  const KINDS = ['repeat', 'pause'];
+  const KINDS = ['repeat', 'pause', 'busy'];
   const WEEKDAY_NUM = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
   const DAY_MS = 86400000;
 
@@ -68,7 +71,7 @@
     const changes = (Array.isArray(value.changes) ? value.changes : []).map((c, i) => {
       if (!c || typeof c !== 'object' || !KINDS.includes(c.kind)) return null;
       const afterWeek = Number(c.afterWeek);
-      if (!Number.isInteger(afterWeek) || afterWeek < (c.kind === 'repeat' ? 1 : 0) || afterWeek > maxWeek) return null;
+      if (!Number.isInteger(afterWeek) || afterWeek < (c.kind === 'pause' ? 0 : 1) || afterWeek > maxWeek) return null;
       let id = typeof c.id === 'string' ? c.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) : '';
       if (!id || seen.has(id)) id = 'c' + (i + 1) + '-' + afterWeek;
       while (seen.has(id)) id += 'x';
@@ -98,7 +101,7 @@
       if (w > 0) add(w, 'week', null);
       changes.filter(c => c.afterWeek === w).forEach(c => {
         if (c.kind === 'pause') add(null, 'pause', c);
-        else if (w > 0) add(w, 'repeat', c);
+        else if (w > 0) add(w, c.kind === 'busy' ? 'busy' : 'repeat', c);
       });
     }
     return out;
@@ -229,6 +232,7 @@
       kind: entry.kind,
       pause: entry.kind === 'pause',
       repeat: entry.kind === 'repeat',
+      busy: entry.kind === 'busy',
       deload: entry.week !== null && !!(meta[entry.week - 1] || {}).deload,
       note: entry.note,
       block: m.block,
@@ -243,5 +247,32 @@
     };
   }
 
-  return { MAX_CHANGES, normalize, slots, weekMeta, locate, slotIndexAt, slotMonday, trainingNumsOf, isoDate, toIso };
+  /**
+   * A busy (maintenance) week's day, from Butters University's
+   * Time-efficient training: keep load and effort, cut the sets to about a
+   * third, never below one per exercise. The first sets stay (the heavy top
+   * sets); the rest are dropped. Works on the app's day shape
+   * ({ exercises: [{ sets: [...] }] }) and leaves the original untouched.
+   */
+  function maintenanceDay(day) {
+    if (!day || !Array.isArray(day.exercises)) return day;
+    return {
+      ...day,
+      maintenance: true,
+      exercises: day.exercises.map((ex) => {
+        if (!ex || !Array.isArray(ex.sets)) return ex;
+        const working = ex.sets.filter(s => !s || s.setType !== 'warmup');
+        const keep = Math.max(1, Math.round(working.length / 3));
+        let kept = 0;
+        const sets = ex.sets.filter((s) => {
+          if (s && s.setType === 'warmup') return true;
+          kept++;
+          return kept <= keep;
+        });
+        return { ...ex, sets };
+      }),
+    };
+  }
+
+  return { MAX_CHANGES, maintenanceDay, normalize, slots, weekMeta, locate, slotIndexAt, slotMonday, trainingNumsOf, isoDate, toIso };
 });

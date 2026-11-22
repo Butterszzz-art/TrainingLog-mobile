@@ -1620,6 +1620,7 @@ mark.pi-suggested { background: var(--warning-bg, rgba(168,124,56,.25)); color: 
 .se-chip { display: inline-block; padding: 1px 8px; border-radius: var(--radius-pill, 999px); border: 1px solid var(--border); font-weight: 700; font-size: 0.78rem; white-space: nowrap; }
 .se-chip--repeat { border-color: #4a7fc1; color: #8db4e6; }
 .se-chip--pause { border-style: dashed; color: var(--text-sec); }
+.se-chip--busy { border-color: #b08a3e; color: #d9b56a; }
 .se-chip--deload { border-color: #e0a64a; color: #e0a64a; font-weight: 600; }
 .se-block { white-space: nowrap; }
 .se-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; background: var(--pb-block); }
