@@ -83,11 +83,11 @@ describe('performance-mode helpers', () => {
       setItem: (k, v) => { store[k] = String(v); },
       removeItem: (k) => { delete store[k]; },
     };
-    expect(pm.getSettings()).toEqual({ active: false, restSeconds: 90 });
+    expect(pm.getSettings()).toEqual({ active: false, restSeconds: 90, budgetMin: null });
     store.tl_performance_mode_v1 = JSON.stringify({ active: true, restSeconds: 180 });
-    expect(pm.getSettings()).toEqual({ active: true, restSeconds: 180 });
+    expect(pm.getSettings()).toEqual({ active: true, restSeconds: 180, budgetMin: null });
     store.tl_performance_mode_v1 = '{not json';
-    expect(pm.getSettings()).toEqual({ active: false, restSeconds: 90 });
+    expect(pm.getSettings()).toEqual({ active: false, restSeconds: 90, budgetMin: null });
   });
 });
 
@@ -105,5 +105,13 @@ describe('performance-mode restore on app start', () => {
   test('does not restore without a running workout or when inactive', () => {
     expect(pm.shouldRestoreOnLoad({ active: true }, null, 'lifter')).toBe(false);
     expect(pm.shouldRestoreOnLoad({ active: false }, running, 'lifter')).toBe(false);
+  });
+});
+
+describe('performance-mode Auto rest', () => {
+  test("normaliseRestSeconds keeps 'auto' and presets, defaults the rest", () => {
+    expect(pm.normaliseRestSeconds('auto')).toBe('auto');
+    expect(pm.normaliseRestSeconds(120)).toBe(120);
+    expect(pm.normaliseRestSeconds(45)).toBe(pm.DEFAULT_REST_SECONDS);
   });
 });
