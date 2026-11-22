@@ -63,9 +63,14 @@
     { name: 'cardioLog',        key: u => `cardioLog_${u}`,        mode: 'list' },
     // syncIds of tracker workouts the user removed (activity-sync-bridge.js).
     { name: 'cardioSyncDismissed', key: u => `cardioSyncDismissed_${u}`, mode: 'value' },
-    { name: 'crossfitLog',      key: u => `crossfitLog_${u}`,      mode: 'list' },
+    // Hybrid mode (functional.js). New WOD entries carry an id; older ones
+    // fall back to a content hash exactly as before.
+    { name: 'crossfitLog',      key: u => `crossfitLog_${u}`,      mode: 'list', idField: 'id' },
     { name: 'crossfitWorkouts', key: u => `crossfitWorkouts_${u}`, mode: 'list' },
     { name: 'hyroxLog',         key: u => `hyroxLog_${u}`,         mode: 'list', idField: 'ts' },
+    { name: 'crossfitTemplates', key: u => `crossfitTemplates_${u}`, mode: 'list', idField: 'id' },
+    { name: 'functionalCircuits', key: u => `functionalCircuits_${u}`, mode: 'list', idField: 'id' },
+    { name: 'hyroxRace',        key: u => `hyroxRace_${u}`,        mode: 'value' },
     { name: 'macroHistory',     key: u => `macroHistory_${u}`,     mode: 'list', idField: 'date' },
     { name: 'macroTargets',     key: u => `macroTargets_${u}`,     mode: 'value' },
     // The food log, one item per food logged (food-database.js). A coach
@@ -491,8 +496,7 @@
     if (has('bodyweightLog')) { call('renderWeights'); call('renderBwMonthlyHistory'); call('renderCheckInTab'); }
     if (has('bodyMeasurements')) { call('renderMeasurementsHistory'); call('renderMeasurementsChart'); }
     if (has('cardioLog')) call('renderCardio');
-    if (has('crossfitLog', 'crossfitWorkouts')) call('renderCrossfitWorkouts');
-    if (has('hyroxLog')) call('renderHyroxHistory');
+    if (has('crossfitLog', 'crossfitWorkouts', 'crossfitTemplates', 'functionalCircuits', 'hyroxLog', 'hyroxRace')) call('renderFunctionalTab');
     if (has('macroHistory')) call('renderMacroHistory');
     if (has('foodLog')) call('renderFoodLog');
     if (has('macroTargets', 'dailyMacroMeals', 'dailyMacroProgress', 'dailyMacroDate', 'macroDayType', 'macroDayComplete')) {

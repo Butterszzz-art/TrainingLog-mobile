@@ -125,10 +125,11 @@ describe('buildWeeklyRecap — body, cardio, nutrition, recovery', () => {
     expect(r.nutrition.daysOnTarget).toBe(1);
   });
 
-  test('counts mobility and CrossFit sessions and averages readiness and steps', () => {
+  test('counts mobility, CrossFit and HYROX sessions and averages readiness and steps', () => {
     const r = recap({
       mobilitySessions: [{ completedAt: new Date(2026, 8, 16, 18).toISOString() }],
       crossfitLog: [{ date: '2026-09-19' }, { date: '2026-09-12' }],
+      hyroxLog: [{ date: '2026-09-17', total: 5400 }, { date: '2026-09-10', total: 5500 }],
       readiness: {
         [new Date(2026, 8, 14).toDateString()]: { score: 80 },
         [new Date(2026, 8, 15).toDateString()]: { score: 60 },
@@ -136,7 +137,7 @@ describe('buildWeeklyRecap — body, cardio, nutrition, recovery', () => {
       },
       steps: { '2026-09-14': 8000, '2026-09-15': 12000 }
     });
-    expect(r.conditioning).toEqual({ crossfit: 1, mobility: 1 });
+    expect(r.conditioning).toEqual({ crossfit: 1, hyrox: 1, mobility: 1 });
     expect(r.recovery.avgReadiness).toBe(70);
     expect(r.recovery.avgSteps).toBe(10000);
   });
