@@ -90,6 +90,7 @@
     { tab: 'librariesTab',  name: 'Libraries',   blurb: 'Exercises, guides and ebooks.', keywords: 'library exercises guide guides ebooks learn how technique form', ready: () => true },
     { tab: 'posingTab',     name: 'Posing',      blurb: 'Mandatories and photo comparisons.', keywords: 'posing poses mandatories bodybuilding stage photos physique', ready: c => c.checkIns >= 1 || v(c, 'checkInTab') },
     { tab: 'powerliftingTab', name: 'Lifting tools', blurb: 'Powerlifting attempts and peaking.', keywords: 'powerlifting meet attempts peak week squat bench deadlift total', ready: c => c.workoutDays >= 3 },
+    { tab: 'functionalTab', name: 'Hybrid training', blurb: 'WODs, benchmark PRs, HYROX race prep and circuits.', keywords: 'crossfit wod hyrox hybrid benchmark fran murph amrap emom tabata circuit conditioning race simulation', ready: () => true },
     { tab: 'communityTab',  name: 'Community',   blurb: 'Groups, feed and friends.', keywords: 'community friends groups feed social share people', ready: c => c.workoutDays >= 5,
       unlock: () => 'You’re consistent. Join a group to keep each other going.' },
     { tab: 'leaderboardTab', name: 'Leaderboard', blurb: 'Rankings against other lifters.', keywords: 'leaderboard ranking rank compete competition top', ready: c => c.workoutDays >= 8,

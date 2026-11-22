@@ -192,7 +192,7 @@
         ${rows || '<p class="ws-empty-note">Nothing logged in this group yet.</p>'}
       </div>
       <div class="pill-nav" style="margin-top:12px;">
-        <span role="button" tabindex="0" class="pill" onclick="showTab('functionalTab')">Functional</span>
+        <span role="button" tabindex="0" class="pill" onclick="showTab('functionalTab')">Hybrid</span>
         <span role="button" tabindex="0" class="pill" onclick="showTab('mobilityTab')">Flexibility</span>
         <span role="button" tabindex="0" class="pill" onclick="showTab('posingTab')">Posing</span>
       </div>

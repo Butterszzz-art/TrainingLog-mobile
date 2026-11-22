@@ -95,7 +95,7 @@
 
     hybrid: {
       label: 'Hybrid Athlete',
-      trainingMode: 'bodybuilding',
+      trainingMode: 'athlete',
       defaults: {
         repRange: '6-10',
         restSeconds: 120,
@@ -114,9 +114,9 @@
         'Periodise cardio around strength blocks',
         'Functional carry-over matters — train movements, not muscles',
       ],
-      progressMetrics: ['volume', 'estimated1RM', 'cardioCapacity', 'bodyweight'],
-      visibleTabs: [],
-      hiddenTabs: ['posingTab', 'powerliftingTab', 'functionalTab'],
+      progressMetrics: ['volume', 'estimated1RM', 'cardioCapacity', 'benchmarkPRs', 'bodyweight'],
+      visibleTabs: ['functionalTab'],
+      hiddenTabs: ['posingTab', 'powerliftingTab'],
       periodisation: {
         phases: ['strength', 'conditioning', 'hybrid', 'deload'],
         blockLengthWeeks: 4,
@@ -128,8 +128,8 @@
         periWorkout: 'Balanced pre and post nutrition',
       },
       smartTips: {
-        logScreen: 'Alternate heavy and volume days',
-        progressScreen: 'Track both strength and endurance metrics',
+        logScreen: 'Log benchmark WODs Rx or scaled — the PR board tracks both',
+        progressScreen: 'Track both strength (e1RM) and engine (benchmarks, HYROX splits)',
         weightScreen: 'Body composition over scale weight',
         macroScreen: 'Higher carbs on conditioning days',
       },

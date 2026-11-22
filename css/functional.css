@@ -1,7 +1,7 @@
 /* =============================================================
    FUNCTIONAL FITNESS TAB  (Modernist)
-   Sub-views for CrossFit, HYROX and Circuits, plus the WOD interval
-   timer (driven by src/js/archetype-features.js). Shared blocks live
+   Hybrid mode: WOD log + timer, PRs, HYROX, Circuits and History
+   (driven by src/js/functional.js). Shared blocks live
    in modernist-kit.css. Timer selectors are scoped under
    #functionalTab so they win over any legacy rule.
    ============================================================= */
@@ -173,3 +173,182 @@
 @media (max-width: 360px) {
   #functionalTab .wod-timer-clock { font-size: 76px; }
 }
+
+/* =============================================================
+   HYBRID REVAMP (src/js/functional.js)
+   ============================================================= */
+
+/* Week hero */
+.fx-week { margin-bottom: 12px; }
+.fx-week .mx-tiles { margin-top: 4px; }
+.fx-week-sub { margin: 8px 0 0; }
+
+/* Segmented filters that can outgrow a phone width scroll sideways */
+#fxBenchFilter, #fxHistFilter {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 10px;
+}
+#fxBenchFilter::-webkit-scrollbar, #fxHistFilter::-webkit-scrollbar { display: none; }
+#fxBenchFilter > button, #fxHistFilter > button { flex: none; padding: 0 12px; }
+.fx-rx { display: flex; }
+.fx-rx > button { flex: 1; }
+
+/* Timer extras */
+.fx-rounds { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; }
+.fx-rounds[hidden] { display: none; }
+.fx-round-btn { min-height: 44px; padding: 0 18px; }
+#wodLogResultBtn[hidden] { display: none; }
+
+/* Log form */
+.fx-edit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  border: 1px solid var(--border-brass);
+}
+.fx-edit-banner[hidden] { display: none; }
+.fx-bench-desc { margin: 8px 0 0; line-height: 1.45; }
+.fx-bench-desc[hidden], .fx-prev[hidden] { display: none; }
+.fx-prev { margin: 2px 0 0; }
+.fx-prev b { color: var(--text-primary); }
+.fx-score [hidden] { display: none; }
+.fx-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.fx-check input { width: 22px; height: 22px; margin: 0; accent-color: var(--green-70); }
+.fx-rpe .mx-preset { min-width: 44px; justify-content: center; }
+.fx-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.fx-actions:empty { display: none; }
+.fx-actions > .mx-outline { flex: 1; min-width: 140px; }
+.fx-actions > [hidden] { display: none; }
+.fx-hint { margin: 0; }
+
+/* Movement rows */
+.cf-ex-head { display: flex; gap: 6px; align-items: center; }
+.cf-ex-head .mx-well { flex: 1; min-width: 0; }
+.cf-ex-grid .mx-lbl select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  padding: 0 14px 0 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 4px center, right 0 center;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+/* History / list rows */
+.fx-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fx-row-actions { display: flex; align-items: center; gap: 2px; flex: none; margin-right: -8px; }
+.fx-sec { margin: 14px 0 2px; }
+.fx-bench-row {
+  width: 100%;
+  margin: 0;
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fx-bench-row:first-child { border-top: 0; }
+.fx-bench-row .mx-row-right { text-align: right; flex: none; }
+.fx-chart-wrap { margin: 10px 0 6px; }
+.fx-chart-wrap[hidden] { display: none; }
+#hyroxChartEmpty[hidden] { display: none; }
+.fx-bench-attempts { margin: 4px 0 12px; }
+#fxBenchDetail[hidden] { display: none; }
+.fx-mini { min-height: 38px; padding: 0 14px; }
+
+/* HYROX: live delta vs best split */
+.hyrox-delta {
+  flex: none;
+  min-width: 44px;
+  text-align: right;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+.hyrox-delta.is-faster, .fx-plan-table .is-faster { color: var(--green-90); }
+.hyrox-delta.is-slower, .fx-plan-table .is-slower { color: var(--danger-text); }
+.hyrox-station[data-kind="rox"] .hyrox-station-num { font-family: var(--font-label); font-size: 13px; }
+.hyrox-station .mx-tin { flex: none; width: 84px; }
+
+.fx-best-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.fx-best {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--pod-bg-alt);
+  border: 1px solid var(--border-soft);
+}
+.fx-best b { font-family: var(--font-display); font-size: 22px; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+
+.fx-phase { display: flex; flex-direction: column; gap: 4px; margin: 14px 0 10px; }
+.fx-plan-tiles { margin: 10px 0 6px; }
+.fx-plan-table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.fx-plan-table th {
+  text-align: left;
+  padding: 6px 4px;
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-row);
+}
+.fx-plan-table td { padding: 7px 4px; border-bottom: 1px solid var(--border-row); color: var(--text-secondary); }
+.fx-plan-table td:first-child { width: 28px; color: var(--text-tertiary); }
+.fx-plan-table td b { color: var(--text-primary); font-weight: 600; }
+.fx-plan-table tr.fx-plan-station td:nth-child(2) { color: var(--brass-light); }
+
+/* Circuits */
+.fx-circuit-meter { width: 100%; margin-top: 6px; }
+#circuitTimerPhase.is-rest { color: var(--brass-light); }
+#circuitTimerPhase:not(.is-rest) { color: var(--green-90); }
+.circuit-timer-controls .mx-outline { min-height: 52px; }
+
+@media (max-width: 360px) {
+  .hyrox-station .mx-tin { width: 80px; }
+  .hyrox-delta { min-width: 36px; }
+  .fx-best b { font-size: 19px; }
+}
+
+/* Five sub-tabs: keep them on one row at phone width */
+#funcSubNav .log-subtab { padding: 7px 11px; }
+@media (max-width: 420px) {
+  #funcSubNav { gap: 4px; }
+  #funcSubNav .log-subtab { padding: 7px 9px; font-size: 12.5px; }
+  #funcSubNav .log-subtab .ui-icon { display: none; }
+}
+.hyrox-station-meta:empty { display: none; }

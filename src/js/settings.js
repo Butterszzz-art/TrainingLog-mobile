@@ -1106,7 +1106,7 @@ function bindPhaseSetup(container = document) {
 const TRAINING_MODE_DESCRIPTIONS = {
   bodybuilding: 'Shows the posing tracker, contest prep timeline and physique tools.',
   powerlifting: 'Shows the plate calculator, 1RM tracker and meet prep timeline.',
-  athlete: 'Shows the CrossFit tracker and general fitness tools.'
+  athlete: 'Hybrid: CrossFit WODs with benchmarks & PRs, HYROX race prep and simulations, timed circuits.'
 };
 
 let pendingSettingsPage = null;

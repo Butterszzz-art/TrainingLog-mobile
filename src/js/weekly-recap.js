@@ -299,7 +299,7 @@
   /**
    * @param {object} data   raw logs (workouts, cardioLog, bodyweightLog,
    *                        macroHistory, macroTargets, mobilitySessions,
-   *                        crossfitLog, readiness, steps, muscleTargets)
+   *                        crossfitLog, hyroxLog, readiness, steps, muscleTargets)
    * @param {object} opts   { weekStart: 'YYYY-MM-DD' (a Monday),
    *                          getMuscleGroup: fn, today?: 'YYYY-MM-DD' }
    */
@@ -323,6 +323,7 @@
     const cardio = _cardio(data.cardioLog, start, end);
     const prevCardio = _cardio(data.cardioLog, prevStart, prevEnd);
     const crossfit = _countInWeek(data.crossfitLog, start, end, 'date');
+    const hyrox = _countInWeek(data.hyroxLog, start, end, 'date');
     const mobility = _countInWeek(data.mobilitySessions, start, end, 'completedAt');
     const muscles = _muscleBreakdown(data.workouts, start, end, opts.getMuscleGroup, targets);
     const bodyweight = _bodyweight(data.bodyweightLog, start, end);
@@ -338,7 +339,7 @@
     }));
     const activeDays = days.filter(d => d.lifted || d.cardio).length;
 
-    const hasData = training.sets > 0 || cardio.sessions > 0 || crossfit > 0 ||
+    const hasData = training.sets > 0 || cardio.sessions > 0 || crossfit > 0 || hyrox > 0 ||
       mobility > 0 || !!bodyweight || !!nutrition;
 
     return {
@@ -372,7 +373,7 @@
         types: cardio.types
       },
       prevCardio: { sessions: prevCardio.sessions, minutes: prevCardio.minutes },
-      conditioning: { crossfit, mobility },
+      conditioning: { crossfit, hyrox, mobility },
       nutrition,
       recovery
     };
@@ -415,6 +416,7 @@
       macroTargets: _parse(`macroTargets_${username}`, {}),
       mobilitySessions: _parse(`mobilitySessions_${username}`, []),
       crossfitLog: _parse(`crossfitLog_${username}`, []),
+      hyroxLog: _parse(`hyroxLog_${username}`, []),
       readiness: _parse('dailyReadiness_v1', {}),
       steps: _parse('dailySteps', {}),
       muscleTargets: _parse(`muscleWeeklyTargets_${username}`, {})
@@ -506,6 +508,7 @@
     if (t.sessions) bits.push(`${t.sessions} lifting session${t.sessions === 1 ? '' : 's'}`);
     if (r.cardio.sessions) bits.push(`${Math.round(r.cardio.minutes)} min cardio`);
     if (r.conditioning.crossfit) bits.push(`${r.conditioning.crossfit} WOD${r.conditioning.crossfit === 1 ? '' : 's'}`);
+    if (r.conditioning.hyrox) bits.push(`${r.conditioning.hyrox} HYROX sim${r.conditioning.hyrox === 1 ? '' : 's'}`);
     if (!bits.length) return 'No training logged — body and nutrition only.';
     return bits.join(' · ');
   }
@@ -640,7 +643,7 @@
   function _cardioHtml(r) {
     const c = r.cardio;
     const cond = r.conditioning;
-    if (!c.sessions && !cond.crossfit && !cond.mobility) return '<p class="wr-empty">No cardio or conditioning logged.</p>';
+    if (!c.sessions && !cond.crossfit && !cond.hyrox && !cond.mobility) return '<p class="wr-empty">No cardio or conditioning logged.</p>';
     const tiles = `<div class="mx-tiles">
       <div class="mx-stat"><span class="mx-stat-l">Minutes</span><span class="mx-stat-v">${Math.round(c.minutes) || '—'}</span>${_countDelta(Math.round(c.minutes), Math.round(r.prevCardio.minutes))}</div>
       <div class="mx-stat"><span class="mx-stat-l">Distance</span><span class="mx-stat-v">${c.distanceKm ? c.distanceKm.toFixed(1) + '<small>km</small>' : '—'}</span></div>
@@ -652,6 +655,7 @@
     const extra = [
       c.sessions ? `${c.sessions} cardio session${c.sessions === 1 ? '' : 's'}` : '',
       cond.crossfit ? `${cond.crossfit} WOD${cond.crossfit === 1 ? '' : 's'}` : '',
+      cond.hyrox ? `${cond.hyrox} HYROX sim${cond.hyrox === 1 ? '' : 's'}` : '',
       cond.mobility ? `${cond.mobility} mobility session${cond.mobility === 1 ? '' : 's'}` : ''
     ].filter(Boolean).join(' · ');
     return tiles + types + (extra ? `<p class="wr-legend">${extra}</p>` : '');
