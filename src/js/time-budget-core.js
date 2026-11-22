@@ -74,7 +74,7 @@
   }
 
   /** How well two exercises superset: 0 = they compete for the same
-   * muscles (don't pair), 3 = antagonists or push/pull, 2 = upper/lower. */
+   * muscles (don't pair), 4 = antagonists, 3 = push/pull, 2 = upper/lower. */
   function pairScore(a, b, muscleOf) {
     const ma = muscleOf(a);
     const mb = muscleOf(b);
@@ -83,8 +83,8 @@
     const ra = region(ma);
     const rb = region(mb);
     // Two heavy leg compounds back to back is a fatigue problem, not a time saver.
-    if (ra === 'lower' && rb === 'lower') return antagonist && !(isCompound(a) && isCompound(b)) ? 3 : 0;
-    if (antagonist) return 3;
+    if (ra === 'lower' && rb === 'lower') return antagonist && !(isCompound(a) && isCompound(b)) ? 4 : 0;
+    if (antagonist) return 4;
     if (ra === rb) return 0;
     if ((ra === 'push' && rb === 'pull') || (ra === 'pull' && rb === 'push')) return 3;
     return 2;
@@ -344,6 +344,75 @@
     return out;
   }
 
+  /**
+   * Phase 2: how a finished session used its minutes, saved on the
+   * workout as `efficiency` (session-efficiency.js) and shared with the
+   * coach. `restBreaks` are the rest-timer lengths that ran out (minutes,
+   * index.html logRestBreak); `log` is the workout's stored entries.
+   *   { durationMin, workingSets, minPerSet, workMin, restMin, otherMin,
+   *     budgetMin?, plannedMin? }
+   * otherMin is time that was neither a set nor a timed rest: walking,
+   * setting up, the phone, skipped or overrun rests. Null when the session
+   * has no duration or no working sets.
+   */
+  function sessionEfficiency({ log, durationMin, restBreaks, budgetMin, plannedMin }) {
+    const duration = Math.round(Number(durationMin) || 0);
+    const entries = Array.isArray(log) ? log : [];
+    if (duration <= 0) return null;
+    let workSec = 0;
+    let sets = 0;
+    entries.forEach((e) => {
+      if (!e || !e.exercise) return;
+      const reps = Array.isArray(e.repsArray) ? e.repsArray : null;
+      const types = Array.isArray(e.setTypeArray) ? e.setTypeArray : [];
+      const n = reps ? reps.length : (Number(e.sets) || 0);
+      const per = isCompound(e.exercise) ? WORK.compound : WORK.isolation;
+      for (let i = 0; i < n; i++) {
+        if (types[i] === 'warmup') continue;
+        sets++;
+        workSec += per;
+      }
+    });
+    if (!sets) return null;
+    const restMin = (Array.isArray(restBreaks) ? restBreaks : [])
+      .reduce((n, m) => n + Math.max(0, Number(m) || 0), 0);
+    const workMin = workSec / 60;
+    const r1 = (x) => Math.round(x * 10) / 10;
+    const out = {
+      durationMin: duration,
+      workingSets: sets,
+      minPerSet: r1(duration / sets),
+      workMin: Math.round(workMin),
+      restMin: Math.round(Math.min(restMin, duration)),
+      otherMin: Math.max(0, Math.round(duration - workMin - restMin)),
+    };
+    const budget = normaliseBudget(budgetMin);
+    if (budget) out.budgetMin = budget;
+    const planned = Math.round(Number(plannedMin) || 0);
+    if (planned > 0) out.plannedMin = planned;
+    return out;
+  }
+
+  /** "42 min · 16 sets · 2.6 min/set" + what the lifter can act on. */
+  function describeEfficiency(e) {
+    if (!e) return null;
+    const head = `${e.durationMin} min · ${e.workingSets} set${e.workingSets === 1 ? '' : 's'} · ${e.minPerSet} min/set`;
+    const target = e.budgetMin || e.plannedMin || null;
+    let verdict = '';
+    if (target) {
+      const diff = e.durationMin - target;
+      if (diff > 2) verdict = `${diff} min over your ${e.budgetMin ? 'budget' : 'plan'}`;
+      else if (diff < -2) verdict = `${-diff} min under your ${e.budgetMin ? 'budget' : 'plan'}`;
+      else verdict = `on your ${e.budgetMin ? 'budget' : 'plan'}`;
+    }
+    // Worth pointing at only when it's a real share of the session.
+    const share = e.durationMin ? e.otherMin / e.durationMin : 0;
+    const tip = e.otherMin >= 8 && share >= 0.25
+      ? `About ${e.otherMin} min went on neither sets nor timed rest. Supersets and setting up the next exercise during rest win most of it back.`
+      : '';
+    return { head, verdict, tip };
+  }
+
   /** "18 of 30 min · 9/14 sets · 4 min behind" */
   function formatPace(p) {
     if (!p) return '';
@@ -364,5 +433,6 @@
     exerciseKey, isCompound, normaliseBudget, pairScore, anchorKey, partnerOf, planItems,
     restSecondsFor, estimateRemainingSeconds, estimateSessionMinutes, paceStatus,
     suggestCuts, applySuggestion, nextInPair, countDoneSets, formatPace,
+    sessionEfficiency, describeEfficiency,
   };
 });

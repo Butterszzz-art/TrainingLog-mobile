@@ -121,6 +121,69 @@
     return Math.round(pct * 100);
   }
 
+  const SESSION_TIME_DAYS = 28;
+  const MAX_SESSION_TIMES = 12;
+  const MUSCLE_SET_DAYS = 14;
+
+  /** Recent sessions' timing (src/js/session-efficiency.js), newest first:
+   * [{ date, durationMin, sets, minPerSet, otherMin, targetMin? }]. */
+  function sessionTimes(store, username, now) {
+    const from = new Date(now);
+    from.setDate(from.getDate() - SESSION_TIME_DAYS);
+    const fromIso = isoDay(from);
+    return allWorkouts(store, username)
+      .filter(w => w.efficiency && String(w.date).slice(0, 10) >= fromIso)
+      .map((w) => {
+        const e = w.efficiency;
+        const out = {
+          date: String(w.date).slice(0, 10),
+          durationMin: numOrNull(e.durationMin),
+          sets: numOrNull(e.workingSets),
+          minPerSet: numOrNull(e.minPerSet),
+          otherMin: numOrNull(e.otherMin),
+        };
+        const target = numOrNull(e.budgetMin) || numOrNull(e.plannedMin);
+        if (target) out.targetMin = target;
+        return out;
+      })
+      .filter(x => x.durationMin && x.sets)
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+      .slice(0, MAX_SESSION_TIMES);
+  }
+
+  function muscleLookup() {
+    if (root && typeof root.getMuscleGroup === 'function') return root.getMuscleGroup;
+    try { return typeof require === 'function' ? require('../../exerciseMuscleMap.js').getMuscleGroup : null; } catch (_e) { return null; }
+  }
+
+  /** Working sets per muscle per week, averaged over the last two weeks
+   * ({ chest: 9, quads: 12, … }). Warm-ups don't count. */
+  function weeklyMuscleSets(store, username, now) {
+    const muscleOf = muscleLookup();
+    if (!muscleOf) return {};
+    const from = new Date(now);
+    from.setDate(from.getDate() - MUSCLE_SET_DAYS);
+    const fromIso = isoDay(from);
+    const totals = {};
+    allWorkouts(store, username).forEach((w) => {
+      if (String(w.date).slice(0, 10) < fromIso) return;
+      arr(w.log).forEach((e) => {
+        if (!e || !e.exercise) return;
+        const muscle = muscleOf(e.exercise);
+        if (!muscle || muscle === 'other') return;
+        const reps = Array.isArray(e.repsArray) ? e.repsArray : null;
+        const types = arr(e.setTypeArray);
+        const n = reps ? reps.length : (Number(e.sets) || 0);
+        let sets = 0;
+        for (let i = 0; i < n; i++) if (types[i] !== 'warmup') sets++;
+        totals[muscle] = (totals[muscle] || 0) + sets;
+      });
+    });
+    const out = {};
+    Object.keys(totals).forEach((m) => { if (totals[m] > 0) out[m] = Math.round((totals[m] / (MUSCLE_SET_DAYS / 7)) * 10) / 10; });
+    return out;
+  }
+
   function checkInDetailApi() {
     if (root && root.checkInDetail) return root.checkInDetail;
     try { return typeof require === 'function' ? require('./checkin-detail.js') : null; } catch (_e) { return null; }
@@ -163,7 +226,15 @@
     return {
       checkIns,
       bodyweight,
-      workouts: { thisWeek: weekly[weekly.length - 1].count, weekStart: weekly[weekly.length - 1].weekStart, weekly },
+      workouts: {
+        thisWeek: weekly[weekly.length - 1].count,
+        weekStart: weekly[weekly.length - 1].weekStart,
+        weekly,
+        // Time-efficient training (BU): how long sessions take vs. their
+        // target, and weekly sets per muscle, for the coach's Session time card.
+        sessions: sessionTimes(store, username, now),
+        muscleSets: weeklyMuscleSets(store, username, now),
+      },
       compliancePercent: compliancePercent(weekly, program && program.perWeek, program && program.startDate),
       activeProgramName: (program && program.name) || '',
       activeProgramId: (program && program.id) || '',
@@ -369,7 +440,7 @@
     return steps;
   }
 
-  const api = { checkInPhotoPlan, fingerprint, buildShareSnapshot, weeklySessionCounts, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
+  const api = { checkInPhotoPlan, fingerprint, buildShareSnapshot, weeklySessionCounts, sessionTimes, weeklyMuscleSets, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (!root || !root.document) return;
   root.ClientCoaching = api;

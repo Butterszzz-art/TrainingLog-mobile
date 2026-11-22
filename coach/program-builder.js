@@ -36,6 +36,9 @@
   const M = root.ProgramModel;
   const WEEKDAY_OPTIONS = [['', '—']].concat(M.WEEKDAYS.map((d, i) => [String(i + 1), d]));
   const TYPE_OPTIONS = [['', 'Type'], ['compound', 'Compound'], ['isolation', 'Isolation'], ['core', 'Core']];
+  // Rows with the same letter are a superset: the app alternates them and
+  // rests ~45 s between them (BU Time-efficient training).
+  const SUPERSET_OPTIONS = [['', '—']].concat(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map(l => [l, l]));
   const ZONE_TEXT = { below: 'below MEV', productive: 'MEV–MAV', high: 'MAV–MRV', over: 'over MRV' };
   const LANDMARK_LABEL = { mev: 'MEV', mav: 'MAV', mrv: 'MRV' };
 
@@ -155,6 +158,7 @@
         + '<td><select class="pb-in" data-f="type" aria-label="Type">' + options(TYPE_OPTIONS, e.type) + '</select></td>'
         + '<td><select class="pb-in pb-in--muscle" data-f="muscle" aria-label="Muscle the sets count toward">'
         + options([['', 'Auto · ' + muscleLabel(autoMuscle(e))]].concat(M.MUSCLES.map(m => [m, muscleLabel(m)])), e.muscle || '') + '</select></td>'
+        + '<td><select class="pb-in pb-in--ss' + (e.superset ? ' is-on' : '') + '" data-f="superset" aria-label="Superset group" title="Same letter = superset">' + options(SUPERSET_OPTIONS, e.superset || '') + '</select></td>'
         + '<td>' + numberCell('sets', e.sets, ' min="1" max="20" aria-label="Sets"') + '</td>'
         + '<td class="pb-range">' + numberCell('repsMin', e.repsMin, ' min="1" max="100" aria-label="Reps from"') + '<span>–</span>' + numberCell('repsMax', e.repsMax, ' min="1" max="100" aria-label="Reps to"') + '</td>'
         + '<td>' + numberCell('rir', e.rir, ' min="0" max="10" step="0.5" aria-label="Target RIR"') + '</td>'
@@ -169,6 +173,12 @@
         + '</td></tr>';
     }
 
+    /** " · ~48 min" — the day's estimated length (time-budget-core.js). */
+    function estimateText(d) {
+      const min = root.CoachTimeEfficiency ? root.CoachTimeEfficiency.estimateMinutes(d) : null;
+      return min ? ' · ~' + min + ' min' : '';
+    }
+
     function dayHtml(d, di, warnedIds, dayWarned) {
       return '<section class="pb-day' + (dayWarned.has(d.dayId) ? ' is-warned' : '') + '" data-d="' + di + '">'
         + '<header class="pb-day-head">'
@@ -176,9 +186,10 @@
           + '<input class="pb-in pb-in--label" data-f="label" value="' + esc(d.label) + '" placeholder="Lower A" maxlength="40" aria-label="Day name">')
         + '<input class="pb-in pb-in--focus" data-f="focus" value="' + esc(d.focus) + '" placeholder="Focus (optional)" maxlength="60" aria-label="Focus">'
         + (!single && options_.onSaveWorkout && d.exercises.length ? '<button type="button" class="pb-link" data-act="save-workout">Save as workout</button>' : '')
+        + (root.CoachTimeEfficiency && d.exercises.length >= 3 ? '<button type="button" class="pb-link" data-act="compress-day" title="Pair exercises that don’t share muscles into supersets (every week of this day). The first heavy lift keeps its full rest.">Compress' + (estimateText(d)) + '</button>' : '')
         + (single ? '' : '<button type="button" class="pb-link" data-act="del-day">Remove day</button>')
         + '</header>'
-        + '<table class="pb-table"><thead><tr><th>Exercise</th><th>Type</th><th title="The muscle these sets count toward for MEV / MAV / MRV">Muscle</th><th>Sets</th><th>Reps</th><th>RIR</th><th title="RIR on the last set; empty = same">Last set</th><th title="% of 1RM or kg">Load</th><th>Rest</th><th>Notes</th><th></th></tr></thead>'
+        + '<table class="pb-table"><thead><tr><th>Exercise</th><th>Type</th><th title="The muscle these sets count toward for MEV / MAV / MRV">Muscle</th><th title="Same letter = superset">SS</th><th>Sets</th><th>Reps</th><th>RIR</th><th title="RIR on the last set; empty = same">Last set</th><th title="% of 1RM or kg">Load</th><th>Rest</th><th>Notes</th><th></th></tr></thead>'
         + '<tbody>' + d.exercises.map((e, ei) => rowHtml(e, di, ei, warnedIds)).join('') + '</tbody></table>'
         + '<input class="pb-in pb-quick" data-quick="' + di + '" placeholder="Quick add: Squat 4x6-8 @2 75% 2-3min — Enter" aria-label="Quick add exercise">'
         + (!single && savedWorkouts().length ? '<select class="pb-in pb-insert" data-insert="' + di + '" aria-label="Insert a saved workout"><option value="">+ Insert a saved workout…</option>'
@@ -583,7 +594,7 @@
       const { day, ex } = rowAt(t);
       if (ex) {
         if (f === 'name' || f === 'notes') ex[f] = t.value;
-        else if (f !== 'rest' && f !== 'type' && f !== 'load') ex[f] = numOrNull(t.value);
+        else if (f !== 'rest' && f !== 'type' && f !== 'load' && f !== 'superset' && f !== 'muscle') ex[f] = numOrNull(t.value);
       } else if (day && (f === 'label' || f === 'focus')) day[f] = t.value;
     });
 
@@ -639,6 +650,7 @@
         return;
       }
       if (ex && f === 'muscle') { if (t.value) ex.muscle = t.value; else delete ex.muscle; refreshWeekVolume(); return; }
+      if (ex && f === 'superset') { if (t.value) ex.superset = t.value; else delete ex.superset; render(); return; }
       if (ex && f === 'type') ex.type = t.value || null;
       else if (ex && f === 'rest') { Object.assign(ex, M.parseRest(t.value)); t.value = restText(ex); }
       else if (ex && f === 'load') { Object.assign(ex, M.parseLoad(t.value)); t.value = loadText(ex); }
@@ -889,6 +901,11 @@
         p.weeks.splice(state.week - 1, 1);
         renumber(p);
         state.week = Math.min(state.week, p.weeks.length);
+      } else if (act === 'compress-day') {
+        const r = root.CoachTimeEfficiency.compressProgramDay(p, day.dayId);
+        state.message = r.pairs.length
+          ? 'Supersets: ' + r.pairs.map(x => x.join(' + ')).join(', ') + '. ' + (day.label || 'This day') + ' ~' + r.beforeMin + ' → ~' + r.afterMin + ' min, every week. Save to keep it.'
+          : 'Nothing to pair: the remaining exercises share muscles, or are already supersets.';
       } else if (act === 'save-workout') {
         try {
           state.message = (await options_.onSaveWorkout(JSON.parse(JSON.stringify(day)))) || '';

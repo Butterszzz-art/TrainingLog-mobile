@@ -916,6 +916,8 @@ function renderOverview(c) {
     + (weeks.length ? weekBars(weeks) + '<p class="ws-empty-note">Last ' + weeks.length + ' weeks' + (c.activeProgramName ? ' · following ' + escapeHtml(c.activeProgramName) : '') + '</p>'
       : empty('No workouts shared yet.'))
     + '</div>'
+    // Session length vs. target and sets per muscle (coach/time-efficiency.js).
+    + (window.CoachTimeEfficiency ? '<div class="d-card">' + window.CoachTimeEfficiency.sessionTimeCard(d || {}, { loading, cardHead }) + '</div>' : '')
     + '<div class="d-card">' + cardHead('Latest check-in', null, null, ci.date ? '<span class="ca-chip">' + escapeHtml(shortDate(ci.date)) + '</span>' : '')
     + (ci.date ? scoreRows(ci, checkIns[1]) : empty('No check-ins shared yet.'))
     + '</div>'

@@ -24,8 +24,8 @@ describe('exercise classification', () => {
   });
 
   test('pairScore: antagonists and push/pull pair; same-muscle and heavy leg pairs do not', () => {
-    expect(tb.pairScore('Incline DB Press', 'Chest Supported Row', getMuscleGroup)).toBe(3);
-    expect(tb.pairScore('Seated Leg Curl', 'Leg Extension', getMuscleGroup)).toBe(3);
+    expect(tb.pairScore('Incline DB Press', 'Chest Supported Row', getMuscleGroup)).toBe(4);
+    expect(tb.pairScore('Seated Leg Curl', 'Leg Extension', getMuscleGroup)).toBe(4);
     expect(tb.pairScore('Seated Leg Curl', 'Overhead Cable Triceps Extension', getMuscleGroup)).toBe(2);
     expect(tb.pairScore('Bench Press', 'Incline DB Press', getMuscleGroup)).toBe(0);
     expect(tb.pairScore('Bench Press', 'Overhead Cable Triceps Extension', getMuscleGroup)).toBe(0);

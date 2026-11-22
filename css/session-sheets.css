@@ -137,6 +137,29 @@
 }
 .tl-sheet-chip .ui-icon { width: 13px; height: 13px; color: var(--green-90); }
 
+/* How the session used its minutes (src/js/session-efficiency.js) */
+.tl-sheet-eff { margin-top: 10px; }
+.tl-sheet-eff-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.tl-sheet-eff-head .ui-icon { width: 13px; height: 13px; color: var(--green-90); }
+.tl-sheet-eff-verdict { color: var(--text-primary); }
+.tl-sheet-eff-tip {
+  margin: 4px 0 0;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+
 /* ── Body ───────────────────────────────────────────────────── */
 .tl-sheet-body {
   flex: 1 1 auto;

@@ -901,3 +901,17 @@ a.ci-msg-pin, a.bulk-action-btn { text-decoration: none; }
 .auto-toggle input { width: 18px; height: 18px; accent-color: var(--green-70); }
 .auto-inline { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-secondary); }
 .auto-inline select { width: auto; margin: 0; }
+
+/* ── Session time card (coach/time-efficiency.js) ─────────────── */
+.te-lines { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--text-sec); }
+.te-tip { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-brass); background: var(--warning-bg); font-size: 12.5px; line-height: 1.45; color: var(--text); }
+.te-cap { margin: 12px 0 6px; font-family: var(--font-label); font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-sec); }
+.te-muscles { display: flex; flex-wrap: wrap; gap: 6px; }
+.te-mus { display: inline-flex; gap: 4px; align-items: baseline; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; color: var(--text-sec); }
+.te-mus b { color: var(--text); font-weight: 700; }
+.te-mus--low { border-color: var(--border-brass); color: var(--brass-light); }
+.te-mus--ok { border-color: var(--green-70); }
+
+/* Program builder: superset letter */
+.pb-in--ss { width: 52px; }
+.pb-in--ss.is-on { border-color: var(--border-brass); color: var(--brass-light); font-weight: 700; }

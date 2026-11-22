@@ -8573,6 +8573,12 @@ function openSessionRatingModal(workoutIndex) {
     exerciseCount ? `<span class="tl-sheet-chip">${icon('dumbbell')}${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}</span>` : '',
     setCount ? `<span class="tl-sheet-chip">${icon('check')}${setCount} set${setCount === 1 ? '' : 's'}</span>` : ''
   ].join('');
+  // How the session used its minutes (src/js/session-efficiency.js).
+  const eff = workout.efficiency && window.TimeBudgetCore ? window.TimeBudgetCore.describeEfficiency(workout.efficiency) : null;
+  const effHtml = eff ? `<div class="tl-sheet-eff">
+            <p class="tl-sheet-eff-head">${icon('clock')}${esc(eff.head)}${eff.verdict ? ` · <span class="tl-sheet-eff-verdict">${esc(eff.verdict)}</span>` : ''}</p>
+            ${eff.tip ? `<p class="tl-sheet-eff-tip">${esc(eff.tip)}</p>` : ''}
+          </div>` : '';
   const isEdit = !!workout.sessionRating;
 
   const modal = document.createElement('div');
@@ -8586,6 +8592,7 @@ function openSessionRatingModal(workoutIndex) {
           <h2 class="tl-sheet-title" id="sessionRatingTitle">How did it go?</h2>
           <p class="tl-sheet-sub">Quick 1–5 for each. All optional.</p>
           ${chips ? `<div class="tl-sheet-chips">${chips}</div>` : ''}
+          ${effHtml}
         </div>
         <button type="button" class="tl-sheet-close" aria-label="Close" onclick="closeSessionRatingModal()">${icon('x') || '✕'}</button>
       </header>
@@ -21733,6 +21740,7 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/set-complete.js"></script>
   <script src="src/js/overload-win.js"></script>
   <script src="src/js/time-budget-core.js"></script>
+  <script src="src/js/session-efficiency.js"></script>
   <script src="src/js/performance-mode.js"></script>
   <script src="src/js/profiles.js"></script>
   <script src="src/js/settings-hero.js"></script>
