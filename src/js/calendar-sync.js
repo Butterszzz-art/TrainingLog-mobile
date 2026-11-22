@@ -152,7 +152,6 @@
   }
 
   const REQUEST_TIMEOUT_MS = 20000;
-  const RETRY_DELAY_MS = 1200;
   const OFFLINE_MESSAGE = "Couldn't reach Pocket Coach. Check your connection and try again.";
 
   /** fetch() rejected without an HTTP response: offline, timed out, or an
@@ -179,15 +178,8 @@
     try {
       res = await _send(method, path, body);
     } catch (err) {
-      if (!_isNetworkError(err)) throw err;
-      // One retry: a cold start or a blip on mobile data usually clears.
-      await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
-      try {
-        res = await _send(method, path, body);
-      } catch (again) {
-        console.warn('[calendar] ' + method + ' /api/calendar' + path + ' failed:', (again && again.message) || again);
-        throw new Error(_isNetworkError(again) ? OFFLINE_MESSAGE : ((again && again.message) || OFFLINE_MESSAGE));
-      }
+      console.warn('[calendar] ' + method + ' /api/calendar' + path + ' failed:', (err && err.message) || err);
+      throw new Error(_isNetworkError(err) ? OFFLINE_MESSAGE : ((err && err.message) || OFFLINE_MESSAGE));
     }
     let json = null;
     try { json = await res.json(); } catch { /* empty body */ }
