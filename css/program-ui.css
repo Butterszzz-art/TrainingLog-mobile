@@ -129,6 +129,12 @@
   display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin: 0; padding: 0; flex: none;
   border-radius: 50%; border: 0; background: none; box-shadow: none; color: var(--mx-faint); font-size: 15px;
 }
+#programTab .pbv2-ex-card-actions { display: inline-flex; align-items: center; gap: 2px; flex: none; }
+#programTab .pbv2-ex-card-move {
+  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin: 0; padding: 0; flex: none;
+  border-radius: 50%; border: 0; background: none; box-shadow: none; color: var(--text-secondary); font-size: 18px; font-weight: 700;
+}
+#programTab .pbv2-ex-card-move:disabled { opacity: 0.3; }
 #programTab .pbv2-ex-card-remove:hover, #programTab .pbv2-del-set-btn:hover { color: var(--danger-text-mobile); background: rgba(201, 112, 124, 0.1); }
 
 #programTab .pbv2-sets-table, #programTab .pbv2-sets-table thead, #programTab .pbv2-sets-table tbody, #programTab .pbv2-sets-table tr { background: none; border: 0; box-shadow: none; }

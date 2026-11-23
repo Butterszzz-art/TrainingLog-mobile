@@ -260,10 +260,14 @@
     const todayStr = _localDateKey();
     let workouts = [];
     try { workouts = u ? JSON.parse(localStorage.getItem('workouts_' + u)) || [] : []; } catch { workouts = []; }
-    const today = workouts.find(w => w.date === todayStr);
-    const log = today && Array.isArray(today.log) ? today.log : [];
+    // Every workout of today (a freeform one and a loaded plan can both
+    // exist); a loaded plan's sets count once ticked, like everywhere else.
+    const todays = workouts.filter(w => w && w.date === todayStr);
+    const sc = global.SetComplete;
+    const view = w => (sc && sc.isPlannedWorkout(w) ? sc.completedView(w) : w);
+    const log = [].concat(...todays.map(w => { const v = view(w); return Array.isArray(v && v.log) ? v.log : []; }));
     // Warm-ups (warmup-sets.js) sit beside the log so no stat counts them.
-    const warmups = today && Array.isArray(today.warmups) ? today.warmups : [];
+    const warmups = [].concat(...todays.map(w => (Array.isArray(w.warmups) ? w.warmups : [])));
 
     if (!log.length && !warmups.length) { el.innerHTML = ''; return; }
 
@@ -328,7 +332,16 @@
     try { return JSON.parse(localStorage.getItem('workouts_' + u)) || []; } catch { return []; }
   }
 
-  /** Muscles trained in the last 7 days: [{ muscle, sets, target, ratio }], most worked first. */
+  /** First day of the running program's current week, or null (no program). */
+  function _programWeekStart(u, now) {
+    const sched = _schedule();
+    if (!sched || typeof sched.programWeekStart !== 'function') return null;
+    try { return sched.programWeekStart(u, now) || null; } catch { return null; }
+  }
+
+  /** Muscles trained this week: [{ muscle, sets, target, ratio }], most worked
+   * first. "This week" is the program's week (from its first session) when a
+   * program is running, else the last 7 days. opts.weekStart overrides it. */
   function weeklyMuscleVolume(user, opts) {
     const u = user || _user();
     const compute = global.computeMuscleRecoverySummary;
@@ -337,9 +350,20 @@
     const workouts = options.workouts || _readWorkoutHistory(u);
     const readTargets = global.readMuscleWeeklyTargets;
     const weeklyTargets = (typeof readTargets === 'function' && readTargets(u)) || undefined;
-    return compute(workouts, { weeklyTargets, now: options.now })
+    const weekStart = options.weekStart !== undefined ? options.weekStart : _programWeekStart(u, options.now);
+    return compute(workouts, { weeklyTargets, now: options.now, weekStart: weekStart || undefined })
       .filter(r => r.sets > 0)
       .sort((a, b) => b.sets - a.sets);
+  }
+
+  /** The card's window label: "program week · since Mon" or "last 7 days". */
+  function weeklyVolumeWindowLabel(user, now) {
+    const start = _programWeekStart(user || _user(), now);
+    if (!start) return 'last 7 days';
+    const today = new Date(now || Date.now());
+    if (_localDateKey(start) === _localDateKey(today)) return 'program week · from today';
+    const abbr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][start.getDay()];
+    return `program week · since ${abbr}`;
   }
 
   function renderVolumeLandmarks() {
@@ -355,7 +379,7 @@
       <div class="pod vl-card">
         <div class="pod-row">
           <span class="pod-kicker">Weekly sets per muscle</span>
-          <span class="sq-count">last 7 days &middot; your targets</span>
+          <span class="sq-count">${_escHTML(weeklyVolumeWindowLabel())} &middot; your targets</span>
         </div>
         ${rows.map(r => {
           const over = r.sets > r.target;
@@ -455,6 +479,46 @@
     return { source: 'program', planned: true, programId: day.programId || null, programDay: day.name, programName: day.programName || '' };
   }
 
+  /**
+   * Turn a freeform workout into today's planned session. Sets already
+   * logged by hand count as done: they're ticked, and each takes the place of
+   * one of that exercise's planned sets. Entries follow the plan's order; lifts
+   * that aren't in the plan stay first (they were done first). Mutates `workout`.
+   */
+  function mergePlannedIntoWorkout(workout, plannedLog, metadata, name) {
+    const grouping = global.sessionGrouping;
+    const PER = (grouping && grouping.PER_SET_ARRAYS) || ['repsArray', 'weightsArray', 'rpeArray', 'rirArray', 'dropsetArray',
+      'restPauseArray', 'unilateralArray', 'sideRepsArray', 'skippedArray', 'completedArray', 'setTypeArray', 'advancedArray'];
+    const keyOf = e => {
+      const n = String((e && e.exercise) || '').trim().toLowerCase();
+      return grouping && typeof grouping.exerciseIdFor === 'function' ? grouping.exerciseIdFor(n) || n : n;
+    };
+    const logged = (Array.isArray(workout.log) ? workout.log : []).map(e => {
+      const reps = Array.isArray(e.repsArray) ? e.repsArray : [];
+      return Object.assign({}, e, { completedArray: reps.map(() => true) });
+    });
+    const doneBy = new Map();
+    logged.forEach(e => doneBy.set(keyOf(e), (doneBy.get(keyOf(e)) || 0) + (e.repsArray || []).length));
+    const used = new Set();
+    const ordered = [];
+    (plannedLog || []).forEach(p => {
+      const k = keyOf(p);
+      logged.forEach((e, i) => { if (!used.has(i) && keyOf(e) === k) { used.add(i); ordered.push(e); } });
+      let skip = Math.min(doneBy.get(k) || 0, (p.repsArray || []).length);
+      doneBy.set(k, (doneBy.get(k) || 0) - skip);
+      if (skip >= (p.repsArray || []).length) return;
+      const rest = Object.assign({}, p);
+      PER.forEach(key => { if (Array.isArray(p[key])) rest[key] = p[key].slice(skip); });
+      rest.sets = rest.repsArray.length;
+      ordered.push(rest);
+    });
+    const extras = logged.filter((_, i) => !used.has(i));
+    workout.log = extras.concat(ordered);
+    workout.metadata = Object.assign({}, workout.metadata || {}, metadata);
+    if (!workout.title || /^Workout on /.test(workout.title)) workout.title = name || workout.title;
+    return workout;
+  }
+
   /** Load today's session into today's log (once), then open it. A template
    * goes through the template loader (index.html loadResistanceTemplateById)
    * so it keeps its set definitions. Returns the workout index, or -1 when
@@ -487,15 +551,24 @@
     }
     if (index === -1) {
       const dateKey = _localDateKey();
-      workouts.push({
-        title: day.name,
-        date: dateKey,
-        metadata: sessionMetadata(day),
-        log: buildProgramDayLog(day, dateKey, _lastWeightFor),
-        restBreaks: [],
-      });
+      const plannedLog = buildProgramDayLog(day, dateKey, _lastWeightFor);
+      // Already lifting freeform today: load the plan into that workout, so
+      // the log and the program are one session, not two.
+      const freeform = workouts.findIndex(w => w && w.date === dateKey && !(w.metadata && w.metadata.planned) && Array.isArray(w.log));
+      if (freeform !== -1) {
+        mergePlannedIntoWorkout(workouts[freeform], plannedLog, sessionMetadata(day), day.name);
+        index = freeform;
+      } else {
+        workouts.push({
+          title: day.name,
+          date: dateKey,
+          metadata: sessionMetadata(day),
+          log: plannedLog,
+          restBreaks: [],
+        });
+        index = workouts.length - 1;
+      }
       localStorage.setItem('workouts_' + u, JSON.stringify(workouts));
-      index = workouts.length - 1;
       if (typeof global.renderWorkouts === 'function') global.renderWorkouts();
       if (global.showToast) global.showToast(day.source === 'program' ? `${day.name} loaded from your program` : `${day.name} loaded`, 'success');
     }
@@ -1270,7 +1343,7 @@
   }
 
   const api = { unloadUntouchedSession, declineTodayFromLog, undoDeclineFromLog, getTodaysPlannedDay, sessionMetadata, sessionSourceLabel, todaysLiftedSession, canSaveTodayAsRoutine, saveTodayAsRoutine, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
-    initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks, weeklyMuscleVolume,
+    initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks, weeklyMuscleVolume, weeklyVolumeWindowLabel, mergePlannedIntoWorkout,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
     refreshLogButtonLabel: _updateQuickLogButtonLabel };

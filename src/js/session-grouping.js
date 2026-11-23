@@ -184,6 +184,9 @@
     merged.maxedOut = entries.some(e => e.maxedOut);
     const withRec = entries.slice().reverse().find(e => e.nextSessionRecommendation);
     merged.nextSessionRecommendation = withRec ? withRec.nextSessionRecommendation : undefined;
+    // The newest in-session advice (set-complete.js stampSetAdvice).
+    const withAdvice = entries.filter(e => e.setAdvice).sort((a, b) => (a.setAdvice.at || 0) - (b.setAdvice.at || 0)).pop();
+    merged.setAdvice = withAdvice ? withAdvice.setAdvice : undefined;
     return merged;
   }
 
@@ -252,7 +255,30 @@
     return parts.join(' · ');
   }
 
+  /**
+   * Move one exercise (the card holding `entryIndexes`) up (dir -1) or down
+   * (dir +1) past its neighbour. Returns the reordered log (a new array of the
+   * same entries, each exercise's entries kept together and in order), or
+   * null when it can't move that way.
+   */
+  function moveExercise(log, entryIndexes, dir) {
+    const blocks = groupSessionLog(log);
+    const first = Array.isArray(entryIndexes) ? entryIndexes[0] : entryIndexes;
+    const at = blocks.findIndex(b => b.entryIndexes.includes(first));
+    const to = at + (dir < 0 ? -1 : 1);
+    if (at === -1 || to < 0 || to >= blocks.length) return null;
+    const order = blocks.slice();
+    [order[at], order[to]] = [order[to], order[at]];
+    const out = [];
+    const placed = new Set();
+    order.forEach(b => b.entryIndexes.forEach(i => { out.push(log[i]); placed.add(i); }));
+    // Anything groupSessionLog skipped (non-objects) keeps its place at the end.
+    log.forEach((e, i) => { if (!placed.has(i)) out.push(e); });
+    return out;
+  }
+
   const api = {
+    moveExercise,
     normName,
     exerciseIdFor,
     exerciseKeyOf,

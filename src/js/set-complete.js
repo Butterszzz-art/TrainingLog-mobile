@@ -185,10 +185,6 @@
     if (typeof global.renderSessionSoFar === 'function') global.renderSessionSoFar();
   }
 
-  function _toast(msg, type) {
-    if (typeof global.showToast === 'function') global.showToast(msg, type);
-  }
-
   // ── Actions (wired from the set rows in index.html createSetRow) ──
 
   /** Reps left on a set (null clears). Tapping the chosen chip again clears it. */
@@ -242,6 +238,7 @@
     openEffort.delete(`${wi}_${ei}_${si}`);
 
     if (!completed) {
+      delete entry.setAdvice;
       _write(user, workouts);
       _rerender();
       return null;
@@ -267,6 +264,9 @@
     if (advice && advice.kind === 'backoff' && entry.setTypeArray[si] === 'top-set') {
       filled = applyBackoffWeight(workout, name, advice.weight);
     }
+    // Shown inside this exercise's card, above the next set (index.html
+    // renderSetAdvice), instead of a toast at the top of the screen.
+    stampSetAdvice(entry, advice, filled);
 
     // Next-session advice, judged on the ticked sets.
     if (typeof global.suggestNextSession === 'function') {
@@ -292,10 +292,6 @@
 
     _rerender();
 
-    if (advice && advice.message) {
-      const extra = filled ? ` Back-off set${filled === 1 ? '' : 's'} updated.` : '';
-      _toast(`${name}: ${advice.message}${extra}`, advice.warn ? 'warn' : undefined);
-    }
 
     // Same signal quick log sends (performance mode, next-step chips, ...).
     if (typeof document !== 'undefined' && typeof CustomEvent === 'function') {
@@ -310,8 +306,149 @@
     return advice;
   }
 
+  /**
+   * Keep the in-session advice for the next set on the entry, so the
+   * exercise card can show it where the lifter is looking. Cleared when
+   * there's no advice (e.g. the last set was unticked).
+   */
+  function stampSetAdvice(entry, advice, filled) {
+    if (!entry) return;
+    if (!advice || !advice.message) { delete entry.setAdvice; return; }
+    const extra = filled ? ` Back-off set${filled === 1 ? '' : 's'} updated.` : '';
+    entry.setAdvice = {
+      message: advice.message + extra,
+      warn: !!advice.warn,
+      kind: advice.kind || null,
+      weight: Number.isFinite(advice.weight) ? advice.weight : null,
+      reps: Number.isFinite(advice.reps) ? advice.reps : null,
+      unit: advice.unit || entry.unit || 'kg',
+      restLabel: advice.restLabel || '',
+      at: Date.now(),
+    };
+  }
+
+  /**
+   * Quick log into a loaded program / template session: the sets logged by
+   * hand fill that exercise's planned sets still to do (ticked Done), so the
+   * plan and the log stay one session instead of a planned card plus a
+   * separate logged one. Mutates `log`. Returns null when the exercise has no
+   * open planned set; else { entry, leftover } where `entry` is the last
+   * planned entry filled and `leftover` holds any extra sets (as a new entry,
+   * all ticked) or null.
+   */
+  function fillPlannedSets(log, newEntry) {
+    const grouping = global.sessionGrouping;
+    if (!Array.isArray(log) || !newEntry || !Array.isArray(newEntry.repsArray) || !newEntry.repsArray.length) return null;
+    const indexes = grouping && typeof grouping.findBlockFor === 'function'
+      ? ((grouping.findBlockFor(log, newEntry.exercise, newEntry.exerciseId) || {}).entryIndexes || [])
+      : log.map((e, i) => (e && _sameName(e.exercise, newEntry.exercise) ? i : -1)).filter(i => i !== -1);
+    const unit = newEntry.unit || 'kg';
+    const open = indexes.filter(i => log[i] && (log[i].unit || 'kg') === unit);
+    if (!open.length) return null;
+
+    const n = newEntry.repsArray.length;
+    let filledEntry = null;
+    let k = 0;
+    const at = (key, i) => (Array.isArray(newEntry[key]) ? newEntry[key][i] : undefined);
+    const put = (e, key, si, v) => {
+      if (!Array.isArray(e[key])) e[key] = [];
+      while (e[key].length < e.repsArray.length) e[key].push(null);
+      e[key][si] = v;
+    };
+    for (; k < n; k++) {
+      const next = nextOpenSet(log, open);
+      if (!next) break;
+      const [ei, si] = next;
+      const e = log[ei];
+      put(e, 'repsArray', si, Number(newEntry.repsArray[k]) || 0);
+      put(e, 'weightsArray', si, Number(at('weightsArray', k)) || 0);
+      if (at('rirArray', k) != null) put(e, 'rirArray', si, at('rirArray', k));
+      if (at('rpeArray', k) != null) put(e, 'rpeArray', si, at('rpeArray', k));
+      if (at('unilateralArray', k) != null) put(e, 'unilateralArray', si, !!at('unilateralArray', k));
+      if (at('sideRepsArray', k) != null) put(e, 'sideRepsArray', si, at('sideRepsArray', k));
+      const type = at('setTypeArray', k);
+      // A tag picked while logging wins; otherwise the plan's own set type stays.
+      if (type && type !== 'standard') put(e, 'setTypeArray', si, type);
+      put(e, 'completedArray', si, true);
+      put(e, 'skippedArray', si, false);
+      if (newEntry.sessionCtx && !e.sessionCtx) e.sessionCtx = newEntry.sessionCtx;
+      if (newEntry.maxedOut) e.maxedOut = true;
+      filledEntry = e;
+    }
+    if (!filledEntry) return null;
+    if (k >= n) return { entry: filledEntry, leftover: null };
+    const leftover = Object.assign({}, newEntry);
+    PER_SET.forEach((key) => { if (Array.isArray(newEntry[key])) leftover[key] = newEntry[key].slice(k); });
+    leftover.completedArray = leftover.repsArray.map(() => true);
+    leftover.sets = leftover.repsArray.length;
+    return { entry: filledEntry, leftover };
+  }
+
+  /**
+   * Replace an exercise (the card holding `entryIndexes`) with `newName`.
+   * In a loaded session (opts.planned) the sets already ticked were lifted on
+   * the old exercise and stay with it; the sets still to do move to the new
+   * one, keeping their reps and set types, with the new lift's last weight
+   * (opts.lastWeightFor) or blank. In a freeform workout it's a rename: every
+   * set was logged under the wrong name. Returns a new log, or null.
+   */
+  function replaceExercise(log, entryIndexes, newName, opts) {
+    const options = opts || {};
+    const name = String(newName || '').trim();
+    const indexes = Array.isArray(entryIndexes) ? entryIndexes : [entryIndexes];
+    if (!Array.isArray(log) || !name || !indexes.length) return null;
+    const grouping = global.sessionGrouping;
+    const idFor = n => (grouping && typeof grouping.exerciseIdFor === 'function' ? grouping.exerciseIdFor(n) : undefined);
+    const lastWeight = typeof options.lastWeightFor === 'function' ? Number(options.lastWeightFor(name)) || 0 : 0;
+    const renamed = e => {
+      const out = Object.assign({}, e, { exercise: name });
+      const id = idFor(name);
+      if (id) out.exerciseId = id; else delete out.exerciseId;
+      ['nextSessionRecommendation', 'setAdvice', 'goal', 'repGoal', 'plannedBackoffWeight', 'replacedFrom'].forEach(k => delete out[k]);
+      out.replacedFrom = e.replacedFrom || e.exercise;
+      return out;
+    };
+    const set = new Set(indexes);
+    const out = [];
+    log.forEach((entry, i) => {
+      if (!set.has(i) || !entry) { out.push(entry); return; }
+      if (!options.planned) { out.push(renamed(entry)); return; }
+      const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+      const done = reps.map((_, si) => !!(entry.completedArray && entry.completedArray[si]));
+      const pick = keep => {
+        const copy = Object.assign({}, entry);
+        PER_SET.forEach(key => { if (Array.isArray(entry[key])) copy[key] = entry[key].filter((_, si) => done[si] === keep); });
+        copy.sets = copy.repsArray.length;
+        return copy;
+      };
+      if (done.some(Boolean)) out.push(pick(true));
+      if (done.some(d => !d)) {
+        const todo = renamed(pick(false));
+        todo.weightsArray = todo.repsArray.map(() => lastWeight);
+        todo.completedArray = todo.repsArray.map(() => false);
+        if (Array.isArray(todo.rirArray)) todo.rirArray = todo.repsArray.map(() => null);
+        out.push(todo);
+      }
+    });
+    return out;
+  }
+
+  /** Hide the advice on an entry (the card's ×). */
+  function dismissSetAdvice(wi, ei) {
+    const user = _logUser();
+    const workouts = _read(user);
+    const log = workouts[wi] && workouts[wi].log;
+    if (!Array.isArray(log)) return;
+    const entry = log[ei];
+    const name = entry && String(entry.exercise || '').trim().toLowerCase();
+    // A lift logged set by set has several entries: clear them all.
+    log.forEach(e => { if (e && String(e.exercise || '').trim().toLowerCase() === name) delete e.setAdvice; });
+    _write(user, workouts);
+    _rerender();
+  }
+
   const api = {
-    DEFAULT_REST_SECONDS,
+    DEFAULT_REST_SECONDS, stampSetAdvice, dismissSetAdvice, fillPlannedSets, replaceExercise,
     isPlannedWorkout, completedEntry, completedView, completedWorkouts, nextOpenSet,
     applyBackoffWeight, plannedRestSeconds, restSecondsFor,
     completeSet, setSetRir, setSetRole, toggleEffort, isEffortOpen, startRest,

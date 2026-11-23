@@ -124,12 +124,23 @@ describe('evaluateWin', () => {
     expect(evaluateWin('Row', history, TODAY)).toBeNull();
   });
 
-  test('no card when the tip was Repeat (last time missed reps)', () => {
+  test('beating last time still counts when the tip was Repeat (last time missed reps)', () => {
     const history = [
       workout('2026-11-14', [entry('Bench Press', [[80, 5, 'top-set']], { repRange: '6-8' })]),
       workout(TODAY, [entry('Bench Press', [[80, 7, 'top-set']], { repRange: '6-8' })]),
     ];
-    expect(evaluateWin('Bench Press', history, TODAY)).toBeNull();
+    const w = evaluateWin('Bench Press', history, TODAY);
+    expect(w).toMatchObject({ beat: true, followed: false, kind: 'reps', delta: 2 });
+  });
+
+  test('a heavier weight than last time earns it even after a Repeat tip', () => {
+    // Last time 12.5 × 6 at 0 RIR (harder than planned → Repeat); today 15 × 6.
+    const history = [
+      workout('2026-10-29', [entry('Single Overhead Extension', [[12.5, 6, 'standard', 0], [12.5, 6, 'standard', 0]])]),
+      workout(TODAY, [entry('Single Overhead Extension', [[15, 6, 'standard', 1]])]),
+    ];
+    const w = evaluateWin('Single Overhead Extension', history, TODAY);
+    expect(w).toMatchObject({ kind: 'weight', delta: 2.5, today: { weight: 15, reps: 6 } });
   });
 
   test('no card at an alt gym', () => {
@@ -167,6 +178,68 @@ describe('evaluateWin', () => {
       workout('2026-11-14', [entry('Row', [[70, 10]])]),
     ];
     expect(evaluateWin('Row', history, TODAY)).toMatchObject({ kind: 'weight', delta: 2.5 });
+  });
+});
+
+describe('back-off sets and rep PRs', () => {
+  test('a back-off that beats last time\'s back-off earns a card', () => {
+    const history = [
+      workout('2026-11-14', [entry('Single Overhead Extension', [[15, 6, 'top-set'], [14, 6, 'backoff']])]),
+      workout(TODAY, [entry('Single Overhead Extension', [[15, 6, 'top-set'], [14, 8, 'backoff', 0]])]),
+    ];
+    const wins = win.evaluateBackoffWins('Single Overhead Extension', history, TODAY);
+    expect(wins).toHaveLength(1);
+    expect(wins[0]).toMatchObject({ scope: 'backoff', index: 0, kind: 'reps', delta: 2 });
+    expect(describeWin(wins[0]).kicker).toBe('Back-off beaten');
+  });
+
+  test('untagged lighter sets after the top set count as back-offs', () => {
+    const history = [
+      workout('2026-11-14', [entry('Low Row', [[60, 7], [50, 8]])]),
+      workout(TODAY, [entry('Low Row', [[60, 7], [52.5, 8]])]),
+    ];
+    const wins = win.evaluateBackoffWins('Low Row', history, TODAY);
+    expect(wins[0]).toMatchObject({ kind: 'weight', delta: 2.5 });
+  });
+
+  test('rep PR: more reps than ever at a weight done before', () => {
+    const history = [
+      workout('2026-11-01', [entry('Curl', [[14, 7], [16, 5]])]),
+      workout('2026-11-14', [entry('Curl', [[16, 6], [14, 6]])]),
+      workout(TODAY, [entry('Curl', [[16, 6], [14, 8]])]),
+    ];
+    const prs = win.evaluateRepPRs('Curl', history, TODAY);
+    expect(prs).toHaveLength(1);
+    expect(prs[0]).toMatchObject({ scope: 'rep-pr', today: { weight: 14, reps: 8 }, last: { weight: 14, reps: 7 }, delta: 1 });
+    expect(describeWin(prs[0]).title).toBe('Most reps ever at 14 kg');
+  });
+
+  test('no rep PR at a brand-new weight, or when a heavier set had more reps', () => {
+    const history = [
+      workout('2026-11-14', [entry('Curl', [[16, 9], [14, 6]])]),
+      workout(TODAY, [entry('Curl', [[18, 6], [14, 8]])]),
+    ];
+    expect(win.evaluateRepPRs('Curl', history, TODAY)).toEqual([]);
+  });
+
+  test('checkAndCelebrate: top set first, then the back-off gets its own card', () => {
+    document.body.innerHTML = '';
+    localStorage.clear();
+    localStorage.setItem('fitnessAppUser', 'kim');
+    globalThis.requestAnimationFrame = cb => setTimeout(cb, 0);
+    localStorage.setItem('workouts_kim', JSON.stringify([
+      workout('2026-11-14', [entry('Press', [[40, 6, 'top-set'], [35, 8, 'backoff']])]),
+      workout(TODAY, [entry('Press', [[42.5, 6, 'top-set']])]),
+    ]));
+    expect(win.checkAndCelebrate('Press', TODAY)).toMatchObject({ kind: 'weight' });
+    document.getElementById('_overloadWin')._close();
+    localStorage.setItem('workouts_kim', JSON.stringify([
+      workout('2026-11-14', [entry('Press', [[40, 6, 'top-set'], [35, 8, 'backoff']])]),
+      workout(TODAY, [entry('Press', [[42.5, 6, 'top-set'], [35, 10, 'backoff']])]),
+    ]));
+    const second = win.checkAndCelebrate('Press', TODAY);
+    expect(second).toMatchObject({ scope: 'rep-pr', today: { weight: 35, reps: 10 } });
+    expect(win.checkAndCelebrate('Press', TODAY)).toBeNull();
   });
 });
 

@@ -217,3 +217,27 @@ describe('the coach\'s repeat / pause weeks (program.timeline)', () => {
     expect(imported.weeks[1].deload).toBe(true);
   });
 });
+
+describe('programWeekStart', () => {
+  const sched = () => ps.createSchedule(program, null, { core });
+
+  test('a week starts on its first session and runs through the rest days after it', () => {
+    // Week of Mon 2026-11-16: Mon/Tue/Thu/Fri, then Sat/Sun rest.
+    expect(ps.localDateKey(ps.programWeekStart(sched(), date('2026-11-16')))).toBe('2026-11-16');
+    expect(ps.localDateKey(ps.programWeekStart(sched(), date('2026-11-19')))).toBe('2026-11-16');
+    expect(ps.localDateKey(ps.programWeekStart(sched(), date('2026-11-22')))).toBe('2026-11-16');
+    expect(ps.localDateKey(ps.programWeekStart(sched(), date('2026-11-23')))).toBe('2026-11-23');
+  });
+
+  test('follows the program, not the calendar Monday', () => {
+    const p = Object.assign({}, program, { startDate: '2026-11-19', frequency: ['Thu', 'Fri', 'Mon', 'Tue'] });
+    const s = ps.createSchedule(p, null, { core });
+    expect(ps.localDateKey(ps.programWeekStart(s, date('2026-11-24')))).toBe('2026-11-19');
+    expect(ps.localDateKey(ps.programWeekStart(s, date('2026-11-26')))).toBe('2026-11-26');
+  });
+
+  test('null without a running program, or before it starts', () => {
+    expect(ps.programWeekStart('nobody', date('2026-11-23'))).toBeNull();
+    expect(ps.programWeekStart(sched(), date('2026-09-01'))).toBeNull();
+  });
+});

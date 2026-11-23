@@ -5,18 +5,24 @@
  * them (progressiveOverload.js suggestNextSession).
  *
  * Rules
- *  - Top set only: the set that drives progression (progressiveOverload.js
- *    topSetOf: a tagged Top Set, else the heaviest non-back-off set). Back-off
- *    and warm-up sets never earn it.
+ *  - Top set: the set that drives progression (progressiveOverload.js
+ *    topSetOf: a tagged Top Set, else the heaviest non-back-off set).
+ *  - Back-off sets earn their own card: a back-off (any work set after the
+ *    top set) that beats the same back-off last session (evaluateBackoffWin).
+ *  - Rep PR: more reps at a weight than ever before at that weight or
+ *    heavier (evaluateRepPR), on any work set.
  *  - Followed the plan: today's top set is at or above the tip's top set
  *    (weight and reps) for tips that add load: Add weight / Add a rep /
  *    Maxed out (+1 rep).
  *  - Beat last time: today's top set beats last session's top set: more
  *    reps at the same weight, or more weight with a higher e1RM (which
  *    includes more weight at the same or more reps).
- *  - No card when the tip was Repeat or Deload, at an alt gym or on an alt
- *    machine, for a lift's first session, or for matching last time exactly.
- *  - Once per exercise per session (day).
+ *  - Lifting more than last time always counts, whatever the tip said (a
+ *    Repeat or Deload tip only means there's no plan to "follow").
+ *  - No card at an alt gym or on an alt machine, for a lift's first
+ *    session, or for matching last time exactly.
+ *  - Once per exercise per session (day) for the top set; once per back-off
+ *    set and once per rep-PR weight.
  *  - An all-time PR outranks it: the gold PR card shows and gets a
  *    "+2.5 kg vs last time" line instead of a second card.
  *  - Overload streak: sessions in a row the top set went up; shown from 2.
@@ -124,9 +130,9 @@
     if (typeof eng.suggestNextSession === 'function') {
       try { rec = eng.suggestNextSession(name, prior, { gymKey: '' }); } catch { rec = null; }
     }
-    if (rec && NO_CARD_STRATEGIES.has(rec.strategy)) return null;
-
-    const tip = rec && LOADING_STRATEGIES.has(rec.strategy) && rec.topSet ? rec.topSet : null;
+    // A Repeat / Deload tip has no load to "follow", but beating last time
+    // still earns the card (lifting more than before always should).
+    const tip = rec && !NO_CARD_STRATEGIES.has(rec.strategy) && LOADING_STRATEGIES.has(rec.strategy) && rec.topSet ? rec.topSet : null;
     const followed = !!tip && top.weight >= tip.weight && top.reps >= tip.reps;
     const beat = beats(top, lastTop);
     if (!followed && !beat) return null;
@@ -163,9 +169,118 @@
     };
   }
 
+  /** Today's merged session and the prior sessions of `name`, or null. */
+  function _sessionsFor(name, workouts, date, eng) {
+    const all = _byDate(workouts);
+    const today = _mergeSessions(eng.collectSessions(name, all.filter(w => w.date === date), ''));
+    if (!today) return null;
+    const prior = eng.collectSessions(name, all.filter(w => w.date < date), '');
+    return { today, prior };
+  }
+
+  const _isWork = s => s && !s.skipped && s.weight > 0 && s.reps > 0;
+
+  /** Work sets other than the top set, in the order they were done. */
+  function _backoffs(sets, topSetOf) {
+    const top = topSetOf(sets);
+    return sets.filter(s => s !== top && _isWork(s));
+  }
+
+  /**
+   * Back-off wins: each back-off (a work set after the top set, tagged BO or
+   * not) that beats the same back-off of last session (1st vs 1st, …).
+   * Returns [{ …win, scope: 'backoff', index }] in set order.
+   */
+  function evaluateBackoffWins(exercise, workouts, date, engine) {
+    const eng = engine || _engine();
+    if (!eng.collectSessions || !eng.topSetOf) return [];
+    const name = String(exercise || '').trim();
+    if (!name || !date) return [];
+    const found = _sessionsFor(name, workouts, date, eng);
+    if (!found || !found.prior.length) return [];
+    const last = found.prior[found.prior.length - 1];
+    const unit = found.today.unit || 'kg';
+    if ((last.unit || 'kg') !== unit) return [];
+    const todayBo = _backoffs(found.today.sets, eng.topSetOf);
+    const lastBo = _backoffs(last.sets, eng.topSetOf);
+    const wins = [];
+    todayBo.forEach((set, i) => {
+      const before = lastBo[i];
+      if (!before || !beats(set, before)) return;
+      let kind, delta, deltaUnit;
+      if (set.weight > before.weight) { kind = 'weight'; delta = _round(set.weight - before.weight); deltaUnit = unit; }
+      else { kind = 'reps'; delta = set.reps - before.reps; deltaUnit = delta === 1 ? 'rep' : 'reps'; }
+      wins.push({
+        exercise: name, unit, date, scope: 'backoff', index: i,
+        today: { weight: set.weight, reps: set.reps },
+        last: { weight: before.weight, reps: before.reps, date: last.date },
+        tip: null, followed: false, pastTip: false, beat: true,
+        kind, delta, deltaUnit,
+        e1rmDelta: _round(_e1rm(set) - _e1rm(before), 1),
+        streak: 0,
+      });
+    });
+    return wins;
+  }
+
+  /**
+   * Rep PRs: a work set today with more reps than ever before at that weight
+   * or heavier, at a weight done before (a brand-new weight is a load jump,
+   * not a rep PR). Returns [{ …win, scope: 'rep-pr' }], best first.
+   */
+  function evaluateRepPRs(exercise, workouts, date, engine) {
+    const eng = engine || _engine();
+    if (!eng.collectSessions) return [];
+    const name = String(exercise || '').trim();
+    if (!name || !date) return [];
+    const found = _sessionsFor(name, workouts, date, eng);
+    if (!found || !found.prior.length) return [];
+    const unit = found.today.unit || 'kg';
+    const priorSets = [];
+    found.prior.forEach(s => { if ((s.unit || 'kg') === unit) s.sets.filter(_isWork).forEach(x => priorSets.push(x)); });
+    const byWeight = new Map();
+    found.today.sets.filter(_isWork).forEach(set => {
+      if (!priorSets.some(p => p.weight === set.weight)) return;
+      const best = priorSets.filter(p => p.weight >= set.weight).reduce((b, p) => (!b || p.reps > b.reps ? p : b), null);
+      if (!best || set.reps <= best.reps) return;
+      const cur = byWeight.get(set.weight);
+      if (!cur || set.reps > cur.today.reps) {
+        const delta = set.reps - best.reps;
+        byWeight.set(set.weight, {
+          exercise: name, unit, date, scope: 'rep-pr',
+          today: { weight: set.weight, reps: set.reps },
+          last: { weight: best.weight, reps: best.reps, date: '' },
+          tip: null, followed: false, pastTip: false, beat: true,
+          kind: 'reps', delta, deltaUnit: delta === 1 ? 'rep' : 'reps',
+          e1rmDelta: _round(_e1rm(set) - _e1rm(best), 1),
+          streak: 0,
+        });
+      }
+    });
+    return Array.from(byWeight.values()).sort((a, b) => b.delta - a.delta || b.today.weight - a.today.weight);
+  }
+
   /** Card copy for a win. */
   function describeWin(win) {
     const fmt = n => String(_round(n));
+    if (win.scope === 'backoff' || win.scope === 'rep-pr') {
+      const backoff = win.scope === 'backoff';
+      const chips = [];
+      if (win.repPR) chips.push({ text: 'Rep PR' });
+      if (win.e1rmDelta > 0) chips.push({ text: `e1RM +${fmt(win.e1rmDelta)} ${win.unit}` });
+      return {
+        kicker: backoff ? 'Back-off beaten' : 'Rep PR',
+        title: backoff ? 'More than last workout' : `Most reps ever at ${fmt(win.today.weight)} ${win.unit}`,
+        delta: `+${fmt(win.delta)}`,
+        deltaUnit: win.deltaUnit,
+        sub: backoff ? `back-off set ${win.index + 1}` : `at ${fmt(win.today.weight)} ${win.unit}`,
+        lastLabel: backoff ? 'Last time' : 'Best before',
+        last: `${fmt(win.last.weight)} × ${win.last.reps}`,
+        today: `${fmt(win.today.weight)} × ${win.today.reps}`,
+        chips,
+        prLine: `+${fmt(win.delta)} ${win.deltaUnit} ${backoff ? 'on a back-off vs last time' : `rep PR at ${fmt(win.today.weight)} ${win.unit}`}`,
+      };
+    }
     let kicker, title;
     if (win.followed && win.pastTip) { kicker = 'Overload hit'; title = 'Plan beaten'; }
     else if (win.followed) { kicker = 'Overload hit'; title = 'You followed the plan'; }
@@ -183,6 +298,7 @@
 
     const chips = [];
     if (win.streak >= 2) chips.push({ text: `🔥 ${win.streak} sessions in a row`, fire: true });
+    if (win.repPR) chips.push({ text: 'Rep PR' });
     if (win.followed && !win.pastTip) chips.push({ text: 'Suggestion matched' });
     if (win.kind !== 'e1rm' && win.e1rmDelta > 0) chips.push({ text: `e1RM +${fmt(win.e1rmDelta)} ${win.unit}` });
 
@@ -347,7 +463,7 @@
           <span class="ow-delta-sub">${_esc(win.exercise)} · ${_esc(copy.sub)}</span>
         </div>
         <div class="ow-compare">
-          <span class="ow-c"><span class="ow-lbl">Last time</span><span class="ow-val">${_esc(copy.last)}</span></span>
+          <span class="ow-c"><span class="ow-lbl">${_esc(copy.lastLabel || 'Last time')}</span><span class="ow-val">${_esc(copy.last)}</span></span>
           <span class="ow-arrow" aria-hidden="true">→</span>
           <span class="ow-c ow-c--today"><span class="ow-lbl">Today</span><span class="ow-val">${_esc(copy.today)}</span></span>
         </div>
@@ -415,15 +531,50 @@
     return workouts;
   }
 
+  /**
+   * The win to celebrate now, marked as celebrated: the top set first, then a
+   * rep PR, then a back-off. Each has its own once-per-session key, so a
+   * back-off or rep PR later in the session still gets its card.
+   */
+  function _nextWin(user, exercise, history, date) {
+    const repPRs = evaluateRepPRs(exercise, history, date);
+    const repKey = w => `${exercise}#rep#${w.today.weight}`;
+    const freshRep = repPRs.find(w => !alreadyCelebrated(user, date, repKey(w)));
+
+    if (!alreadyCelebrated(user, date, exercise)) {
+      const top = evaluateWin(exercise, history, date);
+      if (top) {
+        markCelebrated(user, date, exercise);
+        // The top set is also a rep PR: one card, with a Rep PR chip.
+        const sameSet = freshRep && freshRep.today.weight === top.today.weight && freshRep.today.reps === top.today.reps;
+        if (sameSet) { markCelebrated(user, date, repKey(freshRep)); top.repPR = true; }
+        return top;
+      }
+    }
+    const backoffs = evaluateBackoffWins(exercise, history, date);
+    const boKey = w => `${exercise}#bo#${w.index}`;
+    const freshBo = backoffs.find(w => !alreadyCelebrated(user, date, boKey(w)));
+    if (freshRep) {
+      markCelebrated(user, date, repKey(freshRep));
+      // Same set also beat its back-off from last time: don't show it twice.
+      if (freshBo && freshBo.today.weight === freshRep.today.weight && freshBo.today.reps === freshRep.today.reps) markCelebrated(user, date, boKey(freshBo));
+      return freshRep;
+    }
+    if (freshBo) {
+      markCelebrated(user, date, boKey(freshBo));
+      return freshBo;
+    }
+    return null;
+  }
+
   /** Check the lift just logged and celebrate if it earned it. Returns the win or null. */
   function checkAndCelebrate(exercise, date) {
     if (global.coachLoggingClient) return null; // a coach logging for a client
     const user = _user();
     if (!user || !exercise || !date) return null;
-    if (alreadyCelebrated(user, date, exercise)) return null;
-    const win = evaluateWin(exercise, _history(user), date);
+    const history = _history(user);
+    const win = _nextWin(user, exercise, history, date);
     if (!win) return null;
-    markCelebrated(user, date, exercise);
 
     const copy = describeWin(win);
     if (_addToPRCard(win, copy)) return win; // the PR card outranks this one
@@ -453,7 +604,7 @@
     document.addEventListener('tl:set-logged', _onSetLogged);
   }
 
-  const api = { evaluateWin, describeWin, beats, progressed, alreadyCelebrated, markCelebrated, checkAndCelebrate, showWinCard, haptic: _haptic };
+  const api = { evaluateWin, evaluateBackoffWins, evaluateRepPRs, describeWin, beats, progressed, alreadyCelebrated, markCelebrated, checkAndCelebrate, showWinCard, haptic: _haptic };
   global.OverloadWin = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
