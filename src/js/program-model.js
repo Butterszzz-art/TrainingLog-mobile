@@ -523,23 +523,33 @@
   /**
    * Fill weeks from..to from week `from` (the template), the way a coach
    * would drag a progression across a spreadsheet. Returns a new program.
+   *
+   * Volume is held across a mesocycle: every training week of the block has
+   * the same sets. It goes up only from one mesocycle to the next (the first
+   * block at MEV, each later block above the one before); within a block the
+   * reps, RIR and load progress instead.
    *   opts.rirStart / rirEnd   RIR on the first / last training week (linear
    *                            in between, steps of 0.5). Null keeps each row's RIR.
-   *   opts.setsPerWeek         sets added per week (0 = same), capped at opts.setsMax
-   *                            (also the most sets one row gets in a volume ramp).
+   *   opts.holdSets            { muscle: sets }: each muscle's weekly sets for
+   *                            every training week of the block, shared over
+   *                            its rows by their template sets (at least 1 and
+   *                            at most opts.setsMax a row). Muscles not named
+   *                            (and 'other') keep their template sets.
+   *                            opts.muscleOf(row) names a row's muscle.
+   *   opts.repsPerWeek         reps added per week to both ends of each row's
+   *                            range (+1: 8-10 → 9-11 → 10-12), at least 1.
+   *   opts.repLimits           { compound?: 'a-b' | {min,max}, isolation?: … }:
+   *                            the coach's rep-range barrier per exercise type
+   *                            (a row's type, else guessType of its name; core
+   *                            rows have none). The range moves with
+   *                            repsPerWeek until its top reaches the barrier,
+   *                            then holds there (limit 4-8: 4-6 → 5-7 → 6-8 →
+   *                            6-8); a range wider than the barrier is cut to it.
    *   opts.pctPerWeek          %1RM added per week on rows with a % load.
    *   opts.kgPerWeek           kg added per week on rows with a kg load.
-   *   opts.repsPerWeek         reps added per week to both ends of each row's
-   *                            range (-1: 10-12 → 9-11 → 8-10), at least 1.
-   *   opts.volumeFrom / volumeTo   'mev' | 'mav' | 'mrv': each muscle's weekly
-   *                            sets go from that landmark on the first week to
-   *                            the other on the last training week, shared
-   *                            over the muscle's rows by their template sets.
-   *                            Replaces setsPerWeek for muscles with landmarks;
-   *                            opts.muscleOf(row) names a row's muscle.
-   *   opts.deloadLast          the last week is a deload: about half the sets
-   *                            (opts.deloadSetsFactor, default 0.5), RIR +2 on
-   *                            the template, loads -10%.
+   *   opts.deloadLast          the last week is a deload: about half the
+   *                            block's sets (opts.deloadSetsFactor, default
+   *                            0.5), RIR +2 on the template, loads -10%.
    * Rows without a RIR (e.g. core) keep none. Last-set RIR keeps its gap to
    * the other sets. Week labels, notes and blocks are kept.
    */
@@ -554,15 +564,19 @@
     const training = (deloadLast ? end - 1 : end) - start + 1;
     const rirStart = num(o.rirStart, 0, 10);
     const rirEnd = num(o.rirEnd, 0, 10);
-    const setsPerWeek = int(o.setsPerWeek, -5, 5) || 0;
     const setsMax = int(o.setsMax, 1, 20) || 20;
     const pctPerWeek = num(o.pctPerWeek, -20, 20) || 0;
     const kgPerWeek = num(o.kgPerWeek, -50, 50) || 0;
     const factor = num(o.deloadSetsFactor, 0.1, 1) || 0.5;
     const repsPerWeek = int(o.repsPerWeek, -10, 10) || 0;
+    const repLimits = {};
+    ['compound', 'isolation'].forEach(t => {
+      const lim = repLimit(o.repLimits && o.repLimits[t]);
+      if (lim) repLimits[t] = lim;
+    });
+    const limitOf = e => repLimits[e.type || guessType(e.name)] || null;
     const half = x => Math.round(x * 2) / 2;
-    const LANDMARK_KEYS = ['mev', 'mav', 'mrv'];
-    const ramp = LANDMARK_KEYS.includes(o.volumeFrom) && LANDMARK_KEYS.includes(o.volumeTo);
+    const hold = o.holdSets && typeof o.holdSets === 'object' ? o.holdSets : {};
     // Template sets per muscle (rows across every day of the template week).
     const muscleOfRow = new Map();
     const templateSets = {};
@@ -571,35 +585,29 @@
       muscleOfRow.set(e, m);
       templateSets[m] = (templateSets[m] || 0) + e.sets;
     }));
-    const rampSets = new Map(); // week → Map(row → sets)
-    if (ramp) {
-      for (let week = start; week <= end - (deloadLast ? 1 : 0); week++) {
-        const t = training > 1 ? (week - start) / (training - 1) : 0;
-        const sets = new Map();
-        Object.keys(templateSets).forEach(m => {
-          const lm = landmarks(program, m);
-          if (!lm || m === 'other' || !templateSets[m]) return;
-          const target = Math.round(lm[o.volumeFrom] + (lm[o.volumeTo] - lm[o.volumeFrom]) * t);
-          const rows = [];
-          template.forEach(d => d.exercises.forEach(e => { if (muscleOfRow.get(e) === m) rows.push(e); }));
-          // Share the target by template sets (largest remainder), at least 1
-          // and at most setsMax a row: one exercise never carries a whole MRV.
-          // Past what the rows can hold, the muscle stays short of its target
-          // (the coach adds an exercise).
-          const cap = setsMax;
-          const raw = rows.map(e => target * e.sets / templateSets[m]);
-          const got = raw.map(x => Math.max(1, Math.min(cap, Math.floor(x))));
-          let left = target - got.reduce((a, b) => a + b, 0);
-          const order = raw.map((x, i) => [x - Math.floor(x), i]).sort((a, b) => b[0] - a[0]);
-          for (let i = 0; left > 0 && i < order.length * cap; i++) {
-            const j = order[i % order.length][1];
-            if (got[j] < cap) { got[j]++; left--; }
-          }
-          rows.forEach((e, i) => sets.set(e, got[i]));
-        });
-        rampSets.set(week, sets);
+    // The block's sets per row: the same every training week.
+    const heldSets = new Map();
+    Object.keys(templateSets).forEach(m => {
+      const target = int(hold[m], 0, 60);
+      if (target === null || m === 'other' || !templateSets[m]) return;
+      const rows = [];
+      template.forEach(d => d.exercises.forEach(e => { if (muscleOfRow.get(e) === m) rows.push(e); }));
+      // Share the target by template sets (largest remainder), at least 1
+      // and at most setsMax a row: one exercise never carries a whole MRV.
+      // Past what the rows can hold, the muscle stays short of its target
+      // (the coach adds an exercise).
+      const cap = setsMax;
+      const raw = rows.map(e => target * e.sets / templateSets[m]);
+      const got = raw.map(x => Math.max(1, Math.min(cap, Math.floor(x))));
+      let left = target - got.reduce((a, b) => a + b, 0);
+      const order = raw.map((x, i) => [x - Math.floor(x), i]).sort((a, b) => b[0] - a[0]);
+      for (let i = 0; left > 0 && i < order.length * cap; i++) {
+        const j = order[i % order.length][1];
+        if (got[j] < cap) { got[j]++; left--; }
       }
-    }
+      rows.forEach((e, i) => heldSets.set(e, got[i]));
+    });
+    const blockSets = e => (heldSets.has(e) ? heldSets.get(e) : e.sets);
 
     for (let week = start; week <= end; week++) {
       const k = week - start;
@@ -610,7 +618,7 @@
           const row = Object.assign({}, e, { id: 'w' + week + '-' + td.dayId + '-e' + (j + 1) });
           const gap = e.rir !== null && e.lastSetRir !== null ? e.rir - e.lastSetRir : null;
           if (isDeload) {
-            row.sets = Math.max(1, Math.round(e.sets * factor));
+            row.sets = Math.max(1, Math.round(blockSets(e) * factor));
             if (e.rir !== null) row.rir = Math.min(10, (rirStart !== null ? rirStart : e.rir) + 2);
             row.lastSetRir = null;
             // 90% of the template load, rounded down to a 2.5 step.
@@ -618,11 +626,22 @@
             if (e.loadKg != null) row.loadKg = Math.floor(e.loadKg * 0.9 / 2.5) * 2.5;
             return row;
           }
-          const ramped = rampSets.get(week) && rampSets.get(week).get(e);
-          row.sets = ramped !== undefined ? ramped : Math.max(1, Math.min(Math.max(setsMax, e.sets), e.sets + setsPerWeek * k));
-          if (repsPerWeek && e.repsMin !== null) {
-            row.repsMin = Math.max(1, Math.min(100, e.repsMin + repsPerWeek * k));
-            row.repsMax = e.repsMax !== null ? Math.max(row.repsMin + 1, Math.min(100, e.repsMax + repsPerWeek * k)) : null;
+          row.sets = blockSets(e);
+          const lim = limitOf(e);
+          if ((repsPerWeek || lim) && e.repsMin !== null) {
+            let lo = e.repsMin + repsPerWeek * k;
+            let hi = e.repsMax !== null ? e.repsMax + repsPerWeek * k : null;
+            if (lim) {
+              // Slide the range back inside the barrier, then cut what still sticks out.
+              const over = (hi !== null ? hi : lo) - lim.max;
+              if (over > 0) { lo -= over; if (hi !== null) hi -= over; }
+              const under = lim.min - lo;
+              if (under > 0) { lo += under; if (hi !== null) hi += under; }
+              lo = Math.min(lo, lim.max);
+              if (hi !== null) hi = Math.min(hi, lim.max);
+            }
+            row.repsMin = Math.max(1, Math.min(100, lo));
+            row.repsMax = hi !== null && hi > row.repsMin ? Math.min(100, hi) : null;
           }
           if (e.rir !== null && rirStart !== null) {
             row.rir = half(rirStart + ((rirEnd !== null ? rirEnd : rirStart) - rirStart) * t);
@@ -642,6 +661,52 @@
       next.weeks[week - 1] = Object.assign(keep, { days });
     }
     return readProgram(next) || next;
+  }
+
+  /**
+   * The weekly sets per muscle a mesocycle holds, for the block whose first
+   * week is `from`: { muscle: sets } over the muscles trained in that week.
+   *   - The first mesocycle (nothing before it) starts at each muscle's MEV.
+   *   - A later one is the mesocycle before it (its first non-deload week)
+   *     plus opts.step sets per muscle (default 2), never past MRV; a muscle
+   *     new in this block starts at its MEV.
+   * Muscles without landmarks (and 'other') are left out: they keep their sets.
+   * Also returns which muscles were held at MRV: { sets, atMrv: [muscle] }.
+   */
+  function mesocycleSets(program, from, opts) {
+    const o = opts || {};
+    const step = int(o.step, 0, 10);
+    const add = step === null ? 2 : step;
+    const runs = blockRuns(program);
+    const i = runs.findIndex(r => r.from <= from && from <= r.to);
+    const prev = i > 0 ? runs[i - 1] : null;
+    let base = null;
+    if (prev) {
+      let w = prev.from;
+      while (w < prev.to && prev.deloads.includes(w)) w++;
+      base = muscleSets(program, w, o.muscleOf);
+    }
+    const here = muscleSets(program, from, o.muscleOf);
+    const sets = {};
+    const atMrv = [];
+    Object.keys(here).forEach(m => {
+      const lm = landmarks(program, m);
+      if (m === 'other' || !lm) return;
+      const want = base && base[m] ? base[m] + add : lm.mev;
+      sets[m] = Math.min(want, lm.mrv);
+      if (base && base[m] && want >= lm.mrv) atMrv.push(m);
+    });
+    return { sets, atMrv };
+  }
+
+  /** A rep-range barrier: "4-8" or { min: 4, max: 8 } → { min, max }, else null. */
+  function repLimit(src) {
+    let min = null;
+    let max = null;
+    if (src && typeof src === 'object') { min = int(src.min, 1, 100); max = int(src.max, 1, 100); }
+    else if (src != null && String(src).trim()) { const r = parseReps(src); min = r.repsMin; max = r.repsMax; }
+    if (min === null || max === null || max < min) return null;
+    return { min, max };
   }
 
   /** Things worth a second look, each pinned to where it is. */
@@ -802,7 +867,7 @@
     SCHEMA, WEEKDAYS, TYPES, LIMITS, MUSCLES, DEFAULT_LANDMARKS,
     landmarks, volumeZone, muscleSets,
     readProgram, weekDays, stats, validate, copyWeek, toLibrary, toV1Days,
-    blockRuns, weeklySets, progressWeeks,
+    blockRuns, weeklySets, progressWeeks, mesocycleSets, repLimit,
     parseQuickEntry, parseReps, parseRir, parseRest, parseDayLabel, parseWeek, parseLoad, parseCell,
     formatRow, formatRest, formatCell, formatLoad, weekdayNumber, guessType,
   };

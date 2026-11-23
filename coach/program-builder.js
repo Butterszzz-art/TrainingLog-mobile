@@ -21,7 +21,10 @@
  * Long-term programs: weeks are grouped into mesocycles (blocks) with a
  * name and goal, and any week can be a deload. "+ Mesocycle" appends a block
  * of weeks; "Progression" fills a block from its first week (RIR from → to,
- * sets and load per week, deload last week). The Sheet view shows a block
+ * reps and load per week, deload last week). Volume is held within a
+ * mesocycle and goes up only from one mesocycle to the next: the first block
+ * sits at MEV, each new block copies the start of the one before (reps back
+ * down, load a step up) and adds sets per muscle. The Sheet view shows a block
  * (or every week) as one grid like a spreadsheet: a row per exercise, a
  * column per week, each cell "4×6-8 @2 75%" editable in place. "Export CSV"
  * writes the Week | Day | Exercise | … sheet the import reads back.
@@ -29,7 +32,8 @@
  * Volume: each row counts toward a muscle (exerciseMuscleMap.js's
  * getMuscleGroup, or the row's Muscle column). The Volume view holds the
  * program's MEV / MAV / MRV per muscle and colours each week's sets by zone;
- * Progression can ramp each muscle from one landmark to another. */
+ * Progression holds each muscle at MEV (first block) or at the block before
+ * plus a few sets. */
 (function (root) {
   'use strict';
 
@@ -139,7 +143,7 @@
 
   function mount(container, program, opts) {
     const options_ = opts || {};
-    const state = { program: expand(program), week: 1, saving: false, message: '', view: 'week', sheetAll: false, panel: null };
+    const state = { program: expand(program), week: 1, saving: false, message: '', view: 'week', sheetAll: false, panel: null, repLimits: {} };
     const single = !!options_.single;
     const savedWorkouts = () => (typeof options_.workouts === 'function' ? options_.workouts() || [] : []);
 
@@ -289,35 +293,49 @@
           + '<div class="pb-panel-grid">'
           + '<label class="pb-meta pb-meta--grow"><span>Name</span><input class="pb-in" data-pp="name" value="' + esc(pn.name) + '" maxlength="40" placeholder="Accumulation"></label>'
           + numField('weeks', 'Weeks', pn.weeks, ' min="1" max="16"')
-          + '<label class="pb-meta"><span>Start from</span><select class="pb-in" data-pp="from"><option value="copy"' + (pn.from === 'copy' ? ' selected' : '') + '>Copy of W' + state.week + '</option><option value="empty"' + (pn.from === 'empty' ? ' selected' : '') + '>Empty weeks</option></select></label>'
+          + '<label class="pb-meta"><span>Start from</span><select class="pb-in" data-pp="from"><option value="copy"' + (pn.from === 'copy' ? ' selected' : '') + '>Copy of W' + mesoSourceWeek(pn) + '</option><option value="empty"' + (pn.from === 'empty' ? ' selected' : '') + '>Empty weeks</option></select></label>'
+          + (mesoStepsUp(pn) ? numField('pctUp', '+ %1RM', pn.pctUp, ' min="-20" max="20" step="0.5" title="Load step on rows with a % load"')
+            + numField('kgUp', '+ kg', pn.kgUp, ' min="-50" max="50" step="0.25" title="Load step on rows with a kg load"') : '')
           + '<label class="pb-meta pb-meta--check"><input type="checkbox" data-pp="deloadLast"' + (pn.deloadLast ? ' checked' : '') + '><span>Last week is a deload</span></label>'
-          + '<label class="pb-meta pb-meta--wide"><span>Goal</span><input class="pb-in" data-pp="goal" value="' + esc(pn.goal) + '" maxlength="200" placeholder="e.g. Build volume, RIR 3 → 1"></label>'
+          + '<label class="pb-meta pb-meta--wide"><span>Goal</span><input class="pb-in" data-pp="goal" value="' + esc(pn.goal) + '" maxlength="200" placeholder="' + (mesoStepsUp(pn) ? 'e.g. +2 sets / muscle, reps 8 → 11' : 'e.g. MEV, reps 8 → 11, RIR 3 → 1') + '"></label>'
           + '</div>'
           + '<p class="pb-panel-note">' + (mesoReusesFirst(pn)
             ? 'W1' + ((pn.weeks || 0) > 1 ? '–W' + Math.min(16, pn.weeks) : '') + ' become this block'
             : 'Adds ' + (pn.weeks || 0) + ' weeks after W' + state.program.weeks.length + (state.program.weeks.length + (pn.weeks || 0) > M.LIMITS.weeks ? ' (only up to ' + M.LIMITS.weeks + ' weeks fit)' : ''))
           + '. Set the progression across them next.</p>'
+          + '<p class="pb-panel-note">' + (mesoStepsUp(pn)
+            ? 'Starts from the first week of the block before (reps back at its start, load up by the step above); Progression then adds sets per muscle over that block and holds them for every week.'
+            : 'The first mesocycle sits at MEV: the same sets every week while the reps go up. Volume rises only in the next mesocycle.') + '</p>'
           + '<div class="pb-panel-acts"><button type="button" class="mp-btn" data-act="meso-create">Add mesocycle</button><button type="button" class="pb-link" data-act="panel-close">Cancel</button></div></div>';
       }
       const deloadOk = pn.to > pn.from;
       return '<div class="pb-panel" data-panel="progress"><div class="pb-panel-title">Progression · W' + pn.from + ' → W' + pn.to + '</div>'
-        + '<p class="pb-panel-note">Rebuilds W' + (pn.from + 1) + '–W' + pn.to + ' from W' + pn.from + ' (exercises, reps, rest and notes as in W' + pn.from + '). Edit single weeks afterwards as you like.</p>'
+        + '<p class="pb-panel-note">Rebuilds W' + pn.from + '–W' + pn.to + ' from W' + pn.from + ' (exercises, rest and notes as in W' + pn.from + '). Sets stay the same every week of the block; reps, RIR and load progress. Edit single weeks afterwards as you like.</p>'
         + '<div class="pb-panel-grid">'
         + numField('from', 'From week', pn.from, ' min="1" max="' + state.program.weeks.length + '"')
         + numField('to', 'To week', pn.to, ' min="1" max="' + state.program.weeks.length + '"')
         + numField('rirStart', 'RIR first wk', pn.rirStart, ' min="0" max="10" step="0.5" placeholder="keep"')
         + numField('rirEnd', 'RIR last wk', pn.rirEnd, ' min="0" max="10" step="0.5" placeholder="keep"')
-        + '<label class="pb-meta"><span>Sets</span><select class="pb-in" data-pp="volume">'
-        + options([['', '+ sets / wk (below)'], ['mev-mav', 'MEV → MAV'], ['mev-mrv', 'MEV → MRV'], ['mav-mrv', 'MAV → MRV']], pn.volume || '') + '</select></label>'
-        + (pn.volume ? '' : numField('setsPerWeek', '+ sets / wk', pn.setsPerWeek, ' min="-5" max="5"'))
+        + '<label class="pb-meta"><span>Block volume</span><select class="pb-in" data-pp="volume">'
+        + options([['mev', 'MEV (baseline)']].concat(prevRunOf(pn.from) ? [['step', 'Block before + sets']] : []).concat([['keep', 'Keep W' + pn.from + ' sets']]), pn.volume) + '</select></label>'
+        + (pn.volume === 'step' ? numField('setsStep', '+ sets / muscle', pn.setsStep, ' min="0" max="10"') : '')
         + numField('setsMax', 'Max sets / exercise', pn.setsMax, ' min="1" max="20"')
-        + numField('repsPerWeek', '± reps / wk', pn.repsPerWeek, ' min="-10" max="10" title="Moves each rep range, e.g. -1: 10-12 → 9-11 → 8-10"')
+        + numField('repsPerWeek', '+ reps / wk', pn.repsPerWeek, ' min="-10" max="10" title="Moves each rep range, e.g. +1: 8-10 → 9-11 → 10-12"')
+        + repLimitField('limitCompound', 'Rep limit · compound', pn.limitCompound, '4-8')
+        + repLimitField('limitIsolation', 'Rep limit · isolation', pn.limitIsolation, '8-15')
         + numField('pctPerWeek', '+ %1RM / wk', pn.pctPerWeek, ' min="-20" max="20" step="0.5"')
         + numField('kgPerWeek', '+ kg / wk', pn.kgPerWeek, ' min="-50" max="50" step="0.25"')
         + '<label class="pb-meta pb-meta--check"><input type="checkbox" data-pp="deloadLast"' + (pn.deloadLast && deloadOk ? ' checked' : '') + (deloadOk ? '' : ' disabled') + '><span>Last week is a deload (½ sets, RIR +2, load −10%)</span></label>'
         + '</div>'
-        + (pn.volume ? '<p class="pb-panel-note">Each muscle\'s weekly sets go from its ' + pn.volume.split('-').map(k => LANDMARK_LABEL[k]).join(' on W' + pn.from + ' to its ') + ' on the last training week, shared over its exercises (see Volume for the numbers). Rows counted as Other keep their sets.</p>' : '')
-        + '<div class="pb-panel-acts"><button type="button" class="mp-btn" data-act="progress-apply"' + (pn.to > pn.from ? '' : ' disabled') + '>Fill W' + (pn.from + 1) + '–W' + pn.to + '</button><button type="button" class="pb-link" data-act="panel-close">Cancel</button></div></div>';
+        + (pn.volume === 'keep' ? '' : '<p class="pb-panel-note">' + (pn.volume === 'step'
+          ? 'Each muscle holds the sets of the block before plus ' + (Number(pn.setsStep) || 0) + ' (never past its MRV)'
+          : 'Each muscle holds its MEV') + ' every training week, shared over its exercises (see Volume for the numbers). Rows counted as Other keep their sets.</p>')
+        + '<div class="pb-panel-acts"><button type="button" class="mp-btn" data-act="progress-apply"' + (pn.to > pn.from ? '' : ' disabled') + '>Fill W' + pn.from + '–W' + pn.to + '</button><button type="button" class="pb-link" data-act="panel-close">Cancel</button></div></div>';
+    }
+
+    // A rep-range barrier: reps rise each week until the top of the range meets it.
+    function repLimitField(key, label, value, example) {
+      return '<label class="pb-meta"><span>' + label + '</span><input class="pb-in" data-pp="' + key + '" value="' + esc(value || '') + '" maxlength="9" placeholder="e.g. ' + example + '" title="Reps go up each week until the top of the range reaches this limit, then hold (empty = no limit)"></label>';
     }
 
     function progressPanelFor(run) {
@@ -327,7 +345,8 @@
       return {
         kind: 'progress', from: r.from, to: r.to,
         rirStart: firstRir !== null ? firstRir : 3, rirEnd: firstRir !== null ? Math.max(0, firstRir - 2) : 1,
-        setsPerWeek: 0, setsMax: 8, repsPerWeek: 0, volume: '', pctPerWeek: 0, kgPerWeek: 0,
+        volume: prevRunOf(r.from) ? 'step' : 'mev', setsStep: 2, setsMax: 8, repsPerWeek: 1, pctPerWeek: 0, kgPerWeek: 0,
+        limitCompound: state.repLimits.compound || '', limitIsolation: state.repLimits.isolation || '',
         deloadLast: r.deloads.includes(r.to) || r.to - r.from >= 3,
       };
     }
@@ -413,6 +432,29 @@
         const twin = fresh.querySelector('[data-vcell="' + td.dataset.vcell + '"]');
         if (twin) td.innerHTML = twin.innerHTML;
       });
+    }
+
+    // The mesocycle before the one that starts at (or holds) week `from`.
+    function prevRunOf(from) {
+      const list = runs();
+      const i = list.findIndex(r => r.from <= from && from <= r.to);
+      return i > 0 ? list[i - 1] : null;
+    }
+
+    // A new mesocycle copies the first training week of the last one: reps
+    // start over there, the volume steps up in its progression.
+    function mesoSourceWeek(pn) {
+      if (mesoReusesFirst(pn)) return 1;
+      const last = runs().slice(-1)[0];
+      if (!last) return 1;
+      let w = last.from;
+      while (w < last.to && last.deloads.includes(w)) w++;
+      return w;
+    }
+
+    // Whether the new mesocycle follows another (copies it, load and sets up).
+    function mesoStepsUp(pn) {
+      return pn.from === 'copy' && !mesoReusesFirst(pn) && state.program.weeks.some(w => w.days.some(d => d.exercises.length));
     }
 
     // A one-week program without a block becomes the block's first week.
@@ -791,7 +833,7 @@
       if (act === 'sheet-all') { state.sheetAll = !!btn.checked; render(); return; }
       if (act === 'panel-close') { state.panel = null; render(); return; }
       if (act === 'meso-open') {
-        state.panel = { kind: 'meso', name: 'Mesocycle ' + (p.blocks.length + 1), goal: '', weeks: 4, from: 'copy', deloadLast: true };
+        state.panel = { kind: 'meso', name: 'Mesocycle ' + (p.blocks.length + 1), goal: '', weeks: 5, from: 'copy', deloadLast: true, pctUp: 2.5, kgUp: 2.5 };
         render();
         const input = container.querySelector('[data-pp="name"]');
         if (input) { input.focus(); input.select(); }
@@ -807,9 +849,17 @@
         if (!name) { state.message = 'Give the mesocycle a name.'; render(); return; }
         if (room <= 0) { state.message = 'A program holds up to ' + M.LIMITS.weeks + ' weeks.'; render(); return; }
         if (p.blocks.length >= M.LIMITS.blocks) { state.message = 'A program holds up to ' + M.LIMITS.blocks + ' mesocycles.'; render(); return; }
+        const stepUp = mesoStepsUp(pn);
+        const source = mesoSourceWeek(pn);
         const id = nextBlockId(p);
         p.blocks.push({ id, name: name.slice(0, 40), goal: String(pn.goal || '').trim().slice(0, 200) });
-        const template = pn.from === 'copy' ? week().days : [];
+        const pctUp = stepUp ? Number(pn.pctUp) || 0 : 0;
+        const kgUp = stepUp ? Number(pn.kgUp) || 0 : 0;
+        const template = pn.from === 'copy' ? p.weeks[source - 1].days.map(d => Object.assign({}, d, {
+          exercises: d.exercises.map(e => Object.assign({}, e,
+            e.loadPct != null && pctUp ? { loadPct: Math.max(1, Math.min(120, Math.round((e.loadPct + pctUp) * 2) / 2)) } : {},
+            e.loadKg != null && kgUp ? { loadKg: Math.max(0, Math.round((e.loadKg + kgUp) * 4) / 4) } : {})),
+        })) : [];
         const first = reuseFirst ? 1 : p.weeks.length + 1;
         if (reuseFirst) p.weeks[0].block = id;
         for (let i = reuseFirst ? 1 : 0; i < count; i++) {
@@ -833,25 +883,37 @@
         const from = Math.max(1, Math.round(Number(pn.from) || 1));
         const to = Math.min(p.weeks.length, Math.round(Number(pn.to) || 1));
         if (to <= from) return;
-        if (!root.confirm('Rebuild W' + (from + 1) + '–W' + to + ' from W' + from + '? Changes made by hand in those weeks are replaced.')) return;
+        if (!root.confirm('Rebuild W' + from + '–W' + to + ' from W' + from + '? Changes made by hand in those weeks are replaced.')) return;
         const clean = M.readProgram(p);
         if (!clean) { state.message = 'Give the program a name first.'; render(); return; }
-        const [volumeFrom, volumeTo] = pn.volume ? pn.volume.split('-') : [null, null];
+        const mode = pn.volume === 'step' && !prevRunOf(from) ? 'mev' : pn.volume;
+        const held = mode === 'keep' ? { sets: {}, atMrv: [] } : M.mesocycleSets(clean, from, { muscleOf, step: mode === 'step' ? pn.setsStep : 0 });
+        if (mode === 'mev') {
+          // MEV whatever came before: the baseline block.
+          Object.keys(held.sets).forEach(m => { held.sets[m] = lmFor(m).mev; });
+          held.atMrv = [];
+        }
+        const badLimit = [['limitCompound', 'compound'], ['limitIsolation', 'isolation']]
+          .find(([k]) => String(pn[k] || '').trim() && !M.repLimit(pn[k]));
+        if (badLimit) { state.message = 'Write the ' + badLimit[1] + ' rep limit as low-high, e.g. 4-8.'; render(); return; }
+        // Remembered for the next block's progression.
+        state.repLimits = { compound: String(pn.limitCompound || '').trim(), isolation: String(pn.limitIsolation || '').trim() };
         state.program = expand(M.progressWeeks(clean, from, to, Object.assign({}, pn, {
-          deloadLast: pn.deloadLast && to > from, volumeFrom, volumeTo, muscleOf,
+          deloadLast: pn.deloadLast && to > from, holdSets: held.sets, muscleOf,
+          repLimits: { compound: pn.limitCompound, isolation: pn.limitIsolation },
         })));
         state.panel = null;
-        state.message = 'Filled W' + (from + 1) + '–W' + to + '.';
-        // Muscles the rows could not carry to their landmark (one exercise at
+        state.message = 'Filled W' + from + '–W' + to + '.';
+        // Muscles the rows could not carry to their target (one exercise at
         // the per-exercise cap): say so, the coach adds an exercise or raises the cap.
-        if (volumeTo) {
-          const lastTraining = pn.deloadLast && to > from ? to - 1 : to;
-          const got = M.muscleSets(state.program, lastTraining, muscleOf);
-          const short = Object.keys(got).filter(m => m !== 'other' && lmFor(m) && got[m] < lmFor(m)[volumeTo]);
-          if (short.length) {
-            state.message += ' ' + short.map(m => muscleLabel(m) + ' ' + got[m] + '/' + lmFor(m)[volumeTo]).join(', ')
-              + ' stop short of ' + LANDMARK_LABEL[volumeTo] + ': add an exercise or raise Max sets / exercise.';
-          }
+        const got = M.muscleSets(state.program, from, muscleOf);
+        const short = Object.keys(held.sets).filter(m => (got[m] || 0) < held.sets[m]);
+        if (short.length) {
+          state.message += ' ' + short.map(m => muscleLabel(m) + ' ' + (got[m] || 0) + '/' + held.sets[m]).join(', ')
+            + ' stop short of ' + (mode === 'mev' ? 'MEV' : 'the block\'s sets') + ': add an exercise or raise Max sets / exercise.';
+        }
+        if (held.atMrv.length) {
+          state.message += ' ' + held.atMrv.map(muscleLabel).join(', ') + ' reached MRV: time for a deload or a lower-volume phase.';
         }
         render();
         return;

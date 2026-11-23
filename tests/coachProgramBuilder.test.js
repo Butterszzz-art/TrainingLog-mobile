@@ -131,7 +131,10 @@ test('+ Mesocycle turns a one-week program into a block, then Progression fills 
   expect($$('.pb-tab')[3].classList.contains('is-deload')).toBe(true);
   // The progression panel opens for the new block.
   expect($('[data-panel="progress"]')).not.toBeNull();
-  type($('[data-pp="setsPerWeek"]'), '1');
+  // First block: volume held at MEV, reps go up each week up to the coach's rep limit.
+  expect($('[data-pp="volume"]').value).toBe('mev');
+  expect($('[data-pp="repsPerWeek"]').value).toBe('1');
+  type($('[data-pp="limitCompound"]'), '4-9');
   const apply = $('[data-act="progress-apply"]');
   type($('[data-pp="pctPerWeek"]'), '2.5'); // commit, then click the same button
   expect(apply.isConnected).toBe(true);
@@ -140,8 +143,19 @@ test('+ Mesocycle turns a one-week program into a block, then Progression fills 
   click($('[data-act="meso-open"]'));
   type($('[data-pp="name"]'), 'Intensification');
   type($('[data-pp="weeks"]'), '2');
+  // It starts from the first week of the block before, load a step up.
+  expect($('[data-pp="from"]').selectedOptions[0].textContent).toBe('Copy of W1');
+  expect($('[data-pp="pctUp"]').value).toBe('2.5');
   click($('[data-act="meso-create"]'));
   expect($$('.pb-tab')).toHaveLength(6);
+  // …and its progression steps the volume up from the block before.
+  expect($('[data-pp="volume"]').value).toBe('step');
+  expect($('[data-pp="setsStep"]').value).toBe('2');
+  expect($('[data-pp="limitCompound"]').value).toBe('4-9'); // the limit carries over
+  type($('[data-pp="limitIsolation"]'), '12');
+  click($('[data-act="progress-apply"]'));
+  expect($('.pb-msg').textContent).toBe('Write the isolation rep limit as low-high, e.g. 4-8.');
+  type($('[data-pp="limitIsolation"]'), '');
   click($('[data-act="save"]'));
   await flush();
   const p = saved[0];
@@ -149,11 +163,14 @@ test('+ Mesocycle turns a one-week program into a block, then Progression fills 
   expect(p.blocks[0].goal).toBe('Volume up');
   expect(p.weeks.map(w => w.block)).toEqual(['b1', 'b1', 'b1', 'b1', 'b2', 'b2']);
   const sq = n => p.weeks[n - 1].days[0].exercises[0];
-  expect([1, 2, 3].map(n => sq(n).sets)).toEqual([3, 4, 5]);
+  expect([1, 2, 3].map(n => sq(n).sets)).toEqual([3, 3, 3]); // held within the block
+  expect([1, 2, 3].map(n => [sq(n).repsMin, sq(n).repsMax])).toEqual([[6, 8], [7, 9], [7, 9]]); // held at the 4-9 limit
   expect([1, 2, 3].map(n => sq(n).rir)).toEqual([3, 2, 1]);
   expect([1, 2, 3].map(n => sq(n).loadPct)).toEqual([70, 72.5, 75]);
   expect(p.weeks[3].deload).toBe(true);
   expect(sq(4)).toMatchObject({ sets: 2, rir: 5, loadPct: 62.5 });
+  // The next block starts over at W1's reps with the load a step up.
+  expect(sq(5)).toMatchObject({ sets: 3, repsMin: 6, repsMax: 8, loadPct: 72.5 });
 });
 
 test('Sheet view edits a week cell in place and adds an exercise to every week', async () => {
@@ -193,7 +210,7 @@ test('week settings: deload toggle; CSV export lists every week', () => {
 
 const MUSCLE_MAP = fs.readFileSync(path.join(__dirname, '../exerciseMuscleMap.js'), 'utf8');
 
-test('Volume: chips per muscle, Muscle column, editable MEV/MAV/MRV, MEV → MRV progression', async () => {
+test('Volume: chips per muscle, Muscle column, editable MEV/MAV/MRV; MEV block, then a block 2 sets up', async () => {
   const t = setup({
     schema: 'pocketcoach.program/2', name: 'Legs',
     weeks: [{ days: [{ dayId: 'd1', weekday: 1, label: 'Lower', exercises: [
@@ -225,21 +242,29 @@ test('Volume: chips per muscle, Muscle column, editable MEV/MAV/MRV, MEV → MRV
 
   click($('[data-act="view-week"]'));
   click($('[data-act="progress-open"]'));
-  const vol = $('[data-pp="volume"]');
-  type(vol, 'mev-mrv');
-  expect($('[data-pp="setsPerWeek"]')).toBeNull();
-  type($('[data-pp="repsPerWeek"]'), '-1');
+  // No block before W1: the only choices are MEV and keeping W1's sets.
+  expect(Array.from($('[data-pp="volume"]').options).map(o => o.value)).toEqual(['mev', 'keep']);
   click($('[data-act="progress-apply"]'));
-  expect($('.pb-msg').textContent).toMatch(/Quads 8\/20, Hamstrings 8\/20, Traps 8\/26 stop short of MRV/);
+  expect($('.pb-msg').textContent).toBe('Filled W1–W4.');
+  // A second mesocycle: +2 sets per muscle, held; a one-row muscle past the cap stops short.
+  click($('[data-act="meso-open"]'));
+  type($('[data-pp="weeks"]'), '3');
+  click($('[data-act="meso-create"]'));
+  type($('[data-pp="setsMax"]'), '7');
+  click($('[data-act="progress-apply"]'));
+  expect($('.pb-msg').textContent).toMatch(/Hamstrings 7\/8 stop short of the block's sets/);
   click($('[data-act="save"]'));
   await flush();
   const p = saved[0];
   expect(p.volume).toEqual({ quads: { mev: 4, mav: 15, mrv: 20 } });
   expect(p.weeks[0].days[0].exercises[2].muscle).toBe('traps');
   const sets = n => p.weeks[n - 1].days[0].exercises.map(e => e.sets);
-  // Quads 4 → 20 over W1–W3 but one row holds at most 8 (default cap); hamstrings 6 → 20, capped too.
-  expect(sets(1)).toEqual([4, 6, 4]);
-  expect(sets(2)).toEqual([8, 8, 8]);
+  // Block 1 at MEV every week (quads 4, hamstrings 6, traps 4), deload halves it.
+  expect([1, 2, 3].map(sets)).toEqual([[4, 6, 4], [4, 6, 4], [4, 6, 4]]);
   expect(p.weeks[3].deload).toBe(true);
-  expect(p.weeks[2].days[0].exercises[0]).toMatchObject({ repsMin: 4, repsMax: 6 });
+  expect(sets(4)).toEqual([2, 3, 2]);
+  // Block 2 = block 1 + 2 a muscle, the same every week; reps start over.
+  expect([5, 6].map(sets)).toEqual([[6, 7, 6], [6, 7, 6]]);
+  expect(p.weeks[6].deload).toBe(true);
+  expect([1, 2, 3, 5, 6].map(n => p.weeks[n - 1].days[0].exercises[0].repsMin)).toEqual([6, 7, 8, 6, 7]);
 });
