@@ -73,9 +73,23 @@
     return global.currentUser || (global.localStorage && global.localStorage.getItem('fitnessAppUser')) || null;
   }
 
+  /**
+   * The active-program record, always as { programId, programName, startDate }.
+   * Older restores from the backend stored the whole program object here
+   * (it has `id`, not `programId`), which left the schedule without a
+   * program: today's session fell back to "your usual next".
+   */
+  function normalizeActiveRecord(rec) {
+    if (!rec || typeof rec !== 'object') return null;
+    const programId = rec.programId || rec.id || null;
+    if (!programId) return null;
+    if (rec.programId && !Array.isArray(rec.days)) return rec;
+    return { programId, programName: rec.programName || rec.name || rec.title || '', startDate: rec.startDate || null };
+  }
+
   function readActiveRecord(user) {
     if (!user) return null;
-    return _readJSON(`activeProgram_${user}`, null) || _readJSON('activeProgram', null);
+    return normalizeActiveRecord(_readJSON(`activeProgram_${user}`, null) || _readJSON('activeProgram', null));
   }
 
   function readPrograms(user) {
@@ -248,9 +262,41 @@
     const u = user || currentUser();
     const active = readActiveRecord(u);
     if (!active || !active.programId) return null;
-    const program = readPrograms(u).find(p => p && p.id === active.programId);
+    const program = readPrograms(u).find(p => p && (p.id || p.programId) === active.programId);
     if (!program) return null;
-    return createSchedule(program, active, { overrides: readOverrides(u, program.id) });
+    return createSchedule(program, active, { overrides: readOverrides(u, program.id || program.programId) });
+  }
+
+  /**
+   * The first day of the program week `now` falls in (local midnight), or
+   * null when there's no running program. A program week is one pass through
+   * the program's days: it starts on the session with training index
+   * k·nDays and runs until the next week's first session, so rest days after
+   * a week's last session still belong to it (dayFor's weekNum agrees).
+   * Weekly volume counts from here instead of a rolling 7 days, so a week's
+   * totals line up with the program's own week.
+   */
+  function programWeekStart(scheduleOrUser, now) {
+    const sched = scheduleOrUser && typeof scheduleOrUser.dayFor === 'function'
+      ? scheduleOrUser
+      : getActiveSchedule(scheduleOrUser);
+    if (!sched) return null;
+    const today = _midnight(now || new Date());
+    if (today < sched.startDate) return null;
+    const info = sched.dayFor(today);
+    const weekIndex = info.isTraining || info.trainingIndex === 0 ? info.trainingIndex : info.trainingIndex - 1;
+    const firstIndex = Math.floor(weekIndex / sched.nDays) * sched.nDays;
+    // Walk back to the session that opened this week (swaps included).
+    for (let i = 0; i <= 31; i++) {
+      const d = _addDays(today, -i);
+      if (d < sched.startDate) break;
+      const di = sched.dayFor(d);
+      if (di.isTraining && di.trainingIndex === firstIndex) return _midnight(d);
+      if (di.isTraining && di.trainingIndex < firstIndex) return _addDays(_midnight(d), 1);
+    }
+    // Fallback: 7-day blocks from the program's start date.
+    const days = Math.floor((today - sched.startDate) / DAY_MS);
+    return _addDays(sched.startDate, Math.floor(days / 7) * 7);
   }
 
   /**
@@ -361,10 +407,12 @@
     countTrainingDaysBetween,
     currentUser,
     readActiveRecord,
+    normalizeActiveRecord,
     readPrograms,
     readOverrides,
     createSchedule,
     getActiveSchedule,
+    programWeekStart,
     swapIntoToday,
     dayProgress,
     isPlannedWorkout,

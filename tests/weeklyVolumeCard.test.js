@@ -61,3 +61,23 @@ describe('Log weekly volume card matches Insights', () => {
     expect(recovery.formatSetCount(7.5)).toBe('7.5');
   });
 });
+
+describe('weekly volume follows the program week', () => {
+  beforeEach(() => {
+    global.computeMuscleRecoverySummary = recovery.computeMuscleRecoverySummary;
+    global.readMuscleWeeklyTargets = () => null;
+    global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+  });
+
+  test('weekStart counts from the program week, not the last 7 days', () => {
+    const now = new Date(2026, 10, 21, 12);
+    const workouts = [
+      { date: '2026-11-20', log: [{ exercise: 'Back Squat', repsArray: [5, 5, 5], weightsArray: [100, 100, 100] }] },
+      { date: '2026-11-16', log: [{ exercise: 'Back Squat', repsArray: [5, 5], weightsArray: [100, 100] }] },
+    ];
+    const rolling = weeklyMuscleVolume('lifter', { workouts, now, weekStart: null });
+    const programWeek = weeklyMuscleVolume('lifter', { workouts, now, weekStart: new Date(2026, 10, 19) });
+    expect(rolling.find(r => r.muscle === 'quads').sets).toBe(5);
+    expect(programWeek.find(r => r.muscle === 'quads').sets).toBe(3);
+  });
+});

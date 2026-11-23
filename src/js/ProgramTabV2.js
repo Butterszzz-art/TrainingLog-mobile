@@ -380,6 +380,19 @@
       renderExercisesPane();
     }
 
+    /** Move an exercise one place up (-1) or down (+1) within its day. */
+    function moveExercise(dayId, exerciseId, dir) {
+      const day = (draft.days || []).find(d => d.dayId === dayId);
+      const list = day && Array.isArray(day.exercises) ? day.exercises : null;
+      if (!list) return;
+      const at = list.findIndex(e => e.exerciseId === exerciseId);
+      const to = at + (dir < 0 ? -1 : 1);
+      if (at === -1 || to < 0 || to >= list.length) return;
+      [list[at], list[to]] = [list[to], list[at]];
+      persistDraft();
+      renderExercisesPane();
+    }
+
     function addSet(dayId, exerciseId) {
       const day = (draft.days || []).find(d => d.dayId === dayId);
       const ex = (day?.exercises || []).find(e => e.exerciseId === exerciseId);
@@ -869,11 +882,20 @@
 
       const header = document.createElement('div');
       header.className = 'pbv2-ex-card-header';
+      const siblings = ((draft.days || []).find(d => d.dayId === dayId) || {}).exercises || [];
+      const pos = siblings.findIndex(e => e.exerciseId === ex.exerciseId);
       header.innerHTML = `
         <span class="pbv2-ex-card-name">${esc(ex.name)}</span>
-        <button type="button" class="pbv2-ex-card-remove" title="Remove exercise" aria-label="Remove exercise">${ico('x')}</button>
+        <span class="pbv2-ex-card-actions">
+          <button type="button" class="pbv2-ex-card-move" data-move="-1" title="Move up" aria-label="Move ${esc(ex.name)} up"${pos <= 0 ? ' disabled' : ''}>&#8593;</button>
+          <button type="button" class="pbv2-ex-card-move" data-move="1" title="Move down" aria-label="Move ${esc(ex.name)} down"${pos === -1 || pos >= siblings.length - 1 ? ' disabled' : ''}>&#8595;</button>
+          <button type="button" class="pbv2-ex-card-remove" title="Remove exercise" aria-label="Remove exercise">${ico('x')}</button>
+        </span>
       `;
-      header.querySelector('button').addEventListener('click', () => removeExercise(dayId, ex.exerciseId));
+      header.querySelector('.pbv2-ex-card-remove').addEventListener('click', () => removeExercise(dayId, ex.exerciseId));
+      header.querySelectorAll('.pbv2-ex-card-move').forEach(btn => {
+        btn.addEventListener('click', () => moveExercise(dayId, ex.exerciseId, Number(btn.dataset.move)));
+      });
       card.appendChild(header);
 
       /* Sets table */

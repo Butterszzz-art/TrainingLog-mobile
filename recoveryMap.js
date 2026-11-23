@@ -54,7 +54,18 @@ function daysBetween(laterMs, earlierMs) {
   return Math.floor((laterMs - earlierMs) / 86400000);
 }
 
-function getEntrySetCount(entry) {
+// A program day / template loaded into the log lays its sets out ahead of
+// time; only the ones ticked Done have been lifted (set-complete.js).
+function isPlannedWorkout(workout) {
+  const meta = workout && workout.metadata;
+  return !!(meta && (meta.planned === true || meta.source === 'program'));
+}
+
+function getEntrySetCount(entry, planned) {
+  if (planned) {
+    const done = Array.isArray(entry?.completedArray) ? entry.completedArray : [];
+    return done.filter(Boolean).length;
+  }
   const reps = Array.isArray(entry?.repsArray) ? entry.repsArray.length : 0;
   const weights = Array.isArray(entry?.weightsArray) ? entry.weightsArray.length : 0;
   return Math.max(reps, weights, toNumber(entry?.sets));
@@ -104,6 +115,8 @@ function formatSetCount(n) {
 // options.now: reference date (defaults to current time; pass explicitly in tests)
 // options.weeklyTargets: overrides for DEFAULT_WEEKLY_MUSCLE_TARGETS
 // options.soreness: today's whole-body soreness rating, 1 (very sore) - 5 (none), or null if not logged
+// options.weekStart: count the week's sets from this date (the program week's
+//   first day, program-schedule.js programWeekStart) instead of a rolling 7 days
 function computeMuscleRecoverySummary(workouts, options = {}) {
   const source = Array.isArray(workouts) ? workouts : [];
   const now = options.now instanceof Date ? options.now : new Date();
@@ -112,7 +125,21 @@ function computeMuscleRecoverySummary(workouts, options = {}) {
     Object.entries(rawTargets).map(([muscle, value]) => [muscle, clampMuscleTarget(muscle, value)])
   );
   const soreness = Number.isFinite(options.soreness) ? options.soreness : null;
+  const weekStart = options.weekStart instanceof Date && !Number.isNaN(options.weekStart.getTime()) ? options.weekStart : null;
   const windowStartMs = now.getTime() - 7 * 86400000;
+  // Workouts are keyed by local calendar day ("YYYY-MM-DD"), so a program
+  // week compares by day key: everything from its first day up to today.
+  const pad = (n) => String(n).padStart(2, '0');
+  const dayKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const weekStartKey = weekStart ? dayKey(weekStart) : null;
+  const todayKey = dayKey(now);
+  const inWeek = (workout, dateMs) => {
+    if (!weekStartKey) return dateMs >= windowStartMs && dateMs <= now.getTime();
+    const key = typeof workout.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(workout.date)
+      ? workout.date.slice(0, 10)
+      : dayKey(new Date(dateMs));
+    return key >= weekStartKey && key <= todayKey;
+  };
 
   const weekSets = {};
   const lastTrainedMs = {};
@@ -121,13 +148,15 @@ function computeMuscleRecoverySummary(workouts, options = {}) {
     const date = new Date(workout?.date);
     if (Number.isNaN(date.getTime()) || !Array.isArray(workout?.log)) return;
     const dateMs = date.getTime();
+    const planned = isPlannedWorkout(workout);
 
     workout.log.forEach((entry) => {
       const muscle = typeof resolvedGetMuscleGroup === 'function' ? resolvedGetMuscleGroup(entry?.exercise) : 'other';
       if (!(muscle in targets)) return;
 
-      const setCount = getEntrySetCount(entry);
-      if (dateMs >= windowStartMs && dateMs <= now.getTime()) {
+      const setCount = getEntrySetCount(entry, planned);
+      if (planned && !setCount) return;
+      if (inWeek(workout, dateMs)) {
         weekSets[muscle] = (weekSets[muscle] || 0) + setCount;
       }
       if (!lastTrainedMs[muscle] || dateMs > lastTrainedMs[muscle]) {

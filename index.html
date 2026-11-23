@@ -3785,7 +3785,7 @@
           <div id="exerciseProgress" style="display:none;"></div>
           <div id="recoveryPanel" class="recovery-panel" style="display:none;">
             <h3 style="margin-bottom:6px;">Recovery Map</h3>
-            <p class="recovery-sub">Trailing 7-day set volume and estimated fatigue per muscle group.</p>
+            <p class="recovery-sub">This week's set volume (your program week, else the last 7 days) and estimated fatigue per muscle group.</p>
             <div class="recovery-figures">
               <div class="recovery-figure-col">
                 <svg viewBox="0 0 220 440" xmlns="http://www.w3.org/2000/svg">
@@ -6930,19 +6930,42 @@ function addLogEntry() {
     window.applySessionContext(newEntry, { altMachine: !!document.getElementById('altMachineToggle')?.checked });
   }
 
-  const activeWorkoutIndex = workouts.findIndex(w => w.date === date);
+  // Today's program / template session when one is loaded (it may sit after
+  // a freeform workout of the same day), so quick log and the plan are one log.
+  const _sc = window.SetComplete;
+  const _plannedToday = _sc ? workouts.findIndex(w => w.date === date && _sc.isPlannedWorkout(w)) : -1;
+  const activeWorkoutIndex = _plannedToday !== -1 ? _plannedToday : workouts.findIndex(w => w.date === date);
   const _grouping = window.sessionGrouping;
   if (_grouping) newEntry.exerciseId = _grouping.exerciseIdFor(exercise);
+  const _isPlanned = _plannedToday !== -1;
+  let savedEntry = null;
+  if (_isPlanned) {
+    // Sets logged by hand were lifted: they count as done in the plan, and
+    // fill that exercise's planned sets still to do before adding new ones.
+    newEntry.completedArray = newEntry.repsArray.map(() => true);
+    const filled = typeof _sc.fillPlannedSets === 'function' ? _sc.fillPlannedSets(workouts[activeWorkoutIndex].log, newEntry) : null;
+    if (filled && filled.leftover) {
+      workouts[activeWorkoutIndex].log.push(filled.leftover);
+      savedEntry = filled.leftover;
+    } else if (filled) {
+      savedEntry = filled.entry;
+    }
+  }
   // Same exercise already in this session: add the set(s) to its block
   // instead of a new log entry, so it shows as one exercise with numbered
   // sets. Volume/PR/set counts read the per-set arrays, so they don't change.
-  const savedEntry = (typeof appendToSessionEntry === 'function'
-    && appendToSessionEntry(workouts[activeWorkoutIndex].log, newEntry)) || newEntry;
-  if (savedEntry === newEntry) workouts[activeWorkoutIndex].log.push(newEntry);
+  if (!savedEntry) {
+    savedEntry = (typeof appendToSessionEntry === 'function'
+      && appendToSessionEntry(workouts[activeWorkoutIndex].log, newEntry)) || newEntry;
+    if (savedEntry === newEntry) workouts[activeWorkoutIndex].log.push(newEntry);
+  }
 
   let _deloadFor = null;
   if (typeof suggestNextSession === 'function') {
-    const recommendation = suggestNextSession(savedEntry, getOverloadWorkouts(_activeUser, workouts));
+    // A planned session's unticked sets are still to do: judge the ticked ones.
+    const _recEntry = _isPlanned ? (_sc.completedEntry(savedEntry) || savedEntry) : savedEntry;
+    const _recHistory = _isPlanned ? _sc.completedWorkouts(getOverloadWorkouts(_activeUser, workouts)) : getOverloadWorkouts(_activeUser, workouts);
+    const recommendation = suggestNextSession(_recEntry, _recHistory);
     if (recommendation) {
       savedEntry.nextSessionRecommendation = recommendation;
       if (recommendation.strategy === 'deload') _deloadFor = exercise;
@@ -6951,7 +6974,9 @@ function addLogEntry() {
   // In-session advice for the next set (Butters University autoregulation).
   if (typeof suggestNextSet === 'function') {
     const nextSet = suggestNextSet(exercise, workouts, { date, gymKey: typeof entryGymKey === 'function' ? entryGymKey(newEntry) : '' });
-    if (nextSet) window.showToast(`${exercise}: ${nextSet.message} Rest ${nextSet.restLabel}.`);
+    // Shown inside the exercise's card (renderSetAdvice), not as a toast.
+    if (window.SetComplete?.stampSetAdvice) window.SetComplete.stampSetAdvice(savedEntry, nextSet, 0);
+    else if (nextSet) window.showToast(`${exercise}: ${nextSet.message} Rest ${nextSet.restLabel}.`);
   }
 
   const activeWorkout = workouts[activeWorkoutIndex];
@@ -7917,6 +7942,7 @@ function createExerciseCard(workoutIndex, entryIndex, entry, block = null, rawLo
   }
 
   card.appendChild(setList);
+  renderSetAdvice(card, setList, entry, workouts[workoutIndex], workoutIndex, block ? block.entryIndexes[block.entryIndexes.length - 1] : entryIndex);
 
   // A loaded session's unticked sets are still to do: judge only the ticked ones.
   const _judged = _planned ? _setDone.completedEntry(entry) : entry;
@@ -7960,6 +7986,59 @@ function createExerciseCard(workoutIndex, entryIndex, entry, block = null, rawLo
   card.appendChild(goalRow);
 
   return card;
+}
+
+/**
+ * In-session advice for the next set (progressiveOverload.js suggestNextSet,
+ * stored by set-complete.js stampSetAdvice) shown inside the exercise's own
+ * card, right above the next set to do, so it's clear which lift it's for.
+ * Only today's session, and only until the exercise is finished.
+ */
+function renderSetAdvice(card, setList, entry, workout, workoutIndex, entryIndex) {
+  const advice = entry && entry.setAdvice;
+  if (!advice || !advice.message || !workout) return;
+  const todayKey = typeof localDateKey === 'function' ? localDateKey() : new Date().toISOString().slice(0, 10);
+  if (workout.date !== todayKey) return;
+  const done = Array.isArray(entry.completedArray) ? entry.completedArray : [];
+  const planned = !!(window.SetComplete && window.SetComplete.isPlannedWorkout(workout));
+  if (planned && done.length && done.every(Boolean)) return;
+
+  const box = document.createElement('div');
+  box.className = 'set-advice' + (advice.warn ? ' set-advice--warn' : '');
+  box.setAttribute('role', 'status');
+  const head = document.createElement('div');
+  head.className = 'set-advice-head';
+  const kicker = document.createElement('span');
+  kicker.className = 'set-advice-kicker';
+  kicker.textContent = advice.warn ? 'Heads up · next set' : (advice.kind === 'backoff' ? 'Back-off sets' : 'Next set');
+  head.appendChild(kicker);
+  if (advice.weight != null && advice.weight > 0) {
+    const target = document.createElement('span');
+    target.className = 'set-advice-target';
+    target.textContent = `${advice.weight} ${advice.unit || 'kg'}${advice.reps ? ` × ${advice.reps}` : ''}`;
+    head.appendChild(target);
+  }
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'set-advice-close';
+  close.setAttribute('aria-label', 'Hide advice');
+  close.textContent = '×';
+  close.addEventListener('click', ev => {
+    ev.stopPropagation();
+    if (window.SetComplete?.dismissSetAdvice) window.SetComplete.dismissSetAdvice(workoutIndex, entryIndex);
+    else box.remove();
+  });
+  head.appendChild(close);
+  box.appendChild(head);
+  const msg = document.createElement('div');
+  msg.className = 'set-advice-msg';
+  msg.textContent = advice.message + (advice.restLabel ? ` Rest ${advice.restLabel}.` : '');
+  box.appendChild(msg);
+
+  // Right above the next set to do when there is one, else under the sets.
+  const current = setList.querySelector('.is-current');
+  if (current && current.parentNode === setList) setList.insertBefore(box, current);
+  else card.appendChild(box);
 }
 
 function createSetRow(workoutIndex, entryIndex, entry, setIndex, displayNumber = setIndex + 1, opts = null) {
@@ -8458,6 +8537,13 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null, block
         goalRow.hidden = false;
         goalRow.querySelector('input')?.focus();
       });
+    }
+    // Reorder exercises in the session (a loaded program day too).
+    const _grp = window.sessionGrouping;
+    const _wLog = _workoutsForMenu[workoutIndex]?.log || [];
+    if (_grp?.moveExercise) {
+      if (_grp.moveExercise(_wLog, _blockIdx, -1)) addButton('Move Up', () => moveLogExercise(workoutIndex, _blockIdx, -1));
+      if (_grp.moveExercise(_wLog, _blockIdx, 1)) addButton('Move Down', () => moveLogExercise(workoutIndex, _blockIdx, 1));
     }
     addButton(_entryForMenu?.maxedOut ? 'Un-mark Maxed Out' : 'Mark as Maxed Out', () => toggleMaxedOut(workoutIndex, _blockIdx));
     addButton(_entryForMenu?.sessionCtx?.altMachine ? 'Same machine as usual' : 'Different machine', () => toggleAltMachineEntry(workoutIndex, _blockIdx));
@@ -15279,6 +15365,22 @@ function calculateWorkoutVolume(workout) {
 
 // entryIndex may be an array (a grouped exercise): removed highest first so
 // the remaining indexes stay valid.
+// Move an exercise card up (-1) or down (+1) in its session.
+function moveLogExercise(workoutIndex, entryIndexes, dir) {
+  // Same store the ⋮ menu read the session from.
+  const user = window.coachLoggingClient || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${user}`)) || [];
+  const workout = workouts[workoutIndex];
+  if (!workout || !Array.isArray(workout.log) || !window.sessionGrouping?.moveExercise) return;
+  const moved = window.sessionGrouping.moveExercise(workout.log, entryIndexes, dir);
+  if (!moved) return;
+  workout.log = moved;
+  localStorage.setItem(`workouts_${user}`, JSON.stringify(workouts));
+  if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
+  renderWorkouts();
+  if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
+}
+
 function removeLogEntry(workoutIndex, entryIndex) {
   const workouts = JSON.parse(localStorage.getItem(`workouts_${currentUser}`)) || [];
   const indexes = (Array.isArray(entryIndex) ? entryIndex : [entryIndex]).slice().sort((a, b) => b - a);
@@ -17668,9 +17770,14 @@ function renderRecoveryProgress(workouts) {
   const soreness = getTodaySorenessForRecovery();
   const savedTargets = readMuscleWeeklyTargets(currentUser);
 
+  // Same week as the Log tab's weekly sets card: the program's week when one
+  // is running (program-schedule.js programWeekStart), else the last 7 days.
+  let weekStart;
+  try { weekStart = window.programSchedule?.programWeekStart?.(currentUser) || undefined; } catch { weekStart = undefined; }
   const summary = computeMuscleRecoverySummary(workouts, {
     soreness,
-    weeklyTargets: savedTargets || undefined
+    weeklyTargets: savedTargets || undefined,
+    weekStart
   });
   const byMuscle = {};
   summary.forEach((row) => { byMuscle[row.muscle] = row; });
@@ -18185,6 +18292,7 @@ function getLocalStorage(key) {
 }
 
 function getActiveProgram() {
+  if (window.programSchedule?.readActiveRecord) return window.programSchedule.readActiveRecord(currentUser);
   return JSON.parse(localStorage.getItem(`activeProgram_${currentUser}`));
 }
 
@@ -18193,7 +18301,7 @@ function getProgramDayDates(startDate) {
   const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
   const active = getActiveProgram();
   if (!active) return [];
-  const program = programs.find(p => p.id === active.programId);
+  const program = programs.find(p => (p.id || p.programId) === active.programId);
   if (!program) return [];
   const dates = [];
   for (let i = 0; i < program.days.length; i++) {
@@ -18231,7 +18339,7 @@ function getPlannedProgramDates(rangeStart, rangeEnd) {
   const active = getActiveProgram();
   if (!active || !active.startDate) return [];
   const programs = JSON.parse(localStorage.getItem(`programs_${currentUser}`)) || [];
-  const program = programs.find(p => p.id === active.programId);
+  const program = programs.find(p => (p.id || p.programId) === active.programId);
   if (!program || !Array.isArray(program.days) || !program.days.length) return [];
 
   const start = new Date(active.startDate);
@@ -19434,8 +19542,18 @@ window.removeWorkout = removeWorkout;               // ✅ Add this
       // Restore active program if one is flagged on the backend
       const activeItem = data.items.find(i => i.isActive);
       if (activeItem?.programData && !localStorage.getItem(`activeProgram_${username}`)) {
-        localStorage.setItem(`activeProgram_${username}`, JSON.stringify(activeItem.programData));
-        localStorage.setItem('activeProgram', JSON.stringify(activeItem.programData));
+        // The active record is { programId, programName, startDate }, not the
+        // program itself (program-schedule.js reads programId).
+        const pd = activeItem.programData;
+        const record = {
+          programId: pd.id || pd.programId,
+          programName: pd.name || pd.title || '',
+          startDate: pd.startDate || null,
+        };
+        if (record.programId && record.startDate) {
+          localStorage.setItem(`activeProgram_${username}`, JSON.stringify(record));
+          localStorage.setItem('activeProgram', JSON.stringify(record));
+        }
       }
 
       console.info(`[Programs] Loaded ${data.items.length} programs from backend for ${username}`);

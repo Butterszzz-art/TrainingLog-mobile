@@ -121,7 +121,10 @@ describe('completeSet', () => {
     expect(e.weightsArray[1]).toBe(advice.weight);
     expect(e.weightsArray[2]).toBe(advice.weight);
     expect(advice.weight).toBeLessThan(100);
-    expect(window.showToast).toHaveBeenCalledWith(expect.stringContaining('Back-off sets updated'), undefined);
+    // The advice sits on the exercise's card (renderSetAdvice), not in a toast.
+    expect(e.setAdvice).toMatchObject({ kind: 'backoff', weight: advice.weight, warn: false });
+    expect(e.setAdvice.message).toContain('Back-off sets updated');
+    expect(window.showToast).not.toHaveBeenCalledWith(expect.stringContaining('Back-off'), expect.anything());
     expect(logged).toHaveBeenCalledTimes(1);
     expect(started).toEqual([advice.restSeconds]);
     document.removeEventListener('tl:set-logged', logged);
@@ -170,5 +173,16 @@ describe('completeSet', () => {
     const rec = stored()[0].log[0].nextSessionRecommendation;
     expect(rec).toBeTruthy();
     expect(rec.previousSets).toEqual([{ reps: 5, weight: 60 }]);
+  });
+});
+
+describe('in-card set advice', () => {
+  test('unticking clears it; dismiss clears every entry of the lift', () => {
+    const sc2 = require('../src/js/set-complete');
+    const entry = { exercise: 'Row', setAdvice: { message: 'x' } };
+    sc2.stampSetAdvice(entry, null, 0);
+    expect(entry.setAdvice).toBeUndefined();
+    sc2.stampSetAdvice(entry, { message: 'Drop to 80 kg', warn: true, weight: 80, reps: 6, unit: 'kg' }, 0);
+    expect(entry.setAdvice).toMatchObject({ message: 'Drop to 80 kg', warn: true, weight: 80, reps: 6 });
   });
 });
