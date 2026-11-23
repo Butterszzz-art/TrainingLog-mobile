@@ -440,7 +440,42 @@
     return steps;
   }
 
-  const api = { checkInPhotoPlan, fingerprint, buildShareSnapshot, weeklySessionCounts, sessionTimes, weeklyMuscleSets, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
+  // The revision a coach-assigned program is at: Start remembers it, so a
+  // newer version shows as Updated (Your Coach) and comes back to My Programs.
+  function programRevOf(program) {
+    if (!program) return '';
+    return String(program.rev && program.rev._seconds ? program.rev._seconds : (program.rev || program.programId || program.title));
+  }
+
+  // Programs active coaches assigned that the client hasn't started (or a
+  // newer version of one they started). My Programs shows these as cards.
+  //   invites, assignments: from the server; started: { coachUid: rev }.
+  //   skipUids: coaches whose published plan supplies the program instead.
+  function pendingCoachPrograms({ invites, assignments, started, skipUids }) {
+    const out = [];
+    const skip = skipUids || new Set();
+    (invites || []).filter(i => i && i.status === 'active' && !skip.has(i.coachUid)).forEach(inv => {
+      const asn = (assignments || []).find(a => a && (a.coachUid === inv.coachUid || a.coachUsername === inv.coachUsername));
+      const program = asn && asn.program;
+      if (!program || !Array.isArray(program.days)) return;
+      const rev = programRevOf(program);
+      const startedRev = (started || {})[inv.coachUid];
+      if (startedRev === rev) return;
+      out.push({
+        kind: 'program',
+        coachUid: inv.coachUid,
+        coachUsername: inv.coachUsername || asn.coachUsername || '',
+        title: program.title || asn.currentProgram || 'Program',
+        days: program.days.length,
+        frequency: Array.isArray(program.frequency) ? program.frequency : [],
+        rev,
+        updated: !!startedRev,
+      });
+    });
+    return out;
+  }
+
+  const api = { programRevOf, pendingCoachPrograms, checkInPhotoPlan, fingerprint, buildShareSnapshot, weeklySessionCounts, sessionTimes, weeklyMuscleSets, compliancePercent, weekStart, isoDay, parseNote, unseenCounts, tsMs, buildCoachOverview, coachMacroEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (!root || !root.document) return;
   root.ClientCoaching = api;
@@ -681,6 +716,7 @@
     state.decided = (sharing && sharing.decided) || state.decided;
     if (planRes && planRes.ok) { state.plan = planRes.plan || null; state.planLoaded = true; }
     state.loadedAt = Date.now();
+    doc.dispatchEvent(new CustomEvent('pc:coach-programs-changed'));
     const linked = state.invites.some(i => i.status === 'active');
     root.localStorage.setItem(linkKey(), linked ? 'true' : 'false');
     doc.dispatchEvent(new CustomEvent('pc:coach-sharing-changed'));
@@ -916,6 +952,69 @@
     return true;
   }
 
+  // Start the program a coach assigned: copy it into My Programs and make it
+  // the active program. Used by Your Coach and the My Programs card.
+  async function startCoachProgram(coachUid) {
+    const asn = state.assignments.find(a => a.coachUid === coachUid);
+    const core = root.programBuilderV2Core;
+    if (!asn || !asn.program || !core) return false;
+    const schedule = scheduleFor(asn);
+    const startDate = schedule && schedule.startDate ? schedule.startDate : '';
+    const ok = await root.showConfirm(`Start "${asn.program.title}"? It becomes your active program and Today's session follows it${startDate ? ` from ${shortDay(new Date(startDate + 'T00:00:00'))}, the date your coach set` : ''}.`, { confirmText: 'Start program' });
+    if (!ok) return false;
+    const timeline = timelineOf(schedule);
+    const imported = core.importLibraryProgram(root, timeline ? { ...asn.program, timeline } : asn.program, {
+      userId: user(),
+      source: { type: 'coach-program', coachUid: asn.coachUid, programId: asn.currentProgramId || '', id: asn.program.id || '' },
+    });
+    if (!imported) return false;
+    core.startProgram(root, imported.id, { userId: user(), ...(startDate ? { startDate } : {}) });
+    const started = readJSON(root.localStorage, startedKey(), {});
+    started[asn.coachUid] = programRevOf(asn.program);
+    root.localStorage.setItem(startedKey(), JSON.stringify(started));
+    if (doc.getElementById('yourCoachSection')) render();
+    toast(`${asn.program.title} is now your active program.`);
+    if (typeof root.renderTodayProgramCard === 'function') root.renderTodayProgramCard();
+    doc.dispatchEvent(new CustomEvent('pc:coach-programs-changed'));
+    pushShare({ force: true });
+    return true;
+  }
+
+  // What My Programs shows under "From your coach": assigned programs not yet
+  // started, plus the published plan's program while it isn't followed.
+  function coachProgramsToStart() {
+    const activeUids = new Set(state.invites.filter(i => i.status === 'active').map(i => i.coachUid));
+    const planUid = state.plan && state.plan.status === 'published' && state.plan.client && activeUids.has(state.plan.client.coachUid) ? state.plan.client.coachUid : '';
+    const composed = planUid ? planProgramFor(planUid) : null;
+    const out = pendingCoachPrograms({
+      invites: state.invites,
+      assignments: state.assignments,
+      started: readJSON(root.localStorage, startedKey(), {}),
+      skipUids: composed ? new Set([planUid]) : new Set(),
+    });
+    if (composed && (activePlanSource() || {}).planId !== state.plan.planId) {
+      const inv = state.invites.find(i => i.coachUid === planUid) || {};
+      out.unshift({
+        kind: 'plan', coachUid: planUid, coachUsername: inv.coachUsername || '',
+        title: composed.title || 'Program', days: arr(composed.days).length,
+        frequency: arr(composed.frequency), rev: String(state.plan.planId), updated: false,
+      });
+    }
+    return out;
+  }
+
+  async function startCoachPlanProgram(coachUid) {
+    const composed = planProgramFor(coachUid);
+    if (!composed) return false;
+    const ok = await root.showConfirm(`Follow "${composed.title}" from your coach's plan? It becomes your active program and Today's session follows the plan's weeks and phases.`, { confirmText: 'Start program' });
+    if (!ok || !startPlanProgram(composed)) return false;
+    if (doc.getElementById('yourCoachSection')) render();
+    toast(`${composed.title} is now your active program.`);
+    doc.dispatchEvent(new CustomEvent('pc:coach-programs-changed'));
+    pushShare({ force: true });
+    return true;
+  }
+
   function todayIso() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1107,7 +1206,7 @@
       const program = asn.program;
       const started = readJSON(root.localStorage, startedKey(), {});
       const startedRev = started[inv.coachUid];
-      const programRev = program ? String(program.rev && program.rev._seconds ? program.rev._seconds : (program.rev || program.programId || program.title)) : '';
+      const programRev = programRevOf(program);
       const programState = !program ? ''
         : startedRev === programRev ? '<span class="mx-chip mx-chip--sm">Started</span>'
           : startedRev ? '<span class="mx-chip mx-chip--brass mx-chip--sm">Updated</span>' : NEW_CHIP;
@@ -1580,41 +1679,12 @@
     }
 
     if (t.dataset.ycPlanStart) {
-      const composed = planProgramFor(t.dataset.ycPlanStart);
-      if (!composed) return;
-      const ok = await root.showConfirm(`Follow "${composed.title}" from your coach's plan? It becomes your active program and Today's session follows the plan's weeks and phases.`, { confirmText: 'Start program' });
-      if (!ok) return;
-      if (startPlanProgram(composed)) {
-        render();
-        toast(`${composed.title} is now your active program.`);
-        pushShare({ force: true });
-      }
+      await startCoachPlanProgram(t.dataset.ycPlanStart);
       return;
     }
 
     if (t.dataset.ycImport) {
-      const asn = state.assignments.find(a => a.coachUid === t.dataset.ycImport);
-      const core = root.programBuilderV2Core;
-      if (!asn || !asn.program || !core) return;
-      const schedule = scheduleFor(asn);
-      const startDate = schedule && schedule.startDate ? schedule.startDate : '';
-      const ok = await root.showConfirm(`Start "${asn.program.title}"? It becomes your active program and Today's session follows it${startDate ? ` from ${shortDay(new Date(startDate + 'T00:00:00'))}, the date your coach set` : ''}.`, { confirmText: 'Start program' });
-      if (!ok) return;
-      const timeline = timelineOf(schedule);
-      const imported = core.importLibraryProgram(root, timeline ? { ...asn.program, timeline } : asn.program, {
-        userId: user(),
-        source: { type: 'coach-program', coachUid: asn.coachUid, programId: asn.currentProgramId || '', id: asn.program.id || '' },
-      });
-      if (imported) {
-        core.startProgram(root, imported.id, { userId: user(), ...(startDate ? { startDate } : {}) });
-        const started = readJSON(root.localStorage, startedKey(), {});
-        started[asn.coachUid] = t.dataset.ycRev || '';
-        root.localStorage.setItem(startedKey(), JSON.stringify(started));
-        render();
-      }
-      toast(`${asn.program.title} is now your active program.`);
-      if (typeof root.renderTodayProgramCard === 'function') root.renderTodayProgramCard();
-      pushShare({ force: true });
+      await startCoachProgram(t.dataset.ycImport);
       return;
     }
 
@@ -1676,6 +1746,9 @@
 
   root.renderYourCoachSection = renderYourCoachSection;
   root.refreshYourCoach = refreshYourCoach;
+  root.coachProgramsToStart = coachProgramsToStart;
+  root.startCoachProgram = startCoachProgram;
+  root.startCoachPlanProgram = startCoachPlanProgram;
   root.openYourCoach = openYourCoach;
   root.markYourCoachSeen = markSeenSoon;
   root.acceptCoachInvite = acceptCoachInvite;
