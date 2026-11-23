@@ -96,12 +96,12 @@ describe('mesocycles, deloads and loads', () => {
     expect('blocks' in M.readProgram({ name: 'x', weeks: [{ days: [] }] })).toBe(false);
   });
 
-  test('progressWeeks ramps RIR, sets and load across a block and ends with a deload', () => {
+  test('progressWeeks ramps RIR and load across a block, holds its sets and ends with a deload', () => {
     const p = M.progressWeeks(M.readProgram(base), 1, 4, { rirStart: 3, rirEnd: 1, setsPerWeek: 1, setsMax: 5, pctPerWeek: 2.5, kgPerWeek: 2.5, deloadLast: true });
     const squat = w => p.weeks[w - 1].days[0].exercises[0];
     expect([1, 2, 3].map(w => squat(w).rir)).toEqual([3, 2, 1]);
     expect([1, 2, 3].map(w => squat(w).lastSetRir)).toEqual([2, 1, 0]);
-    expect([1, 2, 3].map(w => squat(w).sets)).toEqual([3, 4, 5]);
+    expect([1, 2, 3].map(w => squat(w).sets)).toEqual([3, 3, 3]); // no sets added within a block
     expect([1, 2, 3].map(w => squat(w).loadPct)).toEqual([72.5, 75, 77.5]);
     expect(p.weeks[2].days[0].exercises[1].loadKg).toBe(45);
     expect(p.weeks[3].deload).toBe(true);
@@ -177,17 +177,29 @@ describe('volume landmarks (MEV / MAV / MRV) and rep-range progression', () => {
     expect(M.volumeZone(5, null)).toBeNull();
   });
 
-  test('progressWeeks ramps each muscle from MEV to MRV, shared over its rows, capped per row', () => {
+  test('progressWeeks holds each muscle at its block volume every week, shared over its rows, capped per row', () => {
     const p = prog({ volume: { quads: { mev: 10, mav: 16, mrv: 20 }, hamstrings: { mev: 6, mav: 10, mrv: 14 } } });
-    const q = M.progressWeeks(p, 1, 5, { volumeFrom: 'mev', volumeTo: 'mrv', setsMax: 6, deloadLast: true, muscleOf });
-    const quads = [1, 2, 3, 4].map(w => M.muscleSets(q, w, muscleOf).quads);
-    expect(quads).toEqual([10, 13, 17, 18]); // week 4 wants 20; three rows × 6 max = 18
+    const q = M.progressWeeks(p, 1, 5, { holdSets: { quads: 10, hamstrings: 8 }, setsMax: 6, repsPerWeek: 1, deloadLast: true, muscleOf });
+    expect([1, 2, 3, 4].map(w => M.muscleSets(q, w, muscleOf).quads)).toEqual([10, 10, 10, 10]);
     expect([1, 2, 3, 4].map(w => M.muscleSets(q, w, muscleOf).hamstrings)).toEqual([6, 6, 6, 6]); // one row, capped at 6
     expect(M.weekDays(q, 1)[0].exercises.map(e => e.sets)).toEqual([4, 2, 6, 2]); // 10 quad sets as 4 + 2 + 4 by template share
     expect(M.weekDays(q, 1)[1].exercises[0].sets).toBe(4);
     expect(M.weekDays(q, 2)[0].exercises[3].sets).toBe(2); // "other" keeps its sets
+    expect([1, 2, 3, 4].map(w => M.weekDays(q, w)[0].exercises[0].repsMin)).toEqual([6, 7, 8, 9]); // reps carry the progression
     expect(q.weeks[4].deload).toBe(true);
-    expect(M.weekDays(q, 5)[0].exercises[0].sets).toBe(2); // deload: half the template
+    expect(M.weekDays(q, 5)[0].exercises[0].sets).toBe(2); // deload: half the block's sets
+  });
+
+  test('mesocycleSets: the first block at MEV, each later block the one before + step, never past MRV', () => {
+    const p = prog({ volume: { quads: { mev: 10, mav: 12, mrv: 13 }, hamstrings: { mev: 6, mav: 10, mrv: 14 } } });
+    p.blocks = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }];
+    p.weeks.forEach((w, i) => { w.block = i < 3 ? 'a' : 'b'; });
+    p.weeks[2].deload = true;
+    expect(M.mesocycleSets(p, 1, { muscleOf })).toEqual({ sets: { quads: 10, hamstrings: 6 }, atMrv: [] });
+    const first = M.progressWeeks(p, 1, 3, { holdSets: { quads: 10, hamstrings: 6 }, deloadLast: true, muscleOf });
+    // Block B starts from block A's held sets (not its deload): 10 + 3 capped at MRV 13, 6 + 3 = 9.
+    expect(M.mesocycleSets(first, 4, { muscleOf, step: 3 })).toEqual({ sets: { quads: 13, hamstrings: 9 }, atMrv: ['quads'] });
+    expect(M.mesocycleSets(first, 4, { muscleOf }).sets).toEqual({ quads: 12, hamstrings: 8 }); // default step 2
   });
 
   test('repsPerWeek moves each rep range on its own', () => {
