@@ -202,6 +202,25 @@ describe('volume landmarks (MEV / MAV / MRV) and rep-range progression', () => {
     expect(M.mesocycleSets(first, 4, { muscleOf }).sets).toEqual({ quads: 12, hamstrings: 8 }); // default step 2
   });
 
+  test('repLimits: reps rise until the top of the range meets the coach\'s barrier, then hold', () => {
+    // Squat (compound) 6-8, leg extension and leg curl (isolation) 10-15 and 10-12, farmer walk (core) 1.
+    const q = M.progressWeeks(prog(), 1, 5, { repsPerWeek: 1, repLimits: { compound: '4-8', isolation: { min: 8, max: 14 } } });
+    const day = w => M.weekDays(q, w)[0].exercises;
+    const range = (w, i) => [day(w)[i].repsMin, day(w)[i].repsMax];
+    expect([1, 2, 3].map(w => range(w, 0))).toEqual([[6, 8], [6, 8], [6, 8]]); // already at the top: holds
+    expect([1, 2, 3, 4].map(w => range(w, 2))).toEqual([[10, 12], [11, 13], [12, 14], [12, 14]]);
+    expect(range(1, 1)).toEqual([9, 14]); // 10-15 slides back under the 14 top
+    expect(day(4)[3]).toMatchObject({ repsMin: 4, repsMax: null }); // core: no barrier
+    const low = M.progressWeeks(M.readProgram({ name: 'x', weeks: [{ days: [{ dayId: 'd1', weekday: 1, exercises: [
+      { name: 'Bench press', sets: 3, repsMin: 4, repsMax: 6, rir: 2 }] }] }, { sameAs: 1 }, { sameAs: 1 }, { sameAs: 1 }] }),
+    1, 4, { repsPerWeek: 1, repLimits: { compound: '4-8' } });
+    expect([1, 2, 3, 4].map(w => { const e = M.weekDays(low, w)[0].exercises[0]; return e.repsMin + '-' + e.repsMax; }))
+      .toEqual(['4-6', '5-7', '6-8', '6-8']);
+    expect(M.repLimit('4-8')).toEqual({ min: 4, max: 8 });
+    expect(M.repLimit('8')).toBeNull();
+    expect(M.repLimit('')).toBeNull();
+  });
+
   test('repsPerWeek moves each rep range on its own', () => {
     const q = M.progressWeeks(prog(), 1, 3, { repsPerWeek: -2 });
     const day = w => M.weekDays(q, w)[0].exercises;

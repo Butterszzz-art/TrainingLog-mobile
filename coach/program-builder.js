@@ -143,7 +143,7 @@
 
   function mount(container, program, opts) {
     const options_ = opts || {};
-    const state = { program: expand(program), week: 1, saving: false, message: '', view: 'week', sheetAll: false, panel: null };
+    const state = { program: expand(program), week: 1, saving: false, message: '', view: 'week', sheetAll: false, panel: null, repLimits: {} };
     const single = !!options_.single;
     const savedWorkouts = () => (typeof options_.workouts === 'function' ? options_.workouts() || [] : []);
 
@@ -321,6 +321,8 @@
         + (pn.volume === 'step' ? numField('setsStep', '+ sets / muscle', pn.setsStep, ' min="0" max="10"') : '')
         + numField('setsMax', 'Max sets / exercise', pn.setsMax, ' min="1" max="20"')
         + numField('repsPerWeek', '+ reps / wk', pn.repsPerWeek, ' min="-10" max="10" title="Moves each rep range, e.g. +1: 8-10 → 9-11 → 10-12"')
+        + repLimitField('limitCompound', 'Rep limit · compound', pn.limitCompound, '4-8')
+        + repLimitField('limitIsolation', 'Rep limit · isolation', pn.limitIsolation, '8-15')
         + numField('pctPerWeek', '+ %1RM / wk', pn.pctPerWeek, ' min="-20" max="20" step="0.5"')
         + numField('kgPerWeek', '+ kg / wk', pn.kgPerWeek, ' min="-50" max="50" step="0.25"')
         + '<label class="pb-meta pb-meta--check"><input type="checkbox" data-pp="deloadLast"' + (pn.deloadLast && deloadOk ? ' checked' : '') + (deloadOk ? '' : ' disabled') + '><span>Last week is a deload (½ sets, RIR +2, load −10%)</span></label>'
@@ -331,6 +333,11 @@
         + '<div class="pb-panel-acts"><button type="button" class="mp-btn" data-act="progress-apply"' + (pn.to > pn.from ? '' : ' disabled') + '>Fill W' + pn.from + '–W' + pn.to + '</button><button type="button" class="pb-link" data-act="panel-close">Cancel</button></div></div>';
     }
 
+    // A rep-range barrier: reps rise each week until the top of the range meets it.
+    function repLimitField(key, label, value, example) {
+      return '<label class="pb-meta"><span>' + label + '</span><input class="pb-in" data-pp="' + key + '" value="' + esc(value || '') + '" maxlength="9" placeholder="e.g. ' + example + '" title="Reps go up each week until the top of the range reaches this limit, then hold (empty = no limit)"></label>';
+    }
+
     function progressPanelFor(run) {
       const r = run || currentRun() || { from: state.week, to: state.program.weeks.length, deloads: [] };
       const rows = (week() && M.weekDays(M.readProgram(state.program) || state.program, r.from)) || [];
@@ -339,6 +346,7 @@
         kind: 'progress', from: r.from, to: r.to,
         rirStart: firstRir !== null ? firstRir : 3, rirEnd: firstRir !== null ? Math.max(0, firstRir - 2) : 1,
         volume: prevRunOf(r.from) ? 'step' : 'mev', setsStep: 2, setsMax: 8, repsPerWeek: 1, pctPerWeek: 0, kgPerWeek: 0,
+        limitCompound: state.repLimits.compound || '', limitIsolation: state.repLimits.isolation || '',
         deloadLast: r.deloads.includes(r.to) || r.to - r.from >= 3,
       };
     }
@@ -885,8 +893,14 @@
           Object.keys(held.sets).forEach(m => { held.sets[m] = lmFor(m).mev; });
           held.atMrv = [];
         }
+        const badLimit = [['limitCompound', 'compound'], ['limitIsolation', 'isolation']]
+          .find(([k]) => String(pn[k] || '').trim() && !M.repLimit(pn[k]));
+        if (badLimit) { state.message = 'Write the ' + badLimit[1] + ' rep limit as low-high, e.g. 4-8.'; render(); return; }
+        // Remembered for the next block's progression.
+        state.repLimits = { compound: String(pn.limitCompound || '').trim(), isolation: String(pn.limitIsolation || '').trim() };
         state.program = expand(M.progressWeeks(clean, from, to, Object.assign({}, pn, {
           deloadLast: pn.deloadLast && to > from, holdSets: held.sets, muscleOf,
+          repLimits: { compound: pn.limitCompound, isolation: pn.limitIsolation },
         })));
         state.panel = null;
         state.message = 'Filled W' + from + '–W' + to + '.';

@@ -131,9 +131,10 @@ test('+ Mesocycle turns a one-week program into a block, then Progression fills 
   expect($$('.pb-tab')[3].classList.contains('is-deload')).toBe(true);
   // The progression panel opens for the new block.
   expect($('[data-panel="progress"]')).not.toBeNull();
-  // First block: volume held at MEV, reps go up each week.
+  // First block: volume held at MEV, reps go up each week up to the coach's rep limit.
   expect($('[data-pp="volume"]').value).toBe('mev');
   expect($('[data-pp="repsPerWeek"]').value).toBe('1');
+  type($('[data-pp="limitCompound"]'), '4-9');
   const apply = $('[data-act="progress-apply"]');
   type($('[data-pp="pctPerWeek"]'), '2.5'); // commit, then click the same button
   expect(apply.isConnected).toBe(true);
@@ -150,6 +151,11 @@ test('+ Mesocycle turns a one-week program into a block, then Progression fills 
   // …and its progression steps the volume up from the block before.
   expect($('[data-pp="volume"]').value).toBe('step');
   expect($('[data-pp="setsStep"]').value).toBe('2');
+  expect($('[data-pp="limitCompound"]').value).toBe('4-9'); // the limit carries over
+  type($('[data-pp="limitIsolation"]'), '12');
+  click($('[data-act="progress-apply"]'));
+  expect($('.pb-msg').textContent).toBe('Write the isolation rep limit as low-high, e.g. 4-8.');
+  type($('[data-pp="limitIsolation"]'), '');
   click($('[data-act="save"]'));
   await flush();
   const p = saved[0];
@@ -158,7 +164,7 @@ test('+ Mesocycle turns a one-week program into a block, then Progression fills 
   expect(p.weeks.map(w => w.block)).toEqual(['b1', 'b1', 'b1', 'b1', 'b2', 'b2']);
   const sq = n => p.weeks[n - 1].days[0].exercises[0];
   expect([1, 2, 3].map(n => sq(n).sets)).toEqual([3, 3, 3]); // held within the block
-  expect([1, 2, 3].map(n => [sq(n).repsMin, sq(n).repsMax])).toEqual([[6, 8], [7, 9], [8, 10]]);
+  expect([1, 2, 3].map(n => [sq(n).repsMin, sq(n).repsMax])).toEqual([[6, 8], [7, 9], [7, 9]]); // held at the 4-9 limit
   expect([1, 2, 3].map(n => sq(n).rir)).toEqual([3, 2, 1]);
   expect([1, 2, 3].map(n => sq(n).loadPct)).toEqual([70, 72.5, 75]);
   expect(p.weeks[3].deload).toBe(true);

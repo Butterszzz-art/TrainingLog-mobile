@@ -538,6 +538,13 @@
    *                            opts.muscleOf(row) names a row's muscle.
    *   opts.repsPerWeek         reps added per week to both ends of each row's
    *                            range (+1: 8-10 → 9-11 → 10-12), at least 1.
+   *   opts.repLimits           { compound?: 'a-b' | {min,max}, isolation?: … }:
+   *                            the coach's rep-range barrier per exercise type
+   *                            (a row's type, else guessType of its name; core
+   *                            rows have none). The range moves with
+   *                            repsPerWeek until its top reaches the barrier,
+   *                            then holds there (limit 4-8: 4-6 → 5-7 → 6-8 →
+   *                            6-8); a range wider than the barrier is cut to it.
    *   opts.pctPerWeek          %1RM added per week on rows with a % load.
    *   opts.kgPerWeek           kg added per week on rows with a kg load.
    *   opts.deloadLast          the last week is a deload: about half the
@@ -562,6 +569,12 @@
     const kgPerWeek = num(o.kgPerWeek, -50, 50) || 0;
     const factor = num(o.deloadSetsFactor, 0.1, 1) || 0.5;
     const repsPerWeek = int(o.repsPerWeek, -10, 10) || 0;
+    const repLimits = {};
+    ['compound', 'isolation'].forEach(t => {
+      const lim = repLimit(o.repLimits && o.repLimits[t]);
+      if (lim) repLimits[t] = lim;
+    });
+    const limitOf = e => repLimits[e.type || guessType(e.name)] || null;
     const half = x => Math.round(x * 2) / 2;
     const hold = o.holdSets && typeof o.holdSets === 'object' ? o.holdSets : {};
     // Template sets per muscle (rows across every day of the template week).
@@ -614,9 +627,21 @@
             return row;
           }
           row.sets = blockSets(e);
-          if (repsPerWeek && e.repsMin !== null) {
-            row.repsMin = Math.max(1, Math.min(100, e.repsMin + repsPerWeek * k));
-            row.repsMax = e.repsMax !== null ? Math.max(row.repsMin + 1, Math.min(100, e.repsMax + repsPerWeek * k)) : null;
+          const lim = limitOf(e);
+          if ((repsPerWeek || lim) && e.repsMin !== null) {
+            let lo = e.repsMin + repsPerWeek * k;
+            let hi = e.repsMax !== null ? e.repsMax + repsPerWeek * k : null;
+            if (lim) {
+              // Slide the range back inside the barrier, then cut what still sticks out.
+              const over = (hi !== null ? hi : lo) - lim.max;
+              if (over > 0) { lo -= over; if (hi !== null) hi -= over; }
+              const under = lim.min - lo;
+              if (under > 0) { lo += under; if (hi !== null) hi += under; }
+              lo = Math.min(lo, lim.max);
+              if (hi !== null) hi = Math.min(hi, lim.max);
+            }
+            row.repsMin = Math.max(1, Math.min(100, lo));
+            row.repsMax = hi !== null && hi > row.repsMin ? Math.min(100, hi) : null;
           }
           if (e.rir !== null && rirStart !== null) {
             row.rir = half(rirStart + ((rirEnd !== null ? rirEnd : rirStart) - rirStart) * t);
@@ -672,6 +697,16 @@
       if (base && base[m] && want >= lm.mrv) atMrv.push(m);
     });
     return { sets, atMrv };
+  }
+
+  /** A rep-range barrier: "4-8" or { min: 4, max: 8 } → { min, max }, else null. */
+  function repLimit(src) {
+    let min = null;
+    let max = null;
+    if (src && typeof src === 'object') { min = int(src.min, 1, 100); max = int(src.max, 1, 100); }
+    else if (src != null && String(src).trim()) { const r = parseReps(src); min = r.repsMin; max = r.repsMax; }
+    if (min === null || max === null || max < min) return null;
+    return { min, max };
   }
 
   /** Things worth a second look, each pinned to where it is. */
@@ -832,7 +867,7 @@
     SCHEMA, WEEKDAYS, TYPES, LIMITS, MUSCLES, DEFAULT_LANDMARKS,
     landmarks, volumeZone, muscleSets,
     readProgram, weekDays, stats, validate, copyWeek, toLibrary, toV1Days,
-    blockRuns, weeklySets, progressWeeks, mesocycleSets,
+    blockRuns, weeklySets, progressWeeks, mesocycleSets, repLimit,
     parseQuickEntry, parseReps, parseRir, parseRest, parseDayLabel, parseWeek, parseLoad, parseCell,
     formatRow, formatRest, formatCell, formatLoad, weekdayNumber, guessType,
   };
