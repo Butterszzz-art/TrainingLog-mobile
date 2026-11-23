@@ -1204,6 +1204,12 @@
      MY PROGRAMS — list view
   ══════════════════════════════════════════════════════════════ */
 
+  // Coach data arrives after the list may already be on screen.
+  document.addEventListener('pc:coach-programs-changed', () => {
+    const listView = document.getElementById('progListView');
+    if (listView && listView.style.display !== 'none' && listView.offsetParent !== null) renderProgramList();
+  });
+
   function renderProgramList() {
     const container = document.getElementById('progListContainer');
     if (!container) return;
@@ -1239,6 +1245,34 @@
         + `<button type="button" class="plan-history-link" onclick="PlanLimits.upgrade()">Unlimited with Pro</button>`;
       container.appendChild(planLine);
     }
+
+    // Programs the coach sent that aren't started yet (src/js/client-coaching.js).
+    // Starting one copies it into this list and makes it the active program.
+    const fromCoach = typeof window.coachProgramsToStart === 'function' ? window.coachProgramsToStart() : [];
+    fromCoach.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'prog-card prog-card--coach';
+      const freq = item.frequency.length ? ' · ' + item.frequency.join(', ') : '';
+      card.innerHTML = `
+        <div class="prog-card-badges">
+          <span class="prog-badge prog-badge--coach">${ico('users')}<span>From ${esc(item.coachUsername || 'your coach')}</span></span>
+          <span class="prog-badge prog-badge--new">${item.updated ? 'Updated' : 'New'}</span>
+        </div>
+        <div class="prog-card-title">${esc(item.title)}</div>
+        <div class="prog-card-meta">${item.days} day${item.days !== 1 ? 's' : ''} a week${esc(freq)}</div>
+        <div class="prog-card-actions">
+          <button type="button" class="prog-card-load prog-card-start">${item.updated ? 'Start new version' : 'Start program'}</button>
+        </div>
+      `;
+      const btn = card.querySelector('.prog-card-start');
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        const start = item.kind === 'plan' ? window.startCoachPlanProgram : window.startCoachProgram;
+        const ok = typeof start === 'function' ? await start(item.coachUid) : false;
+        if (ok) renderProgramList(); else btn.disabled = false;
+      });
+      container.appendChild(card);
+    });
 
     if (!programs.length) {
       const empty = document.createElement('div');
@@ -1364,7 +1398,12 @@
       if (window.PremiumLibrary) window.PremiumLibrary.show();
     } else if (view === 'list') {
       if (builderContainer) builderContainer.style.display = 'none';
-      if (listView) { listView.style.display = ''; renderProgramList(); }
+      if (listView) {
+        listView.style.display = '';
+        renderProgramList();
+        // Fetch what the coach sent if it's stale; the list re-renders when it lands.
+        if (typeof window.refreshYourCoach === 'function') window.refreshYourCoach(5 * 60 * 1000);
+      }
       setActive(1);
     } else {
       if (builderContainer) builderContainer.style.display = '';
