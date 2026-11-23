@@ -665,3 +665,51 @@
 @media (prefers-reduced-motion: reduce) {
   #workoutsContainer .set-advice { animation: none; }
 }
+
+/* ── Replace Exercise picker (index.html openReplaceExercise) ── */
+#workoutsContainer .replace-ex {
+  margin: 4px 0 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1.5px solid var(--green-90, #8ec2a4);
+  background: rgba(95, 184, 138, 0.1);
+}
+#workoutsContainer .replace-ex-kicker {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-90, #8ec2a4);
+}
+#workoutsContainer .replace-ex-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+#workoutsContainer .replace-ex-chip {
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--green-90, #8ec2a4);
+  background: transparent;
+  color: var(--text-primary, #fff);
+  font-size: 13.5px;
+}
+#workoutsContainer .replace-ex-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+#workoutsContainer .replace-ex-input { flex: 1 1 auto; min-width: 0; min-height: 44px; margin: 0; }
+#workoutsContainer .replace-ex-go {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--green-90, #8ec2a4);
+  color: #0d1a14;
+  font-weight: 700;
+}
+#workoutsContainer .replace-ex-cancel {
+  flex: none;
+  width: 40px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 20px;
+}

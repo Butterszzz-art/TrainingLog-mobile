@@ -109,3 +109,30 @@ describe('active program restored from the backend', () => {
     expect(ps.getActiveSchedule('sam')).not.toBeNull();
   });
 });
+
+describe('replace exercise', () => {
+  test('loaded session: done sets stay, the rest move to the new lift at its last weight', () => {
+    const entry = planned('Lat Pulldown', [[91, 3], [87.5, 6], [87.5, 6]]);
+    entry.completedArray = [true, false, false];
+    entry.nextSessionRecommendation = { message: 'x' };
+    const log = [planned('Low Row', [[60, 7]]), entry];
+    const out = sc.replaceExercise(log, [1], 'One Arm Pulldown', { planned: true, lastWeightFor: () => 55 });
+    expect(out.map(e => e.exercise)).toEqual(['Low Row', 'Lat Pulldown', 'One Arm Pulldown']);
+    expect(out[1].repsArray).toEqual([3]);
+    expect(out[1].completedArray).toEqual([true]);
+    expect(out[2]).toMatchObject({ repsArray: [6, 6], weightsArray: [55, 55], completedArray: [false, false], replacedFrom: 'Lat Pulldown' });
+    expect(out[2].nextSessionRecommendation).toBeUndefined();
+    expect(log[1].exercise).toBe('Lat Pulldown'); // input untouched
+  });
+
+  test('nothing done yet: the whole card becomes the new lift', () => {
+    const out = sc.replaceExercise([planned('Cable Fly', [[30, 8], [30, 8]])], [0], 'Pec Deck', { planned: true });
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ exercise: 'Pec Deck', repsArray: [8, 8], weightsArray: [0, 0] });
+  });
+
+  test('freeform workout: a rename of every set', () => {
+    const out = sc.replaceExercise([logged('Incline Press', [[50, 6], [50, 6]])], [0], 'Incline Machine Press', { planned: false });
+    expect(out[0]).toMatchObject({ exercise: 'Incline Machine Press', weightsArray: [50, 50] });
+  });
+});

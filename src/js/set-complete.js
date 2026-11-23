@@ -384,6 +384,55 @@
     return { entry: filledEntry, leftover };
   }
 
+  /**
+   * Replace an exercise (the card holding `entryIndexes`) with `newName`.
+   * In a loaded session (opts.planned) the sets already ticked were lifted on
+   * the old exercise and stay with it; the sets still to do move to the new
+   * one, keeping their reps and set types, with the new lift's last weight
+   * (opts.lastWeightFor) or blank. In a freeform workout it's a rename: every
+   * set was logged under the wrong name. Returns a new log, or null.
+   */
+  function replaceExercise(log, entryIndexes, newName, opts) {
+    const options = opts || {};
+    const name = String(newName || '').trim();
+    const indexes = Array.isArray(entryIndexes) ? entryIndexes : [entryIndexes];
+    if (!Array.isArray(log) || !name || !indexes.length) return null;
+    const grouping = global.sessionGrouping;
+    const idFor = n => (grouping && typeof grouping.exerciseIdFor === 'function' ? grouping.exerciseIdFor(n) : undefined);
+    const lastWeight = typeof options.lastWeightFor === 'function' ? Number(options.lastWeightFor(name)) || 0 : 0;
+    const renamed = e => {
+      const out = Object.assign({}, e, { exercise: name });
+      const id = idFor(name);
+      if (id) out.exerciseId = id; else delete out.exerciseId;
+      ['nextSessionRecommendation', 'setAdvice', 'goal', 'repGoal', 'plannedBackoffWeight', 'replacedFrom'].forEach(k => delete out[k]);
+      out.replacedFrom = e.replacedFrom || e.exercise;
+      return out;
+    };
+    const set = new Set(indexes);
+    const out = [];
+    log.forEach((entry, i) => {
+      if (!set.has(i) || !entry) { out.push(entry); return; }
+      if (!options.planned) { out.push(renamed(entry)); return; }
+      const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+      const done = reps.map((_, si) => !!(entry.completedArray && entry.completedArray[si]));
+      const pick = keep => {
+        const copy = Object.assign({}, entry);
+        PER_SET.forEach(key => { if (Array.isArray(entry[key])) copy[key] = entry[key].filter((_, si) => done[si] === keep); });
+        copy.sets = copy.repsArray.length;
+        return copy;
+      };
+      if (done.some(Boolean)) out.push(pick(true));
+      if (done.some(d => !d)) {
+        const todo = renamed(pick(false));
+        todo.weightsArray = todo.repsArray.map(() => lastWeight);
+        todo.completedArray = todo.repsArray.map(() => false);
+        if (Array.isArray(todo.rirArray)) todo.rirArray = todo.repsArray.map(() => null);
+        out.push(todo);
+      }
+    });
+    return out;
+  }
+
   /** Hide the advice on an entry (the card's ×). */
   function dismissSetAdvice(wi, ei) {
     const user = _logUser();
@@ -399,7 +448,7 @@
   }
 
   const api = {
-    DEFAULT_REST_SECONDS, stampSetAdvice, dismissSetAdvice, fillPlannedSets,
+    DEFAULT_REST_SECONDS, stampSetAdvice, dismissSetAdvice, fillPlannedSets, replaceExercise,
     isPlannedWorkout, completedEntry, completedView, completedWorkouts, nextOpenSet,
     applyBackoffWeight, plannedRestSeconds, restSecondsFor,
     completeSet, setSetRir, setSetRole, toggleEffort, isEffortOpen, startRest,

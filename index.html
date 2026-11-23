@@ -8545,6 +8545,7 @@ function openContextMenu(event, workoutIndex, entryIndex, setIndex = null, block
       if (_grp.moveExercise(_wLog, _blockIdx, -1)) addButton('Move Up', () => moveLogExercise(workoutIndex, _blockIdx, -1));
       if (_grp.moveExercise(_wLog, _blockIdx, 1)) addButton('Move Down', () => moveLogExercise(workoutIndex, _blockIdx, 1));
     }
+    if (window.SetComplete?.replaceExercise) addButton('Replace Exercise', () => openReplaceExercise(card, workoutIndex, _blockIdx));
     addButton(_entryForMenu?.maxedOut ? 'Un-mark Maxed Out' : 'Mark as Maxed Out', () => toggleMaxedOut(workoutIndex, _blockIdx));
     addButton(_entryForMenu?.sessionCtx?.altMachine ? 'Same machine as usual' : 'Different machine', () => toggleAltMachineEntry(workoutIndex, _blockIdx));
     addButton('Delete Exercise', () => removeLogEntry(workoutIndex, _blockIdx));
@@ -15365,6 +15366,78 @@ function calculateWorkoutVolume(workout) {
 
 // entryIndex may be an array (a grouped exercise): removed highest first so
 // the remaining indexes stay valid.
+// "Replace Exercise" (card ⋮ menu): an inline picker in the card with
+// same-muscle suggestions and the full exercise list (#exerciseSuggestions).
+function openReplaceExercise(card, workoutIndex, entryIndexes) {
+  if (!card) return;
+  card.querySelector('.replace-ex')?.remove();
+  const user = window.coachLoggingClient || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${user}`)) || [];
+  const entry = workouts[workoutIndex]?.log?.[entryIndexes[0]];
+  if (!entry) return;
+  const current = String(entry.exercise || '');
+  const muscleOf = typeof getMuscleGroup === 'function' ? getMuscleGroup : null;
+  const muscle = muscleOf ? muscleOf(current) : null;
+  const names = Array.from(document.querySelectorAll('#exerciseSuggestions option')).map(o => o.value);
+  const alternatives = muscle && muscle !== 'other'
+    ? names.filter(n => n.toLowerCase() !== current.toLowerCase() && muscleOf(n) === muscle).slice(0, 6)
+    : [];
+
+  const box = document.createElement('div');
+  box.className = 'replace-ex';
+  const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  box.innerHTML = `
+    <div class="replace-ex-head"><span class="replace-ex-kicker">Replace ${esc(current)}</span></div>
+    ${alternatives.length ? `<div class="replace-ex-chips">${alternatives.map(n => `<button type="button" class="replace-ex-chip" data-name="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
+    <div class="replace-ex-row">
+      <input type="text" class="replace-ex-input" list="exerciseSuggestions" placeholder="Exercise name…" autocomplete="off" aria-label="New exercise">
+      <button type="button" class="replace-ex-go">Replace</button>
+      <button type="button" class="replace-ex-cancel" aria-label="Cancel">×</button>
+    </div>`;
+  box.addEventListener('click', e => e.stopPropagation());
+  const input = box.querySelector('.replace-ex-input');
+  const apply = name => {
+    if (replaceLogExercise(workoutIndex, entryIndexes, name)) box.remove();
+  };
+  box.querySelectorAll('.replace-ex-chip').forEach(b => b.addEventListener('click', () => apply(b.dataset.name)));
+  box.querySelector('.replace-ex-go').addEventListener('click', () => apply(input.value));
+  box.querySelector('.replace-ex-cancel').addEventListener('click', () => box.remove());
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); apply(input.value); }
+    if (e.key === 'Escape') box.remove();
+  });
+  const setList = card.querySelector('.set-list');
+  if (setList) card.insertBefore(box, setList); else card.appendChild(box);
+  input.focus();
+}
+
+// Swap a card's exercise for another. Returns true when something changed.
+function replaceLogExercise(workoutIndex, entryIndexes, newName) {
+  const name = String(newName || '').trim();
+  if (!name) { window.showToast?.('Pick or type an exercise.', 'warn'); return false; }
+  const user = window.coachLoggingClient || currentUser;
+  const workouts = JSON.parse(localStorage.getItem(`workouts_${user}`)) || [];
+  const workout = workouts[workoutIndex];
+  const sc = window.SetComplete;
+  if (!workout || !Array.isArray(workout.log) || !sc?.replaceExercise) return false;
+  const old = workout.log[entryIndexes[0]]?.exercise || '';
+  if (old.trim().toLowerCase() === name.toLowerCase()) return false;
+  const lastWeightFor = n => {
+    try { const st = typeof getExerciseStats === 'function' ? getExerciseStats(n) : null; return st?.lastTopSet?.weight || 0; } catch { return 0; }
+  };
+  const next = sc.replaceExercise(workout.log, entryIndexes, name, { planned: sc.isPlannedWorkout(workout), lastWeightFor });
+  if (!next) return false;
+  workout.log = next;
+  localStorage.setItem(`workouts_${user}`, JSON.stringify(workouts));
+  if (typeof saveUserExercise === 'function') { try { saveUserExercise(name); } catch { /* optional */ } }
+  if (typeof syncLocalHistoryFromWorkouts === 'function') syncLocalHistoryFromWorkouts();
+  renderWorkouts();
+  if (typeof window.renderSessionQueue === 'function') window.renderSessionQueue();
+  if (typeof window.renderSessionSoFar === 'function') window.renderSessionSoFar();
+  window.showToast?.(`${old} replaced with ${name}.`, 'success');
+  return true;
+}
+
 // Move an exercise card up (-1) or down (+1) in its session.
 function moveLogExercise(workoutIndex, entryIndexes, dir) {
   // Same store the ⋮ menu read the session from.
