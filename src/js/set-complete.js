@@ -140,6 +140,15 @@
     } catch { return false; }
   }
 
+  /** Performance mode with a rest length the lifter picked (not Auto). */
+  function _manualRestPicked() {
+    try {
+      const pm = global.PerformanceMode;
+      const s = pm && pm.getSettings();
+      return !!(s && s.active && s.restSeconds !== (pm.AUTO_REST || 'auto'));
+    } catch { return false; }
+  }
+
   function startRest(seconds) {
     const secs = Math.max(1, Math.round(Number(seconds) || DEFAULT_REST_SECONDS));
     if (typeof global.startRestTimerSeconds === 'function') {
@@ -297,9 +306,10 @@
     if (typeof document !== 'undefined' && typeof CustomEvent === 'function') {
       document.dispatchEvent(new CustomEvent('tl:set-logged', { detail: { exercise: name, sets: 1, date, planned: true } }));
     }
-    // Performance mode starts its own rest on that event; a rest the plan
-    // prescribes wins over its default, so ours is written after it.
-    if (!_performanceModeActive() || plannedRestSeconds(entry, si)) {
+    // Performance mode starts its own rest on that event. On Auto, a rest
+    // the plan prescribes wins over its default, so ours is written after
+    // it; a rest length the lifter picked by hand always wins.
+    if (!_performanceModeActive() || (plannedRestSeconds(entry, si) && !_manualRestPicked())) {
       const secs = restSecondsFor(entry, si, advice);
       setTimeout(() => startRest(secs), 0);
     }

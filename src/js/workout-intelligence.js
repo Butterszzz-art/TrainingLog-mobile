@@ -78,10 +78,14 @@
         const repsArr    = Array.isArray(entry.repsArray)    ? entry.repsArray    : [];
         const weightsArr = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
 
+        // A loaded program/template day only counts the sets ticked off.
+        const planned = _isPlanned(w);
+        const doneArr = Array.isArray(entry.completedArray) ? entry.completedArray : [];
         const sets = repsArr.map((r, idx) => ({
           reps:   Number(r)               || 0,
           weight: Number(weightsArr[idx]) || 0,
-        })).filter(s => s.reps > 0);
+          done:   !planned || !!doneArr[idx],
+        })).filter(s => s.reps > 0 && s.done).map(({ reps, weight }) => ({ reps, weight }));
 
         if (!sets.length) continue;
 
@@ -102,6 +106,12 @@
       }
     }
     return null;
+  }
+
+  function _isPlanned(w) {
+    if (window.SetComplete && typeof window.SetComplete.isPlannedWorkout === 'function') return window.SetComplete.isPlannedWorkout(w);
+    const meta = w && w.metadata;
+    return !!(meta && (meta.planned === true || meta.source === 'program'));
   }
 
   function _fmtNum(v) {
@@ -266,11 +276,17 @@
     const range = rec.repRange || [rec.reps, rec.reps];
     const rangeTxt = range[0] === range[1] ? `${range[0]}` : `${range[0]}–${range[1]}`;
     const label = rec.kind === 'backoff' ? 'Back-off' : 'Next set';
-    const today = workouts.find(w => w && w.date === _todayKey());
-    const done = today && Array.isArray(today.log)
-      ? today.log.filter(e => (e.exercise || '').trim().toLowerCase() === exerciseName.toLowerCase())
-        .reduce((n, e) => n + (Array.isArray(e.repsArray) ? e.repsArray.length : 0), 0)
-      : 0;
+    // Sets done today, across every workout of the day; a loaded plan's
+    // sets count once ticked.
+    const key = exerciseName.toLowerCase();
+    const done = workouts.filter(w => w && w.date === _todayKey() && Array.isArray(w.log)).reduce((n, w) => {
+      const planned = _isPlanned(w);
+      return n + w.log.filter(e => (e.exercise || '').trim().toLowerCase() === key).reduce((m, e) => {
+        const reps = Array.isArray(e.repsArray) ? e.repsArray : [];
+        const doneArr = Array.isArray(e.completedArray) ? e.completedArray : [];
+        return m + (planned ? reps.filter((_, i) => doneArr[i]).length : reps.length);
+      }, 0);
+    }, 0);
     return `
       <div class="exb-last">This session: ${_plural(done, 'set')} · rest ${_esc(rec.restLabel || '')}</div>
       <div class="exb-rule"></div>

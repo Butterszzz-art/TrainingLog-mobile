@@ -156,7 +156,18 @@ function e1rm(set) {
   return set.weight * (1 + set.reps / 30);
 }
 
-function entrySets(entry) {
+/**
+ * A session loaded from a program day or template (session-queue.js): its
+ * sets are laid out ahead and only count once ticked (set-complete.js).
+ */
+function isPlannedSessionWorkout(workout) {
+  const meta = workout && workout.metadata;
+  return !!(meta && (meta.planned === true || meta.source === 'program'));
+}
+
+/** Sets of an entry; `onlyDone` keeps just the ticked ones (planned sessions). */
+function entrySets(entry, onlyDone) {
+  const done = Array.isArray(entry && entry.completedArray) ? entry.completedArray : [];
   const reps = Array.isArray(entry && entry.repsArray) ? entry.repsArray : [];
   const weights = Array.isArray(entry && entry.weightsArray) ? entry.weightsArray : [];
   const types = Array.isArray(entry && entry.setTypeArray) ? entry.setTypeArray : [];
@@ -166,6 +177,7 @@ function entrySets(entry) {
   for (let i = 0; i < n; i++) {
     const type = types[i] || 'standard';
     if (NON_WORK_TYPES.has(type)) continue;
+    if (onlyDone && !done[i]) continue;
     out.push({
       weight: Number(weights[i]) || 0,
       reps: Number(reps[i]) || 0,
@@ -183,11 +195,12 @@ function entrySets(entry) {
  */
 function buildSession(entries, workout) {
   const sets = [];
+  const onlyDone = isPlannedSessionWorkout(workout);
   let range = null;
   let maxedOut = false;
   let unit = 'kg';
   entries.forEach((entry) => {
-    sets.push(...entrySets(entry));
+    sets.push(...entrySets(entry, onlyDone));
     range = parseRepRange(entry) || range;
     if (entry.maxedOut) maxedOut = true;
     if (entry.unit) unit = entry.unit;
@@ -398,13 +411,21 @@ function suggestNextSet(exercise, workouts = [], options = {}) {
   const t = resolveTarget(exercise, workouts, options);
   if (!t) return null;
   const date = options.date;
-  const today = (Array.isArray(workouts) ? workouts : []).filter(w => w && (!date || w.date === date));
-  const workout = date ? today[today.length - 1] : (today.length ? today[today.length - 1] : null);
-  if (!workout || !Array.isArray(workout.log)) return null;
-  const entries = workout.log.filter(e => normalizeExerciseName(e) === t.name.toLowerCase() && isComparableEntry(e, workout, t.gymKey));
-  if (!entries.length) return null;
-  const session = buildSession(entries, workout);
-  if (!session.sets.length) return null;
+  const list = (Array.isArray(workouts) ? workouts : []).filter(w => w && Array.isArray(w.log));
+  // Every workout of the day: a loaded program day and a freeform workout
+  // can share a date, and quick log writes into the program day even when
+  // it isn't the last one stored. Without a date, the newest workout.
+  const today = date ? list.filter(w => w.date === date) : list.slice(-1);
+  const sessions = today.map((w) => {
+    const entries = w.log.filter(e => normalizeExerciseName(e) === t.name.toLowerCase() && isComparableEntry(e, w, t.gymKey));
+    return entries.length ? buildSession(entries, w) : null;
+  }).filter(s => s && s.sets.length);
+  if (!sessions.length) return null;
+  const session = sessions.reduce((acc, s) => ({
+    ...s,
+    sets: acc.sets.concat(s.sets),
+    range: s.range || acc.range,
+  }), { sets: [], range: null });
 
   const unit = session.unit || 'kg';
   const type = liftType(t.name);
@@ -475,7 +496,7 @@ if (typeof module !== 'undefined') {
     getProgressiveOverloadSuggestion, suggestNextSession, suggestNextSet,
     isAltSessionEntry, isComparableEntry, entryGymKey, normalizeGymName,
     liftType, weightStep, setRir, classifyEffort,
-    collectSessions, topSetOf, e1rm
+    collectSessions, topSetOf, e1rm, isPlannedSessionWorkout
   };
 }
 if (typeof window !== 'undefined') {
