@@ -64,7 +64,7 @@ struct TodayProvider: TimelineProvider {
             if expiry > now, expiry < midnight { dates.append(expiry) }
         }
         dates.append(midnight)
-        let entries = dates.sorted().map { TodayEntry(date: $0, snapshot: stored.map { s in Self.asOf($0, s) }) }
+        let entries = dates.sorted().map { day in TodayEntry(date: day, snapshot: stored.map { Self.asOf(day, $0) }) }
         completion(Timeline(entries: entries, policy: .after(midnight.addingTimeInterval(60))))
     }
 
