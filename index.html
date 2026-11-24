@@ -9261,6 +9261,8 @@ function skipRestTimer() {
   const display = document.getElementById('restTimerDisplay');
   if (banner)  banner.hidden = true;
   if (display) display.textContent = '';
+  // The Home Screen widget shows the rest countdown in performance mode.
+  if (window.HomeWidget) window.HomeWidget.sync();
 }
 
 function formatRestTime(sec) {

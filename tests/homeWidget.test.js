@@ -55,7 +55,33 @@ describe('buildSnapshot', () => {
       protein: { eaten: 112, target: 190 },
       carbs: { eaten: 128, target: 300 },
       fat: { eaten: 41, target: 80 },
+      performance: null,
     });
+  });
+
+  test('performance mode summary rides along, cleaned up', () => {
+    const s = HW.buildSnapshot({
+      dateKey: '2026-11-20', today: null, tomorrow: null, eaten: null, targets: null,
+      performance: {
+        dayName: 'Push', startedAtMs: 1763650000000.4, doneSets: 7, plannedSets: 18,
+        volumeKg: 4320.6, nextUp: 'Bench Press · Set 4', restEndsAtMs: 1763650090000,
+        restPausedSeconds: null, budgetMin: 45, pace: 'behind', behindMin: 4,
+      },
+    });
+    expect(s.performance).toEqual({
+      dayName: 'Push', startedAtMs: 1763650000000, doneSets: 7, plannedSets: 18,
+      volumeKg: 4321, nextUp: 'Bench Press · Set 4', restEndsAtMs: 1763650090000,
+      restPausedSeconds: null, budgetMin: 45, pace: 'behind', behindMin: 4,
+    });
+  });
+
+  test('performance: unknown pace dropped, behind minutes only when behind', () => {
+    const p = HW.buildPerformance({ doneSets: 2, pace: 'weird', behindMin: 3, restPausedSeconds: 42 });
+    expect(p.pace).toBeNull();
+    expect(p.behindMin).toBeNull();
+    expect(p.restPausedSeconds).toBe(42);
+    expect(p.plannedSets).toBe(0);
+    expect(HW.buildPerformance(null)).toBeNull();
   });
 
   test('nothing planned, nothing logged, no targets', () => {
@@ -91,6 +117,18 @@ describe('readSnapshot', () => {
     delete global.todaySession;
     delete global.getTodayDateString;
     delete global.getAdaptiveMacroTargets;
+    delete global.PerformanceMode;
+  });
+
+  test('carries performance mode\'s summary while it is on', () => {
+    global.currentUser = 'ana';
+    let summary = { dayName: 'Push', doneSets: 3, plannedSets: 12, volumeKg: 1800, nextUp: 'Row · Set 1' };
+    global.PerformanceMode = { getWidgetSummary: () => summary };
+    const on = HW.readSnapshot(store({}), new Date(2026, 10, 11));
+    expect(on.performance.doneSets).toBe(3);
+    expect(on.performance.nextUp).toBe('Row · Set 1');
+    summary = null;
+    expect(HW.readSnapshot(store({}), new Date(2026, 10, 11)).performance).toBeNull();
   });
 
   test('null when nobody is signed in', () => {
