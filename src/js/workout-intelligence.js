@@ -147,6 +147,7 @@
    * this only suggests what to add, and "Use" applies it.
    */
   function renderOverloadHint() {
+    try { renderLastSessionCard(); } catch { /* the card is optional */ }
     const hintEl   = document.getElementById('overloadHint');
     const inputEl  = document.getElementById('exercise');
     if (!hintEl || !inputEl) return;
@@ -191,7 +192,150 @@
       strategy: recommendation.strategy
     };
     hintEl.innerHTML = renderOverloadTip(recommendation, session);
+    // The "Last time" card under the bubble lists every set: drop the
+    // one-line summary here so last session isn't shown twice.
+    const card = document.getElementById('lastSessionCard');
+    if (card && !card.hidden) hintEl.querySelectorAll('.exb-last, .exb-rule').forEach(n => n.remove());
     _setBubbleLive(true);
+  }
+
+  /* ── "Last time" card: every set of the last session, next to today's ── */
+
+  function _sameLift(entry, key) {
+    return String((entry && (entry.exercise || entry.name)) || '').trim().toLowerCase() === key;
+  }
+
+  function _comparable(entry, w, gymKey) {
+    return typeof window.isComparableEntry !== 'function' || window.isComparableEntry(entry, w, gymKey);
+  }
+
+  /** Lifted sets of `key` in workouts `ws` (a planned day: ticked sets only), in order. */
+  function _liftedSets(ws, key, gymKey) {
+    const out = [];
+    ws.forEach(w => {
+      const planned = _isPlanned(w);
+      (Array.isArray(w.log) ? w.log : []).forEach(entry => {
+        if (!_sameLift(entry, key) || !_comparable(entry, w, gymKey)) return;
+        const reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+        const weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+        const types = Array.isArray(entry.setTypeArray) ? entry.setTypeArray : [];
+        const done = Array.isArray(entry.completedArray) ? entry.completedArray : [];
+        const skipped = Array.isArray(entry.skippedArray) ? entry.skippedArray : [];
+        const rir = Array.isArray(entry.rirArray) ? entry.rirArray : [];
+        reps.forEach((r, i) => {
+          if (planned && !done[i]) return;
+          if (skipped[i] || types[i] === 'warmup' || types[i] === 'warm-up') return;
+          const n = Number(r) || 0;
+          if (n <= 0) return;
+          out.push({ weight: Number(weights[i]) || 0, reps: n, type: types[i] || 'standard',
+            rir: rir[i] != null && rir[i] !== '' ? Number(rir[i]) : null, unit: entry.unit || 'kg' });
+        });
+      });
+    });
+    return out;
+  }
+
+  /**
+   * The last day `exerciseName` was trained before today (at the gym being
+   * trained at now), with every set, and today's sets so far.
+   * Returns { date, unit, last: [...], today: [...] } or null.
+   */
+  function getLastSessionComparison(exerciseName, username, todayKey) {
+    const key = String(exerciseName || '').trim().toLowerCase();
+    if (!key || !username) return null;
+    const gymKey = typeof window.getCurrentGymKey === 'function' ? window.getCurrentGymKey() : '';
+    if (gymKey === null) return null;
+    const today = todayKey || _todayKey();
+    const workouts = _loadWorkouts(username).filter(w => w && Array.isArray(w.log) && typeof w.date === 'string');
+    const before = workouts.filter(w => w.date.slice(0, 10) < today);
+    const dates = Array.from(new Set(before.map(w => w.date.slice(0, 10)))).sort().reverse();
+    for (const d of dates) {
+      const last = _liftedSets(before.filter(w => w.date.slice(0, 10) === d), key, gymKey);
+      if (!last.length) continue;
+      const todaySets = _liftedSets(workouts.filter(w => w.date.slice(0, 10) === today), key, gymKey);
+      return { date: d, unit: last[last.length - 1].unit || 'kg', last, today: todaySets };
+    }
+    return null;
+  }
+
+  /** ↑ / = / ↓ of today's set against the same set last time. */
+  function compareSet(a, b) {
+    if (!a || !b) return null;
+    if (a.weight === b.weight) return a.reps > b.reps ? 'up' : a.reps === b.reps ? 'same' : 'down';
+    const ea = _e1rm(a.weight, a.reps), eb = _e1rm(b.weight, b.reps);
+    if (a.weight > b.weight) return a.reps >= b.reps || ea > eb ? 'up' : 'down';
+    return 'down';
+  }
+
+  function _setTag(type) {
+    if (type === 'top-set') return '<span class="lsc-tag">Top</span>';
+    if (type === 'backoff') return '<span class="lsc-tag lsc-tag--bo">BO</span>';
+    if (type === 'dropset') return '<span class="lsc-tag lsc-tag--bo">Drop</span>';
+    return '';
+  }
+
+  function _ensureLastSessionEl() {
+    let el = document.getElementById('lastSessionCard');
+    if (el) return el;
+    const bubble = document.getElementById('exerciseBubble');
+    if (!bubble || !bubble.parentNode) return null;
+    el = document.createElement('div');
+    el.id = 'lastSessionCard';
+    el.className = 'last-session-card';
+    el.hidden = true;
+    el.setAttribute('aria-live', 'polite');
+    bubble.insertAdjacentElement('afterend', el);
+    return el;
+  }
+
+  function renderLastSessionCard() {
+    const el = _ensureLastSessionEl();
+    const inputEl = document.getElementById('exercise');
+    if (!el || !inputEl) return;
+    const name = (inputEl.value || '').trim();
+    const username = _user();
+    const cmp = name.length >= 3 && username ? getLastSessionComparison(name, username) : null;
+    if (!cmp) { el.hidden = true; el.innerHTML = ''; return; }
+
+    const unit = cmp.unit;
+    const rows = Math.max(cmp.last.length, cmp.today.length);
+    const next = cmp.today.length; // index of the set to do now
+    let up = 0;
+    const body = [];
+    for (let i = 0; i < rows; i++) {
+      const l = cmp.last[i], t = cmp.today[i];
+      const verdict = compareSet(t, l);
+      if (verdict === 'up') up++;
+      const mark = verdict === 'up' ? '<span class="lsc-mark lsc-up" aria-label="beat">↑</span>'
+        : verdict === 'same' ? '<span class="lsc-mark lsc-same" aria-label="matched">=</span>'
+        : verdict === 'down' ? '<span class="lsc-mark lsc-down" aria-label="below">↓</span>' : '';
+      const lastTxt = l ? `${_fmtNum(l.weight)} × ${_esc(l.reps)}${l.rir != null && Number.isFinite(l.rir) ? ` <span class="lsc-rir">${_esc(l.rir)} left</span>` : ''}` : '<span class="lsc-none">—</span>';
+      const todayTxt = t ? `${_fmtNum(t.weight)} × ${_esc(t.reps)} ${mark}`
+        : (i === next ? '<span class="lsc-next-lbl">Next</span>' : '');
+      body.push(`<div class="lsc-row${i === next && l ? ' is-next' : ''}${t ? ' is-done' : ''}">
+        <span class="lsc-n">${i + 1}</span>
+        <span class="lsc-last">${lastTxt}${l ? _setTag(l.type) : ''}</span>
+        <span class="lsc-today">${todayTxt}</span>
+      </div>`);
+    }
+    const best = cmp.last.reduce((b, s) => (_e1rm(s.weight, s.reps) > _e1rm(b.weight, b.reps) ? s : b), cmp.last[0]);
+    const status = cmp.today.length
+      ? `${up} of ${Math.min(cmp.today.length, cmp.last.length)} set${Math.min(cmp.today.length, cmp.last.length) === 1 ? '' : 's'} beaten`
+      : `${cmp.last.length} set${cmp.last.length === 1 ? '' : 's'} · best ${_fmtNum(best.weight)} × ${_esc(best.reps)}`;
+    const nextLast = cmp.last[next];
+    const goal = nextLast
+      ? `<div class="lsc-goal">Set ${next + 1}: beat <b>${_fmtNum(nextLast.weight)} ${_esc(unit)} × ${_esc(nextLast.reps)}</b> — ${_esc(nextLast.reps + 1)} reps, or more weight</div>`
+      : (cmp.today.length >= cmp.last.length ? `<div class="lsc-goal lsc-goal--done">All ${cmp.last.length} sets from last time done${cmp.today.length > cmp.last.length ? ` · +${cmp.today.length - cmp.last.length} extra` : ''}</div>` : '');
+
+    el.innerHTML = `
+      <div class="lsc-head">
+        <span class="lsc-kicker">Last time · ${_esc(_relativeDate(cmp.date))}</span>
+        <span class="lsc-status">${status}</span>
+      </div>
+      <div class="lsc-cols"><span></span><span>Last time (${_esc(unit)})</span><span>Today</span></div>
+      ${body.join('')}
+      ${goal}`;
+    el.hidden = false;
   }
 
   function _plural(n, word) { return `${_fmtNum(n)} ${word}${Number(n) === 1 ? '' : 's'}`; }
@@ -582,6 +726,11 @@
 
   window.getLastExerciseSession  = getLastExerciseSession;
   window.renderOverloadHint      = renderOverloadHint;
+  window.renderLastSessionCard   = renderLastSessionCard;
+  window.getLastSessionComparison = getLastSessionComparison;
+  // A set ticked in a loaded session (set-complete.js) doesn't go through
+  // quick log: refresh the card's Today column from the event too.
+  document.addEventListener('tl:set-logged', () => setTimeout(() => { try { renderLastSessionCard(); } catch { /* optional */ } }, 0));
   window.applyOverloadSuggestion = applyOverloadSuggestion;
   window.dismissOverloadHint     = dismissOverloadHint;
   window.searchWorkoutHistory    = searchWorkoutHistory;
