@@ -178,12 +178,16 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
-  /** Today's stored log entries (one per exercise, or one per set in old data). */
+  /** Today's stored log entries (one per exercise, or one per set in old data),
+   * across every workout of the day. A loaded program/template day lays its
+   * sets out ahead, so only its ticked sets count as done. */
   function _todaysLog() {
     const u = global.coachLoggingClient || global.currentUser || global.localStorage.getItem('fitnessAppUser');
     const workouts = (u && _read('workouts_' + u)) || [];
-    const today = Array.isArray(workouts) ? workouts.find((w) => w.date === _todayKey()) : null;
-    return (today && Array.isArray(today.log)) ? today.log : [];
+    const day = Array.isArray(workouts) ? workouts.filter((w) => w && w.date === _todayKey()) : [];
+    const sc = global.SetComplete;
+    const view = sc && typeof sc.completedWorkouts === 'function' ? sc.completedWorkouts(day) : day;
+    return view.reduce((all, w) => all.concat(Array.isArray(w.log) ? w.log : []), []);
   }
 
   function _todaysLoggedExercises() {

@@ -7100,7 +7100,17 @@ function triggerFlowCapture(entry) {
   const promptKey = `${entry.date}|${String(entry.exercise).trim().toLowerCase()}`;
   if (_flowCapturePrompted.has(promptKey)) return;
   _flowCapturePrompted.add(promptKey);
-  showFlowCaptureModal(entry.exercise, entry.sets);
+  // The first set of a lift is usually the one that beats last time: let
+  // the PR / overload-win card (shown ~60 ms after the set is saved) play
+  // out first instead of opening the check-in on top of it.
+  const busy = () => document.getElementById('_prModal') || document.getElementById('_overloadWin')
+    || document.querySelector('.milestone-celebrate');
+  let waited = 0;
+  function showWhenClear() {
+    if (busy() && waited < 15000) { waited += 400; setTimeout(showWhenClear, 400); return; }
+    showFlowCaptureModal(entry.exercise, entry.sets);
+  }
+  setTimeout(showWhenClear, 200);
 }
 window.triggerFlowCapture = triggerFlowCapture;
 
