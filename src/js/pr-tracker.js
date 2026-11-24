@@ -51,24 +51,41 @@
   /* ── Scan most recent workout for new PRs ─────────────────── */
 
   /**
-   * Called after a workout is saved.
-   * Returns an array of new PR objects (empty if none).
+   * The sets to scan: the workouts dated `date` (the day a set was just
+   * logged), else the most recent workout. A session loaded from a program
+   * or template lays its sets out ahead, so only its ticked sets count —
+   * otherwise a planned 80 kg that was never lifted read as a new PR.
    */
-  function checkLatestWorkoutForPRs(username) {
+  function _setsToScan(workouts, date) {
+    const picked = date ? workouts.filter(w => w && w.date === date) : [];
+    const list = picked.length ? picked : [workouts[workouts.length - 1]];
+    const sc = window.SetComplete;
+    const out = [];
+    list.forEach(w => {
+      if (!w || !Array.isArray(w.log)) return;
+      const view = sc && typeof sc.completedWorkouts === 'function' ? sc.completedWorkouts([w])[0] : w;
+      (view && Array.isArray(view.log) ? view.log : []).forEach(entry => out.push({ entry, workout: w }));
+    });
+    return out;
+  }
+
+  /**
+   * Called after a set is logged (tl:set-logged). Returns an array of new
+   * PR objects (empty if none).
+   */
+  function checkLatestWorkoutForPRs(username, date) {
     if (!username) return [];
     const workouts = _loadWorkouts(username);
     if (!workouts.length) return [];
 
-    // Most recent workout
-    const latest = workouts[workouts.length - 1];
-    const log = Array.isArray(latest.log) ? latest.log : [];
-    if (!log.length) return [];
+    const scan = _setsToScan(workouts, date);
+    if (!scan.length) return [];
 
     const prs = _loadPRs(username);
     const newPRs = [];
     const today = (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10));
 
-    for (const entry of log) {
+    for (const { entry, workout: latest } of scan) {
       const name = (entry.exercise || entry.name || '').trim();
       if (!name) continue;
       // Alt Machine / Alt Gym sets don't compare with the usual setup, so
@@ -276,22 +293,19 @@
     host.appendChild(wrap);
   }
 
-  /* ── Hook into addLogEntry ────────────────────────────────── */
+  /* ── Check on every logged set ────────────────────────────── */
 
-  function _hookAddLogEntry() {
-    const orig = window.addLogEntry;
-    if (typeof orig !== 'function' || orig.__prHooked) return;
-
-    window.addLogEntry = function () {
-      orig.apply(this, arguments);
-      // Give localStorage a moment to write, then scan
-      setTimeout(() => {
-        const username = _user();
-        if (username) checkLatestWorkoutForPRs(username);
-      }, 600);
-    };
-    window.addLogEntry.__prHooked = true;
+  // addLogEntry (quick log / manual rows) and ticking a planned set
+  // (set-complete.js) both send tl:set-logged once the set is saved. The
+  // check runs right away so the PR card is already up when the overload
+  // win card looks for it (overload-win.js), and the two merge into one.
+  function _onSetLogged(e) {
+    if (window.coachLoggingClient) return; // a coach logging for a client
+    const username = _user();
+    if (!username) return;
+    try { checkLatestWorkoutForPRs(username, e && e.detail && e.detail.date); } catch { /* never block logging */ }
   }
+  document.addEventListener('tl:set-logged', _onSetLogged);
 
   /* ── Helpers ─────────────────────────────────────────────── */
 
@@ -308,10 +322,5 @@
   window.showPRCelebration        = showPRCelebration;
 
   /* ── Boot ─────────────────────────────────────────────────── */
-
-  document.addEventListener('DOMContentLoaded', () => {
-    // Hook as soon as addLogEntry is defined (it may load after this script)
-    setTimeout(_hookAddLogEntry, 2500);
-  });
 
 })();

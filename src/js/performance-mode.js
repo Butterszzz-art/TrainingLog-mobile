@@ -75,6 +75,20 @@
     return { ...state, endTimeMs: now + remaining * 1000, totalSeconds };
   }
 
+  /**
+   * A rest already running switched to a new length (a rest chip tapped mid
+   * rest): the time already rested counts, so 90 s picked 30 s in leaves
+   * 60 s. Paused stays paused. Never under 1 s.
+   */
+  function retimeRestState(state, totalSeconds, now) {
+    const secs = Math.max(1, Math.round(Number(totalSeconds) || DEFAULT_REST_SECONDS));
+    if (!state) return createRestState(secs, now);
+    const elapsed = Math.max(0, (state.totalSeconds || 0) - getRestRemaining(state, now));
+    const remaining = Math.max(1, secs - elapsed);
+    if (typeof state.pausedRemaining === 'number') return { ...state, pausedRemaining: remaining, totalSeconds: secs };
+    return { ...state, endTimeMs: now + remaining * 1000, totalSeconds: secs };
+  }
+
   function isRestUrgent(remaining) {
     return remaining > 0 && remaining <= URGENT_SECONDS;
   }
@@ -147,7 +161,7 @@
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     const hint = document.getElementById('pmRestHint');
-    if (hint) hint.textContent = restSeconds === AUTO_REST ? 'fits each exercise' : 'starts after each logged set';
+    if (hint) hint.textContent = restSeconds === AUTO_REST ? 'fits each exercise' : 'tap to start · then after each set';
   }
 
   function _renderDayName() {
@@ -164,12 +178,16 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
-  /** Today's stored log entries (one per exercise, or one per set in old data). */
+  /** Today's stored log entries (one per exercise, or one per set in old data),
+   * across every workout of the day. A loaded program/template day lays its
+   * sets out ahead, so only its ticked sets count as done. */
   function _todaysLog() {
     const u = global.coachLoggingClient || global.currentUser || global.localStorage.getItem('fitnessAppUser');
     const workouts = (u && _read('workouts_' + u)) || [];
-    const today = Array.isArray(workouts) ? workouts.find((w) => w.date === _todayKey()) : null;
-    return (today && Array.isArray(today.log)) ? today.log : [];
+    const day = Array.isArray(workouts) ? workouts.filter((w) => w && w.date === _todayKey()) : [];
+    const sc = global.SetComplete;
+    const view = sc && typeof sc.completedWorkouts === 'function' ? sc.completedWorkouts(day) : day;
+    return view.reduce((all, w) => all.concat(Array.isArray(w.log) ? w.log : []), []);
   }
 
   function _todaysLoggedExercises() {
@@ -432,9 +450,24 @@
     _releaseWakeLock();
   }
 
+  /**
+   * A rest chip: the rest length after each logged set from now on. A fixed
+   * length also takes effect now: a rest already running switches to it,
+   * otherwise a rest of that length starts (resting by hand, e.g. after a
+   * set that wasn't logged). Auto only changes the setting.
+   */
   function setPerformanceRestSeconds(seconds) {
-    _saveSettings({ restSeconds: normaliseRestSeconds(seconds) });
+    const restSeconds = normaliseRestSeconds(seconds);
+    _saveSettings({ restSeconds });
     _renderRestPresets();
+    if (restSeconds === AUTO_REST || !isActive()) return;
+    const now = Date.now();
+    const state = _read(REST_TIMER_KEY);
+    const running = state && getRestRemaining(state, now) > 0;
+    hideRestOverCard();
+    _setNextUpText();
+    _write(REST_TIMER_KEY, running ? retimeRestState(state, restSeconds, now) : createRestState(restSeconds, now));
+    _rerunRestTimer();
   }
 
   function toggleRestTimerPause() {
@@ -536,7 +569,7 @@
 
   const api = {
     REST_PRESETS, DEFAULT_REST_SECONDS, URGENT_SECONDS, AUTO_REST,
-    getRestRemaining, createRestState, togglePausedState, adjustRestState, isRestUrgent,
+    getRestRemaining, createRestState, retimeRestState, togglePausedState, adjustRestState, isRestUrgent,
     formatNextUp, normaliseRestSeconds, shouldRestoreOnLoad, getSettings,
     startPerformanceMode, exitPerformanceMode, restorePerformanceModeIfNeeded, setPerformanceRestSeconds,
     toggleRestTimerPause, adjustRestTimer, hideRestOverCard,

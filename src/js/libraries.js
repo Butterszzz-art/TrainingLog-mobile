@@ -57,11 +57,23 @@
 
     try {
       const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
-      workouts.forEach(w => (w.log || []).forEach(entry => {
-        record(entry.exercise, w.date,
-          Array.isArray(entry.repsArray) ? entry.repsArray : [],
-          Array.isArray(entry.weightsArray) ? entry.weightsArray : []);
-      }));
+      workouts.forEach(w => {
+        // A loaded program/template day lays its sets out ahead: only the
+        // ticked ones were lifted.
+        const meta = w && w.metadata;
+        const planned = !!(meta && (meta.planned === true || meta.source === 'program'));
+        (w.log || []).forEach(entry => {
+          let reps = Array.isArray(entry.repsArray) ? entry.repsArray : [];
+          let weights = Array.isArray(entry.weightsArray) ? entry.weightsArray : [];
+          if (planned) {
+            const done = Array.isArray(entry.completedArray) ? entry.completedArray : [];
+            weights = weights.filter((_, i) => done[i]);
+            reps = reps.filter((_, i) => done[i]);
+            if (!reps.length) return;
+          }
+          record(entry.exercise, w.date, reps, weights);
+        });
+      });
     } catch { /* ignore malformed storage */ }
 
     try {

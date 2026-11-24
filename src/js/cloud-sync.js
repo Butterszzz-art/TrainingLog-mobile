@@ -90,6 +90,11 @@
     { name: 'mealSetup',        key: u => `mealSetup_${u}`,        mode: 'value' },
     // Fasting timer goal and "started now" (meal-timing.js).
     { name: 'fastingPlan',      key: u => `fastingPlan_${u}`,      mode: 'value' },
+    // Exercises the lifter created (customExercises.js) and the names
+    // they've logged (index.html saveUserExercise). Without these a new
+    // device kept the logged sets but forgot the exercise itself.
+    { name: 'customExercises',  key: u => `customExercises_${u}`,  mode: 'list', idField: 'name' },
+    { name: 'exercises',        key: u => `exercises_${u}`,        mode: 'list' },
     { name: 'programs',         key: u => `programs_${u}`,         mode: 'list', idField: 'id' },
     { name: 'activeProgram',    key: u => `activeProgram_${u}`,    mode: 'value' },
     { name: 'managedTemplates', key: u => `managedTemplates_${u}`, mode: 'list', idField: 'id' },

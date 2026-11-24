@@ -52,7 +52,9 @@
     if (secInput) secInput.value = seconds;
 
     // Highlight active preset button
-    document.querySelectorAll('.rest-preset-btn').forEach(btn => {
+    // Only this view's presets: performance mode's rest and time-budget
+    // chips share the class and keep their own highlight.
+    document.querySelectorAll('#logSub_rest .rest-preset-btn').forEach(btn => {
       btn.classList.remove('active-preset');
     });
     const clicked = document.activeElement;

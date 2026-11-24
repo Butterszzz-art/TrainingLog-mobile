@@ -14,7 +14,10 @@ describe('addLogEntry', () => {
 
   let context;
   let dom;
+  let timers = [];
+  const flushTimers = () => { while (timers.length) timers.shift()(); };
   beforeEach(() => {
+    timers = [];
     dom = new JSDOM(`<!DOCTYPE html>
       <input id="exercise">
       <input id="sets">
@@ -64,7 +67,10 @@ describe('addLogEntry', () => {
       createDefaultAdvancedSet: () => ({}),
       // addLogEntry() announces each saved entry with a tl:set-logged
       // CustomEvent (performance mode auto-starts the rest timer from it).
-      CustomEvent: dom.window.CustomEvent
+      CustomEvent: dom.window.CustomEvent,
+      // The post-log check-in waits for the PR / overload-win card; queued
+      // timers run when the test calls flushTimers().
+      setTimeout: (fn) => { timers.push(fn); return timers.length; },
     };
     context.window = context; // so `window.coachLoggingClient` resolves (to undefined, falling through to getActiveUsername())
     vm.createContext(context);
@@ -171,10 +177,26 @@ describe('addLogEntry', () => {
     vm.runInContext('showFlowCaptureModal = (exercise, sets) => __shown.push(exercise);', Object.assign(context, { __shown: shown }));
     const log = (exercise) => context.triggerFlowCapture({ exercise, sets: 1, date: '2024-01-01' });
     log('Bench'); log('Bench'); log('bench '); log('Squat'); log('Bench');
+    flushTimers();
     expect(shown).toEqual(['Bench', 'Squat']);
     // A new day asks again.
     context.triggerFlowCapture({ exercise: 'Bench', sets: 1, date: '2024-01-02' });
+    flushTimers();
     expect(shown).toEqual(['Bench', 'Squat', 'Bench']);
+  });
+
+  test('post-log check-in waits until the overload-win card has closed', () => {
+    const shown = [];
+    vm.runInContext('showFlowCaptureModal = (exercise) => __shown.push(exercise);', Object.assign(context, { __shown: shown }));
+    const card = context.document.createElement('div');
+    card.id = '_overloadWin';
+    context.document.body.appendChild(card);
+    context.triggerFlowCapture({ exercise: 'Row', sets: 1, date: '2024-01-03' });
+    timers.shift()(); // first check: card still up
+    expect(shown).toEqual([]);
+    card.remove();
+    flushTimers();
+    expect(shown).toEqual(['Row']);
   });
 
   test('entry is tagged by session context before the next-session suggestion runs', () => {

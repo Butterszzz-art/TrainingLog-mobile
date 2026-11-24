@@ -2366,6 +2366,94 @@
   .ex-bubble.is-live, .ex-bubble.is-live .ex-bubble-in { animation: none; }
 }
 
+/* ── "Last time" card (workout-intelligence.js renderLastSessionCard) ──
+   Every set of the last session of the lift being logged, next to today's,
+   so it's clear what to beat on each set. */
+.last-session-card[hidden] { display: none; }
+.last-session-card {
+  margin: 0 0 10px;
+  padding: 10px 12px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-variant-numeric: tabular-nums;
+}
+.lsc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.lsc-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary-text, #42a679);
+  white-space: nowrap;
+}
+.lsc-status { font-size: 11px; color: var(--text-muted); text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lsc-cols, .lsc-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.lsc-cols {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 6px 4px;
+}
+.lsc-row {
+  padding: 6px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #e8ecea);
+}
+.lsc-row + .lsc-row { margin-top: 2px; }
+.lsc-row.is-done .lsc-last { color: var(--text-muted); }
+.lsc-row.is-next {
+  background: rgba(66, 166, 121, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(66, 166, 121, 0.45);
+}
+.lsc-n {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+.lsc-row.is-next .lsc-n { color: #0b100e; background: var(--primary-text, #42a679); }
+.lsc-last, .lsc-today { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.lsc-rir { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.lsc-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--brass-light, #e0bd82);
+  border: 1px solid rgba(224, 189, 130, 0.45);
+}
+.lsc-tag--bo { color: #a9b2ad; border-color: rgba(169, 178, 173, 0.4); }
+.lsc-none { color: var(--text-muted); font-weight: 500; }
+.lsc-next-lbl { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--primary-text, #42a679); }
+.lsc-mark { font-weight: 900; }
+.lsc-up { color: #5fd39a; }
+.lsc-same { color: #c9d1cc; }
+.lsc-down { color: #e58b7b; }
+.lsc-goal {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 12.5px;
+  color: #c9d1cc;
+}
+.lsc-goal b { color: var(--text-primary, #fff); }
+.lsc-goal--done { color: var(--primary-text, #42a679); font-weight: 700; }
+
 /* ── Warm-up sets (warmup-sets.js) ─────────────────────────── */
 .warmup-hint[hidden] { display: none; }
 .wu-card {

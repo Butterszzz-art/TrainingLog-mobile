@@ -265,6 +265,21 @@
     }
   }
 
+  // Custom exercises synced from another device (cloud-sync.js): make them
+  // selectable and counted toward their muscle group right away.
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('cloudsync:applied', (e) => {
+      const stores = (e && e.detail && e.detail.stores) || [];
+      if (Array.isArray(stores) && stores.length && !stores.some(st => st === 'customExercises' || st === 'exercises')) return;
+      const user = getActiveUser();
+      if (!user) return;
+      refreshRuntimeMuscleMap(user);
+      if (typeof global.loadUserExercises === 'function') global.loadUserExercises();
+      else if (typeof global.updateExerciseSuggestions === 'function') global.updateExerciseSuggestions();
+      if (document.getElementById('customExerciseList')) renderCustomExerciseList(user);
+    });
+  }
+
   if (typeof module !== 'undefined') {
     module.exports = {
       CUSTOM_MUSCLE_GROUPS,

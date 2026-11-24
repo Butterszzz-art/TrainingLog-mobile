@@ -948,15 +948,25 @@
 
   /** Sets already logged today for this exercise (its whole block, matched
    * by id or case-insensitive name) — from the store renderSessionSoFar() reads. */
+  /**
+   * Today's lifted sets as one workout: every workout of the day, with a
+   * loaded program/template day narrowed to its ticked sets (its unticked
+   * sets are still to do). Null when nothing is logged today.
+   */
+  function _todaysLifted(workouts) {
+    const day = (Array.isArray(workouts) ? workouts : []).filter(w => w && w.date === _localDateKey());
+    if (!day.length) return null;
+    const sc = global.SetComplete;
+    const view = sc && typeof sc.completedWorkouts === 'function' ? sc.completedWorkouts(day) : day;
+    return { date: _localDateKey(), log: view.reduce((all, w) => all.concat(Array.isArray(w.log) ? w.log : []), []) };
+  }
+
   function _todaysSetCount(name) {
     const u = _user();
     if (!u || typeof localStorage === 'undefined') return 0;
-    const todayStr = _localDateKey();
     try {
       const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
-      const today = workouts.find(w => w.date === todayStr);
-      if (!today) return 0;
-      const block = _todaysBlock(today, name);
+      const block = _todaysBlock(_todaysLifted(workouts), name);
       return block ? block.sets.length : 0;
     } catch { return 0; }
   }
@@ -980,7 +990,7 @@
     if (!u || typeof localStorage === 'undefined') return null;
     try {
       const workouts = JSON.parse(localStorage.getItem('workouts_' + u)) || [];
-      const block = _todaysBlock(workouts.find(w => w.date === _localDateKey()), name);
+      const block = _todaysBlock(_todaysLifted(workouts), name);
       const last = block && block.sets[block.sets.length - 1];
       return last && last.reps != null ? { weight: last.weight, reps: last.reps } : null;
     } catch { return null; }
