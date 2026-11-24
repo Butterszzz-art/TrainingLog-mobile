@@ -4,7 +4,9 @@ import WidgetKit
 // Home Screen "Today" widget (medium): calories left in a ring, the program
 // day, and protein / carbs / fat left. The app writes the data
 // (src/js/home-widget.js → WorkoutActivityPlugin.updateWidget → App Group);
-// this only draws it. Design: "B · Macro-first banner".
+// this only draws it. Design: "B · Macro-first banner". While performance
+// mode is on in the app it shows that mode's summary instead: workout clock
+// in the ring, sets done of planned, volume, next up and the rest timer.
 
 private let surface = Color(red: 0x0e / 255, green: 0x14 / 255, blue: 0x11 / 255)
 private let track = Color(red: 0x22 / 255, green: 0x2c / 255, blue: 0x26 / 255)
@@ -32,7 +34,8 @@ struct TodayProvider: TimelineProvider {
         kcal: .init(eaten: 1230, target: 2650),
         protein: .init(eaten: 112, target: 190),
         carbs: .init(eaten: 128, target: 300),
-        fat: .init(eaten: 41, target: 80))
+        fat: .init(eaten: 41, target: 80),
+        performance: nil)
 
     func placeholder(in context: Context) -> TodayEntry {
         TodayEntry(date: Date(), snapshot: Self.sample)
@@ -51,19 +54,34 @@ struct TodayProvider: TimelineProvider {
         let now = Date()
         let midnight = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: now) ?? now)
         let stored = TodayWidgetStore.load()
-        let entries = [
-            TodayEntry(date: now, snapshot: stored.map { Self.asOf(now, $0) }),
-            TodayEntry(date: midnight, snapshot: stored.map { Self.asOf(midnight, $0) })
-        ]
+        var dates = [now]
+        // A running rest: redraw when it ends so the countdown turns to "Go".
+        if let end = stored?.performance?.restEndsAt, end > now, end < midnight { dates.append(end) }
+        // An abandoned performance session (app killed mid-workout) stops
+        // showing once it's implausibly long.
+        if let start = stored?.performance?.startedAt {
+            let expiry = start.addingTimeInterval(Self.performanceMaxAge)
+            if expiry > now, expiry < midnight { dates.append(expiry) }
+        }
+        dates.append(midnight)
+        let entries = dates.sorted().map { TodayEntry(date: $0, snapshot: stored.map { s in Self.asOf($0, s) }) }
         completion(Timeline(entries: entries, policy: .after(midnight.addingTimeInterval(60))))
     }
+
+    static let performanceMaxAge: TimeInterval = 4 * 60 * 60
 
     /// The snapshot as it reads on `day`: unchanged on its own day, rolled
     /// over the day after, and a prompt to open the app once it's older.
     static func asOf(_ day: Date, _ snap: TodayWidgetSnapshot) -> TodayWidgetSnapshot {
         let calendar = Calendar.current
         let today = dateKey(day)
-        if snap.date == today { return snap }
+        if snap.date == today {
+            var current = snap
+            if let start = snap.performance?.startedAt, day.timeIntervalSince(start) >= performanceMaxAge {
+                current.performance = nil
+            }
+            return current
+        }
         let yesterday = calendar.date(byAdding: .day, value: -1, to: day).map(dateKey)
         var rolled = snap.rolledOver()
         if snap.date != yesterday {
@@ -174,12 +192,105 @@ private struct MacroColumn: View {
     }
 }
 
+private let boltColor = Color(red: 0xf0 / 255, green: 0xb8 / 255, blue: 0x4b / 255)
+private let behindColor = Color(red: 0xe8 / 255, green: 0x8b / 255, blue: 0x7b / 255)
+
+/// Performance mode's ring: sets done of planned around the workout clock.
+private struct WorkoutRing: View {
+    let perf: TodayWidgetSnapshot.Performance
+
+    /// iOS ticks a .timer Text by itself, so the clock runs without updates.
+    private var clock: Text {
+        if let start = perf.startedAt { return Text(start, style: .timer) }
+        return Text("—")
+    }
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(track, lineWidth: 10)
+            Circle()
+                .trim(from: 0, to: perf.setsFraction)
+                .stroke(ringGreen, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 2) {
+                clock
+                .font(.system(size: 22, weight: .heavy))
+                .fontWidth(.condensed)
+                .monospacedDigit()
+                .multilineTextAlignment(.center)
+                .foregroundStyle(textPrimary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                Text("WORKOUT")
+                    .font(.system(size: 10, weight: .bold))
+                    .fontWidth(.condensed)
+                    .tracking(1)
+                    .foregroundStyle(textMuted)
+            }
+            .padding(.horizontal, 14)
+        }
+        .frame(width: 112, height: 112)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// One stat under the performance title, styled like a MacroColumn.
+private struct StatColumn<Value: View>: View {
+    let label: String
+    let color: Color
+    let value: Value
+    let unit: String
+    let fraction: Double?
+
+    init(_ label: String, color: Color, unit: String = "", fraction: Double? = nil, @ViewBuilder value: () -> Value) {
+        self.label = label
+        self.color = color
+        self.unit = unit
+        self.fraction = fraction
+        self.value = value()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .fontWidth(.condensed)
+                .tracking(0.8)
+                .foregroundStyle(color)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                value
+                    .font(.system(size: 15, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(textPrimary)
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(textSoft)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(track)
+                    Capsule().fill(color).frame(width: geo.size.width * (fraction ?? 0))
+                }
+            }
+            .frame(height: 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct TodayWidgetView: View {
     let entry: TodayEntry
 
     var body: some View {
         Group {
-            if let snap = entry.snapshot {
+            if let snap = entry.snapshot, let perf = snap.performance {
+                performance(perf, snap)
+            } else if let snap = entry.snapshot {
                 content(snap)
             } else {
                 empty
@@ -221,6 +332,82 @@ struct TodayWidgetView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func performance(_ perf: TodayWidgetSnapshot.Performance, _ snap: TodayWidgetSnapshot) -> some View {
+        let now = entry.date
+        let resting = perf.restEndsAt.map { $0 > now } ?? false
+        let volume = perf.volumeKg >= 10_000
+            ? String(format: "%.1f", Double(perf.volumeKg) / 1000)
+            : perf.volumeKg.formatted()
+        return HStack(spacing: 16) {
+            WorkoutRing(perf: perf)
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(boltColor)
+                        Text(perf.dayName.map { "Performance · \($0)" }?.uppercased() ?? "PERFORMANCE MODE")
+                            .font(.system(size: 12, weight: .bold))
+                            .fontWidth(.condensed)
+                            .tracking(1)
+                            .foregroundStyle(textMuted)
+                            .lineLimit(1)
+                    }
+                    Text((perf.nextUp.map { "Next · \($0)" } ?? snap.title).uppercased())
+                        .font(.system(size: 21, weight: .heavy))
+                        .fontWidth(.condensed)
+                        .foregroundStyle(textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
+                HStack(spacing: 8) {
+                    StatColumn("Sets", color: proteinColor,
+                               unit: perf.plannedSets > 0 ? "/ \(perf.plannedSets)" : "done",
+                               fraction: perf.plannedSets > 0 ? perf.setsFraction : nil) {
+                        Text("\(perf.doneSets)")
+                    }
+                    StatColumn("Volume", color: carbsColor, unit: perf.volumeKg >= 10_000 ? "t" : "kg") {
+                        Text(volume)
+                    }
+                    restOrPace(perf, now: now, resting: resting)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Rest countdown while resting (or paused); otherwise the pace against
+    /// the time budget, or "Go" when there's no budget.
+    @ViewBuilder
+    private func restOrPace(_ perf: TodayWidgetSnapshot.Performance, now: Date, resting: Bool) -> some View {
+        if resting, let end = perf.restEndsAt {
+            StatColumn("Rest", color: fatColor) {
+                Text(timerInterval: now...end, countsDown: true)
+            }
+        } else if let paused = perf.restPausedSeconds, paused > 0 {
+            StatColumn("Rest", color: fatColor, unit: "paused") {
+                Text(String(format: "%d:%02d", paused / 60, paused % 60))
+            }
+        } else if let budget = perf.budgetMin, let pace = perf.pace {
+            let (text, unit): (String, String) = {
+                switch pace {
+                case "behind": return ("\(perf.behindMin ?? 0)", "min behind")
+                case "ahead": return ("Ahead", "")
+                case "over": return ("Over", "\(budget) min")
+                case "done": return ("Done", "")
+                default: return ("On", "pace")
+                }
+            }()
+            StatColumn("Pace", color: pace == "behind" || pace == "over" ? behindColor : ringGreen, unit: unit) {
+                Text(text)
+            }
+        } else {
+            StatColumn("Rest", color: fatColor, unit: "") {
+                Text("Go")
+            }
         }
     }
 

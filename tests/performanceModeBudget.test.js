@@ -76,6 +76,40 @@ describe('performance mode time budget', () => {
     expect(remaining).not.toContain(first);
   });
 
+  test('widget summary mirrors the in-app view while on, null when off', () => {
+    const today = (() => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; })();
+    win.localStorage.setItem('workouts_demo', JSON.stringify([{ date: today, log: [
+      { exercise: 'Hack Squat', sets: 2, repsArray: [10, 8], weightsArray: [100, 100] },
+    ] }]));
+    expect(win.PerformanceMode.getWidgetSummary()).toBeNull();
+    const sync = jest.fn();
+    win.HomeWidget = { sync };
+
+    win.startPerformanceMode({ restore: true });
+    win.setPerformanceBudget(30);
+    expect(sync).toHaveBeenCalled();
+    const s = win.PerformanceMode.getWidgetSummary();
+    expect(s.dayName).toBe('Full body A');
+    expect(s.doneSets).toBe(2);
+    expect(s.plannedSets).toBe(19);
+    expect(s.volumeKg).toBe(1800);
+    expect(s.budgetMin).toBe(30);
+    expect(s.pace).toBe('behind');
+    expect(s.behindMin).toBeGreaterThan(0);
+    expect(typeof s.startedAtMs).toBe('number');
+    expect(s.restEndsAtMs).toBeNull();
+
+    win.setPerformanceRestSeconds(90);
+    expect(win.PerformanceMode.getWidgetSummary().restEndsAtMs).toBeGreaterThan(Date.now());
+    win.toggleRestTimerPause();
+    const paused = win.PerformanceMode.getWidgetSummary();
+    expect(paused.restEndsAtMs).toBeNull();
+    expect(paused.restPausedSeconds).toBeGreaterThan(80);
+
+    win.exitPerformanceMode();
+    expect(win.PerformanceMode.getWidgetSummary()).toBeNull();
+  });
+
   test('No limit hides the bar and offers no fixes', () => {
     win.startPerformanceMode({ restore: true });
     win.setPerformanceBudget(null);

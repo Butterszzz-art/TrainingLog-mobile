@@ -2,7 +2,9 @@
    HOME SCREEN WIDGET (iOS)
    Feeds the "Today" widget (native/ios/PocketCoachLiveActivity/
    TodayWidget.swift): the active program and week, today's session,
-   and calories / protein / carbs / fat left.
+   and calories / protein / carbs / fat left. While performance mode
+   is on it carries that mode's summary instead (sets, volume, next
+   up, rest timer, pace), and the widget switches layout to match.
 
    A widget can't run the app's code, so this writes a small snapshot
    through the WorkoutActivity plugin (updateWidget) into the App
@@ -61,10 +63,13 @@
    *   tomorrow: { eyebrow, title, isTraining } or null (unknown without a program)
    *   eaten:    { protein, carbs, fats, calories } logged today, or null
    *   targets:  { calories, protein, carbs, fat } or null
+   *   performance: PerformanceMode.getWidgetSummary() while performance
+   *             mode is on, else null — the widget then shows the workout
+   *             (sets, volume, next up, rest) instead of macros.
    * Never includes the current time, so callers can compare results to skip
    * redundant native calls.
    */
-  function buildSnapshot({ dateKey, today, tomorrow, eaten, targets }) {
+  function buildSnapshot({ dateKey, today, tomorrow, eaten, targets, performance }) {
     const e = eaten || {};
     const t = targets || {};
     const macro = (have, target) => ({ eaten: _num(have), target: _num(target) });
@@ -81,6 +86,31 @@
       protein: macro(e.protein, t.protein),
       carbs: macro(e.carbs, t.carbs),
       fat: macro(e.fats ?? e.fat, t.fat ?? t.fats),
+      performance: buildPerformance(performance),
+    };
+  }
+
+  function _ms(v) {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+  }
+
+  /** The performance-mode part of the snapshot, or null when it's off. */
+  function buildPerformance(p) {
+    if (!p) return null;
+    const pace = ['ahead', 'on', 'behind', 'over', 'done'].includes(p.pace) ? p.pace : null;
+    return {
+      dayName: p.dayName ? String(p.dayName) : null,
+      startedAtMs: _ms(p.startedAtMs),
+      doneSets: _num(p.doneSets),
+      plannedSets: _num(p.plannedSets),
+      volumeKg: _num(p.volumeKg),
+      nextUp: p.nextUp ? String(p.nextUp) : null,
+      restEndsAtMs: _ms(p.restEndsAtMs),
+      restPausedSeconds: p.restPausedSeconds == null ? null : _num(p.restPausedSeconds),
+      budgetMin: p.budgetMin ? _num(p.budgetMin) : null,
+      pace,
+      behindMin: pace === 'behind' ? _num(p.behindMin) : null,
     };
   }
 
@@ -158,7 +188,12 @@
     if (!user) return null;
     const { today, tomorrow } = _todayLabels(user, now);
     const { eaten, targets } = _macros(storage);
-    return buildSnapshot({ dateKey: _localDateKey(now), today, tomorrow, eaten, targets });
+    const pm = global.PerformanceMode;
+    let performance = null;
+    try {
+      if (pm && typeof pm.getWidgetSummary === 'function') performance = pm.getWidgetSummary();
+    } catch { /* show the normal widget */ }
+    return buildSnapshot({ dateKey: _localDateKey(now), today, tomorrow, eaten, targets, performance });
   }
 
   // ── native bridge ────────────────────────────────────────────
@@ -173,12 +208,15 @@
 
   let _lastKey = null;
   let _inFlight = null;
+  let _again = false;
   let _timer = null;
 
-  /** Pushes the current snapshot to the widget if it changed. */
+  /** Pushes the current snapshot to the widget if it changed. A call made
+   * while an update is on its way runs again once it lands, so a quick
+   * change (a set logged right after performance mode starts) isn't lost. */
   async function sync() {
     if (!_isAvailable()) return;
-    if (_inFlight) return _inFlight;
+    if (_inFlight) { _again = true; return _inFlight; }
     let snapshot;
     try {
       snapshot = readSnapshot();
@@ -199,6 +237,7 @@
         console.warn('Widget update failed', err);
       } finally {
         _inFlight = null;
+        if (_again) { _again = false; sync(); }
       }
     })();
     return _inFlight;
@@ -215,7 +254,7 @@
     global.addEventListener && global.addEventListener('pagehide', () => sync());
   }
 
-  const api = { programDayLabels, buildSnapshot, readSnapshot, sync, start };
+  const api = { programDayLabels, buildSnapshot, buildPerformance, readSnapshot, sync, start };
   global.HomeWidget = api;
 
   if (global.document) {

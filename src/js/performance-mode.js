@@ -335,6 +335,7 @@
     _saveSettings(patch);
     _renderRestPresets();
     _renderBudget();
+    _syncWidget();
   }
 
   function applyPerformanceBudgetTip(index) {
@@ -411,6 +412,61 @@
     if (typeof global.resumeRestTimer === 'function') global.resumeRestTimer();
   }
 
+  // ── Home Screen widget ──────────────────────────────────────────
+
+  /**
+   * What the Today widget shows while performance mode is on — the same
+   * numbers as the in-app view: the day, sets done of planned (the time
+   * budget's count), "Session so far" volume, what's up next, the rest
+   * timer and, with a budget, the pace. Null when performance mode is off.
+   * No current time in it (only fixed timestamps) so src/js/home-widget.js
+   * can skip unchanged snapshots.
+   */
+  function getWidgetSummary() {
+    if (typeof document === 'undefined' || !isActive()) return null;
+    const log = _todaysLog();
+    let loggedSets = 0;
+    let volumeKg = 0;
+    log.forEach((e) => {
+      const reps = Array.isArray(e.repsArray) ? e.repsArray : [];
+      const weights = Array.isArray(e.weightsArray) ? e.weightsArray : [];
+      loggedSets += e.sets || reps.length;
+      reps.forEach((r, i) => { volumeKg += (Number(r) || 0) * (Number(weights[i]) || 0); });
+    });
+
+    const day = _plannedDay();
+    const m = _budgetModel();
+    const hasPlan = !!(m && m.hasPlan);
+    const timer = _read(WORKOUT_TIMER_KEY);
+    const rest = _read(REST_TIMER_KEY);
+    const now = Date.now();
+    const restLeft = rest ? getRestRemaining(rest, now) : 0;
+    const paused = !!(rest && typeof rest.pausedRemaining === 'number' && restLeft > 0);
+    const exerciseEl = document.getElementById('exercise');
+
+    return {
+      dayName: day && day.name ? String(day.name) : null,
+      startedAtMs: timer && typeof timer.startTimeMs === 'number' ? timer.startTimeMs : null,
+      doneSets: hasPlan ? m.pace.doneSets : loggedSets,
+      plannedSets: hasPlan ? m.pace.plannedSets : 0,
+      volumeKg: Math.round(volumeKg),
+      nextUp: exerciseEl && exerciseEl.value.trim() ? _currentNextUp() || null : null,
+      restEndsAtMs: !paused && restLeft > 0 ? rest.endTimeMs : null,
+      restPausedSeconds: paused ? restLeft : null,
+      budgetMin: m ? m.budgetMin : null,
+      pace: m && m.budgetMin ? m.pace.status : null,
+      behindMin: m && m.budgetMin && m.pace.status === 'behind' ? m.pace.overMin : null,
+    };
+  }
+
+  /** Tell the widget something changed rather than waiting for its poll. */
+  function _syncWidget() {
+    const hw = global.HomeWidget;
+    if (hw && typeof hw.sync === 'function') {
+      try { hw.sync(); } catch { /* widget is best effort */ }
+    }
+  }
+
   // ── Public actions ──────────────────────────────────────────────
 
   function startPerformanceMode(opts = {}) {
@@ -439,6 +495,7 @@
     _renderBudget();
     _startPaceRefresh();
     _requestWakeLock();
+    _syncWidget();
   }
 
   function exitPerformanceMode() {
@@ -448,6 +505,7 @@
     hideRestOverCard();
     _stopPaceRefresh();
     _releaseWakeLock();
+    _syncWidget();
   }
 
   /**
@@ -468,6 +526,7 @@
     _setNextUpText();
     _write(REST_TIMER_KEY, running ? retimeRestState(state, restSeconds, now) : createRestState(restSeconds, now));
     _rerunRestTimer();
+    _syncWidget();
   }
 
   function toggleRestTimerPause() {
@@ -475,6 +534,7 @@
     if (!state) return;
     _write(REST_TIMER_KEY, togglePausedState(state, Date.now()));
     _rerunRestTimer();
+    _syncWidget();
   }
 
   function adjustRestTimer(deltaSeconds) {
@@ -482,6 +542,7 @@
     if (!state) return;
     _write(REST_TIMER_KEY, adjustRestState(state, deltaSeconds, Date.now()));
     _rerunRestTimer();
+    _syncWidget();
   }
 
   let _restOverTimeout = null;
@@ -517,6 +578,7 @@
       _write(REST_TIMER_KEY, createRestState(_restSecondsAfter(exercise), Date.now()));
       _rerunRestTimer();
       _renderBudget();
+      _syncWidget();
     }, 0);
   }
 
@@ -570,7 +632,7 @@
   const api = {
     REST_PRESETS, DEFAULT_REST_SECONDS, URGENT_SECONDS, AUTO_REST,
     getRestRemaining, createRestState, retimeRestState, togglePausedState, adjustRestState, isRestUrgent,
-    formatNextUp, normaliseRestSeconds, shouldRestoreOnLoad, getSettings,
+    formatNextUp, normaliseRestSeconds, shouldRestoreOnLoad, getSettings, getWidgetSummary,
     startPerformanceMode, exitPerformanceMode, restorePerformanceModeIfNeeded, setPerformanceRestSeconds,
     toggleRestTimerPause, adjustRestTimer, hideRestOverCard,
     setPerformanceBudget, applyPerformanceBudgetTip, dismissPerformanceBudgetTip,
