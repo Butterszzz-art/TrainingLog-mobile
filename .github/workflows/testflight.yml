@@ -1,0 +1,65 @@
+name: TestFlight build
+
+# Starts the Codemagic "Pocket Coach – iOS (App Store)" workflow
+# (codemagic.yaml ios-app-store) on every push to main, which uploads the
+# build to TestFlight. Codemagic's own push trigger never fired for this
+# repo (every build so far was started by hand), so GitHub starts it
+# through the Codemagic API instead. Codemagic numbers the build itself.
+#
+# Needs the repo secret CODEMAGIC_API_TOKEN: Codemagic → Teams → Personal
+# Account → Integrations → Codemagic API → Show.
+#
+# The paths below mirror the workflow's `when: changeset: excludes` in
+# codemagic.yaml: merges that change nothing bundled into the app don't
+# start a build. "Run workflow" on the Actions tab starts one by hand.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'coach/**'
+      - 'tests/**'
+      - '**/*.md'
+      - 'intake/**'
+      - 'pricing.html'
+      - 'payment-success.html'
+      - '.github/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer merge replaces one still waiting to start its build; Codemagic
+# cancels a build still running (cancel_previous_builds).
+concurrency:
+  group: testflight-build
+  cancel-in-progress: true
+
+jobs:
+  start-build:
+    runs-on: ubuntu-latest
+    env:
+      CODEMAGIC_APP_ID: 69ed010bff628879c6135e9b
+      CODEMAGIC_WORKFLOW_ID: ios-app-store
+    steps:
+      - name: Start the Codemagic App Store build
+        env:
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+        run: |
+          if [ -z "$CODEMAGIC_API_TOKEN" ]; then
+            echo "::error::Add the repo secret CODEMAGIC_API_TOKEN (Codemagic → Integrations → Codemagic API) to start TestFlight builds."
+            exit 1
+          fi
+          body=$(jq -n --arg app "$CODEMAGIC_APP_ID" --arg wf "$CODEMAGIC_WORKFLOW_ID" \
+            '{appId: $app, workflowId: $wf, branch: "main"}')
+          response=$(curl -sS --fail-with-body -X POST https://api.codemagic.io/builds \
+            -H "Content-Type: application/json" \
+            -H "x-auth-token: $CODEMAGIC_API_TOKEN" \
+            -d "$body")
+          echo "$response"
+          build_id=$(echo "$response" | jq -r '.buildId // empty')
+          if [ -z "$build_id" ]; then
+            echo "::error::Codemagic didn't start a build."
+            exit 1
+          fi
+          echo "Started https://codemagic.io/app/$CODEMAGIC_APP_ID/build/$build_id" >> "$GITHUB_STEP_SUMMARY"
