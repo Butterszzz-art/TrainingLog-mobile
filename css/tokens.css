@@ -268,22 +268,89 @@
   --text-rule:      #3d4741; /* breadcrumb separators */
 }
 
-/* ── Alternate themes ───────────────────────────────────────── */
+/* ── Alternate themes ─────────────────────────────────────────
+   Settings → Display → Theme. Both are variations of the app's own
+   design, never a separate palette: the green ramp (and whichever
+   app colour the user picked via data-accent) stays in charge, only
+   the ground, wash and surfaces move. Values stay 'light' (Standard,
+   the default look), 'dark' (Midnight) and 'neon' (Glow) so saved
+   settings keep working.
 
+   The wash tokens are rebuilt here, not inherited: a custom property
+   that references other variables is resolved where it is declared,
+   so overriding --ground on body alone would leave :root's wash. */
+
+/* Midnight — near-black ground, the wash turned down, surfaces one
+   step deeper. Same green tint, so it reads as the app at night,
+   not a generic grey dark mode. Kind to OLED screens. */
 body.theme-dark {
-  --bg-color:     #121212;
-  --text-color:   #FFFFFF;
-  --card-bg:      #1E1E1E;
-  --border-color: #333;
-  --sidebar-bg:   #000000;
+  --ground:             #020403;
+  --ground-mid-mobile:  #050a07;
+  --ground-mid-desktop: #040806;
+  --wash-mobile: radial-gradient(150% 92% at 50% -6%,
+    rgba(var(--acc-23543e), 0.30) 0%,
+    rgba(var(--acc-142c21), 0.26) 28%,
+    rgba(var(--acc-0e1e16), 0.34) 52%,
+    var(--ground-mid-mobile) 74%,
+    var(--ground) 100%);
+  --wash-desktop: radial-gradient(120% 80% at 18% -18%,
+    rgba(var(--acc-1c4432), 0.26) 0%,
+    rgba(var(--acc-142c21), 0.20) 30%,
+    rgba(var(--acc-0e1e16), 0.34) 58%,
+    var(--ground-mid-desktop) 80%,
+    var(--ground) 100%);
+  --bg-hero-gradient: var(--wash-mobile);
+
+  --bg-color:         var(--ground);
+  --surface-bg:       #080c0a;
+  --card-bg:          #0b110e;
+  --elevated-bg:      #101814;
+  --sidebar-bg:       #040705;
+  --pod-bg:           #090e0c;
+  --pod-bg-alt:       #0c1310;
+  --pod-bg-hover:     #0e1512;
+  --pill-bg:          #090e0c;
+  --surface-recessed: #050907;
+  --surface-raised:   #0f1613;
+  --surface-navbar:   rgba(7, 11, 9, 0.96);
+  --pod-bg-hero:      linear-gradient(168deg, rgba(var(--acc-0f2318), 0.94), rgba(6, 10, 8, 0.99));
+  --pod-bg-hero-alt:  linear-gradient(168deg, rgba(var(--acc-0f2318), 0.92), rgba(6, 10, 8, 0.99));
+  --pod-bevel:        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --border-color:     rgba(116, 138, 126, 0.16);
+  --border-default:   rgba(116, 138, 126, 0.16);
+  --pod-border:       var(--border-default);
 }
 
+/* Glow — the wash turned up and the outlines tinted with the app
+   colour, so pods pick up a soft accent edge. Built on the --acc-*
+   ramp, so it follows the chosen app colour too. */
 body.theme-neon {
-  --bg-color:     #000000;
-  --text-color:   #39FF14;
-  --card-bg:      #001100;
-  --border-color: #39FF14;
-  --sidebar-bg:   #003300;
+  --wash-mobile: radial-gradient(150% 92% at 50% -6%,
+    rgba(var(--acc-347a58), 0.78) 0%,
+    rgba(var(--acc-23543e), 0.58) 26%,
+    rgba(var(--acc-142c21), 0.60) 52%,
+    var(--ground-mid-mobile) 76%,
+    var(--ground) 100%);
+  --wash-desktop: radial-gradient(120% 80% at 18% -18%,
+    rgba(var(--acc-347a58), 0.58) 0%,
+    rgba(var(--acc-1c4432), 0.44) 30%,
+    rgba(var(--acc-0e1e16), 0.56) 58%,
+    var(--ground-mid-desktop) 80%,
+    var(--ground) 100%);
+  --bg-hero-gradient: var(--wash-mobile);
+
+  --pod-bg-hero:     linear-gradient(168deg, rgba(var(--acc-1e382e), 0.94), rgba(12, 18, 15, 0.985));
+  --pod-bg-hero-alt: linear-gradient(168deg, rgba(var(--acc-1e382e), 0.92), rgba(12, 18, 15, 0.985));
+  --pod-bevel:       inset 0 1px 0 rgba(var(--acc-8ec2a4), 0.07);
+  --border-color:    rgba(var(--acc-4a8466), 0.30);
+  --border-default:  rgba(var(--acc-4a8466), 0.30);
+  --border-chip:     rgba(var(--acc-4a8466), 0.36);
+  --border-soft:     rgba(var(--acc-4a8466), 0.24);
+  --border-featured: rgba(var(--acc-5fa87e), 0.44);
+  --border-featured-strong: rgba(var(--acc-5fa87e), 0.58);
+  --pod-border:      var(--border-default);
+  --pill-border:     var(--border-chip);
+  --glow-live:       0 0 16px var(--green-90);
 }
 
 /* ── App colour (accent) ─────────────────────────────────────────

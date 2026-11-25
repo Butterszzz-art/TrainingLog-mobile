@@ -649,8 +649,8 @@
         <div class="ob-pref-row">
           <span>Theme</span>
           <div class="ob-toggle-group" id="obThemeToggle">
-            <button class="ob-toggle-btn ob-active" data-theme="dark">Dark</button>
-            <button class="ob-toggle-btn" data-theme="light">Light</button>
+            <button class="ob-toggle-btn ob-active" data-theme="light">Standard</button>
+            <button class="ob-toggle-btn" data-theme="dark">Midnight</button>
           </div>
         </div>
       </div>
@@ -19923,12 +19923,41 @@ window.renderRewardSummary = typeof renderRewardSummary === 'function' ? renderR
 
   window.initMobilePanels = initMobilePanels;
 
+  // 'light' = Standard (the default look), 'dark' = Midnight, 'neon' = Glow.
+  // The themes themselves live in css/tokens.css.
   function applyTheme(theme) {
+    if (theme !== 'dark' && theme !== 'neon') theme = 'light';
     document.body.classList.remove('theme-dark', 'theme-neon', 'theme-light');
     if (theme === 'dark') document.body.classList.add('theme-dark');
     else if (theme === 'neon') document.body.classList.add('theme-neon');
-    localStorage.setItem('theme', theme);
+    try { localStorage.setItem('theme', theme); } catch (_) {}
+    syncThemePickers(theme);
   }
+
+  function syncThemePickers(theme) {
+    document.querySelectorAll('[data-theme-choice]').forEach((btn) => {
+      const on = btn.dataset.themeChoice === theme;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  }
+
+  // Settings → Display → Theme segments. They set the hidden #theme select
+  // and fire its change event, so applyTheme and settings autosave both run.
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-theme-choice]');
+    if (!btn) return;
+    const row = btn.closest('.st-row') || document;
+    const select = row.querySelector('select#theme') || document.getElementById('theme');
+    const value = btn.dataset.themeChoice;
+    if (select) {
+      select.value = value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      applyTheme(value);
+    }
+  });
+
 
 window.applyTheme = applyTheme;
 
@@ -20057,7 +20086,7 @@ const _ob = {
   sex: null,
   activityFactor: null,
   unit: 'kg',            // display unit for rest of app
-  theme: 'dark',
+  theme: 'light',        // 'light' = Standard look, 'dark' = Midnight
   // Step 7: training week (src/js/habit.js)
   trainingDays: [],      // JS getDay() numbers
   weeklyGoal: 3,
