@@ -351,12 +351,31 @@
 
       <div class="mx-kicker st-kicker">Display</div>
       <div class="pod st-group">
-        <label class="st-row" for="theme"><span class="st-label">Theme</span>
-          <select id="theme" name="theme" onchange="applyTheme(this.value)">
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-            <option value="neon">Neon</option>
-          </select></label>
+        <div class="st-row st-row--stack st-theme-row">
+          <span class="st-label" id="stThemeLabel">Theme</span>
+          <!-- The segments drive the hidden select, which stays the saved
+               field (saveSettings reads #theme). Values are legacy:
+               light = Standard, dark = Midnight, neon = Glow. -->
+          <div class="st-theme-picker" role="radiogroup" aria-labelledby="stThemeLabel" data-theme-picker>
+            <button type="button" class="st-theme-opt" role="radio" data-theme-choice="light">
+              <span class="st-theme-swatch st-theme-swatch--standard" aria-hidden="true"></span>
+              <span class="st-theme-name">Standard</span>
+            </button>
+            <button type="button" class="st-theme-opt" role="radio" data-theme-choice="dark">
+              <span class="st-theme-swatch st-theme-swatch--midnight" aria-hidden="true"></span>
+              <span class="st-theme-name">Midnight</span>
+            </button>
+            <button type="button" class="st-theme-opt" role="radio" data-theme-choice="neon">
+              <span class="st-theme-swatch st-theme-swatch--glow" aria-hidden="true"></span>
+              <span class="st-theme-name">Glow</span>
+            </button>
+          </div>
+          <select id="theme" name="theme" hidden onchange="applyTheme(this.value)">
+            <option value="light">Standard</option>
+            <option value="dark">Midnight</option>
+            <option value="neon">Glow</option>
+          </select>
+        </div>
         <button type="button" class="st-row st-row--btn" data-logbook-edit>
           <span class="st-label">Logbook name and colour</span><span class="st-val" id="stLogbookVal"></span><span class="st-chev" aria-hidden="true"></span>
         </button>
