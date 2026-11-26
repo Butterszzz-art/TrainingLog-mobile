@@ -266,9 +266,91 @@ function _normalizeProgramState(p) {
 let _progState = _emptyProgram();
 let _progActiveDay = 'Mon';
 
+function _isPhone() {
+  return !!(window.ProgramQuickAdjust && window.ProgramQuickAdjust.isPhone());
+}
+
+// Phone: no 7-day grid or exercise library — templates, your library, and
+// quick adjust ("add 2 sets to bench", "more chest a week") on the program
+// that's open. Building weeks from scratch stays on the coach dashboard.
+let _progUndo = null; // the days before the last quick adjust
+
+function renderCoachProgramBuilderPhone(container) {
+  container.innerHTML = `
+    <div class="prog-builder-layout prog-builder-layout--phone">
+      <section class="pod mx-pod prog-head">
+        <div class="mx-field prog-canvas-title">
+          <label class="mx-lbl" for="progNameInput">Program name</label>
+          <div class="mx-well mx-well--text"><input type="text" id="progNameInput" value="${_escH(_progState.name)}" placeholder="Program name" maxlength="80" oninput="_progState.name=this.value"></div>
+        </div>
+        <div class="prog-canvas-actions">
+          <button type="button" class="mx-cta prog-save-btn" onclick="saveCoachProgram()"><span>Save to library</span><span class="mx-cta-icon"><span class="ui-icon">${ICONS.check}</span></span></button>
+        </div>
+        <div class="mx-field">
+          <span class="mx-lbl">Start from a template</span>
+          <div class="prog-template-bar">
+            <button type="button" class="prog-template-btn" onclick="applyProgTemplate('bodybuilding')">Bodybuilding</button>
+            <button type="button" class="prog-template-btn" onclick="applyProgTemplate('powerlifting')">Powerlifting</button>
+            <button type="button" class="prog-template-btn" onclick="applyProgTemplate('crossfit')">CrossFit</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="progQuickAdjust"></div>
+
+      <button type="button" class="coach-desktop-link" onclick="window.AppLinks && window.AppLinks.openCoachDashboard()">
+        <span class="ui-icon">${ICONS.share || ''}</span>
+        <span><strong>Build a program from scratch</strong><small>Day-by-day builder on the coach dashboard</small></span>
+      </button>
+
+      <p class="mx-sub prog-assign-bar">Saved programs can be assigned from a client's page (Clients → Open client → Program). The client gets the full plan and a Start button.</p>
+
+      <div id="savedProgsList"><div class="mx-empty">Loading your library…</div></div>
+    </div>`;
+  _renderProgQuickAdjust(true);
+  renderSavedProgramsList();
+}
+
+function _renderProgQuickAdjust(resetUndo) {
+  const host = document.getElementById('progQuickAdjust');
+  const Q = window.ProgramQuickAdjustCore;
+  if (!host || !Q || !window.ProgramQuickAdjust) return;
+  if (resetUndo) _progUndo = null;
+  window.ProgramQuickAdjust.render(host, {
+    resetUndo: !!resetUndo,
+    getRows: () => Q.rowsFromWeek(_progState.days, DAYS),
+    apply: async plan => {
+      const before = _progState.days;
+      _progState.days = Q.applyToWeek(_progState.days, plan);
+      try {
+        if (_progState.id) await window.CoachProgramLibrary.save(_progState.id, { name: _progState.name, days: _progState.days });
+      } catch (err) {
+        _progState.days = before;
+        throw err;
+      }
+      _progUndo = before;
+      if (_progState.id) renderSavedProgramsList();
+    },
+    undo: async () => {
+      if (!_progUndo) return;
+      const after = _progState.days;
+      _progState.days = _progUndo;
+      try {
+        if (_progState.id) await window.CoachProgramLibrary.save(_progState.id, { name: _progState.name, days: _progState.days });
+      } catch (err) {
+        _progState.days = after;
+        throw err;
+      }
+      _progUndo = null;
+      if (_progState.id) renderSavedProgramsList();
+    },
+  });
+}
+
 function renderCoachProgramBuilder() {
   const container = document.getElementById('coachSub_programs');
   if (!container) return;
+  if (_isPhone()) return renderCoachProgramBuilderPhone(container);
 
   container.innerHTML = `
     <div class="prog-builder-layout">
@@ -522,6 +604,7 @@ function _refreshAllDays() {
   const nameInput = document.getElementById('progNameInput');
   if (nameInput) nameInput.value = _progState.name;
   DAYS.forEach(_refreshDayCol);
+  _renderProgQuickAdjust(true); // phone layout only; no-op without its host
 }
 
 window.removeProgExercise = function (day, idx) {
@@ -592,7 +675,7 @@ async function renderSavedProgramsList() {
             <span class="mx-row-sub">${DAYS.filter(d => (p.days?.[d] || []).length).join(', ') || 'No days'} · ${p.exerciseCount || 0} exercises</span>
           </div>
           <div class="saved-prog-actions">
-            <button type="button" class="mx-outline" data-prog-load="${_escH(p.id)}">Edit</button>
+            <button type="button" class="mx-outline" data-prog-load="${_escH(p.id)}">${_isPhone() ? 'Adjust' : 'Edit'}</button>
             <button type="button" class="mx-iconbtn mx-iconbtn--ghost" data-prog-delete="${_escH(p.id)}" aria-label="Delete ${_escH(p.name)}"><span class="ui-icon">${ICONS.x}</span></button>
           </div>
         </div>`).join('')}

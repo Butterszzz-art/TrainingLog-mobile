@@ -398,3 +398,36 @@
   #programTab .prog-top-btn { padding: 0 6px; gap: 0; font-size: 12px; letter-spacing: 0.06em; min-width: 0; }
   #programTab .prog-top-btn .ui-icon { display: none; }
 }
+
+/* ── Quick adjust (phones): src/js/program-quick-adjust.js ───── */
+.pqa-phone { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+.pqa { display: flex; flex-direction: column; gap: 14px; }
+.pqa .mx-segs { display: flex; width: 100%; }
+.pqa .mx-segs > button { flex: 1; padding: 0 6px; font-size: 12px; letter-spacing: 0.06em; }
+.pqa .mx-well select { width: 100%; }
+.pqa-dir { margin-bottom: 8px; }
+.pqa-preview {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-soft);
+  font-size: 14px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.pqa-preview.is-empty { color: var(--text-tertiary); }
+.pqa-undo { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; color: var(--text-secondary); }
+.pqa-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pqa-chip {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  min-height: 40px; padding: 0 14px; width: auto; margin: 0;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-recessed);
+  color: var(--text-secondary);
+  font-size: 14px; cursor: pointer;
+}
+.pqa-chip strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.prog-builder-layout--phone { display: flex; flex-direction: column; gap: 12px; }
