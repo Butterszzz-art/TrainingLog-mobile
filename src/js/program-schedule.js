@@ -115,6 +115,44 @@
     global.localStorage.setItem(`programDayOverrides_${user}`, JSON.stringify({ programId, dates: kept }));
   }
 
+  // ── Cadence (synchronous weekdays vs. asynchronous days on / off) ───────
+
+  /** Whole local days from `from` to `to` (DST-safe). */
+  function daysBetween(from, to) {
+    const a = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+    const b = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+    return Math.round((b - a) / DAY_MS);
+  }
+
+  /**
+   * The program's rolling on/off cycle, or null for a weekday (synchronous)
+   * split. An asynchronous split (schedule.mode 'async') trains `onDays` in a
+   * row, rests `offDays`, and repeats from the start date.
+   */
+  function cadenceOf(program) {
+    const s = program && program.schedule;
+    if (!s || s.mode !== 'async') return null;
+    const clamp = v => Math.min(7, Math.max(0, Math.floor(Number(v)) || 0));
+    const onDays = clamp(s.onDays);
+    const offDays = clamp(s.offDays);
+    return onDays >= 1 ? { onDays, offDays } : null;
+  }
+
+  /** 0-based position of `date` in the cycle that began on `startDate`. */
+  function cycleDay(startDate, date, cycle) {
+    const len = cycle.onDays + cycle.offDays;
+    return ((daysBetween(startDate, date) % len) + len) % len;
+  }
+
+  /** "Mon, Wed, Fri" or "3 on / 1 off" — how a program's split is scheduled. */
+  function cadenceLabel(program) {
+    const cycle = cadenceOf(program);
+    if (cycle) return `${cycle.onDays} on / ${cycle.offDays} off`;
+    const iso = program && program.schedule && Array.isArray(program.schedule.weekdays) ? program.schedule.weekdays : [];
+    const names = iso.length ? iso.slice().sort((a, b) => a - b).map(n => WEEKDAY_ABBR[n % 7]) : (program && program.frequency) || [];
+    return Array.isArray(names) ? names.join(', ') : '';
+  }
+
   // ── Schedule ────────────────────────────────────────────────────────────
 
   /**
@@ -125,14 +163,34 @@
   function createSchedule(program, active, opts) {
     if (!program || !Array.isArray(program.days) || !program.days.length) return null;
     const options = opts || {};
-    const rawFreq = program.frequency || program.weekdays || ['Mon', 'Wed', 'Fri'];
-    const trainingNums = (Array.isArray(rawFreq) ? rawFreq : [])
+    const cycle = cadenceOf(program);
+    // Builder programs keep their weekdays in schedule.weekdays (ISO 1–7, Mon = 1).
+    const scheduleWeekdays = (program.schedule && Array.isArray(program.schedule.weekdays) ? program.schedule.weekdays : [])
+      .map(n => WEEKDAY_ABBR[n % 7]);
+    const nonEmpty = a => (Array.isArray(a) && a.length ? a : null);
+    const rawFreq = nonEmpty(program.frequency) || nonEmpty(scheduleWeekdays)
+      || program.frequency || program.weekdays || ['Mon', 'Wed', 'Fri'];
+    const trainingNums = cycle ? [] : (Array.isArray(rawFreq) ? rawFreq : [])
       .map(d => WEEKDAY_MAP[d])
       .filter(n => n !== undefined);
-    if (!trainingNums.length) return null;
+    if (!cycle && !trainingNums.length) return null;
 
     const startDate = parseLocalDate((active && active.startDate) || program.startDate);
     if (!startDate) return null;
+
+    /** Whether `date` (local midnight, on/after the start) is a training day of the split. */
+    function isTrainingDate(date) {
+      if (!cycle) return trainingNums.includes(date.getDay());
+      return cycleDay(startDate, date, cycle) < cycle.onDays;
+    }
+
+    /** Training days from the start date up to but not including `until`. */
+    function trainingDaysBefore(until) {
+      if (!cycle) return countTrainingDaysBetween(startDate, until, trainingNums);
+      const n = Math.max(0, daysBetween(startDate, until));
+      const len = cycle.onDays + cycle.offDays;
+      return Math.floor(n / len) * cycle.onDays + Math.min(n % len, cycle.onDays);
+    }
 
     const core = options.core || global.programBuilderV2Core || null;
     const overrides = options.overrides || {};
@@ -194,8 +252,8 @@
       const date = _midnight(dateLike);
       const key = localDateKey(date);
       const before = date < startDate;
-      const naturalTraining = !before && trainingNums.includes(date.getDay());
-      const naturalIndex = countTrainingDaysBetween(startDate, date, trainingNums);
+      const naturalTraining = !before && isTrainingDate(date);
+      const naturalIndex = trainingDaysBefore(date);
       let isTraining = naturalTraining;
       let trainingIndex = naturalIndex;
       let swapped = false;
@@ -227,6 +285,7 @@
         swapped,
         day: isTraining ? dayAt(trainingIndex) : null,
         weekNum,
+        cycleDay: cycle && !before ? cycleDay(startDate, date, cycle) + 1 : null,
         phase: pause ? 'Pause week' : pauseSlot && pauseSlot.kind === 'busy' ? 'Busy week · maintenance' : weekCount > 1 ? phaseFor(weekNum) : '',
         pause,
         pauseNote: pause ? pauseSlot.note || '' : '',
@@ -254,7 +313,7 @@
       return null;
     }
 
-    return { program, startDate, trainingNums, nDays, weekCount, timeline, dayFor, weekOf, nextTrainingAfter };
+    return { program, startDate, trainingNums, cycle, nDays, weekCount, timeline, dayFor, weekOf, nextTrainingAfter };
   }
 
   /** Schedule for the signed-in user's active program, or null. */
@@ -405,6 +464,8 @@
     localDateKey,
     parseLocalDate,
     countTrainingDaysBetween,
+    cadenceOf,
+    cadenceLabel,
     currentUser,
     readActiveRecord,
     normalizeActiveRecord,

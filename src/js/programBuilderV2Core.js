@@ -382,10 +382,36 @@
               return Number.isInteger(weekday) && weekday >= 1 && weekday <= 7;
             })
           : [],
+        ...normalizeCadence(source.schedule),
       },
       createdAt: typeof source.createdAt === "string" && source.createdAt ? source.createdAt : base.createdAt,
       updatedAt: new Date().toISOString(),
     };
+  }
+
+  // How the split runs: "sync" trains on the same weekdays every week
+  // (schedule.weekdays); "async" rolls through days on / days off from the
+  // start date, whatever weekday that lands on.
+  const CADENCE_MAX_DAYS = 7;
+
+  function clampCadenceDays(value, fallback) {
+    const n = Math.floor(Number(value));
+    return Number.isFinite(n) && n >= 1 ? Math.min(n, CADENCE_MAX_DAYS) : fallback;
+  }
+
+  function normalizeCadence(schedule) {
+    const src = schedule && typeof schedule === "object" ? schedule : {};
+    return {
+      mode: src.mode === "async" ? "async" : "sync",
+      onDays: clampCadenceDays(src.onDays, 3),
+      offDays: clampCadenceDays(src.offDays, 1),
+    };
+  }
+
+  function isScheduled(schedule) {
+    const s = schedule || {};
+    if (s.mode === "async") return clampCadenceDays(s.onDays, 0) >= 1;
+    return Array.isArray(s.weekdays) && s.weekdays.length > 0;
   }
 
   function computeProgramSummary(draft) {
@@ -406,7 +432,10 @@
       archetype: normalized.archetype || "general",
       dayCount: normalized.days.length,
       exerciseCount: exerciseCount,
-      scheduledDays: normalized.schedule.weekdays.length,
+      scheduledDays: normalized.schedule.mode === "async"
+        ? normalized.schedule.onDays
+        : normalized.schedule.weekdays.length,
+      cadence: normalized.schedule.mode,
       progressionNotes: normalized.progressionNotes || "",
     };
   }
@@ -421,7 +450,7 @@
       case "review":
         return true;
       case "schedule":
-        return normalized.schedule.weekdays.length > 0;
+        return isScheduled(normalized.schedule);
       case "save":
         return Boolean((normalized.name || "").trim());
       default:
@@ -711,6 +740,9 @@
     clearDraft,
     computeProgramSummary,
     validateStep,
+    normalizeCadence,
+    isScheduled,
+    CADENCE_MAX_DAYS,
     toggleProgramBuilder,
     populateProgramTemplateSelect,
     initProgramBuilder,

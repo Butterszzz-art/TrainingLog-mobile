@@ -114,7 +114,9 @@
     const p = program || {};
     const title = p.title || p.name || 'Untitled Program';
     const days = Array.isArray(p.days) ? p.days : [];
-    const wdNames = (p.schedule?.weekdays || []).map(d => WEEKDAYS[d - 1]).filter(Boolean).join(', ');
+    const wdNames = p.schedule?.mode === 'async' && Number(p.schedule.onDays) >= 1
+      ? `${p.schedule.onDays} on / ${p.schedule.offDays} off (rolling)`
+      : (p.schedule?.weekdays || []).map(d => WEEKDAYS[d - 1]).filter(Boolean).join(', ');
     const splitLabel = SPLIT_LABELS[p.split?.type] || p.split?.type || '—';
     const goalLabel = GOAL_LABELS[p.archetype] || p.archetype || '—';
 
@@ -262,7 +264,7 @@
         case 'goal':      return Boolean(draft.archetype);
         case 'split':     return Boolean(draft.split?.type);
         case 'exercises': return Array.isArray(draft.days) && draft.days.length > 0;
-        case 'schedule':  return (draft.schedule?.weekdays || []).length > 0;
+        case 'schedule':  return core.isScheduled ? core.isScheduled(draft.schedule) : (draft.schedule?.weekdays || []).length > 0;
         case 'save':      return Boolean((draft.title || draft.name || '').trim());
         default:          return true;
       }
@@ -425,6 +427,9 @@
       const title = (draft.title || '').trim();
       if (!title) { showToast('Enter a program title first.', true); return; }
       draft.name = title;
+      // Today's Session schedules from `frequency` (weekday names); an
+      // asynchronous split runs on its on/off cycle instead.
+      draft.frequency = isAsync() ? [] : (draft.schedule?.weekdays || []).map(d => WEEKDAYS[d - 1]).filter(Boolean);
       draft.programId = draft.programId || `prog-${Date.now()}`;
       draft.coachId = draft.coachId || userId;
       const saved = core.loadPrograms(window);
@@ -610,11 +615,13 @@
       wrap.innerHTML = `
         <div class="pbv2-step-heading">
           <h2>Choose a training split</h2>
-          <p>How many days per week do you want to train?</p>
+          <p>${isAsync() ? 'How many workouts are in your rotation?' : 'How many days per week do you want to train?'}</p>
         </div>
-        <div class="pbv2-split-list"></div>
       `;
-      const list = wrap.querySelector('.pbv2-split-list');
+      wrap.appendChild(buildCadencePicker());
+      const list = document.createElement('div');
+      list.className = 'pbv2-split-list';
+      wrap.appendChild(list);
       SPLITS.forEach(sp => {
         const card = document.createElement('button');
         card.type = 'button';
@@ -623,7 +630,7 @@
           <span class="pbv2-split-icon">${ico(sp.icon)}</span>
           <div class="pbv2-split-info">
             <div class="pbv2-split-label">${esc(sp.label)}</div>
-            <span class="pbv2-split-days-badge">${esc(sp.badge)}</span>
+            <span class="pbv2-split-days-badge">${esc(isAsync() && sp.type !== 'custom' ? `${sp.days}-day rotation` : sp.badge)}</span>
             <div class="pbv2-split-desc">${esc(sp.desc)}</div>
             <div class="pbv2-split-rec">${esc(sp.rec)}</div>
           </div>
@@ -632,6 +639,125 @@
         list.appendChild(card);
       });
       return wrap;
+    }
+
+    /* ── Cadence (synchronous / asynchronous split) ─ */
+
+    function cadence() {
+      const c = core.normalizeCadence ? core.normalizeCadence(draft.schedule) : { mode: 'sync', onDays: 3, offDays: 1 };
+      return c;
+    }
+
+    function isAsync() { return cadence().mode === 'async'; }
+
+    function ensureSchedule() {
+      draft.schedule = draft.schedule || { startDate: '', weekdays: [] };
+      return draft.schedule;
+    }
+
+    function setCadenceMode(mode) {
+      const sched = ensureSchedule();
+      const c = cadence();
+      sched.mode = mode === 'async' ? 'async' : 'sync';
+      sched.onDays = c.onDays;
+      sched.offDays = c.offDays;
+      persistDraft();
+      render();
+    }
+
+    function stepCadenceDays(field, delta) {
+      const sched = ensureSchedule();
+      const c = cadence();
+      const max = core.CADENCE_MAX_DAYS || 7;
+      sched[field] = Math.min(max, Math.max(1, c[field] + delta));
+      sched.onDays = field === 'onDays' ? sched.onDays : c.onDays;
+      sched.offDays = field === 'offDays' ? sched.offDays : c.offDays;
+      persistDraft();
+      render();
+    }
+
+    function cadenceSummary(c) {
+      const len = c.onDays + c.offDays;
+      return `${c.onDays} day${c.onDays !== 1 ? 's' : ''} on, ${c.offDays} day${c.offDays !== 1 ? 's' : ''} off — repeats every ${len} days.`;
+    }
+
+    /** Two weeks of on/off pills (training days named after the program's days when there are some). */
+    function buildCyclePreview(c, startIso) {
+      const row = document.createElement('div');
+      row.className = 'pbv2-cycle-row';
+      const days = Array.isArray(draft.days) ? draft.days : [];
+      const len = c.onDays + c.offDays;
+      const total = 14; // two rows of seven: enough to see the cycle come round
+      const start = startIso ? new Date(startIso + 'T00:00:00') : null;
+      let session = 0;
+      for (let i = 0; i < total; i++) {
+        const on = i % len < c.onDays;
+        const pill = document.createElement('div');
+        pill.className = 'pbv2-cycle-pill' + (on ? ' on' : '');
+        const top = start && !isNaN(start)
+          ? WEEKDAYS[(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i).getDay() + 6) % 7]
+          : `D${i + 1}`;
+        const di = session % Math.max(days.length, 1);
+        const full = on ? (days.length ? String(days[di].name || `Day ${di + 1}`) : 'Train') : 'Rest';
+        // Long day names don't fit a seventh of a phone: show D1, D2… and keep the name as a tooltip.
+        const label = on && days.length && full.length > 4 ? `D${di + 1}` : full;
+        if (on) session++;
+        pill.title = full;
+        pill.innerHTML = `<span class="pbv2-cycle-top">${esc(top)}</span><span class="pbv2-cycle-name">${esc(label)}</span>`;
+        row.appendChild(pill);
+      }
+      return row;
+    }
+
+    function buildCadencePicker() {
+      const c = cadence();
+      const box = document.createElement('div');
+      box.className = 'pbv2-cadence';
+      box.innerHTML = `
+        <p class="pbv2-schedule-label">Split type</p>
+        <div class="pbv2-cadence-toggle" role="radiogroup" aria-label="Split type">
+          <button type="button" role="radio" class="pbv2-cadence-opt${c.mode === 'sync' ? ' active' : ''}" data-mode="sync" aria-checked="${c.mode === 'sync'}">
+            <span class="pbv2-cadence-opt-label">Synchronous</span>
+            <span class="pbv2-cadence-opt-desc">Same weekdays every week</span>
+          </button>
+          <button type="button" role="radio" class="pbv2-cadence-opt${c.mode === 'async' ? ' active' : ''}" data-mode="async" aria-checked="${c.mode === 'async'}">
+            <span class="pbv2-cadence-opt-label">Asynchronous</span>
+            <span class="pbv2-cadence-opt-desc">Rolling days on / days off</span>
+          </button>
+        </div>
+      `;
+      box.querySelectorAll('.pbv2-cadence-opt').forEach(btn => {
+        btn.addEventListener('click', () => { if (btn.dataset.mode !== c.mode) setCadenceMode(btn.dataset.mode); });
+      });
+      if (c.mode === 'async') {
+        const max = core.CADENCE_MAX_DAYS || 7;
+        const steppers = document.createElement('div');
+        steppers.className = 'pbv2-cadence-steppers';
+        [['onDays', 'Days on'], ['offDays', 'Days off']].forEach(([field, label]) => {
+          const val = c[field];
+          const el = document.createElement('div');
+          el.className = 'pbv2-cadence-stepper';
+          el.innerHTML = `
+            <span class="pbv2-cadence-stepper-label">${label}</span>
+            <div class="pbv2-cadence-stepper-ctrl">
+              <button type="button" class="pbv2-cadence-step" data-delta="-1" aria-label="Fewer ${label.toLowerCase()}" ${val <= 1 ? 'disabled' : ''}>${ico('minus')}</button>
+              <span class="pbv2-cadence-val" aria-live="polite">${val}</span>
+              <button type="button" class="pbv2-cadence-step" data-delta="1" aria-label="More ${label.toLowerCase()}" ${val >= max ? 'disabled' : ''}>${ico('plus')}</button>
+            </div>
+          `;
+          el.querySelectorAll('.pbv2-cadence-step').forEach(b => {
+            b.addEventListener('click', () => stepCadenceDays(field, Number(b.dataset.delta)));
+          });
+          steppers.appendChild(el);
+        });
+        box.appendChild(steppers);
+        const hint = document.createElement('p');
+        hint.className = 'pbv2-wd-hint';
+        hint.textContent = cadenceSummary(c);
+        box.appendChild(hint);
+        box.appendChild(buildCyclePreview(c, ''));
+      }
+      return box;
     }
 
     /* ── Exercises step — mobile-first stacked layout ─ */
@@ -938,6 +1064,7 @@
 
     /* ── Schedule step ─ */
     function buildScheduleStep() {
+      if (isAsync()) return buildAsyncScheduleStep();
       const wrap = document.createElement('div');
       wrap.innerHTML = `
         <div class="pbv2-step-heading">
@@ -990,12 +1117,43 @@
       return wrap;
     }
 
+    function buildAsyncScheduleStep() {
+      const c = cadence();
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <div class="pbv2-step-heading">
+          <h2>When do you train?</h2>
+          <p>Your split runs ${c.onDays} on / ${c.offDays} off from the day you start, whatever weekday that is.</p>
+        </div>
+        <div class="pbv2-schedule-body">
+          <p class="pbv2-schedule-label">Start date (optional)</p>
+          <input type="date" id="pbv2StartDate" class="pbv2-date-input" value="${esc(draft.schedule?.startDate || '')}">
+          <p class="pbv2-schedule-label">Your cycle</p>
+          <p class="pbv2-wd-hint">${esc(cadenceSummary(c))}</p>
+          <div id="pbv2CycleSlot"></div>
+          <button type="button" class="pbv2-advanced-btn" id="pbv2EditCadenceBtn">${ico('pencil')}<span>Change days on / off</span></button>
+        </div>
+      `;
+      const slot = wrap.querySelector('#pbv2CycleSlot');
+      slot.appendChild(buildCyclePreview(c, draft.schedule?.startDate || ''));
+      wrap.querySelector('#pbv2StartDate').addEventListener('change', e => {
+        ensureSchedule().startDate = e.target.value;
+        persistDraft();
+        slot.innerHTML = '';
+        slot.appendChild(buildCyclePreview(c, e.target.value));
+      });
+      wrap.querySelector('#pbv2EditCadenceBtn').addEventListener('click', () => goToStep('split'));
+      return wrap;
+    }
+
     /* ── Save step ─ */
     function buildSaveStep() {
       const summary = core.computeProgramSummary(draft);
       const splitLabels = { fullbody: 'Full Body', upperlower: 'Upper/Lower', ppl: 'Push/Pull/Legs', custom: 'Custom' };
       const goalLabels  = { strength: 'Strength', hypertrophy: 'Muscle Growth', 'fat-loss': 'Fat Loss', general: 'General Fitness' };
-      const wdNames = (draft.schedule?.weekdays || []).map(d => WEEKDAYS[d - 1]).join(', ');
+      const wdNames = isAsync()
+        ? `${cadence().onDays} on / ${cadence().offDays} off`
+        : (draft.schedule?.weekdays || []).map(d => WEEKDAYS[d - 1]).join(', ');
 
       const wrap = document.createElement('div');
       wrap.innerHTML = `
@@ -1328,6 +1486,7 @@
         <div class="prog-card-badges">
           <span class="prog-badge">${esc(splitLabel)}</span>
           <span class="prog-badge">${esc(goalLabel)}</span>
+          ${prog.schedule?.mode === 'async' && Number(prog.schedule.onDays) >= 1 ? `<span class="prog-badge">${esc(`${prog.schedule.onDays} on / ${prog.schedule.offDays} off`)}</span>` : ''}
         </div>
         <div class="prog-card-actions">
           <button type="button" class="prog-card-load" data-idx="${origIdx}">Load into Builder</button>
