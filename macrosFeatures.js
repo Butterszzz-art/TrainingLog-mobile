@@ -135,12 +135,18 @@ const DAY_TYPE_KEY = 'macroDayType'; // per user + synced (cloud-sync.js)
 const initTrainingToggle = () => {
   const toggle = document.getElementById('trainingDayToggle');
   if (!toggle) return;
+  const restToggle = document.getElementById('restDayToggle');
   let saved = null;
   try { saved = localStorage.getItem(DAY_TYPE_KEY); } catch { /* storage blocked */ }
   toggle.checked = saved === 'training-day';
-  toggle.addEventListener('change', (e) => {
-    try { localStorage.setItem(DAY_TYPE_KEY, e.target.checked ? 'training-day' : 'normal'); } catch { /* storage blocked */ }
-  });
+  if (restToggle) restToggle.checked = saved === 'rest-day';
+  // Training day and Rest day chips are one or the other (index.html).
+  const remember = () => {
+    const value = toggle.checked ? 'training-day' : restToggle?.checked ? 'rest-day' : 'normal';
+    try { localStorage.setItem(DAY_TYPE_KEY, value); } catch { /* storage blocked */ }
+  };
+  toggle.addEventListener('change', remember);
+  restToggle?.addEventListener('change', remember);
   // A coach's weekly pattern decides today's day type over the saved chip
   // (index.html applyCoachMacroScheduleForToday); this runs after it did.
   if (window.applyCoachMacroScheduleForToday?.()) window.updateMacroUI?.();
