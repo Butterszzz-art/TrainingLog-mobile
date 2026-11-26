@@ -3458,6 +3458,11 @@
                 <span class="macro-toggle-icon" data-icon="dumbbell"></span>
                 <span class="macro-toggle-label">Training day</span>
               </label>
+              <label class="macro-toggle-card" id="restDayCard">
+                <input type="checkbox" id="restDayToggle" style="display:none;">
+                <span class="macro-toggle-icon" data-icon="moon"></span>
+                <span class="macro-toggle-label">Rest day</span>
+              </label>
               <label class="macro-toggle-card" id="refeedDayCard">
                 <input type="checkbox" id="refeedDayToggle" style="display:none;">
                 <span class="macro-toggle-icon" data-icon="flame"></span>
@@ -3596,7 +3601,7 @@
               <button type="button" class="macro-seg-btn active" data-val="training" aria-pressed="true" onclick="setMacroEditDay('training')">Training day</button>
               <button type="button" class="macro-seg-btn" data-val="rest" aria-pressed="false" onclick="setMacroEditDay('rest')">Rest day</button>
             </div>
-            <p id="macroEditDayHint" class="macro-slider-caption">Your training-day macros. Set rest-day macros too and the Training day chip switches between them; Low and High carb days adjust that day's own numbers.</p>
+            <p id="macroEditDayHint" class="macro-slider-caption">Your training-day macros. Set rest-day macros too and the Training day and Rest day chips switch between them; Low and High carb days adjust that day's own numbers.</p>
             <button type="button" id="macroRestClearBtn" class="mx-link" onclick="clearRestDayMacros()" hidden>Use training-day macros on rest days</button>
             <p class="macro-slider-caption macro-type-hint">Drag a slider, or tap a number to type it. Calories are worked out from your macros.</p>
             <div class="macro-slider-head"><label for="proteinSlider">Protein</label><span class="macro-slider-val"><input type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="1500" class="mx-num macro-num-input" id="proteinVal" value="0" aria-label="Protein, grams" oninput="typeMacro('proteinSlider')" onblur="_updateSliderDisplay()"><small>g</small></span></div>
@@ -10707,11 +10712,13 @@ function getMacroTargetValues() {
 
 function getMacroCyclingSettings() {
   const trainingToggle = document.getElementById("trainingDayToggle");
+  const restToggle = document.getElementById("restDayToggle");
   const carbCycleSelect = document.getElementById("carbCycleSelect");
   const refeedToggle = document.getElementById("refeedDayToggle");
   return {
-    // Unticked = a normal day: the saved (slider) targets as they are.
-    dayType: trainingToggle?.checked ? "training" : "base",
+    // Neither chip = a normal day: the saved (slider) targets as they are,
+    // or the rest-day ones once those are set (macroEngine).
+    dayType: trainingToggle?.checked ? "training" : restToggle?.checked ? "rest" : "base",
     carbCycle: carbCycleSelect?.value || "normal",
     isRefeedDay: Boolean(refeedToggle?.checked),
   };
@@ -10852,6 +10859,8 @@ function applyCoachMacroScheduleForToday() {
   const trainingToggle = document.getElementById('trainingDayToggle');
   const carbSelect = document.getElementById('carbCycleSelect');
   if (trainingToggle) trainingToggle.checked = type !== 'rest' && type !== 'low';
+  const restToggle = document.getElementById('restDayToggle');
+  if (restToggle) restToggle.checked = type === 'rest';
   if (carbSelect) carbSelect.value = type === 'high' || type === 'low' ? type : 'normal';
   document.querySelectorAll('.macro-seg-row[data-macro-seg-for="carbCycleSelect"] .macro-seg-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.val === (carbSelect ? carbSelect.value : 'normal'));
@@ -10904,6 +10913,8 @@ function loadMacroDayContext() {
     const trainingToggle = document.getElementById("trainingDayToggle");
     if (trainingToggle && saved.dayTypeSetByHand && typeof saved.dayType === 'string') {
       trainingToggle.checked = saved.dayType === 'training';
+      const restToggle = document.getElementById("restDayToggle");
+      if (restToggle) restToggle.checked = saved.dayType === 'rest';
     }
     const hydrationInput = document.getElementById("hydrationMlInput");
     if (hydrationInput && saved.hydrationMl) hydrationInput.value = saved.hydrationMl;
@@ -11486,11 +11497,11 @@ function renderMacroEditDay() {
   if (hint) {
     hint.textContent = macroEditDay === 'rest'
       ? (hasRest
-        ? 'Your rest-day macros, used when the Training day chip is off. Low and High carb days adjust these.'
+        ? 'Your rest-day macros, used when Training day is off (or Rest day is on). Low and High carb days adjust these.'
         : 'Starts from your training-day macros. Change them and save to set your rest-day macros.')
       : (hasRest
         ? 'Your training-day macros, used when the Training day chip is on. Low and High carb days adjust these.'
-        : "Your training-day macros. Set rest-day macros too and the Training day chip switches between them; Low and High carb days adjust that day's own numbers.");
+        : "Your training-day macros. Set rest-day macros too and the Training day and Rest day chips switch between them; Low and High carb days adjust that day's own numbers.");
   }
   const clearBtn = document.getElementById('macroRestClearBtn');
   if (clearBtn) clearBtn.hidden = !(macroEditDay === 'rest' && hasRest);
@@ -12077,12 +12088,19 @@ loadAndRenderDailyProgress();
 loadMacroDayContext();
 if (applyCoachMacroScheduleForToday()) updateMacroUI();
 
-["carbCycleSelect", "refeedDayToggle", "hydrationMlInput", "sodiumMgInput", "digestionNotesInput", "trainingDayToggle"].forEach((id) => {
+["carbCycleSelect", "refeedDayToggle", "hydrationMlInput", "sodiumMgInput", "digestionNotesInput", "trainingDayToggle", "restDayToggle"].forEach((id) => {
   const node = document.getElementById(id);
   if (!node) return;
   const eventName = node.tagName === 'SELECT' ? 'change' : (node.type === 'checkbox' ? 'change' : 'input');
-  const isDayType = id === 'carbCycleSelect' || id === 'trainingDayToggle';
+  const isDayType = id === 'carbCycleSelect' || id === 'trainingDayToggle' || id === 'restDayToggle';
   node.addEventListener(eventName, () => {
+    // Training day and Rest day are one or the other.
+    const other = id === 'trainingDayToggle' ? 'restDayToggle' : id === 'restDayToggle' ? 'trainingDayToggle' : null;
+    const otherNode = other && node.checked ? document.getElementById(other) : null;
+    if (otherNode && otherNode.checked) {
+      otherNode.checked = false;
+      otherNode.dispatchEvent(new Event('change'));
+    }
     persistMacroDayContext({ dayTypeSetByHand: isDayType });
     updateMacroUI();
   });

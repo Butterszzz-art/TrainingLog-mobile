@@ -56,7 +56,8 @@
     }
     const refeed   = document.getElementById('refeedDayToggle')?.checked;
     const training = document.getElementById('trainingDayToggle')?.checked;
-    el.textContent = refeed ? 'Today · Refeed day' : training ? 'Today · Training day' : 'Today';
+    const rest     = document.getElementById('restDayToggle')?.checked;
+    el.textContent = refeed ? 'Today · Refeed day' : training ? 'Today · Training day' : rest ? 'Today · Rest day' : 'Today';
   }
 
   function syncAll() {
