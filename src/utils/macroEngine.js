@@ -247,11 +247,24 @@ function applyDailyMacroAdjustment({
   };
 }
 
+// Rest-day targets the athlete typed in themselves (Adjust Macros → Rest day).
+// Only usable when they hold some macros.
+function hasOwnRestTargets(rest) {
+  if (!rest || typeof rest !== 'object') return false;
+  return ['protein', 'carbs', 'fat'].some(k => Number(rest[k]) > 0);
+}
+
 function buildBodybuildingDayTargets(baseTargets = {}, strategy = {}) {
-  const base = roundMacroTargets(baseTargets);
+  // With the athlete's own rest-day targets, the saved targets are the
+  // training day and there's no automatic split: a training day uses the
+  // saved targets as they are, any other day the rest-day ones. High/low
+  // carb days then adjust that day's own numbers.
+  const ownRest = hasOwnRestTargets(strategy?.restTargets);
+  let dayType = ['training', 'rest'].includes(strategy?.dayType) ? strategy.dayType : 'base';
+  if (ownRest && dayType === 'base') dayType = 'rest';
+  const base = roundMacroTargets(ownRest && dayType === 'rest' ? strategy.restTargets : baseTargets);
   // 'base' (no day type picked) keeps the saved targets exactly; the
   // training/rest split only applies when that day type is chosen.
-  const dayType = ['training', 'rest'].includes(strategy?.dayType) ? strategy.dayType : 'base';
   const carbCycle = ['high', 'low'].includes(strategy?.carbCycle) ? strategy.carbCycle : 'normal';
   const isRefeedDay = Boolean(strategy?.isRefeedDay);
 
@@ -260,7 +273,9 @@ function buildBodybuildingDayTargets(baseTargets = {}, strategy = {}) {
   let fat = base.fat;
   const notes = [];
 
-  if (dayType === 'training') {
+  if (ownRest) {
+    notes.push(dayType === 'training' ? 'Your training-day targets.' : 'Your rest-day targets.');
+  } else if (dayType === 'training') {
     carbs = Math.round(carbs * 1.12);
     protein = Math.round(protein * 1.05);
     fat = Math.round(fat * 0.92);
@@ -294,6 +309,7 @@ function buildBodybuildingDayTargets(baseTargets = {}, strategy = {}) {
       dayType,
       carbCycle,
       isRefeedDay,
+      ownDayTargets: ownRest,
       label: `${dayType === 'training' ? 'Training' : dayType === 'rest' ? 'Rest' : 'Your targets'} · ${carbCycle === 'normal' ? 'Normal' : carbCycle === 'high' ? 'High' : 'Low'}${isRefeedDay ? ' · Refeed' : ''}`,
     },
     notes,
