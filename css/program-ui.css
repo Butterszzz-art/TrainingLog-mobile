@@ -91,6 +91,36 @@
 #programTab .pbv2-split-desc { font-size: 13.5px; line-height: 1.45; color: var(--text-secondary); }
 #programTab .pbv2-split-rec { font-size: 12px; color: var(--mx-faint); }
 
+/* ── Split type (synchronous / asynchronous) ───────────────── */
+#programTab .pbv2-cadence { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius-pod); border: 1px solid var(--border-soft); background: var(--pod-bg); box-shadow: var(--pod-bevel); }
+#programTab .pbv2-cadence .pbv2-schedule-label { margin: 0; }
+#programTab .pbv2-cadence-toggle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+#programTab .pbv2-cadence-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 64px; margin: 0; padding: 10px 12px; text-align: left;
+  border-radius: 14px; border: 1px solid var(--border-chip); background: var(--pod-bg-alt); box-shadow: none; color: var(--text-secondary);
+}
+#programTab .pbv2-cadence-opt.active { background: var(--fill-btn-primary-mobile); border-color: transparent; color: var(--label-on-green); }
+#programTab .pbv2-cadence-opt-label { font-family: var(--font-label); font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+#programTab .pbv2-cadence-opt-desc { font-size: 12.5px; line-height: 1.3; opacity: 0.85; }
+#programTab .pbv2-cadence-steppers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+#programTab .pbv2-cadence-stepper { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px; border-radius: 14px; background: var(--surface-recessed); border: 1px solid var(--border-soft); }
+#programTab .pbv2-cadence-stepper-label { font-family: var(--font-label); font-size: 11.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mx-label); }
+#programTab .pbv2-cadence-stepper-ctrl { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; }
+#programTab .pbv2-cadence-step {
+  width: 40px; height: 40px; min-width: 40px; min-height: 40px; flex: none; margin: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 1px solid var(--border-chip); background: var(--pod-bg-alt); box-shadow: none; color: var(--text-primary);
+}
+#programTab .pbv2-cadence-step:disabled { opacity: 0.35; }
+#programTab .pbv2-cadence-val { font-family: var(--font-display); font-size: 28px; line-height: 1; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+#programTab .pbv2-cycle-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+#programTab .pbv2-cycle-pill {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: 48px; padding: 4px 2px;
+  border-radius: 12px; border: 1px solid var(--border-chip); background: var(--pod-bg-alt); color: var(--text-tertiary);
+}
+#programTab .pbv2-cycle-pill.on { background: rgba(var(--acc-2f8a63), 0.16); border-color: rgba(var(--acc-2f8a63), 0.4); color: var(--green-90); }
+#programTab .pbv2-cycle-top { font-family: var(--font-label); font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+#programTab .pbv2-cycle-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 600; }
+
 /* ── Exercises step ────────────────────────────────────────── */
 #programTab .pbv2-day-tabs-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 6px; margin: 0; border: 0; background: none; scrollbar-width: none; }
 #programTab .pbv2-day-tabs-row::-webkit-scrollbar { display: none; }
