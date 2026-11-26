@@ -1310,6 +1310,7 @@
 
     const splitLabels = { fullbody: 'Full Body', upperlower: 'Upper/Lower', ppl: 'PPL', custom: 'Custom' };
     const goalLabels  = { strength: 'Strength', hypertrophy: 'Hypertrophy', 'fat-loss': 'Fat Loss', general: 'General' };
+    const phone = !!(window.ProgramQuickAdjust && window.ProgramQuickAdjust.isPhone());
 
     programs.slice().reverse().forEach((prog, revIdx) => {
       const origIdx = programs.length - 1 - revIdx;
@@ -1330,7 +1331,7 @@
           <span class="prog-badge">${esc(goalLabel)}</span>
         </div>
         <div class="prog-card-actions">
-          <button type="button" class="prog-card-load" data-idx="${origIdx}">Load into Builder</button>
+          <button type="button" class="prog-card-load" data-idx="${origIdx}">${phone && progId(prog) ? 'Adjust' : 'Load into Builder'}</button>
           <button type="button" class="prog-card-export" data-idx="${origIdx}" title="Export as PDF">${ico('fileText')}<span>PDF</span></button>
           <button type="button" class="prog-card-del" data-idx="${origIdx}">Delete</button>
         </div>
@@ -1341,6 +1342,7 @@
       card.querySelector('.prog-card-export').addEventListener('click', () => exportProgramPDF(prog));
 
       card.querySelector('.prog-card-load').addEventListener('click', () => {
+        if (phone && progId(prog)) { window.openProgramQuickAdjust(progId(prog)); return; }
         // Load this program into the draft and switch to builder
         const core = window.programBuilderV2Core;
         if (!core) return;
@@ -1438,6 +1440,129 @@
 
   window.initProgramTabV2 = initProgramTabV2;
 
+  /* ══════════════════════════════════════════════════════════════
+     PHONE: quick adjust instead of the full wizard
+     On a phone the Build view is "add 2 sets to bench", "less chest
+     this week" on a program you already have (program-quick-adjust.js).
+     New programs come from Generate with AI, Import, the Library or a
+     coach; the full wizard is still one tap away for building from scratch.
+  ══════════════════════════════════════════════════════════════ */
+
+  let phoneFullBuilder = false; // "Build from scratch" for the rest of this visit
+  let phoneProgramId = null;    // the program picked in the Adjust view
+  let phoneUndo = null;         // { id, stores: { key: programBefore } }
+
+  const progId = p => (p && (p.programId || p.id)) || null;
+  const sameProg = (p, id) => !!p && !!id && (p.programId === id || p.id === id);
+
+  function startedKey() { return 'programs_' + getUserId(); }
+  function readList(key) {
+    try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; } catch (_e) { return []; }
+  }
+  function activeProgramId() {
+    for (const k of ['activeProgram_' + getUserId(), 'activeProgram']) {
+      try { const a = JSON.parse(localStorage.getItem(k) || 'null'); if (a && a.programId) return a.programId; } catch (_e) { /* ignore */ }
+    }
+    return null;
+  }
+
+  // Saved programs (My Programs) plus started copies (programs_<user>,
+  // what Today follows) that aren't in My Programs, newest first.
+  function phonePrograms() {
+    const saved = readList('programs');
+    const started = readList(startedKey()).filter(p => progId(p) && !saved.some(s => sameProg(s, progId(p))));
+    return saved.concat(started).filter(p => progId(p)).reverse();
+  }
+
+  // Write a changed program back to every store that holds it, keeping each
+  // copy's own fields (a started copy keeps its startDate).
+  function writeProgram(id, changed) {
+    const before = {};
+    ['programs', startedKey()].forEach(key => {
+      const list = readList(key);
+      const i = list.findIndex(p => sameProg(p, id));
+      if (i === -1) return;
+      before[key] = list[i];
+      list[i] = { ...list[i], days: changed.days, ...(changed.weeks ? { weeks: changed.weeks } : {}), updatedAt: new Date().toISOString() };
+      if (!changed.days) delete list[i].days;
+      localStorage.setItem(key, JSON.stringify(list));
+    });
+    if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+    return before;
+  }
+
+  function renderPhoneAdjust(mount) {
+    const Q = window.ProgramQuickAdjustCore;
+    const programs = phonePrograms();
+    if (!programs.some(p => sameProg(p, phoneProgramId))) {
+      const active = activeProgramId();
+      phoneProgramId = progId(programs.find(p => sameProg(p, active)) || programs[0]);
+    }
+    const current = () => phonePrograms().find(p => sameProg(p, phoneProgramId));
+    const prog = current();
+    const active = activeProgramId();
+    const multiWeek = prog && Array.isArray(prog.weeks) && prog.weeks.length > 1;
+
+    mount.innerHTML = `
+      <div class="pqa-phone">
+        ${programs.length ? `
+        <section class="pod mx-pod">
+          <div class="mx-field">
+            <label class="mx-lbl" for="pqaProgram">Program</label>
+            <div class="mx-well"><select id="pqaProgram">
+              ${programs.map(p => `<option value="${esc(progId(p))}"${sameProg(p, phoneProgramId) ? ' selected' : ''}>${esc(p.name || p.title || 'Untitled Program')}${sameProg(p, active) ? ' (active)' : ''}</option>`).join('')}
+            </select></div>
+          </div>
+          ${multiWeek ? `<p class="mx-sub">Changes apply to every week of this program except deloads.</p>` : ''}
+        </section>
+        <div id="pqaHost"></div>` : `
+        <section class="pod mx-pod">
+          <div class="mx-empty">No programs yet. Generate one with AI, import one, or pick one from the Library, then adjust it here.</div>
+        </section>`}
+        <button type="button" class="mx-outline mx-outline--block pqa-full-builder">${ico('pencil')}<span>Build from scratch</span></button>
+      </div>`;
+
+    mount.querySelector('.pqa-full-builder').addEventListener('click', () => {
+      phoneFullBuilder = true;
+      mount.innerHTML = '';
+      mount.__pbv2Mounted = false;
+      initProgramTabV2(mount);
+    });
+    const select = mount.querySelector('#pqaProgram');
+    if (select) select.addEventListener('change', () => { phoneProgramId = select.value; phoneUndo = null; renderPhoneAdjust(mount); });
+
+    const host = mount.querySelector('#pqaHost');
+    if (!host || !Q || !window.ProgramQuickAdjust) return;
+    window.ProgramQuickAdjust.render(host, {
+      resetUndo: !phoneUndo,
+      getRows: () => Q.rowsFromDays(Q.baseDays(current())),
+      apply: async (plan, action) => {
+        const p = current();
+        if (!p) throw new Error('That program is gone. Pick another.');
+        const changed = Q.applyToProgram(p, plan, action, window.ProgramQuickAdjust.muscleOf);
+        phoneUndo = { id: progId(p), stores: writeProgram(progId(p), changed) };
+      },
+      undo: async () => {
+        if (!phoneUndo) return;
+        Object.entries(phoneUndo.stores).forEach(([key, prev]) => {
+          const list = readList(key);
+          const i = list.findIndex(p => sameProg(p, phoneUndo.id));
+          if (i !== -1) { list[i] = prev; localStorage.setItem(key, JSON.stringify(list)); }
+        });
+        phoneUndo = null;
+        if (typeof window.renderTodayProgramCard === 'function') window.renderTodayProgramCard();
+      },
+    });
+  }
+
+  // Open the phone Adjust view on one program (My Programs → Adjust).
+  window.openProgramQuickAdjust = function (id) {
+    phoneProgramId = id || phoneProgramId;
+    phoneUndo = null;
+    phoneFullBuilder = false;
+    window.showProgramView('build');
+  };
+
   // Wire up the entry point called by the tab switcher
   window.initProgramBuilder = function () {
     let mount = document.getElementById('programBuilderV2Mount');
@@ -1447,6 +1572,11 @@
       mount = document.createElement('div');
       mount.id = 'programBuilderV2Mount';
       container.appendChild(mount);
+    }
+    if (!phoneFullBuilder && window.ProgramQuickAdjust && window.ProgramQuickAdjust.isPhone()) {
+      mount.__pbv2Mounted = false; // so "Build from scratch" mounts the wizard fresh
+      renderPhoneAdjust(mount);
+      return;
     }
     initProgramTabV2(mount);
   };
