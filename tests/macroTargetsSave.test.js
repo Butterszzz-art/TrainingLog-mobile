@@ -35,7 +35,7 @@ describe('normalizeMacroTargets', () => {
 });
 
 describe('saveSliderMacros', () => {
-  function setup(fetchImpl) {
+  function setup(fetchImpl, editDay = 'training') {
     const store = {};
     const toasts = [];
     const sliders = { proteinSlider: 150, fatSlider: 60, carbSlider: 200 };
@@ -51,6 +51,8 @@ describe('saveSliderMacros', () => {
       alert: () => {},
       console: { error: () => {} },
       macroRanges: null,
+      macroEditDay: editDay,
+      renderMacroEditDay: () => {},
     };
     vm.createContext(ctx);
     vm.runInContext(`
@@ -79,6 +81,17 @@ describe('saveSliderMacros', () => {
     expect(JSON.parse(store.macroTargets_alice).protein).toBe(150);
     expect(toasts).toHaveLength(1);
     expect(toasts[0].type).toBe('error');
+  });
+
+  test('on Rest day it saves the rest-day targets and leaves the account targets alone', async () => {
+    const fetchImpl = jest.fn();
+    const { ctx, store, toasts } = setup(fetchImpl, 'rest');
+    ctx.saveSliderMacros();
+    await flush();
+    expect(JSON.parse(store.macroRestTargets_alice)).toMatchObject({ calories: 1940, protein: 150, fat: 60, carbs: 200 });
+    expect(store.macroTargets_alice).toBeUndefined();
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(toasts).toEqual([{ msg: 'Rest-day macros saved!', type: 'success' }]);
   });
 });
 

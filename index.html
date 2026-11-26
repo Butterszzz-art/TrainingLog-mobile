@@ -3591,6 +3591,13 @@
         <div id="adjustMacroSection" class="adjust-macros grid" style="margin-bottom: 30px;">
           <div class="macro-card">
             <h3>Daily Tracking</h3>
+            <p class="macro-seg-label" style="margin-top:0;">Targets for</p>
+            <div class="macro-seg-row" id="macroEditDaySegRow" role="group" aria-label="Which day's targets you're editing">
+              <button type="button" class="macro-seg-btn active" data-val="training" aria-pressed="true" onclick="setMacroEditDay('training')">Training day</button>
+              <button type="button" class="macro-seg-btn" data-val="rest" aria-pressed="false" onclick="setMacroEditDay('rest')">Rest day</button>
+            </div>
+            <p id="macroEditDayHint" class="macro-slider-caption">Your training-day macros. Set rest-day macros too and the Training day chip switches between them; Low and High carb days adjust that day's own numbers.</p>
+            <button type="button" id="macroRestClearBtn" class="mx-link" onclick="clearRestDayMacros()" hidden>Use training-day macros on rest days</button>
             <p class="macro-slider-caption macro-type-hint">Drag a slider, or tap a number to type it. Calories are worked out from your macros.</p>
             <div class="macro-slider-head"><label for="proteinSlider">Protein</label><span class="macro-slider-val"><input type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="1500" class="mx-num macro-num-input" id="proteinVal" value="0" aria-label="Protein, grams" oninput="typeMacro('proteinSlider')" onblur="_updateSliderDisplay()"><small>g</small></span></div>
             <input type="range" id="proteinSlider" min="0" max="0" oninput="adjustMacros('proteinSlider')" title="Default: 2 g/kg when cutting, 1.8 g/kg when maintaining/bulking">
@@ -10911,7 +10918,10 @@ function getBodybuildingMacroTargets(baseTargets) {
   if (!window.macroEngine?.buildBodybuildingDayTargets) {
     return { adjusted: baseTargets, profile: { label: "Base" }, notes: [] };
   }
-  return window.macroEngine.buildBodybuildingDayTargets(baseTargets, getMacroCyclingSettings());
+  return window.macroEngine.buildBodybuildingDayTargets(baseTargets, {
+    ...getMacroCyclingSettings(),
+    restTargets: getRestDayMacroTargets(),
+  });
 }
 
 function getAdaptiveMacroTargets() {
@@ -11441,6 +11451,67 @@ function renderMacroTargets(options = {}) {
   document.getElementById("calsBar").value = 0;
 
   // Always set up sliders from saved targets with 1.5× headroom so the user can adjust above targets
+  loadMacroEditSliders(macroEditDay === 'rest' ? getRestEditTargets(saved) : saved);
+}
+
+// Which day's targets the Adjust Macros sliders edit: 'training' (the
+// saved targets) or 'rest' (macroRestTargets_<user>, synced by cloud-sync.js).
+var macroEditDay = 'training';
+
+function getRestDayMacroTargets() {
+  try {
+    const rest = normalizeMacroTargets(JSON.parse(localStorage.getItem(`macroRestTargets_${currentUser || ''}`)));
+    return rest && (rest.protein || rest.carbs || rest.fat) ? rest : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+// Until rest-day macros are saved, the Rest day editor starts from the
+// training-day ones.
+function getRestEditTargets(saved) {
+  return getRestDayMacroTargets() || saved || normalizeMacroTargets(JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`)));
+}
+
+function renderMacroEditDay() {
+  document.querySelectorAll('#macroEditDaySegRow .macro-seg-btn').forEach((btn) => {
+    const on = btn.dataset.val === macroEditDay;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const hasRest = Boolean(getRestDayMacroTargets());
+  const hint = document.getElementById('macroEditDayHint');
+  if (hint) {
+    hint.textContent = macroEditDay === 'rest'
+      ? (hasRest
+        ? 'Your rest-day macros, used when the Training day chip is off. Low and High carb days adjust these.'
+        : 'Starts from your training-day macros. Change them and save to set your rest-day macros.')
+      : (hasRest
+        ? 'Your training-day macros, used when the Training day chip is on. Low and High carb days adjust these.'
+        : "Your training-day macros. Set rest-day macros too and the Training day chip switches between them; Low and High carb days adjust that day's own numbers.");
+  }
+  const clearBtn = document.getElementById('macroRestClearBtn');
+  if (clearBtn) clearBtn.hidden = !(macroEditDay === 'rest' && hasRest);
+}
+
+function setMacroEditDay(day) {
+  macroEditDay = day === 'rest' ? 'rest' : 'training';
+  const saved = normalizeMacroTargets(JSON.parse(localStorage.getItem(`macroTargets_${currentUser}`)));
+  const targets = macroEditDay === 'rest' ? getRestEditTargets(saved) : saved;
+  if (targets) loadMacroEditSliders(targets);
+  renderMacroEditDay();
+}
+
+function clearRestDayMacros() {
+  localStorage.removeItem(`macroRestTargets_${currentUser}`);
+  setMacroEditDay('rest');
+  updateMacroUI();
+  window.showToast?.('Rest days now use your training-day macros', 'success');
+}
+
+function loadMacroEditSliders(saved) {
+  if (!saved) return;
+  renderMacroEditDay();
   const _pHead = Math.round(saved.protein * 1.5);
   const _fHead = Math.round(saved.fat * 1.5);
   const _cHead = Math.round(saved.carbs * 1.5);
@@ -11518,6 +11589,16 @@ function saveSliderMacros() {
     const c = Number(document.getElementById("carbSlider").value);
     const calTotal = p*4 + f*9 + c*4;
       const target = { calories: calTotal, protein: p, fat: f, carbs: c };
+      if (macroEditDay === 'rest') {
+        // Rest-day targets sync with the rest of the device data
+        // (cloud-sync.js macroRestTargets); the account's targets stay the
+        // training day's.
+        localStorage.setItem(`macroRestTargets_${currentUser}`, JSON.stringify({ ...target, updatedAt: new Date().toISOString() }));
+        renderMacroEditDay();
+        updateMacroUI();
+        window.showToast?.("Rest-day macros saved!", 'success');
+        return;
+      }
       // Save on the device first so the targets stick even if the request
       // fails, then only report success once the server accepted them.
       saveMacroTargetsToTop(target);
@@ -11566,6 +11647,8 @@ async function saveMacroTargetsToBackend(username, target, { silent = false } = 
   
 function saveMacroTargetsToTop(target) {
     localStorage.setItem(`macroTargets_${currentUser}`, JSON.stringify(target));
+    macroEditDay = 'training';
+    renderMacroEditDay();
     // Keep the in-memory fallback in step with what was just saved.
     macroTargetCalories = Number(target.calories) || 0;
     macroTargetProtein  = Number(target.protein) || 0;

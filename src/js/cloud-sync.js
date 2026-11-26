@@ -73,6 +73,8 @@
     { name: 'hyroxRace',        key: u => `hyroxRace_${u}`,        mode: 'value' },
     { name: 'macroHistory',     key: u => `macroHistory_${u}`,     mode: 'list', idField: 'date' },
     { name: 'macroTargets',     key: u => `macroTargets_${u}`,     mode: 'value' },
+    // Rest-day targets set in Adjust Macros (index.html saveSliderMacros).
+    { name: 'macroRestTargets', key: u => `macroRestTargets_${u}`, mode: 'value' },
     // The food log, one item per food logged (food-database.js). A coach
     // the client shares it with reads these on the server.
     { name: 'foodLog',          key: u => `foodLog_${u}`,          mode: 'list', idField: 'id' },
@@ -504,7 +506,7 @@
     if (has('crossfitLog', 'crossfitWorkouts', 'crossfitTemplates', 'functionalCircuits', 'hyroxLog', 'hyroxRace')) call('renderFunctionalTab');
     if (has('macroHistory')) call('renderMacroHistory');
     if (has('foodLog')) call('renderFoodLog');
-    if (has('macroTargets', 'dailyMacroMeals', 'dailyMacroProgress', 'dailyMacroDate', 'macroDayType', 'macroDayComplete')) {
+    if (has('macroTargets', 'macroRestTargets', 'dailyMacroMeals', 'dailyMacroProgress', 'dailyMacroDate', 'macroDayType', 'macroDayComplete')) {
       call('loadMacroTargetsFromLocal'); call('renderMacroSlots'); call('renderDailyMacroProgress'); call('updateMacroUI');
     }
     if (has('logbookCover')) { call('renderLogbookCover'); call('renderSettingsHero'); }
