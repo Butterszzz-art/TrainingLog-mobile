@@ -241,3 +241,38 @@ describe('programWeekStart', () => {
     expect(ps.programWeekStart(sched(), date('2026-09-01'))).toBeNull();
   });
 });
+
+describe('currentLiftIndex', () => {
+  const lift = (planned, done) => ({ name: 'x', planned, done, complete: planned > 0 && done >= planned });
+
+  test('nothing logged yet: the first lift', () => {
+    expect(ps.currentLiftIndex([lift(3, 0), lift(3, 0)])).toBe(0);
+  });
+
+  test('stays on a lift with sets still to do', () => {
+    expect(ps.currentLiftIndex([lift(3, 3), lift(3, 1), lift(3, 0)])).toBe(1);
+  });
+
+  test('moves on past a lift finished a set short', () => {
+    // Lift 0 stopped at 2 of 3, lift 1 is done: the next lift is 2, not 0.
+    expect(ps.currentLiftIndex([lift(3, 2), lift(3, 3), lift(3, 0)])).toBe(2);
+  });
+
+  test('wraps round to a lift left behind once the rest are done', () => {
+    expect(ps.currentLiftIndex([lift(3, 2), lift(3, 3), lift(3, 3)])).toBe(0);
+  });
+
+  test('fromIndex: the lift after the one just finished', () => {
+    expect(ps.currentLiftIndex([lift(2, 2), lift(2, 0), lift(2, 0)], 0)).toBe(1);
+  });
+
+  test('-1 when every lift is complete', () => {
+    expect(ps.currentLiftIndex([lift(2, 2), lift(1, 1)])).toBe(-1);
+  });
+
+  test('dayProgress reports it as current', () => {
+    const day = { exercises: [{ name: 'Squat', sets: 2 }, { name: 'Cable Fly', sets: 2 }] };
+    const log = [{ exercise: 'Squat', repsArray: [5, 5], weightsArray: [100, 90] }];
+    expect(ps.dayProgress(day, [{ date: '2026-11-27', log }]).current).toBe(1);
+  });
+});

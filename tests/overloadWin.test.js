@@ -314,3 +314,26 @@ describe('success buzz', () => {
     expect(globalThis.navigator.vibrate).toHaveBeenCalled();
   });
 });
+
+describe('another gym (Alt Gym session context)', () => {
+  const alt = { sessionCtx: { altMachine: false, altGym: true, gymName: 'Home' } };
+  const history = [
+    workout('2026-11-14', [entry('Seated Band Hamstring Curl', [[68, 6, 'top-set', 1], [63, 7, 'backoff', 0]], alt)]),
+    workout(TODAY, [entry('Seated Band Hamstring Curl', [[70, 5, 'top-set']], alt)]),
+  ];
+
+  test('beating last time at the same gym earns the card', () => {
+    const w = evaluateWin('Seated Band Hamstring Curl', history, TODAY, undefined, 'home');
+    expect(w).not.toBeNull();
+    expect(w.today).toEqual({ weight: 70, reps: 5 });
+    expect(w.last).toMatchObject({ weight: 68, reps: 6 });
+  });
+
+  test('usual-gym comparison still ignores those sets', () => {
+    expect(evaluateWin('Seated Band Hamstring Curl', history, TODAY)).toBeNull();
+  });
+
+  test('an unnamed alt gym has nothing to compare with', () => {
+    expect(evaluateWin('Seated Band Hamstring Curl', history, TODAY, undefined, null)).toBeNull();
+  });
+});

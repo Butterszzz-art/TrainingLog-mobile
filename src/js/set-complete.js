@@ -244,6 +244,12 @@
 
     entry.completedArray[si] = !!completed;
     if (completed) entry.skippedArray[si] = false;
+    // Ticked at another gym: tag the lift like quick log does, so these sets
+    // compare with that gym's and stay out of the usual gym's PRs.
+    if (completed && !entry.sessionCtx && typeof global.getCurrentGymKey === 'function'
+      && global.getCurrentGymKey() !== '' && typeof global.applySessionContext === 'function') {
+      try { global.applySessionContext(entry, { altMachine: false }); } catch { /* tagging is optional */ }
+    }
     openEffort.delete(`${wi}_${ei}_${si}`);
 
     if (!completed) {
