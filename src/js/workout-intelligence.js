@@ -258,6 +258,37 @@
     return null;
   }
 
+  /**
+   * The back-off to do next when last time's set at this position was a
+   * back-off: its weight follows today's top set, not last session's.
+   * Right after the top set it's the advised drop from it (suggestNextSet,
+   * the same number the tip and a loaded plan use); after a back-off it's
+   * that back-off's weight. Reps aim at last time's for the set.
+   * Returns { index, weight, reps, unit, last, top } or null.
+   */
+  function getBackoffTarget(exerciseName, username, cmpIn) {
+    const cmp = cmpIn || getLastSessionComparison(exerciseName, username);
+    if (!cmp || !cmp.today.length) return null;
+    const index = cmp.today.length;
+    const last = cmp.last[index];
+    if (!last || last.type !== 'backoff') return null;
+    const prev = cmp.today[index - 1];
+    const top = cmp.today.filter(s => s.type === 'top-set').pop() || null;
+    if (!top) return null;
+    let weight = null;
+    if (prev.type === 'top-set' && typeof window.suggestNextSet === 'function') {
+      try {
+        const gymKey = typeof window.getCurrentGymKey === 'function' ? window.getCurrentGymKey() : '';
+        const adv = window.suggestNextSet(exerciseName, _loadWorkouts(username), { date: _todayKey(), gymKey: gymKey || '' });
+        if (adv && adv.kind === 'backoff') weight = adv.weight;
+      } catch { weight = null; }
+    } else if (prev.type === 'backoff') {
+      weight = prev.weight;
+    }
+    if (!(Number(weight) > 0)) return null;
+    return { index, weight: Number(weight), reps: last.reps, unit: cmp.unit, last, top };
+  }
+
   /** ↑ / = / ↓ of today's set against the same set last time. */
   function compareSet(a, b) {
     if (!a || !b) return null;
@@ -300,6 +331,11 @@
     const unit = cmp.unit;
     const rows = Math.max(cmp.last.length, cmp.today.length);
     const next = cmp.today.length; // index of the set to do now
+    // A back-off follows today's top set: once that's heavier or lighter
+    // than last time's, last time's back-off weight is the wrong target.
+    let bo = null;
+    try { bo = getBackoffTarget(name, username, cmp); } catch { bo = null; }
+    const boMoved = !!(bo && cmp.last[next] && Math.abs(bo.weight - cmp.last[next].weight) > 1e-9);
     let up = 0;
     const body = [];
     for (let i = 0; i < rows; i++) {
@@ -311,7 +347,7 @@
         : verdict === 'down' ? '<span class="lsc-mark lsc-down" aria-label="below">↓</span>' : '';
       const lastTxt = l ? `${_fmtNum(l.weight)} × ${_esc(l.reps)}${l.rir != null && Number.isFinite(l.rir) ? ` <span class="lsc-rir">${_esc(l.rir)} left</span>` : ''}` : '<span class="lsc-none">—</span>';
       const todayTxt = t ? `${_fmtNum(t.weight)} × ${_esc(t.reps)} ${mark}`
-        : (i === next ? '<span class="lsc-next-lbl">Next</span>' : '');
+        : (i === next ? `<span class="lsc-next-lbl">Next</span>${boMoved ? ` <span class="lsc-target">${_fmtNum(bo.weight)} × ${_esc(bo.reps)}</span>` : ''}` : '');
       body.push(`<div class="lsc-row${i === next && l ? ' is-next' : ''}${t ? ' is-done' : ''}">
         <span class="lsc-n">${i + 1}</span>
         <span class="lsc-last">${lastTxt}${l ? _setTag(l.type) : ''}</span>
@@ -323,7 +359,9 @@
       ? `${up} of ${Math.min(cmp.today.length, cmp.last.length)} set${Math.min(cmp.today.length, cmp.last.length) === 1 ? '' : 's'} beaten`
       : `${cmp.last.length} set${cmp.last.length === 1 ? '' : 's'} · best ${_fmtNum(best.weight)} × ${_esc(best.reps)}`;
     const nextLast = cmp.last[next];
-    const goal = nextLast
+    const goal = boMoved
+      ? `<div class="lsc-goal">Set ${next + 1} · back-off: <b>${_fmtNum(bo.weight)} ${_esc(unit)} × ${_esc(bo.reps)}+</b> — from today's ${_fmtNum(bo.top.weight)} ${_esc(unit)} top set (last time ${_fmtNum(nextLast.weight)} × ${_esc(nextLast.reps)})</div>`
+      : nextLast
       ? `<div class="lsc-goal">Set ${next + 1}: beat <b>${_fmtNum(nextLast.weight)} ${_esc(unit)} × ${_esc(nextLast.reps)}</b> — ${_esc(nextLast.reps + 1)} reps, or more weight</div>`
       : (cmp.today.length >= cmp.last.length ? `<div class="lsc-goal lsc-goal--done">All ${cmp.last.length} sets from last time done${cmp.today.length > cmp.last.length ? ` · +${cmp.today.length - cmp.last.length} extra` : ''}</div>` : '');
 
@@ -728,6 +766,7 @@
   window.renderOverloadHint      = renderOverloadHint;
   window.renderLastSessionCard   = renderLastSessionCard;
   window.getLastSessionComparison = getLastSessionComparison;
+  window.getBackoffTarget        = getBackoffTarget;
   // A set ticked in a loaded session (set-complete.js) doesn't go through
   // quick log: refresh the card's Today column from the event too.
   document.addEventListener('tl:set-logged', () => setTimeout(() => { try { renderLastSessionCard(); } catch { /* optional */ } }, 0));

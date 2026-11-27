@@ -615,11 +615,18 @@
     if (typeof global.renderTodayProgramCard === 'function') global.renderTodayProgramCard();
   }
 
+  /** The lift being worked on (program-schedule.js currentLiftIndex). */
+  function _currentIdx(progress) {
+    if (!progress) return -1;
+    if (Number.isInteger(progress.current)) return progress.current;
+    return progress.lifts.findIndex(l => !l.complete);
+  }
+
   /** Open quick log on the first lift from last time not yet matched today. */
   function _continueMatched(day, u) {
     const ps = _schedule();
     const progress = ps ? ps.dayProgress(day, ps.workoutsOn(_localDateKey(), u)) : null;
-    const i = progress ? progress.lifts.findIndex(l => !l.complete) : -1;
+    const i = progress ? _currentIdx(progress) : -1;
     const ex = i === -1 ? null : day.exercises[i];
     if (ex && typeof global.startQuickLogFor === 'function') {
       const first = (ex.sets && ex.sets[0]) || {};
@@ -691,7 +698,7 @@
     const ps = _schedule();
     const progress = ps ? ps.dayProgress(day, ps.workoutsOn(_localDateKey(), _user())) : null;
     const tracking = !!(progress && progress.started);
-    const currentIdx = tracking ? progress.lifts.findIndex(l => !l.complete) : -1;
+    const currentIdx = tracking ? _currentIdx(progress) : -1;
 
     const _esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     const hasStats = typeof global.getExerciseStats === 'function';
@@ -944,6 +951,39 @@
     _qlRepsLeft = null;
     _qlRepsRight = null;
     _syncQuickLogSidesUI();
+  }
+
+  /**
+   * Follow last time's set structure for the set about to be logged: if
+   * that set was the Top Set or a Back-off, pre-select the same pill (the
+   * lifter can untick it), and right after today's Top Set put the back-off
+   * weight worked out from it (workout-intelligence.js getBackoffTarget) on
+   * the stepper. Without this, sets quick-logged outside a loaded plan went
+   * in untagged, so the back-offs never followed a heavier top set.
+   */
+  function _presetFromLastTime(name) {
+    if (typeof document === 'undefined' || !name) return;
+    const u = _user();
+    if (!u || typeof global.getLastSessionComparison !== 'function') return;
+    let cmp = null;
+    try { cmp = global.getLastSessionComparison(name, u); } catch { cmp = null; }
+    const next = cmp && cmp.last[cmp.today.length];
+    if (!next) return;
+    const topEl = document.getElementById('qlTopSet');
+    const boEl = document.getElementById('qlBackoff');
+    const picked = !!((topEl && topEl.checked) || (boEl && boEl.checked));
+    if (!picked && next.type === 'top-set' && topEl) topEl.checked = true;
+    if (!picked && next.type === 'backoff' && boEl) boEl.checked = true;
+    const prev = cmp.today[cmp.today.length - 1];
+    if (next.type === 'backoff' && prev && prev.type === 'top-set' && typeof global.getBackoffTarget === 'function') {
+      let bo = null;
+      try { bo = global.getBackoffTarget(name, u, cmp); } catch { bo = null; }
+      if (bo) {
+        _qlWeight = bo.weight;
+        if (bo.reps > 0) _qlReps = bo.reps;
+        _syncQuickLogDisplay();
+      }
+    }
   }
 
   /** Sets already logged today for this exercise (its whole block, matched
@@ -1210,7 +1250,7 @@
           _qlReps = Number(todaysLast.reps);
         }
       }
-      if (isNewExercise) _resetQuickLogSetOpts();
+      if (isNewExercise) { _resetQuickLogSetOpts(); _presetFromLastTime(name); }
       _syncQuickLogDisplay();
       _writeQuickLogToForm();
     }
@@ -1224,7 +1264,7 @@
   /** Tapped a session-queue row: jump straight into quick-log for that
    * exercise, pre-filled from the plan's first set (real planned values,
    * falling back to the sticky-default logic above when absent). */
-  function startQuickLogFor(name, plannedFirstSet) {
+  function startQuickLogFor(name, plannedFirstSet, opts) {
     if (typeof document === 'undefined' || !name) return;
     const exerciseEl = document.getElementById('exercise');
     if (!exerciseEl) return;
@@ -1241,7 +1281,41 @@
       _syncQuickLogDisplay();
       _writeQuickLogToForm();
     }
-    document.getElementById('quickLogPanel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!(opts && opts.scroll === false)) document.getElementById('quickLogPanel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /**
+   * Quick log just finished the planned sets of `name` in today's session
+   * (program day, template, or the usual session matched from last time):
+   * move the card on to the lift to do next, so quick log and the rest
+   * timer's "Next" follow the plan instead of staying on the lift just
+   * finished. Tapping a row in the plan still goes back for an extra set.
+   * Returns the next lift's name, or null when nothing moved.
+   */
+  function advanceQuickLogIfLiftDone(name) {
+    const ps = _schedule();
+    const day = getTodaysPlannedDay();
+    const exercises = day && Array.isArray(day.exercises) ? day.exercises : [];
+    if (!ps || !exercises.length || !name) return null;
+    const progress = ps.dayProgress(day, ps.workoutsOn(_localDateKey(), _user()));
+    const at = progress.lifts.findIndex(l => _sameName(l.name, name));
+    if (at === -1 || !progress.lifts[at].complete) return null;
+    const nextIdx = typeof ps.currentLiftIndex === 'function'
+      ? ps.currentLiftIndex(progress.lifts, at)
+      : progress.lifts.findIndex(l => !l.complete);
+    if (nextIdx === -1 || nextIdx === at) return null;
+    const ex = exercises[nextIdx];
+    const lift = progress.lifts[nextIdx];
+    const sets = Array.isArray(ex.sets) ? ex.sets : [];
+    const planned = sets[Math.min(lift.done || 0, Math.max(0, sets.length - 1))] || {};
+    startQuickLogFor(ex.name, {
+      weight: planned.weight != null && Number(planned.weight) > 0 ? Number(planned.weight) : null,
+      reps: planned.reps != null && Number(planned.reps) > 0 ? Number(planned.reps) : null,
+    }, { scroll: false });
+    const liveTitle = document.getElementById('exerciseLiveTitle');
+    if (liveTitle) { liveTitle.hidden = false; liveTitle.textContent = ex.name; }
+    if (global.showToast) global.showToast(`${name} done — next: ${ex.name}`, 'success');
+    return ex.name;
   }
 
   /** Removing rows back down to one hands row 0 back to the steppers; adopt
@@ -1306,6 +1380,14 @@
       if (setsInput2) setsInput2.value = '1';
       if (typeof global.generateSetInputs === 'function') global.generateSetInputs(1);
       _resetQuickLogSetOpts(); // Drop/RP/L-R applied to the set just logged, not the next one
+      // Planned sets of this lift all done: move on to the next lift.
+      let movedTo = null;
+      try { movedTo = advanceQuickLogIfLiftDone(name); } catch { movedTo = null; }
+      if (movedTo) {
+        if (typeof global.renderSessionQueue === 'function') global.renderSessionQueue();
+        return;
+      }
+      _presetFromLastTime(name); // Top/BO like last time; back-off weight follows today's top set
       _writeQuickLogToForm(); // keep the same weight/reps for the next set
       _updateQuickLogButtonLabel(name);
       _updateExerciseStatsLine(name);
@@ -1353,7 +1435,7 @@
   }
 
   const api = { unloadUntouchedSession, declineTodayFromLog, undoDeclineFromLog, getTodaysPlannedDay, sessionMetadata, sessionSourceLabel, todaysLiftedSession, canSaveTodayAsRoutine, saveTodayAsRoutine, buildProgramDayLog, loadTodayProgramIntoLog, renderProgramTemplateRow, renderSessionQueue, renderTrainHero, renderTrainReadinessStrip, renderSessionSoFar,
-    initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks, weeklyMuscleVolume, weeklyVolumeWindowLabel, mergePlannedIntoWorkout,
+    advanceQuickLogIfLiftDone, initQuickLog, quickLogStep, quickLogTyped, quickLogTypedDone, quickLogSet, startNewExercise, syncQuickLogFromRow0, startQuickLogFor, syncQuickLogUnit, renderVolumeLandmarks, weeklyMuscleVolume, weeklyVolumeWindowLabel, mergePlannedIntoWorkout,
     toggleQuickLogUnit, openQuickLogWeightSheet, closeQuickLogWeightSheet, qlPlateAdd, qlWeightSheetClear,
     confirmQuickLogWeightSheet, toggleQuickLogSetRole, toggleQuickLogUnilateral, toggleQuickLogSameSides,
     refreshLogButtonLabel: _updateQuickLogButtonLabel };

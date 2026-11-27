@@ -105,20 +105,21 @@
    * history (any order) including `date`'s session, with only completed
    * sets in planned sessions. Returns the win, or null.
    */
-  function evaluateWin(exercise, workouts, date, engine) {
+  function evaluateWin(exercise, workouts, date, engine, gymKey = '') {
     const eng = engine || _engine();
     if (!eng.collectSessions || !eng.topSetOf) return null;
     const name = String(exercise || '').trim();
-    if (!name || !date) return null;
+    if (!name || !date || gymKey === null) return null;
+    const gym = gymKey || '';
 
     const all = _byDate(workouts);
     const prior = all.filter(w => w.date < date);
-    const today = _mergeSessions(eng.collectSessions(name, all.filter(w => w.date === date), ''));
+    const today = _mergeSessions(eng.collectSessions(name, all.filter(w => w.date === date), gym));
     if (!today) return null; // nothing at the usual gym today (alt gym / alt machine)
     const top = _workTop(eng.topSetOf, today.sets);
     if (!top) return null;
 
-    const sessions = eng.collectSessions(name, prior, '');
+    const sessions = eng.collectSessions(name, prior, gym);
     if (!sessions.length) return null; // first time: nothing to beat
     const last = sessions[sessions.length - 1];
     const lastTop = _workTop(eng.topSetOf, last.sets) || eng.topSetOf(last.sets);
@@ -128,7 +129,7 @@
 
     let rec = null;
     if (typeof eng.suggestNextSession === 'function') {
-      try { rec = eng.suggestNextSession(name, prior, { gymKey: '' }); } catch { rec = null; }
+      try { rec = eng.suggestNextSession(name, prior, { gymKey: gym }); } catch { rec = null; }
     }
     // A Repeat / Deload tip has no load to "follow", but beating last time
     // still earns the card (lifting more than before always should).
@@ -170,11 +171,13 @@
   }
 
   /** Today's merged session and the prior sessions of `name`, or null. */
-  function _sessionsFor(name, workouts, date, eng) {
+  function _sessionsFor(name, workouts, date, eng, gymKey) {
+    if (gymKey === null) return null;
+    const gym = gymKey || '';
     const all = _byDate(workouts);
-    const today = _mergeSessions(eng.collectSessions(name, all.filter(w => w.date === date), ''));
+    const today = _mergeSessions(eng.collectSessions(name, all.filter(w => w.date === date), gym));
     if (!today) return null;
-    const prior = eng.collectSessions(name, all.filter(w => w.date < date), '');
+    const prior = eng.collectSessions(name, all.filter(w => w.date < date), gym);
     return { today, prior };
   }
 
@@ -191,12 +194,12 @@
    * not) that beats the same back-off of last session (1st vs 1st, …).
    * Returns [{ …win, scope: 'backoff', index }] in set order.
    */
-  function evaluateBackoffWins(exercise, workouts, date, engine) {
+  function evaluateBackoffWins(exercise, workouts, date, engine, gymKey = '') {
     const eng = engine || _engine();
     if (!eng.collectSessions || !eng.topSetOf) return [];
     const name = String(exercise || '').trim();
     if (!name || !date) return [];
-    const found = _sessionsFor(name, workouts, date, eng);
+    const found = _sessionsFor(name, workouts, date, eng, gymKey);
     if (!found || !found.prior.length) return [];
     const last = found.prior[found.prior.length - 1];
     const unit = found.today.unit || 'kg';
@@ -228,12 +231,12 @@
    * or heavier, at a weight done before (a brand-new weight is a load jump,
    * not a rep PR). Returns [{ …win, scope: 'rep-pr' }], best first.
    */
-  function evaluateRepPRs(exercise, workouts, date, engine) {
+  function evaluateRepPRs(exercise, workouts, date, engine, gymKey = '') {
     const eng = engine || _engine();
     if (!eng.collectSessions) return [];
     const name = String(exercise || '').trim();
     if (!name || !date) return [];
-    const found = _sessionsFor(name, workouts, date, eng);
+    const found = _sessionsFor(name, workouts, date, eng, gymKey);
     if (!found || !found.prior.length) return [];
     const unit = found.today.unit || 'kg';
     const priorSets = [];
@@ -517,6 +520,12 @@
       || null;
   }
 
+  /** The gym trained at now: '' usual, a gym key, or null (unnamed alt gym). */
+  function _gymKey() {
+    try { return typeof global.getCurrentGymKey === 'function' ? global.getCurrentGymKey() : ''; }
+    catch { return ''; }
+  }
+
   function _history(user) {
     let workouts = [];
     try {
@@ -536,13 +545,13 @@
    * rep PR, then a back-off. Each has its own once-per-session key, so a
    * back-off or rep PR later in the session still gets its card.
    */
-  function _nextWin(user, exercise, history, date) {
-    const repPRs = evaluateRepPRs(exercise, history, date);
+  function _nextWin(user, exercise, history, date, gymKey) {
+    const repPRs = evaluateRepPRs(exercise, history, date, undefined, gymKey);
     const repKey = w => `${exercise}#rep#${w.today.weight}`;
     const freshRep = repPRs.find(w => !alreadyCelebrated(user, date, repKey(w)));
 
     if (!alreadyCelebrated(user, date, exercise)) {
-      const top = evaluateWin(exercise, history, date);
+      const top = evaluateWin(exercise, history, date, undefined, gymKey);
       if (top) {
         markCelebrated(user, date, exercise);
         // The top set is also a rep PR: one card, with a Rep PR chip.
@@ -551,7 +560,7 @@
         return top;
       }
     }
-    const backoffs = evaluateBackoffWins(exercise, history, date);
+    const backoffs = evaluateBackoffWins(exercise, history, date, undefined, gymKey);
     const boKey = w => `${exercise}#bo#${w.index}`;
     const freshBo = backoffs.find(w => !alreadyCelebrated(user, date, boKey(w)));
     if (freshRep) {
@@ -573,18 +582,24 @@
     const user = _user();
     if (!user || !exercise || !date) return null;
     const history = _history(user);
-    const win = _nextWin(user, exercise, history, date);
+    // Compare like for like, as the "Last time" card does: at another gym
+    // today, beating last time there still earns the card. (All-time PRs
+    // stay usual-gym only — pr-tracker.js.)
+    const gymKey = _gymKey();
+    const win = _nextWin(user, exercise, history, date, gymKey);
     if (!win) return null;
 
     const copy = describeWin(win);
     if (_addToPRCard(win, copy)) return win; // the PR card outranks this one
 
-    // Another celebration (PR on a different lift, badge) is up: wait for it.
+    // Another celebration (PR on a different lift, badge) is up: wait for
+    // it, then show. The win is already marked celebrated, so giving up here
+    // would lose it for the day: after the wait, show it regardless.
     let waited = 0;
     (function tryShow() {
-      if (document.getElementById('_prModal') || document.querySelector('.milestone-celebrate')) {
+      if (waited < 12000 && (document.getElementById('_prModal') || document.querySelector('.milestone-celebrate'))) {
         waited += 500;
-        if (waited <= 12000) setTimeout(tryShow, 500);
+        setTimeout(tryShow, 500);
         return;
       }
       showWinCard(win);

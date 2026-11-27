@@ -397,6 +397,31 @@
   }
 
   /**
+   * The lift the lifter is on: the furthest lift with sets logged if it
+   * still has sets to do, else the next unfinished lift after it (wrapping
+   * round to any left behind). Plain "first unfinished lift" stuck on a lift
+   * finished a set short, or one done out of order, for the rest of the
+   * session. `fromIndex` asks for the lift after that one instead.
+   * Returns an index into `lifts`, or -1 when every lift is complete.
+   */
+  function currentLiftIndex(lifts, fromIndex) {
+    const list = Array.isArray(lifts) ? lifts : [];
+    const n = list.length;
+    if (!n) return -1;
+    let anchor = Number.isInteger(fromIndex) ? fromIndex : -1;
+    if (anchor < 0) {
+      for (let i = n - 1; i >= 0; i--) if (list[i] && list[i].done > 0) { anchor = i; break; }
+      if (anchor < 0) return list.findIndex(l => l && !l.complete);
+      if (!list[anchor].complete) return anchor;
+    }
+    for (let k = 1; k <= n; k++) {
+      const j = (anchor + k) % n;
+      if (list[j] && !list[j].complete) return j;
+    }
+    return -1;
+  }
+
+  /**
    * How much of `day` is logged in `workouts` (already filtered to the date).
    * Returns { lifts:[{name, planned, done, complete}], doneKg, doneSets,
    * totalSets, doneLifts, totalLifts, started, complete }.
@@ -433,6 +458,7 @@
     const totalSets = lifts.reduce((n, l) => n + l.planned, 0);
     const doneSets = lifts.reduce((n, l) => n + l.done, 0);
     const doneLifts = lifts.filter(l => l.complete).length;
+    const current = currentLiftIndex(lifts);
     const seen = new Set();
     const doneKg = exercises.reduce((sum, ex) => {
       const key = _norm(ex.name);
@@ -442,6 +468,7 @@
     }, 0);
     return {
       lifts,
+      current,
       doneKg,
       doneSets,
       totalSets,
@@ -476,6 +503,7 @@
     programWeekStart,
     swapIntoToday,
     dayProgress,
+    currentLiftIndex,
     isPlannedWorkout,
     workoutsOn,
   };

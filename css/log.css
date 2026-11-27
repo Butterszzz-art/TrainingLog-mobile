@@ -2425,7 +2425,12 @@
   background: rgba(255, 255, 255, 0.06);
 }
 .lsc-row.is-next .lsc-n { color: #0b100e; background: var(--primary-text, #42a679); }
-.lsc-last, .lsc-today { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+/* Each piece (weight × reps, "1 left", the Top/BO tag) stays whole but wraps
+   onto a second line when the column is too narrow — they used to run past
+   the column into Today and overlap its "Next" label on phones. */
+.lsc-last, .lsc-today { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; white-space: nowrap; }
+.lsc-today { overflow: hidden; }
+.lsc-target { font-size: 12.5px; font-weight: 700; color: var(--text-primary, #e8ecea); }
 .lsc-rir { font-size: 11px; font-weight: 600; color: var(--text-muted); }
 .lsc-tag {
   font-size: 9px;
