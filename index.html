@@ -3445,6 +3445,11 @@
               <progress id="fatBar" value="0" max="100"></progress>
             </section>
 
+            <!-- This week: weekly budget from the daily targets, eaten so far,
+                 what's left and the daily average that still lands on it
+                 (src/js/weekly-budget.js, rendered by updateMacroUI). -->
+            <section id="macroWeeklyBudget" class="pod macro-weekly-budget" aria-label="This week's macros" hidden></section>
+
             <!-- Saved favourites: one tap adds to today (renderMacroNudge) -->
             <div id="macroFavoritesContainer"></div>
 
@@ -11323,6 +11328,23 @@ function updateMacroUI() {
     { netCals }
   );
 
+  // Today's targets as they stand, so the day keeps them in macroHistory
+  // when it rolls over (rolloverMacroDay): the weekly budget adds up each
+  // day's own target, not today's for every day.
+  if (!viewDate && currentUser) {
+    try {
+      localStorage.setItem("dailyMacroTargetSnap", JSON.stringify({
+        user: currentUser,
+        date: getTodayDateString(),
+        calories: Number(adaptiveTargets.calories) || 0,
+        protein: Number(adaptiveTargets.protein) || 0,
+        carbs: Number(adaptiveTargets.carbs) || 0,
+        fat: Number(adaptiveTargets.fat) || 0,
+      }));
+    } catch (_err) { /* storage full or blocked */ }
+  }
+  window.renderWeeklyMacroBudget?.();
+
   // The pace nudge is about today; an earlier day has none.
   if (viewDate) {
     const nudgeEl = document.getElementById('macroNudgeContainer');
@@ -12250,6 +12272,12 @@ function rolloverMacroDay() {
     totals.calories = macroProgressCalories(totals);
     if (totals.calories > 0) {
       const extra = isMacroDayComplete(savedDate) ? { complete: true } : {};
+      // The day's own targets (saved by updateMacroUI) for the weekly budget.
+      let snap = null;
+      try { snap = JSON.parse(localStorage.getItem("dailyMacroTargetSnap")); } catch (_err) { snap = null; }
+      if (snap && snap.user === currentUser && snap.date === savedDate && Number(snap.calories) > 0) {
+        extra.target = { calories: snap.calories, protein: snap.protein, carbs: snap.carbs, fat: snap.fat };
+      }
       addMacroHistoryEntry(savedDate, previousMeals, totals, extra);
       saveDailyMacroLog(currentUser, savedDate, previousMeals, totals);
 
@@ -22154,6 +22182,8 @@ window.renderCaffeinePod = renderCaffeinePod;
   <script src="src/js/food-describe.js"></script>
   <script src="src/js/nutrition-insights.js"></script>
   <script src="src/js/nutrition-review.js"></script>
+  <script src="src/js/weekly-budget-core.js"></script>
+  <script src="src/js/weekly-budget.js"></script>
   <script src="src/js/weekly-summary.js"></script>
   <script src="src/js/weekly-recap.js"></script>
   <script src="src/js/body-hub.js"></script>

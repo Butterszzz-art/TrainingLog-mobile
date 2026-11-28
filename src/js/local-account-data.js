@@ -15,7 +15,7 @@
   // Keys the app writes without an account name. They always describe the
   // last signed-in user, so they go with that user's account.
   const UNSCOPED_KEYS = [
-    'personalDetails', 'dailyMacroProgress', 'dailyMacroMeals', 'dailyMacroDate',
+    'personalDetails', 'dailyMacroProgress', 'dailyMacroMeals', 'dailyMacroDate', 'dailyMacroTargetSnap',
     'macroResetTime', 'macroDayType', 'macroTargets', 'dailySteps',
     'workoutHistory', 'resistanceLogs', 'archivedWorkoutIds',
     'programs', 'activeProgram', 'trainingMode', 'plMeetDetails', 'plCutPlanInputs',
