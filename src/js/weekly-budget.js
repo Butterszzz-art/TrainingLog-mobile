@@ -21,7 +21,6 @@
   const today = () => (typeof getTodayDateString === 'function' ? getTodayDateString() : (globalThis.AppTime?.today() || new Date().toISOString().slice(0, 10))); // eslint-disable-line no-undef
   const fmt = n => Math.round(Number(n) || 0).toLocaleString('en-GB');
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const OPEN_KEY = 'macroWeeklyBudgetOpen';
 
   function readJSON(key, fallback) {
     try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch { return fallback; }
@@ -69,33 +68,47 @@
   }
 
   const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const shortDate = key => { const [, m, d] = key.split('-').map(Number); return `${d} ${MONTHS[m - 1]}`; };
+  const pct = (a, b) => (b > 0 ? Math.max(0, Math.min(100, Math.round((a / b) * 100))) : 0);
+  // Same stroke icons as the hero's pace nudge (24×24, currentColor).
+  const SVG = '<svg class="nudge-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+  const ICON = {
+    under: SVG + '<path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>',
+    on_track: SVG + '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+    over: SVG + '<path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>',
+  };
+  ICON.over_week = ICON.over;
 
+  // Seven slim bars, one per day, under the week's meter.
   function dayStrip(week) {
     return week.days.map((d, i) => {
       let cls = 'is-ahead';
-      let title = `${d.date}: ${fmt(d.target.kcal)} kcal target`;
-      if (d.when === 'past' && !d.counted) { cls = 'is-skipped'; title = `${d.date}: not logged, left out`; }
+      let label = `${shortDate(d.date)}: ${fmt(d.target.kcal)} kcal target`;
+      if (d.when === 'past' && !d.counted) { cls = 'is-skipped'; label = `${shortDate(d.date)}: not logged, left out`; }
       else if (d.when !== 'ahead') {
         const diff = d.eaten.kcal - d.target.kcal;
         cls = d.when === 'today' ? 'is-today' : Math.abs(diff) <= Math.max(50, d.target.kcal * 0.05) ? 'is-hit' : diff > 0 ? 'is-over' : 'is-under';
-        title = `${d.date}: ${fmt(d.eaten.kcal)} / ${fmt(d.target.kcal)} kcal`;
+        label = `${shortDate(d.date)}: ${fmt(d.eaten.kcal)} of ${fmt(d.target.kcal)} kcal`;
       }
-      const pct = d.target.kcal ? Math.min(100, Math.round((d.eaten.kcal / d.target.kcal) * 100)) : 0;
-      return `<li class="mwb-day ${cls}" title="${esc(title)}">
-        <span class="mwb-day-bar"><span style="height:${d.when === 'ahead' ? 0 : pct}%"></span></span>
+      const h = d.when === 'ahead' ? 0 : pct(d.eaten.kcal, d.target.kcal);
+      return `<li class="mwb-day ${cls}" title="${esc(label)}" aria-label="${esc(label)}">
+        <span class="mwb-day-bar"><span style="height:${h}%"></span></span>
         <span class="mwb-day-lbl">${DOW[i]}</span>
       </li>`;
     }).join('');
   }
 
-  function macroRow(label, key, week, dot) {
+  // A stat column in the hero's grid: eaten / weekly, meter, what's left.
+  function macroStat(label, key, week, bar) {
     const left = week.left[key];
     const over = left < 0;
-    return `<div class="mwb-macro">
-      <span class="mwb-macro-name"><span class="macro-card-dot ${dot}"></span>${label}</span>
-      <span class="mwb-macro-val">${fmt(week.eaten[key])}<small> / ${fmt(week.budget[key])}g</small></span>
-      <span class="mwb-macro-left${over ? ' is-over' : ''}">${fmt(Math.abs(left))}g ${over ? 'over' : 'left'}</span>
-      <span class="mwb-macro-day">~${fmt(week.perDay[key])}g/day</span>
+    return `<div class="macro-hero-stat">
+      <span class="mx-lbl">${label}</span>
+      <div class="macro-hero-stat-val">${fmt(week.eaten[key])}<small> / ${fmt(week.budget[key])}g</small></div>
+      <div class="macro-hero-meter macro-hero-meter--sm"><div class="macro-card-bar-fill ${bar}" style="width:${pct(week.eaten[key], week.budget[key])}%"></div></div>
+      <small class="mwb-stat-left${over ? ' is-over' : ''}">${fmt(Math.abs(left))}g ${over ? 'over' : 'left'}</small>
+      <small class="mwb-stat-day">~${fmt(week.perDay[key])}g a day</small>
     </div>`;
   }
 
@@ -107,42 +120,47 @@
     host.hidden = false;
 
     const over = week.left.kcal < 0;
-    const fill = Math.min(100, Math.round((week.eaten.kcal / week.budget.kcal) * 100));
-    const pace = Math.min(100, Math.round((week.paceKcal / week.budget.kcal) * 100));
-    const chip = { on_track: ['On track', ''], under: ['Banked', 'mx-chip--brass'], over: ['Over pace', 'mwb-chip-over'], over_week: ['Over budget', 'mwb-chip-over'] }[week.status];
-    const open = readJSON(OPEN_KEY, false) === true;
+    const fill = pct(week.eaten.kcal, week.budget.kcal);
+    const pace = pct(week.paceKcal, week.budget.kcal);
+    const chip = {
+      on_track: ['On track', ''],
+      under: ['Banked', 'mx-chip--brass'],
+      over: ['Over pace', 'mwb-chip-over'],
+      over_week: ['Over budget', 'mwb-chip-over'],
+    }[week.status];
+    const n = week.daysRemaining;
     const notes = [];
-    if (week.daysSkipped) notes.push(`${week.daysSkipped} earlier day${week.daysSkipped === 1 ? '' : 's'} with nothing logged ${week.daysSkipped === 1 ? 'is' : 'are'} left out.`);
-    notes.push('Days ahead count at your usual daily targets.');
+    if (week.daysSkipped) notes.push(`${week.daysSkipped} unlogged day${week.daysSkipped === 1 ? '' : 's'} left out.`);
+    notes.push('Days ahead count at your usual targets.');
 
     host.innerHTML = `
-      <div class="mwb-top">
-        <span class="mx-lbl">This week</span>
+      <div class="macro-hero-top">
+        <span class="mx-lbl">This week <span class="mwb-range">${shortDate(week.start)} – ${shortDate(week.end)}</span></span>
         <span class="mx-chip mx-chip--sm ${chip[1]}">${chip[0]}</span>
       </div>
-      <div class="mwb-num-row">
-        <span class="mwb-num mx-num">${fmt(week.eaten.kcal)}</span>
+      <div class="macro-hero-num-row">
+        <span class="macro-hero-num mwb-num mx-num">${fmt(week.eaten.kcal)}</span>
         <span class="mx-unit">/ ${fmt(week.budget.kcal)} kcal</span>
-        <b class="mwb-left${over ? ' is-over' : ''}">${fmt(Math.abs(week.left.kcal))} ${over ? 'over' : 'left'}</b>
       </div>
+      <p class="macro-hero-sub">
+        <b class="${over ? 'is-over' : ''}">${fmt(Math.abs(week.left.kcal))} kcal ${over ? 'over' : 'left'}</b>
+        <span aria-hidden="true">·</span>
+        <span>~${fmt(week.perDay.kcal)} a day for ${n === 1 ? 'today' : `${n} days`}</span>
+      </p>
       <div class="macro-hero-meter mwb-meter" role="img" aria-label="${fmt(week.eaten.kcal)} of ${fmt(week.budget.kcal)} kcal eaten this week">
         <div class="macro-card-bar-fill macro-bar-cal" style="width:${fill}%"></div>
-        <span class="mwb-pace" style="left:${pace}%" title="Where the week would be if every day so far hit its target"></span>
+        <span class="mwb-pace" style="left:${pace}%"></span>
       </div>
-      <p class="mwb-line">${esc(Core().headline(week))}</p>
-      <details class="mwb-more"${open ? ' open' : ''}>
-        <summary>Macros and days</summary>
-        <ul class="mwb-days" aria-label="Calories by day">${dayStrip(week)}</ul>
-        <div class="mwb-macros">
-          ${macroRow('Protein', 'protein', week, 'macro-dot-protein')}
-          ${macroRow('Carbs', 'carbs', week, 'macro-dot-carbs')}
-          ${macroRow('Fat', 'fat', week, 'macro-dot-fat')}
-        </div>
-        <p class="mwb-foot">${esc(notes.join(' '))} The daily average spreads what's banked (or over) across today and the days left; it doesn't change your targets.</p>
-      </details>`;
-    host.querySelector('.mwb-more')?.addEventListener('toggle', e => {
-      try { localStorage.setItem(OPEN_KEY, JSON.stringify(e.target.open)); } catch { /* storage blocked */ }
-    });
+      <ul class="mwb-days" aria-label="Calories by day">${dayStrip(week)}</ul>
+      <div class="macro-hero-grid">
+        ${macroStat('Protein', 'protein', week, 'macro-bar-protein')}
+        ${macroStat('Carbs', 'carbs', week, 'macro-bar-carbs')}
+        ${macroStat('Fat', 'fat', week, 'macro-bar-fat')}
+      </div>
+      <div class="macro-hero-nudge mwb-nudge is-${week.status}">
+        ${ICON[week.status]}
+        <p>${esc(Core().headline(week))} <span class="mwb-foot">${esc(notes.join(' '))}</span></p>
+      </div>`;
   }
 
   window.renderWeeklyMacroBudget = render;
