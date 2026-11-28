@@ -753,3 +753,88 @@
 .macro-health-sync-off { font-size: 12px; padding: 0; }
 .macro-health-sync-off[hidden] { display: none; }
 .macro-health-sync .macro-day-btn { flex: none; padding: 10px 14px; }
+
+/* ── This week: weekly macro budget (src/js/weekly-budget.js) ──
+   Built from the hero's own pieces (.macro-hero-*, meters, stat grid,
+   nudge line); only the pace marker and the day strip are new. */
+.macro-weekly-budget { margin-top: 12px; }
+.macro-weekly-budget[hidden] { display: none; }
+.mwb-range { margin-left: 6px; color: var(--text-faint); font-weight: 700; letter-spacing: 0.04em; }
+.mwb-num { font-size: 44px; }
+.mwb-chip-over { border-color: var(--border-alert); color: var(--danger-text-mobile); }
+
+/* Week meter with a tick where the week would be if every day so far
+   hit its target. */
+.mwb-meter { position: relative; overflow: visible; }
+.mwb-meter .macro-card-bar-fill { height: 100%; border-radius: var(--radius-pill); }
+.mwb-pace {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--text-secondary);
+}
+
+/* Day strip */
+.mwb-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.mwb-day { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.mwb-day-bar {
+  position: relative;
+  width: 100%;
+  max-width: 22px;
+  height: 34px;
+  border-radius: 6px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-row);
+  overflow: hidden;
+}
+.mwb-day-bar > span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--fill-meter-a);
+}
+.mwb-day.is-under .mwb-day-bar > span { background: var(--fill-meter-brass); }
+.mwb-day.is-over .mwb-day-bar > span { background: var(--danger-text-mobile); }
+.mwb-day.is-today .mwb-day-bar { border-color: var(--border-featured); }
+.mwb-day.is-skipped .mwb-day-bar { border-style: dashed; background: transparent; }
+.mwb-day-lbl { font-size: 10px; font-weight: 700; color: var(--mx-faint); }
+.mwb-day.is-today .mwb-day-lbl { color: var(--text-primary); }
+
+/* Under each macro: what's left and the daily average */
+.mwb-stat-left {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mwb-stat-left.is-over { color: var(--danger-text-mobile); }
+.mwb-stat-left { color: var(--green-90); font-weight: 600; }
+.mwb-stat-day {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--mx-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Headline line: the hero nudge, tinted by where the week is */
+.mwb-nudge.is-on_track .nudge-icon { color: var(--green-90); }
+.mwb-nudge.is-over .nudge-icon,
+.mwb-nudge.is-over_week .nudge-icon { color: var(--danger-text-mobile); }
+.mwb-foot { display: block; margin-top: 3px; font-size: 11px; color: var(--text-tertiary); }
