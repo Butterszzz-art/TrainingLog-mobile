@@ -138,6 +138,15 @@
   background: linear-gradient(135deg, rgba(199, 154, 84, 0.95), rgba(109, 81, 36, 0.95));
   color: #1a1206;
 }
+/* "Current plan": the plan the user already pays for. */
+.upg-cta[disabled] {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  box-shadow: none;
+  cursor: default;
+}
+.upg-cta[disabled] .mx-cta-icon { display: none; }
 
 /* ── Payment-method chooser ─────────────────────────────────── */
 .payment-method-modal .payment-method-inner {
