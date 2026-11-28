@@ -4521,6 +4521,7 @@
 <script src="src/js/plan-source.js"></script>
 <script src="src/js/ai-usage.js"></script>
 <script src="src/js/client-pro.js"></script>
+<script src="src/js/plan-offer.js"></script>
 <script src="src/js/payments.js"></script>
 <script src="src/js/plan-limits.js"></script>
 <script type="module" src="history.js"></script>
@@ -5054,6 +5055,15 @@ async function loadUserPlan() {
     window.currentPlanSource = data.planSource || null;
     window.currentPlanExpiresAt = data.planExpiresAt || null;
     window.currentCoachPro = data.coachPro || null; // Pro from a coach's code (src/js/coach-code.js)
+    // The user's own running store subscription ({ store, plan, billing }) and
+    // trial history: the upgrade sheet offers a switch instead of a second
+    // subscription, and the web trial only once (src/js/plan-offer.js).
+    window.currentSubscription = data.subscription || null;
+    window.currentTrialInfo = data.trial || null;
+    try {
+      localStorage.setItem('userSubscription', data.subscription ? JSON.stringify(data.subscription) : '');
+      localStorage.setItem('userTrialInfo', data.trial ? JSON.stringify(data.trial) : '');
+    } catch (e) { /* quota */ }
     window.currentUserPlanLoaded = true;
     localStorage.setItem('userPlan', window.currentUserPlan);
     localStorage.setItem('userIsAdmin', window.currentIsAdmin ? '1' : '');
@@ -5079,6 +5089,8 @@ async function loadUserPlan() {
     try { window.currentAiUsage = JSON.parse(localStorage.getItem('userAiUsage') || 'null'); } catch (e) { window.currentAiUsage = null; }
     if (window.PocketCoachAiUsage) window.PocketCoachAiUsage.set(window.currentAiUsage);
     try { window.currentClientPro = JSON.parse(localStorage.getItem('userClientPro') || 'null'); } catch (e) { window.currentClientPro = null; }
+    try { window.currentSubscription = JSON.parse(localStorage.getItem('userSubscription') || 'null'); } catch (e) { window.currentSubscription = null; }
+    try { window.currentTrialInfo = JSON.parse(localStorage.getItem('userTrialInfo') || 'null'); } catch (e) { window.currentTrialInfo = null; }
     window.dispatchEvent(new CustomEvent('pc:plan-loaded', { detail: { plan: window.currentUserPlan, cached: true } }));
   }
 }
@@ -5141,11 +5153,53 @@ function usesAppleIAP() {
 // Store's localized price for the user's storefront (EUR in the EU), or null
 // until StoreKit has loaded the products — see src/js/payments.js.
 function planPrice(key, billing) {
-  if (usesAppleIAP()) return window.pocketCoachPayments.applePrice(key, billing);
+  var offer = planOffer(key, billing);
+  if (usesAppleIAP()) {
+    var ap = window.pocketCoachPayments.applePrice(key, billing);
+    // applePrice only includes the trial when this Apple ID can still get it;
+    // a switch or current plan never shows one.
+    return ap && !offer.trial ? Object.assign({}, ap, { trial: '' }) : ap;
+  }
   var p = UPGRADE_PLANS[key] || UPGRADE_PLANS.pro;
+  // One web trial per account; the server enforces the same rule.
+  var trial = offer.trial ? '7-day free trial' : '';
   return billing === 'annual'
-    ? { headline: '£' + p.annual, per: '/mo', note: p.annualNote, billed: '£' + (p.annual * 12) + ' per year', trial: '7-day free trial' }
-    : { headline: '£' + p.monthly, per: '/mo', note: '', billed: '£' + p.monthly + ' per month', trial: '7-day free trial' };
+    ? { headline: '£' + p.annual, per: '/mo', note: p.annualNote, billed: '£' + (p.annual * 12) + ' per year', trial: trial }
+    : { headline: '£' + p.monthly, per: '/mo', note: '', billed: '£' + p.monthly + ' per month', trial: trial };
+}
+
+// What a plan card offers this user: current / switch / other-store / new
+// (src/js/plan-offer.js).
+function planOffer(key, billing) {
+  var apple = usesAppleIAP();
+  var trialEligible = apple
+    ? !!(window.pocketCoachPayments && window.pocketCoachPayments.appleTrialEligible())
+    : !(window.currentTrialInfo && window.currentTrialInfo.stripeTrialUsed);
+  if (!window.PlanOffer) return { state: 'new', trial: trialEligible };
+  return window.PlanOffer.offerFor({
+    plan: key, billing: billing, store: apple ? 'apple' : 'stripe',
+    subscription: window.currentSubscription, trialEligible: trialEligible,
+  });
+}
+
+function planCtaLabel(key, billing) {
+  var name = (UPGRADE_PLANS[key] || UPGRADE_PLANS.pro).name;
+  var offer = planOffer(key, billing);
+  return window.PlanOffer ? window.PlanOffer.ctaLabel(offer, name) : (offer.trial ? 'Start Free Trial' : 'Subscribe');
+}
+
+// Subscription bought in the other store: it's changed there, not bought again.
+function showOtherStoreNotice() {
+  if (usesAppleIAP()) { window.pocketCoachPayments.manage(); return; } // explains the web subscription
+  var modal = document.createElement('div');
+  modal.className = 'payment-method-modal';
+  modal.innerHTML = '<div class="payment-method-inner" role="dialog" aria-modal="true" aria-labelledby="otherStoreTitle">'
+    + '<h3 id="otherStoreTitle">Subscription</h3>'
+    + '<p class="payment-sub">You subscribed in the App Store, so your plan is changed there. '
+    + 'On your iPhone or iPad, open Settings → your name → Subscriptions → Pocket Coach.</p>'
+    + '<button class="close-payment-modal" aria-label="Close" onclick="this.closest(\'.payment-method-modal\').remove()"><span class="ui-icon">' + ICONS.x + '</span></button>'
+    + '</div>';
+  document.body.appendChild(modal);
 }
 
 // Apple Guideline 3.1.2: before buying an auto-renewing subscription the user
@@ -5160,7 +5214,7 @@ function subscriptionTermsHtml(price) {
       + (price.trial ? ' (including the free trial)' : '') + '. Manage or cancel it in your Apple ID settings. ' + links;
   }
   return 'Your subscription renews automatically at ' + price.billed + ' until you cancel. '
-    + 'Cancel any time before the trial ends and you won\'t be charged. '
+    + (price.trial ? 'Cancel any time before the trial ends and you won\'t be charged. ' : '')
     + 'Manage or cancel any time from Progress → Tools → Subscription. ' + links;
 }
 
@@ -5174,12 +5228,25 @@ async function openCheckout(plan) {
   if (usesAppleIAP()) await window.pocketCoachPayments.loadAppleProducts();
   var price = planPrice(plan, billing);
   if (!price) { subscriptionsUnavailable(); return; }
+  var offer = planOffer(plan, billing);
+  if (offer.state === 'current') {
+    if (typeof nativeToast === 'function') nativeToast('You\'re already on this plan.', 'info');
+    return;
+  }
+  if (offer.state === 'other-store') { showOtherStoreNotice(); return; }
+  var switching = offer.state === 'switch';
+  // Web: Stripe changes the running subscription's price and prorates the
+  // difference on the next bill. iOS: the App Store handles the change.
+  var switchNote = switching && !usesAppleIAP()
+    ? '<p class="payment-sub">Your current subscription changes to ' + p.name + '. The price difference is adjusted on your next bill.</p>'
+    : '';
 
   var modal = document.createElement('div');
   modal.className = 'payment-method-modal';
   modal.innerHTML = '<div class="payment-method-inner">'
-    + '<h3>' + p.name + ' plan</h3>'
+    + '<h3>' + (switching ? 'Switch to ' + p.name : p.name + ' plan') + '</h3>'
     + '<p class="payment-sub">' + (price.trial ? price.trial + ', then ' : '') + price.billed + '</p>'
+    + switchNote
     // EU/UK 14-day right of withdrawal: Stripe buyers must ask for the paid
     // service to start within the 14 days (unticked, required). The server
     // refuses checkout without it. Apple handles this for App Store purchases.
@@ -5189,7 +5256,7 @@ async function openCheckout(plan) {
       + '. I understand that if I cancel within 14 days of subscribing, I get a refund minus the days of paid service I\'ve used. '
       + '<a href="terms.html#refunds">Refunds</a></span></label>'
       + '<p class="payment-waiver-error" id="withdrawalWaiverError" role="alert"></p>')
-    + '<button class="pay-btn pay-stripe" onclick="continueCheckout(this, \'' + plan + '\', \'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> Continue</button>'
+    + '<button class="pay-btn pay-stripe" onclick="continueCheckout(this, \'' + plan + '\', \'' + billing + '\')"><span class="ui-icon">' + ICONS.creditCard + '</span> ' + (switching ? 'Switch plan' : 'Continue') + '</button>'
     + (usesAppleIAP()
       ? '<button type="button" class="payment-restore" onclick="this.closest(\'.payment-method-modal\').remove();pocketCoachPayments.restore()">Restore Purchases</button>'
       : '<p class="payment-note">Secure checkout powered by Stripe</p>')
@@ -5225,8 +5292,18 @@ async function checkoutWithStripe(plan, billing, opts) {
       body: JSON.stringify({ username: username, plan: plan, billing: billing, withdrawalWaiver: !!(opts && opts.withdrawalWaiver) })
     });
     var data = await res.json();
-    if (data.url) window.location.href = data.url;
-    else if (typeof nativeToast === 'function') nativeToast('Could not start checkout', 'error');
+    if (data.url) { window.location.href = data.url; return; }
+    if (data.switched) {
+      // The running subscription now has the new plan (no second subscription).
+      if (typeof loadUserPlan === 'function') await loadUserPlan();
+      if (typeof renderSubscriptionPanel === 'function') renderSubscriptionPanel();
+      document.dispatchEvent(new CustomEvent('pc:plan-changed', { detail: { plan: window.currentUserPlan } }));
+      if (typeof nativeToast === 'function') nativeToast('You\'re now on ' + ((UPGRADE_PLANS[plan] || {}).name || 'your new plan') + '.', 'success');
+      return;
+    }
+    if (typeof nativeToast === 'function') {
+      nativeToast(data.code === 'already_subscribed' ? 'You\'re already on this plan.' : (data.error || 'Could not start checkout'), 'error');
+    }
   } catch {
     if (typeof nativeToast === 'function') nativeToast('Connection error', 'error');
   }
@@ -5283,6 +5360,7 @@ function upgradePlanCard(key, isAnnual) {
   var shown = upgradePriceHtml(key, billing);
   var price = planPrice(key, billing);
   var sub = p.sub || (price && price.trial) || 'Cancel anytime';
+  var isCurrent = planOffer(key, billing).state === 'current';
   return '<section class="pod ' + p.cardCls + ' mx-pod upg-plan upg-plan--' + key + '" aria-label="' + p.name + ' plan">'
     + '<div class="pod-row"><h4 class="pod-title mx-h3">' + p.name + '</h4><span class="mx-chip mx-chip--sm ' + p.chip + '">' + p.badge + '</span></div>'
     + '<div class="upg-price-block">'
@@ -5293,8 +5371,8 @@ function upgradePlanCard(key, isAnnual) {
     + '<ul class="upg-features">'
     + p.features.map(function (f) { return '<li><span class="ui-icon">' + ICONS[f[0]] + '</span>' + f[1] + '</li>'; }).join('')
     + '</ul>'
-    + '<button type="button" class="mx-cta upg-cta upg-cta--' + key + '" onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'' + key + '\')">'
-    +   '<span id="' + idBase + 'Cta">' + (price && price.trial ? 'Start Free Trial' : 'Subscribe') + '</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.sparkles + '</span></span>'
+    + '<button type="button" class="mx-cta upg-cta upg-cta--' + key + '" id="' + idBase + 'CtaBtn"' + (isCurrent ? ' disabled aria-disabled="true"' : '') + ' onclick="this.closest(\'.payment-method-modal\').remove();openCheckout(\'' + key + '\')">'
+    +   '<span id="' + idBase + 'Cta">' + planCtaLabel(key, billing) + '</span><span class="mx-cta-icon"><span class="ui-icon">' + ICONS.sparkles + '</span></span>'
     + '</button>'
     + '</section>';
 }
@@ -5356,7 +5434,9 @@ function refreshModalPrices() {
     if (el('Price')) el('Price').innerHTML = shown.price;
     if (el('Note')) el('Note').textContent = shown.note;
     if (el('Sub') && !UPGRADE_PLANS[pair[1]].sub) el('Sub').textContent = (price && price.trial) || 'Cancel anytime';
-    if (el('Cta')) el('Cta').textContent = price && price.trial ? 'Start Free Trial' : 'Subscribe';
+    if (el('Cta')) el('Cta').textContent = planCtaLabel(pair[1], billing);
+    var isCurrent = planOffer(pair[1], billing).state === 'current';
+    if (el('CtaBtn')) { el('CtaBtn').disabled = isCurrent; el('CtaBtn').setAttribute('aria-disabled', isCurrent ? 'true' : 'false'); }
   });
 }
 

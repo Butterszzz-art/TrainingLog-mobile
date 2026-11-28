@@ -86,10 +86,13 @@
 
   function loadAppleProducts() {
     if (!usesAppleIAP()) return Promise.resolve(null);
-    if (appleProducts) return Promise.resolve(appleProducts);
+    if (appleProducts && trialEligible !== null) return Promise.resolve(appleProducts);
     if (!productsLoading) {
-      productsLoading = native('getProducts', { productIdentifiers: ALL_PRODUCT_IDS, productType: 'subs' })
-        .then(({ products }) => {
+      productsLoading = Promise.all([
+        appleProducts ? { products: Object.values(appleProducts) } : native('getProducts', { productIdentifiers: ALL_PRODUCT_IDS, productType: 'subs' }),
+        loadTrialEligibility(),
+      ])
+        .then(([{ products }]) => {
           const byId = {};
           (products || []).forEach(p => { byId[p.identifier] = p; });
           if (Object.keys(byId).length) appleProducts = byId;
@@ -104,7 +107,32 @@
     return productsLoading;
   }
 
+  // Apple gives the free trial once per Apple ID per subscription group: any
+  // earlier transaction for one of our products (all in one group) means no
+  // trial. StoreKit's Transaction.all is that history. true / false, or null
+  // until checked. A failed check counts as not eligible, so the sheet never
+  // promises a trial that Apple won't give.
+  let trialEligible = null;
+
+  function loadTrialEligibility() {
+    if (trialEligible !== null) return Promise.resolve(trialEligible);
+    return native('getPurchases', { productType: 'subs', onlyCurrentEntitlements: false })
+      .then(({ purchases }) => {
+        trialEligible = !(purchases || []).some(p => ALL_PRODUCT_IDS.includes(p.productIdentifier));
+        return trialEligible;
+      })
+      .catch(err => {
+        console.warn('[payments] Could not check trial eligibility:', err && err.message);
+        return false; // not cached: checked again next time the sheet opens
+      });
+  }
+
+  function appleTrialEligible() {
+    return trialEligible === true;
+  }
+
   function trialText(product) {
+    if (!appleTrialEligible()) return '';
     const intro = product && product.introductoryPrice;
     if (!intro || intro.paymentMode !== PAYMENT_MODE_FREE_TRIAL) return '';
     const period = intro.subscriptionPeriod || {};
@@ -158,6 +186,7 @@
       if (!transaction || !transaction.jwsRepresentation) {
         throw new Error('The App Store didn’t return a receipt. Try Restore Purchases.');
       }
+      trialEligible = false; // this Apple ID has now had a subscription
       const result = await api('POST', '/api/iap/apple/verify', { signedTransaction: transaction.jwsRepresentation });
       await refreshPlan();
       if (result.active) toast('Welcome to ' + (plan === 'coach' ? 'Coach' : 'Pro') + '!', 'success');
@@ -276,6 +305,7 @@
     usesAppleIAP,
     loadAppleProducts,
     applePrice,
+    appleTrialEligible,
     purchase,
     restore,
     manage,
